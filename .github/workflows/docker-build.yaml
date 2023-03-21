@@ -113,7 +113,7 @@ jobs:
         env:
           SOURCE_TAG: ${{ steps.vars.outputs.tag }}
         run: |
-          echo RELEASE_TAG=${SOURCE_TAG:1} >> $GITHUB_ENV
+          echo RELEASE_TAG=${SOURCE_TAG} >> $GITHUB_ENV
 
       - name: Repository Dispatch
         uses: peter-evans/repository-dispatch@v2

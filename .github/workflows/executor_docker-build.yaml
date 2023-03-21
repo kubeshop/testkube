@@ -471,7 +471,7 @@ jobs:
         env:
           SOURCE_TAG: ${{ github.event.client_payload.release_version }}
         run: |
-          echo RELEASE_TAG=${SOURCE_TAG:1} >> $GITHUB_ENV
+          echo RELEASE_TAG=${SOURCE_TAG} >> $GITHUB_ENV
 
       - name: Repository Dispatch
         uses: peter-evans/repository-dispatch@v2
