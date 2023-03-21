@@ -1,7 +1,10 @@
 package testkube
 
 import (
+	"errors"
 	"fmt"
+
+	"github.com/adhocore/gronx"
 )
 
 func (test *TestUpsertRequest) QuoteTestTextFields() {
@@ -58,4 +61,23 @@ func (test *TestUpsertRequest) QuoteTestTextFields() {
 			}
 		}
 	}
+}
+
+func ValidateUpsertTestRequest(test TestUpsertRequest) error {
+	if test.Name == "" {
+		return errors.New("test name cannot be empty")
+	}
+	if test.Type_ == "" {
+		return errors.New("test type cannot be empty")
+	}
+	if test.Content == nil {
+		return errors.New("test content cannot be empty")
+	}
+	if test.Schedule != "" {
+		gron := gronx.New()
+		if !gron.IsValid(test.Schedule) {
+			return errors.New("invalin cron expression in test schedule")
+		}
+	}
+	return nil
 }
