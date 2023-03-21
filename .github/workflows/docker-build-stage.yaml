@@ -71,6 +71,7 @@ jobs:
             build.args.ANALYTICS_TRACKING_ID=${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
             build.args.ANALYTICS_API_KEY=${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
             build.args.SEGMENTIO_KEY=${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
+            build.args.CLOUD_SEGMENTIO_KEY=${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
           push: true
 
       #Trigger Helm repo workflow to deploy API to GKE Stage cluster

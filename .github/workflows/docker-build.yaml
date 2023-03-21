@@ -73,6 +73,7 @@ jobs:
             build.args.SLACK_BOT_CLIENT_ID=${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}
             build.args.SLACK_BOT_CLIENT_SECRET=${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}
             build.args.SEGMENTIO_KEY=${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
+            build.args.CLOUD_SEGMENTIO_KEY=${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
           push: true
 
   releasing_helm_chart_api_server:
