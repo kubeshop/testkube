@@ -109,14 +109,8 @@ jobs:
           GH_PUSH_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
 
-      - name: Set token env
-        env:
-          SOURCE_TAG: ${{ steps.vars.outputs.tag }}
-        run: |
-          echo RELEASE_TAG=${SOURCE_TAG} >> $GITHUB_ENV
-
       - name: Repository Dispatch
         uses: peter-evans/repository-dispatch@v2
         with:
           event-type: trigger-executor-docker-build
-          client-payload: '{"release_version": "${{ env.RELEASE_TAG }}"}'
+          client-payload: '{"release_version": "${{ steps.vars.outputs.tag }}"}'
