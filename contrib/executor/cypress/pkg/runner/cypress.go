@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	junit "github.com/joshdk/go-junit"
+	"github.com/joshdk/go-junit"
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -122,7 +122,8 @@ func (r *CypressRunner) Run(execution testkube.Execution) (result testkube.Execu
 	// scrape artifacts first even if there are errors above
 	if r.Params.ScrapperEnabled {
 		directories := []string{
-			projectPath,
+			filepath.Join(projectPath, "cypress/videos"),
+			filepath.Join(projectPath, "cypress/screenshots"),
 		}
 
 		output.PrintLog(fmt.Sprintf("Scraping directories: %v", directories))
