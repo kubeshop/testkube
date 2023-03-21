@@ -49,6 +49,7 @@ jobs:
           cd ./helm-charts
           git config user.name "kubeshop-bot"
           git config user.email "kubeshop-bot@kubeshop.io"
+          git fetch origin "release-$RELEASE_VERSION"          
           git checkout main
 
           git merge "release-$RELEASE_VERSION"
