@@ -115,11 +115,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      - 
-        name: Print version
-        run: |
-          echo "New Docker image version is ${{ github.event.client_payload.release_version }}"
-
   executor_jdk_docker:
     strategy:
       matrix:
@@ -467,3 +462,19 @@ jobs:
           targets: ${{ matrix.version }}
           set: ${{ matrix.version }}.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
           push: true
+
+  releasing_helm_chart_executor:
+    needs: [single_executor_docker, helper_executor_docker, executor_jdk_docker, executor_cypress_docker, executor_playwright_docker]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set token env
+        env:
+          SOURCE_TAG: ${{ github.event.client_payload.release_version }}
+        run: |
+          echo RELEASE_TAG=${SOURCE_TAG:1} >> $GITHUB_ENV
+
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          event-type: trigger-executor-helm-releaser
+          client-payload: '{"release_version": "${{ env.RELEASE_TAG }}"}'
