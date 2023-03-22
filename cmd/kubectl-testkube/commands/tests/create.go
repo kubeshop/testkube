@@ -33,7 +33,7 @@ func NewCreateTestsCmd() *cobra.Command {
 		gitToken                 string
 		gitUsernameSecret        map[string]string
 		gitTokenSecret           map[string]string
-		isBitbucketToken         bool
+		isHeaderToken            bool
 		gitCertificateSecret     string
 		sourceName               string
 		labels                   map[string]string
@@ -152,7 +152,7 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
 	cmd.Flags().StringVarP(&gitUsername, "git-username", "", "", "if git repository is private we can use username as an auth parameter")
 	cmd.Flags().StringVarP(&gitToken, "git-token", "", "", "if git repository is private we can use token as an auth parameter")
-	cmd.Flags().BoolVar(&isBitbucketToken, "is-bitbucket-token", false, "if true the http.extraHeader arg will be appended to the git clone command")
+	cmd.Flags().BoolVar(&isHeaderToken, "is-header-token", false, "if true the http.extraHeader arg will be appended to the git clone command")
 	cmd.Flags().StringToStringVarP(&gitUsernameSecret, "git-username-secret", "", map[string]string{}, "git username secret in a form of secret_name1=secret_key1 for private repository")
 	cmd.Flags().StringToStringVarP(&gitTokenSecret, "git-token-secret", "", map[string]string{}, "git token secret in a form of secret_name1=secret_key1 for private repository")
 	cmd.Flags().StringVarP(&gitCertificateSecret, "git-certificate-secret", "", "", "if git repository is private we can use certificate as an auth parameter stored in a kubernetes secret name")
