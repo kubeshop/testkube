@@ -41,7 +41,12 @@ func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) er
 			return err
 		}
 
-		request := testkube.ExecutionRequest{}
+		request := testkube.ExecutionRequest{
+			RunningContext: &testkube.RunningContext{
+				Type_:   string(testkube.RunningContextTypeTestTrigger),
+				Context: t.Name,
+			},
+		}
 
 		wp := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](concurrencyLevel)
 		go func() {
@@ -70,7 +75,12 @@ func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) er
 			return err
 		}
 
-		request := testkube.TestSuiteExecutionRequest{}
+		request := testkube.TestSuiteExecutionRequest{
+			RunningContext: &testkube.RunningContext{
+				Type_:   string(testkube.RunningContextTypeTestTrigger),
+				Context: t.Name,
+			},
+		}
 
 		wp := workerpool.New[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution](concurrencyLevel)
 		go func() {

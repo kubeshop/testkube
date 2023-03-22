@@ -171,6 +171,7 @@ type ExecuteTestOptions struct {
 	IsNegativeTestChangedOnRun    bool
 	EnvConfigMaps                 []testkube.EnvReference
 	EnvSecrets                    []testkube.EnvReference
+	RunningContext                *testkube.RunningContext
 }
 
 // ExecuteTestSuiteOptions contains test suite run options
@@ -180,6 +181,7 @@ type ExecuteTestSuiteOptions struct {
 	HTTPSProxy         string
 	ExecutionLabels    map[string]string
 	ContentRequest     *testkube.TestContentRequest
+	RunningContext     *testkube.RunningContext
 }
 
 // Gettable is an interface of gettable objects

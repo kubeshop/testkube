@@ -123,6 +123,9 @@ func NewRunTestCmd() *cobra.Command {
 				IsNegativeTestChangedOnRun:    false,
 				EnvConfigMaps:                 envConfigMaps,
 				EnvSecrets:                    envSecrets,
+				RunningContext: &testkube.RunningContext{
+					Type_: string(testkube.RunningContextTypeUserCLI),
+				},
 			}
 
 			if artifactStorageClassName != "" && artifactVolumeMountPath != "" {

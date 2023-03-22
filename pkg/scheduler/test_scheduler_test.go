@@ -152,6 +152,9 @@ func TestGetExecuteOptions(t *testing.T) {
 				MapToVariables: false,
 			},
 		},
+		RunningContext: &testkube.RunningContext{
+			Type_: string(testkube.RunningContextTypeUserCLI),
+		},
 	}
 
 	got, err := sc.getExecuteOptions("namespace", "id", req)

@@ -143,6 +143,7 @@ func (c TestSuiteClient) ExecuteTestSuite(id, executionName string, options Exec
 		HttpsProxy:      options.HTTPSProxy,
 		ExecutionLabels: options.ExecutionLabels,
 		ContentRequest:  options.ContentRequest,
+		RunningContext:  options.RunningContext,
 	}
 
 	body, err := json.Marshal(executionRequest)
@@ -163,6 +164,7 @@ func (c TestSuiteClient) ExecuteTestSuites(selector string, concurrencyLevel int
 		HttpsProxy:      options.HTTPSProxy,
 		ExecutionLabels: options.ExecutionLabels,
 		ContentRequest:  options.ContentRequest,
+		RunningContext:  options.RunningContext,
 	}
 
 	body, err := json.Marshal(executionRequest)

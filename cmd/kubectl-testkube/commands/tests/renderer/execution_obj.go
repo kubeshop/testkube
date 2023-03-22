@@ -26,6 +26,11 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 	ui.Warn("Start time:       ", execution.StartTime.String())
 	ui.Warn("End time:         ", execution.EndTime.String())
 	ui.Warn("Duration:         ", execution.Duration)
+	if execution.RunningContext != nil {
+		ui.Warn("Running context:")
+		ui.Warn("Type:   ", execution.RunningContext.Type_)
+		ui.Warn("Context:", execution.RunningContext.Context)
+	}
 
 	if len(execution.Labels) > 0 {
 		ui.Warn("Labels:           ", testkube.MapToString(execution.Labels))
