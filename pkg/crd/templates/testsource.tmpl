@@ -47,6 +47,9 @@ spec:
       {{- if .Repository.TokenSecret.Key }}
       key: {{ .Repository.TokenSecret.Key }}
       {{- end }}
+      {{- if .Repository.IsHeaderToken }}
+      isHeaderToken: {{ .Repository.IsHeaderToken }}
+      {{- end }}
     {{- if .Repository.CertificateSecret }}
     certificateSecret: {{ .Repository.CertificateSecret }}
     {{- end }}

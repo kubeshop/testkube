@@ -106,6 +106,11 @@ func validateUpsertOptions(cmd *cobra.Command) error {
 	gitPath := cmd.Flag("git-path").Value.String()
 	gitUsername := cmd.Flag("git-username").Value.String()
 	gitToken := cmd.Flag("git-token").Value.String()
+	isHeaderToken, err := cmd.Flags().GetBool("is-header-token")
+	if err != nil {
+		return err
+	}
+
 	gitUsernameSecret, err := cmd.Flags().GetStringToString("git-username-secret")
 	if err != nil {
 		return err
@@ -141,6 +146,10 @@ func validateUpsertOptions(cmd *cobra.Command) error {
 
 	if hasGitParams && gitUri == "" {
 		return fmt.Errorf("please pass valid `--git-uri` flag")
+	}
+
+	if isHeaderToken && gitToken == "" {
+		return fmt.Errorf("please pass valid git token with the `--git-token` flag when setting --is-header-token to true")
 	}
 
 	if len(gitUsernameSecret) > 1 {

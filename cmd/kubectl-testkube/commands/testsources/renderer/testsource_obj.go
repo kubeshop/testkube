@@ -2,6 +2,7 @@ package renderer
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -36,6 +37,12 @@ func TestSourceRenderer(ui *ui.UI, obj interface{}) error {
 		if testSource.Repository.TokenSecret != nil {
 			ui.Warn("  Token:       ", fmt.Sprintf("[secret:%s key:%s]", testSource.Repository.TokenSecret.Name,
 				testSource.Repository.TokenSecret.Key))
+		}
+
+		if testSource.Repository.IsHeaderToken {
+			ui.Warn("  IsHeaderToken: ", strconv.FormatBool(testSource.Repository.IsHeaderToken))
+		} else {
+			ui.Warn("  IsHeaderToken: ", strconv.FormatBool(testSource.Repository.IsHeaderToken))
 		}
 
 		if testSource.Repository.CertificateSecret != "" {

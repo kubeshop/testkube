@@ -14,6 +14,11 @@ func NewRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository
 	gitPath := cmd.Flag("git-path").Value.String()
 	gitUsername := cmd.Flag("git-username").Value.String()
 	gitToken := cmd.Flag("git-token").Value.String()
+	isHeaderToken, err := cmd.Flags().GetBool("is-header-token")
+	if err != nil {
+		return nil, err
+	}
+
 	gitUsernameSecret, err := cmd.Flags().GetStringToString("git-username-secret")
 	if err != nil {
 		return nil, err
@@ -46,6 +51,7 @@ func NewRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository
 		Path:              gitPath,
 		Username:          gitUsername,
 		Token:             gitToken,
+		IsHeaderToken:     isHeaderToken,
 		CertificateSecret: gitCertificateSecret,
 		WorkingDir:        gitWorkingDir,
 	}
@@ -144,6 +150,27 @@ func NewRepositoryUpdateFromFlags(cmd *cobra.Command) (repository *testkube.Repo
 				*ref.destination = &secret
 				nonEmpty = true
 			}
+		}
+	}
+
+	var cmdBools = []struct {
+		name        string
+		destination **bool
+	}{
+		{
+			"is-header-token",
+			&repository.IsHeaderToken,
+		},
+	}
+
+	for _, cmdBool := range cmdBools {
+		if cmd.Flag(cmdBool.name).Changed {
+			value, err := cmd.Flags().GetBool(cmdBool.name)
+			if err != nil {
+				return nil, err
+			}
+			*cmdBool.destination = &value
+			nonEmpty = true
 		}
 	}
 

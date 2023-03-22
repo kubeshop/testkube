@@ -2,6 +2,7 @@ package renderer
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/renderer"
@@ -54,6 +55,12 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 			if test.Content.Repository.TokenSecret != nil {
 				ui.Warn("  Token:       ", fmt.Sprintf("[secret:%s key:%s]", test.Content.Repository.TokenSecret.Name,
 					test.Content.Repository.TokenSecret.Key))
+			}
+
+			if test.Content.Repository.IsHeaderToken {
+				ui.Warn("  IsHeaderToken: ", strconv.FormatBool(test.Content.Repository.IsHeaderToken))
+			} else {
+				ui.Warn("  IsHeaderToken: ", strconv.FormatBool(test.Content.Repository.IsHeaderToken))
 			}
 
 			if test.Content.Repository.CertificateSecret != "" {
