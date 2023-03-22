@@ -79,7 +79,7 @@ conditionSpec:
 ```
 
 ### Supported Values
-* **eRsource**  - pod, deployment, statefulset, daemonset, service, ingress, event, configmap
+* **Resource**  - pod, deployment, statefulset, daemonset, service, ingress, event, configmap
 * **Action**    - run
 * **Event**     - created, modified, deleted
 * **Execution** - test, testsuite
