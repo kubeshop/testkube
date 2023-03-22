@@ -91,7 +91,7 @@ func (f Fetcher) FetchGitDir(repo *testkube.Repository) (path string, err error)
 
 	// if path not set make full repo checkout
 	if repo.Path == "" || repo.WorkingDir != "" {
-		path, err := git.Checkout(uri, repo.Branch, repo.Commit, repo.Token, f.path, repo.IsBitbucketServerToken)
+		path, err := git.Checkout(uri, repo.Branch, repo.Commit, repo.Token, f.path, repo.IsHeaderToken)
 		if err != nil {
 			output.PrintLog(fmt.Sprintf("%s Failed to fetch git dir: %s", ui.IconCross, err.Error()))
 			return path, fmt.Errorf("failed to fetch git dir: %w", err)
@@ -100,7 +100,7 @@ func (f Fetcher) FetchGitDir(repo *testkube.Repository) (path string, err error)
 		return path, nil
 	}
 
-	path, err = git.PartialCheckout(uri, repo.Path, repo.Branch, repo.Commit, repo.Token, f.path, repo.IsBitbucketServerToken)
+	path, err = git.PartialCheckout(uri, repo.Path, repo.Branch, repo.Commit, repo.Token, f.path, repo.IsHeaderToken)
 	if err != nil {
 		output.PrintLog(fmt.Sprintf("%s Failed to do partial checkout on git dir: %s", ui.IconCross, err.Error()))
 		return path, fmt.Errorf("failed to do partial checkout on git dir: %w", err)
@@ -117,7 +117,7 @@ func (f Fetcher) FetchGitFile(repo *testkube.Repository) (path string, err error
 		return path, err
 	}
 
-	repoPath, err := git.Checkout(uri, repo.Branch, repo.Commit, repo.Token, f.path, repo.IsBitbucketServerToken)
+	repoPath, err := git.Checkout(uri, repo.Branch, repo.Commit, repo.Token, f.path, repo.IsHeaderToken)
 	if err != nil {
 		output.PrintLog(fmt.Sprintf("%s Failed to checkout git file: %s", ui.IconCross, err.Error()))
 		return path, err
@@ -138,7 +138,7 @@ func (f Fetcher) FetchGit(repo *testkube.Repository) (path string, err error) {
 
 	// if path not set make full repo checkout
 	if repo.Path == "" || repo.WorkingDir != "" {
-		path, err := git.Checkout(uri, repo.Branch, repo.Commit, repo.Token, f.path, repo.IsBitbucketServerToken)
+		path, err := git.Checkout(uri, repo.Branch, repo.Commit, repo.Token, f.path, repo.IsHeaderToken)
 		if err != nil {
 			output.PrintLog(fmt.Sprintf("%s Failed to fetch git: %s", ui.IconCross, err.Error()))
 			return path, fmt.Errorf("failed to fetch git: %w", err)
@@ -160,7 +160,7 @@ func (f Fetcher) FetchGit(repo *testkube.Repository) (path string, err error) {
 		return path, nil
 	}
 
-	path, err = git.PartialCheckout(uri, repo.Path, repo.Branch, repo.Commit, repo.Token, f.path, repo.IsBitbucketServerToken)
+	path, err = git.PartialCheckout(uri, repo.Path, repo.Branch, repo.Commit, repo.Token, f.path, repo.IsHeaderToken)
 	if err != nil {
 		output.PrintLog(fmt.Sprintf("%s Failed to do partial checkout on git: %s", ui.IconCross, err.Error()))
 		return path, fmt.Errorf("failed to do partial checkout on git: %w", err)

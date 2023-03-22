@@ -73,7 +73,7 @@ func CheckoutCommit(uri, path, commit, dir string) (err error) {
 }
 
 // Checkout will checkout directory from Git repository
-func Checkout(uri, branch, commit, token, dir string, isBitbucketServerToken bool) (outputDir string, err error) {
+func Checkout(uri, branch, commit, token, dir string, isHeaderToken bool) (outputDir string, err error) {
 	tmpDir := dir
 	if tmpDir == "" {
 		tmpDir, err = os.MkdirTemp("", "git-checkout")
@@ -89,7 +89,7 @@ func Checkout(uri, branch, commit, token, dir string, isBitbucketServerToken boo
 		// prohibited. This appends the HTTP Authorization header to the git clone args to
 		// authenticate using a bearer token. More info:
 		// https://confluence.atlassian.com/bitbucketserver/http-access-tokens-939515499.html
-		if isBitbucketServerToken {
+		if isHeaderToken {
 			args = append(args, "-c", fmt.Sprintf("http.extraHeader='Authorization: Bearer %s'", token))
 		}
 
@@ -116,7 +116,7 @@ func Checkout(uri, branch, commit, token, dir string, isBitbucketServerToken boo
 }
 
 // PartialCheckout will checkout only given directory from Git repository
-func PartialCheckout(uri, path, branch, commit, token, dir string, isBitbucketServerToken bool) (outputDir string, err error) {
+func PartialCheckout(uri, path, branch, commit, token, dir string, isHeaderToken bool) (outputDir string, err error) {
 	tmpDir := dir
 	if tmpDir == "" {
 		tmpDir, err = os.MkdirTemp("", "git-sparse-checkout")
@@ -132,7 +132,7 @@ func PartialCheckout(uri, path, branch, commit, token, dir string, isBitbucketSe
 		// prohibited. This appends the HTTP Authorization header to the git clone args to
 		// authenticate using a bearer token. More info:
 		// https://confluence.atlassian.com/bitbucketserver/http-access-tokens-939515499.html
-		if isBitbucketServerToken {
+		if isHeaderToken {
 			args = append(args, "-c", fmt.Sprintf("http.extraHeader='Authorization: Bearer %s'", token))
 		}
 

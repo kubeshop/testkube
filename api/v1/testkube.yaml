@@ -3474,7 +3474,7 @@ components:
         token:
           type: string
           description: git auth token for private repositories
-        isBitbucketServerToken:
+        isHeaderToken:
           type: boolean
           description: if true git clone will be executed with the http.extraHeader arg set to the value specified in token
           example: "false"
