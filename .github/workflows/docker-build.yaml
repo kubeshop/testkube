@@ -73,6 +73,7 @@ jobs:
             build.args.SLACK_BOT_CLIENT_ID=${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}
             build.args.SLACK_BOT_CLIENT_SECRET=${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}
             build.args.SEGMENTIO_KEY=${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
+            build.args.CLOUD_SEGMENTIO_KEY=${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
           push: true
 
   releasing_helm_chart_api_server:
@@ -92,7 +93,7 @@ jobs:
           cd ./helm-charts
           git config user.name "kubeshop-bot"
           git config user.email "kubeshop-bot@kubeshop.io"
-          # git checkout -b "release-$RELEASE_VERSION"
+          git checkout -b "release-$RELEASE_VERSION"
 
           # Calling chart releaser script by passing needed folder name:
           # E.G. in order to relase testkube-api":
@@ -102,8 +103,14 @@ jobs:
           export RELEASE_VERSION
 
           cd ./scripts
-          ./chart_releaser.sh --helm-chart-folder testkube-api --main-chart true # --branch true
+          ./chart_releaser.sh --helm-chart-folder testkube-api --main-chart true --branch true
 
         env:
           GH_PUSH_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
+
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          event-type: trigger-executor-docker-build
+          client-payload: '{"release_version": "${{ steps.vars.outputs.tag }}"}'

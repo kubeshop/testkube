@@ -1,6 +1,7 @@
 name: Docker images building and pushing for executor
 on:
-  workflow_dispatch
+  repository_dispatch:
+    types: [ trigger-executor-docker-build ]
 
 jobs:
   single_executor_docker:
@@ -59,8 +60,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
             type=sha
 
       -
@@ -113,6 +114,37 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-
+
+      -
+        name: Login to DockerHub
+        uses: docker/login-action@v1 
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      -
+        name: Docker meta for executor ${{ matrix.executor }}
+        id: meta_executor
+        uses: docker/metadata-action@v3
+        with:
+          images: kubeshop/testkube-executor-${{ matrix.executor }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
+            type=sha
+
+      - 
+        name: Build Executor ${{ matrix.executor }}
+        uses: docker/bake-action@v1
+        with:
+          files: |
+            contrib/executor/${{ matrix.executor }}/build/agent/docker-bake.hcl
+            ${{ steps.meta_executor.outputs.bake-file }}
+          targets: build
+          set: build.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          push: true
 
   executor_jdk_docker:
     strategy:
@@ -172,8 +204,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
             type=sha
           flavor: |
             latest=auto
@@ -189,8 +221,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
             type=sha
           flavor: |
             latest=auto
@@ -278,8 +310,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
             type=sha
           flavor: |
             prefix=
@@ -295,8 +327,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
             type=sha
           flavor: |
             latest=auto
@@ -312,8 +344,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
             type=sha
           flavor: |
             latest=auto
@@ -413,8 +445,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
             type=sha
           flavor: |
             latest=auto
@@ -430,8 +462,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
             type=sha
           flavor: |
             latest=auto
@@ -461,3 +493,13 @@ jobs:
           targets: ${{ matrix.version }}
           set: ${{ matrix.version }}.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
           push: true
+
+  releasing_helm_chart_executor:
+    needs: [single_executor_docker, helper_executor_docker, executor_jdk_docker, executor_cypress_docker, executor_playwright_docker]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          event-type: trigger-executor-helm-releaser
+          client-payload: '{"release_version": "${{ github.event.client_payload.release_version }}"}'
