@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/Masterminds/semver v1.5.0
+	github.com/adhocore/gronx v1.1.2
 	github.com/cli/cli/v2 v2.20.2
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
@@ -47,7 +48,6 @@ require (
 	cloud.google.com/go/compute v1.12.1 // indirect
 	cloud.google.com/go/compute/metadata v0.2.1 // indirect
 	github.com/AlecAivazis/survey/v2 v2.3.6 // indirect
-	github.com/adhocore/gronx v1.1.2 // indirect
 	github.com/alecthomas/chroma v0.10.0 // indirect
 	github.com/aymanbagabas/go-osc52 v1.2.1 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
