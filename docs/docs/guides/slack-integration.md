@@ -87,6 +87,7 @@ The default message is [/charts/testkube-api/slack-template.json](https://github
 
 ```go
 type MessageArgs struct {
+	ExecutionID   string
 	ExecutionName string
 	EventType     string
 	Namespace     string

@@ -13,6 +13,7 @@ import (
 )
 
 type MessageArgs struct {
+	ExecutionID   string
 	ExecutionName string
 	EventType     string
 	Namespace     string
@@ -168,6 +169,7 @@ func (s *Notifier) composeTestsuiteMessage(execution *testkube.TestSuiteExecutio
 	}
 
 	args := MessageArgs{
+		ExecutionID:   execution.Id,
 		ExecutionName: execution.Name,
 		EventType:     string(eventType),
 		Namespace:     execution.TestSuite.Namespace,
@@ -201,6 +203,7 @@ func (s *Notifier) composeTestMessage(execution *testkube.Execution, eventType t
 	}
 
 	args := MessageArgs{
+		ExecutionID:   execution.Id,
 		ExecutionName: execution.Name,
 		EventType:     string(eventType),
 		Namespace:     execution.TestNamespace,
