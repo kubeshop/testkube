@@ -1,7 +1,6 @@
 package crds
 
 import (
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
+	tests_cmd "github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
@@ -21,12 +21,36 @@ import (
 )
 
 var (
+	uri                      string
+	labels                   map[string]string
+	secretVariables          map[string]string
+	schedule                 string
 	executorArgs             []string
 	executorType             string
+	executionName            string
+	variablesFile            string
 	envs                     map[string]string
 	variables                map[string]string
+	secretEnvs               map[string]string
+	httpProxy, httpsProxy    string
+	copyFiles                []string
+	image                    string
+	command                  []string
+	imagePullSecretNames     []string
+	timeout                  int64
+	artifactStorageClassName string
+	artifactVolumeMountPath  string
+	artifactDirs             []string
+	jobTemplate              string
 	preRunScript             string
 	secretVariableReferences map[string]string
+	scraperTemplate          string
+	negativeTest             bool
+	mountConfigMaps          map[string]string
+	variableConfigMaps       []string
+	mountSecrets             map[string]string
+	variableSecrets          []string
+	uploadTimeout            string
 )
 
 // NewCRDTestsCmd is command to generate test CRDs
@@ -38,124 +62,83 @@ func NewCRDTestsCmd() *cobra.Command {
 		Long:    `Generate tests manifest based on directory (e.g. for ArgoCD sync based on tests files)`,
 		Args:    validator.ManifestsDirectory,
 		Run: func(cmd *cobra.Command, args []string) {
-			// try to detect type if none passed
-			d := detector.NewDefaultDetector()
-			dir := args[0]
+			var (
+				testContentType, file, name string
+				crdOnly                     bool
+			)
+			cmd.Flags().StringVar(&testContentType, "test-content-type", "string", "")
+			cmd.Flags().BoolVar(&crdOnly, "crd-only", true, "generate only CRD")
+			cmd.Flags().StringVar(&uri, "uri", "", "")
+			cmd.Flags().StringVar(&file, "file", "", "")
+			cmd.Flags().StringVar(&name, "name", "", "")
+			if executorType == detector.PostmanCollectionType {
+				processPostmanFiles(cmd, args)
+			} else {
+				dir := args[0]
+				err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
+					if err != nil {
+						return nil
+					}
 
-			tests := make(map[string]map[string]client.UpsertTestOptions, 0)
-			testEnvs := make(map[string]map[string]map[string]string, 0)
-			testSecretEnvs := make(map[string]map[string]map[string]string, 0)
+					if info.IsDir() {
+						return nil
+					}
+					cmd.Flags().Set("file", path)
+					cmd.Flags().Set("name", sanitizeName(filepath.Base(path)))
+					options, err := tests_cmd.NewUpsertTestOptionsFromFlags(cmd)
+					if err != nil {
+						ui.Info("# getting test options for file", path, err.Error())
+						ui.Info("---")
+						return nil
+					}
+					(*testkube.TestUpsertRequest)(&options).QuoteTestTextFields()
+					data, err := crd.ExecuteTemplate(crd.TemplateTest, options)
+					if err != nil {
+						ui.Info("# executing crd template for file", err.Error())
+						ui.Info("---")
+						return nil
+					}
 
-			var script []byte
-			var err error
+					ui.Info(data)
+					ui.Info("---")
+					return nil
+				})
 
-			if preRunScript != "" {
-				script, err = os.ReadFile(preRunScript)
-				ui.ExitOnError("getting prerun script", err)
+				ui.ExitOnError("getting directory content", err)
 			}
-
-			err = filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
-				if err != nil {
-					return nil
-				}
-
-				if info.IsDir() {
-					return nil
-				}
-
-				if testName, envName, testType, ok := d.DetectEnvName(path); ok {
-					if _, ok := testEnvs[testType]; !ok {
-						testEnvs[testType] = make(map[string]map[string]string, 0)
-					}
-
-					if _, ok := testEnvs[testType][envName]; !ok {
-						testEnvs[testType][envName] = make(map[string]string, 0)
-					}
-
-					testEnvs[testType][envName][testName] = path
-					return nil
-				}
-
-				if secretTestName, secretEnvName, testType, ok := d.DetectSecretEnvName(path); ok {
-					if _, ok := testSecretEnvs[testType]; !ok {
-						testSecretEnvs[testType] = make(map[string]map[string]string, 0)
-					}
-
-					if _, ok := testSecretEnvs[testType][secretEnvName]; !ok {
-						testSecretEnvs[testType][secretEnvName] = make(map[string]string, 0)
-					}
-
-					testSecretEnvs[testType][secretEnvName][secretTestName] = path
-					return nil
-				}
-
-				ns, _ := cmd.Flags().GetString("namespace")
-				test, err := generateTest(ns, path)
-				if err != nil {
-					if !errors.Is(err, ErrTypeNotDetected) {
-						return err
-					}
-
-					ui.UseStderr()
-					ui.Warn(fmt.Sprintf("generate test for file %s got an error: %v", path, err))
-					return nil
-				}
-
-				testName, testType, ok := d.DetectTestName(path)
-				if !ok {
-					testName = test.Name
-					testType = test.Type_
-				}
-
-				if executorType != "" && testType != executorType {
-					return nil
-				}
-
-				if _, ok := tests[testType]; !ok {
-					tests[testType] = make(map[string]client.UpsertTestOptions, 0)
-				}
-
-				scriptBody := string(script)
-				if scriptBody != "" {
-					scriptBody = fmt.Sprintf("%q", strings.TrimSpace(scriptBody))
-				}
-
-				for key, value := range envs {
-					if value != "" {
-						envs[key] = fmt.Sprintf("%q", value)
-					}
-				}
-
-				vars, err := common.CreateVariables(cmd, true)
-				if err != nil {
-					return err
-				}
-
-				for name, variable := range vars {
-					if variable.Value != "" {
-						variable.Value = fmt.Sprintf("%q", variable.Value)
-						vars[name] = variable
-					}
-				}
-
-				test.ExecutionRequest = &testkube.ExecutionRequest{Args: executorArgs, Envs: envs, Variables: vars, PreRunScript: scriptBody}
-				tests[testType][testName] = *test
-				return nil
-			})
-
-			ui.ExitOnError("getting directory content", err)
-
-			generateCRDs(addEnvToTests(tests, testEnvs, testSecretEnvs))
 		},
 	}
 
 	cmd.Flags().StringVarP(&executorType, "type", "t", "", "test type, if it is specified it will generate only tests of this type")
-	cmd.Flags().StringArrayVarP(&executorArgs, "executor-args", "", []string{}, "executor binary additional arguments")
-	cmd.Flags().StringToStringVarP(&envs, "env", "", map[string]string{}, "envs in a form of name1=val1 passed to executor")
+	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().StringToStringVarP(&secretVariables, "secret-variable", "s", nil, "secret variable key value pair: --secret-variable key1=value1")
+	cmd.Flags().StringVar(&schedule, "schedule", "", "test schedule in a cronjob form: * * * * *")
+	cmd.Flags().StringArrayVar(&executorArgs, "executor-args", []string{}, "executor binary additional arguments")
+	cmd.Flags().StringVar(&executionName, "execution-name", "", "execution name, if empty will be autogenerated")
+	cmd.Flags().StringVar(&variablesFile, "variables-file", "", "variables file path, e.g. postman env file - will be passed to executor if supported")
+	cmd.Flags().StringToStringVar(&envs, "env", map[string]string{}, "envs in a form of name1=val1 passed to executor")
 	cmd.Flags().StringToStringVarP(&variables, "variable", "v", nil, "variable key value pair: --variable key1=value1")
+	cmd.Flags().StringToStringVarP(&secretEnvs, "secret-env", "", map[string]string{}, "secret envs in a form of secret_key1=secret_name1 passed to executor")
+	cmd.Flags().StringVar(&httpProxy, "http-proxy", "", "http proxy for executor containers")
+	cmd.Flags().StringVar(&httpsProxy, "https-proxy", "", "https proxy for executor containers")
+	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
+	cmd.Flags().StringVar(&image, "image", "", "image for container executor")
+	cmd.Flags().StringArrayVar(&imagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in container executor")
+	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in container executor")
+	cmd.Flags().Int64Var(&timeout, "timeout", 0, "duration in seconds for test to timeout. 0 disables timeout.")
+	cmd.Flags().StringVar(&artifactStorageClassName, "artifact-storage-class-name", "", "artifact storage class name for container executor")
+	cmd.Flags().StringVar(&artifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
+	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for container executor")
+	cmd.Flags().StringVar(&jobTemplate, "job-template", "", "job template file path for extensions to job template")
 	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
-	cmd.Flags().MarkDeprecated("env", "env is deprecated use variable instead")
+	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
+	cmd.Flags().BoolVar(&negativeTest, "negative-test", false, "negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa")
+	cmd.Flags().StringToStringVarP(&mountConfigMaps, "mount-configmap", "", map[string]string{}, "config map value pair for mounting it to executor pod: --mount-configmap configmap_name=configmap_mountpath")
+	cmd.Flags().StringArrayVar(&variableConfigMaps, "variable-configmap", []string{}, "config map name used to map all keys to basis variables")
+	cmd.Flags().StringToStringVarP(&mountSecrets, "mount-secret", "", map[string]string{}, "secret value pair for mounting it to executor pod: --mount-secret secret_name=secret_mountpath")
+	cmd.Flags().StringArrayVar(&variableSecrets, "variable-secret", []string{}, "secret name used to map all keys to secret variables")
 	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
+	cmd.Flags().StringVar(&uploadTimeout, "upload-timeout", "", "timeout to use when uploading files, example: 30s")
 
 	return cmd
 }
@@ -163,36 +146,107 @@ func NewCRDTestsCmd() *cobra.Command {
 // ErrTypeNotDetected is not detcted test type error
 var ErrTypeNotDetected = fmt.Errorf("type not detected")
 
-// generateTest generates Test based on directory of test files
-func generateTest(namespace, path string) (*client.UpsertTestOptions, error) {
-	var testType string
-
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	// try to detect type if none passed
+// processPostmanFiles processes postman files
+func processPostmanFiles(cmd *cobra.Command, args []string) error {
 	d := detector.NewDefaultDetector()
-	if detectedType, ok := d.Detect(path, client.UpsertTestOptions{Content: &testkube.TestContent{Data: string(content)}}); ok {
-		ui.Debug("Detected test type", detectedType)
-		testType = detectedType
-	} else {
-		return nil, ErrTypeNotDetected
-	}
+	dir := args[0]
 
-	name := filepath.Base(path)
-	test := &client.UpsertTestOptions{
-		Name:      sanitizeName(name),
-		Namespace: namespace,
-		Content: &testkube.TestContent{
-			Type_: string(testkube.TestContentTypeString),
-			Data:  fmt.Sprintf("%q", strings.TrimSpace(string(content))),
-		},
-		Type_: testType,
-	}
+	tests := make(map[string]map[string]client.UpsertTestOptions, 0)
+	testEnvs := make(map[string]map[string]map[string]string, 0)
+	testSecretEnvs := make(map[string]map[string]map[string]string, 0)
 
-	return test, nil
+	var script []byte
+
+	err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		if testName, envName, testType, ok := d.DetectEnvName(path); ok {
+			if _, ok := testEnvs[testType]; !ok {
+				testEnvs[testType] = make(map[string]map[string]string, 0)
+			}
+
+			if _, ok := testEnvs[testType][envName]; !ok {
+				testEnvs[testType][envName] = make(map[string]string, 0)
+			}
+
+			testEnvs[testType][envName][testName] = path
+			return nil
+		}
+
+		if secretTestName, secretEnvName, testType, ok := d.DetectSecretEnvName(path); ok {
+			if _, ok := testSecretEnvs[testType]; !ok {
+				testSecretEnvs[testType] = make(map[string]map[string]string, 0)
+			}
+
+			if _, ok := testSecretEnvs[testType][secretEnvName]; !ok {
+				testSecretEnvs[testType][secretEnvName] = make(map[string]string, 0)
+			}
+
+			testSecretEnvs[testType][secretEnvName][secretTestName] = path
+			return nil
+		}
+
+		test, err := tests_cmd.NewUpsertTestOptionsFromFlags(cmd)
+		if err != nil {
+			ui.Warn(fmt.Sprintf("generate test for file %s got an error: %v", path, err))
+			ui.UseStderr()
+			return err
+		}
+		test.Name = sanitizeName(filepath.Base(path))
+
+		testName, testType, ok := d.DetectTestName(path)
+		if !ok {
+			testName = test.Name
+			testType = test.Type_
+		}
+
+		if executorType != "" && testType != executorType {
+			return nil
+		}
+
+		if _, ok := tests[testType]; !ok {
+			tests[testType] = make(map[string]client.UpsertTestOptions, 0)
+		}
+
+		scriptBody := string(script)
+		if scriptBody != "" {
+			scriptBody = fmt.Sprintf("%q", strings.TrimSpace(scriptBody))
+		}
+
+		for key, value := range envs {
+			if value != "" {
+				envs[key] = fmt.Sprintf("%q", value)
+			}
+		}
+
+		vars, err := common.CreateVariables(cmd, true)
+		if err != nil {
+			return err
+		}
+
+		for name, variable := range vars {
+			if variable.Value != "" {
+				variable.Value = fmt.Sprintf("%q", variable.Value)
+				vars[name] = variable
+			}
+		}
+
+		test.ExecutionRequest = &testkube.ExecutionRequest{Args: executorArgs, Envs: envs, Variables: vars, PreRunScript: scriptBody}
+		tests[testType][testName] = test
+		return nil
+	})
+
+	ui.ExitOnError("getting directory content", err)
+
+	generateCRDs(addEnvToTests(tests, testEnvs, testSecretEnvs))
+	return nil
+
 }
 
 // sanitizeName sanitizes test name

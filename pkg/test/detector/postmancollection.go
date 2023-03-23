@@ -14,6 +14,11 @@ import (
 type PostmanCollectionAdapter struct {
 }
 
+const (
+	// PostmanCollectionType is type of Postman collection
+	PostmanCollectionType = "postman/collection"
+)
+
 // Is detects based on upsert test options what kind of test it is
 func (d PostmanCollectionAdapter) Is(options apiClient.UpsertTestOptions) (name string, ok bool) {
 	var data map[string]interface{}
@@ -113,7 +118,7 @@ func (d PostmanCollectionAdapter) GetSecretVariables(data string) (map[string]te
 
 // GetType returns test type
 func (d PostmanCollectionAdapter) GetType() string {
-	return "postman/collection"
+	return PostmanCollectionType
 }
 
 // EnvFile contains env file structure
