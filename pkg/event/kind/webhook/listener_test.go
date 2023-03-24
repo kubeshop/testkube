@@ -30,7 +30,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		l := NewWebhookListener("l1", svr.URL, "", testEventTypes)
+		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "")
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -51,7 +51,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		l := NewWebhookListener("l1", svr.URL, "", testEventTypes)
+		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "")
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -67,7 +67,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 	t.Run("send event bad uri", func(t *testing.T) {
 		// given
 
-		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testEventTypes)
+		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testEventTypes, "")
 
 		// when
 		r := s.Notify(testkube.Event{
@@ -79,6 +79,30 @@ func TestWebhookListener_Notify(t *testing.T) {
 		assert.NotEqual(t, "", r.Error())
 	})
 
+	t.Run("send event success response use payload field", func(t *testing.T) {
+		// given
+		testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var event testkube.Event
+			err := json.NewDecoder(r.Body).Decode(&event)
+			// then
+			assert.NoError(t, err)
+			assert.Equal(t, executionID, event.TestExecution.Id)
+		})
+
+		svr := httptest.NewServer(testHandler)
+		defer svr.Close()
+
+		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "field")
+
+		// when
+		r := l.Notify(testkube.Event{
+			Type_:         testkube.EventStartTest,
+			TestExecution: exampleExecution(),
+		})
+
+		assert.Equal(t, "", r.Error())
+
+	})
 }
 
 func exampleExecution() *testkube.Execution {

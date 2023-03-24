@@ -18,24 +18,26 @@ import (
 
 var _ common.Listener = &WebhookListener{}
 
-func NewWebhookListener(name, uri, selector string, events []testkube.EventType) *WebhookListener {
+func NewWebhookListener(name, uri, selector string, events []testkube.EventType, payloadObjectField string) *WebhookListener {
 	return &WebhookListener{
-		name:       name,
-		Uri:        uri,
-		Log:        log.DefaultLogger,
-		HttpClient: thttp.NewClient(),
-		selector:   selector,
-		events:     events,
+		name:               name,
+		Uri:                uri,
+		Log:                log.DefaultLogger,
+		HttpClient:         thttp.NewClient(),
+		selector:           selector,
+		events:             events,
+		payloadObjectField: payloadObjectField,
 	}
 }
 
 type WebhookListener struct {
-	name       string
-	Uri        string
-	Log        *zap.SugaredLogger
-	HttpClient *http.Client
-	events     []testkube.EventType
-	selector   string
+	name               string
+	Uri                string
+	Log                *zap.SugaredLogger
+	HttpClient         *http.Client
+	events             []testkube.EventType
+	selector           string
+	payloadObjectField string
 }
 
 func (l *WebhookListener) Name() string {
@@ -51,16 +53,24 @@ func (l *WebhookListener) Events() []testkube.EventType {
 }
 func (l *WebhookListener) Metadata() map[string]string {
 	return map[string]string{
-		"name":     l.Name(),
-		"uri":      l.Uri,
-		"selector": l.selector,
-		"events":   fmt.Sprintf("%v", l.events),
+		"name":               l.Name(),
+		"uri":                l.Uri,
+		"selector":           l.selector,
+		"events":             fmt.Sprintf("%v", l.events),
+		"payloadObjectField": l.payloadObjectField,
 	}
+}
+
+func (l *WebhookListener) PayloadObjectField() string {
+	return l.payloadObjectField
 }
 
 func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventResult) {
 	body := bytes.NewBuffer([]byte{})
 	err := json.NewEncoder(body).Encode(event)
+	if err == nil && l.payloadObjectField != "" {
+		err = json.NewEncoder(body).Encode(map[string]string{l.payloadObjectField: string(body.Bytes())})
+	}
 
 	log := l.Log.With(event.Log()...)
 

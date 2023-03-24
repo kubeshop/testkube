@@ -10,12 +10,13 @@ import (
 // MapCRDToAPI maps Webhook CRD to OpenAPI spec Webhook
 func MapCRDToAPI(item executorv1.Webhook) testkube.Webhook {
 	return testkube.Webhook{
-		Name:      item.Name,
-		Namespace: item.Namespace,
-		Uri:       item.Spec.Uri,
-		Events:    MapStringArrayToCRDEvents(item.Spec.Events),
-		Selector:  item.Spec.Selector,
-		Labels:    item.Labels,
+		Name:               item.Name,
+		Namespace:          item.Namespace,
+		Uri:                item.Spec.Uri,
+		Events:             MapStringArrayToCRDEvents(item.Spec.Events),
+		Selector:           item.Spec.Selector,
+		Labels:             item.Labels,
+		PayloadObjectField: item.Spec.PayloadObjectField,
 	}
 }
 
@@ -36,9 +37,10 @@ func MapAPIToCRD(request testkube.WebhookCreateRequest) executorv1.Webhook {
 			Labels:    request.Labels,
 		},
 		Spec: executorv1.WebhookSpec{
-			Uri:      request.Uri,
-			Events:   MapEventTypesToStringArray(request.Events),
-			Selector: request.Selector,
+			Uri:                request.Uri,
+			Events:             MapEventTypesToStringArray(request.Events),
+			Selector:           request.Selector,
+			PayloadObjectField: request.PayloadObjectField,
 		},
 	}
 }

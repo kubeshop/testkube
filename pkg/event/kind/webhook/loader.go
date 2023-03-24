@@ -40,7 +40,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 	for _, webhook := range webhookList.Items {
 		types := webhooks.MapStringArrayToCRDEvents(webhook.Spec.Events)
 		name := fmt.Sprintf("%s.%s", webhook.ObjectMeta.Namespace, webhook.ObjectMeta.Name)
-		listeners = append(listeners, NewWebhookListener(name, webhook.Spec.Uri, webhook.Spec.Selector, types))
+		listeners = append(listeners, NewWebhookListener(name, webhook.Spec.Uri, webhook.Spec.Selector, types, webhook.Spec.PayloadObjectField))
 	}
 
 	return listeners, nil

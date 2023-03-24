@@ -17,6 +17,7 @@ testkube create webhook [flags]
   -h, --help                   help for webhook
   -l, --label stringToString   label key value pair: --label key1=value1 (default [])
   -n, --name string            unique webhook name - mandatory
+      --payload-field string   field to use for notification object payload
       --selector string        expression to select tests and test suites for webhook events: --selector app=backend
   -u, --uri string             URI which should be called when given event occurs
 ```
