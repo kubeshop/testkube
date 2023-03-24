@@ -17,6 +17,7 @@ func NewGetExecutionCmd() *cobra.Command {
 		selectors []string
 		testID    string
 		limit     int
+		logsOnly  bool
 	)
 
 	cmd := &cobra.Command{
@@ -32,8 +33,12 @@ func NewGetExecutionCmd() *cobra.Command {
 				execution, err := client.GetExecution(executionID)
 				ui.ExitOnError("getting test execution: "+executionID, err)
 
-				err = render.Obj(cmd, execution, os.Stdout, renderer.ExecutionRenderer)
-				ui.ExitOnError("rendering execution", err)
+				if logsOnly {
+					render.RenderExecutionResult(&execution, logsOnly)
+				} else {
+					err = render.Obj(cmd, execution, os.Stdout, renderer.ExecutionRenderer)
+					ui.ExitOnError("rendering execution", err)
+				}
 			} else {
 				executions, err := client.ListExecutions(testID, limit, strings.Join(selectors, ","))
 				ui.ExitOnError("Getting executions for test: "+testID, err)
@@ -46,6 +51,7 @@ func NewGetExecutionCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringVarP(&testID, "test", "", "", "test id")
 	cmd.Flags().IntVarP(&limit, "limit", "", 10, "records limit")
+	cmd.Flags().BoolVar(&logsOnly, "logs-only", false, "show only execution logs")
 
 	return cmd
 }

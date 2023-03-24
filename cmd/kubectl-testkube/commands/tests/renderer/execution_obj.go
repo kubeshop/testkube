@@ -51,7 +51,7 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 		ui.Warn("  Certificate:    ", execution.Content.Repository.CertificateSecret)
 	}
 
-	render.RenderExecutionResult(&execution)
+	render.RenderExecutionResult(&execution, false)
 
 	ui.NL()
 
