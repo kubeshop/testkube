@@ -26,6 +26,9 @@ const (
 	healthcheckCommand = "healthcheck"
 )
 
+// buffer up to five messages per worker
+const bufferSizePerWorker = 5
+
 func NewGRPCConnection(ctx context.Context, isInsecure bool, server string, logger *zap.SugaredLogger) (*grpc.ClientConn, error) {
 	creds := credentials.NewTLS(nil)
 	if isInsecure {
@@ -53,16 +56,16 @@ type Agent struct {
 	healthcheckInterval time.Duration
 }
 
-func NewAgent(logger *zap.SugaredLogger, handler fasthttp.RequestHandler, apiKey string, client cloud.TestKubeCloudAPIClient) (*Agent, error) {
+func NewAgent(logger *zap.SugaredLogger, handler fasthttp.RequestHandler, apiKey string, client cloud.TestKubeCloudAPIClient, workerCount int) (*Agent, error) {
 	return &Agent{
 		handler:             handler,
 		logger:              logger,
 		apiKey:              apiKey,
 		client:              client,
 		events:              make(chan testkube.Event),
-		workerCount:         50,
-		requestBuffer:       make(chan *cloud.ExecuteRequest, 250),
-		responseBuffer:      make(chan *cloud.ExecuteResponse, 250),
+		workerCount:         workerCount,
+		requestBuffer:       make(chan *cloud.ExecuteRequest, bufferSizePerWorker*workerCount),
+		responseBuffer:      make(chan *cloud.ExecuteResponse, bufferSizePerWorker*workerCount),
 		receiveTimeout:      5 * time.Minute,
 		sendTimeout:         30 * time.Second,
 		healthcheckInterval: 30 * time.Second,

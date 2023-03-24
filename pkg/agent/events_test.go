@@ -48,7 +48,7 @@ func TestEventLoop(t *testing.T) {
 
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 
-	agent, err := agent.NewAgent(logger.Sugar(), nil, "api-key", grpcClient)
+	agent, err := agent.NewAgent(logger.Sugar(), nil, "api-key", grpcClient, 5)
 	assert.NoError(t, err)
 	go func() {
 		l, err := agent.Load()

@@ -51,7 +51,7 @@ func TestCommandExecution(t *testing.T) {
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 
 	logger, _ := zap.NewDevelopment()
-	agent, err := agent.NewAgent(logger.Sugar(), m, "api-key", grpcClient)
+	agent, err := agent.NewAgent(logger.Sugar(), m, "api-key", grpcClient, 5)
 	if err != nil {
 		t.Fatal(err)
 	}

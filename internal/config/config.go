@@ -42,6 +42,7 @@ type Config struct {
 	TestkubeCloudAPIKey              string `envconfig:"TESTKUBE_CLOUD_API_KEY" default:""`
 	TestkubeCloudURL                 string `envconfig:"TESTKUBE_CLOUD_URL" default:""`
 	TestkubeCloudTLSInsecure         bool   `envconfig:"TESTKUBE_CLOUD_TLS_INSECURE" default:"false"`
+	TestkubeCloudWorkerCount         int    `envconfig:"TESTKUBE_CLOUD_WORKER_COUNT" default:"50"`
 	TestkubeWatcherNamespaces        string `envconfig:"TESTKUBE_WATCHER_NAMESPACES" default:""`
 }
 
