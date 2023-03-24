@@ -74,7 +74,7 @@ type CloudServer struct {
 	cloud.UnimplementedTestKubeCloudAPIServer
 }
 
-func (cs *CloudServer) Execute(srv cloud.TestKubeCloudAPI_ExecuteServer) error {
+func (cs *CloudServer) ExecuteAsync(srv cloud.TestKubeCloudAPI_ExecuteAsyncServer) error {
 	md, ok := metadata.FromIncomingContext(srv.Context())
 	if !ok {
 		panic("no metadata")
