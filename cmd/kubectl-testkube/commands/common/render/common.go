@@ -63,7 +63,7 @@ func RenderPrettyList(obj ui.TableData, w io.Writer) error {
 	return nil
 }
 
-func RenderExecutionResult(execution *testkube.Execution) {
+func RenderExecutionResult(execution *testkube.Execution, logsOnly bool) {
 
 	result := execution.ExecutionResult
 	if result == nil {
@@ -81,8 +81,10 @@ func RenderExecutionResult(execution *testkube.Execution) {
 
 	case result.IsPassed():
 		ui.Info(result.Output)
-		duration := execution.EndTime.Sub(execution.StartTime)
-		ui.Success("Test execution completed with success in " + duration.String())
+		if !logsOnly {
+			duration := execution.EndTime.Sub(execution.StartTime)
+			ui.Success("Test execution completed with success in " + duration.String())
+		}
 
 	case result.IsAborted():
 		ui.Warn("Test execution aborted")
@@ -91,16 +93,26 @@ func RenderExecutionResult(execution *testkube.Execution) {
 		ui.Warn("Test execution timeout")
 
 	case result.IsFailed():
-		ui.UseStderr()
-		ui.Warn("Test execution failed:\n")
-		ui.Errf(result.ErrorMessage)
+		if logsOnly {
+			ui.Info(result.ErrorMessage)
+		} else {
+			ui.UseStderr()
+			ui.Warn("Test execution failed:\n")
+			ui.Errf(result.ErrorMessage)
+		}
+
 		ui.Info(result.Output)
 		os.Exit(1)
 
 	default:
-		ui.UseStderr()
-		ui.Warn("Test execution status unknown:\n")
-		ui.Errf(result.ErrorMessage)
+		if logsOnly {
+			ui.Info(result.ErrorMessage)
+		} else {
+			ui.UseStderr()
+			ui.Warn("Test execution status unknown:\n")
+			ui.Errf(result.ErrorMessage)
+		}
+
 		ui.Info(result.Output)
 		os.Exit(1)
 	}
