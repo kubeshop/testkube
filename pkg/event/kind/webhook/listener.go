@@ -69,7 +69,9 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	body := bytes.NewBuffer([]byte{})
 	err := json.NewEncoder(body).Encode(event)
 	if err == nil && l.payloadObjectField != "" {
-		err = json.NewEncoder(body).Encode(map[string]string{l.payloadObjectField: string(body.Bytes())})
+		data := map[string]string{l.payloadObjectField: string(body.Bytes())}
+		body.Reset()
+		err = json.NewEncoder(body).Encode(data)
 	}
 
 	log := l.Log.With(event.Log()...)
