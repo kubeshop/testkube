@@ -4005,7 +4005,7 @@ components:
       type: object
       required:
         - uri
-        - types
+        - events
       properties:
         name:
           type: string
@@ -4023,6 +4023,9 @@ components:
         selector:
           type: string
           description: Labels to filter for tests and test suites
+        payloadObjectField:
+          type: string
+          description: will load the generated payload for notification inside the object
         labels:
           type: object
           description: "webhook labels"
