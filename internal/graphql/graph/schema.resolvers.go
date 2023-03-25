@@ -35,9 +35,10 @@ func (r *subscriptionResolver) Executors(ctx context.Context) (<-chan []model.Ex
 				return err
 			}
 
-			executors := make([]model.ExecutorDetails, len(execs.Items))
+			executors := []model.ExecutorDetails{}
 
-			for _, exec := range execs.Items {
+			for _, ex := range execs.Items {
+				var exec = ex
 				// Mapping is pain in the ass :/
 				executors = append(executors, model.ExecutorDetails{
 					Name: &exec.Name,
@@ -70,6 +71,12 @@ func (r *Resolver) Subscription() SubscriptionResolver { return &subscriptionRes
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
 
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//     it when you're done.
+//   - You have helper methods in this file. Move them out to keep these resolver files clean.
 func SliceToSliceOfPointers[T interface{}](in []T) (out []*T) {
 	for _, e := range in {
 		out = append(out, &e)
