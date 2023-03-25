@@ -2749,7 +2749,7 @@ components:
             app: "backend"
         runningContext:
           $ref: "#/components/schemas/RunningContext"
-          description: running context for the test suite execution     
+          description: running context for the test suite execution
 
     TestSuiteExecutionStatus:
       type: string
@@ -4038,16 +4038,34 @@ components:
       required:
         - type
         - id
+        - resourceId
+        - resource
       properties:
         id:
           type: string
           description: UUID of event
+        resource:
+          $ref: "#/components/schemas/EventResource"
+        resourceId:
+          type: string
+          description: ID of resource
         type:
           $ref: "#/components/schemas/EventType"
         testExecution:
           $ref: "#/components/schemas/Execution"
         testSuiteExecution:
           $ref: "#/components/schemas/TestSuiteExecution"
+
+    EventResource:
+      type: string
+      enum:
+        - test
+        - testsuite
+        - executor
+        - trigger
+        - webhook
+        - testexecution
+        - testsuiteexecution
 
     EventType:
       type: string
@@ -4062,6 +4080,9 @@ components:
         - end-testsuite-failed
         - end-testsuite-aborted
         - end-testsuite-timeout
+        - created
+        - updated
+        - deleted
 
     EventResult:
       description: Listener result after sending particular event

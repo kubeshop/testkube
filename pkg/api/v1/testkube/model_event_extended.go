@@ -7,6 +7,15 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
+func NewEvent(t *EventType, resource *EventResource, id string) Event {
+	return Event{
+		Id:         uuid.NewString(),
+		ResourceId: id,
+		Resource:   resource,
+		Type_:      t,
+	}
+}
+
 func NewEventStartTest(execution *Execution) Event {
 	return Event{
 		Id:            uuid.NewString(),
@@ -120,12 +129,20 @@ func (e Event) Log() []any {
 		labelsStr += k + "=" + v + " "
 	}
 
+	resource := ""
+	if e.Resource != nil {
+		resource = string(*e.Resource)
+	}
+
 	return []any{
 		"id", e.Id,
 		"type", eventType,
-		"executionId", id,
+		"resource", resource,
+		"resourceId", e.ResourceId,
 		"executionName", name,
+		"executionId", id,
 		"labels", labelsStr,
+		"topic", e.Topic(),
 	}
 }
 
@@ -137,8 +154,6 @@ func (e Event) Valid(selector string, types []EventType) (valid bool) {
 		executionLabels = e.TestSuiteExecution.Labels
 	} else if e.TestExecution != nil {
 		executionLabels = e.TestExecution.Labels
-	} else {
-		return false
 	}
 
 	typesMatch := false
@@ -164,4 +179,18 @@ func (e Event) Valid(selector string, types []EventType) (valid bool) {
 	}
 
 	return
+}
+
+// Topic returns topic for event based on resource and resource id
+// or fallback to global "events" topic
+func (e Event) Topic() string {
+	if e.Resource == nil {
+		return "events.all"
+	}
+
+	if e.ResourceId == "" {
+		return "events." + string(*e.Resource)
+	}
+
+	return "events." + string(*e.Resource) + "." + e.ResourceId
 }
