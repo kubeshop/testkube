@@ -80,7 +80,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		assert.NotEqual(t, "", r.Error())
 	})
 
-	t.Run("send event success response use payload field", func(t *testing.T) {
+	t.Run("send event success response using payload field", func(t *testing.T) {
 		// given
 		testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			body := bytes.NewBuffer([]byte{})
