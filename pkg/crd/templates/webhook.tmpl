@@ -22,3 +22,6 @@ spec:
   {{- if .Selector }}
   selector: {{ .Selector }}
   {{- end }}
+  {{- if .PayloadObjectField }}
+  payloadObjectField: {{ .PayloadObjectField }}
+  {{- end }}
