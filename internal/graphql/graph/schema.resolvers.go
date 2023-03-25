@@ -18,9 +18,9 @@ func (r *queryResolver) Executors(ctx context.Context) ([]*model.Executor, error
 	panic(fmt.Errorf("not implemented: Executors - executors"))
 }
 
-// Executor is the resolver for the executor field.
-func (r *subscriptionResolver) Executor(ctx context.Context) (<-chan *model.ExecutorDetails, error) {
-	ch := make(chan *model.ExecutorDetails)
+// Executors is the resolver for the executors field.
+func (r *subscriptionResolver) Executors(ctx context.Context) (<-chan []model.ExecutorDetails, error) {
+	ch := make(chan []model.ExecutorDetails)
 
 	// TODO You can (and probably should) handle your channels in a central place outside of `schema.resolvers.go`.
 	// For this example we'll simply use a Goroutine with a simple loop.
@@ -30,17 +30,30 @@ func (r *subscriptionResolver) Executor(ctx context.Context) (<-chan *model.Exec
 		r.Bus.SubscribeTopic("events.executor.>", rand.String(30), func(e testkube.Event) error {
 			r.Log.Infof("%s %s %s\n", e.Type_, *e.Resource, e.ResourceId)
 
-			exec, err := r.Client.Get(e.ResourceId)
+			execs, err := r.Client.List("")
 			if err != nil {
 				return err
+			}
+
+			executors := make([]model.ExecutorDetails, len(execs.Items))
+
+			for _, exec := range execs.Items {
+				// Mapping is pain in the ass :/
+				executors = append(executors, model.ExecutorDetails{
+					Name: &exec.Name,
+					Executor: &model.Executor{
+						Args:    SliceToSliceOfPointers(exec.Spec.Args),
+						Command: SliceToSliceOfPointers(exec.Spec.Command),
+						//ContentTypes: ,
+						ExecutorType: &exec.Spec.ExecutorType,
+					},
+				})
 			}
 
 			// TODO valid data mapper between types
 			// It's a little bit tricky because we have to map between different types based
 			// on even more ugly pointers than spec (slices have pointers too :/ )
-			ch <- &model.ExecutorDetails{Name: &exec.Name, Executor: &model.Executor{
-				Image: &exec.Spec.Image,
-			}}
+			ch <- executors
 			return nil
 		})
 	}()
@@ -56,3 +69,10 @@ func (r *Resolver) Subscription() SubscriptionResolver { return &subscriptionRes
 
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
+
+func SliceToSliceOfPointers[T interface{}](in []T) (out []*T) {
+	for _, e := range in {
+		out = append(out, &e)
+	}
+	return
+}

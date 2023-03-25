@@ -1,5 +1,7 @@
 package main
 
+// TODO move it to main API server
+
 import (
 	"net/http"
 	"os"

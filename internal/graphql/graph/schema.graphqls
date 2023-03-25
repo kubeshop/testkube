@@ -2,7 +2,7 @@ type Subscription {
   """
   `executor` will return a stream of `Executor` objects.
   """
-  executor: ExecutorDetails!
+  executors: [ExecutorDetails!]
 }
 
 
@@ -18,8 +18,15 @@ type Query {
 }
 
 type ExecutorDetails {
+  event: Event
   name: String 
   executor: Executor
+}
+
+type Event {
+  type: String
+  resource: String 
+  resourceId: String 
 }
 
 

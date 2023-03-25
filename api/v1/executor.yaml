@@ -1,3 +1,5 @@
+# TODO remove it - it was only to generate model from it as testkube.yaml have a lot of issues
+# and validator can't go through it
 openapi: 3.0.1
 
 servers:

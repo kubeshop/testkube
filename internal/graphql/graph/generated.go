@@ -45,6 +45,12 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	Event struct {
+		Resource   func(childComplexity int) int
+		ResourceID func(childComplexity int) int
+		Type       func(childComplexity int) int
+	}
+
 	Executor struct {
 		Args             func(childComplexity int) int
 		Command          func(childComplexity int) int
@@ -61,6 +67,7 @@ type ComplexityRoot struct {
 	}
 
 	ExecutorDetails struct {
+		Event    func(childComplexity int) int
 		Executor func(childComplexity int) int
 		Name     func(childComplexity int) int
 	}
@@ -80,7 +87,7 @@ type ComplexityRoot struct {
 	}
 
 	Subscription struct {
-		Executor func(childComplexity int) int
+		Executors func(childComplexity int) int
 	}
 }
 
@@ -88,7 +95,7 @@ type QueryResolver interface {
 	Executors(ctx context.Context) ([]*model.Executor, error)
 }
 type SubscriptionResolver interface {
-	Executor(ctx context.Context) (<-chan *model.ExecutorDetails, error)
+	Executors(ctx context.Context) (<-chan []model.ExecutorDetails, error)
 }
 
 type executableSchema struct {
@@ -105,6 +112,27 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e}
 	_ = ec
 	switch typeName + "." + field {
+
+	case "Event.resource":
+		if e.complexity.Event.Resource == nil {
+			break
+		}
+
+		return e.complexity.Event.Resource(childComplexity), true
+
+	case "Event.resourceId":
+		if e.complexity.Event.ResourceID == nil {
+			break
+		}
+
+		return e.complexity.Event.ResourceID(childComplexity), true
+
+	case "Event.type":
+		if e.complexity.Event.Type == nil {
+			break
+		}
+
+		return e.complexity.Event.Type(childComplexity), true
 
 	case "Executor.args":
 		if e.complexity.Executor.Args == nil {
@@ -190,6 +218,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Executor.URI(childComplexity), true
 
+	case "ExecutorDetails.event":
+		if e.complexity.ExecutorDetails.Event == nil {
+			break
+		}
+
+		return e.complexity.ExecutorDetails.Event(childComplexity), true
+
 	case "ExecutorDetails.executor":
 		if e.complexity.ExecutorDetails.Executor == nil {
 			break
@@ -239,12 +274,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Executors(childComplexity), true
 
-	case "Subscription.executor":
-		if e.complexity.Subscription.Executor == nil {
+	case "Subscription.executors":
+		if e.complexity.Subscription.Executors == nil {
 			break
 		}
 
-		return e.complexity.Subscription.Executor(childComplexity), true
+		return e.complexity.Subscription.Executors(childComplexity), true
 
 	}
 	return 0, false
@@ -386,6 +421,129 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 // endregion ************************** directives.gotpl **************************
 
 // region    **************************** field.gotpl *****************************
+
+func (ec *executionContext) _Event_type(ctx context.Context, field graphql.CollectedField, obj *model.Event) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Event_type(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Type, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Event_type(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Event",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Event_resource(ctx context.Context, field graphql.CollectedField, obj *model.Event) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Event_resource(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Resource, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Event_resource(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Event",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Event_resourceId(ctx context.Context, field graphql.CollectedField, obj *model.Event) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Event_resourceId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ResourceID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Event_resourceId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Event",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
 
 func (ec *executionContext) _Executor_args(ctx context.Context, field graphql.CollectedField, obj *model.Executor) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Executor_args(ctx, field)
@@ -891,6 +1049,55 @@ func (ec *executionContext) fieldContext_Executor_uri(ctx context.Context, field
 	return fc, nil
 }
 
+func (ec *executionContext) _ExecutorDetails_event(ctx context.Context, field graphql.CollectedField, obj *model.ExecutorDetails) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ExecutorDetails_event(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Event, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Event)
+	fc.Result = res
+	return ec.marshalOEvent2ᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋinternalᚋgraphqlᚋgraphᚋmodelᚐEvent(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ExecutorDetails_event(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ExecutorDetails",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "type":
+				return ec.fieldContext_Event_type(ctx, field)
+			case "resource":
+				return ec.fieldContext_Event_resource(ctx, field)
+			case "resourceId":
+				return ec.fieldContext_Event_resourceId(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Event", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ExecutorDetails_name(ctx context.Context, field graphql.CollectedField, obj *model.ExecutorDetails) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ExecutorDetails_name(ctx, field)
 	if err != nil {
@@ -1359,8 +1566,8 @@ func (ec *executionContext) fieldContext_Query___schema(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Subscription_executor(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
-	fc, err := ec.fieldContext_Subscription_executor(ctx, field)
+func (ec *executionContext) _Subscription_executors(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
+	fc, err := ec.fieldContext_Subscription_executors(ctx, field)
 	if err != nil {
 		return nil
 	}
@@ -1373,21 +1580,18 @@ func (ec *executionContext) _Subscription_executor(ctx context.Context, field gr
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Subscription().Executor(rctx)
+		return ec.resolvers.Subscription().Executors(rctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
 		return nil
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return nil
 	}
 	return func(ctx context.Context) graphql.Marshaler {
 		select {
-		case res, ok := <-resTmp.(<-chan *model.ExecutorDetails):
+		case res, ok := <-resTmp.(<-chan []model.ExecutorDetails):
 			if !ok {
 				return nil
 			}
@@ -1395,7 +1599,7 @@ func (ec *executionContext) _Subscription_executor(ctx context.Context, field gr
 				w.Write([]byte{'{'})
 				graphql.MarshalString(field.Alias).MarshalGQL(w)
 				w.Write([]byte{':'})
-				ec.marshalNExecutorDetails2ᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋinternalᚋgraphqlᚋgraphᚋmodelᚐExecutorDetails(ctx, field.Selections, res).MarshalGQL(w)
+				ec.marshalOExecutorDetails2ᚕgithubᚗcomᚋkubeshopᚋtestkubeᚋinternalᚋgraphqlᚋgraphᚋmodelᚐExecutorDetailsᚄ(ctx, field.Selections, res).MarshalGQL(w)
 				w.Write([]byte{'}'})
 			})
 		case <-ctx.Done():
@@ -1404,7 +1608,7 @@ func (ec *executionContext) _Subscription_executor(ctx context.Context, field gr
 	}
 }
 
-func (ec *executionContext) fieldContext_Subscription_executor(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Subscription_executors(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Subscription",
 		Field:      field,
@@ -1412,6 +1616,8 @@ func (ec *executionContext) fieldContext_Subscription_executor(ctx context.Conte
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "event":
+				return ec.fieldContext_ExecutorDetails_event(ctx, field)
 			case "name":
 				return ec.fieldContext_ExecutorDetails_name(ctx, field)
 			case "executor":
@@ -3204,6 +3410,39 @@ func (ec *executionContext) fieldContext___Type_specifiedByURL(ctx context.Conte
 
 // region    **************************** object.gotpl ****************************
 
+var eventImplementors = []string{"Event"}
+
+func (ec *executionContext) _Event(ctx context.Context, sel ast.SelectionSet, obj *model.Event) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, eventImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Event")
+		case "type":
+
+			out.Values[i] = ec._Event_type(ctx, field, obj)
+
+		case "resource":
+
+			out.Values[i] = ec._Event_resource(ctx, field, obj)
+
+		case "resourceId":
+
+			out.Values[i] = ec._Event_resourceId(ctx, field, obj)
+
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var executorImplementors = []string{"Executor"}
 
 func (ec *executionContext) _Executor(ctx context.Context, sel ast.SelectionSet, obj *model.Executor) graphql.Marshaler {
@@ -3283,6 +3522,10 @@ func (ec *executionContext) _ExecutorDetails(ctx context.Context, sel ast.Select
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("ExecutorDetails")
+		case "event":
+
+			out.Values[i] = ec._ExecutorDetails_event(ctx, field, obj)
+
 		case "name":
 
 			out.Values[i] = ec._ExecutorDetails_name(ctx, field, obj)
@@ -3435,8 +3678,8 @@ func (ec *executionContext) _Subscription(ctx context.Context, sel ast.Selection
 	}
 
 	switch fields[0].Name {
-	case "executor":
-		return ec._Subscription_executor(ctx, fields[0])
+	case "executors":
+		return ec._Subscription_executors(ctx, fields[0])
 	default:
 		panic("unknown field " + strconv.Quote(fields[0].Name))
 	}
@@ -3779,16 +4022,6 @@ func (ec *executionContext) marshalNExecutorDetails2githubᚗcomᚋkubeshopᚋte
 	return ec._ExecutorDetails(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNExecutorDetails2ᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋinternalᚋgraphqlᚋgraphᚋmodelᚐExecutorDetails(ctx context.Context, sel ast.SelectionSet, v *model.ExecutorDetails) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._ExecutorDetails(ctx, sel, v)
-}
-
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
 	res, err := graphql.UnmarshalString(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -4083,6 +4316,13 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return res
 }
 
+func (ec *executionContext) marshalOEvent2ᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋinternalᚋgraphqlᚋgraphᚋmodelᚐEvent(ctx context.Context, sel ast.SelectionSet, v *model.Event) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Event(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalOExecutor2ᚕᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋinternalᚋgraphqlᚋgraphᚋmodelᚐExecutor(ctx context.Context, sel ast.SelectionSet, v []*model.Executor) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -4129,6 +4369,53 @@ func (ec *executionContext) marshalOExecutor2ᚖgithubᚗcomᚋkubeshopᚋtestku
 		return graphql.Null
 	}
 	return ec._Executor(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOExecutorDetails2ᚕgithubᚗcomᚋkubeshopᚋtestkubeᚋinternalᚋgraphqlᚋgraphᚋmodelᚐExecutorDetailsᚄ(ctx context.Context, sel ast.SelectionSet, v []model.ExecutorDetails) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNExecutorDetails2githubᚗcomᚋkubeshopᚋtestkubeᚋinternalᚋgraphqlᚋgraphᚋmodelᚐExecutorDetails(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalOExecutorMeta2ᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋinternalᚋgraphqlᚋgraphᚋmodelᚐExecutorMeta(ctx context.Context, sel ast.SelectionSet, v *model.ExecutorMeta) graphql.Marshaler {

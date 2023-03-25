@@ -8,6 +8,12 @@ import (
 	"strconv"
 )
 
+type Event struct {
+	Type       *string `json:"type,omitempty"`
+	Resource   *string `json:"resource,omitempty"`
+	ResourceID *string `json:"resourceId,omitempty"`
+}
+
 // CRD based executor data
 type Executor struct {
 	// additional executor binary arguments
@@ -37,6 +43,7 @@ type Executor struct {
 }
 
 type ExecutorDetails struct {
+	Event    *Event    `json:"event,omitempty"`
 	Name     *string   `json:"name,omitempty"`
 	Executor *Executor `json:"executor,omitempty"`
 }
