@@ -247,6 +247,10 @@ func validateCreateOptions(cmd *cobra.Command) error {
 		return fmt.Errorf("please pass only one secret reference for git token")
 	}
 
+	if gitAuthType != string(testkube.GitAuthTypeBasic) && gitAuthType != string(testkube.GitAuthTypeHeader) {
+		return fmt.Errorf("please pass one of basic` or `header` for git auth type")
+	}
+
 	if (gitUsername != "" || gitToken != "") && (len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0) && gitCertificateSecret != "" {
 		return fmt.Errorf("please pass git credentials either as direct values or as secret references")
 	}

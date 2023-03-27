@@ -8,6 +8,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -146,6 +147,10 @@ func validateUpsertOptions(cmd *cobra.Command) error {
 
 	if len(gitTokenSecret) > 1 {
 		return fmt.Errorf("please pass only one secret reference for git token")
+	}
+
+	if gitAuthType != string(testkube.GitAuthTypeBasic) && gitAuthType != string(testkube.GitAuthTypeHeader) {
+		return fmt.Errorf("please pass one of basic` or `header` for git auth type")
 	}
 
 	if (gitUsername != "" || gitToken != "") && (len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0) && gitCertificateSecret != "" {
