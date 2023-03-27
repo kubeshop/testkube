@@ -43,6 +43,7 @@ type Config struct {
 	TestkubeCloudURL                 string `envconfig:"TESTKUBE_CLOUD_URL" default:""`
 	TestkubeCloudTLSInsecure         bool   `envconfig:"TESTKUBE_CLOUD_TLS_INSECURE" default:"false"`
 	TestkubeWatcherNamespaces        string `envconfig:"TESTKUBE_WATCHER_NAMESPACES" default:""`
+	GraphqlPort                      string `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
 }
 
 func Get() (*Config, error) {
