@@ -22,9 +22,6 @@ func hasGitParamsInCmd(cmd *cobra.Command) bool {
 
 // NewRepositoryFromFlags creates repository from command flags
 func NewRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository, err error) {
-	if cmd.Flag("git-uri") == nil {
-		return nil, nil
-	}
 	gitUri := cmd.Flag("git-uri").Value.String()
 	gitBranch := cmd.Flag("git-branch").Value.String()
 	gitCommit := cmd.Flag("git-commit").Value.String()
