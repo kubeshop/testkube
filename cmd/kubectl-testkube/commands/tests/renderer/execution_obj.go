@@ -49,6 +49,7 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 		ui.Warn("  Path:           ", execution.Content.Repository.Path)
 		ui.Warn("  Working dir:    ", execution.Content.Repository.WorkingDir)
 		ui.Warn("  Certificate:    ", execution.Content.Repository.CertificateSecret)
+		ui.Warn("  Auth type:      ", execution.Content.Repository.AuthType)
 	}
 
 	render.RenderExecutionResult(&execution, false)

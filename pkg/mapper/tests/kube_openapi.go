@@ -77,6 +77,7 @@ func MapTestContentFromSpec(specContent *testsv3.TestContent) *testkube.TestCont
 				Path:              specContent.Repository.Path,
 				WorkingDir:        specContent.Repository.WorkingDir,
 				CertificateSecret: specContent.Repository.CertificateSecret,
+				AuthType:          specContent.Repository.AuthType,
 			}
 
 			if specContent.Repository.UsernameSecret != nil {

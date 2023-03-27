@@ -495,6 +495,9 @@ func mergeContents(test testsv3.TestSpec, testSource testsourcev1.TestSourceSpec
 			test.Content.Repository.CertificateSecret = testSource.Repository.CertificateSecret
 		}
 
+		if test.Content.Repository.AuthType == "" {
+			test.Content.Repository.AuthType = testSource.Repository.AuthType
+		}		
 	}
 
 	return test

@@ -43,6 +43,7 @@ func TestSourceRenderer(ui *ui.UI, obj interface{}) error {
 		}
 
 		ui.Warn("  Working dir: ", testSource.Repository.WorkingDir)
+		ui.Warn("  Auth type:   ", testSource.Repository.AuthType)
 	}
 
 	if testSource.Data != "" {

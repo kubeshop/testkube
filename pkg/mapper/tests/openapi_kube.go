@@ -95,6 +95,7 @@ func MapContentToSpecContent(content *testkube.TestContent) (specContent *testsv
 			Path:              content.Repository.Path,
 			WorkingDir:        content.Repository.WorkingDir,
 			CertificateSecret: content.Repository.CertificateSecret,
+			AuthType:          content.Repository.AuthType,
 		}
 
 		if content.Repository.UsernameSecret != nil {
@@ -331,6 +332,10 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 			{
 				(*content.Repository).CertificateSecret,
 				&testContent.Repository.CertificateSecret,
+			},
+			{
+				(*content.Repository).AuthType,
+				&testContent.Repository.AuthType,
 			},
 		}
 

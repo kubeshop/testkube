@@ -14,6 +14,8 @@ func NewRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository
 	gitPath := cmd.Flag("git-path").Value.String()
 	gitUsername := cmd.Flag("git-username").Value.String()
 	gitToken := cmd.Flag("git-token").Value.String()
+	gitAuthType := cmd.Flag("git-auth-type").Value.String()
+
 	gitUsernameSecret, err := cmd.Flags().GetStringToString("git-username-secret")
 	if err != nil {
 		return nil, err
@@ -24,15 +26,10 @@ func NewRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository
 		return nil, err
 	}
 
-	gitCertificateSecret, err := cmd.Flags().GetString("git-certificate-secret")
-	if err != nil {
-		return nil, err
-	}
-
 	gitWorkingDir := cmd.Flag("git-working-dir").Value.String()
-
+	gitCertificateSecret := cmd.Flag("git-certificate-secret").Value.String()
 	hasGitParams := gitBranch != "" || gitCommit != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != "" ||
-		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0 || gitWorkingDir != "" || gitCertificateSecret != ""
+		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0 || gitWorkingDir != "" || gitCertificateSecret != "" || gitAuthType != ""
 
 	if !hasGitParams {
 		return nil, nil
@@ -48,6 +45,7 @@ func NewRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository
 		Token:             gitToken,
 		CertificateSecret: gitCertificateSecret,
 		WorkingDir:        gitWorkingDir,
+		AuthType:          gitAuthType,
 	}
 
 	for key, val := range gitUsernameSecret {
@@ -102,6 +100,14 @@ func NewRepositoryUpdateFromFlags(cmd *cobra.Command) (repository *testkube.Repo
 		{
 			"git-working-dir",
 			&repository.WorkingDir,
+		},
+		{
+			"git-certificate-secret",
+			&repository.CertificateSecret,
+		},
+		{
+			"git-auth-type",
+			&repository.AuthType,
 		},
 	}
 

@@ -19,6 +19,7 @@ func MapCRDToAPI(item testsourcev1.TestSource) testkube.TestSource {
 			Path:              item.Spec.Repository.Path,
 			WorkingDir:        item.Spec.Repository.WorkingDir,
 			CertificateSecret: item.Spec.Repository.CertificateSecret,
+			AuthType:          item.Spec.Repository.AuthType,
 		}
 
 		if item.Spec.Repository.UsernameSecret != nil {
@@ -59,6 +60,7 @@ func MapAPIToCRD(request testkube.TestSourceUpsertRequest) testsourcev1.TestSour
 			Path:              request.Repository.Path,
 			WorkingDir:        request.Repository.WorkingDir,
 			CertificateSecret: request.Repository.CertificateSecret,
+			AuthType:          request.Repository.AuthType,
 		}
 
 		if request.Repository.UsernameSecret != nil {
@@ -176,6 +178,10 @@ func MapUpdateToSpec(request testkube.TestSourceUpdateRequest, testSource *tests
 			{
 				(*request.Repository).CertificateSecret,
 				&testSource.Spec.Repository.CertificateSecret,
+			},
+			{
+				(*request.Repository).AuthType,
+				&testSource.Spec.Repository.AuthType,
 			},
 		}
 
