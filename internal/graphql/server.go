@@ -5,6 +5,7 @@ package graphql
 import (
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
+
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	"github.com/kubeshop/testkube/internal/graphql/graph"
 	"github.com/kubeshop/testkube/pkg/event/bus"

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/99designs/gqlgen/graphql/playground"
+
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/internal/graphql"
 	"github.com/kubeshop/testkube/pkg/log"

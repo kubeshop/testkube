@@ -3,9 +3,10 @@
 package graph
 
 import (
+	"go.uber.org/zap"
+
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/event/bus"
-	"go.uber.org/zap"
 )
 
 // This file will not be regenerated automatically.
