@@ -51,7 +51,7 @@ func TestCommandExecution(t *testing.T) {
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 
 	logger, _ := zap.NewDevelopment()
-	agent, err := agent.NewAgent(logger.Sugar(), m, "api-key", grpcClient)
+	agent, err := agent.NewAgent(logger.Sugar(), m, "api-key", grpcClient, 5)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +74,7 @@ type CloudServer struct {
 	cloud.UnimplementedTestKubeCloudAPIServer
 }
 
-func (cs *CloudServer) Execute(srv cloud.TestKubeCloudAPI_ExecuteServer) error {
+func (cs *CloudServer) ExecuteAsync(srv cloud.TestKubeCloudAPI_ExecuteAsyncServer) error {
 	md, ok := metadata.FromIncomingContext(srv.Context())
 	if !ok {
 		panic("no metadata")
