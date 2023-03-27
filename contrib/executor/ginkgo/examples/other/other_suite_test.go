@@ -17,7 +17,7 @@ func init() {
 func TestE2e(t *testing.T) {
 	RegisterFailHandler(Fail)
 	if baseURL == "" {
-		baseURL = "google.com"
+		baseURL = "kubeshop.io"
 	}
 	RunSpecs(t, "Other Testing Suite")
 }
