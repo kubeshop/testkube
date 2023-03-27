@@ -8,61 +8,6 @@ import (
 	"strconv"
 )
 
-type Event struct {
-	Type       *string `json:"type,omitempty"`
-	Resource   *string `json:"resource,omitempty"`
-	ResourceID *string `json:"resourceId,omitempty"`
-}
-
-// CRD based executor data
-type Executor struct {
-	// additional executor binary arguments
-	Args []*string `json:"args,omitempty"`
-	// container executor image command
-	Command []*string `json:"command,omitempty"`
-	// list of handled content types
-	ContentTypes []*string `json:"contentTypes,omitempty"`
-	// ExecutorType one of "rest" for rest openapi based executors or "job" which will be default runners for testkube soon
-	ExecutorType *string `json:"executorType,omitempty"`
-	// Available executor features
-	Features []*FeaturesListItem `json:"features,omitempty"`
-	// Image for kube-job
-	Image *string `json:"image,omitempty"`
-	// container image pull secrets
-	ImagePullSecrets []*LocalObjectReference `json:"imagePullSecrets,omitempty"`
-	// Job template to launch executor
-	JobTemplate *string `json:"jobTemplate,omitempty"`
-	// executor labels
-	Labels *string `json:"labels,omitempty"`
-	// Executor meta data
-	Meta *ExecutorMeta `json:"meta,omitempty"`
-	// Types defines what types can be handled by executor e.g. "postman/collection", ":curl/command" etc
-	Types []*string `json:"types,omitempty"`
-	// URI for rest based executors
-	URI *string `json:"uri,omitempty"`
-}
-
-type ExecutorDetails struct {
-	Event    *Event    `json:"event,omitempty"`
-	Name     *string   `json:"name,omitempty"`
-	Executor *Executor `json:"executor,omitempty"`
-}
-
-// Executor meta data
-type ExecutorMeta struct {
-	// URI for executor docs
-	DocsURI *string `json:"docsURI,omitempty"`
-	// URI for executor icon
-	IconURI *string `json:"iconURI,omitempty"`
-	// executor tooltips
-	Tooltips *string `json:"tooltips,omitempty"`
-}
-
-// Reference to Kubernetes object
-type LocalObjectReference struct {
-	Name *string `json:"name,omitempty"`
-}
-
 type FeaturesListItem string
 
 const (
