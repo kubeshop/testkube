@@ -153,7 +153,7 @@ func validateUpsertOptions(cmd *cobra.Command) error {
 		return fmt.Errorf("please pass one of basic` or `header` for git auth type")
 	}
 
-	if (gitUsername != "" || gitToken != "") && (len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0) && gitCertificateSecret != "" {
+	if (gitUsername != "" || gitToken != "") && (len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0) {
 		return fmt.Errorf("please pass only one auth method for git repository")
 	}
 
