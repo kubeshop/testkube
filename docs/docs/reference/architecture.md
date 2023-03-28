@@ -15,6 +15,8 @@ This diagram was made with the C4 diagram technique
 
 ![testkube container diagram](../img/containers.png)
 
+See also [Dependencies for Testkube](../concepts/dependencies.md) mentionning nats, minio and mongodb dependencies
+
 ### Components
 
 #### API
