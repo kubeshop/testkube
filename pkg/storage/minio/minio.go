@@ -167,11 +167,6 @@ func (c *Client) ListFiles(bucketFolder string) ([]testkube.Artifact, error) {
 	return c.listFiles(c.bucket, bucketFolder)
 }
 
-// ListFilesFromBucket lists available files in given bucket
-func (c *Client) ListFilesFromBucket(bucket string) ([]testkube.Artifact, error) {
-	return c.listFiles(bucket, "")
-}
-
 // saveFile saves file defined by local filePath to S3 bucket
 func (c *Client) saveFile(bucket, bucketFolder, filePath string) error {
 	c.Log.Debugw("saving file", "bucket", bucket, "bucketFolder", bucketFolder, "filePath", filePath)
@@ -207,7 +202,7 @@ func (c *Client) saveFile(bucket, bucketFolder, filePath string) error {
 	return nil
 }
 
-func (c *Client) SaveFileDirect(ctx context.Context, folder, file string, data io.Reader, size int64) error {
+func (c *Client) SaveFileDirect(ctx context.Context, folder, file string, data io.Reader, size int64, opts minio.PutObjectOptions) error {
 	exists, err := c.minioclient.BucketExists(ctx, c.bucket)
 	if err != nil {
 		return errors.Wrapf(err, "error checking does bucket %s exists", c.bucket)
@@ -220,8 +215,11 @@ func (c *Client) SaveFileDirect(ctx context.Context, folder, file string, data i
 
 	filename := fmt.Sprintf("%s/%s", folder, file)
 
+	if opts.ContentType == "" {
+		opts.ContentType = "application/octet-stream"
+	}
 	c.Log.Debugw("saving object in minio", "filename", filename, "bucket", c.bucket, "size", size)
-	_, err = c.minioclient.PutObject(ctx, c.bucket, filename, data, size, minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	_, err = c.minioclient.PutObject(ctx, c.bucket, filename, data, size, opts)
 	if err != nil {
 		return errors.Wrapf(err, "minio saving file (%s) put object error", filename)
 	}
@@ -233,12 +231,6 @@ func (c *Client) SaveFileDirect(ctx context.Context, folder, file string, data i
 func (c *Client) SaveFile(bucketFolder, filePath string) error {
 	c.Log.Debugw("SaveFile", "bucket", c.bucket, "bucketFolder", bucketFolder, "filePath", filePath)
 	return c.saveFile(c.bucket, bucketFolder, filePath)
-}
-
-// SaveFileToBucket saves file defined by local filePath to given S3 bucket
-func (c *Client) SaveFileToBucket(bucket, bucketFolder, filePath string) error {
-	c.Log.Debugw("SaveFileToBucket", "bucket", bucket, "bucketFolder", bucketFolder, "filePath", filePath)
-	return c.saveFile(bucket, bucketFolder, filePath)
 }
 
 // downloadFile downloads file from bucket

@@ -22,7 +22,7 @@ import (
 func Scrape(ctx context.Context, dirs []string, execution testkube.Execution, params envs.Params) (err error) {
 	output.PrintLog(fmt.Sprintf("%s Extracting artifacts from %s using Filesystem Extractor", ui.IconCheckMark, dirs))
 
-	extractor := scraper.NewFilesystemExtractor(dirs, filesystem.NewOSFileSystem())
+	extractor := scraper.NewArchiveFilesystemExtractor(dirs, filesystem.NewOSFileSystem())
 
 	var loader scraper.Uploader
 	var meta map[string]any
@@ -42,7 +42,7 @@ func Scrape(ctx context.Context, dirs []string, execution testkube.Execution, pa
 			return errors.Wrap(err, "error creating minio loader")
 		}
 	}
-	elScraper := scraper.NewELScraper(extractor, loader)
+	elScraper := scraper.NewExtractLoadScraper(extractor, loader)
 	if err = elScraper.Scrape(ctx, meta); err != nil {
 		output.PrintLog(fmt.Sprintf("%s Error encountered while scraping artifacts", ui.IconCross))
 		return errors.Errorf("error scraping artifacts: %v", err)

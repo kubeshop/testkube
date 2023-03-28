@@ -2,6 +2,7 @@ package scraper
 
 import (
 	"context"
+	coreminio "github.com/minio/minio-go/v7"
 
 	"github.com/kubeshop/testkube/pkg/log"
 
@@ -47,7 +48,8 @@ func (l *MinIOUploader) Upload(ctx context.Context, object *Object, meta map[str
 	}
 
 	log.DefaultLogger.Infow("MinIO loader is uploading file", "file", object.Name, "folder", folder, "size", object.Size)
-	if err := l.client.SaveFileDirect(ctx, folder, object.Name, object.Data, object.Size); err != nil {
+	opts := coreminio.PutObjectOptions{DisableMultipart: true, UserMetadata: map[string]string{"X-Amz-Meta-Snowball-Auto-Extract": "true"}}
+	if err := l.client.SaveFileDirect(ctx, folder, object.Name, object.Data, object.Size, opts); err != nil {
 		return errors.Wrapf(err, "error saving file %s", object.Name)
 	}
 

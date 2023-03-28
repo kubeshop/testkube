@@ -43,7 +43,7 @@ func TestMinIOScraper(t *testing.T) {
 	err = os.WriteFile(file3, []byte("test3"), os.ModePerm)
 	assert.NoError(t, err)
 
-	extractor := scraper.NewFilesystemExtractor([]string{tempDir}, filesystem.NewOSFileSystem())
+	extractor := scraper.NewRecursiveFilesystemExtractor([]string{tempDir}, filesystem.NewOSFileSystem())
 
 	loader, err := scraper.NewMinIOLoader("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-2", false)
 	if err != nil {
@@ -53,14 +53,14 @@ func TestMinIOScraper(t *testing.T) {
 	meta := map[string]any{
 		"executionId": "minio-test",
 	}
-	s := scraper.NewELScraper(extractor, loader)
+	s := scraper.NewExtractLoadScraper(extractor, loader)
 	err = s.Scrape(context.Background(), meta)
 	if err != nil {
 		t.Fatalf("error scraping: %v", err)
 	}
 
 	c := minio.NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-2", false)
-	artifacts, err := c.ListFilesFromBucket("test-bucket-2")
+	artifacts, err := c.ListFiles("test-bucket-2")
 	if err != nil {
 		t.Fatalf("error listing files from bucket: %v", err)
 	}

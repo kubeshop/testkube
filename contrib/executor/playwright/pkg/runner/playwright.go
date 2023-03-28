@@ -1,8 +1,10 @@
 package runner
 
 import (
-	"errors"
+	"context"
 	"fmt"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
+	"github.com/pkg/errors"
 	"os"
 	"path/filepath"
 
@@ -12,7 +14,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
-	"github.com/kubeshop/testkube/pkg/executor/scraper"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -24,16 +25,7 @@ func NewPlaywrightRunner(dependency string) (*PlaywrightRunner, error) {
 	}
 
 	return &PlaywrightRunner{
-		Params: params,
-		Scraper: scraper.NewMinioScraper(
-			params.Endpoint,
-			params.AccessKeyID,
-			params.SecretAccessKey,
-			params.Location,
-			params.Token,
-			params.Bucket,
-			params.Ssl,
-		),
+		Params:     params,
 		dependency: dependency,
 	}, nil
 }
@@ -41,7 +33,6 @@ func NewPlaywrightRunner(dependency string) (*PlaywrightRunner, error) {
 // PlaywrightRunner - implements runner interface used in worker to start test execution
 type PlaywrightRunner struct {
 	Params     envs.Params
-	Scraper    scraper.Scraper
 	dependency string
 }
 
@@ -139,9 +130,10 @@ func scrapeArtifacts(r *PlaywrightRunner, execution testkube.Execution) (err err
 	directories := []string{
 		filepath.Join(projectPath, compressedName),
 	}
-	if err := r.Scraper.Scrape(execution.Id, directories); err != nil {
-		output.PrintLog(fmt.Sprintf("%s Artifact scraping failed", ui.IconCross))
-		return fmt.Errorf("scrape artifacts error: %w", err)
+	output.PrintLog(fmt.Sprintf("Scraping directories: %v", directories))
+
+	if err := factory.Scrape(context.Background(), directories, execution, r.Params); err != nil {
+		return errors.Wrap(err, "error scraping artifacts")
 	}
 
 	return nil

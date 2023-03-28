@@ -45,7 +45,7 @@ func TestCloudScraper(t *testing.T) {
 	err = os.WriteFile(file3, []byte("test3"), os.ModePerm)
 	assert.NoError(t, err)
 
-	extractor := scraper.NewFilesystemExtractor([]string{tempDir}, filesystem.NewOSFileSystem())
+	extractor := scraper.NewRecursiveFilesystemExtractor([]string{tempDir}, filesystem.NewOSFileSystem())
 
 	testServerRequests := 0
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -96,7 +96,7 @@ func TestCloudScraper(t *testing.T) {
 		"testName":      "my-test",
 		"testSuiteName": "my-test-suite",
 	}
-	s := scraper.NewELScraper(extractor, cloudLoader)
+	s := scraper.NewExtractLoadScraper(extractor, cloudLoader)
 	err = s.Scrape(context.Background(), meta)
 	assert.NoError(t, err)
 	assert.Equal(t, 3, testServerRequests)

@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	domainstorage "github.com/kubeshop/testkube/pkg/storage"
+	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"io"
 	"net"
 	"os"
@@ -314,6 +316,21 @@ func main() {
 		ui.ExitOnError("Creating slack loader", err)
 	}
 
+	var storageClient domainstorage.Client
+	if mode == common.ModeAgent {
+		// TODO
+	} else {
+		storageClient = minio.NewClient(
+			cfg.StorageEndpoint,
+			cfg.StorageAccessKeyID,
+			cfg.StorageSecretAccessKey,
+			cfg.StorageLocation,
+			cfg.StorageToken,
+			cfg.StorageBucket,
+			cfg.StorageSSL,
+		)
+	}
+
 	api := apiv1.NewTestkubeAPI(
 		cfg.TestkubeNamespace,
 		resultsRepository,
@@ -335,6 +352,7 @@ func main() {
 		jobTemplate,
 		sched,
 		slackLoader,
+		storageClient,
 	)
 
 	isMinioStorage := cfg.LogsStorage == "minio"

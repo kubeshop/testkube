@@ -10,19 +10,19 @@ type Scraper interface {
 	Scrape(executionID string, directories []string) error
 }
 
-type ELScraper struct {
+type ExtractLoadScraper struct {
 	extractor Extractor
 	loader    Uploader
 }
 
-func NewELScraper(extractor Extractor, loader Uploader) *ELScraper {
-	return &ELScraper{
+func NewExtractLoadScraper(extractor Extractor, loader Uploader) *ExtractLoadScraper {
+	return &ExtractLoadScraper{
 		extractor: extractor,
 		loader:    loader,
 	}
 }
 
-func (s *ELScraper) Scrape(ctx context.Context, meta map[string]any) error {
+func (s *ExtractLoadScraper) Scrape(ctx context.Context, meta map[string]any) error {
 	return s.
 		extractor.
 		Extract(ctx, func(ctx context.Context, object *Object) error {

@@ -37,7 +37,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/storage"
-	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
@@ -68,6 +67,7 @@ func NewTestkubeAPI(
 	jobTemplate string,
 	scheduler *scheduler.Scheduler,
 	slackLoader *slack.SlackLoader,
+	storage storage.Client,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -101,6 +101,7 @@ func NewTestkubeAPI(
 		jobTemplate:          jobTemplate,
 		scheduler:            scheduler,
 		slackLoader:          slackLoader,
+		Storage:              storage,
 	}
 
 	// will be reused in websockets handler
@@ -111,7 +112,6 @@ func NewTestkubeAPI(
 	s.Events.Loader.Register(s.slackLoader)
 
 	s.InitEnvs()
-	s.InitStorage()
 	s.InitRoutes()
 
 	return s
@@ -191,15 +191,17 @@ func (s *TestkubeAPI) InitEnvs() {
 	}
 }
 
-func (s *TestkubeAPI) InitStorage() {
-	s.Storage = minio.NewClient(s.storageParams.Endpoint,
-		s.storageParams.AccessKeyId,
-		s.storageParams.SecretAccessKey,
-		s.storageParams.Location,
-		s.storageParams.Token,
-		s.storageParams.Bucket,
-		s.storageParams.SSL)
-}
+//func (s *TestkubeAPI) InitStorage() {
+//	s.Storage = minio.NewClient(
+//		s.storageParams.Endpoint,
+//		s.storageParams.AccessKeyId,
+//		s.storageParams.SecretAccessKey,
+//		s.storageParams.Location,
+//		s.storageParams.Token,
+//		s.storageParams.Bucket,
+//		s.storageParams.SSL,
+//	)
+//}
 
 func (s *TestkubeAPI) InitRoutes() {
 	s.Routes.Static("/api-docs", "./api/v1")

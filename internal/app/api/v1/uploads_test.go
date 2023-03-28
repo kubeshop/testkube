@@ -195,10 +195,6 @@ func (m MockStorage) ListFilesFromBucket(bucket string) ([]testkube.Artifact, er
 	panic("not implemented")
 }
 
-func (m MockStorage) SaveFileToBucket(bucket, bucketFolder, filePath string) error {
-	panic("not implemented")
-}
-
 func (m MockStorage) DownloadFileFromBucket(bucket, bucketFolder, file string) (*minio.Object, error) {
 	panic("not implemented")
 }

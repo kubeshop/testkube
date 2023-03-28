@@ -14,7 +14,7 @@ type Client interface {
 	ClientImplicitBucket
 }
 
-// ClientImplicitBucket is storage client abstraction where bucket name is providet from config
+// ClientImplicitBucket is storage client abstraction where bucket name is provided from config
 type ClientImplicitBucket interface {
 	ListFiles(bucketFolder string) ([]testkube.Artifact, error)
 	SaveFile(bucketFolder, filePath string) error
@@ -29,8 +29,6 @@ type ClientBucket interface {
 	CreateBucket(bucket string) error
 	DeleteBucket(bucket string, force bool) error
 	ListBuckets() ([]string, error)
-	ListFilesFromBucket(bucket string) ([]testkube.Artifact, error)
-	SaveFileToBucket(bucket, bucketFolder, filePath string) error
 	DownloadFileFromBucket(bucket, bucketFolder, file string) (*minio.Object, error)
 	UploadFileToBucket(bucket, bucketFolder, filePath string, reader io.Reader, objectSize int64) error
 	GetValidBucketName(parentType string, parentName string) string
