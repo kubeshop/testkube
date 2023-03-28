@@ -120,16 +120,21 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		namespaces, err := s.Clientset.CoreV1().Namespaces().List(c.UserContext(), v1.ListOptions{})
-		if err != nil {
-			return errors.Wrap(err, "error fetching list of all namespaces")
+		namespaces := make(map[string]struct{}, 0)
+		for _, upsertRequest := range request {
+			namespace := s.Namespace
+			if upsertRequest.Namespace != "" {
+				namespace = upsertRequest.Namespace
+			}
+
+			namespaces[namespace] = struct{}{}
 		}
-		for _, ns := range namespaces.Items {
+
+		for namespace := range namespaces {
 			err = s.TestKubeClientset.
 				TestsV1().
-				TestTriggers(ns.Name).
+				TestTriggers(namespace).
 				DeleteCollection(c.UserContext(), v1.DeleteOptions{}, v1.ListOptions{})
-
 			if err != nil && !k8serrors.IsNotFound(err) {
 				return s.Error(c, http.StatusBadGateway, errors.Wrap(err, "error cleaning triggers before reapply"))
 			}
@@ -139,8 +144,8 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 
 		testTriggers := make([]testkube.TestTrigger, 0, len(request))
 
-		namespace := s.Namespace
 		for _, upsertRequest := range request {
+			namespace := s.Namespace
 			if upsertRequest.Namespace != "" {
 				namespace = upsertRequest.Namespace
 			}
