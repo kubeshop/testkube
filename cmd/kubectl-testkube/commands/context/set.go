@@ -13,6 +13,7 @@ func NewSetContextCmd() *cobra.Command {
 		org, env, apiKey, apiUri string
 		agentKey, agentUri       string
 		kubeconfig               bool
+		namespace                string
 	)
 
 	cmd := &cobra.Command{
@@ -59,6 +60,10 @@ func NewSetContextCmd() *cobra.Command {
 				ui.Errf("Unknown context type: %s", cfg.ContextType)
 			}
 
+			if namespace != "" {
+				cfg.Namespace = namespace
+			}
+
 			err = config.Save(cfg)
 			ui.ExitOnError("saving config file", err)
 
@@ -71,6 +76,7 @@ func NewSetContextCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&kubeconfig, "kubeconfig", "", false, "reset context mode for CLI to default kubeconfig based")
 	cmd.Flags().StringVarP(&org, "org", "o", "", "Testkube Cloud Organization ID")
 	cmd.Flags().StringVarP(&env, "env", "e", "", "Testkube Cloud Environment ID")
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "Testkube namespace to use for CLI commands")
 	cmd.Flags().StringVarP(&apiKey, "api-key", "k", "", "API Key for Testkube Cloud")
 	cmd.Flags().StringVarP(&apiUri, "cloud-api-uri", "", "https://api.testkube.io", "Testkube Cloud API URI - defaults to api.testksube.io")
 
