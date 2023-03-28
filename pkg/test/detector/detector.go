@@ -1,21 +1,35 @@
 package detector
 
-import "github.com/kubeshop/testkube/pkg/api/v1/client"
+import (
+	"github.com/kubeshop/testkube/contrib/executor/artillery/pkg/artillery"
+	"github.com/kubeshop/testkube/contrib/executor/curl/pkg/curl"
+	"github.com/kubeshop/testkube/contrib/executor/cypress/pkg/cypress"
+	"github.com/kubeshop/testkube/contrib/executor/ginkgo/pkg/ginkgo"
+	"github.com/kubeshop/testkube/contrib/executor/gradle/pkg/gradle"
+	"github.com/kubeshop/testkube/contrib/executor/jmeter/pkg/jmeter"
+	"github.com/kubeshop/testkube/contrib/executor/k6/pkg/k6"
+	"github.com/kubeshop/testkube/contrib/executor/kubepug/pkg/kubepug"
+	"github.com/kubeshop/testkube/contrib/executor/maven/pkg/maven"
+	"github.com/kubeshop/testkube/contrib/executor/playwright/pkg/playwright"
+	"github.com/kubeshop/testkube/contrib/executor/postman/pkg/postman"
+	"github.com/kubeshop/testkube/contrib/executor/soapui/pkg/soapui"
+	"github.com/kubeshop/testkube/pkg/api/v1/client"
+)
 
 func NewDefaultDetector() Detector {
 	d := Detector{Adapters: make(map[string]Adapter, 0)}
-	d.Add(ArtilleryAdapter{})
-	d.Add(CurlTestAdapter{})
-	d.Add(JMeterAdapter{})
-	d.Add(K6Adapter{})
-	d.Add(PostmanCollectionAdapter{})
-	d.Add(SoapUIAdapter{})
-	d.Add(MavenAdapter{})
-	d.Add(GradleAdapter{})
-	d.Add(PlaywrightAdapter{})
-	d.Add(CypressAdapter{})
-	d.Add(GinkgoAdapter{})
-	d.Add(KubePugAdapter{})
+	d.Add(artillery.Detector{})
+	d.Add(curl.Detector{})
+	d.Add(jmeter.Detector{})
+	d.Add(k6.Detector{})
+	d.Add(postman.Detector{})
+	d.Add(soapui.Detector{})
+	d.Add(maven.Detector{})
+	d.Add(gradle.Detector{})
+	d.Add(playwright.Detector{})
+	d.Add(cypress.Detector{})
+	d.Add(ginkgo.Detector{})
+	d.Add(kubepug.Detector{})
 	return d
 }
 
@@ -34,39 +48,6 @@ func (d *Detector) Detect(path string, options client.UpsertTestOptions) (name s
 	for _, adapter := range d.Adapters {
 		if name, found := adapter.IsWithPath(path, options); found {
 			return name, found
-		}
-	}
-
-	return
-}
-
-// DetectTestName detects test name
-func (d *Detector) DetectTestName(filename string) (name, testType string, found bool) {
-	for _, adapter := range d.Adapters {
-		if name, found := adapter.IsTestName(filename); found {
-			return name, adapter.GetType(), found
-		}
-	}
-
-	return
-}
-
-// DetectEnvName detects env name
-func (d *Detector) DetectEnvName(filename string) (name, env, testType string, found bool) {
-	for _, adapter := range d.Adapters {
-		if name, env, found := adapter.IsEnvName(filename); found {
-			return name, env, adapter.GetType(), found
-		}
-	}
-
-	return
-}
-
-// DetectSecretEnvName detecs secret env name
-func (d *Detector) DetectSecretEnvName(filename string) (name, env, testType string, found bool) {
-	for _, adapter := range d.Adapters {
-		if name, env, found := adapter.IsSecretEnvName(filename); found {
-			return name, env, adapter.GetType(), found
 		}
 	}
 

@@ -13,10 +13,10 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
+	"github.com/kubeshop/testkube/contrib/executor/postman/pkg/postman"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
-	"github.com/kubeshop/testkube/pkg/test/detector"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -43,7 +43,7 @@ func NewCRDTestsCmd() *cobra.Command {
 			cmd.Flags().StringVar(&uri, "uri", "", "")
 			cmd.Flags().StringVar(&file, "file", "", "")
 			cmd.Flags().StringVar(&name, "name", "", "")
-			if flags.ExecutorType == detector.PostmanCollectionType {
+			if flags.ExecutorType == postman.PostmanCollectionType {
 				processPostmanFiles(cmd, args)
 			} else {
 				dir := args[0]
@@ -90,12 +90,12 @@ var ErrTypeNotDetected = fmt.Errorf("type not detected")
 
 // processPostmanFiles processes postman files
 func processPostmanFiles(cmd *cobra.Command, args []string) error {
-	d := detector.NewDefaultDetector()
+	detector := postman.Detector{}
 	dir := args[0]
 
-	detectedTests := make(map[string]map[string]client.UpsertTestOptions, 0)
-	testEnvs := make(map[string]map[string]map[string]string, 0)
-	testSecretEnvs := make(map[string]map[string]map[string]string, 0)
+	detectedTests := make(map[string]client.UpsertTestOptions, 0)
+	testEnvs := make(map[string]map[string]string, 0)
+	testSecretEnvs := make(map[string]map[string]string, 0)
 
 	var script []byte
 
@@ -108,52 +108,39 @@ func processPostmanFiles(cmd *cobra.Command, args []string) error {
 			return nil
 		}
 
-		if testName, envName, testType, ok := d.DetectEnvName(path); ok {
-			if _, ok := testEnvs[testType]; !ok {
-				testEnvs[testType] = make(map[string]map[string]string, 0)
+		if testName, envName, ok := detector.IsEnvName(path); ok {
+
+			if _, ok := testEnvs[envName]; !ok {
+				testEnvs[envName] = make(map[string]string, 0)
 			}
 
-			if _, ok := testEnvs[testType][envName]; !ok {
-				testEnvs[testType][envName] = make(map[string]string, 0)
-			}
-
-			testEnvs[testType][envName][testName] = path
+			testEnvs[envName][testName] = path
 			return nil
 		}
 
-		if secretTestName, secretEnvName, testType, ok := d.DetectSecretEnvName(path); ok {
-			if _, ok := testSecretEnvs[testType]; !ok {
-				testSecretEnvs[testType] = make(map[string]map[string]string, 0)
+		if secretTestName, secretEnvName, ok := detector.IsSecretEnvName(path); ok {
+
+			if _, ok := testSecretEnvs[secretEnvName]; !ok {
+				testSecretEnvs[secretEnvName] = make(map[string]string, 0)
 			}
 
-			if _, ok := testSecretEnvs[testType][secretEnvName]; !ok {
-				testSecretEnvs[testType][secretEnvName] = make(map[string]string, 0)
-			}
-
-			testSecretEnvs[testType][secretEnvName][secretTestName] = path
+			testSecretEnvs[secretEnvName][secretTestName] = path
 			return nil
 		}
 
+		cmd.Flags().Set("file", path)
 		test, err := tests.NewUpsertTestOptionsFromFlags(cmd)
 		if err != nil {
 			ui.Warn(fmt.Sprintf("generate test for file %s got an error: %v", path, err))
 			ui.UseStderr()
 			return err
 		}
+
 		test.Name = sanitizeName(filepath.Base(path))
 
-		testName, testType, ok := d.DetectTestName(path)
+		testName, ok := detector.IsTestName(path)
 		if !ok {
 			testName = test.Name
-			testType = test.Type_
-		}
-
-		if flags.ExecutorType != "" && testType != flags.ExecutorType {
-			return nil
-		}
-
-		if _, ok := detectedTests[testType]; !ok {
-			detectedTests[testType] = make(map[string]client.UpsertTestOptions, 0)
 		}
 
 		scriptBody := string(script)
@@ -180,7 +167,7 @@ func processPostmanFiles(cmd *cobra.Command, args []string) error {
 		}
 
 		test.ExecutionRequest = &testkube.ExecutionRequest{Args: flags.ExecutorArgs, Envs: flags.Envs, Variables: vars, PreRunScript: scriptBody}
-		detectedTests[testType][testName] = test
+		detectedTests[testName] = test
 		return nil
 	})
 
@@ -209,89 +196,85 @@ func sanitizeName(path string) string {
 }
 
 // addEnvToTest adds env files to tests
-func addEnvToTests(tests map[string]map[string]client.UpsertTestOptions,
-	testEnvs, testSecretEnvs map[string]map[string]map[string]string) (envTests []client.UpsertTestOptions) {
-	d := detector.NewDefaultDetector()
-	for testType, values := range tests {
-		for testName, test := range values {
-			testMap := map[string]client.UpsertTestOptions{}
-			for envName := range testEnvs[testType] {
-				if filename, ok := testEnvs[testType][envName][testName]; ok {
-					data, err := os.ReadFile(filename)
-					if err != nil {
-						ui.UseStderr()
-						ui.Warn(fmt.Sprintf("read variables file %s got an error: %v", filename, err))
-						continue
-					}
-
-					envTest := test
-					envTest.Name = sanitizeName(envTest.Name + "-" + envName)
-					if test.ExecutionRequest != nil {
-						envTest.ExecutionRequest = &testkube.ExecutionRequest{}
-						*envTest.ExecutionRequest = *test.ExecutionRequest
-					}
-
-					if envTest.ExecutionRequest == nil {
-						envTest.ExecutionRequest = &testkube.ExecutionRequest{}
-					}
-
-					envTest.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", strings.TrimSpace(string(data)))
-					testMap[envTest.Name] = envTest
+func addEnvToTests(tests map[string]client.UpsertTestOptions,
+	testEnvs, testSecretEnvs map[string]map[string]string) (envTests []client.UpsertTestOptions) {
+	detector := postman.Detector{}
+	for testName, test := range tests {
+		testMap := map[string]client.UpsertTestOptions{}
+		for envName := range testEnvs {
+			if filename, ok := testEnvs[envName][testName]; ok {
+				data, err := os.ReadFile(filename)
+				if err != nil {
+					ui.UseStderr()
+					ui.Warn(fmt.Sprintf("read variables file %s got an error: %v", filename, err))
+					continue
 				}
+
+				envTest := test
+				envTest.Name = sanitizeName(envTest.Name + "-" + envName)
+				if test.ExecutionRequest != nil {
+					envTest.ExecutionRequest = &testkube.ExecutionRequest{}
+					*envTest.ExecutionRequest = *test.ExecutionRequest
+				}
+
+				if envTest.ExecutionRequest == nil {
+					envTest.ExecutionRequest = &testkube.ExecutionRequest{}
+				}
+
+				envTest.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", strings.TrimSpace(string(data)))
+				testMap[envTest.Name] = envTest
 			}
+		}
 
-			for secretEnvName := range testSecretEnvs[testType] {
-				if filename, ok := testSecretEnvs[testType][secretEnvName][testName]; ok {
-					data, err := os.ReadFile(filename)
-					if err != nil {
-						ui.UseStderr()
-						ui.Warn(fmt.Sprintf("read secret variables file %s got an error: %v", filename, err))
-						continue
-					}
+		for secretEnvName := range testSecretEnvs {
+			if filename, ok := testSecretEnvs[secretEnvName][testName]; ok {
+				data, err := os.ReadFile(filename)
+				if err != nil {
+					ui.UseStderr()
+					ui.Warn(fmt.Sprintf("read secret variables file %s got an error: %v", filename, err))
+					continue
+				}
 
-					if adapter := d.GetAdapter(testType); adapter != nil {
-						variables, err := adapter.GetSecretVariables(string(data))
-						if err != nil {
-							ui.UseStderr()
-							ui.Warn(fmt.Sprintf("parse secret file %s got an error: %v", filename, err))
-							continue
-						}
+				variables, err := detector.GetSecretVariables(string(data))
+				if err != nil {
+					ui.UseStderr()
+					ui.Warn(fmt.Sprintf("parse secret file %s got an error: %v", filename, err))
+					continue
+				}
 
-						secretEnvTest := test
-						secretEnvTest.Name = sanitizeName(secretEnvTest.Name + "-" + secretEnvName)
-						if test.ExecutionRequest != nil {
-							secretEnvTest.ExecutionRequest = &testkube.ExecutionRequest{}
-							*secretEnvTest.ExecutionRequest = *test.ExecutionRequest
-						}
+				secretEnvTest := test
+				secretEnvTest.Name = sanitizeName(secretEnvTest.Name + "-" + secretEnvName)
+				if test.ExecutionRequest != nil {
+					secretEnvTest.ExecutionRequest = &testkube.ExecutionRequest{}
+					*secretEnvTest.ExecutionRequest = *test.ExecutionRequest
+				}
 
-						if envTest, ok := testMap[secretEnvTest.Name]; ok {
-							secretEnvTest = envTest
-						}
+				if envTest, ok := testMap[secretEnvTest.Name]; ok {
+					secretEnvTest = envTest
+				}
 
-						if secretEnvTest.ExecutionRequest == nil {
-							secretEnvTest.ExecutionRequest = &testkube.ExecutionRequest{}
-						}
+				if secretEnvTest.ExecutionRequest == nil {
+					secretEnvTest.ExecutionRequest = &testkube.ExecutionRequest{}
+				}
 
-						for key, value := range variables {
-							if value.Value != "" {
-								value.Value = fmt.Sprintf("%q", value.Value)
-								variables[key] = value
-							}
-						}
-
-						secretEnvTest.ExecutionRequest.Variables = variables
-						testMap[secretEnvTest.Name] = secretEnvTest
+				for key, value := range variables {
+					if value.Value != "" {
+						value.Value = fmt.Sprintf("%q", value.Value)
+						variables[key] = value
 					}
 				}
-			}
 
-			if len(testMap) == 0 {
-				testMap[test.Name] = test
+				secretEnvTest.ExecutionRequest.Variables = variables
+				testMap[secretEnvTest.Name] = secretEnvTest
 			}
+		}
 
-			for _, envTest := range testMap {
-				envTests = append(envTests, envTest)
-			}
+		if len(testMap) == 0 {
+			testMap[test.Name] = test
+		}
+
+		for _, envTest := range testMap {
+			envTests = append(envTests, envTest)
 		}
 	}
 

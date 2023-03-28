@@ -130,7 +130,7 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 		testContentType = string(testkube.TestContentTypeString)
 	}
 	var repository *testkube.Repository
-	if cmd.Flag("git-uri") == nil {
+	if cmd.Flag("git-uri") != nil {
 		repository, err = common.NewRepositoryFromFlags(cmd)
 		if err != nil {
 			return nil, err
