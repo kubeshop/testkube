@@ -120,12 +120,23 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		err = s.TestKubeClientset.
-			TestsV1().
-			TestTriggers(s.Namespace).
-			DeleteCollection(c.UserContext(), v1.DeleteOptions{}, v1.ListOptions{})
-		if err != nil && !k8serrors.IsNotFound(err) {
-			return s.Error(c, http.StatusBadGateway, errors.Wrap(err, "error cleaning triggers before reapply"))
+		namespaces := make(map[string]struct{}, 0)
+		for _, upsertRequest := range request {
+			namespaces[upsertRequest.Namespace] = struct{}{}
+		}
+
+		if len(namespaces) == 0 {
+			namespaces[s.Namespace] = struct{}{}
+		}
+
+		for namespace := range namespaces {
+			err = s.TestKubeClientset.
+				TestsV1().
+				TestTriggers(namespace).
+				DeleteCollection(c.UserContext(), v1.DeleteOptions{}, v1.ListOptions{})
+			if err != nil && !k8serrors.IsNotFound(err) {
+				return s.Error(c, http.StatusBadGateway, errors.Wrap(err, "error cleaning triggers before reapply"))
+			}
 		}
 
 		s.Metrics.IncBulkDeleteTestTrigger(nil)
