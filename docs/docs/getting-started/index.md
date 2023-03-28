@@ -9,3 +9,11 @@ In this section you will:
 You can also see the full installation video from our product experts: [Testkube Installation Video](https://www.youtube.com/watch?v=bjQboi3Etys):
 
 <iframe width="100%" height="315" src="https://www.youtube.com/embed/ynzEkOUhxKk" title="YouTube Tutorial: Getting started with Testing in Kubernetes Using Testkube" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+
+As a summary, you now have a ready testkube setup in your kubernetes cluster, ready to discover the testkube features:
+- the testkube cli enables to locally port forward to the kube dashboard deployment
+- the testkube cli enables to interact with testkube server components through k8s CRs or REST api calls made through the [kube apiserver proxy](https://kubernetes.io/docs/concepts/cluster-administration/proxies/)
+
+As usage of testkube grows within your team, you may choose to:
+* leverage [managed testkube cloud](../testkube-cloud/intro.md)
+* [getting to production](../guides/going-to-production) with your own testkube installation 

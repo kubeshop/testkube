@@ -1,5 +1,9 @@
 # OAuth for CLI
 
+By default, testkube cli uses the "proxy" client which leverages the [kube apiserver proxy](https://kubernetes.io/docs/concepts/cluster-administration/proxies/) to reach the testkube api server. This implies granting users access to testkube internals in order to reach the testkube api REST endpoint (when using commands such as `testkube get artifact` )
+
+This section describes how to protect the testkube api-server REST api endpoint with [oauth2 authentication authorization grant](https://oauth.net/2/grant-types/authorization-code/), for use by the testkube cli as an oauth 2 client. In this mode, kubetest users do not need to be granted "kubetest administrator roles".
+
 Testkube doesn't provide a separate user/role management system to protect access to its CLI.
 
 Users can configure OAuth-based authentication modules using Testkube Helm chart parameters and the CLI config command.
@@ -20,6 +24,14 @@ Pay attention to the usage of the scheme (http or https) in URIs.
 ```
 
 ## Create Github OAuth Application
+
+Currently, only github OAuth authentication is supported. It is not yet possible to configure kube api-server to authenticate testkube cli oauth2 against other Oauth2 IDPs. 
+
+In [oauth terminology](https://www.rfc-editor.org/rfc/rfc6749#section-1.1): 
+- github is the *authorization server*.
+- testkube cli is the *client* receiving http redirects from authorization server on a local http endpoint (http://127.0.0.1:13254) served by the cli. A local web browser invoked by [xdg-open](https://linux.die.net/man/1/xdg-open) is required to access github web ui, and then follow http redirect to the local http authorization callback endpoint.
+- testkube api-server is the *resource server*
+
 
 Register a new Github OAuth application for your personal or organization account.
 
