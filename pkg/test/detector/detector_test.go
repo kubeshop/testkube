@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/contrib/executor/curl/pkg/curl"
-	"github.com/kubeshop/testkube/contrib/executor/k6/pkg/k6"
+	"github.com/kubeshop/testkube/contrib/executor/k6/pkg/k6detector"
 	"github.com/kubeshop/testkube/contrib/executor/postman/pkg/postman"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -23,7 +23,7 @@ func TestDetectorDetect(t *testing.T) {
 		detector := Detector{Adapters: make(map[string]Adapter, 0)}
 		detector.Add(curl.Detector{})
 		detector.Add(postman.Detector{})
-		detector.Add(k6.Detector{})
+		detector.Add(k6detector.Detector{})
 
 		name, found := detector.Detect("postman_collection.json", client.UpsertTestOptions{
 			Content: testkube.NewStringTestContent(exampleValidContent),
