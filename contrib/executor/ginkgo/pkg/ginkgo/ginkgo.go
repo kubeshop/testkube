@@ -1,7 +1,6 @@
 package ginkgo
 
 import (
-	"path/filepath"
 	"strings"
 
 	apiClient "github.com/kubeshop/testkube/pkg/api/v1/client"
@@ -31,9 +30,6 @@ func (d Detector) Is(options apiClient.UpsertTestOptions) (name string, ok bool)
 
 // IsWithPath detects based on upsert test options what kind of test it is
 func (d Detector) IsWithPath(path string, options apiClient.UpsertTestOptions) (name string, ok bool) {
-	name, ok = d.Is(options)
-	ext := filepath.Ext(path)
-	ok = ok && (ext == ".go")
 	// TODO: implement for multiple files test
 	return "", false
 }
