@@ -11,6 +11,9 @@ var AllEventTypes = []EventType{
 	END_TESTSUITE_FAILED_EventType,
 	END_TESTSUITE_ABORTED_EventType,
 	END_TESTSUITE_TIMEOUT_EventType,
+	CREATED_EventType,
+	DELETED_EventType,
+	UPDATED_EventType,
 }
 
 func (t EventType) String() string {
@@ -32,6 +35,9 @@ var (
 	EventEndTestSuiteFailed  = EventTypePtr(END_TESTSUITE_FAILED_EventType)
 	EventEndTestSuiteAborted = EventTypePtr(END_TESTSUITE_ABORTED_EventType)
 	EventEndTestSuiteTimeout = EventTypePtr(END_TESTSUITE_TIMEOUT_EventType)
+	EventCreated             = EventTypePtr(CREATED_EventType)
+	EventDeleted             = EventTypePtr(DELETED_EventType)
+	EventUpdated             = EventTypePtr(UPDATED_EventType)
 )
 
 func EventTypesFromSlice(types []string) []EventType {

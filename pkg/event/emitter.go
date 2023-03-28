@@ -124,7 +124,7 @@ func (e *Emitter) UpdateListeners(listeners common.Listeners) {
 
 // Notify notifies emitter with webhook
 func (e *Emitter) Notify(event testkube.Event) {
-	err := e.Bus.Publish(event)
+	err := e.Bus.PublishTopic(event.Topic(), event)
 	e.Log.Infow("event published", append(event.Log(), "error", err)...)
 }
 
@@ -152,7 +152,7 @@ func (e *Emitter) Listen(ctx context.Context) {
 
 func (e *Emitter) startListener(l common.Listener) {
 	e.Log.Infow("starting listener", l.Name(), l.Metadata())
-	err := e.Bus.Subscribe(l.Name(), e.notifyHandler(l))
+	err := e.Bus.SubscribeTopic("events.>", l.Name(), e.notifyHandler(l))
 	if err != nil {
 		e.Log.Errorw("error subscribing to event", "error", err)
 	}
@@ -191,7 +191,6 @@ func (e *Emitter) Reconcile(ctx context.Context) {
 			e.UpdateListeners(listeners)
 			e.Log.Debugw("reconciled listeners", e.Listeners.Log()...)
 			time.Sleep(reconcileInterval)
-
 		}
 	}
 }

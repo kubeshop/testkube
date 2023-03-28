@@ -8,5 +8,9 @@ type Bus interface {
 	Publish(event testkube.Event) error
 	Subscribe(queue string, handler Handler) error
 	Unsubscribe(queue string) error
+
+	PublishTopic(topic string, event testkube.Event) error
+	SubscribeTopic(topic string, queue string, handler Handler) error
+
 	Close() error
 }

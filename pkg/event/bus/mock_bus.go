@@ -6,6 +6,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
+var _ Bus = &EventBusMock{}
+
 type EventBusMock struct {
 	events sync.Map
 }
@@ -22,6 +24,26 @@ func (b *EventBusMock) Publish(event testkube.Event) error {
 	return nil
 }
 func (b *EventBusMock) Subscribe(queue string, handler Handler) error {
+
+	ch := make(chan testkube.Event)
+	b.events.Store(queue, ch)
+
+	go func() {
+		for e := range ch {
+			handler(e)
+		}
+	}()
+	return nil
+}
+
+func (b *EventBusMock) PublishTopic(topic string, event testkube.Event) error {
+	b.events.Range(func(key, e interface{}) bool {
+		e.(chan testkube.Event) <- event
+		return true
+	})
+	return nil
+}
+func (b *EventBusMock) SubscribeTopic(topic, queue string, handler Handler) error {
 
 	ch := make(chan testkube.Event)
 	b.events.Store(queue, ch)
