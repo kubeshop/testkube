@@ -19,8 +19,8 @@ func (a *TestkubeAPI) RunGraphQLServer(
 ) error {
 	srv := graphql.GetServer(a.Events.Bus, a.ExecutorsClient)
 
-	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	http.Handle("/query", srv)
+	http.Handle("/", playground.Handler("GraphQL playground", "/graphql"))
+	http.Handle("/graphql", srv)
 
 	log.DefaultLogger.Infow("running GraphQL server", "port", cfg.GraphqlPort)
 
