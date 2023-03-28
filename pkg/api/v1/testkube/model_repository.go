@@ -27,7 +27,7 @@ type Repository struct {
 	Token          string     `json:"token,omitempty"`
 	UsernameSecret *SecretRef `json:"usernameSecret,omitempty"`
 	TokenSecret    *SecretRef `json:"tokenSecret,omitempty"`
-	// secret with certificate for private repositories
+	// secret with certificate for private repositories. Should contain one key ending with .crt such as "mycorp.crt", whose value is the certificate file content, suitable for git config http.sslCAInfo
 	CertificateSecret string `json:"certificateSecret,omitempty"`
 	// if provided we checkout the whole repository and run test from this directory
 	WorkingDir string `json:"workingDir,omitempty"`

@@ -3480,7 +3480,7 @@ components:
           $ref: "#/components/schemas/SecretRef"
         certificateSecret:
           type: string
-          description: secret with certificate for private repositories
+          description: secret with certificate for private repositories. Should contain one key ending with .crt such as "mycorp.crt", whose value is the certificate file content, suitable for git config http.sslCAInfo
         workingDir:
           type: string
           description: if provided we checkout the whole repository and run test from this directory
