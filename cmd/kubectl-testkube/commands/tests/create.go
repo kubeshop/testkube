@@ -90,7 +90,7 @@ func NewCreateTestsCmd() *cobra.Command {
 				}
 			}
 
-			err = validateCreateOptions(cmd)
+			err = common.ValidateUpsertOptions(cmd, sourceName)
 			ui.ExitOnError("validating passed flags", err)
 
 			err = validateArtifactRequest(artifactStorageClassName, artifactVolumeMountPath, artifactDirs)
@@ -190,72 +190,6 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVar(&uploadTimeout, "upload-timeout", "", "timeout to use when uploading files, example: 30s")
 
 	return cmd
-}
-
-func validateCreateOptions(cmd *cobra.Command) error {
-	gitUri := cmd.Flag("git-uri").Value.String()
-	gitBranch := cmd.Flag("git-branch").Value.String()
-	gitCommit := cmd.Flag("git-commit").Value.String()
-	gitPath := cmd.Flag("git-path").Value.String()
-	gitUsername := cmd.Flag("git-username").Value.String()
-	gitToken := cmd.Flag("git-token").Value.String()
-	gitUsernameSecret, err := cmd.Flags().GetStringToString("git-username-secret")
-	if err != nil {
-		return err
-	}
-
-	gitTokenSecret, err := cmd.Flags().GetStringToString("git-token-secret")
-	if err != nil {
-		return err
-	}
-
-	gitWorkingDir := cmd.Flag("git-working-dir").Value.String()
-	gitCertificateSecret := cmd.Flag("git-certificate-secret").Value.String()
-	gitAuthType := cmd.Flag("git-auth-type").Value.String()
-	file := cmd.Flag("file").Value.String()
-	uri := cmd.Flag("uri").Value.String()
-	sourceName := cmd.Flag("source").Value.String()
-
-	hasGitParams := gitBranch != "" || gitCommit != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != "" ||
-		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0 || gitWorkingDir != "" || gitCertificateSecret != "" || gitAuthType != ""
-
-	if hasGitParams && uri != "" {
-		return fmt.Errorf("found git params and `--uri` flag, please use `--git-uri` for git based repo or `--uri` without git based params")
-	}
-	if hasGitParams && file != "" {
-		return fmt.Errorf("found git params and `--file` flag, please use `--git-uri` for git based repo or `--file` without git based params")
-	}
-
-	if file != "" && uri != "" {
-		return fmt.Errorf("please pass only one of `--file` and `--uri`")
-	}
-
-	if hasGitParams {
-		if gitUri == "" && sourceName == "" {
-			return fmt.Errorf("please pass valid `--git-uri` flag")
-		}
-		if gitBranch != "" && gitCommit != "" {
-			return fmt.Errorf("please pass only one of `--git-branch` or `--git-commit`")
-		}
-	}
-
-	if len(gitUsernameSecret) > 1 {
-		return fmt.Errorf("please pass only one secret reference for git username")
-	}
-
-	if len(gitTokenSecret) > 1 {
-		return fmt.Errorf("please pass only one secret reference for git token")
-	}
-
-	if gitAuthType != string(testkube.GitAuthTypeBasic) && gitAuthType != string(testkube.GitAuthTypeHeader) {
-		return fmt.Errorf("please pass one of basic` or `header` for git auth type")
-	}
-
-	if (gitUsername != "" || gitToken != "") && (len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0) {
-		return fmt.Errorf("please pass git credentials either as direct values or as secret references")
-	}
-
-	return nil
 }
 
 func validateExecutorTypeAndContent(executorType, contentType string, executors testkube.ExecutorsDetails) error {
