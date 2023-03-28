@@ -3,12 +3,14 @@ package agent
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/version"
 
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/encoding/gzip"
 
 	"github.com/pkg/errors"
 	"github.com/valyala/fasthttp"
@@ -172,7 +174,7 @@ func (ag *Agent) runCommandLoop(ctx context.Context) error {
 
 	ag.logger.Infow("initiating streaming connection with Cloud API")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
-	var opts []grpc.CallOption
+	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	stream, err := ag.client.ExecuteAsync(ctx, opts...)
 	if err != nil {
 		ag.logger.Errorf("failed to execute: %w", err)
