@@ -28,7 +28,6 @@ func NewRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository
 	gitPath := cmd.Flag("git-path").Value.String()
 	gitUsername := cmd.Flag("git-username").Value.String()
 	gitToken := cmd.Flag("git-token").Value.String()
-
 	gitUsernameSecret, err := cmd.Flags().GetStringToString("git-username-secret")
 	if err != nil {
 		return nil, err
@@ -42,6 +41,7 @@ func NewRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository
 	gitWorkingDir := cmd.Flag("git-working-dir").Value.String()
 	gitCertificateSecret := cmd.Flag("git-certificate-secret").Value.String()
 	gitAuthType := cmd.Flag("git-auth-type").Value.String()
+
 	hasGitParams := hasGitParamsInCmd(cmd)
 	if !hasGitParams {
 		return nil, nil
@@ -194,10 +194,10 @@ func ValidateUpsertOptions(cmd *cobra.Command, sourceName string) error {
 	uri := cmd.Flag("uri").Value.String()
 
 	hasGitParams := hasGitParamsInCmd(cmd)
-
 	if hasGitParams && uri != "" {
 		return fmt.Errorf("found git params and `--uri` flag, please use `--git-uri` for git based repo or `--uri` without git based params")
 	}
+
 	if hasGitParams && file != "" {
 		return fmt.Errorf("found git params and `--file` flag, please use `--git-uri` for git based repo or `--file` without git based params")
 	}
