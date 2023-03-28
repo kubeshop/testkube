@@ -122,7 +122,9 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 
 		namespaces := make(map[string]struct{}, 0)
 		for _, upsertRequest := range request {
-			namespaces[upsertRequest.Namespace] = struct{}{}
+			if upsertRequest.Namespace != "" {
+				namespaces[upsertRequest.Namespace] = struct{}{}
+			}
 		}
 
 		if len(namespaces) == 0 {
