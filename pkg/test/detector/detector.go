@@ -7,7 +7,7 @@ import (
 	"github.com/kubeshop/testkube/contrib/executor/ginkgo/pkg/ginkgo"
 	"github.com/kubeshop/testkube/contrib/executor/gradle/pkg/gradle"
 	"github.com/kubeshop/testkube/contrib/executor/jmeter/pkg/jmeter"
-	"github.com/kubeshop/testkube/contrib/executor/k6/pkg/k6"
+	"github.com/kubeshop/testkube/contrib/executor/k6/pkg/k6detector"
 	"github.com/kubeshop/testkube/contrib/executor/kubepug/pkg/kubepug"
 	"github.com/kubeshop/testkube/contrib/executor/maven/pkg/maven"
 	"github.com/kubeshop/testkube/contrib/executor/playwright/pkg/playwright"
@@ -21,7 +21,7 @@ func NewDefaultDetector() Detector {
 	d.Add(artillery.Detector{})
 	d.Add(curl.Detector{})
 	d.Add(jmeter.Detector{})
-	d.Add(k6.Detector{})
+	d.Add(k6detector.Detector{})
 	d.Add(postman.Detector{})
 	d.Add(soapui.Detector{})
 	d.Add(maven.Detector{})
