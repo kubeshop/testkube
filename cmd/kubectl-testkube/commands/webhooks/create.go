@@ -14,10 +14,11 @@ import (
 
 func NewCreateWebhookCmd() *cobra.Command {
 	var (
-		events    []string
-		name, uri string
-		selector  string
-		labels    map[string]string
+		events             []string
+		name, uri          string
+		selector           string
+		labels             map[string]string
+		payloadObjectField string
 	)
 
 	cmd := &cobra.Command{
@@ -45,12 +46,13 @@ func NewCreateWebhookCmd() *cobra.Command {
 			}
 
 			options := apiv1.CreateWebhookOptions{
-				Name:      name,
-				Namespace: namespace,
-				Events:    webhooksmapper.MapStringArrayToCRDEvents(events),
-				Uri:       uri,
-				Selector:  selector,
-				Labels:    labels,
+				Name:               name,
+				Namespace:          namespace,
+				Events:             webhooksmapper.MapStringArrayToCRDEvents(events),
+				Uri:                uri,
+				Selector:           selector,
+				Labels:             labels,
+				PayloadObjectField: payloadObjectField,
 			}
 
 			if !crdOnly {
@@ -72,6 +74,7 @@ func NewCreateWebhookCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&uri, "uri", "u", "", "URI which should be called when given event occurs")
 	cmd.Flags().StringVarP(&selector, "selector", "", "", "expression to select tests and test suites for webhook events: --selector app=backend")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().StringVarP(&payloadObjectField, "payload-field", "", "", "field to use for notification object payload")
 
 	return cmd
 }

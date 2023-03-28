@@ -16,6 +16,7 @@ testkube get execution [executionID][executionName] [flags]
   -h, --help            help for execution
   -l, --label strings   label key value pair: --label key1=value1
       --limit int       records limit (default 10)
+      --logs-only       show only execution logs
       --test string     test id
 ```
 

@@ -1,6 +1,7 @@
 package webhook
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -30,7 +31,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		l := NewWebhookListener("l1", svr.URL, "", testEventTypes)
+		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "")
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -51,7 +52,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		l := NewWebhookListener("l1", svr.URL, "", testEventTypes)
+		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "")
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -67,7 +68,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 	t.Run("send event bad uri", func(t *testing.T) {
 		// given
 
-		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testEventTypes)
+		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testEventTypes, "")
 
 		// when
 		r := s.Notify(testkube.Event{
@@ -79,6 +80,37 @@ func TestWebhookListener_Notify(t *testing.T) {
 		assert.NotEqual(t, "", r.Error())
 	})
 
+	t.Run("send event success response using payload field", func(t *testing.T) {
+		// given
+		testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body := bytes.NewBuffer([]byte{})
+			err := json.NewEncoder(body).Encode(testkube.Event{
+				Type_:         testkube.EventStartTest,
+				TestExecution: exampleExecution(),
+			})
+			assert.NoError(t, err)
+
+			data := make(map[string]string, 0)
+			err = json.NewDecoder(r.Body).Decode(&data)
+			// then
+			assert.NoError(t, err)
+			assert.Equal(t, string(body.Bytes()), data["field"])
+		})
+
+		svr := httptest.NewServer(testHandler)
+		defer svr.Close()
+
+		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "field")
+
+		// when
+		r := l.Notify(testkube.Event{
+			Type_:         testkube.EventStartTest,
+			TestExecution: exampleExecution(),
+		})
+
+		assert.Equal(t, "", r.Error())
+
+	})
 }
 
 func exampleExecution() *testkube.Execution {

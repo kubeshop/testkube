@@ -48,7 +48,7 @@ func TestEventLoop(t *testing.T) {
 
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 
-	agent, err := agent.NewAgent(logger.Sugar(), nil, "api-key", grpcClient)
+	agent, err := agent.NewAgent(logger.Sugar(), nil, "api-key", grpcClient, 5)
 	assert.NoError(t, err)
 	go func() {
 		l, err := agent.Load()
@@ -83,7 +83,7 @@ func (cws *CloudEventServer) Count() int {
 	return cws.messageCount
 }
 
-func (cws *CloudEventServer) Execute(srv cloud.TestKubeCloudAPI_ExecuteServer) error {
+func (cws *CloudEventServer) ExecuteAsync(srv cloud.TestKubeCloudAPI_ExecuteAsyncServer) error {
 	for {
 		if srv.Context().Err() != nil {
 			return srv.Context().Err()

@@ -360,7 +360,7 @@ func main() {
 	if mode == common.ModeAgent {
 		log.DefaultLogger.Info("starting agent service")
 
-		agentHandle, err := agent.NewAgent(log.DefaultLogger, api.Mux.Handler(), cfg.TestkubeCloudAPIKey, grpcClient)
+		agentHandle, err := agent.NewAgent(log.DefaultLogger, api.Mux.Handler(), cfg.TestkubeCloudAPIKey, grpcClient, cfg.TestkubeCloudWorkerCount)
 		if err != nil {
 			ui.ExitOnError("Starting agent", err)
 		}
