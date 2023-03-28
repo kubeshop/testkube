@@ -118,7 +118,7 @@ func TestDetectorGetAdapter(t *testing.T) {
 		detector := Detector{Adapters: make(map[string]Adapter, 0)}
 		detector.Add(curl.Detector{})
 		detector.Add(postman.Detector{})
-		detector.Add(k6.Detector{})
+		detector.Add(k6detector.Detector{})
 
 		adapter := detector.GetAdapter("postman/collection")
 
