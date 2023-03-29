@@ -153,7 +153,6 @@ type storageParams struct {
 	Endpoint        string
 	AccessKeyId     string
 	SecretAccessKey string
-	Location        string
 	Region          string
 	Token           string
 	Bucket          string
@@ -200,7 +199,6 @@ func (s *TestkubeAPI) InitStorage() {
 	s.Storage = minio.NewClient(s.storageParams.Endpoint,
 		s.storageParams.AccessKeyId,
 		s.storageParams.SecretAccessKey,
-		s.storageParams.Location,
 		s.storageParams.Region,
 		s.storageParams.Token,
 		s.storageParams.Bucket,

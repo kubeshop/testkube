@@ -70,7 +70,6 @@ func (r *InitRunner) Run(execution testkube.Execution) (result testkube.Executio
 		fp := content.NewCopyFilesPlacer(params.Endpoint,
 			params.AccessKeyID,
 			params.SecretAccessKey,
-			params.Location,
 			params.Region,
 			params.Token,
 			params.Bucket,

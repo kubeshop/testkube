@@ -109,7 +109,7 @@ func TestParseRunnerOutput(t *testing.T) {
 {"type":"line","content":"RUNNER_ENDPOINT=\"testkube-minio-service-testkube:9000\"","time":"2023-01-17T15:29:17.921788721Z"}
 {"type":"line","content":"RUNNER_ACCESSKEYID=\"********\"","time":"2023-01-17T15:29:17.921790721Z"}
 {"type":"line","content":"RUNNER_SECRETACCESSKEY=\"********\"","time":"2023-01-17T15:29:17.921792388Z"}
-{"type":"line","content":"RUNNER_LOCATION=\"\"","time":"2023-01-17T15:29:17.921793846Z"}
+{"type":"line","content":"RUNNER_REGION=\"\"","time":"2023-01-17T15:29:17.921793846Z"}
 {"type":"line","content":"RUNNER_TOKEN=\"\"","time":"2023-01-17T15:29:17.921795304Z"}
 {"type":"line","content":"RUNNER_SSL=false","time":"2023-01-17T15:29:17.921797054Z"}
 {"type":"line","content":"RUNNER_SCRAPPERENABLED=\"true\"","time":"2023-01-17T15:29:17.921798679Z"}
@@ -127,7 +127,7 @@ func TestParseRunnerOutput(t *testing.T) {
 RUNNER_ENDPOINT="testkube-minio-service-testkube:9000"
 RUNNER_ACCESSKEYID="********"
 RUNNER_SECRETACCESSKEY="********"
-RUNNER_LOCATION=""
+RUNNER_REGION=""
 RUNNER_TOKEN=""
 RUNNER_SSL=false
 RUNNER_SCRAPPERENABLED="true"
@@ -175,7 +175,7 @@ could not start process: fork/exec ./zap-api-scan.py: no such file or directory
 {"type":"line","content":"RUNNER_ENDPOINT=\"testkube-minio-service-testkube:9000\"","time":"2023-01-19T15:22:25.867946929Z"}
 {"type":"line","content":"RUNNER_ACCESSKEYID=\"********\"","time":"2023-01-19T15:22:25.867948804Z"}
 {"type":"line","content":"RUNNER_SECRETACCESSKEY=\"********\"","time":"2023-01-19T15:22:25.867955263Z"}
-{"type":"line","content":"RUNNER_LOCATION=\"\"","time":"2023-01-19T15:22:25.867962596Z"}
+{"type":"line","content":"RUNNER_REGION=\"\"","time":"2023-01-19T15:22:25.867962596Z"}
 {"type":"line","content":"RUNNER_TOKEN=\"\"","time":"2023-01-19T15:22:25.867967971Z"}
 {"type":"line","content":"RUNNER_SSL=false","time":"2023-01-19T15:22:25.867974013Z"}
 {"type":"line","content":"RUNNER_SCRAPPERENABLED=\"true\"","time":"2023-01-19T15:22:25.867978888Z"}
@@ -193,7 +193,6 @@ could not start process: fork/exec ./zap-api-scan.py: no such file or directory
 RUNNER_ENDPOINT="testkube-minio-service-testkube:9000"
 RUNNER_ACCESSKEYID="********"
 RUNNER_SECRETACCESSKEY="********"
-RUNNER_LOCATION=""
 RUNNER_REGION=""
 RUNNER_TOKEN=""
 RUNNER_SSL=false
@@ -225,7 +224,7 @@ can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.
 {"type":"line","content":"RUNNER_ENDPOINT=\"testkube-minio-service-testkube:9000\"","time":"2023-01-19T15:22:25.867946929Z"}
 {"type":"line","content":"RUNNER_ACCESSKEYID=\"********\"","time":"2023-01-19T15:22:25.867948804Z"}
 {"type":"line","content":"RUNNER_SECRETACCESSKEY=\"********\"","time":"2023-01-19T15:22:25.867955263Z"}
-{"type":"line","content":"RUNNER_LOCATION=\"\"","time":"2023-01-19T15:22:25.867962596Z"}
+{"type":"line","content":"RUNNER_REGION=\"\"","time":"2023-01-19T15:22:25.867962596Z"}
 {"type":"line","content":"RUNNER_TOKEN=\"\"","time":"2023-01-19T15:22:25.867967971Z"}
 {"type":"line","content":"RUNNER_SSL=false","time":"2023-01-19T15:22:25.867974013Z"}
 {"type":"line","content":"RUNNER_SCRAPPERENABLED=\"true\"","time":"2023-01-19T15:22:25.867978888Z"}
@@ -249,7 +248,7 @@ can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.
 RUNNER_ENDPOINT="testkube-minio-service-testkube:9000"
 RUNNER_ACCESSKEYID="********"
 RUNNER_SECRETACCESSKEY="********"
-RUNNER_LOCATION=""
+RUNNER_REGION=""
 RUNNER_TOKEN=""
 RUNNER_SSL=false
 RUNNER_SCRAPPERENABLED="true"
@@ -281,7 +280,7 @@ can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.
 {"type":"line","content":"RUNNER_ENDPOINT=\"testkube-minio-service-testkube:9000\"","time":"2023-01-20T12:44:15.718962633Z"}
 {"type":"line","content":"RUNNER_ACCESSKEYID=\"********\"","time":"2023-01-20T12:44:15.718966091Z"}
 {"type":"line","content":"RUNNER_SECRETACCESSKEY=\"********\"","time":"2023-01-20T12:44:15.718969383Z"}
-{"type":"line","content":"RUNNER_LOCATION=\"\"","time":"2023-01-20T12:44:15.718972299Z"}
+{"type":"line","content":"RUNNER_REGION=\"\"","time":"2023-01-20T12:44:15.718972299Z"}
 {"type":"line","content":"RUNNER_TOKEN=\"\"","time":"2023-01-20T12:44:15.718975174Z"}
 {"type":"line","content":"RUNNER_SSL=false","time":"2023-01-20T12:44:15.718977924Z"}
 {"type":"line","content":"RUNNER_SCRAPPERENABLED=\"true\"","time":"2023-01-20T12:44:15.718980758Z"}
@@ -299,7 +298,6 @@ can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.
 RUNNER_ENDPOINT="testkube-minio-service-testkube:9000"
 RUNNER_ACCESSKEYID="********"
 RUNNER_SECRETACCESSKEY="********"
-RUNNER_LOCATION=""
 RUNNER_REGION=""
 RUNNER_TOKEN=""
 RUNNER_SSL=false
