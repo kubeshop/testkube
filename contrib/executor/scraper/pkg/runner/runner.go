@@ -1,10 +1,14 @@
 package runner
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/pkg/errors"
+
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 
 	"github.com/kelseyhightower/envconfig"
 
@@ -12,7 +16,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
-	"github.com/kubeshop/testkube/pkg/executor/scraper"
 )
 
 // NewRunner creates scraper runner
@@ -24,16 +27,7 @@ func NewRunner() (*ScraperRunner, error) {
 	}
 
 	runner := &ScraperRunner{
-		Scraper: scraper.NewMinioScraper(
-			params.Endpoint,
-			params.AccessKeyID,
-			params.SecretAccessKey,
-			params.Location,
-			params.Token,
-			params.Bucket,
-			params.Ssl,
-		),
-		ScrapperEnabled: params.ScrapperEnabled,
+		Params: params,
 	}
 
 	return runner, nil
@@ -41,8 +35,7 @@ func NewRunner() (*ScraperRunner, error) {
 
 // ScraperRunner prepares data for executor
 type ScraperRunner struct {
-	ScrapperEnabled bool // RUNNER_SCRAPPERENABLED
-	Scraper         scraper.Scraper
+	Params envs.Params
 }
 
 // Run prepares data for executor
@@ -57,7 +50,7 @@ func (r *ScraperRunner) Run(execution testkube.Execution) (result testkube.Execu
 		return result, err
 	}
 
-	if r.ScrapperEnabled {
+	if r.Params.ScrapperEnabled {
 		directories := execution.ArtifactRequest.Dirs
 		if len(directories) == 0 {
 			directories = []string{"."}
@@ -67,8 +60,11 @@ func (r *ScraperRunner) Run(execution testkube.Execution) (result testkube.Execu
 			directories[i] = filepath.Join(execution.ArtifactRequest.VolumeMountPath, directories[i])
 		}
 
-		output.PrintEvent("scraping for test files", directories)
-		err := r.Scraper.Scrape(execution.Id, directories)
+		output.PrintLog(fmt.Sprintf("Scraping directories: %v", directories))
+
+		if err := factory.Scrape(context.Background(), directories, execution, r.Params); err != nil {
+			return result, errors.Wrap(err, "error getting artifacts from SoapUI executor")
+		}
 		if err != nil {
 			return *result.Err(err), fmt.Errorf("failed getting artifacts: %w", err)
 		}

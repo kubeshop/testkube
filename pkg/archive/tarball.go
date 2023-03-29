@@ -4,10 +4,11 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
-	"github.com/pkg/errors"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/pkg/errors"
 )
 
 type Tarball struct{}

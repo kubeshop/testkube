@@ -6,14 +6,15 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	domainstorage "github.com/kubeshop/testkube/pkg/storage"
-	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"io"
 	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
+
+	domainstorage "github.com/kubeshop/testkube/pkg/storage"
+	"github.com/kubeshop/testkube/pkg/storage/minio"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
@@ -59,6 +60,7 @@ import (
 	testsourcesclientv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
+	"github.com/kubeshop/testkube/internal/graphql"
 	"github.com/kubeshop/testkube/internal/migrations"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -331,6 +333,8 @@ func main() {
 		)
 	}
 
+	gqlServer := graphql.GetServer(eventBus, executorsClient)
+
 	api := apiv1.NewTestkubeAPI(
 		cfg.TestkubeNamespace,
 		resultsRepository,
@@ -353,6 +357,7 @@ func main() {
 		sched,
 		slackLoader,
 		storageClient,
+		gqlServer,
 	)
 
 	isMinioStorage := cfg.LogsStorage == "minio"
@@ -426,6 +431,10 @@ func main() {
 
 	g.Go(func() error {
 		return api.Run(ctx)
+	})
+
+	g.Go(func() error {
+		return api.RunGraphQLServer(ctx, cfg)
 	})
 
 	if err := g.Wait(); err != nil {

@@ -4,10 +4,11 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTarball_Extract(t *testing.T) {

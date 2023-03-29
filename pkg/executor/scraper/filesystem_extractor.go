@@ -3,11 +3,12 @@ package scraper
 import (
 	"bytes"
 	"context"
-	"github.com/kubeshop/testkube/pkg/archive"
-	"github.com/kubeshop/testkube/pkg/log"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/kubeshop/testkube/pkg/archive"
+	"github.com/kubeshop/testkube/pkg/log"
 
 	"github.com/kubeshop/testkube/pkg/filesystem"
 

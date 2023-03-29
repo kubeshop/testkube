@@ -3,11 +3,13 @@ package runner
 import (
 	"context"
 	"fmt"
-	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
-	"github.com/pkg/errors"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/pkg/errors"
+
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
@@ -83,7 +85,7 @@ func (r *SoapUIRunner) Run(execution testkube.Execution) (result testkube.Execut
 	output.PrintLog(fmt.Sprintf("Scraping directories: %v", directories))
 
 	if err := factory.Scrape(context.Background(), directories, execution, r.Params); err != nil {
-		return result, errors.Wrap(err, "error getting artifacts from SoapUI logs")
+		return result, errors.Wrap(err, "error getting artifacts from SoapUI executor")
 	}
 
 	return result, nil

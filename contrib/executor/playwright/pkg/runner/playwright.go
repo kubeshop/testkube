@@ -3,10 +3,12 @@ package runner
 import (
 	"context"
 	"fmt"
-	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
-	"github.com/pkg/errors"
 	"os"
 	"path/filepath"
+
+	"github.com/pkg/errors"
+
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"

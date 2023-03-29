@@ -44,6 +44,7 @@ type Config struct {
 	TestkubeCloudTLSInsecure         bool   `envconfig:"TESTKUBE_CLOUD_TLS_INSECURE" default:"false"`
 	TestkubeCloudWorkerCount         int    `envconfig:"TESTKUBE_CLOUD_WORKER_COUNT" default:"50"`
 	TestkubeWatcherNamespaces        string `envconfig:"TESTKUBE_WATCHER_NAMESPACES" default:""`
+	GraphqlPort                      string `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
 }
 
 func Get() (*Config, error) {

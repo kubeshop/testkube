@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kubeshop/testkube/contrib/executor/soapui/pkg/mock"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -74,16 +73,12 @@ func TestRun(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			s := mock.Scraper{}
-			s.ScrapeFn = test.scraper
-
 			file, err := test.testFileCreator()
 			assert.NoError(t, err)
 			defer file.Close()
 
 			runner := SoapUIRunner{
 				SoapUIExecPath: file.Name(),
-				Scraper:        s,
 				DataDir:        tempDir,
 			}
 

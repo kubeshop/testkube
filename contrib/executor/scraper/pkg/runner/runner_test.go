@@ -5,6 +5,8 @@ import (
 	"log"
 	"testing"
 
+	"github.com/kubeshop/testkube/pkg/envs"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -43,8 +45,7 @@ func TestRun(t *testing.T) {
 			s.ScrapeFn = test.scraper
 
 			runner := ScraperRunner{
-				ScrapperEnabled: true,
-				Scraper:         s,
+				Params: envs.Params{ScrapperEnabled: true},
 			}
 
 			res, err := runner.Run(test.execution)

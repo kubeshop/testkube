@@ -2,6 +2,7 @@ package scraper
 
 import (
 	"context"
+
 	coreminio "github.com/minio/minio-go/v7"
 
 	"github.com/kubeshop/testkube/pkg/log"

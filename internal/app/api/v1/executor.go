@@ -38,6 +38,12 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
+		s.Events.Notify(testkube.NewEvent(
+			testkube.EventCreated,
+			testkube.EventResourceExecutor,
+			created.Name,
+		))
+
 		c.Status(http.StatusCreated)
 		return c.JSON(created)
 	}
@@ -73,6 +79,12 @@ func (s TestkubeAPI) UpdateExecutorHandler() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, err)
 		}
+
+		s.Events.Notify(testkube.NewEvent(
+			testkube.EventCreated,
+			testkube.EventResourceExecutor,
+			updatedExecutor.Name,
+		))
 
 		return c.JSON(updatedExecutor)
 	}
@@ -135,7 +147,14 @@ func (s TestkubeAPI) DeleteExecutorHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
+		s.Events.Notify(testkube.NewEvent(
+			testkube.EventDeleted,
+			testkube.EventResourceExecutor,
+			name,
+		))
+
 		c.Status(http.StatusNoContent)
+
 		return nil
 	}
 }

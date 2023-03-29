@@ -16,6 +16,7 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/proxy"
@@ -68,6 +69,7 @@ func NewTestkubeAPI(
 	scheduler *scheduler.Scheduler,
 	slackLoader *slack.SlackLoader,
 	storage storage.Client,
+	graphQL *handler.Server,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -102,6 +104,7 @@ func NewTestkubeAPI(
 		scheduler:            scheduler,
 		slackLoader:          slackLoader,
 		Storage:              storage,
+		GraphQL:              graphQL,
 	}
 
 	// will be reused in websockets handler
@@ -142,6 +145,7 @@ type TestkubeAPI struct {
 	scheduler            *scheduler.Scheduler
 	Clientset            kubernetes.Interface
 	slackLoader          *slack.SlackLoader
+	GraphQL              *handler.Server
 }
 
 type storageParams struct {
@@ -335,6 +339,12 @@ func (s *TestkubeAPI) InitRoutes() {
 
 	repositories := s.Routes.Group("/repositories")
 	repositories.Post("/", s.ValidateRepositoryHandler())
+
+	// TODO it's not possible to mount graphql on FastHTTP
+	// https://github.com/99designs/gqlgen/issues/1664
+	// gql := s.Routes.Group("/graphql")
+	// gql.All("/query", adaptor.HTTPHandler(s.GraphQL))
+	// gql.All("/", adaptor.HTTPHandler(playground.Handler("GraphQL playground", "/v1/graphql/query")))
 
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor
