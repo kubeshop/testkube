@@ -31,4 +31,6 @@ type RepositoryUpdate struct {
 	CertificateSecret *string `json:"certificateSecret,omitempty"`
 	// if provided we checkout the whole repository and run test from this directory
 	WorkingDir *string `json:"workingDir,omitempty"`
+	// auth type for git requests
+	AuthType *string `json:"authType,omitempty"`
 }

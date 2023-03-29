@@ -34,6 +34,7 @@ func NewCreateTestsCmd() *cobra.Command {
 		gitUsernameSecret        map[string]string
 		gitTokenSecret           map[string]string
 		gitCertificateSecret     string
+		gitAuthType              string
 		sourceName               string
 		labels                   map[string]string
 		variables                map[string]string
@@ -89,7 +90,7 @@ func NewCreateTestsCmd() *cobra.Command {
 				}
 			}
 
-			err = validateCreateOptions(cmd)
+			err = common.ValidateUpsertOptions(cmd, sourceName)
 			ui.ExitOnError("validating passed flags", err)
 
 			err = validateArtifactRequest(artifactStorageClassName, artifactVolumeMountPath, artifactDirs)
@@ -154,6 +155,7 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&gitUsernameSecret, "git-username-secret", "", map[string]string{}, "git username secret in a form of secret_name1=secret_key1 for private repository")
 	cmd.Flags().StringToStringVarP(&gitTokenSecret, "git-token-secret", "", map[string]string{}, "git token secret in a form of secret_name1=secret_key1 for private repository")
 	cmd.Flags().StringVarP(&gitCertificateSecret, "git-certificate-secret", "", "", "if git repository is private we can use certificate as an auth parameter stored in a kubernetes secret name")
+	cmd.Flags().StringVarP(&gitAuthType, "git-auth-type", "", "basic", "auth type for git requests one of basic|header")
 	cmd.Flags().StringVarP(&sourceName, "source", "", "", "source name - will be used together with content parameters")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringToStringVarP(&variables, "variable", "v", nil, "variable key value pair: --variable key1=value1")
@@ -188,71 +190,6 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVar(&uploadTimeout, "upload-timeout", "", "timeout to use when uploading files, example: 30s")
 
 	return cmd
-}
-
-func validateCreateOptions(cmd *cobra.Command) error {
-	gitUri := cmd.Flag("git-uri").Value.String()
-	gitBranch := cmd.Flag("git-branch").Value.String()
-	gitCommit := cmd.Flag("git-commit").Value.String()
-	gitPath := cmd.Flag("git-path").Value.String()
-	gitUsername := cmd.Flag("git-username").Value.String()
-	gitToken := cmd.Flag("git-token").Value.String()
-	gitUsernameSecret, err := cmd.Flags().GetStringToString("git-username-secret")
-	if err != nil {
-		return err
-	}
-
-	gitTokenSecret, err := cmd.Flags().GetStringToString("git-token-secret")
-	if err != nil {
-		return err
-	}
-
-	gitCertificateSecret, err := cmd.Flags().GetString("git-certificate-secret")
-	if err != nil {
-		return err
-	}
-
-	gitWorkingDir := cmd.Flag("git-working-dir").Value.String()
-	file := cmd.Flag("file").Value.String()
-	uri := cmd.Flag("uri").Value.String()
-	sourceName := cmd.Flag("source").Value.String()
-
-	hasGitParams := gitBranch != "" || gitCommit != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != "" ||
-		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0 || gitWorkingDir != "" || gitCertificateSecret != ""
-
-	if hasGitParams && uri != "" {
-		return fmt.Errorf("found git params and `--uri` flag, please use `--git-uri` for git based repo or `--uri` without git based params")
-	}
-	if hasGitParams && file != "" {
-		return fmt.Errorf("found git params and `--file` flag, please use `--git-uri` for git based repo or `--file` without git based params")
-	}
-
-	if file != "" && uri != "" {
-		return fmt.Errorf("please pass only one of `--file` and `--uri`")
-	}
-
-	if hasGitParams {
-		if gitUri == "" && sourceName == "" {
-			return fmt.Errorf("please pass valid `--git-uri` flag")
-		}
-		if gitBranch != "" && gitCommit != "" {
-			return fmt.Errorf("please pass only one of `--git-branch` or `--git-commit`")
-		}
-	}
-
-	if len(gitUsernameSecret) > 1 {
-		return fmt.Errorf("please pass only one secret reference for git username")
-	}
-
-	if len(gitTokenSecret) > 1 {
-		return fmt.Errorf("please pass only one secret reference for git token")
-	}
-
-	if (gitUsername != "" || gitToken != "" || gitCertificateSecret != "") && (len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0) {
-		return fmt.Errorf("please pass git credentials either as direct values or as secret references")
-	}
-
-	return nil
 }
 
 func validateExecutorTypeAndContent(executorType, contentType string, executors testkube.ExecutorsDetails) error {

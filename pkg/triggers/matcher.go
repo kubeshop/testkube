@@ -18,10 +18,10 @@ var ErrConditionTimeout = errors.New("timed-out waiting for trigger conditions")
 func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 	for _, status := range s.triggerStatus {
 		t := status.testTrigger
-		if t.Spec.Resource != string(e.resource) {
+		if t.Spec.Resource != testtriggersv1.TestTriggerResource(e.resource) {
 			continue
 		}
-		if !matchEventOrCause(t.Spec.Event, e) {
+		if !matchEventOrCause(string(t.Spec.Event), e) {
 			continue
 		}
 		if !matchSelector(&t.Spec.ResourceSelector, t.Namespace, e, s.logger) {

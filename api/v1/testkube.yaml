@@ -3485,6 +3485,12 @@ components:
           type: string
           description: if provided we checkout the whole repository and run test from this directory
           example: "/"
+        authType:
+          type: string
+          enum:
+            - basic
+            - header
+          description: auth type for git requests
 
     RepositoryParameters:
       description: repository parameters for tests in git repositories
