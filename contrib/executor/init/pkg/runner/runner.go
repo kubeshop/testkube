@@ -67,7 +67,13 @@ func (r *InitRunner) Run(execution testkube.Execution) (result testkube.Executio
 	// add copy files in case object storage is set
 	if params.Endpoint != "" {
 		output.PrintLog(fmt.Sprintf("%s Fetching uploads from object store %s...", ui.IconFile, params.Endpoint))
-		fp := content.NewCopyFilesPlacer(params.Endpoint, params.AccessKeyID, params.SecretAccessKey, params.Location, params.Token, params.Bucket, params.Ssl)
+		fp := content.NewCopyFilesPlacer(params.Endpoint,
+			params.AccessKeyID,
+			params.SecretAccessKey,
+			params.Region,
+			params.Token,
+			params.Bucket,
+			params.Ssl)
 		fp.PlaceFiles(execution.TestName, execution.BucketName)
 	}
 

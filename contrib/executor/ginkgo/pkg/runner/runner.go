@@ -35,7 +35,7 @@ func NewGinkgoRunner() (*GinkgoRunner, error) {
 			params.Endpoint,
 			params.AccessKeyID,
 			params.SecretAccessKey,
-			params.Location,
+			params.Region,
 			params.Token,
 			params.Bucket,
 			params.Ssl,

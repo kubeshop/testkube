@@ -33,7 +33,7 @@ type Client struct {
 	accessKeyID     string
 	secretAccessKey string
 	ssl             bool
-	location        string
+	region          string
 	token           string
 	bucket          string
 	minioclient     *minio.Client
@@ -41,9 +41,9 @@ type Client struct {
 }
 
 // NewClient returns new MinIO client
-func NewClient(endpoint, accessKeyID, secretAccessKey, location, token, bucket string, ssl bool) *Client {
+func NewClient(endpoint, accessKeyID, secretAccessKey, region, token, bucket string, ssl bool) *Client {
 	c := &Client{
-		location:        location,
+		region:          region,
 		accessKeyID:     accessKeyID,
 		secretAccessKey: secretAccessKey,
 		token:           token,
@@ -59,14 +59,23 @@ func NewClient(endpoint, accessKeyID, secretAccessKey, location, token, bucket s
 // Connect connects to MinIO server
 func (c *Client) Connect() error {
 	creds := credentials.NewIAM("")
-	c.Log.Debugw("connecting to minio", "endpoint", c.Endpoint, "accessKeyID", c.accessKeyID, "location", c.location, "token", c.token, "ssl", c.ssl)
+	c.Log.Debugw("connecting to minio",
+		"endpoint", c.Endpoint,
+		"accessKeyID", c.accessKeyID,
+		"region", c.region,
+		"token", c.token,
+		"ssl", c.ssl)
 	if c.accessKeyID != "" && c.secretAccessKey != "" {
 		creds = credentials.NewStaticV4(c.accessKeyID, c.secretAccessKey, c.token)
 	}
-	mclient, err := minio.New(c.Endpoint, &minio.Options{
+	opts := &minio.Options{
 		Creds:  creds,
 		Secure: c.ssl,
-	})
+	}
+	if c.region != "" {
+		opts.Region = c.region
+	}
+	mclient, err := minio.New(c.Endpoint, opts)
 	if err != nil {
 		c.Log.Errorw("error connecting to minio", "error", err)
 		return err
@@ -81,7 +90,7 @@ func (c *Client) CreateBucket(bucket string) error {
 		return err
 	}
 	ctx := context.Background()
-	err := c.minioclient.MakeBucket(ctx, bucket, minio.MakeBucketOptions{Region: c.location})
+	err := c.minioclient.MakeBucket(ctx, bucket, minio.MakeBucketOptions{Region: c.region})
 	if err != nil {
 		c.Log.Errorw("error creating bucket", "error", err)
 		// Check to see if we already own this bucket (which happens if you run this twice)
