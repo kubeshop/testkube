@@ -1,7 +1,10 @@
-project_name: testkube-api
+project_name: testkube-api-server
 builds:
   - id: "linux"
-    env: [CGO_ENABLED=0]
+    main: ./cmd/api-server
+    binary: testkube-api-server
+    env:
+      - CGO_ENABLED=0
     goos:
       - linux
     goarch:
@@ -9,7 +12,7 @@ builds:
       - arm64
     mod_timestamp: "{{ .CommitTimestamp }}"
 dockers:
-  - dockerfile: build/api-server/Dockerfile
+  - dockerfile: ./build/api-server/Dockerfile
     use: buildx
     goos: linux
     goarch: amd64
@@ -21,8 +24,8 @@ dockers:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
       - "--label=org.opencontainers.image.created={{ .Date}}"
-      - "--label=org.opencontainers.image.revision={{ .FullCommit}}"
-      - "--label=org.opencontainers.image.version={{ .Version}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
       - "--build-arg=TOKEN={{ Env.TOKEN }}"
       - "--build-arg=VERSION={{ .Version }}"
       - "--build-arg=COMMIT={{ .FullCommit }}"
@@ -33,7 +36,7 @@ dockers:
       - "--build-arg=SEGMENTIO_KEY={{ .Env.SEGMENTIO_KEY }}"
       - "--build-arg=CLOUD_SEGMENTIO_KEY={{ .Env.CLOUD_SEGMENTIO_KEY }}"
 
-  - dockerfile: build/api-server/Dockerfile
+  - dockerfile: ./build/api-server/Dockerfile
     use: buildx
     goos: linux
     goarch: arm64
@@ -43,11 +46,11 @@ dockers:
       - "kubeshop/testkube-api-server:latest-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--build-arg=TOKEN={{ Env.TOKEN }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--build-arg=TOKEN={{ .Env.TOKEN }}"
       - "--build-arg=VERSION={{ .Version }}"
       - "--build-arg=COMMIT={{ .FullCommit }}"
       - "--build-arg=ANALYTICS_TRACKING_ID={{ .Env.ANALYTICS_TRACKING_ID }}"
