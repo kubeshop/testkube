@@ -229,7 +229,7 @@ func (s *Service) addTest(test *testsv3.Test) {
 
 	var dataSource string
 	if test.Spec.Content != nil {
-		dataSource = test.Spec.Content.Type_
+		dataSource = string(test.Spec.Content.Type_)
 	}
 
 	out, err := telemetry.SendCreateEvent("testkube_api_create_test", telemetry.CreateParams{

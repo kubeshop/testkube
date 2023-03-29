@@ -340,7 +340,7 @@ func SyncDefaultExecutors(
 			},
 			Spec: executorv1.ExecutorSpec{
 				Types:        executor.Executor.Types,
-				ExecutorType: executor.Executor.ExecutorType,
+				ExecutorType: executorv1.ExecutorType(executor.Executor.ExecutorType),
 				Image:        executor.Executor.Image,
 				Features:     executorsmapper.MapFeaturesToCRD(executor.Executor.Features),
 				ContentTypes: executorsmapper.MapContentTypesToCRD(executor.Executor.ContentTypes),

@@ -95,7 +95,7 @@ func MapContentToSpecContent(content *testkube.TestContent) (specContent *testsv
 			Path:              content.Repository.Path,
 			WorkingDir:        content.Repository.WorkingDir,
 			CertificateSecret: content.Repository.CertificateSecret,
-			AuthType:          content.Repository.AuthType,
+			AuthType:          testsv3.GitAuthType(content.Repository.AuthType),
 		}
 
 		if content.Repository.UsernameSecret != nil {
@@ -117,7 +117,7 @@ func MapContentToSpecContent(content *testkube.TestContent) (specContent *testsv
 		Repository: repository,
 		Data:       content.Data,
 		Uri:        content.Uri,
-		Type_:      content.Type_,
+		Type_:      testsv3.TestContentType(content.Type_),
 	}
 }
 
@@ -265,10 +265,6 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 		destination *string
 	}{
 		{
-			content.Type_,
-			&testContent.Type_,
-		},
-		{
 			content.Data,
 			&testContent.Data,
 		},
@@ -283,6 +279,11 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 			*field.destination = *field.source
 			emptyContent = false
 		}
+	}
+
+	if content.Type_ != nil {
+		testContent.Type_ = testsv3.TestContentType(*content.Type_)
+		emptyContent = false
 	}
 
 	if content.Repository != nil {
@@ -333,10 +334,6 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 				(*content.Repository).CertificateSecret,
 				&testContent.Repository.CertificateSecret,
 			},
-			{
-				(*content.Repository).AuthType,
-				&testContent.Repository.AuthType,
-			},
 		}
 
 		for _, field := range fields {
@@ -344,6 +341,11 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 				*field.destination = *field.source
 				emptyRepository = false
 			}
+		}
+
+		if (*content.Repository).AuthType != nil {
+			testContent.Repository.AuthType = testsv3.GitAuthType(*(*content.Repository).AuthType)
+			emptyRepository = false
 		}
 
 		if (*content.Repository).UsernameSecret != nil {
