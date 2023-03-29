@@ -14,7 +14,7 @@ type DummyLoader struct {
 func (l DummyLoader) List(selector string) (*executorsv1.WebhookList, error) {
 	return &executorsv1.WebhookList{
 		Items: []executorsv1.Webhook{
-			{Spec: executorsv1.WebhookSpec{Uri: "http://localhost:3333", Events: []string{"start-test"}, PayloadObjectField: "text"}},
+			{Spec: executorsv1.WebhookSpec{Uri: "http://localhost:3333", Events: []executorsv1.EventType{"start-test"}, PayloadObjectField: "text"}},
 		},
 	}, nil
 }
