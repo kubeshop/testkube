@@ -26,15 +26,10 @@ dockers:
       - "--label=org.opencontainers.image.created={{ .Date}}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
       - "--label=org.opencontainers.image.version={{ .Version }}"
-      - "--build-arg=TOKEN={{ Env.TOKEN }}"
+      - "--build-arg=TOKEN=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"
       - "--build-arg=VERSION={{ .Version }}"
       - "--build-arg=COMMIT={{ .FullCommit }}"
-      - "--build-arg=ANALYTICS_TRACKING_ID={{ .Env.ANALYTICS_TRACKING_ID }}"
-      - "--build-arg=ANALYTICS_API_KEY={{ .Env.ANALYTICS_API_KEY }}"
-      - "--build-arg=SLACK_BOT_CLIENT_ID={{ .Env.SLACK_BOT_CLIENT_ID}}"
-      - "--build-arg=SLACK_BOT_CLIENT_SECRET={{ .Env.SLACK_BOT_CLIENT_SECRET }}"
-      - "--build-arg=SEGMENTIO_KEY={{ .Env.SEGMENTIO_KEY }}"
-      - "--build-arg=CLOUD_SEGMENTIO_KEY={{ .Env.CLOUD_SEGMENTIO_KEY }}"
+
 
   - dockerfile: ./build/api-server/Dockerfile
     use: buildx
