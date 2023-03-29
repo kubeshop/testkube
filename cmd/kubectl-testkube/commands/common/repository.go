@@ -224,7 +224,7 @@ func ValidateUpsertOptions(cmd *cobra.Command, sourceName string) error {
 	}
 
 	if gitAuthType != string(testkube.GitAuthTypeBasic) && gitAuthType != string(testkube.GitAuthTypeHeader) {
-		return fmt.Errorf("please pass one of basic` or `header` for git auth type")
+		return fmt.Errorf("please pass one of `basic` or `header` for git auth type")
 	}
 
 	if (gitUsername != "" || gitToken != "") && (len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0) {
