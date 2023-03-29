@@ -1,0 +1,74 @@
+project_name: testkube-api
+builds:
+  - id: "linux"
+    env: [CGO_ENABLED=0]
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    mod_timestamp: "{{ .CommitTimestamp }}"
+dockers:
+  - dockerfile: build/api-server/Dockerfile
+    use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "kubeshop/testkube-api-server:{{ .ShortCommit }}-amd64"
+      - "kubeshop/testkube-api-server:{{ .Version }}-amd64"
+      - "kubeshop/testkube-api-server:latest-amd64"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit}}"
+      - "--label=org.opencontainers.image.version={{ .Version}}"
+      - "--build-arg=TOKEN={{ Env.TOKEN }}"
+      - "--build-arg=VERSION={{ .Version }}"
+      - "--build-arg=COMMIT={{ .FullCommit }}"
+      - "--build-arg=ANALYTICS_TRACKING_ID={{ .Env.ANALYTICS_TRACKING_ID }}"
+      - "--build-arg=ANALYTICS_API_KEY={{ .Env.ANALYTICS_API_KEY }}"
+      - "--build-arg=SLACK_BOT_CLIENT_ID={{ .Env.SLACK_BOT_CLIENT_ID}}"
+      - "--build-arg=SLACK_BOT_CLIENT_SECRET={{ .Env.SLACK_BOT_CLIENT_SECRET }}"
+      - "--build-arg=SEGMENTIO_KEY={{ .Env.SEGMENTIO_KEY }}"
+      - "--build-arg=CLOUD_SEGMENTIO_KEY={{ .Env.CLOUD_SEGMENTIO_KEY }}"
+
+  - dockerfile: build/api-server/Dockerfile
+    use: buildx
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "kubeshop/testkube-api-server:{{ .ShortCommit }}-arm64v8"
+      - "kubeshop/testkube-api-server:{{ .Version }}-arm64v8"
+      - "kubeshop/testkube-api-server:latest-arm64v8"
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--build-arg=TOKEN={{ Env.TOKEN }}"
+      - "--build-arg=VERSION={{ .Version }}"
+      - "--build-arg=COMMIT={{ .FullCommit }}"
+      - "--build-arg=ANALYTICS_TRACKING_ID={{ .Env.ANALYTICS_TRACKING_ID }}"
+      - "--build-arg=ANALYTICS_API_KEY={{ .Env.ANALYTICS_API_KEY }}"
+      - "--build-arg=SLACK_BOT_CLIENT_ID={{ .Env.SLACK_BOT_CLIENT_ID}}"
+      - "--build-arg=SLACK_BOT_CLIENT_SECRET={{ .Env.SLACK_BOT_CLIENT_SECRET }}"
+      - "--build-arg=SEGMENTIO_KEY={{ .Env.SEGMENTIO_KEY }}"
+      - "--build-arg=CLOUD_SEGMENTIO_KEY={{ .Env.CLOUD_SEGMENTIO_KEY }}"
+
+docker_manifests:
+  - name_template: kubeshop/testkube-api-server:{{ .ShortCommit }}
+    image_templates:
+      - kubeshop/testkube-api-server:{{ .ShortCommit }}-amd64
+      - kubeshop/testkube-api-server:{{ .ShortCommit }}-arm64v8
+  - name_template: kubeshop/testkube-api-server:{{ .Version }}
+    image_templates:
+      - kubeshop/testkube-api-server:{{ .Version }}-amd64
+      - kubeshop/testkube-api-server:{{ .Version }}-arm64v8
+  - name_template: kubeshop/testkube-api-server:latest
+    image_templates:
+      - kubeshop/testkube-api-server:latest-amd64
+      - kubeshop/testkube-api-server:latest-arm64v8
+
+
