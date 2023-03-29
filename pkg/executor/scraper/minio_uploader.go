@@ -14,23 +14,24 @@ import (
 )
 
 type MinIOUploader struct {
-	Endpoint, AccessKeyID, SecretAccessKey, Location, Token, Bucket string
-	Ssl                                                             bool
-	client                                                          *minio.Client
+	Endpoint, AccessKeyID, SecretAccessKey, Location, Region, Token, Bucket string
+	Ssl                                                                     bool
+	client                                                                  *minio.Client
 }
 
-func NewMinIOLoader(endpoint, accessKeyID, secretAccessKey, location, token, bucket string, ssl bool) (*MinIOUploader, error) {
+func NewMinIOLoader(endpoint, accessKeyID, secretAccessKey, location, region, token, bucket string, ssl bool) (*MinIOUploader, error) {
 	l := &MinIOUploader{
 		Endpoint:        endpoint,
 		AccessKeyID:     accessKeyID,
 		SecretAccessKey: secretAccessKey,
 		Location:        location,
+		Region:          region,
 		Token:           token,
 		Bucket:          bucket,
 		Ssl:             ssl,
 	}
 
-	client := minio.NewClient(l.Endpoint, l.AccessKeyID, l.SecretAccessKey, l.Location, l.Token, l.Bucket, l.Ssl)
+	client := minio.NewClient(l.Endpoint, l.AccessKeyID, l.SecretAccessKey, l.Location, l.Region, l.Token, l.Bucket, l.Ssl)
 	err := client.Connect()
 	if err != nil {
 		return nil, errors.Errorf("error occured creating minio client: %v", err)

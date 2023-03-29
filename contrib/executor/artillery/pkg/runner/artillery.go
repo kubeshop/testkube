@@ -32,6 +32,7 @@ func NewArtilleryRunner() (*ArtilleryRunner, error) {
 			params.AccessKeyID,
 			params.SecretAccessKey,
 			params.Location,
+			params.Region,
 			params.Token,
 			params.Bucket,
 			params.Ssl,
