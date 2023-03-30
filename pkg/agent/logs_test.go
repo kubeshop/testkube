@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/agent"
+	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -18,15 +19,12 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-
-	"github.com/kubeshop/testkube/pkg/agent"
-	"github.com/kubeshop/testkube/pkg/cloud"
 )
 
-func TestCommandExecution(t *testing.T) {
-	url := "localhost:9999"
-	ctx, cancel := context.WithCancel(context.Background())
+func TestLogStream(t *testing.T) {
+	url := "localhost:8997"
 
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		lis, err := net.Listen("tcp", url)
 		if err != nil {
@@ -35,16 +33,14 @@ func TestCommandExecution(t *testing.T) {
 
 		var opts []grpc.ServerOption
 		grpcServer := grpc.NewServer(opts...)
-		cloud.RegisterTestKubeCloudAPIServer(grpcServer, newServer(ctx))
+		cloud.RegisterTestKubeCloudAPIServer(grpcServer, newLogStreamServer(ctx))
 		grpcServer.Serve(lis)
 	}()
 
-	var msgCnt int32
 	m := func(ctx *fasthttp.RequestCtx) {
 		h := &ctx.Response.Header
 		h.Add("Content-type", "application/json")
 		fmt.Fprintf(ctx, "Hi there! RequestURI is %q", ctx.RequestURI())
-		atomic.AddInt32(&msgCnt, 1)
 	}
 
 	grpcConn, err := agent.NewGRPCConnection(context.Background(), true, url, log.DefaultLogger)
@@ -53,7 +49,18 @@ func TestCommandExecution(t *testing.T) {
 
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 
-	var logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error)
+	var msgCnt int32
+	logStreamFunc := func(ctx context.Context, executionID string) (chan output.Output, error) {
+		ch := make(chan output.Output, 5)
+
+		ch <- output.Output{
+			Type_:   output.TypeLogLine,
+			Content: "log1",
+			Time:    time.Now(),
+		}
+		msgCnt++
+		return ch, nil
+	}
 
 	logger, _ := zap.NewDevelopment()
 	agent, err := agent.NewAgent(logger.Sugar(), m, "api-key", grpcClient, 5, 5, logStreamFunc)
@@ -74,18 +81,16 @@ func TestCommandExecution(t *testing.T) {
 	assert.True(t, msgCnt > 0)
 }
 
-type CloudServer struct {
-	cloud.UnimplementedTestKubeCloudAPIServer
+type CloudLogsServer struct {
 	ctx context.Context
+	cloud.UnimplementedTestKubeCloudAPIServer
 }
 
-func (cs *CloudServer) GetLogsStream(srv cloud.TestKubeCloudAPI_GetLogsStreamServer) error {
+func (cs *CloudLogsServer) ExecuteAsync(srv cloud.TestKubeCloudAPI_ExecuteAsyncServer) error {
 	<-cs.ctx.Done()
-
 	return nil
 }
-
-func (cs *CloudServer) ExecuteAsync(srv cloud.TestKubeCloudAPI_ExecuteAsyncServer) error {
+func (cs *CloudLogsServer) GetLogsStream(srv cloud.TestKubeCloudAPI_GetLogsStreamServer) error {
 	md, ok := metadata.FromIncomingContext(srv.Context())
 	if !ok {
 		panic("no metadata")
@@ -95,7 +100,10 @@ func (cs *CloudServer) ExecuteAsync(srv cloud.TestKubeCloudAPI_ExecuteAsyncServe
 		panic("error bad api-key")
 	}
 
-	req := &cloud.ExecuteRequest{Method: "url", Url: "localhost/v1/tests", Body: nil}
+	req := &cloud.LogsStreamRequest{
+		StreamId:    "streamID",
+		ExecutionId: "executionID",
+	}
 	err := srv.Send(req)
 	if err != nil {
 		return err
@@ -110,19 +118,6 @@ func (cs *CloudServer) ExecuteAsync(srv cloud.TestKubeCloudAPI_ExecuteAsyncServe
 	return nil
 }
 
-func (cs *CloudServer) Send(srv cloud.TestKubeCloudAPI_SendServer) error {
-	for {
-		if srv.Context().Err() != nil {
-			return srv.Context().Err()
-		}
-
-		_, err := srv.Recv()
-		if err != nil {
-			return err
-		}
-	}
-
-}
-func newServer(ctx context.Context) *CloudServer {
-	return &CloudServer{ctx: ctx}
+func newLogStreamServer(ctx context.Context) *CloudLogsServer {
+	return &CloudLogsServer{ctx: ctx}
 }
