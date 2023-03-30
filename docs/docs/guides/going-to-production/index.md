@@ -4,4 +4,4 @@ This sections provides guidance to get testkube to production, in particular ena
 1. Exposing Testkube Dashboard [externally with ingresses](exposing-testkube/overview.md) 
 2. Overall [testkube deployment on AWS](aws.md)
 3. Add [Oauth authentication to testkube dashboard](authentication/oauth-ui.md) 
-4. Add [Oauth authentication to testkube api-server used by cli](authentication/oauth-cli.md) as an alternative to default `proxy` mode leveraging [kube apiserver proxy](https://kubernetes.io/docs/concepts/cluster-administration/proxies/)   
+4. Add [OAuth authentication to the Testkube api-server used by the CLI](authentication/oauth-cli.md) as an alternative to default `proxy` mode leveraging [kube apiserver proxy](https://kubernetes.io/docs/concepts/cluster-administration/proxies/).   
