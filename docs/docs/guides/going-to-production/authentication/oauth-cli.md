@@ -25,7 +25,7 @@ Pay attention to the usage of the scheme (http or https) in URIs.
 
 ## Create Github OAuth Application
 
-Currently, only github OAuth authentication is supported. It is not yet possible to configure kube api-server to authenticate testkube cli oauth2 against other Oauth2 IDPs. 
+Currently, only GitHub OAuth authentication is supported. It is not yet possible to configure kube api-server to authenticate Testkube CLI OAuth2 against other OAuth2 IDPs. 
 
 In [OAuth terminology](https://www.rfc-editor.org/rfc/rfc6749#section-1.1): 
 - GitHub is the *authorization server*.
