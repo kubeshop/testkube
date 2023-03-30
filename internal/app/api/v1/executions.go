@@ -139,6 +139,24 @@ func (s *TestkubeAPI) ListExecutionsHandler() fiber.Handler {
 	}
 }
 
+func (s *TestkubeAPI) GetLogsStream(ctx context.Context, executionID string) (chan output.Output, error) {
+	execution, err := s.ExecutionResults.Get(ctx, executionID)
+	if err != nil {
+		return nil, fmt.Errorf("can't find execution %s: %w", executionID, err)
+	}
+	executor, err := s.getExecutorByTestType(execution.TestType)
+	if err != nil {
+		return nil, fmt.Errorf("can't get executor for test type %s: %w", execution.TestType, err)
+	}
+
+	logs, err := executor.Logs(ctx, executionID)
+	if err != nil {
+		return nil, fmt.Errorf("can't get executor logs: %w", err)
+	}
+
+	return logs, nil
+}
+
 func (s *TestkubeAPI) ExecutionLogsStreamHandler() fiber.Handler {
 	return websocket.New(func(c *websocket.Conn) {
 		executionID := c.Params("executionID")
@@ -148,19 +166,7 @@ func (s *TestkubeAPI) ExecutionLogsStreamHandler() fiber.Handler {
 
 		defer c.Conn.Close()
 
-		execution, err := s.ExecutionResults.Get(context.Background(), executionID)
-		if err != nil {
-			l.Errorw("can't find execution ", "error", err)
-			return
-		}
-
-		executor, err := s.getExecutorByTestType(execution.TestType)
-		if err != nil {
-			l.Errorw("can't get executor", "error", err)
-			return
-		}
-
-		logs, err := executor.Logs(context.Background(), executionID)
+		logs, err := s.GetLogsStream(context.Background(), executionID)
 		if err != nil {
 			l.Errorw("can't get pod logs", "error", err)
 			return

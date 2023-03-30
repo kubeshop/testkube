@@ -6,6 +6,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/version"
 
 	"google.golang.org/grpc/credentials"
@@ -52,25 +53,41 @@ type Agent struct {
 	requestBuffer  chan *cloud.ExecuteRequest
 	responseBuffer chan *cloud.ExecuteResponse
 
+	logStreamWorkerCount    int
+	logStreamRequestBuffer  chan *cloud.LogsStreamRequest
+	logStreamResponseBuffer chan *cloud.LogsStreamResponse
+	logStreamFunc           func(ctx context.Context, executionID string) (chan output.Output, error)
+
 	events              chan testkube.Event
 	sendTimeout         time.Duration
 	receiveTimeout      time.Duration
 	healthcheckInterval time.Duration
 }
 
-func NewAgent(logger *zap.SugaredLogger, handler fasthttp.RequestHandler, apiKey string, client cloud.TestKubeCloudAPIClient, workerCount int) (*Agent, error) {
+func NewAgent(logger *zap.SugaredLogger,
+	handler fasthttp.RequestHandler,
+	apiKey string,
+	client cloud.TestKubeCloudAPIClient,
+	workerCount int,
+	logStreamWorkerCount int,
+	logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error),
+) (*Agent, error) {
 	return &Agent{
-		handler:             handler,
-		logger:              logger,
-		apiKey:              apiKey,
-		client:              client,
-		events:              make(chan testkube.Event),
-		workerCount:         workerCount,
-		requestBuffer:       make(chan *cloud.ExecuteRequest, bufferSizePerWorker*workerCount),
-		responseBuffer:      make(chan *cloud.ExecuteResponse, bufferSizePerWorker*workerCount),
-		receiveTimeout:      5 * time.Minute,
-		sendTimeout:         30 * time.Second,
-		healthcheckInterval: 30 * time.Second,
+		handler:                 handler,
+		logger:                  logger,
+		apiKey:                  apiKey,
+		client:                  client,
+		events:                  make(chan testkube.Event),
+		workerCount:             workerCount,
+		requestBuffer:           make(chan *cloud.ExecuteRequest, bufferSizePerWorker*workerCount),
+		responseBuffer:          make(chan *cloud.ExecuteResponse, bufferSizePerWorker*workerCount),
+		receiveTimeout:          5 * time.Minute,
+		sendTimeout:             30 * time.Second,
+		healthcheckInterval:     30 * time.Second,
+		logStreamWorkerCount:    logStreamWorkerCount,
+		logStreamRequestBuffer:  make(chan *cloud.LogsStreamRequest, bufferSizePerWorker*logStreamWorkerCount),
+		logStreamResponseBuffer: make(chan *cloud.LogsStreamResponse, bufferSizePerWorker*logStreamWorkerCount),
+		logStreamFunc:           logStreamFunc,
 	}, nil
 }
 
@@ -100,6 +117,13 @@ func (ag *Agent) run(ctx context.Context) (err error) {
 
 	g.Go(func() error {
 		return ag.runEventLoop(groupCtx)
+	})
+
+	g.Go(func() error {
+		return ag.runLogStreamLoop(groupCtx)
+	})
+	g.Go(func() error {
+		return ag.runLogStreamWorker(groupCtx, ag.logStreamWorkerCount)
 	})
 
 	err = g.Wait()
