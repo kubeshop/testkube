@@ -52,35 +52,6 @@ jobs:
           SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
           CLOUD_SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
 
-
-
-  #      - name: Build API Server
-#        uses: docker/bake-action@v1
-#        with:
-#          files: |
-#            build/api-server/docker-bake.hcl
-#            ${{ steps.meta_api_server.outputs.bake-file }}
-#          targets: build
-#          set: |
-#            build.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
-#            build.args.VERSION=${{ steps.vars.outputs.tag }}
-#            build.args.COMMIT=${{ github.sha }}
-#            build.args.ANALYTICS_TRACKING_ID=${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
-#            build.args.ANALYTICS_API_KEY=${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
-#            build.args.SLACK_BOT_CLIENT_ID=${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}
-#            build.args.SLACK_BOT_CLIENT_SECRET=${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}
-#            build.args.SEGMENTIO_KEY=${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
-#            build.args.CLOUD_SEGMENTIO_KEY=${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
-#          push: true
-
-#  releasing_helm_chart_api_server:
-#    needs: docker
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: getting Tag name pushed.
-#        id: vars
-#        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
-#
 #      - name: Editing helm-release repo with version based on a Tag pushed.
 #        run: |
 #

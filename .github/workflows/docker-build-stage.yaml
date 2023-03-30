@@ -2,7 +2,7 @@ name: Docker images stage
 on:
   push:
     branches:
-      - main
+      - switch-to-goreleaser
 
 jobs:
   docker:
@@ -57,28 +57,32 @@ jobs:
         id: github_sha
         run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
 
-      - name: Build API Server
-        uses: docker/bake-action@v1
+      - name: Release
+        uses: goreleaser/goreleaser-action@v4
         with:
-          files: |
-            build/api-server/docker-bake.hcl
-            ${{ steps.meta_api_server.outputs.bake-file }}
-          targets: build
-          set: |
-            build.args.TOKEN=${{ secrets.CI_BOT_TOKEN }}
-            build.args.VERSION=${{ steps.vars.outputs.tag }}
-            build.args.COMMIT=${{ github.sha }}
-            build.args.ANALYTICS_TRACKING_ID=${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
-            build.args.ANALYTICS_API_KEY=${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
-            build.args.SEGMENTIO_KEY=${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
-            build.args.CLOUD_SEGMENTIO_KEY=${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
-          push: true
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-stage.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          COMMIT: ${{ github.sha }}
+          ANALYTICS_TRACKING_ID: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
+          ANALYTICS_API_KEY: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
+          SLACK_BOT_CLIENT_ID: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}
+          SLACK_BOT_CLIENT_SECRET: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}
+          SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
+          CLOUD_SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
 
-      #Trigger Helm repo workflow to deploy API to GKE Stage cluster
-      - name: Repository Dispatch
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.CI_BOT_TOKEN }}
-          repository: kubeshop/helm-charts
-          event-type: trigger-workflow
-          client-payload: '{"image_tag": "sha-${{ steps.github_sha.outputs.sha_short }}"}'
+      - name: Push Docker images
+        run: |
+          docker push kubeshop/testkube-api-server:${{ steps.github_sha.outputs.sha_short }}
+
+#      #Trigger Helm repo workflow to deploy API to GKE Stage cluster
+#      - name: Repository Dispatch
+#        uses: peter-evans/repository-dispatch@v2
+#        with:
+#          token: ${{ secrets.CI_BOT_TOKEN }}
+#          repository: kubeshop/helm-charts
+#          event-type: trigger-workflow
+#          client-payload: '{"image_tag": "sha-${{ steps.github_sha.outputs.sha_short }}"}'
