@@ -13,7 +13,7 @@ Generate tests manifest on stdout, based on the source files present in a direct
    * `spec.type` is the matching adapter test type (e.g. `postman/collection`)
    * `spec.content` is inlined source file content
 
-Check out https://github.com/kubeshop/testkube/blob/a42605cbdb84efd5e1156e2290c44b2f9b484190/pkg/test/detector/interface.go#L12-L14 for the full list of currently supported adapters 
+Check out https://github.com/kubeshop/testkube/blob/main/pkg/test/detector/detector.go#L5 for the full list of currently supported adapters 
 
 ```
 testkube generate tests-crds <manifestDirectory> [flags]
