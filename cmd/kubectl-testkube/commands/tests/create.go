@@ -95,8 +95,10 @@ func NewCreateTestsCmd() *cobra.Command {
 				}
 			}
 
-			err = common.ValidateUpsertOptions(cmd, sourceName)
-			ui.ExitOnError("validating passed flags", err)
+			if cmd.Flag("git-uri") != nil {
+				err = common.ValidateUpsertOptions(cmd, sourceName)
+				ui.ExitOnError("validating passed flags", err)
+			}
 
 			err = validateArtifactRequest(flags.ArtifactStorageClassName, flags.ArtifactVolumeMountPath, flags.ArtifactDirs)
 			ui.ExitOnError("validating artifact flags", err)
