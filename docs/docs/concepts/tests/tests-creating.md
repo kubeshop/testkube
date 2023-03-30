@@ -361,7 +361,7 @@ spec:
   template:
     spec:
       containers:
-        - name: {{ .Name }}
+        - name: "{{ .Name }}"
           image: {{ .Image }}
           imagePullPolicy: Always
           command:
