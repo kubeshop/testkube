@@ -1,6 +1,6 @@
 # OAuth for CLI
 
-By default, testkube cli uses the "proxy" client which leverages the [kube apiserver proxy](https://kubernetes.io/docs/concepts/cluster-administration/proxies/) to reach the testkube api server. This implies granting users access to testkube internals in order to reach the testkube api REST endpoint (when using commands such as `testkube get artifact` )
+By default, Testkube CLI uses the "proxy" client which leverages the [kube apiserver proxy](https://kubernetes.io/docs/concepts/cluster-administration/proxies/) to reach the Testkube API server. This implies granting users access to Iestkube internals in order to reach the Testkube APIREST endpoint (when using commands such as `testkube get artifact` ).
 
 This section describes how to protect the testkube api-server REST api endpoint with [oauth2 authentication authorization grant](https://oauth.net/2/grant-types/authorization-code/), for use by the testkube cli as an oauth 2 client. In this mode, kubetest users do not need to be granted "kubetest administrator roles".
 
