@@ -16,4 +16,4 @@ In summary, you now have Testkube setup in your Kubernetes cluster, ready to dis
 
 As usage of testkube grows within your team, you may choose to:
 * leverage [managed testkube cloud](../testkube-cloud/intro.md)
-* [getting to production](../guides/going-to-production) with your own testkube installation 
+* [Move to production](../guides/going-to-production) with your own Testkube installation.
