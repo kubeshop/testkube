@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ .Name }}
+  name: "{{ .Name }}"
   namespace: {{ .Namespace }}
 spec:
   {{- if gt .ActiveDeadlineSeconds 0 }}
@@ -36,7 +36,7 @@ spec:
           {{- end }}
           {{- end }}
       containers:
-        - name: {{ .Name }}
+        - name: "{{ .Name }}"
           image: {{ .Image }}
           imagePullPolicy: Always
           command:
