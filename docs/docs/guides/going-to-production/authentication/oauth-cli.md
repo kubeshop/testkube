@@ -28,7 +28,7 @@ Pay attention to the usage of the scheme (http or https) in URIs.
 Currently, only github OAuth authentication is supported. It is not yet possible to configure kube api-server to authenticate testkube cli oauth2 against other Oauth2 IDPs. 
 
 In [OAuth terminology](https://www.rfc-editor.org/rfc/rfc6749#section-1.1): 
-- github is the *authorization server*.
+- GitHub is the *authorization server*.
 - Testkube CLI is the *client* receiving HTTP redirects from the authorization server on a local HTTP endpoint (http://127.0.0.1:13254) served by the CLI. A local web browser invoked by [xdg-open](https://linux.die.net/man/1/xdg-open) is required to access GitHub web UI, and then follow HTTP redirect to the local HTTP authorization callback endpoint.
 - Testkube api-server is the *resource server*.
 
