@@ -15,5 +15,5 @@ In summary, you now have Testkube setup in your Kubernetes cluster, ready to dis
 - The Testkube CLI allows you to interact with the Testkube server components through k8s CRs or REST API calls made through the [kube apiserver proxy](https://kubernetes.io/docs/concepts/cluster-administration/proxies/).
 
 As usage of Testkube grows within your team, you may choose to:
-* leverage [managed testkube cloud](../testkube-cloud/intro.md)
+* Leverage [managed Testkube cloud](../testkube-cloud/intro.md).
 * [Move to production](../guides/going-to-production) with your own Testkube installation.
