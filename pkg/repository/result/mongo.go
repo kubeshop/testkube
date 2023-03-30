@@ -20,8 +20,10 @@ import (
 var _ Repository = &MongoRepository{}
 
 const (
-	CollectionResults   = "results"
-	CollectionSequences = "sequences"
+	CollectionResults     = "results"
+	CollectionSequences   = "sequences"
+	OutputMaxSize         = 15 * 1024 * 1024 // the maximum document size is 16 megabytes in Mongo, leaving some space for other fields
+	OverflownOutputPrefix = "WARNING: Output was shortened in order to fit into MongoDB.\n"
 )
 
 func NewMongoRepository(db *mongo.Database, allowDiskUse bool, opts ...MongoRepositoryOpt) *MongoRepository {
@@ -353,7 +355,8 @@ func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result te
 	if err != nil {
 		return
 	}
-	err = r.OutputRepository.UpdateOutput(ctx, id, result.TestName, result.TestSuiteName, output)
+
+	err = r.OutputRepository.UpdateOutput(ctx, id, result.TestName, result.TestSuiteName, cleanOutput(output))
 	return
 }
 
@@ -584,4 +587,14 @@ func (r *MongoRepository) GetTestMetrics(ctx context.Context, name string, limit
 	}
 
 	return metrics, nil
+}
+
+// cleanOutput makes sure the output fits into the limits imposed by Mongo;
+// if needed it trims the beginning of the string and adds a warning to inform the user
+func cleanOutput(output string) string {
+	if len(output) >= OutputMaxSize {
+		output = output[len(output)-OutputMaxSize+len(OverflownOutputPrefix):]
+		output = OverflownOutputPrefix + output
+	}
+	return output
 }
