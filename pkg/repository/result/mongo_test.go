@@ -4,12 +4,14 @@ package result
 
 import (
 	"context"
+	random "math/rand"
 	"testing"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/datefilter"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -378,4 +380,49 @@ func (r *MongoRepository) insertExecutionResult(testName string, execStatus test
 			ExecutionResult: &testkube.ExecutionResult{Status: &execStatus},
 			Labels:          labels,
 		})
+}
+
+func TestUpdateOutput(t *testing.T) {
+	repository, err := getRepository()
+	assert.NoError(t, err)
+
+	testName := "example-test"
+	executionID := "example-execution"
+	executionStatus := testkube.RUNNING_ExecutionStatus
+
+	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, time.Now(), map[string]string{"key1": "value1", "key2": "value2"})
+	assert.NoError(err)
+
+	t.Run("valid input", func(t *testing.T) {
+		result := testkube.Execution{
+			Id:       executionID,
+			Name:     executionID,
+			TestName: testName,
+			ExecutionResult: &testkube.ExecutionResult{
+				Output: "",
+			},
+		}
+		err = repository.UpdateResult(context.Background(), testName, result)
+		assert.NoError(t, err)
+	})
+	t.Run("output bigger than MongoDB document limit should not throw error", func(t *testing.T) {
+		randomString := func(len int) string {
+			bytes := make([]byte, len)
+			for i := 0; i < len; i++ {
+				bytes[i] = byte(65 + random.Intn(25))
+			}
+			return string(bytes)
+		}
+
+		result := testkube.Execution{
+			Id:       executionID,
+			Name:     executionID,
+			TestName: testName,
+			ExecutionResult: &testkube.ExecutionResult{
+				Output: randomString(OutputMaxSize),
+			},
+		}
+		err = repository.UpdateResult(context.Background(), testName, result)
+		assert.NoError(t, err)
+	})
 }
