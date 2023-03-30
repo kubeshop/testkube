@@ -388,10 +388,9 @@ func TestUpdateOutput(t *testing.T) {
 
 	testName := "example-test"
 	executionID := "example-execution"
-	executionStatus := testkube.RUNNING_ExecutionStatus
 
-	err = repository.insertExecutionResult(defaultName, testkube.FAILED_ExecutionStatus, time.Now(), map[string]string{"key1": "value1", "key2": "value2"})
-	assert.NoError(err)
+	err = repository.insertExecutionResult(testName, testkube.FAILED_ExecutionStatus, time.Now(), map[string]string{"key1": "value1", "key2": "value2"})
+	assert.NoError(t, err)
 
 	t.Run("valid input", func(t *testing.T) {
 		result := testkube.Execution{
