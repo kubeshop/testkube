@@ -5,15 +5,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/kubeshop/testkube/contrib/executor/artillery/pkg/artillery"
 	"github.com/kubeshop/testkube/contrib/executor/curl/pkg/curl"
+	"github.com/kubeshop/testkube/contrib/executor/jmeter/pkg/jmeter"
 	"github.com/kubeshop/testkube/contrib/executor/k6/pkg/k6detector"
 	"github.com/kubeshop/testkube/contrib/executor/postman/pkg/postman"
+	"github.com/kubeshop/testkube/contrib/executor/soapui/pkg/soapui"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-)
-
-const (
-	exampleValidContent = `{ "info": { "_postman_id": "3d9a6be2-bd3e-4cf7-89ca-354103aab4a7", "name": "Testkube", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" }, "item": [ { "name": "Health", "event": [ { "listen": "test", "script": { "exec": [ "pm.test(\"Status code is 200\", function () {", "    pm.response.to.have.status(200);", "});" ], "type": "text/javascript" } } ], "request": { "method": "GET", "header": [], "url": { "raw": "{{URI}}/health", "host": [ "{{URI}}" ], "path": [ "health" ] } }, "response": [] } ] } `
 )
 
 func TestDetectorDetect(t *testing.T) {
@@ -26,7 +25,7 @@ func TestDetectorDetect(t *testing.T) {
 		detector.Add(k6detector.Detector{})
 
 		name, found := detector.Detect("postman_collection.json", client.UpsertTestOptions{
-			Content: testkube.NewStringTestContent(exampleValidContent),
+			Content: testkube.NewStringTestContent(examplePostmanContent),
 		})
 
 		assert.True(t, found, "detector should find postman/collection")
@@ -125,4 +124,66 @@ func TestDetectorGetAdapter(t *testing.T) {
 		assert.NotNil(t, adapter)
 	})
 
+}
+
+func TestDifferentTestTypes(t *testing.T) {
+	t.Run("Detect postman collection", func(t *testing.T) {
+		detector := NewDefaultDetector()
+		name, found := detector.Detect("postman_collection.json", client.UpsertTestOptions{
+			Content: testkube.NewStringTestContent(examplePostmanContent),
+		})
+
+		assert.True(t, found, "detector should find postman/collection")
+		assert.Equal(t, postman.PostmanCollectionType, name)
+	})
+
+	t.Run("Detect artillery test", func(t *testing.T) {
+		detector := NewDefaultDetector()
+		name, found := detector.Detect(exampleArtilleryFilename, client.UpsertTestOptions{
+			Content: testkube.NewStringTestContent(exampleArtilleryContent),
+		})
+
+		assert.True(t, found, "detector should find artillery/test")
+		assert.Equal(t, artillery.Type, name)
+	})
+
+	t.Run("Detect cURL test", func(t *testing.T) {
+		detector := NewDefaultDetector()
+		name, found := detector.Detect(exampleCurlFilename, client.UpsertTestOptions{
+			Content: testkube.NewStringTestContent(exampleCurlContent),
+		})
+
+		assert.True(t, found, "detector should find curl/test")
+		assert.Equal(t, curl.Type, name)
+	})
+
+	t.Run("Detect jmeter test", func(t *testing.T) {
+		detector := NewDefaultDetector()
+		name, found := detector.Detect(exampleJMeterFilename, client.UpsertTestOptions{
+			Content: testkube.NewStringTestContent(exampleJMeterContent),
+		})
+
+		assert.True(t, found, "detector should find jmeter/test")
+		assert.Equal(t, jmeter.Type, name)
+	})
+
+	t.Run("Detect k6 test", func(t *testing.T) {
+		detector := NewDefaultDetector()
+		name, found := detector.Detect(exampleK6Filename, client.UpsertTestOptions{
+			Content: testkube.NewStringTestContent(exampleK6Content),
+		})
+
+		assert.True(t, found, "detector should find k6/test")
+		assert.Equal(t, k6detector.Type, name)
+	})
+
+	t.Run("Detect soapui test", func(t *testing.T) {
+		detector := NewDefaultDetector()
+		name, found := detector.Detect(exampleSoapUIFilename, client.UpsertTestOptions{
+			Content: testkube.NewStringTestContent(exampleSoapUIContent),
+		})
+
+		assert.True(t, found, "detector should find soapui/test")
+		assert.Equal(t, soapui.Type, name)
+	})
 }

@@ -12,6 +12,11 @@ import (
 // Detector is detector adapter for Artillery like tests
 type Detector struct{}
 
+const (
+	// Type is test type
+	Type = "artillery/test"
+)
+
 // Is detects based on upsert test options what kind of test it is
 func (d Detector) Is(options apiClient.UpsertTestOptions) (name string, ok bool) {
 	if options.Content == nil {
@@ -33,11 +38,11 @@ func (d Detector) Is(options apiClient.UpsertTestOptions) (name string, ok bool)
 func (d Detector) IsWithPath(path string, options apiClient.UpsertTestOptions) (name string, ok bool) {
 	name, ok = d.Is(options)
 	ext := filepath.Ext(path)
-	ok = ok && (ext == ".yml")
+	ok = ok && ((ext == ".yml") || (ext == ".yaml"))
 	return
 }
 
 // GetType returns test type
 func (d Detector) GetType() string {
-	return "artillery/test"
+	return Type
 }

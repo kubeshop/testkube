@@ -12,6 +12,11 @@ import (
 // Detector is adapter for JMeter tests
 type Detector struct{}
 
+const (
+	// Type is test type
+	Type = "jmeter/test"
+)
+
 // Is detects based on upsert test options what kind of test it is
 func (d Detector) Is(options apiClient.UpsertTestOptions) (name string, ok bool) {
 	if options.Content == nil {
@@ -39,5 +44,5 @@ func (d Detector) IsWithPath(path string, options apiClient.UpsertTestOptions) (
 
 // GetType returns test type
 func (d Detector) GetType() string {
-	return "jmeter/test"
+	return Type
 }

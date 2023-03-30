@@ -11,6 +11,11 @@ import (
 type Detector struct {
 }
 
+const (
+	// Type is test type
+	Type = "curl/test"
+)
+
 // Is detects based on upsert test options what kind of test it is
 func (d Detector) Is(options apiClient.UpsertTestOptions) (name string, ok bool) {
 	var data map[string]interface{}
@@ -41,5 +46,5 @@ func (d Detector) IsWithPath(path string, options apiClient.UpsertTestOptions) (
 
 // GetType returns test type
 func (d Detector) GetType() string {
-	return "curl/test"
+	return Type
 }
