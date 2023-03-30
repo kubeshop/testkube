@@ -29,7 +29,7 @@ Currently, only github OAuth authentication is supported. It is not yet possible
 
 In [oauth terminology](https://www.rfc-editor.org/rfc/rfc6749#section-1.1): 
 - github is the *authorization server*.
-- testkube cli is the *client* receiving http redirects from authorization server on a local http endpoint (http://127.0.0.1:13254) served by the cli. A local web browser invoked by [xdg-open](https://linux.die.net/man/1/xdg-open) is required to access github web ui, and then follow http redirect to the local http authorization callback endpoint.
+- Testkube CLI is the *client* receiving HTTP redirects from the authorization server on a local HTTP endpoint (http://127.0.0.1:13254) served by the CLI. A local web browser invoked by [xdg-open](https://linux.die.net/man/1/xdg-open) is required to access GitHub web UI, and then follow HTTP redirect to the local HTTP authorization callback endpoint.
 - testkube api-server is the *resource server*
 
 
