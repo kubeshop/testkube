@@ -11,7 +11,7 @@ builds:
       - arm64
     mod_timestamp: "{{ .CommitTimestamp }}"
 dockers:
-  - dockerfile: "./contrib/executor/{{ .Env.EXECUTOR }}/build/Dockerfile"
+  - dockerfile: "./contrib/executor/{{ .Env.EXECUTOR }}/build/agent/Dockerfile"
     use: buildx
     goos: linux
     goarch: amd64
