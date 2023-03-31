@@ -1,4 +1,4 @@
-package detector
+package k6detector
 
 import (
 	"testing"
@@ -58,7 +58,7 @@ func TestK6Adapter(t *testing.T) {
 
 	t.Run("detect valid k6 script", func(t *testing.T) {
 		// given
-		a := K6Adapter{}
+		a := Detector{}
 
 		// when
 		name, ok := a.Is(apiClient.UpsertTestOptions{
@@ -72,7 +72,7 @@ func TestK6Adapter(t *testing.T) {
 
 	t.Run("ignore invalid k6 script", func(t *testing.T) {
 		// given
-		a := K6Adapter{}
+		a := Detector{}
 
 		// when
 		name, ok := a.Is(apiClient.UpsertTestOptions{

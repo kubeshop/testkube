@@ -3,6 +3,7 @@ package tests
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -128,10 +129,12 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	if len(fileContent) > 0 && testContentType == "" {
 		testContentType = string(testkube.TestContentTypeString)
 	}
-
-	repository, err := common.NewRepositoryFromFlags(cmd)
-	if err != nil {
-		return nil, err
+	var repository *testkube.Repository
+	if cmd.Flag("git-uri") != nil {
+		repository, err = common.NewRepositoryFromFlags(cmd)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if repository != nil && testContentType == "" {
@@ -390,6 +393,7 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.Upse
 	}
 
 	name := cmd.Flag("name").Value.String()
+	file := cmd.Flag("file").Value.String()
 	executorType := cmd.Flag("type").Value.String()
 	namespace := cmd.Flag("namespace").Value.String()
 	labels, err := cmd.Flags().GetStringToString("label")
@@ -407,7 +411,10 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.Upse
 		return options, err
 	}
 
-	sourceName := cmd.Flag("source").Value.String()
+	sourceName := ""
+	if cmd.Flag("source") != nil {
+		sourceName = cmd.Flag("source").Value.String()
+	}
 	options = apiclientv1.UpsertTestOptions{
 		Name:      name,
 		Type_:     executorType,
@@ -427,8 +434,11 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.Upse
 	// try to detect type if none passed
 	if executorType == "" {
 		d := detector.NewDefaultDetector()
-		if detectedType, ok := d.Detect(options); ok {
-			ui.Info("Detected test test type", detectedType)
+		if detectedType, ok := d.Detect(file, options); ok {
+			crdOnly, _ := strconv.ParseBool(cmd.Flag("crd-only").Value.String())
+			if !crdOnly {
+				ui.Info("Detected test type", detectedType)
+			}
 			options.Type_ = detectedType
 		}
 	}

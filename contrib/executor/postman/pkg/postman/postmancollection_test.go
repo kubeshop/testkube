@@ -1,4 +1,4 @@
-package detector
+package postman
 
 import (
 	"testing"
@@ -20,7 +20,7 @@ const (
 func TestPostmanCollectionAdapterIs(t *testing.T) {
 
 	t.Run("Is return true when valid content", func(t *testing.T) {
-		detector := PostmanCollectionAdapter{}
+		detector := Detector{}
 		name, is := detector.Is(client.UpsertTestOptions{
 			Content: testkube.NewStringTestContent(exampleValidContent),
 		})
@@ -30,7 +30,7 @@ func TestPostmanCollectionAdapterIs(t *testing.T) {
 	})
 
 	t.Run("Is return false in case of invalid JSON content", func(t *testing.T) {
-		detector := PostmanCollectionAdapter{}
+		detector := Detector{}
 		name, is := detector.Is(client.UpsertTestOptions{
 			Content: testkube.NewStringTestContent(exampleInvalidContent),
 		})
@@ -40,7 +40,7 @@ func TestPostmanCollectionAdapterIs(t *testing.T) {
 	})
 
 	t.Run("Is return false in case of content which is not JSON ", func(t *testing.T) {
-		detector := PostmanCollectionAdapter{}
+		detector := Detector{}
 		name, is := detector.Is(client.UpsertTestOptions{
 			Content: testkube.NewStringTestContent(exampleInvalidJSONContent),
 		})
@@ -53,7 +53,7 @@ func TestPostmanCollectionAdapterIs(t *testing.T) {
 func TestPostmanCollectionAdapterIsTestName(t *testing.T) {
 
 	t.Run("Is test name returns true when filename is valid", func(t *testing.T) {
-		detector := PostmanCollectionAdapter{}
+		detector := Detector{}
 		name, is := detector.IsTestName("test.postman_collection.json")
 
 		assert.Equal(t, "test", name)
@@ -61,7 +61,7 @@ func TestPostmanCollectionAdapterIsTestName(t *testing.T) {
 	})
 
 	t.Run("Is test name returns false when filename is invalid", func(t *testing.T) {
-		detector := PostmanCollectionAdapter{}
+		detector := Detector{}
 		name, is := detector.IsTestName("test.json")
 
 		assert.Empty(t, name)
@@ -73,7 +73,7 @@ func TestPostmanCollectionAdapterIsTestName(t *testing.T) {
 func TestPostmanCollectionAdapterIsEnvName(t *testing.T) {
 
 	t.Run("Is env name returns true when filename is valid", func(t *testing.T) {
-		detector := PostmanCollectionAdapter{}
+		detector := Detector{}
 		name, envName, is := detector.IsEnvName("test.prod.postman_environment.json")
 
 		assert.Equal(t, "test", name)
@@ -82,7 +82,7 @@ func TestPostmanCollectionAdapterIsEnvName(t *testing.T) {
 	})
 
 	t.Run("Is env name returns false when filename is invalid", func(t *testing.T) {
-		detector := PostmanCollectionAdapter{}
+		detector := Detector{}
 		name, envName, is := detector.IsEnvName("test.dev.json")
 
 		assert.Empty(t, name)
@@ -91,7 +91,7 @@ func TestPostmanCollectionAdapterIsEnvName(t *testing.T) {
 	})
 
 	t.Run("Is env name returns false when filename doesn't contain env", func(t *testing.T) {
-		detector := PostmanCollectionAdapter{}
+		detector := Detector{}
 		name, envName, is := detector.IsEnvName("test.postman_environment.json")
 
 		assert.Empty(t, name)
@@ -104,7 +104,7 @@ func TestPostmanCollectionAdapterIsEnvName(t *testing.T) {
 func TestPostmanCollectionAdapterIsSecretEnvName(t *testing.T) {
 
 	t.Run("Is secret env name returns true when filename is valid", func(t *testing.T) {
-		detector := PostmanCollectionAdapter{}
+		detector := Detector{}
 		name, envName, is := detector.IsSecretEnvName("test.prod.postman_secret_environment.json")
 
 		assert.Equal(t, "test", name)
@@ -113,7 +113,7 @@ func TestPostmanCollectionAdapterIsSecretEnvName(t *testing.T) {
 	})
 
 	t.Run("Is secret env name returns false when filename is invalid", func(t *testing.T) {
-		detector := PostmanCollectionAdapter{}
+		detector := Detector{}
 		name, envName, is := detector.IsSecretEnvName("test.dev.json")
 
 		assert.Empty(t, name)
@@ -122,7 +122,7 @@ func TestPostmanCollectionAdapterIsSecretEnvName(t *testing.T) {
 	})
 
 	t.Run("Is secret env name returns false when filename doesn't contain env", func(t *testing.T) {
-		detector := PostmanCollectionAdapter{}
+		detector := Detector{}
 		name, envName, is := detector.IsEnvName("test.postman_secret_environment.json")
 
 		assert.Empty(t, name)
@@ -135,7 +135,7 @@ func TestPostmanCollectionAdapterIsSecretEnvName(t *testing.T) {
 func TestPostmanCollectionAdapterGetSecretVariables(t *testing.T) {
 
 	t.Run("Get secret variables returns enabled secret variables", func(t *testing.T) {
-		detector := PostmanCollectionAdapter{}
+		detector := Detector{}
 		variables, err := detector.GetSecretVariables(exampleValidSecretEnvironmentContent)
 
 		assert.Equal(t, variables, map[string]testkube.Variable{"secenv1": testkube.NewSecretVariableReference("secenv1", "var-secrets", "homepage")})
@@ -143,7 +143,7 @@ func TestPostmanCollectionAdapterGetSecretVariables(t *testing.T) {
 	})
 
 	t.Run("Get secret variables returns no secret variable", func(t *testing.T) {
-		detector := PostmanCollectionAdapter{}
+		detector := Detector{}
 		variables, err := detector.GetSecretVariables(exampleInValidSecretEnvironmentContent)
 
 		assert.Equal(t, variables, map[string]testkube.Variable{})
@@ -151,7 +151,7 @@ func TestPostmanCollectionAdapterGetSecretVariables(t *testing.T) {
 	})
 
 	t.Run("Get secret variables returns error for invalid json", func(t *testing.T) {
-		detector := PostmanCollectionAdapter{}
+		detector := Detector{}
 		variables, err := detector.GetSecretVariables(exampleInvalidJSONContent)
 
 		assert.Nil(t, variables)

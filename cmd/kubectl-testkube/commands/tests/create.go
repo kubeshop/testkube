@@ -15,55 +15,60 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
+// CreateCommonFlags are common flags for creating all test types
+type CreateCommonFlags struct {
+	ExecutorType             string
+	Labels                   map[string]string
+	Variables                map[string]string
+	SecretVariables          map[string]string
+	Schedule                 string
+	ExecutorArgs             []string
+	ExecutionName            string
+	VariablesFile            string
+	Envs                     map[string]string
+	SecretEnvs               map[string]string
+	HttpProxy, HttpsProxy    string
+	SecretVariableReferences map[string]string
+	CopyFiles                []string
+	Image                    string
+	Command                  []string
+	ImagePullSecretNames     []string
+	Timeout                  int64
+	ArtifactStorageClassName string
+	ArtifactVolumeMountPath  string
+	ArtifactDirs             []string
+	JobTemplate              string
+	PreRunScript             string
+	ScraperTemplate          string
+	NegativeTest             bool
+	MountConfigMaps          map[string]string
+	VariableConfigMaps       []string
+	MountSecrets             map[string]string
+	VariableSecrets          []string
+	UploadTimeout            string
+}
+
 // NewCreateTestsCmd is a command tp create new Test Custom Resource
 func NewCreateTestsCmd() *cobra.Command {
 
 	var (
-		testName                 string
-		testContentType          string
-		file                     string
-		executorType             string
-		uri                      string
-		gitUri                   string
-		gitBranch                string
-		gitCommit                string
-		gitPath                  string
-		gitWorkingDir            string
-		gitUsername              string
-		gitToken                 string
-		gitUsernameSecret        map[string]string
-		gitTokenSecret           map[string]string
-		gitCertificateSecret     string
-		gitAuthType              string
-		sourceName               string
-		labels                   map[string]string
-		variables                map[string]string
-		secretVariables          map[string]string
-		schedule                 string
-		executorArgs             []string
-		executionName            string
-		variablesFile            string
-		envs                     map[string]string
-		secretEnvs               map[string]string
-		httpProxy, httpsProxy    string
-		secretVariableReferences map[string]string
-		copyFiles                []string
-		image                    string
-		command                  []string
-		imagePullSecretNames     []string
-		timeout                  int64
-		artifactStorageClassName string
-		artifactVolumeMountPath  string
-		artifactDirs             []string
-		jobTemplate              string
-		preRunScript             string
-		scraperTemplate          string
-		negativeTest             bool
-		mountConfigMaps          map[string]string
-		variableConfigMaps       []string
-		mountSecrets             map[string]string
-		variableSecrets          []string
-		uploadTimeout            string
+		testName             string
+		testContentType      string
+		file                 string
+		uri                  string
+		gitUri               string
+		gitBranch            string
+		gitCommit            string
+		gitPath              string
+		gitWorkingDir        string
+		gitUsername          string
+		gitToken             string
+		gitUsernameSecret    map[string]string
+		gitTokenSecret       map[string]string
+		gitCertificateSecret string
+		gitAuthType          string
+		sourceName           string
+		flags                CreateCommonFlags
 	)
 
 	cmd := &cobra.Command{
@@ -90,10 +95,12 @@ func NewCreateTestsCmd() *cobra.Command {
 				}
 			}
 
-			err = common.ValidateUpsertOptions(cmd, sourceName)
-			ui.ExitOnError("validating passed flags", err)
+			if cmd.Flag("git-uri") != nil {
+				err = common.ValidateUpsertOptions(cmd, sourceName)
+				ui.ExitOnError("validating passed flags", err)
+			}
 
-			err = validateArtifactRequest(artifactStorageClassName, artifactVolumeMountPath, artifactDirs)
+			err = validateArtifactRequest(flags.ArtifactStorageClassName, flags.ArtifactVolumeMountPath, flags.ArtifactDirs)
 			ui.ExitOnError("validating artifact flags", err)
 
 			options, err := NewUpsertTestOptionsFromFlags(cmd)
@@ -111,15 +118,15 @@ func NewCreateTestsCmd() *cobra.Command {
 				err = validateExecutorTypeAndContent(options.Type_, contentType, executors)
 				ui.ExitOnError("validating executor type", err)
 
-				if len(copyFiles) > 0 {
+				if len(flags.CopyFiles) > 0 {
 					var timeout time.Duration
-					if uploadTimeout != "" {
-						timeout, err = time.ParseDuration(uploadTimeout)
+					if flags.UploadTimeout != "" {
+						timeout, err = time.ParseDuration(flags.UploadTimeout)
 						if err != nil {
 							ui.ExitOnError("invalid upload timeout duration", err)
 						}
 					}
-					err := uploadFiles(client, testName, apiv1.Test, copyFiles, timeout)
+					err := uploadFiles(client, testName, apiv1.Test, flags.CopyFiles, timeout)
 					ui.ExitOnError("could not upload files", err)
 				}
 
@@ -140,8 +147,6 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&testName, "name", "n", "", "unique test name - mandatory")
 	cmd.Flags().StringVarP(&testContentType, "test-content-type", "", "", "content type of test one of string|file-uri|git")
 
-	cmd.Flags().StringVarP(&executorType, "type", "t", "", "test type (defaults to postman/collection)")
-
 	// create options
 	cmd.Flags().StringVarP(&file, "file", "f", "", "test file - will be read from stdin if not specified")
 	cmd.Flags().StringVarP(&uri, "uri", "", "", "URI of resource - will be loaded by http GET")
@@ -157,39 +162,48 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitCertificateSecret, "git-certificate-secret", "", "", "if git repository is private we can use certificate as an auth parameter stored in a kubernetes secret name")
 	cmd.Flags().StringVarP(&gitAuthType, "git-auth-type", "", "basic", "auth type for git requests one of basic|header")
 	cmd.Flags().StringVarP(&sourceName, "source", "", "", "source name - will be used together with content parameters")
-	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
-	cmd.Flags().StringToStringVarP(&variables, "variable", "v", nil, "variable key value pair: --variable key1=value1")
-	cmd.Flags().StringToStringVarP(&secretVariables, "secret-variable", "s", nil, "secret variable key value pair: --secret-variable key1=value1")
-	cmd.Flags().StringVarP(&schedule, "schedule", "", "", "test schedule in a cronjob form: * * * * *")
-	cmd.Flags().StringArrayVarP(&executorArgs, "executor-args", "", []string{}, "executor binary additional arguments")
-	cmd.Flags().StringVarP(&executionName, "execution-name", "", "", "execution name, if empty will be autogenerated")
-	cmd.Flags().StringVarP(&variablesFile, "variables-file", "", "", "variables file path, e.g. postman env file - will be passed to executor if supported")
-	cmd.Flags().StringToStringVarP(&envs, "env", "", map[string]string{}, "envs in a form of name1=val1 passed to executor")
-	cmd.Flags().StringToStringVarP(&secretEnvs, "secret-env", "", map[string]string{}, "secret envs in a form of secret_key1=secret_name1 passed to executor")
-	cmd.Flags().StringVar(&httpProxy, "http-proxy", "", "http proxy for executor containers")
-	cmd.Flags().StringVar(&httpsProxy, "https-proxy", "", "https proxy for executor containers")
-	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
-	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
-	cmd.Flags().StringVar(&image, "image", "", "image for container executor")
-	cmd.Flags().StringArrayVar(&imagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in container executor")
-	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in container executor")
-	cmd.Flags().Int64Var(&timeout, "timeout", 0, "duration in seconds for test to timeout. 0 disables timeout.")
-	cmd.Flags().StringVar(&artifactStorageClassName, "artifact-storage-class-name", "", "artifact storage class name for container executor")
-	cmd.Flags().StringVar(&artifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
-	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for container executor")
-	cmd.Flags().StringVar(&jobTemplate, "job-template", "", "job template file path for extensions to job template")
-	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
-	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
-	cmd.Flags().BoolVar(&negativeTest, "negative-test", false, "negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa")
-	cmd.Flags().StringToStringVarP(&mountConfigMaps, "mount-configmap", "", map[string]string{}, "config map value pair for mounting it to executor pod: --mount-configmap configmap_name=configmap_mountpath")
-	cmd.Flags().StringArrayVar(&variableConfigMaps, "variable-configmap", []string{}, "config map name used to map all keys to basis variables")
-	cmd.Flags().StringToStringVarP(&mountSecrets, "mount-secret", "", map[string]string{}, "secret value pair for mounting it to executor pod: --mount-secret secret_name=secret_mountpath")
-	cmd.Flags().StringArrayVar(&variableSecrets, "variable-secret", []string{}, "secret name used to map all keys to secret variables")
 	cmd.Flags().MarkDeprecated("env", "env is deprecated use variable instead")
 	cmd.Flags().MarkDeprecated("secret-env", "secret-env is deprecated use secret-variable instead")
-	cmd.Flags().StringVar(&uploadTimeout, "upload-timeout", "", "timeout to use when uploading files, example: 30s")
+
+	AddCreateFlags(cmd, &flags)
 
 	return cmd
+}
+
+// AddCreateFlags adds flags to the create command that can be used by the create from file
+func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
+
+	cmd.Flags().StringVarP(&flags.ExecutorType, "type", "t", "", "test type")
+
+	cmd.Flags().StringToStringVarP(&flags.Labels, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().StringToStringVarP(&flags.Variables, "variable", "v", nil, "variable key value pair: --variable key1=value1")
+	cmd.Flags().StringToStringVarP(&flags.SecretVariables, "secret-variable", "s", nil, "secret variable key value pair: --secret-variable key1=value1")
+	cmd.Flags().StringVarP(&flags.Schedule, "schedule", "", "", "test schedule in a cronjob form: * * * * *")
+	cmd.Flags().StringArrayVarP(&flags.ExecutorArgs, "executor-args", "", []string{}, "executor binary additional arguments")
+	cmd.Flags().StringVarP(&flags.ExecutionName, "execution-name", "", "", "execution name, if empty will be autogenerated")
+	cmd.Flags().StringVarP(&flags.VariablesFile, "variables-file", "", "", "variables file path, e.g. postman env file - will be passed to executor if supported")
+	cmd.Flags().StringToStringVarP(&flags.Envs, "env", "", map[string]string{}, "envs in a form of name1=val1 passed to executor")
+	cmd.Flags().StringToStringVarP(&flags.SecretEnvs, "secret-env", "", map[string]string{}, "secret envs in a form of secret_key1=secret_name1 passed to executor")
+	cmd.Flags().StringVar(&flags.HttpProxy, "http-proxy", "", "http proxy for executor containers")
+	cmd.Flags().StringVar(&flags.HttpsProxy, "https-proxy", "", "https proxy for executor containers")
+	cmd.Flags().StringToStringVarP(&flags.SecretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
+	cmd.Flags().StringArrayVarP(&flags.CopyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
+	cmd.Flags().StringVar(&flags.Image, "image", "", "image for container executor")
+	cmd.Flags().StringArrayVar(&flags.ImagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in container executor")
+	cmd.Flags().StringArrayVar(&flags.Command, "command", []string{}, "command passed to image in container executor")
+	cmd.Flags().Int64Var(&flags.Timeout, "timeout", 0, "duration in seconds for test to timeout. 0 disables timeout.")
+	cmd.Flags().StringVar(&flags.ArtifactStorageClassName, "artifact-storage-class-name", "", "artifact storage class name for container executor")
+	cmd.Flags().StringVar(&flags.ArtifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
+	cmd.Flags().StringArrayVarP(&flags.ArtifactDirs, "artifact-dir", "", []string{}, "artifact dirs for container executor")
+	cmd.Flags().StringVar(&flags.JobTemplate, "job-template", "", "job template file path for extensions to job template")
+	cmd.Flags().StringVarP(&flags.PreRunScript, "prerun-script", "", "", "path to script to be run before test execution")
+	cmd.Flags().StringVar(&flags.ScraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
+	cmd.Flags().BoolVar(&flags.NegativeTest, "negative-test", false, "negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa")
+	cmd.Flags().StringToStringVarP(&flags.MountConfigMaps, "mount-configmap", "", map[string]string{}, "config map value pair for mounting it to executor pod: --mount-configmap configmap_name=configmap_mountpath")
+	cmd.Flags().StringArrayVar(&flags.VariableConfigMaps, "variable-configmap", []string{}, "config map name used to map all keys to basis variables")
+	cmd.Flags().StringToStringVarP(&flags.MountSecrets, "mount-secret", "", map[string]string{}, "secret value pair for mounting it to executor pod: --mount-secret secret_name=secret_mountpath")
+	cmd.Flags().StringArrayVar(&flags.VariableSecrets, "variable-secret", []string{}, "secret name used to map all keys to secret variables")
+	cmd.Flags().StringVar(&flags.UploadTimeout, "upload-timeout", "", "timeout to use when uploading files, example: 30s")
 }
 
 func validateExecutorTypeAndContent(executorType, contentType string, executors testkube.ExecutorsDetails) error {
