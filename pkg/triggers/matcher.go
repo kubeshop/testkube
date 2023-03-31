@@ -73,7 +73,7 @@ func matchSelector(selector *testtriggersv1.TestTriggerSelector, namespace strin
 		isSameName := selector.Name == event.name
 		isSameNamespace := selector.Namespace == event.namespace
 		isSameTestTriggerNamespace := selector.Namespace == "" && namespace == event.namespace
-		return isSameName && (isSameTestTriggerNamespace || isSameNamespace)
+		return isSameName && (isSameNamespace || isSameTestTriggerNamespace)
 	}
 	if selector.LabelSelector != nil && len(event.labels) > 0 {
 		k8sSelector, err := v1.LabelSelectorAsSelector(selector.LabelSelector)
