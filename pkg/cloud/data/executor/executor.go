@@ -3,8 +3,10 @@ package executor
 import (
 	"context"
 	"encoding/json"
+	"math"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/kubeshop/testkube/pkg/agent"
@@ -41,7 +43,7 @@ func (e *CloudGRPCExecutor) Execute(ctx context.Context, command Command, payloa
 		Payload: &s,
 	}
 	ctx = agent.AddAPIKeyMeta(ctx, e.apiKey)
-	var opts []grpc.CallOption
+	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	cmdResponse, err := e.client.Call(ctx, &req, opts...)
 	if err != nil {
 		return nil, err
