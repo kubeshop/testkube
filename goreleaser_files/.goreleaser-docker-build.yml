@@ -26,7 +26,7 @@ dockers:
       - "--label=org.opencontainers.image.created={{ .Date}}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
       - "--label=org.opencontainers.image.version={{ .Version }}"
-      - "--build-arg=TOKEN={{ Env.TOKEN }}"
+      - "--build-arg=TOKEN={{ .Env.TOKEN }}"
       - "--build-arg=VERSION={{ .Version }}"
       - "--build-arg=COMMIT={{ .FullCommit }}"
       - "--build-arg=ANALYTICS_TRACKING_ID={{ .Env.ANALYTICS_TRACKING_ID }}"
