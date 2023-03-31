@@ -59,12 +59,16 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor.yml
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor.yml --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           EXECUTOR: ${{ matrix.executor }}
           RELEASE_VERSION: "v1.10.28-beta1"
+
+      - name: Push Docker images
+        run: |
+          docker push kubeshop/testkube-${{ matrix.executor }}:v1.10.28-beta1
 
 
 #      -
