@@ -17,10 +17,15 @@ service TestKubeCloudAPI {
     rpc GetLogsStream(stream LogsStreamResponse) returns (stream LogsStreamRequest);
 }
 
+enum LogsStreamRequestType {
+  STREAM_LOG_MESSAGE = 0;
+  STREAM_HEALTH_CHECK = 1;
+}
 
 message LogsStreamRequest {
   string stream_id = 1;
   string execution_id = 2;
+  LogsStreamRequestType request_type = 3;
 }
 
 message LogsStreamResponse {
