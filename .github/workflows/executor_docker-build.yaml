@@ -10,7 +10,7 @@ jobs:
   single_executor_docker:
     strategy:
       matrix:
-        executor: [artillery, curl, example, ginkgo, jmeter, k6, kubepug, postman, soapui, template]
+        executor: [artillery]
 
     runs-on: ubuntu-latest
     steps:
