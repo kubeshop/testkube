@@ -28,7 +28,7 @@ dockers:
       - "--build-arg=TOKEN={{ .Env.TOKEN }}"
 
 
-  - dockerfile: "./contrib/executor/{{ .Env.EXECUTOR }}/build/Dockerfile"
+  - dockerfile: "./contrib/executor/{{ .Env.EXECUTOR }}/build/agent/Dockerfile"
     use: buildx
     goos: linux
     goarch: arm64
