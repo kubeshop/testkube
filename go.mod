@@ -22,7 +22,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.47
 	github.com/montanaflynn/stats v0.6.6
 	github.com/moogar0880/problems v0.1.1
-	github.com/nats-io/nats.go v1.25.0
+	github.com/nats-io/nats.go v1.22.1
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/onsi/ginkgo/v2 v2.1.6
 	github.com/onsi/gomega v1.20.2
@@ -94,7 +94,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nats-io/jwt/v2 v2.3.0 // indirect
 	github.com/nats-io/nats-server/v2 v2.8.4 // indirect
-	github.com/nats-io/nkeys v0.4.4 // indirect
+	github.com/nats-io/nkeys v0.3.0 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/rivo/uniseg v0.4.2 // indirect
 	github.com/savsgio/gotils v0.0.0-20220530130905-52f3993e8d6d // indirect
@@ -166,7 +166,7 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
-	golang.org/x/crypto v0.6.0 // indirect
+	golang.org/x/crypto v0.1.0 // indirect
 	golang.org/x/net v0.6.0 // indirect
 	golang.org/x/oauth2 v0.1.0
 	golang.org/x/sync v0.1.0
