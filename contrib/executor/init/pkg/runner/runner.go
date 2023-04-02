@@ -2,10 +2,10 @@ package runner
 
 import (
 	"context"
-	"fmt"
-	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"os"
 	"path/filepath"
+
+	"github.com/kubeshop/testkube/pkg/storage/minio"
 
 	"github.com/pkg/errors"
 
@@ -55,13 +55,13 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	}
 
 	if execution.VariablesFile != "" {
-		output.PrintLog(fmt.Sprintf("%s Creating variables file...", ui.IconWorld))
+		output.PrintLogf("%s Creating variables file...", ui.IconWorld)
 		file := filepath.Join(r.dir, "params-file")
 		if err = os.WriteFile(file, []byte(execution.VariablesFile), 0666); err != nil {
 			output.PrintLogf("%s Could not create variables file %s: %s", ui.IconCross, file, err.Error())
 			return result, errors.Errorf("could not create variables file %s: %v", file, err)
 		}
-		output.PrintLog(fmt.Sprintf("%s Variables file created", ui.IconCheckMark))
+		output.PrintLogf("%s Variables file created", ui.IconCheckMark)
 	}
 
 	_, err = r.Fetcher.Fetch(execution.Content)
@@ -72,27 +72,27 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 
 	// add copy files in case object storage is set
 	if params.Endpoint != "" {
-		output.PrintLog(fmt.Sprintf("%s Fetching uploads from object store %s...", ui.IconFile, params.Endpoint))
-		minioClient := minio.NewClient(params.Endpoint, params.AccessKeyID, params.SecretAccessKey, params.Location, params.Token, params.Bucket, params.Ssl)
+		output.PrintLogf("%s Fetching uploads from object store %s...", ui.IconFile, params.Endpoint)
+		minioClient := minio.NewClient(params.Endpoint, params.AccessKeyID, params.SecretAccessKey, params.Region, params.Token, params.Bucket, params.Ssl)
 		fp := content.NewCopyFilesPlacer(minioClient)
 		fp.PlaceFiles(execution.TestName, execution.BucketName)
 	}
 
-	output.PrintLog(fmt.Sprintf("%s Setting up access to files in %s", ui.IconFile, r.dir))
+	output.PrintLogf("%s Setting up access to files in %s", ui.IconFile, r.dir)
 	_, err = executor.Run(r.dir, "chmod", nil, []string{"-R", "777", "."}...)
 	if err != nil {
-		output.PrintLog(fmt.Sprintf("%s Could not chmod for data dir: %s", ui.IconCross, err.Error()))
+		output.PrintLogf("%s Could not chmod for data dir: %s", ui.IconCross, err.Error())
 	}
 
 	if execution.ArtifactRequest != nil {
 		_, err = executor.Run(execution.ArtifactRequest.VolumeMountPath, "chmod", nil, []string{"-R", "777", "."}...)
 		if err != nil {
-			output.PrintLog(fmt.Sprintf("%s Could not chmod for artifacts dir: %s", ui.IconCross, err.Error()))
+			output.PrintLogf("%s Could not chmod for artifacts dir: %s", ui.IconCross, err.Error())
 		}
 	}
-	output.PrintLog(fmt.Sprintf("%s Access to files enabled", ui.IconCheckMark))
+	output.PrintLogf("%s Access to files enabled", ui.IconCheckMark)
 
-	output.PrintLog(fmt.Sprintf("%s Initialization successful", ui.IconCheckMark))
+	output.PrintLogf("%s Initialization successful", ui.IconCheckMark)
 	return testkube.NewPendingExecutionResult(), nil
 }
 

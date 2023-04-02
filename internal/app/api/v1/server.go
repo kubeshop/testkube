@@ -200,7 +200,7 @@ func (s *TestkubeAPI) InitEnvs() {
 //		s.storageParams.Endpoint,
 //		s.storageParams.AccessKeyId,
 //		s.storageParams.SecretAccessKey,
-//		s.storageParams.Location,
+//		s.storageParams.Reg,
 //		s.storageParams.Token,
 //		s.storageParams.Bucket,
 //		s.storageParams.SSL,
