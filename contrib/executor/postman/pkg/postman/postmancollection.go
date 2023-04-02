@@ -1,4 +1,4 @@
-package detector
+package postman
 
 import (
 	"encoding/json"
@@ -10,14 +10,18 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-// PostmanCollectionAdapter is detector adapter for Postman collection saved as JSON content
-type PostmanCollectionAdapter struct {
+// Detector is detector adapter for Postman collection saved as JSON content
+type Detector struct {
 }
 
-// Is detects based on upsert test options what kind of test it is
-func (d PostmanCollectionAdapter) Is(options apiClient.UpsertTestOptions) (name string, ok bool) {
-	var data map[string]interface{}
+const (
+	// PostmanCollectionType is type of Postman collection
+	PostmanCollectionType = "postman/collection"
+)
 
+// Is detects based on upsert test options what kind of test it is
+func (d Detector) Is(options apiClient.UpsertTestOptions) (name string, ok bool) {
+	var data map[string]interface{}
 	err := json.Unmarshal([]byte(options.Content.Data), &data)
 	if err != nil {
 		return
@@ -32,6 +36,14 @@ func (d PostmanCollectionAdapter) Is(options apiClient.UpsertTestOptions) (name 
 	return
 }
 
+// IsWithPath detects based on upsert test options what kind of test it is
+func (d Detector) IsWithPath(path string, options apiClient.UpsertTestOptions) (name string, ok bool) {
+	name, ok = d.Is(options)
+	ext := filepath.Ext(path)
+	ok = ok && (ext == ".json")
+	return
+}
+
 func checkName(filename, pattern string) (string, bool) {
 	ok := filepath.Ext(filename) == ".json" &&
 		strings.HasSuffix(strings.TrimSuffix(filename, filepath.Ext(filename)), pattern)
@@ -42,12 +54,12 @@ func checkName(filename, pattern string) (string, bool) {
 }
 
 // IsTestName detecs if filename has a conventional test name
-func (d PostmanCollectionAdapter) IsTestName(filename string) (string, bool) {
+func (d Detector) IsTestName(filename string) (string, bool) {
 	return checkName(filename, ".postman_collection")
 }
 
 // IsEnvName detecs if filename has a conventional env name
-func (d PostmanCollectionAdapter) IsEnvName(filename string) (string, string, bool) {
+func (d Detector) IsEnvName(filename string) (string, string, bool) {
 	filename, found := checkName(filename, ".postman_environment")
 	if !found {
 		return "", "", false
@@ -62,7 +74,7 @@ func (d PostmanCollectionAdapter) IsEnvName(filename string) (string, string, bo
 }
 
 // IsSecretEnvName detecs if filename has a conventional secret env name
-func (d PostmanCollectionAdapter) IsSecretEnvName(filename string) (string, string, bool) {
+func (d Detector) IsSecretEnvName(filename string) (string, string, bool) {
 	filename, found := checkName(filename, ".postman_secret_environment")
 	if !found {
 		return "", "", false
@@ -77,7 +89,7 @@ func (d PostmanCollectionAdapter) IsSecretEnvName(filename string) (string, stri
 }
 
 // GetSecretVariables retuns secret variables
-func (d PostmanCollectionAdapter) GetSecretVariables(data string) (map[string]testkube.Variable, error) {
+func (d Detector) GetSecretVariables(data string) (map[string]testkube.Variable, error) {
 	var envFile EnvFile
 	if err := json.Unmarshal([]byte(data), &envFile); err != nil {
 		return nil, err
@@ -104,8 +116,8 @@ func (d PostmanCollectionAdapter) GetSecretVariables(data string) (map[string]te
 }
 
 // GetType returns test type
-func (d PostmanCollectionAdapter) GetType() string {
-	return "postman/collection"
+func (d Detector) GetType() string {
+	return PostmanCollectionType
 }
 
 // EnvFile contains env file structure

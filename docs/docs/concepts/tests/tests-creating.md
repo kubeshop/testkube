@@ -361,15 +361,12 @@ spec:
   template:
     spec:
       containers:
-        - name: { { .Name } }
-          image: { { .Image } }
+        - name: "{{ .Name }}"
+          image: {{ .Image }}
           imagePullPolicy: Always
           command:
             - "/bin/runner"
-            - "{{ .Jsn }}"
-          volumeMounts:
-            - name: data-volume
-              mountPath: /data
+            - '{{ .Jsn }}'
           resources:
             limits:
               memory: 128Mi

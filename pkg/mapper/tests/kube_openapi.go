@@ -65,7 +65,7 @@ func MapTestContentFromSpec(specContent *testsv3.TestContent) *testkube.TestCont
 
 	content := &testkube.TestContent{}
 	if specContent != nil {
-		content.Type_ = specContent.Type_
+		content.Type_ = string(specContent.Type_)
 		content.Data = specContent.Data
 		content.Uri = specContent.Uri
 		if specContent.Repository != nil {
@@ -77,6 +77,7 @@ func MapTestContentFromSpec(specContent *testsv3.TestContent) *testkube.TestCont
 				Path:              specContent.Repository.Path,
 				WorkingDir:        specContent.Repository.WorkingDir,
 				CertificateSecret: specContent.Repository.CertificateSecret,
+				AuthType:          string(specContent.Repository.AuthType),
 			}
 
 			if specContent.Repository.UsernameSecret != nil {

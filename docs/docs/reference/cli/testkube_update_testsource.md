@@ -14,7 +14,9 @@ testkube update testsource [flags]
 
 ```
   -f, --file string                          source file - will be read from stdin if not specified
+      --git-auth-type string                 auth type for git requests one of basic|header (default "basic")
       --git-branch string                    if uri is git repository we can set additional branch parameter
+      --git-certificate-secret string        if git repository is private we can use certificate as an auth parameter stored in a kubernetes secret name
       --git-commit string                    if uri is git repository we can use commit id (sha) parameter
       --git-path string                      if repository is big we need to define additional path to directory/file to checkout partially
       --git-token string                     if git repository is private we can use token as an auth parameter

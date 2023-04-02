@@ -61,6 +61,7 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 			}
 
 			ui.Warn("  Working dir: ", test.Content.Repository.WorkingDir)
+			ui.Warn("  Auth type:   ", test.Content.Repository.AuthType)
 		}
 
 		if test.Content.Data != "" {

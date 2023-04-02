@@ -251,7 +251,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		testCR.Spec = mergeContents(testCR.Spec, testSourceCR.Spec)
 
 		if testSourceCR.Spec.Type_ == "" && testSourceCR.Spec.Repository.Type_ == "git" {
-			testCR.Spec.Content.Type_ = string(testkube.TestContentTypeGit)
+			testCR.Spec.Content.Type_ = testsv3.TestContentType(testkube.TestContentTypeGit)
 		}
 	}
 
@@ -437,7 +437,7 @@ func mergeContents(test testsv3.TestSpec, testSource testsourcev1.TestSourceSpec
 	}
 
 	if test.Content.Type_ == "" {
-		test.Content.Type_ = testSource.Type_
+		test.Content.Type_ = testsv3.TestContentType(testSource.Type_)
 	}
 
 	if test.Content.Data == "" {
@@ -495,6 +495,9 @@ func mergeContents(test testsv3.TestSpec, testSource testsourcev1.TestSourceSpec
 			test.Content.Repository.CertificateSecret = testSource.Repository.CertificateSecret
 		}
 
+		if test.Content.Repository.AuthType == "" {
+			test.Content.Repository.AuthType = testsv3.GitAuthType(testSource.Repository.AuthType)
+		}
 	}
 
 	return test

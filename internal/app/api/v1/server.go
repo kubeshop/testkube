@@ -153,7 +153,7 @@ type storageParams struct {
 	Endpoint        string
 	AccessKeyId     string
 	SecretAccessKey string
-	Location        string
+	Region          string
 	Token           string
 	Bucket          string
 }

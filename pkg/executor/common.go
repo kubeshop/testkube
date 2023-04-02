@@ -55,8 +55,8 @@ var RunnerEnvVars = []corev1.EnvVar{
 		Value: os.Getenv("STORAGE_SECRETACCESSKEY"),
 	},
 	{
-		Name:  "RUNNER_LOCATION",
-		Value: os.Getenv("STORAGE_LOCATION"),
+		Name:  "RUNNER_REGION",
+		Value: os.Getenv("STORAGE_REGION"),
 	},
 	{
 		Name:  "RUNNER_TOKEN",
@@ -340,7 +340,7 @@ func SyncDefaultExecutors(
 			},
 			Spec: executorv1.ExecutorSpec{
 				Types:        executor.Executor.Types,
-				ExecutorType: executor.Executor.ExecutorType,
+				ExecutorType: executorv1.ExecutorType(executor.Executor.ExecutorType),
 				Image:        executor.Executor.Image,
 				Features:     executorsmapper.MapFeaturesToCRD(executor.Executor.Features),
 				ContentTypes: executorsmapper.MapContentTypesToCRD(executor.Executor.ContentTypes),

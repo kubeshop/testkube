@@ -82,7 +82,7 @@ func getMinIOLoader(params envs.Params) (*scraper.MinIOUploader, error) {
 		params.Endpoint,
 		params.AccessKeyID,
 		params.SecretAccessKey,
-		params.Location,
+		params.Region,
 		params.Token,
 		params.Bucket,
 		params.Ssl,

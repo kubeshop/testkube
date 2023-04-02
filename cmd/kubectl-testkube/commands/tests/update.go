@@ -41,6 +41,8 @@ func NewUpdateTestsCmd() *cobra.Command {
 		imagePullSecretNames     []string
 		timeout                  int64
 		gitWorkingDir            string
+		gitCertificateSecret     string
+		gitAuthType              string
 		artifactStorageClassName string
 		artifactVolumeMountPath  string
 		artifactDirs             []string
@@ -115,6 +117,8 @@ func NewUpdateTestsCmd() *cobra.Command {
 	cmd.Flags().StringArrayVarP(&command, "command", "", []string{}, "command passed to image in container executor")
 	cmd.Flags().Int64Var(&timeout, "timeout", 0, "duration in seconds for test to timeout. 0 disables timeout.")
 	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
+	cmd.Flags().StringVarP(&gitCertificateSecret, "git-certificate-secret", "", "", "if git repository is private we can use certificate as an auth parameter stored in a kubernetes secret name")
+	cmd.Flags().StringVarP(&gitAuthType, "git-auth-type", "", "basic", "auth type for git requests one of basic|header")
 	cmd.Flags().StringVar(&artifactStorageClassName, "artifact-storage-class-name", "", "artifact storage class name for container executor")
 	cmd.Flags().StringVar(&artifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
 	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for container executor")

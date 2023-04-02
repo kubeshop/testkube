@@ -15,12 +15,12 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 			Labels:    request.Labels,
 		},
 		Spec: testsv1.TestTriggerSpec{
-			Resource:         string(*request.Resource),
+			Resource:         testsv1.TestTriggerResource(*request.Resource),
 			ResourceSelector: mapSelectorToCRD(request.ResourceSelector),
-			Event:            request.Event,
+			Event:            testsv1.TestTriggerEvent(request.Event),
 			ConditionSpec:    mapConditionSpecCRD(request.ConditionSpec),
-			Action:           string(*request.Action),
-			Execution:        string(*request.Execution),
+			Action:           testsv1.TestTriggerAction(*request.Action),
+			Execution:        testsv1.TestTriggerExecution(*request.Execution),
 			TestSelector:     mapSelectorToCRD(request.TestSelector),
 		},
 	}

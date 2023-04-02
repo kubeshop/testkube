@@ -25,6 +25,7 @@ type TestKubeCloudAPIClient interface {
 	Send(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_SendClient, error)
 	Call(ctx context.Context, in *CommandRequest, opts ...grpc.CallOption) (*CommandResponse, error)
 	ExecuteAsync(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_ExecuteAsyncClient, error)
+	GetLogsStream(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetLogsStreamClient, error)
 }
 
 type testKubeCloudAPIClient struct {
@@ -140,6 +141,37 @@ func (x *testKubeCloudAPIExecuteAsyncClient) Recv() (*ExecuteRequest, error) {
 	return m, nil
 }
 
+func (c *testKubeCloudAPIClient) GetLogsStream(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetLogsStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[3], "/cloud.TestKubeCloudAPI/GetLogsStream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPIGetLogsStreamClient{stream}
+	return x, nil
+}
+
+type TestKubeCloudAPI_GetLogsStreamClient interface {
+	Send(*LogsStreamResponse) error
+	Recv() (*LogsStreamRequest, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPIGetLogsStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPIGetLogsStreamClient) Send(m *LogsStreamResponse) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *testKubeCloudAPIGetLogsStreamClient) Recv() (*LogsStreamRequest, error) {
+	m := new(LogsStreamRequest)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // TestKubeCloudAPIServer is the server API for TestKubeCloudAPI service.
 // All implementations must embed UnimplementedTestKubeCloudAPIServer
 // for forward compatibility
@@ -150,6 +182,7 @@ type TestKubeCloudAPIServer interface {
 	Send(TestKubeCloudAPI_SendServer) error
 	Call(context.Context, *CommandRequest) (*CommandResponse, error)
 	ExecuteAsync(TestKubeCloudAPI_ExecuteAsyncServer) error
+	GetLogsStream(TestKubeCloudAPI_GetLogsStreamServer) error
 	mustEmbedUnimplementedTestKubeCloudAPIServer()
 }
 
@@ -168,6 +201,9 @@ func (UnimplementedTestKubeCloudAPIServer) Call(context.Context, *CommandRequest
 }
 func (UnimplementedTestKubeCloudAPIServer) ExecuteAsync(TestKubeCloudAPI_ExecuteAsyncServer) error {
 	return status.Errorf(codes.Unimplemented, "method ExecuteAsync not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) GetLogsStream(TestKubeCloudAPI_GetLogsStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetLogsStream not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) mustEmbedUnimplementedTestKubeCloudAPIServer() {}
 
@@ -278,6 +314,32 @@ func (x *testKubeCloudAPIExecuteAsyncServer) Recv() (*ExecuteResponse, error) {
 	return m, nil
 }
 
+func _TestKubeCloudAPI_GetLogsStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(TestKubeCloudAPIServer).GetLogsStream(&testKubeCloudAPIGetLogsStreamServer{stream})
+}
+
+type TestKubeCloudAPI_GetLogsStreamServer interface {
+	Send(*LogsStreamRequest) error
+	Recv() (*LogsStreamResponse, error)
+	grpc.ServerStream
+}
+
+type testKubeCloudAPIGetLogsStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPIGetLogsStreamServer) Send(m *LogsStreamRequest) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *testKubeCloudAPIGetLogsStreamServer) Recv() (*LogsStreamResponse, error) {
+	m := new(LogsStreamResponse)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // TestKubeCloudAPI_ServiceDesc is the grpc.ServiceDesc for TestKubeCloudAPI service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -305,6 +367,12 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "ExecuteAsync",
 			Handler:       _TestKubeCloudAPI_ExecuteAsync_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "GetLogsStream",
+			Handler:       _TestKubeCloudAPI_GetLogsStream_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},
