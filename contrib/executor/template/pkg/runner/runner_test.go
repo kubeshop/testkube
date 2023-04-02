@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,6 +10,7 @@ import (
 )
 
 func TestRun(t *testing.T) {
+	ctx := context.Background()
 
 	t.Run("runner should run test based on execution data", func(t *testing.T) {
 		// given
@@ -17,7 +19,7 @@ func TestRun(t *testing.T) {
 		execution.Content = testkube.NewStringTestContent("hello I'm test content")
 
 		// when
-		result, err := runner.Run(*execution)
+		result, err := runner.Run(ctx, *execution)
 
 		// then
 		assert.NoError(t, err)

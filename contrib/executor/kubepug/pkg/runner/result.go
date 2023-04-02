@@ -7,7 +7,7 @@ import (
 	kubepug "github.com/rikatz/kubepug/pkg/results"
 )
 
-// GetResults parses the output of a kubepug execution into a Result
+// GetResult parses the output of a kubepug execution into a Result
 func GetResult(r string) (kubepug.Result, error) {
 	var result kubepug.Result
 	err := json.Unmarshal([]byte(r), &result)

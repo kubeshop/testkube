@@ -11,29 +11,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
+      # setup-go@v4 handles Go cache by default
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
           go-version: 1.18
-
-      - name: Go Cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Install k6
-        run: |
-          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-          echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
-          sudo apt-get update
-          sudo apt-get install k6
 
       - name: Setup gotestsum
         run: go install gotest.tools/gotestsum@latest
@@ -75,6 +59,7 @@ jobs:
 
   integration-tests:
     runs-on: ubuntu-latest
+
     services:
       mongo:
         image: bitnami/mongodb
@@ -96,22 +81,37 @@ jobs:
           MINIO_ROOT_PASSWORD: minio123
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
+      # setup-go@v4 handles Go cache by default
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
           go-version: 1.18
 
-      - name: Go Cache
-        uses: actions/cache@v2
+      - name : Set up Java
+        uses: actions/setup-java@v3
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          distribution: 'adopt'
+          java-version: '8'
+
+      - name: Install node@19
+        uses: actions/setup-node@v3
+        with:
+          node-version: 19
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.1.0
+
+      - name: Install Artillery
+        run: npm install -g artillery@2.0.0-31
+
+      - name: Install kubepug
+        uses: cpanato/kubepug-installer@main
+        with:
+          kubepug-release: '1.4.0'
 
       - name: Install k6
         run: |
@@ -127,6 +127,9 @@ jobs:
           mv apache-jmeter-5.5 jmeter
           sudo mv jmeter /opt
           echo "/opt/jmeter/bin" >> $GITHUB_PATH
+
+      - name: Install Ginkgo
+        run: go install github.com/onsi/ginkgo/v2/ginkgo@v2.9.2
 
       - name: Setup gotestsum
         run: go install gotest.tools/gotestsum@latest

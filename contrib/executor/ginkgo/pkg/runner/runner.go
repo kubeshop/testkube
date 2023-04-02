@@ -1,12 +1,17 @@
 package runner
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	junit "github.com/joshdk/go-junit"
+	"github.com/pkg/errors"
+
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
+
+	"github.com/joshdk/go-junit"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
@@ -22,28 +27,31 @@ import (
 var ginkgoDefaultParams = InitializeGinkgoParams()
 var ginkgoBin = "ginkgo"
 
-func NewGinkgoRunner() (*GinkgoRunner, error) {
-	output.PrintLog(fmt.Sprintf("%s Preparing test runner", ui.IconTruck))
+func NewGinkgoRunner(ctx context.Context) (*GinkgoRunner, error) {
+	output.PrintLogf("%s Preparing test runner", ui.IconTruck)
 	params, err := envs.LoadTestkubeVariables()
 	if err != nil {
-		return nil, fmt.Errorf("could not initialize Ginkgo runner variables: %w", err)
+		return nil, errors.Errorf("could not initialize Ginkgo runner variables: %v", err)
 	}
 
-	runner := &GinkgoRunner{
+	r := &GinkgoRunner{
 		Fetcher: content.NewFetcher(""),
-		Scraper: scraper.NewMinioScraper(
-			params.Endpoint,
-			params.AccessKeyID,
-			params.SecretAccessKey,
-			params.Location,
-			params.Token,
-			params.Bucket,
-			params.Ssl,
-		),
-		Params: params,
+		Params:  params,
 	}
 
-	return runner, nil
+	if params.ScrapperEnabled {
+		uploader := factory.MinIOUploader
+		if params.CloudMode {
+			uploader = factory.CloudUploader
+		}
+		s, err := factory.GetScraper(ctx, params, factory.ArchiveFilesystemExtractor, uploader)
+		if err != nil {
+			return nil, errors.Wrap(err, "error creating scraper")
+		}
+		r.Scraper = s
+	}
+
+	return r, nil
 }
 
 type GinkgoRunner struct {
@@ -52,14 +60,16 @@ type GinkgoRunner struct {
 	Scraper scraper.Scraper
 }
 
-func (r *GinkgoRunner) Run(execution testkube.Execution) (result testkube.ExecutionResult, err error) {
-	output.PrintLog(fmt.Sprintf("%s Preparing for test run", ui.IconTruck))
+var _ runner.Runner = &GinkgoRunner{}
+
+func (r *GinkgoRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+	output.PrintLogf("%s Preparing for test run", ui.IconTruck)
 	err = r.Validate(execution)
 	if err != nil {
 		return result, err
 	}
 
-	// Set github user and token params in Content.Repository
+	// Set GitHub user and token params in Content.Repository
 	if r.Params.GitUsername != "" || r.Params.GitToken != "" {
 		if execution.Content != nil && execution.Content.Repository != nil {
 			execution.Content.Repository.Username = r.Params.GitUsername
@@ -82,8 +92,8 @@ func (r *GinkgoRunner) Run(execution testkube.Execution) (result testkube.Execut
 	}
 
 	if !fileInfo.IsDir() {
-		output.PrintLog(fmt.Sprintf("%s passing ginkgo test as single file not implemented yet", ui.IconCross))
-		return result, fmt.Errorf("passing ginkgo test as single file not implemented yet")
+		output.PrintLogf("%s passing ginkgo test as single file not implemented yet", ui.IconCross)
+		return result, errors.Errorf("passing ginkgo test as single file not implemented yet")
 	}
 
 	// Set up ginkgo params
@@ -108,7 +118,7 @@ func (r *GinkgoRunner) Run(execution testkube.Execution) (result testkube.Execut
 	if _, err := os.Stat(reportsPath); os.IsNotExist(err) {
 		mkdirErr := os.Mkdir(reportsPath, os.ModePerm)
 		if mkdirErr != nil {
-			output.PrintLog(fmt.Sprintf("%s could not set up reports directory: %s", ui.IconCross, mkdirErr.Error()))
+			output.PrintLogf("%s could not set up reports directory: %s", ui.IconCross, mkdirErr.Error())
 			return result, mkdirErr
 		}
 	}
@@ -121,27 +131,27 @@ func (r *GinkgoRunner) Run(execution testkube.Execution) (result testkube.Execut
 	if ginkgoParams["GinkgoJsonReport"] != "" {
 		moveErr := MoveReport(runPath, reportsPath, strings.Split(ginkgoParams["GinkgoJsonReport"], " ")[1])
 		if moveErr != nil {
-			output.PrintLog(fmt.Sprintf("%s could not move JSON report: %s", ui.IconCross, moveErr.Error()))
+			output.PrintLogf("%s could not move JSON report: %s", ui.IconCross, moveErr.Error())
 			return result, moveErr
 		}
 	}
 	if ginkgoParams["GinkgoJunitReport"] != "" {
 		moveErr := MoveReport(runPath, reportsPath, strings.Split(ginkgoParams["GinkgoJunitReport"], " ")[1])
 		if moveErr != nil {
-			output.PrintLog(fmt.Sprintf("%s could not move Junit report: %s", ui.IconCross, moveErr.Error()))
+			output.PrintLogf("%s could not move Junit report: %s", ui.IconCross, moveErr.Error())
 			return result, moveErr
 		}
 	}
 	if ginkgoParams["GinkgoTeamCityReport"] != "" {
 		moveErr := MoveReport(runPath, reportsPath, strings.Split(ginkgoParams["GinkgoTeamCityReport"], " ")[1])
 		if moveErr != nil {
-			output.PrintLog(fmt.Sprintf("%s could not move TeamCity report: %s", ui.IconCross, moveErr.Error()))
+			output.PrintLogf("%s could not move TeamCity report: %s", ui.IconCross, moveErr.Error())
 			return result, moveErr
 		}
 	}
 	suites, serr := junit.IngestFile(filepath.Join(reportsPath, strings.Split(ginkgoParams["GinkgoJunitReport"], " ")[1]))
 	result = MapJunitToExecutionResults(out, suites)
-	output.PrintLog(fmt.Sprintf("%s Mapped Junit to Execution Results...", ui.IconCheckMark))
+	output.PrintLogf("%s Mapped Junit to Execution Results...", ui.IconCheckMark)
 
 	// scrape artifacts first even if there are errors above
 
@@ -149,9 +159,9 @@ func (r *GinkgoRunner) Run(execution testkube.Execution) (result testkube.Execut
 		directories := []string{
 			reportsPath,
 		}
-		err := r.Scraper.Scrape(execution.Id, directories)
-		if err != nil {
-			return *result.WithErrors(fmt.Errorf("scrape artifacts error: %w", err)), nil
+
+		if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
+			return *result.Err(err), errors.Wrap(err, "error scraping artifacts for Ginkgo executor")
 		}
 	}
 
@@ -169,7 +179,7 @@ func MoveReport(path string, reportsPath string, reportFileName string) error {
 }
 
 func InitializeGinkgoParams() map[string]string {
-	output.PrintLog(fmt.Sprintf("%s Preparing initial Ginkgo parameters", ui.IconWorld))
+	output.PrintLogf("%s Preparing initial Ginkgo parameters", ui.IconWorld)
 
 	ginkgoParams := make(map[string]string)
 	ginkgoParams["GinkgoTestPackage"] = ""
@@ -198,13 +208,13 @@ func InitializeGinkgoParams() map[string]string {
 	ginkgoParams["GinkgoJunitReport"] = "--junit-report report.xml" // --junit-report report.xml [will be stored in reports/filename]
 	ginkgoParams["GinkgoTeamCityReport"] = ""                       // --teamcity-report report.teamcity [will be stored in reports/filename]
 
-	output.PrintLog(fmt.Sprintf("%s Initial Ginkgo parameters prepared: %s", ui.IconCheckMark, ginkgoParams))
+	output.PrintLogf("%s Initial Ginkgo parameters prepared: %s", ui.IconCheckMark, ginkgoParams)
 	return ginkgoParams
 }
 
-// Find any GinkgoParams in execution.Variables
+// FindGinkgoParams finds any GinkgoParams in execution.Variables
 func FindGinkgoParams(execution *testkube.Execution, defaultParams map[string]string) map[string]string {
-	output.PrintLog(fmt.Sprintf("%s Setting Ginkgo parameters from variables", ui.IconWorld))
+	output.PrintLogf("%s Setting Ginkgo parameters from variables", ui.IconWorld)
 
 	var retVal = make(map[string]string)
 	for k, p := range defaultParams {
@@ -219,14 +229,14 @@ func FindGinkgoParams(execution *testkube.Execution, defaultParams map[string]st
 		}
 	}
 
-	output.PrintLog(fmt.Sprintf("%s Ginkgo parameters from variables set: %s", ui.IconCheckMark, retVal))
+	output.PrintLogf("%s Ginkgo parameters from variables set: %s", ui.IconCheckMark, retVal)
 	return retVal
 }
 
 func BuildGinkgoArgs(params map[string]string, path, runPath string) ([]string, error) {
-	output.PrintLog(fmt.Sprintf("%s Building Ginkgo arguments from params", ui.IconWorld))
+	output.PrintLogf("%s Building Ginkgo arguments from params", ui.IconWorld)
 
-	args := []string{}
+	var args []string
 	for k, p := range params {
 		if p == "" {
 			continue
@@ -248,19 +258,19 @@ func BuildGinkgoArgs(params map[string]string, path, runPath string) ([]string, 
 		}
 	}
 
-	output.PrintLog(fmt.Sprintf("%s Ginkgo arguments from params built: %s", ui.IconCheckMark, args))
+	output.PrintLogf("%s Ginkgo arguments from params built: %s", ui.IconCheckMark, args)
 	return args, nil
 }
 
-// This should always be called after FindGinkgoParams so that it only
+// BuildGinkgoPassThroughFlags should always be called after FindGinkgoParams so that it only
 // acts on the "left over" Variables that are to be treated as pass through
 // flags to GInkgo
 func BuildGinkgoPassThroughFlags(execution testkube.Execution) []string {
-	output.PrintLog(fmt.Sprintf("%s Building Ginkgo flags", ui.IconWorld))
+	output.PrintLogf("%s Building Ginkgo flags", ui.IconWorld)
 
 	vars := execution.Variables
 	args := execution.Args
-	flags := []string{}
+	var flags []string
 	for _, v := range vars {
 		os.Setenv(v.Name, v.Value)
 	}
@@ -273,7 +283,7 @@ func BuildGinkgoPassThroughFlags(execution testkube.Execution) []string {
 		flags = append([]string{"--"}, flags...)
 	}
 
-	output.PrintLog(fmt.Sprintf("%s Ginkgo flags built: %s", ui.IconCheckMark, flags))
+	output.PrintLogf("%s Ginkgo flags built: %s", ui.IconCheckMark, flags)
 	return flags
 }
 
@@ -281,17 +291,17 @@ func BuildGinkgoPassThroughFlags(execution testkube.Execution) []string {
 func (r *GinkgoRunner) Validate(execution testkube.Execution) error {
 
 	if execution.Content == nil {
-		output.PrintLog(fmt.Sprintf("%s Can't find any content to run in execution data", ui.IconCross))
+		output.PrintLogf("%s Can't find any content to run in execution data", ui.IconCross)
 		return fmt.Errorf("can't find any content to run in execution data: %+v", execution)
 	}
 
 	if execution.Content.Repository == nil {
-		output.PrintLog(fmt.Sprintf("%s Ginkgo executor handles only repository based tests, but repository is nil", ui.IconCross))
+		output.PrintLogf("%s Ginkgo executor handles only repository based tests, but repository is nil", ui.IconCross)
 		return fmt.Errorf("ginkgo executor handles only repository based tests, but repository is nil")
 	}
 
 	if execution.Content.Repository.Branch == "" && execution.Content.Repository.Commit == "" {
-		output.PrintLog(fmt.Sprintf("%s Can't find branch or commit in params must use one or the other, repo %+v", ui.IconCross, execution.Content.Repository))
+		output.PrintLogf("%s Can't find branch or commit in params must use one or the other, repo %+v", ui.IconCross, execution.Content.Repository)
 		return fmt.Errorf("can't find branch or commit in params must use one or the other, repo:%+v", execution.Content.Repository)
 	}
 

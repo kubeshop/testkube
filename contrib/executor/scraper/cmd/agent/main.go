@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -10,10 +11,11 @@ import (
 )
 
 func main() {
-	r, err := runner.NewRunner()
+	ctx := context.Background()
+	r, err := runner.NewRunner(ctx)
 	if err != nil {
 		output.PrintError(os.Stderr, fmt.Errorf("could not initialize runner: %w", err))
 		os.Exit(1)
 	}
-	agent.Run(r, os.Args)
+	agent.Run(ctx, r, os.Args)
 }

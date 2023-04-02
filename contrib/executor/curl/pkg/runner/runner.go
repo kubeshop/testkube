@@ -1,13 +1,15 @@
 package runner
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"go.uber.org/zap"
 
@@ -31,11 +33,13 @@ type CurlRunner struct {
 	Log     *zap.SugaredLogger
 }
 
+var _ runner.Runner = &CurlRunner{}
+
 func NewCurlRunner() (*CurlRunner, error) {
-	outputPkg.PrintLog(fmt.Sprintf("%s Preparing test runner", ui.IconTruck))
+	outputPkg.PrintLogf("%s Preparing test runner", ui.IconTruck)
 	params, err := envs.LoadTestkubeVariables()
 	if err != nil {
-		return nil, fmt.Errorf("could not initialize cURL runner variables: %w", err)
+		return nil, errors.Errorf("could not initialize cURL runner variables: %v", err)
 	}
 
 	return &CurlRunner{
@@ -45,8 +49,8 @@ func NewCurlRunner() (*CurlRunner, error) {
 	}, nil
 }
 
-func (r *CurlRunner) Run(execution testkube.Execution) (result testkube.ExecutionResult, err error) {
-	outputPkg.PrintLog(fmt.Sprintf("%s Preparing for test run", ui.IconTruck))
+func (r *CurlRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+	outputPkg.PrintLogf("%s Preparing for test run", ui.IconTruck)
 	var runnerInput CurlRunnerInput
 	if r.Params.GitUsername != "" || r.Params.GitToken != "" {
 		if execution.Content != nil && execution.Content.Repository != nil {
@@ -83,19 +87,19 @@ func (r *CurlRunner) Run(execution testkube.Execution) (result testkube.Executio
 	envManager.GetReferenceVars(envManager.Variables)
 	variables := testkube.VariablesToMap(envManager.Variables)
 
-	outputPkg.PrintLog(fmt.Sprintf("%s Filling in the input templates", ui.IconKey))
+	outputPkg.PrintLogf("%s Filling in the input templates", ui.IconKey)
 	err = runnerInput.FillTemplates(variables)
 	if err != nil {
-		outputPkg.PrintLog(fmt.Sprintf("%s Failed to fill in the input templates: %s", ui.IconCross, err.Error()))
+		outputPkg.PrintLogf("%s Failed to fill in the input templates: %s", ui.IconCross, err.Error())
 		r.Log.Errorf("Error occured when resolving input templates %s", err)
 		return *result.Err(err), nil
 	}
-	outputPkg.PrintLog(fmt.Sprintf("%s Successfully filled the input templates", ui.IconCheckMark))
+	outputPkg.PrintLogf("%s Successfully filled the input templates", ui.IconCheckMark)
 
 	command := runnerInput.Command[0]
 	if command != "curl" {
-		outputPkg.PrintLog(fmt.Sprintf("%s you can run only `curl` commands with this executor but passed: `%s`", ui.IconCross, command))
-		return result, fmt.Errorf("you can run only `curl` commands with this executor but passed: `%s`", command)
+		outputPkg.PrintLogf("%s you can run only `curl` commands with this executor but passed: `%s`", ui.IconCross, command)
+		return result, errors.Errorf("you can run only `curl` commands with this executor but passed: `%s`", command)
 	}
 
 	runnerInput.Command[0] = CurlAdditionalFlags
@@ -120,27 +124,27 @@ func (r *CurlRunner) Run(execution testkube.Execution) (result testkube.Executio
 	result.Output = outputString
 	responseStatus, err := getResponseCode(outputString)
 	if err != nil {
-		outputPkg.PrintLog(fmt.Sprintf("%s Test run failed: %s", ui.IconCross, err.Error()))
+		outputPkg.PrintLogf("%s Test run failed: %s", ui.IconCross, err.Error())
 		return *result.Err(err), nil
 	}
 
 	expectedStatus, err := strconv.Atoi(runnerInput.ExpectedStatus)
 	if err != nil {
-		outputPkg.PrintLog(fmt.Sprintf("%s Test run failed: cannot process expected status: %s", ui.IconCross, err.Error()))
-		return *result.Err(fmt.Errorf("cannot process expected status %s", runnerInput.ExpectedStatus)), nil
+		outputPkg.PrintLogf("%s Test run failed: cannot process expected status: %s", ui.IconCross, err.Error())
+		return *result.Err(errors.Errorf("cannot process expected status %s", runnerInput.ExpectedStatus)), nil
 	}
 
 	if responseStatus != expectedStatus {
-		outputPkg.PrintLog(fmt.Sprintf("%s Test run failed: cannot process expected status: %s", ui.IconCross, err.Error()))
-		return *result.Err(fmt.Errorf("response status don't match expected %d got %d", expectedStatus, responseStatus)), nil
+		outputPkg.PrintLogf("%s Test run failed: cannot process expected status: %s", ui.IconCross, err.Error())
+		return *result.Err(errors.Errorf("response status don't match expected %d got %d", expectedStatus, responseStatus)), nil
 	}
 
 	if !strings.Contains(outputString, runnerInput.ExpectedBody) {
-		outputPkg.PrintLog(fmt.Sprintf("%s Test run failed: response doesn't contain body: %s", ui.IconCross, runnerInput.ExpectedBody))
-		return *result.Err(fmt.Errorf("response doesn't contain body: %s", runnerInput.ExpectedBody)), nil
+		outputPkg.PrintLogf("%s Test run failed: response doesn't contain body: %s", ui.IconCross, runnerInput.ExpectedBody)
+		return *result.Err(errors.Errorf("response doesn't contain body: %s", runnerInput.ExpectedBody)), nil
 	}
 
-	outputPkg.PrintLog(fmt.Sprintf("%s Test run succeeded", ui.IconCheckMark))
+	outputPkg.PrintLogf("%s Test run succeeded", ui.IconCheckMark)
 
 	return testkube.ExecutionResult{
 		Status: testkube.ExecutionStatusPassed,
@@ -152,7 +156,7 @@ func getResponseCode(curlOutput string) (int, error) {
 	re := regexp.MustCompile(`\A\S*\s(\d+)`)
 	matches := re.FindStringSubmatch(curlOutput)
 	if len(matches) == 0 {
-		return -1, fmt.Errorf("could not find a response status in the command output")
+		return -1, errors.Errorf("could not find a response status in the command output")
 	}
 	return strconv.Atoi(matches[1])
 }

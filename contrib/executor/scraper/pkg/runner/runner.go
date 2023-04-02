@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
+
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
@@ -19,30 +21,45 @@ import (
 )
 
 // NewRunner creates scraper runner
-func NewRunner() (*ScraperRunner, error) {
+func NewRunner(ctx context.Context) (*ScraperRunner, error) {
 	var params envs.Params
 	err := envconfig.Process("runner", &params)
 	if err != nil {
 		return nil, err
 	}
 
-	runner := &ScraperRunner{
+	r := &ScraperRunner{
 		Params: params,
 	}
 
-	return runner, nil
+	if params.ScrapperEnabled {
+		uploader := factory.MinIOUploader
+		if params.CloudMode {
+			uploader = factory.CloudUploader
+		}
+		s, err := factory.GetScraper(ctx, params, factory.ArchiveFilesystemExtractor, uploader)
+		if err != nil {
+			return nil, errors.Wrap(err, "error creating scraper")
+		}
+		r.Scraper = s
+	}
+
+	return r, nil
 }
 
 // ScraperRunner prepares data for executor
 type ScraperRunner struct {
-	Params envs.Params
+	Params  envs.Params
+	Scraper scraper.Scraper
 }
 
+var _ runner.Runner = &ScraperRunner{}
+
 // Run prepares data for executor
-func (r *ScraperRunner) Run(execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+func (r *ScraperRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
 	// check that the artifact dir exists
 	if execution.ArtifactRequest == nil {
-		return *result.Err(fmt.Errorf("executor only support artifact based tests")), nil
+		return *result.Err(errors.Errorf("executor only support artifact based tests")), nil
 	}
 
 	_, err = os.Stat(execution.ArtifactRequest.VolumeMountPath)
@@ -62,11 +79,8 @@ func (r *ScraperRunner) Run(execution testkube.Execution) (result testkube.Execu
 
 		output.PrintLog(fmt.Sprintf("Scraping directories: %v", directories))
 
-		if err := factory.Scrape(context.Background(), directories, execution, r.Params); err != nil {
-			return result, errors.Wrap(err, "error getting artifacts from SoapUI executor")
-		}
-		if err != nil {
-			return *result.Err(err), fmt.Errorf("failed getting artifacts: %w", err)
+		if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
+			return *result.Err(err), errors.Wrap(err, "error scraping artifacts from container executor")
 		}
 	}
 

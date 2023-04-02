@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 
 	"github.com/kubeshop/testkube/contrib/executor/jmeter/pkg/runner"
@@ -9,9 +10,10 @@ import (
 )
 
 func main() {
-	runner, err := runner.NewRunner()
+	ctx := context.Background()
+	runner, err := runner.NewRunner(ctx)
 	if err != nil {
 		ui.Err(err)
 	}
-	agent.Run(runner, os.Args)
+	agent.Run(ctx, runner, os.Args)
 }

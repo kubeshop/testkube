@@ -1,6 +1,9 @@
+//go:build integration
+
 package runner
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,9 +14,10 @@ import (
 )
 
 func TestRunFiles(t *testing.T) {
+	ctx := context.Background()
 	// setup
 	tempDir := os.TempDir()
-	os.Setenv("RUNNER_DATADIR", tempDir)
+	assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
 
 	t.Run("Run k6 with simple script", func(t *testing.T) {
 		// given
@@ -24,7 +28,7 @@ func TestRunFiles(t *testing.T) {
 		writeTestContent(t, tempDir, "../../examples/k6-test-script.js")
 
 		// when
-		result, err := runner.Run(*execution)
+		result, err := runner.Run(ctx, *execution)
 
 		// then
 		assert.NoError(t, err)
@@ -41,7 +45,7 @@ func TestRunFiles(t *testing.T) {
 		writeTestContent(t, tempDir, "../../examples/k6-test-failing-script.js")
 
 		// when
-		result, err := runner.Run(*execution)
+		result, err := runner.Run(ctx, *execution)
 
 		// then
 		assert.NoError(t, err)
@@ -59,7 +63,7 @@ func TestRunFiles(t *testing.T) {
 		writeTestContent(t, tempDir, "../../examples/k6-test-script.js")
 
 		// when
-		result, err := runner.Run(*execution)
+		result, err := runner.Run(ctx, *execution)
 
 		// then
 		assert.NoError(t, err)
@@ -77,7 +81,7 @@ func TestRunFiles(t *testing.T) {
 		writeTestContent(t, tempDir, "../../examples/k6-test-environment.js")
 
 		// when
-		result, err := runner.Run(*execution)
+		result, err := runner.Run(ctx, *execution)
 
 		// then
 		assert.NoError(t, err)
@@ -87,9 +91,10 @@ func TestRunFiles(t *testing.T) {
 }
 
 func TestRunAdvanced(t *testing.T) {
+	ctx := context.Background()
 	// setup
 	tempDir := os.TempDir()
-	os.Setenv("RUNNER_DATADIR", tempDir)
+	assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
 
 	t.Run("Run k6 with scenarios", func(t *testing.T) {
 		// given
@@ -100,7 +105,7 @@ func TestRunAdvanced(t *testing.T) {
 		writeTestContent(t, tempDir, "../../examples/k6-test-scenarios.js")
 
 		// when
-		result, err := runner.Run(*execution)
+		result, err := runner.Run(ctx, *execution)
 
 		// then
 		assert.NoError(t, err)
@@ -117,7 +122,7 @@ func TestRunAdvanced(t *testing.T) {
 		writeTestContent(t, tempDir, "../../examples/k6-test-thresholds.js")
 
 		// when
-		result, err := runner.Run(*execution)
+		result, err := runner.Run(ctx, *execution)
 
 		// then
 		assert.NoError(t, err)
@@ -128,12 +133,13 @@ func TestRunAdvanced(t *testing.T) {
 }
 
 func TestRunDirs(t *testing.T) {
+	ctx := context.Background()
 	// setup
 	tempDir, _ := os.MkdirTemp("", "*")
-	os.Setenv("RUNNER_DATADIR", tempDir)
+	assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
 
 	repoDir := filepath.Join(tempDir, "repo")
-	os.Mkdir(repoDir, 0755)
+	assert.NoError(t, os.Mkdir(repoDir, 0755))
 
 	k6Script, err := os.ReadFile("../../examples/k6-test-script.js")
 	if err != nil {
@@ -160,7 +166,7 @@ func TestRunDirs(t *testing.T) {
 		execution.Args = []string{"--duration", "1s", "k6-test-script.js"}
 
 		// when
-		result, err := runner.Run(*execution)
+		result, err := runner.Run(ctx, *execution)
 
 		// then
 		assert.NoError(t, err)
@@ -170,10 +176,11 @@ func TestRunDirs(t *testing.T) {
 }
 
 func TestRunErrors(t *testing.T) {
+	ctx := context.Background()
 
 	t.Run("Run k6 with no script", func(t *testing.T) {
 		// setup
-		os.Setenv("RUNNER_DATADIR", ".")
+		assert.NoError(t, os.Setenv("RUNNER_DATADIR", "."))
 
 		// given
 		runner := NewRunner()
@@ -182,7 +189,7 @@ func TestRunErrors(t *testing.T) {
 		execution.TestType = "k6/script"
 
 		// when
-		result, err := runner.Run(*execution)
+		result, err := runner.Run(ctx, *execution)
 
 		// then
 		assert.NoError(t, err)
@@ -192,7 +199,7 @@ func TestRunErrors(t *testing.T) {
 
 	t.Run("Run k6 with invalid arguments", func(t *testing.T) {
 		// setup
-		os.Setenv("RUNNER_DATADIR", ".")
+		assert.NoError(t, os.Setenv("RUNNER_DATADIR", "."))
 
 		runner := NewRunner()
 		execution := testkube.NewQueuedExecution()
@@ -201,7 +208,7 @@ func TestRunErrors(t *testing.T) {
 		execution.Args = []string{"--vues", "2", "--duration", "5"}
 
 		// when
-		result, err := runner.Run(*execution)
+		result, err := runner.Run(ctx, *execution)
 
 		// then
 		assert.NoError(t, err)
@@ -211,7 +218,7 @@ func TestRunErrors(t *testing.T) {
 
 	t.Run("Run k6 from directory with missing script arg", func(t *testing.T) {
 		// setup
-		os.Setenv("RUNNER_DATADIR", ".")
+		assert.NoError(t, os.Setenv("RUNNER_DATADIR", "."))
 
 		// given
 		runner := NewRunner()
@@ -228,7 +235,7 @@ func TestRunErrors(t *testing.T) {
 		execution.Args = []string{}
 
 		// when
-		result, err := runner.Run(*execution)
+		result, err := runner.Run(ctx, *execution)
 
 		// then
 		assert.NoError(t, err)

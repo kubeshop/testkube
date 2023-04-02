@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
@@ -10,9 +11,10 @@ import (
 )
 
 func main() {
-	r, err := runner.NewArtilleryRunner()
+	ctx := context.Background()
+	r, err := runner.NewArtilleryRunner(ctx)
 	if err != nil {
 		log.Fatalf("%s could not run artillery tests: %s", ui.IconCross, err.Error())
 	}
-	agent.Run(r, os.Args)
+	agent.Run(ctx, r, os.Args)
 }

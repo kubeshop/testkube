@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 
 	"github.com/kubeshop/testkube/contrib/executor/gradle/pkg/runner"
@@ -8,5 +9,5 @@ import (
 )
 
 func main() {
-	agent.Run(runner.NewRunner(), os.Args)
+	agent.Run(context.Background(), runner.NewRunner(), os.Args)
 }

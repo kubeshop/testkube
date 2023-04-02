@@ -1,6 +1,9 @@
+//go:build integration
+
 package newman
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +18,7 @@ import (
 // TestRun runs newman instance on top of example collection
 // creates temporary server and check if call to the server was done from newman
 func TestRun(t *testing.T) {
+	t.Parallel()
 	// given
 	runner, err := NewNewmanRunner()
 	assert.NoError(t, err)
@@ -34,8 +38,10 @@ func TestRun(t *testing.T) {
 		Content: testkube.NewStringTestContent(fmt.Sprintf(exampleCollection, port, port)),
 	}
 
+	ctx := context.Background()
+
 	// when
-	result, err := runner.Run(execution)
+	result, err := runner.Run(ctx, execution)
 
 	// then
 	assert.NoError(t, err)

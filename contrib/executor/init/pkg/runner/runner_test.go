@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -10,9 +11,10 @@ import (
 )
 
 func TestRun(t *testing.T) {
+	ctx := context.Background()
 
 	t.Run("runner should run test based on execution data", func(t *testing.T) {
-		os.Setenv("RUNNER_DATADIR", "./testdir")
+		assert.NoError(t, os.Setenv("RUNNER_DATADIR", "./testdir"))
 
 		// given
 		runner := NewRunner()
@@ -20,7 +22,7 @@ func TestRun(t *testing.T) {
 		execution.Content = testkube.NewStringTestContent("hello I'm  test content")
 
 		// when
-		result, err := runner.Run(*execution)
+		result, err := runner.Run(ctx, *execution)
 
 		// then
 		assert.NoError(t, err)

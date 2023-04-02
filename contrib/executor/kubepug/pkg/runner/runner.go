@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -23,14 +24,14 @@ type Params struct {
 }
 
 func NewRunner() *KubepugRunner {
-	output.PrintLog(fmt.Sprintf("%s Preparing test runner", ui.IconTruck))
+	output.PrintLogf("%s Preparing test runner", ui.IconTruck)
 
-	output.PrintLog(fmt.Sprintf("%s Reading environment variables...", ui.IconWorld))
+	output.PrintLogf("%s Reading environment variables...", ui.IconWorld)
 	params := Params{
 		DataDir: os.Getenv("RUNNER_DATADIR"),
 	}
-	output.PrintLog(fmt.Sprintf("%s Environment variables read successfully", ui.IconCheckMark))
-	output.PrintLog(fmt.Sprintf("RUNNER_DATADIR=\"%s\"", params.DataDir))
+	output.PrintLogf("%s Environment variables read successfully", ui.IconCheckMark)
+	output.PrintLogf("RUNNER_DATADIR=\"%s\"", params.DataDir)
 
 	return &KubepugRunner{
 		Fetcher: content.NewFetcher(""),
@@ -44,9 +45,11 @@ type KubepugRunner struct {
 	params  Params
 }
 
+var _ runner.Runner = &KubepugRunner{}
+
 // Run runs the kubepug executable and parses it's output to be Testkube-compatible
-func (r *KubepugRunner) Run(execution testkube.Execution) (testkube.ExecutionResult, error) {
-	output.PrintLog(fmt.Sprintf("%s Preparing for test run", ui.IconTruck))
+func (r *KubepugRunner) Run(ctx context.Context, execution testkube.Execution) (testkube.ExecutionResult, error) {
+	output.PrintLogf("%s Preparing for test run", ui.IconTruck)
 
 	path, err := r.Fetcher.Fetch(execution.Content)
 	if err != nil {
@@ -59,20 +62,20 @@ func (r *KubepugRunner) Run(execution testkube.Execution) (testkube.ExecutionRes
 	}
 
 	if !fileInfo.IsDir() {
-		output.PrintLog(fmt.Sprintf("%s Using single file: %v", ui.IconFile, execution))
+		output.PrintLogf("%s Using single file: %v", ui.IconFile, execution)
 	}
 
 	if fileInfo.IsDir() {
-		output.PrintLog(fmt.Sprintf("%s Using dir: %v", ui.IconFile, execution))
+		output.PrintLogf("%s Using dir: %v", ui.IconFile, execution)
 	}
 
 	args, err := buildArgs(execution.Args, path)
 	if err != nil {
-		output.PrintLog(fmt.Sprintf("%s Could not build up parameters: %s", ui.IconCross, err.Error()))
+		output.PrintLogf("%s Could not build up parameters: %s", ui.IconCross, err.Error())
 		return testkube.ExecutionResult{}, fmt.Errorf("could not build up parameters: %w", err)
 	}
 
-	output.PrintLog(fmt.Sprintf("%s Running kubepug with arguments: %v", ui.IconWorld, args))
+	output.PrintLogf("%s Running kubepug with arguments: %v", ui.IconWorld, args)
 	envManager := env.NewManagerWithVars(execution.Variables)
 	envManager.GetReferenceVars(envManager.Variables)
 
@@ -84,14 +87,14 @@ func (r *KubepugRunner) Run(execution testkube.Execution) (testkube.ExecutionRes
 	out, err := executor.Run(runPath, "kubepug", envManager, args...)
 	out = envManager.ObfuscateSecrets(out)
 	if err != nil {
-		output.PrintLog(fmt.Sprintf("%s Could not execute kubepug: %s", ui.IconCross, err.Error()))
+		output.PrintLogf("%s Could not execute kubepug: %s", ui.IconCross, err.Error())
 		return testkube.ExecutionResult{}, fmt.Errorf("could not execute kubepug: %w", err)
 	}
 
 	var kubepugResult kubepug.Result
 	err = json.Unmarshal(out, &kubepugResult)
 	if err != nil {
-		output.PrintLog(fmt.Sprintf("%s could not unmarshal kubepug execution result: %s", ui.IconCross, err.Error()))
+		output.PrintLogf("%s could not unmarshal kubepug execution result: %s", ui.IconCross, err.Error())
 		return testkube.ExecutionResult{}, fmt.Errorf("could not unmarshal kubepug execution result: %w", err)
 	}
 
@@ -140,12 +143,12 @@ func createDeletedAPIsStep(r kubepug.Result) testkube.ExecutionStepResult {
 
 	if len(r.DeletedAPIs) == 0 {
 		step.Status = "passed"
-		output.PrintLog(fmt.Sprintf("%s No deleted APIs found", ui.IconCheckMark))
+		output.PrintLogf("%s No deleted APIs found", ui.IconCheckMark)
 		return step
 	}
 
 	step.Status = "failed"
-	output.PrintLog(fmt.Sprintf("%s Found deleted APIs: %v", ui.IconCross, r.DeletedAPIs))
+	output.PrintLogf("%s Found deleted APIs: %v", ui.IconCross, r.DeletedAPIs)
 	for _, api := range r.DeletedAPIs {
 		step.AssertionResults = append(step.AssertionResults, testkube.AssertionResult{
 			Name:         api.Name,

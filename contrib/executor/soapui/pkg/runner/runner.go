@@ -7,9 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pkg/errors"
-
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
 	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
+
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
@@ -23,44 +24,59 @@ import (
 const FailureMessage string = "finished with status [FAILED]"
 
 // NewRunner creates a new SoapUIRunner
-func NewRunner() (*SoapUIRunner, error) {
-	output.PrintLog(fmt.Sprintf("%s Preparing test runner", ui.IconTruck))
+func NewRunner(ctx context.Context) (*SoapUIRunner, error) {
+	output.PrintLogf("%s Preparing test runner", ui.IconTruck)
 	params, err := envs.LoadTestkubeVariables()
 	if err != nil {
 		return nil, fmt.Errorf("could not initialize Artillery runner variables: %w", err)
 	}
 
-	return &SoapUIRunner{
+	r := &SoapUIRunner{
 		SoapUIExecPath: "/usr/local/SmartBear/EntryPoint.sh",
 		SoapUILogsPath: "/home/soapui/.soapuios/logs",
-		DataDir:        params.DataDir,
 		Params:         params,
-	}, nil
+	}
+
+	if params.ScrapperEnabled {
+		uploader := factory.MinIOUploader
+		if params.CloudMode {
+			uploader = factory.CloudUploader
+		}
+		s, err := factory.GetScraper(ctx, params, factory.ArchiveFilesystemExtractor, uploader)
+		if err != nil {
+			return nil, errors.Wrap(err, "error creating scraper")
+		}
+		r.Scraper = s
+	}
+
+	return r, nil
 }
 
 // SoapUIRunner runs SoapUI tests
 type SoapUIRunner struct {
 	SoapUIExecPath string
 	SoapUILogsPath string
-	DataDir        string
+	Scraper        scraper.Scraper
 	Params         envs.Params
 }
 
+var _ runner.Runner = &SoapUIRunner{}
+
 // Run executes the test and returns the test results
-func (r *SoapUIRunner) Run(execution testkube.Execution) (result testkube.ExecutionResult, err error) {
-	output.PrintLog(fmt.Sprintf("%s Preparing for test run", ui.IconTruck))
+func (r *SoapUIRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+	output.PrintLogf("%s Preparing for test run", ui.IconTruck)
 
 	testFile := ""
 	if execution.Content != nil {
 		if execution.Content.Type_ == string(testkube.TestContentTypeString) ||
 			execution.Content.Type_ == string(testkube.TestContentTypeFileURI) {
-			testFile = filepath.Join(r.DataDir, "test-content")
+			testFile = filepath.Join(r.Params.DataDir, "test-content")
 		}
 
 		if execution.Content.Type_ == string(testkube.TestContentTypeGitFile) ||
 			execution.Content.Type_ == string(testkube.TestContentTypeGitDir) ||
 			execution.Content.Type_ == string(testkube.TestContentTypeGit) {
-			testFile = filepath.Join(r.DataDir, "repo")
+			testFile = filepath.Join(r.Params.DataDir, "repo")
 			if execution.Content.Repository != nil {
 				testFile = filepath.Join(testFile, execution.Content.Repository.Path)
 			}
@@ -78,14 +94,16 @@ func (r *SoapUIRunner) Run(execution testkube.Execution) (result testkube.Execut
 		return testkube.ExecutionResult{}, errors.New("SoapUI executor only tests one project per execution, a directory of projects was given")
 	}
 
-	output.PrintLog(fmt.Sprintf("%s Running SoapUI tests", ui.IconMicroscope))
+	output.PrintLogf("%s Running SoapUI tests", ui.IconMicroscope)
 	result = r.runSoapUI(&execution)
 
-	directories := []string{r.SoapUILogsPath}
-	output.PrintLog(fmt.Sprintf("Scraping directories: %v", directories))
+	if r.Params.ScrapperEnabled {
+		directories := []string{r.SoapUILogsPath}
+		output.PrintLogf("Scraping directories: %v", directories)
 
-	if err := factory.Scrape(context.Background(), directories, execution, r.Params); err != nil {
-		return result, errors.Wrap(err, "error getting artifacts from SoapUI executor")
+		if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
+			return *result.Err(err), errors.Wrap(err, "error scraping artifacts from SoapUI executor")
+		}
 	}
 
 	return result, nil
@@ -106,7 +124,7 @@ func (r *SoapUIRunner) runSoapUI(execution *testkube.Execution) testkube.Executi
 
 	runPath := ""
 	if execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
-		runPath = filepath.Join(r.DataDir, "repo", execution.Content.Repository.WorkingDir)
+		runPath = filepath.Join(r.Params.DataDir, "repo", execution.Content.Repository.WorkingDir)
 	}
 
 	output, err := executor.Run(runPath, "/bin/sh", envManager, r.SoapUIExecPath)

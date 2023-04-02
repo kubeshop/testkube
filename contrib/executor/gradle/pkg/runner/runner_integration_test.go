@@ -1,9 +1,10 @@
 //go:build integration
 
-// TODO create integration environemnt with `gradle` binary installed on OS level
+// TODO create integration environment with `gradle` binary installed on OS level
 package runner
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,13 +17,14 @@ import (
 )
 
 func TestRunGradleIntegration(t *testing.T) {
+	ctx := context.Background()
 
 	t.Run("run gradle wrapper project with explicit target arg", func(t *testing.T) {
 		// setup
 		tempDir, _ := os.MkdirTemp("", "*")
-		os.Setenv("RUNNER_DATADIR", tempDir)
+		assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
 		repoDir := filepath.Join(tempDir, "repo")
-		os.Mkdir(repoDir, 0755)
+		assert.NoError(t, os.Mkdir(repoDir, 0755))
 		_ = cp.Copy("../../examples/hello-gradlew", repoDir)
 
 		// given
@@ -39,7 +41,7 @@ func TestRunGradleIntegration(t *testing.T) {
 		execution.Args = []string{"test"}
 
 		// when
-		result, err := runner.Run(*execution)
+		result, err := runner.Run(ctx, *execution)
 
 		// then
 		assert.NoError(t, err)
@@ -49,9 +51,9 @@ func TestRunGradleIntegration(t *testing.T) {
 	t.Run("run gradle project test with envs", func(t *testing.T) {
 		// setup
 		tempDir, _ := os.MkdirTemp("", "*")
-		os.Setenv("RUNNER_DATADIR", tempDir)
+		assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
 		repoDir := filepath.Join(tempDir, "repo")
-		os.Mkdir(repoDir, 0755)
+		assert.NoError(t, os.Mkdir(repoDir, 0755))
 		_ = cp.Copy("../../examples/hello-gradle", repoDir)
 
 		// given
@@ -65,10 +67,10 @@ func TestRunGradleIntegration(t *testing.T) {
 				Branch: "main",
 			},
 		}
-		os.Setenv("TESTKUBE_GRADLE", "true")
+		assert.NoError(t, os.Setenv("TESTKUBE_GRADLE", "true"))
 
 		// when
-		result, err := runner.Run(*execution)
+		result, err := runner.Run(ctx, *execution)
 
 		fmt.Printf("%+v\n", result)
 
@@ -80,16 +82,17 @@ func TestRunGradleIntegration(t *testing.T) {
 }
 
 func TestRunErrorsIntegration(t *testing.T) {
+	ctx := context.Background()
 
 	t.Run("no RUNNER_DATADIR", func(t *testing.T) {
-		os.Setenv("RUNNER_DATADIR", "/unknown")
+		assert.NoError(t, os.Setenv("RUNNER_DATADIR", "/unknown"))
 
 		// given
 		runner := NewRunner()
 		execution := testkube.NewQueuedExecution()
 
 		// when
-		_, err := runner.Run(*execution)
+		_, err := runner.Run(ctx, *execution)
 
 		// then
 		assert.Error(t, err)
@@ -97,7 +100,7 @@ func TestRunErrorsIntegration(t *testing.T) {
 
 	t.Run("unsupported file-content", func(t *testing.T) {
 		tempDir := os.TempDir()
-		os.Setenv("RUNNER_DATADIR", tempDir)
+		assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
 
 		// given
 		runner := NewRunner()
@@ -106,7 +109,7 @@ func TestRunErrorsIntegration(t *testing.T) {
 		execution.Content = testkube.NewStringTestContent("")
 
 		// when
-		_, err := runner.Run(*execution)
+		_, err := runner.Run(ctx, *execution)
 
 		// then
 		assert.EqualError(t, err, "gradle executor handles only repository based tests, but repository is nil")
@@ -115,10 +118,10 @@ func TestRunErrorsIntegration(t *testing.T) {
 	t.Run("no settings.gradle", func(t *testing.T) {
 		// setup
 		tempDir, _ := os.MkdirTemp("", "*")
-		os.Setenv("RUNNER_DATADIR", tempDir)
+		assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
 
 		repoDir := filepath.Join(tempDir, "repo")
-		os.Mkdir(repoDir, 0755)
+		assert.NoError(t, os.Mkdir(repoDir, 0755))
 
 		// given
 		runner := NewRunner()
@@ -133,7 +136,7 @@ func TestRunErrorsIntegration(t *testing.T) {
 		}
 
 		// when
-		result, err := runner.Run(*execution)
+		result, err := runner.Run(ctx, *execution)
 
 		// then
 		assert.NoError(t, err)

@@ -14,7 +14,7 @@ import (
 func TestTarball_Extract(t *testing.T) {
 	// create a test tarball
 	var buf bytes.Buffer
-	tarball := NewTarball()
+	tarball := NewTarballService()
 	content := "testfile\n"
 	files := []*File{
 		{Name: "testfile.txt", Mode: 0644, Size: 9, ModTime: time.Now(), Data: bytes.NewBufferString(content)},

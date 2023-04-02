@@ -13,7 +13,7 @@ import (
 
 type Tarball struct{}
 
-func NewTarball() *Tarball {
+func NewTarballService() *Tarball {
 	return &Tarball{}
 }
 
@@ -79,12 +79,12 @@ func (t *Tarball) addFileToTarWriter(file *File, tarWriter *tar.Writer) (size in
 		return 0, errors.Wrapf(err, "error writing header for file %s in tarball", file.Name)
 	}
 
-	_, err = io.Copy(tarWriter, file.Data)
+	n, err := io.Copy(tarWriter, file.Data)
 	if err != nil {
 		return 0, errors.Wrapf(err, "error copying file %s data to tarball", file.Name)
 	}
 
-	return file.Size, nil
+	return n, nil
 }
 
 func ExtractTarballToFS(gzipStream io.Reader, destinationDir string) error {

@@ -60,8 +60,8 @@ func TestFilesystemExtractor_Extract_Integration(t *testing.T) {
 		return nil
 	}
 
-	extractor := scraper.NewRecursiveFilesystemExtractor([]string{tempDir}, filesystem.NewOSFileSystem())
-	err = extractor.Extract(context.Background(), processFn)
+	extractor := scraper.NewRecursiveFilesystemExtractor(filesystem.NewOSFileSystem())
+	err = extractor.Extract(context.Background(), []string{tempDir}, processFn)
 	require.NoError(t, err)
 	assert.Equal(t, processCallCount, 3)
 }
@@ -94,9 +94,9 @@ func TestFilesystemExtractor_Extract_RelPath_Integration(t *testing.T) {
 		return nil
 	}
 
+	extractor := scraper.NewRecursiveFilesystemExtractor(filesystem.NewOSFileSystem())
 	scrapeDirs := []string{filepath.Join(tempDir, "file1.txt")}
-	extractor := scraper.NewRecursiveFilesystemExtractor(scrapeDirs, filesystem.NewOSFileSystem())
-	err = extractor.Extract(context.Background(), processFn)
+	err = extractor.Extract(context.Background(), scrapeDirs, processFn)
 	require.NoError(t, err)
 	assert.Equal(t, processCallCount, 1)
 }

@@ -3,6 +3,7 @@
 package runner
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,14 +13,14 @@ import (
 )
 
 func TestRun(t *testing.T) {
-	t.Parallel()
+	ctx := context.Background()
 
 	tempDir := os.TempDir()
-	os.Setenv("RUNNER_DATADIR", tempDir)
-	os.Setenv("ENTRYPOINT_CMD", "jmeter")
+	assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
+	assert.NoError(t, os.Setenv("ENTRYPOINT_CMD", "jmeter"))
 
 	t.Run("run successful jmeter test", func(t *testing.T) {
-		runner, err := NewRunner()
+		runner, err := NewRunner(ctx)
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
@@ -29,7 +30,7 @@ func TestRun(t *testing.T) {
 
 		execution.Variables = map[string]testkube.Variable{}
 
-		result, err := runner.Run(*execution)
+		result, err := runner.Run(ctx, *execution)
 
 		assert.NoError(t, err)
 		assert.Empty(t, result.ErrorMessage)
@@ -41,7 +42,7 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("run failing jmeter test", func(t *testing.T) {
-		runner, err := NewRunner()
+		runner, err := NewRunner(ctx)
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
@@ -51,7 +52,7 @@ func TestRun(t *testing.T) {
 
 		execution.Variables = map[string]testkube.Variable{}
 
-		result, err := runner.Run(*execution)
+		result, err := runner.Run(ctx, *execution)
 
 		assert.NoError(t, err)
 		assert.Equal(t, "Test failed: text expected to contain /SOME_NONExisting_String/", result.ErrorMessage)
@@ -63,7 +64,7 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("run successful jmeter test with arguments", func(t *testing.T) {
-		runner, err := NewRunner()
+		runner, err := NewRunner(ctx)
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
@@ -73,7 +74,7 @@ func TestRun(t *testing.T) {
 
 		execution.Args = []string{"-Jthreads", "10", "-Jrampup", "0", "-Jloopcount", "1", "-Jip", "sampleip", "-Jport", "1234"}
 
-		result, err := runner.Run(*execution)
+		result, err := runner.Run(ctx, *execution)
 
 		assert.NoError(t, err)
 		assert.Empty(t, result.ErrorMessage)

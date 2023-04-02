@@ -16,18 +16,17 @@ import (
 )
 
 type ArchiveFilesystemExtractor struct {
-	dirs []string
-	fs   filesystem.FileSystem
+	fs filesystem.FileSystem
 }
 
-func NewArchiveFilesystemExtractor(dirs []string, fs filesystem.FileSystem) *ArchiveFilesystemExtractor {
-	return &ArchiveFilesystemExtractor{dirs: dirs, fs: fs}
+func NewArchiveFilesystemExtractor(fs filesystem.FileSystem) *ArchiveFilesystemExtractor {
+	return &ArchiveFilesystemExtractor{fs: fs}
 }
 
-func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, process ProcessFn) error {
-	log.DefaultLogger.Infof("extracting files from directories: %v", e.dirs)
+func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths []string, process ProcessFn) error {
+	log.DefaultLogger.Infof("extracting files from directories: %v", paths)
 	var filePaths []string
-	for _, dir := range e.dirs {
+	for _, dir := range paths {
 		log.DefaultLogger.Debugf("walking directory: %v", dir)
 		err := e.fs.Walk(
 			dir,
@@ -41,15 +40,8 @@ func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, process Proces
 					log.DefaultLogger.Debugf("skipping directory %s", path)
 					return nil
 				}
-				relpath, err := filepath.Rel(dir, path)
-				if err != nil {
-					return errors.Wrapf(err, "error getting relative path for %s", path)
-				}
-				if relpath == "." {
-					relpath = fileInfo.Name()
-				}
 
-				filePaths = append(filePaths, relpath)
+				filePaths = append(filePaths, path)
 				return nil
 			},
 		)
@@ -68,7 +60,7 @@ func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, process Proces
 		archiveFiles = append(archiveFiles, archiveFile)
 	}
 
-	tarballService := archive.NewTarball()
+	tarballService := archive.NewTarballService()
 	var artifactsTarball bytes.Buffer
 	log.DefaultLogger.Infof("creating artifacts tarball with %d files", len(archiveFiles))
 	meta, err := tarballService.Create(&artifactsTarball, archiveFiles)
@@ -105,6 +97,7 @@ func (e *ArchiveFilesystemExtractor) newArchiveFile(path string) (*archive.File,
 		Size:    stat.Size(),
 		Mode:    int64(stat.Mode()),
 		ModTime: stat.ModTime(),
+		Data:    &bytes.Buffer{},
 	}
 	n, err := io.Copy(archiveFile.Data, f)
 	if err != nil {
@@ -118,17 +111,16 @@ func (e *ArchiveFilesystemExtractor) newArchiveFile(path string) (*archive.File,
 }
 
 type RecursiveFilesystemExtractor struct {
-	dirs []string
-	fs   filesystem.FileSystem
+	fs filesystem.FileSystem
 }
 
-func NewRecursiveFilesystemExtractor(dirs []string, fs filesystem.FileSystem) *RecursiveFilesystemExtractor {
-	return &RecursiveFilesystemExtractor{dirs: dirs, fs: fs}
+func NewRecursiveFilesystemExtractor(fs filesystem.FileSystem) *RecursiveFilesystemExtractor {
+	return &RecursiveFilesystemExtractor{fs: fs}
 }
 
-func (e *RecursiveFilesystemExtractor) Extract(ctx context.Context, process ProcessFn) error {
-	log.DefaultLogger.Infof("extracting files from directories: %v", e.dirs)
-	for _, dir := range e.dirs {
+func (e *RecursiveFilesystemExtractor) Extract(ctx context.Context, paths []string, process ProcessFn) error {
+	log.DefaultLogger.Infof("extracting files from directories: %v", paths)
+	for _, dir := range paths {
 		log.DefaultLogger.Infof("walking directory: %v", dir)
 
 		if _, err := e.fs.Stat(dir); os.IsNotExist(err) {

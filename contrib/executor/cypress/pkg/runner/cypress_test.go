@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,30 +16,34 @@ import (
 func TestRun(t *testing.T) {
 	t.Skip("move this test to e2e test suite with valid environment setup")
 
+	ctx := context.Background()
+
 	// setup
 	tempDir, _ := os.MkdirTemp("", "*")
-	os.Setenv("RUNNER_DATADIR", tempDir)
+	assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
 	repoDir := filepath.Join(tempDir, "repo")
-	os.Mkdir(repoDir, 0755)
+	assert.NoError(t, os.Mkdir(repoDir, 0755))
 	_ = cp.Copy("../../examples", repoDir)
 
-	runner, err := NewCypressRunner("npm")
+	runner, err := NewCypressRunner(ctx, "npm")
 	if err != nil {
 		t.Fail()
 	}
 
 	repoURI := "https://github.com/kubeshop/testkube-executor-cypress.git"
-	result, err := runner.Run(testkube.Execution{
-		Content: &testkube.TestContent{
-			Type_: string(testkube.TestContentTypeGitDir),
-			Repository: &testkube.Repository{
-				Type_:  "git",
-				Uri:    repoURI,
-				Branch: "jacek/feature/json-output",
-				Path:   "",
+	result, err := runner.Run(
+		ctx,
+		testkube.Execution{
+			Content: &testkube.TestContent{
+				Type_: string(testkube.TestContentTypeGitDir),
+				Repository: &testkube.Repository{
+					Type_:  "git",
+					Uri:    repoURI,
+					Branch: "jacek/feature/json-output",
+					Path:   "",
+				},
 			},
-		},
-	})
+		})
 
 	fmt.Printf("RESULT: %+v\n", result)
 	fmt.Printf("ERROR:  %+v\n", err)
@@ -48,12 +53,13 @@ func TestRun(t *testing.T) {
 }
 
 func TestRunErrors(t *testing.T) {
+	ctx := context.Background()
 
 	t.Run("no RUNNER_DATADIR", func(t *testing.T) {
-		os.Setenv("RUNNER_DATADIR", "/unknown")
+		assert.NoError(t, os.Setenv("RUNNER_DATADIR", "/unknown"))
 
 		// given
-		runner, err := NewCypressRunner("yarn")
+		runner, err := NewCypressRunner(ctx, "yarn")
 		if err != nil {
 			t.Fail()
 		}
@@ -61,7 +67,7 @@ func TestRunErrors(t *testing.T) {
 		execution := testkube.NewQueuedExecution()
 
 		// when
-		_, err = runner.Run(*execution)
+		_, err = runner.Run(ctx, *execution)
 
 		// then
 		assert.Error(t, err)

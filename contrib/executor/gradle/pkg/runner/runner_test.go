@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,6 +13,7 @@ import (
 )
 
 func TestRunGradle(t *testing.T) {
+	ctx := context.Background()
 
 	t.Run("run gradle wrapper project with explicit target arg", func(t *testing.T) {
 		// setup
@@ -35,7 +37,7 @@ func TestRunGradle(t *testing.T) {
 		execution.Args = []string{"test"}
 
 		// when
-		result, err := runner.Run(*execution)
+		result, err := runner.Run(ctx, *execution)
 
 		// then
 		assert.NoError(t, err)
@@ -46,6 +48,7 @@ func TestRunGradle(t *testing.T) {
 }
 
 func TestRunErrors(t *testing.T) {
+	ctx := context.Background()
 
 	t.Run("no RUNNER_DATADIR", func(t *testing.T) {
 		os.Setenv("RUNNER_DATADIR", "/unknown")
@@ -55,7 +58,7 @@ func TestRunErrors(t *testing.T) {
 		execution := testkube.NewQueuedExecution()
 
 		// when
-		_, err := runner.Run(*execution)
+		_, err := runner.Run(ctx, *execution)
 
 		// then
 		assert.Error(t, err)
@@ -72,7 +75,7 @@ func TestRunErrors(t *testing.T) {
 		execution.Content = testkube.NewStringTestContent("")
 
 		// when
-		_, err := runner.Run(*execution)
+		_, err := runner.Run(ctx, *execution)
 
 		// then
 		assert.Error(t, err)
@@ -99,7 +102,7 @@ func TestRunErrors(t *testing.T) {
 		}
 
 		// when
-		result, err := runner.Run(*execution)
+		result, err := runner.Run(ctx, *execution)
 
 		// then
 		assert.NoError(t, err)

@@ -1,11 +1,13 @@
 package runner
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
@@ -20,53 +22,52 @@ type Params struct {
 }
 
 func NewRunner() *K6Runner {
-	outputPkg.PrintLog(fmt.Sprintf("%s Preparing test runner", ui.IconTruck))
+	outputPkg.PrintLogf("%s Preparing test runner", ui.IconTruck)
 
-	outputPkg.PrintLog(fmt.Sprintf("%s Reading environment variables...", ui.IconWorld))
+	outputPkg.PrintLogf("%s Reading environment variables...", ui.IconWorld)
 	params := Params{
 		Datadir: os.Getenv("RUNNER_DATADIR"),
 	}
-	outputPkg.PrintLog(fmt.Sprintf("%s Environment variables read successfully", ui.IconCheckMark))
-	outputPkg.PrintLog(fmt.Sprintf("RUNNER_DATADIR=\"%s\"", params.Datadir))
+	outputPkg.PrintLogf("%s Environment variables read successfully", ui.IconCheckMark)
+	outputPkg.PrintLogf("RUNNER_DATADIR=\"%s\"", params.Datadir)
 
-	runner := &K6Runner{
+	return &K6Runner{
 		Params: params,
 	}
-
-	return runner
 }
 
 type K6Runner struct {
 	Params Params
 }
 
-const K6_CLOUD = "cloud"
-const K6_RUN = "run"
-const K6_SCRIPT = "script"
+var _ runner.Runner = &K6Runner{}
 
-func (r *K6Runner) Run(execution testkube.Execution) (result testkube.ExecutionResult, err error) {
-	outputPkg.PrintLog(fmt.Sprintf("%s Preparing for test run", ui.IconTruck))
+const K6Cloud = "cloud"
+const K6Run = "run"
+
+func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+	outputPkg.PrintLogf("%s Preparing for test run", ui.IconTruck)
 
 	// check that the datadir exists
 	_, err = os.Stat(r.Params.Datadir)
 	if errors.Is(err, os.ErrNotExist) {
-		outputPkg.PrintLog(fmt.Sprintf("%s Datadir %s does not exist", ui.IconCross, r.Params.Datadir))
+		outputPkg.PrintLogf("%s Datadir %s does not exist", ui.IconCross, r.Params.Datadir)
 		return result, err
 	}
 
-	args := []string{}
+	var args []string
 
 	k6TestType := strings.Split(execution.TestType, "/")
 	if len(k6TestType) != 2 {
-		outputPkg.PrintLog(fmt.Sprintf("%s Invalid test type %s", ui.IconCross, execution.TestType))
-		return *result.Err(fmt.Errorf("invalid test type %s", execution.TestType)), nil
+		outputPkg.PrintLogf("%s Invalid test type %s", ui.IconCross, execution.TestType)
+		return *result.Err(errors.Errorf("invalid test type %s", execution.TestType)), nil
 	}
 
 	k6Subtype := k6TestType[1]
-	if k6Subtype == K6_CLOUD {
-		args = append(args, K6_CLOUD)
+	if k6Subtype == K6Cloud {
+		args = append(args, K6Cloud)
 	} else {
-		args = append(args, K6_RUN)
+		args = append(args, K6Run)
 	}
 
 	envManager := env.NewManagerWithVars(execution.Variables)
@@ -74,8 +75,8 @@ func (r *K6Runner) Run(execution testkube.Execution) (result testkube.ExecutionR
 	for _, variable := range envManager.Variables {
 		if variable.Name != "K6_CLOUD_TOKEN" {
 			// pass to k6 using -e option
-			env := fmt.Sprintf("%s=%s", variable.Name, variable.Value)
-			args = append(args, "-e", env)
+			envvar := fmt.Sprintf("%s=%s", variable.Name, variable.Value)
+			args = append(args, "-e", envvar)
 		}
 	}
 
@@ -84,8 +85,8 @@ func (r *K6Runner) Run(execution testkube.Execution) (result testkube.ExecutionR
 	for key, value := range execution.Envs {
 		if key != "K6_CLOUD_TOKEN" {
 			// pass to k6 using -e option
-			env := fmt.Sprintf("%s=%s", key, value)
-			args = append(args, "-e", env)
+			envvar := fmt.Sprintf("%s=%s", key, value)
+			args = append(args, "-e", envvar)
 		}
 	}
 
@@ -117,8 +118,8 @@ func (r *K6Runner) Run(execution testkube.Execution) (result testkube.ExecutionR
 
 		fileInfo, err := os.Stat(filepath.Join(directory, path))
 		if err != nil {
-			outputPkg.PrintLog(fmt.Sprintf("%s k6 test directory %v not found", ui.IconCross, err))
-			return *result.Err(fmt.Errorf("k6 test directory %v not found", err)), nil
+			outputPkg.PrintLogf("%s k6 test directory %v not found", ui.IconCross, err)
+			return *result.Err(errors.Errorf("k6 test directory %v not found", err)), nil
 		}
 
 		if fileInfo.IsDir() {
@@ -131,8 +132,8 @@ func (r *K6Runner) Run(execution testkube.Execution) (result testkube.ExecutionR
 		scriptFile := filepath.Join(directory, workingDir, args[len(args)-1])
 		fileInfo, err = os.Stat(scriptFile)
 		if errors.Is(err, os.ErrNotExist) || fileInfo.IsDir() {
-			outputPkg.PrintLog(fmt.Sprintf("%s k6 test script %s not found", ui.IconCross, scriptFile))
-			return *result.Err(fmt.Errorf("k6 test script %s not found", scriptFile)), nil
+			outputPkg.PrintLogf("%s k6 test script %s not found", ui.IconCross, scriptFile)
+			return *result.Err(errors.Errorf("k6 test script %s not found", scriptFile)), nil
 		}
 	}
 
@@ -152,20 +153,20 @@ func finalExecutionResult(output string, err error) (result testkube.ExecutionRe
 	succeeded := isSuccessful(output)
 	switch {
 	case err == nil && succeeded:
-		outputPkg.PrintLog(fmt.Sprintf("%s Test run successful", ui.IconCheckMark))
+		outputPkg.PrintLogf("%s Test run successful", ui.IconCheckMark)
 		result.Status = testkube.ExecutionStatusPassed
 	case err == nil && !succeeded:
-		outputPkg.PrintLog(fmt.Sprintf("%s Test run failed: some checks have failed", ui.IconCross))
+		outputPkg.PrintLogf("%s Test run failed: some checks have failed", ui.IconCross)
 		result.Status = testkube.ExecutionStatusFailed
 		result.ErrorMessage = "some checks have failed"
 	case err != nil && strings.Contains(err.Error(), "exit status 99"):
 		// tests have run, but some checks + thresholds have failed
-		outputPkg.PrintLog(fmt.Sprintf("%s Test run failed: some thresholds have failed: %s", ui.IconCross, err.Error()))
+		outputPkg.PrintLogf("%s Test run failed: some thresholds have failed: %s", ui.IconCross, err.Error())
 		result.Status = testkube.ExecutionStatusFailed
 		result.ErrorMessage = "some thresholds have failed"
 	default:
 		// k6 was unable to run at all
-		outputPkg.PrintLog(fmt.Sprintf("%s Test run failed: %s", ui.IconCross, err.Error()))
+		outputPkg.PrintLogf("%s Test run failed: %s", ui.IconCross, err.Error())
 		result.Status = testkube.ExecutionStatusFailed
 		result.ErrorMessage = err.Error()
 		return result
@@ -222,7 +223,7 @@ func containsErrors(summary string) bool {
 
 func parseScenarioNames(summary string) []string {
 	lines := splitSummaryBody(summary)
-	names := []string{}
+	var names []string
 
 	for _, line := range lines {
 		if strings.Contains(line, "* ") {
