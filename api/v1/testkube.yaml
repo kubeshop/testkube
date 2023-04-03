@@ -2155,7 +2155,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Config"
-        502:
+        400:
+          description: "problem with input"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "config not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
           description: "problem with updating key in cluster storage"
           content:
             application/problem+json:
@@ -2176,7 +2192,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Config"
-        502:
+        404:
+          description: "config not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
           description: "problem with getting config from cluster storage"
           content:
             application/problem+json:
