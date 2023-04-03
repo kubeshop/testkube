@@ -150,6 +150,7 @@ func TestService_Run(t *testing.T) {
 		mockLeaseBackend,
 		testLogger,
 		configMapConfig,
+		mockExecutorsClient,
 		WithClusterID(testClusterID),
 		WithIdentifier(testIdentifier),
 		WithScraperInterval(50*time.Millisecond),

@@ -55,7 +55,7 @@ func NewContainerExecutor(
 	metrics ExecutionCounter,
 	emiter EventEmitter,
 	configMap config.Repository,
-	executorsClient *executorsclientv1.ExecutorsClient,
+	executorsClient executorsclientv1.Interface,
 	testsClient testsv3.Interface,
 ) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
@@ -74,8 +74,8 @@ func NewContainerExecutor(
 		serviceAccountName: serviceAccountName,
 		metrics:            metrics,
 		emitter:            emiter,
-		executorsClient:    executorsClient,
 		testsClient:        testsClient,
+		executorsClient:    executorsClient,
 	}, nil
 }
 
@@ -94,9 +94,9 @@ type ContainerExecutor struct {
 	metrics            ExecutionCounter
 	emitter            EventEmitter
 	configMap          config.Repository
-	executorsClient    *executorsclientv1.ExecutorsClient
 	serviceAccountName string
 	testsClient        testsv3.Interface
+	executorsClient    executorsclientv1.Interface
 }
 
 type JobOptions struct {
