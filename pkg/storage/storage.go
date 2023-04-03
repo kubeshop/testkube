@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"io"
 
 	"github.com/minio/minio-go/v7"
@@ -16,21 +17,21 @@ type Client interface {
 
 // ClientImplicitBucket is storage client abstraction where bucket name is provided from config
 type ClientImplicitBucket interface {
-	ListFiles(bucketFolder string) ([]testkube.Artifact, error)
-	SaveFile(bucketFolder, filePath string) error
-	DownloadFile(bucketFolder, file string) (*minio.Object, error)
-	UploadFile(bucketFolder string, filePath string, reader io.Reader, objectSize int64) error
-	PlaceFiles(bucketFolders []string, prefix string) error
-	DeleteFile(bucketFolder, file string) error
+	ListFiles(ctx context.Context, bucketFolder string) ([]testkube.Artifact, error)
+	SaveFile(ctx context.Context, bucketFolder, filePath string) error
+	DownloadFile(ctx context.Context, bucketFolder, file string) (*minio.Object, error)
+	UploadFile(ctx context.Context, bucketFolder string, filePath string, reader io.Reader, objectSize int64) error
+	PlaceFiles(ctx context.Context, bucketFolders []string, prefix string) error
+	DeleteFile(ctx context.Context, bucketFolder, file string) error
 }
 
 // ClientBucket is storage client abstraction where you have to specify bucket name
 type ClientBucket interface {
-	CreateBucket(bucket string) error
-	DeleteBucket(bucket string, force bool) error
-	ListBuckets() ([]string, error)
-	DownloadFileFromBucket(bucket, bucketFolder, file string) (*minio.Object, error)
-	UploadFileToBucket(bucket, bucketFolder, filePath string, reader io.Reader, objectSize int64) error
+	CreateBucket(ctx context.Context, bucket string) error
+	DeleteBucket(ctx context.Context, bucket string, force bool) error
+	ListBuckets(ctx context.Context) ([]string, error)
+	DownloadFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) (*minio.Object, error)
+	UploadFileToBucket(ctx context.Context, bucket, bucketFolder, filePath string, reader io.Reader, objectSize int64) error
 	GetValidBucketName(parentType string, parentName string) string
-	DeleteFileFromBucket(bucket, bucketFolder, file string) error
+	DeleteFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) error
 }

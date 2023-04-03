@@ -110,6 +110,8 @@ func (e *ArchiveFilesystemExtractor) newArchiveFile(path string) (*archive.File,
 	return &archiveFile, nil
 }
 
+var _ Extractor = (*ArchiveFilesystemExtractor)(nil)
+
 type RecursiveFilesystemExtractor struct {
 	fs filesystem.FileSystem
 }
@@ -172,3 +174,5 @@ func (e *RecursiveFilesystemExtractor) Extract(ctx context.Context, paths []stri
 
 	return nil
 }
+
+var _ Extractor = (*RecursiveFilesystemExtractor)(nil)

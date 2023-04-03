@@ -225,7 +225,7 @@ func TestEmitter_UpdateListeners(t *testing.T) {
 
 }
 
-var _ common.Listener = &FakeListener{}
+var _ common.Listener = (*FakeListener)(nil)
 
 type FakeListener struct {
 	name string

@@ -6,7 +6,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-var _ Bus = &EventBusMock{}
+var _ Bus = (*EventBusMock)(nil)
 
 type EventBusMock struct {
 	events sync.Map

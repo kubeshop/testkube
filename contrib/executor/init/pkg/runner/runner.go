@@ -75,7 +75,7 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		output.PrintLogf("%s Fetching uploads from object store %s...", ui.IconFile, params.Endpoint)
 		minioClient := minio.NewClient(params.Endpoint, params.AccessKeyID, params.SecretAccessKey, params.Region, params.Token, params.Bucket, params.Ssl)
 		fp := content.NewCopyFilesPlacer(minioClient)
-		fp.PlaceFiles(execution.TestName, execution.BucketName)
+		fp.PlaceFiles(ctx, execution.TestName, execution.BucketName)
 	}
 
 	output.PrintLogf("%s Setting up access to files in %s", ui.IconFile, r.dir)

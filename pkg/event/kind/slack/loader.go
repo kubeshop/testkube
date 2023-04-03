@@ -11,7 +11,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/slack"
 )
 
-var _ common.ListenerLoader = &SlackLoader{}
+var _ common.ListenerLoader = (*SlackLoader)(nil)
 
 func NewSlackLoader(messageTemplate, configString string, events []testkube.EventType) *SlackLoader {
 	var config []slack.NotificationsConfig

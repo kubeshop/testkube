@@ -31,15 +31,15 @@ func NewMinioOutputRepository(storageClient storage.Client, executionCollection 
 }
 
 func (m *MinioRepository) GetOutput(ctx context.Context, id, testName, testSuiteName string) (output string, err error) {
-	eOutput, err := m.getOutput(id)
+	eOutput, err := m.getOutput(ctx, id)
 	if err != nil {
 		return "", err
 	}
 	return eOutput.Output, err
 }
 
-func (m *MinioRepository) getOutput(id string) (ExecutionOutput, error) {
-	file, err := m.storage.DownloadFileFromBucket(m.bucket, "", id)
+func (m *MinioRepository) getOutput(ctx context.Context, id string) (ExecutionOutput, error) {
+	file, err := m.storage.DownloadFileFromBucket(ctx, m.bucket, "", id)
 	if err != nil && err == minio.ErrArtifactsNotFound {
 		log.DefaultLogger.Infow("output not found in minio", "id", id)
 		return ExecutionOutput{}, nil
@@ -56,35 +56,35 @@ func (m *MinioRepository) getOutput(id string) (ExecutionOutput, error) {
 	return eOutput, err
 }
 
-func (m *MinioRepository) saveOutput(eOutput ExecutionOutput) error {
+func (m *MinioRepository) saveOutput(ctx context.Context, eOutput ExecutionOutput) error {
 	data, err := json.Marshal(eOutput)
 	if err != nil {
 		return err
 	}
 	reader := bytes.NewReader(data)
-	err = m.storage.UploadFileToBucket(m.bucket, "", eOutput.Id, reader, reader.Size())
+	err = m.storage.UploadFileToBucket(ctx, m.bucket, "", eOutput.Id, reader, reader.Size())
 	return err
 }
 
 func (m *MinioRepository) InsertOutput(ctx context.Context, id, testName, testSuiteName, output string) error {
 	log.DefaultLogger.Debugw("inserting output", "id", id, "testName", testName, "testSuiteName", testSuiteName)
 	eOutput := ExecutionOutput{Id: id, Name: id, TestName: testName, TestSuiteName: testSuiteName, Output: output}
-	return m.saveOutput(eOutput)
+	return m.saveOutput(ctx, eOutput)
 }
 
 func (m *MinioRepository) UpdateOutput(ctx context.Context, id, testName, testSuiteName, output string) error {
 	log.DefaultLogger.Debugw("updating output", "id", id)
-	eOutput, err := m.getOutput(id)
+	eOutput, err := m.getOutput(ctx, id)
 	if err != nil {
 		return err
 	}
 	eOutput.Output = output
-	return m.saveOutput(eOutput)
+	return m.saveOutput(ctx, eOutput)
 }
 
 func (m *MinioRepository) DeleteOutput(ctx context.Context, id, testName, testSuiteName string) error {
 	log.DefaultLogger.Debugw("deleting output", "id", id)
-	return m.storage.DeleteFileFromBucket(m.bucket, "", id)
+	return m.storage.DeleteFileFromBucket(ctx, m.bucket, "", id)
 }
 
 func (m *MinioRepository) DeleteOutputByTest(ctx context.Context, testName string) error {
@@ -169,9 +169,9 @@ func (m *MinioRepository) DeleteOutputForAllTestSuite(ctx context.Context) error
 }
 
 func (m *MinioRepository) DeleteAllOutput(ctx context.Context) error {
-	err := m.storage.DeleteBucket(m.bucket, true)
+	err := m.storage.DeleteBucket(ctx, m.bucket, true)
 	if err != nil {
 		return err
 	}
-	return m.storage.CreateBucket(m.bucket)
+	return m.storage.CreateBucket(ctx, m.bucket)
 }

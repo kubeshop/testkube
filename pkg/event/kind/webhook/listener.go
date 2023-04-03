@@ -16,7 +16,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
-var _ common.Listener = &WebhookListener{}
+var _ common.Listener = (*WebhookListener)(nil)
 
 func NewWebhookListener(name, uri, selector string, events []testkube.EventType, payloadObjectField string) *WebhookListener {
 	return &WebhookListener{

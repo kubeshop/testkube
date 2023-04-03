@@ -2,6 +2,7 @@ package v1
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -147,33 +148,33 @@ type MockStorage struct {
 	GetValidBucketNameFn func(parentType string, parentName string) string
 }
 
-func (m MockStorage) CreateBucket(bucket string) error {
+func (m MockStorage) CreateBucket(ctx context.Context, bucket string) error {
 	panic("not implemented")
 }
 
-func (m MockStorage) DeleteBucket(bucket string, force bool) error {
+func (m MockStorage) DeleteBucket(ctx context.Context, bucket string, force bool) error {
 	panic("not implemented")
 }
-func (m MockStorage) ListBuckets() ([]string, error) {
+func (m MockStorage) ListBuckets(ctx context.Context) ([]string, error) {
 	panic("not implemented")
 }
-func (m MockStorage) ListFiles(bucketFolder string) ([]testkube.Artifact, error) {
+func (m MockStorage) ListFiles(ctx context.Context, bucketFolder string) ([]testkube.Artifact, error) {
 	panic("not implemented")
 }
-func (m MockStorage) SaveFile(bucketFolder, filePath string) error {
+func (m MockStorage) SaveFile(ctx context.Context, bucketFolder, filePath string) error {
 	panic("not implemented")
 }
-func (m MockStorage) DownloadFile(bucketFolder, file string) (*minio.Object, error) {
+func (m MockStorage) DownloadFile(ctx context.Context, bucketFolder, file string) (*minio.Object, error) {
 	panic("not implemented")
 }
-func (m MockStorage) UploadFile(bucketFolder string, filePath string, reader io.Reader, objectSize int64) error {
+func (m MockStorage) UploadFile(ctx context.Context, bucketFolder string, filePath string, reader io.Reader, objectSize int64) error {
 	if m.UploadFileFn == nil {
 		panic("not implemented")
 	}
 	return m.UploadFileFn(bucketFolder, filePath, reader, objectSize)
 }
 
-func (m MockStorage) PlaceFiles(buckets []string, prefix string) error {
+func (m MockStorage) PlaceFiles(ctx context.Context, buckets []string, prefix string) error {
 	if m.PlaceFilesFn == nil {
 		panic("not implemented")
 	}
@@ -187,22 +188,22 @@ func (m MockStorage) GetValidBucketName(parentType string, parentName string) st
 	return m.GetValidBucketNameFn(parentType, parentName)
 }
 
-func (m MockStorage) DeleteFile(bucket, filePath string) error {
+func (m MockStorage) DeleteFile(ctx context.Context, bucket, filePath string) error {
 	panic("not implemented")
 }
 
-func (m MockStorage) ListFilesFromBucket(bucket string) ([]testkube.Artifact, error) {
+func (m MockStorage) ListFilesFromBucket(ctx context.Context, bucket string) ([]testkube.Artifact, error) {
 	panic("not implemented")
 }
 
-func (m MockStorage) DownloadFileFromBucket(bucket, bucketFolder, file string) (*minio.Object, error) {
+func (m MockStorage) DownloadFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) (*minio.Object, error) {
 	panic("not implemented")
 }
 
-func (m MockStorage) UploadFileToBucket(bucket, bucketFolder, filePath string, reader io.Reader, objectSize int64) error {
+func (m MockStorage) UploadFileToBucket(ctx context.Context, bucket, bucketFolder, filePath string, reader io.Reader, objectSize int64) error {
 	panic("not implemented")
 }
 
-func (m MockStorage) DeleteFileFromBucket(bucket, bucketFolder, file string) error {
+func (m MockStorage) DeleteFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) error {
 	panic("not implemented")
 }
