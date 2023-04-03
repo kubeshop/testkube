@@ -1704,7 +1704,7 @@ paths:
       description: "Returns execution with given executionID"
       operationId: getTestExecution
       responses:
-          200:
+        200:
           description: successful operation
           content:
             application/json:
