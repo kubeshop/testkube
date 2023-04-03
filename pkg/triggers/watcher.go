@@ -665,6 +665,13 @@ func (s *Service) testSuiteEventHandler() cache.ResourceEventHandlerFuncs {
 				s.logger.Errorf("failed to process create testsuite event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
+			if inPast(testSuite.CreationTimestamp.Time, s.watchFromDate) {
+				s.logger.Debugf(
+					"trigger service: watcher component: no-op create trigger: testsuite %s/%s was created in the past",
+					testSuite.Namespace, testSuite.Name,
+				)
+				return
+			}
 			s.logger.Debugf(
 				"trigger service: watcher component: adding testsuite %s/%s",
 				testSuite.Namespace, testSuite.Name,
@@ -682,11 +689,30 @@ func (s *Service) testEventHandler() cache.ResourceEventHandlerFuncs {
 				s.logger.Errorf("failed to process create test event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
+			if inPast(test.CreationTimestamp.Time, s.watchFromDate) {
+				s.logger.Debugf(
+					"trigger service: watcher component: no-op create trigger: test %s/%s was created in the past",
+					test.Namespace, test.Name,
+				)
+				return
+			}
 			s.logger.Debugf(
 				"trigger service: watcher component: adding test %s/%s",
 				test.Namespace, test.Name,
 			)
 			s.addTest(test)
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			test, ok := newObj.(*testsv3.Test)
+			if !ok {
+				s.logger.Errorf("failed to process update test event due to it being an unexpected type, received type %+v", newObj)
+				return
+			}
+			s.logger.Debugf(
+				"trigger service: watcher component: updating test %s/%s",
+				test.Namespace, test.Name,
+			)
+			s.updateTest(test)
 		},
 	}
 }

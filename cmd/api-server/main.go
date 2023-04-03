@@ -388,6 +388,7 @@ func main() {
 			triggerLeaseBackend,
 			log.DefaultLogger,
 			configMapConfig,
+			executorsClient,
 			triggers.WithHostnameIdentifier(),
 			triggers.WithTestkubeNamespace(cfg.TestkubeNamespace),
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
