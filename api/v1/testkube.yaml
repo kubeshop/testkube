@@ -955,6 +955,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+        404:
+          description: "test not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -995,6 +1003,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExecutionsResult"
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting test executions from storage"
           content:
@@ -1021,6 +1037,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Execution"
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting test executions from storage"
           content:
@@ -1029,6 +1053,15 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with reading secrets from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
 
   /executions/{id}/artifacts:
     get:
@@ -1050,6 +1083,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Artifact"
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting execution's artifacts from storage"
           content:
@@ -1108,6 +1149,14 @@ paths:
               schema:
                 type: string
                 format: binary
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting artifacts from storage"
           content:
@@ -1578,6 +1627,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+        404:
+          description: "test not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -1617,6 +1674,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExecutionsResult"
+        404:
+          description: "test or execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting test executions from storage"
           content:
@@ -1639,14 +1704,30 @@ paths:
       description: "Returns execution with given executionID"
       operationId: getTestExecution
       responses:
-        200:
+          200:
           description: successful operation
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Execution"
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting test executions from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with reading secrets from kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -1665,6 +1746,8 @@ paths:
       description: "Aborts execution with given executionID"
       operationId: abortExecution
       responses:
+        204:
+          description: "no content"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1673,9 +1756,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
-        204:
-          description: "no content"
-
   /executors:
     get:
       tags:
