@@ -132,6 +132,7 @@ type JobOptions struct {
 	JobTemplateExtensions string
 	EnvConfigMaps         []testkube.EnvReference
 	EnvSecrets            []testkube.EnvReference
+	Labels                map[string]string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -474,6 +475,10 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		JobTemplateExtensions: options.Request.JobTemplate,
 		EnvConfigMaps:         options.Request.EnvConfigMaps,
 		EnvSecrets:            options.Request.EnvSecrets,
+		Labels: map[string]string{
+			testkube.TestLabelTestType: options.TestSpec.Type_,
+			testkube.TestLabelExecutor: options.ExecutorName,
+		},
 	}
 }
 
@@ -671,6 +676,10 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(jobSpec), len(jobSpec))
 	if err := decoder.Decode(&job); err != nil {
 		return nil, errors.Errorf("decoding job spec error: %v", err)
+	}
+
+	for key, value := range options.Labels {
+		job.Labels[key] = value
 	}
 
 	envs := append(executor.RunnerEnvVars, secretEnvVars...)

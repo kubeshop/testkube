@@ -688,6 +688,18 @@ func (s *Service) testEventHandler() cache.ResourceEventHandlerFuncs {
 			)
 			s.addTest(test)
 		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			test, ok := newObj.(*testsv3.Test)
+			if !ok {
+				s.logger.Errorf("failed to process update test event due to it being an unexpected type, received type %+v", newObj)
+				return
+			}
+			s.logger.Debugf(
+				"trigger service: watcher component: updating test %s/%s",
+				test.Namespace, test.Name,
+			)
+			s.updateTest(test)
+		},
 	}
 }
 

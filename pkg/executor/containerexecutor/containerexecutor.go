@@ -131,6 +131,7 @@ type JobOptions struct {
 	ScraperTemplateExtensions string
 	EnvConfigMaps             []testkube.EnvReference
 	EnvSecrets                []testkube.EnvReference
+	Labels                    map[string]string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -581,6 +582,10 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		ScraperTemplateExtensions: options.Request.ScraperTemplate,
 		EnvConfigMaps:             options.Request.EnvConfigMaps,
 		EnvSecrets:                options.Request.EnvSecrets,
+		Labels: map[string]string{
+			testkube.TestLabelTestType: options.TestSpec.Type_,
+			testkube.TestLabelExecutor: options.ExecutorName,
+		},
 	}
 }
 
