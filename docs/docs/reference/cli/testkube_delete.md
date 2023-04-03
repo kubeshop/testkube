@@ -1,4 +1,4 @@
-## testkube delete
+# testkube delete
 
 Delete resources
 

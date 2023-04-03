@@ -1,4 +1,4 @@
-## testkube run test
+# testkube run test
 
 Starts new test
 

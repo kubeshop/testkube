@@ -1,4 +1,4 @@
-## testkube get artifact
+# testkube get artifact
 
 List artifacts of the given test or test suite execution name
 

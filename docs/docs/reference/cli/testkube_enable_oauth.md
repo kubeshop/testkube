@@ -1,4 +1,4 @@
-## testkube enable oauth
+# testkube enable oauth
 
 enable oauth authentication for direct api
 

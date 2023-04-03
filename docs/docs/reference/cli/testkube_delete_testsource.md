@@ -1,4 +1,4 @@
-## testkube delete testsource
+# testkube delete testsource
 
 Delete test source
 

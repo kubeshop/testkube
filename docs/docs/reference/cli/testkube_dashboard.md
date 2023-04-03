@@ -1,4 +1,4 @@
-## testkube dashboard
+# testkube dashboard
 
 Open testkube dashboard
 

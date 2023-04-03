@@ -1,4 +1,4 @@
-## testkube agent
+# testkube agent
 
 Testkube Cloud Agent related commands
 

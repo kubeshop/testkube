@@ -2,6 +2,8 @@
 
 In order to receive notifications in Slack about the status of the testing process, Testkube provides integration with Slack. Below are the steps to configure it.
 
+<iframe width="100%" height="315" src="https://www.youtube.com/embed/iaiiDilAyMY" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+
 ## Install the Testkube bot to Your Slack Workspace
 
 Testkube bot:

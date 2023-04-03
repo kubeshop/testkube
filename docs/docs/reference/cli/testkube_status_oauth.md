@@ -1,4 +1,4 @@
-## testkube status oauth
+# testkube status oauth
 
 Get oauth status
 

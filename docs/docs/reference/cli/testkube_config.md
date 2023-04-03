@@ -1,4 +1,4 @@
-## testkube config
+# testkube config
 
 Set feature configuration value
 
