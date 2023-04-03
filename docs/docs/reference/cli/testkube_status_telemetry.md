@@ -1,4 +1,4 @@
-## testkube status telemetry
+# testkube status telemetry
 
 Get telemetry status
 

@@ -1,4 +1,4 @@
-## testkube debug
+# testkube debug
 
 Print environment information for debugging
 

@@ -1,4 +1,4 @@
-## testkube debug info
+# testkube debug info
 
 Show debug info
 

@@ -1,4 +1,4 @@
-## testkube completion fish
+# testkube completion fish
 
 Generate the autocompletion script for fish
 

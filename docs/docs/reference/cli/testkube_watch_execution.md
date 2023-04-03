@@ -1,4 +1,4 @@
-## testkube watch execution
+# testkube watch execution
 
 Watch logs output from executor pod
 

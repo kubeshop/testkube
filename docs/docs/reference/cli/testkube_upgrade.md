@@ -1,4 +1,4 @@
-## testkube upgrade
+# testkube upgrade
 
 Upgrade Helm chart, install dependencies and run migrations
 

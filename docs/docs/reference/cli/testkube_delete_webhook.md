@@ -1,4 +1,4 @@
-## testkube delete webhook
+# testkube delete webhook
 
 Delete webhook
 

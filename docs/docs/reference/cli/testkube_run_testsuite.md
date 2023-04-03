@@ -1,4 +1,4 @@
-## testkube run testsuite
+# testkube run testsuite
 
 Starts new test suite
 
