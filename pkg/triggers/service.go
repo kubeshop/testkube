@@ -255,7 +255,7 @@ func (s *Service) addTest(test *testsv3.Test) {
 		test.Labels = make(map[string]string)
 	}
 
-	test.Labels[testkube.TestLabelTestType] = test.Spec.Type_
+	test.Labels[testkube.TestLabelTestType] = utils.SanitizeName(test.Spec.Type_)
 	executorCR, err := s.executorsClient.GetByType(test.Spec.Type_)
 	if err == nil {
 		test.Labels[testkube.TestLabelExecutor] = executorCR.Name
@@ -274,8 +274,9 @@ func (s *Service) updateTest(test *testsv3.Test) {
 		test.Labels = make(map[string]string)
 	}
 
-	if test.Labels[testkube.TestLabelTestType] != test.Spec.Type_ {
-		test.Labels[testkube.TestLabelTestType] = test.Spec.Type_
+	testType := utils.SanitizeName(test.Spec.Type_)
+	if test.Labels[testkube.TestLabelTestType] != testType {
+		test.Labels[testkube.TestLabelTestType] = testType
 		changed = true
 	}
 

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/repository/config"
+	"github.com/kubeshop/testkube/pkg/utils"
 
 	"github.com/kubeshop/testkube/pkg/repository/result"
 
@@ -583,7 +584,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		EnvConfigMaps:             options.Request.EnvConfigMaps,
 		EnvSecrets:                options.Request.EnvSecrets,
 		Labels: map[string]string{
-			testkube.TestLabelTestType: options.TestSpec.Type_,
+			testkube.TestLabelTestType: utils.SanitizeName(options.TestSpec.Type_),
 			testkube.TestLabelExecutor: options.ExecutorName,
 		},
 	}

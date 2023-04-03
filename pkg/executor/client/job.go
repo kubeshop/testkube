@@ -476,7 +476,7 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		EnvConfigMaps:         options.Request.EnvConfigMaps,
 		EnvSecrets:            options.Request.EnvSecrets,
 		Labels: map[string]string{
-			testkube.TestLabelTestType: options.TestSpec.Type_,
+			testkube.TestLabelTestType: utils.SanitizeName(options.TestSpec.Type_),
 			testkube.TestLabelExecutor: options.ExecutorName,
 		},
 	}
