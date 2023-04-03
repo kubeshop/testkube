@@ -6,13 +6,14 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	cloudstorageclient "github.com/kubeshop/testkube/pkg/cloud/data/storage"
 	"io"
 	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
+
+	cloudstorageclient "github.com/kubeshop/testkube/pkg/cloud/data/storage"
 
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"

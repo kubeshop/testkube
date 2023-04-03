@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/kubeshop/testkube/pkg/cloud"
 	"hash/fnv"
 	"io"
+
+	"github.com/kubeshop/testkube/pkg/cloud"
 
 	"github.com/minio/minio-go/v7"
 
