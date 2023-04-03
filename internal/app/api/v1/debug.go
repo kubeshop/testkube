@@ -4,7 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// GetConfigsHandler returns configuration
+// GetDebugListenersHandler returns event logs
 func (s TestkubeAPI) GetDebugListenersHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return c.JSON(s.Events.Listeners.Log())
