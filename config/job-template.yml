@@ -12,7 +12,7 @@ spec:
       initContainers:
         - name: {{ .Name }}-init
           image: {{ .InitImage }}
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           command:
             - "/bin/runner"
             - '{{ .Jsn }}'
@@ -38,7 +38,7 @@ spec:
       containers:
         - name: "{{ .Name }}"
           image: {{ .Image }}
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           command:
             - "/bin/runner"
             - '{{ .Jsn }}'
