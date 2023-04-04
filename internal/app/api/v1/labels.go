@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
@@ -10,14 +11,15 @@ import (
 
 func (s TestkubeAPI) ListLabelsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to list labels"
 		testSuitesLabels, err := s.TestsSuitesClient.ListLabels()
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client failed to list labels for test suites: %w", errPrefix, err))
 		}
 
 		labels, err := s.TestsClient.ListLabels()
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client failed to list labels for tests: %w", errPrefix, err))
 		}
 
 		for key, testValues := range testSuitesLabels {
