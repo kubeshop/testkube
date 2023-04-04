@@ -4,6 +4,7 @@ package result
 
 import (
 	"context"
+	"fmt"
 	random "math/rand"
 	"testing"
 	"time"
@@ -392,6 +393,14 @@ func TestUpdateOutput(t *testing.T) {
 	err = repository.insertExecutionResult(testName, testkube.FAILED_ExecutionStatus, time.Now(), map[string]string{"key1": "value1", "key2": "value2"})
 	assert.NoError(t, err)
 
+	randomString := func(len int) string {
+		bytes := make([]byte, len)
+		for i := 0; i < len; i++ {
+			bytes[i] = byte(65 + random.Intn(25))
+		}
+		return string(bytes)
+	}
+
 	t.Run("valid input", func(t *testing.T) {
 		result := testkube.Execution{
 			Id:       executionID,
@@ -405,14 +414,6 @@ func TestUpdateOutput(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	t.Run("output bigger than MongoDB document limit should not throw error", func(t *testing.T) {
-		randomString := func(len int) string {
-			bytes := make([]byte, len)
-			for i := 0; i < len; i++ {
-				bytes[i] = byte(65 + random.Intn(25))
-			}
-			return string(bytes)
-		}
-
 		result := testkube.Execution{
 			Id:       executionID,
 			Name:     executionID,
@@ -421,6 +422,25 @@ func TestUpdateOutput(t *testing.T) {
 				Output: randomString(OutputMaxSize),
 			},
 		}
+		err = repository.UpdateResult(context.Background(), testName, result)
+		assert.NoError(t, err)
+	})
+	t.Run("too many steps", func(t *testing.T) {
+		result := testkube.Execution{
+			Id:       executionID,
+			Name:     executionID,
+			TestName: testName,
+			ExecutionResult: &testkube.ExecutionResult{
+				Output: randomString(OutputMaxSize),
+				Steps:  []testkube.ExecutionStepResult{},
+			},
+		}
+		for i := 0; i < StepMaxCount; i++ {
+			result.ExecutionResult.Steps = append(result.ExecutionResult.Steps, testkube.ExecutionStepResult{
+				Name: fmt.Sprintf("step-%d", i),
+			})
+		}
+
 		err = repository.UpdateResult(context.Background(), testName, result)
 		assert.NoError(t, err)
 	})
