@@ -2283,6 +2283,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with input for yaml generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -2424,6 +2432,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+        404:
+          description: "test source not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -2471,6 +2487,22 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with input for yaml generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "test source not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
