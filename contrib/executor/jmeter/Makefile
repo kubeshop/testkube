@@ -23,8 +23,8 @@ docker-build:
 docker-build-local: build-local-linux
 	docker build -t $(REPOSITORY)/$(NAME):$(LOCAL_TAG) -f build/agent/local.Dockerfile .
 
-.PHONY:
-kind-load-local: build-local-linux:
+.PHONY: kind-load-local
+kind-load-local: build-local-linux
 	kind load docker-image kubeshop/testkube-jmeter-executor:999.0.0
 
 .PHONY: test
@@ -33,7 +33,7 @@ test:
 
 .PHONY: integration-test
 integration-test:
-	go test --tags=integration -v ./...
+	INTEGRATION=y gotestsum --format short-verbose -- -run _Integration -cover ./...
 
 .PHONY: cover
 cover:
