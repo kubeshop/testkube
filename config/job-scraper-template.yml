@@ -12,7 +12,7 @@ spec:
       containers:
         - name: {{ .Name }}-scraper
           image: {{ .ScraperImage }}
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           command:
             - "/bin/runner"
             - '{{ .Jsn }}'
