@@ -53,7 +53,10 @@ func (l *MinIOUploader) Upload(ctx context.Context, object *Object, execution te
 		opts.DisableMultipart = true
 		opts.ContentEncoding = "gzip"
 		opts.ContentType = "application/gzip"
-		opts.UserMetadata = map[string]string{"X-Amz-Meta-Snowball-Auto-Extract": "true"}
+		opts.UserMetadata = map[string]string{
+			"X-Amz-Meta-Snowball-Auto-Extract": "true",
+			"X-Amz-Meta-Minio-Snowball-Prefix": execution.Id,
+		}
 	}
 
 	if err := l.client.SaveFileDirect(ctx, folder, object.Name, object.Data, object.Size, opts); err != nil {

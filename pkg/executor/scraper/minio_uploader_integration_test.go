@@ -17,22 +17,17 @@ import (
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
-func TestMinIOLoader_Upload_Tarball(t *testing.T) {
+func TestMinIOUploader_Upload_Tarball(t *testing.T) {
 	t.Parallel()
 
-	m := minio.NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-1", false)
-	if err := m.Connect(); err != nil {
-		t.Fatalf("error conecting to minio: %v", err)
-	}
-
-	// Create a new MinIO loader with the appropriate configuration
-	loader, err := scraper.NewMinIOUploader("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-1", false)
+	// Create a new MinIO uploader with the appropriate configuration
+	uploader, err := scraper.NewMinIOUploader("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-1", false)
 	if err != nil {
 		t.Fatalf("failed to create MinIO loader: %v", err)
 	}
 
 	files := []*archive.File{
-		{Name: "testfile.txt", Mode: 0644, Size: 9, ModTime: time.Now(), Data: bytes.NewBufferString("testdata\n")},
+		{Name: "test/testfile.txt", Mode: 0644, Size: 9, ModTime: time.Now(), Data: bytes.NewBufferString("testdata\n")},
 	}
 
 	var buf bytes.Buffer
@@ -45,7 +40,7 @@ func TestMinIOLoader_Upload_Tarball(t *testing.T) {
 	size := int64(buf.Len())
 	// Create a test object to save to MinIO
 	testObject := &scraper.Object{
-		Name:     "test-file.txt",
+		Name:     "artifacts.tar.gz",
 		Data:     &buf,
 		Size:     size,
 		DataType: scraper.DataTypeTarball,
@@ -53,28 +48,27 @@ func TestMinIOLoader_Upload_Tarball(t *testing.T) {
 
 	execution := testkube.Execution{Id: "test-execution-id"}
 	// Call the Upload function to save the object to MinIO
-	err = loader.Upload(context.Background(), testObject, execution)
+	err = uploader.Upload(context.Background(), testObject, execution)
 	if err != nil {
 		t.Fatalf("failed to save file to MinIO: %v", err)
 	}
-
-	artifacts, err := m.ListFiles(context.Background(), "test-execution-id")
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(artifacts))
-	assert.Equal(t, "test-file.txt", artifacts[0].Name)
-	assert.Equal(t, size, artifacts[0].Size)
-}
-
-func TestMinIOLoader_Upload_Raw(t *testing.T) {
-	t.Parallel()
 
 	m := minio.NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-1", false)
 	if err := m.Connect(); err != nil {
 		t.Fatalf("error conecting to minio: %v", err)
 	}
+	artifacts, err := m.ListFiles(context.Background(), "test-execution-id")
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(artifacts))
+	assert.Equal(t, "test/testfile.txt", artifacts[0].Name)
+	assert.Equal(t, files[0].Size, int64(artifacts[0].Size))
+}
+
+func TestMinIOUploader_Upload_Raw(t *testing.T) {
+	t.Parallel()
 
 	// Create a new MinIO loader with the appropriate configuration
-	loader, err := scraper.NewMinIOUploader("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-1", false)
+	uploader, err := scraper.NewMinIOUploader("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-2", false)
 	if err != nil {
 		t.Fatalf("failed to create MinIO loader: %v", err)
 	}
@@ -92,15 +86,19 @@ func TestMinIOLoader_Upload_Raw(t *testing.T) {
 	}
 
 	execution := testkube.Execution{Id: "test-execution-id"}
-	// Call the Load function to save the object to MinIO
-	err = loader.Upload(ctx, testObject, execution)
+	// Call the Upload function to save the object to MinIO
+	err = uploader.Upload(ctx, testObject, execution)
 	if err != nil {
 		t.Fatalf("failed to save file to MinIO: %v", err)
 	}
 
+	m := minio.NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-2", false)
+	if err := m.Connect(); err != nil {
+		t.Fatalf("error conecting to minio: %v", err)
+	}
 	artifacts, err := m.ListFiles(context.Background(), "test-execution-id")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(artifacts))
 	assert.Equal(t, "test-file.txt", artifacts[0].Name)
-	assert.Equal(t, int32(size), artifacts[0].Size)
+	assert.Equal(t, size, int64(artifacts[0].Size))
 }
