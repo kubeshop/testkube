@@ -657,7 +657,7 @@ func (s TestkubeAPI) ListTestSuiteArtifactsHandler() fiber.Handler {
 			return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test suite with execution id/name %s not found", errPrefix, id))
 		}
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not get test suite execution from db: %w", err))
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not get test suite execution from db: %w", errPrefix, err))
 		}
 
 		var artifacts []testkube.Artifact
@@ -678,7 +678,7 @@ func (s TestkubeAPI) ListTestSuiteArtifactsHandler() fiber.Handler {
 		}
 
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not list artifacts: %w", err))
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not list artifacts: %w", errPrefix, err))
 		}
 
 		return c.JSON(artifacts)
