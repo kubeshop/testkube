@@ -32,8 +32,16 @@ You will need *Helm* installed and `kubectl` configured with access to your Kube
 
 ## Validating the Installation 
 
-Testkube Cloud will notify if the installation is successful. A green indicator means that your cluster was able to connect to Testkube Cloud.
+Testkube Cloud will notify if the installation is successful. 
+
+* A green indicator means that your cluster was able to connect to Testkube Cloud.
+* A red indicator indicates that the Testkube Agent can't connect to the Testkube Cloud API (Testkube need some time to establish connection max 2-3 minutes).
 
 ![Validate install](https://user-images.githubusercontent.com/30776/206461244-f885c270-fc57-4919-9330-89a1ce5ad082.png)
 
-A red indicator indicates that the Testkube Agent can't connect to the Testkube Cloud API.
+In case of RED status you can try to debug the issues with the command below
+
+```sh 
+testkube agent debug
+```
+
