@@ -2543,8 +2543,16 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with creating folder for partial git checkout"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
-          description: "problem with communicating with kubernetes cluster"
+          description: "problem with communicating with kubernetes cluster or git server"
           content:
             application/problem+json:
               schema:
