@@ -137,8 +137,11 @@ jobs:
       - name: Install Ginkgo@2.9
         run: go install github.com/onsi/ginkgo/v2/ginkgo@v2.9.2
 
-      - name: Setup gotestsum
-        run: go install gotest.tools/gotestsum@latest
+      - name: Set up gotestsum@v1.9
+        run: go install gotest.tools/gotestsum@v1.9.0
+
+      - name: Set up Playwright dependencies
+        run: echo "y" | npx playwright install-deps
 
       - name: Integration Tests
         run: |
