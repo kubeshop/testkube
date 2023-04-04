@@ -1061,8 +1061,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
-
-
   /executions/{id}/artifacts:
     get:
       parameters:
@@ -1778,6 +1776,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with input for yaml generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1891,6 +1897,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with input for yaml generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -1933,6 +1947,14 @@ paths:
                 $ref: "#/components/schemas/ExecutorDetails"
         400:
           description: "problem with executor definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "executor not found"
           content:
             application/problem+json:
               schema:
