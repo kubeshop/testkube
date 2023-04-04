@@ -276,6 +276,8 @@ func TestRunMavenProject(t *testing.T) {
 			"wrapper": {Name: "TESTKUBE_MAVEN", Value: "true", Type_: testkube.VariableTypeBasic},
 		}
 
+		assert.NoError(t, os.Setenv("TESTKUBE_MAVEN", "true"))
+
 		// when
 		result, err := runner.Run(ctx, *execution)
 
