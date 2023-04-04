@@ -5,11 +5,12 @@ package newman
 import (
 	"context"
 	"fmt"
-	"github.com/kubeshop/testkube/pkg/envs"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/kubeshop/testkube/pkg/envs"
 
 	"github.com/stretchr/testify/assert"
 

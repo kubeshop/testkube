@@ -4,18 +4,20 @@ package artifact_test
 
 import (
 	"context"
-	"github.com/golang/mock/gomock"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	cloudscraper "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
-	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
-	"github.com/kubeshop/testkube/pkg/executor/scraper"
-	"github.com/kubeshop/testkube/pkg/filesystem"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	cloudscraper "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
+	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/filesystem"
 )
 
 func TestCloudScraper_ArchiveFilesystemExtractor(t *testing.T) {

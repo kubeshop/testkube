@@ -4,16 +4,18 @@ package scraper_test
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"testing"
+
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
 	"github.com/kubeshop/testkube/pkg/filesystem"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"os"
-	"path/filepath"
-	"testing"
 )
 
 func TestMinIOScraper(t *testing.T) {
@@ -59,7 +61,7 @@ func TestMinIOScraper(t *testing.T) {
 
 	c := minio.NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-2", false)
 	assert.NoError(t, c.Connect())
-	artifacts, err := c.ListFiles("test-bucket-2")
+	artifacts, err := c.ListFiles(context.Background(), "test-bucket-2")
 	if err != nil {
 		t.Fatalf("error listing files from bucket: %v", err)
 	}

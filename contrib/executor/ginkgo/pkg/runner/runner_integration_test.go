@@ -4,9 +4,10 @@ package runner
 
 import (
 	"context"
-	"github.com/kubeshop/testkube/pkg/envs"
 	"os"
 	"testing"
+
+	"github.com/kubeshop/testkube/pkg/envs"
 
 	"github.com/stretchr/testify/assert"
 

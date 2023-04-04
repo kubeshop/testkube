@@ -6,15 +6,17 @@ package runner
 import (
 	"context"
 	"fmt"
-	"github.com/kubeshop/testkube/pkg/envs"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/kubeshop/testkube/pkg/envs"
+
 	cp "github.com/otiai10/copy"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 func TestRunGradleIntegration(t *testing.T) {

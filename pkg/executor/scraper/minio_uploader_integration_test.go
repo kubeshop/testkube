@@ -5,14 +5,16 @@ package scraper_test
 import (
 	"bytes"
 	"context"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/archive"
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
-	"github.com/stretchr/testify/assert"
-	"strings"
-	"testing"
-	"time"
 )
 
 func TestMinIOLoader_Upload_Tarball(t *testing.T) {
@@ -56,7 +58,7 @@ func TestMinIOLoader_Upload_Tarball(t *testing.T) {
 		t.Fatalf("failed to save file to MinIO: %v", err)
 	}
 
-	artifacts, err := m.ListFiles("test-execution-id")
+	artifacts, err := m.ListFiles(context.Background(), "test-execution-id")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(artifacts))
 	assert.Equal(t, "test-file.txt", artifacts[0].Name)
@@ -96,7 +98,7 @@ func TestMinIOLoader_Upload_Raw(t *testing.T) {
 		t.Fatalf("failed to save file to MinIO: %v", err)
 	}
 
-	artifacts, err := m.ListFiles("test-execution-id")
+	artifacts, err := m.ListFiles(context.Background(), "test-execution-id")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(artifacts))
 	assert.Equal(t, "test-file.txt", artifacts[0].Name)
