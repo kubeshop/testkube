@@ -258,7 +258,7 @@ func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 			if _, ok := testSourceBatch[name]; !ok {
 				err := s.TestSourcesClient.Delete(name)
 				if err != nil {
-					return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test source %s: %w", errPrefix, testSource.Name, err))
+					return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test source %s: %w", errPrefix, name, err))
 				}
 
 				result.Deleted = append(result.Deleted, name)
