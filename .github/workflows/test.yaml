@@ -29,7 +29,7 @@ jobs:
 
       - name: Unit Test Summary
         if: always()
-        uses: test-summary/action@v1
+        uses: test-summary/action@v2
         with:
           paths: |
             unit-tests.xml
@@ -150,7 +150,7 @@ jobs:
 
       - name: Integration Test Summary
         if: always()
-        uses: test-summary/action@v1
+        uses: test-summary/action@v2
         with:
           paths: |
             integration-tests.xml
