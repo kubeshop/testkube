@@ -22,7 +22,7 @@ func TestMinIOUploader_Upload_Tarball_Integration(t *testing.T) {
 	t.Parallel()
 
 	// Create a new MinIO uploader with the appropriate configuration
-	uploader, err := scraper.NewMinIOUploader("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-1", false)
+	uploader, err := scraper.NewMinIOUploader("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-fsgds", false)
 	if err != nil {
 		t.Fatalf("failed to create MinIO loader: %v", err)
 	}
@@ -54,7 +54,7 @@ func TestMinIOUploader_Upload_Tarball_Integration(t *testing.T) {
 		t.Fatalf("failed to save file to MinIO: %v", err)
 	}
 
-	m := minio.NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-1", false)
+	m := minio.NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-fsgds", false)
 	if err := m.Connect(); err != nil {
 		t.Fatalf("error conecting to minio: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestMinIOUploader_Upload_Raw_Integration(t *testing.T) {
 	t.Parallel()
 
 	// Create a new MinIO loader with the appropriate configuration
-	uploader, err := scraper.NewMinIOUploader("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-2", false)
+	uploader, err := scraper.NewMinIOUploader("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-hgfhfg", false)
 	if err != nil {
 		t.Fatalf("failed to create MinIO loader: %v", err)
 	}
@@ -94,7 +94,7 @@ func TestMinIOUploader_Upload_Raw_Integration(t *testing.T) {
 		t.Fatalf("failed to save file to MinIO: %v", err)
 	}
 
-	m := minio.NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-2", false)
+	m := minio.NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-hgfhfg", false)
 	if err := m.Connect(); err != nil {
 		t.Fatalf("error conecting to minio: %v", err)
 	}
