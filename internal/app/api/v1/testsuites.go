@@ -28,11 +28,13 @@ import (
 // CreateTestSuiteHandler for getting test object
 func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to create test suite"
 		var request testkube.TestSuiteUpsertRequest
 		err := c.BodyParser(&request)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %w", errPrefix, err))
 		}
+		errPrefix = errPrefix + " " + request.Name
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			request.QuoteTestSuiteTextFields()
@@ -50,7 +52,7 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 		s.Metrics.IncCreateTestSuite(err)
 
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not create test suite: %w", errPrefix, err))
 		}
 
 		c.Status(http.StatusCreated)
@@ -61,25 +63,28 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 // UpdateTestSuiteHandler updates an existing TestSuite CR based on TestSuite content
 func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to update test suite"
+
 		var request testkube.TestSuiteUpdateRequest
 		err := c.BodyParser(&request)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %w", errPrefix, err))
 		}
 
 		var name string
 		if request.Name != nil {
 			name = *request.Name
 		}
+		errPrefix = errPrefix + " " + name
 
 		// we need to get resource first and load its metadata.ResourceVersion
 		testSuite, err := s.TestsSuitesClient.Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return s.Error(c, http.StatusNotFound, err)
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test suite not found: %w", errPrefix, err))
 			}
 
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get test suite: %w", errPrefix, err))
 		}
 
 		// map TestSuite but load spec only to not override metadata.ResourceVersion
@@ -90,7 +95,7 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 		s.Metrics.IncUpdateTestSuite(err)
 
 		if err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway,  fmt.Errorf("%s: client could not update test suite: %w", errPrefix, err)))
 		}
 
 		return c.JSON(updatedTestSuite)
@@ -101,13 +106,15 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
+		errPrefix := "failed to get test suite " + name
+
 		crTestSuite, err := s.TestsSuitesClient.Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, err)
+				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: test suite not found: %w", errPrefix, err))
 			}
 
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get test suite: %w", errPrefix, err))
 		}
 
 		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
@@ -125,13 +132,14 @@ func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
+		errPrefix := fmt.Sprintf("failed to get test suite %s with execution", name)
 		crTestSuite, err := s.TestsSuitesClient.Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, err)
+				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: test suite not found: %w", errPrefix, err))
 			}
 
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get test suite: %w", errPrefix, err))
 		}
 
 		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
@@ -144,12 +152,12 @@ func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 		ctx := c.Context()
 		startExecution, startErr := s.TestExecutionResults.GetLatestByTestSuite(ctx, name, "starttime")
 		if startErr != nil && startErr != mongo.ErrNoDocuments {
-			return s.Error(c, http.StatusInternalServerError, startErr)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not get execution by start time :%w", errPrefix, startErr))
 		}
 
 		endExecution, endErr := s.TestExecutionResults.GetLatestByTestSuite(ctx, name, "endtime")
 		if endErr != nil && endErr != mongo.ErrNoDocuments {
-			return s.Error(c, http.StatusInternalServerError, endErr)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not get execution by end time :%w", errPrefix, endErr))
 		}
 
 		testSuiteWithExecution := testkube.TestSuiteWithExecution{

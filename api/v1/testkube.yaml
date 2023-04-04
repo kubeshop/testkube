@@ -78,6 +78,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with selector parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: problem communicating with kubernetes cluster
           content:
@@ -186,6 +194,22 @@ paths:
       responses:
         204:
           description: "no content"
+        400:
+          description: "problem with selector parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "test trigger not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: problem communicating with kubernetes cluster
           content:
@@ -216,6 +240,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        404:
+          description: "test trigger not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: problem communicating with kubernetes cluster
           content:
@@ -260,6 +292,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+        404:
+          description: "test trigger not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: problem communicating with kubernetes cluster
           content:
@@ -282,6 +322,14 @@ paths:
       responses:
         204:
           description: "no content"
+        404:
+          description: "test trigger not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: problem communicating with kubernetes cluster
           content:
