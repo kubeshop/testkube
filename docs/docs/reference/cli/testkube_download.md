@@ -1,4 +1,4 @@
-## testkube download
+# testkube download
 
 Artifacts management commands
 

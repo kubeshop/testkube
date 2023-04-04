@@ -5,7 +5,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -18,6 +17,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 var (
@@ -56,7 +56,7 @@ func NewCRDTestsCmd() *cobra.Command {
 						return nil
 					}
 					cmd.Flags().Set("file", path)
-					cmd.Flags().Set("name", sanitizeName(filepath.Base(path)))
+					cmd.Flags().Set("name", utils.SanitizeName(filepath.Base(path)))
 					options, err := tests.NewUpsertTestOptionsFromFlags(cmd)
 					if err != nil {
 						ui.Info("# getting test options for file", path, err.Error())
@@ -136,7 +136,7 @@ func processPostmanFiles(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		test.Name = sanitizeName(filepath.Base(path))
+		test.Name = utils.SanitizeName(filepath.Base(path))
 
 		testName, ok := detector.IsTestName(path)
 		if !ok {
@@ -178,23 +178,6 @@ func processPostmanFiles(cmd *cobra.Command, args []string) error {
 
 }
 
-// sanitizeName sanitizes test name
-func sanitizeName(path string) string {
-	path = strings.TrimSuffix(path, filepath.Ext(path))
-
-	reg := regexp.MustCompile("[^a-zA-Z0-9-]+")
-	path = reg.ReplaceAllString(path, "-")
-	path = strings.TrimLeft(path, "-")
-	path = strings.TrimRight(path, "-")
-	path = strings.ToLower(path)
-
-	if len(path) > 63 {
-		return path[:63]
-	}
-
-	return path
-}
-
 // addEnvToTest adds env files to tests
 func addEnvToTests(tests map[string]client.UpsertTestOptions,
 	testEnvs, testSecretEnvs map[string]map[string]string) (envTests []client.UpsertTestOptions) {
@@ -211,7 +194,7 @@ func addEnvToTests(tests map[string]client.UpsertTestOptions,
 				}
 
 				envTest := test
-				envTest.Name = sanitizeName(envTest.Name + "-" + envName)
+				envTest.Name = utils.SanitizeName(envTest.Name + "-" + envName)
 				if test.ExecutionRequest != nil {
 					envTest.ExecutionRequest = &testkube.ExecutionRequest{}
 					*envTest.ExecutionRequest = *test.ExecutionRequest
@@ -243,7 +226,7 @@ func addEnvToTests(tests map[string]client.UpsertTestOptions,
 				}
 
 				secretEnvTest := test
-				secretEnvTest.Name = sanitizeName(secretEnvTest.Name + "-" + secretEnvName)
+				secretEnvTest.Name = utils.SanitizeName(secretEnvTest.Name + "-" + secretEnvName)
 				if test.ExecutionRequest != nil {
 					secretEnvTest.ExecutionRequest = &testkube.ExecutionRequest{}
 					*secretEnvTest.ExecutionRequest = *test.ExecutionRequest

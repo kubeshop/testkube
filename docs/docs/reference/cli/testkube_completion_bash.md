@@ -1,4 +1,4 @@
-## testkube completion bash
+# testkube completion bash
 
 Generate the autocompletion script for bash
 

@@ -1,4 +1,4 @@
-## testkube init
+# testkube init
 
 Install Helm chart registry in current kubectl context and update dependencies
 

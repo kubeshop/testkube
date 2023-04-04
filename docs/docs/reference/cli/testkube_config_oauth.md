@@ -1,4 +1,4 @@
-## testkube config oauth
+# testkube config oauth
 
 Set oauth credentials for api uri in testkube client
 

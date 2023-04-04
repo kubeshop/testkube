@@ -1,4 +1,4 @@
-## testkube abort execution
+# testkube abort execution
 
 Aborts execution of the test
 

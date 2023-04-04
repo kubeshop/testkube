@@ -1,4 +1,4 @@
-## testkube update testsuite
+# testkube update testsuite
 
 Update Test Suite
 

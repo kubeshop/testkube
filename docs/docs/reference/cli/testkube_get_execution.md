@@ -1,4 +1,4 @@
-## testkube get execution
+# testkube get execution
 
 Lists or gets test executions
 

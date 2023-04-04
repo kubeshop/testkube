@@ -65,6 +65,14 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 		return nil, fmt.Errorf("decoding executor job spec error: %w", err)
 	}
 
+	for key, value := range options.Labels {
+		if job.Labels == nil {
+			job.Labels = make(map[string]string)
+		}
+
+		job.Labels[key] = value
+	}
+
 	envs := append(executor.RunnerEnvVars, secretEnvVars...)
 	if options.HTTPProxy != "" {
 		envs = append(envs, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})

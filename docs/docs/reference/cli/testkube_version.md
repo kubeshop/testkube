@@ -1,4 +1,4 @@
-## testkube version
+# testkube version
 
 Shows version and build info
 

@@ -1,4 +1,4 @@
-## testkube delete executor
+# testkube delete executor
 
 Delete Executor
 

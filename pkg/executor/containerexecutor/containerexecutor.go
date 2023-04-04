@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/repository/config"
+	"github.com/kubeshop/testkube/pkg/utils"
 
 	"github.com/kubeshop/testkube/pkg/repository/result"
 
@@ -55,7 +56,7 @@ func NewContainerExecutor(
 	metrics ExecutionCounter,
 	emiter EventEmitter,
 	configMap config.Repository,
-	executorsClient *executorsclientv1.ExecutorsClient,
+	executorsClient executorsclientv1.Interface,
 	testsClient testsv3.Interface,
 ) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
@@ -74,8 +75,8 @@ func NewContainerExecutor(
 		serviceAccountName: serviceAccountName,
 		metrics:            metrics,
 		emitter:            emiter,
-		executorsClient:    executorsClient,
 		testsClient:        testsClient,
+		executorsClient:    executorsClient,
 	}, nil
 }
 
@@ -94,9 +95,9 @@ type ContainerExecutor struct {
 	metrics            ExecutionCounter
 	emitter            EventEmitter
 	configMap          config.Repository
-	executorsClient    *executorsclientv1.ExecutorsClient
 	serviceAccountName string
 	testsClient        testsv3.Interface
+	executorsClient    executorsclientv1.Interface
 }
 
 type JobOptions struct {
@@ -131,6 +132,7 @@ type JobOptions struct {
 	ScraperTemplateExtensions string
 	EnvConfigMaps             []testkube.EnvReference
 	EnvSecrets                []testkube.EnvReference
+	Labels                    map[string]string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -581,6 +583,10 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		ScraperTemplateExtensions: options.Request.ScraperTemplate,
 		EnvConfigMaps:             options.Request.EnvConfigMaps,
 		EnvSecrets:                options.Request.EnvSecrets,
+		Labels: map[string]string{
+			testkube.TestLabelTestType: utils.SanitizeName(options.TestSpec.Type_),
+			testkube.TestLabelExecutor: options.ExecutorName,
+		},
 	}
 }
 
