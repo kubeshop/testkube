@@ -1,9 +1,8 @@
-//go:build integration
-
 package runner
 
 import (
 	"context"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 	"testing"
 
 	"github.com/kubeshop/testkube/pkg/envs"
@@ -13,7 +12,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func TestRunString(t *testing.T) {
+func TestRunString_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()
@@ -88,7 +88,8 @@ metadata:
 	})
 }
 
-func TestRunFileURI(t *testing.T) {
+func TestRunFileURI_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()
@@ -134,7 +135,8 @@ func TestRunFileURI(t *testing.T) {
 	})
 }
 
-func TestRunGitFile(t *testing.T) {
+func TestRunGitFile_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()
@@ -182,7 +184,8 @@ func TestRunGitFile(t *testing.T) {
 	})
 }
 
-func TestRunGitDirectory(t *testing.T) {
+func TestRunGitDirectory_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()
@@ -211,7 +214,8 @@ func TestRunGitDirectory(t *testing.T) {
 	})
 }
 
-func TestRunWithSpecificK8sVersion(t *testing.T) {
+func TestRunWithSpecificK8sVersion_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()

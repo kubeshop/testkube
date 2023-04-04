@@ -1,9 +1,8 @@
-//go:build integration
-
 package runner
 
 import (
 	"context"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 	"os"
 	"path/filepath"
 	"testing"
@@ -15,7 +14,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func TestRunFiles(t *testing.T) {
+func TestRunFiles_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()
@@ -115,7 +115,8 @@ func TestRunFiles(t *testing.T) {
 	})
 }
 
-func TestRunAdvanced(t *testing.T) {
+func TestRunAdvanced_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()
@@ -168,7 +169,8 @@ func TestRunAdvanced(t *testing.T) {
 	})
 }
 
-func TestRunDirs(t *testing.T) {
+func TestRunDirs_Integtaion(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()
@@ -214,7 +216,8 @@ func TestRunDirs(t *testing.T) {
 	})
 }
 
-func TestRunErrors(t *testing.T) {
+func TestRunErrors_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()

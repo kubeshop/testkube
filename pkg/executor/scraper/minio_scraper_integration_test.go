@@ -1,9 +1,8 @@
-//go:build integration
-
 package scraper_test
 
 import (
 	"context"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 	"os"
 	"path/filepath"
 	"testing"
@@ -18,7 +17,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
-func TestMinIOScraper(t *testing.T) {
+func TestMinIOScraper_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	mockCtrl := gomock.NewController(t)

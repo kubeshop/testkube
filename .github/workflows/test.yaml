@@ -143,10 +143,11 @@ jobs:
       - name: Set up Playwright dependencies
         run: echo "y" | npx playwright install-deps
 
+      - name: Set up git
+        run: sudo apt-get install -y git
+
       - name: Integration Tests
-        run: |
-          sudo apt-get install -y git
-          gotestsum --format short-verbose --junitfile integration-tests.xml --jsonfile integration-tests.json -- -tags=integration -coverprofile=coverage.out -covermode=atomic ./...
+        run: INTEGRATION=y gotestsum --format short-verbose --junitfile integration-tests.xml --jsonfile integration-tests.json -- -run _Integration -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Integration Test Summary
         if: always()

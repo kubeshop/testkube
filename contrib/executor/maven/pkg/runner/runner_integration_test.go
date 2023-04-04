@@ -1,10 +1,9 @@
-//go:build integration
-
 package runner
 
 import (
 	"context"
 	"fmt"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 	"os"
 	"path/filepath"
 	"testing"
@@ -18,7 +17,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func TestRun(t *testing.T) {
+func TestRun_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()
@@ -171,7 +171,8 @@ func TestRun(t *testing.T) {
 	})
 }
 
-func TestRunErrors(t *testing.T) {
+func TestRunErrors_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()
@@ -244,7 +245,8 @@ func TestRunErrors(t *testing.T) {
 	})
 }
 
-func TestRunMavenProject(t *testing.T) {
+func TestRunMavenProject_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()

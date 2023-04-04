@@ -1,9 +1,8 @@
-//go:build integration
-
 package runner
 
 import (
 	"context"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 	"os"
 	"path/filepath"
 	"testing"
@@ -15,7 +14,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func TestRun(t *testing.T) {
+func TestRun_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()

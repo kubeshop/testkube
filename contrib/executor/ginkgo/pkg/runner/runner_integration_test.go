@@ -1,9 +1,8 @@
-//go:build integration
-
 package runner
 
 import (
 	"context"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 	"os"
 	"testing"
 
@@ -17,6 +16,7 @@ import (
 const repoURI = "https://github.com/kubeshop/testkube-executor-ginkgo.git"
 
 func TestRun_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()

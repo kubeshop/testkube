@@ -1,9 +1,8 @@
-//go:build integration
-
 package runner
 
 import (
 	"context"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 	"os"
 	"path/filepath"
 	"testing"
@@ -17,7 +16,8 @@ import (
 	cp "github.com/otiai10/copy"
 )
 
-func TestRun(t *testing.T) {
+func TestRun_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 	// setup
 	tempDir, err := os.MkdirTemp("", "*")

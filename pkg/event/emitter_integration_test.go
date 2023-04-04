@@ -1,9 +1,8 @@
-//go:build integration
-
 package event
 
 import (
 	"context"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 	"os"
 	"testing"
 	"time"
@@ -27,7 +26,8 @@ func GetTestNATSEmitter() *Emitter {
 	return NewEmitter(bus.NewNATSBus(nc))
 }
 
-func TestEmitter_NATS_Register(t *testing.T) {
+func TestEmitter_NATS_Register_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 
 	t.Run("Register adds new listener", func(t *testing.T) {
 		// given
@@ -42,13 +42,15 @@ func TestEmitter_NATS_Register(t *testing.T) {
 	})
 }
 
-func TestEmitter_NATS_Listen(t *testing.T) {
+func TestEmitter_NATS_Listen_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+
 	t.Run("listener handles only given events based on selectors", func(t *testing.T) {
 		// given
 		emitter := GetTestNATSEmitter()
 		// given listener with matching selector
 		listener1 := &dummy.DummyListener{Id: "l1", SelectorString: "type=OnlyMe"}
-		// and listener with non matching selector
+		// and listener with non-matching selector
 		listener2 := &dummy.DummyListener{Id: "l2", SelectorString: "type=NotMe"}
 
 		// and emitter with registered listeners
@@ -82,7 +84,9 @@ func TestEmitter_NATS_Listen(t *testing.T) {
 
 }
 
-func TestEmitter_NATS_Notify(t *testing.T) {
+func TestEmitter_NATS_Notify_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+
 	t.Run("notifies listeners in queue groups", func(t *testing.T) {
 		// given
 		emitter := GetTestNATSEmitter()
@@ -113,7 +117,8 @@ func TestEmitter_NATS_Notify(t *testing.T) {
 	})
 }
 
-func TestEmitter_NATS_Reconcile(t *testing.T) {
+func TestEmitter_NATS_Reconcile_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 
 	t.Run("emitter refersh listeners in reconcile loop", func(t *testing.T) {
 		// given

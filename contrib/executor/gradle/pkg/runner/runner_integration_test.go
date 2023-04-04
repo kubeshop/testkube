@@ -1,11 +1,10 @@
-//go:build integration
-
 // TODO create integration environment with `gradle` binary installed on OS level
 package runner
 
 import (
 	"context"
 	"fmt"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 	"os"
 	"path/filepath"
 	"testing"
@@ -19,7 +18,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func TestRunGradleIntegration(t *testing.T) {
+func TestRunGradle_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()
@@ -92,7 +92,8 @@ func TestRunGradleIntegration(t *testing.T) {
 	})
 }
 
-func TestRunErrorsIntegration(t *testing.T) {
+func TestRunErrors_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()

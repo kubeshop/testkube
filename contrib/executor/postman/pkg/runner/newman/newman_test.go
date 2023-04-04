@@ -1,10 +1,9 @@
-//go:build integration
-
 package newman
 
 import (
 	"context"
 	"fmt"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -19,7 +18,8 @@ import (
 
 // TestRun runs newman instance on top of example collection
 // creates temporary server and check if call to the server was done from newman
-func TestRun(t *testing.T) {
+func TestRun_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 	// given
 	runner, err := NewNewmanRunner(envs.Params{})

@@ -1,9 +1,8 @@
-//go:build integration
-
 package scraper_test
 
 import (
 	"context"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 	"io"
 	"os"
 	"path/filepath"
@@ -17,6 +16,7 @@ import (
 )
 
 func TestFilesystemExtractor_Extract_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	tempDir, err := os.MkdirTemp("", "test")
@@ -69,6 +69,7 @@ func TestFilesystemExtractor_Extract_Integration(t *testing.T) {
 }
 
 func TestFilesystemExtractor_Extract_RelPath_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	tempDir, err := os.MkdirTemp("", "test")

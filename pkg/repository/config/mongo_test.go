@@ -1,9 +1,8 @@
-//go:build integration
-
 package config
 
 import (
 	"context"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 	"testing"
 
 	"github.com/kubeshop/testkube/pkg/repository/storage"
@@ -24,7 +23,10 @@ func getRepository() (*MongoRepository, error) {
 	return repository, err
 }
 
-func TestStorage(t *testing.T) {
+func TestStorage_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	t.Parallel()
+
 	assert := require.New(t)
 
 	repository, err := getRepository()
@@ -34,6 +36,7 @@ func TestStorage(t *testing.T) {
 	assert.NoError(err)
 
 	t.Run("GetUniqueClusterId should return same id for each call", func(t *testing.T) {
+		t.Parallel()
 		// given/when
 		id1, err := repository.GetUniqueClusterId(context.Background())
 		assert.NoError(err)
@@ -51,6 +54,7 @@ func TestStorage(t *testing.T) {
 	})
 
 	t.Run("Upsert should insert new config entry", func(t *testing.T) {
+		t.Parallel()
 		// given,
 		clusterId := "uniq3"
 		_, err := repository.Upsert(context.Background(), testkube.Config{

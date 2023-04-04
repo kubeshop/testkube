@@ -1,10 +1,9 @@
-//go:build integration
-
 package scraper_test
 
 import (
 	"bytes"
 	"context"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 	"strings"
 	"testing"
 	"time"
@@ -17,7 +16,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
-func TestMinIOUploader_Upload_Tarball(t *testing.T) {
+func TestMinIOUploader_Upload_Tarball_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	// Create a new MinIO uploader with the appropriate configuration
@@ -64,7 +64,8 @@ func TestMinIOUploader_Upload_Tarball(t *testing.T) {
 	assert.Equal(t, files[0].Size, int64(artifacts[0].Size))
 }
 
-func TestMinIOUploader_Upload_Raw(t *testing.T) {
+func TestMinIOUploader_Upload_Raw_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	// Create a new MinIO loader with the appropriate configuration

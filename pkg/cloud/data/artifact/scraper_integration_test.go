@@ -1,9 +1,8 @@
-//go:build integration
-
 package artifact_test
 
 import (
 	"context"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -20,7 +19,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/filesystem"
 )
 
-func TestCloudScraper_ArchiveFilesystemExtractor(t *testing.T) {
+func TestCloudScraper_ArchiveFilesystemExtractor_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	mockCtrl := gomock.NewController(t)
@@ -83,7 +83,8 @@ func TestCloudScraper_ArchiveFilesystemExtractor(t *testing.T) {
 	assert.Equal(t, 1, testServerRequests)
 }
 
-func TestCloudScraper_RecursiveFilesystemExtractor(t *testing.T) {
+func TestCloudScraper_RecursiveFilesystemExtractor_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	mockCtrl := gomock.NewController(t)

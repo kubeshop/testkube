@@ -1,10 +1,9 @@
-//go:build integration
-
 package runner
 
 import (
 	"context"
 	"errors"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 	"os"
 	"path/filepath"
 	"testing"
@@ -19,8 +18,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func TestRun(t *testing.T) {
+func TestRun_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Skipf("Skipping integration test %s until it is installed in CI", t.Name())
+
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
