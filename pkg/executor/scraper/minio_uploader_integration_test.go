@@ -3,10 +3,11 @@ package scraper_test
 import (
 	"bytes"
 	"context"
-	"github.com/kubeshop/testkube/pkg/utils/test"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/stretchr/testify/assert"
 

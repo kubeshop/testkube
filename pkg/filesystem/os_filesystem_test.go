@@ -1,11 +1,12 @@
 package filesystem
 
 import (
-	"github.com/kubeshop/testkube/pkg/utils/test"
 	"io"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
 func TestOSFileSystem_OpenFile_Integration(t *testing.T) {

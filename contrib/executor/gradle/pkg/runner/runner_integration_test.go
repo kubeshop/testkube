@@ -4,10 +4,11 @@ package runner
 import (
 	"context"
 	"fmt"
-	"github.com/kubeshop/testkube/pkg/utils/test"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/kubeshop/testkube/pkg/envs"
 

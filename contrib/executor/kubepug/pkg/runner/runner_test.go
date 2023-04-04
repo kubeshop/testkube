@@ -2,8 +2,9 @@ package runner
 
 import (
 	"context"
-	"github.com/kubeshop/testkube/pkg/utils/test"
 	"testing"
+
+	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/kubeshop/testkube/pkg/envs"
 

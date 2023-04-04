@@ -3,10 +3,11 @@ package bus
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/kubeshop/testkube/pkg/utils/test"
 	"sync"
 	"sync/atomic"
 	"testing"
+
+	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"

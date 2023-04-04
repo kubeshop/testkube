@@ -2,10 +2,11 @@ package event
 
 import (
 	"context"
-	"github.com/kubeshop/testkube/pkg/utils/test"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/stretchr/testify/assert"
 

@@ -2,10 +2,11 @@ package scraper_test
 
 import (
 	"context"
-	"github.com/kubeshop/testkube/pkg/utils/test"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"

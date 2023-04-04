@@ -4,11 +4,13 @@ package result
 
 import (
 	"context"
-	"github.com/kubeshop/testkube/pkg/utils/test"
-	"github.com/stretchr/testify/assert"
 	random "math/rand"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/kubeshop/testkube/pkg/datefilter"
 	"github.com/kubeshop/testkube/pkg/repository/storage"

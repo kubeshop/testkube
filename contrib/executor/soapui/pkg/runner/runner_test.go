@@ -3,10 +3,11 @@ package runner
 import (
 	"context"
 	"errors"
-	"github.com/kubeshop/testkube/pkg/utils/test"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
 

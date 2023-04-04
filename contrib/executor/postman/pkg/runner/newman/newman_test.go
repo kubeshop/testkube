@@ -3,11 +3,12 @@ package newman
 import (
 	"context"
 	"fmt"
-	"github.com/kubeshop/testkube/pkg/utils/test"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/kubeshop/testkube/pkg/envs"
 
