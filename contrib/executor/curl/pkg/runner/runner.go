@@ -131,7 +131,7 @@ func (r *CurlRunner) Run(execution testkube.Execution) (result testkube.Executio
 	}
 
 	if responseStatus != expectedStatus {
-		outputPkg.PrintLog(fmt.Sprintf("%s Test run failed: cannot process expected status: %s", ui.IconCross, err.Error()))
+		outputPkg.PrintLog(fmt.Sprintf("%s Test run failed: response status don't match expected %d got %d", ui.IconCross, expectedStatus, responseStatus))
 		return *result.Err(fmt.Errorf("response status don't match expected %d got %d", expectedStatus, responseStatus)), nil
 	}
 
