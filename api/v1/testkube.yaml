@@ -1825,7 +1825,7 @@ paths:
               schema:
                 type: string
         400:
-          description: "problem with input for yaml generation"
+          description: "problem with input for CRD generation"
           content:
             application/problem+json:
               schema:
@@ -1946,7 +1946,7 @@ paths:
               schema:
                 type: string
         400:
-          description: "problem with input for yaml generation"
+          description: "problem with input for CRD generation"
           content:
             application/problem+json:
               schema:
@@ -2074,6 +2074,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -2159,6 +2167,14 @@ paths:
       responses:
         204:
           description: webhook deleted successfuly
+        404:
+          description: "webhook not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -2187,8 +2203,16 @@ paths:
             text/yaml:
               schema:
                 type: string
-        502:
-          description: "problem with communicating with kubernetes cluster"
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "webhook not found"
           content:
             application/problem+json:
               schema:
@@ -2197,6 +2221,14 @@ paths:
                   $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting webhook data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -2332,7 +2364,7 @@ paths:
               schema:
                 type: string
         400:
-          description: "problem with input for yaml generation"
+          description: "problem with input for CRD generation"
           content:
             application/problem+json:
               schema:
@@ -2536,7 +2568,7 @@ paths:
               schema:
                 type: string
         400:
-          description: "problem with input for yaml generation"
+          description: "problem with input for CRD generation"
           content:
             application/problem+json:
               schema:
