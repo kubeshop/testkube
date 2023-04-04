@@ -13,6 +13,7 @@ const TypeLogEvent = "event"
 const TypeLogLine = "line"
 const TypeError = "error"
 const TypeResult = "result"
+const TypeUnknown = "unknown"
 
 // NewOutputEvent returns new Output struct of type event
 func NewOutputEvent(message string) Output {
