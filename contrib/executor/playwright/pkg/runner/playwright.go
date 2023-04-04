@@ -21,28 +21,18 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func NewPlaywrightRunner(ctx context.Context, dependency string) (*PlaywrightRunner, error) {
+func NewPlaywrightRunner(ctx context.Context, dependency string, params envs.Params) (*PlaywrightRunner, error) {
 	output.PrintLogf("%s Preparing test runner", ui.IconTruck)
-	params, err := envs.LoadTestkubeVariables()
-	if err != nil {
-		return nil, errors.Errorf("could not initialize Playwright runner variables: %v", err)
-	}
 
+	var err error
 	r := &PlaywrightRunner{
 		Params:     params,
 		dependency: dependency,
 	}
 
-	if params.ScrapperEnabled {
-		uploader := factory.MinIOUploader
-		if params.CloudMode {
-			uploader = factory.CloudUploader
-		}
-		s, err := factory.GetScraper(ctx, params, factory.ArchiveFilesystemExtractor, uploader)
-		if err != nil {
-			return nil, errors.Wrap(err, "error creating scraper")
-		}
-		r.Scraper = s
+	r.Scraper, err = factory.TryGetScrapper(ctx, params)
+	if err != nil {
+		return nil, err
 	}
 
 	return r, nil

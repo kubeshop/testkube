@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"github.com/kubeshop/testkube/pkg/envs"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -20,19 +21,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-type Params struct {
-	Datadir string // RUNNER_DATADIR
-}
-
-func NewRunner() *GradleRunner {
+func NewRunner(params envs.Params) *GradleRunner {
 	output.PrintLogf("%s Preparing test runner", ui.IconTruck)
-
-	output.PrintLogf("%s Reading environment variables...", ui.IconWorld)
-	params := Params{
-		Datadir: os.Getenv("RUNNER_DATADIR"),
-	}
-	output.PrintLogf("%s Environment variables read successfully", ui.IconCheckMark)
-	output.PrintLogf("RUNNER_DATADIR=\"%s\"", params.Datadir)
 
 	return &GradleRunner{
 		params: params,
@@ -40,7 +30,7 @@ func NewRunner() *GradleRunner {
 }
 
 type GradleRunner struct {
-	params Params
+	params envs.Params
 }
 
 func (r *GradleRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
@@ -51,9 +41,9 @@ func (r *GradleRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	}
 
 	// check that the datadir exists
-	_, err = os.Stat(r.params.Datadir)
+	_, err = os.Stat(r.params.DataDir)
 	if errors.Is(err, os.ErrNotExist) {
-		output.PrintLogf("%s Datadir %s does not exist", ui.IconCross, r.params.Datadir)
+		output.PrintLogf("%s Datadir %s does not exist", ui.IconCross, r.params.DataDir)
 		return result, err
 	}
 
@@ -62,7 +52,7 @@ func (r *GradleRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	envManager.GetReferenceVars(envManager.Variables)
 
 	// check settings.gradle or settings.gradle.kts files exist
-	directory := filepath.Join(r.params.Datadir, "repo", execution.Content.Repository.Path)
+	directory := filepath.Join(r.params.DataDir, "repo", execution.Content.Repository.Path)
 
 	fileInfo, err := os.Stat(directory)
 	if err != nil {
@@ -105,7 +95,7 @@ func (r *GradleRunner) Run(ctx context.Context, execution testkube.Execution) (r
 
 	runPath := directory
 	if execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
-		runPath = filepath.Join(r.params.Datadir, "repo", execution.Content.Repository.WorkingDir)
+		runPath = filepath.Join(r.params.DataDir, "repo", execution.Content.Repository.WorkingDir)
 		args = append(args, "-p", directory)
 	}
 

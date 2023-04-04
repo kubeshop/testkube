@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"github.com/kubeshop/testkube/pkg/envs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,18 +15,18 @@ import (
 )
 
 func TestRun(t *testing.T) {
-	t.Skip("move this test to e2e test suite with valid environment setup")
+	t.Parallel()
 
 	ctx := context.Background()
 
 	// setup
 	tempDir, _ := os.MkdirTemp("", "*")
-	assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
 	repoDir := filepath.Join(tempDir, "repo")
 	assert.NoError(t, os.Mkdir(repoDir, 0755))
 	_ = cp.Copy("../../examples", repoDir)
 
-	runner, err := NewCypressRunner(ctx, "npm")
+	params := envs.Params{DataDir: tempDir}
+	runner, err := NewCypressRunner(ctx, "npm", params)
 	if err != nil {
 		t.Fail()
 	}
@@ -45,21 +46,20 @@ func TestRun(t *testing.T) {
 			},
 		})
 
+	assert.NoErrorf(t, err, "Cypress Test Failed: ResultErr: %v, Err: %v ", result.ErrorMessage, err)
 	fmt.Printf("RESULT: %+v\n", result)
-	fmt.Printf("ERROR:  %+v\n", err)
-
-	t.Fail()
-
 }
 
 func TestRunErrors(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	t.Run("no RUNNER_DATADIR", func(t *testing.T) {
-		assert.NoError(t, os.Setenv("RUNNER_DATADIR", "/unknown"))
+		t.Parallel()
 
-		// given
-		runner, err := NewCypressRunner(ctx, "yarn")
+		params := envs.Params{DataDir: "/unknown"}
+		runner, err := NewCypressRunner(ctx, "yarn", params)
 		if err != nil {
 			t.Fail()
 		}
@@ -72,5 +72,4 @@ func TestRunErrors(t *testing.T) {
 		// then
 		assert.Error(t, err)
 	})
-
 }

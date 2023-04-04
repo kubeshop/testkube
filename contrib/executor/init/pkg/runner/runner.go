@@ -19,10 +19,11 @@ import (
 )
 
 // NewRunner creates init runner
-func NewRunner() *InitRunner {
+func NewRunner(params envs.Params) *InitRunner {
 	dir := os.Getenv("RUNNER_DATADIR")
 	return &InitRunner{
 		Fetcher: content.NewFetcher(dir),
+		Params:  params,
 		dir:     dir,
 	}
 }
@@ -30,6 +31,7 @@ func NewRunner() *InitRunner {
 // InitRunner prepares data for executor
 type InitRunner struct {
 	Fetcher content.ContentFetcher
+	Params  envs.Params
 	dir     string
 }
 
@@ -38,14 +40,9 @@ var _ runner.Runner = &InitRunner{}
 // Run prepares data for executor
 func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
 	output.PrintLogf("%s Initializing...", ui.IconTruck)
-	params, err := envs.LoadTestkubeVariables()
-	if err != nil {
-		output.PrintLogf("%s Environment variables read unsuccessfully", ui.IconCross)
-		return result, errors.Errorf("%s Could not read environment variables: %v", ui.IconCross, err)
-	}
 
-	gitUsername := params.GitUsername
-	gitToken := params.GitToken
+	gitUsername := r.Params.GitUsername
+	gitToken := r.Params.GitToken
 
 	if gitUsername != "" || gitToken != "" {
 		if execution.Content != nil && execution.Content.Repository != nil {
@@ -71,9 +68,9 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	}
 
 	// add copy files in case object storage is set
-	if params.Endpoint != "" {
-		output.PrintLogf("%s Fetching uploads from object store %s...", ui.IconFile, params.Endpoint)
-		minioClient := minio.NewClient(params.Endpoint, params.AccessKeyID, params.SecretAccessKey, params.Region, params.Token, params.Bucket, params.Ssl)
+	if r.Params.Endpoint != "" {
+		output.PrintLogf("%s Fetching uploads from object store %s...", ui.IconFile, r.Params.Endpoint)
+		minioClient := minio.NewClient(r.Params.Endpoint, r.Params.AccessKeyID, r.Params.SecretAccessKey, r.Params.Region, r.Params.Token, r.Params.Bucket, r.Params.Ssl)
 		fp := content.NewCopyFilesPlacer(minioClient)
 		fp.PlaceFiles(ctx, execution.TestName, execution.BucketName)
 	}

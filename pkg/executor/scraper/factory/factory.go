@@ -28,6 +28,22 @@ const (
 	CloudUploader                UploaderType  = "CloudUploader"
 )
 
+func TryGetScrapper(ctx context.Context, params envs.Params) (scraper.Scraper, error) {
+	if params.ScrapperEnabled {
+		uploader := MinIOUploader
+		if params.CloudMode {
+			uploader = CloudUploader
+		}
+		s, err := GetScraper(ctx, params, ArchiveFilesystemExtractor, uploader)
+		if err != nil {
+			return nil, errors.Wrap(err, "error creating scraper")
+		}
+		return s, nil
+	}
+
+	return nil, nil
+}
+
 func GetScraper(ctx context.Context, params envs.Params, extractorType ExtractorType, uploaderType UploaderType) (scraper.Scraper, error) {
 	var extractor scraper.Extractor
 	switch extractorType {

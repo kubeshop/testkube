@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
+
+	"github.com/kubeshop/testkube/pkg/envs"
+
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/contrib/executor/playwright/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/executor/agent"
@@ -12,9 +15,14 @@ import (
 
 func main() {
 	ctx := context.Background()
-	r, err := runner.NewPlaywrightRunner(ctx, os.Getenv("DEPENDENCY_MANAGER"))
+	params, err := envs.LoadTestkubeVariables()
 	if err != nil {
-		output.PrintError(os.Stderr, fmt.Errorf("could not initialize runner: %w", err))
+		output.PrintError(os.Stderr, errors.Errorf("could not initialize Playwright Executor environment variables: %v", err))
+		os.Exit(1)
+	}
+	r, err := runner.NewPlaywrightRunner(ctx, os.Getenv("DEPENDENCY_MANAGER"), params)
+	if err != nil {
+		output.PrintError(os.Stderr, errors.Wrap(err, "could not initialize runner"))
 		os.Exit(1)
 	}
 	agent.Run(ctx, r, os.Args)

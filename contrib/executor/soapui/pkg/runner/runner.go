@@ -2,7 +2,6 @@ package runner
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,29 +23,19 @@ import (
 const FailureMessage string = "finished with status [FAILED]"
 
 // NewRunner creates a new SoapUIRunner
-func NewRunner(ctx context.Context) (*SoapUIRunner, error) {
+func NewRunner(ctx context.Context, params envs.Params) (*SoapUIRunner, error) {
 	output.PrintLogf("%s Preparing test runner", ui.IconTruck)
-	params, err := envs.LoadTestkubeVariables()
-	if err != nil {
-		return nil, fmt.Errorf("could not initialize Artillery runner variables: %w", err)
-	}
 
+	var err error
 	r := &SoapUIRunner{
 		SoapUIExecPath: "/usr/local/SmartBear/EntryPoint.sh",
 		SoapUILogsPath: "/home/soapui/.soapuios/logs",
 		Params:         params,
 	}
 
-	if params.ScrapperEnabled {
-		uploader := factory.MinIOUploader
-		if params.CloudMode {
-			uploader = factory.CloudUploader
-		}
-		s, err := factory.GetScraper(ctx, params, factory.ArchiveFilesystemExtractor, uploader)
-		if err != nil {
-			return nil, errors.Wrap(err, "error creating scraper")
-		}
-		r.Scraper = s
+	r.Scraper, err = factory.TryGetScrapper(ctx, params)
+	if err != nil {
+		return nil, err
 	}
 
 	return r, nil

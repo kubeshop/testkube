@@ -12,8 +12,6 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 
-	"github.com/kelseyhightower/envconfig"
-
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -21,27 +19,15 @@ import (
 )
 
 // NewRunner creates scraper runner
-func NewRunner(ctx context.Context) (*ScraperRunner, error) {
-	var params envs.Params
-	err := envconfig.Process("runner", &params)
-	if err != nil {
-		return nil, err
-	}
-
+func NewRunner(ctx context.Context, params envs.Params) (*ScraperRunner, error) {
+	var err error
 	r := &ScraperRunner{
 		Params: params,
 	}
 
-	if params.ScrapperEnabled {
-		uploader := factory.MinIOUploader
-		if params.CloudMode {
-			uploader = factory.CloudUploader
-		}
-		s, err := factory.GetScraper(ctx, params, factory.ArchiveFilesystemExtractor, uploader)
-		if err != nil {
-			return nil, errors.Wrap(err, "error creating scraper")
-		}
-		r.Scraper = s
+	r.Scraper, err = factory.TryGetScrapper(ctx, params)
+	if err != nil {
+		return nil, err
 	}
 
 	return r, nil

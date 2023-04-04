@@ -4,6 +4,7 @@ package runner
 
 import (
 	"context"
+	"github.com/kubeshop/testkube/pkg/envs"
 	"os"
 	"testing"
 
@@ -18,10 +19,14 @@ func TestRun_Integration(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("GinkgoRunner should run tests from a repo that pass", func(t *testing.T) {
-		runner, err := NewGinkgoRunner(ctx)
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "could not create temp dir: %v", err)
+		defer assert.NoError(t, os.RemoveAll(tempDir))
 
+		params := envs.Params{DataDir: tempDir}
+		runner, err := NewGinkgoRunner(ctx, params)
 		if err != nil {
-			t.Fail()
+			t.Fatalf("could not create runner: %v", err)
 		}
 		vars := make(map[string]testkube.Variable)
 		variableOne := testkube.Variable{
@@ -49,9 +54,10 @@ func TestRun_Integration(t *testing.T) {
 	})
 
 	t.Run("GinkgoRunner should run tests from a repo that fail", func(t *testing.T) {
-		assert.NoError(t, os.Setenv("RUNNER_GITUSERNAME", "testuser"))
-		assert.NoError(t, os.Setenv("RUNNER_GITTOKEN", "testtoken"))
-		runner, err := NewGinkgoRunner(ctx)
+		t.Parallel()
+
+		params := envs.Params{GitUsername: "testuser", GitToken: "testtoken"}
+		runner, err := NewGinkgoRunner(ctx, params)
 		if err != nil {
 			t.Fail()
 		}

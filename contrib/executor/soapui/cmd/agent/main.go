@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
+
+	"github.com/kubeshop/testkube/pkg/envs"
+
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/contrib/executor/soapui/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/executor/agent"
@@ -12,9 +15,14 @@ import (
 
 func main() {
 	ctx := context.Background()
-	r, err := runner.NewRunner(ctx)
+	params, err := envs.LoadTestkubeVariables()
 	if err != nil {
-		output.PrintError(os.Stderr, fmt.Errorf("could not initialize runner: %w", err))
+		output.PrintError(os.Stderr, errors.Errorf("could not initialize SoapUI Executor environment variables: %v", err))
+		os.Exit(1)
+	}
+	r, err := runner.NewRunner(ctx, params)
+	if err != nil {
+		output.PrintError(os.Stderr, errors.Errorf("could not initialize runner: %v", err))
 		os.Exit(1)
 	}
 

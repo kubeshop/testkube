@@ -18,12 +18,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func NewNewmanRunner() (*NewmanRunner, error) {
+func NewNewmanRunner(params envs.Params) (*NewmanRunner, error) {
 	output.PrintLog(fmt.Sprintf("%s Preparing test runner", ui.IconTruck))
-	params, err := envs.LoadTestkubeVariables()
-	if err != nil {
-		return nil, fmt.Errorf("could not initialize Artillery runner variables: %w", err)
-	}
 
 	return &NewmanRunner{
 		Params:  params,

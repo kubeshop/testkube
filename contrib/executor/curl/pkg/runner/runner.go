@@ -35,12 +35,8 @@ type CurlRunner struct {
 
 var _ runner.Runner = &CurlRunner{}
 
-func NewCurlRunner() (*CurlRunner, error) {
+func NewCurlRunner(params envs.Params) (*CurlRunner, error) {
 	outputPkg.PrintLogf("%s Preparing test runner", ui.IconTruck)
-	params, err := envs.LoadTestkubeVariables()
-	if err != nil {
-		return nil, errors.Errorf("could not initialize cURL runner variables: %v", err)
-	}
 
 	return &CurlRunner{
 		Log:     log.DefaultLogger,

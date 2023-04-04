@@ -27,28 +27,18 @@ import (
 var ginkgoDefaultParams = InitializeGinkgoParams()
 var ginkgoBin = "ginkgo"
 
-func NewGinkgoRunner(ctx context.Context) (*GinkgoRunner, error) {
+func NewGinkgoRunner(ctx context.Context, params envs.Params) (*GinkgoRunner, error) {
 	output.PrintLogf("%s Preparing test runner", ui.IconTruck)
-	params, err := envs.LoadTestkubeVariables()
-	if err != nil {
-		return nil, errors.Errorf("could not initialize Ginkgo runner variables: %v", err)
-	}
 
+	var err error
 	r := &GinkgoRunner{
 		Fetcher: content.NewFetcher(""),
 		Params:  params,
 	}
 
-	if params.ScrapperEnabled {
-		uploader := factory.MinIOUploader
-		if params.CloudMode {
-			uploader = factory.CloudUploader
-		}
-		s, err := factory.GetScraper(ctx, params, factory.ArchiveFilesystemExtractor, uploader)
-		if err != nil {
-			return nil, errors.Wrap(err, "error creating scraper")
-		}
-		r.Scraper = s
+	r.Scraper, err = factory.TryGetScrapper(ctx, params)
+	if err != nil {
+		return nil, err
 	}
 
 	return r, nil
@@ -121,6 +111,14 @@ func (r *GinkgoRunner) Run(ctx context.Context, execution testkube.Execution) (r
 			output.PrintLogf("%s could not set up reports directory: %s", ui.IconCross, mkdirErr.Error())
 			return result, mkdirErr
 		}
+	}
+
+	// check Ginkgo version
+	output.PrintLogf("%s Checking Ginkgo CLI version", ui.IconTruck)
+	_, err = executor.Run(runPath, ginkgoBin, envManager, "version")
+	if err != nil {
+		output.PrintLogf("%s error checking Ginkgo CLI version: %s", ui.IconCross, err.Error())
+		return result, err
 	}
 
 	// run executor here
@@ -297,12 +295,12 @@ func (r *GinkgoRunner) Validate(execution testkube.Execution) error {
 
 	if execution.Content.Repository == nil {
 		output.PrintLogf("%s Ginkgo executor handles only repository based tests, but repository is nil", ui.IconCross)
-		return fmt.Errorf("ginkgo executor handles only repository based tests, but repository is nil")
+		return errors.New("ginkgo executor handles only repository based tests, but repository is nil")
 	}
 
 	if execution.Content.Repository.Branch == "" && execution.Content.Repository.Commit == "" {
 		output.PrintLogf("%s Can't find branch or commit in params must use one or the other, repo %+v", ui.IconCross, execution.Content.Repository)
-		return fmt.Errorf("can't find branch or commit in params must use one or the other, repo:%+v", execution.Content.Repository)
+		return fmt.Errorf("can't find branch or commit in params must use one or the other, repo: %+v", execution.Content.Repository)
 	}
 
 	return nil

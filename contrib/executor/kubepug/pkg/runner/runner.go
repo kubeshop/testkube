@@ -8,6 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/kubeshop/testkube/pkg/envs"
+
+	"github.com/pkg/errors"
+
 	kubepug "github.com/rikatz/kubepug/pkg/results"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -19,19 +23,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-type Params struct {
-	DataDir string // RUNNER_DATADIR
-}
-
-func NewRunner() *KubepugRunner {
+func NewRunner(params envs.Params) *KubepugRunner {
 	output.PrintLogf("%s Preparing test runner", ui.IconTruck)
-
-	output.PrintLogf("%s Reading environment variables...", ui.IconWorld)
-	params := Params{
-		DataDir: os.Getenv("RUNNER_DATADIR"),
-	}
-	output.PrintLogf("%s Environment variables read successfully", ui.IconCheckMark)
-	output.PrintLogf("RUNNER_DATADIR=\"%s\"", params.DataDir)
 
 	return &KubepugRunner{
 		Fetcher: content.NewFetcher(""),
@@ -42,7 +35,7 @@ func NewRunner() *KubepugRunner {
 // KubepugRunner runs kubepug against cluster
 type KubepugRunner struct {
 	Fetcher content.ContentFetcher
-	params  Params
+	params  envs.Params
 }
 
 var _ runner.Runner = &KubepugRunner{}
@@ -175,7 +168,7 @@ func buildArgs(args []string, inputPath string) ([]string, error) {
 			return []string{}, fmt.Errorf("the Testkube Kubepug executor does not accept the \"--format\" parameter: %s", a)
 		}
 		if strings.Contains(a, "--input-file") {
-			return []string{}, fmt.Errorf("the Testkube Kubepug executor does not accept the \"--input-file\" parameter: %s", a)
+			return []string{}, errors.Errorf("the Testkube Kubepug executor does not accept the \"--input-file\" parameter: %s", a)
 		}
 	}
 	return append(args, "--format=json", "--input-file", inputPath), nil

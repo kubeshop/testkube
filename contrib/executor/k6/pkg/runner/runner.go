@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/kubeshop/testkube/pkg/envs"
+
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -17,19 +19,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-type Params struct {
-	Datadir string // RUNNER_DATADIR
-}
-
-func NewRunner() *K6Runner {
+func NewRunner(params envs.Params) *K6Runner {
 	outputPkg.PrintLogf("%s Preparing test runner", ui.IconTruck)
-
-	outputPkg.PrintLogf("%s Reading environment variables...", ui.IconWorld)
-	params := Params{
-		Datadir: os.Getenv("RUNNER_DATADIR"),
-	}
-	outputPkg.PrintLogf("%s Environment variables read successfully", ui.IconCheckMark)
-	outputPkg.PrintLogf("RUNNER_DATADIR=\"%s\"", params.Datadir)
 
 	return &K6Runner{
 		Params: params,
@@ -37,7 +28,7 @@ func NewRunner() *K6Runner {
 }
 
 type K6Runner struct {
-	Params Params
+	Params envs.Params
 }
 
 var _ runner.Runner = &K6Runner{}
@@ -49,9 +40,9 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 	outputPkg.PrintLogf("%s Preparing for test run", ui.IconTruck)
 
 	// check that the datadir exists
-	_, err = os.Stat(r.Params.Datadir)
+	_, err = os.Stat(r.Params.DataDir)
 	if errors.Is(err, os.ErrNotExist) {
-		outputPkg.PrintLogf("%s Datadir %s does not exist", ui.IconCross, r.Params.Datadir)
+		outputPkg.PrintLogf("%s Datadir %s does not exist", ui.IconCross, r.Params.DataDir)
 		return result, err
 	}
 
@@ -99,7 +90,7 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 	// file path as final parameter to k6
 	if execution.Content.Type_ == string(testkube.TestContentTypeString) ||
 		execution.Content.Type_ == string(testkube.TestContentTypeFileURI) {
-		directory = r.Params.Datadir
+		directory = r.Params.DataDir
 		args = append(args, "test-content")
 	}
 
@@ -108,7 +99,7 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 	if execution.Content.Type_ == string(testkube.TestContentTypeGitFile) ||
 		execution.Content.Type_ == string(testkube.TestContentTypeGitDir) ||
 		execution.Content.Type_ == string(testkube.TestContentTypeGit) {
-		directory = filepath.Join(r.Params.Datadir, "repo")
+		directory = filepath.Join(r.Params.DataDir, "repo")
 		path := ""
 		workingDir := ""
 		if execution.Content != nil && execution.Content.Repository != nil {

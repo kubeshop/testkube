@@ -4,6 +4,8 @@ package runner
 
 import (
 	"context"
+	"github.com/kubeshop/testkube/pkg/envs"
+	"os"
 	"testing"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -11,12 +13,16 @@ import (
 )
 
 func TestRun(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	t.Run("runner should run test based on execution data", func(t *testing.T) {
-		// given
-		// install artillery before running test
-		runner, err := NewArtilleryRunner(ctx)
+		t.Parallel()
+
+		tempDir, _ := os.MkdirTemp("", "*")
+		params := envs.Params{DataDir: tempDir}
+		runner, err := NewArtilleryRunner(ctx, params)
 		assert.NoError(t, err)
 
 		repoURI := "https://github.com/kubeshop/testkube-executor-artillery.git"

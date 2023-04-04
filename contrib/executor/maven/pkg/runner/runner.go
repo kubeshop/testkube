@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/kubeshop/testkube/pkg/envs"
+
 	"github.com/pkg/errors"
 
 	"github.com/joshdk/go-junit"
@@ -20,19 +22,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-type Params struct {
-	Datadir string // RUNNER_DATADIR
-}
-
-func NewRunner() *MavenRunner {
+func NewRunner(params envs.Params) *MavenRunner {
 	outputPkg.PrintLogf("%s Preparing test runner", ui.IconTruck)
-
-	outputPkg.PrintLogf("%s Reading environment variables...", ui.IconWorld)
-	params := Params{
-		Datadir: os.Getenv("RUNNER_DATADIR"),
-	}
-	outputPkg.PrintLogf("%s Environment variables read successfully", ui.IconCheckMark)
-	outputPkg.PrintLogf("RUNNER_DATADIR=\"%s\"", params.Datadir)
 
 	return &MavenRunner{
 		params: params,
@@ -40,7 +31,7 @@ func NewRunner() *MavenRunner {
 }
 
 type MavenRunner struct {
-	params Params
+	params envs.Params
 }
 
 var _ runner.Runner = &MavenRunner{}
@@ -53,14 +44,14 @@ func (r *MavenRunner) Run(ctx context.Context, execution testkube.Execution) (re
 	}
 
 	// check that the datadir exists
-	_, err = os.Stat(r.params.Datadir)
+	_, err = os.Stat(r.params.DataDir)
 	if errors.Is(err, os.ErrNotExist) {
-		outputPkg.PrintLogf("%s Datadir %s does not exist", ui.IconCross, r.params.Datadir)
+		outputPkg.PrintLogf("%s Datadir %s does not exist", ui.IconCross, r.params.DataDir)
 		return result, err
 	}
 
 	// check that pom.xml file exists
-	directory := filepath.Join(r.params.Datadir, "repo", execution.Content.Repository.Path)
+	directory := filepath.Join(r.params.DataDir, "repo", execution.Content.Repository.Path)
 
 	fileInfo, err := os.Stat(directory)
 	if err != nil {
@@ -124,7 +115,7 @@ func (r *MavenRunner) Run(ctx context.Context, execution testkube.Execution) (re
 
 	runPath := directory
 	if execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
-		runPath = filepath.Join(r.params.Datadir, "repo", execution.Content.Repository.WorkingDir)
+		runPath = filepath.Join(r.params.DataDir, "repo", execution.Content.Repository.WorkingDir)
 	}
 
 	output, err := executor.Run(runPath, mavenCommand, envManager, args...)
