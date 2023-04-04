@@ -5,6 +5,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"github.com/kubeshop/testkube/pkg/envs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -16,18 +17,23 @@ import (
 )
 
 func TestRun(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	t.Run("run maven wrapper test goal with envs", func(t *testing.T) {
+		t.Parallel()
 		// setup
-		tempDir, _ := os.MkdirTemp("", "*")
-		assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
 		repoDir := filepath.Join(tempDir, "repo")
 		assert.NoError(t, os.Mkdir(repoDir, 0755))
 		_ = cp.Copy("../../examples/hello-mvnw", repoDir)
 
 		// given
-		runner := NewRunner()
+		params := envs.Params{DataDir: tempDir}
+		runner := NewRunner(params)
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "maven/test"
 		execution.Content = &testkube.TestContent{
@@ -53,15 +59,18 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("run maven project with test task and envs", func(t *testing.T) {
+		t.Parallel()
 		// setup
-		tempDir, _ := os.MkdirTemp("", "*")
-		assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
 		repoDir := filepath.Join(tempDir, "repo")
 		assert.NoError(t, os.Mkdir(repoDir, 0755))
 		_ = cp.Copy("../../examples/hello-maven", repoDir)
 
 		// given
-		runner := NewRunner()
+		params := envs.Params{DataDir: tempDir}
+		runner := NewRunner(params)
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "maven/project"
 		execution.Content = &testkube.TestContent{
@@ -87,15 +96,18 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("run maven wrapper test goal with envs", func(t *testing.T) {
+		t.Parallel()
 		// setup
-		tempDir, _ := os.MkdirTemp("", "*")
-		assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
 		repoDir := filepath.Join(tempDir, "repo")
 		assert.NoError(t, os.Mkdir(repoDir, 0755))
 		_ = cp.Copy("../../examples/hello-mvnw", repoDir)
 
 		// given
-		runner := NewRunner()
+		params := envs.Params{DataDir: tempDir}
+		runner := NewRunner(params)
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "maven/test"
 		execution.Content = &testkube.TestContent{
@@ -118,15 +130,18 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("run maven project with settings.xml", func(t *testing.T) {
+		t.Parallel()
 		// setup
-		tempDir, _ := os.MkdirTemp("", "*")
-		assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
 		repoDir := filepath.Join(tempDir, "repo")
 		assert.NoError(t, os.Mkdir(repoDir, 0755))
 		_ = cp.Copy("../../examples/hello-maven-settings", repoDir)
 
 		// given
-		runner := NewRunner()
+		params := envs.Params{DataDir: tempDir}
+		runner := NewRunner(params)
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "maven/test"
 		execution.Content = &testkube.TestContent{
@@ -155,13 +170,15 @@ func TestRun(t *testing.T) {
 }
 
 func TestRunErrors(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	t.Run("no RUNNER_DATADIR", func(t *testing.T) {
-		assert.NoError(t, os.Setenv("RUNNER_DATADIR", "/unknown"))
-
+		t.Parallel()
 		// given
-		runner := NewRunner()
+		params := envs.Params{DataDir: "/unknown"}
+		runner := NewRunner(params)
 		execution := testkube.NewQueuedExecution()
 
 		// when
@@ -172,32 +189,39 @@ func TestRunErrors(t *testing.T) {
 	})
 
 	t.Run("unsupported file-content", func(t *testing.T) {
-		tempDir := os.TempDir()
-		assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
+		t.Parallel()
+
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
 
 		// given
-		runner := NewRunner()
+		params := envs.Params{DataDir: tempDir}
+		runner := NewRunner(params)
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "maven/test"
 		execution.Content = testkube.NewStringTestContent("")
 
 		// when
-		_, err := runner.Run(ctx, *execution)
+		_, err = runner.Run(ctx, *execution)
 
 		// then
 		assert.Error(t, err)
 	})
 
 	t.Run("no pom.xml", func(t *testing.T) {
-		// setup
-		tempDir, _ := os.MkdirTemp("", "*")
-		assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
+		t.Parallel()
 
+		// setup
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
 		repoDir := filepath.Join(tempDir, "repo")
 		assert.NoError(t, os.Mkdir(repoDir, 0755))
 
 		// given
-		runner := NewRunner()
+		params := envs.Params{DataDir: tempDir}
+		runner := NewRunner(params)
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "maven/test"
 		execution.Content = &testkube.TestContent{
@@ -220,19 +244,22 @@ func TestRunErrors(t *testing.T) {
 
 func TestRunMavenProject(t *testing.T) {
 	t.Parallel()
+
 	ctx := context.Background()
 
 	t.Run("run maven project with test task and envs", func(t *testing.T) {
 		t.Parallel()
 		// setup
-		tempDir, _ := os.MkdirTemp("", "*")
-		assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
 		repoDir := filepath.Join(tempDir, "repo")
 		assert.NoError(t, os.Mkdir(repoDir, 0755))
 		_ = cp.Copy("../../examples/hello-maven", repoDir)
 
 		// given
-		runner := NewRunner()
+		params := envs.Params{DataDir: tempDir}
+		runner := NewRunner(params)
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "maven/project"
 		execution.Content = &testkube.TestContent{
@@ -243,7 +270,9 @@ func TestRunMavenProject(t *testing.T) {
 			},
 		}
 		execution.Args = []string{"test"}
-		execution.Envs = map[string]string{"TESTKUBE_MAVEN": "true"}
+		execution.Variables = map[string]testkube.Variable{
+			"wrapper": {Name: "TESTKUBE_MAVEN", Value: "true", Type_: testkube.VariableTypeBasic},
+		}
 
 		// when
 		result, err := runner.Run(ctx, *execution)

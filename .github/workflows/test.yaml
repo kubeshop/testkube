@@ -93,7 +93,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           distribution: 'adopt'
-          java-version: '8'
+          java-version: '11'
 
       - name: Install node@19
         uses: actions/setup-node@v3
@@ -127,6 +127,10 @@ jobs:
           mv apache-jmeter-5.5 jmeter
           sudo mv jmeter /opt
           echo "/opt/jmeter/bin" >> $GITHUB_PATH
+
+      - name: Set up Newman
+        run: |
+          npm install -g newman@5.3.2
 
       - name: Install Ginkgo
         run: go install github.com/onsi/ginkgo/v2/ginkgo@v2.9.2

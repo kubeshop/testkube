@@ -2,8 +2,9 @@ package runner
 
 import (
 	"context"
-	"os"
 	"testing"
+
+	"github.com/kubeshop/testkube/pkg/envs"
 
 	"github.com/stretchr/testify/assert"
 
@@ -11,13 +12,15 @@ import (
 )
 
 func TestRun(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	t.Run("runner should run test based on execution data", func(t *testing.T) {
-		assert.NoError(t, os.Setenv("RUNNER_DATADIR", "./testdir"))
+		t.Parallel()
 
-		// given
-		runner := NewRunner()
+		params := envs.Params{DataDir: "./testdir"}
+		runner := NewRunner(params)
 		execution := testkube.NewQueuedExecution()
 		execution.Content = testkube.NewStringTestContent("hello I'm  test content")
 

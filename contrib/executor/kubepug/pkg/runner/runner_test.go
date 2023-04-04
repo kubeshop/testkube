@@ -4,6 +4,7 @@ package runner
 
 import (
 	"context"
+	"github.com/kubeshop/testkube/pkg/envs"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,7 +20,7 @@ func TestRunString(t *testing.T) {
 	t.Run("runner should return success and empty result on empty string", func(t *testing.T) {
 		t.Parallel()
 
-		runner := NewRunner()
+		runner := NewRunner(envs.Params{})
 		execution := testkube.NewQueuedExecution()
 		execution.Content = testkube.NewStringTestContent("")
 
@@ -35,7 +36,7 @@ func TestRunString(t *testing.T) {
 	t.Run("runner should return success and empty result on passing yaml", func(t *testing.T) {
 		t.Parallel()
 
-		runner := NewRunner()
+		runner := NewRunner(envs.Params{})
 		execution := testkube.NewQueuedExecution()
 		execution.Content = testkube.NewStringTestContent(`
 apiVersion: v1
@@ -62,7 +63,7 @@ metadata:
 	t.Run("runner should return failure and list of deprecated APIs result on yaml containing deprecated API", func(t *testing.T) {
 		t.Parallel()
 
-		runner := NewRunner()
+		runner := NewRunner(envs.Params{})
 		execution := testkube.NewQueuedExecution()
 		execution.Content = testkube.NewStringTestContent(`
 apiVersion: v1
@@ -94,7 +95,7 @@ func TestRunFileURI(t *testing.T) {
 	t.Run("runner should return success on valid yaml gist file URI", func(t *testing.T) {
 		t.Parallel()
 
-		runner := NewRunner()
+		runner := NewRunner(envs.Params{})
 		execution := testkube.NewQueuedExecution()
 		execution.Content = &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeFileURI),
@@ -114,7 +115,7 @@ func TestRunFileURI(t *testing.T) {
 	t.Run("runner should return failure on yaml gist file URI with deprecated/deleted APIs", func(t *testing.T) {
 		t.Parallel()
 
-		runner := NewRunner()
+		runner := NewRunner(envs.Params{})
 		execution := testkube.NewQueuedExecution()
 		execution.Content = &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeFileURI),
@@ -140,7 +141,7 @@ func TestRunGitFile(t *testing.T) {
 	t.Run("runner should return error on non-existent Git path", func(t *testing.T) {
 		t.Parallel()
 
-		runner := NewRunner()
+		runner := NewRunner(envs.Params{})
 		execution := testkube.NewQueuedExecution()
 		execution.Content = &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeGitFile),
@@ -159,7 +160,7 @@ func TestRunGitFile(t *testing.T) {
 	t.Run("runner should return deprecated and deleted APIs on Git file containing deprecated and delete API definitions", func(t *testing.T) {
 		t.Parallel()
 
-		runner := NewRunner()
+		runner := NewRunner(envs.Params{})
 		execution := testkube.NewQueuedExecution()
 		execution.Content = &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeGitFile),
@@ -188,7 +189,7 @@ func TestRunGitDirectory(t *testing.T) {
 	t.Run("runner should return success on manifests from Git directory", func(t *testing.T) {
 		t.Parallel()
 
-		runner := NewRunner()
+		runner := NewRunner(envs.Params{})
 		execution := testkube.NewQueuedExecution()
 		execution.Content = &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeGitDir),
@@ -218,7 +219,7 @@ func TestRunWithSpecificK8sVersion(t *testing.T) {
 		"on yaml containing deprecated API with current K8s version", func(t *testing.T) {
 		t.Parallel()
 
-		runner := NewRunner()
+		runner := NewRunner(envs.Params{})
 		execution := testkube.NewQueuedExecution()
 		execution.Content = testkube.NewStringTestContent(`
 apiVersion: v1
@@ -244,7 +245,7 @@ metadata:
 	t.Run("runner should return success on yaml containing deprecated API with old K8s version", func(t *testing.T) {
 		t.Parallel()
 
-		runner := NewRunner()
+		runner := NewRunner(envs.Params{})
 		execution := testkube.NewQueuedExecution()
 		execution.Args = []string{
 			"--k8s-version=v1.18.0", // last version v1/ComponentStatus was valid

@@ -3,10 +3,11 @@ package runner
 import (
 	"context"
 	"fmt"
-	"github.com/kubeshop/testkube/pkg/envs"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/kubeshop/testkube/pkg/envs"
 
 	cp "github.com/otiai10/copy"
 	"github.com/stretchr/testify/assert"
@@ -20,7 +21,9 @@ func TestRun(t *testing.T) {
 	ctx := context.Background()
 
 	// setup
-	tempDir, _ := os.MkdirTemp("", "*")
+	tempDir, err := os.MkdirTemp("", "*")
+	assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+	defer os.RemoveAll(tempDir)
 	repoDir := filepath.Join(tempDir, "repo")
 	assert.NoError(t, os.Mkdir(repoDir, 0755))
 	_ = cp.Copy("../../examples", repoDir)

@@ -6,6 +6,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"github.com/kubeshop/testkube/pkg/envs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -17,18 +18,23 @@ import (
 )
 
 func TestRunGradleIntegration(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	t.Run("run gradle wrapper project with explicit target arg", func(t *testing.T) {
+		t.Parallel()
 		// setup
-		tempDir, _ := os.MkdirTemp("", "*")
-		assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
 		repoDir := filepath.Join(tempDir, "repo")
 		assert.NoError(t, os.Mkdir(repoDir, 0755))
 		_ = cp.Copy("../../examples/hello-gradlew", repoDir)
 
 		// given
-		runner := NewRunner()
+		params := envs.Params{DataDir: tempDir}
+		runner := NewRunner(params)
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "gradle/project"
 		execution.Content = &testkube.TestContent{
@@ -49,15 +55,18 @@ func TestRunGradleIntegration(t *testing.T) {
 	})
 
 	t.Run("run gradle project test with envs", func(t *testing.T) {
+		t.Parallel()
 		// setup
-		tempDir, _ := os.MkdirTemp("", "*")
-		assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
 		repoDir := filepath.Join(tempDir, "repo")
 		assert.NoError(t, os.Mkdir(repoDir, 0755))
 		_ = cp.Copy("../../examples/hello-gradle", repoDir)
 
 		// given
-		runner := NewRunner()
+		params := envs.Params{DataDir: tempDir}
+		runner := NewRunner(params)
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "gradle/test"
 		execution.Content = &testkube.TestContent{
@@ -82,13 +91,15 @@ func TestRunGradleIntegration(t *testing.T) {
 }
 
 func TestRunErrorsIntegration(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	t.Run("no RUNNER_DATADIR", func(t *testing.T) {
-		assert.NoError(t, os.Setenv("RUNNER_DATADIR", "/unknown"))
-
+		t.Parallel()
 		// given
-		runner := NewRunner()
+		params := envs.Params{DataDir: "/unknown"}
+		runner := NewRunner(params)
 		execution := testkube.NewQueuedExecution()
 
 		// when
@@ -99,11 +110,13 @@ func TestRunErrorsIntegration(t *testing.T) {
 	})
 
 	t.Run("unsupported file-content", func(t *testing.T) {
+		t.Parallel()
+
 		tempDir := os.TempDir()
-		assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
 
 		// given
-		runner := NewRunner()
+		params := envs.Params{DataDir: tempDir}
+		runner := NewRunner(params)
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "gradle/project"
 		execution.Content = testkube.NewStringTestContent("")
@@ -116,15 +129,18 @@ func TestRunErrorsIntegration(t *testing.T) {
 	})
 
 	t.Run("no settings.gradle", func(t *testing.T) {
+		t.Parallel()
 		// setup
-		tempDir, _ := os.MkdirTemp("", "*")
-		assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
 
 		repoDir := filepath.Join(tempDir, "repo")
 		assert.NoError(t, os.Mkdir(repoDir, 0755))
 
 		// given
-		runner := NewRunner()
+		params := envs.Params{DataDir: tempDir}
+		runner := NewRunner(params)
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "gradle/project"
 		execution.Content = &testkube.TestContent{

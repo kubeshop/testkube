@@ -3,11 +3,12 @@ package runner
 import (
 	"context"
 	"fmt"
-	"github.com/kubeshop/testkube/pkg/envs"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/kubeshop/testkube/pkg/envs"
 
 	"github.com/pkg/errors"
 

@@ -4,6 +4,7 @@ package runner
 
 import (
 	"context"
+	"github.com/kubeshop/testkube/pkg/envs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,14 +14,21 @@ import (
 )
 
 func TestRun(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
-	tempDir := os.TempDir()
-	assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
 	assert.NoError(t, os.Setenv("ENTRYPOINT_CMD", "jmeter"))
 
 	t.Run("run successful jmeter test", func(t *testing.T) {
-		runner, err := NewRunner(ctx)
+		t.Parallel()
+
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
+
+		params := envs.Params{DataDir: tempDir}
+		runner, err := NewRunner(ctx, params)
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
@@ -42,7 +50,14 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("run failing jmeter test", func(t *testing.T) {
-		runner, err := NewRunner(ctx)
+		t.Parallel()
+
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
+
+		params := envs.Params{DataDir: tempDir}
+		runner, err := NewRunner(ctx, params)
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
@@ -64,7 +79,14 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("run successful jmeter test with arguments", func(t *testing.T) {
-		runner, err := NewRunner(ctx)
+		t.Parallel()
+
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
+
+		params := envs.Params{DataDir: tempDir}
+		runner, err := NewRunner(ctx, params)
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()

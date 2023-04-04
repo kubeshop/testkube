@@ -1,7 +1,10 @@
+//go:build integration
+
 package runner
 
 import (
 	"context"
+	"github.com/kubeshop/testkube/pkg/envs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,16 +17,20 @@ import (
 )
 
 func TestRun(t *testing.T) {
+	t.Parallel()
 	// setup
-	tempDir, _ := os.MkdirTemp("", "*")
-	assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
+	tempDir, err := os.MkdirTemp("", "*")
+	assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+	defer os.RemoveAll(tempDir)
+
 	repoDir := filepath.Join(tempDir, "repo")
 	assert.NoError(t, os.Mkdir(repoDir, 0755))
 	_ = cp.Copy("../../examples", repoDir)
 
 	ctx := context.Background()
 
-	runner, err := NewPlaywrightRunner(ctx, "pnpm")
+	params := envs.Params{DataDir: tempDir}
+	runner, err := NewPlaywrightRunner(ctx, "pnpm", params)
 	if err != nil {
 		t.Fail()
 	}

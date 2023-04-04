@@ -5,6 +5,7 @@ package newman
 import (
 	"context"
 	"fmt"
+	"github.com/kubeshop/testkube/pkg/envs"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -20,7 +21,7 @@ import (
 func TestRun(t *testing.T) {
 	t.Parallel()
 	// given
-	runner, err := NewNewmanRunner()
+	runner, err := NewNewmanRunner(envs.Params{})
 	assert.NoError(t, err)
 
 	// and test server for getting newman responses

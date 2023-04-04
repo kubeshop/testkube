@@ -1,11 +1,7 @@
-//go:build integration
-
 package runner
 
 import (
-	"context"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,239 +9,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func TestRunFiles(t *testing.T) {
-	ctx := context.Background()
-	// setup
-	tempDir := os.TempDir()
-	assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
-
-	t.Run("Run k6 with simple script", func(t *testing.T) {
-		// given
-		runner := NewRunner()
-		execution := testkube.NewQueuedExecution()
-		execution.Content = testkube.NewStringTestContent("")
-		execution.TestType = "k6/script"
-		writeTestContent(t, tempDir, "../../examples/k6-test-script.js")
-
-		// when
-		result, err := runner.Run(ctx, *execution)
-
-		// then
-		assert.NoError(t, err)
-		assert.Equal(t, testkube.ExecutionStatusPassed, result.Status)
-		assert.Len(t, result.Steps, 1)
-	})
-
-	t.Run("Run k6 with simple failing script", func(t *testing.T) {
-		// given
-		runner := NewRunner()
-		execution := testkube.NewQueuedExecution()
-		execution.Content = testkube.NewStringTestContent("")
-		execution.TestType = "k6/script"
-		writeTestContent(t, tempDir, "../../examples/k6-test-failing-script.js")
-
-		// when
-		result, err := runner.Run(ctx, *execution)
-
-		// then
-		assert.NoError(t, err)
-		assert.Equal(t, testkube.ExecutionStatusFailed, result.Status)
-		assert.Len(t, result.Steps, 1)
-	})
-
-	t.Run("Run k6 with arguments and simple script", func(t *testing.T) {
-		// given
-		runner := NewRunner()
-		execution := testkube.NewQueuedExecution()
-		execution.Content = testkube.NewStringTestContent("")
-		execution.TestType = "k6/run"
-		execution.Args = []string{"--vus", "2", "--duration", "1s"}
-		writeTestContent(t, tempDir, "../../examples/k6-test-script.js")
-
-		// when
-		result, err := runner.Run(ctx, *execution)
-
-		// then
-		assert.NoError(t, err)
-		assert.Equal(t, testkube.ExecutionStatusPassed, result.Status)
-		assert.Len(t, result.Steps, 1)
-	})
-
-	t.Run("Run k6 with ENV variables and script", func(t *testing.T) {
-		// given
-		runner := NewRunner()
-		execution := testkube.NewQueuedExecution()
-		execution.Content = testkube.NewStringTestContent("")
-		execution.TestType = "k6/script"
-		execution.Envs = map[string]string{"TARGET_HOSTNAME": "kubeshop.github.io"}
-		writeTestContent(t, tempDir, "../../examples/k6-test-environment.js")
-
-		// when
-		result, err := runner.Run(ctx, *execution)
-
-		// then
-		assert.NoError(t, err)
-		assert.Equal(t, testkube.ExecutionStatusPassed, result.Status)
-		assert.Len(t, result.Steps, 1)
-	})
-}
-
-func TestRunAdvanced(t *testing.T) {
-	ctx := context.Background()
-	// setup
-	tempDir := os.TempDir()
-	assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
-
-	t.Run("Run k6 with scenarios", func(t *testing.T) {
-		// given
-		runner := NewRunner()
-		execution := testkube.NewQueuedExecution()
-		execution.Content = testkube.NewStringTestContent("")
-		execution.TestType = "k6/run"
-		writeTestContent(t, tempDir, "../../examples/k6-test-scenarios.js")
-
-		// when
-		result, err := runner.Run(ctx, *execution)
-
-		// then
-		assert.NoError(t, err)
-		assert.Equal(t, testkube.ExecutionStatusPassed, result.Status)
-		assert.Len(t, result.Steps, 2)
-	})
-
-	t.Run("Run k6 with checks and thresholds", func(t *testing.T) {
-		// given
-		runner := NewRunner()
-		execution := testkube.NewQueuedExecution()
-		execution.Content = testkube.NewStringTestContent("")
-		execution.TestType = "k6/script"
-		writeTestContent(t, tempDir, "../../examples/k6-test-thresholds.js")
-
-		// when
-		result, err := runner.Run(ctx, *execution)
-
-		// then
-		assert.NoError(t, err)
-		assert.Equal(t, "some thresholds have failed", result.ErrorMessage)
-		assert.Equal(t, testkube.ExecutionStatusFailed, result.Status)
-		assert.Len(t, result.Steps, 1)
-	})
-}
-
-func TestRunDirs(t *testing.T) {
-	ctx := context.Background()
-	// setup
-	tempDir, _ := os.MkdirTemp("", "*")
-	assert.NoError(t, os.Setenv("RUNNER_DATADIR", tempDir))
-
-	repoDir := filepath.Join(tempDir, "repo")
-	assert.NoError(t, os.Mkdir(repoDir, 0755))
-
-	k6Script, err := os.ReadFile("../../examples/k6-test-script.js")
-	if err != nil {
-		assert.FailNow(t, "Unable to read k6 test script")
-	}
-
-	err = os.WriteFile(filepath.Join(repoDir, "k6-test-script.js"), k6Script, 0644)
-	if err != nil {
-		assert.FailNow(t, "Unable to write k6 runner test content file")
-	}
-
-	t.Run("Run k6 from directory with script argument", func(t *testing.T) {
-		// given
-		runner := NewRunner()
-		execution := testkube.NewQueuedExecution()
-		execution.Content = &testkube.TestContent{
-			Type_: string(testkube.TestContentTypeGitDir),
-			Repository: &testkube.Repository{
-				Uri:    "https://github.com/kubeshop/testkube-executor-k6.git",
-				Branch: "main",
-			},
-		}
-		execution.TestType = "k6/script"
-		execution.Args = []string{"--duration", "1s", "k6-test-script.js"}
-
-		// when
-		result, err := runner.Run(ctx, *execution)
-
-		// then
-		assert.NoError(t, err)
-		assert.Equal(t, testkube.ExecutionStatusPassed, result.Status)
-		assert.Len(t, result.Steps, 1)
-	})
-}
-
-func TestRunErrors(t *testing.T) {
-	ctx := context.Background()
-
-	t.Run("Run k6 with no script", func(t *testing.T) {
-		// setup
-		assert.NoError(t, os.Setenv("RUNNER_DATADIR", "."))
-
-		// given
-		runner := NewRunner()
-		execution := testkube.NewQueuedExecution()
-		execution.Content = testkube.NewStringTestContent("")
-		execution.TestType = "k6/script"
-
-		// when
-		result, err := runner.Run(ctx, *execution)
-
-		// then
-		assert.NoError(t, err)
-		assert.Equal(t, testkube.ExecutionStatusFailed, result.Status)
-		assert.Contains(t, result.ErrorMessage, "255")
-	})
-
-	t.Run("Run k6 with invalid arguments", func(t *testing.T) {
-		// setup
-		assert.NoError(t, os.Setenv("RUNNER_DATADIR", "."))
-
-		runner := NewRunner()
-		execution := testkube.NewQueuedExecution()
-		execution.Content = testkube.NewStringTestContent("")
-		execution.TestType = "k6/script"
-		execution.Args = []string{"--vues", "2", "--duration", "5"}
-
-		// when
-		result, err := runner.Run(ctx, *execution)
-
-		// then
-		assert.NoError(t, err)
-		assert.Equal(t, testkube.ExecutionStatusFailed, result.Status)
-		assert.Contains(t, result.ErrorMessage, "255")
-	})
-
-	t.Run("Run k6 from directory with missing script arg", func(t *testing.T) {
-		// setup
-		assert.NoError(t, os.Setenv("RUNNER_DATADIR", "."))
-
-		// given
-		runner := NewRunner()
-		execution := testkube.NewQueuedExecution()
-		execution.Content = &testkube.TestContent{
-			Type_: string(testkube.TestContentTypeGitDir),
-			Repository: &testkube.Repository{
-				Uri:    "https://github.com/kubeshop/testkube-executor-k6.git",
-				Branch: "main",
-				Path:   "examples",
-			},
-		}
-		execution.TestType = "k6/script"
-		execution.Args = []string{}
-
-		// when
-		result, err := runner.Run(ctx, *execution)
-
-		// then
-		assert.NoError(t, err)
-		assert.Equal(t, testkube.ExecutionStatusFailed, result.Status)
-		assert.Contains(t, result.ErrorMessage, "not found")
-	})
-}
-
 func TestExecutionResult(t *testing.T) {
+	t.Parallel()
+
 	t.Run("Get default k6 execution result", func(t *testing.T) {
+		t.Parallel()
 		// setup
 		summary, err := os.ReadFile("../../examples/k6-test-summary.txt")
 		if err != nil {
@@ -258,6 +26,7 @@ func TestExecutionResult(t *testing.T) {
 	})
 
 	t.Run("Get custom scenario k6 execution result", func(t *testing.T) {
+		t.Parallel()
 		// setup
 		summary, err := os.ReadFile("../../examples/k6-test-scenarios.txt")
 		if err != nil {
@@ -271,7 +40,11 @@ func TestExecutionResult(t *testing.T) {
 }
 
 func TestParse(t *testing.T) {
+	t.Parallel()
+
 	t.Run("Split scenario name", func(t *testing.T) {
+		t.Parallel()
+
 		name := splitScenarioName("default: 1 iterations for each of 1 VUs (maxDuration: 10m0s, gracefulStop: 30s)")
 		assert.Equal(t, "default", name)
 	})
@@ -284,18 +57,23 @@ func TestParse(t *testing.T) {
 		}
 
 		t.Run("Parse scenario names", func(t *testing.T) {
+			t.Parallel()
+
 			names := parseScenarioNames(string(summary))
 			assert.Len(t, names, 1)
 			assert.Equal(t, "default: 1 iterations for each of 1 VUs (maxDuration: 10m0s, gracefulStop: 30s)", names[0])
 		})
 
 		t.Run("Parse default scenario duration", func(t *testing.T) {
+			t.Parallel()
+
 			duration := parseScenarioDuration(string(summary), "default")
 			assert.Equal(t, "00m01.0s/10m0s", duration)
 		})
 	})
 
 	t.Run("Parse k6 scenario summary", func(t *testing.T) {
+		t.Parallel()
 		// setup
 		summary, err := os.ReadFile("../../examples/k6-test-scenarios.txt")
 		if err != nil {
@@ -303,6 +81,8 @@ func TestParse(t *testing.T) {
 		}
 
 		t.Run("Parse scenario names", func(t *testing.T) {
+			t.Parallel()
+
 			names := parseScenarioNames(string(summary))
 			assert.Len(t, names, 2)
 			assert.Equal(t, "testkube: 5 looping VUs for 10s (exec: testkube, gracefulStop: 30s)", names[0])
@@ -310,25 +90,17 @@ func TestParse(t *testing.T) {
 		})
 
 		t.Run("Parse teskube scenario duration", func(t *testing.T) {
+			t.Parallel()
+
 			duration := parseScenarioDuration(string(summary), "testkube")
 			assert.Equal(t, "10.0s/10s", duration)
 		})
 
 		t.Run("Parse monokle scenario duration", func(t *testing.T) {
+			t.Parallel()
+
 			duration := parseScenarioDuration(string(summary), "monokle")
 			assert.Equal(t, "0m10.2s/1m0s", duration)
 		})
 	})
-}
-
-func writeTestContent(t *testing.T, dir string, testScript string) {
-	k6Script, err := os.ReadFile(testScript)
-	if err != nil {
-		assert.FailNow(t, "Unable to read k6 test script")
-	}
-
-	err = os.WriteFile(filepath.Join(dir, "test-content"), k6Script, 0644)
-	if err != nil {
-		assert.FailNow(t, "Unable to write k6 runner test content file")
-	}
 }

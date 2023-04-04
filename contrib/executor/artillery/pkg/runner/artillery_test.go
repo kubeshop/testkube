@@ -20,7 +20,10 @@ func TestRun(t *testing.T) {
 	t.Run("runner should run test based on execution data", func(t *testing.T) {
 		t.Parallel()
 
-		tempDir, _ := os.MkdirTemp("", "*")
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
+
 		params := envs.Params{DataDir: tempDir}
 		runner, err := NewArtilleryRunner(ctx, params)
 		assert.NoError(t, err)
