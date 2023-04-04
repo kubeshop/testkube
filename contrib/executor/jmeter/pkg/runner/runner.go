@@ -196,7 +196,7 @@ func getEntrypoint() (entrypoint string) {
 	if err != nil {
 		wd = "."
 	}
-	return filepath.Join(wd, "scripts/entrypoint.sh")
+	return filepath.Join(wd, "testkube/contrib/executor/jmeter/scripts/entrypoint.sh")
 }
 
 func MapResultsToExecutionResults(out []byte, results parser.Results) (result testkube.ExecutionResult) {

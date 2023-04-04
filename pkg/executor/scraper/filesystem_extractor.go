@@ -25,7 +25,7 @@ func NewArchiveFilesystemExtractor(fs filesystem.FileSystem) *ArchiveFilesystemE
 
 func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths []string, process ProcessFn) error {
 	log.DefaultLogger.Infof("extracting files from directories: %v", paths)
-	var filePaths []string
+	var archiveFiles []*archive.File
 	for _, dir := range paths {
 		log.DefaultLogger.Debugf("walking directory: %v", dir)
 		err := e.fs.Walk(
@@ -41,7 +41,11 @@ func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths []string
 					return nil
 				}
 
-				filePaths = append(filePaths, path)
+				archiveFile, err := e.newArchiveFile(dir, path)
+				if err != nil {
+					return errors.Wrapf(err, "error creating archive file for path %s", path)
+				}
+				archiveFiles = append(archiveFiles, archiveFile)
 				return nil
 			},
 		)
@@ -51,26 +55,16 @@ func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths []string
 		}
 	}
 
-	archiveFiles := make([]*archive.File, 0, len(filePaths))
-	for _, path := range filePaths {
-		archiveFile, err := e.newArchiveFile(path)
-		if err != nil {
-			return errors.Wrapf(err, "error creating archive file for path %s", path)
-		}
-		archiveFiles = append(archiveFiles, archiveFile)
-	}
-
 	tarballService := archive.NewTarballService()
 	var artifactsTarball bytes.Buffer
 	log.DefaultLogger.Infof("creating artifacts tarball with %d files", len(archiveFiles))
-	meta, err := tarballService.Create(&artifactsTarball, archiveFiles)
-	if err != nil {
+	if err := tarballService.Create(&artifactsTarball, archiveFiles); err != nil {
 		return errors.Wrapf(err, "error creating tarball")
 	}
 
 	object := &Object{
 		Name:     "artifacts.tar.gz",
-		Size:     meta.Size,
+		Size:     int64(artifactsTarball.Len()),
 		Data:     &artifactsTarball,
 		DataType: DataTypeTarball,
 	}
@@ -81,7 +75,7 @@ func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths []string
 	return nil
 }
 
-func (e *ArchiveFilesystemExtractor) newArchiveFile(path string) (*archive.File, error) {
+func (e *ArchiveFilesystemExtractor) newArchiveFile(baseDir string, path string) (*archive.File, error) {
 	f, err := e.fs.OpenFileRO(path)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error opening file %s", path)
@@ -92,8 +86,16 @@ func (e *ArchiveFilesystemExtractor) newArchiveFile(path string) (*archive.File,
 		return nil, errors.Wrapf(err, "error getting file stat %s", path)
 	}
 
+	relpath, err := filepath.Rel(baseDir, path)
+	if err != nil {
+		return nil, errors.Wrapf(err, "error getting relative path for %s", path)
+	}
+	if relpath == "." {
+		relpath = stat.Name()
+	}
+
 	archiveFile := archive.File{
-		Name:    path,
+		Name:    relpath,
 		Size:    stat.Size(),
 		Mode:    int64(stat.Mode()),
 		ModTime: stat.ModTime(),

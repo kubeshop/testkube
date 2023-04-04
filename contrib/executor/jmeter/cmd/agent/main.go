@@ -11,7 +11,6 @@ import (
 
 	"github.com/kubeshop/testkube/contrib/executor/jmeter/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/executor/agent"
-	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func main() {
@@ -23,7 +22,8 @@ func main() {
 	}
 	r, err := runner.NewRunner(ctx, params)
 	if err != nil {
-		ui.Err(err)
+		output.PrintError(os.Stderr, errors.Wrap(err, "error instantiating JMeter Executor"))
+		os.Exit(1)
 	}
 	agent.Run(ctx, r, os.Args)
 }

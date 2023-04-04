@@ -33,8 +33,7 @@ func TestMinIOUploader_Upload_Tarball_Integration(t *testing.T) {
 
 	var buf bytes.Buffer
 	tarballService := archive.NewTarballService()
-	_, err = tarballService.Create(&buf, files)
-	if err != nil {
+	if err = tarballService.Create(&buf, files); err != nil {
 		t.Fatalf("error creating tarball: %v", err)
 	}
 

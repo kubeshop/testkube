@@ -22,7 +22,7 @@ func TestTarball_Extract(t *testing.T) {
 		{Name: "testfile.txt", Mode: 0644, Size: 9, ModTime: time.Now(), Data: bytes.NewBufferString(content)},
 		{Name: "../hack.txt", Mode: 0644, Size: 9, ModTime: time.Now(), Data: bytes.NewBufferString(content)},
 	}
-	if _, err := tarball.Create(&buf, files); err != nil {
+	if err := tarball.Create(&buf, files); err != nil {
 		t.Fatalf("error creating tarball: %v", err)
 	}
 
@@ -56,7 +56,7 @@ func TestTarball_Create(t *testing.T) {
 
 	var buf bytes.Buffer
 	tarball := NewTarballService()
-	if _, err := tarball.Create(&buf, files); err != nil {
+	if err := tarball.Create(&buf, files); err != nil {
 		t.Fatalf("error creating tarball: %v", err)
 	}
 

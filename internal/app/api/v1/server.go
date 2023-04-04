@@ -195,18 +195,6 @@ func (s *TestkubeAPI) InitEnvs() {
 	}
 }
 
-//func (s *TestkubeAPI) InitStorage() {
-//	s.Storage = minio.NewClient(
-//		s.storageParams.Endpoint,
-//		s.storageParams.AccessKeyId,
-//		s.storageParams.SecretAccessKey,
-//		s.storageParams.Reg,
-//		s.storageParams.Token,
-//		s.storageParams.Bucket,
-//		s.storageParams.SSL,
-//	)
-//}
-
 func (s *TestkubeAPI) InitRoutes() {
 	s.Routes.Static("/api-docs", "./api/v1")
 	s.Routes.Use(cors.New())
