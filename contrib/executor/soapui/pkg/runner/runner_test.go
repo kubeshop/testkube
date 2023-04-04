@@ -20,6 +20,7 @@ import (
 )
 
 func TestRun(t *testing.T) {
+	t.Skipf("Skipping integration test %s until it is installed in CI", t.Name())
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
