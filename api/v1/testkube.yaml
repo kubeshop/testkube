@@ -2588,6 +2588,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with the input"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "could not upload file"
           content:
