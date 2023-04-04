@@ -7,9 +7,20 @@ To migrate Testkube OSS to Cloud you need to install Testkube in Cloud Agent mod
 
 Please follow the [install steps](installing-agent.md) to get started using the Testkube Agent.
 
-## Setting the Testkube CLI contenxt to the agent
+```
+helm repo add kubeshop https://kubeshop.github.io/helm-charts ; helm repo update && helm upgrade --install --create-namespace testkube kubeshop/testkube --set testkube-api.cloud.key=tkcagnt_aaaaaaaaaaaaaaaaaaaaakey --set testkube-api.minio.enabled=false --set mongodb.enabled=false --namespace testkube
+```
 
-Please follow the [install steps](managing-cli-context.md) to configure your Testkube CLI in Cloud mode.
+WARNING! Please keep in mind that default install will REMOVE existing MongoDB, Minio and Dashboard pods!
+
+To keep them set below options to true (3 values for MongoDB, MinIO, Dashboard):
+```sh
+ --set testkube-api.minio.enabled=true --set mongodb.enabled=true --set testkube-dashboard.enabled=true
+```
+
+## Setting the Testkube CLI context to the agent mode
+
+Please follow the [context management](managing-cli-context.md) to configure your Testkube CLI in Cloud mode.
 
 
 ## Migrating the Testkube Resources
