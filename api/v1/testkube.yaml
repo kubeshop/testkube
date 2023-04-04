@@ -2245,7 +2245,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/DebugInfo"
         500:
-          description: "problem with getting debug information"
+          description: "problem with getting execution logs from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with getting debug information from the Kuberenetes cluster"
           content:
             application/problem+json:
               schema:

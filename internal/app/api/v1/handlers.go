@@ -1,10 +1,9 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/version"
 
@@ -79,29 +78,30 @@ func (s *TestkubeAPI) RoutesHandler() fiber.Handler {
 // DebugHandler is a handler to get debug information
 func (s *TestkubeAPI) DebugHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to get debug information"
 		clientSet, err := k8sclient.ConnectToK8s()
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, errors.Wrap(err, "could not connect to cluster"))
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: could not connect to cluster: %w", errPrefix, err))
 		}
 
 		clusterVersion, err := k8sclient.GetClusterVersion(clientSet)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, errors.Wrap(err, "could not get cluster version"))
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: could not get cluster version: %w", errPrefix, err))
 		}
 
 		apiLogs, err := k8sclient.GetAPIServerLogs(c.UserContext(), clientSet, s.Namespace)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, errors.Wrap(err, "could not get api server logs"))
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: could not get api server logs: %w", errPrefix, err))
 		}
 
 		operatorLogs, err := k8sclient.GetOperatorLogs(c.UserContext(), clientSet, s.Namespace)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, errors.Wrap(err, "could not get operator logs"))
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: could not get operator logs: %w", errPrefix, err))
 		}
 
 		executionLogs, err := s.GetLatestExecutionLogs(c.UserContext())
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, errors.Wrap(err, "could not get execution logs"))
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not get execution logs: %w", errPrefix, err))
 		}
 
 		return c.JSON(testkube.DebugInfo{
