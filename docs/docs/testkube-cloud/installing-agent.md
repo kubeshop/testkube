@@ -23,7 +23,7 @@ You will need *Helm* installed and `kubectl` configured with access to your Kube
 - To install `helm` just follow [install instrcutions on Helm web site](https://helm.sh/docs/intro/install/)
 - To install `kubectl` follow [Kubernetes docs](https://kubernetes.io/docs/tasks/tools/)
 
-![Install steps 1](https://user-images.githubusercontent.com/30776/206460225-a71ee0ef-15f0-482a-a188-f8d0cfc485cb.png)
+![install-steps 1](https://user-images.githubusercontent.com/30776/229802501-69a76f00-8e56-41de-b3d5-8315b6902cc2.png)
 
 5. After some time, you should see Helm installation notice: 
 
