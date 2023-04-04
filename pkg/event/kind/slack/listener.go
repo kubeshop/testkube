@@ -11,7 +11,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/slack"
 )
 
-var _ common.Listener = &SlackListener{}
+var _ common.Listener = (*SlackListener)(nil)
 
 func NewSlackListener(name, selector string, events []testkube.EventType, notifier *slack.Notifier) *SlackListener {
 	return &SlackListener{

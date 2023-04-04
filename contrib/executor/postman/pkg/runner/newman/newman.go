@@ -1,6 +1,7 @@
 package newman
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -17,12 +18,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func NewNewmanRunner() (*NewmanRunner, error) {
+func NewNewmanRunner(params envs.Params) (*NewmanRunner, error) {
 	output.PrintLog(fmt.Sprintf("%s Preparing test runner", ui.IconTruck))
-	params, err := envs.LoadTestkubeVariables()
-	if err != nil {
-		return nil, fmt.Errorf("could not initialize Artillery runner variables: %w", err)
-	}
 
 	return &NewmanRunner{
 		Params:  params,
@@ -36,8 +33,10 @@ type NewmanRunner struct {
 	Fetcher content.ContentFetcher
 }
 
+var _ runner.Runner = &NewmanRunner{}
+
 // Run runs particular test content on top of newman binary
-func (r *NewmanRunner) Run(execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+func (r *NewmanRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
 	output.PrintLog(fmt.Sprintf("%s Preparing for test run", ui.IconTruck))
 
 	if r.Params.GitUsername != "" || r.Params.GitToken != "" {
@@ -114,7 +113,7 @@ func (r *NewmanRunner) Run(execution testkube.Execution) (result testkube.Execut
 	return result, nil
 }
 
-func (r NewmanRunner) GetNewmanResult(tmpName string, out []byte) (newmanResult NewmanExecutionResult, err error) {
+func (r *NewmanRunner) GetNewmanResult(tmpName string, out []byte) (newmanResult NewmanExecutionResult, err error) {
 	newmanResult.Output = string(out)
 
 	// parse JSON output of newman test

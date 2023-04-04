@@ -1,14 +1,18 @@
 package runner
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
 
-	junit "github.com/joshdk/go-junit"
+	"github.com/kubeshop/testkube/pkg/envs"
+
+	"github.com/pkg/errors"
+
+	"github.com/joshdk/go-junit"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
@@ -18,47 +22,36 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-type Params struct {
-	Datadir string // RUNNER_DATADIR
-}
+func NewRunner(params envs.Params) *MavenRunner {
+	outputPkg.PrintLogf("%s Preparing test runner", ui.IconTruck)
 
-func NewRunner() *MavenRunner {
-	outputPkg.PrintLog(fmt.Sprintf("%s Preparing test runner", ui.IconTruck))
-
-	outputPkg.PrintLog(fmt.Sprintf("%s Reading environment variables...", ui.IconWorld))
-	params := Params{
-		Datadir: os.Getenv("RUNNER_DATADIR"),
-	}
-	outputPkg.PrintLog(fmt.Sprintf("%s Environment variables read successfully", ui.IconCheckMark))
-	outputPkg.PrintLog(fmt.Sprintf("RUNNER_DATADIR=\"%s\"", params.Datadir))
-
-	runner := &MavenRunner{
+	return &MavenRunner{
 		params: params,
 	}
-
-	return runner
 }
 
 type MavenRunner struct {
-	params Params
+	params envs.Params
 }
 
-func (r *MavenRunner) Run(execution testkube.Execution) (result testkube.ExecutionResult, err error) {
-	outputPkg.PrintLog(fmt.Sprintf("%s Preparing for test run", ui.IconTruck))
+var _ runner.Runner = &MavenRunner{}
+
+func (r *MavenRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+	outputPkg.PrintLogf("%s Preparing for test run", ui.IconTruck)
 	err = r.Validate(execution)
 	if err != nil {
 		return result, err
 	}
 
 	// check that the datadir exists
-	_, err = os.Stat(r.params.Datadir)
+	_, err = os.Stat(r.params.DataDir)
 	if errors.Is(err, os.ErrNotExist) {
-		outputPkg.PrintLog(fmt.Sprintf("%s Datadir %s does not exist", ui.IconCross, r.params.Datadir))
+		outputPkg.PrintLogf("%s Datadir %s does not exist", ui.IconCross, r.params.DataDir)
 		return result, err
 	}
 
 	// check that pom.xml file exists
-	directory := filepath.Join(r.params.Datadir, "repo", execution.Content.Repository.Path)
+	directory := filepath.Join(r.params.DataDir, "repo", execution.Content.Repository.Path)
 
 	fileInfo, err := os.Stat(directory)
 	if err != nil {
@@ -66,16 +59,16 @@ func (r *MavenRunner) Run(execution testkube.Execution) (result testkube.Executi
 	}
 
 	if !fileInfo.IsDir() {
-		outputPkg.PrintLog(fmt.Sprintf("%s passing maven test as single file not implemented yet", ui.IconCross))
-		return result, fmt.Errorf("passing maven test as single file not implemented yet")
+		outputPkg.PrintLogf("%s passing maven test as single file not implemented yet", ui.IconCross)
+		return result, errors.New("passing maven test as single file not implemented yet")
 	}
 
 	pomXml := filepath.Join(directory, "pom.xml")
 
 	_, pomXmlErr := os.Stat(pomXml)
 	if errors.Is(pomXmlErr, os.ErrNotExist) {
-		outputPkg.PrintLog(fmt.Sprintf("%s No pom.xml found", ui.IconCross))
-		return *result.Err(fmt.Errorf("no pom.xml found")), nil
+		outputPkg.PrintLogf("%s No pom.xml found", ui.IconCross)
+		return *result.Err(errors.New("no pom.xml found")), nil
 	}
 
 	// determine the Maven command to use
@@ -91,17 +84,17 @@ func (r *MavenRunner) Run(execution testkube.Execution) (result testkube.Executi
 	envManager.GetReferenceVars(envManager.Variables)
 
 	// pass additional executor arguments/flags to Gradle
-	args := []string{}
+	var args []string
 	args = append(args, execution.Args...)
 
 	if execution.VariablesFile != "" {
-		outputPkg.PrintLog(fmt.Sprintf("%s Creating settings.xml file", ui.IconWorld))
+		outputPkg.PrintLogf("%s Creating settings.xml file", ui.IconWorld)
 		settingsXML, err := createSettingsXML(directory, execution.VariablesFile)
 		if err != nil {
-			outputPkg.PrintLog(fmt.Sprintf("%s Could not create settings.xml", ui.IconCross))
-			return *result.Err(fmt.Errorf("could not create settings.xml")), nil
+			outputPkg.PrintLogf("%s Could not create settings.xml", ui.IconCross)
+			return *result.Err(errors.New("could not create settings.xml")), nil
 		}
-		outputPkg.PrintLog(fmt.Sprintf("%s Successfully created settings.xml", ui.IconCheckMark))
+		outputPkg.PrintLogf("%s Successfully created settings.xml", ui.IconCheckMark)
 		args = append(args, "--settings", settingsXML)
 	}
 
@@ -122,7 +115,7 @@ func (r *MavenRunner) Run(execution testkube.Execution) (result testkube.Executi
 
 	runPath := directory
 	if execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
-		runPath = filepath.Join(r.params.Datadir, "repo", execution.Content.Repository.WorkingDir)
+		runPath = filepath.Join(r.params.DataDir, "repo", execution.Content.Repository.WorkingDir)
 	}
 
 	output, err := executor.Run(runPath, mavenCommand, envManager, args...)
@@ -130,11 +123,11 @@ func (r *MavenRunner) Run(execution testkube.Execution) (result testkube.Executi
 
 	if err == nil {
 		result.Status = testkube.ExecutionStatusPassed
-		outputPkg.PrintLog(fmt.Sprintf("%s Test run successful", ui.IconCheckMark))
+		outputPkg.PrintLogf("%s Test run successful", ui.IconCheckMark)
 	} else {
 		result.Status = testkube.ExecutionStatusFailed
 		result.ErrorMessage = err.Error()
-		outputPkg.PrintLog(fmt.Sprintf("%s Test run failed: %s", ui.IconCross, err.Error()))
+		outputPkg.PrintLogf("%s Test run failed: %s", ui.IconCross, err.Error())
 		if strings.Contains(result.ErrorMessage, "exit status 1") {
 			// probably some tests have failed
 			result.ErrorMessage = "build failed with an exception"
@@ -191,7 +184,7 @@ func createSettingsXML(directory string, content string) (string, error) {
 	settingsXML := filepath.Join(directory, "settings.xml")
 	err := os.WriteFile(settingsXML, []byte(content), 0644)
 	if err != nil {
-		return "", fmt.Errorf("could not create settings.xml: %w", err)
+		return "", errors.Errorf("could not create settings.xml: %v", err)
 	}
 
 	return settingsXML, nil
@@ -206,18 +199,18 @@ func (r *MavenRunner) GetType() runner.Type {
 func (r *MavenRunner) Validate(execution testkube.Execution) error {
 
 	if execution.Content == nil {
-		outputPkg.PrintLog(fmt.Sprintf("%s Can't find any content to run in execution data", ui.IconCross))
-		return fmt.Errorf("can't find any content to run in execution data: %+v", execution)
+		outputPkg.PrintLogf("%s Can't find any content to run in execution data", ui.IconCross)
+		return errors.Errorf("can't find any content to run in execution data: %+v", execution)
 	}
 
 	if execution.Content.Repository == nil {
-		outputPkg.PrintLog(fmt.Sprintf("%s Maven executor handles only repository based tests, but repository is nil", ui.IconCross))
-		return fmt.Errorf("maven executor handles only repository based tests, but repository is nil")
+		outputPkg.PrintLogf("%s Maven executor handles only repository based tests, but repository is nil", ui.IconCross)
+		return errors.New("maven executor handles only repository based tests, but repository is nil")
 	}
 
 	if execution.Content.Repository.Branch == "" && execution.Content.Repository.Commit == "" {
-		outputPkg.PrintLog(fmt.Sprintf("%s Can't find branch or commit in params must use one or the other, repo %+v", ui.IconCross, execution.Content.Repository))
-		return fmt.Errorf("can't find branch or commit in params must use one or the other, repo:%+v", execution.Content.Repository)
+		outputPkg.PrintLogf("%s Can't find branch or commit in params must use one or the other, repo %+v", ui.IconCross, execution.Content.Repository)
+		return errors.Errorf("can't find branch or commit in params must use one or the other, repo:%+v", execution.Content.Repository)
 	}
 
 	return nil

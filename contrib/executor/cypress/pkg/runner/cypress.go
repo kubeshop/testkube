@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
+
 	"github.com/joshdk/go-junit"
 	"github.com/pkg/errors"
 
@@ -20,16 +22,18 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func NewCypressRunner(dependency string) (*CypressRunner, error) {
-	output.PrintLog(fmt.Sprintf("%s Preparing test runner", ui.IconTruck))
-	params, err := envs.LoadTestkubeVariables()
-	if err != nil {
-		return nil, errors.Errorf("could not initialize Cypress runner variables: %v", err)
-	}
+func NewCypressRunner(ctx context.Context, dependency string, params envs.Params) (*CypressRunner, error) {
+	output.PrintLogf("%s Preparing test runner", ui.IconTruck)
 
+	var err error
 	r := &CypressRunner{
 		Params:     params,
 		dependency: dependency,
+	}
+
+	r.Scraper, err = factory.TryGetScrapper(ctx, params)
+	if err != nil {
+		return nil, err
 	}
 
 	return r, nil
@@ -38,18 +42,19 @@ func NewCypressRunner(dependency string) (*CypressRunner, error) {
 // CypressRunner - implements runner interface used in worker to start test execution
 type CypressRunner struct {
 	Params     envs.Params
+	Scraper    scraper.Scraper
 	dependency string
 }
 
-func (r *CypressRunner) Run(execution testkube.Execution) (result testkube.ExecutionResult, err error) {
-	output.PrintLog(fmt.Sprintf("%s Preparing for test run", ui.IconTruck))
+func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+	output.PrintLogf("%s Preparing for test run", ui.IconTruck)
 	// make some validation
 	err = r.Validate(execution)
 	if err != nil {
 		return result, err
 	}
 
-	output.PrintLog(fmt.Sprintf("%s Checking test content from %s...", ui.IconBox, execution.Content.Type_))
+	output.PrintLogf("%s Checking test content from %s...", ui.IconBox, execution.Content.Type_)
 	// check that the datadir exists
 	_, err = os.Stat(r.Params.DataDir)
 	if errors.Is(err, os.ErrNotExist) {
@@ -68,17 +73,17 @@ func (r *CypressRunner) Run(execution testkube.Execution) (result testkube.Execu
 	}
 
 	if !fileInfo.IsDir() {
-		output.PrintLog(fmt.Sprintf("%s Using file...", ui.IconTruck))
+		output.PrintLogf("%s Using file...", ui.IconTruck)
 
 		// TODO add cypress project structure
 		// TODO checkout this repo with `skeleton` path
 		// TODO overwrite skeleton/cypress/integration/test.js
 		//      file with execution content git file
-		output.PrintLog(fmt.Sprintf("%s Passing Cypress test as single file not implemented yet", ui.IconCross))
+		output.PrintLogf("%s Passing Cypress test as single file not implemented yet", ui.IconCross)
 		return result, errors.Errorf("passing cypress test as single file not implemented yet")
 	}
 
-	output.PrintLog(fmt.Sprintf("%s Test content checked", ui.IconCheckMark))
+	output.PrintLogf("%s Test content checked", ui.IconCheckMark)
 
 	out, err := r.installModule(runPath)
 	if err != nil {
@@ -96,7 +101,7 @@ func (r *CypressRunner) Run(execution testkube.Execution) (result testkube.Execu
 	envVars := make([]string, 0, len(envManager.Variables))
 	for _, value := range envManager.Variables {
 		if !value.IsSecret() {
-			output.PrintLog(fmt.Sprintf("%s=%s", value.Name, value.Value))
+			output.PrintLogf("%s=%s", value.Name, value.Value)
 		}
 		envVars = append(envVars, fmt.Sprintf("%s=%s", value.Name, value.Value))
 	}
@@ -117,7 +122,7 @@ func (r *CypressRunner) Run(execution testkube.Execution) (result testkube.Execu
 	out = envManager.ObfuscateSecrets(out)
 	suites, serr := junit.IngestFile(junitReportPath)
 	result = MapJunitToExecutionResults(out, suites)
-	output.PrintLog(fmt.Sprintf("%s Mapped Junit to Execution Results...", ui.IconCheckMark))
+	output.PrintLogf("%s Mapped Junit to Execution Results...", ui.IconCheckMark)
 
 	// scrape artifacts first even if there are errors above
 	if r.Params.ScrapperEnabled {
@@ -126,9 +131,9 @@ func (r *CypressRunner) Run(execution testkube.Execution) (result testkube.Execu
 			filepath.Join(projectPath, "cypress/screenshots"),
 		}
 
-		output.PrintLog(fmt.Sprintf("Scraping directories: %v", directories))
+		output.PrintLogf("Scraping directories: %v", directories)
 
-		if err := factory.Scrape(context.Background(), directories, execution, r.Params); err != nil {
+		if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
 			return *result.WithErrors(err), nil
 		}
 	}
@@ -177,28 +182,28 @@ func (r *CypressRunner) installModule(runPath string) (out []byte, err error) {
 			}
 		}
 	} else {
-		output.PrintLog(fmt.Sprintf("%s failed checking package.json file: %s", ui.IconCross, err.Error()))
+		output.PrintLogf("%s failed checking package.json file: %s", ui.IconCross, err.Error())
 		return nil, errors.Errorf("checking package.json file: %v", err)
 	}
 	return
 }
 
-// Validate checks if Execution has valid data in context of Cypress executor
-// Cypress executor runs currently only based on cypress project
+// Validate checks if Execution has valid data in context of Cypress executor.
+// Cypress executor runs currently only based on Cypress project
 func (r *CypressRunner) Validate(execution testkube.Execution) error {
 
 	if execution.Content == nil {
-		output.PrintLog(fmt.Sprintf("%s Invalid input: can't find any content to run in execution data", ui.IconCross))
+		output.PrintLogf("%s Invalid input: can't find any content to run in execution data", ui.IconCross)
 		return errors.Errorf("can't find any content to run in execution data: %+v", execution)
 	}
 
 	if execution.Content.Repository == nil {
-		output.PrintLog(fmt.Sprintf("%s Cypress executor handles only repository based tests, but repository is nil", ui.IconCross))
+		output.PrintLogf("%s Cypress executor handles only repository based tests, but repository is nil", ui.IconCross)
 		return errors.Errorf("cypress executor handles only repository based tests, but repository is nil")
 	}
 
 	if execution.Content.Repository.Branch == "" && execution.Content.Repository.Commit == "" {
-		output.PrintLog(fmt.Sprintf("%s can't find branch or commit in params, repo:%+v", ui.IconCross, execution.Content.Repository))
+		output.PrintLogf("%s can't find branch or commit in params, repo:%+v", ui.IconCross, execution.Content.Repository)
 		return errors.Errorf("can't find branch or commit in params, repo:%+v", execution.Content.Repository)
 	}
 

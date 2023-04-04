@@ -1,18 +1,31 @@
 package runner
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/kubeshop/testkube/pkg/utils/test"
+
+	"github.com/golang/mock/gomock"
+
+	"github.com/kubeshop/testkube/pkg/envs"
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
+
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kubeshop/testkube/contrib/executor/soapui/pkg/mock"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func TestRun(t *testing.T) {
+func TestRun_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	t.Skipf("Skipping integration test %s until it is installed in CI", t.Name())
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
 	tempDir := os.TempDir()
 	testXML := "./example/REST-Project-1-soapui-project.xml"
 	writeTestContent(t, tempDir, testXML)
@@ -29,43 +42,59 @@ func TestRun(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		scraper         func(id string, directories []string) error
 		testFileCreator func() (*os.File, error)
 		execution       testkube.Execution
 		expectedError   string
 		expectedStatus  testkube.ExecutionStatus
+		scraperBuilder  func() scraper.Scraper
 	}{
 		{
 			name:            "Successful test, successful scraper",
-			scraper:         func(id string, directories []string) error { return nil },
 			testFileCreator: createSuccessfulScript,
 			execution:       e,
 			expectedError:   "",
 			expectedStatus:  *testkube.ExecutionStatusPassed,
+			scraperBuilder: func() scraper.Scraper {
+				s := scraper.NewMockScraper(mockCtrl)
+				s.EXPECT().Scrape(gomock.Any(), []string{"/logs"}, gomock.Eq(e)).Return(nil)
+				return s
+			},
 		},
 		{
 			name:            "Failing test, successful scraper",
-			scraper:         func(id string, directories []string) error { return nil },
 			testFileCreator: createFailingScript,
 			execution:       e,
 			expectedError:   "",
 			expectedStatus:  *testkube.ExecutionStatusFailed,
+			scraperBuilder: func() scraper.Scraper {
+				s := scraper.NewMockScraper(mockCtrl)
+				s.EXPECT().Scrape(gomock.Any(), []string{"/logs"}, gomock.Eq(e)).Return(nil)
+				return s
+			},
 		},
 		{
 			name:            "Successful test, failing scraper",
-			scraper:         func(id string, directories []string) error { return errors.New("Scraping failed") },
 			testFileCreator: createSuccessfulScript,
 			execution:       e,
-			expectedError:   "failed getting artifacts: Scraping failed",
+			expectedError:   "error scraping artifacts from SoapUI executor: Scraping failed",
 			expectedStatus:  *testkube.ExecutionStatusPassed,
+			scraperBuilder: func() scraper.Scraper {
+				s := scraper.NewMockScraper(mockCtrl)
+				s.EXPECT().Scrape(gomock.Any(), []string{"/logs"}, gomock.Eq(e)).Return(errors.New("Scraping failed"))
+				return s
+			},
 		},
 		{
 			name:            "Failing test, failing scraper",
-			scraper:         func(id string, directories []string) error { return errors.New("Scraping failed") },
 			testFileCreator: createFailingScript,
 			execution:       e,
-			expectedError:   "failed getting artifacts: Scraping failed",
+			expectedError:   "error scraping artifacts from SoapUI executor: Scraping failed",
 			expectedStatus:  *testkube.ExecutionStatusFailed,
+			scraperBuilder: func() scraper.Scraper {
+				s := scraper.NewMockScraper(mockCtrl)
+				s.EXPECT().Scrape(gomock.Any(), []string{"/logs"}, gomock.Eq(e)).Return(errors.New("Scraping failed"))
+				return s
+			},
 		},
 	}
 
@@ -74,20 +103,18 @@ func TestRun(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			s := mock.Scraper{}
-			s.ScrapeFn = test.scraper
-
 			file, err := test.testFileCreator()
 			assert.NoError(t, err)
 			defer file.Close()
-
+			params := envs.Params{DataDir: tempDir, ScrapperEnabled: true}
 			runner := SoapUIRunner{
+				SoapUILogsPath: "/logs",
 				SoapUIExecPath: file.Name(),
-				Scraper:        s,
-				DataDir:        tempDir,
+				Params:         params,
+				Scraper:        test.scraperBuilder(),
 			}
 
-			res, err := runner.Run(test.execution)
+			res, err := runner.Run(context.Background(), test.execution)
 			if test.expectedError == "" {
 				assert.NoError(t, err)
 			} else {

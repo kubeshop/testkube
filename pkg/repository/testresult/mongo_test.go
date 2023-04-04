@@ -4,9 +4,10 @@ package testresult
 
 import (
 	"context"
-	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"testing"
 	"time"
+
+	"github.com/kubeshop/testkube/pkg/repository/storage"
 
 	"github.com/stretchr/testify/require"
 

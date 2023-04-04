@@ -336,7 +336,7 @@ func (s *TestkubeAPI) GetArtifactHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
 
-		file, err := s.Storage.DownloadFile(execution.Id, fileName)
+		file, err := s.Storage.DownloadFile(c.Context(), execution.Id, fileName)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
@@ -358,7 +358,7 @@ func (s *TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
-		files, err := s.Storage.ListFiles(execution.Id)
+		files, err := s.Storage.ListFiles(c.Context(), execution.Id)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}

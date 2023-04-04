@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,14 +10,17 @@ import (
 )
 
 func TestRun(t *testing.T) {
+	ctx := context.Background()
 
 	t.Run("successful result", func(t *testing.T) {
 		runner := NewRunner()
-		res, err := runner.Run(testkube.Execution{
-			Content: &testkube.TestContent{
-				Uri: "https://testkube.io",
-			},
-		})
+		res, err := runner.Run(
+			ctx,
+			testkube.Execution{
+				Content: &testkube.TestContent{
+					Uri: "https://testkube.io",
+				},
+			})
 
 		assert.NoError(t, err)
 		assert.Equal(t, testkube.ExecutionStatusPassed, res.Status)
@@ -24,11 +28,13 @@ func TestRun(t *testing.T) {
 
 	t.Run("failed 404 result", func(t *testing.T) {
 		runner := NewRunner()
-		res, err := runner.Run(testkube.Execution{
-			Content: &testkube.TestContent{
-				Uri: "https://testkube.io/some-non-existing-uri-blablablabl",
-			},
-		})
+		res, err := runner.Run(
+			ctx,
+			testkube.Execution{
+				Content: &testkube.TestContent{
+					Uri: "https://testkube.io/some-non-existing-uri-blablablabl",
+				},
+			})
 
 		assert.NoError(t, err)
 		assert.Equal(t, testkube.ExecutionStatusFailed, res.Status)
@@ -37,11 +43,13 @@ func TestRun(t *testing.T) {
 
 	t.Run("network connection issues returns errors", func(t *testing.T) {
 		runner := NewRunner()
-		_, err := runner.Run(testkube.Execution{
-			Content: &testkube.TestContent{
-				Uri: "blabla://non-existing-uri",
-			},
-		})
+		_, err := runner.Run(
+			ctx,
+			testkube.Execution{
+				Content: &testkube.TestContent{
+					Uri: "blabla://non-existing-uri",
+				},
+			})
 
 		assert.Error(t, err)
 	})

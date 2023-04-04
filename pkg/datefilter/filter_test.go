@@ -1,5 +1,3 @@
-//go:build integration
-
 package datefilter
 
 import (
@@ -10,6 +8,8 @@ import (
 )
 
 func TestIsPassingDateFilterWhenInvalidStartAndEndDateThenValidateAll(t *testing.T) {
+	t.Parallel()
+
 	assertion := require.New(t)
 	dFilter := NewDateFilter("", "")
 	assertion.True(dFilter.IsPassing(time.Now()), "Date filter should pass any value if the start date and end date are empty")
@@ -18,6 +18,8 @@ func TestIsPassingDateFilterWhenInvalidStartAndEndDateThenValidateAll(t *testing
 }
 
 func TestIsPassingDateFilterWhenStartIsValidAndEndDateInvalidThenValidateAllAfterStart(t *testing.T) {
+	t.Parallel()
+
 	assertion := require.New(t)
 	fiveDaysAgo := time.Now().AddDate(0, 0, -5).Format(DateFormatISO8601)
 	dFilter := NewDateFilter(fiveDaysAgo, "")
@@ -28,6 +30,8 @@ func TestIsPassingDateFilterWhenStartIsValidAndEndDateInvalidThenValidateAllAfte
 }
 
 func TestIsPassingDateFilterWhenStartIsValidAndEndValidThenOnlyDatesBetweenAreValidated(t *testing.T) {
+	t.Parallel()
+
 	assertion := require.New(t)
 	tenDaysAgo := time.Now().AddDate(0, 0, -10).Format(DateFormatISO8601)
 	twoDaysAgo := time.Now().AddDate(0, 0, -2).Format(DateFormatISO8601)
@@ -38,6 +42,8 @@ func TestIsPassingDateFilterWhenStartIsValidAndEndValidThenOnlyDatesBetweenAreVa
 }
 
 func TestIsPassingDateFilterWhenStartAndEndDateAreTheSameThenValidateForSameDate(t *testing.T) {
+	t.Parallel()
+
 	assertion := require.New(t)
 	now := time.Now().Format(DateFormatISO8601)
 	dFilter := NewDateFilter(now, now)

@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"os"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -21,7 +22,9 @@ type ExampleRunner struct {
 	Fetcher content.ContentFetcher
 }
 
-func (r *ExampleRunner) Run(execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+var _ runner.Runner = &ExampleRunner{}
+
+func (r *ExampleRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
 
 	// use `execution.Variables` for variables passed from Test/Execution
 	// variables of type "secret" will be automatically decoded

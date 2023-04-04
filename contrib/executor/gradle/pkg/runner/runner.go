@@ -1,14 +1,18 @@
 package runner
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 
-	junit "github.com/joshdk/go-junit"
+	"github.com/kubeshop/testkube/pkg/envs"
+
+	"github.com/pkg/errors"
+
+	"github.com/joshdk/go-junit"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
@@ -18,42 +22,29 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-type Params struct {
-	Datadir string // RUNNER_DATADIR
-}
+func NewRunner(params envs.Params) *GradleRunner {
+	output.PrintLogf("%s Preparing test runner", ui.IconTruck)
 
-func NewRunner() *GradleRunner {
-	output.PrintLog(fmt.Sprintf("%s Preparing test runner", ui.IconTruck))
-
-	output.PrintLog(fmt.Sprintf("%s Reading environment variables...", ui.IconWorld))
-	params := Params{
-		Datadir: os.Getenv("RUNNER_DATADIR"),
-	}
-	output.PrintLog(fmt.Sprintf("%s Environment variables read successfully", ui.IconCheckMark))
-	output.PrintLog(fmt.Sprintf("RUNNER_DATADIR=\"%s\"", params.Datadir))
-
-	runner := &GradleRunner{
+	return &GradleRunner{
 		params: params,
 	}
-
-	return runner
 }
 
 type GradleRunner struct {
-	params Params
+	params envs.Params
 }
 
-func (r *GradleRunner) Run(execution testkube.Execution) (result testkube.ExecutionResult, err error) {
-	output.PrintLog(fmt.Sprintf("%s Preparing for test run", ui.IconTruck))
+func (r *GradleRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+	output.PrintLogf("%s Preparing for test run", ui.IconTruck)
 	err = r.Validate(execution)
 	if err != nil {
 		return result, err
 	}
 
 	// check that the datadir exists
-	_, err = os.Stat(r.params.Datadir)
+	_, err = os.Stat(r.params.DataDir)
 	if errors.Is(err, os.ErrNotExist) {
-		output.PrintLog(fmt.Sprintf("%s Datadir %s does not exist", ui.IconCross, r.params.Datadir))
+		output.PrintLogf("%s Datadir %s does not exist", ui.IconCross, r.params.DataDir)
 		return result, err
 	}
 
@@ -62,7 +53,7 @@ func (r *GradleRunner) Run(execution testkube.Execution) (result testkube.Execut
 	envManager.GetReferenceVars(envManager.Variables)
 
 	// check settings.gradle or settings.gradle.kts files exist
-	directory := filepath.Join(r.params.Datadir, "repo", execution.Content.Repository.Path)
+	directory := filepath.Join(r.params.DataDir, "repo", execution.Content.Repository.Path)
 
 	fileInfo, err := os.Stat(directory)
 	if err != nil {
@@ -70,8 +61,8 @@ func (r *GradleRunner) Run(execution testkube.Execution) (result testkube.Execut
 	}
 
 	if !fileInfo.IsDir() {
-		output.PrintLog(fmt.Sprintf("%s passing gradle test as single file not implemented yet", ui.IconCross))
-		return result, fmt.Errorf("passing gradle test as single file not implemented yet")
+		output.PrintLogf("%s passing gradle test as single file not implemented yet", ui.IconCross)
+		return result, errors.Errorf("passing gradle test as single file not implemented yet")
 	}
 
 	settingsGradle := filepath.Join(directory, "settings.gradle")
@@ -80,8 +71,8 @@ func (r *GradleRunner) Run(execution testkube.Execution) (result testkube.Execut
 	_, settingsGradleErr := os.Stat(settingsGradle)
 	_, settingsGradleKtsErr := os.Stat(settingsGradleKts)
 	if errors.Is(settingsGradleErr, os.ErrNotExist) && errors.Is(settingsGradleKtsErr, os.ErrNotExist) {
-		output.PrintLog(fmt.Sprintf("%s no settings.gradle or settings.gradle.kts found", ui.IconCross))
-		return *result.Err(fmt.Errorf("no settings.gradle or settings.gradle.kts found")), nil
+		output.PrintLogf("%s no settings.gradle or settings.gradle.kts found", ui.IconCross)
+		return *result.Err(errors.New("no settings.gradle or settings.gradle.kts found")), nil
 	}
 
 	// determine the Gradle command to use
@@ -105,7 +96,7 @@ func (r *GradleRunner) Run(execution testkube.Execution) (result testkube.Execut
 
 	runPath := directory
 	if execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
-		runPath = filepath.Join(r.params.Datadir, "repo", execution.Content.Repository.WorkingDir)
+		runPath = filepath.Join(r.params.DataDir, "repo", execution.Content.Repository.WorkingDir)
 		args = append(args, "-p", directory)
 	}
 
@@ -113,18 +104,18 @@ func (r *GradleRunner) Run(execution testkube.Execution) (result testkube.Execut
 	out, err := executor.Run(runPath, gradleCommand, envManager, args...)
 	out = envManager.ObfuscateSecrets(out)
 
-	ls := []string{}
-	filepath.Walk("/data", func(path string, info fs.FileInfo, err error) error {
+	var ls []string
+	_ = filepath.Walk("/data", func(path string, info fs.FileInfo, err error) error {
 		ls = append(ls, path)
 		return nil
 	})
 	output.PrintEvent("/data content", ls)
 
 	if err == nil {
-		output.PrintLog(fmt.Sprintf("%s Test execution passed", ui.IconCheckMark))
+		output.PrintLogf("%s Test execution passed", ui.IconCheckMark)
 		result.Status = testkube.ExecutionStatusPassed
 	} else {
-		output.PrintLog(fmt.Sprintf("%s Test execution failed: %s", ui.IconCross, err.Error()))
+		output.PrintLogf("%s Test execution failed: %s", ui.IconCross, err.Error())
 		result.Status = testkube.ExecutionStatusFailed
 		result.ErrorMessage = err.Error()
 		if strings.Contains(result.ErrorMessage, "exit status 1") {
@@ -142,7 +133,7 @@ func (r *GradleRunner) Run(execution testkube.Execution) (result testkube.Execut
 	junitReportPath := filepath.Join(directory, "build", "test-results")
 	err = filepath.Walk(junitReportPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			output.PrintLog(fmt.Sprintf("%s Could not process reports: %s", ui.IconCross, err.Error()))
+			output.PrintLogf("%s Could not process reports: %s", ui.IconCross, err.Error())
 			return err
 		}
 
@@ -189,18 +180,18 @@ func (r *GradleRunner) GetType() runner.Type {
 func (r *GradleRunner) Validate(execution testkube.Execution) error {
 
 	if execution.Content == nil {
-		output.PrintLog(fmt.Sprintf("%s Can't find any content to run in execution data", ui.IconCross))
-		return fmt.Errorf("can't find any content to run in execution data: %+v", execution)
+		output.PrintLogf("%s Can't find any content to run in execution data", ui.IconCross)
+		return errors.Errorf("can't find any content to run in execution data: %+v", execution)
 	}
 
 	if execution.Content.Repository == nil {
-		output.PrintLog(fmt.Sprintf("%s Gradle executor handles only repository based tests, but repository is nil", ui.IconCross))
-		return fmt.Errorf("gradle executor handles only repository based tests, but repository is nil")
+		output.PrintLogf("%s Gradle executor handles only repository based tests, but repository is nil", ui.IconCross)
+		return errors.Errorf("gradle executor handles only repository based tests, but repository is nil")
 	}
 
 	if execution.Content.Repository.Branch == "" && execution.Content.Repository.Commit == "" {
-		output.PrintLog(fmt.Sprintf("%s Can't find branch or commit in params must use one or the other, repo %+v", ui.IconCross, execution.Content.Repository))
-		return fmt.Errorf("can't find branch or commit in params must use one or the other, repo:%+v", execution.Content.Repository)
+		output.PrintLogf("%s Can't find branch or commit in params must use one or the other, repo %+v", ui.IconCross, execution.Content.Repository)
+		return errors.Errorf("can't find branch or commit in params must use one or the other, repo:%+v", execution.Content.Repository)
 	}
 
 	return nil

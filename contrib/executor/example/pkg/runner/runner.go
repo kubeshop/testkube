@@ -1,9 +1,11 @@
 package runner
 
 import (
-	"fmt"
+	"context"
 	"io"
 	"net/http"
+
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
@@ -14,10 +16,11 @@ func NewRunner() *ExampleRunner {
 }
 
 // ExampleRunner for template - change me to some valid runner
-type ExampleRunner struct {
-}
+type ExampleRunner struct{}
 
-func (r *ExampleRunner) Run(execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+var _ runner.Runner = &ExampleRunner{}
+
+func (r *ExampleRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
 	// ScriptContent will have URI
 	uri := ""
 	if execution.Content != nil {
@@ -44,7 +47,7 @@ func (r *ExampleRunner) Run(execution testkube.Execution) (result testkube.Execu
 	}
 
 	// else we'll return error to simplify example
-	err = fmt.Errorf("invalid status code %d, (uri:%s)", resp.StatusCode, uri)
+	err = errors.Errorf("invalid status code %d, (uri:%s)", resp.StatusCode, uri)
 	return *result.Err(err), nil
 }
 

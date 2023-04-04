@@ -11,11 +11,11 @@ import (
 
 // RunGraphQLServer runs GraphQL server on go net/http server
 // There is an issue with gqlgen and fasthttp server
-func (a *TestkubeAPI) RunGraphQLServer(
+func (s *TestkubeAPI) RunGraphQLServer(
 	ctx context.Context,
 	cfg *config.Config,
 ) error {
-	srv := graphql.GetServer(a.Events.Bus, a.ExecutorsClient)
+	srv := graphql.GetServer(s.Events.Bus, s.ExecutorsClient)
 
 	http.Handle("/graphql", srv)
 

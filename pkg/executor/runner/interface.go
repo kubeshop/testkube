@@ -1,6 +1,8 @@
 package runner
 
 import (
+	"context"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -34,7 +36,7 @@ func (t Type) IsFin() bool {
 // Runner interface to abstract runners implementations
 type Runner interface {
 	// Run takes Execution data and returns execution result
-	Run(execution testkube.Execution) (result testkube.ExecutionResult, err error)
+	Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error)
 	// GetType returns runner type
 	GetType() Type
 }

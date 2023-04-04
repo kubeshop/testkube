@@ -85,11 +85,10 @@ func (c *Client) Connect() error {
 }
 
 // CreateBucket creates new S3 like bucket
-func (c *Client) CreateBucket(bucket string) error {
+func (c *Client) CreateBucket(ctx context.Context, bucket string) error {
 	if err := c.Connect(); err != nil {
 		return err
 	}
-	ctx := context.Background()
 	err := c.minioclient.MakeBucket(ctx, bucket, minio.MakeBucketOptions{Region: c.region})
 	if err != nil {
 		c.Log.Errorw("error creating bucket", "error", err)
@@ -105,20 +104,20 @@ func (c *Client) CreateBucket(bucket string) error {
 }
 
 // DeleteBucket deletes bucket by name
-func (c *Client) DeleteBucket(bucket string, force bool) error {
+func (c *Client) DeleteBucket(ctx context.Context, bucket string, force bool) error {
 	if err := c.Connect(); err != nil {
 		return err
 	}
-	return c.minioclient.RemoveBucketWithOptions(context.TODO(), bucket, minio.RemoveBucketOptions{ForceDelete: force})
+	return c.minioclient.RemoveBucketWithOptions(ctx, bucket, minio.RemoveBucketOptions{ForceDelete: force})
 }
 
 // ListBuckets lists available buckets
-func (c *Client) ListBuckets() ([]string, error) {
+func (c *Client) ListBuckets(ctx context.Context) ([]string, error) {
 	if err := c.Connect(); err != nil {
 		return nil, err
 	}
-	toReturn := []string{}
-	if buckets, err := c.minioclient.ListBuckets(context.TODO()); err != nil {
+	var toReturn []string
+	if buckets, err := c.minioclient.ListBuckets(ctx); err != nil {
 		return nil, err
 	} else {
 		for _, bucket := range buckets {
@@ -129,13 +128,13 @@ func (c *Client) ListBuckets() ([]string, error) {
 }
 
 // listFiles lists available files in given bucket
-func (c *Client) listFiles(bucket, bucketFolder string) ([]testkube.Artifact, error) {
+func (c *Client) listFiles(ctx context.Context, bucket, bucketFolder string) ([]testkube.Artifact, error) {
 	if err := c.Connect(); err != nil {
 		return nil, err
 	}
-	toReturn := []testkube.Artifact{}
+	var toReturn []testkube.Artifact
 
-	exists, err := c.minioclient.BucketExists(context.TODO(), bucket)
+	exists, err := c.minioclient.BucketExists(ctx, bucket)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +148,7 @@ func (c *Client) listFiles(bucket, bucketFolder string) ([]testkube.Artifact, er
 		listOptions.Prefix = bucketFolder
 	}
 
-	for obj := range c.minioclient.ListObjects(context.TODO(), bucket, listOptions) {
+	for obj := range c.minioclient.ListObjects(ctx, bucket, listOptions) {
 		if obj.Err != nil {
 			return nil, obj.Err
 		}
@@ -163,26 +162,21 @@ func (c *Client) listFiles(bucket, bucketFolder string) ([]testkube.Artifact, er
 }
 
 // ListFiles lists available files in the bucket from the config
-func (c *Client) ListFiles(bucketFolder string) ([]testkube.Artifact, error) {
+func (c *Client) ListFiles(ctx context.Context, bucketFolder string) ([]testkube.Artifact, error) {
 	c.Log.Infow("listing files", "bucket", c.bucket, "bucketFolder", bucketFolder)
 	// TODO: this is for back compatibility, remove it sometime in the future
-	if exist, err := c.minioclient.BucketExists(context.TODO(), bucketFolder); err == nil && exist {
-		formerResult, err := c.listFiles(bucketFolder, "")
+	if exist, err := c.minioclient.BucketExists(ctx, bucketFolder); err == nil && exist {
+		formerResult, err := c.listFiles(ctx, bucketFolder, "")
 		if err == nil && len(formerResult) > 0 {
 			return formerResult, nil
 		}
 	}
 
-	return c.listFiles(c.bucket, bucketFolder)
-}
-
-// ListFilesFromBucket lists available files in given bucket
-func (c *Client) ListFilesFromBucket(bucket string) ([]testkube.Artifact, error) {
-	return c.listFiles(bucket, "")
+	return c.listFiles(ctx, c.bucket, bucketFolder)
 }
 
 // saveFile saves file defined by local filePath to S3 bucket
-func (c *Client) saveFile(bucket, bucketFolder, filePath string) error {
+func (c *Client) saveFile(ctx context.Context, bucket, bucketFolder, filePath string) error {
 	c.Log.Debugw("saving file", "bucket", bucket, "bucketFolder", bucketFolder, "filePath", filePath)
 	if err := c.Connect(); err != nil {
 		return err
@@ -197,9 +191,9 @@ func (c *Client) saveFile(bucket, bucketFolder, filePath string) error {
 		return fmt.Errorf("minio object stat (file:%s) error: %w", filePath, err)
 	}
 
-	exists, err := c.minioclient.BucketExists(context.Background(), bucket)
+	exists, err := c.minioclient.BucketExists(ctx, bucket)
 	if err != nil || !exists {
-		err := c.CreateBucket(bucket)
+		err := c.CreateBucket(ctx, bucket)
 		if err != nil {
 			return fmt.Errorf("minio saving file (%s) bucket was not created and create bucket returnes error: %w", filePath, err)
 		}
@@ -208,7 +202,7 @@ func (c *Client) saveFile(bucket, bucketFolder, filePath string) error {
 	fileName := strings.Trim(bucketFolder, "/") + "/" + objectStat.Name()
 
 	c.Log.Debugw("saving object in minio", "filePath", filePath, "fileName", fileName, "bucket", bucket, "size", objectStat.Size())
-	_, err = c.minioclient.PutObject(context.Background(), bucket, fileName, object, objectStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	_, err = c.minioclient.PutObject(ctx, bucket, fileName, object, objectStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
 		return fmt.Errorf("minio saving file (%s) put object error: %w", fileName, err)
 	}
@@ -216,21 +210,24 @@ func (c *Client) saveFile(bucket, bucketFolder, filePath string) error {
 	return nil
 }
 
-func (c *Client) SaveFileDirect(ctx context.Context, folder, file string, data io.Reader, size int64) error {
+func (c *Client) SaveFileDirect(ctx context.Context, folder, file string, data io.Reader, size int64, opts minio.PutObjectOptions) error {
 	exists, err := c.minioclient.BucketExists(ctx, c.bucket)
 	if err != nil {
 		return errors.Wrapf(err, "error checking does bucket %s exists", c.bucket)
 	}
 	if !exists {
-		if err := c.CreateBucket(c.bucket); err != nil {
+		if err := c.CreateBucket(ctx, c.bucket); err != nil {
 			return errors.Wrapf(err, "error creating bucket %s", c.bucket)
 		}
 	}
 
 	filename := fmt.Sprintf("%s/%s", folder, file)
 
+	if opts.ContentType == "" {
+		opts.ContentType = "application/octet-stream"
+	}
 	c.Log.Debugw("saving object in minio", "filename", filename, "bucket", c.bucket, "size", size)
-	_, err = c.minioclient.PutObject(ctx, c.bucket, filename, data, size, minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	_, err = c.minioclient.PutObject(ctx, c.bucket, filename, data, size, opts)
 	if err != nil {
 		return errors.Wrapf(err, "minio saving file (%s) put object error", filename)
 	}
@@ -239,25 +236,19 @@ func (c *Client) SaveFileDirect(ctx context.Context, folder, file string, data i
 }
 
 // SaveFile saves file defined by local filePath to S3 bucket from the config
-func (c *Client) SaveFile(bucketFolder, filePath string) error {
+func (c *Client) SaveFile(ctx context.Context, bucketFolder, filePath string) error {
 	c.Log.Debugw("SaveFile", "bucket", c.bucket, "bucketFolder", bucketFolder, "filePath", filePath)
-	return c.saveFile(c.bucket, bucketFolder, filePath)
-}
-
-// SaveFileToBucket saves file defined by local filePath to given S3 bucket
-func (c *Client) SaveFileToBucket(bucket, bucketFolder, filePath string) error {
-	c.Log.Debugw("SaveFileToBucket", "bucket", bucket, "bucketFolder", bucketFolder, "filePath", filePath)
-	return c.saveFile(bucket, bucketFolder, filePath)
+	return c.saveFile(ctx, c.bucket, bucketFolder, filePath)
 }
 
 // downloadFile downloads file from bucket
-func (c *Client) downloadFile(bucket, bucketFolder, file string) (*minio.Object, error) {
+func (c *Client) downloadFile(ctx context.Context, bucket, bucketFolder, file string) (*minio.Object, error) {
 	c.Log.Debugw("downloadFile", "bucket", bucket, "bucketFolder", bucketFolder, "file", file)
 	if err := c.Connect(); err != nil {
 		return nil, fmt.Errorf("minio DownloadFile .Connect error: %w", err)
 	}
 
-	exists, err := c.minioclient.BucketExists(context.TODO(), bucket)
+	exists, err := c.minioclient.BucketExists(ctx, bucket)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +262,7 @@ func (c *Client) downloadFile(bucket, bucketFolder, file string) (*minio.Object,
 		file = strings.Trim(bucketFolder, "/") + "/" + file
 	}
 
-	reader, err := c.minioclient.GetObject(context.Background(), bucket, file, minio.GetObjectOptions{})
+	reader, err := c.minioclient.GetObject(ctx, bucket, file, minio.GetObjectOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("minio DownloadFile GetObject error: %w", err)
 	}
@@ -285,20 +276,20 @@ func (c *Client) downloadFile(bucket, bucketFolder, file string) (*minio.Object,
 }
 
 // DownloadFile downloads file from bucket from the config
-func (c *Client) DownloadFile(bucketFolder, file string) (*minio.Object, error) {
+func (c *Client) DownloadFile(ctx context.Context, bucketFolder, file string) (*minio.Object, error) {
 	c.Log.Infow("Download file", "bucket", c.bucket, "bucketFolder", bucketFolder, "file", file)
 	// TODO: this is for back compatibility, remove it sometime in the future
 	var errFirst error
-	exists, err := c.minioclient.BucketExists(context.TODO(), bucketFolder)
+	exists, err := c.minioclient.BucketExists(ctx, bucketFolder)
 	c.Log.Debugw("Checking if bucket exists", exists, err)
 	if err == nil && exists {
 		c.Log.Infow("Bucket exists, trying to get files from former bucket per execution", exists, err)
-		objFirst, errFirst := c.downloadFile(bucketFolder, "", file)
+		objFirst, errFirst := c.downloadFile(ctx, bucketFolder, "", file)
 		if errFirst == nil && objFirst != nil {
 			return objFirst, nil
 		}
 	}
-	objSecond, errSecond := c.downloadFile(c.bucket, bucketFolder, file)
+	objSecond, errSecond := c.downloadFile(ctx, c.bucket, bucketFolder, file)
 	if errSecond != nil {
 		return nil, fmt.Errorf("minio DownloadFile error: %v, error from getting files from former bucket per execution: %v", errSecond, errFirst)
 	}
@@ -306,13 +297,13 @@ func (c *Client) DownloadFile(bucketFolder, file string) (*minio.Object, error) 
 }
 
 // DownloadFileFromBucket downloads file from given bucket
-func (c *Client) DownloadFileFromBucket(bucket, bucketFolder, file string) (*minio.Object, error) {
+func (c *Client) DownloadFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) (*minio.Object, error) {
 	c.Log.Debugw("Downloading file", "bucket", bucket, "bucketFolder", bucketFolder, "file", file)
-	return c.downloadFile(bucket, bucketFolder, file)
+	return c.downloadFile(ctx, bucket, bucketFolder, file)
 }
 
 // ScrapeArtefacts pushes local files located in directories to given folder with given id located in the configured bucket
-func (c *Client) ScrapeArtefacts(id string, directories ...string) error {
+func (c *Client) ScrapeArtefacts(ctx context.Context, id string, directories ...string) error {
 	if err := c.Connect(); err != nil {
 		return fmt.Errorf("minio scrape artefacts connection error: %w", err)
 	}
@@ -332,7 +323,7 @@ func (c *Client) ScrapeArtefacts(id string, directories ...string) error {
 				}
 
 				if !info.IsDir() {
-					err = c.SaveFile(id, path) //The function will detect if there is a subdirectory and store accordingly
+					err = c.SaveFile(ctx, id, path) //The function will detect if there is a subdirectory and store accordingly
 					if err != nil {
 						return fmt.Errorf("minio save file (%s) error: %w", path, err)
 					}
@@ -348,19 +339,19 @@ func (c *Client) ScrapeArtefacts(id string, directories ...string) error {
 }
 
 // uploadFile saves a file to be copied into a running execution
-func (c *Client) uploadFile(bucket, bucketFolder, filePath string, reader io.Reader, objectSize int64) error {
+func (c *Client) uploadFile(ctx context.Context, bucket, bucketFolder, filePath string, reader io.Reader, objectSize int64) error {
 	if err := c.Connect(); err != nil {
 		return fmt.Errorf("minio UploadFile connection error: %w", err)
 	}
 
-	exists, err := c.minioclient.BucketExists(context.TODO(), bucket)
+	exists, err := c.minioclient.BucketExists(ctx, bucket)
 	if err != nil {
 		return fmt.Errorf("could not check if bucket already exists for copy files: %w", err)
 	}
 
 	if !exists {
 		c.Log.Debugw("creating minio bucket for copy files", "bucket", bucket)
-		err := c.CreateBucket(bucket)
+		err := c.CreateBucket(ctx, bucket)
 		if err != nil {
 			return fmt.Errorf("could not create bucket: %w", err)
 		}
@@ -371,7 +362,7 @@ func (c *Client) uploadFile(bucket, bucketFolder, filePath string, reader io.Rea
 	}
 
 	c.Log.Debugw("saving object in minio", "file", filePath, "bucket", bucket)
-	_, err = c.minioclient.PutObject(context.Background(), bucket, filePath, reader, objectSize, minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	_, err = c.minioclient.PutObject(ctx, bucket, filePath, reader, objectSize, minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
 		return fmt.Errorf("minio saving file (%s) put object error: %w", filePath, err)
 	}
@@ -380,23 +371,23 @@ func (c *Client) uploadFile(bucket, bucketFolder, filePath string, reader io.Rea
 }
 
 // UploadFile saves a file to be copied into a running execution
-func (c *Client) UploadFile(bucketFolder, filePath string, reader io.Reader, objectSize int64) error {
-	return c.uploadFile(c.bucket, bucketFolder, filePath, reader, objectSize)
+func (c *Client) UploadFile(ctx context.Context, bucketFolder, filePath string, reader io.Reader, objectSize int64) error {
+	return c.uploadFile(ctx, c.bucket, bucketFolder, filePath, reader, objectSize)
 }
 
 // UploadFileToBucket saves a file to be copied into a running execution
-func (c *Client) UploadFileToBucket(bucket, bucketFolder, filePath string, reader io.Reader, objectSize int64) error {
-	return c.uploadFile(bucket, bucketFolder, filePath, reader, objectSize)
+func (c *Client) UploadFileToBucket(ctx context.Context, bucket, bucketFolder, filePath string, reader io.Reader, objectSize int64) error {
+	return c.uploadFile(ctx, bucket, bucketFolder, filePath, reader, objectSize)
 }
 
 // PlaceFiles saves the content of the buckets to the filesystem
-func (c *Client) PlaceFiles(bucketFolders []string, prefix string) error {
+func (c *Client) PlaceFiles(ctx context.Context, bucketFolders []string, prefix string) error {
 	output.PrintLog(fmt.Sprintf("%s Getting the contents of bucket folders %s", ui.IconFile, bucketFolders))
 	if err := c.Connect(); err != nil {
 		output.PrintLog(fmt.Sprintf("%s Minio PlaceFiles connection error: %s", ui.IconWarning, err.Error()))
 		return fmt.Errorf("minio PlaceFiles connection error: %w", err)
 	}
-	exists, err := c.minioclient.BucketExists(context.TODO(), c.bucket)
+	exists, err := c.minioclient.BucketExists(ctx, c.bucket)
 	if err != nil {
 		output.PrintLog(fmt.Sprintf("%s Could not check if bucket already exists for files %s", ui.IconWarning, err.Error()))
 		return fmt.Errorf("could not check if bucket already exists for files: %w", err)
@@ -407,7 +398,7 @@ func (c *Client) PlaceFiles(bucketFolders []string, prefix string) error {
 	}
 	for _, folder := range bucketFolders {
 
-		files, err := c.ListFiles(folder)
+		files, err := c.ListFiles(ctx, folder)
 		if err != nil {
 			output.PrintLog(fmt.Sprintf("%s Could not list files in bucket %s folder %s", ui.IconWarning, c.bucket, folder))
 			return fmt.Errorf("could not list files in bucket %s folder %s", c.bucket, folder)
@@ -417,7 +408,7 @@ func (c *Client) PlaceFiles(bucketFolders []string, prefix string) error {
 			output.PrintEvent(fmt.Sprintf("%s Downloading file %s", ui.IconFile, f.Name))
 			c.Log.Infof("Getting file %s", f)
 			objectName := fmt.Sprintf("%s/%s", folder, f.Name)
-			err = c.minioclient.FGetObject(context.Background(), c.bucket, objectName, prefix+f.Name, minio.GetObjectOptions{})
+			err = c.minioclient.FGetObject(ctx, c.bucket, objectName, prefix+f.Name, minio.GetObjectOptions{})
 			if err != nil {
 				output.PrintEvent(fmt.Sprintf("%s Could not download file %s", ui.IconCross, f.Name))
 				return fmt.Errorf("could not persist file %s from bucket %s, folder %s: %w", f.Name, c.bucket, folder, err)
@@ -441,12 +432,12 @@ func (c *Client) GetValidBucketName(parentType string, parentName string) string
 	return fmt.Sprintf("%s-%d", bucketName[:52], h.Sum32())
 }
 
-func (c *Client) deleteFile(bucket, bucketFolder, file string) error {
+func (c *Client) deleteFile(ctx context.Context, bucket, bucketFolder, file string) error {
 	if err := c.Connect(); err != nil {
 		return fmt.Errorf("minio DeleteFile connection error: %w", err)
 	}
 
-	exists, err := c.minioclient.BucketExists(context.TODO(), bucket)
+	exists, err := c.minioclient.BucketExists(ctx, bucket)
 	if err != nil {
 		return fmt.Errorf("could not check if bucket already exists for delete file: %w", err)
 	}
@@ -460,7 +451,7 @@ func (c *Client) deleteFile(bucket, bucketFolder, file string) error {
 		file = strings.Trim(bucketFolder, "/") + "/" + file
 	}
 
-	err = c.minioclient.RemoveObject(context.Background(), bucket, file, minio.RemoveObjectOptions{ForceDelete: true})
+	err = c.minioclient.RemoveObject(ctx, bucket, file, minio.RemoveObjectOptions{ForceDelete: true})
 	if err != nil {
 		return fmt.Errorf("minio DeleteFile RemoveObject error: %w", err)
 	}
@@ -469,17 +460,17 @@ func (c *Client) deleteFile(bucket, bucketFolder, file string) error {
 }
 
 // DeleteFile deletes a file from a bucket folder where bucket is provided by config
-func (c *Client) DeleteFile(bucketFolder, file string) error {
+func (c *Client) DeleteFile(ctx context.Context, bucketFolder, file string) error {
 	// TODO: this is for back compatibility, remove it sometime in the future
 	var errFirst error
-	if exist, err := c.minioclient.BucketExists(context.TODO(), c.bucket); err != nil || !exist {
-		errFirst = c.DeleteFileFromBucket(bucketFolder, "", file)
+	if exist, err := c.minioclient.BucketExists(ctx, c.bucket); err != nil || !exist {
+		errFirst = c.DeleteFileFromBucket(ctx, bucketFolder, "", file)
 		if err == nil {
 			return nil
 		}
 
 	}
-	errSecond := c.deleteFile(c.bucket, bucketFolder, file)
+	errSecond := c.deleteFile(ctx, c.bucket, bucketFolder, file)
 	if errFirst != nil {
 		return fmt.Errorf("deleting file error: %v, previous attemt to delete file from one bucket per execution error: %v", errSecond, errFirst)
 	}
@@ -487,6 +478,6 @@ func (c *Client) DeleteFile(bucketFolder, file string) error {
 }
 
 // DeleteFileFromBucket deletes a file from a bucket folder
-func (c *Client) DeleteFileFromBucket(bucket, bucketFolder, file string) error {
-	return c.deleteFile(bucket, bucketFolder, file)
+func (c *Client) DeleteFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) error {
+	return c.deleteFile(ctx, bucket, bucketFolder, file)
 }

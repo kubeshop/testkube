@@ -25,7 +25,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
-// GetTestSuiteHandler for getting test object
+// CreateTestSuiteHandler for getting test object
 func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var request testkube.TestSuiteUpsertRequest
@@ -402,14 +402,13 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 			return s.getCRDs(c, data, err)
 		}
 
-		ctx := c.Context()
 		results := make([]testkube.TestSuiteWithExecutionSummary, 0, len(testSuites))
 		testSuiteNames := make([]string, len(testSuites))
 		for i := range testSuites {
 			testSuiteNames[i] = testSuites[i].Name
 		}
 
-		executionMap, err := s.getLatestTestSuiteExecutions(ctx, testSuiteNames)
+		executionMap, err := s.getLatestTestSuiteExecutions(c.Context(), testSuiteNames)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, err)
 		}
@@ -503,8 +502,6 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 
 func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		ctx := context.Background()
-
 		var request testkube.TestSuiteExecutionRequest
 		err := c.BodyParser(&request)
 		if err != nil {
@@ -546,7 +543,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 			workerpoolService := workerpool.New[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution](concurrencyLevel)
 
 			go workerpoolService.SendRequests(s.scheduler.PrepareTestSuiteRequests(testSuites, request))
-			go workerpoolService.Run(ctx)
+			go workerpoolService.Run(c.Context())
 
 			for r := range workerpoolService.GetResponses() {
 				results = append(results, r.Result)
@@ -570,9 +567,9 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 
 func (s TestkubeAPI) ListTestSuiteExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		ctx := context.Background()
 		filter := getExecutionsFilterFromRequest(c)
 
+		ctx := c.Context()
 		executionsTotals, err := s.TestExecutionResults.GetExecutionsTotals(ctx, filter)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)
@@ -597,9 +594,8 @@ func (s TestkubeAPI) ListTestSuiteExecutionsHandler() fiber.Handler {
 
 func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		ctx := context.Background()
 		id := c.Params("executionID")
-		execution, err := s.TestExecutionResults.Get(ctx, id)
+		execution, err := s.TestExecutionResults.Get(c.Context(), id)
 		if err == mongo.ErrNoDocuments {
 			return s.Error(c, http.StatusNotFound, fmt.Errorf("test suite with execution id/name %s not found", id))
 		}
@@ -619,7 +615,7 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 
 		for key, value := range secretMap {
 			if variable, ok := execution.Variables[key]; ok && value != "" {
-				variable.Value = string(value)
+				variable.Value = value
 				variable.SecretRef = nil
 				execution.Variables[key] = variable
 			}
@@ -632,9 +628,8 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 func (s TestkubeAPI) ListTestSuiteArtifactsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		s.Log.Infow("listing testsuite artifacts", "executionID", c.Params("executionID"))
-		ctx := context.Background()
 		id := c.Params("executionID")
-		execution, err := s.TestExecutionResults.Get(ctx, id)
+		execution, err := s.TestExecutionResults.Get(c.Context(), id)
 		if err == mongo.ErrNoDocuments {
 			return s.Error(c, http.StatusNotFound, fmt.Errorf("test suite with execution id/name %s not found", id))
 		}
@@ -647,7 +642,7 @@ func (s TestkubeAPI) ListTestSuiteArtifactsHandler() fiber.Handler {
 			if stepResult.Execution.Id == "" {
 				continue
 			}
-			stepArtifacts, err := s.Storage.ListFiles(stepResult.Execution.Id)
+			stepArtifacts, err := s.Storage.ListFiles(c.Context(), stepResult.Execution.Id)
 			if err != nil {
 				s.Log.Warnw("can't list artifacts", "executionID", stepResult.Execution.Id, "error", err)
 				continue
@@ -670,9 +665,8 @@ func (s TestkubeAPI) ListTestSuiteArtifactsHandler() fiber.Handler {
 func (s TestkubeAPI) AbortTestSuiteExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		s.Log.Infow("aborting test suite execution", "executionID", c.Params("executionID"))
-		ctx := context.Background()
 		id := c.Params("executionID")
-		execution, err := s.TestExecutionResults.Get(ctx, id)
+		execution, err := s.TestExecutionResults.Get(c.Context(), id)
 		if err == mongo.ErrNoDocuments {
 			return s.Error(c, http.StatusNotFound, fmt.Errorf("test suite with execution id/name %s not found", id))
 		}
@@ -681,7 +675,7 @@ func (s TestkubeAPI) AbortTestSuiteExecutionHandler() fiber.Handler {
 		}
 
 		execution.Status = testkube.TestSuiteExecutionStatusAborting
-		err = s.TestExecutionResults.Update(ctx, execution)
+		err = s.TestExecutionResults.Update(c.Context(), execution)
 
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, err)

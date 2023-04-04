@@ -1,55 +1,51 @@
 package runner
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/kelseyhightower/envconfig"
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
+
+	"github.com/pkg/errors"
+
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
-	"github.com/kubeshop/testkube/pkg/executor/scraper"
 )
 
 // NewRunner creates scraper runner
-func NewRunner() (*ScraperRunner, error) {
-	var params envs.Params
-	err := envconfig.Process("runner", &params)
+func NewRunner(ctx context.Context, params envs.Params) (*ScraperRunner, error) {
+	var err error
+	r := &ScraperRunner{
+		Params: params,
+	}
+
+	r.Scraper, err = factory.TryGetScrapper(ctx, params)
 	if err != nil {
 		return nil, err
 	}
 
-	runner := &ScraperRunner{
-		Scraper: scraper.NewMinioScraper(
-			params.Endpoint,
-			params.AccessKeyID,
-			params.SecretAccessKey,
-			params.Region,
-			params.Token,
-			params.Bucket,
-			params.Ssl,
-		),
-		ScrapperEnabled: params.ScrapperEnabled,
-	}
-
-	return runner, nil
+	return r, nil
 }
 
 // ScraperRunner prepares data for executor
 type ScraperRunner struct {
-	ScrapperEnabled bool // RUNNER_SCRAPPERENABLED
-	Scraper         scraper.Scraper
+	Params  envs.Params
+	Scraper scraper.Scraper
 }
 
+var _ runner.Runner = &ScraperRunner{}
+
 // Run prepares data for executor
-func (r *ScraperRunner) Run(execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+func (r *ScraperRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
 	// check that the artifact dir exists
 	if execution.ArtifactRequest == nil {
-		return *result.Err(fmt.Errorf("executor only support artifact based tests")), nil
+		return *result.Err(errors.Errorf("executor only support artifact based tests")), nil
 	}
 
 	_, err = os.Stat(execution.ArtifactRequest.VolumeMountPath)
@@ -57,7 +53,7 @@ func (r *ScraperRunner) Run(execution testkube.Execution) (result testkube.Execu
 		return result, err
 	}
 
-	if r.ScrapperEnabled {
+	if r.Params.ScrapperEnabled {
 		directories := execution.ArtifactRequest.Dirs
 		if len(directories) == 0 {
 			directories = []string{"."}
@@ -67,10 +63,10 @@ func (r *ScraperRunner) Run(execution testkube.Execution) (result testkube.Execu
 			directories[i] = filepath.Join(execution.ArtifactRequest.VolumeMountPath, directories[i])
 		}
 
-		output.PrintEvent("scraping for test files", directories)
-		err := r.Scraper.Scrape(execution.Id, directories)
-		if err != nil {
-			return *result.Err(err), fmt.Errorf("failed getting artifacts: %w", err)
+		output.PrintLog(fmt.Sprintf("Scraping directories: %v", directories))
+
+		if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
+			return *result.Err(err), errors.Wrap(err, "error scraping artifacts from container executor")
 		}
 	}
 
