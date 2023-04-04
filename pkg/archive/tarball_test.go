@@ -12,12 +12,15 @@ import (
 )
 
 func TestTarball_Extract(t *testing.T) {
+	t.Parallel()
+
 	// create a test tarball
 	var buf bytes.Buffer
 	tarball := NewTarballService()
 	content := "testfile\n"
 	files := []*File{
 		{Name: "testfile.txt", Mode: 0644, Size: 9, ModTime: time.Now(), Data: bytes.NewBufferString(content)},
+		{Name: "../hack.txt", Mode: 0644, Size: 9, ModTime: time.Now(), Data: bytes.NewBufferString(content)},
 	}
 	if _, err := tarball.Create(&buf, files); err != nil {
 		t.Fatalf("error creating tarball: %v", err)
@@ -27,7 +30,6 @@ func TestTarball_Extract(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Extract() error: %v", err)
 	}
-	assert.Lenf(t, files, 1, "Extract() returned %d files, expected 1", len(files))
 	assert.Equalf(t, "testfile.txt", files[0].Name, "Extract() returned file with name %s, expected testfile.txt", files[0].Name)
 	assert.Equalf(t, int64(0644), files[0].Mode, "Extract() returned file with mode %o, expected 0644", files[0].Mode)
 	if files[0].Mode != 0644 {
@@ -38,15 +40,22 @@ func TestTarball_Extract(t *testing.T) {
 		t.Fatalf("Extract() returned file with zero modtime")
 	}
 	assert.Equalf(t, content, files[0].Data.String(), "Extract() returned file with content %s, expected %s", files[0].Data.String(), content)
+	// assert extracted filepaths are sanitized
+	assert.Equalf(t, "hack.txt", files[1].Name, "filepath is not sanitized: %s", files[1].Name)
+	// assert there are 2 files in the tarball
+	assert.Lenf(t, files, 2, "Extract() returned %d files, expected 2", len(files))
+
 }
 
 func TestTarball_Create(t *testing.T) {
+	t.Parallel()
+
 	files := []*File{
 		{Name: "testfile.txt", Mode: 0644, Size: 9, ModTime: time.Now(), Data: bytes.NewBufferString("testdata\n")},
 	}
 
 	var buf bytes.Buffer
-	tarball := Tarball{}
+	tarball := NewTarballService()
 	if _, err := tarball.Create(&buf, files); err != nil {
 		t.Fatalf("error creating tarball: %v", err)
 	}

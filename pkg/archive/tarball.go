@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -38,7 +39,8 @@ func (t *Tarball) Extract(in io.Reader) ([]*File, error) {
 		case tar.TypeDir:
 			// do nothing
 		case tar.TypeReg:
-			file := &File{Name: header.Name, Size: header.Size, Mode: header.Mode, ModTime: header.ModTime, Data: new(bytes.Buffer)}
+			sanitizedFilepath := t.sanitizeFilepath(header.Name)
+			file := &File{Name: sanitizedFilepath, Size: header.Size, Mode: header.Mode, ModTime: header.ModTime, Data: new(bytes.Buffer)}
 			if _, err := io.Copy(file.Data, tarReader); err != nil {
 				return nil, errors.Wrapf(err, "error copying file %s data to tarball", file.Name)
 			}
@@ -48,6 +50,17 @@ func (t *Tarball) Extract(in io.Reader) ([]*File, error) {
 		}
 	}
 	return files, nil
+}
+
+func (t *Tarball) sanitizeFilepath(path string) string {
+	cleaned := filepath.Clean(path)
+	if strings.HasPrefix(cleaned, "..") {
+		cleaned = strings.TrimPrefix(cleaned, "..")
+	}
+	if strings.HasPrefix(cleaned, "/") {
+		cleaned = strings.TrimPrefix(cleaned, "/")
+	}
+	return cleaned
 }
 
 func (t *Tarball) Create(out io.Writer, files []*File) (*Meta, error) {
@@ -67,10 +80,6 @@ func (t *Tarball) Create(out io.Writer, files []*File) (*Meta, error) {
 	}
 
 	return &Meta{Size: totalSize}, nil
-}
-
-type Meta struct {
-	Size int64
 }
 
 func (t *Tarball) addFileToTarWriter(file *File, tarWriter *tar.Writer) (size int64, err error) {
@@ -134,3 +143,5 @@ func GetTarballReader(gzipStream io.Reader) (*tar.Reader, error) {
 
 	return tar.NewReader(uncompressedStream), nil
 }
+
+var _ Archive = (*Tarball)(nil)
