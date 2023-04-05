@@ -18,7 +18,7 @@ To keep them set below options to true (3 values for MongoDB, MinIO, Dashboard):
  --set testkube-api.minio.enabled=true --set mongodb.enabled=true --set testkube-dashboard.enabled=true
 ```
 
-## Setting the Testkube CLI context to the agent mode
+## Setting the Testkube CLI Context to Agent Mode
 
 Please follow the [context management](managing-cli-context.md) to configure your Testkube CLI in Cloud mode.
 
