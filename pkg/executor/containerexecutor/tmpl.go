@@ -35,18 +35,6 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 	if err != nil {
 		return nil, fmt.Errorf("creating job spec from executor template error: %w", err)
 	}
-	options.Jsn = strings.ReplaceAll(options.Jsn, "'", "''")
-	for i := range options.Command {
-		if options.Command[i] != "" {
-			options.Command[i] = fmt.Sprintf("%q", options.Command[i])
-		}
-	}
-
-	for i := range options.Args {
-		if options.Args[i] != "" {
-			options.Args[i] = fmt.Sprintf("%q", options.Args[i])
-		}
-	}
 
 	var buffer bytes.Buffer
 	if err = tmpl.ExecuteTemplate(&buffer, "job", options); err != nil {
