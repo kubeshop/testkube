@@ -24,16 +24,21 @@ func NewArchiveFilesystemExtractor(fs filesystem.FileSystem) *ArchiveFilesystemE
 }
 
 func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths []string, process ProcessFn) error {
-	log.DefaultLogger.Infof("extracting files from directories: %v", paths)
 	var archiveFiles []*archive.File
 	for _, dir := range paths {
-		log.DefaultLogger.Debugf("walking directory: %v", dir)
+		log.DefaultLogger.Infof("scraping artifacts in directory: %v", dir)
+
+		if _, err := e.fs.Stat(dir); os.IsNotExist(err) {
+			log.DefaultLogger.Warnf("skipping directory %s because it does not exist", dir)
+			continue
+		}
+
 		err := e.fs.Walk(
 			dir,
 			func(path string, fileInfo os.FileInfo, err error) error {
-				log.DefaultLogger.Debugf("walking path %s", path)
+				log.DefaultLogger.Debugf("checking path %s", path)
 				if err != nil {
-					return errors.Wrapf(err, "error walking path %s", path)
+					return errors.Wrap(err, "walk function returned a special error")
 				}
 
 				if fileInfo.IsDir() {
@@ -123,21 +128,20 @@ func NewRecursiveFilesystemExtractor(fs filesystem.FileSystem) *RecursiveFilesys
 }
 
 func (e *RecursiveFilesystemExtractor) Extract(ctx context.Context, paths []string, process ProcessFn) error {
-	log.DefaultLogger.Infof("extracting files from directories: %v", paths)
 	for _, dir := range paths {
-		log.DefaultLogger.Infof("walking directory: %v", dir)
+		log.DefaultLogger.Infof("scraping artifacts in directory: %v", dir)
 
 		if _, err := e.fs.Stat(dir); os.IsNotExist(err) {
-			log.DefaultLogger.Warnf("directory %s does not exist, skipping", dir)
+			log.DefaultLogger.Warnf("skipping directory %s because it does not exist", dir)
 			continue
 		}
 
 		err := e.fs.Walk(
 			dir,
 			func(path string, fileInfo os.FileInfo, err error) error {
-				log.DefaultLogger.Infof("walking path %s", path)
+				log.DefaultLogger.Debugf("checking path %s", path)
 				if err != nil {
-					return errors.Wrapf(err, "error walking path %s", path)
+					return errors.Wrap(err, "walk function returned a special error")
 				}
 
 				if fileInfo.IsDir() {
