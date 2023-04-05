@@ -9,7 +9,7 @@ You can create a token:
 
 ![admin-token](https://user-images.githubusercontent.com/30776/229772185-01f1e466-b04d-4c6d-9d5c-e4464d651177.png)
 
-* with particular role for given environments
+* with particular role for given environments:
 
 ![roles-for-token](https://user-images.githubusercontent.com/30776/229772310-64bda85d-57a8-47b7-a68b-2625089724f8.png)
 
