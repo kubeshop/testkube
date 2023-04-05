@@ -1,4 +1,4 @@
-## Changing the Testkube context to cloud one
+## Changing the Testkube Context to Cloud
 
 To set context to could one, testkube CLI tool need to have access, so first you'll need to create API token with 
 valid access rights.
