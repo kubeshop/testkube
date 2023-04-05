@@ -16,43 +16,36 @@ dockers:
     goos: linux
     goarch: amd64
     image_templates:
-      - "kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .ShortCommit }}-amd64"
-      - "kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .Env.RELEASE_VERSION }}-amd64"
+      - "kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .Version }}-amd64"
       - "kubeshop/testkube-{{ .Env.EXECUTOR }}:latest-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
       - "--label=org.opencontainers.image.created={{ .Date}}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-      - "--label=org.opencontainers.image.version={{ .Env.RELEASE_VERSION }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
       - "--build-arg=TOKEN={{ .Env.TOKEN }}"
-
 
   - dockerfile: "./contrib/executor/{{ .Env.EXECUTOR }}/build/agent/Dockerfile"
     use: buildx
     goos: linux
     goarch: arm64
     image_templates:
-      - "kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .ShortCommit }}-arm64v8"
-      - "kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .Env.RELEASE_VERSION }}-arm64v8"
+      - "kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .Version }}-arm64v8"
       - "kubeshop/testkube-{{ .Env.EXECUTOR }}:latest-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-      - "--label=org.opencontainers.image.version={{ .Env.RELEASE_VERSION }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
       - "--build-arg=TOKEN={{ .Env.TOKEN }}"
 
 docker_manifests:
-  - name_template: kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .ShortCommit }}
+  - name_template: kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .Version }}
     image_templates:
-      - kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .ShortCommit }}-amd64
-      - kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .ShortCommit }}-arm64v8
-  - name_template: kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .Env.RELEASE_VERSION }}
-    image_templates:
-      - kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .Env.RELEASE_VERSION }}-amd64
-      - kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .Env.RELEASE_VERSION }}-arm64v8
+      - kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .Version }}-amd64
+      - kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .Version }}-arm64v8
   - name_template: kubeshop/testkube-{{ .Env.EXECUTOR }}:latest
     image_templates:
       - kubeshop/testkube-{{ .Env.EXECUTOR }}:latest-amd64
