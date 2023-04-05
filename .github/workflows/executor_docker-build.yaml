@@ -2,13 +2,15 @@ name: Docker images building and pushing for executor
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]-beta-*"
+      - "v[0-9]+.[0-9]+.[0-9]-beta-0?[1-9]"
 
 jobs:
   single_executor_docker:
     strategy:
       matrix:
-        executor: [artillery, curl, example, ginkgo, jmeter, k6, kubepug, postman, soapui, init, scraper, template]
+        executor: [artillery, curl, example, ginkgo]
+
+        #left jmeter, k6, kubepug, postman, soapui, init, scraper, template
 
     runs-on: ubuntu-latest
     steps:
