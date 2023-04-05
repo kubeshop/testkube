@@ -11,7 +11,7 @@ Please follow the [install steps](installing-agent.md) to get started using the 
 helm repo add kubeshop https://kubeshop.github.io/helm-charts ; helm repo update && helm upgrade --install --create-namespace testkube kubeshop/testkube --set testkube-api.cloud.key=tkcagnt_aaaaaaaaaaaaaaaaaaaaakey --set testkube-api.minio.enabled=false --set mongodb.enabled=false --namespace testkube
 ```
 
-WARNING! Please keep in mind that default install will REMOVE existing MongoDB, Minio and Dashboard pods!
+WARNING! Please keep in mind that the default install will REMOVE existing MongoDB, MinIO and Dashboard pods!
 
 To keep them set below options to true (3 values for MongoDB, MinIO, Dashboard):
 ```sh
