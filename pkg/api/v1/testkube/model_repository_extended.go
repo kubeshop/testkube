@@ -8,6 +8,8 @@ const (
 	GitAuthTypeBasic GitAuthType = "basic"
 	// GitAuthTypeHeader for git header auth requests
 	GitAuthTypeHeader GitAuthType = "header"
+	// GitAuthTypeEmpty for git empty auth requests
+	GitAuthTypeEmpty GitAuthType = ""
 )
 
 // NewGitRepository is a constructor for new repository
