@@ -55,7 +55,7 @@ TODO
   ┌
   │ 'creating', 'http://34.74.127.60:8080/todos/50'
   └
-  ✓  Check if todo item craeted successfully
+  ✓  Check if todo item created successfully
   GET http://34.74.127.60:8080/todos/50 [200 OK, 291B, 8ms]
 
 → Complete TODO item
