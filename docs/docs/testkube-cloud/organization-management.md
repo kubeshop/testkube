@@ -1,4 +1,4 @@
-## Organizations management
+# Organizations management
 
 
 To manage your organization settings click "Manage Organization" from organizations drop-down menu
@@ -50,7 +50,7 @@ There are 4 types of organization members:
 * `owner` - has access to all environments and organization settings, also can access billing details
 * `admin` - has access to all environments and organization settings.
 * `biller` - has access to billing details only.
-* `member` - has limited access to environments, access is defined by the roles assigned to given member. Member by default doesn't have any access, you need to [explicitly set it in given environment](testkube-cloud/environment-management). 
+* `member` - has limited access to environments, access is defined by the roles assigned to given member. Member by default doesn't have any access, you need to [explicitly set it in given environment](environment-management.md). 
 
 
 
