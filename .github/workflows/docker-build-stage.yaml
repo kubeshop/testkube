@@ -2,7 +2,7 @@ name: Docker images stage
 on:
   push:
     branches:
-      - switch-to-goreleaser
+      - main
 
 jobs:
   docker:
