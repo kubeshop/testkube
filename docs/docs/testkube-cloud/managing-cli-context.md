@@ -15,7 +15,7 @@ You can create a token:
 
 
 
-Now when your token is there you're ready to change Testkube CLI context: 
+When your token is there, you're ready to change the Testkube CLI context: 
 
 ![setting-context](https://user-images.githubusercontent.com/30776/229771159-4415aa74-70bb-4684-9511-449d0779b483.png)
 
