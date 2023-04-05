@@ -1,4 +1,4 @@
-## Changing the Testkube Context to Cloud
+# Changing the Testkube Context to Cloud
 
 To set the Testkube context to Cloud, the Testkube CLI tool needs to have access, so first you'll need to create an API token with 
 valid access rights.
@@ -20,7 +20,7 @@ When your token is there, you're ready to change the Testkube CLI context:
 ![setting-context](https://user-images.githubusercontent.com/30776/229771159-4415aa74-70bb-4684-9511-449d0779b483.png)
 
 
-### Changing the Testkube Context to kubeconfig-based
+# Changing the Testkube Context to kubeconfig-based
 
 When you want to return to using Testkube CLI with your local OSS Testkube cluster,  set the context to kubeconfig-based: 
 
