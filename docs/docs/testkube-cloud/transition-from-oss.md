@@ -13,7 +13,7 @@ helm repo add kubeshop https://kubeshop.github.io/helm-charts ; helm repo update
 
 WARNING! Please keep in mind that the default install will REMOVE existing MongoDB, MinIO and Dashboard pods!
 
-To keep them set below options to true (3 values for MongoDB, MinIO, Dashboard):
+To keep the pods, set the below options to true (3 values for MongoDB, MinIO, Dashboard):
 ```sh
  --set testkube-api.minio.enabled=true --set mongodb.enabled=true --set testkube-dashboard.enabled=true
 ```
