@@ -22,7 +22,7 @@ When your token is there, you're ready to change the Testkube CLI context:
 
 ### Changing the Testkube Context to kubeconfig-based
 
-When you want to get back to using Testkube CLI with your local OSS Testkube cluster just set context to kubeconfig based: 
+When you want to return to using Testkube CLI with your local OSS Testkube cluster,  set the context to kubeconfig-based: 
 
 ```sh 
 testkube set context --kubeconfig
