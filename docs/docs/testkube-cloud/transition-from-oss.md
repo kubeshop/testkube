@@ -25,4 +25,4 @@ Please follow the [context management](managing-cli-context.md) to configure you
 
 ## Migrating the Testkube Resources
 
-Currently there is no automatic migration tool for existing Testkube OSS resources. But we have plan for it in incoming releases.
+Currently there is no automatic migration tool for existing Testkube OSS resources. This is planned for coming releases.
