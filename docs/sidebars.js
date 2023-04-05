@@ -172,6 +172,8 @@ const sidebars = {
       items: [
         "testkube-cloud/intro",
         "testkube-cloud/installing-agent",
+        "testkube-cloud/transition-from-oss",
+        "testkube-cloud/managing-cli-context",
         "testkube-cloud/architecture",
       ],
     },
