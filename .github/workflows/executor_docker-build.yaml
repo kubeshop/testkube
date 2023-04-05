@@ -1,4 +1,4 @@
-name: Docker images building and pushing for executor
+name: Docker images building and pushing for executors
 on:
   push:
     tags:
