@@ -11,7 +11,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
-var _ Bus = &NATSBus{}
+var _ Bus = (*NATSBus)(nil)
 
 const (
 	SubscribeBuffer  = 1

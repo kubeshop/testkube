@@ -1,10 +1,13 @@
 package runner
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/kubeshop/testkube/pkg/envs"
 
 	cp "github.com/otiai10/copy"
 	"github.com/stretchr/testify/assert"
@@ -13,47 +16,53 @@ import (
 )
 
 func TestRun(t *testing.T) {
-	t.Skip("move this test to e2e test suite with valid environment setup")
+	t.Parallel()
+
+	ctx := context.Background()
 
 	// setup
-	tempDir, _ := os.MkdirTemp("", "*")
-	os.Setenv("RUNNER_DATADIR", tempDir)
+	tempDir, err := os.MkdirTemp("", "*")
+	assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+	defer os.RemoveAll(tempDir)
 	repoDir := filepath.Join(tempDir, "repo")
-	os.Mkdir(repoDir, 0755)
+	assert.NoError(t, os.Mkdir(repoDir, 0755))
 	_ = cp.Copy("../../examples", repoDir)
 
-	runner, err := NewCypressRunner("npm")
+	params := envs.Params{DataDir: tempDir}
+	runner, err := NewCypressRunner(ctx, "npm", params)
 	if err != nil {
 		t.Fail()
 	}
 
 	repoURI := "https://github.com/kubeshop/testkube-executor-cypress.git"
-	result, err := runner.Run(testkube.Execution{
-		Content: &testkube.TestContent{
-			Type_: string(testkube.TestContentTypeGitDir),
-			Repository: &testkube.Repository{
-				Type_:  "git",
-				Uri:    repoURI,
-				Branch: "jacek/feature/json-output",
-				Path:   "",
+	result, err := runner.Run(
+		ctx,
+		testkube.Execution{
+			Content: &testkube.TestContent{
+				Type_: string(testkube.TestContentTypeGitDir),
+				Repository: &testkube.Repository{
+					Type_:  "git",
+					Uri:    repoURI,
+					Branch: "jacek/feature/json-output",
+					Path:   "",
+				},
 			},
-		},
-	})
+		})
 
+	assert.NoErrorf(t, err, "Cypress Test Failed: ResultErr: %v, Err: %v ", result.ErrorMessage, err)
 	fmt.Printf("RESULT: %+v\n", result)
-	fmt.Printf("ERROR:  %+v\n", err)
-
-	t.Fail()
-
 }
 
 func TestRunErrors(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
 
 	t.Run("no RUNNER_DATADIR", func(t *testing.T) {
-		os.Setenv("RUNNER_DATADIR", "/unknown")
+		t.Parallel()
 
-		// given
-		runner, err := NewCypressRunner("yarn")
+		params := envs.Params{DataDir: "/unknown"}
+		runner, err := NewCypressRunner(ctx, "yarn", params)
 		if err != nil {
 			t.Fail()
 		}
@@ -61,10 +70,9 @@ func TestRunErrors(t *testing.T) {
 		execution := testkube.NewQueuedExecution()
 
 		// when
-		_, err = runner.Run(*execution)
+		_, err = runner.Run(ctx, *execution)
 
 		// then
 		assert.Error(t, err)
 	})
-
 }

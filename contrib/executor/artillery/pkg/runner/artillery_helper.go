@@ -2,8 +2,9 @@ package runner
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
+
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -108,7 +109,7 @@ type ArtilleryTestResult struct {
 func (r *ArtilleryRunner) Validate(execution testkube.Execution) error {
 
 	if execution.Content == nil {
-		return fmt.Errorf("can't find any content to run in execution data: %+v", execution)
+		return errors.Errorf("can't find any content to run in execution data: %+v", execution)
 	}
 
 	return nil

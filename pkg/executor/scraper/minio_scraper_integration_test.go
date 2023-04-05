@@ -1,22 +1,25 @@
-//go:build integration
-
 package scraper_test
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/kubeshop/testkube/pkg/utils/test"
+
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
 	"github.com/kubeshop/testkube/pkg/filesystem"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"os"
-	"path/filepath"
-	"testing"
 )
 
-func TestMinIOScraper(t *testing.T) {
+func TestMinIOScraper_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	mockCtrl := gomock.NewController(t)
@@ -43,24 +46,23 @@ func TestMinIOScraper(t *testing.T) {
 	err = os.WriteFile(file3, []byte("test3"), os.ModePerm)
 	assert.NoError(t, err)
 
-	extractor := scraper.NewFilesystemExtractor([]string{tempDir}, filesystem.NewOSFileSystem())
+	extractor := scraper.NewRecursiveFilesystemExtractor(filesystem.NewOSFileSystem())
 
-	loader, err := scraper.NewMinIOLoader("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-2", false)
+	loader, err := scraper.NewMinIOUploader("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-asdf", false)
 	if err != nil {
 		t.Fatalf("error creating minio loader: %v", err)
 	}
 
-	meta := map[string]any{
-		"executionId": "minio-test",
-	}
-	s := scraper.NewELScraper(extractor, loader)
-	err = s.Scrape(context.Background(), meta)
+	execution := testkube.Execution{Id: "minio-test"}
+	s := scraper.NewExtractLoadScraper(extractor, loader)
+	err = s.Scrape(context.Background(), []string{tempDir}, execution)
 	if err != nil {
 		t.Fatalf("error scraping: %v", err)
 	}
 
-	c := minio.NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-2", false)
-	artifacts, err := c.ListFilesFromBucket("test-bucket-2")
+	c := minio.NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-asdf", false)
+	assert.NoError(t, c.Connect())
+	artifacts, err := c.ListFiles(context.Background(), "test-bucket-asdf")
 	if err != nil {
 		t.Fatalf("error listing files from bucket: %v", err)
 	}

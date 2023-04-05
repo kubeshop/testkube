@@ -13,6 +13,11 @@ import (
 	"path/filepath"
 	"syscall"
 
+	cloudstorageclient "github.com/kubeshop/testkube/pkg/cloud/data/storage"
+
+	domainstorage "github.com/kubeshop/testkube/pkg/storage"
+	"github.com/kubeshop/testkube/pkg/storage/minio"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 
@@ -164,11 +169,13 @@ func main() {
 	var testResultsRepository testresult.Repository
 	var configRepository configrepository.Repository
 	var triggerLeaseBackend triggers.LeaseBackend
+	var storageClient domainstorage.Client
 	if mode == common.ModeAgent {
 		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, cfg.TestkubeCloudAPIKey)
 		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, cfg.TestkubeCloudAPIKey)
 		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, cfg.TestkubeCloudAPIKey)
 		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
+		storageClient = cloudstorageclient.NewCloudClient(grpcClient, cfg.TestkubeCloudAPIKey)
 	} else {
 		mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
 		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, mongoSSLConfig)
@@ -177,6 +184,15 @@ func main() {
 		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
 		configRepository = configrepository.NewMongoRepository(db)
 		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
+		storageClient = minio.NewClient(
+			cfg.StorageEndpoint,
+			cfg.StorageAccessKeyID,
+			cfg.StorageSecretAccessKey,
+			cfg.StorageLocation,
+			cfg.StorageToken,
+			cfg.StorageBucket,
+			cfg.StorageSSL,
+		)
 	}
 
 	configName := fmt.Sprintf("testkube-api-server-config-%s", cfg.TestkubeNamespace)
@@ -338,6 +354,7 @@ func main() {
 		jobTemplate,
 		sched,
 		slackLoader,
+		storageClient,
 		gqlServer,
 	)
 
@@ -346,7 +363,7 @@ func main() {
 		bucket := cfg.LogsBucket
 		if bucket == "" {
 			log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
-		} else if _, err := api.Storage.ListBuckets(); err == nil {
+		} else if _, err := api.Storage.ListBuckets(ctx); err == nil {
 			log.DefaultLogger.Info("setting minio as logs storage")
 			mongoResultsRepository, ok := resultsRepository.(*result.MongoRepository)
 			if ok {

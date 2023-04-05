@@ -1,20 +1,23 @@
-//go:build integration
-
 package scraper_test
 
 import (
 	"context"
-	"github.com/kubeshop/testkube/pkg/executor/scraper"
-	"github.com/kubeshop/testkube/pkg/filesystem"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/kubeshop/testkube/pkg/utils/test"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/filesystem"
 )
 
 func TestFilesystemExtractor_Extract_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	tempDir, err := os.MkdirTemp("", "test")
@@ -60,13 +63,14 @@ func TestFilesystemExtractor_Extract_Integration(t *testing.T) {
 		return nil
 	}
 
-	extractor := scraper.NewFilesystemExtractor([]string{tempDir}, filesystem.NewOSFileSystem())
-	err = extractor.Extract(context.Background(), processFn)
+	extractor := scraper.NewRecursiveFilesystemExtractor(filesystem.NewOSFileSystem())
+	err = extractor.Extract(context.Background(), []string{tempDir}, processFn)
 	require.NoError(t, err)
 	assert.Equal(t, processCallCount, 3)
 }
 
 func TestFilesystemExtractor_Extract_RelPath_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	tempDir, err := os.MkdirTemp("", "test")
@@ -94,9 +98,9 @@ func TestFilesystemExtractor_Extract_RelPath_Integration(t *testing.T) {
 		return nil
 	}
 
+	extractor := scraper.NewRecursiveFilesystemExtractor(filesystem.NewOSFileSystem())
 	scrapeDirs := []string{filepath.Join(tempDir, "file1.txt")}
-	extractor := scraper.NewFilesystemExtractor(scrapeDirs, filesystem.NewOSFileSystem())
-	err = extractor.Extract(context.Background(), processFn)
+	err = extractor.Extract(context.Background(), scrapeDirs, processFn)
 	require.NoError(t, err)
 	assert.Equal(t, processCallCount, 1)
 }

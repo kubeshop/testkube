@@ -78,6 +78,13 @@ func PrintLog(message string) {
 	fmt.Printf("%s\n", out)
 }
 
+// PrintLogf - prints log line as output json and supports sprintf formatting
+func PrintLogf(format string, args ...any) {
+	message := fmt.Sprintf(format, args...)
+	out, _ := json.Marshal(NewOutputLine([]byte(message)))
+	fmt.Printf("%s\n", out)
+}
+
 // PrintResult - prints result as output json
 func PrintResult(result testkube.ExecutionResult) {
 	out, _ := json.Marshal(NewOutputResult(result))

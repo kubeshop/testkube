@@ -25,20 +25,21 @@ var (
 
 func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to validate repository"
 		var request testkube.Repository
 		err := c.BodyParser(&request)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: unable to parse request: %w", errPrefix, err))
 		}
 
 		if request.Type_ != "git" {
-			return s.Error(c, http.StatusBadRequest, errWrongRepositoryType)
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: %w", errPrefix, errWrongRepositoryType))
 		}
 
 		switch testkube.GitAuthType(request.AuthType) {
 		case testkube.GitAuthTypeBasic, testkube.GitAuthTypeHeader, testkube.GitAuthTypeEmpty:
 		default:
-			return s.Error(c, http.StatusBadRequest, errWrongAuthType)
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: %w", errPrefix, errWrongAuthType))
 		}
 
 		if request.Username == "" && request.Token == "" {
@@ -60,16 +61,16 @@ func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 				if item.secretRef != nil {
 					secretClient, err := secret.NewClient(item.secretRef.Namespace)
 					if err != nil {
-						return s.Error(c, http.StatusBadGateway, err)
+						return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: unable to get secret client: %w", errPrefix, err))
 					}
 
 					data, err := secretClient.Get(item.secretRef.Name)
 					if err != nil {
-						return s.Error(c, http.StatusBadGateway, err)
+						return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: unable to get secret from secret client: %w", errPrefix, err))
 					}
 
 					if value, ok := data[item.secretRef.Key]; !ok {
-						return s.Error(c, http.StatusBadGateway, fmt.Errorf("username secret or token secret: missed key %s in secret %s/%s",
+						return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: username secret or token secret: missed key %s in secret %s/%s", errPrefix,
 							item.secretRef.Key, item.secretRef.Namespace, item.secretRef.Name))
 					} else {
 						*item.field = value
@@ -81,7 +82,7 @@ func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 		if request.CertificateSecret == "" {
 			dir, err := os.MkdirTemp("", "checkout")
 			if err != nil {
-				return s.Error(c, http.StatusBadGateway, err)
+				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not create folder for git: %w", errPrefix, err))
 			}
 			defer os.RemoveAll(dir) // clean up
 
@@ -104,7 +105,7 @@ func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 					err = errAuthFailed
 				}
 
-				return s.Error(c, http.StatusBadGateway, err)
+				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: %w", errPrefix, err))
 			}
 		}
 

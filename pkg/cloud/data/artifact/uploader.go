@@ -6,11 +6,9 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/kubeshop/testkube/pkg/log"
-
-	"github.com/kubeshop/testkube/pkg/utils"
-
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+
+	"github.com/kubeshop/testkube/pkg/log"
 
 	"github.com/pkg/errors"
 
@@ -26,13 +24,14 @@ func NewCloudUploader(executor executor.Executor) *CloudUploader {
 	return &CloudUploader{executor: executor}
 }
 
-func (l *CloudUploader) Upload(ctx context.Context, object *scraper.Object, meta map[string]any) error {
-	meta["object"] = object.Name
-	req, err := l.validateInfo(meta)
-	if err != nil {
-		return err
+func (l *CloudUploader) Upload(ctx context.Context, object *scraper.Object, execution testkube.Execution) error {
+	log.DefaultLogger.Infow("cloud uploader is requesting signed URL", "file", object.Name, "folder", execution.Id, "size", object.Size)
+	req := &PutObjectSignedURLRequest{
+		Object:        object.Name,
+		ExecutionID:   execution.Id,
+		TestName:      execution.TestName,
+		TestSuiteName: execution.TestSuiteName,
 	}
-	log.DefaultLogger.Infow("cloud uploader is requesting signed URL", "file", object.Name, "folder", req.ExecutionID, "size", object.Size)
 	signedURL, err := l.getSignedURL(ctx, req)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get signed URL for object [%s]", req.Object)
@@ -44,36 +43,6 @@ func (l *CloudUploader) Upload(ctx context.Context, object *scraper.Object, meta
 	}
 
 	return nil
-}
-
-func (l *CloudUploader) validateInfo(info map[string]any) (*PutObjectSignedURLRequest, error) {
-	object, err := utils.GetStringKey(info, "object")
-	if err != nil {
-		return nil, err
-	}
-	executionID, err := utils.GetStringKey(info, "executionId")
-	if err != nil {
-		return nil, err
-	}
-	testName, err := utils.GetStringKey(info, "testName")
-	if err != nil {
-		return nil, err
-	}
-	testSuiteName, _ := utils.GetStringKey(info, "testSuiteName")
-	req := &PutObjectSignedURLRequest{
-		Object:        object,
-		ExecutionID:   executionID,
-		TestName:      testName,
-		TestSuiteName: testSuiteName,
-	}
-
-	if info["testSuiteName"] != nil {
-		if s, ok := info["testSuiteName"].(string); ok {
-			req.TestSuiteName = s
-		}
-	}
-
-	return req, nil
 }
 
 func (l *CloudUploader) getSignedURL(ctx context.Context, req *PutObjectSignedURLRequest) (string, error) {
@@ -102,12 +71,4 @@ func (l *CloudUploader) putObject(ctx context.Context, url string, data io.Reade
 		return errors.New("response code was not OK")
 	}
 	return nil
-}
-
-func ExtractCloudLoaderMeta(execution testkube.Execution) map[string]any {
-	return map[string]any{
-		"executionId":   execution.Id,
-		"testName":      execution.TestName,
-		"testSuiteName": execution.TestSuiteName,
-	}
 }

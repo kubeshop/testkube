@@ -10,7 +10,6 @@ VERSION ?= 999.0.0-$(shell git log -1 --pretty=format:"%h")
 DEBUG ?= ${DEBUG:-0}
 DASHBOARD_URI ?= ${DASHBOARD_URI:-"https://demo.testkube.io"}
 ANALYTICS_TRACKING_ID = ${ANALYTICS_TRACKING_ID:-""}
-TESTKUBE_ANALYTICS_ENABLED = ${TESTKUBE_ANALYTICS_ENABLED:-false}
 ANALYTICS_API_KEY = ${ANALYTICS_API_KEY:-""}
 PROTOC := ${BIN_DIR}/protoc/bin/protoc
 PROTOC_GEN_GO := ${BIN_DIR}/protoc-gen-go

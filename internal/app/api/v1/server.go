@@ -38,7 +38,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/storage"
-	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
@@ -69,6 +68,7 @@ func NewTestkubeAPI(
 	jobTemplate string,
 	scheduler *scheduler.Scheduler,
 	slackLoader *slack.SlackLoader,
+	storage storage.Client,
 	graphQL *handler.Server,
 ) TestkubeAPI {
 
@@ -103,6 +103,7 @@ func NewTestkubeAPI(
 		jobTemplate:          jobTemplate,
 		scheduler:            scheduler,
 		slackLoader:          slackLoader,
+		Storage:              storage,
 		GraphQL:              graphQL,
 	}
 
@@ -114,7 +115,6 @@ func NewTestkubeAPI(
 	s.Events.Loader.Register(s.slackLoader)
 
 	s.InitEnvs()
-	s.InitStorage()
 	s.InitRoutes()
 
 	return s
@@ -193,16 +193,6 @@ func (s *TestkubeAPI) InitEnvs() {
 	if err := envconfig.Process("TESTKUBE_OAUTH", &s.oauthParams); err != nil {
 		s.Log.Infow("Processing TESTKUBE_OAUTH environment config", err)
 	}
-}
-
-func (s *TestkubeAPI) InitStorage() {
-	s.Storage = minio.NewClient(s.storageParams.Endpoint,
-		s.storageParams.AccessKeyId,
-		s.storageParams.SecretAccessKey,
-		s.storageParams.Region,
-		s.storageParams.Token,
-		s.storageParams.Bucket,
-		s.storageParams.SSL)
 }
 
 func (s *TestkubeAPI) InitRoutes() {

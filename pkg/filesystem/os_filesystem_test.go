@@ -1,5 +1,3 @@
-//go:build integration
-
 package filesystem
 
 import (
@@ -7,9 +5,14 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
-func TestOSFileSystem_OpenFile(t *testing.T) {
+func TestOSFileSystem_OpenFile_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	t.Parallel()
+
 	// Create a temporary file and write some data to it
 	f, err := os.CreateTemp("", "test.txt")
 	if err != nil {
@@ -42,7 +45,9 @@ func TestOSFileSystem_OpenFile(t *testing.T) {
 	}
 }
 
-func TestOSFileSystem_Walk(t *testing.T) {
+func TestOSFileSystem_Walk_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	t.Parallel()
 	// Create a temporary directory and some files
 	dir, err := os.MkdirTemp("", "test-dir")
 	if err != nil {
@@ -88,7 +93,10 @@ func TestOSFileSystem_Walk(t *testing.T) {
 	}
 }
 
-func TestOSFileSystem_OpenFileBuffered(t *testing.T) {
+func TestOSFileSystem_OpenFileBuffered_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	t.Parallel()
+
 	// Create a temporary file and write some data to it
 	tempFile, err := os.CreateTemp("", "test_buffered_file.txt")
 	if err != nil {

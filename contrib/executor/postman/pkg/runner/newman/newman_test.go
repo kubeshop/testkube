@@ -1,11 +1,16 @@
 package newman
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/kubeshop/testkube/pkg/utils/test"
+
+	"github.com/kubeshop/testkube/pkg/envs"
 
 	"github.com/stretchr/testify/assert"
 
@@ -14,9 +19,11 @@ import (
 
 // TestRun runs newman instance on top of example collection
 // creates temporary server and check if call to the server was done from newman
-func TestRun(t *testing.T) {
+func TestRun_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	t.Parallel()
 	// given
-	runner, err := NewNewmanRunner()
+	runner, err := NewNewmanRunner(envs.Params{})
 	assert.NoError(t, err)
 
 	// and test server for getting newman responses
@@ -34,8 +41,10 @@ func TestRun(t *testing.T) {
 		Content: testkube.NewStringTestContent(fmt.Sprintf(exampleCollection, port, port)),
 	}
 
+	ctx := context.Background()
+
 	// when
-	result, err := runner.Run(execution)
+	result, err := runner.Run(ctx, execution)
 
 	// then
 	assert.NoError(t, err)

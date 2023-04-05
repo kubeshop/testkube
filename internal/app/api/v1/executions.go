@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/kubeshop/testkube/pkg/repository/result"
+	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
@@ -37,17 +38,18 @@ const (
 func (s *TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
+		errPrefix := "failed to execute test"
 
 		var request testkube.ExecutionRequest
 		err := c.BodyParser(&request)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("test request body invalid: %w", err))
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: test request body invalid: %w", errPrefix, err))
 		}
 
 		if request.Args != nil {
 			request.Args, err = testkube.PrepareExecutorArgs(request.Args)
 			if err != nil {
-				return s.Error(c, http.StatusBadRequest, err)
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not prepare executor args: %w", errPrefix, err))
 			}
 		}
 
@@ -57,14 +59,17 @@ func (s *TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 		if id != "" {
 			test, err := s.TestsClient.Get(id)
 			if err != nil {
-				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get test: %w", err))
+				if errors.IsNotFound(err) {
+					return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: client found no test: %w", errPrefix, err))
+				}
+				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: can't get test: %w", errPrefix, err))
 			}
 
 			tests = append(tests, *test)
 		} else {
 			testList, err := s.TestsClient.List(c.Query("selector"))
 			if err != nil {
-				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get tests: %w", err))
+				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: can't get tests: %w", errPrefix, err))
 			}
 
 			tests = append(tests, testList.Items...)
@@ -78,7 +83,7 @@ func (s *TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 		if len(tests) != 0 {
 			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", DefaultConcurrencyLevel))
 			if err != nil {
-				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't detect concurrency level: %w", err))
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: can't detect concurrency level: %w", errPrefix, err))
 			}
 
 			workerpoolService := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](concurrencyLevel)
@@ -93,7 +98,7 @@ func (s *TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 
 		if id != "" && len(results) != 0 {
 			if results[0].ExecutionResult.IsFailed() {
-				return s.Error(c, http.StatusInternalServerError, fmt.Errorf(results[0].ExecutionResult.ErrorMessage))
+				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: execution failed: %s", errPrefix, results[0].ExecutionResult.ErrorMessage))
 			}
 
 			c.Status(http.StatusCreated)
@@ -108,6 +113,7 @@ func (s *TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 // ListExecutionsHandler returns array of available test executions
 func (s *TestkubeAPI) ListExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to list executions"
 		// TODO refactor into some Services (based on some abstraction for CRDs at least / CRUD)
 		// should we split this to separate endpoint? currently this one handles
 		// endpoints from /executions and from /tests/{id}/executions
@@ -117,17 +123,26 @@ func (s *TestkubeAPI) ListExecutionsHandler() fiber.Handler {
 
 		executions, err := s.ExecutionResults.GetExecutions(c.Context(), filter)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, err)
+			if err == mongo.ErrNoDocuments {
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: db found no execution results: %w", errPrefix, err))
+			}
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: db client failed to get execution results: %w", errPrefix, err))
 		}
 
 		executionTotals, err := s.ExecutionResults.GetExecutionTotals(c.Context(), false, filter)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, err)
+			if err == mongo.ErrNoDocuments {
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: db client found no total execution results: %w", errPrefix, err))
+			}
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: db client failed to get total execution results: %w", errPrefix, err))
 		}
 
 		filteredTotals, err := s.ExecutionResults.GetExecutionTotals(c.Context(), true, filter)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, err)
+			if err == mongo.ErrNoDocuments {
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: db found no total filtered execution results: %w", errPrefix, err))
+			}
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: db client failed to get total filtered execution results: %w", errPrefix, err))
 		}
 		results := testkube.ExecutionsResult{
 			Totals:   &executionTotals,
@@ -227,6 +242,7 @@ func (s *TestkubeAPI) GetExecutionHandler() fiber.Handler {
 		ctx := c.Context()
 		id := c.Params("id", "")
 		executionID := c.Params("executionID")
+		errPrefix := "failed to get execution for test '%s' and name '%s'"
 
 		var execution testkube.Execution
 		var err error
@@ -234,18 +250,18 @@ func (s *TestkubeAPI) GetExecutionHandler() fiber.Handler {
 		if id == "" {
 			execution, err = s.ExecutionResults.Get(ctx, executionID)
 			if err == mongo.ErrNoDocuments {
-				return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id/name %s not found", executionID))
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test with execution id/name %s not found", errPrefix, executionID))
 			}
 			if err != nil {
-				return s.Error(c, http.StatusInternalServerError, err)
+				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: db client was unable to get execution result by ID: %w", errPrefix, err))
 			}
 		} else {
 			execution, err = s.ExecutionResults.GetByNameAndTest(ctx, executionID, id)
 			if err == mongo.ErrNoDocuments {
-				return s.Error(c, http.StatusNotFound, fmt.Errorf("test %s/%s not found", id, executionID))
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test %s/%s not found", errPrefix, id, executionID))
 			}
 			if err != nil {
-				return s.Error(c, http.StatusInternalServerError, err)
+				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: db client was unable to get execution result by name and test: %s", errPrefix, err))
 			}
 		}
 
@@ -255,7 +271,7 @@ func (s *TestkubeAPI) GetExecutionHandler() fiber.Handler {
 		if execution.TestSecretUUID != "" {
 			testSecretMap, err = s.TestsClient.GetSecretTestVars(execution.TestName, execution.TestSecretUUID)
 			if err != nil {
-				return s.Error(c, http.StatusInternalServerError, err)
+				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client was unable to get test secrets: %w", errPrefix, err))
 			}
 		}
 
@@ -263,7 +279,7 @@ func (s *TestkubeAPI) GetExecutionHandler() fiber.Handler {
 		if execution.TestSuiteSecretUUID != "" {
 			testSuiteSecretMap, err = s.TestsSuitesClient.GetSecretTestSuiteVars(execution.TestSuiteName, execution.TestSuiteSecretUUID)
 			if err != nil {
-				return s.Error(c, http.StatusInternalServerError, err)
+				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client was unable to get test suite secrets: %w", errPrefix, err))
 			}
 		}
 
@@ -289,19 +305,20 @@ func (s *TestkubeAPI) AbortExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		executionID := c.Params("executionID")
+		errPrefix := "failed to abort execution %s"
 
 		s.Log.Infow("aborting execution", "executionID", executionID)
 		execution, err := s.ExecutionResults.Get(ctx, executionID)
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
-				return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id %s not found", executionID))
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test with execution id %s not found", errPrefix, executionID))
 			}
-			return s.Error(c, http.StatusInternalServerError, err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not get test %v", errPrefix, err))
 		}
 
 		res, err := s.Executor.Abort(ctx, &execution)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not abort execution: %v", errPrefix, err))
 		}
 		s.Metrics.IncAbortTest(execution.TestType, res.IsFailed())
 
@@ -313,6 +330,7 @@ func (s *TestkubeAPI) GetArtifactHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
 		fileName := c.Params("filename")
+		errPrefix := fmt.Sprintf("failed to get artifact %s for execution %s", fileName, executionID)
 
 		// TODO fix this someday :) we don't know 15 mins before release why it's working this way
 		// remember about CLI client and Dashboard client too!
@@ -330,15 +348,15 @@ func (s *TestkubeAPI) GetArtifactHandler() fiber.Handler {
 
 		execution, err := s.ExecutionResults.Get(c.Context(), executionID)
 		if err == mongo.ErrNoDocuments {
-			return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id/name %s not found", executionID))
+			return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test with execution id/name %s not found", errPrefix, executionID))
 		}
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: db could not get execution result: %w", errPrefix, err))
 		}
 
-		file, err := s.Storage.DownloadFile(execution.Id, fileName)
+		file, err := s.Storage.DownloadFile(c.Context(), execution.Id, fileName)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not download file: %w", errPrefix, err))
 		}
 
 		// SendStream promises to close file using io.Close() method
@@ -351,16 +369,18 @@ func (s *TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		executionID := c.Params("executionID")
+		errPrefix := fmt.Sprintf("failed to list artifacts for execution %s", executionID)
+
 		execution, err := s.ExecutionResults.Get(c.Context(), executionID)
 		if err == mongo.ErrNoDocuments {
-			return s.Error(c, http.StatusNotFound, fmt.Errorf("test with execution id/name %s not found", executionID))
+			return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test with execution id/name %s not found", errPrefix, executionID))
 		}
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: db could not get test with execution: %s", errPrefix, err))
 		}
-		files, err := s.Storage.ListFiles(execution.Id)
+		files, err := s.Storage.ListFiles(c.Context(), execution.Id)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: storage client could not list files %w", errPrefix, err))
 		}
 
 		return c.JSON(files)

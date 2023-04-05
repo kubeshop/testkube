@@ -8,9 +8,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/mapper/webhooks"
 )
 
-var _ common.ListenerLoader = &WebhooksLoader{}
+var _ common.ListenerLoader = (*WebhooksLoader)(nil)
 
-// WebhooksLoader loads webhooks from kubernetes
+// WebhooksLister loads webhooks from kubernetes
 type WebhooksLister interface {
 	List(selector string) (*executorsv1.WebhookList, error)
 }

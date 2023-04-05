@@ -1,5 +1,9 @@
 # .golangci.yml
 
+run:
+  build-tags:
+    - integration
+
 linters:
   disable-all: true
   enable:

@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"os"
@@ -18,7 +19,7 @@ import (
 // - pod:success, test execution: success
 // - pod:success, test execution: failed
 // - pod:failed,  test execution: failed - this one is unusual behaviour
-func Run(r runner.Runner, args []string) {
+func Run(ctx context.Context, r runner.Runner, args []string) {
 
 	var test []byte
 	var err error
@@ -64,7 +65,7 @@ func Run(r runner.Runner, args []string) {
 	}
 
 	output.PrintEvent("running test", e.Id)
-	result, err := r.Run(e)
+	result, err := r.Run(ctx, e)
 	if err != nil {
 		output.PrintError(os.Stderr, err)
 		os.Exit(1)

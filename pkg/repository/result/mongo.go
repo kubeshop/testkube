@@ -17,7 +17,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/storage"
 )
 
-var _ Repository = &MongoRepository{}
+var _ Repository = (*MongoRepository)(nil)
 
 const (
 	CollectionResults   = "results"

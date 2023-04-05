@@ -9,10 +9,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/utils/test"
+
 	"github.com/kubeshop/testkube/pkg/datefilter"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -24,7 +27,8 @@ const (
 	mongoDbName = "testkube-test"
 )
 
-func TestStorage(t *testing.T) {
+func TestStorage_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	assert := require.New(t)
 
 	repository, err := getRepository()
@@ -261,7 +265,8 @@ func TestStorage(t *testing.T) {
 
 }
 
-func TestLabels(t *testing.T) {
+func TestLabels_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	assert := require.New(t)
 
 	repository, err := getRepository()
@@ -277,7 +282,8 @@ func TestLabels(t *testing.T) {
 	})
 }
 
-func TestTestExecutionsMetrics(t *testing.T) {
+func TestTestExecutionsMetrics_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	assert := require.New(t)
 
 	repository, err := getRepository()
@@ -383,7 +389,9 @@ func (r *MongoRepository) insertExecutionResult(testName string, execStatus test
 		})
 }
 
-func TestUpdateOutput(t *testing.T) {
+func TestUpdateOutput_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+
 	repository, err := getRepository()
 	assert.NoError(t, err)
 

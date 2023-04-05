@@ -1,5 +1,3 @@
-//go:build integration
-
 package bus
 
 import (
@@ -9,12 +7,17 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/utils/test"
+
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func TestMultipleMessages(t *testing.T) {
+func TestMultipleMessages_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+
 	// given NATS connection
 	nc, err := nats.Connect("localhost")
 	assert.NoError(t, err)
@@ -33,13 +36,13 @@ func TestMultipleMessages(t *testing.T) {
 	nc.QueueSubscribe("test1", "q1", func(msg *nats.Msg) {
 
 		var event testkube.Event
-		json.Unmarshal(msg.Data, &event)
+		assert.NoError(t, json.Unmarshal(msg.Data, &event))
 		atomic.AddInt32(&i, 1)
 		wg.Done()
 	})
 	nc.QueueSubscribe("test1", "q1", func(msg *nats.Msg) {
 		var event testkube.Event
-		json.Unmarshal(msg.Data, &event)
+		assert.NoError(t, json.Unmarshal(msg.Data, &event))
 		atomic.AddInt32(&i, 1)
 		wg.Done()
 	})
@@ -47,7 +50,7 @@ func TestMultipleMessages(t *testing.T) {
 	// second subscription with another queue group
 	nc.QueueSubscribe("test1", "q2", func(msg *nats.Msg) {
 		var event testkube.Event
-		json.Unmarshal(msg.Data, &event)
+		assert.NoError(t, json.Unmarshal(msg.Data, &event))
 		atomic.AddInt32(&i, 1)
 		wg.Done()
 	})
@@ -69,7 +72,8 @@ func TestMultipleMessages(t *testing.T) {
 
 }
 
-func TestNATS(t *testing.T) {
+func TestNATS_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 
 	// given event
 
