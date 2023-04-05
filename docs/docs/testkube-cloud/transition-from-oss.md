@@ -1,6 +1,6 @@
 # Transition from Testkube OSS
 
-To migrate Testkube OSS to Cloud you need to install Testkube in Cloud Agent mode. Testkube Cloud Agent is the Testkube engine for managing test runs into your cluster. It sends data to Testkubes Cloud Servers. It's main responsibility is to manage test workloads and to get insight into Testkube resources stored in the cluster.
+To migrate Testkube OSS to Cloud you need to install Testkube in Cloud Agent mode. Testkube Cloud Agent is the Testkube engine for managing test runs into your cluster. It sends data to Testkube's Cloud Servers. Its main responsibility is to manage test workloads and to get insight into Testkube resources stored in the cluster.
 
 
 ## Installing the Agent
