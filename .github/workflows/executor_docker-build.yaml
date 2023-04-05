@@ -2,7 +2,7 @@ name: Docker images building and pushing for executors
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]-beta[0-9]"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 jobs:
   single_executor_docker:
