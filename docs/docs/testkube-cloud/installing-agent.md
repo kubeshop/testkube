@@ -39,7 +39,7 @@ Testkube Cloud will notify if the installation is successful.
 
 ![Validate install](https://user-images.githubusercontent.com/30776/206461244-f885c270-fc57-4919-9330-89a1ce5ad082.png)
 
-In case of RED status you can try to debug the issues with the command below
+In case of a RED status you can try to debug the issues with the command below:
 
 ```sh 
 testkube agent debug
