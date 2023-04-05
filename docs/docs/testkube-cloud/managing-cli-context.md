@@ -5,7 +5,7 @@ valid access rights.
 
 You can create a token:
 
-* with "admin" access rights (access to all environments) 
+* with "admin" access rights (access to all environments):
 
 ![admin-token](https://user-images.githubusercontent.com/30776/229772185-01f1e466-b04d-4c6d-9d5c-e4464d651177.png)
 
