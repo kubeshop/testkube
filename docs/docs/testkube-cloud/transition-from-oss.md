@@ -20,7 +20,7 @@ To keep them set below options to true (3 values for MongoDB, MinIO, Dashboard):
 
 ## Setting the Testkube CLI Context to Agent Mode
 
-Please follow the [context management](managing-cli-context.md) to configure your Testkube CLI in Cloud mode.
+Please follow the [context management guide](managing-cli-context.md) to configure your Testkube CLI in Cloud mode.
 
 
 ## Migrating the Testkube Resources
