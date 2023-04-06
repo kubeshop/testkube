@@ -314,6 +314,7 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.clientSet, executorPod.Name, c.namespace)); err != nil {
 		// continue on poll err and try to get logs later
 		l.Errorw("waiting for executor pod complete error", "error", err)
+		execution.ExecutionResult.Err(err)
 	}
 	l.Debug("poll executor immediate end")
 
@@ -405,6 +406,10 @@ func (c *ContainerExecutor) updateResultsFromPod(
 
 	executorLogs = append(executorLogs, scraperLogs...)
 	execution.ExecutionResult.Output = string(executorLogs)
+
+	if execution.ExecutionResult.IsFailed() && execution.ExecutionResult.ErrorMessage == "" {
+		execution.ExecutionResult.ErrorMessage = executor.GetPodErrorMessage(latestExecutorPod)
+	}
 
 	l.Infow("container execution completed saving result", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
 	err = c.repository.UpdateResult(ctx, execution.Id, *execution)

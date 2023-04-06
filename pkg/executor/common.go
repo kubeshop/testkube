@@ -366,3 +366,24 @@ func SyncDefaultExecutors(
 
 	return images, nil
 }
+
+// GetPodErrorMessage return pod error message
+func GetPodErrorMessage(pod *corev1.Pod) string {
+	if pod.Status.Message != "" {
+		return pod.Status.Message
+	}
+
+	for _, initContainerStatus := range pod.Status.InitContainerStatuses {
+		if initContainerStatus.State.Terminated != nil && initContainerStatus.State.Terminated.Message != "" {
+			return initContainerStatus.State.Terminated.Message
+		}
+	}
+
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if containerStatus.State.Terminated != nil && containerStatus.State.Terminated.Message != "" {
+			return containerStatus.State.Terminated.Message
+		}
+	}
+
+	return ""
+}
