@@ -23,7 +23,7 @@ You will need *Helm* installed and `kubectl` configured with access to your Kube
 - To install `helm` just follow [install instrcutions on Helm web site](https://helm.sh/docs/intro/install/)
 - To install `kubectl` follow [Kubernetes docs](https://kubernetes.io/docs/tasks/tools/)
 
-![Install steps 1](https://user-images.githubusercontent.com/30776/206460225-a71ee0ef-15f0-482a-a188-f8d0cfc485cb.png)
+![install-steps 1](https://user-images.githubusercontent.com/30776/229802501-69a76f00-8e56-41de-b3d5-8315b6902cc2.png)
 
 5. After some time, you should see Helm installation notice: 
 
@@ -32,8 +32,16 @@ You will need *Helm* installed and `kubectl` configured with access to your Kube
 
 ## Validating the Installation 
 
-Testkube Cloud will notify if the installation is successful. A green indicator means that your cluster was able to connect to Testkube Cloud.
+Testkube Cloud will notify if the installation is successful. 
+
+* A green indicator means that your cluster was able to connect to Testkube Cloud.
+* A red indicator indicates that the Testkube Agent can't connect to the Testkube Cloud API (Testkube needs some time to establish a connection, max time is 2-3 minutes).
 
 ![Validate install](https://user-images.githubusercontent.com/30776/206461244-f885c270-fc57-4919-9330-89a1ce5ad082.png)
 
-A red indicator indicates that the Testkube Agent can't connect to the Testkube Cloud API.
+In case of a RED status you can try to debug the issues with the command below:
+
+```sh 
+testkube agent debug
+```
+
