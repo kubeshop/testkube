@@ -27,7 +27,14 @@ const config = {
     defaultLocale: "en",
     locales: ["en"],
   },
-
+  scripts: [
+    {
+      src: "https://app.usercentrics.eu/browser-ui/latest/loader.js",
+      id: "usercentrics-cmp",
+      "data-settings-id": "WQ2gSqnsK",
+      async: true,
+    },
+  ],
   presets: [
     [
       "classic",
@@ -48,7 +55,7 @@ const config = {
           trackingID: "G-G7HWN1EDK5",
         },
         googleTagManager: {
-          containerId: 'GTM-PQK4DKN',
+          containerId: "GTM-PQK4DKN",
         },
       },
     ],
