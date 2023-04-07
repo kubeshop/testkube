@@ -6,13 +6,14 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"google.golang.org/grpc"
 	"io"
 	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
+
+	"google.golang.org/grpc"
 
 	cloudstorageclient "github.com/kubeshop/testkube/pkg/cloud/data/storage"
 
@@ -177,7 +178,7 @@ func main() {
 		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
 		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
 		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
-		storageClient = cloudstorageclient.NewCloudClient(grpcClient, cfg.TestkubeCloudAPIKey)
+		storageClient = cloudstorageclient.NewCloudClient(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
 	} else {
 		mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
 		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, mongoSSLConfig)

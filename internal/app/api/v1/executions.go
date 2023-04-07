@@ -10,8 +10,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/kubeshop/testkube/pkg/repository/result"
 	"k8s.io/apimachinery/pkg/api/errors"
+
+	"github.com/kubeshop/testkube/pkg/repository/result"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"

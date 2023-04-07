@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"encoding/json"
+
 	"google.golang.org/grpc"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"

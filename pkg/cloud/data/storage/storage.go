@@ -8,6 +8,8 @@ import (
 	"hash/fnv"
 	"io"
 
+	"google.golang.org/grpc"
+
 	"github.com/kubeshop/testkube/pkg/cloud"
 
 	"github.com/minio/minio-go/v7"
@@ -23,8 +25,8 @@ type CloudClient struct {
 	executor executor.Executor
 }
 
-func NewCloudClient(cloudClient cloud.TestKubeCloudAPIClient, apiKey string) *CloudClient {
-	return &CloudClient{executor: executor.NewCloudGRPCExecutor(cloudClient, apiKey)}
+func NewCloudClient(cloudClient cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string) *CloudClient {
+	return &CloudClient{executor: executor.NewCloudGRPCExecutor(cloudClient, grpcConn, apiKey)}
 }
 
 func (c *CloudClient) CreateBucket(ctx context.Context, bucket string) error {

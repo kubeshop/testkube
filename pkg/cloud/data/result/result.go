@@ -3,8 +3,9 @@ package result
 import (
 	"context"
 	"encoding/json"
-	"google.golang.org/grpc"
 	"time"
+
+	"google.golang.org/grpc"
 
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 
