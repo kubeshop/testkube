@@ -356,8 +356,16 @@ func (s *TestkubeAPI) InitRoutes() {
 			}
 
 			// Extract Unix connection
-			serverSock, _ := serverConn.(*net.TCPConn)
-			clientSock, _ := reflect.Indirect(reflect.ValueOf(c)).FieldByName("Conn").Interface().(*net.TCPConn)
+			serverSock, ok := serverConn.(*net.TCPConn)
+			if !ok {
+				s.Log.Errorw("error while building TCPConn out ouf serverConn", "error", err)
+				return
+			}
+			clientSock, ok := reflect.Indirect(reflect.ValueOf(c)).FieldByName("Conn").Interface().(*net.TCPConn)
+			if !ok {
+				s.Log.Errorw("error while building TCPConn out of hijacked connection", "error", err)
+				return
+			}
 
 			// Close the connection afterward
 			defer clientSock.Close()
