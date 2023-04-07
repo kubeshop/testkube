@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"google.golang.org/grpc"
 	"io"
 	"net"
 	"os"
@@ -129,12 +130,13 @@ func main() {
 	ui.ExitOnError("Getting config map client", err)
 	// agent
 	var grpcClient cloud.TestKubeCloudAPIClient
+	var grpcConn *grpc.ClientConn
 	mode := common.ModeStandalone
 	if cfg.TestkubeCloudAPIKey != "" {
 		mode = common.ModeAgent
 	}
 	if mode == common.ModeAgent {
-		grpcConn, err := agent.NewGRPCConnection(ctx, cfg.TestkubeCloudTLSInsecure, cfg.TestkubeCloudURL, log.DefaultLogger)
+		grpcConn, err = agent.NewGRPCConnection(ctx, cfg.TestkubeCloudTLSInsecure, cfg.TestkubeCloudURL, log.DefaultLogger)
 		ui.ExitOnError("error creating gRPC connection", err)
 		defer grpcConn.Close()
 
@@ -171,9 +173,9 @@ func main() {
 	var triggerLeaseBackend triggers.LeaseBackend
 	var storageClient domainstorage.Client
 	if mode == common.ModeAgent {
-		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, cfg.TestkubeCloudAPIKey)
-		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, cfg.TestkubeCloudAPIKey)
-		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, cfg.TestkubeCloudAPIKey)
+		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
+		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
+		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
 		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
 		storageClient = cloudstorageclient.NewCloudClient(grpcClient, cfg.TestkubeCloudAPIKey)
 	} else {

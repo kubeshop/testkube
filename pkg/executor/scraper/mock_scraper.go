@@ -35,6 +35,20 @@ func (m *MockScraper) EXPECT() *MockScraperMockRecorder {
 	return m.recorder
 }
 
+// Close mocks base method.
+func (m *MockScraper) Close() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockScraperMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockScraper)(nil).Close))
+}
+
 // Scrape mocks base method.
 func (m *MockScraper) Scrape(arg0 context.Context, arg1 []string, arg2 testkube.Execution) error {
 	m.ctrl.T.Helper()

@@ -33,7 +33,7 @@ type MinioScraper struct {
 }
 
 // Scrape gets artifacts from pod based on execution ID and directories list
-func (s MinioScraper) Scrape(ctx context.Context, directories []string, execution testkube.Execution) error {
+func (s *MinioScraper) Scrape(ctx context.Context, directories []string, execution testkube.Execution) error {
 	output.PrintLog(fmt.Sprintf("%s Scraping artifacts %s", ui.IconCabinet, directories))
 	client := minio.NewClient(s.Endpoint, s.AccessKeyID, s.SecretAccessKey, s.Region, s.Token, s.Bucket, s.Ssl) // create storage client
 	err := client.Connect()
@@ -49,6 +49,10 @@ func (s MinioScraper) Scrape(ctx context.Context, directories []string, executio
 	}
 
 	output.PrintLog(fmt.Sprintf("%s Successfully scraped artifacts", ui.IconCheckMark))
+	return nil
+}
+
+func (s *MinioScraper) Close() error {
 	return nil
 }
 

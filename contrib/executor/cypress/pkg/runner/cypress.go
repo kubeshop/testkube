@@ -47,6 +47,9 @@ type CypressRunner struct {
 }
 
 func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+	if r.Scraper != nil {
+		defer r.Scraper.Close()
+	}
 	output.PrintLogf("%s Preparing for test run", ui.IconTruck)
 	// make some validation
 	err = r.Validate(execution)

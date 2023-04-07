@@ -46,7 +46,9 @@ type JMeterRunner struct {
 var _ runner.Runner = &JMeterRunner{}
 
 func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
-
+	if r.Scraper != nil {
+		defer r.Scraper.Close()
+	}
 	output.PrintEvent(
 		fmt.Sprintf("%s Running with config", ui.IconTruck),
 		"scraperEnabled", r.Params.ScrapperEnabled,

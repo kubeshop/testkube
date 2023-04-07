@@ -12,6 +12,7 @@ import (
 type Scraper interface {
 	// Scrape gets artifacts from the provided paths and the provided execution
 	Scrape(ctx context.Context, paths []string, execution testkube.Execution) error
+	Close() error
 }
 
 type ExtractLoadScraper struct {
@@ -32,4 +33,8 @@ func (s *ExtractLoadScraper) Scrape(ctx context.Context, paths []string, executi
 		Extract(ctx, paths, func(ctx context.Context, object *Object) error {
 			return s.loader.Upload(ctx, object, execution)
 		})
+}
+
+func (s *ExtractLoadScraper) Close() error {
+	return s.loader.Close()
 }

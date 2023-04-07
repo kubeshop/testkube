@@ -65,3 +65,9 @@ func (l *MinIOUploader) Upload(ctx context.Context, object *Object, execution te
 
 	return nil
 }
+
+func (l *MinIOUploader) Close() error {
+	return nil
+}
+
+var _ Uploader = (*MinIOUploader)(nil)

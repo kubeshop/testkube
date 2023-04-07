@@ -3,6 +3,7 @@ package result
 import (
 	"context"
 	"encoding/json"
+	"google.golang.org/grpc"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
@@ -22,8 +23,8 @@ type CloudRepository struct {
 	executor executor.Executor
 }
 
-func NewCloudResultRepository(cloudClient cloud.TestKubeCloudAPIClient, apiKey string) *CloudRepository {
-	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(cloudClient, apiKey)}
+func NewCloudResultRepository(cloudClient cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string) *CloudRepository {
+	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(cloudClient, grpcConn, apiKey)}
 }
 
 func (r *CloudRepository) GetNextExecutionNumber(ctx context.Context, testName string) (int32, error) {
