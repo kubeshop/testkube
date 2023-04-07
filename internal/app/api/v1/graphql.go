@@ -20,7 +20,7 @@ func (s *TestkubeAPI) RunGraphQLServer(
 
 	mux := http.NewServeMux()
 	mux.Handle("/graphql", srv)
-	httpSrv := &http.Server{Addr: ":" + cfg.GraphqlPort}
+	httpSrv := &http.Server{Addr: ":" + cfg.GraphqlPort, Handler: mux}
 
 	log.DefaultLogger.Infow("running GraphQL server", "port", cfg.GraphqlPort)
 
