@@ -60,6 +60,11 @@ func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths []string
 		}
 	}
 
+	if len(archiveFiles) == 0 {
+		log.DefaultLogger.Infof("skipping tarball creation because no files were scraped")
+		return nil
+	}
+
 	tarballService := archive.NewTarballService()
 	var artifactsTarball bytes.Buffer
 	log.DefaultLogger.Infof("creating artifacts tarball with %d files", len(archiveFiles))
@@ -81,7 +86,7 @@ func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths []string
 }
 
 func (e *ArchiveFilesystemExtractor) newArchiveFile(baseDir string, path string) (*archive.File, error) {
-	f, err := e.fs.OpenFileRO(path)
+	f, err := e.fs.OpenFileBuffered(path)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error opening file %s", path)
 	}

@@ -15,7 +15,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	cloudstorageclient "github.com/kubeshop/testkube/pkg/cloud/data/storage"
+	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
@@ -172,13 +172,14 @@ func main() {
 	var testResultsRepository testresult.Repository
 	var configRepository configrepository.Repository
 	var triggerLeaseBackend triggers.LeaseBackend
+	var artifactStorage domainstorage.ArtifactsStorage
 	var storageClient domainstorage.Client
 	if mode == common.ModeAgent {
 		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
 		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
 		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
 		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
-		storageClient = cloudstorageclient.NewCloudClient(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
+		artifactStorage = cloudartifacts.NewCloudStorageClient(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
 	} else {
 		mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
 		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, mongoSSLConfig)
@@ -187,6 +188,15 @@ func main() {
 		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
 		configRepository = configrepository.NewMongoRepository(db)
 		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
+		artifactStorage = minio.NewMinIOArtifactClient(
+			cfg.StorageEndpoint,
+			cfg.StorageAccessKeyID,
+			cfg.StorageSecretAccessKey,
+			cfg.StorageLocation,
+			cfg.StorageToken,
+			cfg.StorageBucket,
+			cfg.StorageSSL,
+		)
 		storageClient = minio.NewClient(
 			cfg.StorageEndpoint,
 			cfg.StorageAccessKeyID,
@@ -359,6 +369,7 @@ func main() {
 		slackLoader,
 		storageClient,
 		gqlServer,
+		artifactStorage,
 	)
 
 	isMinioStorage := cfg.LogsStorage == "minio"
