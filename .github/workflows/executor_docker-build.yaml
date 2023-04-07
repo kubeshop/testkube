@@ -256,7 +256,7 @@ jobs:
   executor_cypress_docker:
     strategy:
       matrix:
-        version: [default, legacy, yarn, cypress8, cypress9, cypress10]
+        version: [default, legacy, yarn, cypress8, cypress9, cypress10, cypress11]
 
     runs-on: ubuntu-latest
     steps:
