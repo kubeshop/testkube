@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"net"
 	"net/http"
 
 	"github.com/kubeshop/testkube/internal/config"
@@ -17,9 +18,22 @@ func (s *TestkubeAPI) RunGraphQLServer(
 ) error {
 	srv := graphql.GetServer(s.Events.Bus, s.ExecutorsClient)
 
-	http.Handle("/graphql", srv)
+	mux := http.NewServeMux()
+	mux.Handle("/graphql", srv)
+	httpSrv := &http.Server{Addr: ":" + cfg.GraphqlPort}
 
 	log.DefaultLogger.Infow("running GraphQL server", "port", cfg.GraphqlPort)
 
-	return http.ListenAndServe(":"+cfg.GraphqlPort, nil)
+	l, err := net.Listen("tcp", httpSrv.Addr)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		<-ctx.Done()
+		s.Log.Infof("shutting down Testkube GraphQL API server")
+		_ = httpSrv.Shutdown(context.Background())
+	}()
+
+	return httpSrv.Serve(l)
 }
