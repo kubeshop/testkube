@@ -3,13 +3,12 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"time"
-
 	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/pprof"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
+	"net"
 
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/problem"
@@ -93,16 +92,15 @@ func (s *HTTPServer) getProblemMessage(err error, context ...interface{}) string
 
 // Run starts listening for incoming connetions
 func (s *HTTPServer) Run(ctx context.Context) error {
+	l, err := net.Listen("tcp", s.Config.Addr())
+	if err != nil {
+		return err
+	}
 	// this function listens for finished context and calls graceful shutdown on the API server
 	go func() {
-		select {
-		case <-ctx.Done():
-			// sleep 2 seconds to cover the edge case if SIGTERM or SIGKILL signal occurs before the server is started,
-			// so the application does not get stuck
-			time.Sleep(2 * time.Second)
-			s.Log.Infof("shutting down Testkube API server")
-			_ = s.Mux.Shutdown()
-		}
+		<-ctx.Done()
+		s.Log.Infof("shutting down Testkube API server")
+		_ = s.Mux.Shutdown()
 	}()
-	return s.Mux.Listen(s.Config.Addr())
+	return s.Mux.Listener(l)
 }

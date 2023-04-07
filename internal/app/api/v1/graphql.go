@@ -5,8 +5,8 @@ import (
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/internal/graphql"
 	"github.com/kubeshop/testkube/pkg/log"
+	"net"
 	"net/http"
-	"time"
 )
 
 // RunGraphQLServer runs GraphQL server on go net/http server
@@ -23,14 +23,16 @@ func (s *TestkubeAPI) RunGraphQLServer(
 
 	log.DefaultLogger.Infow("running GraphQL server", "port", cfg.GraphqlPort)
 
+	l, err := net.Listen("tcp", httpSrv.Addr)
+	if err != nil {
+		return err
+	}
+
 	go func() {
 		<-ctx.Done()
-		// sleep 2 seconds to cover the edge case if SIGTERM or SIGKILL signal occurs before the server is started,
-		// so the application does not get stuck
-		time.Sleep(2 * time.Second)
 		s.Log.Infof("shutting down Testkube GraphQL API server")
 		_ = httpSrv.Shutdown(context.Background())
 	}()
 
-	return httpSrv.ListenAndServe()
+	return httpSrv.Serve(l)
 }
