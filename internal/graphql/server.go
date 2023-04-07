@@ -3,8 +3,13 @@ package graphql
 // TODO move it to main API server
 
 import (
+	"net/http"
+	"time"
+
 	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
+	"github.com/gorilla/websocket"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	"github.com/kubeshop/testkube/internal/graphql/graph"
@@ -12,45 +17,28 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
-// const defaultPort = "8080"
-
-// func main() {
-// 	port := os.Getenv("PORT")
-// 	if port == "" {
-// 		port = defaultPort
-// 	}
-
-// 	// configure NATS event bus
-// 	nc, err := bus.NewNATSConnection("nats://localhost:4222")
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	eventBus := bus.NewNATSBus(nc)
-
-// 	kubeClient, err := kubeclient.GetClient()
-// 	if err != nil {
-// 		log.DefaultLogger.Panic(err)
-// 	}
-// 	executorsClient := executorsclientv1.NewClient(kubeClient, "testkube")
-
-// 	srv := GetGraphQLServer(eventBus, executorsClient)
-
-// 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-// 	http.Handle("/query", srv)
-
-// 	log.DefaultLogger.Infof("connect to http://localhost:%s/ for GraphQL playground", port)
-// 	log.DefaultLogger.Panic(http.ListenAndServe(":"+port, nil))
-// }
-
 func GetServer(eventBus bus.Bus, executorsClient *executorsclientv1.ExecutorsClient) *handler.Server {
-	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{
+	srv := handler.New(graph.NewExecutableSchema(graph.Config{
 		Resolvers: &graph.Resolver{
 			Log:    log.DefaultLogger,
 			Bus:    eventBus,
 			Client: executorsClient,
 		}}))
-
-	srv.AddTransport(&transport.Websocket{})
+	srv.AddTransport(transport.Websocket{
+		KeepAlivePingInterval: 10 * time.Second,
+		Upgrader: websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool {
+				return true
+			},
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
+		},
+	})
+	srv.AddTransport(transport.Options{})
+	srv.AddTransport(transport.GET{})
+	srv.AddTransport(transport.POST{})
+	srv.AddTransport(transport.MultipartForm{})
+	srv.Use(extension.Introspection{})
 
 	return srv
 
