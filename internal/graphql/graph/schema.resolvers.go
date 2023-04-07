@@ -74,6 +74,8 @@ func (r *subscriptionResolver) Executors(ctx context.Context) (<-chan []testkube
 		execs, err := getExecutors(r.Client)
 		if err == nil {
 			ch <- execs
+		} else {
+			r.Log.Errorw("failed to get initial executors", "error", err)
 		}
 
 		r.Log.Infof("%+v\n", "subscribed to events.executor.>")
@@ -85,6 +87,7 @@ func (r *subscriptionResolver) Executors(ctx context.Context) (<-chan []testkube
 
 			execs, err := getExecutors(r.Client)
 			if err != nil {
+				r.Log.Errorw("failed to get executors", "error", err)
 				return err
 			}
 			ch <- execs
