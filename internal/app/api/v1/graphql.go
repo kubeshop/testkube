@@ -2,11 +2,12 @@ package v1
 
 import (
 	"context"
+	"net"
+	"net/http"
+
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/internal/graphql"
 	"github.com/kubeshop/testkube/pkg/log"
-	"net"
-	"net/http"
 )
 
 // RunGraphQLServer runs GraphQL server on go net/http server
