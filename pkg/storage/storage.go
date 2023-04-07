@@ -20,6 +20,7 @@ type ClientImplicitBucket interface {
 	ListFiles(ctx context.Context, bucketFolder string) ([]testkube.Artifact, error)
 	SaveFile(ctx context.Context, bucketFolder, filePath string) error
 	DownloadFile(ctx context.Context, bucketFolder, file string) (*minio.Object, error)
+	DownloadArchive(ctx context.Context, bucketFolder string) (io.Reader, error)
 	UploadFile(ctx context.Context, bucketFolder string, filePath string, reader io.Reader, objectSize int64) error
 	PlaceFiles(ctx context.Context, bucketFolders []string, prefix string) error
 	DeleteFile(ctx context.Context, bucketFolder, file string) error

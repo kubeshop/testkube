@@ -365,6 +365,30 @@ func (s *TestkubeAPI) GetArtifactHandler() fiber.Handler {
 	}
 }
 
+// GetArtifactArchiveHandler returns artifact archive
+func (s *TestkubeAPI) GetArtifactArchiveHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		executionID := c.Params("executionID")
+		errPrefix := fmt.Sprintf("failed to get artifact archive for execution %s", executionID)
+
+		execution, err := s.ExecutionResults.Get(c.Context(), executionID)
+		if err == mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test with execution id/name %s not found", errPrefix, executionID))
+		}
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: db could not get execution result: %w", errPrefix, err))
+		}
+
+		archive, err := s.Storage.DownloadArchive(c.Context(), execution.Id)
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not download artifact archive: %w", errPrefix, err))
+		}
+
+		// SendStream promises to close archive using io.Close() method
+		return c.SendStream(archive)
+	}
+}
+
 // ListArtifactsHandler returns list of files in the given bucket
 func (s *TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {

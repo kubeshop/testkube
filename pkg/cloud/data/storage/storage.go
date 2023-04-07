@@ -101,6 +101,11 @@ func (c *CloudClient) DownloadFile(ctx context.Context, bucketFolder, file strin
 	panic("implement me")
 }
 
+func (c *CloudClient) DownloadArchive(ctx context.Context, bucketFolder string) (io.Reader, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (c *CloudClient) UploadFile(ctx context.Context, bucketFolder string, filePath string, reader io.Reader, objectSize int64) error {
 	//TODO implement me
 	panic("implement me")
