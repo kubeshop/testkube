@@ -7,6 +7,7 @@ package graph
 import (
 	"context"
 	"fmt"
+	"github.com/kubeshop/testkube-operator/client/executors/v1"
 
 	"github.com/kubeshop/testkube/internal/graphql/graph/model"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -49,6 +50,19 @@ func (r *queryResolver) Executors(ctx context.Context) ([]*testkube.Executor, er
 	panic(fmt.Errorf("not implemented: Executors - executors"))
 }
 
+func getExecutors(client *executors.ExecutorsClient) ([]testkube.ExecutorDetails, error) {
+	execs, err := client.List("")
+	if err != nil {
+		return nil, err
+	}
+
+	execsDetails := []testkube.ExecutorDetails{}
+	for _, item := range execs.Items {
+		execsDetails = append(execsDetails, executorsmapper.MapExecutorCRDToExecutorDetails(item))
+	}
+	return execsDetails, nil
+}
+
 // Executors is the resolver for the executors field.
 func (r *subscriptionResolver) Executors(ctx context.Context) (<-chan []testkube.ExecutorDetails, error) {
 	ch := make(chan []testkube.ExecutorDetails)
@@ -56,24 +70,24 @@ func (r *subscriptionResolver) Executors(ctx context.Context) (<-chan []testkube
 	// TODO You can (and probably should) handle your channels in a central place outside of `schema.resolvers.go`.
 	// For this example we'll simply use a Goroutine with a simple loop.
 	go func() {
+
+		execs, err := getExecutors(r.Client)
+		if err == nil {
+			ch <- execs
+		}
+
 		r.Log.Infof("%+v\n", "subscribed to events.executor.>")
 
 		queue := rand.String(30)
 
-		err := r.Bus.SubscribeTopic("events.executor.>", queue, func(e testkube.Event) error {
+		err = r.Bus.SubscribeTopic("events.executor.>", queue, func(e testkube.Event) error {
 			r.Log.Infof("%s %s %s\n", e.Type_, *e.Resource, e.ResourceId)
 
-			execs, err := r.Client.List("")
+			execs, err := getExecutors(r.Client)
 			if err != nil {
 				return err
 			}
-
-			executors := []testkube.ExecutorDetails{}
-			for _, item := range execs.Items {
-				executors = append(executors, executorsmapper.MapExecutorCRDToExecutorDetails(item))
-			}
-
-			ch <- executors
+			ch <- execs
 			return nil
 		})
 
