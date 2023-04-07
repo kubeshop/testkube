@@ -41,6 +41,7 @@ func TestRun(t *testing.T) {
 			scraperBuilder: func() scraper.Scraper {
 				s := scraper.NewMockScraper(mockCtrl)
 				s.EXPECT().Scrape(gomock.Any(), []string{"."}, gomock.Eq(e)).Return(nil)
+				s.EXPECT().Close().Return(nil)
 				return s
 			},
 		},
@@ -53,6 +54,7 @@ func TestRun(t *testing.T) {
 			scraperBuilder: func() scraper.Scraper {
 				s := scraper.NewMockScraper(mockCtrl)
 				s.EXPECT().Scrape(gomock.Any(), []string{"."}, gomock.Eq(e)).Return(errors.New("Scraping failed"))
+				s.EXPECT().Close().Return(nil)
 				return s
 			},
 		},

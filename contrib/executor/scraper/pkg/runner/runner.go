@@ -43,6 +43,9 @@ var _ runner.Runner = &ScraperRunner{}
 
 // Run prepares data for executor
 func (r *ScraperRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+	if r.Scraper != nil {
+		defer r.Scraper.Close()
+	}
 	// check that the artifact dir exists
 	if execution.ArtifactRequest == nil {
 		return *result.Err(errors.Errorf("executor only support artifact based tests")), nil

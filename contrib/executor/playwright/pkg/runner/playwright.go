@@ -48,6 +48,9 @@ type PlaywrightRunner struct {
 var _ runner.Runner = &PlaywrightRunner{}
 
 func (r *PlaywrightRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+	if r.Scraper != nil {
+		defer r.Scraper.Close()
+	}
 	output.PrintLogf("%s Preparing for test run", ui.IconTruck)
 
 	// check that the datadir exists

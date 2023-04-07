@@ -18,15 +18,17 @@ type Command string
 //go:generate mockgen -destination=./mock_executor.go -package=executor "github.com/kubeshop/testkube/pkg/cloud/data/executor" Executor
 type Executor interface {
 	Execute(ctx context.Context, command Command, payload any) (response []byte, err error)
+	Close() error
 }
 
 type CloudGRPCExecutor struct {
 	client cloud.TestKubeCloudAPIClient
+	conn   *grpc.ClientConn
 	apiKey string
 }
 
-func NewCloudGRPCExecutor(client cloud.TestKubeCloudAPIClient, apiKey string) *CloudGRPCExecutor {
-	return &CloudGRPCExecutor{client: client, apiKey: apiKey}
+func NewCloudGRPCExecutor(client cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string) *CloudGRPCExecutor {
+	return &CloudGRPCExecutor{client: client, conn: grpcConn, apiKey: apiKey}
 }
 
 func (e *CloudGRPCExecutor) Execute(ctx context.Context, command Command, payload any) (response []byte, err error) {
@@ -49,4 +51,8 @@ func (e *CloudGRPCExecutor) Execute(ctx context.Context, command Command, payloa
 		return nil, err
 	}
 	return cmdResponse.Response, nil
+}
+
+func (e *CloudGRPCExecutor) Close() error {
+	return e.conn.Close()
 }
