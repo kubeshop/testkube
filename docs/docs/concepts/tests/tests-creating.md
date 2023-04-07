@@ -374,6 +374,18 @@ spec:
 
 When you run such a test you will face a memory limit for the test executor pod, when the default job template doesn't have any resource constraints.
 
+```yaml
+apiVersion: batch/v1
+kind: Job
+spec:
+  template:
+    spec:
+      imagePullSecrets:
+        - name: yourSecretName
+
+```
+Add `imagePullSecrets` option if you use your own Image Registry. This will add the secret for both `init` and `executor` containers.
+
 ### Executing a Prerun Script
 
 If you need to provide additional configuration for your executor environment, you can submit a prerun script to be executed before the test is started. For example, we have a simple shell script stored in `script.sh` file:
