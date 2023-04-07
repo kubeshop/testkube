@@ -58,7 +58,9 @@ func (r *subscriptionResolver) Executors(ctx context.Context) (<-chan []testkube
 	go func() {
 		r.Log.Infof("%+v\n", "subscribed to events.executor.>")
 
-		r.Bus.SubscribeTopic("events.executor.>", rand.String(30), func(e testkube.Event) error {
+		queue := rand.String(30)
+
+		err := r.Bus.SubscribeTopic("events.executor.>", queue, func(e testkube.Event) error {
 			r.Log.Infof("%s %s %s\n", e.Type_, *e.Resource, e.ResourceId)
 
 			execs, err := r.Client.List("")
@@ -74,6 +76,13 @@ func (r *subscriptionResolver) Executors(ctx context.Context) (<-chan []testkube
 			ch <- executors
 			return nil
 		})
+
+		if err != nil {
+			go func() {
+				<-ctx.Done()
+				_ = r.Bus.Unsubscribe(queue)
+			}()
+		}
 	}()
 
 	return ch, nil
