@@ -22,11 +22,26 @@ const (
 )
 
 type ArchiveFilesystemExtractor struct {
-	fs filesystem.FileSystem
+	generateMeta bool
+	fs           filesystem.FileSystem
 }
 
-func NewArchiveFilesystemExtractor(fs filesystem.FileSystem) *ArchiveFilesystemExtractor {
-	return &ArchiveFilesystemExtractor{fs: fs}
+func NewArchiveFilesystemExtractor(fs filesystem.FileSystem, opts ...ArchiveFilesystemExtractorOpts) *ArchiveFilesystemExtractor {
+	r := &ArchiveFilesystemExtractor{fs: fs}
+
+	for _, opt := range opts {
+		opt(r)
+	}
+
+	return r
+}
+
+type ArchiveFilesystemExtractorOpts func(*ArchiveFilesystemExtractor)
+
+func GenerateTarballMetaFile() ArchiveFilesystemExtractorOpts {
+	return func(a *ArchiveFilesystemExtractor) {
+		a.generateMeta = true
+	}
 }
 
 func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths []string, process ProcessFn) error {
@@ -88,12 +103,14 @@ func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths []string
 		return errors.Wrapf(err, "error processing object %s", object.Name)
 	}
 
-	tarballMeta, err := e.newTarballMeta(archiveFiles)
-	if err != nil {
-		return errors.Wrapf(err, "error creating tarball meta")
-	}
-	if err := process(ctx, tarballMeta); err != nil {
-		return errors.Wrapf(err, "error processing object %s", tarballMeta.Name)
+	if e.generateMeta {
+		tarballMeta, err := e.newTarballMeta(archiveFiles)
+		if err != nil {
+			return errors.Wrapf(err, "error creating tarball meta")
+		}
+		if err := process(ctx, tarballMeta); err != nil {
+			return errors.Wrapf(err, "error processing object %s", tarballMeta.Name)
+		}
 	}
 
 	return nil

@@ -2,6 +2,7 @@ package scraper_test
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
@@ -16,7 +17,111 @@ import (
 	"github.com/kubeshop/testkube/pkg/filesystem"
 )
 
-func TestFilesystemExtractor_Extract_Integration(t *testing.T) {
+func TestArchiveFilesystemExtractor_Extract_NoMeta_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	t.Parallel()
+
+	tempDir, err := os.MkdirTemp("", "test")
+	require.NoError(t, err)
+
+	defer os.RemoveAll(tempDir)
+
+	err = os.Mkdir(filepath.Join(tempDir, "subdir"), os.ModePerm)
+	require.NoError(t, err)
+
+	file1 := filepath.Join(tempDir, "file1.txt")
+	file2 := filepath.Join(tempDir, "file2.txt")
+	file3 := filepath.Join(tempDir, "subdir", "file3.txt")
+
+	err = os.WriteFile(file1, []byte("test1"), os.ModePerm)
+	assert.NoError(t, err)
+
+	err = os.WriteFile(file2, []byte("test2"), os.ModePerm)
+	assert.NoError(t, err)
+
+	err = os.WriteFile(file3, []byte("test3"), os.ModePerm)
+	assert.NoError(t, err)
+
+	processCallCount := 0
+	processFn := func(ctx context.Context, object *scraper.Object) error {
+		processCallCount++
+		assert.Equal(t, "artifacts.tar.gz", object.Name)
+		assert.Equal(t, scraper.DataTypeTarball, object.DataType)
+
+		return nil
+	}
+
+	extractor := scraper.NewArchiveFilesystemExtractor(filesystem.NewOSFileSystem())
+	scrapeDirs := []string{tempDir}
+	err = extractor.Extract(context.Background(), scrapeDirs, processFn)
+	require.NoError(t, err)
+	assert.Equal(t, 1, processCallCount)
+}
+
+func TestArchiveFilesystemExtractor_Extract_Meta_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	t.Parallel()
+
+	tempDir, err := os.MkdirTemp("", "test")
+	require.NoError(t, err)
+
+	defer os.RemoveAll(tempDir)
+
+	err = os.Mkdir(filepath.Join(tempDir, "subdir"), os.ModePerm)
+	require.NoError(t, err)
+
+	file1 := filepath.Join(tempDir, "file1.txt")
+	file2 := filepath.Join(tempDir, "file2.txt")
+	file3 := filepath.Join(tempDir, "subdir", "file3.txt")
+
+	err = os.WriteFile(file1, []byte("test1"), os.ModePerm)
+	assert.NoError(t, err)
+
+	err = os.WriteFile(file2, []byte("test2"), os.ModePerm)
+	assert.NoError(t, err)
+
+	err = os.WriteFile(file3, []byte("test3"), os.ModePerm)
+	assert.NoError(t, err)
+
+	processCallCount := 0
+	processFn := func(ctx context.Context, object *scraper.Object) error {
+		switch object.Name {
+		case "artifacts.tar.gz":
+			processCallCount++
+			assert.Equal(t, scraper.DataTypeTarball, object.DataType)
+		case ".testkube-meta-files.json":
+			processCallCount++
+			var meta []scraper.TarballMeta
+			jsonData, err := io.ReadAll(object.Data)
+			if err != nil {
+				t.Fatalf("Failed to read meta files: %v", err)
+			}
+			if err := json.Unmarshal(jsonData, &meta); err != nil {
+				t.Fatalf("Failed to unmarshal meta files: %v", err)
+			}
+			assert.Len(t, meta, 3)
+			assert.Equal(t, "file1.txt", meta[0].File)
+			assert.Equal(t, int64(5), meta[0].Size)
+			assert.Equal(t, "file2.txt", meta[1].File)
+			assert.Equal(t, int64(5), meta[1].Size)
+			assert.Equal(t, "subdir/file3.txt", meta[2].File)
+			assert.Equal(t, int64(5), meta[2].Size)
+			assert.Equal(t, scraper.DataTypeRaw, object.DataType)
+		default:
+			t.Fatalf("Unexpected object name: %s", object.Name)
+		}
+
+		return nil
+	}
+
+	extractor := scraper.NewArchiveFilesystemExtractor(filesystem.NewOSFileSystem(), scraper.GenerateTarballMetaFile())
+	scrapeDirs := []string{tempDir}
+	err = extractor.Extract(context.Background(), scrapeDirs, processFn)
+	require.NoError(t, err)
+	assert.Equal(t, 2, processCallCount)
+}
+
+func TestRecursiveFilesystemExtractor_Extract_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 	t.Parallel()
 
@@ -48,9 +153,9 @@ func TestFilesystemExtractor_Extract_Integration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("error reading %s: %v", object.Name, err)
 		}
+		assert.Equal(t, scraper.DataTypeRaw, object.DataType)
 		switch object.Name {
 		case "file1.txt":
-
 			assert.Equal(t, b, []byte("test1"))
 		case "file2.txt":
 			assert.Equal(t, b, []byte("test2"))
@@ -70,7 +175,7 @@ func TestFilesystemExtractor_Extract_Integration(t *testing.T) {
 	assert.Equal(t, processCallCount, 3)
 }
 
-func TestFilesystemExtractor_Extract_RelPath_Integration(t *testing.T) {
+func TestRecursiveFilesystemExtractor_Extract_RelPath_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 	t.Parallel()
 
@@ -95,7 +200,7 @@ func TestFilesystemExtractor_Extract_RelPath_Integration(t *testing.T) {
 			t.Fatalf("error reading %s: %v", object.Name, err)
 		}
 		assert.Equal(t, b, []byte("test1"))
-
+		assert.Equal(t, scraper.DataTypeRaw, object.DataType)
 		return nil
 	}
 

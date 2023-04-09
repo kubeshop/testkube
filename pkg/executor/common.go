@@ -68,11 +68,11 @@ var RunnerEnvVars = []corev1.EnvVar{
 	},
 	{
 		Name:  "RUNNER_SSL",
-		Value: os.Getenv("STORAGE_SSL"),
+		Value: getOr("STORAGE_SSL", "false"),
 	},
 	{
 		Name:  "RUNNER_SCRAPPERENABLED",
-		Value: os.Getenv("SCRAPPERENABLED"),
+		Value: getOr("SCRAPPERENABLED", "false"),
 	},
 	{
 		Name:  "RUNNER_DATADIR",
@@ -88,7 +88,7 @@ var RunnerEnvVars = []corev1.EnvVar{
 	},
 	{
 		Name:  "RUNNER_CLOUD_API_TLS_INSECURE",
-		Value: getRunnerCloudTLSInsecure(),
+		Value: getOr("TESTKUBE_CLOUD_TLS_INSECURE", "false"),
 	},
 	{
 		Name:  "RUNNER_CLOUD_API_URL",
@@ -96,17 +96,16 @@ var RunnerEnvVars = []corev1.EnvVar{
 	},
 }
 
+func getOr(key, defaultVal string) string {
+	if val, ok := os.LookupEnv(key); ok {
+		return val
+	}
+	return defaultVal
+}
+
 func getRunnerCloudMode() string {
 	val := "false"
 	if os.Getenv("TESTKUBE_CLOUD_API_KEY") != "" {
-		val = "true"
-	}
-	return val
-}
-
-func getRunnerCloudTLSInsecure() string {
-	val := "false"
-	if os.Getenv("TESTKUBE_CLOUD_TLS_INSECURE") == "true" {
 		val = "true"
 	}
 	return val

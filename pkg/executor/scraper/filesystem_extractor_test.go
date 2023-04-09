@@ -49,7 +49,7 @@ func TestRecursiveFilesystemExtractor_Extract(t *testing.T) {
 	assert.NoErrorf(t, err, "Extract failed: %v", err)
 }
 
-func TestArchiveFilesystemExtractor_Extract(t *testing.T) {
+func TestArchiveFilesystemExtractor_Extract_NoMeta(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
@@ -68,6 +68,54 @@ func TestArchiveFilesystemExtractor_Extract(t *testing.T) {
 	}
 	fs.EXPECT().Stat("/my/directory/file1").Return(&testFileInfo, nil)
 	extractor := scraper.NewArchiveFilesystemExtractor(fs)
+
+	// Set up the expected calls to the mocked fs object
+	fs.EXPECT().Walk("/my/directory", gomock.Any()).Return(nil).DoAndReturn(func(_ string, walkFn filepath.WalkFunc) error {
+		fileInfo := filesystem.MockFileInfo{
+			FName:  "file1",
+			FIsDir: false,
+		}
+		return walkFn("/my/directory/file1", &fileInfo, nil)
+	})
+
+	processFnCallCount := 0
+	processFn := func(ctx context.Context, object *scraper.Object) error {
+		processFnCallCount++
+		switch object.Name {
+		case "artifacts.tar.gz":
+			assert.Equal(t, scraper.DataTypeTarball, object.DataType)
+		default:
+			t.Fatalf("Unexpected object name: %s", object.Name)
+		}
+
+		return nil
+	}
+
+	// Call the Extract function
+	err := extractor.Extract(context.Background(), []string{"/my/directory"}, processFn)
+	assert.NoErrorf(t, err, "Extract failed: %v", err)
+	assert.Equal(t, 1, processFnCallCount)
+}
+
+func TestArchiveFilesystemExtractor_Extract_Meta(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	fs := filesystem.NewMockFileSystem(ctrl)
+	fs.EXPECT().Stat("/my/directory").Return(nil, nil)
+	testContent := "test"
+	fs.EXPECT().OpenFileBuffered("/my/directory/file1").Return(bufio.NewReader(strings.NewReader(testContent)), nil)
+	testFileInfo := filesystem.MockFileInfo{
+		FName:    "/my/directory/file1",
+		FSize:    int64(len(testContent)),
+		FMode:    0755,
+		FModTime: time.Time{},
+		FIsDir:   false,
+	}
+	fs.EXPECT().Stat("/my/directory/file1").Return(&testFileInfo, nil)
+	extractor := scraper.NewArchiveFilesystemExtractor(fs, scraper.GenerateTarballMetaFile())
 
 	// Set up the expected calls to the mocked fs object
 	fs.EXPECT().Walk("/my/directory", gomock.Any()).Return(nil).DoAndReturn(func(_ string, walkFn filepath.WalkFunc) error {
