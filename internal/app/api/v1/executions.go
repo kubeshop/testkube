@@ -355,7 +355,7 @@ func (s *TestkubeAPI) GetArtifactHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: db could not get execution result: %w", errPrefix, err))
 		}
 
-		file, err := s.Storage.DownloadFile(c.Context(), execution.Id, fileName)
+		file, err := s.artifactsStorage.DownloadFile(c.Context(), fileName, execution.Id, execution.TestName, execution.TestSuiteName)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not download file: %w", errPrefix, err))
 		}
@@ -379,7 +379,7 @@ func (s *TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: db could not get test with execution: %s", errPrefix, err))
 		}
-		files, err := s.Storage.ListFiles(c.Context(), execution.Id)
+		files, err := s.artifactsStorage.ListFiles(c.Context(), execution.Id, execution.TestName, execution.TestSuiteName)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: storage client could not list files %w", errPrefix, err))
 		}

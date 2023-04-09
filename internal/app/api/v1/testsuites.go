@@ -665,7 +665,7 @@ func (s TestkubeAPI) ListTestSuiteArtifactsHandler() fiber.Handler {
 			if stepResult.Execution.Id == "" {
 				continue
 			}
-			stepArtifacts, err := s.Storage.ListFiles(c.Context(), stepResult.Execution.Id)
+			stepArtifacts, err := s.artifactsStorage.ListFiles(c.Context(), stepResult.Execution.Id, stepResult.Execution.TestName, stepResult.Execution.TestSuiteName)
 			if err != nil {
 				s.Log.Warnw("can't list artifacts", "executionID", stepResult.Execution.Id, "error", err)
 				continue

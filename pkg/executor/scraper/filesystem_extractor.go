@@ -3,6 +3,7 @@ package scraper
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
@@ -13,6 +14,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/filesystem"
 
 	"github.com/pkg/errors"
+)
+
+const (
+	defaultTarballName     = "artifacts.tar.gz"
+	defaultTarballMetaName = ".testkube-meta-files.json"
 )
 
 type ArchiveFilesystemExtractor struct {
@@ -60,6 +66,11 @@ func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths []string
 		}
 	}
 
+	if len(archiveFiles) == 0 {
+		log.DefaultLogger.Infof("skipping tarball creation because no files were scraped")
+		return nil
+	}
+
 	tarballService := archive.NewTarballService()
 	var artifactsTarball bytes.Buffer
 	log.DefaultLogger.Infof("creating artifacts tarball with %d files", len(archiveFiles))
@@ -68,7 +79,7 @@ func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths []string
 	}
 
 	object := &Object{
-		Name:     "artifacts.tar.gz",
+		Name:     defaultTarballName,
 		Size:     int64(artifactsTarball.Len()),
 		Data:     &artifactsTarball,
 		DataType: DataTypeTarball,
@@ -77,11 +88,45 @@ func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths []string
 		return errors.Wrapf(err, "error processing object %s", object.Name)
 	}
 
+	tarballMeta, err := e.newTarballMeta(archiveFiles)
+	if err != nil {
+		return errors.Wrapf(err, "error creating tarball meta")
+	}
+	if err := process(ctx, tarballMeta); err != nil {
+		return errors.Wrapf(err, "error processing object %s", tarballMeta.Name)
+	}
+
 	return nil
 }
 
+type TarballMeta struct {
+	File string `json:"file"`
+	Size int64  `json:"size"`
+}
+
+func (e *ArchiveFilesystemExtractor) newTarballMeta(files []*archive.File) (*Object, error) {
+	var meta []*TarballMeta
+	for _, f := range files {
+		meta = append(meta, &TarballMeta{
+			File: f.Name,
+			Size: f.Size,
+		})
+	}
+	jsonMeta, err := json.Marshal(meta)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Object{
+		Name:     defaultTarballMetaName,
+		Size:     int64(len(jsonMeta)),
+		Data:     bytes.NewReader(jsonMeta),
+		DataType: DataTypeRaw,
+	}, nil
+}
+
 func (e *ArchiveFilesystemExtractor) newArchiveFile(baseDir string, path string) (*archive.File, error) {
-	f, err := e.fs.OpenFileRO(path)
+	f, err := e.fs.OpenFileBuffered(path)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error opening file %s", path)
 	}

@@ -73,6 +73,7 @@ func NewTestkubeAPI(
 	slackLoader *slack.SlackLoader,
 	storage storage.Client,
 	graphqlPort string,
+	artifactsStorage storage.ArtifactsStorage,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -108,6 +109,7 @@ func NewTestkubeAPI(
 		slackLoader:          slackLoader,
 		Storage:              storage,
 		graphqlPort:          graphqlPort,
+		artifactsStorage:     artifactsStorage,
 	}
 
 	// will be reused in websockets handler
@@ -149,6 +151,7 @@ type TestkubeAPI struct {
 	Clientset            kubernetes.Interface
 	slackLoader          *slack.SlackLoader
 	graphqlPort          string
+	artifactsStorage     storage.ArtifactsStorage
 }
 
 type storageParams struct {

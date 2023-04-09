@@ -67,12 +67,15 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		return result, errors.Errorf("could not fetch test content: %v", err)
 	}
 
+	// TODO: write a proper cloud implementation
 	// add copy files in case object storage is set
-	if r.Params.Endpoint != "" {
+	if r.Params.Endpoint != "" && !r.Params.CloudMode {
 		output.PrintLogf("%s Fetching uploads from object store %s...", ui.IconFile, r.Params.Endpoint)
 		minioClient := minio.NewClient(r.Params.Endpoint, r.Params.AccessKeyID, r.Params.SecretAccessKey, r.Params.Region, r.Params.Token, r.Params.Bucket, r.Params.Ssl)
 		fp := content.NewCopyFilesPlacer(minioClient)
 		fp.PlaceFiles(ctx, execution.TestName, execution.BucketName)
+	} else if r.Params.CloudMode {
+		output.PrintLogf("%s Copy files functionality is currently not supported in cloud mode", ui.IconWarning)
 	}
 
 	output.PrintLogf("%s Setting up access to files in %s", ui.IconFile, r.dir)

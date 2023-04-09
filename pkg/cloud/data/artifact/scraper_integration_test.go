@@ -71,6 +71,16 @@ func TestCloudScraper_ArchiveFilesystemExtractor_Integration(t *testing.T) {
 		EXPECT().
 		Execute(gomock.Any(), cloudscraper.CmdScraperPutObjectSignedURL, gomock.Eq(req)).
 		Return([]byte(`{"URL":"`+testServer.URL+`/dummy"}`), nil)
+	req2 := &cloudscraper.PutObjectSignedURLRequest{
+		Object:        ".testkube-meta-files.json",
+		ExecutionID:   "my-execution-id",
+		TestName:      "my-test",
+		TestSuiteName: "my-test-suite",
+	}
+	mockExecutor.
+		EXPECT().
+		Execute(gomock.Any(), cloudscraper.CmdScraperPutObjectSignedURL, gomock.Eq(req2)).
+		Return([]byte(`{"URL":"`+testServer.URL+`/dummy"}`), nil)
 
 	s := scraper.NewExtractLoadScraper(extractor, cloudLoader)
 	execution := testkube.Execution{
@@ -81,7 +91,7 @@ func TestCloudScraper_ArchiveFilesystemExtractor_Integration(t *testing.T) {
 	err = s.Scrape(context.Background(), []string{tempDir}, execution)
 
 	assert.NoError(t, err)
-	assert.Equal(t, 1, testServerRequests)
+	assert.Equal(t, 2, testServerRequests)
 }
 
 func TestCloudScraper_RecursiveFilesystemExtractor_Integration(t *testing.T) {
