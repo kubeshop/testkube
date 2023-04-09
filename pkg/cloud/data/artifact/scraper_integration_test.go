@@ -48,7 +48,7 @@ func TestCloudScraper_ArchiveFilesystemExtractor_Integration(t *testing.T) {
 	err = os.WriteFile(file3, []byte("test3"), os.ModePerm)
 	assert.NoError(t, err)
 
-	extractor := scraper.NewArchiveFilesystemExtractor(filesystem.NewOSFileSystem())
+	extractor := scraper.NewArchiveFilesystemExtractor(filesystem.NewOSFileSystem(), scraper.GenerateTarballMetaFile())
 
 	testServerRequests := 0
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

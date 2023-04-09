@@ -50,7 +50,11 @@ func GetScraper(ctx context.Context, params envs.Params, extractorType Extractor
 	case RecursiveFilesystemExtractor:
 		extractor = scraper.NewRecursiveFilesystemExtractor(filesystem.NewOSFileSystem())
 	case ArchiveFilesystemExtractor:
-		extractor = scraper.NewArchiveFilesystemExtractor(filesystem.NewOSFileSystem())
+		var opts []scraper.ArchiveFilesystemExtractorOpts
+		if params.CloudMode {
+			opts = append(opts, scraper.GenerateTarballMetaFile())
+		}
+		extractor = scraper.NewArchiveFilesystemExtractor(filesystem.NewOSFileSystem(), opts...)
 	default:
 		return nil, errors.Errorf("unknown extractor type: %s", extractorType)
 	}
