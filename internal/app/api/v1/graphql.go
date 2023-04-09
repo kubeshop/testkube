@@ -5,26 +5,21 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/internal/graphql"
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
 // RunGraphQLServer runs GraphQL server on go net/http server
-// There is an issue with gqlgen and fasthttp server
-func (s *TestkubeAPI) RunGraphQLServer(
-	ctx context.Context,
-	cfg *config.Config,
-) error {
+func (s *TestkubeAPI) RunGraphQLServer(ctx context.Context, port string) error {
 	srv := graphql.GetServer(s.Events.Bus, s.ExecutorsClient)
 
 	mux := http.NewServeMux()
 	mux.Handle("/graphql", srv)
-	httpSrv := &http.Server{Addr: ":" + cfg.GraphqlPort}
+	httpSrv := &http.Server{Handler: mux}
 
-	log.DefaultLogger.Infow("running GraphQL server", "port", cfg.GraphqlPort)
+	log.DefaultLogger.Infow("running GraphQL server", "port", port)
 
-	l, err := net.Listen("tcp", httpSrv.Addr)
+	l, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		return err
 	}

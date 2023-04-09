@@ -64,7 +64,6 @@ import (
 	testsourcesclientv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
-	"github.com/kubeshop/testkube/internal/graphql"
 	"github.com/kubeshop/testkube/internal/migrations"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -344,8 +343,6 @@ func main() {
 		ui.ExitOnError("Creating slack loader", err)
 	}
 
-	gqlServer := graphql.GetServer(eventBus, executorsClient)
-
 	api := apiv1.NewTestkubeAPI(
 		cfg.TestkubeNamespace,
 		resultsRepository,
@@ -368,7 +365,7 @@ func main() {
 		sched,
 		slackLoader,
 		storageClient,
-		gqlServer,
+		cfg.GraphqlPort,
 		artifactStorage,
 	)
 
@@ -447,7 +444,7 @@ func main() {
 	})
 
 	g.Go(func() error {
-		return api.RunGraphQLServer(ctx, cfg)
+		return api.RunGraphQLServer(ctx, cfg.GraphqlPort)
 	})
 
 	if err := g.Wait(); err != nil {
