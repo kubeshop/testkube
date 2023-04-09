@@ -3,14 +3,16 @@ package artifact
 import (
 	context "context"
 	"encoding/json"
+	"io"
+	"net/http"
+
+	"github.com/pkg/errors"
+	"google.golang.org/grpc"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/storage"
-	"github.com/pkg/errors"
-	"google.golang.org/grpc"
-	"io"
-	"net/http"
 )
 
 type CloudStorageClient struct {

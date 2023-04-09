@@ -2,8 +2,9 @@ package storage
 
 import (
 	"context"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"io"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 //go:generate mockgen -destination=./artifacts_mock.go -package=storage "github.com/kubeshop/testkube/pkg/storage" ArtifactsStorage
