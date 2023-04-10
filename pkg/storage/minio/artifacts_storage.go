@@ -46,13 +46,6 @@ func NewMinIOArtifactClient(endpoint, accessKeyID, secretAccessKey, region, toke
 // ListFiles lists available files in the bucket from the config
 func (c *ArtifactClient) ListFiles(ctx context.Context, executionId, testName, testSuiteName string) ([]testkube.Artifact, error) {
 	c.Log.Infow("listing files", "bucket", c.bucket, "bucketFolder", executionId)
-	// TODO: this is for back compatibility, remove it sometime in the future
-	if exist, err := c.minioclient.BucketExists(ctx, executionId); err == nil && exist {
-		formerResult, err := c.listFiles(ctx, executionId, "")
-		if err == nil && len(formerResult) > 0 {
-			return formerResult, nil
-		}
-	}
 
 	return c.listFiles(ctx, c.bucket, executionId)
 }
@@ -94,22 +87,8 @@ func (c *ArtifactClient) listFiles(ctx context.Context, bucket, bucketFolder str
 // DownloadFile downloads file from bucket from the config
 func (c *ArtifactClient) DownloadFile(ctx context.Context, file, executionId, testName, testSuiteName string) (io.Reader, error) {
 	c.Log.Infow("Download file", "bucket", c.bucket, "bucketFolder", executionId, "file", file)
-	// TODO: this is for back compatibility, remove it sometime in the future
-	var errFirst error
-	exists, err := c.minioclient.BucketExists(ctx, executionId)
-	c.Log.Debugw("Checking if bucket exists", exists, err)
-	if err == nil && exists {
-		c.Log.Infow("Bucket exists, trying to get files from former bucket per execution", exists, err)
-		objFirst, errFirst := c.downloadFile(ctx, executionId, "", file)
-		if errFirst == nil && objFirst != nil {
-			return objFirst, nil
-		}
-	}
-	objSecond, errSecond := c.downloadFile(ctx, c.bucket, executionId, file)
-	if errSecond != nil {
-		return nil, fmt.Errorf("minio DownloadFile error: %v, error from getting files from former bucket per execution: %v", errSecond, errFirst)
-	}
-	return objSecond, nil
+
+	return c.downloadFile(ctx, c.bucket, executionId, file)
 }
 
 // downloadFile downloads file from bucket
