@@ -367,7 +367,7 @@ func (c *Client) DownloadArchive(ctx context.Context, bucketFolder string) (io.R
 	exists, err := c.minioclient.BucketExists(ctx, bucketFolder)
 	c.Log.Debugw("Checking if bucket exists", exists, err)
 	if err == nil && exists {
-		c.Log.Infow("Bucket exists, trying to get files from former bucket per execution", exists, err)
+		c.Log.Infow("Bucket exists, trying to get archive from former bucket per execution", exists, err)
 		objFirst, errFirst := c.downloadArchive(ctx, bucketFolder, "")
 		if errFirst == nil && objFirst != nil {
 			return objFirst, nil
@@ -375,7 +375,7 @@ func (c *Client) DownloadArchive(ctx context.Context, bucketFolder string) (io.R
 	}
 	objSecond, errSecond := c.downloadArchive(ctx, c.bucket, bucketFolder)
 	if errSecond != nil {
-		return nil, fmt.Errorf("minio DownloadArchive error: %v, error from getting files from former bucket per execution: %v", errSecond, errFirst)
+		return nil, fmt.Errorf("minio DownloadArchive error: %v, error from getting archive from former bucket per execution: %v", errSecond, errFirst)
 	}
 	return objSecond, nil
 }
