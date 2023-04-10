@@ -2,8 +2,12 @@ package v1
 
 import (
 	"context"
+	"io"
+	"net"
 	"os"
+	"reflect"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/repository/config"
@@ -16,7 +20,6 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/proxy"
@@ -69,7 +72,8 @@ func NewTestkubeAPI(
 	scheduler *scheduler.Scheduler,
 	slackLoader *slack.SlackLoader,
 	storage storage.Client,
-	graphQL *handler.Server,
+	graphqlPort string,
+	artifactsStorage storage.ArtifactsStorage,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -104,7 +108,8 @@ func NewTestkubeAPI(
 		scheduler:            scheduler,
 		slackLoader:          slackLoader,
 		Storage:              storage,
-		GraphQL:              graphQL,
+		graphqlPort:          graphqlPort,
+		artifactsStorage:     artifactsStorage,
 	}
 
 	// will be reused in websockets handler
@@ -145,7 +150,8 @@ type TestkubeAPI struct {
 	scheduler            *scheduler.Scheduler
 	Clientset            kubernetes.Interface
 	slackLoader          *slack.SlackLoader
-	GraphQL              *handler.Server
+	graphqlPort          string
+	artifactsStorage     storage.ArtifactsStorage
 }
 
 type storageParams struct {
@@ -329,12 +335,6 @@ func (s *TestkubeAPI) InitRoutes() {
 	repositories := s.Routes.Group("/repositories")
 	repositories.Post("/", s.ValidateRepositoryHandler())
 
-	// TODO it's not possible to mount graphql on FastHTTP
-	// https://github.com/99designs/gqlgen/issues/1664
-	// gql := s.Routes.Group("/graphql")
-	// gql.All("/query", adaptor.HTTPHandler(s.GraphQL))
-	// gql.All("/", adaptor.HTTPHandler(playground.Handler("GraphQL playground", "/v1/graphql/query")))
-
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor
 	s.Mux.Mount("/results", s.Mux)
@@ -347,6 +347,64 @@ func (s *TestkubeAPI) InitRoutes() {
 	s.Log.Infow("dashboard uri", "uri", dashboardURI)
 	s.Mux.All("/", proxy.Forward(dashboardURI))
 
+	// set up proxy for the internal GraphQL server
+	s.Mux.All("/graphql", func(ctx *fiber.Ctx) error {
+		header := ctx.Request().Header.Header()
+		ctx.Context().HijackSetNoResponse(true)
+		ctx.Context().Hijack(func(c net.Conn) {
+			// Connect to server
+			serverConn, err := net.Dial("tcp", ":"+s.graphqlPort)
+			if err != nil {
+				s.Log.Errorw("could not connect to GraphQL server as a proxy", "error", err)
+				return
+			}
+
+			// Extract Unix connection
+			serverSock, ok := serverConn.(*net.TCPConn)
+			if !ok {
+				s.Log.Errorw("error while building TCPConn out ouf serverConn", "error", err)
+				return
+			}
+			clientSock, ok := reflect.Indirect(reflect.ValueOf(c)).FieldByName("Conn").Interface().(*net.TCPConn)
+			if !ok {
+				s.Log.Errorw("error while building TCPConn out of hijacked connection", "error", err)
+				return
+			}
+
+			// Close the connection afterward
+			defer clientSock.Close()
+			defer serverSock.Close()
+
+			// Resend headers to the server
+			_, err = serverSock.Write(header)
+			if err != nil {
+				s.Log.Errorw("error while sending headers to GraphQL server", "error", err)
+				return
+			}
+
+			// Duplex communication between client and GraphQL server
+			var wg sync.WaitGroup
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				_, err := io.Copy(clientSock, serverSock)
+				if err != io.EOF {
+					s.Log.Errorw("error while reading GraphQL client data", "error", err)
+				}
+				clientSock.CloseWrite()
+			}()
+			go func() {
+				defer wg.Done()
+				_, err := io.Copy(serverSock, clientSock)
+				if err != io.EOF {
+					s.Log.Errorw("error while reading GraphQL server data", "error", err)
+				}
+				serverSock.CloseWrite()
+			}()
+			wg.Wait()
+		})
+		return nil
+	})
 }
 
 func (s TestkubeAPI) StartTelemetryHeartbeats(ctx context.Context) {

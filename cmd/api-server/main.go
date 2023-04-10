@@ -15,7 +15,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	cloudstorageclient "github.com/kubeshop/testkube/pkg/cloud/data/storage"
+	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
@@ -64,7 +64,6 @@ import (
 	testsourcesclientv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
-	"github.com/kubeshop/testkube/internal/graphql"
 	"github.com/kubeshop/testkube/internal/migrations"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -172,13 +171,14 @@ func main() {
 	var testResultsRepository testresult.Repository
 	var configRepository configrepository.Repository
 	var triggerLeaseBackend triggers.LeaseBackend
+	var artifactStorage domainstorage.ArtifactsStorage
 	var storageClient domainstorage.Client
 	if mode == common.ModeAgent {
 		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
 		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
 		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
 		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
-		storageClient = cloudstorageclient.NewCloudClient(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
+		artifactStorage = cloudartifacts.NewCloudStorageClient(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
 	} else {
 		mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
 		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, mongoSSLConfig)
@@ -187,11 +187,20 @@ func main() {
 		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
 		configRepository = configrepository.NewMongoRepository(db)
 		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
+		artifactStorage = minio.NewMinIOArtifactClient(
+			cfg.StorageEndpoint,
+			cfg.StorageAccessKeyID,
+			cfg.StorageSecretAccessKey,
+			cfg.StorageRegion,
+			cfg.StorageToken,
+			cfg.StorageBucket,
+			cfg.StorageSSL,
+		)
 		storageClient = minio.NewClient(
 			cfg.StorageEndpoint,
 			cfg.StorageAccessKeyID,
 			cfg.StorageSecretAccessKey,
-			cfg.StorageLocation,
+			cfg.StorageRegion,
 			cfg.StorageToken,
 			cfg.StorageBucket,
 			cfg.StorageSSL,
@@ -334,8 +343,6 @@ func main() {
 		ui.ExitOnError("Creating slack loader", err)
 	}
 
-	gqlServer := graphql.GetServer(eventBus, executorsClient)
-
 	api := apiv1.NewTestkubeAPI(
 		cfg.TestkubeNamespace,
 		resultsRepository,
@@ -358,7 +365,8 @@ func main() {
 		sched,
 		slackLoader,
 		storageClient,
-		gqlServer,
+		cfg.GraphqlPort,
+		artifactStorage,
 	)
 
 	isMinioStorage := cfg.LogsStorage == "minio"
@@ -436,7 +444,7 @@ func main() {
 	})
 
 	g.Go(func() error {
-		return api.RunGraphQLServer(ctx, cfg)
+		return api.RunGraphQLServer(ctx, cfg.GraphqlPort)
 	})
 
 	if err := g.Wait(); err != nil {

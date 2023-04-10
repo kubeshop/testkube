@@ -16,7 +16,7 @@ type Config struct {
 	StorageBucket                     string `envconfig:"STORAGE_BUCKET" default:""`
 	StorageAccessKeyID                string `envconfig:"STORAGE_ACCESSKEYID" default:""`
 	StorageSecretAccessKey            string `envconfig:"STORAGE_SECRETACCESSKEY" default:""`
-	StorageLocation                   string `envconfig:"STORAGE_LOCATION" default:""`
+	StorageRegion                     string `envconfig:"STORAGE_REGION" default:""`
 	StorageToken                      string `envconfig:"STORAGE_TOKEN" default:""`
 	StorageSSL                        bool   `envconfig:"STORAGE_SSL" default:"false"`
 	ScrapperEnabled                   bool   `envconfig:"SCRAPPERENABLED" default:"false"`

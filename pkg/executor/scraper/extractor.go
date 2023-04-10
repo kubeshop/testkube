@@ -11,7 +11,7 @@ const (
 	// DataTypeRaw specifies that the object is a raw file
 	DataTypeRaw DataType = "raw"
 	// DataTypeTarball specifies that the object is a tarball (gzip compressed tar archive)
-	DataTypeTarball = "tarball"
+	DataTypeTarball DataType = "tarball"
 )
 
 //go:generate mockgen -destination=./mock_extractor.go -package=scraper "github.com/kubeshop/testkube/pkg/executor/scraper" Extractor
