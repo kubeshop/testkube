@@ -46,13 +46,6 @@ func NewMinIOArtifactClient(endpoint, accessKeyID, secretAccessKey, region, toke
 // ListFiles lists available files in the bucket from the config
 func (c *ArtifactClient) ListFiles(ctx context.Context, executionId, testName, testSuiteName string) ([]testkube.Artifact, error) {
 	c.Log.Infow("listing files", "bucket", c.bucket, "bucketFolder", executionId)
-	// TODO: this is for back compatibility, remove it sometime in the future
-	if exist, err := c.minioclient.BucketExists(ctx, executionId); err == nil && exist {
-		formerResult, err := c.listFiles(ctx, executionId, "")
-		if err == nil && len(formerResult) > 0 {
-			return formerResult, nil
-		}
-	}
 
 	return c.listFiles(ctx, c.bucket, executionId)
 }
