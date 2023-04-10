@@ -167,6 +167,9 @@ func (m MockStorage) SaveFile(ctx context.Context, bucketFolder, filePath string
 func (m MockStorage) DownloadFile(ctx context.Context, bucketFolder, file string) (*minio.Object, error) {
 	panic("not implemented")
 }
+func (m MockStorage) DownloadArchive(ctx context.Context, bucketFolder string) (io.Reader, error) {
+	panic("not implemented")
+}
 func (m MockStorage) UploadFile(ctx context.Context, bucketFolder string, filePath string, reader io.Reader, objectSize int64) error {
 	if m.UploadFileFn == nil {
 		panic("not implemented")

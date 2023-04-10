@@ -325,6 +325,7 @@ func (c *Client) downloadArchive(ctx context.Context, bucket, bucketFolder strin
 		files = append(files, &archive.File{
 			Name:    obj.Key,
 			Size:    obj.Size,
+			Mode:    int64(os.ModePerm),
 			ModTime: obj.LastModified,
 		})
 	}
