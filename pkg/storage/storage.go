@@ -32,6 +32,7 @@ type ClientBucket interface {
 	DeleteBucket(ctx context.Context, bucket string, force bool) error
 	ListBuckets(ctx context.Context) ([]string, error)
 	DownloadFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) (*minio.Object, error)
+	DownloadArchiveFromBucket(ctx context.Context, bucket, bucketFolder string) (io.Reader, error)
 	UploadFileToBucket(ctx context.Context, bucket, bucketFolder, filePath string, reader io.Reader, objectSize int64) error
 	GetValidBucketName(parentType string, parentName string) string
 	DeleteFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) error

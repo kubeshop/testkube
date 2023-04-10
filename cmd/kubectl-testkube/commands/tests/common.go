@@ -20,6 +20,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
+const (
+	artifactsFormatFolder  = "folder"
+	artifactsFormatArchive = "archive"
+)
+
 func printExecutionDetails(execution testkube.Execution) {
 	ui.Warn("Type:             ", execution.TestType)
 	ui.Warn("Name:             ", execution.TestName)
@@ -41,7 +46,7 @@ func printExecutionDetails(execution testkube.Execution) {
 	ui.NL()
 }
 
-func DownloadArtifacts(id, dir string, client apiclientv1.Client) {
+func DownloadArtifacts(id, dir, format string, client apiclientv1.Client) {
 	artifacts, err := client.GetExecutionArtifacts(id)
 	ui.ExitOnError("getting artifacts ", err)
 
@@ -51,10 +56,19 @@ func DownloadArtifacts(id, dir string, client apiclientv1.Client) {
 	if len(artifacts) > 0 {
 		ui.Info("Getting artifacts", fmt.Sprintf("count = %d", len(artifacts)), "\n")
 	}
-	for _, artifact := range artifacts {
-		f, err := client.DownloadFile(id, artifact.Name, dir)
-		ui.ExitOnError("downloading file: "+f, err)
-		ui.Warn(" - downloading file ", f)
+
+	if format == artifactsFormatFolder {
+		for _, artifact := range artifacts {
+			f, err := client.DownloadFile(id, artifact.Name, dir)
+			ui.ExitOnError("downloading file: "+f, err)
+			ui.Warn(" - downloading file ", f)
+		}
+	}
+
+	if format == artifactsFormatArchive {
+		f, err := client.DownloadArchive(id, dir)
+		ui.ExitOnError("downloading archive: "+f, err)
+		ui.Warn(" - downloading archive ", f)
 	}
 
 	ui.NL()

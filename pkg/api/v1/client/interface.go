@@ -44,6 +44,7 @@ type ExecutionAPI interface {
 	AbortExecutions(test string) error
 	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
+	DownloadArchive(executionID, destination string) (archive string, err error)
 }
 
 // TestSuiteAPI describes test suite api methods

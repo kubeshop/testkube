@@ -247,6 +247,12 @@ func (c TestClient) DownloadFile(executionID, fileName, destination string) (art
 	return c.executionTransport.GetFile(uri, fileName, destination)
 }
 
+// DownloadArchive downloads archive
+func (c TestClient) DownloadArchive(executionID, destination string) (archive string, err error) {
+	uri := c.executionTransport.GetURI("/executions/%s/artifact-archive", executionID)
+	return c.executionTransport.GetFile(uri, fmt.Sprintf("%s.tar.gz", executionID), destination)
+}
+
 // GetServerInfo returns server info
 func (c TestClient) GetServerInfo() (info testkube.ServerInfo, err error) {
 	uri := c.serverInfoTransport.GetURI("/info")

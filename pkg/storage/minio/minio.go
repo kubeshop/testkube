@@ -316,6 +316,10 @@ func (c *Client) downloadArchive(ctx context.Context, bucket, bucketFolder strin
 	}
 
 	listOptions := minio.ListObjectsOptions{Recursive: true}
+	if bucketFolder != "" {
+		listOptions.Prefix = strings.Trim(bucketFolder, "/")
+	}
+
 	var files []*archive.File
 	for obj := range c.minioclient.ListObjects(ctx, bucket, listOptions) {
 		if obj.Err != nil {
@@ -380,6 +384,12 @@ func (c *Client) DownloadArchive(ctx context.Context, bucketFolder string) (io.R
 func (c *Client) DownloadFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) (*minio.Object, error) {
 	c.Log.Debugw("Downloading file", "bucket", bucket, "bucketFolder", bucketFolder, "file", file)
 	return c.downloadFile(ctx, bucket, bucketFolder, file)
+}
+
+// DownloadArrchiveFromBucket downloads archive from given bucket
+func (c *Client) DownloadArchiveFromBucket(ctx context.Context, bucket, bucketFolder string) (io.Reader, error) {
+	c.Log.Debugw("Downloading archive", "bucket", bucket, "bucketFolder", bucketFolder)
+	return c.downloadArchive(ctx, bucket, bucketFolder)
 }
 
 // ScrapeArtefacts pushes local files located in directories to given folder with given id located in the configured bucket

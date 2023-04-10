@@ -203,6 +203,10 @@ func (m MockStorage) DownloadFileFromBucket(ctx context.Context, bucket, bucketF
 	panic("not implemented")
 }
 
+func (m MockStorage) DownloadArchiveFromBucket(ctx context.Context, bucket, bucketFolder string) (io.Reader, error) {
+	panic("not implemented")
+}
+
 func (m MockStorage) UploadFileToBucket(ctx context.Context, bucket, bucketFolder, filePath string, reader io.Reader, objectSize int64) error {
 	panic("not implemented")
 }
