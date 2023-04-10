@@ -248,7 +248,7 @@ func (c TestClient) DownloadFile(executionID, fileName, destination string) (art
 }
 
 // DownloadArchive downloads archive
-func (c TestClient) DownloadArchive(executionID, destination string) (archive string, err error) {
+func (c TestClient) DownloadArchive(executionID, destination string, masks []string) (archive string, err error) {
 	uri := c.executionTransport.GetURI("/executions/%s/artifact-archive", executionID)
 	return c.executionTransport.GetFile(uri, fmt.Sprintf("%s.tar.gz", executionID), destination)
 }

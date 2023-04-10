@@ -299,8 +299,8 @@ func (c *Client) DownloadFile(ctx context.Context, bucketFolder, file string) (*
 }
 
 // downloadArchive downloads archive from bucket
-func (c *Client) downloadArchive(ctx context.Context, bucket, bucketFolder string) (io.Reader, error) {
-	c.Log.Debugw("downloadArchive", "bucket", bucket, "bucketFolder", bucketFolder)
+func (c *Client) downloadArchive(ctx context.Context, bucket, bucketFolder string, masks []string) (io.Reader, error) {
+	c.Log.Debugw("downloadArchive", "bucket", bucket, "bucketFolder", bucketFolder, "masks", masks)
 	if err := c.Connect(); err != nil {
 		return nil, fmt.Errorf("minio DownloadArchive .Connect error: %w", err)
 	}
@@ -360,20 +360,20 @@ func (c *Client) downloadArchive(ctx context.Context, bucket, bucketFolder strin
 }
 
 // DownloadArchive downloads archive from bucket from the config
-func (c *Client) DownloadArchive(ctx context.Context, bucketFolder string) (io.Reader, error) {
-	c.Log.Infow("Download archive", "bucket", c.bucket, "bucketFolder", bucketFolder)
+func (c *Client) DownloadArchive(ctx context.Context, bucketFolder string, masks []string) (io.Reader, error) {
+	c.Log.Infow("Download archive", "bucket", c.bucket, "bucketFolder", bucketFolder, "masks", masks)
 	// TODO: this is for back compatibility, remove it sometime in the future
 	var errFirst error
 	exists, err := c.minioclient.BucketExists(ctx, bucketFolder)
 	c.Log.Debugw("Checking if bucket exists", exists, err)
 	if err == nil && exists {
 		c.Log.Infow("Bucket exists, trying to get archive from former bucket per execution", exists, err)
-		objFirst, errFirst := c.downloadArchive(ctx, bucketFolder, "")
+		objFirst, errFirst := c.downloadArchive(ctx, bucketFolder, "", masks)
 		if errFirst == nil && objFirst != nil {
 			return objFirst, nil
 		}
 	}
-	objSecond, errSecond := c.downloadArchive(ctx, c.bucket, bucketFolder)
+	objSecond, errSecond := c.downloadArchive(ctx, c.bucket, bucketFolder, masks)
 	if errSecond != nil {
 		return nil, fmt.Errorf("minio DownloadArchive error: %v, error from getting archive from former bucket per execution: %v", errSecond, errFirst)
 	}
@@ -387,9 +387,9 @@ func (c *Client) DownloadFileFromBucket(ctx context.Context, bucket, bucketFolde
 }
 
 // DownloadArrchiveFromBucket downloads archive from given bucket
-func (c *Client) DownloadArchiveFromBucket(ctx context.Context, bucket, bucketFolder string) (io.Reader, error) {
-	c.Log.Debugw("Downloading archive", "bucket", bucket, "bucketFolder", bucketFolder)
-	return c.downloadArchive(ctx, bucket, bucketFolder)
+func (c *Client) DownloadArchiveFromBucket(ctx context.Context, bucket, bucketFolder string, masks []string) (io.Reader, error) {
+	c.Log.Debugw("Downloading archive", "bucket", bucket, "bucketFolder", bucketFolder, "masks", masks)
+	return c.downloadArchive(ctx, bucket, bucketFolder, masks)
 }
 
 // ScrapeArtefacts pushes local files located in directories to given folder with given id located in the configured bucket

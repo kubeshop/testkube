@@ -129,15 +129,15 @@ func (c *ArtifactClient) downloadFile(ctx context.Context, bucket, bucketFolder,
 }
 
 // DownloadArrchive downloads archive from bucket from the config
-func (c *ArtifactClient) DownloadArchive(ctx context.Context, executionId string) (io.Reader, error) {
-	c.Log.Debugw("Downloading archive", "bucket", c.bucket, "bucketFolder", executionId)
+func (c *ArtifactClient) DownloadArchive(ctx context.Context, executionId string, masks []string) (io.Reader, error) {
+	c.Log.Debugw("Downloading archive", "bucket", c.bucket, "bucketFolder", executionId, "masks", masks)
 
-	return c.downloadArchive(ctx, c.bucket, executionId)
+	return c.downloadArchive(ctx, c.bucket, executionId, masks)
 }
 
 // downloadArchive downloads archive from bucket
-func (c *ArtifactClient) downloadArchive(ctx context.Context, bucket, bucketFolder string) (io.Reader, error) {
-	c.Log.Debugw("downloadArchive", "bucket", bucket, "bucketFolder", bucketFolder)
+func (c *ArtifactClient) downloadArchive(ctx context.Context, bucket, bucketFolder string, masks []string) (io.Reader, error) {
+	c.Log.Debugw("downloadArchive", "bucket", bucket, "bucketFolder", bucketFolder, "masks", masks)
 	if err := c.Connect(); err != nil {
 		return nil, fmt.Errorf("minio DownloadArchive .Connect error: %w", err)
 	}

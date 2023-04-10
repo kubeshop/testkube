@@ -11,5 +11,5 @@ import (
 type ArtifactsStorage interface {
 	ListFiles(ctx context.Context, executionId, testName, testSuiteName string) ([]testkube.Artifact, error)
 	DownloadFile(ctx context.Context, file, executionId, testName, testSuiteName string) (io.Reader, error)
-	DownloadArchive(ctx context.Context, executionId string) (io.Reader, error)
+	DownloadArchive(ctx context.Context, executionId string, masks []string) (io.Reader, error)
 }

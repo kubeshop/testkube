@@ -25,6 +25,7 @@ type DownloadFileResponse struct {
 
 type DownloadArchiveRequest struct {
 	ExecutionID string
+	Masks       []string
 }
 
 type DownloadArchiveResponse struct {

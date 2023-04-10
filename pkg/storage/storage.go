@@ -20,7 +20,7 @@ type ClientImplicitBucket interface {
 	ListFiles(ctx context.Context, bucketFolder string) ([]testkube.Artifact, error)
 	SaveFile(ctx context.Context, bucketFolder, filePath string) error
 	DownloadFile(ctx context.Context, bucketFolder, file string) (*minio.Object, error)
-	DownloadArchive(ctx context.Context, bucketFolder string) (io.Reader, error)
+	DownloadArchive(ctx context.Context, bucketFolder string, masks []string) (io.Reader, error)
 	UploadFile(ctx context.Context, bucketFolder string, filePath string, reader io.Reader, objectSize int64) error
 	PlaceFiles(ctx context.Context, bucketFolders []string, prefix string) error
 	DeleteFile(ctx context.Context, bucketFolder, file string) error
@@ -32,7 +32,7 @@ type ClientBucket interface {
 	DeleteBucket(ctx context.Context, bucket string, force bool) error
 	ListBuckets(ctx context.Context) ([]string, error)
 	DownloadFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) (*minio.Object, error)
-	DownloadArchiveFromBucket(ctx context.Context, bucket, bucketFolder string) (io.Reader, error)
+	DownloadArchiveFromBucket(ctx context.Context, bucket, bucketFolder string, masks []string) (io.Reader, error)
 	UploadFileToBucket(ctx context.Context, bucket, bucketFolder, filePath string, reader io.Reader, objectSize int64) error
 	GetValidBucketName(parentType string, parentName string) string
 	DeleteFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) error

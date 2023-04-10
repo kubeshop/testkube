@@ -3,6 +3,7 @@ package tests
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -46,7 +47,7 @@ func printExecutionDetails(execution testkube.Execution) {
 	ui.NL()
 }
 
-func DownloadArtifacts(id, dir, format string, client apiclientv1.Client) {
+func DownloadArtifacts(id, dir, format string, masks []string, client apiclientv1.Client) {
 	artifacts, err := client.GetExecutionArtifacts(id)
 	ui.ExitOnError("getting artifacts ", err)
 
@@ -57,8 +58,27 @@ func DownloadArtifacts(id, dir, format string, client apiclientv1.Client) {
 		ui.Info("Getting artifacts", fmt.Sprintf("count = %d", len(artifacts)), "\n")
 	}
 
+	var regexps []*regexp.Regexp
+	for _, mask := range masks {
+		re, err := regexp.Compile(mask)
+		ui.ExitOnError("checking mask "+mask, err)
+
+		regexps = append(regexps, re)
+	}
+
 	if format == artifactsFormatFolder {
 		for _, artifact := range artifacts {
+			found := len(regexps) == 0
+			for i := range regexps {
+				if found = regexps[i].MatchString(artifact.Name); found {
+					break
+				}
+			}
+
+			if !found {
+				continue
+			}
+
 			f, err := client.DownloadFile(id, artifact.Name, dir)
 			ui.ExitOnError("downloading file: "+f, err)
 			ui.Warn(" - downloading file ", f)
@@ -66,7 +86,7 @@ func DownloadArtifacts(id, dir, format string, client apiclientv1.Client) {
 	}
 
 	if format == artifactsFormatArchive {
-		f, err := client.DownloadArchive(id, dir)
+		f, err := client.DownloadArchive(id, dir, masks)
 		ui.ExitOnError("downloading archive: "+f, err)
 		ui.Warn(" - downloading archive ", f)
 	}

@@ -55,6 +55,7 @@ func NewRunTestCmd() *cobra.Command {
 		variableSecrets          []string
 		uploadTimeout            string
 		format                   string
+		masks                    []string
 	)
 
 	cmd := &cobra.Command{
@@ -220,7 +221,7 @@ func NewRunTestCmd() *cobra.Command {
 
 				if execution.Id != "" {
 					if downloadArtifactsEnabled {
-						DownloadArtifacts(execution.Id, downloadDir, format, client)
+						DownloadArtifacts(execution.Id, downloadDir, format, masks, client)
 					}
 
 					uiShellWatchExecution(execution.Name)
@@ -273,6 +274,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().MarkDeprecated("secret", "secret-env is deprecated use secret-variable instead")
 	cmd.Flags().StringVar(&uploadTimeout, "upload-timeout", "", "timeout to use when uploading files, example: 30s")
 	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")
+	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files")
 
 	return cmd
 }

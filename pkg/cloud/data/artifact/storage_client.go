@@ -65,9 +65,10 @@ func (c *CloudStorageClient) DownloadFile(ctx context.Context, file, executionID
 	return data, nil
 }
 
-func (c *CloudStorageClient) DownloadArchive(ctx context.Context, executionID string) (io.Reader, error) {
+func (c *CloudStorageClient) DownloadArchive(ctx context.Context, executionID string, masks []string) (io.Reader, error) {
 	req := DownloadArchiveRequest{
 		ExecutionID: executionID,
+		Masks:       masks,
 	}
 	response, err := c.executor.Execute(ctx, CmdArtifactsDownloadArchive, req)
 	if err != nil {
