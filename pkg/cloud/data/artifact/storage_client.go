@@ -65,6 +65,27 @@ func (c *CloudStorageClient) DownloadFile(ctx context.Context, file, executionID
 	return data, nil
 }
 
+func (c *CloudStorageClient) DownloadArchive(ctx context.Context, executionID string) (io.Reader, error) {
+	req := DownloadArchiveRequest{
+		ExecutionID: executionID,
+	}
+	response, err := c.executor.Execute(ctx, CmdArtifactsDownloadArchive, req)
+	if err != nil {
+		return nil, err
+	}
+	var commandResponse DownloadArchiveResponse
+	if err = json.Unmarshal(response, &commandResponse); err != nil {
+		return nil, err
+	}
+
+	data, err := c.getObject(ctx, commandResponse.URL)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
 func (c *CloudStorageClient) getObject(ctx context.Context, url string) (io.Reader, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {

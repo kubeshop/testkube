@@ -1,9 +1,11 @@
 package minio
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/minio/minio-go/v7"
@@ -11,6 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/archive"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/storage"
 )
@@ -123,6 +126,74 @@ func (c *ArtifactClient) downloadFile(ctx context.Context, bucket, bucketFolder,
 	}
 
 	return reader, nil
+}
+
+// DownloadArrchive downloads archive from bucket from the config
+func (c *ArtifactClient) DownloadArchive(ctx context.Context, executionId string) (io.Reader, error) {
+	c.Log.Debugw("Downloading archive", "bucket", c.bucket, "bucketFolder", executionId)
+
+	return c.downloadArchive(ctx, c.bucket, executionId)
+}
+
+// downloadArchive downloads archive from bucket
+func (c *ArtifactClient) downloadArchive(ctx context.Context, bucket, bucketFolder string) (io.Reader, error) {
+	c.Log.Debugw("downloadArchive", "bucket", bucket, "bucketFolder", bucketFolder)
+	if err := c.Connect(); err != nil {
+		return nil, fmt.Errorf("minio DownloadArchive .Connect error: %w", err)
+	}
+
+	exists, err := c.minioclient.BucketExists(ctx, bucket)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		c.Log.Infow("bucket doesn't exist", "bucket", bucket)
+		return nil, ErrArtifactsNotFound
+	}
+
+	listOptions := minio.ListObjectsOptions{Recursive: true}
+	if bucketFolder != "" {
+		listOptions.Prefix = strings.Trim(bucketFolder, "/")
+	}
+
+	var files []*archive.File
+	for obj := range c.minioclient.ListObjects(ctx, bucket, listOptions) {
+		if obj.Err != nil {
+			return nil, obj.Err
+		}
+
+		files = append(files, &archive.File{
+			Name:    obj.Key,
+			Size:    obj.Size,
+			Mode:    int64(os.ModePerm),
+			ModTime: obj.LastModified,
+		})
+	}
+
+	for i := range files {
+		reader, err := c.minioclient.GetObject(ctx, bucket, files[i].Name, minio.GetObjectOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("minio DownloadArchive GetObject error: %w", err)
+		}
+
+		if _, err = reader.Stat(); err != nil {
+			return nil, fmt.Errorf("minio DownloadArchive Stat error: %w", err)
+		}
+
+		files[i].Data = &bytes.Buffer{}
+		if _, err = files[i].Data.ReadFrom(reader); err != nil {
+			return nil, fmt.Errorf("minio DownloadArchive Read error: %w", err)
+		}
+	}
+
+	service := archive.NewTarballService()
+	data := &bytes.Buffer{}
+	if err = service.Create(data, files); err != nil {
+		return nil, fmt.Errorf("minio DownloadArchive CreateArchive error: %w", err)
+	}
+
+	return data, nil
 }
 
 // Connect connects to MinIO server

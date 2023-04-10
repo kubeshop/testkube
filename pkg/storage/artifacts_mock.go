@@ -36,6 +36,21 @@ func (m *MockArtifactsStorage) EXPECT() *MockArtifactsStorageMockRecorder {
 	return m.recorder
 }
 
+// DownloadArchive mocks base method.
+func (m *MockArtifactsStorage) DownloadArchive(arg0 context.Context, arg1 string) (io.Reader, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DownloadArchive", arg0, arg1)
+	ret0, _ := ret[0].(io.Reader)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DownloadArchive indicates an expected call of DownloadArchive.
+func (mr *MockArtifactsStorageMockRecorder) DownloadArchive(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DownloadArchive", reflect.TypeOf((*MockArtifactsStorage)(nil).DownloadArchive), arg0, arg1)
+}
+
 // DownloadFile mocks base method.
 func (m *MockArtifactsStorage) DownloadFile(arg0 context.Context, arg1, arg2, arg3, arg4 string) (io.Reader, error) {
 	m.ctrl.T.Helper()

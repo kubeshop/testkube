@@ -22,3 +22,11 @@ type DownloadFileRequest struct {
 type DownloadFileResponse struct {
 	URL string
 }
+
+type DownloadArchiveRequest struct {
+	ExecutionID string
+}
+
+type DownloadArchiveResponse struct {
+	URL string
+}

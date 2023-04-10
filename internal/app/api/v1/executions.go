@@ -379,7 +379,7 @@ func (s *TestkubeAPI) GetArtifactArchiveHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: db could not get execution result: %w", errPrefix, err))
 		}
 
-		archive, err := s.Storage.DownloadArchive(c.Context(), execution.Id)
+		archive, err := s.artifactsStorage.DownloadArchive(c.Context(), execution.Id)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not download artifact archive: %w", errPrefix, err))
 		}
