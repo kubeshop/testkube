@@ -87,22 +87,8 @@ func (c *ArtifactClient) listFiles(ctx context.Context, bucket, bucketFolder str
 // DownloadFile downloads file from bucket from the config
 func (c *ArtifactClient) DownloadFile(ctx context.Context, file, executionId, testName, testSuiteName string) (io.Reader, error) {
 	c.Log.Infow("Download file", "bucket", c.bucket, "bucketFolder", executionId, "file", file)
-	// TODO: this is for back compatibility, remove it sometime in the future
-	var errFirst error
-	exists, err := c.minioclient.BucketExists(ctx, executionId)
-	c.Log.Debugw("Checking if bucket exists", exists, err)
-	if err == nil && exists {
-		c.Log.Infow("Bucket exists, trying to get files from former bucket per execution", exists, err)
-		objFirst, errFirst := c.downloadFile(ctx, executionId, "", file)
-		if errFirst == nil && objFirst != nil {
-			return objFirst, nil
-		}
-	}
-	objSecond, errSecond := c.downloadFile(ctx, c.bucket, executionId, file)
-	if errSecond != nil {
-		return nil, fmt.Errorf("minio DownloadFile error: %v, error from getting files from former bucket per execution: %v", errSecond, errFirst)
-	}
-	return objSecond, nil
+
+	return c.downloadFile(ctx, c.bucket, executionId, file)
 }
 
 // downloadFile downloads file from bucket
