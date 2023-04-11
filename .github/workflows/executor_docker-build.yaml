@@ -352,6 +352,16 @@ jobs:
             prefix=
             suffix=-${{ matrix.version }}
 
+      -
+        name: Docker meta for cypress executor ${{ matrix.version }}
+        if: ${{ matrix.version != 'legacy' && matrix.version != 'default' }}
+        id: meta_executor_no_suffix
+        uses: docker/metadata-action@v3
+        with:
+          images: kubeshop/testkube-cypress-executor
+          tags: |
+            type=raw,value=${{ matrix.version }}
+
       - 
         name: Build ${{ matrix.version }} cypress executor
         if: ${{ matrix.version == 'legacy' }}
@@ -384,6 +394,18 @@ jobs:
           files: |
             contrib/executor/cypress/build/agent/docker-bake.hcl
             ${{ steps.meta_executor.outputs.bake-file }}
+          targets: ${{ matrix.version }}
+          set: ${{ matrix.version }}.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          push: true
+
+      -
+        name: Build cypress ${{ matrix.executor }} executor
+        if: ${{ matrix.version != 'legacy' && matrix.version != 'default' }}
+        uses: docker/bake-action@v1
+        with:
+          files: |
+            contrib/executor/cypress/build/agent/docker-bake.hcl
+            ${{ steps.meta_executor_no_suffix.outputs.bake-file }}
           targets: ${{ matrix.version }}
           set: ${{ matrix.version }}.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
           push: true
