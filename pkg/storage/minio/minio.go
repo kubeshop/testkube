@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -315,6 +316,16 @@ func (c *Client) downloadArchive(ctx context.Context, bucket, bucketFolder strin
 		return nil, ErrArtifactsNotFound
 	}
 
+	var regexps []*regexp.Regexp
+	for _, mask := range masks {
+		re, err := regexp.Compile(mask)
+		if err != nil {
+			return nil, fmt.Errorf("minio DownloadArchive regexp error: %w", err)
+		}
+
+		regexps = append(regexps, re)
+	}
+
 	listOptions := minio.ListObjectsOptions{Recursive: true}
 	if bucketFolder != "" {
 		listOptions.Prefix = strings.Trim(bucketFolder, "/")
@@ -323,7 +334,18 @@ func (c *Client) downloadArchive(ctx context.Context, bucket, bucketFolder strin
 	var files []*archive.File
 	for obj := range c.minioclient.ListObjects(ctx, bucket, listOptions) {
 		if obj.Err != nil {
-			return nil, obj.Err
+			return nil, fmt.Errorf("minio DownloadArchive ListObjects error: %w", obj.Err)
+		}
+
+		found := len(regexps) == 0
+		for i := range regexps {
+			if found = regexps[i].MatchString(obj.Key); found {
+				break
+			}
+		}
+
+		if !found {
+			continue
 		}
 
 		files = append(files, &archive.File{
