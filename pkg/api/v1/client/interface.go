@@ -212,5 +212,5 @@ type Transport[A All] interface {
 	ExecuteMethod(method, uri, selector string, isContentExpected bool) error
 	GetURI(pathTemplate string, params ...interface{}) string
 	GetLogs(uri string, logs chan output.Output) error
-	GetFile(uri, fileName, destination string) (name string, err error)
+	GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error)
 }

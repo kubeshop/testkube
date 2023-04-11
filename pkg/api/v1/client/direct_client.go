@@ -183,8 +183,23 @@ func (t DirectClient[A]) GetLogs(uri string, logs chan output.Output) error {
 }
 
 // GetFile returns file artifact
-func (t DirectClient[A]) GetFile(uri, fileName, destination string) (name string, err error) {
-	resp, err := t.client.Get(uri)
+func (t DirectClient[A]) GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error) {
+	req, err := http.NewRequest(http.MethodGet, uri, nil)
+	if err != nil {
+		return "", err
+	}
+
+	q := req.URL.Query()
+	for key, values := range params {
+		for _, value := range values {
+			if value != "" {
+				q.Add(key, value)
+			}
+		}
+	}
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := t.client.Do(req)
 	if err != nil {
 		return name, err
 	}
