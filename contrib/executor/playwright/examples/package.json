@@ -5,8 +5,5 @@
   "main": "index.js",
   "scripts": {},
   "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "@playwright/test": "^1.32.2"
-  }
+  "license": "ISC"
 }
