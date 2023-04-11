@@ -141,7 +141,7 @@ jobs:
         run: go install gotest.tools/gotestsum@v1.9.0
 
       - name: Set up Playwright dependencies
-        run: echo "y" | npx playwright install-deps
+        run: echo "y" | npx playwright@1.32.2 install-deps
 
       - name: Set up git
         run: sudo apt-get install -y git
