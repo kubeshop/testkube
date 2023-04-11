@@ -178,16 +178,17 @@ func main() {
 		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
 		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
 		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
-		artifactStorage = cloudartifacts.NewCloudStorageClient(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
+		artifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
 	} else {
 		mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
 		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, mongoSSLConfig)
 		ui.ExitOnError("Getting mongo database", err)
-		resultsRepository = result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
+		mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
+		resultsRepository = mongoResultsRepository
 		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
 		configRepository = configrepository.NewMongoRepository(db)
 		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
-		artifactStorage = minio.NewMinIOArtifactClient(
+		minioClient := minio.NewClient(
 			cfg.StorageEndpoint,
 			cfg.StorageAccessKeyID,
 			cfg.StorageSecretAccessKey,
@@ -196,15 +197,24 @@ func main() {
 			cfg.StorageBucket,
 			cfg.StorageSSL,
 		)
-		storageClient = minio.NewClient(
-			cfg.StorageEndpoint,
-			cfg.StorageAccessKeyID,
-			cfg.StorageSecretAccessKey,
-			cfg.StorageRegion,
-			cfg.StorageToken,
-			cfg.StorageBucket,
-			cfg.StorageSSL,
-		)
+		if err = minioClient.Connect(); err != nil {
+			ui.ExitOnError("Connecting to minio", err)
+		}
+		storageClient = minioClient
+		artifactStorage = minio.NewMinIOArtifactClient(storageClient)
+		// init storage
+		isMinioStorage := cfg.LogsStorage == "minio"
+		if isMinioStorage {
+			bucket := cfg.LogsBucket
+			if bucket == "" {
+				log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
+			} else if _, err := storageClient.ListBuckets(ctx); err == nil {
+				log.DefaultLogger.Info("setting minio as logs storage")
+				mongoResultsRepository.OutputRepository = result.NewMinioOutputRepository(storageClient, mongoResultsRepository.ResultsColl, bucket)
+			} else {
+				log.DefaultLogger.Infow("minio is not available, using default logs storage", "error", err)
+			}
+		}
 	}
 
 	configName := fmt.Sprintf("testkube-api-server-config-%s", cfg.TestkubeNamespace)
@@ -368,22 +378,6 @@ func main() {
 		cfg.GraphqlPort,
 		artifactStorage,
 	)
-
-	isMinioStorage := cfg.LogsStorage == "minio"
-	if api.Storage != nil && isMinioStorage && mode != common.ModeAgent {
-		bucket := cfg.LogsBucket
-		if bucket == "" {
-			log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
-		} else if _, err := api.Storage.ListBuckets(ctx); err == nil {
-			log.DefaultLogger.Info("setting minio as logs storage")
-			mongoResultsRepository, ok := resultsRepository.(*result.MongoRepository)
-			if ok {
-				mongoResultsRepository.OutputRepository = result.NewMinioOutputRepository(api.Storage, mongoResultsRepository.ResultsColl, bucket)
-			}
-		} else {
-			log.DefaultLogger.Infow("minio is not available, using default logs storage", "error", err)
-		}
-	}
 
 	if mode == common.ModeAgent {
 		log.DefaultLogger.Info("starting agent service")
