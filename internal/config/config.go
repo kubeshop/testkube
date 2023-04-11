@@ -6,9 +6,11 @@ type Config struct {
 	APIServerPort                     string `envconfig:"APISERVER_PORT" default:"8088"`
 	APIServerConfig                   string `envconfig:"APISERVER_CONFIG" default:""`
 	APIMongoDSN                       string `envconfig:"API_MONGO_DSN" default:"mongodb://localhost:27017"`
+	APIMongoAllowTLS                  bool   `envconfig:"API_MONGO_ALLOW_TLS" default:"false"`
 	APIMongoSSLCert                   string `envconfig:"API_MONGO_SSL_CERT" default:""`
 	APIMongoAllowDiskUse              bool   `envconfig:"API_MONGO_ALLOW_DISK_USE" default:"false"`
 	APIMongoDB                        string `envconfig:"API_MONGO_DB" default:"testkube"`
+	APIMongoDBType                    string `envconfig:"API_MONGO_DB_TYPE" default:"mongo"`
 	SlackToken                        string `envconfig:"SLACK_TOKEN" default:""`
 	SlackConfig                       string `envconfig:"SLACK_CONFIG" default:""`
 	SlackTemplate                     string `envconfig:"SLACK_TEMPLATE" default:""`
