@@ -249,7 +249,17 @@ func (c TestClient) DownloadFile(executionID, fileName, destination string) (art
 
 // DownloadArchive downloads archive
 func (c TestClient) DownloadArchive(executionID, destination string, masks []string) (archive string, err error) {
-	uri := c.executionTransport.GetURI("/executions/%s/artifact-archive", executionID)
+	query := ""
+	if len(masks) != 0 {
+		values := url.Values{}
+		for _, mask := range masks {
+			values.Add("mask", mask)
+		}
+
+		query = fmt.Sprintf("?%s", values.Encode())
+	}
+
+	uri := c.executionTransport.GetURI("/executions/%s/artifact-archive%s", executionID, query)
 	return c.executionTransport.GetFile(uri, fmt.Sprintf("%s.tar.gz", executionID), destination)
 }
 

@@ -64,6 +64,7 @@ func CommandOutput(output []byte, command string, params ...string) {
 }
 func Print(message string, subMessages ...string)           { ui.Print(message, subMessages...) }
 func Printf(format string, data ...any)                     { ui.Printf(format, data...) }
+func PrintDot()                                             { ui.PrintDot() }
 func PrintEnabled(message string, subMessages ...string)    { ui.PrintEnabled(message, subMessages...) }
 func PrintDisabled(message string, subMessages ...string)   { ui.PrintDisabled(message, subMessages...) }
 func Medal()                                                { ui.Medal() }

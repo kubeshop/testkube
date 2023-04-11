@@ -71,6 +71,10 @@ func (ui *UI) Printf(format string, data ...any) {
 	fmt.Fprintln(ui.Writer)
 }
 
+func (ui *UI) PrintDot() {
+	fmt.Fprint(ui.Writer, ".")
+}
+
 // PrintEnabled shows enabled in terminal
 func (ui *UI) PrintEnabled(message string, subMessages ...string) {
 	fmt.Fprintf(ui.Writer, IconMedal+"  ")

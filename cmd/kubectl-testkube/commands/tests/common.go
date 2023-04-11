@@ -86,9 +86,35 @@ func DownloadArtifacts(id, dir, format string, masks []string, client apiclientv
 	}
 
 	if format == artifactsFormatArchive {
-		f, err := client.DownloadArchive(id, dir, masks)
-		ui.ExitOnError("downloading archive: "+f, err)
-		ui.Warn(" - downloading archive ", f)
+		const readinessCheckTimeout = time.Second
+		ticker := time.NewTicker(readinessCheckTimeout)
+		defer ticker.Stop()
+
+		ch := make(chan string)
+		defer close(ch)
+
+		go func() {
+			f, err := client.DownloadArchive(id, dir, masks)
+			ui.ExitOnError("downloading archive: "+f, err)
+
+			ch <- f
+		}()
+
+		var archive string
+		ui.Warn(" - preparing archive ")
+
+	outloop:
+		for {
+			select {
+			case <-ticker.C:
+				ui.PrintDot()
+			case archive = <-ch:
+				ui.NL()
+				break outloop
+			}
+		}
+
+		ui.Warn(" - downloading archive ", archive)
 	}
 
 	ui.NL()
