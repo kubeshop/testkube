@@ -99,7 +99,7 @@ func TestArchiveFilesystemExtractor_Extract_Meta_Integration(t *testing.T) {
 			if err := json.Unmarshal(jsonData, &meta); err != nil {
 				t.Fatalf("Failed to unmarshal meta files: %v", err)
 			}
-			assert.Len(t, meta, 3)
+			assert.Len(t, meta.Files, 3)
 			assert.Equal(t, "artifacts.tar.gz", meta.Archive)
 			assert.Equal(t, scraper.DataTypeTarball, meta.DataType)
 			assert.Equal(t, "file1.txt", meta.Files[0].Name)
