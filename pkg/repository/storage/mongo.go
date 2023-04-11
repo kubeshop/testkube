@@ -12,6 +12,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/log"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -33,28 +34,27 @@ const (
 )
 
 // GetMongoDatabase returns a valid database connection to the configured MongoDB database
-func GetMongoDatabase(dsn, name, dbType string, certConfig *MongoSSLConfig) (db *mongo.Database, err error) {
+func GetMongoDatabase(dsn, name, dbType string, allowTLS bool, certConfig *MongoSSLConfig) (db *mongo.Database, err error) {
+	if dbType != "" && dbType != TypeMongoDB && dbType != TypeDocDB {
+		return nil, fmt.Errorf("unsupported database type %s", dbType)
+	}
 	var mongoOptions *tls.Config
 
-	switch dbType {
-	case TypeMongoDB, "":
-		if certConfig != nil {
-			mongoOptions, err = options.BuildTLSConfig(map[string]interface{}{
-				"sslClientCertificateKeyFile":     certConfig.SSLClientCertificateKeyFile,
-				"sslClientCertificateKeyPassword": certConfig.SSLClientCertificateKeyFilePassword,
-				"sslCertificateAuthorityFile":     certConfig.SSLCertificateAuthoritiyFile,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("could not build SSL config: %w", err)
-			}
+	if (dbType == TypeMongoDB || dbType == "") && certConfig != nil {
+		mongoOptions, err = options.BuildTLSConfig(map[string]interface{}{
+			"sslClientCertificateKeyFile":     certConfig.SSLClientCertificateKeyFile,
+			"sslClientCertificateKeyPassword": certConfig.SSLClientCertificateKeyFilePassword,
+			"sslCertificateAuthorityFile":     certConfig.SSLCertificateAuthoritiyFile,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("could not build SSL config: %w", err)
 		}
-	case TypeDocDB:
+	}
+	if dbType == TypeDocDB && allowTLS {
 		mongoOptions, err = getDocDBTLSConfig()
 		if err != nil {
 			return nil, fmt.Errorf("could not get DocDB: %w", err)
 		}
-	default:
-		return nil, fmt.Errorf("unsupported database type %s", dbType)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -72,10 +72,15 @@ func getDocDBTLSConfig() (*tls.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not get CA file: %w", err)
 	}
+	defer func() {
+		err := deleteDocDBTLSConfigFile(caFilePath)
+		if err != nil {
+			log.DefaultLogger.Warnf("could not remove AWS DocumentDB CA file %s: %v", caFilePath, err)
+		}
+	}()
 
 	tlsConfig := new(tls.Config)
 	certs, err := ioutil.ReadFile(caFilePath)
-
 	if err != nil {
 		return nil, fmt.Errorf("could not read CA file: %s", err)
 	}
@@ -100,16 +105,24 @@ func GetDocDBcaFile() (string, error) {
 	}
 	defer resp.Body.Close()
 
-	docDBcaPath := "/tmp/rds-combined-ca-bundle.pem"
-	out, err := os.Create(docDBcaPath)
+	out, err := os.CreateTemp("", "rds-combined-ca-bundle.pem")
 	if err != nil {
-		return "", fmt.Errorf("could not create file %s: %w", docDBcaPath, err)
+		return "", fmt.Errorf("could not create file %s: %w", out.Name(), err)
 	}
 	defer out.Close()
 
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("could not write file %s: %w", docDBcaPath, err)
+		return "", fmt.Errorf("could not write file %s: %w", out.Name(), err)
 	}
-	return docDBcaPath, nil
+	return out.Name(), nil
+}
+
+// deleteDocDBTLSConfigFile deletes the downloaded CA file
+func deleteDocDBTLSConfigFile(docDBcaPath string) error {
+	err := os.Remove(docDBcaPath)
+	if err != nil {
+		return fmt.Errorf("could not delete file %s: %w", docDBcaPath, err)
+	}
+	return nil
 }
