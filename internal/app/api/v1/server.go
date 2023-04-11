@@ -347,16 +347,36 @@ func (s *TestkubeAPI) InitRoutes() {
 	s.Mux.All("/", proxy.Forward(dashboardURI))
 
 	// set up proxy for the internal GraphQL server
-	s.Mux.All("/graphql", func(ctx *fiber.Ctx) error {
-		header := ctx.Request().Header.Header()
-		ctx.Context().HijackSetNoResponse(true)
-		ctx.Context().Hijack(func(c net.Conn) {
-			// Connect to server
-			serverConn, err := net.Dial("tcp", ":"+s.graphqlPort)
-			if err != nil {
-				s.Log.Errorw("could not connect to GraphQL server as a proxy", "error", err)
-				return
-			}
+	s.Mux.All("/graphql", func(c *fiber.Ctx) error {
+		// Connect to server
+		serverConn, err := net.Dial("tcp", ":"+s.graphqlPort)
+		if err != nil {
+			s.Log.Errorw("could not connect to GraphQL server as a proxy", "error", err)
+			return err
+		}
+
+		// Resend headers to the server
+		_, err = serverConn.Write(c.Request().Header.Header())
+		if err != nil {
+			serverConn.Close()
+			s.Log.Errorw("error while sending headers to GraphQL server", "error", err)
+			return err
+		}
+
+		// Resend body to the server
+		_, err = serverConn.Write(c.Body())
+		if err != nil && err != io.EOF {
+			serverConn.Close()
+			s.Log.Errorw("error while reading GraphQL client data", "error", err)
+			return err
+		}
+
+		// Handle optional WebSocket connection
+		c.Context().HijackSetNoResponse(true)
+		c.Context().Hijack(func(clientConn net.Conn) {
+			// Close the connection afterward
+			defer serverConn.Close()
+			defer clientConn.Close()
 
 			// Extract Unix connection
 			serverSock, ok := serverConn.(*net.TCPConn)
@@ -364,20 +384,9 @@ func (s *TestkubeAPI) InitRoutes() {
 				s.Log.Errorw("error while building TCPConn out ouf serverConn", "error", err)
 				return
 			}
-			clientSock, ok := reflect.Indirect(reflect.ValueOf(c)).FieldByName("Conn").Interface().(*net.TCPConn)
+			clientSock, ok := reflect.Indirect(reflect.ValueOf(clientConn)).FieldByName("Conn").Interface().(*net.TCPConn)
 			if !ok {
 				s.Log.Errorw("error while building TCPConn out of hijacked connection", "error", err)
-				return
-			}
-
-			// Close the connection afterward
-			defer clientSock.Close()
-			defer serverSock.Close()
-
-			// Resend headers to the server
-			_, err = serverSock.Write(header)
-			if err != nil {
-				s.Log.Errorw("error while sending headers to GraphQL server", "error", err)
 				return
 			}
 
@@ -387,18 +396,18 @@ func (s *TestkubeAPI) InitRoutes() {
 			go func() {
 				defer wg.Done()
 				_, err := io.Copy(clientSock, serverSock)
-				if err != io.EOF {
+				if err != nil && err != io.EOF {
 					s.Log.Errorw("error while reading GraphQL client data", "error", err)
 				}
-				clientSock.CloseWrite()
+				serverSock.CloseWrite()
 			}()
 			go func() {
 				defer wg.Done()
-				_, err := io.Copy(serverSock, clientSock)
-				if err != io.EOF {
+				_, err = io.Copy(serverSock, clientSock)
+				if err != nil && err != io.EOF {
 					s.Log.Errorw("error while reading GraphQL server data", "error", err)
 				}
-				serverSock.CloseWrite()
+				clientSock.CloseWrite()
 			}()
 			wg.Wait()
 		})
