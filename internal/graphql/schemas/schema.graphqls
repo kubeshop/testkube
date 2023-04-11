@@ -1,0 +1,4 @@
+scalar Map
+
+type Subscription
+type Query
