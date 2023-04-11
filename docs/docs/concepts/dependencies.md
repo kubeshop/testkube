@@ -48,7 +48,7 @@ mongodb:
   allowDiskUse: false
 ```
 
-#### TLS enabled
+#### With TLS Enabled
 
 Using DocumentDB with TLS enabled is fairly simple as well. You will need to specify the `dbType` and `allowTLS` in addition to the previous fields:
 
