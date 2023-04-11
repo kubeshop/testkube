@@ -37,3 +37,27 @@ data:
 ```
 
 To set this variable on helm-charts level, set [mongodb.sslCertSecret](https://github.com/kubeshop/helm-charts/blob/main/charts/testkube-api/values.yaml) to the name of the secret.
+
+### Amazon DocumentDB
+
+Testkube supports using [Amazon DocumentDB](https://aws.amazon.com/documentdb/), the managed version on MongoDB on AWS, as its database. Configuring it without TLS enabled is straightforward: add the connection string, and make sure the features that are not supported by DocumentDB are disabled. The parameters in the [helm-charts](https://github.com/kubeshop/helm-charts/blob/main/charts/testkube-api/values.yaml) are:
+
+```bash
+mongodb:
+  dsn: "mongodb://docdbadmin:<insertYourPassword>@docdb.cluster.us-east-1.docdb.amazonaws.com:27017/?retryWrites=false"
+  allowDiskUse: false
+```
+
+#### With TLS Enabled
+
+Using DocumentDB with TLS enabled is fairly simple as well. You will need to specify the `dbType` and `allowTLS` in addition to the previous fields:
+
+```bash
+mongodb:
+  dsn: "mongodb://docdbadmin:<insertYourPassword>@docdb.cluster.location.docdb.amazonaws.com:27017/?retryWrites=false"
+  allowDiskUse: false
+  dbType: docdb
+  allowTLS: true
+```
+
+Testkube will download and use the CA certificates provided by AWS from https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem.
