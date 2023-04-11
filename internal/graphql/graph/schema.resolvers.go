@@ -6,61 +6,26 @@ package graph
 
 import (
 	"context"
-	"fmt"
-	"github.com/kubeshop/testkube-operator/client/executors/v1"
 
-	"github.com/kubeshop/testkube/internal/graphql/graph/model"
+	executors "github.com/kubeshop/testkube-operator/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"
 	"github.com/kubeshop/testkube/pkg/rand"
 )
 
-// Type is the resolver for the type field.
-func (r *eventResolver) Type(ctx context.Context, obj *testkube.Event) (*string, error) {
-	panic(fmt.Errorf("not implemented: Type - type"))
-}
-
-// Resource is the resolver for the resource field.
-func (r *eventResolver) Resource(ctx context.Context, obj *testkube.Event) (*string, error) {
-	panic(fmt.Errorf("not implemented: Resource - resource"))
-}
-
-// Features is the resolver for the features field.
-func (r *executorResolver) Features(ctx context.Context, obj *testkube.Executor) ([]*model.FeaturesListItem, error) {
-	panic(fmt.Errorf("not implemented: Features - features"))
-}
-
 // Labels is the resolver for the labels field.
-func (r *executorResolver) Labels(ctx context.Context, obj *testkube.Executor) (*string, error) {
-	panic(fmt.Errorf("not implemented: Labels - labels"))
-}
-
-// Event is the resolver for the event field.
-func (r *executorDetailsResolver) Event(ctx context.Context, obj *testkube.ExecutorDetails) (*testkube.Event, error) {
-	panic(fmt.Errorf("not implemented: Event - event"))
+func (r *executorResolver) Labels(ctx context.Context, obj *testkube.Executor) (map[string]interface{}, error) {
+	return mapToMapInterface(obj.Labels), nil
 }
 
 // Tooltips is the resolver for the tooltips field.
-func (r *executorMetaResolver) Tooltips(ctx context.Context, obj *testkube.ExecutorMeta) (*string, error) {
-	panic(fmt.Errorf("not implemented: Tooltips - tooltips"))
+func (r *executorMetaResolver) Tooltips(ctx context.Context, obj *testkube.ExecutorMeta) (map[string]interface{}, error) {
+	return mapToMapInterface(obj.Tooltips), nil
 }
 
 // Executors is the resolver for the executors field.
-func (r *queryResolver) Executors(ctx context.Context) ([]*testkube.Executor, error) {
-	panic(fmt.Errorf("not implemented: Executors - executors"))
-}
-
-func getExecutors(client *executors.ExecutorsClient) ([]testkube.ExecutorDetails, error) {
-	execs, err := client.List("")
-	if err != nil {
-		return nil, err
-	}
-
-	execsDetails := []testkube.ExecutorDetails{}
-	for _, item := range execs.Items {
-		execsDetails = append(execsDetails, executorsmapper.MapExecutorCRDToExecutorDetails(item))
-	}
-	return execsDetails, nil
+func (r *queryResolver) Executors(ctx context.Context) ([]testkube.ExecutorDetails, error) {
+	return getExecutors(r.Client)
 }
 
 // Executors is the resolver for the executors field.
@@ -105,14 +70,8 @@ func (r *subscriptionResolver) Executors(ctx context.Context) (<-chan []testkube
 	return ch, nil
 }
 
-// Event returns EventResolver implementation.
-func (r *Resolver) Event() EventResolver { return &eventResolver{r} }
-
 // Executor returns ExecutorResolver implementation.
 func (r *Resolver) Executor() ExecutorResolver { return &executorResolver{r} }
-
-// ExecutorDetails returns ExecutorDetailsResolver implementation.
-func (r *Resolver) ExecutorDetails() ExecutorDetailsResolver { return &executorDetailsResolver{r} }
 
 // ExecutorMeta returns ExecutorMetaResolver implementation.
 func (r *Resolver) ExecutorMeta() ExecutorMetaResolver { return &executorMetaResolver{r} }
@@ -123,9 +82,7 @@ func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 // Subscription returns SubscriptionResolver implementation.
 func (r *Resolver) Subscription() SubscriptionResolver { return &subscriptionResolver{r} }
 
-type eventResolver struct{ *Resolver }
 type executorResolver struct{ *Resolver }
-type executorDetailsResolver struct{ *Resolver }
 type executorMetaResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
@@ -136,9 +93,25 @@ type subscriptionResolver struct{ *Resolver }
 //   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
 //     it when you're done.
 //   - You have helper methods in this file. Move them out to keep these resolver files clean.
-func SliceToSliceOfPointers[T interface{}](in []T) (out []*T) {
-	for _, e := range in {
-		out = append(out, &e)
+func mapToMapInterface[T interface{}](input map[string]T) map[string]interface{} {
+	if input == nil {
+		return nil
 	}
-	return
+	result := make(map[string]interface{}, len(input))
+	for k, v := range input {
+		result[k] = v
+	}
+	return result
+}
+func getExecutors(client *executors.ExecutorsClient) ([]testkube.ExecutorDetails, error) {
+	execs, err := client.List("")
+	if err != nil {
+		return nil, err
+	}
+
+	execsDetails := []testkube.ExecutorDetails{}
+	for _, item := range execs.Items {
+		execsDetails = append(execsDetails, executorsmapper.MapExecutorCRDToExecutorDetails(item))
+	}
+	return execsDetails, nil
 }

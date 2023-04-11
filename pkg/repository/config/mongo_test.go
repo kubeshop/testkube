@@ -19,7 +19,7 @@ const (
 )
 
 func getRepository() (*MongoRepository, error) {
-	db, err := storage.GetMongoDatabase(mongoDns, mongoDbName, nil)
+	db, err := storage.GetMongoDatabase(mongoDns, mongoDbName, storage.TypeMongoDB, false, nil)
 	repository := NewMongoRepository(db)
 	return repository, err
 }
