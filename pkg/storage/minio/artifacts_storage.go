@@ -157,7 +157,7 @@ func (c *ArtifactClient) downloadArchive(ctx context.Context, bucket, bucketFold
 	for _, mask := range masks {
 		re, err := regexp.Compile(mask)
 		if err != nil {
-			return nil, fmt.Errorf("minio DownloadArchive regexp error: %w",err)
+			return nil, fmt.Errorf("minio DownloadArchive regexp error: %w", err)
 		}
 
 		regexps = append(regexps, re)
