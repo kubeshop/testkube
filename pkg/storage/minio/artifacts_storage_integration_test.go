@@ -7,12 +7,15 @@ import (
 	"os"
 	"testing"
 
+	"github.com/kubeshop/testkube/pkg/utils/test"
+
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestArtifactClient(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	directMinioClient, err := minio.New("localhost:9000", &minio.Options{
