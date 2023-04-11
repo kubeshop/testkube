@@ -2,14 +2,16 @@ package v1
 
 import (
 	"bytes"
-	"github.com/golang/mock/gomock"
-	"github.com/kubeshop/testkube/pkg/storage"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"testing"
+
+	"github.com/golang/mock/gomock"
+
+	"github.com/kubeshop/testkube/pkg/storage"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"

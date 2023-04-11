@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/kubeshop/testkube/pkg/utils/test"
+
 	"github.com/kubeshop/testkube/pkg/envs"
 
 	cp "github.com/otiai10/copy"
@@ -15,7 +17,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func TestRun(t *testing.T) {
+func TestRun_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()
