@@ -11,10 +11,10 @@ import (
 	"io"
 	"strconv"
 	"sync"
+	"sync/atomic"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
-	"github.com/kubeshop/testkube/internal/graphql/graph/model"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
@@ -38,9 +38,7 @@ type Config struct {
 }
 
 type ResolverRoot interface {
-	Event() EventResolver
 	Executor() ExecutorResolver
-	ExecutorDetails() ExecutorDetailsResolver
 	ExecutorMeta() ExecutorMetaResolver
 	Query() QueryResolver
 	Subscription() SubscriptionResolver
@@ -50,12 +48,6 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
-	Event struct {
-		Resource   func(childComplexity int) int
-		ResourceId func(childComplexity int) int
-		Type       func(childComplexity int) int
-	}
-
 	Executor struct {
 		Args             func(childComplexity int) int
 		Command          func(childComplexity int) int
@@ -72,7 +64,6 @@ type ComplexityRoot struct {
 	}
 
 	ExecutorDetails struct {
-		Event    func(childComplexity int) int
 		Executor func(childComplexity int) int
 		Name     func(childComplexity int) int
 	}
@@ -96,23 +87,14 @@ type ComplexityRoot struct {
 	}
 }
 
-type EventResolver interface {
-	Type(ctx context.Context, obj *testkube.Event) (*string, error)
-	Resource(ctx context.Context, obj *testkube.Event) (*string, error)
-}
 type ExecutorResolver interface {
-	Features(ctx context.Context, obj *testkube.Executor) ([]*model.FeaturesListItem, error)
-
-	Labels(ctx context.Context, obj *testkube.Executor) (*string, error)
-}
-type ExecutorDetailsResolver interface {
-	Event(ctx context.Context, obj *testkube.ExecutorDetails) (*testkube.Event, error)
+	Labels(ctx context.Context, obj *testkube.Executor) (map[string]interface{}, error)
 }
 type ExecutorMetaResolver interface {
-	Tooltips(ctx context.Context, obj *testkube.ExecutorMeta) (*string, error)
+	Tooltips(ctx context.Context, obj *testkube.ExecutorMeta) (map[string]interface{}, error)
 }
 type QueryResolver interface {
-	Executors(ctx context.Context) ([]*testkube.Executor, error)
+	Executors(ctx context.Context) ([]testkube.Executor, error)
 }
 type SubscriptionResolver interface {
 	Executors(ctx context.Context) (<-chan []testkube.ExecutorDetails, error)
@@ -132,27 +114,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e}
 	_ = ec
 	switch typeName + "." + field {
-
-	case "Event.resource":
-		if e.complexity.Event.Resource == nil {
-			break
-		}
-
-		return e.complexity.Event.Resource(childComplexity), true
-
-	case "Event.resourceId":
-		if e.complexity.Event.ResourceId == nil {
-			break
-		}
-
-		return e.complexity.Event.ResourceId(childComplexity), true
-
-	case "Event.type":
-		if e.complexity.Event.Type == nil {
-			break
-		}
-
-		return e.complexity.Event.Type(childComplexity), true
 
 	case "Executor.args":
 		if e.complexity.Executor.Args == nil {
@@ -237,13 +198,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Executor.Uri(childComplexity), true
-
-	case "ExecutorDetails.event":
-		if e.complexity.ExecutorDetails.Event == nil {
-			break
-		}
-
-		return e.complexity.ExecutorDetails.Event(childComplexity), true
 
 	case "ExecutorDetails.executor":
 		if e.complexity.ExecutorDetails.Executor == nil {
@@ -442,129 +396,6 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
-func (ec *executionContext) _Event_type(ctx context.Context, field graphql.CollectedField, obj *testkube.Event) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Event_type(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Event().Type(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*string)
-	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Event_type(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Event",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Event_resource(ctx context.Context, field graphql.CollectedField, obj *testkube.Event) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Event_resource(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Event().Resource(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*string)
-	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Event_resource(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Event",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Event_resourceId(ctx context.Context, field graphql.CollectedField, obj *testkube.Event) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Event_resourceId(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ResourceId, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalOString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Event_resourceId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Event",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Executor_args(ctx context.Context, field graphql.CollectedField, obj *testkube.Executor) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Executor_args(ctx, field)
 	if err != nil {
@@ -590,7 +421,7 @@ func (ec *executionContext) _Executor_args(ctx context.Context, field graphql.Co
 	}
 	res := resTmp.([]string)
 	fc.Result = res
-	return ec.marshalOString2ᚕstring(ctx, field.Selections, res)
+	return ec.marshalOString2ᚕstringᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Executor_args(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -631,7 +462,7 @@ func (ec *executionContext) _Executor_command(ctx context.Context, field graphql
 	}
 	res := resTmp.([]string)
 	fc.Result = res
-	return ec.marshalOString2ᚕstring(ctx, field.Selections, res)
+	return ec.marshalOString2ᚕstringᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Executor_command(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -672,7 +503,7 @@ func (ec *executionContext) _Executor_contentTypes(ctx context.Context, field gr
 	}
 	res := resTmp.([]string)
 	fc.Result = res
-	return ec.marshalOString2ᚕstring(ctx, field.Selections, res)
+	return ec.marshalOString2ᚕstringᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Executor_contentTypes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -743,7 +574,7 @@ func (ec *executionContext) _Executor_features(ctx context.Context, field graphq
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Executor().Features(rctx, obj)
+		return obj.Features, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -752,19 +583,19 @@ func (ec *executionContext) _Executor_features(ctx context.Context, field graphq
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]*model.FeaturesListItem)
+	res := resTmp.([]string)
 	fc.Result = res
-	return ec.marshalOFeaturesListItem2ᚕᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋinternalᚋgraphqlᚋgraphᚋmodelᚐFeaturesListItem(ctx, field.Selections, res)
+	return ec.marshalOString2ᚕstringᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Executor_features(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Executor",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type FeaturesListItem does not have child fields")
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -836,7 +667,7 @@ func (ec *executionContext) _Executor_imagePullSecrets(ctx context.Context, fiel
 	}
 	res := resTmp.([]testkube.LocalObjectReference)
 	fc.Result = res
-	return ec.marshalOLocalObjectReference2ᚕgithubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐLocalObjectReference(ctx, field.Selections, res)
+	return ec.marshalOLocalObjectReference2ᚕgithubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐLocalObjectReferenceᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Executor_imagePullSecrets(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -920,9 +751,9 @@ func (ec *executionContext) _Executor_labels(ctx context.Context, field graphql.
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(map[string]interface{})
 	fc.Result = res
-	return ec.marshalOJSON2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOMap2map(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Executor_labels(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -932,7 +763,7 @@ func (ec *executionContext) fieldContext_Executor_labels(ctx context.Context, fi
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type JSON does not have child fields")
+			return nil, errors.New("field of type Map does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1012,7 +843,7 @@ func (ec *executionContext) _Executor_types(ctx context.Context, field graphql.C
 	}
 	res := resTmp.([]string)
 	fc.Result = res
-	return ec.marshalOString2ᚕstring(ctx, field.Selections, res)
+	return ec.marshalOString2ᚕstringᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Executor_types(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1069,55 +900,6 @@ func (ec *executionContext) fieldContext_Executor_uri(ctx context.Context, field
 	return fc, nil
 }
 
-func (ec *executionContext) _ExecutorDetails_event(ctx context.Context, field graphql.CollectedField, obj *testkube.ExecutorDetails) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ExecutorDetails_event(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.ExecutorDetails().Event(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*testkube.Event)
-	fc.Result = res
-	return ec.marshalOEvent2ᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐEvent(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ExecutorDetails_event(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ExecutorDetails",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "type":
-				return ec.fieldContext_Event_type(ctx, field)
-			case "resource":
-				return ec.fieldContext_Event_resource(ctx, field)
-			case "resourceId":
-				return ec.fieldContext_Event_resourceId(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Event", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _ExecutorDetails_name(ctx context.Context, field graphql.CollectedField, obj *testkube.ExecutorDetails) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ExecutorDetails_name(ctx, field)
 	if err != nil {
@@ -1139,11 +921,14 @@ func (ec *executionContext) _ExecutorDetails_name(ctx context.Context, field gra
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
 	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2string(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_ExecutorDetails_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1180,11 +965,14 @@ func (ec *executionContext) _ExecutorDetails_executor(ctx context.Context, field
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
 	res := resTmp.(*testkube.Executor)
 	fc.Result = res
-	return ec.marshalOExecutor2ᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐExecutor(ctx, field.Selections, res)
+	return ec.marshalNExecutor2ᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐExecutor(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_ExecutorDetails_executor(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1331,9 +1119,9 @@ func (ec *executionContext) _ExecutorMeta_tooltips(ctx context.Context, field gr
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(map[string]interface{})
 	fc.Result = res
-	return ec.marshalOJSON2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOMap2map(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_ExecutorMeta_tooltips(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1343,7 +1131,7 @@ func (ec *executionContext) fieldContext_ExecutorMeta_tooltips(ctx context.Conte
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type JSON does not have child fields")
+			return nil, errors.New("field of type Map does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1411,11 +1199,14 @@ func (ec *executionContext) _Query_executors(ctx context.Context, field graphql.
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.([]*testkube.Executor)
+	res := resTmp.([]testkube.Executor)
 	fc.Result = res
-	return ec.marshalOExecutor2ᚕᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐExecutor(ctx, field.Selections, res)
+	return ec.marshalNExecutor2ᚕgithubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐExecutorᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_executors(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1607,6 +1398,9 @@ func (ec *executionContext) _Subscription_executors(ctx context.Context, field g
 		return nil
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return nil
 	}
 	return func(ctx context.Context) graphql.Marshaler {
@@ -1619,7 +1413,7 @@ func (ec *executionContext) _Subscription_executors(ctx context.Context, field g
 				w.Write([]byte{'{'})
 				graphql.MarshalString(field.Alias).MarshalGQL(w)
 				w.Write([]byte{':'})
-				ec.marshalOExecutorDetails2ᚕgithubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐExecutorDetailsᚄ(ctx, field.Selections, res).MarshalGQL(w)
+				ec.marshalNExecutorDetails2ᚕgithubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐExecutorDetailsᚄ(ctx, field.Selections, res).MarshalGQL(w)
 				w.Write([]byte{'}'})
 			})
 		case <-ctx.Done():
@@ -1636,8 +1430,6 @@ func (ec *executionContext) fieldContext_Subscription_executors(ctx context.Cont
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "event":
-				return ec.fieldContext_ExecutorDetails_event(ctx, field)
 			case "name":
 				return ec.fieldContext_ExecutorDetails_name(ctx, field)
 			case "executor":
@@ -3430,65 +3222,6 @@ func (ec *executionContext) fieldContext___Type_specifiedByURL(ctx context.Conte
 
 // region    **************************** object.gotpl ****************************
 
-var eventImplementors = []string{"Event"}
-
-func (ec *executionContext) _Event(ctx context.Context, sel ast.SelectionSet, obj *testkube.Event) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, eventImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("Event")
-		case "type":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Event_type(ctx, field, obj)
-				return res
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
-		case "resource":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Event_resource(ctx, field, obj)
-				return res
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
-		case "resourceId":
-
-			out.Values[i] = ec._Event_resourceId(ctx, field, obj)
-
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
 var executorImplementors = []string{"Executor"}
 
 func (ec *executionContext) _Executor(ctx context.Context, sel ast.SelectionSet, obj *testkube.Executor) graphql.Marshaler {
@@ -3516,22 +3249,9 @@ func (ec *executionContext) _Executor(ctx context.Context, sel ast.SelectionSet,
 			out.Values[i] = ec._Executor_executorType(ctx, field, obj)
 
 		case "features":
-			field := field
 
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Executor_features(ctx, field, obj)
-				return res
-			}
+			out.Values[i] = ec._Executor_features(ctx, field, obj)
 
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
 		case "image":
 
 			out.Values[i] = ec._Executor_image(ctx, field, obj)
@@ -3594,31 +3314,20 @@ func (ec *executionContext) _ExecutorDetails(ctx context.Context, sel ast.Select
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("ExecutorDetails")
-		case "event":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._ExecutorDetails_event(ctx, field, obj)
-				return res
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
 		case "name":
 
 			out.Values[i] = ec._ExecutorDetails_name(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "executor":
 
 			out.Values[i] = ec._ExecutorDetails_executor(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3730,6 +3439,9 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_executors(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
 				return res
 			}
 
@@ -4116,8 +3828,114 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
+func (ec *executionContext) marshalNExecutor2githubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐExecutor(ctx context.Context, sel ast.SelectionSet, v testkube.Executor) graphql.Marshaler {
+	return ec._Executor(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNExecutor2ᚕgithubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐExecutorᚄ(ctx context.Context, sel ast.SelectionSet, v []testkube.Executor) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNExecutor2githubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐExecutor(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNExecutor2ᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐExecutor(ctx context.Context, sel ast.SelectionSet, v *testkube.Executor) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Executor(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNExecutorDetails2githubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐExecutorDetails(ctx context.Context, sel ast.SelectionSet, v testkube.ExecutorDetails) graphql.Marshaler {
 	return ec._ExecutorDetails(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNExecutorDetails2ᚕgithubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐExecutorDetailsᚄ(ctx context.Context, sel ast.SelectionSet, v []testkube.ExecutorDetails) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNExecutorDetails2githubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐExecutorDetails(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNLocalObjectReference2githubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐLocalObjectReference(ctx context.Context, sel ast.SelectionSet, v testkube.LocalObjectReference) graphql.Marshaler {
+	return ec._LocalObjectReference(ctx, sel, &v)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
@@ -4414,14 +4232,14 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return res
 }
 
-func (ec *executionContext) marshalOEvent2ᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐEvent(ctx context.Context, sel ast.SelectionSet, v *testkube.Event) graphql.Marshaler {
+func (ec *executionContext) marshalOExecutorMeta2ᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐExecutorMeta(ctx context.Context, sel ast.SelectionSet, v *testkube.ExecutorMeta) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	return ec._Event(ctx, sel, v)
+	return ec._ExecutorMeta(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalOExecutor2ᚕᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐExecutor(ctx context.Context, sel ast.SelectionSet, v []*testkube.Executor) graphql.Marshaler {
+func (ec *executionContext) marshalOLocalObjectReference2ᚕgithubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐLocalObjectReferenceᚄ(ctx context.Context, sel ast.SelectionSet, v []testkube.LocalObjectReference) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -4448,55 +4266,7 @@ func (ec *executionContext) marshalOExecutor2ᚕᚖgithubᚗcomᚋkubeshopᚋtes
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalOExecutor2ᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐExecutor(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	return ret
-}
-
-func (ec *executionContext) marshalOExecutor2ᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐExecutor(ctx context.Context, sel ast.SelectionSet, v *testkube.Executor) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._Executor(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalOExecutorDetails2ᚕgithubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐExecutorDetailsᚄ(ctx context.Context, sel ast.SelectionSet, v []testkube.ExecutorDetails) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNExecutorDetails2githubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐExecutorDetails(ctx, sel, v[i])
+			ret[i] = ec.marshalNLocalObjectReference2githubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐLocalObjectReference(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -4516,149 +4286,20 @@ func (ec *executionContext) marshalOExecutorDetails2ᚕgithubᚗcomᚋkubeshop�
 	return ret
 }
 
-func (ec *executionContext) marshalOExecutorMeta2ᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐExecutorMeta(ctx context.Context, sel ast.SelectionSet, v *testkube.ExecutorMeta) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._ExecutorMeta(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalOFeaturesListItem2ᚕᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋinternalᚋgraphqlᚋgraphᚋmodelᚐFeaturesListItem(ctx context.Context, v interface{}) ([]*model.FeaturesListItem, error) {
+func (ec *executionContext) unmarshalOMap2map(ctx context.Context, v interface{}) (map[string]interface{}, error) {
 	if v == nil {
 		return nil, nil
 	}
-	var vSlice []interface{}
-	if v != nil {
-		vSlice = graphql.CoerceList(v)
-	}
-	var err error
-	res := make([]*model.FeaturesListItem, len(vSlice))
-	for i := range vSlice {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalOFeaturesListItem2ᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋinternalᚋgraphqlᚋgraphᚋmodelᚐFeaturesListItem(ctx, vSlice[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
-}
-
-func (ec *executionContext) marshalOFeaturesListItem2ᚕᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋinternalᚋgraphqlᚋgraphᚋmodelᚐFeaturesListItem(ctx context.Context, sel ast.SelectionSet, v []*model.FeaturesListItem) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalOFeaturesListItem2ᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋinternalᚋgraphqlᚋgraphᚋmodelᚐFeaturesListItem(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	return ret
-}
-
-func (ec *executionContext) unmarshalOFeaturesListItem2ᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋinternalᚋgraphqlᚋgraphᚋmodelᚐFeaturesListItem(ctx context.Context, v interface{}) (*model.FeaturesListItem, error) {
-	if v == nil {
-		return nil, nil
-	}
-	var res = new(model.FeaturesListItem)
-	err := res.UnmarshalGQL(v)
+	res, err := graphql.UnmarshalMap(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalOFeaturesListItem2ᚖgithubᚗcomᚋkubeshopᚋtestkubeᚋinternalᚋgraphqlᚋgraphᚋmodelᚐFeaturesListItem(ctx context.Context, sel ast.SelectionSet, v *model.FeaturesListItem) graphql.Marshaler {
+func (ec *executionContext) marshalOMap2map(ctx context.Context, sel ast.SelectionSet, v map[string]interface{}) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	return v
-}
-
-func (ec *executionContext) unmarshalOJSON2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := graphql.UnmarshalString(v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOJSON2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	res := graphql.MarshalString(*v)
+	res := graphql.MarshalMap(v)
 	return res
-}
-
-func (ec *executionContext) marshalOLocalObjectReference2githubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐLocalObjectReference(ctx context.Context, sel ast.SelectionSet, v testkube.LocalObjectReference) graphql.Marshaler {
-	return ec._LocalObjectReference(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalOLocalObjectReference2ᚕgithubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐLocalObjectReference(ctx context.Context, sel ast.SelectionSet, v []testkube.LocalObjectReference) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalOLocalObjectReference2githubᚗcomᚋkubeshopᚋtestkubeᚋpkgᚋapiᚋv1ᚋtestkubeᚐLocalObjectReference(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	return ret
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {
@@ -4671,7 +4312,7 @@ func (ec *executionContext) marshalOString2string(ctx context.Context, sel ast.S
 	return res
 }
 
-func (ec *executionContext) unmarshalOString2ᚕstring(ctx context.Context, v interface{}) ([]string, error) {
+func (ec *executionContext) unmarshalOString2ᚕstringᚄ(ctx context.Context, v interface{}) ([]string, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -4683,7 +4324,7 @@ func (ec *executionContext) unmarshalOString2ᚕstring(ctx context.Context, v in
 	res := make([]string, len(vSlice))
 	for i := range vSlice {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalOString2string(ctx, vSlice[i])
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -4691,13 +4332,19 @@ func (ec *executionContext) unmarshalOString2ᚕstring(ctx context.Context, v in
 	return res, nil
 }
 
-func (ec *executionContext) marshalOString2ᚕstring(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+func (ec *executionContext) marshalOString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	ret := make(graphql.Array, len(v))
 	for i := range v {
-		ret[i] = ec.marshalOString2string(ctx, sel, v[i])
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
 	}
 
 	return ret
