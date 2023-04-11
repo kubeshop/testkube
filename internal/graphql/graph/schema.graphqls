@@ -13,7 +13,7 @@ type Query {
   
   Equivalent to GET /executors
   """
-  executors: [Executor!]!
+  executors: [ExecutorDetails!]!
 }
 
 type ExecutorDetails {

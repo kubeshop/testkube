@@ -6,7 +6,6 @@ package graph
 
 import (
 	"context"
-	"fmt"
 
 	executors "github.com/kubeshop/testkube-operator/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -25,8 +24,8 @@ func (r *executorMetaResolver) Tooltips(ctx context.Context, obj *testkube.Execu
 }
 
 // Executors is the resolver for the executors field.
-func (r *queryResolver) Executors(ctx context.Context) ([]testkube.Executor, error) {
-	panic(fmt.Errorf("not implemented: Executors - executors"))
+func (r *queryResolver) Executors(ctx context.Context) ([]testkube.ExecutorDetails, error) {
+	return getExecutors(r.Client)
 }
 
 // Executors is the resolver for the executors field.
