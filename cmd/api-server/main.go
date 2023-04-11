@@ -181,7 +181,7 @@ func main() {
 		artifactStorage = cloudartifacts.NewCloudStorageClient(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
 	} else {
 		mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
-		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, mongoSSLConfig)
+		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, mongoSSLConfig)
 		ui.ExitOnError("Getting mongo database", err)
 		resultsRepository = result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
 		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
