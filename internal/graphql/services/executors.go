@@ -8,6 +8,7 @@ import (
 	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"
 )
 
+//go:generate mockgen -destination=./mock_executors.go -package=services "github.com/kubeshop/testkube/internal/graphql/services" ExecutorsService
 type ExecutorsService interface {
 	List(selector string) ([]testkube.ExecutorDetails, error)
 	SubscribeList(ctx context.Context, selector string) (<-chan []testkube.ExecutorDetails, error)
