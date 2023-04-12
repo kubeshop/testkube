@@ -31,7 +31,9 @@ type Executor {
     contentTypes: [String!]
 
     """
-    ExecutorType one of "rest" for rest openapi based executors or "job" which will be default runners for testkube soon
+    ExecutorType one of "rest" for rest openapi based executors
+    or "job" which will be default runners for testkube or "container"
+    for container executors
     """
     executorType: String!
 
