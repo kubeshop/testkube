@@ -7,20 +7,9 @@ package resolvers
 import (
 	"context"
 
-	"github.com/kubeshop/testkube/internal/graphql/gen"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"
 )
-
-// Labels is the resolver for the labels field.
-func (r *executorResolver) Labels(ctx context.Context, obj *testkube.Executor) (map[string]interface{}, error) {
-	return MapToMapInterface(obj.Labels), nil
-}
-
-// Tooltips is the resolver for the tooltips field.
-func (r *executorMetaResolver) Tooltips(ctx context.Context, obj *testkube.ExecutorMeta) (map[string]interface{}, error) {
-	return MapToMapInterface(obj.Tooltips), nil
-}
 
 // Executors is the resolver for the executors field.
 func (r *queryResolver) Executors(ctx context.Context) ([]testkube.ExecutorDetails, error) {
@@ -31,15 +20,6 @@ func (r *queryResolver) Executors(ctx context.Context) ([]testkube.ExecutorDetai
 func (r *subscriptionResolver) Executors(ctx context.Context) (<-chan []testkube.ExecutorDetails, error) {
 	return CreateBusSubscription(ctx, r, "events.executor.>", getExecutors)
 }
-
-// Executor returns gen.ExecutorResolver implementation.
-func (r *Resolver) Executor() gen.ExecutorResolver { return &executorResolver{r} }
-
-// ExecutorMeta returns gen.ExecutorMetaResolver implementation.
-func (r *Resolver) ExecutorMeta() gen.ExecutorMetaResolver { return &executorMetaResolver{r} }
-
-type executorResolver struct{ *Resolver }
-type executorMetaResolver struct{ *Resolver }
 
 // !!! WARNING !!!
 // The code below was going to be deleted when updating resolvers. It has been copied here so you have

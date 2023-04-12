@@ -7,17 +7,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/rand"
 )
 
-func MapToMapInterface[K comparable, T interface{}](input map[K]T) map[K]interface{} {
-	if input == nil {
-		return nil
-	}
-	result := make(map[K]interface{}, len(input))
-	for k, v := range input {
-		result[k] = v
-	}
-	return result
-}
-
 func CreateBusSubscription[T interface{}](
 	ctx context.Context,
 	r ResolverData,

@@ -14,6 +14,7 @@ import (
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
+	"github.com/kubeshop/testkube/internal/graphql/scalars"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
@@ -37,8 +38,6 @@ type Config struct {
 }
 
 type ResolverRoot interface {
-	Executor() ExecutorResolver
-	ExecutorMeta() ExecutorMetaResolver
 	Query() QueryResolver
 	Subscription() SubscriptionResolver
 }
@@ -86,12 +85,6 @@ type ComplexityRoot struct {
 	}
 }
 
-type ExecutorResolver interface {
-	Labels(ctx context.Context, obj *testkube.Executor) (map[string]interface{}, error)
-}
-type ExecutorMetaResolver interface {
-	Tooltips(ctx context.Context, obj *testkube.ExecutorMeta) (map[string]interface{}, error)
-}
 type QueryResolver interface {
 	Executors(ctx context.Context) ([]testkube.ExecutorDetails, error)
 }
@@ -373,7 +366,7 @@ type Executor {
     jobTemplate: String
 
     """executor labels"""
-    labels: Map
+    labels: StringMap
 
     """Executor meta data"""
     meta: ExecutorMeta
@@ -401,10 +394,11 @@ type ExecutorMeta {
     iconURI: String
 
     """executor tooltips"""
-    tooltips: Map
+    tooltips: StringMap
 }
 `, BuiltIn: false},
 	{Name: "../schemas/schema.graphqls", Input: `scalar Map
+scalar StringMap
 
 directive @goModel(model: String, models: [String!]) on OBJECT | INPUT_OBJECT | SCALAR | ENUM | INTERFACE | UNION
 directive @goField(forceResolver: Boolean, name: String) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
@@ -819,7 +813,7 @@ func (ec *executionContext) _Executor_labels(ctx context.Context, field graphql.
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Executor().Labels(rctx, obj)
+		return obj.Labels, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -828,19 +822,19 @@ func (ec *executionContext) _Executor_labels(ctx context.Context, field graphql.
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(map[string]interface{})
+	res := resTmp.(map[string]string)
 	fc.Result = res
-	return ec.marshalOMap2map(ctx, field.Selections, res)
+	return ec.marshalOStringMap2map(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Executor_labels(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Executor",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Map does not have child fields")
+			return nil, errors.New("field of type StringMap does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1187,7 +1181,7 @@ func (ec *executionContext) _ExecutorMeta_tooltips(ctx context.Context, field gr
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.ExecutorMeta().Tooltips(rctx, obj)
+		return obj.Tooltips, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1196,19 +1190,19 @@ func (ec *executionContext) _ExecutorMeta_tooltips(ctx context.Context, field gr
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(map[string]interface{})
+	res := resTmp.(map[string]string)
 	fc.Result = res
-	return ec.marshalOMap2map(ctx, field.Selections, res)
+	return ec.marshalOStringMap2map(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_ExecutorMeta_tooltips(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ExecutorMeta",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Map does not have child fields")
+			return nil, errors.New("field of type StringMap does not have child fields")
 		},
 	}
 	return fc, nil
@@ -3322,22 +3316,9 @@ func (ec *executionContext) _Executor(ctx context.Context, sel ast.SelectionSet,
 			out.Values[i] = ec._Executor_jobTemplate(ctx, field, obj)
 
 		case "labels":
-			field := field
 
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Executor_labels(ctx, field, obj)
-				return res
-			}
+			out.Values[i] = ec._Executor_labels(ctx, field, obj)
 
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
 		case "meta":
 
 			out.Values[i] = ec._Executor_meta(ctx, field, obj)
@@ -3415,22 +3396,9 @@ func (ec *executionContext) _ExecutorMeta(ctx context.Context, sel ast.Selection
 			out.Values[i] = ec._ExecutorMeta_iconURI(ctx, field, obj)
 
 		case "tooltips":
-			field := field
 
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._ExecutorMeta_tooltips(ctx, field, obj)
-				return res
-			}
+			out.Values[i] = ec._ExecutorMeta_tooltips(ctx, field, obj)
 
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -4295,22 +4263,6 @@ func (ec *executionContext) marshalOLocalObjectReference2ᚕgithubᚗcomᚋkubes
 	return ret
 }
 
-func (ec *executionContext) unmarshalOMap2map(ctx context.Context, v interface{}) (map[string]interface{}, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := graphql.UnmarshalMap(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOMap2map(ctx context.Context, sel ast.SelectionSet, v map[string]interface{}) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	res := graphql.MarshalMap(v)
-	return res
-}
-
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {
 	res, err := graphql.UnmarshalString(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -4372,6 +4324,22 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 		return graphql.Null
 	}
 	res := graphql.MarshalString(*v)
+	return res
+}
+
+func (ec *executionContext) unmarshalOStringMap2map(ctx context.Context, v interface{}) (map[string]string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := scalars.UnmarshalStringMapScalar(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOStringMap2map(ctx context.Context, sel ast.SelectionSet, v map[string]string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	res := scalars.MarshalStringMapScalar(v)
 	return res
 }
 

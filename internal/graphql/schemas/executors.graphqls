@@ -48,7 +48,7 @@ type Executor {
     jobTemplate: String
 
     """executor labels"""
-    labels: Map
+    labels: StringMap
 
     """Executor meta data"""
     meta: ExecutorMeta
@@ -76,5 +76,5 @@ type ExecutorMeta {
     iconURI: String
 
     """executor tooltips"""
-    tooltips: Map
+    tooltips: StringMap
 }

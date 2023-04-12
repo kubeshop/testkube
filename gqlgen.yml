@@ -61,3 +61,6 @@ models:
       - github.com/99designs/gqlgen/graphql.Int
       - github.com/99designs/gqlgen/graphql.Int64
       - github.com/99designs/gqlgen/graphql.Int32
+  StringMap:
+    model:
+      - github.com/kubeshop/testkube/internal/graphql/scalars.StringMapScalar
