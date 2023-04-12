@@ -50,6 +50,7 @@ func HandleSubscription[T ServiceData, U interface{}](
 		go func() {
 			<-ctx.Done()
 			_ = s.GetBus().Unsubscribe(queue)
+			close(ch)
 		}()
 	} else {
 		s.GetLogger().Errorw("graphql subscription: failed to subscribe to "+topic, err)
