@@ -406,6 +406,10 @@ type ExecutorMeta {
 `, BuiltIn: false},
 	{Name: "../schemas/schema.graphqls", Input: `scalar Map
 
+directive @goModel(model: String, models: [String!]) on OBJECT | INPUT_OBJECT | SCALAR | ENUM | INTERFACE | UNION
+directive @goField(forceResolver: Boolean, name: String) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
+directive @goTag(key: String!, value: String) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
+
 type Subscription
 type Query
 `, BuiltIn: false},
