@@ -1,6 +1,7 @@
 package graphql
 
 import (
+	"github.com/kubeshop/testkube/internal/graphql/services"
 	"net/http"
 	"time"
 
@@ -17,12 +18,17 @@ import (
 )
 
 func GetServer(eventBus bus.Bus, executorsClient *executorsclientv1.ExecutorsClient) *handler.Server {
-	srv := handler.New(gen.NewExecutableSchema(gen.Config{
-		Resolvers: &resolvers.Resolver{
-			LoggerInstance:          log.DefaultLogger,
-			BusInstance:             eventBus,
-			ExecutorsClientInstance: executorsClient,
-		}}))
+	service := &services.Service{
+		Logger: log.DefaultLogger,
+		Bus:    eventBus,
+	}
+	resolver := &resolvers.Resolver{
+		ExecutorsService: &services.ExecutorsService{
+			Service: service,
+			Client:  executorsClient,
+		},
+	}
+	srv := handler.New(gen.NewExecutableSchema(gen.Config{Resolvers: resolver}))
 	srv.AddTransport(transport.Websocket{
 		KeepAlivePingInterval: 10 * time.Second,
 		Upgrader: websocket.Upgrader{
