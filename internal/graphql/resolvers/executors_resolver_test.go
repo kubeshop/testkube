@@ -5,9 +5,10 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 var (
