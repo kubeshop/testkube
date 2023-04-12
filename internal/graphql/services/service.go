@@ -5,20 +5,27 @@ import (
 	"go.uber.org/zap"
 )
 
-type ServiceData interface {
-	GetBus() bus.Bus
-	GetLogger() *zap.SugaredLogger
+type Service interface {
+	Bus() bus.Bus
+	Logger() *zap.SugaredLogger
 }
 
-type Service struct {
-	Bus    bus.Bus
-	Logger *zap.SugaredLogger
+type service struct {
+	bus    bus.Bus
+	logger *zap.SugaredLogger
 }
 
-func (s *Service) GetBus() bus.Bus {
-	return s.Bus
+func (s *service) Bus() bus.Bus {
+	return s.bus
 }
 
-func (s *Service) GetLogger() *zap.SugaredLogger {
-	return s.Logger
+func (s *service) Logger() *zap.SugaredLogger {
+	return s.logger
+}
+
+func NewService(bus bus.Bus, logger *zap.SugaredLogger) Service {
+	return &service{
+		bus:    bus,
+		logger: logger,
+	}
 }

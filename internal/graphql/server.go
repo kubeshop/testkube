@@ -18,15 +18,9 @@ import (
 )
 
 func GetServer(eventBus bus.Bus, executorsClient *executorsclientv1.ExecutorsClient) *handler.Server {
-	service := &services.Service{
-		Logger: log.DefaultLogger,
-		Bus:    eventBus,
-	}
+	service := services.NewService(eventBus, log.DefaultLogger)
 	resolver := &resolvers.Resolver{
-		ExecutorsService: &services.ExecutorsService{
-			Service: service,
-			Client:  executorsClient,
-		},
+		ExecutorsService: services.NewExecutorsService(service, executorsClient),
 	}
 	srv := handler.New(gen.NewExecutableSchema(gen.Config{Resolvers: resolver}))
 	srv.AddTransport(transport.Websocket{

@@ -11,5 +11,5 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	ExecutorsService *services.ExecutorsService
+	ExecutorsService services.ExecutorsService
 }

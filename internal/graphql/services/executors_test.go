@@ -7,9 +7,6 @@ import (
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/event/bus"
-	"github.com/kubeshop/testkube/pkg/log"
-
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -18,6 +15,7 @@ import (
 )
 
 var (
+	srvMock    = NewMockService()
 	k8sObjects = []k8sclient.Object{
 		&executorv1.Executor{
 			TypeMeta: metav1.TypeMeta{
@@ -97,41 +95,34 @@ var (
 )
 
 var (
-	busMock *bus.EventBusMock
-	client  *executorsclientv1.ExecutorsClient
-	service *ExecutorsService
+	client *executorsclientv1.ExecutorsClient
+	srv    ExecutorsService
 )
 
 func ResetMocks() {
-	busMock = bus.NewEventBusMock()
+	srvMock.Reset()
 	client = getMockExecutorClient(k8sObjects)
-	service = &ExecutorsService{
-		Service: &Service{
-			Bus:    busMock,
-			Logger: log.DefaultLogger,
-		},
-		Client: client,
-	}
+	srv = NewExecutorsService(srvMock, client)
 }
 
 func TestExecutorsService_List(t *testing.T) {
 	t.Run("should list all available executors when no selector passed", func(t *testing.T) {
 		ResetMocks()
-		result, err := service.List("")
+		result, err := srv.List("")
 		assert.NoError(t, err)
 		assert.Equal(t, result, []testkube.ExecutorDetails{sample})
 	})
 
 	t.Run("should list none executors when none matches selector", func(t *testing.T) {
 		ResetMocks()
-		result, err := service.List("xyz=def")
+		result, err := srv.List("xyz=def")
 		assert.NoError(t, err)
 		assert.Equal(t, result, []testkube.ExecutorDetails{})
 	})
 
 	t.Run("should list executors matching the selector", func(t *testing.T) {
 		ResetMocks()
-		result, err := service.List("label-name=label-value")
+		result, err := srv.List("label-name=label-value")
 		assert.NoError(t, err)
 		assert.Equal(t, result, []testkube.ExecutorDetails{sample})
 	})
@@ -141,18 +132,18 @@ func TestExecutorsService_SubscribeList(t *testing.T) {
 	t.Run("should cancel subscription when the context is canceled", func(t *testing.T) {
 		ResetMocks()
 		ctx, cancel := context.WithCancel(context.Background())
-		ch, err := service.SubscribeList(ctx, "")
+		ch, err := srv.SubscribeList(ctx, "")
 		assert.NoError(t, err)
 		<-ch
 		cancel()
 		_, opened := <-ch
 		assert.False(t, opened)
-		assert.Len(t, busMock.ListQueues(), 0)
+		assert.Len(t, srvMock.BusMock().ListQueues(), 0)
 	})
 
 	t.Run("should return initial list of executors", func(t *testing.T) {
 		ResetMocks()
-		ch, err := service.SubscribeList(context.Background(), "")
+		ch, err := srv.SubscribeList(context.Background(), "")
 		assert.NoError(t, err)
 		result := <-ch
 		assert.Equal(t, result, []testkube.ExecutorDetails{sample})
@@ -160,20 +151,20 @@ func TestExecutorsService_SubscribeList(t *testing.T) {
 
 	t.Run("should subscribe for new entries", func(t *testing.T) {
 		ResetMocks()
-		ch, err := service.SubscribeList(context.Background(), "")
+		ch, err := srv.SubscribeList(context.Background(), "")
 		assert.NoError(t, err)
 		result := <-ch
 		assert.Equal(t, result, []testkube.ExecutorDetails{sample})
-		assert.Len(t, busMock.ListQueues(), 1)
+		assert.Len(t, srvMock.BusMock().ListQueues(), 1)
 	})
 
 	t.Run("should return new list of executors after events are triggered", func(t *testing.T) {
 		ResetMocks()
-		ch, err := service.SubscribeList(context.Background(), "")
+		ch, err := srv.SubscribeList(context.Background(), "")
 		assert.NoError(t, err)
 		<-ch
 		client.Client = getMockExecutorClient(k8sObjects2).Client
-		assert.NoError(t, busMock.PublishTopic("events.executor.create", testkube.Event{
+		assert.NoError(t, srvMock.BusMock().PublishTopic("events.executor.create", testkube.Event{
 			Type_:    testkube.EventCreated,
 			Resource: testkube.EventResourceExecutor,
 		}))

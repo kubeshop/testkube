@@ -8,20 +8,29 @@ import (
 	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"
 )
 
-type ExecutorsService struct {
-	*Service
-	Client *executorsclientv1.ExecutorsClient
+type ExecutorsService interface {
+	List(selector string) ([]testkube.ExecutorDetails, error)
+	SubscribeList(ctx context.Context, selector string) (<-chan []testkube.ExecutorDetails, error)
 }
 
-func (s *ExecutorsService) List(selector string) ([]testkube.ExecutorDetails, error) {
-	execs, err := s.Client.List(selector)
+type executorsService struct {
+	ServiceBase
+	client *executorsclientv1.ExecutorsClient
+}
+
+func NewExecutorsService(service Service, client *executorsclientv1.ExecutorsClient) ExecutorsService {
+	return &executorsService{ServiceBase: ServiceBase{Service: service}, client: client}
+}
+
+func (s *executorsService) List(selector string) ([]testkube.ExecutorDetails, error) {
+	execs, err := s.client.List(selector)
 	if err != nil {
 		return nil, err
 	}
 	return Map(execs.Items, executorsmapper.MapExecutorCRDToExecutorDetails), nil
 }
 
-func (s *ExecutorsService) SubscribeList(ctx context.Context, selector string) (<-chan []testkube.ExecutorDetails, error) {
+func (s *executorsService) SubscribeList(ctx context.Context, selector string) (<-chan []testkube.ExecutorDetails, error) {
 	return HandleSubscription(ctx, "events.executor.>", s, func() ([]testkube.ExecutorDetails, error) {
 		return s.List(selector)
 	})

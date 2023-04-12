@@ -15,7 +15,7 @@ func Map[T interface{}, U interface{}](list []T, mapper func(item T) U) []U {
 	return result
 }
 
-func HandleSubscription[T ServiceData, U interface{}](
+func HandleSubscription[T Service, U interface{}](
 	ctx context.Context,
 	topic string,
 	s T,
@@ -28,17 +28,17 @@ func HandleSubscription[T ServiceData, U interface{}](
 	if err == nil {
 		ch <- initial
 	} else {
-		s.GetLogger().Errorw("failed to get initial data for "+topic, err)
+		s.Logger().Errorw("failed to get initial data for "+topic, err)
 		return nil, err
 	}
 
 	// Setup queue
 	queue := rand.String(30)
-	err = s.GetBus().SubscribeTopic(topic, queue, func(e testkube.Event) error {
-		s.GetLogger().Debugf("graphql subscription event: %s %s %s", e.Type_, *e.Resource, e.ResourceId)
+	err = s.Bus().SubscribeTopic(topic, queue, func(e testkube.Event) error {
+		s.Logger().Debugf("graphql subscription event: %s %s %s", e.Type_, *e.Resource, e.ResourceId)
 		result, err := get()
 		if err != nil {
-			s.GetLogger().Errorw("failed to get data after change for "+topic, err)
+			s.Logger().Errorw("failed to get data after change for "+topic, err)
 			return err
 		}
 		ch <- result
@@ -46,14 +46,14 @@ func HandleSubscription[T ServiceData, U interface{}](
 	})
 
 	if err == nil {
-		s.GetLogger().Debug("graphql subscription: subscribed to " + topic)
+		s.Logger().Debug("graphql subscription: subscribed to " + topic)
 		go func() {
 			<-ctx.Done()
-			_ = s.GetBus().Unsubscribe(queue)
+			_ = s.Bus().Unsubscribe(queue)
 			close(ch)
 		}()
 	} else {
-		s.GetLogger().Errorw("graphql subscription: failed to subscribe to "+topic, err)
+		s.Logger().Errorw("graphql subscription: failed to subscribe to "+topic, err)
 		return nil, err
 	}
 
