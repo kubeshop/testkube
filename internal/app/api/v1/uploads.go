@@ -24,7 +24,7 @@ func (s TestkubeAPI) UploadFiles() fiber.Handler {
 			return s.Error(c, fiber.StatusBadRequest, fmt.Errorf("%s: wrong input: filePath cannot be empty", errPrefix))
 		}
 
-		bucketName := s.Storage.GetValidBucketName(parentType, parentName)
+		bucketName := s.artifactsStorage.GetValidBucketName(parentType, parentName)
 		file, err := c.FormFile("attachment")
 		if err != nil {
 			return s.Error(c, fiber.StatusBadRequest, fmt.Errorf("%s: unable to upload file: %w", errPrefix, err))
@@ -35,7 +35,7 @@ func (s TestkubeAPI) UploadFiles() fiber.Handler {
 		}
 		defer f.Close()
 
-		err = s.Storage.UploadFile(c.Context(), bucketName, filePath, f, file.Size)
+		err = s.artifactsStorage.UploadFile(c.Context(), bucketName, filePath, f, file.Size)
 		if err != nil {
 			return s.Error(c, fiber.StatusInternalServerError, fmt.Errorf("%s: could not save uploaded file: %w", errPrefix, err))
 		}

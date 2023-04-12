@@ -520,7 +520,8 @@ func (c *Client) PlaceFiles(ctx context.Context, bucketFolders []string, prefix 
 			output.PrintEvent(fmt.Sprintf("%s Downloading file %s", ui.IconFile, f.Name))
 			c.Log.Infof("Getting file %s", f)
 			objectName := fmt.Sprintf("%s/%s", folder, f.Name)
-			err = c.minioclient.FGetObject(ctx, c.bucket, objectName, prefix+f.Name, minio.GetObjectOptions{})
+			path := filepath.Join(prefix, f.Name)
+			err = c.minioclient.FGetObject(ctx, c.bucket, objectName, path, minio.GetObjectOptions{})
 			if err != nil {
 				output.PrintEvent(fmt.Sprintf("%s Could not download file %s", ui.IconCross, f.Name))
 				return fmt.Errorf("could not persist file %s from bucket %s, folder %s: %w", f.Name, c.bucket, folder, err)

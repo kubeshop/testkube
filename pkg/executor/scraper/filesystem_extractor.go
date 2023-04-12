@@ -116,18 +116,18 @@ func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths []string
 	return nil
 }
 
-type TarballMeta struct {
-	File string `json:"file"`
-	Size int64  `json:"size"`
-}
-
 func (e *ArchiveFilesystemExtractor) newTarballMeta(files []*archive.File) (*Object, error) {
-	var meta []*TarballMeta
+	var stats []*FileStat
 	for _, f := range files {
-		meta = append(meta, &TarballMeta{
-			File: f.Name,
+		stats = append(stats, &FileStat{
+			Name: f.Name,
 			Size: f.Size,
 		})
+	}
+	meta := &FilesMeta{
+		Files:    stats,
+		DataType: DataTypeTarball,
+		Archive:  defaultTarballName,
 	}
 	jsonMeta, err := json.Marshal(meta)
 	if err != nil {

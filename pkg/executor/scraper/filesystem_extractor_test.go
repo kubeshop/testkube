@@ -131,7 +131,7 @@ func TestArchiveFilesystemExtractor_Extract_Meta(t *testing.T) {
 		processFnCallCount++
 		switch object.Name {
 		case ".testkube-meta-files.json":
-			var meta []scraper.TarballMeta
+			var meta scraper.FilesMeta
 			jsonData, err := io.ReadAll(object.Data)
 			if err != nil {
 				t.Fatalf("Failed to read meta files: %v", err)
@@ -139,9 +139,11 @@ func TestArchiveFilesystemExtractor_Extract_Meta(t *testing.T) {
 			if err := json.Unmarshal(jsonData, &meta); err != nil {
 				t.Fatalf("Failed to unmarshal meta files: %v", err)
 			}
-			assert.Len(t, meta, 1)
-			assert.Equal(t, "file1", meta[0].File)
-			assert.Equal(t, int64(len(testContent)), meta[0].Size)
+			assert.Len(t, meta.Files, 1)
+			assert.Equal(t, "artifacts.tar.gz", meta.Archive)
+			assert.Equal(t, scraper.DataTypeTarball, meta.DataType)
+			assert.Equal(t, "file1", meta.Files[0].Name)
+			assert.Equal(t, int64(len(testContent)), meta.Files[0].Size)
 			assert.Equal(t, scraper.DataTypeRaw, object.DataType)
 		case "artifacts.tar.gz":
 			assert.Equal(t, scraper.DataTypeTarball, object.DataType)

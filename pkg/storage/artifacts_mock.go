@@ -66,6 +66,20 @@ func (mr *MockArtifactsStorageMockRecorder) DownloadFile(arg0, arg1, arg2, arg3,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DownloadFile", reflect.TypeOf((*MockArtifactsStorage)(nil).DownloadFile), arg0, arg1, arg2, arg3, arg4)
 }
 
+// GetValidBucketName mocks base method.
+func (m *MockArtifactsStorage) GetValidBucketName(arg0, arg1 string) string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetValidBucketName", arg0, arg1)
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetValidBucketName indicates an expected call of GetValidBucketName.
+func (mr *MockArtifactsStorageMockRecorder) GetValidBucketName(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidBucketName", reflect.TypeOf((*MockArtifactsStorage)(nil).GetValidBucketName), arg0, arg1)
+}
+
 // ListFiles mocks base method.
 func (m *MockArtifactsStorage) ListFiles(arg0 context.Context, arg1, arg2, arg3 string) ([]testkube.Artifact, error) {
 	m.ctrl.T.Helper()
@@ -79,4 +93,32 @@ func (m *MockArtifactsStorage) ListFiles(arg0 context.Context, arg1, arg2, arg3 
 func (mr *MockArtifactsStorageMockRecorder) ListFiles(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFiles", reflect.TypeOf((*MockArtifactsStorage)(nil).ListFiles), arg0, arg1, arg2, arg3)
+}
+
+// PlaceFiles mocks base method.
+func (m *MockArtifactsStorage) PlaceFiles(arg0 context.Context, arg1 []string, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PlaceFiles", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PlaceFiles indicates an expected call of PlaceFiles.
+func (mr *MockArtifactsStorageMockRecorder) PlaceFiles(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PlaceFiles", reflect.TypeOf((*MockArtifactsStorage)(nil).PlaceFiles), arg0, arg1, arg2)
+}
+
+// UploadFile mocks base method.
+func (m *MockArtifactsStorage) UploadFile(arg0 context.Context, arg1, arg2 string, arg3 io.Reader, arg4 int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UploadFile", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UploadFile indicates an expected call of UploadFile.
+func (mr *MockArtifactsStorageMockRecorder) UploadFile(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadFile", reflect.TypeOf((*MockArtifactsStorage)(nil).UploadFile), arg0, arg1, arg2, arg3, arg4)
 }
