@@ -8,7 +8,10 @@ import (
 	"reflect"
 	"strconv"
 	"sync"
+	"syscall"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/repository/config"
 
@@ -397,7 +400,7 @@ func (s *TestkubeAPI) InitRoutes() {
 			go func() {
 				defer wg.Done()
 				_, err := io.Copy(clientSock, serverSock)
-				if err != nil && err != io.EOF {
+				if err != nil && err != io.EOF && !errors.Is(err, syscall.ECONNRESET) && !errors.Is(err, syscall.EPIPE) {
 					s.Log.Errorw("error while reading GraphQL client data", "error", err)
 				}
 				serverSock.CloseWrite()
