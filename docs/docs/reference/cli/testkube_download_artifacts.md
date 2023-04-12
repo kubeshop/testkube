@@ -14,7 +14,7 @@ testkube download artifacts <executionName> [flags]
   -e, --execution-id string   ID of the execution
       --format string         data format for storing files, one of folder|archive (default "folder")
   -h, --help                  help for artifacts
-      --mask stringArray      regexp to filter downloaded files
+      --mask stringArray      regexp to filter downloaded files, single or comma separated, like report/.* or .*\.json,.*\.js$
       --verbose               should I show additional debug messages
 ```
 

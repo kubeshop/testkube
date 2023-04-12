@@ -96,7 +96,7 @@ func NewDownloadAllArtifactsCmd() *cobra.Command {
 	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the execution")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
 	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")
-	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files")
+	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
 
 	// output renderer flags
 	return cmd
