@@ -27,3 +27,16 @@ type Object struct {
 	Data     io.Reader
 	DataType DataType
 }
+
+type FilesMeta struct {
+	// DataType is the type of data that is stored
+	DataType DataType `json:"dataType"`
+	// Files is a list of files that are stored and their original sizes
+	Files []*FileStat `json:"files"`
+	// Archive is the name of the archive file that contains all the files
+	Archive string `json:"archive,omitempty"`
+}
+type FileStat struct {
+	Name string `json:"name"`
+	Size int64  `json:"size"`
+}

@@ -91,7 +91,7 @@ func TestArchiveFilesystemExtractor_Extract_Meta_Integration(t *testing.T) {
 			assert.Equal(t, scraper.DataTypeTarball, object.DataType)
 		case ".testkube-meta-files.json":
 			processCallCount++
-			var meta []scraper.TarballMeta
+			var meta scraper.FilesMeta
 			jsonData, err := io.ReadAll(object.Data)
 			if err != nil {
 				t.Fatalf("Failed to read meta files: %v", err)
@@ -99,13 +99,15 @@ func TestArchiveFilesystemExtractor_Extract_Meta_Integration(t *testing.T) {
 			if err := json.Unmarshal(jsonData, &meta); err != nil {
 				t.Fatalf("Failed to unmarshal meta files: %v", err)
 			}
-			assert.Len(t, meta, 3)
-			assert.Equal(t, "file1.txt", meta[0].File)
-			assert.Equal(t, int64(5), meta[0].Size)
-			assert.Equal(t, "file2.txt", meta[1].File)
-			assert.Equal(t, int64(5), meta[1].Size)
-			assert.Equal(t, "subdir/file3.txt", meta[2].File)
-			assert.Equal(t, int64(5), meta[2].Size)
+			assert.Len(t, meta.Files, 3)
+			assert.Equal(t, "artifacts.tar.gz", meta.Archive)
+			assert.Equal(t, scraper.DataTypeTarball, meta.DataType)
+			assert.Equal(t, "file1.txt", meta.Files[0].Name)
+			assert.Equal(t, int64(5), meta.Files[0].Size)
+			assert.Equal(t, "file2.txt", meta.Files[1].Name)
+			assert.Equal(t, int64(5), meta.Files[1].Size)
+			assert.Equal(t, "subdir/file3.txt", meta.Files[2].Name)
+			assert.Equal(t, int64(5), meta.Files[2].Size)
 			assert.Equal(t, scraper.DataTypeRaw, object.DataType)
 		default:
 			t.Fatalf("Unexpected object name: %s", object.Name)
