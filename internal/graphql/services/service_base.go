@@ -7,7 +7,7 @@ import (
 )
 
 type ServiceBase struct {
-	Service Service
+	Service
 }
 
 func (s *ServiceBase) Bus() bus.Bus {
