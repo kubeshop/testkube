@@ -1,7 +1,6 @@
 package graphql
 
 import (
-	"github.com/kubeshop/testkube/internal/graphql/services"
 	"net/http"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	"github.com/kubeshop/testkube/internal/graphql/gen"
 	"github.com/kubeshop/testkube/internal/graphql/resolvers"
+	"github.com/kubeshop/testkube/internal/graphql/services"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/log"
 )

@@ -2,6 +2,7 @@ package services
 
 import (
 	"github.com/kubeshop/testkube/pkg/event/bus"
+
 	"go.uber.org/zap"
 )
 
