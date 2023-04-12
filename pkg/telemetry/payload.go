@@ -178,7 +178,7 @@ const (
 func AnonymizeHost(host string) string {
 	if strings.Contains(host, "testkube.io") {
 		return APIHostTestkubeInternal
-	} else if strings.Contains(host, "localhost:8088") {
+	} else if strings.Contains(host, "localhost:") {
 		return APIHostLocal
 	}
 

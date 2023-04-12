@@ -1,10 +1,10 @@
 package client
 
-func NewAPIConfig(namespace string) APIConfig {
+func NewAPIConfig(namespace, serviceName string, servicePort int) APIConfig {
 	return APIConfig{
 		Namespace:   namespace,
-		ServiceName: "testkube-api-server",
-		ServicePort: 8088,
+		ServiceName: serviceName,
+		ServicePort: servicePort,
 	}
 }
 
