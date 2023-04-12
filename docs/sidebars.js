@@ -68,6 +68,7 @@ const sidebars = {
         "concepts/triggers",
         "concepts/dependencies",
         "concepts/common-issues",
+        "concepts/test-sources"
       ],
     },
     {
