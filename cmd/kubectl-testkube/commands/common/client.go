@@ -35,15 +35,15 @@ func GetClient(cmd *cobra.Command) (client.Client, string) {
 	}
 
 	if cfg.APIServerName == "" {
-		cfg.APIServerName = config.ApiServerName
+		cfg.APIServerName = config.APIServerName
 	}
 
 	if cfg.APIServerPort == 0 {
-		cfg.APIServerPort = config.ApiServerPort
+		cfg.APIServerPort = config.APIServerPort
 	}
 
-	options.ApiServerName = cfg.APIServerName
-	options.ApiServerPort = cfg.APIServerPort
+	options.APIServerName = cfg.APIServerName
+	options.APIServerPort = cfg.APIServerPort
 
 	switch cfg.ContextType {
 	case config.ContextTypeKubeconfig:

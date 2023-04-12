@@ -27,8 +27,8 @@ type Options struct {
 	ClientID      string
 	ClientSecret  string
 	Scopes        []string
-	ApiServerName string
-	ApiServerPort int
+	APIServerName string
+	APIServerPort int
 
 	// Testkube Cloud
 	CloudApiPathPrefix string
@@ -68,7 +68,7 @@ func GetClient(clientType ClientType, options Options) (client Client, err error
 			return client, err
 		}
 
-		client = NewProxyAPIClient(clientset, NewAPIConfig(options.Namespace, options.ApiServerName, options.ApiServerPort))
+		client = NewProxyAPIClient(clientset, NewAPIConfig(options.Namespace, options.APIServerName, options.APIServerPort))
 	default:
 		return client, fmt.Errorf("unsupported client type %s", clientType)
 	}

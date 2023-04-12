@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	ApiServerName string = "testkube-api-server"
-	ApiServerPort int    = 8088
+	APIServerName string = "testkube-api-server"
+	APIServerPort int    = 8088
 	DashboardName string = "testkube-dashboard"
 	DashboardPort int    = 8080
 
@@ -22,8 +22,8 @@ var DefaultConfig = Data{
 	TelemetryEnabled: true,
 	Namespace:        "testkube",
 	APIURI:           "http://localhost:8088",
-	APIServerName:    ApiServerName,
-	APIServerPort:    ApiServerPort,
+	APIServerName:    APIServerName,
+	APIServerPort:    APIServerPort,
 	DashboardName:    DashboardName,
 	DashboardPort:    DashboardPort,
 	OAuth2Data: OAuth2Data{

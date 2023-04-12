@@ -14,8 +14,8 @@ func TestGetClient(t *testing.T) {
 
 		client, err := GetClient(ClientProxy, Options{
 			Namespace:     "testkube",
-			ApiServerName: "testkube-api-server",
-			ApiServerPort: 8088,
+			APIServerName: "testkube-api-server",
+			APIServerPort: 8088,
 		})
 		assert.NoError(t, err)
 		assert.Equal(t, "client.ProxyAPIClient", fmt.Sprintf("%T", client))

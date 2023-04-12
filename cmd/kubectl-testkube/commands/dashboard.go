@@ -36,11 +36,11 @@ func NewDashboardCmd() *cobra.Command {
 			ui.ExitOnError("loading config file", err)
 
 			if cfg.APIServerName == "" {
-				cfg.APIServerName = config.ApiServerName
+				cfg.APIServerName = config.APIServerName
 			}
 
 			if cfg.APIServerPort == 0 {
-				cfg.APIServerPort = config.ApiServerPort
+				cfg.APIServerPort = config.APIServerPort
 			}
 
 			if cfg.DashboardName == "" {
