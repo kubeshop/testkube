@@ -1,11 +1,10 @@
 # Testkube docs
 
-You can find the docs here: https://kubeshop.github.io/testkube/
+You can find the docs here: https://docs.testkube.io
 
-## How to edit the docs?
+## How to edit the docs
 
-System requirements:
-
+**System requirements:**
 - [npm](https://nodejs.org/en/download)
 
 If you're editing the docs, follow this workflow:
@@ -36,19 +35,20 @@ If you're editing the docs, follow this workflow:
 
 5. You can preview the changes locally in your browser: http://localhost:3000
 
-## How to style the docs
+### How to style the docs
 
-### Warning signs
+#### Warning signs
+
+If you want to add a warning/info message like the below, use [Docusuarus Admonitions](https://docusaurus.io/docs/markdown-features/admonitions).
 
 ![Warning signs](./docs/img/docusaurus-admonitions.png)
 
-If you want to add a warning/info message like the above, use [Docusuarus Admonitions](https://docusaurus.io/docs/markdown-features/admonitions).
 
-### Code blocks title
-
-![Code Block title](./docs/img/docusaurus-codeblock-title.png)
+#### Code blocks title
 
 If the content of the code blocks refers to a file, use Docusaurus [Code Block title](https://docusaurus.io/docs/markdown-features/code-blocks#code-title).
+
+![Code Block title](./docs/img/docusaurus-codeblock-title.png)
 
 **Don't:**
 
