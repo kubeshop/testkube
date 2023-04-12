@@ -409,7 +409,7 @@ type ExecutorMeta {
     tooltips: StringMap
 }
 `, BuiltIn: false},
-	{Name: "../schemas/schema.graphqls", Input: `scalar Map
+	{Name: "../schemas/root.graphqls", Input: `scalar Map
 scalar StringMap
 
 directive @goModel(model: String, models: [String!]) on OBJECT | INPUT_OBJECT | SCALAR | ENUM | INTERFACE | UNION

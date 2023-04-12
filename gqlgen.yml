@@ -22,6 +22,7 @@ resolver:
   layout: follow-schema
   dir: internal/graphql/resolvers
   package: resolvers
+  filename_template: "{name}_resolver.go"
 
 # Optional: turn on use ` + "`" + `gqlgen:"fieldName"` + "`" + ` tags in your models
 # struct_tag: json
