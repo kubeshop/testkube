@@ -8,28 +8,17 @@ import (
 	"github.com/kubeshop/testkube/pkg/oauth"
 )
 
-const (
-	ApiServerName string = "testkube-api-server"
-	ApiServerPort int    = 8088
-	DashboardName string = "testkube-dashboard"
-	DashboardPort int    = 8080
-
-	configDirName = ".testkube"
-	configFile    = "config.json"
-)
-
 var DefaultConfig = Data{
 	TelemetryEnabled: true,
 	Namespace:        "testkube",
 	APIURI:           "http://localhost:8088",
-	APIServerName:    ApiServerName,
-	APIServerPort:    ApiServerPort,
-	DashboardName:    DashboardName,
-	DashboardPort:    DashboardPort,
 	OAuth2Data: OAuth2Data{
 		Provider: oauth.GithubProviderType,
 	},
 }
+
+const configDirName = ".testkube"
+const configFile = "config.json"
 
 func GetStorage(dir string) (Storage, error) {
 	storage := Storage{Dir: dir}

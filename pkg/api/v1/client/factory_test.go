@@ -12,11 +12,7 @@ func TestGetClient(t *testing.T) {
 	t.Run("get proxy client", func(t *testing.T) {
 		t.Skip("This one needs kubernetes config to work")
 
-		client, err := GetClient(ClientProxy, Options{
-			Namespace:     "testkube",
-			ApiServerName: "testkube-api-server",
-			ApiServerPort: 8088,
-		})
+		client, err := GetClient(ClientProxy, Options{Namespace: "testkube"})
 		assert.NoError(t, err)
 		assert.Equal(t, "client.ProxyAPIClient", fmt.Sprintf("%T", client))
 	})

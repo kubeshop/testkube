@@ -12,7 +12,6 @@ import (
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -32,26 +31,7 @@ func NewDashboardCmd() *cobra.Command {
 		Short:   "Open testkube dashboard",
 		Long:    `Open testkube dashboard`,
 		Run: func(cmd *cobra.Command, args []string) {
-			cfg, err := config.Load()
-			ui.ExitOnError("loading config file", err)
-
-			if cfg.APIServerName == "" {
-				cfg.APIServerName = config.ApiServerName
-			}
-
-			if cfg.APIServerPort == 0 {
-				cfg.APIServerPort = config.ApiServerPort
-			}
-
-			if cfg.DashboardName == "" {
-				cfg.DashboardName = config.DashboardName
-			}
-
-			if cfg.DashboardPort == 0 {
-				cfg.DashboardPort = config.DashboardPort
-			}
-
-			dashboardLocalPort, err := getDashboardLocalPort(cfg.APIServerPort)
+			dashboardLocalPort, err := getDashboardLocalPort()
 			ui.PrintOnError("checking dashboard port", err)
 
 			uri := fmt.Sprintf("http://localhost:%d", dashboardLocalPort)
@@ -59,7 +39,7 @@ func NewDashboardCmd() *cobra.Command {
 				uri = DashboardURI
 			}
 
-			apiURI := fmt.Sprintf("localhost:%d/%s", cfg.APIServerPort, ApiVersion)
+			apiURI := fmt.Sprintf("localhost:%d/%s", ApiServerPort, ApiVersion)
 			dashboardAddress := fmt.Sprintf("%s/apiEndpoint?apiEndpoint=%s", uri, apiURI)
 			apiAddress := fmt.Sprintf("http://%s", apiURI)
 
@@ -78,12 +58,12 @@ func NewDashboardCmd() *cobra.Command {
 			namespace := cmd.Flag("namespace").Value.String()
 			// if not global dasboard - we'll try to port-forward current cluster API
 			if !useGlobalDashboard {
-				command, err := asyncPortForward(namespace, cfg.DashboardName, dashboardLocalPort, cfg.DashboardPort)
+				command, err := asyncPortForward(namespace, DashboardName, dashboardLocalPort, DashboardPort)
 				ui.PrintOnError("port forwarding dashboard endpoint", err)
 				commandsToKill = append(commandsToKill, command)
 			}
 
-			command, err := asyncPortForward(namespace, cfg.APIServerName, cfg.APIServerPort, cfg.APIServerPort)
+			command, err := asyncPortForward(namespace, ApiServerName, ApiServerPort, ApiServerPort)
 			ui.PrintOnError("port forwarding api endpoint", err)
 			commandsToKill = append(commandsToKill, command)
 
@@ -159,9 +139,9 @@ func localPortCheck(port int) error {
 	return nil
 }
 
-func getDashboardLocalPort(apiServerPort int) (int, error) {
+func getDashboardLocalPort() (int, error) {
 	for port := DashboardLocalPort; port <= maxPortNumber; port++ {
-		if port == apiServerPort {
+		if port == ApiServerPort {
 			continue
 		}
 

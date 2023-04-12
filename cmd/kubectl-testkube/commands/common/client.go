@@ -34,17 +34,6 @@ func GetClient(cmd *cobra.Command) (client.Client, string) {
 		cfg.ContextType = config.ContextTypeKubeconfig
 	}
 
-	if cfg.APIServerName == "" {
-		cfg.APIServerName = config.ApiServerName
-	}
-
-	if cfg.APIServerPort == 0 {
-		cfg.APIServerPort = config.ApiServerPort
-	}
-
-	options.ApiServerName = cfg.APIServerName
-	options.ApiServerPort = cfg.APIServerPort
-
 	switch cfg.ContextType {
 	case config.ContextTypeKubeconfig:
 		if oauthEnabled {

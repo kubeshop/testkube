@@ -19,16 +19,14 @@ const (
 
 // Options contains client options
 type Options struct {
-	Namespace     string
-	ApiUri        string
-	ApiPath       string
-	Token         *oauth2.Token
-	Provider      oauth.ProviderType
-	ClientID      string
-	ClientSecret  string
-	Scopes        []string
-	ApiServerName string
-	ApiServerPort int
+	Namespace    string
+	ApiUri       string
+	ApiPath      string
+	Token        *oauth2.Token
+	Provider     oauth.ProviderType
+	ClientID     string
+	ClientSecret string
+	Scopes       []string
 
 	// Testkube Cloud
 	CloudApiPathPrefix string
@@ -68,7 +66,7 @@ func GetClient(clientType ClientType, options Options) (client Client, err error
 			return client, err
 		}
 
-		client = NewProxyAPIClient(clientset, NewAPIConfig(options.Namespace, options.ApiServerName, options.ApiServerPort))
+		client = NewProxyAPIClient(clientset, NewAPIConfig(options.Namespace))
 	default:
 		return client, fmt.Errorf("unsupported client type %s", clientType)
 	}
