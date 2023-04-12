@@ -16,6 +16,15 @@ func NewEventBusMock() *EventBusMock {
 	return &EventBusMock{}
 }
 
+func (b *EventBusMock) ListQueues() []string {
+	var keys []string
+	b.events.Range(func(key, value any) bool {
+		keys = append(keys, key.(string))
+		return true
+	})
+	return keys
+}
+
 func (b *EventBusMock) Publish(event testkube.Event) error {
 	b.events.Range(func(key, e interface{}) bool {
 		e.(chan testkube.Event) <- event
@@ -57,9 +66,10 @@ func (b *EventBusMock) SubscribeTopic(topic, queue string, handler Handler) erro
 }
 
 func (b *EventBusMock) Unsubscribe(queue string) error {
+	b.events.Delete(queue)
 	return nil
-
 }
+
 func (b *EventBusMock) Close() error {
 	b.events.Range(func(key, e interface{}) bool {
 		b.events.Delete(key)
