@@ -77,19 +77,19 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Executors func(childComplexity int) int
+		Executors func(childComplexity int, selector string) int
 	}
 
 	Subscription struct {
-		Executors func(childComplexity int) int
+		Executors func(childComplexity int, selector string) int
 	}
 }
 
 type QueryResolver interface {
-	Executors(ctx context.Context) ([]testkube.ExecutorDetails, error)
+	Executors(ctx context.Context, selector string) ([]testkube.ExecutorDetails, error)
 }
 type SubscriptionResolver interface {
-	Executors(ctx context.Context) (<-chan []testkube.ExecutorDetails, error)
+	Executors(ctx context.Context, selector string) (<-chan []testkube.ExecutorDetails, error)
 }
 
 type executableSchema struct {
@@ -238,14 +238,24 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Query.Executors(childComplexity), true
+		args, err := ec.field_Query_executors_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Executors(childComplexity, args["selector"].(string)), true
 
 	case "Subscription.executors":
 		if e.complexity.Subscription.Executors == nil {
 			break
 		}
 
-		return e.complexity.Subscription.Executors(childComplexity), true
+		args, err := ec.field_Subscription_executors_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Subscription.Executors(childComplexity, args["selector"].(string)), true
 
 	}
 	return 0, false
@@ -320,7 +330,7 @@ var sources = []*ast.Source{
     """
     ` + "`" + `executor` + "`" + ` will return a stream of ` + "`" + `Executor` + "`" + ` objects.
     """
-    executors: [ExecutorDetails!]!
+    executors(selector: String! = ""): [ExecutorDetails!]!
 }
 
 extend type Query {
@@ -329,7 +339,7 @@ extend type Query {
 
     Equivalent to GET /executors
     """
-    executors: [ExecutorDetails!]!
+    executors(selector: String! = ""): [ExecutorDetails!]!
 }
 
 type ExecutorDetails {
@@ -426,6 +436,36 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_executors_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["selector"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("selector"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["selector"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Subscription_executors_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["selector"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("selector"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["selector"] = arg0
 	return args, nil
 }
 
@@ -1263,7 +1303,7 @@ func (ec *executionContext) _Query_executors(ctx context.Context, field graphql.
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Executors(rctx)
+		return ec.resolvers.Query().Executors(rctx, fc.Args["selector"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1295,6 +1335,17 @@ func (ec *executionContext) fieldContext_Query_executors(ctx context.Context, fi
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ExecutorDetails", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_executors_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
 	}
 	return fc, nil
 }
@@ -1442,7 +1493,7 @@ func (ec *executionContext) _Subscription_executors(ctx context.Context, field g
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Subscription().Executors(rctx)
+		return ec.resolvers.Subscription().Executors(rctx, fc.Args["selector"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1488,6 +1539,17 @@ func (ec *executionContext) fieldContext_Subscription_executors(ctx context.Cont
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ExecutorDetails", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Subscription_executors_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
 	}
 	return fc, nil
 }

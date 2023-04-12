@@ -11,11 +11,11 @@ import (
 )
 
 // Executors is the resolver for the executors field.
-func (r *queryResolver) Executors(ctx context.Context) ([]testkube.ExecutorDetails, error) {
-	return r.ExecutorsService.List()
+func (r *queryResolver) Executors(ctx context.Context, selector string) ([]testkube.ExecutorDetails, error) {
+	return r.ExecutorsService.List(selector)
 }
 
 // Executors is the resolver for the executors field.
-func (r *subscriptionResolver) Executors(ctx context.Context) (<-chan []testkube.ExecutorDetails, error) {
-	return r.ExecutorsService.SubscribeList(ctx)
+func (r *subscriptionResolver) Executors(ctx context.Context, selector string) (<-chan []testkube.ExecutorDetails, error) {
+	return r.ExecutorsService.SubscribeList(ctx, selector)
 }

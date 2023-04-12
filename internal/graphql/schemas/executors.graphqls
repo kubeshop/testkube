@@ -2,7 +2,7 @@ extend type Subscription {
     """
     `executor` will return a stream of `Executor` objects.
     """
-    executors: [ExecutorDetails!]!
+    executors(selector: String! = ""): [ExecutorDetails!]!
 }
 
 extend type Query {
@@ -11,7 +11,7 @@ extend type Query {
 
     Equivalent to GET /executors
     """
-    executors: [ExecutorDetails!]!
+    executors(selector: String! = ""): [ExecutorDetails!]!
 }
 
 type ExecutorDetails {
