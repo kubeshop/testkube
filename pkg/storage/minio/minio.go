@@ -318,12 +318,15 @@ func (c *Client) downloadArchive(ctx context.Context, bucket, bucketFolder strin
 
 	var regexps []*regexp.Regexp
 	for _, mask := range masks {
-		re, err := regexp.Compile(mask)
-		if err != nil {
-			return nil, fmt.Errorf("minio DownloadArchive regexp error: %w", err)
-		}
+		values := strings.Split(mask, ",")
+		for _, value := range values {
+			re, err := regexp.Compile(value)
+			if err != nil {
+				return nil, fmt.Errorf("minio DownloadArchive regexp error: %w", err)
+			}
 
-		regexps = append(regexps, re)
+			regexps = append(regexps, re)
+		}
 	}
 
 	listOptions := minio.ListObjectsOptions{Recursive: true}

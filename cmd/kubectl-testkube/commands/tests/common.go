@@ -60,10 +60,13 @@ func DownloadArtifacts(id, dir, format string, masks []string, client apiclientv
 
 	var regexps []*regexp.Regexp
 	for _, mask := range masks {
-		re, err := regexp.Compile(mask)
-		ui.ExitOnError("checking mask "+mask, err)
+		values := strings.Split(mask, ",")
+		for _, value := range values {
+			re, err := regexp.Compile(value)
+			ui.ExitOnError("checking mask "+value, err)
 
-		regexps = append(regexps, re)
+			regexps = append(regexps, re)
+		}
 	}
 
 	if format == artifactsFormatFolder {
