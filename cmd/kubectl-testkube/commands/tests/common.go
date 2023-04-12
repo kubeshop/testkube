@@ -58,6 +58,10 @@ func DownloadArtifacts(id, dir, format string, masks []string, client apiclientv
 		ui.Info("Getting artifacts", fmt.Sprintf("count = %d", len(artifacts)), "\n")
 	}
 
+	if format != artifactsFormatFolder && format != artifactsFormatArchive {
+		ui.Failf("invalid artifacts format: %s. use one of folder|archive", format)
+	}
+
 	var regexps []*regexp.Regexp
 	for _, mask := range masks {
 		values := strings.Split(mask, ",")
