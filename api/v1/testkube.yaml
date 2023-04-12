@@ -1229,6 +1229,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+
   /executions/{id}/artifacts:
     get:
       parameters:
@@ -1325,6 +1326,43 @@ paths:
                   $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting artifacts from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /executions/{id}/artifact-archive:
+    get:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/Mask"
+      tags:
+        - artifacts
+        - executions
+        - api
+      summary: "Download artifact archive"
+      description: "Download the artifact archive from the given execution"
+      operationId: downloadArchive
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with getting artifact archive from storage"
           content:
             application/problem+json:
               schema:
@@ -1579,6 +1617,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+
   /tests/{id}/abort:
     post:
       tags:
@@ -1616,6 +1655,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+
   /tests/{id}/metrics:
     get:
       tags:
@@ -2719,6 +2759,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+
   /uploads:
     post:
       tags:
@@ -4988,6 +5029,13 @@ components:
       schema:
         type: string
         description: Name of the object
+    Mask:
+      in: query
+      name: mask
+      schema:
+        type: string
+        description: mask to filter files
+      required: false
   requestBodies:
     UploadsBody:
       description: "Upload files request body data"

@@ -27,6 +27,11 @@ func (c *ArtifactClient) DownloadFile(ctx context.Context, file, executionId, te
 	return c.client.DownloadFile(ctx, executionId, file)
 }
 
+// DownloadArrchive downloads archive from bucket from the config
+func (c *ArtifactClient) DownloadArchive(ctx context.Context, executionId string, masks []string) (io.Reader, error) {
+	return c.client.DownloadArchive(ctx, executionId, masks)
+}
+
 // UploadFile saves a file to be copied into a running execution
 func (c *ArtifactClient) UploadFile(ctx context.Context, bucketFolder, filePath string, reader io.Reader, objectSize int64) error {
 	return c.client.UploadFile(ctx, bucketFolder, filePath, reader, objectSize)

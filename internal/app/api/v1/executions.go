@@ -365,6 +365,36 @@ func (s *TestkubeAPI) GetArtifactHandler() fiber.Handler {
 	}
 }
 
+// GetArtifactArchiveHandler returns artifact archive
+func (s *TestkubeAPI) GetArtifactArchiveHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		executionID := c.Params("executionID")
+		query := c.Request().URI().QueryString()
+		errPrefix := fmt.Sprintf("failed to get artifact archive for execution %s", executionID)
+
+		values, err := url.ParseQuery(string(query))
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse query string: %w", errPrefix, err))
+		}
+
+		execution, err := s.ExecutionResults.Get(c.Context(), executionID)
+		if err == mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test with execution id/name %s not found", errPrefix, executionID))
+		}
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: db could not get execution result: %w", errPrefix, err))
+		}
+
+		archive, err := s.artifactsStorage.DownloadArchive(c.Context(), execution.Id, values["mask"])
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not download artifact archive: %w", errPrefix, err))
+		}
+
+		// SendStream promises to close archive using io.Close() method
+		return c.SendStream(archive)
+	}
+}
+
 // ListArtifactsHandler returns list of files in the given bucket
 func (s *TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {

@@ -236,6 +236,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	executions.Get("/:executionID/logs", s.ExecutionLogsHandler())
 	executions.Get("/:executionID/logs/stream", s.ExecutionLogsStreamHandler())
 	executions.Get("/:executionID/artifacts/:filename", s.GetArtifactHandler())
+	executions.Get("/:executionID/artifact-archive", s.GetArtifactArchiveHandler())
 
 	tests := s.Routes.Group("/tests")
 

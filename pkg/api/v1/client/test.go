@@ -244,7 +244,13 @@ func (c TestClient) GetExecutionArtifacts(executionID string) (artifacts testkub
 // DownloadFile downloads file
 func (c TestClient) DownloadFile(executionID, fileName, destination string) (artifact string, err error) {
 	uri := c.executionTransport.GetURI("/executions/%s/artifacts/%s", executionID, url.QueryEscape(fileName))
-	return c.executionTransport.GetFile(uri, fileName, destination)
+	return c.executionTransport.GetFile(uri, fileName, destination, nil)
+}
+
+// DownloadArchive downloads archive
+func (c TestClient) DownloadArchive(executionID, destination string, masks []string) (archive string, err error) {
+	uri := c.executionTransport.GetURI("/executions/%s/artifact-archive", executionID)
+	return c.executionTransport.GetFile(uri, fmt.Sprintf("%s.tar.gz", executionID), destination, map[string][]string{"mask": masks})
 }
 
 // GetServerInfo returns server info

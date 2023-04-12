@@ -1,12 +1,14 @@
 package minio
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"hash/fnv"
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -16,6 +18,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/archive"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/storage"
@@ -296,10 +299,122 @@ func (c *Client) DownloadFile(ctx context.Context, bucketFolder, file string) (*
 	return objSecond, nil
 }
 
+// downloadArchive downloads archive from bucket
+func (c *Client) downloadArchive(ctx context.Context, bucket, bucketFolder string, masks []string) (io.Reader, error) {
+	c.Log.Debugw("downloadArchive", "bucket", bucket, "bucketFolder", bucketFolder, "masks", masks)
+	if err := c.Connect(); err != nil {
+		return nil, fmt.Errorf("minio DownloadArchive .Connect error: %w", err)
+	}
+
+	exists, err := c.minioclient.BucketExists(ctx, bucket)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		c.Log.Infow("bucket doesn't exist", "bucket", bucket)
+		return nil, ErrArtifactsNotFound
+	}
+
+	var regexps []*regexp.Regexp
+	for _, mask := range masks {
+		values := strings.Split(mask, ",")
+		for _, value := range values {
+			re, err := regexp.Compile(value)
+			if err != nil {
+				return nil, fmt.Errorf("minio DownloadArchive regexp error: %w", err)
+			}
+
+			regexps = append(regexps, re)
+		}
+	}
+
+	listOptions := minio.ListObjectsOptions{Recursive: true}
+	if bucketFolder != "" {
+		listOptions.Prefix = strings.Trim(bucketFolder, "/")
+	}
+
+	var files []*archive.File
+	for obj := range c.minioclient.ListObjects(ctx, bucket, listOptions) {
+		if obj.Err != nil {
+			return nil, fmt.Errorf("minio DownloadArchive ListObjects error: %w", obj.Err)
+		}
+
+		found := len(regexps) == 0
+		for i := range regexps {
+			if found = regexps[i].MatchString(obj.Key); found {
+				break
+			}
+		}
+
+		if !found {
+			continue
+		}
+
+		files = append(files, &archive.File{
+			Name:    obj.Key,
+			Size:    obj.Size,
+			Mode:    int64(os.ModePerm),
+			ModTime: obj.LastModified,
+		})
+	}
+
+	for i := range files {
+		reader, err := c.minioclient.GetObject(ctx, bucket, files[i].Name, minio.GetObjectOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("minio DownloadArchive GetObject error: %w", err)
+		}
+
+		if _, err = reader.Stat(); err != nil {
+			return nil, fmt.Errorf("minio DownloadArchive Stat error: %w", err)
+		}
+
+		files[i].Data = &bytes.Buffer{}
+		if _, err = files[i].Data.ReadFrom(reader); err != nil {
+			return nil, fmt.Errorf("minio DownloadArchive Read error: %w", err)
+		}
+	}
+
+	service := archive.NewTarballService()
+	data := &bytes.Buffer{}
+	if err = service.Create(data, files); err != nil {
+		return nil, fmt.Errorf("minio DownloadArchive CreateArchive error: %w", err)
+	}
+
+	return data, nil
+}
+
+// DownloadArchive downloads archive from bucket from the config
+func (c *Client) DownloadArchive(ctx context.Context, bucketFolder string, masks []string) (io.Reader, error) {
+	c.Log.Infow("Download archive", "bucket", c.bucket, "bucketFolder", bucketFolder, "masks", masks)
+	// TODO: this is for back compatibility, remove it sometime in the future
+	var errFirst error
+	exists, err := c.minioclient.BucketExists(ctx, bucketFolder)
+	c.Log.Debugw("Checking if bucket exists", exists, err)
+	if err == nil && exists {
+		c.Log.Infow("Bucket exists, trying to get archive from former bucket per execution", exists, err)
+		objFirst, errFirst := c.downloadArchive(ctx, bucketFolder, "", masks)
+		if errFirst == nil && objFirst != nil {
+			return objFirst, nil
+		}
+	}
+	objSecond, errSecond := c.downloadArchive(ctx, c.bucket, bucketFolder, masks)
+	if errSecond != nil {
+		return nil, fmt.Errorf("minio DownloadArchive error: %v, error from getting archive from former bucket per execution: %v", errSecond, errFirst)
+	}
+	return objSecond, nil
+}
+
 // DownloadFileFromBucket downloads file from given bucket
 func (c *Client) DownloadFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) (*minio.Object, error) {
 	c.Log.Debugw("Downloading file", "bucket", bucket, "bucketFolder", bucketFolder, "file", file)
 	return c.downloadFile(ctx, bucket, bucketFolder, file)
+}
+
+// DownloadArrchiveFromBucket downloads archive from given bucket
+func (c *Client) DownloadArchiveFromBucket(ctx context.Context, bucket, bucketFolder string, masks []string) (io.Reader, error) {
+	c.Log.Debugw("Downloading archive", "bucket", bucket, "bucketFolder", bucketFolder, "masks", masks)
+	return c.downloadArchive(ctx, bucket, bucketFolder, masks)
 }
 
 // ScrapeArtefacts pushes local files located in directories to given folder with given id located in the configured bucket

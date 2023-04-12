@@ -67,6 +67,10 @@ func (c *CloudArtifactsStorage) DownloadFile(ctx context.Context, file, executio
 	return data, nil
 }
 
+func (c *CloudArtifactsStorage) DownloadArchive(ctx context.Context, executionID string, masks []string) (io.Reader, error) {
+	return nil, errors.WithStack(ErrOperationNotSupported)
+}
+
 func (c *CloudArtifactsStorage) getObject(ctx context.Context, url string) (io.Reader, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {

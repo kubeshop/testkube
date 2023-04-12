@@ -13,6 +13,8 @@ type ArtifactsStorage interface {
 	ListFiles(ctx context.Context, executionId, testName, testSuiteName string) ([]testkube.Artifact, error)
 	// DownloadFile downloads file from configured
 	DownloadFile(ctx context.Context, file, executionId, testName, testSuiteName string) (io.Reader, error)
+	// DownloadArchive downloads archive from configured
+	DownloadArchive(ctx context.Context, executionId string, masks []string) (io.Reader, error)
 	// UploadFile uploads file to configured bucket
 	UploadFile(ctx context.Context, bucketFolder string, filePath string, reader io.Reader, objectSize int64) error
 	// PlaceFiles saves the content of the bucket folders to the filesystem

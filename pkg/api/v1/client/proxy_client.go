@@ -150,15 +150,24 @@ func (t ProxyClient[A]) GetLogs(uri string, logs chan output.Output) error {
 }
 
 // GetFile returns file artifact
-func (t ProxyClient[A]) GetFile(uri, fileName, destination string) (name string, err error) {
-	req, err := t.getProxy(http.MethodGet).
+func (t ProxyClient[A]) GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error) {
+	req := t.getProxy(http.MethodGet).
 		Suffix(uri).
-		SetHeader("Accept", "text/event-stream").
-		Stream(context.Background())
+		SetHeader("Accept", "text/event-stream")
+
+	for key, values := range params {
+		for _, value := range values {
+			if value != "" {
+				req.Param(key, value)
+			}
+		}
+	}
+
+	stream, err := req.Stream(context.Background())
 	if err != nil {
 		return name, err
 	}
-	defer req.Close()
+	defer stream.Close()
 
 	target := filepath.Join(destination, fileName)
 	dir := filepath.Dir(target)
@@ -175,7 +184,7 @@ func (t ProxyClient[A]) GetFile(uri, fileName, destination string) (name string,
 		return name, err
 	}
 
-	if _, err = f.ReadFrom(req); err != nil {
+	if _, err = f.ReadFrom(stream); err != nil {
 		return name, err
 	}
 

@@ -44,6 +44,7 @@ type ExecutionAPI interface {
 	AbortExecutions(test string) error
 	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
+	DownloadArchive(executionID, destination string, masks []string) (archive string, err error)
 }
 
 // TestSuiteAPI describes test suite api methods
@@ -211,5 +212,5 @@ type Transport[A All] interface {
 	ExecuteMethod(method, uri, selector string, isContentExpected bool) error
 	GetURI(pathTemplate string, params ...interface{}) string
 	GetLogs(uri string, logs chan output.Output) error
-	GetFile(uri, fileName, destination string) (name string, err error)
+	GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error)
 }

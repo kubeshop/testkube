@@ -3,6 +3,7 @@ package tests
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +19,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/test/detector"
 	"github.com/kubeshop/testkube/pkg/ui"
+)
+
+const (
+	artifactsFormatFolder  = "folder"
+	artifactsFormatArchive = "archive"
 )
 
 func printExecutionDetails(execution testkube.Execution) {
@@ -41,7 +47,7 @@ func printExecutionDetails(execution testkube.Execution) {
 	ui.NL()
 }
 
-func DownloadArtifacts(id, dir string, client apiclientv1.Client) {
+func DownloadArtifacts(id, dir, format string, masks []string, client apiclientv1.Client) {
 	artifacts, err := client.GetExecutionArtifacts(id)
 	ui.ExitOnError("getting artifacts ", err)
 
@@ -51,10 +57,67 @@ func DownloadArtifacts(id, dir string, client apiclientv1.Client) {
 	if len(artifacts) > 0 {
 		ui.Info("Getting artifacts", fmt.Sprintf("count = %d", len(artifacts)), "\n")
 	}
-	for _, artifact := range artifacts {
-		f, err := client.DownloadFile(id, artifact.Name, dir)
-		ui.ExitOnError("downloading file: "+f, err)
-		ui.Warn(" - downloading file ", f)
+
+	var regexps []*regexp.Regexp
+	for _, mask := range masks {
+		values := strings.Split(mask, ",")
+		for _, value := range values {
+			re, err := regexp.Compile(value)
+			ui.ExitOnError("checking mask "+value, err)
+
+			regexps = append(regexps, re)
+		}
+	}
+
+	if format == artifactsFormatFolder {
+		for _, artifact := range artifacts {
+			found := len(regexps) == 0
+			for i := range regexps {
+				if found = regexps[i].MatchString(artifact.Name); found {
+					break
+				}
+			}
+
+			if !found {
+				continue
+			}
+
+			f, err := client.DownloadFile(id, artifact.Name, dir)
+			ui.ExitOnError("downloading file: "+f, err)
+			ui.Warn(" - downloading file ", f)
+		}
+	}
+
+	if format == artifactsFormatArchive {
+		const readinessCheckTimeout = time.Second
+		ticker := time.NewTicker(readinessCheckTimeout)
+		defer ticker.Stop()
+
+		ch := make(chan string)
+		defer close(ch)
+
+		go func() {
+			f, err := client.DownloadArchive(id, dir, masks)
+			ui.ExitOnError("downloading archive: "+f, err)
+
+			ch <- f
+		}()
+
+		var archive string
+		ui.Warn(" - preparing archive ")
+
+	outloop:
+		for {
+			select {
+			case <-ticker.C:
+				ui.PrintDot()
+			case archive = <-ch:
+				ui.NL()
+				break outloop
+			}
+		}
+
+		ui.Warn(" - downloading archive ", archive)
 	}
 
 	ui.NL()
