@@ -33,19 +33,19 @@ type Executor {
     """
     ExecutorType one of "rest" for rest openapi based executors or "job" which will be default runners for testkube soon
     """
-    executorType: String
+    executorType: String!
 
     """Available executor features"""
     features: [String!]
 
     """Image for kube-job"""
-    image: String
+    image: String!
 
     """container image pull secrets"""
     imagePullSecrets: [LocalObjectReference!]
 
     """Job template to launch executor"""
-    jobTemplate: String
+    jobTemplate: String!
 
     """executor labels"""
     labels: StringMap
@@ -56,15 +56,15 @@ type Executor {
     """
     Types defines what types can be handled by executor e.g. "postman/collection", ":curl/command" etc
     """
-    types: [String!]
+    types: [String!]!
 
     """URI for rest based executors"""
-    uri: String
+    uri: String!
 }
 
 """Reference to Kubernetes object"""
 type LocalObjectReference {
-    name: String
+    name: String!
 }
 
 """Executor meta data"""

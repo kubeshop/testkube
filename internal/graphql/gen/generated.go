@@ -361,19 +361,19 @@ type Executor {
     """
     ExecutorType one of "rest" for rest openapi based executors or "job" which will be default runners for testkube soon
     """
-    executorType: String
+    executorType: String!
 
     """Available executor features"""
     features: [String!]
 
     """Image for kube-job"""
-    image: String
+    image: String!
 
     """container image pull secrets"""
     imagePullSecrets: [LocalObjectReference!]
 
     """Job template to launch executor"""
-    jobTemplate: String
+    jobTemplate: String!
 
     """executor labels"""
     labels: StringMap
@@ -384,15 +384,15 @@ type Executor {
     """
     Types defines what types can be handled by executor e.g. "postman/collection", ":curl/command" etc
     """
-    types: [String!]
+    types: [String!]!
 
     """URI for rest based executors"""
-    uri: String
+    uri: String!
 }
 
 """Reference to Kubernetes object"""
 type LocalObjectReference {
-    name: String
+    name: String!
 }
 
 """Executor meta data"""
@@ -651,11 +651,14 @@ func (ec *executionContext) _Executor_executorType(ctx context.Context, field gr
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
 	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2string(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Executor_executorType(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -733,11 +736,14 @@ func (ec *executionContext) _Executor_image(ctx context.Context, field graphql.C
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
 	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2string(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Executor_image(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -819,11 +825,14 @@ func (ec *executionContext) _Executor_jobTemplate(ctx context.Context, field gra
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
 	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2string(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Executor_jobTemplate(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -950,11 +959,14 @@ func (ec *executionContext) _Executor_types(ctx context.Context, field graphql.C
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
 	res := resTmp.([]string)
 	fc.Result = res
-	return ec.marshalOString2ᚕstringᚄ(ctx, field.Selections, res)
+	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Executor_types(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -991,11 +1003,14 @@ func (ec *executionContext) _Executor_uri(ctx context.Context, field graphql.Col
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
 	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2string(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Executor_uri(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1269,11 +1284,14 @@ func (ec *executionContext) _LocalObjectReference_name(ctx context.Context, fiel
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
 	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2string(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_LocalObjectReference_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3361,6 +3379,9 @@ func (ec *executionContext) _Executor(ctx context.Context, sel ast.SelectionSet,
 
 			out.Values[i] = ec._Executor_executorType(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "features":
 
 			out.Values[i] = ec._Executor_features(ctx, field, obj)
@@ -3369,6 +3390,9 @@ func (ec *executionContext) _Executor(ctx context.Context, sel ast.SelectionSet,
 
 			out.Values[i] = ec._Executor_image(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "imagePullSecrets":
 
 			out.Values[i] = ec._Executor_imagePullSecrets(ctx, field, obj)
@@ -3377,6 +3401,9 @@ func (ec *executionContext) _Executor(ctx context.Context, sel ast.SelectionSet,
 
 			out.Values[i] = ec._Executor_jobTemplate(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "labels":
 
 			out.Values[i] = ec._Executor_labels(ctx, field, obj)
@@ -3389,10 +3416,16 @@ func (ec *executionContext) _Executor(ctx context.Context, sel ast.SelectionSet,
 
 			out.Values[i] = ec._Executor_types(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "uri":
 
 			out.Values[i] = ec._Executor_uri(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3486,6 +3519,9 @@ func (ec *executionContext) _LocalObjectReference(ctx context.Context, sel ast.S
 
 			out.Values[i] = ec._LocalObjectReference_name(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3990,6 +4026,38 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNString2ᚕstringᚄ(ctx context.Context, v interface{}) ([]string, error) {
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {
