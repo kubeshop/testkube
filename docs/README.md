@@ -35,3 +35,38 @@ If you're editing the docs, follow this workflow:
 ```
 
 5. You can preview the changes locally in your browser: http://localhost:3000
+
+## How to style the docs
+
+### Warning signs
+
+![Warning signs](./docs/img/docusaurus-admonitions.png)
+
+If you want to add a warning/info message like the above, use [Docusuarus Admonitions](https://docusaurus.io/docs/markdown-features/admonitions).
+
+### Code blocks title
+
+![Code Block title](./docs/img/docusaurus-codeblock-title.png)
+
+If the content of the code blocks refers to a file, use Docusaurus [Code Block title](https://docusaurus.io/docs/markdown-features/code-blocks#code-title).
+
+**Don't:**
+
+````md
+file.js
+
+```js
+file
+content
+```
+````
+
+**Do:**
+
+````md
+```js title="file.js"
+file
+content
+```
+````
+
