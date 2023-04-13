@@ -8,7 +8,11 @@ Whether you want to simplify your company's DevOps workflows or empower your QA 
 
 ## Run Your Tests Inside Your Cluster
 
-Testkube runs your tests inside your Kubernetes cluster and not from a CI pipeline. This is a huge networking security benefit because you don't need to expose your cluster to the world to be able to test its application. 
+Testkube runs your tests inside your Kubernetes cluster and not from a CI pipeline. This is a huge networking security benefit because you don't need to expose your cluster to the world to be able to test its application.
+
+## Execute your tests from any CI/CD tool
+
+We decouple test orchestration from your CI/CD pipelines by triggering Testkube’s testing orchestration and execution engine right from within your CI/CD workflow regardless of the tools you use, giving you vendor neutrality and a plethora of options amongst GitLab, GitHub Actions, CircleCI, or a GitOps approach.
 
 ## GitOps Friendly Testing Strategy
 
