@@ -49,8 +49,8 @@ import (
 )
 
 const (
-	HeartbeatInterval = time.Hour
-	HttpBodyLimit     = 1 * 1024 * 1024 * 1024 // 1GB - needed for file uploads
+	HeartbeatInterval    = time.Hour
+	DefaultHttpBodyLimit = 1 * 1024 * 1024 * 1024 // 1GB - needed for file uploads
 )
 
 func NewTestkubeAPI(
@@ -87,7 +87,10 @@ func NewTestkubeAPI(
 	}
 
 	httpConfig.ClusterID = clusterId
-	httpConfig.Http.BodyLimit = HttpBodyLimit
+	httpConfig.Http.BodyLimit = httpConfig.HttpBodyLimit
+	if httpConfig.HttpBodyLimit == 0 {
+		httpConfig.Http.BodyLimit = DefaultHttpBodyLimit
+	}
 
 	s := TestkubeAPI{
 		HTTPServer:           server.NewServer(httpConfig),
