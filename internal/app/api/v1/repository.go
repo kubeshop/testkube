@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -29,7 +28,7 @@ var (
 	// errCommitNotFound is commit not found error
 	errCommitNotFound = errors.New("commit: The specified commit could not be found")
 	// errPathNotFound is path not found error
-	errPathNotFound = errors.New("commit: The specified path could not be found")
+	errPathNotFound = errors.New("path: The specified path could not be found")
 )
 
 func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
@@ -99,13 +98,11 @@ func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 			defer os.RemoveAll(dir) // clean up
 
 			if request.Path != "" {
-				if request.WorkingDir == "" {
-					request.WorkingDir = "." // skip partial checkout for path validation
-				}
+				request.WorkingDir = "." // skip partial checkout for path validation
 			}
 
 			fetcher := content.NewFetcher(dir)
-			if path, err := fetcher.FetchGit(&request); err != nil {
+			if _, err := fetcher.FetchGit(&request); err != nil {
 				message := strings.ToLower(err.Error())
 				switch {
 				case strings.Contains(message, "remote: not found"):
@@ -118,13 +115,11 @@ func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 				case strings.Contains(message, "authentication failed") ||
 					strings.Contains(message, "could not read username"):
 					err = errAuthFailed
+				case strings.Contains(message, "no such file or directory"):
+					err = errPathNotFound
 				}
 
 				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: %w", errPrefix, err))
-			} else if request.Path != "" {
-				if _, err = os.Stat(filepath.Join(path, request.WorkingDir, request.Path)); err != nil {
-					return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: %w", errPrefix, errPathNotFound))
-				}
 			}
 		}
 
