@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -16,11 +17,19 @@ import (
 
 var (
 	// errWrongRepositoryType is wrong repository type error
-	errWrongRepositoryType = errors.New("type: wrong repository type, only 'git' supported")
+	errWrongRepositoryType = errors.New("type: Invalid repository type. Only 'git' supported")
 	// errAuthFailed is auth failed error
-	errAuthFailed = errors.New("username or token: authentication failed")
+	errAuthFailed = errors.New("username or token: Authentication failed. The provided credentials are not valid")
 	// errWrongAuthType is wrong auth type error
-	errWrongAuthType = errors.New("auth type: wrong auth type, only 'basic' or 'header' supported")
+	errWrongAuthType = errors.New("auth type: Invalid auth type. Only 'basic' or 'header' supported")
+	// errRepositoryNotFound is repository not found error
+	errRepositoryNotFound = errors.New("uri: The repository could not be found")
+	// errBranchNotFound is branch not found error
+	errBranchNotFound = errors.New("branch: The specified branch could not be found")
+	// errCommitNotFound is commit not found error
+	errCommitNotFound = errors.New("commit: The specified commit could not be found")
+	// errPathNotFound is path not found error
+	errPathNotFound = errors.New("commit: The specified path could not be found")
 )
 
 func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
@@ -29,7 +38,7 @@ func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 		var request testkube.Repository
 		err := c.BodyParser(&request)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: unable to parse request: %w", errPrefix, err))
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: Unable to parse request: %w", errPrefix, err))
 		}
 
 		if request.Type_ != "git" {
@@ -46,14 +55,17 @@ func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 			var items = []struct {
 				secretRef *testkube.SecretRef
 				field     *string
+				name      string
 			}{
 				{
 					request.UsernameSecret,
 					&request.Username,
+					"username secret",
 				},
 				{
 					request.TokenSecret,
 					&request.Token,
+					"token secret",
 				},
 			}
 
@@ -61,16 +73,16 @@ func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 				if item.secretRef != nil {
 					secretClient, err := secret.NewClient(item.secretRef.Namespace)
 					if err != nil {
-						return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: unable to get secret client: %w", errPrefix, err))
+						return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: %s: Unable to get secret client: %w", errPrefix, item.name, err))
 					}
 
 					data, err := secretClient.Get(item.secretRef.Name)
 					if err != nil {
-						return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: unable to get secret from secret client: %w", errPrefix, err))
+						return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: %s: Unable to get secret from secret client: %w", errPrefix, item.name, err))
 					}
 
 					if value, ok := data[item.secretRef.Key]; !ok {
-						return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: username secret or token secret: missed key %s in secret %s/%s", errPrefix,
+						return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: %s: Missed key %s in secret %s/%s", errPrefix, item.name,
 							item.secretRef.Key, item.secretRef.Namespace, item.secretRef.Name))
 					} else {
 						*item.field = value
@@ -82,30 +94,31 @@ func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 		if request.CertificateSecret == "" {
 			dir, err := os.MkdirTemp("", "checkout")
 			if err != nil {
-				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not create folder for git: %w", errPrefix, err))
+				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: Could not create folder for git: %w", errPrefix, err))
 			}
 			defer os.RemoveAll(dir) // clean up
 
 			fetcher := content.NewFetcher(dir)
-			if _, err = fetcher.FetchGit(&request); err != nil {
+			if path, err := fetcher.FetchGit(&request); err != nil {
 				message := strings.ToLower(err.Error())
 				switch {
 				case strings.Contains(message, "remote: not found"):
-					err = fmt.Errorf("uri: repository not found %s", request.Uri)
-
+					err = errRepositoryNotFound
 				case strings.Contains(message, "could not find remote branch"):
-					err = fmt.Errorf("branch: branch not found %s", request.Branch)
-
+					err = errBranchNotFound
 				case strings.Contains(message, "did not match any file") ||
 					strings.Contains(message, "couldn't find remote"):
-					err = fmt.Errorf("commit: commit not found %s", request.Commit)
-
+					err = errCommitNotFound
 				case strings.Contains(message, "authentication failed") ||
 					strings.Contains(message, "could not read username"):
 					err = errAuthFailed
 				}
 
 				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: %w", errPrefix, err))
+			} else if request.Path != "" || request.WorkingDir != "" {
+				if _, err = os.Stat(filepath.Join(path, request.WorkingDir, request.Path)); err != nil {
+					return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: %w", errPrefix, errPathNotFound))
+				}
 			}
 		}
 
