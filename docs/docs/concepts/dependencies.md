@@ -20,6 +20,9 @@ Inspecting the Testkube API-server manifest shows the following MongoDB-related 
 * _"API_MONGO_DSN"_ (default:"mongodb://localhost:27017") - connection string
 * _"API_MONGO_DB"_ (default:"testkube") - database name
 * _"API_MONGO_SSL_CERT"_ (no default value) - reference to Kubernetes secret for MongoDB instances with SSL enabled
+* _"API_MONGO_SSL_CA_FILE_KEY"_ (default:"sslCertificateAuthorityFile") - the key in the secret that marks the CA file
+* _"API_MONGO_SSL_CLIENT_FILE_KEY"_ (default:"sslClientCertificateKeyFile") - the key in the secret that marks the client certificate file
+* _"API_MONGO_SSL_CLIENT_FILE_PASS_KEY"_ (default:"sslClientCertificateKeyFilePassword") - the key in the secret that marks the client certificate file password
 
 _API_MONGO_SSL_CERT_ expects the name of a Kubernetes secret containing all the necessary information to establish an SSL connection to the MongoDB instance. This secret has to be in the `testkube` namespace and should have the following structure:
 
@@ -36,7 +39,7 @@ data:
   sslClientCertificateKeyFilePassword: <base64 encoded password>
 ```
 
-To set this variable on helm-charts level, set [mongodb.sslCertSecret](https://github.com/kubeshop/helm-charts/blob/main/charts/testkube-api/values.yaml) to the name of the secret.
+The keys of the fields can be modified. To set these variables on helm-charts level, set [mongodb.sslCertSecret](https://github.com/kubeshop/helm-charts/blob/main/charts/testkube-api/values.yaml) to the name of the secret. If needed, also set _mongo.sslClientCert
 
 ### Amazon DocumentDB
 
