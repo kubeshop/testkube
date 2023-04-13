@@ -1,7 +1,23 @@
+import Admonition from "@theme/Admonition";
+
 # Maven
 
-Testkube allows us to run Maven-based tasks which could be also tests. For example, we can easily run JUnit tests in Testkube now. 
+Testkube allows you to run Maven-based tasks which could be also tests. For example, we can easily run JUnit tests in Testkube now. 
 
+export const ExecutorInfo = () => {
+   return (
+    <div>
+      <Admonition type="info" icon="🎓" title="What is Maven?">
+        <ul>
+          <li>Maven is a build automation tool used primarily for Java projects.</li>
+          <li>Paired with JUnit, a testing framework that is built in the Maven project format, you can build and run unit tests for your projects.</li>
+        </ul>
+      </Admonition>
+    </div>
+  );
+}
+
+<ExecutorInfo />
 
 ## Test Environment
 
