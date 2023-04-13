@@ -1,11 +1,11 @@
 # Where are all the schema files located? globs are supported eg  src/**/*.graphqls
 schema:
-  - graph/*.graphqls
+  - internal/graphql/**/*.graphqls
 
 # Where should the generated server code go?
 exec:
-  filename: graph/generated.go
-  package: graph
+  filename: internal/graphql/gen/generated.go
+  package: gen
 
 # Uncomment to enable federation
 # federation:
@@ -14,14 +14,15 @@ exec:
 
 # Where should any generated models go?
 model:
-  filename: graph/generated_models.go
-  package: graph
+  filename: internal/graphql/gen/models.go
+  package: gen
 
 # Where should the resolver implementations go?
 resolver:
   layout: follow-schema
-  dir: graph
-  package: graph
+  dir: internal/graphql/resolvers
+  package: resolvers
+  filename_template: "{name}_resolver.go"
 
 # Optional: turn on use ` + "`" + `gqlgen:"fieldName"` + "`" + ` tags in your models
 # struct_tag: json
@@ -61,3 +62,6 @@ models:
       - github.com/99designs/gqlgen/graphql.Int
       - github.com/99designs/gqlgen/graphql.Int64
       - github.com/99designs/gqlgen/graphql.Int32
+  StringMap:
+    model:
+      - github.com/kubeshop/testkube/internal/graphql/scalars.StringMapScalar

@@ -120,6 +120,11 @@ func main() {
 	_ = ln.Close()
 	log.DefaultLogger.Debugw("TCP Port is available", "port", cfg.APIServerPort)
 
+	ln, err = net.Listen("tcp", ":"+cfg.GraphqlPort)
+	ui.ExitOnError("Checking if port "+cfg.GraphqlPort+"is free", err)
+	_ = ln.Close()
+	log.DefaultLogger.Debugw("TCP Port is available", "port", cfg.GraphqlPort)
+
 	kubeClient, err := kubeclient.GetClient()
 	ui.ExitOnError("Getting kubernetes client", err)
 

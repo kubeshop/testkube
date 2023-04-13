@@ -1,0 +1,82 @@
+extend type Subscription {
+    """
+    `executor` will return a stream of `Executor` objects.
+    """
+    executors(selector: String! = ""): [ExecutorDetails!]!
+}
+
+extend type Query {
+    """
+    List executors available in cluster
+
+    Equivalent to GET /executors
+    """
+    executors(selector: String! = ""): [ExecutorDetails!]!
+}
+
+type ExecutorDetails {
+    name: String!
+    executor: Executor!
+}
+
+"""CRD based executor data"""
+type Executor {
+    """additional executor binary arguments"""
+    args: [String!]
+
+    """container executor image command"""
+    command: [String!]
+
+    """list of handled content types"""
+    contentTypes: [String!]
+
+    """
+    ExecutorType one of "rest" for rest openapi based executors
+    or "job" which will be default runners for testkube or "container"
+    for container executors
+    """
+    executorType: String!
+
+    """Available executor features"""
+    features: [String!]
+
+    """Image for kube-job"""
+    image: String!
+
+    """container image pull secrets"""
+    imagePullSecrets: [LocalObjectReference!]
+
+    """Job template to launch executor"""
+    jobTemplate: String!
+
+    """executor labels"""
+    labels: StringMap
+
+    """Executor meta data"""
+    meta: ExecutorMeta
+
+    """
+    Types defines what types can be handled by executor e.g. "postman/collection", ":curl/command" etc
+    """
+    types: [String!]!
+
+    """URI for rest based executors"""
+    uri: String!
+}
+
+"""Reference to Kubernetes object"""
+type LocalObjectReference {
+    name: String!
+}
+
+"""Executor meta data"""
+type ExecutorMeta {
+    """URI for executor docs"""
+    docsURI: String
+
+    """URI for executor icon"""
+    iconURI: String
+
+    """executor tooltips"""
+    tooltips: StringMap
+}

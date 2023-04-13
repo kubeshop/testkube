@@ -1,7 +1,5 @@
 package graphql
 
-// TODO move it to main API server
-
 import (
 	"net/http"
 	"time"
@@ -12,18 +10,19 @@ import (
 	"github.com/gorilla/websocket"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
-	"github.com/kubeshop/testkube/internal/graphql/graph"
+	"github.com/kubeshop/testkube/internal/graphql/gen"
+	"github.com/kubeshop/testkube/internal/graphql/resolvers"
+	"github.com/kubeshop/testkube/internal/graphql/services"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
 func GetServer(eventBus bus.Bus, executorsClient *executorsclientv1.ExecutorsClient) *handler.Server {
-	srv := handler.New(graph.NewExecutableSchema(graph.Config{
-		Resolvers: &graph.Resolver{
-			Log:    log.DefaultLogger,
-			Bus:    eventBus,
-			Client: executorsClient,
-		}}))
+	service := services.NewService(eventBus, log.DefaultLogger)
+	resolver := &resolvers.Resolver{
+		ExecutorsService: services.NewExecutorsService(service, executorsClient),
+	}
+	srv := handler.New(gen.NewExecutableSchema(gen.Config{Resolvers: resolver}))
 	srv.AddTransport(transport.Websocket{
 		KeepAlivePingInterval: 10 * time.Second,
 		Upgrader: websocket.Upgrader{
