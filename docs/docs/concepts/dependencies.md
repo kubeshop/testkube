@@ -39,7 +39,7 @@ data:
   sslClientCertificateKeyFilePassword: <base64 encoded password>
 ```
 
-The keys of the fields can be modified. To set these variables on helm-charts level, set [mongodb.sslCertSecret](https://github.com/kubeshop/helm-charts/blob/main/charts/testkube-api/values.yaml) to the name of the secret. If needed, also set _mongo.sslClientCert
+The keys of the fields can be modified. To set these variables on helm-charts level, set [mongodb.sslCertSecret](https://github.com/kubeshop/helm-charts/blob/main/charts/testkube-api/values.yaml) to the name of the secret. If needed, also set _mongodb.sslCAFileKey_, _mongo.sslClientFileKey_ and _mongodb.sslClientFilePassKey_.
 
 ### Amazon DocumentDB
 
