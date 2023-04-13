@@ -16,6 +16,7 @@ type Config struct {
 	SlackTemplate                     string `envconfig:"SLACK_TEMPLATE" default:""`
 	StorageEndpoint                   string `envconfig:"STORAGE_ENDPOINT" default:""`
 	StorageBucket                     string `envconfig:"STORAGE_BUCKET" default:""`
+	StorageExpiration                 int    `envconfig:"STORAGE_EXPIRATION"`
 	StorageAccessKeyID                string `envconfig:"STORAGE_ACCESSKEYID" default:""`
 	StorageSecretAccessKey            string `envconfig:"STORAGE_SECRETACCESSKEY" default:""`
 	StorageRegion                     string `envconfig:"STORAGE_REGION" default:""`

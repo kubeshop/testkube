@@ -15,6 +15,7 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -67,6 +68,7 @@ func (c *Client) Connect() error {
 		"accessKeyID", c.accessKeyID,
 		"region", c.region,
 		"token", c.token,
+		"bucket", c.bucket,
 		"ssl", c.ssl)
 	if c.accessKeyID != "" && c.secretAccessKey != "" {
 		creds = credentials.NewStaticV4(c.accessKeyID, c.secretAccessKey, c.token)
@@ -85,6 +87,24 @@ func (c *Client) Connect() error {
 	}
 	c.minioclient = mclient
 	return err
+}
+
+func (c *Client) SetExpirationPolicy(expirationDays int) error {
+	if expirationDays != 0 && c.minioclient != nil {
+		lifecycleConfig := &lifecycle.Configuration{
+			Rules: []lifecycle.Rule{
+				{
+					ID:     "expiration_policy",
+					Status: "Enabled",
+					Expiration: lifecycle.Expiration{
+						Days: lifecycle.ExpirationDays(expirationDays),
+					},
+				},
+			},
+		}
+		return c.minioclient.SetBucketLifecycle(context.TODO(), c.bucket, lifecycleConfig)
+	}
+	return nil
 }
 
 // CreateBucket creates new S3 like bucket
