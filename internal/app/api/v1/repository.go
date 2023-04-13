@@ -98,6 +98,12 @@ func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 			}
 			defer os.RemoveAll(dir) // clean up
 
+			if request.Path != "" {
+				if request.WorkingDir == "" {
+					request.WorkingDir = "." // skip partial checkout for path validation
+				}
+			}
+
 			fetcher := content.NewFetcher(dir)
 			if path, err := fetcher.FetchGit(&request); err != nil {
 				message := strings.ToLower(err.Error())
@@ -115,7 +121,7 @@ func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 				}
 
 				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: %w", errPrefix, err))
-			} else if request.Path != "" || request.WorkingDir != "" {
+			} else if request.Path != "" {
 				if _, err = os.Stat(filepath.Join(path, request.WorkingDir, request.Path)); err != nil {
 					return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: %w", errPrefix, errPathNotFound))
 				}
