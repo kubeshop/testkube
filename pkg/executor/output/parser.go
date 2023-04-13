@@ -18,6 +18,12 @@ func GetLogEntry(b []byte) (out Output, err error) {
 	r := bytes.NewReader(b)
 	dec := json.NewDecoder(r)
 	err = dec.Decode(&out)
+	if err != nil {
+		return out, err
+	}
+	if out.Type_ == "" {
+		out.Type_ = TypeUnknown
+	}
 	return out, err
 }
 
