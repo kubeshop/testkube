@@ -102,7 +102,7 @@ func (s TestkubeAPI) ValidateRepositoryHandler() fiber.Handler {
 			}
 
 			fetcher := content.NewFetcher(dir)
-			if _, err := fetcher.FetchGit(&request); err != nil {
+			if _, err = fetcher.FetchGit(&request); err != nil {
 				message := strings.ToLower(err.Error())
 				switch {
 				case strings.Contains(message, "remote: not found"):
