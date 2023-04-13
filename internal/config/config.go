@@ -8,6 +8,9 @@ type Config struct {
 	APIMongoDSN                       string `envconfig:"API_MONGO_DSN" default:"mongodb://localhost:27017"`
 	APIMongoAllowTLS                  bool   `envconfig:"API_MONGO_ALLOW_TLS" default:"false"`
 	APIMongoSSLCert                   string `envconfig:"API_MONGO_SSL_CERT" default:""`
+	APIMongoSSLCAFileKey              string `envconfig:"API_MONGO_SSL_CA_FILE_KEY" default:"sslCertificateAuthorityFile"`
+	APIMongoSSLClientFileKey          string `envconfig:"API_MONGO_SSL_CLIENT_FILE_KEY" default:"sslClientCertificateKeyFile"`
+	APIMongoSSLClientFilePass         string `envconfig:"API_MONGO_SSL_CLIENT_FILE_PASS_KEY" default:"sslClientCertificateKeyFilePassword"`
 	APIMongoAllowDiskUse              bool   `envconfig:"API_MONGO_ALLOW_DISK_USE" default:"false"`
 	APIMongoDB                        string `envconfig:"API_MONGO_DB" default:"testkube"`
 	APIMongoDBType                    string `envconfig:"API_MONGO_DB_TYPE" default:"mongo"`
