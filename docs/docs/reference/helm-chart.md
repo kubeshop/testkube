@@ -38,6 +38,49 @@ helm delete --namespace namespace_name my-testkube kubeshop/testkube
 ```
 :::
 
+## Testkube Multi-namespace Feature
+
+It is possible to deploy multiple Testkube instances into the same Kubernetes cluster. Please follow these installation commands.
+
+**1. For new installations:**
+
+```sh
+helm repo add kubeshop https://kubeshop.github.io/helm-charts
+
+helm install testkube kubeshop/testkube --namespace testkube --create-namespace --set testkube-api.multinamespace.enabled=true
+
+helm install testkube1 kubeshop/testkube -n testkube1 --create-namespace --set testkube-api.multinamespace.enabled=true --set testkube-operator.enabled=false
+```
+
+These commands will deploy Testkube components into two namespaces: testkube and testkube1 and will create a watcher role to watch k8s resources in each namespace respectively. If you need to watch resources besides the installation namespace, please add them to the **_additionalNamespaces_** variable in **_testkube-api_** section:
+
+```sh
+testkube-api:
+  additionalNamespaces: 
+  - namespace2
+  - namespace3
+
+```
+Additionally, It is possible to change the namespace for **_testkube-operator_** by setting a value for **_namespace_** variable in the **_testkube-operator_** section:
+```sh
+testkube-operator:
+  namespace: testkube-system
+```
+
+:::note
+
+Please note that the **Testkube Operator** creates **ClusterRoles**, so for the second deployment of Testkube, we need to disable the Operator, because it will fail with a `resources already exist` error.  Be aware that the Operator is deployed once with the first chart installation of Testkube. Therefore, if you uninstall the first release, it will uninstall the Operator as well.
+
+:::
+**2. For the users who already have Testkube installed**
+
+Run the following commands to deploy Testkube in another namespace:
+
+```sh
+helm repo update kubeshop
+
+helm install testkube1 kubeshop/testkube --namespace testkube1 --set testkube-api.multinamespace.enabled=true --set testkube-operator.enabled=false
+```
 #### Helm Properties
 
 The following Helm defaults are used in the `testkube` chart:
