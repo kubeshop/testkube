@@ -575,13 +575,13 @@ func getMongoSSLConfig(cfg *config.Config, secretClient *secret.Client) *storage
 	var keyFile, caFile, pass string
 	var ok bool
 	if keyFile, ok = mongoSSLSecret[cfg.APIMongoSSLClientFileKey]; !ok {
-		ui.Warn("Could not find sslClientCertificateKeyFile in secret %s", cfg.APIMongoSSLCert)
+		ui.Warn("Could not find sslClientCertificateKeyFile with key %s in secret %s", cfg.APIMongoSSLClientFileKey, cfg.APIMongoSSLCert)
 	}
 	if caFile, ok = mongoSSLSecret[cfg.APIMongoSSLCAFileKey]; !ok {
-		ui.Warn("Could not find sslCertificateAuthorityFile in secret %s", cfg.APIMongoSSLCert)
+		ui.Warn("Could not find sslCertificateAuthorityFile with key %s in secret %s", cfg.APIMongoSSLCAFileKey, cfg.APIMongoSSLCert)
 	}
 	if pass, ok = mongoSSLSecret[cfg.APIMongoSSLClientFilePass]; !ok {
-		ui.Warn("Could not find sslClientCertificateKeyFilePassword in secret %s", cfg.APIMongoSSLCert)
+		ui.Warn("Could not find sslClientCertificateKeyFilePassword with key %s in secret %s", cfg.APIMongoSSLClientFilePass, cfg.APIMongoSSLCert)
 	}
 
 	err = os.WriteFile(clientCertPath, []byte(keyFile), 0644)
