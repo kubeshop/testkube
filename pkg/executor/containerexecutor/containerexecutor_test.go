@@ -153,6 +153,7 @@ func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 		executor.Images{},
 		executor.Templates{},
 		"",
+		"",
 		testkube.Execution{
 			Id:            "name",
 			TestName:      "name-test-1",
@@ -185,6 +186,7 @@ func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 		executor.Images{},
 		executor.Templates{},
 		"",
+		"",
 		testkube.Execution{
 			Id:            "name",
 			TestName:      "name-test-1",
@@ -216,6 +218,7 @@ func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
 	jobOptions, _ := NewJobOptions(
 		executor.Images{},
 		executor.Templates{},
+		"",
 		"",
 		testkube.Execution{
 			Id:            "name",
