@@ -313,6 +313,7 @@ func main() {
 		configMapConfig,
 		testsClientV3,
 		clientset,
+		cfg.TestkubeRegistry,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating executor client", err)
@@ -334,6 +335,7 @@ func main() {
 		configMapConfig,
 		executorsClient,
 		testsClientV3,
+		cfg.TestkubeRegistry,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating container executor", err)

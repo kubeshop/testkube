@@ -12,7 +12,11 @@ spec:
 	    {{- if ne .InitImage "" }}
       initContainers:
       - name: {{ .Name }}-init
+        {{- if .Registry }}
+        image: {{ .Registry }}/{{ .InitImage }}
+        {{- else }}
         image: {{ .InitImage }}
+        {{- end }}
         imagePullPolicy: IfNotPresent
         command:
           - "/bin/runner"
@@ -43,7 +47,11 @@ spec:
       {{- end }}
       containers:
       - name: "{{ .Name }}"
+        {{- if .Registry }}
+        image: {{ .Registry }}/{{ .Image }}
+        {{- else }}
         image: {{ .Image }}
+        {{- end }}
         imagePullPolicy: IfNotPresent
 	    	{{- if gt (len .Command) 0 }}
         command:

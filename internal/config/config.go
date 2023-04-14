@@ -52,6 +52,7 @@ type Config struct {
 	TestkubeCloudLogStreamWorkerCount int    `envconfig:"TESTKUBE_CLOUD_LOG_STREAM_WORKER_COUNT" default:"25"`
 	TestkubeWatcherNamespaces         string `envconfig:"TESTKUBE_WATCHER_NAMESPACES" default:""`
 	GraphqlPort                       string `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
+	TestkubeRegistry                  string `envconfig:"TESTKUBE_REGISTRY" default:""`
 }
 
 func Get() (*Config, error) {
