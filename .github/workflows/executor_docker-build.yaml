@@ -301,33 +301,33 @@ jobs:
       matrix:
         version: [ cypress8, cypress9, cypress10, cypress11, yarn, npm ]
     runs-on: ubuntu-latest
-      steps:
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+    steps:
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
 
-      - name: Get tag
-        id: tag
-        uses: dawidd6/action-get-tag@v1
-        with:
-          # Optionally strip `v` prefix
-          strip_v: true
+    - name: Get tag
+      id: tag
+      uses: dawidd6/action-get-tag@v1
+      with:
+        # Optionally strip `v` prefix
+        strip_v: true
 
-      - name: Use tag
-        run: echo ${{steps.tag.outputs.tag}}
+    - name: Use tag
+      run: echo ${{steps.tag.outputs.tag}}
 
-      - name: Create manifests
-        run: |
-          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8
-          docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}
+    - name: Create manifests
+      run: |
+        docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8
+        docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}
 
-          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-arm64v8
-          docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}
+        docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-arm64v8
+        docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}
 
-          docker manifest create kubeshop/testkube-cypress-executor:latest --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-arm64v8
-          docker manifest push -p kubeshop/testkube-cypress-executor:latest
+        docker manifest create kubeshop/testkube-cypress-executor:latest --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-arm64v8
+        docker manifest push -p kubeshop/testkube-cypress-executor:latest
 
 #
 #          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress9 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress9-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress9-arm64v8
