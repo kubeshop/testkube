@@ -73,6 +73,7 @@ func NewJobExecutor(
 	configMap config.Repository,
 	testsClient testsv3.Interface,
 	clientset kubernetes.Interface,
+	registry string,
 ) (client *JobExecutor, err error) {
 	return &JobExecutor{
 		ClientSet:          clientset,
@@ -86,6 +87,7 @@ func NewJobExecutor(
 		Emitter:            emiter,
 		configMap:          configMap,
 		testsClient:        testsClient,
+		registry:           registry,
 	}, nil
 }
 
@@ -107,6 +109,7 @@ type JobExecutor struct {
 	Emitter            *event.Emitter
 	configMap          config.Repository
 	testsClient        testsv3.Interface
+	registry           string
 }
 
 type JobOptions struct {
@@ -133,6 +136,7 @@ type JobOptions struct {
 	EnvConfigMaps         []testkube.EnvReference
 	EnvSecrets            []testkube.EnvReference
 	Labels                map[string]string
+	Registry              string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -283,7 +287,7 @@ func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) 
 // CreateJob creates new Kubernetes job based on execution and execute options
 func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
-	jobOptions, err := NewJobOptions(c.images.Init, c.jobTemplate, c.serviceAccountName, execution, options)
+	jobOptions, err := NewJobOptions(c.images.Init, c.jobTemplate, c.serviceAccountName, c.registry, execution, options)
 	if err != nil {
 		return err
 	}
@@ -717,7 +721,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	return &job, nil
 }
 
-func NewJobOptions(initImage, jobTemplate string, serviceAccountName string, execution testkube.Execution, options ExecuteOptions) (jobOptions JobOptions, err error) {
+func NewJobOptions(initImage, jobTemplate string, serviceAccountName, registry string, execution testkube.Execution, options ExecuteOptions) (jobOptions JobOptions, err error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
 		return jobOptions, err
@@ -734,6 +738,7 @@ func NewJobOptions(initImage, jobTemplate string, serviceAccountName string, exe
 	}
 	jobOptions.Variables = execution.Variables
 	jobOptions.ServiceAccountName = serviceAccountName
+	jobOptions.Registry = registry
 
 	return
 }

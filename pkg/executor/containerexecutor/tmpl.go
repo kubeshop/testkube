@@ -190,7 +190,8 @@ func NewPersistentVolumeClaimSpec(log *zap.SugaredLogger, options *JobOptions) (
 }
 
 // NewJobOptions provides job options for templates
-func NewJobOptions(images executor.Images, templates executor.Templates, serviceAccountName string, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
+func NewJobOptions(images executor.Images, templates executor.Templates, serviceAccountName, registry string,
+	execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
 		return nil, err
@@ -212,5 +213,6 @@ func NewJobOptions(images executor.Images, templates executor.Templates, service
 	jobOptions.PVCTemplate = templates.PVC
 	jobOptions.Variables = execution.Variables
 	jobOptions.ServiceAccountName = serviceAccountName
+	jobOptions.Registry = registry
 	return jobOptions, nil
 }
