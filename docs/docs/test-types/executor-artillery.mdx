@@ -1,8 +1,24 @@
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
+import Admonition from "@theme/Admonition";
 
 # Artillery.io
-Artillery.io is an open-source load testing tool. It's designed to be both straightforward in configuration (YAML files), and powerful. The Artillery executor allow you to run Artillery tests with Testkube.
+The Artillery executor allows you to run Artillery tests with Testkube.
+
+export const ExecutorInfo = () => {
+   return (
+    <div>
+      <Admonition type="info" icon="🎓" title="What is Artillery?">
+        <ul>
+          <li><a href="https://www.artillery.io/">Artillery.io</a> is an open-source performance testing toolkit used primarily to perform cloud-scale load testing.</li>
+          <li>Artillery is designed to be both straightforward in configuration (YAML files), and powerful.</li>
+        </ul>
+      </Admonition>
+    </div>
+  );
+}
+
+<ExecutorInfo />
 
 ## **Test Environment**
 

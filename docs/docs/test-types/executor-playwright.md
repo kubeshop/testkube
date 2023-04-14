@@ -3,7 +3,23 @@ import Admonition from "@theme/Admonition";
 
 # Playwright
 
-[Playwright](https://playwright.dev/) is an end-to-end testing and automation framework developed by Microsoft. Starting from the Testkube Helm chart version 1.9.5, it is possible to use Testkube to manage your Playwright tests inside your Kubernetes cluster.
+Starting from the Testkube Helm chart version 1.9.5, it is possible to use Testkube to manage your Playwright tests inside your Kubernetes cluster.
+
+export const ExecutorInfo = () => {
+   return (
+    <div>
+      <Admonition type="info" icon="🎓" title="What is Playwright Testing?">
+        <ul>
+          <li><a href="https://playwright.dev/">Playwright</a> is an end-to-end testing and automation framework developed by Microsoft.</li>
+          <li>Playwright supports end-to-end testing, multiple browsers, operating systems, and languages - making the work of modern developers and testers more efficient.</li>
+        </ul>
+      </Admonition>
+    </div>
+  );
+}
+
+<ExecutorInfo />
+
 
 **Check out our [blog post](https://testkube.io/blog/bring-playwright-tests-into-the-cloud-with-testkube) to learn how to harness the power of Playwright Testing in your cloud-native apps.**
 
