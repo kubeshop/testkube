@@ -5,13 +5,227 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 jobs:
-  single_executor_docker:
+  #  single_executor:
+  #    strategy:
+  #      matrix:
+  #        executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template ]
+  #
+  #
+  #    runs-on: ubuntu-latest
+  #    steps:
+  #
+  #      -
+  #        name: Checkout
+  #        uses: actions/checkout@v2
+  #
+  #      -
+  #        name: Set up QEMU
+  #        uses: docker/setup-qemu-action@v1
+  #
+  #      -
+  #        name: Set up Docker Buildx
+  #        uses: docker/setup-buildx-action@v1
+  #
+  #      -
+  #        name: Go Cache
+  #        uses: actions/cache@v2
+  #        with:
+  #          path: |
+  #            ~/go/pkg/mod
+  #            ~/.cache/go-build
+  #          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+  #          restore-keys: |
+  #            ${{ runner.os }}-go-
+  #
+  #      -
+  #        name: Docker Cache
+  #        uses: actions/cache@v2
+  #        with:
+  #          path: /tmp/.buildx-cache
+  #          key: ${{ runner.os }}-buildx-${{ github.sha }}
+  #          restore-keys: |
+  #            ${{ runner.os }}-buildx-
+  #
+  #      -
+  #        name: Login to DockerHub
+  #        uses: docker/login-action@v1
+  #        with:
+  #          username: ${{ secrets.DOCKERHUB_USERNAME }}
+  #          password: ${{ secrets.DOCKERHUB_TOKEN }}
+  #
+  #      - name: Release
+  #        uses: goreleaser/goreleaser-action@v4
+  #        with:
+  #          distribution: goreleaser
+  #          version: latest
+  #          args: release -f goreleaser_files/.goreleaser-docker-build-executor.yml
+  #        env:
+  #          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+  #          EXECUTOR: ${{ matrix.executor }}
+  #
+  #  executor_jmeter:
+  #    runs-on: ubuntu-latest
+  #    steps:
+  #
+  #      -
+  #        name: Checkout
+  #        uses: actions/checkout@v2
+  #
+  #      -
+  #        name: Set up QEMU
+  #        uses: docker/setup-qemu-action@v1
+  #
+  #      -
+  #        name: Set up Docker Buildx
+  #        uses: docker/setup-buildx-action@v1
+  #
+  #      -
+  #        name: Go Cache
+  #        uses: actions/cache@v2
+  #        with:
+  #          path: |
+  #            ~/go/pkg/mod
+  #            ~/.cache/go-build
+  #          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+  #          restore-keys: |
+  #            ${{ runner.os }}-go-
+  #
+  #      -
+  #        name: Docker Cache
+  #        uses: actions/cache@v2
+  #        with:
+  #          path: /tmp/.buildx-cache
+  #          key: ${{ runner.os }}-buildx-${{ github.sha }}
+  #          restore-keys: |
+  #            ${{ runner.os }}-buildx-
+  #
+  #      -
+  #        name: Login to DockerHub
+  #        uses: docker/login-action@v1
+  #        with:
+  #          username: ${{ secrets.DOCKERHUB_USERNAME }}
+  #          password: ${{ secrets.DOCKERHUB_TOKEN }}
+  #
+  #      - name: Release
+  #        uses: goreleaser/goreleaser-action@v4
+  #        with:
+  #          distribution: goreleaser
+  #          version: latest
+  #          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeter.yml
+  #        env:
+  #          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+  #
+  #  executor_maven:
+  #    runs-on: ubuntu-latest
+  #    steps:
+  #
+  #      -
+  #        name: Checkout
+  #        uses: actions/checkout@v2
+  #
+  #      -
+  #        name: Set up QEMU
+  #        uses: docker/setup-qemu-action@v1
+  #
+  #      -
+  #        name: Set up Docker Buildx
+  #        uses: docker/setup-buildx-action@v1
+  #
+  #      -
+  #        name: Go Cache
+  #        uses: actions/cache@v2
+  #        with:
+  #          path: |
+  #            ~/go/pkg/mod
+  #            ~/.cache/go-build
+  #          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+  #          restore-keys: |
+  #            ${{ runner.os }}-go-
+  #
+  #      -
+  #        name: Docker Cache
+  #        uses: actions/cache@v2
+  #        with:
+  #          path: /tmp/.buildx-cache
+  #          key: ${{ runner.os }}-buildx-${{ github.sha }}
+  #          restore-keys: |
+  #            ${{ runner.os }}-buildx-
+  #
+  #      -
+  #        name: Login to DockerHub
+  #        uses: docker/login-action@v1
+  #        with:
+  #          username: ${{ secrets.DOCKERHUB_USERNAME }}
+  #          password: ${{ secrets.DOCKERHUB_TOKEN }}
+  #
+  #      - name: Release
+  #        uses: goreleaser/goreleaser-action@v4
+  #        with:
+  #          distribution: goreleaser
+  #          version: latest
+  #          args: release -f goreleaser_files/.goreleaser-docker-build-executor-maven.yml
+  #        env:
+  #          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+  ##          TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+  #
+  #  executor_gradle:
+  #    runs-on: ubuntu-latest
+  #    steps:
+  #
+  #      -
+  #        name: Checkout
+  #        uses: actions/checkout@v2
+  #
+  #      -
+  #        name: Set up QEMU
+  #        uses: docker/setup-qemu-action@v1
+  #
+  #      -
+  #        name: Set up Docker Buildx
+  #        uses: docker/setup-buildx-action@v1
+  #
+  #      -
+  #        name: Go Cache
+  #        uses: actions/cache@v2
+  #        with:
+  #          path: |
+  #            ~/go/pkg/mod
+  #            ~/.cache/go-build
+  #          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+  #          restore-keys: |
+  #            ${{ runner.os }}-go-
+  #
+  #      -
+  #        name: Docker Cache
+  #        uses: actions/cache@v2
+  #        with:
+  #          path: /tmp/.buildx-cache
+  #          key: ${{ runner.os }}-buildx-${{ github.sha }}
+  #          restore-keys: |
+  #            ${{ runner.os }}-buildx-
+  #
+  #      -
+  #        name: Login to DockerHub
+  #        uses: docker/login-action@v1
+  #        with:
+  #          username: ${{ secrets.DOCKERHUB_USERNAME }}
+  #          password: ${{ secrets.DOCKERHUB_TOKEN }}
+  #
+  #      - name: Release
+  #        uses: goreleaser/goreleaser-action@v4
+  #        with:
+  #          distribution: goreleaser
+  #          version: latest
+  #          args: release -f goreleaser_files/.goreleaser-docker-build-executor-gradle.yml
+  #        env:
+  #          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+  ##          TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+  executor_cypress:
     strategy:
       matrix:
-        executor: [artillery, curl, example, ginkgo]
-
-        #left jmeter, k6, kubepug, postman, soapui, init, scraper, template
-
+        version: [ cypress8, cypress9, cypress10, cypress11, yarn, npm ]
+    #legacy, yarn
     runs-on: ubuntu-latest
     steps:
 
@@ -27,7 +241,7 @@ jobs:
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
-      - 
+      -
         name: Go Cache
         uses: actions/cache@v2
         with:
@@ -54,88 +268,52 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Release
-        uses: goreleaser/goreleaser-action@v4
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
         with:
-          distribution: goreleaser
-          version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor.yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          EXECUTOR: ${{ matrix.executor }}
+          # Optionally strip `v` prefix
+          strip_v: true
 
-
-  executor_jdk_docker:
-    strategy:
-      matrix:
-        version: [jdk8, jdk11, jdk17,jdk18]
-        executor: [gradle, maven]
-
-    runs-on: ubuntu-latest
-    steps:
-
-      -
-        name: Checkout
-        uses: actions/checkout@v2
-
-      -
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
-
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      -
-        name: Go Cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      -
-        name: Docker Cache
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
-      - name: Output commit sha
-        id: github_sha
-        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
-
-      -
-        name: Login to DockerHub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Use tag
+        run: echo ${{steps.tag.outputs.tag}}
 
       - name: Release
         uses: goreleaser/goreleaser-action@v4
         with:
           distribution: goreleaser
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-gradle-maven.yml --snapshot
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-cypress.yml --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          EXECUTOR: ${{ matrix.executor }}
-          JDK_VERSION: ${{ matrix.version }}
+          EXECUTOR_VERSION: ${{ matrix.version }}
+      #          TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
+      - name: Create Docker manifest and push multi-arch image to Registry
+        run: |
+          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress8 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress8-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress8-arm64v8
+          docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress8
 
-      #  executor_cypress_docker:
-#    strategy:
-#      matrix:
-#        version: [ legacy, yarn, cypress8, cypress9, cypress10]
-#
+          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress9 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress9-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress9-arm64v8
+          docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress9
+
+          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress10 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress10-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress10-arm64v8
+          docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress10
+
+          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-arm64v8
+          docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11
+
+          docker manifest create kubeshop/testkube-cypress-executor:latest --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-arm64v8
+          docker manifest push -p kubeshop/testkube-cypress-executor:latest
+
+          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-arm64v8
+          docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}
+
+#  executor_playwright:
+##    strategy:
+##      matrix:
+##        version: [default, npm, pnpm, yarn]
+##
 #    runs-on: ubuntu-latest
 #    steps:
 #
@@ -179,218 +357,22 @@ jobs:
 #          password: ${{ secrets.DOCKERHUB_TOKEN }}
 #
 #      - name: Release
-#        if: ${{ matrix.version == 'legacy' }}
 #        uses: goreleaser/goreleaser-action@v4
 #        with:
 #          distribution: goreleaser
 #          version: latest
-#          args: release -f goreleaser_files/.goreleaser-docker-build-executor-gradle-maven.yml --snapshot
+#          args: release -f goreleaser_files/.goreleaser-docker-build-executor-playwright.yml
 #        env:
 #          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-#          TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-#          EXECUTOR: ${{ matrix.executor }}
-#          RELEASE_VERSION: ${{ github.event.client_payload.release_version }}
-
-#      -
-#        name: Docker meta for ${{ matrix.version }} cypress executor
-#        if: ${{ matrix.version == 'legacy' }}
-#        id: meta_executor_legacy
-#        uses: docker/metadata-action@v3
-#        with:
-#          images: kubeshop/testkube-cypress-executor
-#          tags: |
-#            type=ref,event=branch
-#            type=ref,event=pr
-#            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
-#            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
-#            type=sha
-#          flavor: |
-#            prefix=
-#            suffix=-legacy
 #
-#      -
-#        name: Docker meta for ${{ matrix.version }} cypress executor
-#        if: ${{ matrix.version == 'default' }}
-#        id: meta_executor_default
-#        uses: docker/metadata-action@v3
-#        with:
-#          images: kubeshop/testkube-cypress-executor
-#          tags: |
-#            type=ref,event=branch
-#            type=ref,event=pr
-#            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
-#            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
-#            type=sha
-#          flavor: |
-#            latest=auto
-#            prefix=
 #
-#      -
-#        name: Docker meta for cypress executor ${{ matrix.version }}
-#        if: ${{ matrix.version != 'legacy' && matrix.version != 'default' }}
-#        id: meta_executor
-#        uses: docker/metadata-action@v3
-#        with:
-#          images: kubeshop/testkube-cypress-executor
-#          tags: |
-#            type=ref,event=branch
-#            type=ref,event=pr
-#            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
-#            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
-#            type=sha
-#          flavor: |
-#            latest=auto
-#            prefix=
-#            suffix=-${{ matrix.version }}
-#
-#      -
-#        name: Build ${{ matrix.version }} cypress executor
-#        if: ${{ matrix.version == 'legacy' }}
-#        uses: docker/bake-action@v1
-#        with:
-#          files: |
-#            contrib/executor/cypress/build/agent/docker-bake.hcl
-#            ${{ steps.meta_executor_legacy.outputs.bake-file }}
-#          targets: npm
-#          set: npm.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
-#          push: true
-#
-#      -
-#        name: Build ${{ matrix.version }} cypress executor
-#        if: ${{ matrix.version == 'default' }}
-#        uses: docker/bake-action@v1
-#        with:
-#          files: |
-#            contrib/executor/cypress/build/agent/docker-bake.hcl
-#            ${{ steps.meta_executor_default.outputs.bake-file }}
-#          targets: cypress11
-#          set: cypress11.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
-#          push: true
-#
-#      -
-#        name: Build cypress ${{ matrix.executor }} executor
-#        if: ${{ matrix.version != 'legacy' && matrix.version != 'default' }}
-#        uses: docker/bake-action@v1
-#        with:
-#          files: |
-#            contrib/executor/cypress/build/agent/docker-bake.hcl
-#            ${{ steps.meta_executor.outputs.bake-file }}
-#          targets: ${{ matrix.version }}
-#          set: ${{ matrix.version }}.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
-#          push: true
-#
-#  executor_playwright_docker:
-#    strategy:
-#      matrix:
-#        version: [default, npm, pnpm, yarn]
-#
-#    runs-on: ubuntu-latest
-#    steps:
-#
-#      -
-#        name: Checkout
-#        uses: actions/checkout@v2
-#
-#      -
-#        name: Set up QEMU
-#        uses: docker/setup-qemu-action@v1
-#
-#      -
-#        name: Set up Docker Buildx
-#        uses: docker/setup-buildx-action@v1
-#
-#      -
-#        name: Go Cache
-#        uses: actions/cache@v2
-#        with:
-#          path: |
-#            ~/go/pkg/mod
-#            ~/.cache/go-build
-#          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
-#
-#      -
-#        name: Docker Cache
-#        uses: actions/cache@v2
-#        with:
-#          path: /tmp/.buildx-cache
-#          key: ${{ runner.os }}-buildx-${{ github.sha }}
-#          restore-keys: |
-#            ${{ runner.os }}-buildx-
-#
-#      -
-#        name: Login to DockerHub
-#        uses: docker/login-action@v1
-#        with:
-#          username: ${{ secrets.DOCKERHUB_USERNAME }}
-#          password: ${{ secrets.DOCKERHUB_TOKEN }}
-#
-#      -
-#        name: Docker meta for ${{ matrix.version }} playwright executor
-#        if: ${{matrix.version == 'default'}}
-#        id: meta_executor_default
-#        uses: docker/metadata-action@v3
-#        with:
-#          images: kubeshop/testkube-playwright-executor
-#          tags: |
-#            type=ref,event=branch
-#            type=ref,event=pr
-#            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
-#            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
-#            type=sha
-#          flavor: |
-#            latest=auto
-#            prefix=
-#
-#      -
-#        name: Docker meta for playwright executor ${{ matrix.version }}
-#        if: ${{matrix.version != 'default'}}
-#        id: meta_executor
-#        uses: docker/metadata-action@v3
-#        with:
-#          images: kubeshop/testkube-playwright-executor
-#          tags: |
-#            type=ref,event=branch
-#            type=ref,event=pr
-#            type=semver,pattern={{version}},value=${{ github.event.client_payload.release_version }}
-#            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.client_payload.release_version }}
-#            type=sha
-#          flavor: |
-#            latest=auto
-#            prefix=
-#            suffix=-${{ matrix.version }}
-#
-#      -
-#        name: Build ${{ matrix.version }} playwright executor
-#        if: ${{matrix.version == 'default'}}
-#        uses: docker/bake-action@v1
-#        with:
-#          files: |
-#            contrib/executor/playwright/build/agent/docker-bake.hcl
-#            ${{ steps.meta_executor_default.outputs.bake-file }}
-#          targets: npm
-#          set: npm.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
-#          push: true
-#
-#      -
-#        name: Build ${{ matrix.executor }} playwright executor
-#        if: ${{matrix.version != 'default'}}
-#        uses: docker/bake-action@v1
-#        with:
-#          files: |
-#            contrib/executor/playwright/build/agent/docker-bake.hcl
-#            ${{ steps.meta_executor.outputs.bake-file }}
-#          targets: ${{ matrix.version }}
-#          set: ${{ matrix.version }}.args.TOKEN=${{ secrets.PERSONAL_ACCESS_TOKEN }}
-#          push: true
-#
-#  releasing_helm_chart_executor:
-#    needs: [single_executor_docker, helper_executor_docker, executor_jdk_docker, executor_cypress_docker, executor_playwright_docker]
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Repository Dispatch
-#        uses: peter-evans/repository-dispatch@v2
-#        with:
-#          event-type: trigger-executor-helm-releaser
-#          client-payload: '{"release_version": "${{ github.event.client_payload.release_version }}"}'
+##
+##  releasing_helm_chart_executor:
+##    needs: [single_executor_docker, helper_executor_docker, executor_jdk_docker, executor_cypress_docker, executor_playwright_docker]
+##    runs-on: ubuntu-latest
+##    steps:
+##      - name: Repository Dispatch
+##        uses: peter-evans/repository-dispatch@v2
+##        with:
+##          event-type: trigger-executor-helm-releaser
+##          client-payload: '{"release_version": "${{ github.event.client_payload.release_version }}"}'

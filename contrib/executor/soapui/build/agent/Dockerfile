@@ -1,13 +1,5 @@
-# syntax=docker/dockerfile:1
-FROM golang:1.18 as builder
-WORKDIR contrib/executor/soapui/build
-COPY . .
-ENV CGO_ENABLED=0
-ENV GOOS=linux
-RUN cd contrib/executor/soapui/cmd/agent;go build -o /runner -mod mod -a .
-
 FROM smartbear/soapuios-testrunner
-COPY --from=builder /runner /bin/runner
+COPY soapui /bin/runner
 
 RUN apt-get update && apt-get install -y git && \
     chmod 777 /usr/local/SmartBear && \

@@ -1,0 +1,113 @@
+builds:
+  - id: "linux"
+    main: "./contrib/executor/playwright/cmd/agent"
+    binary: "playwright"
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    mod_timestamp: "{{ .CommitTimestamp }}"
+dockers:
+  - dockerfile: "./contrib/executor/playwright/build/agent/Dockerfile.pnpm"
+    use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "kubeshop/testkube-playwright-executor:{{ .Version }}-pnpm-amd64"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+  - dockerfile: "./contrib/executor/playwright/build/agent/Dockerfile.pnpm"
+    use: buildx
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "kubeshop/testkube-playwright-executor:{{ .Version }}-pnpm-arm64v8"
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+  - dockerfile: "./contrib/executor/playwright/build/agent/Dockerfile.npm"
+    use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "kubeshop/testkube-playwright-executor:{{ .Version }}-amd64"
+      - "kubeshop/testkube-playwright-executor:{{ .Version }}-npm-amd64"
+      - "kubeshop/testkube-playwright-executor:latest-amd64"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+  - dockerfile: "./contrib/executor/playwright/build/agent/Dockerfile.npm"
+    use: buildx
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "kubeshop/testkube-playwright-executor:{{ .Version }}-arm64v8"
+      - "kubeshop/testkube-playwright-executor:{{ .Version }}-npm-arm64v8"
+      - "kubeshop/testkube-playwright-executor:latest-arm64v8"
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+  - dockerfile: "./contrib/executor/playwright/build/agent/Dockerfile.yarn"
+    use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "kubeshop/testkube-playwright-executor:{{ .Version }}-yarn-amd64"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+  - dockerfile: "./contrib/executor/playwright/build/agent/Dockerfile.yarn"
+    use: buildx
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "kubeshop/testkube-playwright-executor:{{ .Version }}-yarn-arm64v8"
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+docker_manifests:
+  - name_template: kubeshop/testkube-playwright-executor:{{ .Version }}-npm
+    image_templates:
+      - kubeshop/testkube-playwright-executor:{{ .Version }}-npm-amd64
+      - kubeshop/testkube-playwright-executor:{{ .Version }}-npm-arm64v8
+  - name_template: kubeshop/testkube-playwright-executor:{{ .Version }}-pnpm
+    image_templates:
+      - kubeshop/testkube-playwright-executor:{{ .Version }}-pnpm-amd64
+      - kubeshop/testkube-playwright-executor:{{ .Version }}-pnpm-arm64v8
+  - name_template: kubeshop/testkube-playwright-executor:{{ .Version }}-yarn
+    image_templates:
+      - kubeshop/testkube-playwright-executor:{{ .Version }}-yarn-amd64
+      - kubeshop/testkube-playwright-executor:{{ .Version }}-yarn-arm64v8
+  - name_template: kubeshop/testkube-playwright-executor:latest
+    image_templates:
+      - kubeshop/testkube-playwright-executor:latest-amd64
+      - kubeshop/testkube-playwright-executor:latest-arm64v8
+  - name_template: kubeshop/testkube-playwright-executor:{{ .Version }}
+    image_templates:
+      - kubeshop/testkube-playwright-executor:{{ .Version }}-amd64
+      - kubeshop/testkube-playwright-executor:{{ .Version }}-arm64v8
+
+release:
+  disable: true

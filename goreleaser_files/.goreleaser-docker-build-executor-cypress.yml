@@ -1,0 +1,197 @@
+builds:
+  - id: "linux"
+    main: "./contrib/executor/cypress/cmd/agent"
+    binary: "cypress"
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    mod_timestamp: "{{ .CommitTimestamp }}"
+dockers:
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.{{ .Env.EXECUTOR_VERSION }}"
+    use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "kubeshop/testkube-cypress-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-amd64"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.{{ .Env.EXECUTOR_VERSION }}"
+    use: buildx
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "kubeshop/testkube-cypress-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-arm64v8"
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+#  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress9"
+#    use: buildx
+#    goos: linux
+#    goarch: amd64
+#    image_templates:
+#      - "kubeshop/testkube-cypress:{{ .Version }}-cypress9-amd64"
+#    build_flag_templates:
+#      - "--platform=linux/amd64"
+#      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+#      - "--label=org.opencontainers.image.created={{ .Date}}"
+#      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+#
+#  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress9"
+#    use: buildx
+#    goos: linux
+#    goarch: arm64
+#    image_templates:
+#      - "kubeshop/testkube-cypress:{{ .Version }}-cypress9-arm64v8"
+#    build_flag_templates:
+#      - "--platform=linux/arm64/v8"
+#      - "--label=org.opencontainers.image.created={{ .Date }}"
+#      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+#      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+#
+#  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress10"
+#    use: buildx
+#    goos: linux
+#    goarch: amd64
+#    image_templates:
+#      - "kubeshop/testkube-cypress:{{ .Version }}-cypress10-amd64"
+#    build_flag_templates:
+#      - "--platform=linux/amd64"
+#      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+#      - "--label=org.opencontainers.image.created={{ .Date}}"
+#      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+#
+#  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress10"
+#    use: buildx
+#    goos: linux
+#    goarch: arm64
+#    image_templates:
+#      - "kubeshop/testkube-cypress:{{ .Version }}-cypress10-arm64v8"
+#    build_flag_templates:
+#      - "--platform=linux/arm64/v8"
+#      - "--label=org.opencontainers.image.created={{ .Date }}"
+#      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+#      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+#
+#  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress11"
+#    use: buildx
+#    goos: linux
+#    goarch: amd64
+#    image_templates:
+#      - "kubeshop/testkube-cypress:{{ .Version }}-cypress11-amd64"
+#      - "kubeshop/testkube-cypress:{{ .Version }}-amd64"
+#      - "kubeshop/testkube-cypress:latest-amd64"
+#    build_flag_templates:
+#      - "--platform=linux/amd64"
+#      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+#      - "--label=org.opencontainers.image.created={{ .Date}}"
+#      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+#
+#  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress11"
+#    use: buildx
+#    goos: linux
+#    goarch: arm64
+#    image_templates:
+#      - "kubeshop/testkube-cypress:{{ .Version }}-cypress11-arm64v8"
+#      - "kubeshop/testkube-cypress:{{ .Version }}-arm64v8"
+#      - "kubeshop/testkube-cypress:latest-arm64v8"
+#    build_flag_templates:
+#      - "--platform=linux/arm64/v8"
+#      - "--label=org.opencontainers.image.created={{ .Date }}"
+#      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+#      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+#
+#  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.npm"
+#    use: buildx
+#    goos: linux
+#    goarch: amd64
+#    image_templates:
+#      - "kubeshop/testkube-cypress:{{ .Version }}-legacy-amd64"
+#    build_flag_templates:
+#      - "--platform=linux/amd64"
+#      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+#      - "--label=org.opencontainers.image.created={{ .Date}}"
+#      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+#
+#  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.npm"
+#    use: buildx
+#    goos: linux
+#    goarch: arm64
+#    image_templates:
+#      - "kubeshop/testkube-cypress:{{ .Version }}-legacy-arm64v8"
+#    build_flag_templates:
+#      - "--platform=linux/arm64/v8"
+#      - "--label=org.opencontainers.image.created={{ .Date }}"
+#      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+#      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+#
+#  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.yarn"
+#    use: buildx
+#    goos: linux
+#    goarch: amd64
+#    image_templates:
+#      - "kubeshop/testkube-cypress:{{ .Version }}-yarn-amd64"
+#    build_flag_templates:
+#      - "--platform=linux/amd64"
+#      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+#      - "--label=org.opencontainers.image.created={{ .Date}}"
+#      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+#
+#  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.yarn"
+#    use: buildx
+#    goos: linux
+#    goarch: arm64
+#    image_templates:
+#      - "kubeshop/testkube-cypress:{{ .Version }}-yarn-arm64v8"
+#    build_flag_templates:
+#      - "--platform=linux/arm64/v8"
+#      - "--label=org.opencontainers.image.created={{ .Date }}"
+#      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+#      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+#docker_manifests:
+#  - name_template: kubeshop/testkube-cypress:{{ .Version }}-cypress8
+#    image_templates:
+#      - kubeshop/testkube-cypress:{{ .Version }}-cypress8-amd64
+#      - kubeshop/testkube-cypress:{{ .Version }}-cypress8-arm64v8
+#  - name_template: kubeshop/testkube-cypress:{{ .Version }}-cypress9
+#    image_templates:
+#      - kubeshop/testkube-cypress:{{ .Version }}-cypress9-amd64
+#      - kubeshop/testkube-cypress:{{ .Version }}-cypress9-arm64v8
+#  - name_template: kubeshop/testkube-cypress:{{ .Version }}-cypress10
+#    image_templates:
+#      - kubeshop/testkube-cypress:{{ .Version }}-cypress10-amd64
+#      - kubeshop/testkube-cypress:{{ .Version }}-cypress10-arm64v8
+#  - name_template: kubeshop/testkube-cypress:{{ .Version }}-cypress11
+#    image_templates:
+#      - kubeshop/testkube-cypress:{{ .Version }}-cypress11-amd64
+#      - kubeshop/testkube-cypress:{{ .Version }}-cypress11-arm64v8
+#  - name_template: kubeshop/testkube-cypress:legacy
+#    image_templates:
+#      - kubeshop/testkube-cypress:{{ .Version }}-legacy-amd64
+#      - kubeshop/testkube-cypress:{{ .Version }}-legacy-arm64v8
+#  - name_template: kubeshop/testkube-cypress:yarn
+#    image_templates:
+#      - kubeshop/testkube-cypress:{{ .Version }}-yarn-amd64
+#      - kubeshop/testkube-cypress:{{ .Version }}-yarn-arm64v8
+#  - name_template: kubeshop/testkube-cypress:latest
+#    image_templates:
+#      - kubeshop/testkube-cypress:latest-amd64
+#      - kubeshop/testkube-cypress:latest-arm64v8
+#  - name_template: kubeshop/testkube-cypress:{{ .Version }}
+#    image_templates:
+#      - kubeshop/testkube-cypress:{{ .Version }}-amd64
+#      - kubeshop/testkube-cypress:{{ .Version }}-arm64v8
+
+release:
+  disable: true
