@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	pollTimeout             = 24 * time.Hour
+	pollTimeout             = 2 * time.Hour
 	pollInterval            = 200 * time.Millisecond
 	jobDefaultDelaySeconds  = 180
 	jobArtifactDelaySeconds = 90

@@ -52,7 +52,7 @@ const (
 	// GitTokenEnvVarName is git token environment var name
 	GitTokenEnvVarName = "RUNNER_GITTOKEN"
 
-	pollTimeout  = 24 * time.Hour
+	pollTimeout  = 2 * time.Hour
 	pollInterval = 200 * time.Millisecond
 	volumeDir    = "/data"
 	// pollJobStatus is interval for checking if job timeout occurred
