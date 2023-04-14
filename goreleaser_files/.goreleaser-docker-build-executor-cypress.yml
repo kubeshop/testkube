@@ -11,24 +11,24 @@ builds:
       - arm64
     mod_timestamp: "{{ .CommitTimestamp }}"
 dockers:
-  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress8"
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.{{ .Env.EXECUTOR_VERSION }}"
     use: buildx
     goos: linux
     goarch: amd64
     image_templates:
-      - "kubeshop/testkube-cypress-executor:{{ .Version }}-cypress8-amd64"
+      - "kubeshop/testkube-cypress-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
       - "--label=org.opencontainers.image.created={{ .Date}}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
 
-  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress8"
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.{{ .Env.EXECUTOR_VERSION }}"
     use: buildx
     goos: linux
     goarch: arm64
     image_templates:
-      - "kubeshop/testkube-cypress-executor:{{ .Version }}-cypress8-arm64v8"
+      - "kubeshop/testkube-cypress-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"

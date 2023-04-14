@@ -291,11 +291,11 @@ jobs:
 
       - name: Create Docker manifest and push multi-arch image to Registry
         run: |
-          docker push kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress8-amd64
-          docker push kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress8-arm64v8
+          docker push kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64
+          docker push kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8
 
-          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress8 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress8-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress8-arm64v8
-          docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress8
+          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8
+          docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}
 #
 #          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress9 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress9-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress9-arm64v8
 #          docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress9
@@ -309,8 +309,8 @@ jobs:
 #          docker manifest create kubeshop/testkube-cypress-executor:latest --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-arm64v8
 #          docker manifest push -p kubeshop/testkube-cypress-executor:latest
 #
-#          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-arm64v8
-#          docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}
+          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-arm64v8
+          docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}
 
 #  executor_playwright:
 ##    strategy:
