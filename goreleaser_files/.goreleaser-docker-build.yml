@@ -74,4 +74,5 @@ docker_manifests:
       - kubeshop/testkube-api-server:latest-amd64
       - kubeshop/testkube-api-server:latest-arm64v8
 
-
+release:
+  disable: true
