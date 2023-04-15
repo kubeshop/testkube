@@ -10,7 +10,6 @@ jobs:
         matrix:
           executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template ]
 
-
       runs-on: ubuntu-latest
       steps:
 

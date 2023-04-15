@@ -24,7 +24,7 @@ dockers:
       - "--label=org.opencontainers.image.created={{ .Date}}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
       - "--label=org.opencontainers.image.version={{ .Version }}"
-      - "--build-arg=TOKEN={{ .Env.TOKEN }}"
+      - "--build-arg=TOKEN={{ .Env.GITHUB_TOKEN }}"
 
   - dockerfile: "./contrib/executor/{{ .Env.EXECUTOR }}/build/agent/Dockerfile"
     use: buildx
@@ -39,7 +39,7 @@ dockers:
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
       - "--label=org.opencontainers.image.version={{ .Version }}"
-      - "--build-arg=TOKEN={{ .Env.TOKEN }}"
+      - "--build-arg=TOKEN={{ .Env.GITHUB_TOKEN }}"
 
 docker_manifests:
   - name_template: kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .Version }}
