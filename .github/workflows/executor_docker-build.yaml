@@ -5,227 +5,225 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 jobs:
-  #  single_executor:
-  #    strategy:
-  #      matrix:
-  #        executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template ]
-  #
-  #
-  #    runs-on: ubuntu-latest
-  #    steps:
-  #
-  #      -
-  #        name: Checkout
-  #        uses: actions/checkout@v2
-  #
-  #      -
-  #        name: Set up QEMU
-  #        uses: docker/setup-qemu-action@v1
-  #
-  #      -
-  #        name: Set up Docker Buildx
-  #        uses: docker/setup-buildx-action@v1
-  #
-  #      -
-  #        name: Go Cache
-  #        uses: actions/cache@v2
-  #        with:
-  #          path: |
-  #            ~/go/pkg/mod
-  #            ~/.cache/go-build
-  #          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-  #          restore-keys: |
-  #            ${{ runner.os }}-go-
-  #
-  #      -
-  #        name: Docker Cache
-  #        uses: actions/cache@v2
-  #        with:
-  #          path: /tmp/.buildx-cache
-  #          key: ${{ runner.os }}-buildx-${{ github.sha }}
-  #          restore-keys: |
-  #            ${{ runner.os }}-buildx-
-  #
-  #      -
-  #        name: Login to DockerHub
-  #        uses: docker/login-action@v1
-  #        with:
-  #          username: ${{ secrets.DOCKERHUB_USERNAME }}
-  #          password: ${{ secrets.DOCKERHUB_TOKEN }}
-  #
-  #      - name: Release
-  #        uses: goreleaser/goreleaser-action@v4
-  #        with:
-  #          distribution: goreleaser
-  #          version: latest
-  #          args: release -f goreleaser_files/.goreleaser-docker-build-executor.yml
-  #        env:
-  #          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-  #          EXECUTOR: ${{ matrix.executor }}
-  #
-  #  executor_jmeter:
-  #    runs-on: ubuntu-latest
-  #    steps:
-  #
-  #      -
-  #        name: Checkout
-  #        uses: actions/checkout@v2
-  #
-  #      -
-  #        name: Set up QEMU
-  #        uses: docker/setup-qemu-action@v1
-  #
-  #      -
-  #        name: Set up Docker Buildx
-  #        uses: docker/setup-buildx-action@v1
-  #
-  #      -
-  #        name: Go Cache
-  #        uses: actions/cache@v2
-  #        with:
-  #          path: |
-  #            ~/go/pkg/mod
-  #            ~/.cache/go-build
-  #          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-  #          restore-keys: |
-  #            ${{ runner.os }}-go-
-  #
-  #      -
-  #        name: Docker Cache
-  #        uses: actions/cache@v2
-  #        with:
-  #          path: /tmp/.buildx-cache
-  #          key: ${{ runner.os }}-buildx-${{ github.sha }}
-  #          restore-keys: |
-  #            ${{ runner.os }}-buildx-
-  #
-  #      -
-  #        name: Login to DockerHub
-  #        uses: docker/login-action@v1
-  #        with:
-  #          username: ${{ secrets.DOCKERHUB_USERNAME }}
-  #          password: ${{ secrets.DOCKERHUB_TOKEN }}
-  #
-  #      - name: Release
-  #        uses: goreleaser/goreleaser-action@v4
-  #        with:
-  #          distribution: goreleaser
-  #          version: latest
-  #          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeter.yml
-  #        env:
-  #          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-  #
-  #  executor_maven:
-  #    runs-on: ubuntu-latest
-  #    steps:
-  #
-  #      -
-  #        name: Checkout
-  #        uses: actions/checkout@v2
-  #
-  #      -
-  #        name: Set up QEMU
-  #        uses: docker/setup-qemu-action@v1
-  #
-  #      -
-  #        name: Set up Docker Buildx
-  #        uses: docker/setup-buildx-action@v1
-  #
-  #      -
-  #        name: Go Cache
-  #        uses: actions/cache@v2
-  #        with:
-  #          path: |
-  #            ~/go/pkg/mod
-  #            ~/.cache/go-build
-  #          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-  #          restore-keys: |
-  #            ${{ runner.os }}-go-
-  #
-  #      -
-  #        name: Docker Cache
-  #        uses: actions/cache@v2
-  #        with:
-  #          path: /tmp/.buildx-cache
-  #          key: ${{ runner.os }}-buildx-${{ github.sha }}
-  #          restore-keys: |
-  #            ${{ runner.os }}-buildx-
-  #
-  #      -
-  #        name: Login to DockerHub
-  #        uses: docker/login-action@v1
-  #        with:
-  #          username: ${{ secrets.DOCKERHUB_USERNAME }}
-  #          password: ${{ secrets.DOCKERHUB_TOKEN }}
-  #
-  #      - name: Release
-  #        uses: goreleaser/goreleaser-action@v4
-  #        with:
-  #          distribution: goreleaser
-  #          version: latest
-  #          args: release -f goreleaser_files/.goreleaser-docker-build-executor-maven.yml
-  #        env:
-  #          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-  ##          TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-  #
-  #  executor_gradle:
-  #    runs-on: ubuntu-latest
-  #    steps:
-  #
-  #      -
-  #        name: Checkout
-  #        uses: actions/checkout@v2
-  #
-  #      -
-  #        name: Set up QEMU
-  #        uses: docker/setup-qemu-action@v1
-  #
-  #      -
-  #        name: Set up Docker Buildx
-  #        uses: docker/setup-buildx-action@v1
-  #
-  #      -
-  #        name: Go Cache
-  #        uses: actions/cache@v2
-  #        with:
-  #          path: |
-  #            ~/go/pkg/mod
-  #            ~/.cache/go-build
-  #          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-  #          restore-keys: |
-  #            ${{ runner.os }}-go-
-  #
-  #      -
-  #        name: Docker Cache
-  #        uses: actions/cache@v2
-  #        with:
-  #          path: /tmp/.buildx-cache
-  #          key: ${{ runner.os }}-buildx-${{ github.sha }}
-  #          restore-keys: |
-  #            ${{ runner.os }}-buildx-
-  #
-  #      -
-  #        name: Login to DockerHub
-  #        uses: docker/login-action@v1
-  #        with:
-  #          username: ${{ secrets.DOCKERHUB_USERNAME }}
-  #          password: ${{ secrets.DOCKERHUB_TOKEN }}
-  #
-  #      - name: Release
-  #        uses: goreleaser/goreleaser-action@v4
-  #        with:
-  #          distribution: goreleaser
-  #          version: latest
-  #          args: release -f goreleaser_files/.goreleaser-docker-build-executor-gradle.yml
-  #        env:
-  #          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-  ##          TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+    single_executor:
+      strategy:
+        matrix:
+          executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template ]
+
+
+      runs-on: ubuntu-latest
+      steps:
+
+        -
+          name: Checkout
+          uses: actions/checkout@v2
+
+        -
+          name: Set up QEMU
+          uses: docker/setup-qemu-action@v1
+
+        -
+          name: Set up Docker Buildx
+          uses: docker/setup-buildx-action@v1
+
+        -
+          name: Go Cache
+          uses: actions/cache@v2
+          with:
+            path: |
+              ~/go/pkg/mod
+              ~/.cache/go-build
+            key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+            restore-keys: |
+              ${{ runner.os }}-go-
+
+        -
+          name: Docker Cache
+          uses: actions/cache@v2
+          with:
+            path: /tmp/.buildx-cache
+            key: ${{ runner.os }}-buildx-${{ github.sha }}
+            restore-keys: |
+              ${{ runner.os }}-buildx-
+
+        -
+          name: Login to DockerHub
+          uses: docker/login-action@v1
+          with:
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+        - name: Release
+          uses: goreleaser/goreleaser-action@v4
+          with:
+            distribution: goreleaser
+            version: latest
+            args: release -f goreleaser_files/.goreleaser-docker-build-executor.yml
+          env:
+            GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+            EXECUTOR: ${{ matrix.executor }}
+
+    executor_jmeter:
+      runs-on: ubuntu-latest
+      steps:
+
+        -
+          name: Checkout
+          uses: actions/checkout@v2
+
+        -
+          name: Set up QEMU
+          uses: docker/setup-qemu-action@v1
+
+        -
+          name: Set up Docker Buildx
+          uses: docker/setup-buildx-action@v1
+
+        -
+          name: Go Cache
+          uses: actions/cache@v2
+          with:
+            path: |
+              ~/go/pkg/mod
+              ~/.cache/go-build
+            key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+            restore-keys: |
+              ${{ runner.os }}-go-
+
+        -
+          name: Docker Cache
+          uses: actions/cache@v2
+          with:
+            path: /tmp/.buildx-cache
+            key: ${{ runner.os }}-buildx-${{ github.sha }}
+            restore-keys: |
+              ${{ runner.os }}-buildx-
+
+        -
+          name: Login to DockerHub
+          uses: docker/login-action@v1
+          with:
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+        - name: Release
+          uses: goreleaser/goreleaser-action@v4
+          with:
+            distribution: goreleaser
+            version: latest
+            args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeter.yml
+          env:
+            GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+
+    executor_maven:
+      runs-on: ubuntu-latest
+      steps:
+
+        -
+          name: Checkout
+          uses: actions/checkout@v2
+
+        -
+          name: Set up QEMU
+          uses: docker/setup-qemu-action@v1
+
+        -
+          name: Set up Docker Buildx
+          uses: docker/setup-buildx-action@v1
+
+        -
+          name: Go Cache
+          uses: actions/cache@v2
+          with:
+            path: |
+              ~/go/pkg/mod
+              ~/.cache/go-build
+            key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+            restore-keys: |
+              ${{ runner.os }}-go-
+
+        -
+          name: Docker Cache
+          uses: actions/cache@v2
+          with:
+            path: /tmp/.buildx-cache
+            key: ${{ runner.os }}-buildx-${{ github.sha }}
+            restore-keys: |
+              ${{ runner.os }}-buildx-
+
+        -
+          name: Login to DockerHub
+          uses: docker/login-action@v1
+          with:
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+        - name: Release
+          uses: goreleaser/goreleaser-action@v4
+          with:
+            distribution: goreleaser
+            version: latest
+            args: release -f goreleaser_files/.goreleaser-docker-build-executor-maven.yml
+          env:
+            GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+
+    executor_gradle:
+      runs-on: ubuntu-latest
+      steps:
+
+        -
+          name: Checkout
+          uses: actions/checkout@v2
+
+        -
+          name: Set up QEMU
+          uses: docker/setup-qemu-action@v1
+
+        -
+          name: Set up Docker Buildx
+          uses: docker/setup-buildx-action@v1
+
+        -
+          name: Go Cache
+          uses: actions/cache@v2
+          with:
+            path: |
+              ~/go/pkg/mod
+              ~/.cache/go-build
+            key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+            restore-keys: |
+              ${{ runner.os }}-go-
+
+        -
+          name: Docker Cache
+          uses: actions/cache@v2
+          with:
+            path: /tmp/.buildx-cache
+            key: ${{ runner.os }}-buildx-${{ github.sha }}
+            restore-keys: |
+              ${{ runner.os }}-buildx-
+
+        -
+          name: Login to DockerHub
+          uses: docker/login-action@v1
+          with:
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+        - name: Release
+          uses: goreleaser/goreleaser-action@v4
+          with:
+            distribution: goreleaser
+            version: latest
+            args: release -f goreleaser_files/.goreleaser-docker-build-executor-gradle.yml
+          env:
+            GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
 
   executor_cypress:
     strategy:
       matrix:
         version: [ cypress8, cypress9, cypress10, cypress11, yarn, npm ]
-    #legacy, yarn
+
     runs-on: ubuntu-latest
     steps:
 
@@ -287,9 +285,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           EXECUTOR_VERSION: ${{ matrix.version }}
-      #          TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
-      - name: Create Docker manifest and push multi-arch image to Registry
+      - name: Push multi-arch image to the Registry
         run: |
           docker push kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64
           docker push kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8
@@ -300,6 +297,7 @@ jobs:
     strategy:
       matrix:
         version: [ cypress8, cypress9, cypress10, cypress11, yarn, npm ]
+
     runs-on: ubuntu-latest
     steps:
     - name: Set up QEMU
@@ -308,11 +306,16 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
 
+   -  name: Login to DockerHub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
     - name: Get tag
       id: tag
       uses: dawidd6/action-get-tag@v1
       with:
-        # Optionally strip `v` prefix
         strip_v: true
 
     - name: Use tag
@@ -323,81 +326,74 @@ jobs:
         docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8
         docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}
 
+        docker manifest create kubeshop/testkube-cypress-executor:${{ matrix.version }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8
+        docker manifest push -p kubeshop/testkube-cypress-executor:${{ matrix.version }}
+
         docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-arm64v8
         docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}
 
         docker manifest create kubeshop/testkube-cypress-executor:latest --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-arm64v8
         docker manifest push -p kubeshop/testkube-cypress-executor:latest
 
-#
-#          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress9 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress9-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress9-arm64v8
-#          docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress9
-#
-#          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress10 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress10-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress10-arm64v8
-#          docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress10
-#
-#          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-arm64v8
-#          docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11
-#
-#          docker manifest create kubeshop/testkube-cypress-executor:latest --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-arm64v8
-#          docker manifest push -p kubeshop/testkube-cypress-executor:latest
-#
+        docker manifest create kubeshop/testkube-cypress-executor:legacy --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-npm-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-npm-arm64v8
+        docker manifest push -p kubeshop/testkube-cypress-executor:legacy
 
-#  executor_playwright:
-##    strategy:
-##      matrix:
-##        version: [default, npm, pnpm, yarn]
-##
-#    runs-on: ubuntu-latest
-#    steps:
-#
-#      -
-#        name: Checkout
-#        uses: actions/checkout@v2
-#
-#      -
-#        name: Set up QEMU
-#        uses: docker/setup-qemu-action@v1
-#
-#      -
-#        name: Set up Docker Buildx
-#        uses: docker/setup-buildx-action@v1
-#
-#      -
-#        name: Go Cache
-#        uses: actions/cache@v2
-#        with:
-#          path: |
-#            ~/go/pkg/mod
-#            ~/.cache/go-build
-#          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
-#
-#      -
-#        name: Docker Cache
-#        uses: actions/cache@v2
-#        with:
-#          path: /tmp/.buildx-cache
-#          key: ${{ runner.os }}-buildx-${{ github.sha }}
-#          restore-keys: |
-#            ${{ runner.os }}-buildx-
-#
-#      -
-#        name: Login to DockerHub
-#        uses: docker/login-action@v1
-#        with:
-#          username: ${{ secrets.DOCKERHUB_USERNAME }}
-#          password: ${{ secrets.DOCKERHUB_TOKEN }}
-#
-#      - name: Release
-#        uses: goreleaser/goreleaser-action@v4
-#        with:
-#          distribution: goreleaser
-#          version: latest
-#          args: release -f goreleaser_files/.goreleaser-docker-build-executor-playwright.yml
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+
+  executor_playwright:
+#    strategy:
+#      matrix:
+#        version: [npm, pnpm, yarn]
+
+    runs-on: ubuntu-latest
+    steps:
+
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      -
+        name: Go Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      -
+        name: Docker Cache
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      -
+        name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Release
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-playwright.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
 #
 #
 ##
