@@ -52,7 +52,6 @@ const (
 	// GitTokenEnvVarName is git token environment var name
 	GitTokenEnvVarName = "RUNNER_GITTOKEN"
 
-	pollTimeout  = 2 * time.Hour
 	pollInterval = 200 * time.Millisecond
 	volumeDir    = "/data"
 	// pollJobStatus is interval for checking if job timeout occurred
@@ -74,6 +73,7 @@ func NewJobExecutor(
 	testsClient testsv3.Interface,
 	clientset kubernetes.Interface,
 	registry string,
+	pollTimeout time.Duration,
 ) (client *JobExecutor, err error) {
 	return &JobExecutor{
 		ClientSet:          clientset,
@@ -88,6 +88,7 @@ func NewJobExecutor(
 		configMap:          configMap,
 		testsClient:        testsClient,
 		registry:           registry,
+		pollTimeout:        pollTimeout,
 	}, nil
 }
 
@@ -110,6 +111,7 @@ type JobExecutor struct {
 	configMap          config.Repository
 	testsClient        testsv3.Interface
 	registry           string
+	pollTimeout        time.Duration
 }
 
 type JobOptions struct {
@@ -315,7 +317,7 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 
 	// wait for complete
 	l.Debug("poll immediate waiting for pod to succeed")
-	if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
+	if err = wait.PollImmediate(pollInterval, c.pollTimeout, executor.IsPodReady(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
 		// continue on poll err and try to get logs later
 		l.Errorw("waiting for pod complete error", "error", err)
 		execution.ExecutionResult.Err(err)
@@ -520,7 +522,7 @@ func (c *JobExecutor) TailJobLogs(ctx context.Context, id string, logs chan []by
 
 			default:
 				l.Debugw("tailing job logs: waiting for pod to be ready")
-				if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodLoggable(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
+				if err = wait.PollImmediate(pollInterval, c.pollTimeout, executor.IsPodLoggable(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
 					l.Errorw("poll immediate error when tailing logs", "error", err)
 					return c.GetLastLogLineError(ctx, pod)
 				}

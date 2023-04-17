@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -17,7 +18,8 @@ import (
 
 // TailJobLogs - locates logs for job pod(s)
 // These methods here are similar to Job executor, but they don't require the json structure.
-func TailJobLogs(ctx context.Context, log *zap.SugaredLogger, c kubernetes.Interface, namespace string, id string, logs chan []byte) (err error) {
+func TailJobLogs(ctx context.Context, log *zap.SugaredLogger, c kubernetes.Interface, namespace string, id string,
+	pollTimeout time.Duration, logs chan []byte) (err error) {
 	podsClient := c.CoreV1().Pods(namespace)
 
 	pods, err := executor.GetJobPods(ctx, podsClient, id, 1, 10)
