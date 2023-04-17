@@ -38,8 +38,12 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 
 	renderer.RenderVariables(execution.Variables)
 
+	if len(execution.Command) > 0 {
+		ui.Warn("Command:          ", execution.Command...)
+	}
+
 	if len(execution.Args) > 0 {
-		ui.Warn("Args:    ", execution.Args...)
+		ui.Warn("(deprecated) Args:", execution.Args...)
 	}
 
 	if execution.Content != nil && execution.Content.Repository != nil {

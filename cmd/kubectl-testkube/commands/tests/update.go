@@ -114,7 +114,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
 	cmd.Flags().StringVarP(&image, "image", "i", "", "image for container executor")
 	cmd.Flags().StringArrayVar(&imagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in container executor")
-	cmd.Flags().StringArrayVarP(&command, "command", "", []string{}, "command passed to image in container executor")
+	cmd.Flags().StringArrayVarP(&command, "command", "", []string{}, "command passed to image in executor")
 	cmd.Flags().Int64Var(&timeout, "timeout", 0, "duration in seconds for test to timeout. 0 disables timeout.")
 	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
 	cmd.Flags().StringVarP(&gitCertificateSecret, "git-certificate-secret", "", "", "if git repository is private we can use certificate as an auth parameter stored in a kubernetes secret name")
@@ -132,6 +132,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 	cmd.Flags().StringArrayVar(&variableSecrets, "variable-secret", []string{}, "secret name used to map all keys to secret variables")
 	cmd.Flags().MarkDeprecated("env", "env is deprecated use variable instead")
 	cmd.Flags().MarkDeprecated("secret-env", "secret-env is deprecated use secret-variable instead")
+	cmd.Flags().MarkDeprecated("executor-args", "executor args is deprecated use command instead")
 
 	return cmd
 }

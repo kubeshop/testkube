@@ -3570,9 +3570,15 @@ components:
           example:
             record: "true"
             prefix: "some-"
+        command:
+          type: array
+          description: "executor image command"
+          example: ["--concurrency", "2", "--remote", "--some", "blabla"]
+          items:
+            type: string            
         args:
           type: array
-          description: "additional arguments/flags passed to executor binary"
+          description: "additional arguments/flags passed to executor binary. Deprecated: use command instead"
           example: ["--concurrency", "2", "--remote", "--some", "blabla"]
           items:
             type: string
@@ -4021,14 +4027,15 @@ components:
           example: "7934600f-b367-48dd-b981-4353304362fb"
         command:
           type: array
-          description: "container executor image command"
+          description: "executor image command"
           items:
             type: string
           example:
             - "curl"
         args:
+          deprecated: true
           type: array
-          description: "additional executor binary arguments"
+          description: "additional executor binary arguments. Deprecated: use command instead"
           items:
             type: string
           example:
@@ -4295,14 +4302,15 @@ components:
             $ref: "#/components/schemas/LocalObjectReference"
         command:
           type: array
-          description: "container executor image command"
+          description: "executor image command"
           items:
             type: string
           example:
             - "curl"
         args:
+          deprecated: true  
           type: array
-          description: "additional executor binary arguments"
+          description: "additional executor binary arguments. Deprecated: use command instead"
           items:
             type: string
           example:

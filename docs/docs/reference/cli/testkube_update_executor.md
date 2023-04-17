@@ -13,8 +13,8 @@ testkube update executor [flags]
 ### Options
 
 ```
-      --args stringArray                 args passed to image in container executor
-      --command stringArray              command passed to image in container executor
+      --args stringArray                 args passed to image in executor
+      --command stringArray              command passed to image in executor
       --content-type stringArray         list of supported content types for executor
       --docs-uri string                  URI to executor docs
       --executor-type string             executor type, container or job (defaults to job) (default "job")

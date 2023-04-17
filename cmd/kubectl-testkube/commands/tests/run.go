@@ -56,6 +56,7 @@ func NewRunTestCmd() *cobra.Command {
 		uploadTimeout            string
 		format                   string
 		masks                    []string
+		command                  []string
 	)
 
 	cmd := &cobra.Command{
@@ -107,12 +108,16 @@ func NewRunTestCmd() *cobra.Command {
 				scraperTemplateContent = string(b)
 			}
 
+			commandParams, err := testkube.PrepareExecutorArgs(command)
+			ui.ExitOnError("getting command", err)
+
 			var executions []testkube.Execution
 			client, namespace := common.GetClient(cmd)
 			options := apiv1.ExecuteTestOptions{
 				ExecutionVariables:            variables,
 				ExecutionVariablesFileContent: paramsFileContent,
 				ExecutionLabels:               executionLabels,
+				Command:                       commandParams,
 				Args:                          executorArgs,
 				SecretEnvs:                    secretEnvs,
 				HTTPProxy:                     httpProxy,
@@ -275,6 +280,8 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&uploadTimeout, "upload-timeout", "", "timeout to use when uploading files, example: 30s")
 	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")
 	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
+	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in executor")
+	cmd.Flags().MarkDeprecated("args", "executor args is deprecated use command instead")
 
 	return cmd
 }

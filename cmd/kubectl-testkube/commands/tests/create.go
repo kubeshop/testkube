@@ -190,7 +190,7 @@ func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
 	cmd.Flags().StringArrayVarP(&flags.CopyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
 	cmd.Flags().StringVar(&flags.Image, "image", "", "image for container executor")
 	cmd.Flags().StringArrayVar(&flags.ImagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in container executor")
-	cmd.Flags().StringArrayVar(&flags.Command, "command", []string{}, "command passed to image in container executor")
+	cmd.Flags().StringArrayVar(&flags.Command, "command", []string{}, "command passed to image in executor")
 	cmd.Flags().Int64Var(&flags.Timeout, "timeout", 0, "duration in seconds for test to timeout. 0 disables timeout.")
 	cmd.Flags().StringVar(&flags.ArtifactStorageClassName, "artifact-storage-class-name", "", "artifact storage class name for container executor")
 	cmd.Flags().StringVar(&flags.ArtifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
@@ -204,6 +204,7 @@ func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
 	cmd.Flags().StringToStringVarP(&flags.MountSecrets, "mount-secret", "", map[string]string{}, "secret value pair for mounting it to executor pod: --mount-secret secret_name=secret_mountpath")
 	cmd.Flags().StringArrayVar(&flags.VariableSecrets, "variable-secret", []string{}, "secret name used to map all keys to secret variables")
 	cmd.Flags().StringVar(&flags.UploadTimeout, "upload-timeout", "", "timeout to use when uploading files, example: 30s")
+	cmd.Flags().MarkDeprecated("executor-args", "executor args is deprecated use command instead")
 }
 
 func validateExecutorTypeAndContent(executorType, contentType string, executors testkube.ExecutorsDetails) error {

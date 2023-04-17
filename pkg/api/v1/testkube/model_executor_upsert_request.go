@@ -21,9 +21,10 @@ type ExecutorUpsertRequest struct {
 	Image string `json:"image,omitempty"`
 	// container image pull secrets
 	ImagePullSecrets []LocalObjectReference `json:"imagePullSecrets,omitempty"`
-	// container executor image command
+	// executor image command
 	Command []string `json:"command,omitempty"`
-	// additional executor binary arguments
+	// additional executor binary arguments.
+	// Deprecated: use command instead
 	Args []string `json:"args,omitempty"`
 	// Types defines what types can be handled by executor e.g. \"postman/collection\", \":curl/command\" etc
 	Types []string `json:"types"`

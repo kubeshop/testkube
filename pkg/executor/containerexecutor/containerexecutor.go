@@ -515,7 +515,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		len(options.TestSpec.ExecutionRequest.Args) != 0:
 		args = options.TestSpec.ExecutionRequest.Args
 
-	case len(options.ExecutorSpec.Command) != 0:
+	case len(options.ExecutorSpec.Args) != 0:
 		args = options.ExecutorSpec.Args
 	}
 

@@ -365,6 +365,11 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		return nil, err
 	}
 
+	commandParams, err := testkube.PrepareExecutorArgs(command)
+	if err != nil {
+		return nil, err
+	}
+
 	timeout, err := cmd.Flags().GetInt64("timeout")
 	if err != nil {
 		return nil, err
@@ -428,7 +433,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		VariablesFile:         paramsFileContent,
 		Variables:             variables,
 		Image:                 image,
-		Command:               command,
+		Command:               commandParams,
 		Args:                  executorArgs,
 		ImagePullSecrets:      imageSecrets,
 		Envs:                  envs,
@@ -843,7 +848,12 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 			return nil, err
 		}
 
-		request.Command = &command
+		commandParams, err := testkube.PrepareExecutorArgs(command)
+		if err != nil {
+			return nil, err
+		}
+
+		request.Command = &commandParams
 		nonEmpty = true
 	}
 

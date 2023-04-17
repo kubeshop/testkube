@@ -32,7 +32,10 @@ type Execution struct {
 	// Environment variables passed to executor.
 	// Deprecated: use Basic Variables instead
 	Envs map[string]string `json:"envs,omitempty"`
-	// additional arguments/flags passed to executor binary
+	// executor image command
+	Command []string `json:"command,omitempty"`
+	// additional arguments/flags passed to executor binary.
+	// Deprecated: use command instead
 	Args      []string            `json:"args,omitempty"`
 	Variables map[string]Variable `json:"variables,omitempty"`
 	// variables file content - need to be in format for particular executor (e.g. postman envs file)

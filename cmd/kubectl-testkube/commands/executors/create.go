@@ -68,8 +68,8 @@ func NewCreateExecutorCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&uri, "uri", "u", "", "if resource need to be loaded from URI")
 	cmd.Flags().StringVar(&image, "image", "", "image used for executor")
 	cmd.Flags().StringArrayVar(&imagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in executor")
-	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in container executor")
-	cmd.Flags().StringArrayVar(&executorArgs, "args", []string{}, "args passed to image in container executor")
+	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in executor")
+	cmd.Flags().StringArrayVar(&executorArgs, "args", []string{}, "args passed to image in executor")
 	cmd.Flags().StringVarP(&jobTemplate, "job-template", "j", "", "if executor needs to be launched using custom job specification, then a path to template file should be provided")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringArrayVar(&features, "feature", []string{}, "feature provided by executor")
@@ -77,6 +77,7 @@ func NewCreateExecutorCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&docsURI, "docs-uri", "", "", "URI to executor docs")
 	cmd.Flags().StringArrayVar(&contentTypes, "content-type", []string{}, "list of supported content types for executor")
 	cmd.Flags().StringToStringVarP(&tooltips, "tooltip", "", nil, "tooltip key value pair: --tooltip key1=value1")
+	cmd.Flags().MarkDeprecated("args", "args is deprecated use command instead")
 
 	return cmd
 }

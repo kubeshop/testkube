@@ -47,6 +47,13 @@ func (s *TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: test request body invalid: %w", errPrefix, err))
 		}
 
+		if request.Command != nil {
+			request.Command, err = testkube.PrepareExecutorArgs(request.Command)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not prepare executor command: %w", errPrefix, err))
+			}
+		}
+
 		if request.Args != nil {
 			request.Args, err = testkube.PrepareExecutorArgs(request.Args)
 			if err != nil {
