@@ -266,7 +266,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		// Test variables lowest priority, then test suite, then test suite execution / test execution
 		request.Variables = mergeVariables(test.ExecutionRequest.Variables, request.Variables)
 		// Combine test executor args with execution args
-		request.Command = append(request.Command, test.ExecutionRequest.Command...)		
+		request.Command = append(request.Command, test.ExecutionRequest.Command...)
 		request.Args = append(request.Args, test.ExecutionRequest.Args...)
 		request.Envs = mergeEnvs(request.Envs, test.ExecutionRequest.Envs)
 		request.SecretEnvs = mergeEnvs(request.SecretEnvs, test.ExecutionRequest.SecretEnvs)
