@@ -3575,7 +3575,13 @@ components:
           description: "executor image command"
           example: ["--concurrency", "2", "--remote", "--some", "blabla"]
           items:
-            type: string            
+            type: string
+        command_mode:
+          type: string
+          description: usage mode for command parameters
+          enum:
+            - append
+            - override
         args:
           type: array
           description: "additional arguments/flags passed to executor binary. Deprecated: use command instead"
@@ -4032,6 +4038,12 @@ components:
             type: string
           example:
             - "curl"
+        command_mode:
+          type: string
+          description: usage mode for command parameters
+          enum:
+            - append
+            - override
         args:
           deprecated: true
           type: array

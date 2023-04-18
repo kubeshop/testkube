@@ -34,6 +34,8 @@ type Execution struct {
 	Envs map[string]string `json:"envs,omitempty"`
 	// executor image command
 	Command []string `json:"command,omitempty"`
+	// usage mode for command parameters
+	CommandMode string `json:"command_mode,omitempty"`
 	// additional arguments/flags passed to executor binary.
 	// Deprecated: use command instead
 	Args      []string            `json:"args,omitempty"`
