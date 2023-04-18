@@ -33,8 +33,6 @@ const (
 	GitUsernameSecretName = "git-username"
 	// GitTokenSecretName is git token secret name
 	GitTokenSecretName = "git-token"
-	pollTimeout        = 24 * time.Hour
-	pollInterval       = 200 * time.Millisecond
 )
 
 var RunnerEnvVars = []corev1.EnvVar{
