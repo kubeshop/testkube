@@ -19,7 +19,7 @@ import (
 // TailJobLogs - locates logs for job pod(s)
 // These methods here are similar to Job executor, but they don't require the json structure.
 func TailJobLogs(ctx context.Context, log *zap.SugaredLogger, c kubernetes.Interface, namespace string, id string,
-	pollTimeout time.Duration, logs chan []byte) (err error) {
+	podStartTimeout time.Duration, logs chan []byte) (err error) {
 	podsClient := c.CoreV1().Pods(namespace)
 
 	pods, err := executor.GetJobPods(ctx, podsClient, id, 1, 10)
@@ -46,7 +46,10 @@ func TailJobLogs(ctx context.Context, log *zap.SugaredLogger, c kubernetes.Inter
 
 			default:
 				l.Debugw("tailing job logs: waiting for pod to be ready")
-				if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c, pod.Name, namespace)); err != nil {
+				if err = wait.PollImmediate(pollInterval, podStartTimeout, executor.IsPodLoggable(ctx, c, pod.Name, namespace)); err != nil {
+					l.Errorw("poll immediate error when tailing logs", "error", err)
+					return err
+				} else if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c, pod.Name, namespace)); err != nil {
 					l.Errorw("poll immediate error when tailing logs", "error", err)
 					return err
 				}

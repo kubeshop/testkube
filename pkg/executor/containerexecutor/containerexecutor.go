@@ -33,6 +33,7 @@ import (
 )
 
 const (
+	pollTimeout             = 24 * time.Hour
 	pollInterval            = 200 * time.Millisecond
 	jobDefaultDelaySeconds  = 180
 	jobArtifactDelaySeconds = 90
@@ -58,7 +59,7 @@ func NewContainerExecutor(
 	executorsClient executorsclientv1.Interface,
 	testsClient testsv3.Interface,
 	registry string,
-	pollTimeout time.Duration,
+	podStartTimeout time.Duration,
 ) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -79,7 +80,7 @@ func NewContainerExecutor(
 		testsClient:        testsClient,
 		executorsClient:    executorsClient,
 		registry:           registry,
-		pollTimeout:        pollTimeout,
+		podStartTimeout:    podStartTimeout,
 	}, nil
 }
 
@@ -102,7 +103,7 @@ type ContainerExecutor struct {
 	testsClient        testsv3.Interface
 	executorsClient    executorsclientv1.Interface
 	registry           string
-	pollTimeout        time.Duration
+	podStartTimeout    time.Duration
 }
 
 type JobOptions struct {
@@ -179,7 +180,7 @@ func (c *ContainerExecutor) Logs(ctx context.Context, id string) (out chan outpu
 		for _, podName := range ids {
 			logs := make(chan []byte)
 
-			if err := TailJobLogs(ctx, c.log, c.clientSet, c.namespace, podName, c.pollTimeout, logs); err != nil {
+			if err := TailJobLogs(ctx, c.log, c.clientSet, c.namespace, podName, c.podStartTimeout, logs); err != nil {
 				out <- output.NewOutputError(err)
 				return
 			}
@@ -315,11 +316,15 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	// save stop time and final state
 	defer c.stopExecution(ctx, execution, execution.ExecutionResult)
 
-	// wait for complete
-	l.Debug("poll immediate waiting for executor pod to succeed")
-	if err = wait.PollImmediate(pollInterval, c.pollTimeout, executor.IsPodReady(ctx, c.clientSet, executorPod.Name, c.namespace)); err != nil {
+	// wait for pod
+	l.Debug("poll immediate waiting for executor pod")
+	if err = wait.PollImmediate(pollInterval, c.podStartTimeout, executor.IsPodLoggable(ctx, c.clientSet, executorPod.Name, c.namespace)); err != nil {
+		l.Errorw("waiting for executor pod started error", "error", err)
+	} else if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.clientSet, executorPod.Name, c.namespace)); err != nil {
 		// continue on poll err and try to get logs later
 		l.Errorw("waiting for executor pod complete error", "error", err)
+	}
+	if err != nil {
 		execution.ExecutionResult.Err(err)
 	}
 	l.Debug("poll executor immediate end")
@@ -355,7 +360,9 @@ func (c *ContainerExecutor) updateResultsFromPod(
 		for _, scraperPod := range scraperPods.Items {
 			if scraperPod.Status.Phase != corev1.PodRunning && scraperPod.Labels["job-name"] == scraperPodName {
 				l.Debug("poll immediate waiting for scraper pod to succeed")
-				if err = wait.PollImmediate(pollInterval, c.pollTimeout, executor.IsPodReady(ctx, c.clientSet, scraperPod.Name, c.namespace)); err != nil {
+				if err = wait.PollImmediate(pollInterval, c.podStartTimeout, executor.IsPodLoggable(ctx, c.clientSet, scraperPod.Name, c.namespace)); err != nil {
+					l.Errorw("waiting for scraper pod started error", "error", err)
+				} else if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.clientSet, scraperPod.Name, c.namespace)); err != nil {
 					// continue on poll err and try to get logs later
 					l.Errorw("waiting for scraper pod complete error", "error", err)
 				}

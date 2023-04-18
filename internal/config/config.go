@@ -57,7 +57,7 @@ type Config struct {
 	TestkubeWatcherNamespaces         string        `envconfig:"TESTKUBE_WATCHER_NAMESPACES" default:""`
 	GraphqlPort                       string        `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
 	TestkubeRegistry                  string        `envconfig:"TESTKUBE_REGISTRY" default:""`
-	TestkubeTestResultTimeout         time.Duration `envconfig:"TESTKUBE_TEST_RESULT_TIMEOUT" default:"2h"`
+	TestkubePodStartTimeout           time.Duration `envconfig:"TESTKUBE_POD_START_TIMEOUT" default:"30m"`
 }
 
 func Get() (*Config, error) {
