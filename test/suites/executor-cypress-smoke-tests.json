@@ -18,6 +18,7 @@
 		{"execute": {"name": "cypress-default-executor-smoke-electron-git-dir"}},
 		{"execute": {"name": "cypress-default-executor-smoke-electron-testsource"}},
 		{"execute": {"name": "cypress-default-executor-smoke-electron-testsource-git-dir"}},
-		{"execute": {"name": "cypress-default-executor-smoke-yarn"}}
+		{"execute": {"name": "cypress-default-executor-smoke-yarn"}},
+		{"execute": {"name": "cypress-default-executor-smoke-video-recording-enabled"}}
 	]
 }

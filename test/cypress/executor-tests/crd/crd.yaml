@@ -23,6 +23,8 @@ spec:
     args:
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - video=false
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -51,6 +53,8 @@ spec:
       - chrome
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - video=false
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -79,6 +83,8 @@ spec:
       - chrome
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - video=false
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -105,6 +111,36 @@ spec:
     args:
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - video=false
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-default-executor-smoke-video-recording-enabled
+  namespace: testkube
+  labels:
+    core-tests: executors
+spec:
+  type: cypress/project
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: test/cypress/executor-tests/cypress-12
+  executionRequest:
+    variables:
+      CYPRESS_CUSTOM_ENV:
+        name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+        type: basic
+    args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - video=true
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -135,6 +171,8 @@ spec:
     args:
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - video=false
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -161,6 +199,8 @@ spec:
     args:
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - video=false
 ---
 # cypress-default-executor-smoke-electron-testsource TestSource
 apiVersion: tests.testkube.io/v1
@@ -197,6 +237,8 @@ spec:
     args:
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - video=false
 ---
 # cypress-default-executor-smoke-electron-testsource-git-dir - TestSource
 apiVersion: tests.testkube.io/v1
@@ -233,6 +275,8 @@ spec:
     args:
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - video=false
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -259,6 +303,8 @@ spec:
     args:
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - video=false
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -287,7 +333,8 @@ spec:
       - chrome
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
-
+      - --config
+      - video=false
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -316,6 +363,8 @@ spec:
       - firefox
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - video=false
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -354,6 +403,8 @@ spec:
     args:
       - --browser
       - chrome
+      - --config
+      - video=false
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -375,6 +426,8 @@ spec:
     args:
       - --browser
       - firefox
+      - --config
+      - video=false
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -392,6 +445,10 @@ spec:
       uri: https://github.com/kubeshop/testkube
       branch: main
       path: test/cypress/executor-tests/cypress-8
+  executionRequest:
+    args:
+      - --config
+      - video=false
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -413,6 +470,8 @@ spec:
     args:
       - --browser
       - chrome
+      - --config
+      - video=false
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -434,6 +493,8 @@ spec:
     args:
       - --browser
       - firefox
+      - --config
+      - video=false
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
