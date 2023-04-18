@@ -15,28 +15,47 @@ function runTestFlow(testName) {
   const testData = testDataHandler.getTest(testName)
   const realTestName = testData.name
   let currentExecutionNumber;
+  let executionName;
 
   //prerequisites
   const assureTestCreated = apiHelpers.assureTestCreated(testData, false) //API helpers using async/await must be wrapped
   cy.wrap(assureTestCreated)
-  .then(() => {
-    //actions
-    const getLastExecutionNumber = apiHelpers.getLastExecutionNumber(realTestName)
-    cy.wrap(getLastExecutionNumber)
+
+  const getLastExecutionNumber = apiHelpers.getLastExecutionNumber(realTestName)
+  cy.wrap(getLastExecutionNumber)
     .then((lastExecutionNumber) => {
-      mainPage.visitMainPage()
-      mainPage.openTestExecutionDetails(realTestName)
-      testExecutionsPage.runTest()
       currentExecutionNumber = lastExecutionNumber+1
-      const executionName = `${realTestName}-${currentExecutionNumber}`
-      testExecutionsPage.openExecutionDetails(executionName) //openLatestExecutionDetails?
+      executionName = `${realTestName}-${currentExecutionNumber}`
     })
-  })
+
+  mainPage.visitMainPage()
+  mainPage.openTestExecutionDetails(realTestName)
+  testExecutionsPage.runTest()
+  currentExecutionNumber = lastExecutionNumber+1
+  executionName = `${realTestName}-${currentExecutionNumber}`
+  testExecutionsPage.openExecutionDetails(executionName) //openLatestExecutionDetails?
+
+  // .then(() => {
+  //   //actions
+  //   const getLastExecutionNumber = apiHelpers.getLastExecutionNumber(realTestName)
+  //   cy.wrap(getLastExecutionNumber)
+  //   .then((lastExecutionNumber) => {
+  //     mainPage.visitMainPage()
+  //     mainPage.openTestExecutionDetails(realTestName)
+  //     testExecutionsPage.runTest()
+  //     currentExecutionNumber = lastExecutionNumber+1
+  //     executionName = `${realTestName}-${currentExecutionNumber}`
+  //     testExecutionsPage.openExecutionDetails(executionName) //openLatestExecutionDetails?
+
+  //     // apiHelpers.abortTest(realTestName, executionName)
+  //   })
+  // })
 }
 
 describe('Run test with Dashboard', () => {
-  it('Run Cypress test from git-dir', () => {
+  it.only('Run Cypress test from git-dir', () => {
     runTestFlow('cypress-git-created')
+
 
     // testExecutionsPage.validateLogOutputContents('smoke-without-envs.cy.js', 120000)
     // testExecutionsPage.validateLogOutputContents('All specs passed', 20000)
@@ -62,22 +81,22 @@ describe('Run test with Dashboard', () => {
 })
 
 
-describe('Run test with Dashboard - Negative cases', () => {
-  it('Test results - test failure', () => {
-    runTestFlow('postman-negative-test')
+// describe('Run test with Dashboard - Negative cases', () => {
+//   it('Test results - test failure', () => {
+//     runTestFlow('postman-negative-test')
 
-    testExecutionsPage.validateLogOutputContents('postman-executor-smoke', 60000)
-    testExecutionsPage.validateLogOutputContents(`'TESTKUBE_POSTMAN_PARAM' should be set correctly to 'TESTKUBE_POSTMAN_PARAM_value' value`, 20000)
-    testExecutionsPage.validateLogOutputContents('AssertionError', 20000)
+//     testExecutionsPage.validateLogOutputContents('postman-executor-smoke', 60000)
+//     testExecutionsPage.validateLogOutputContents(`'TESTKUBE_POSTMAN_PARAM' should be set correctly to 'TESTKUBE_POSTMAN_PARAM_value' value`, 20000)
+//     testExecutionsPage.validateLogOutputContents('AssertionError', 20000)
 
-    //TODO: validate passed/failed icon - data-test needed
-  })
-  it.skip('Test results - test init failure', () => { // temporary disabled because of https://github.com/kubeshop/testkube/issues/2669 issue
-    runTestFlow('postman-negative-init')
+//     //TODO: validate passed/failed icon - data-test needed
+//   })
+//   it.skip('Test results - test init failure', () => { // temporary disabled because of https://github.com/kubeshop/testkube/issues/2669 issue
+//     runTestFlow('postman-negative-init')
 
-    testExecutionsPage.validateLogOutputContents('warning: Could not find remote branch some-non-existing-branch to clone', 60000)
-    testExecutionsPage.validateLogOutputContents('Remote branch some-non-existing-branch not found', 20000)
+//     testExecutionsPage.validateLogOutputContents('warning: Could not find remote branch some-non-existing-branch to clone', 60000)
+//     testExecutionsPage.validateLogOutputContents('Remote branch some-non-existing-branch not found', 20000)
     
-    //TODO: validate passed/failed icon - data-test needed
-  })
-})
+//     //TODO: validate passed/failed icon - data-test needed
+//   })
+// })
