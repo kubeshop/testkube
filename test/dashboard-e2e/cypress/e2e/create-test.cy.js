@@ -36,14 +36,14 @@ function createTestFlow(testName) {
 
 describe('Create test with Dashboard', () => {
   it('Create Cypress test from git-dir', () => {
-    createTestFlow('cypress-git-dir')
+    createTestFlow('cypress-git')
   })
 
   it('Create K6 test from git-file', () => {
-    createTestFlow('k6-git-file')
+    createTestFlow('k6-git')
   })
 
   it('Create Postman test from git-file', () => {
-    createTestFlow('postman-git-file')
+    createTestFlow('postman-git')
   })
 })

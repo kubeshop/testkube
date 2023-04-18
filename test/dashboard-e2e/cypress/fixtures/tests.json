@@ -1,11 +1,11 @@
 {
-    "cypress-git-dir": {
-        "name": "internal-dashboard-e2e-cypress-git-dir",
+    "cypress-git": {
+        "name": "internal-dashboard-e2e-cypress-git",
         "type": "cypress/project",
         "content": {
-            "type": "git-dir",
+            "type": "git",
             "repository": {
-              "type": "git-dir",
+              "type": "git",
               "uri": "https://github.com/kubeshop/testkube",
               "branch": "main",
               "path": "test/cypress/executor-tests/cypress-without-envs"
@@ -15,13 +15,13 @@
             "core-tests": "dashboard-e2e-internal"
         }
     },
-    "cypress-git-dir-created": {
-        "name": "internal-dashboard-e2e-cypress-git-dir-created",
+    "cypress-git-created": {
+        "name": "internal-dashboard-e2e-cypress-git-created",
         "type": "cypress/project",
         "content": {
-            "type": "git-dir",
+            "type": "git",
             "repository": {
-              "type": "git-dir",
+              "type": "git",
               "uri": "https://github.com/kubeshop/testkube",
               "branch": "main",
               "path": "test/cypress/executor-tests/cypress-without-envs"
@@ -31,13 +31,13 @@
             "core-tests": "dashboard-e2e-internal"
         }
     },
-    "k6-git-file": {
-        "name": "internal-dashboard-e2e-k6-git-file",
+    "k6-git": {
+        "name": "internal-dashboard-e2e-k6-git",
         "type": "k6/script",
         "content": {
-            "type": "git-file",
+            "type": "git",
             "repository": {
-              "type": "git-file",
+              "type": "git",
               "uri": "https://github.com/kubeshop/testkube",
               "branch": "main",
               "path": "test/k6/executor-tests/k6-smoke-test-without-envs.js"
@@ -47,13 +47,13 @@
             "core-tests": "dashboard-e2e-internal"
         }
     },
-    "k6-git-file-created": {
-        "name": "internal-dashboard-e2e-k6-git-file-created",
+    "k6-git-created": {
+        "name": "internal-dashboard-e2e-k6-git-created",
         "type": "k6/script",
         "content": {
-            "type": "git-file",
+            "type": "git",
             "repository": {
-              "type": "git-file",
+              "type": "git",
               "uri": "https://github.com/kubeshop/testkube",
               "branch": "main",
               "path": "test/k6/executor-tests/k6-smoke-test-without-envs.js"
@@ -63,13 +63,13 @@
             "core-tests": "dashboard-e2e-internal"
         }
     },
-    "postman-git-file": {
-        "name": "internal-dashboard-e2e-postman-git-file",
+    "postman-git": {
+        "name": "internal-dashboard-e2e-postman-git",
         "type": "postman/collection",
         "content": {
-            "type": "git-file",
+            "type": "git",
             "repository": {
-              "type": "git-file",
+              "type": "git",
               "uri": "https://github.com/kubeshop/testkube",
               "branch": "main",
               "path": "test/postman/executor-tests/postman-executor-smoke-without-envs.postman_collection.json"
@@ -79,13 +79,13 @@
             "core-tests": "dashboard-e2e-internal"
         }
     },
-    "postman-git-file-created": {
-        "name": "internal-dashboard-e2e-postman-git-file-created",
+    "postman-git-created": {
+        "name": "internal-dashboard-e2e-postman-git-created",
         "type": "postman/collection",
         "content": {
-            "type": "git-file",
+            "type": "git",
             "repository": {
-              "type": "git-file",
+              "type": "git",
               "uri": "https://github.com/kubeshop/testkube",
               "branch": "main",
               "path": "test/postman/executor-tests/postman-executor-smoke-without-envs.postman_collection.json"
@@ -96,12 +96,12 @@
         }
     },
     "postman-negative-test": {
-        "name": "internal-dashboard-e2e-postman-git-file-ran-negative-test",
+        "name": "internal-dashboard-e2e-postman-git-ran-negative-test",
         "type": "postman/collection",
         "content": {
-            "type": "git-file",
+            "type": "git",
             "repository": {
-              "type": "git-file",
+              "type": "git",
               "uri": "https://github.com/kubeshop/testkube",
               "branch": "main",
               "path": "test/postman/executor-tests/postman-executor-smoke.postman_collection.json"
@@ -112,12 +112,12 @@
         }
     },
     "postman-negative-init": {
-        "name": "internal-dashboard-e2e-postman-git-file-ran-negative-init",
+        "name": "internal-dashboard-e2e-postman-git-ran-negative-init",
         "type": "postman/collection",
         "content": {
-            "type": "git-file",
+            "type": "git",
             "repository": {
-              "type": "git-file",
+              "type": "git",
               "uri": "https://github.com/kubeshop/testkube",
               "branch": "some-non-existing-branch",
               "path": "some/incorrect/path/non-existing-file.json"
