@@ -517,28 +517,35 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 	// for args, command and image, HTTP request takes priority, then test spec, then executor
 	var args []string
 	switch {
-	case len(options.Request.Args) != 0:
-		args = options.Request.Args
-
 	case options.TestSpec.ExecutionRequest != nil &&
 		len(options.TestSpec.ExecutionRequest.Args) != 0:
 		args = options.TestSpec.ExecutionRequest.Args
 
-	case len(options.ExecutorSpec.Args) != 0:
-		args = options.ExecutorSpec.Args
+	case len(options.Request.Args) != 0:
+		args = options.Request.Args
+	}
+
+	if options.Request.ArgsMode == string(testkube.ArgsModeTypeAppend) || options.Request.ArgsMode == "" {
+		args = append(options.ExecutorSpec.Args, args...)
+	}
+
+	if options.Request.ArgsMode == string(testkube.ArgsModeTypeOverride) {
+		if len(args) == 0 {
+			args = options.ExecutorSpec.Args
+		}
 	}
 
 	var command []string
 	switch {
-	case len(options.Request.Command) != 0:
-		command = options.Request.Command
+	case len(options.ExecutorSpec.Command) != 0:
+		command = options.ExecutorSpec.Command
 
 	case options.TestSpec.ExecutionRequest != nil &&
 		len(options.TestSpec.ExecutionRequest.Command) != 0:
 		command = options.TestSpec.ExecutionRequest.Command
 
-	case len(options.ExecutorSpec.Command) != 0:
-		command = options.ExecutorSpec.Command
+	case len(options.Request.Command) != 0:
+		command = options.Request.Command
 	}
 
 	var image string
