@@ -3573,21 +3573,21 @@ components:
         command:
           type: array
           description: "executor image command"
+          example: ["curl"]
+          items:
+            type: string
+        args:
+          type: array
+          description: "additional arguments/flags passed to executor binary"
           example: ["--concurrency", "2", "--remote", "--some", "blabla"]
           items:
             type: string
-        command_mode:
+        args_mode:
           type: string
-          description: usage mode for command parameters
+          description: usage mode for arguments
           enum:
             - append
             - override
-        args:
-          type: array
-          description: "additional arguments/flags passed to executor binary. Deprecated: use command instead"
-          example: ["--concurrency", "2", "--remote", "--some", "blabla"]
-          items:
-            type: string
         variables:
           $ref: "#/components/schemas/Variables"
         variablesFile:
@@ -4038,22 +4038,21 @@ components:
             type: string
           example:
             - "curl"
-        command_mode:
-          type: string
-          description: usage mode for command parameters
-          enum:
-            - append
-            - override
         args:
-          deprecated: true
           type: array
-          description: "additional executor binary arguments. Deprecated: use command instead"
+          description: "additional executor binary arguments"
           items:
             type: string
           example:
             - "--repeats"
             - "5"
             - "--insecure"
+        command_mode:
+          type: string
+          description: usage mode for arguments
+          enum:
+            - append
+            - override 
         image:
           type: string
           description: container image, executor will run inside this image
@@ -4320,9 +4319,8 @@ components:
           example:
             - "curl"
         args:
-          deprecated: true  
           type: array
-          description: "additional executor binary arguments. Deprecated: use command instead"
+          description: "additional executor binary argument"
           items:
             type: string
           example:

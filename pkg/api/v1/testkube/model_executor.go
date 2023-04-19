@@ -19,8 +19,7 @@ type Executor struct {
 	ImagePullSecrets []LocalObjectReference `json:"imagePullSecrets,omitempty"`
 	// executor image command
 	Command []string `json:"command,omitempty"`
-	// additional executor binary arguments.
-	// Deprecated: use command instead
+	// additional executor binary argument
 	Args []string `json:"args,omitempty"`
 	// Types defines what types can be handled by executor e.g. \"postman/collection\", \":curl/command\" etc
 	Types []string `json:"types,omitempty"`
