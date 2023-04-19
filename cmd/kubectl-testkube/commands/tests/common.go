@@ -335,6 +335,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		return nil, err
 	}
 
+	argsMode := cmd.Flag("args-mode").Value.String()
 	executionName := cmd.Flag("execution-name").Value.String()
 	envs, err := cmd.Flags().GetStringToString("env")
 	if err != nil {
@@ -365,12 +366,6 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		return nil, err
 	}
 
-	commandParams, err := testkube.PrepareExecutorArgs(command)
-	if err != nil {
-		return nil, err
-	}
-
-	commandMode := cmd.Flag("command-mode").Value.String()
 	timeout, err := cmd.Flags().GetInt64("timeout")
 	if err != nil {
 		return nil, err
@@ -434,9 +429,9 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		VariablesFile:         paramsFileContent,
 		Variables:             variables,
 		Image:                 image,
-		Command:               commandParams,
-		CommandMode:           commandMode,
+		Command:               command,
 		Args:                  executorArgs,
+		ArgsMode:              argsMode,
 		ImagePullSecrets:      imageSecrets,
 		Envs:                  envs,
 		SecretEnvs:            secretEnvs,
@@ -768,8 +763,8 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 			&request.HttpsProxy,
 		},
 		{
-			"command-mode",
-			&request.CommandMode,
+			"args-mode",
+			&request.ArgsMode,
 		},
 	}
 
@@ -854,12 +849,7 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 			return nil, err
 		}
 
-		commandParams, err := testkube.PrepareExecutorArgs(command)
-		if err != nil {
-			return nil, err
-		}
-
-		request.Command = &commandParams
+		request.Command = &command
 		nonEmpty = true
 	}
 

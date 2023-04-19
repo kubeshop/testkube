@@ -4047,7 +4047,7 @@ components:
             - "--repeats"
             - "5"
             - "--insecure"
-        command_mode:
+        args_mode:
           type: string
           description: usage mode for arguments
           enum:

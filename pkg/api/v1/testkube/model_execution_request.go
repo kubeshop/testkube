@@ -33,7 +33,7 @@ type ExecutionRequest struct {
 	// additional executor binary arguments
 	Args []string `json:"args,omitempty"`
 	// usage mode for arguments
-	CommandMode string `json:"command_mode,omitempty"`
+	ArgsMode string `json:"args_mode,omitempty"`
 	// container image, executor will run inside this image
 	Image string `json:"image,omitempty"`
 	// container image pull secrets

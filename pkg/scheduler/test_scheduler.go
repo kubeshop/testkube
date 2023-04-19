@@ -308,8 +308,8 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 				&request.ScraperTemplate,
 			},
 			{
-				test.ExecutionRequest.CommandMode,
-				&request.CommandMode,
+				test.ExecutionRequest.ArgsMode,
+				&request.ArgsMode,
 			},			
 		}
 
@@ -400,13 +400,17 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		request.Variables = mergeVariables(secretVars, request.Variables)
 	}
 
-	if request.CommandMode == testkube.CommandModeAppend {
-		request.Command = append(executorCR.Spec.Command, request.Command...)
+	if len(request.Command) == 0 {
+		request.Command = executorCR.Spec.Command
 	}
 
-	if request.CommandMode == testkube.CommandModeOverride {
-		if len(request.Command) == 0 {
-			request.Command = executorCR.Spec.Command
+	if request.ArgsMode == string(testkube.ArgsModeTypeAppend) || request.ArgsMode == "" {
+		request.Args = append(executorCR.Spec.Args, request.Args...)
+	}
+
+	if request.ArgsMode == string(testkube.ArgsModeTypeOverride) {
+		if len(request.Args) == 0 {
+			request.Args = executorCR.Spec.Args
 		}
 	}
 

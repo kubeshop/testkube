@@ -114,8 +114,8 @@ func TestGetExecuteOptions(t *testing.T) {
 		VariablesFile:    "",
 		Variables:        map[string]testkube.Variable{"var": testkube.Variable{Name: "one"}},
 		Command:          []string{},
-		CommandMode:      "",
 		Args:             []string{},
+		ArgsMode:         "",
 		Image:            "executor-image",
 		ImagePullSecrets: []testkube.LocalObjectReference{},
 		Envs: map[string]string{

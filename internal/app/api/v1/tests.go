@@ -381,13 +381,6 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 		}
 
 		errPrefix = errPrefix + " " + request.Name
-		if request.ExecutionRequest != nil && request.ExecutionRequest.Command != nil {
-			request.ExecutionRequest.Command, err = testkube.PrepareExecutorArgs(request.ExecutionRequest.Command)
-			if err != nil {
-				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not prepare executor command: %w", errPrefix, err))
-			}
-		}
-
 		if request.ExecutionRequest != nil && request.ExecutionRequest.Args != nil {
 			request.ExecutionRequest.Args, err = testkube.PrepareExecutorArgs(request.ExecutionRequest.Args)
 			if err != nil {
@@ -454,13 +447,6 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 			}
 
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get test: %w", errPrefix, err))
-		}
-
-		if request.ExecutionRequest != nil && *request.ExecutionRequest != nil && (*request.ExecutionRequest).Command != nil {
-			*(*request.ExecutionRequest).Command, err = testkube.PrepareExecutorArgs(*(*request.ExecutionRequest).Command)
-			if err != nil {
-				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not prepare executor command: %w", errPrefix, err))
-			}
 		}
 
 		if request.ExecutionRequest != nil && *request.ExecutionRequest != nil && (*request.ExecutionRequest).Args != nil {

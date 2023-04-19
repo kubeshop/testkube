@@ -57,7 +57,7 @@ func NewRunTestCmd() *cobra.Command {
 		format                   string
 		masks                    []string
 		command                  []string
-		commandMode              string
+		argsMode                 string
 	)
 
 	cmd := &cobra.Command{
@@ -109,18 +109,15 @@ func NewRunTestCmd() *cobra.Command {
 				scraperTemplateContent = string(b)
 			}
 
-			commandParams, err := testkube.PrepareExecutorArgs(command)
-			ui.ExitOnError("getting command", err)
-
 			var executions []testkube.Execution
 			client, namespace := common.GetClient(cmd)
 			options := apiv1.ExecuteTestOptions{
 				ExecutionVariables:            variables,
 				ExecutionVariablesFileContent: paramsFileContent,
 				ExecutionLabels:               executionLabels,
-				Command:                       commandParams,
-				commandMode:                   commandMode,
+				Command:                       command,
 				Args:                          executorArgs,
+				ArgsMode:                      argsMode,
 				SecretEnvs:                    secretEnvs,
 				HTTPProxy:                     httpProxy,
 				HTTPSProxy:                    httpsProxy,
@@ -249,8 +246,8 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&variables, "variable", "v", map[string]string{}, "execution variable passed to executor")
 	cmd.Flags().StringToStringVarP(&secretVariables, "secret-variable", "s", map[string]string{}, "execution secret variable passed to executor")
 	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in executor")
-	cmd.Flags().StringVarP(&commandMode, "command-mode", "append", "", "usage mode for command parameters. one of append|override")
 	cmd.Flags().StringArrayVarP(&binaryArgs, "args", "", []string{}, "executor binary additional arguments")
+	cmd.Flags().StringVarP(&argsMode, "args-mode", "append", "", "usage mode for argumnets. one of append|override")
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
 	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "downlaod artifacts automatically")
@@ -284,7 +281,6 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&uploadTimeout, "upload-timeout", "", "timeout to use when uploading files, example: 30s")
 	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")
 	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
-	cmd.Flags().MarkDeprecated("args", "executor args is deprecated use command instead")
 
 	return cmd
 }

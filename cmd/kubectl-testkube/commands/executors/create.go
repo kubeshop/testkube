@@ -77,7 +77,6 @@ func NewCreateExecutorCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&docsURI, "docs-uri", "", "", "URI to executor docs")
 	cmd.Flags().StringArrayVar(&contentTypes, "content-type", []string{}, "list of supported content types for executor")
 	cmd.Flags().StringToStringVarP(&tooltips, "tooltip", "", nil, "tooltip key value pair: --tooltip key1=value1")
-	cmd.Flags().MarkDeprecated("args", "args is deprecated use command instead")
 
 	return cmd
 }
