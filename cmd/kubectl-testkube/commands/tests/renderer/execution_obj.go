@@ -40,6 +40,7 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 
 	if len(execution.Command) > 0 {
 		ui.Warn("Command:          ", execution.Command...)
+		ui.Warn("Command mode:     ", execution.CommandMode)
 	}
 
 	if len(execution.Args) > 0 {

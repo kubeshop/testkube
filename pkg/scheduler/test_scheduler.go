@@ -266,8 +266,14 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		// Test variables lowest priority, then test suite, then test suite execution / test execution
 		request.Variables = mergeVariables(test.ExecutionRequest.Variables, request.Variables)
 		// Combine test executor args with execution args
-		request.Command = append(request.Command, test.ExecutionRequest.Command...)
-		request.Args = append(request.Args, test.ExecutionRequest.Args...)
+		if len(request.Command) == 0 {
+			request.Command = test.ExecutionRequest.Command
+		}
+
+		if len(request.Args) == 0 {
+			request.Args = test.ExecutionRequest.Args
+		}
+
 		request.Envs = mergeEnvs(request.Envs, test.ExecutionRequest.Envs)
 		request.SecretEnvs = mergeEnvs(request.SecretEnvs, test.ExecutionRequest.SecretEnvs)
 		request.EnvConfigMaps = mergeEnvReferences(request.EnvConfigMaps, test.ExecutionRequest.EnvConfigMaps)
@@ -301,6 +307,10 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 				test.ExecutionRequest.ScraperTemplate,
 				&request.ScraperTemplate,
 			},
+			{
+				test.ExecutionRequest.CommandMode,
+				&request.CommandMode,
+			},			
 		}
 
 		for _, field := range fields {
@@ -388,6 +398,16 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 
 	if len(secretVars) != 0 {
 		request.Variables = mergeVariables(secretVars, request.Variables)
+	}
+
+	if request.CommandMode == testkube.CommandModeAppend {
+		request.Command = append(executorCR.Spec.Command, request.Command...)
+	}
+
+	if request.CommandMode == testkube.CommandModeOverride {
+		if len(request.Command) == 0 {
+			request.Command = executorCR.Spec.Command
+		}
 	}
 
 	return client.ExecuteOptions{

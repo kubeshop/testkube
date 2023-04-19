@@ -168,6 +168,7 @@ func processPostmanFiles(cmd *cobra.Command, args []string) error {
 
 		test.ExecutionRequest = &testkube.ExecutionRequest{
 			Command:      flags.Command,
+			CommandMode:  flags.CommandMode,
 			Args:         flags.ExecutorArgs,
 			Envs:         flags.Envs,
 			Variables:    vars,

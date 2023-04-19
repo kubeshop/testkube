@@ -156,6 +156,7 @@ type ExecuteTestOptions struct {
 	ExecutionVariablesFileContent string
 	ExecutionLabels               map[string]string
 	Command                       []string
+	CommandMode                   string
 	Args                          []string
 	Envs                          map[string]string
 	SecretEnvs                    map[string]string

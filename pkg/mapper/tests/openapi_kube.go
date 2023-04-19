@@ -156,6 +156,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 		ImagePullSecrets:      mapImagePullSecrets(executionRequest.ImagePullSecrets),
 		ActiveDeadlineSeconds: executionRequest.ActiveDeadlineSeconds,
 		Command:               executionRequest.Command,
+		CommandMode:           executionRequest.CommandMode,
 		ArtifactRequest:       artifactRequest,
 		JobTemplate:           executionRequest.JobTemplate,
 		PreRunScript:          executionRequest.PreRunScript,
@@ -451,6 +452,10 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 		{
 			executionRequest.ScraperTemplate,
 			&request.ScraperTemplate,
+		},
+		{
+			executionRequest.CommandMode,
+			&request.CommandMode,
 		},
 	}
 

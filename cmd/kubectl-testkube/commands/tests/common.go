@@ -370,6 +370,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		return nil, err
 	}
 
+	commandMode := cmd.Flag("command-mode").Value.String()
 	timeout, err := cmd.Flags().GetInt64("timeout")
 	if err != nil {
 		return nil, err
@@ -434,6 +435,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		Variables:             variables,
 		Image:                 image,
 		Command:               commandParams,
+		CommandMode:           commandMode,
 		Args:                  executorArgs,
 		ImagePullSecrets:      imageSecrets,
 		Envs:                  envs,
@@ -764,6 +766,10 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 		{
 			"https-proxy",
 			&request.HttpsProxy,
+		},
+		{
+			"command-mode",
+			&request.CommandMode,
 		},
 	}
 

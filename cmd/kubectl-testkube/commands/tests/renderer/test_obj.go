@@ -86,6 +86,7 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 
 		if len(test.ExecutionRequest.Command) > 0 {
 			ui.Warn("  Command:                ", test.ExecutionRequest.Command...)
+			ui.Warn("  Command mode:           ", test.ExecutionRequest.CommandMode)
 		}
 
 		if len(test.ExecutionRequest.Args) > 0 {
