@@ -206,7 +206,6 @@ func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
 	cmd.Flags().StringToStringVarP(&flags.MountSecrets, "mount-secret", "", map[string]string{}, "secret value pair for mounting it to executor pod: --mount-secret secret_name=secret_mountpath")
 	cmd.Flags().StringArrayVar(&flags.VariableSecrets, "variable-secret", []string{}, "secret name used to map all keys to secret variables")
 	cmd.Flags().StringVar(&flags.UploadTimeout, "upload-timeout", "", "timeout to use when uploading files, example: 30s")
-	cmd.Flags().MarkDeprecated("executor-args", "executor args is deprecated use command instead")
 }
 
 func validateExecutorTypeAndContent(executorType, contentType string, executors testkube.ExecutorsDetails) error {
