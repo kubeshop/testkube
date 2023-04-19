@@ -1,4 +1,4 @@
-## testkube get testsource
+# testkube get testsource
 
 Get test source details
 

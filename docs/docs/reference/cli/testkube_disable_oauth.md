@@ -1,4 +1,4 @@
-## testkube disable oauth
+# testkube disable oauth
 
 disable oauth authentication for direct api
 

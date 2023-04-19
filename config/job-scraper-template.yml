@@ -11,8 +11,12 @@ spec:
     spec:
       containers:
         - name: {{ .Name }}-scraper
+          {{- if .Registry }}
+          image: {{ .Registry }}/{{ .ScraperImage }}
+          {{- else }}
           image: {{ .ScraperImage }}
-          imagePullPolicy: Always
+          {{- end }}
+          imagePullPolicy: IfNotPresent
           command:
             - "/bin/runner"
             - '{{ .Jsn }}'

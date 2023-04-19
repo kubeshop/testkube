@@ -78,6 +78,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with selector parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: problem communicating with kubernetes cluster
           content:
@@ -186,6 +194,22 @@ paths:
       responses:
         204:
           description: "no content"
+        400:
+          description: "problem with selector parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "test trigger not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: problem communicating with kubernetes cluster
           content:
@@ -216,6 +240,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        404:
+          description: "test trigger not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: problem communicating with kubernetes cluster
           content:
@@ -260,6 +292,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+        404:
+          description: "test trigger not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: problem communicating with kubernetes cluster
           content:
@@ -282,6 +322,14 @@ paths:
       responses:
         204:
           description: "no content"
+        404:
+          description: "test trigger not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: problem communicating with kubernetes cluster
           content:
@@ -319,8 +367,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TestSuite"
-        500:
-          description: "problem with creating test suite"
+        400:
+          description: "problem with test suite definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -350,8 +406,16 @@ paths:
             text/yaml:
               schema:
                 type: string
-        500:
-          description: "problem with getting test suites from storage"
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with listing test suites from kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -370,6 +434,14 @@ paths:
       responses:
         204:
           description: "no content"
+        404:
+          description: "test suite not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -399,8 +471,24 @@ paths:
             text/yaml:
               schema:
                 type: string
+        404:
+          description: "test suite not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
-          description: "problem with getting test suite from storage"
+          description: "could not get execution result from the database"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -439,6 +527,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+        404:
+          description: "test suite not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -460,6 +556,14 @@ paths:
       responses:
         204:
           description: "no content"
+        404:
+          description: "test suite not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -491,7 +595,7 @@ paths:
             text/yaml:
               schema:
                 type: string
-        502:
+        500:
           description: "problem with read information from storage"
           content:
             application/problem+json:
@@ -522,6 +626,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        404:
+          description: "test suite not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -557,8 +669,24 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with input"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting test suite with executions from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with getting test suite from Kubernetes clusteer"
           content:
             application/problem+json:
               schema:
@@ -630,8 +758,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
-        502:
-          description: "problem with communicating with kubernetes cluster"
+        404:
+          description: "test suite not found"
           content:
             application/problem+json:
               schema:
@@ -640,6 +768,14 @@ paths:
                   $ref: "#/components/schemas/Problem"
         500:
           description: "problem with test suite execution"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -697,8 +833,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TestSuiteExecution"
+        404:
+          description: "test not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting test suite executions from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with Kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -717,16 +869,24 @@ paths:
       description: "Aborts testsuite execution with given executionID"
       operationId: abortTestSuiteExecution
       responses:
-        502:
-          description: "problem with read information from kubernetes cluster"
+        204:
+          description: "no content"
+        404:
+          description: "test suite not found"
           content:
             application/problem+json:
               schema:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
-        204:
-          description: "no content"
+        500:
+          description: "problem with read information from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
 
   /test-suites/{id}/executions/{executionID}/artifacts:
     get:
@@ -747,6 +907,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Artifact"
+        404:
+          description: "test suite not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting test suite executions from storage"
           content:
@@ -955,6 +1123,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+        404:
+          description: "test not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -995,6 +1171,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExecutionsResult"
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting test executions from storage"
           content:
@@ -1021,8 +1205,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Execution"
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting test executions from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with reading secrets from kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -1050,6 +1250,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Artifact"
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting execution's artifacts from storage"
           content:
@@ -1108,8 +1316,53 @@ paths:
               schema:
                 type: string
                 format: binary
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting artifacts from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /executions/{id}/artifact-archive:
+    get:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/Mask"
+      tags:
+        - artifacts
+        - executions
+        - api
+      summary: "Download artifact archive"
+      description: "Download the artifact archive from the given execution"
+      operationId: downloadArchive
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with getting artifact archive from storage"
           content:
             application/problem+json:
               schema:
@@ -1364,6 +1617,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+
   /tests/{id}/abort:
     post:
       tags:
@@ -1401,6 +1655,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+
   /tests/{id}/metrics:
     get:
       tags:
@@ -1578,6 +1833,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+        404:
+          description: "test not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -1617,6 +1880,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExecutionsResult"
+        404:
+          description: "test or execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting test executions from storage"
           content:
@@ -1645,8 +1916,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Execution"
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting test executions from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with reading secrets from kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -1665,6 +1952,8 @@ paths:
       description: "Aborts execution with given executionID"
       operationId: abortExecution
       responses:
+        204:
+          description: "no content"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1673,9 +1962,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
-        204:
-          description: "no content"
-
   /executors:
     get:
       tags:
@@ -1698,6 +1984,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1811,6 +2105,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -1853,6 +2155,14 @@ paths:
                 $ref: "#/components/schemas/ExecutorDetails"
         400:
           description: "problem with executor definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "executor not found"
           content:
             application/problem+json:
               schema:
@@ -1924,6 +2234,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -2009,6 +2327,14 @@ paths:
       responses:
         204:
           description: webhook deleted successfuly
+        404:
+          description: "webhook not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -2037,8 +2363,16 @@ paths:
             text/yaml:
               schema:
                 type: string
-        502:
-          description: "problem with communicating with kubernetes cluster"
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "webhook not found"
           content:
             application/problem+json:
               schema:
@@ -2047,6 +2381,14 @@ paths:
                   $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting webhook data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -2075,7 +2417,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Config"
-        502:
+        400:
+          description: "problem with input"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "config not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
           description: "problem with updating key in cluster storage"
           content:
             application/problem+json:
@@ -2096,7 +2454,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Config"
-        502:
+        404:
+          description: "config not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
           description: "problem with getting config from cluster storage"
           content:
             application/problem+json:
@@ -2119,7 +2485,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/DebugInfo"
         500:
-          description: "problem with getting debug information"
+          description: "problem with getting execution logs from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with getting debug information from the Kuberenetes cluster"
           content:
             application/problem+json:
               schema:
@@ -2149,6 +2523,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -2290,6 +2672,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+        404:
+          description: "test source not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -2337,6 +2727,22 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "test source not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -2353,6 +2759,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+
   /uploads:
     post:
       tags:
@@ -2374,6 +2781,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with the input"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "could not upload file"
           content:
@@ -2409,8 +2824,16 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with creating folder for partial git checkout"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
-          description: "problem with communicating with kubernetes cluster"
+          description: "problem with communicating with kubernetes cluster or git server"
           content:
             application/problem+json:
               schema:
@@ -3480,11 +3903,17 @@ components:
           $ref: "#/components/schemas/SecretRef"
         certificateSecret:
           type: string
-          description: secret with certificate for private repositories
+          description: secret with certificate for private repositories. Should contain one key ending with .crt such as "mycorp.crt", whose value is the certificate file content, suitable for git config http.sslCAInfo
         workingDir:
           type: string
           description: if provided we checkout the whole repository and run test from this directory
           example: "/"
+        authType:
+          type: string
+          enum:
+            - basic
+            - header
+          description: auth type for git requests
 
     RepositoryParameters:
       description: repository parameters for tests in git repositories
@@ -4600,6 +5029,13 @@ components:
       schema:
         type: string
         description: Name of the object
+    Mask:
+      in: query
+      name: mask
+      schema:
+        type: string
+        description: mask to filter files
+      required: false
   requestBodies:
     UploadsBody:
       description: "Upload files request body data"

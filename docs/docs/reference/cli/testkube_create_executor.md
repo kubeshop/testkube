@@ -1,4 +1,4 @@
-## testkube create executor
+# testkube create executor
 
 Create new Executor
 

@@ -35,7 +35,20 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 	if err != nil {
 		return nil, fmt.Errorf("creating job spec from executor template error: %w", err)
 	}
+
 	options.Jsn = strings.ReplaceAll(options.Jsn, "'", "''")
+	for i := range options.Command {
+		if options.Command[i] != "" {
+			options.Command[i] = fmt.Sprintf("%q", options.Command[i])
+		}
+	}
+
+	for i := range options.Args {
+		if options.Args[i] != "" {
+			options.Args[i] = fmt.Sprintf("%q", options.Args[i])
+		}
+	}
+
 	var buffer bytes.Buffer
 	if err = tmpl.ExecuteTemplate(&buffer, "job", options); err != nil {
 		return nil, fmt.Errorf("executing job spec executor template: %w", err)
@@ -63,6 +76,14 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(jobSpec), len(jobSpec))
 	if err := decoder.Decode(&job); err != nil {
 		return nil, fmt.Errorf("decoding executor job spec error: %w", err)
+	}
+
+	for key, value := range options.Labels {
+		if job.Labels == nil {
+			job.Labels = make(map[string]string)
+		}
+
+		job.Labels[key] = value
 	}
 
 	envs := append(executor.RunnerEnvVars, secretEnvVars...)
@@ -169,7 +190,8 @@ func NewPersistentVolumeClaimSpec(log *zap.SugaredLogger, options *JobOptions) (
 }
 
 // NewJobOptions provides job options for templates
-func NewJobOptions(images executor.Images, templates executor.Templates, serviceAccountName string, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
+func NewJobOptions(images executor.Images, templates executor.Templates, serviceAccountName, registry string,
+	execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
 		return nil, err
@@ -191,5 +213,6 @@ func NewJobOptions(images executor.Images, templates executor.Templates, service
 	jobOptions.PVCTemplate = templates.PVC
 	jobOptions.Variables = execution.Variables
 	jobOptions.ServiceAccountName = serviceAccountName
+	jobOptions.Registry = registry
 	return jobOptions, nil
 }

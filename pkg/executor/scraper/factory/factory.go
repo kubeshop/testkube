@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/agent"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudscraper "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
@@ -19,60 +18,87 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func Scrape(ctx context.Context, dirs []string, execution testkube.Execution, params envs.Params) (err error) {
-	output.PrintLog(fmt.Sprintf("%s Extracting artifacts from %s using Filesystem Extractor", ui.IconCheckMark, dirs))
+type ExtractorType string
+type UploaderType string
 
-	extractor := scraper.NewFilesystemExtractor(dirs, filesystem.NewOSFileSystem())
+const (
+	RecursiveFilesystemExtractor ExtractorType = "RecursiveFilesystemExtractor"
+	ArchiveFilesystemExtractor   ExtractorType = "ArchiveFilesystemExtractor"
+	MinIOUploader                UploaderType  = "MinIOUploader"
+	CloudUploader                UploaderType  = "CloudUploader"
+)
 
-	var loader scraper.Uploader
-	var meta map[string]any
-	var closeF func() error
-	if params.CloudMode {
-		meta = cloudscraper.ExtractCloudLoaderMeta(execution)
-		loader, closeF, err = getCloudLoader(ctx, params)
-		if err != nil {
-			return errors.Wrap(err, "error creating cloud loader")
+func TryGetScrapper(ctx context.Context, params envs.Params) (scraper.Scraper, error) {
+	if params.ScrapperEnabled {
+		uploader := MinIOUploader
+		if params.CloudMode {
+			uploader = CloudUploader
 		}
-		defer closeF()
-	} else {
-		meta = scraper.ExtractMinIOUploaderMeta(execution)
-
-		loader, err = getMinIOLoader(params)
+		s, err := GetScraper(ctx, params, ArchiveFilesystemExtractor, uploader)
 		if err != nil {
-			return errors.Wrap(err, "error creating minio loader")
+			return nil, errors.Wrap(err, "error creating scraper")
 		}
-	}
-	elScraper := scraper.NewELScraper(extractor, loader)
-	if err = elScraper.Scrape(ctx, meta); err != nil {
-		output.PrintLog(fmt.Sprintf("%s Error encountered while scraping artifacts", ui.IconCross))
-		return errors.Errorf("error scraping artifacts: %v", err)
+		return s, nil
 	}
 
-	return nil
+	return nil, nil
 }
 
-func getCloudLoader(ctx context.Context, params envs.Params) (uploader *cloudscraper.CloudUploader, closeF func() error, err error) {
+func GetScraper(ctx context.Context, params envs.Params, extractorType ExtractorType, uploaderType UploaderType) (scraper.Scraper, error) {
+	var extractor scraper.Extractor
+	switch extractorType {
+	case RecursiveFilesystemExtractor:
+		extractor = scraper.NewRecursiveFilesystemExtractor(filesystem.NewOSFileSystem())
+	case ArchiveFilesystemExtractor:
+		var opts []scraper.ArchiveFilesystemExtractorOpts
+		if params.CloudMode {
+			opts = append(opts, scraper.GenerateTarballMetaFile())
+		}
+		extractor = scraper.NewArchiveFilesystemExtractor(filesystem.NewOSFileSystem(), opts...)
+	default:
+		return nil, errors.Errorf("unknown extractor type: %s", extractorType)
+	}
+
+	var err error
+	var loader scraper.Uploader
+	switch uploaderType {
+	case MinIOUploader:
+		loader, err = getMinIOLoader(params)
+		if err != nil {
+			return nil, errors.Wrap(err, "error creating minio loader")
+		}
+	case CloudUploader:
+		loader, err = getCloudLoader(ctx, params)
+		if err != nil {
+			return nil, errors.Wrap(err, "error creating cloud loader")
+		}
+	default:
+		return nil, errors.Errorf("unknown uploader type: %s", uploaderType)
+	}
+
+	return scraper.NewExtractLoadScraper(extractor, loader), nil
+}
+
+func getCloudLoader(ctx context.Context, params envs.Params) (uploader *cloudscraper.CloudUploader, err error) {
 	output.PrintLog(fmt.Sprintf("%s Uploading artifacts using Cloud Uploader", ui.IconCheckMark))
 
 	grpcConn, err := agent.NewGRPCConnection(ctx, params.CloudAPITLSInsecure, params.CloudAPIURL, log.DefaultLogger)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	closeF = func() error {
-		return grpcConn.Close()
-	}
+
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
-	cloudExecutor := cloudexecutor.NewCloudGRPCExecutor(grpcClient, params.CloudAPIKey)
-	return cloudscraper.NewCloudUploader(cloudExecutor), closeF, nil
+	cloudExecutor := cloudexecutor.NewCloudGRPCExecutor(grpcClient, grpcConn, params.CloudAPIKey)
+	return cloudscraper.NewCloudUploader(cloudExecutor), nil
 }
 
 func getMinIOLoader(params envs.Params) (*scraper.MinIOUploader, error) {
 	output.PrintLog(fmt.Sprintf("%s Uploading artifacts using MinIO Uploader", ui.IconCheckMark))
-	return scraper.NewMinIOLoader(
+	return scraper.NewMinIOUploader(
 		params.Endpoint,
 		params.AccessKeyID,
 		params.SecretAccessKey,
-		params.Location,
+		params.Region,
 		params.Token,
 		params.Bucket,
 		params.Ssl,

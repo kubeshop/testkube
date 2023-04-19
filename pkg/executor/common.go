@@ -33,8 +33,6 @@ const (
 	GitUsernameSecretName = "git-username"
 	// GitTokenSecretName is git token secret name
 	GitTokenSecretName = "git-token"
-	pollTimeout        = 24 * time.Hour
-	pollInterval       = 200 * time.Millisecond
 )
 
 var RunnerEnvVars = []corev1.EnvVar{
@@ -55,8 +53,8 @@ var RunnerEnvVars = []corev1.EnvVar{
 		Value: os.Getenv("STORAGE_SECRETACCESSKEY"),
 	},
 	{
-		Name:  "RUNNER_LOCATION",
-		Value: os.Getenv("STORAGE_LOCATION"),
+		Name:  "RUNNER_REGION",
+		Value: os.Getenv("STORAGE_REGION"),
 	},
 	{
 		Name:  "RUNNER_TOKEN",
@@ -68,11 +66,11 @@ var RunnerEnvVars = []corev1.EnvVar{
 	},
 	{
 		Name:  "RUNNER_SSL",
-		Value: os.Getenv("STORAGE_SSL"),
+		Value: getOr("STORAGE_SSL", "false"),
 	},
 	{
 		Name:  "RUNNER_SCRAPPERENABLED",
-		Value: os.Getenv("SCRAPPERENABLED"),
+		Value: getOr("SCRAPPERENABLED", "false"),
 	},
 	{
 		Name:  "RUNNER_DATADIR",
@@ -88,7 +86,7 @@ var RunnerEnvVars = []corev1.EnvVar{
 	},
 	{
 		Name:  "RUNNER_CLOUD_API_TLS_INSECURE",
-		Value: getRunnerCloudTLSInsecure(),
+		Value: getOr("TESTKUBE_CLOUD_TLS_INSECURE", "false"),
 	},
 	{
 		Name:  "RUNNER_CLOUD_API_URL",
@@ -96,17 +94,16 @@ var RunnerEnvVars = []corev1.EnvVar{
 	},
 }
 
+func getOr(key, defaultVal string) string {
+	if val, ok := os.LookupEnv(key); ok {
+		return val
+	}
+	return defaultVal
+}
+
 func getRunnerCloudMode() string {
 	val := "false"
 	if os.Getenv("TESTKUBE_CLOUD_API_KEY") != "" {
-		val = "true"
-	}
-	return val
-}
-
-func getRunnerCloudTLSInsecure() string {
-	val := "false"
-	if os.Getenv("TESTKUBE_CLOUD_TLS_INSECURE") == "true" {
 		val = "true"
 	}
 	return val
@@ -340,7 +337,7 @@ func SyncDefaultExecutors(
 			},
 			Spec: executorv1.ExecutorSpec{
 				Types:        executor.Executor.Types,
-				ExecutorType: executor.Executor.ExecutorType,
+				ExecutorType: executorv1.ExecutorType(executor.Executor.ExecutorType),
 				Image:        executor.Executor.Image,
 				Features:     executorsmapper.MapFeaturesToCRD(executor.Executor.Features),
 				ContentTypes: executorsmapper.MapContentTypesToCRD(executor.Executor.ContentTypes),
@@ -365,4 +362,25 @@ func SyncDefaultExecutors(
 	}
 
 	return images, nil
+}
+
+// GetPodErrorMessage return pod error message
+func GetPodErrorMessage(pod *corev1.Pod) string {
+	if pod.Status.Message != "" {
+		return pod.Status.Message
+	}
+
+	for _, initContainerStatus := range pod.Status.InitContainerStatuses {
+		if initContainerStatus.State.Terminated != nil && initContainerStatus.State.Terminated.Message != "" {
+			return initContainerStatus.State.Terminated.Message
+		}
+	}
+
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if containerStatus.State.Terminated != nil && containerStatus.State.Terminated.Message != "" {
+			return containerStatus.State.Terminated.Message
+		}
+	}
+
+	return ""
 }

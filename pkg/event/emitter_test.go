@@ -1,5 +1,3 @@
-//go:build !integration
-
 package event
 
 import (
@@ -16,17 +14,17 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/dummy"
 )
 
-var eventBus bus.Bus
-
 func init() {
 	os.Setenv("DEBUG", "true")
-	eventBus = bus.NewEventBusMock()
 }
 
 func TestEmitter_Register(t *testing.T) {
+	t.Parallel()
 
 	t.Run("Register adds new listener", func(t *testing.T) {
+		t.Parallel()
 		// given
+		eventBus := bus.NewEventBusMock()
 		emitter := NewEmitter(eventBus)
 		// when
 		emitter.Register(&dummy.DummyListener{Id: "l1"})
@@ -39,8 +37,12 @@ func TestEmitter_Register(t *testing.T) {
 }
 
 func TestEmitter_Listen(t *testing.T) {
+	t.Parallel()
+
 	t.Run("listener handles only given events based on selectors", func(t *testing.T) {
+		t.Parallel()
 		// given
+		eventBus := bus.NewEventBusMock()
 		emitter := NewEmitter(eventBus)
 		// given listener with matching selector
 		listener1 := &dummy.DummyListener{Id: "l1", SelectorString: "type=listener1"}
@@ -89,8 +91,12 @@ func TestEmitter_Listen(t *testing.T) {
 }
 
 func TestEmitter_Notify(t *testing.T) {
+	t.Parallel()
+
 	t.Run("notifies listeners in queue groups", func(t *testing.T) {
+		t.Parallel()
 		// given
+		eventBus := bus.NewEventBusMock()
 		emitter := NewEmitter(eventBus)
 		// and 2 listeners subscribed to the same queue
 		// * first on pod1
@@ -119,9 +125,12 @@ func TestEmitter_Notify(t *testing.T) {
 }
 
 func TestEmitter_Reconcile(t *testing.T) {
+	t.Parallel()
 
 	t.Run("emitter refersh listeners in reconcile loop", func(t *testing.T) {
+		t.Parallel()
 		// given first reconciler loop was done
+		eventBus := bus.NewEventBusMock()
 		emitter := NewEmitter(eventBus)
 		emitter.Loader.Register(&dummy.DummyLoader{IdPrefix: "dummy1"})
 		emitter.Loader.Register(&dummy.DummyLoader{IdPrefix: "dummy2"})
@@ -170,8 +179,12 @@ func newExampleTestEvent2() testkube.Event {
 }
 
 func TestEmitter_UpdateListeners(t *testing.T) {
+	t.Parallel()
+
 	t.Run("add, update and delete new listeners", func(t *testing.T) {
+		t.Parallel()
 		// given
+		eventBus := bus.NewEventBusMock()
 		emitter := NewEmitter(eventBus)
 		// given listener with matching selector
 		listener1 := &dummy.DummyListener{Id: "l1", SelectorString: "type=listener1"}
@@ -225,7 +238,7 @@ func TestEmitter_UpdateListeners(t *testing.T) {
 
 }
 
-var _ common.Listener = &FakeListener{}
+var _ common.Listener = (*FakeListener)(nil)
 
 type FakeListener struct {
 	name string

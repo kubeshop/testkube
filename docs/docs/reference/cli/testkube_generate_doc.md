@@ -1,4 +1,4 @@
-## testkube generate doc
+# testkube generate doc
 
 Generate docs for kubectl testkube
 

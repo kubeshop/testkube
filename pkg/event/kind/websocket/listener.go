@@ -12,7 +12,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
-var _ common.Listener = &WebsocketListener{}
+var _ common.Listener = (*WebsocketListener)(nil)
 
 func NewWebsocketListener() *WebsocketListener {
 	return &WebsocketListener{

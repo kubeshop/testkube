@@ -1,4 +1,4 @@
-## testkube purge
+# testkube purge
 
 Uninstall Helm chart registry from current kubectl context
 

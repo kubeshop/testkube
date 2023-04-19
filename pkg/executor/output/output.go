@@ -13,6 +13,7 @@ const TypeLogEvent = "event"
 const TypeLogLine = "line"
 const TypeError = "error"
 const TypeResult = "result"
+const TypeUnknown = "unknown"
 
 // NewOutputEvent returns new Output struct of type event
 func NewOutputEvent(message string) Output {
@@ -74,6 +75,13 @@ func PrintError(w io.Writer, err error) {
 
 // PrintLog - prints log line as output json
 func PrintLog(message string) {
+	out, _ := json.Marshal(NewOutputLine([]byte(message)))
+	fmt.Printf("%s\n", out)
+}
+
+// PrintLogf - prints log line as output json and supports sprintf formatting
+func PrintLogf(format string, args ...any) {
+	message := fmt.Sprintf(format, args...)
 	out, _ := json.Marshal(NewOutputLine([]byte(message)))
 	fmt.Printf("%s\n", out)
 }

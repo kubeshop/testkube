@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 
+	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	v3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -27,14 +28,15 @@ func TestExecuteAsync(t *testing.T) {
 	t.Parallel()
 
 	ce := ContainerExecutor{
-		clientSet:   getFakeClient("1"),
-		log:         logger(),
-		repository:  FakeResultRepository{},
-		metrics:     FakeMetricCounter{},
-		emitter:     FakeEmitter{},
-		namespace:   "default",
-		configMap:   FakeConfigRepository{},
-		testsClient: FakeTestsClient{},
+		clientSet:       getFakeClient("1"),
+		log:             logger(),
+		repository:      FakeResultRepository{},
+		metrics:         FakeMetricCounter{},
+		emitter:         FakeEmitter{},
+		namespace:       "default",
+		configMap:       FakeConfigRepository{},
+		testsClient:     FakeTestsClient{},
+		executorsClient: FakeExecutorsClient{},
 	}
 
 	execution := &testkube.Execution{Id: "1"}
@@ -52,14 +54,15 @@ func TestExecuteSync(t *testing.T) {
 	t.Parallel()
 
 	ce := ContainerExecutor{
-		clientSet:   getFakeClient("1"),
-		log:         logger(),
-		repository:  FakeResultRepository{},
-		metrics:     FakeMetricCounter{},
-		emitter:     FakeEmitter{},
-		namespace:   "default",
-		configMap:   FakeConfigRepository{},
-		testsClient: FakeTestsClient{},
+		clientSet:       getFakeClient("1"),
+		log:             logger(),
+		repository:      FakeResultRepository{},
+		metrics:         FakeMetricCounter{},
+		emitter:         FakeEmitter{},
+		namespace:       "default",
+		configMap:       FakeConfigRepository{},
+		testsClient:     FakeTestsClient{},
+		executorsClient: FakeExecutorsClient{},
 	}
 
 	execution := &testkube.Execution{Id: "1"}
@@ -110,11 +113,11 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "RUNNER_ENDPOINT", Value: ""},
 		{Name: "RUNNER_ACCESSKEYID", Value: ""},
 		{Name: "RUNNER_SECRETACCESSKEY", Value: ""},
-		{Name: "RUNNER_LOCATION", Value: ""},
+		{Name: "RUNNER_REGION", Value: ""},
 		{Name: "RUNNER_TOKEN", Value: ""},
 		{Name: "RUNNER_BUCKET", Value: ""},
-		{Name: "RUNNER_SSL", Value: ""},
-		{Name: "RUNNER_SCRAPPERENABLED", Value: ""},
+		{Name: "RUNNER_SSL", Value: "false"},
+		{Name: "RUNNER_SCRAPPERENABLED", Value: "false"},
 		{Name: "RUNNER_DATADIR", Value: "/data"},
 		{Name: "RUNNER_CLOUD_MODE", Value: "false"},
 		{Name: "RUNNER_CLOUD_API_KEY", Value: ""},
@@ -150,6 +153,7 @@ func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 		executor.Images{},
 		executor.Templates{},
 		"",
+		"",
 		testkube.Execution{
 			Id:            "name",
 			TestName:      "name-test-1",
@@ -182,6 +186,7 @@ func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 		executor.Images{},
 		executor.Templates{},
 		"",
+		"",
 		testkube.Execution{
 			Id:            "name",
 			TestName:      "name-test-1",
@@ -213,6 +218,7 @@ func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
 	jobOptions, _ := NewJobOptions(
 		executor.Images{},
 		executor.Templates{},
+		"",
 		"",
 		testkube.Execution{
 			Id:            "name",
@@ -461,5 +467,36 @@ func (FakeTestsClient) DeleteByLabels(selector string) error {
 }
 
 func (FakeTestsClient) UpdateStatus(test *testsv3.Test) error {
+	return nil
+}
+
+type FakeExecutorsClient struct {
+}
+
+func (FakeExecutorsClient) List(selector string) (*executorv1.ExecutorList, error) {
+	return &executorv1.ExecutorList{}, nil
+}
+
+func (FakeExecutorsClient) Get(name string) (*executorv1.Executor, error) {
+	return &executorv1.Executor{}, nil
+}
+
+func (FakeExecutorsClient) GetByType(executorType string) (*executorv1.Executor, error) {
+	return &executorv1.Executor{}, nil
+}
+
+func (FakeExecutorsClient) Create(executor *executorv1.Executor) (*executorv1.Executor, error) {
+	return &executorv1.Executor{}, nil
+}
+
+func (FakeExecutorsClient) Delete(name string) error {
+	return nil
+}
+
+func (FakeExecutorsClient) Update(executor *executorv1.Executor) (*executorv1.Executor, error) {
+	return &executorv1.Executor{}, nil
+}
+
+func (FakeExecutorsClient) DeleteByLabels(selector string) error {
 	return nil
 }

@@ -36,7 +36,7 @@ func NewReleaseCmd() *cobra.Command {
 			pushVersionTag(nextAppVersion)
 
 			// Let's checkout helm chart repo and put changes to particular app
-			dir, err := git.PartialCheckout("https://github.com/kubeshop/helm-charts.git", appName, "main", "", "")
+			dir, err := git.PartialCheckout("https://github.com/kubeshop/helm-charts.git", "", appName, "main", "", "")
 			ui.ExitOnError("checking out "+appName+" chart to "+dir, err)
 
 			chart, path, err := helm.GetChart(dir)
@@ -60,7 +60,7 @@ func NewReleaseCmd() *cobra.Command {
 			gitAddCommitAndPush(dir, "updating "+appName+" chart version to "+nextAppVersion)
 
 			// Checkout main testkube chart and bump main chart with next version
-			dir, err = git.PartialCheckout("https://github.com/kubeshop/helm-charts.git", "testkube", "main", "", "")
+			dir, err = git.PartialCheckout("https://github.com/kubeshop/helm-charts.git", "", "testkube", "main", "", "")
 			ui.ExitOnError("checking out testkube chart to "+dir, err)
 
 			chart, path, err = helm.GetChart(dir)

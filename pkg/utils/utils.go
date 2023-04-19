@@ -4,6 +4,9 @@ import (
 	"bufio"
 	"crypto/rand"
 	"math/big"
+	"path/filepath"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -92,4 +95,21 @@ func GetStringKey(m map[string]any, key string) (string, error) {
 		return "", errors.New(key + " is not a string")
 	}
 	return s, nil
+}
+
+// SanitizeName sanitizes test name
+func SanitizeName(path string) string {
+	path = strings.TrimSuffix(path, filepath.Ext(path))
+
+	reg := regexp.MustCompile("[^a-zA-Z0-9-]+")
+	path = reg.ReplaceAllString(path, "-")
+	path = strings.TrimLeft(path, "-")
+	path = strings.TrimRight(path, "-")
+	path = strings.ToLower(path)
+
+	if len(path) > 63 {
+		return path[:63]
+	}
+
+	return path
 }

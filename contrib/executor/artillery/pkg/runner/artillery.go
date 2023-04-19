@@ -1,9 +1,14 @@
 package runner
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/pkg/errors"
+
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
@@ -17,26 +22,21 @@ import (
 )
 
 // NewArtilleryRunner creates a new Testkube test runner for Artillery tests
-func NewArtilleryRunner() (*ArtilleryRunner, error) {
-	output.PrintLog(fmt.Sprintf("%s Preparing test runner", ui.IconTruck))
-	params, err := envs.LoadTestkubeVariables()
-	if err != nil {
-		return nil, fmt.Errorf("could not initialize Artillery runner variables: %w", err)
-	}
+func NewArtilleryRunner(ctx context.Context, params envs.Params) (*ArtilleryRunner, error) {
+	output.PrintLogf("%s Preparing test runner", ui.IconTruck)
 
-	return &ArtilleryRunner{
+	var err error
+	r := &ArtilleryRunner{
 		Fetcher: content.NewFetcher(""),
 		Params:  params,
-		Scraper: scraper.NewMinioScraper(
-			params.Endpoint,
-			params.AccessKeyID,
-			params.SecretAccessKey,
-			params.Location,
-			params.Token,
-			params.Bucket,
-			params.Ssl,
-		),
-	}, err
+	}
+
+	r.Scraper, err = factory.TryGetScrapper(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
 }
 
 // ArtilleryRunner ...
@@ -46,9 +46,14 @@ type ArtilleryRunner struct {
 	Scraper scraper.Scraper
 }
 
+var _ runner.Runner = &ArtilleryRunner{}
+
 // Run ...
-func (r *ArtilleryRunner) Run(execution testkube.Execution) (result testkube.ExecutionResult, err error) {
-	output.PrintLog(fmt.Sprintf("%s Preparing for test run", ui.IconTruck))
+func (r *ArtilleryRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+	if r.Scraper != nil {
+		defer r.Scraper.Close()
+	}
+	output.PrintLogf("%s Preparing for test run", ui.IconTruck)
 	// make some validation
 	err = r.Validate(execution)
 	if err != nil {
@@ -63,7 +68,7 @@ func (r *ArtilleryRunner) Run(execution testkube.Execution) (result testkube.Exe
 
 	path, err := r.Fetcher.Fetch(execution.Content)
 	if err != nil {
-		return result, fmt.Errorf("could not fetch test content: %w", err)
+		return result, errors.Errorf("could not fetch test content: %v", err)
 	}
 
 	testDir, _ := filepath.Split(path)
@@ -103,19 +108,19 @@ func (r *ArtilleryRunner) Run(execution testkube.Execution) (result testkube.Exe
 	var artilleryResult ArtilleryExecutionResult
 	artilleryResult, err = r.GetArtilleryExecutionResult(testReportFile, out)
 	if err != nil {
-		return *result.WithErrors(rerr, fmt.Errorf("failed to get test execution results")), err
+		return *result.WithErrors(rerr, errors.Errorf("failed to get test execution results")), err
 	}
 
 	result = MapTestSummaryToResults(artilleryResult)
 	output.PrintLog(fmt.Sprintf("%s Mapped test summary to Execution Results...", ui.IconCheckMark))
 
-	if r.Params.ScrapperEnabled && r.Scraper != nil {
-		artifacts := []string{
+	if r.Params.ScrapperEnabled {
+		directories := []string{
 			testReportFile,
 		}
-		err = r.Scraper.Scrape(execution.Id, artifacts)
+		err = r.Scraper.Scrape(ctx, directories, execution)
 		if err != nil {
-			return *result.WithErrors(fmt.Errorf("scrape artifacts error: %w", err)), nil
+			return *result.Err(err), errors.Wrap(err, "error scraping artifacts for Artillery executor")
 		}
 	}
 
@@ -129,18 +134,18 @@ func (r *ArtilleryRunner) GetType() runner.Type {
 }
 
 func CreateEnvFile(vars map[string]testkube.Variable) (string, error) {
-	envVars := []byte{}
+	var envVars []byte
 	for _, v := range vars {
 		envVars = append(envVars, []byte(fmt.Sprintf("%s=%s\n", v.Name, v.Value))...)
 	}
 	envFile, err := os.CreateTemp("/tmp", "")
 	if err != nil {
-		return "", fmt.Errorf("could not create dotenv file: %w", err)
+		return "", errors.Errorf("could not create dotenv file: %v", err)
 	}
 	defer envFile.Close()
 
 	if _, err := envFile.Write(envVars); err != nil {
-		return "", fmt.Errorf("could not write dotenv file: %w", err)
+		return "", errors.Errorf("could not write dotenv file: %v", err)
 	}
 
 	return envFile.Name(), nil

@@ -1,4 +1,4 @@
-## testkube create-ticket
+# testkube create-ticket
 
 Create bug ticket
 

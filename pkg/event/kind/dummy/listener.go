@@ -8,7 +8,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
-var _ common.Listener = &DummyListener{}
+var _ common.Listener = (*DummyListener)(nil)
 
 type DummyListener struct {
 	Id                string

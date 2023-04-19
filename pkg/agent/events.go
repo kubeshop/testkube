@@ -16,7 +16,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 )
 
-var _ common.ListenerLoader = &Agent{}
+var _ common.ListenerLoader = (*Agent)(nil)
 
 func (ag *Agent) Kind() string {
 	return "agent"

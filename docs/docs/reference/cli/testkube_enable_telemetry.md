@@ -1,4 +1,4 @@
-## testkube enable telemetry
+# testkube enable telemetry
 
 Enable collecting of anonymous telemetry data
 

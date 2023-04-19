@@ -1,4 +1,4 @@
-## testkube config api-uri
+# testkube config api-uri
 
 Set api uri for testkube client
 

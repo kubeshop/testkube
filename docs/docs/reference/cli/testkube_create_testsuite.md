@@ -1,4 +1,4 @@
-## testkube create testsuite
+# testkube create testsuite
 
 Create new TestSuite
 

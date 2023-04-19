@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	testkube "github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 // MockUploader is a mock of Uploader interface.
@@ -34,8 +35,22 @@ func (m *MockUploader) EXPECT() *MockUploaderMockRecorder {
 	return m.recorder
 }
 
+// Close mocks base method.
+func (m *MockUploader) Close() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockUploaderMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockUploader)(nil).Close))
+}
+
 // Upload mocks base method.
-func (m *MockUploader) Upload(arg0 context.Context, arg1 *Object, arg2 map[string]interface{}) error {
+func (m *MockUploader) Upload(arg0 context.Context, arg1 *Object, arg2 testkube.Execution) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Upload", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)

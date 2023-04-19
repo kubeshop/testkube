@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -30,5 +31,45 @@ func TestRoundDuration(t *testing.T) {
 
 		// then
 		assert.Equal(t, "2m0s", rounded.String())
+	})
+}
+
+func TestSanitizeName(t *testing.T) {
+	t.Parallel()
+
+	t.Run("name should not be changed", func(t *testing.T) {
+		t.Parallel()
+		//given
+		name := "abc-123"
+
+		// when
+		sanized := SanitizeName(name)
+
+		// then
+		assert.Equal(t, "abc-123", sanized)
+	})
+
+	t.Run("name should be shorted", func(t *testing.T) {
+		t.Parallel()
+		//given
+		name := "abc" + strings.Repeat("0123456789", 10)
+
+		// when
+		sanized := SanitizeName(name)
+
+		// then
+		assert.Equal(t, "abc"+strings.Repeat("0123456789", 6), sanized)
+	})
+
+	t.Run("name should be sanitized", func(t *testing.T) {
+		t.Parallel()
+		//given
+		name := "@#$%!abc()~+123{}<>;"
+
+		// when
+		sanized := SanitizeName(name)
+
+		// then
+		assert.Equal(t, "abc-123", sanized)
 	})
 }

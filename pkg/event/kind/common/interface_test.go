@@ -51,7 +51,7 @@ func TestCompareListeners(t *testing.T) {
 
 }
 
-var _ Listener = &NilListener{}
+var _ Listener = (*NilListener)(nil)
 
 type NilListener struct {
 }
@@ -80,7 +80,7 @@ func (l *NilListener) Metadata() map[string]string {
 	return nil
 }
 
-var _ Listener = &FakeListener{}
+var _ Listener = (*FakeListener)(nil)
 
 type FakeListener struct {
 	field1 string

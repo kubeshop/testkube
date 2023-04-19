@@ -83,7 +83,7 @@ func (m *Version_0_9_2) Migrate() error {
 
 		if script.Spec.Content != nil {
 			test.Spec.Content = &testsv3.TestContent{
-				Type_: script.Spec.Content.Type_,
+				Type_: testsv3.TestContentType(script.Spec.Content.Type_),
 				Data:  script.Spec.Content.Data,
 				Uri:   script.Spec.Content.Uri,
 			}
@@ -172,7 +172,7 @@ func (m *Version_0_9_2) Type() migrator.MigrationType {
 
 func copyTestStepTest2Testsuite(step testsv1.TestStepSpec) testsuite.TestSuiteStepSpec {
 	result := testsuite.TestSuiteStepSpec{
-		Type: step.Type,
+		Type: testsuite.TestSuiteStepType(step.Type),
 	}
 
 	if step.Execute != nil {

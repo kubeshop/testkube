@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
@@ -13,10 +14,11 @@ import (
 
 func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to create executor"
 		var request testkube.ExecutorUpsertRequest
 		err := c.BodyParser(&request)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %w", errPrefix, err))
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
@@ -26,16 +28,11 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 		}
 
 		executor := executorsmapper.MapAPIToCRD(request)
-		notContainerExecutor := executor.Spec.ExecutorType != "container"
-		emptyJobTemplate := executor.Spec.JobTemplate == ""
-		if notContainerExecutor && emptyJobTemplate {
-			executor.Spec.JobTemplate = s.jobTemplate
-		}
 		executor.Namespace = s.Namespace
 
 		created, err := s.ExecutorsClient.Create(&executor)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not create executor: %w", errPrefix, err))
 		}
 
 		s.Events.Notify(testkube.NewEvent(
@@ -51,25 +48,27 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 
 func (s TestkubeAPI) UpdateExecutorHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to update executor"
 		var request testkube.ExecutorUpdateRequest
 		err := c.BodyParser(&request)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %w", errPrefix, err))
 		}
 
 		var name string
 		if request.Name != nil {
 			name = *request.Name
 		}
+		errPrefix = errPrefix + " " + name
 
 		// we need to get resource first and load its metadata.ResourceVersion
 		executor, err := s.ExecutorsClient.Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return s.Error(c, http.StatusNotFound, err)
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: client found no executor: %w", errPrefix, err))
 			}
 
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get executor: %w", errPrefix, err))
 		}
 
 		// map update executor but load spec only to not override metadata.ResourceVersion
@@ -77,7 +76,7 @@ func (s TestkubeAPI) UpdateExecutorHandler() fiber.Handler {
 
 		updatedExecutor, err := s.ExecutorsClient.Update(executorSpec)
 		if err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not update executor: %w", errPrefix, err))
 		}
 
 		s.Events.Notify(testkube.NewEvent(
@@ -92,9 +91,10 @@ func (s TestkubeAPI) UpdateExecutorHandler() fiber.Handler {
 
 func (s TestkubeAPI) ListExecutorsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to list executors"
 		list, err := s.ExecutorsClient.List(c.Query("selector"))
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not list executors: %w", errPrefix, err))
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
@@ -121,9 +121,11 @@ func (s TestkubeAPI) ListExecutorsHandler() fiber.Handler {
 func (s TestkubeAPI) GetExecutorHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("name")
+		errPrefix := fmt.Sprintf("failed to get executor %s", name)
+
 		item, err := s.ExecutorsClient.Get(name)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get executor: %w", errPrefix, err))
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
@@ -141,10 +143,11 @@ func (s TestkubeAPI) GetExecutorHandler() fiber.Handler {
 func (s TestkubeAPI) DeleteExecutorHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("name")
+		errPrefix := fmt.Sprintf("failed to delete executor %s", name)
 
 		err := s.ExecutorsClient.Delete(name)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete executor: %w", errPrefix, err))
 		}
 
 		s.Events.Notify(testkube.NewEvent(
@@ -161,9 +164,10 @@ func (s TestkubeAPI) DeleteExecutorHandler() fiber.Handler {
 
 func (s TestkubeAPI) DeleteExecutorsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to delete executors"
 		err := s.ExecutorsClient.DeleteByLabels(c.Query("selector"))
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete executors: %w", errPrefix, err))
 		}
 
 		c.Status(http.StatusNoContent)

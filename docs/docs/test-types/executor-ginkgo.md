@@ -2,6 +2,22 @@ import Admonition from "@theme/Admonition";
 
 # Ginkgo
 
+Our dedicated Ginkgo executor allows running Ginkgo tests with Testkube - directly from your Git repository.
+
+export const ExecutorInfo = () => {
+  return (
+    <div>
+      <Admonition type="info" icon="🎓" title="What is Ginkgo?">
+        <ul>
+          <li><a href="https://onsi.github.io/ginkgo/">Ginkgo</a> is a popular general purpose testing framework for the Go programming language that, when paired with <a href="https://github.com/onsi/gomega">Gomega</a>, provides a powerful way to write your tests.</li>
+          <li>Built on top of Go's testing infrastructure, it lets you write more expressive tests for different use cases: unit tests, integration tests, performance tests, and more.</li>
+        </ul>
+      </Admonition>
+    </div>
+  );
+}
+
+<ExecutorInfo />
 
 **Check out our [blog post](https://testkube.io/blog/maximize-app-performance-in-kubernetes-with-ginkgo-and-testkube) to learn to write more expressive tests in Go using Ginkgo, Gomega, and Testkube.**
 

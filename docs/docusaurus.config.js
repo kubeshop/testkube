@@ -27,7 +27,14 @@ const config = {
     defaultLocale: "en",
     locales: ["en"],
   },
-
+  scripts: [
+    {
+      src: "https://app.usercentrics.eu/browser-ui/latest/loader.js",
+      id: "usercentrics-cmp",
+      "data-settings-id": "WQ2gSqnsK",
+      async: true,
+    },
+  ],
   presets: [
     [
       "classic",
@@ -46,6 +53,9 @@ const config = {
         },
         gtag: {
           trackingID: "G-G7HWN1EDK5",
+        },
+        googleTagManager: {
+          containerId: "GTM-PQK4DKN",
         },
       },
     ],
@@ -234,27 +244,7 @@ const config = {
             to: "/getting-started",
           },
           {
-            from: "/using-testkube/tests/tests-running",
-            to: "/concepts/tests/tests-running",
-          },
-          {
-            from: "/using-testkube/tests/tests-creating",
-            to: "/concepts/tests/tests-creating",
-          },
-          {
-            from: "/using-testkube/tests/tests-variables",
-            to: "/concepts/tests/tests-variables",
-          },
-          {
-            from: "/using-testkube/test-suites/testsuites-creating",
-            to: "/concepts/test-suites/testsuites-creating",
-          },
-          {
             from: "/guides/test-suites/testsuites-getting-results",
-            to: "/concepts/test-suites/testsuites-getting-results",
-          },
-          {
-            from: "/using-testkube/test-suites/testsuites-getting-results",
             to: "/concepts/test-suites/testsuites-getting-results",
           },
           {
@@ -264,10 +254,6 @@ const config = {
           {
             from: "/category/tests",
             to: "/concepts/tests/tests-creating",
-          },
-          {
-            from: "/using-testkube/triggers",
-            to: "/concepts/triggers",
           },
           {
             from: "/using-testkube/UI",
@@ -310,6 +296,11 @@ const config = {
           if (existingPath.includes("/reference/cli")) {
             // Redirect from /cli-reference to /reference/cli
             return [existingPath.replace("/reference/cli", "/cli-reference")];
+          }
+
+          if (existingPath.includes("/concepts")) {
+            // Redirect from /using-testkube to /concepts
+            return [existingPath.replace("/concepts", "/using-testkube")];
           }
 
           if (

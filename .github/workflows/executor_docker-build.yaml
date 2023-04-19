@@ -381,15 +381,3 @@ jobs:
           args: release -f goreleaser_files/.goreleaser-docker-build-executor-playwright.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-
-
-##
-##  releasing_helm_chart_executor:
-##    needs: [single_executor_docker, helper_executor_docker, executor_jdk_docker, executor_cypress_docker, executor_playwright_docker]
-##    runs-on: ubuntu-latest
-##    steps:
-##      - name: Repository Dispatch
-##        uses: peter-evans/repository-dispatch@v2
-##        with:
-##          event-type: trigger-executor-helm-releaser
-##          client-payload: '{"release_version": "${{ github.event.client_payload.release_version }}"}'

@@ -1,4 +1,4 @@
-## testkube run
+# testkube run
 
 Runs tests or test suites
 

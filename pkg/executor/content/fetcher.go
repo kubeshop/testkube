@@ -83,7 +83,7 @@ func (f Fetcher) FetchURI(uri string) (path string, err error) {
 
 // FetchGitDir returns path to locally checked out git repo with partial path
 func (f Fetcher) FetchGitDir(repo *testkube.Repository) (path string, err error) {
-	uri, err := f.gitURI(repo)
+	uri, authHeader, err := f.gitURI(repo)
 	if err != nil {
 		output.PrintLog(fmt.Sprintf("%s Failed to fetch git dir: %s", ui.IconCross, err.Error()))
 		return path, err
@@ -91,7 +91,7 @@ func (f Fetcher) FetchGitDir(repo *testkube.Repository) (path string, err error)
 
 	// if path not set make full repo checkout
 	if repo.Path == "" || repo.WorkingDir != "" {
-		path, err := git.Checkout(uri, repo.Branch, repo.Commit, f.path)
+		path, err := git.Checkout(uri, authHeader, repo.Branch, repo.Commit, f.path)
 		if err != nil {
 			output.PrintLog(fmt.Sprintf("%s Failed to fetch git dir: %s", ui.IconCross, err.Error()))
 			return path, fmt.Errorf("failed to fetch git dir: %w", err)
@@ -100,7 +100,7 @@ func (f Fetcher) FetchGitDir(repo *testkube.Repository) (path string, err error)
 		return path, nil
 	}
 
-	path, err = git.PartialCheckout(uri, repo.Path, repo.Branch, repo.Commit, f.path)
+	path, err = git.PartialCheckout(uri, authHeader, repo.Path, repo.Branch, repo.Commit, f.path)
 	if err != nil {
 		output.PrintLog(fmt.Sprintf("%s Failed to do partial checkout on git dir: %s", ui.IconCross, err.Error()))
 		return path, fmt.Errorf("failed to do partial checkout on git dir: %w", err)
@@ -111,13 +111,13 @@ func (f Fetcher) FetchGitDir(repo *testkube.Repository) (path string, err error)
 
 // FetchGitFile returns path to git based file saved in local temp directory
 func (f Fetcher) FetchGitFile(repo *testkube.Repository) (path string, err error) {
-	uri, err := f.gitURI(repo)
+	uri, authHeader, err := f.gitURI(repo)
 	if err != nil {
 		output.PrintLog(fmt.Sprintf("%s Failed to fetch git file: %s", ui.IconCross, err.Error()))
 		return path, err
 	}
 
-	repoPath, err := git.Checkout(uri, repo.Branch, repo.Commit, f.path)
+	repoPath, err := git.Checkout(uri, authHeader, repo.Branch, repo.Commit, f.path)
 	if err != nil {
 		output.PrintLog(fmt.Sprintf("%s Failed to checkout git file: %s", ui.IconCross, err.Error()))
 		return path, err
@@ -130,7 +130,7 @@ func (f Fetcher) FetchGitFile(repo *testkube.Repository) (path string, err error
 
 // FetchGit returns path to git based file or dir saved in local temp directory
 func (f Fetcher) FetchGit(repo *testkube.Repository) (path string, err error) {
-	uri, err := f.gitURI(repo)
+	uri, authHeader, err := f.gitURI(repo)
 	if err != nil {
 		output.PrintLog(fmt.Sprintf("%s Failed to fetch git: %s", ui.IconCross, err.Error()))
 		return path, err
@@ -138,7 +138,7 @@ func (f Fetcher) FetchGit(repo *testkube.Repository) (path string, err error) {
 
 	// if path not set make full repo checkout
 	if repo.Path == "" || repo.WorkingDir != "" {
-		path, err := git.Checkout(uri, repo.Branch, repo.Commit, f.path)
+		path, err := git.Checkout(uri, authHeader, repo.Branch, repo.Commit, f.path)
 		if err != nil {
 			output.PrintLog(fmt.Sprintf("%s Failed to fetch git: %s", ui.IconCross, err.Error()))
 			return path, fmt.Errorf("failed to fetch git: %w", err)
@@ -160,7 +160,7 @@ func (f Fetcher) FetchGit(repo *testkube.Repository) (path string, err error) {
 		return path, nil
 	}
 
-	path, err = git.PartialCheckout(uri, repo.Path, repo.Branch, repo.Commit, f.path)
+	path, err = git.PartialCheckout(uri, authHeader, repo.Path, repo.Branch, repo.Commit, f.path)
 	if err != nil {
 		output.PrintLog(fmt.Sprintf("%s Failed to do partial checkout on git: %s", ui.IconCross, err.Error()))
 		return path, fmt.Errorf("failed to do partial checkout on git: %w", err)
@@ -171,17 +171,27 @@ func (f Fetcher) FetchGit(repo *testkube.Repository) (path string, err error) {
 }
 
 // gitUri merge creds with git uri
-func (f Fetcher) gitURI(repo *testkube.Repository) (uri string, err error) {
-	if repo.Username != "" || repo.Token != "" {
-		gitURI, err := url.Parse(repo.Uri)
-		if err != nil {
-			return uri, err
+func (f Fetcher) gitURI(repo *testkube.Repository) (uri, authHeader string, err error) {
+	if repo.AuthType == string(testkube.GitAuthTypeHeader) {
+		if repo.Token != "" {
+			authHeader = fmt.Sprintf("Authorization: Bearer %s", repo.Token)
+			return repo.Uri, authHeader, nil
 		}
-
-		gitURI.User = url.UserPassword(repo.Username, repo.Token)
-		return gitURI.String(), nil
 	}
-	return repo.Uri, nil
+
+	if repo.AuthType == string(testkube.GitAuthTypeBasic) || repo.AuthType == "" {
+		if repo.Username != "" || repo.Token != "" {
+			gitURI, err := url.Parse(repo.Uri)
+			if err != nil {
+				return "", "", err
+			}
+
+			gitURI.User = url.UserPassword(repo.Username, repo.Token)
+			return gitURI.String(), "", nil
+		}
+	}
+
+	return repo.Uri, "", nil
 }
 
 func (f Fetcher) saveTempFile(reader io.Reader) (path string, err error) {

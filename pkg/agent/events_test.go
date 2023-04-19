@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
 
@@ -23,7 +24,9 @@ import (
 
 func TestEventLoop(t *testing.T) {
 	url := "localhost:8998"
-	cloudSrv := newEventServer()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cloudSrv := newEventServer(ctx)
 
 	go func() {
 		lis, err := net.Listen("tcp", url)
@@ -48,7 +51,8 @@ func TestEventLoop(t *testing.T) {
 
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 
-	agent, err := agent.NewAgent(logger.Sugar(), nil, "api-key", grpcClient, 5)
+	var logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error)
+	agent, err := agent.NewAgent(logger.Sugar(), nil, "api-key", grpcClient, 5, 5, logStreamFunc)
 	assert.NoError(t, err)
 	go func() {
 		l, err := agent.Load()
@@ -65,7 +69,6 @@ func TestEventLoop(t *testing.T) {
 		}
 	}()
 
-	ctx, cancel := context.WithCancel(context.Background())
 	g, groupCtx := errgroup.WithContext(ctx)
 	g.Go(func() error {
 		return agent.Run(groupCtx)
@@ -84,17 +87,17 @@ func (cws *CloudEventServer) Count() int {
 }
 
 func (cws *CloudEventServer) ExecuteAsync(srv cloud.TestKubeCloudAPI_ExecuteAsyncServer) error {
-	for {
-		if srv.Context().Err() != nil {
-			return srv.Context().Err()
-		}
+	<-cws.ctx.Done()
 
-		_, err := srv.Recv()
-		if err != nil {
-			return err
-		}
-	}
+	return nil
 }
+
+func (cws *CloudEventServer) GetLogsStream(srv cloud.TestKubeCloudAPI_GetLogsStreamServer) error {
+	<-cws.ctx.Done()
+
+	return nil
+}
+
 func (cws *CloudEventServer) Send(srv cloud.TestKubeCloudAPI_SendServer) error {
 	md, ok := metadata.FromIncomingContext(srv.Context())
 	if !ok {
@@ -129,11 +132,12 @@ func (cws *CloudEventServer) Send(srv cloud.TestKubeCloudAPI_SendServer) error {
 	}
 }
 
-func newEventServer() *CloudEventServer {
-	return &CloudEventServer{}
+func newEventServer(ctx context.Context) *CloudEventServer {
+	return &CloudEventServer{ctx: ctx}
 }
 
 type CloudEventServer struct {
 	cloud.UnimplementedTestKubeCloudAPIServer
 	messageCount int
+	ctx          context.Context
 }

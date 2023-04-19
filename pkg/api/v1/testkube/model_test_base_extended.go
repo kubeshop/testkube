@@ -7,6 +7,13 @@ import (
 	"strings"
 )
 
+const (
+	//TestLabelTestType is a test label for a test type
+	TestLabelTestType = "test-type"
+	// TestLabelExecutor is a test label for an executor
+	TestLabelExecutor = "executor"
+)
+
 type Tests []Test
 
 func (t Tests) Table() (header []string, output [][]string) {

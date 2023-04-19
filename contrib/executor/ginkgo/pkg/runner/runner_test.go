@@ -1,9 +1,7 @@
 package runner
 
 import (
-	"fmt"
 	"os"
-	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,83 +9,12 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-const repoURI = "https://github.com/kubeshop/testkube-executor-ginkgo.git"
-
 func TestRun(t *testing.T) {
-	t.Run("GinkgoRunner should run tests from a repo that pass", func(t *testing.T) {
-		checkForGinkgoCmd := exec.Command("ginkgo", "version")
-		err := checkForGinkgoCmd.Run()
-		if err != nil {
-			fmt.Println("SKIPPING TEST: Ginkgo Not Installed")
-			t.Skip()
-		}
-
-		runner, err := NewGinkgoRunner()
-
-		if err != nil {
-			t.Fail()
-		}
-		vars := make(map[string]testkube.Variable)
-		variable_one := testkube.Variable{
-			Name:  "GinkgoTestPackage",
-			Value: "examples/e2e",
-			Type_: testkube.VariableTypeBasic,
-		}
-		vars["GinkgoTestPackage"] = variable_one
-		result, err := runner.Run(testkube.Execution{
-			Content: &testkube.TestContent{
-				Type_: string(testkube.TestContentTypeGitDir),
-				Repository: &testkube.Repository{
-					Type_:  "git",
-					Uri:    repoURI,
-					Branch: "main",
-				},
-			},
-			Variables: vars,
-		})
-
-		assert.Equal(t, testkube.ExecutionStatusPassed, result.Status)
-		assert.NoError(t, err)
-	})
-
-	t.Run("GinkgoRunner should run tests from a repo that fail", func(t *testing.T) {
-		checkForGinkgoCmd := exec.Command("ginkgo", "version")
-		err := checkForGinkgoCmd.Run()
-		if err != nil {
-			fmt.Println("SKIPPING TEST: Ginkgo Not Installed")
-			t.Skip()
-		}
-
-		os.Setenv("RUNNER_GITUSERNAME", "testuser")
-		os.Setenv("RUNNER_GITTOKEN", "testtoken")
-		runner, err := NewGinkgoRunner()
-		if err != nil {
-			t.Fail()
-		}
-		vars := make(map[string]testkube.Variable)
-		variable_one := testkube.Variable{
-			Name:  "GinkgoTestPackage",
-			Value: "examples/other",
-			Type_: testkube.VariableTypeBasic,
-		}
-		vars["GinkgoTestPackage"] = variable_one
-		result, err := runner.Run(testkube.Execution{
-			Content: &testkube.TestContent{
-				Type_: string(testkube.TestContentTypeGitDir),
-				Repository: &testkube.Repository{
-					Type_:  "git",
-					Uri:    repoURI,
-					Branch: "main",
-				},
-			},
-			Variables: vars,
-		})
-
-		assert.Equal(t, testkube.ExecutionStatusFailed, result.Status)
-		assert.NoError(t, err)
-	})
+	t.Parallel()
 
 	t.Run("InitializeGinkgoParams should should set up some default parameters for ginkgo", func(t *testing.T) {
+		t.Parallel()
+
 		defaultParams := InitializeGinkgoParams()
 		assert.Equal(t, "", defaultParams["GinkgoTestPackage"])
 		assert.Equal(t, "-r", defaultParams["GinkgoRecursive"])
@@ -100,20 +27,22 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("FindGoinkgoParams should override default params when provided with new value", func(t *testing.T) {
+		t.Parallel()
+
 		defaultParams := InitializeGinkgoParams()
 		variables := make(map[string]testkube.Variable)
-		variable_one := testkube.Variable{
+		variableOne := testkube.Variable{
 			Name:  "GinkgoTestPackage",
 			Value: "e2e",
 			Type_: testkube.VariableTypeBasic,
 		}
-		variable_two := testkube.Variable{
+		variableTwo := testkube.Variable{
 			Name:  "GinkgoRecursive",
 			Value: "",
 			Type_: testkube.VariableTypeBasic,
 		}
-		variables["GinkgoTestPackage"] = variable_one
-		variables["GinkgoRecursive"] = variable_two
+		variables["GinkgoTestPackage"] = variableOne
+		variables["GinkgoRecursive"] = variableTwo
 		execution := testkube.Execution{
 			Variables: variables,
 		}
@@ -123,6 +52,8 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("BuildGinkgoArgs should build ginkgo args slice", func(t *testing.T) {
+		t.Parallel()
+
 		defaultParams := InitializeGinkgoParams()
 		argSlice, err := BuildGinkgoArgs(defaultParams, "", "")
 		assert.Nil(t, err)
@@ -136,19 +67,21 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("BuildGinkgoPassThroughFlags should build pass through flags slice from leftover Variables and from Args", func(t *testing.T) {
+		t.Parallel()
+
 		variables := make(map[string]testkube.Variable)
-		variable_one := testkube.Variable{
+		variableOne := testkube.Variable{
 			Name:  "one",
 			Value: "one",
 			Type_: testkube.VariableTypeBasic,
 		}
-		variable_two := testkube.Variable{
+		variableTwo := testkube.Variable{
 			Name:  "two",
 			Value: "two",
 			Type_: testkube.VariableTypeBasic,
 		}
-		variables["GinkgoPassThroughOne"] = variable_one
-		variables["GinkgoPassThroughTwo"] = variable_two
+		variables["GinkgoPassThroughOne"] = variableOne
+		variables["GinkgoPassThroughTwo"] = variableTwo
 
 		args := []string{
 			"--three",

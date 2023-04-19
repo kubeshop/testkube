@@ -1,9 +1,16 @@
 package runner
 
 import (
+	"context"
 	"errors"
 	"log"
 	"testing"
+
+	"github.com/golang/mock/gomock"
+
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
+
+	"github.com/kubeshop/testkube/pkg/envs"
 
 	"github.com/stretchr/testify/assert"
 
@@ -11,26 +18,45 @@ import (
 )
 
 func TestRun(t *testing.T) {
+	t.Parallel()
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	e := testkube.Execution{ArtifactRequest: &testkube.ArtifactRequest{VolumeMountPath: "."}}
 	tests := []struct {
 		name           string
 		scraper        func(id string, directories []string) error
 		execution      testkube.Execution
 		expectedError  string
 		expectedStatus *testkube.ExecutionStatus
+		scraperBuilder func() scraper.Scraper
 	}{
 		{
 			name:           "successful scraper",
 			scraper:        func(id string, directories []string) error { return nil },
-			execution:      testkube.Execution{ArtifactRequest: &testkube.ArtifactRequest{VolumeMountPath: "."}},
+			execution:      e,
 			expectedError:  "",
 			expectedStatus: nil,
+			scraperBuilder: func() scraper.Scraper {
+				s := scraper.NewMockScraper(mockCtrl)
+				s.EXPECT().Scrape(gomock.Any(), []string{"."}, gomock.Eq(e)).Return(nil)
+				s.EXPECT().Close().Return(nil)
+				return s
+			},
 		},
 		{
 			name:           "failing scraper",
 			scraper:        func(id string, directories []string) error { return errors.New("Scraping failed") },
 			execution:      testkube.Execution{ArtifactRequest: &testkube.ArtifactRequest{VolumeMountPath: "."}},
-			expectedError:  "failed getting artifacts: Scraping failed",
+			expectedError:  "error scraping artifacts from container executor: Scraping failed",
 			expectedStatus: testkube.ExecutionStatusFailed,
+			scraperBuilder: func() scraper.Scraper {
+				s := scraper.NewMockScraper(mockCtrl)
+				s.EXPECT().Scrape(gomock.Any(), []string{"."}, gomock.Eq(e)).Return(errors.New("Scraping failed"))
+				s.EXPECT().Close().Return(nil)
+				return s
+			},
 		},
 	}
 
@@ -39,15 +65,12 @@ func TestRun(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			s := Scraper{}
-			s.ScrapeFn = test.scraper
-
 			runner := ScraperRunner{
-				ScrapperEnabled: true,
-				Scraper:         s,
+				Params:  envs.Params{ScrapperEnabled: true},
+				Scraper: test.scraperBuilder(),
 			}
 
-			res, err := runner.Run(test.execution)
+			res, err := runner.Run(context.Background(), test.execution)
 			if err != nil {
 				assert.EqualError(t, err, test.expectedError)
 				assert.Equal(t, *test.expectedStatus, *res.Status)

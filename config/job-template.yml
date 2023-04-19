@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ .Name }}
+  name: "{{ .Name }}"
   namespace: {{ .Namespace }}
 spec:
   {{- if gt .ActiveDeadlineSeconds 0 }}
@@ -11,8 +11,12 @@ spec:
     spec:
       initContainers:
         - name: {{ .Name }}-init
+          {{- if .Registry }}
+          image: {{ .Registry }}/{{ .InitImage }}
+          {{- else }}
           image: {{ .InitImage }}
-          imagePullPolicy: Always
+          {{- end }}
+          imagePullPolicy: IfNotPresent
           command:
             - "/bin/runner"
             - '{{ .Jsn }}'
@@ -36,9 +40,13 @@ spec:
           {{- end }}
           {{- end }}
       containers:
-        - name: {{ .Name }}
+        - name: "{{ .Name }}"
+          {{- if .Registry }}
+          image: {{ .Registry }}/{{ .Image }}
+          {{- else }}
           image: {{ .Image }}
-          imagePullPolicy: Always
+          {{- end }}
+          imagePullPolicy: IfNotPresent
           command:
             - "/bin/runner"
             - '{{ .Jsn }}'

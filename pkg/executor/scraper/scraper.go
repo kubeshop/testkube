@@ -2,30 +2,39 @@ package scraper
 
 import (
 	"context"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-// Scraper is responsible for collecting and persisting the necessary artifacts
+// Scraper is responsible for collecting and persisting the execution artifacts
+//
+//go:generate mockgen -destination=./mock_scraper.go -package=scraper "github.com/kubeshop/testkube/pkg/executor/scraper" Scraper
 type Scraper interface {
-	// Scrape gets artifacts from the directories present in the execution with executionID
-	Scrape(executionID string, directories []string) error
+	// Scrape gets artifacts from the provided paths and the provided execution
+	Scrape(ctx context.Context, paths []string, execution testkube.Execution) error
+	Close() error
 }
 
-type ELScraper struct {
+type ExtractLoadScraper struct {
 	extractor Extractor
 	loader    Uploader
 }
 
-func NewELScraper(extractor Extractor, loader Uploader) *ELScraper {
-	return &ELScraper{
+func NewExtractLoadScraper(extractor Extractor, loader Uploader) *ExtractLoadScraper {
+	return &ExtractLoadScraper{
 		extractor: extractor,
 		loader:    loader,
 	}
 }
 
-func (s *ELScraper) Scrape(ctx context.Context, meta map[string]any) error {
+func (s *ExtractLoadScraper) Scrape(ctx context.Context, paths []string, execution testkube.Execution) error {
 	return s.
 		extractor.
-		Extract(ctx, func(ctx context.Context, object *Object) error {
-			return s.loader.Upload(ctx, object, meta)
+		Extract(ctx, paths, func(ctx context.Context, object *Object) error {
+			return s.loader.Upload(ctx, object, execution)
 		})
+}
+
+func (s *ExtractLoadScraper) Close() error {
+	return s.loader.Close()
 }

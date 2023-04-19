@@ -1,5 +1,3 @@
-//go:build integration
-
 // this test need git to test fetchers
 package content
 
@@ -8,8 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/utils/test"
+
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 // this content is also saved in test repo
@@ -18,10 +19,14 @@ import (
 const fileContent = `{"some":"json","file":"with content"}
 `
 
-func TestFetcher(t *testing.T) {
+func TestFetcher_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	t.Parallel()
+
 	f := NewFetcher("")
 
 	t.Run("test fetch uri", func(t *testing.T) {
+		t.Parallel()
 
 		content := &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeString),
@@ -38,6 +43,8 @@ func TestFetcher(t *testing.T) {
 	})
 
 	t.Run("test fetch git repo based file", func(t *testing.T) {
+		t.Parallel()
+
 		content := &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeGitFile),
 			Repository: testkube.NewGitRepository("https://github.com/kubeshop/testkube-examples.git", "main").
@@ -54,6 +61,8 @@ func TestFetcher(t *testing.T) {
 	})
 
 	t.Run("test fetch git root dir", func(t *testing.T) {
+		t.Parallel()
+
 		content := &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeGitDir),
 			Repository: testkube.NewGitRepository("https://github.com/kubeshop/testkube-examples.git", "main").
@@ -69,6 +78,8 @@ func TestFetcher(t *testing.T) {
 	})
 
 	t.Run("test fetch git subdir", func(t *testing.T) {
+		t.Parallel()
+
 		content := &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeGitDir),
 			Repository: testkube.NewGitRepository("https://github.com/kubeshop/testkube-examples.git", "main").
@@ -82,6 +93,8 @@ func TestFetcher(t *testing.T) {
 	})
 
 	t.Run("test fetch no content", func(t *testing.T) {
+		t.Parallel()
+
 		content := &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeEmpty),
 		}
@@ -92,7 +105,11 @@ func TestFetcher(t *testing.T) {
 	})
 
 	t.Run("test IsGitDir", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("with file", func(t *testing.T) {
+			t.Parallel()
+
 			repo := testkube.NewGitRepository("https://github.com/kubeshop/testkube-examples.git", "main").WithPath("example.json")
 
 			contentType, err := f.CalculateGitContentType(*repo)
@@ -101,6 +118,8 @@ func TestFetcher(t *testing.T) {
 		})
 
 		t.Run("with dir", func(t *testing.T) {
+			t.Parallel()
+
 			repo := testkube.NewGitRepository("https://github.com/kubeshop/testkube-examples.git", "main").WithPath("subdir")
 
 			contentType, err := f.CalculateGitContentType(*repo)

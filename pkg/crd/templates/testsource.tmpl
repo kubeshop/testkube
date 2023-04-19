@@ -54,6 +54,9 @@ spec:
     {{- if .Repository.WorkingDir }}
     workingDir: {{ .Repository.WorkingDir }}
     {{- end }}
+    {{- if .Repository.AuthType }}
+    authType: {{ .Repository.AuthType }}
+    {{- end }}
   {{- end }}
   {{- if .Data }}
   data: {{ .Data }}

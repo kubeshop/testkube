@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
+	"google.golang.org/grpc"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
@@ -16,8 +18,8 @@ type CloudRepository struct {
 	executor executor.Executor
 }
 
-func NewCloudResultRepository(cloudClient cloud.TestKubeCloudAPIClient, apiKey string) *CloudRepository {
-	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(cloudClient, apiKey)}
+func NewCloudResultRepository(cloudClient cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string) *CloudRepository {
+	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(cloudClient, grpcConn, apiKey)}
 }
 
 func (r *CloudRepository) GetUniqueClusterId(ctx context.Context) (string, error) {

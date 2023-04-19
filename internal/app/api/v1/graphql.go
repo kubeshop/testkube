@@ -2,24 +2,33 @@ package v1
 
 import (
 	"context"
+	"net"
 	"net/http"
 
-	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/internal/graphql"
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
 // RunGraphQLServer runs GraphQL server on go net/http server
-// There is an issue with gqlgen and fasthttp server
-func (a *TestkubeAPI) RunGraphQLServer(
-	ctx context.Context,
-	cfg *config.Config,
-) error {
-	srv := graphql.GetServer(a.Events.Bus, a.ExecutorsClient)
+func (s *TestkubeAPI) RunGraphQLServer(ctx context.Context, port string) error {
+	srv := graphql.GetServer(s.Events.Bus, s.ExecutorsClient)
 
-	http.Handle("/graphql", srv)
+	mux := http.NewServeMux()
+	mux.Handle("/graphql", srv)
+	httpSrv := &http.Server{Handler: mux}
 
-	log.DefaultLogger.Infow("running GraphQL server", "port", cfg.GraphqlPort)
+	log.DefaultLogger.Infow("running GraphQL server", "port", port)
 
-	return http.ListenAndServe(":"+cfg.GraphqlPort, nil)
+	l, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		<-ctx.Done()
+		s.Log.Infof("shutting down Testkube GraphQL API server")
+		_ = httpSrv.Shutdown(context.Background())
+	}()
+
+	return httpSrv.Serve(l)
 }

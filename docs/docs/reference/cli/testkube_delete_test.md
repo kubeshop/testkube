@@ -1,4 +1,4 @@
-## testkube delete test
+# testkube delete test
 
 Delete Test
 

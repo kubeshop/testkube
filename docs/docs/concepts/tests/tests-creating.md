@@ -361,21 +361,30 @@ spec:
   template:
     spec:
       containers:
-        - name: { { .Name } }
-          image: { { .Image } }
+        - name: "{{ .Name }}"
+          image: {{ .Image }}
           imagePullPolicy: Always
           command:
             - "/bin/runner"
-            - "{{ .Jsn }}"
-          volumeMounts:
-            - name: data-volume
-              mountPath: /data
+            - '{{ .Jsn }}'
           resources:
             limits:
               memory: 128Mi
 ```
 
 When you run such a test you will face a memory limit for the test executor pod, when the default job template doesn't have any resource constraints.
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+spec:
+  template:
+    spec:
+      imagePullSecrets:
+        - name: yourSecretName
+
+```
+Add `imagePullSecrets` option if you use your own Image Registry. This will add the secret for both `init` and `executor` containers.
 
 ### Executing a Prerun Script
 

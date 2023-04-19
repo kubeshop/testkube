@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/repository/config"
+	"github.com/kubeshop/testkube/pkg/utils"
 
 	"github.com/kubeshop/testkube/pkg/repository/result"
 
@@ -55,8 +56,10 @@ func NewContainerExecutor(
 	metrics ExecutionCounter,
 	emiter EventEmitter,
 	configMap config.Repository,
-	executorsClient *executorsclientv1.ExecutorsClient,
+	executorsClient executorsclientv1.Interface,
 	testsClient testsv3.Interface,
+	registry string,
+	podStartTimeout time.Duration,
 ) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -74,8 +77,10 @@ func NewContainerExecutor(
 		serviceAccountName: serviceAccountName,
 		metrics:            metrics,
 		emitter:            emiter,
-		executorsClient:    executorsClient,
 		testsClient:        testsClient,
+		executorsClient:    executorsClient,
+		registry:           registry,
+		podStartTimeout:    podStartTimeout,
 	}, nil
 }
 
@@ -94,9 +99,11 @@ type ContainerExecutor struct {
 	metrics            ExecutionCounter
 	emitter            EventEmitter
 	configMap          config.Repository
-	executorsClient    *executorsclientv1.ExecutorsClient
 	serviceAccountName string
 	testsClient        testsv3.Interface
+	executorsClient    executorsclientv1.Interface
+	registry           string
+	podStartTimeout    time.Duration
 }
 
 type JobOptions struct {
@@ -131,6 +138,8 @@ type JobOptions struct {
 	ScraperTemplateExtensions string
 	EnvConfigMaps             []testkube.EnvReference
 	EnvSecrets                []testkube.EnvReference
+	Labels                    map[string]string
+	Registry                  string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -171,7 +180,7 @@ func (c *ContainerExecutor) Logs(ctx context.Context, id string) (out chan outpu
 		for _, podName := range ids {
 			logs := make(chan []byte)
 
-			if err := TailJobLogs(ctx, c.log, c.clientSet, c.namespace, podName, logs); err != nil {
+			if err := TailJobLogs(ctx, c.log, c.clientSet, c.namespace, podName, c.podStartTimeout, logs); err != nil {
 				out <- output.NewOutputError(err)
 				return
 			}
@@ -265,7 +274,7 @@ func (c *ContainerExecutor) ExecuteSync(ctx context.Context, execution *testkube
 func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
 	jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
 
-	jobOptions, err := NewJobOptions(c.images, c.templates, c.serviceAccountName, execution, options)
+	jobOptions, err := NewJobOptions(c.images, c.templates, c.serviceAccountName, c.registry, execution, options)
 	if err != nil {
 		return nil, err
 	}
@@ -307,11 +316,16 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	// save stop time and final state
 	defer c.stopExecution(ctx, execution, execution.ExecutionResult)
 
-	// wait for complete
-	l.Debug("poll immediate waiting for executor pod to succeed")
-	if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.clientSet, executorPod.Name, c.namespace)); err != nil {
+	// wait for pod
+	l.Debug("poll immediate waiting for executor pod")
+	if err = wait.PollImmediate(pollInterval, c.podStartTimeout, executor.IsPodLoggable(ctx, c.clientSet, executorPod.Name, c.namespace)); err != nil {
+		l.Errorw("waiting for executor pod started error", "error", err)
+	} else if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.clientSet, executorPod.Name, c.namespace)); err != nil {
 		// continue on poll err and try to get logs later
 		l.Errorw("waiting for executor pod complete error", "error", err)
+	}
+	if err != nil {
+		execution.ExecutionResult.Err(err)
 	}
 	l.Debug("poll executor immediate end")
 
@@ -346,7 +360,9 @@ func (c *ContainerExecutor) updateResultsFromPod(
 		for _, scraperPod := range scraperPods.Items {
 			if scraperPod.Status.Phase != corev1.PodRunning && scraperPod.Labels["job-name"] == scraperPodName {
 				l.Debug("poll immediate waiting for scraper pod to succeed")
-				if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.clientSet, scraperPod.Name, c.namespace)); err != nil {
+				if err = wait.PollImmediate(pollInterval, c.podStartTimeout, executor.IsPodLoggable(ctx, c.clientSet, scraperPod.Name, c.namespace)); err != nil {
+					l.Errorw("waiting for scraper pod started error", "error", err)
+				} else if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.clientSet, scraperPod.Name, c.namespace)); err != nil {
 					// continue on poll err and try to get logs later
 					l.Errorw("waiting for scraper pod complete error", "error", err)
 				}
@@ -403,6 +419,10 @@ func (c *ContainerExecutor) updateResultsFromPod(
 
 	executorLogs = append(executorLogs, scraperLogs...)
 	execution.ExecutionResult.Output = string(executorLogs)
+
+	if execution.ExecutionResult.IsFailed() && execution.ExecutionResult.ErrorMessage == "" {
+		execution.ExecutionResult.ErrorMessage = executor.GetPodErrorMessage(latestExecutorPod)
+	}
 
 	l.Infow("container execution completed saving result", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
 	err = c.repository.UpdateResult(ctx, execution.Id, *execution)
@@ -581,6 +601,10 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		ScraperTemplateExtensions: options.Request.ScraperTemplate,
 		EnvConfigMaps:             options.Request.EnvConfigMaps,
 		EnvSecrets:                options.Request.EnvSecrets,
+		Labels: map[string]string{
+			testkube.TestLabelTestType: utils.SanitizeName(options.TestSpec.Type_),
+			testkube.TestLabelExecutor: options.ExecutorName,
+		},
 	}
 }
 

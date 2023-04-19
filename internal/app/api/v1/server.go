@@ -2,9 +2,16 @@ package v1
 
 import (
 	"context"
+	"io"
+	"net"
 	"os"
+	"reflect"
 	"strconv"
+	"sync"
+	"syscall"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/repository/config"
 
@@ -16,7 +23,6 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/proxy"
@@ -38,14 +44,13 @@ import (
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/storage"
-	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
 const (
-	HeartbeatInterval = time.Hour
-	HttpBodyLimit     = 1 * 1024 * 1024 * 1024 // 1GB - needed for file uploads
+	HeartbeatInterval    = time.Hour
+	DefaultHttpBodyLimit = 1 * 1024 * 1024 * 1024 // 1GB - needed for file uploads
 )
 
 func NewTestkubeAPI(
@@ -69,7 +74,9 @@ func NewTestkubeAPI(
 	jobTemplate string,
 	scheduler *scheduler.Scheduler,
 	slackLoader *slack.SlackLoader,
-	graphQL *handler.Server,
+	storage storage.Client,
+	graphqlPort string,
+	artifactsStorage storage.ArtifactsStorage,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -80,7 +87,10 @@ func NewTestkubeAPI(
 	}
 
 	httpConfig.ClusterID = clusterId
-	httpConfig.Http.BodyLimit = HttpBodyLimit
+	httpConfig.Http.BodyLimit = httpConfig.HttpBodyLimit
+	if httpConfig.HttpBodyLimit == 0 {
+		httpConfig.Http.BodyLimit = DefaultHttpBodyLimit
+	}
 
 	s := TestkubeAPI{
 		HTTPServer:           server.NewServer(httpConfig),
@@ -103,7 +113,9 @@ func NewTestkubeAPI(
 		jobTemplate:          jobTemplate,
 		scheduler:            scheduler,
 		slackLoader:          slackLoader,
-		GraphQL:              graphQL,
+		Storage:              storage,
+		graphqlPort:          graphqlPort,
+		artifactsStorage:     artifactsStorage,
 	}
 
 	// will be reused in websockets handler
@@ -114,7 +126,6 @@ func NewTestkubeAPI(
 	s.Events.Loader.Register(s.slackLoader)
 
 	s.InitEnvs()
-	s.InitStorage()
 	s.InitRoutes()
 
 	return s
@@ -145,7 +156,8 @@ type TestkubeAPI struct {
 	scheduler            *scheduler.Scheduler
 	Clientset            kubernetes.Interface
 	slackLoader          *slack.SlackLoader
-	GraphQL              *handler.Server
+	graphqlPort          string
+	artifactsStorage     storage.ArtifactsStorage
 }
 
 type storageParams struct {
@@ -153,7 +165,7 @@ type storageParams struct {
 	Endpoint        string
 	AccessKeyId     string
 	SecretAccessKey string
-	Location        string
+	Region          string
 	Token           string
 	Bucket          string
 }
@@ -195,16 +207,6 @@ func (s *TestkubeAPI) InitEnvs() {
 	}
 }
 
-func (s *TestkubeAPI) InitStorage() {
-	s.Storage = minio.NewClient(s.storageParams.Endpoint,
-		s.storageParams.AccessKeyId,
-		s.storageParams.SecretAccessKey,
-		s.storageParams.Location,
-		s.storageParams.Token,
-		s.storageParams.Bucket,
-		s.storageParams.SSL)
-}
-
 func (s *TestkubeAPI) InitRoutes() {
 	s.Routes.Static("/api-docs", "./api/v1")
 	s.Routes.Use(cors.New())
@@ -240,6 +242,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	executions.Get("/:executionID/logs", s.ExecutionLogsHandler())
 	executions.Get("/:executionID/logs/stream", s.ExecutionLogsStreamHandler())
 	executions.Get("/:executionID/artifacts/:filename", s.GetArtifactHandler())
+	executions.Get("/:executionID/artifact-archive", s.GetArtifactArchiveHandler())
 
 	tests := s.Routes.Group("/tests")
 
@@ -338,12 +341,6 @@ func (s *TestkubeAPI) InitRoutes() {
 	repositories := s.Routes.Group("/repositories")
 	repositories.Post("/", s.ValidateRepositoryHandler())
 
-	// TODO it's not possible to mount graphql on FastHTTP
-	// https://github.com/99designs/gqlgen/issues/1664
-	// gql := s.Routes.Group("/graphql")
-	// gql.All("/query", adaptor.HTTPHandler(s.GraphQL))
-	// gql.All("/", adaptor.HTTPHandler(playground.Handler("GraphQL playground", "/v1/graphql/query")))
-
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor
 	s.Mux.Mount("/results", s.Mux)
@@ -356,6 +353,73 @@ func (s *TestkubeAPI) InitRoutes() {
 	s.Log.Infow("dashboard uri", "uri", dashboardURI)
 	s.Mux.All("/", proxy.Forward(dashboardURI))
 
+	// set up proxy for the internal GraphQL server
+	s.Mux.All("/graphql", func(c *fiber.Ctx) error {
+		// Connect to server
+		serverConn, err := net.Dial("tcp", ":"+s.graphqlPort)
+		if err != nil {
+			s.Log.Errorw("could not connect to GraphQL server as a proxy", "error", err)
+			return err
+		}
+
+		// Resend headers to the server
+		_, err = serverConn.Write(c.Request().Header.Header())
+		if err != nil {
+			serverConn.Close()
+			s.Log.Errorw("error while sending headers to GraphQL server", "error", err)
+			return err
+		}
+
+		// Resend body to the server
+		_, err = serverConn.Write(c.Body())
+		if err != nil && err != io.EOF {
+			serverConn.Close()
+			s.Log.Errorw("error while reading GraphQL client data", "error", err)
+			return err
+		}
+
+		// Handle optional WebSocket connection
+		c.Context().HijackSetNoResponse(true)
+		c.Context().Hijack(func(clientConn net.Conn) {
+			// Close the connection afterward
+			defer serverConn.Close()
+			defer clientConn.Close()
+
+			// Extract Unix connection
+			serverSock, ok := serverConn.(*net.TCPConn)
+			if !ok {
+				s.Log.Errorw("error while building TCPConn out ouf serverConn", "error", err)
+				return
+			}
+			clientSock, ok := reflect.Indirect(reflect.ValueOf(clientConn)).FieldByName("Conn").Interface().(*net.TCPConn)
+			if !ok {
+				s.Log.Errorw("error while building TCPConn out of hijacked connection", "error", err)
+				return
+			}
+
+			// Duplex communication between client and GraphQL server
+			var wg sync.WaitGroup
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				_, err := io.Copy(clientSock, serverSock)
+				if err != nil && err != io.EOF && !errors.Is(err, syscall.ECONNRESET) && !errors.Is(err, syscall.EPIPE) {
+					s.Log.Errorw("error while reading GraphQL client data", "error", err)
+				}
+				serverSock.CloseWrite()
+			}()
+			go func() {
+				defer wg.Done()
+				_, err = io.Copy(serverSock, clientSock)
+				if err != nil && err != io.EOF {
+					s.Log.Errorw("error while reading GraphQL server data", "error", err)
+				}
+				clientSock.CloseWrite()
+			}()
+			wg.Wait()
+		})
+		return nil
+	})
 }
 
 func (s TestkubeAPI) StartTelemetryHeartbeats(ctx context.Context) {

@@ -3,6 +3,8 @@ package tests
 import (
 	"fmt"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,6 +19,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/test/detector"
 	"github.com/kubeshop/testkube/pkg/ui"
+)
+
+const (
+	artifactsFormatFolder  = "folder"
+	artifactsFormatArchive = "archive"
 )
 
 func printExecutionDetails(execution testkube.Execution) {
@@ -40,7 +47,7 @@ func printExecutionDetails(execution testkube.Execution) {
 	ui.NL()
 }
 
-func DownloadArtifacts(id, dir string, client apiclientv1.Client) {
+func DownloadArtifacts(id, dir, format string, masks []string, client apiclientv1.Client) {
 	artifacts, err := client.GetExecutionArtifacts(id)
 	ui.ExitOnError("getting artifacts ", err)
 
@@ -50,10 +57,71 @@ func DownloadArtifacts(id, dir string, client apiclientv1.Client) {
 	if len(artifacts) > 0 {
 		ui.Info("Getting artifacts", fmt.Sprintf("count = %d", len(artifacts)), "\n")
 	}
-	for _, artifact := range artifacts {
-		f, err := client.DownloadFile(id, artifact.Name, dir)
-		ui.ExitOnError("downloading file: "+f, err)
-		ui.Warn(" - downloading file ", f)
+
+	if format != artifactsFormatFolder && format != artifactsFormatArchive {
+		ui.Failf("invalid artifacts format: %s. use one of folder|archive", format)
+	}
+
+	var regexps []*regexp.Regexp
+	for _, mask := range masks {
+		values := strings.Split(mask, ",")
+		for _, value := range values {
+			re, err := regexp.Compile(value)
+			ui.ExitOnError("checking mask "+value, err)
+
+			regexps = append(regexps, re)
+		}
+	}
+
+	if format == artifactsFormatFolder {
+		for _, artifact := range artifacts {
+			found := len(regexps) == 0
+			for i := range regexps {
+				if found = regexps[i].MatchString(artifact.Name); found {
+					break
+				}
+			}
+
+			if !found {
+				continue
+			}
+
+			f, err := client.DownloadFile(id, artifact.Name, dir)
+			ui.ExitOnError("downloading file: "+f, err)
+			ui.Warn(" - downloading file ", f)
+		}
+	}
+
+	if format == artifactsFormatArchive {
+		const readinessCheckTimeout = time.Second
+		ticker := time.NewTicker(readinessCheckTimeout)
+		defer ticker.Stop()
+
+		ch := make(chan string)
+		defer close(ch)
+
+		go func() {
+			f, err := client.DownloadArchive(id, dir, masks)
+			ui.ExitOnError("downloading archive: "+f, err)
+
+			ch <- f
+		}()
+
+		var archive string
+		ui.Warn(" - preparing archive ")
+
+	outloop:
+		for {
+			select {
+			case <-ticker.C:
+				ui.PrintDot()
+			case archive = <-ch:
+				ui.NL()
+				break outloop
+			}
+		}
+
+		ui.Warn(" - downloading archive ", archive)
 	}
 
 	ui.NL()
@@ -128,10 +196,12 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	if len(fileContent) > 0 && testContentType == "" {
 		testContentType = string(testkube.TestContentTypeString)
 	}
-
-	repository, err := common.NewRepositoryFromFlags(cmd)
-	if err != nil {
-		return nil, err
+	var repository *testkube.Repository
+	if cmd.Flag("git-uri") != nil {
+		repository, err = common.NewRepositoryFromFlags(cmd)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if repository != nil && testContentType == "" {
@@ -390,6 +460,7 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.Upse
 	}
 
 	name := cmd.Flag("name").Value.String()
+	file := cmd.Flag("file").Value.String()
 	executorType := cmd.Flag("type").Value.String()
 	namespace := cmd.Flag("namespace").Value.String()
 	labels, err := cmd.Flags().GetStringToString("label")
@@ -407,7 +478,10 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.Upse
 		return options, err
 	}
 
-	sourceName := cmd.Flag("source").Value.String()
+	sourceName := ""
+	if cmd.Flag("source") != nil {
+		sourceName = cmd.Flag("source").Value.String()
+	}
 	options = apiclientv1.UpsertTestOptions{
 		Name:      name,
 		Type_:     executorType,
@@ -427,8 +501,11 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.Upse
 	// try to detect type if none passed
 	if executorType == "" {
 		d := detector.NewDefaultDetector()
-		if detectedType, ok := d.Detect(options); ok {
-			ui.Info("Detected test test type", detectedType)
+		if detectedType, ok := d.Detect(file, options); ok {
+			crdOnly, _ := strconv.ParseBool(cmd.Flag("crd-only").Value.String())
+			if !crdOnly {
+				ui.Info("Detected test type", detectedType)
+			}
 			options.Type_ = detectedType
 		}
 	}

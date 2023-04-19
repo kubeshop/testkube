@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+
 	"github.com/stretchr/testify/assert"
 
 	cloudscraper "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
@@ -34,7 +36,7 @@ func TestCloudLoader_Load(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		meta        map[string]any
+		execution   testkube.Execution
 		data        io.Reader
 		setup       func() *cloudscraper.CloudUploader
 		putErr      error
@@ -42,11 +44,11 @@ func TestCloudLoader_Load(t *testing.T) {
 		errContains string
 	}{
 		{
-			name: "valid meta and data",
-			meta: map[string]any{
-				"executionId":   "my-execution-id",
-				"testName":      "my-test",
-				"testSuiteName": "my-test-suite",
+			name: "valid data",
+			execution: testkube.Execution{
+				Id:            "my-execution-id",
+				TestName:      "my-test",
+				TestSuiteName: "my-test-suite",
 			},
 			data: nil,
 			setup: func() *cloudscraper.CloudUploader {
@@ -64,38 +66,11 @@ func TestCloudLoader_Load(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "missing meta",
-			meta: map[string]any{
-				"object": "my-object",
-			},
-			data: nil,
-			setup: func() *cloudscraper.CloudUploader {
-				return cloudscraper.NewCloudUploader(mockExecutor)
-			},
-			wantErr:     true,
-			errContains: "executionId is missing",
-		},
-		{
-			name: "invalid meta",
-			meta: map[string]any{
-				"object":        "my-object",
-				"executionId":   123, // invalid type
-				"testName":      "my-test",
-				"testSuiteName": "my-test-suite",
-			},
-			data: nil,
-			setup: func() *cloudscraper.CloudUploader {
-				return cloudscraper.NewCloudUploader(mockExecutor)
-			},
-			wantErr:     true,
-			errContains: "executionId is not a string",
-		},
-		{
 			name: "executor error",
-			meta: map[string]any{
-				"executionId":   "my-execution-id",
-				"testName":      "my-test",
-				"testSuiteName": "my-test-suite",
+			execution: testkube.Execution{
+				Id:            "my-execution-id",
+				TestName:      "my-test",
+				TestSuiteName: "my-test-suite",
 			},
 			data: nil,
 			setup: func() *cloudscraper.CloudUploader {
@@ -123,7 +98,7 @@ func TestCloudLoader_Load(t *testing.T) {
 				Name: "my-object",
 				Data: tt.data,
 			}
-			err := cloudLoader.Upload(ctx, object, tt.meta)
+			err := cloudLoader.Upload(ctx, object, tt.execution)
 			if tt.wantErr {
 				assert.ErrorContains(t, err, tt.errContains)
 			} else {

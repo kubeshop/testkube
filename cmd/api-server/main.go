@@ -13,6 +13,13 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"google.golang.org/grpc"
+
+	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
+
+	domainstorage "github.com/kubeshop/testkube/pkg/storage"
+	"github.com/kubeshop/testkube/pkg/storage/minio"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 
@@ -57,7 +64,6 @@ import (
 	testsourcesclientv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
-	"github.com/kubeshop/testkube/internal/graphql"
 	"github.com/kubeshop/testkube/internal/migrations"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -114,6 +120,11 @@ func main() {
 	_ = ln.Close()
 	log.DefaultLogger.Debugw("TCP Port is available", "port", cfg.APIServerPort)
 
+	ln, err = net.Listen("tcp", ":"+cfg.GraphqlPort)
+	ui.ExitOnError("Checking if port "+cfg.GraphqlPort+"is free", err)
+	_ = ln.Close()
+	log.DefaultLogger.Debugw("TCP Port is available", "port", cfg.GraphqlPort)
+
 	kubeClient, err := kubeclient.GetClient()
 	ui.ExitOnError("Getting kubernetes client", err)
 
@@ -124,12 +135,13 @@ func main() {
 	ui.ExitOnError("Getting config map client", err)
 	// agent
 	var grpcClient cloud.TestKubeCloudAPIClient
+	var grpcConn *grpc.ClientConn
 	mode := common.ModeStandalone
 	if cfg.TestkubeCloudAPIKey != "" {
 		mode = common.ModeAgent
 	}
 	if mode == common.ModeAgent {
-		grpcConn, err := agent.NewGRPCConnection(ctx, cfg.TestkubeCloudTLSInsecure, cfg.TestkubeCloudURL, log.DefaultLogger)
+		grpcConn, err = agent.NewGRPCConnection(ctx, cfg.TestkubeCloudTLSInsecure, cfg.TestkubeCloudURL, log.DefaultLogger)
 		ui.ExitOnError("error creating gRPC connection", err)
 		defer grpcConn.Close()
 
@@ -164,19 +176,53 @@ func main() {
 	var testResultsRepository testresult.Repository
 	var configRepository configrepository.Repository
 	var triggerLeaseBackend triggers.LeaseBackend
+	var artifactStorage domainstorage.ArtifactsStorage
+	var storageClient domainstorage.Client
 	if mode == common.ModeAgent {
-		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, cfg.TestkubeCloudAPIKey)
-		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, cfg.TestkubeCloudAPIKey)
-		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, cfg.TestkubeCloudAPIKey)
+		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
+		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
+		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
 		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
+		artifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
 	} else {
 		mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
-		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, mongoSSLConfig)
+		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)
 		ui.ExitOnError("Getting mongo database", err)
-		resultsRepository = result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
+		mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
+		resultsRepository = mongoResultsRepository
 		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
 		configRepository = configrepository.NewMongoRepository(db)
 		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
+		minioClient := minio.NewClient(
+			cfg.StorageEndpoint,
+			cfg.StorageAccessKeyID,
+			cfg.StorageSecretAccessKey,
+			cfg.StorageRegion,
+			cfg.StorageToken,
+			cfg.StorageBucket,
+			cfg.StorageSSL,
+		)
+		if err = minioClient.Connect(); err != nil {
+			ui.ExitOnError("Connecting to minio", err)
+		}
+		if expErr := minioClient.SetExpirationPolicy(cfg.StorageExpiration); expErr != nil {
+			log.DefaultLogger.Errorw("Error setting expiration policy", "error", expErr)
+		}
+		storageClient = minioClient
+		artifactStorage = minio.NewMinIOArtifactClient(storageClient)
+		// init storage
+		isMinioStorage := cfg.LogsStorage == "minio"
+		if isMinioStorage {
+			bucket := cfg.LogsBucket
+			if bucket == "" {
+				log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
+			} else if _, err := storageClient.ListBuckets(ctx); err == nil {
+				log.DefaultLogger.Info("setting minio as logs storage")
+				mongoResultsRepository.OutputRepository = result.NewMinioOutputRepository(storageClient, mongoResultsRepository.ResultsColl, bucket)
+			} else {
+				log.DefaultLogger.Infow("minio is not available, using default logs storage", "error", err)
+			}
+		}
 	}
 
 	configName := fmt.Sprintf("testkube-api-server-config-%s", cfg.TestkubeNamespace)
@@ -267,6 +313,8 @@ func main() {
 		configMapConfig,
 		testsClientV3,
 		clientset,
+		cfg.TestkubeRegistry,
+		cfg.TestkubePodStartTimeout,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating executor client", err)
@@ -288,6 +336,8 @@ func main() {
 		configMapConfig,
 		executorsClient,
 		testsClientV3,
+		cfg.TestkubeRegistry,
+		cfg.TestkubePodStartTimeout,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating container executor", err)
@@ -315,8 +365,6 @@ func main() {
 		ui.ExitOnError("Creating slack loader", err)
 	}
 
-	gqlServer := graphql.GetServer(eventBus, executorsClient)
-
 	api := apiv1.NewTestkubeAPI(
 		cfg.TestkubeNamespace,
 		resultsRepository,
@@ -338,29 +386,15 @@ func main() {
 		jobTemplate,
 		sched,
 		slackLoader,
-		gqlServer,
+		storageClient,
+		cfg.GraphqlPort,
+		artifactStorage,
 	)
-
-	isMinioStorage := cfg.LogsStorage == "minio"
-	if api.Storage != nil && isMinioStorage && mode != common.ModeAgent {
-		bucket := cfg.LogsBucket
-		if bucket == "" {
-			log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
-		} else if _, err := api.Storage.ListBuckets(); err == nil {
-			log.DefaultLogger.Info("setting minio as logs storage")
-			mongoResultsRepository, ok := resultsRepository.(*result.MongoRepository)
-			if ok {
-				mongoResultsRepository.OutputRepository = result.NewMinioOutputRepository(api.Storage, mongoResultsRepository.ResultsColl, bucket)
-			}
-		} else {
-			log.DefaultLogger.Infow("minio is not available, using default logs storage", "error", err)
-		}
-	}
 
 	if mode == common.ModeAgent {
 		log.DefaultLogger.Info("starting agent service")
 
-		agentHandle, err := agent.NewAgent(log.DefaultLogger, api.Mux.Handler(), cfg.TestkubeCloudAPIKey, grpcClient, cfg.TestkubeCloudWorkerCount)
+		agentHandle, err := agent.NewAgent(log.DefaultLogger, api.Mux.Handler(), cfg.TestkubeCloudAPIKey, grpcClient, cfg.TestkubeCloudWorkerCount, cfg.TestkubeCloudLogStreamWorkerCount, api.GetLogsStream)
 		if err != nil {
 			ui.ExitOnError("Starting agent", err)
 		}
@@ -388,6 +422,7 @@ func main() {
 			triggerLeaseBackend,
 			log.DefaultLogger,
 			configMapConfig,
+			executorsClient,
 			triggers.WithHostnameIdentifier(),
 			triggers.WithTestkubeNamespace(cfg.TestkubeNamespace),
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
@@ -415,7 +450,7 @@ func main() {
 	})
 
 	g.Go(func() error {
-		return api.RunGraphQLServer(ctx, cfg)
+		return api.RunGraphQLServer(ctx, cfg.GraphqlPort)
 	})
 
 	if err := g.Wait(); err != nil {
@@ -546,14 +581,14 @@ func getMongoSSLConfig(cfg *config.Config, secretClient *secret.Client) *storage
 
 	var keyFile, caFile, pass string
 	var ok bool
-	if keyFile, ok = mongoSSLSecret["sslClientCertificateKeyFile"]; !ok {
-		ui.Warn("Could not find sslClientCertificateKeyFile in secret %s", cfg.APIMongoSSLCert)
+	if keyFile, ok = mongoSSLSecret[cfg.APIMongoSSLClientFileKey]; !ok {
+		ui.Warn("Could not find sslClientCertificateKeyFile with key %s in secret %s", cfg.APIMongoSSLClientFileKey, cfg.APIMongoSSLCert)
 	}
-	if caFile, ok = mongoSSLSecret["sslCertificateAuthorityFile"]; !ok {
-		ui.Warn("Could not find sslCertificateAuthorityFile in secret %s", cfg.APIMongoSSLCert)
+	if caFile, ok = mongoSSLSecret[cfg.APIMongoSSLCAFileKey]; !ok {
+		ui.Warn("Could not find sslCertificateAuthorityFile with key %s in secret %s", cfg.APIMongoSSLCAFileKey, cfg.APIMongoSSLCert)
 	}
-	if pass, ok = mongoSSLSecret["sslClientCertificateKeyFilePassword"]; !ok {
-		ui.Warn("Could not find sslClientCertificateKeyFilePassword in secret %s", cfg.APIMongoSSLCert)
+	if pass, ok = mongoSSLSecret[cfg.APIMongoSSLClientFilePass]; !ok {
+		ui.Warn("Could not find sslClientCertificateKeyFilePassword with key %s in secret %s", cfg.APIMongoSSLClientFilePass, cfg.APIMongoSSLCert)
 	}
 
 	err = os.WriteFile(clientCertPath, []byte(keyFile), 0644)
