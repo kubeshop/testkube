@@ -6,7 +6,9 @@ package git
 import (
 	"fmt"
 	"os"
+	"strings"
 
+	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/process"
 )
 
@@ -45,11 +47,13 @@ func CheckoutCommit(uri, authHeader, path, commit, dir string) (err error) {
 	}
 
 	args = append(args, "fetch", "--depth", "1", "origin", commit)
-	if _, err = process.ExecuteInDir(
+	_, err = process.ExecuteInDir(
 		repoDir,
 		"git",
 		args...,
-	); err != nil {
+	)
+	output.PrintLogf("Git parameters: %v", obfuscateArgs(args, uri, authHeader))
+	if err != nil {
 		return err
 	}
 
@@ -106,6 +110,7 @@ func Checkout(uri, authHeader, branch, commit, dir string) (outputDir string, er
 			"git",
 			args...,
 		)
+		output.PrintLogf("Git parameters: %v", obfuscateArgs(args, uri, authHeader))
 		if err != nil {
 			return "", err
 		}
@@ -147,6 +152,7 @@ func PartialCheckout(uri, authHeader, path, branch, commit, dir string) (outputD
 			"git",
 			args...,
 		)
+		output.PrintLogf("Git parameters: %v", obfuscateArgs(args, uri, authHeader))
 		if err != nil {
 			return "", err
 		}
@@ -169,4 +175,16 @@ func PartialCheckout(uri, authHeader, path, branch, commit, dir string) (outputD
 	}
 
 	return tmpDir + "/repo/" + path, nil
+}
+
+func obfuscateArgs(args []string, uri, authHeader string) []string {
+	for i := range args {
+		for _, value := range []string{uri, authHeader} {
+			if value != "" {
+				args[i] = strings.ReplaceAll(args[i], value, strings.Repeat("*", len(value)))
+			}
+		}
+	}
+
+	return args
 }
