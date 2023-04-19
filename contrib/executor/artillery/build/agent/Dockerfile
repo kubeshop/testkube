@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 FROM node:17
 COPY artillery /bin/runner
 

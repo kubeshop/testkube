@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 #Base image with adding pmotheus support: 0.2.4
 # installed packages: go.k6.io/xk6/cmd/xk6@v0.6.1 && xk6 build --with github.com/grafana/xk6-output-prometheus-remote@latest
 FROM kubeshop/testkube-k6-executor:base as builder
