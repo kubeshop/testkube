@@ -310,7 +310,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 			{
 				test.ExecutionRequest.ArgsMode,
 				&request.ArgsMode,
-			},			
+			},
 		}
 
 		for _, field := range fields {
