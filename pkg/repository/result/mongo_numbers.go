@@ -67,17 +67,29 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name strin
 }
 
 func (r *MongoRepository) DeleteExecutionNumber(ctx context.Context, name string) (err error) {
+	err = r.convertFromOldToNew()
+	if err != nil {
+		return err
+	}
 	_, err = r.SequencesColl.DeleteOne(ctx, bson.M{"name": name})
 	return err
 }
 
 func (r *MongoRepository) DeleteExecutionNumbers(ctx context.Context, names []string) (err error) {
+	err = r.convertFromOldToNew()
+	if err != nil {
+		return err
+	}
 	_, err = r.SequencesColl.DeleteMany(ctx, bson.M{"name": bson.M{"$in": names}})
 	return err
 }
 
 func (r *MongoRepository) DeleteAllExecutionNumbers(ctx context.Context, isTestSuite bool) (err error) {
-	_, err = r.SequencesColl.DeleteMany(ctx, bson.M{"isTestSuite": isTestSuite})
+	err = r.convertFromOldToNew()
+	if err != nil {
+		return err
+	}
+	_, err = r.SequencesColl.DeleteMany(ctx, bson.M{"istestsuite": isTestSuite})
 	return err
 }
 
