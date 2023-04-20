@@ -38,7 +38,7 @@ func CheckoutCommit(uri, authHeader, path, commit, dir string) (err error) {
 		return err
 	}
 
-	args := []string{""}
+	args := []string{}
 	// Appends the HTTP Authorization header to the git clone args to
 	// authenticate using a bearer token. More info:
 	// https://confluence.atlassian.com/bitbucketserver/http-access-tokens-939515499.html
