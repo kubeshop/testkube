@@ -84,6 +84,12 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 		}
 
 		job.Labels[key] = value
+
+		if job.Spec.Template.Labels == nil {
+			job.Spec.Template.Labels = make(map[string]string)
+		}
+
+		job.Spec.Template.Labels[key] = value
 	}
 
 	envs := append(executor.RunnerEnvVars, secretEnvVars...)

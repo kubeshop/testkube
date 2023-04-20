@@ -604,6 +604,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		Labels: map[string]string{
 			testkube.TestLabelTestType: utils.SanitizeName(options.TestSpec.Type_),
 			testkube.TestLabelExecutor: options.ExecutorName,
+			testkube.TestLabelTestName: options.TestName,
 		},
 	}
 }
