@@ -311,8 +311,6 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 			}
 		}
 
-		s.logger.Infow("args mode", request.ArgsMode, "test mode", test.ExecutionRequest.ArgsMode)
-
 		// Combine test executor args with execution args
 		if len(request.Command) == 0 {
 			request.Command = test.ExecutionRequest.Command
