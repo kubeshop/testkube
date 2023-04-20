@@ -24,7 +24,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-const CurlAdditionalFlags = "-is"
+const (
+	curlDefaultCommand = "curl"
+	curlDefaultArgs    = "-is"
+)
 
 // CurlRunner is used to run curl commands.
 type CurlRunner struct {
@@ -92,15 +95,23 @@ func (r *CurlRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	}
 	outputPkg.PrintLogf("%s Successfully filled the input templates", ui.IconCheckMark)
 
-	command := runnerInput.Command[0]
+	command := ""
+	var args []string
+	if len(execution.Command) != 0 {
+		command = execution.Command[0]
+		args = execution.Command[1:]
+	}
+
+	if len(runnerInput.Command) != 0 {
+		command = runnerInput.Command[0]
+		args = runnerInput.Command[1:]
+	}
+
 	if command != "curl" {
 		outputPkg.PrintLogf("%s you can run only `curl` commands with this executor but passed: `%s`", ui.IconCross, command)
 		return result, errors.Errorf("you can run only `curl` commands with this executor but passed: `%s`", command)
 	}
 
-	runnerInput.Command[0] = CurlAdditionalFlags
-
-	args := runnerInput.Command
 	args = append(args, execution.Args...)
 
 	runPath := ""
@@ -108,6 +119,7 @@ func (r *CurlRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		runPath = filepath.Join(r.Params.DataDir, "repo", execution.Content.Repository.WorkingDir)
 	}
 
+	outputPkg.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
 	output, err := executor.Run(runPath, command, envManager, args...)
 	output = envManager.ObfuscateSecrets(output)
 

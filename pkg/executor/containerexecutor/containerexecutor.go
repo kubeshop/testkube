@@ -516,23 +516,23 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testku
 func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOptions {
 	// for args, command and image, HTTP request takes priority, then test spec, then executor
 	var args []string
-	switch {
-	case options.TestSpec.ExecutionRequest != nil &&
-		len(options.TestSpec.ExecutionRequest.Args) != 0:
-		args = options.TestSpec.ExecutionRequest.Args
-
-	case len(options.Request.Args) != 0:
-		args = options.Request.Args
+	argsMode := options.Request.ArgsMode
+	if options.TestSpec.ExecutionRequest != nil && argsMode == "" {
+		argsMode = options.TestSpec.ExecutionRequest.ArgsMode
 	}
 
-	if options.Request.ArgsMode == string(testkube.ArgsModeTypeAppend) || options.Request.ArgsMode == "" {
-		args = append(options.ExecutorSpec.Args, args...)
-	}
+	if argsMode == string(testkube.ArgsModeTypeAppend) || argsMode == "" {
+		args = options.ExecutorSpec.Args
 
-	if options.Request.ArgsMode == string(testkube.ArgsModeTypeOverride) {
-		if len(args) == 0 {
-			args = options.ExecutorSpec.Args
+		if options.TestSpec.ExecutionRequest != nil {
+			args = append(args, options.TestSpec.ExecutionRequest.Args...)
 		}
+
+		args = append(args, options.Request.Args...)
+	}
+
+	if argsMode == string(testkube.ArgsModeTypeOverride) {
+		args = options.Request.Args
 	}
 
 	var command []string
@@ -550,15 +550,15 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 
 	var image string
 	switch {
-	case options.Request.Image != "":
-		image = options.Request.Image
+	case options.ExecutorSpec.Image != "":
+		image = options.ExecutorSpec.Image
 
 	case options.TestSpec.ExecutionRequest != nil &&
 		options.TestSpec.ExecutionRequest.Image != "":
 		image = options.TestSpec.ExecutionRequest.Image
 
-	case options.ExecutorSpec.Image != "":
-		image = options.ExecutorSpec.Image
+	case options.Request.Image != "":
+		image = options.Request.Image
 	}
 
 	var workingDir string
