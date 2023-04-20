@@ -12,6 +12,8 @@ const (
 	TestLabelTestType = "test-type"
 	// TestLabelExecutor is a test label for an executor
 	TestLabelExecutor = "executor"
+	// TestLabelTestName is a test label for a test name
+	TestLabelTestName = "test-name"
 )
 
 type Tests []Test

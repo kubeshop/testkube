@@ -494,6 +494,7 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		Labels: map[string]string{
 			testkube.TestLabelTestType: utils.SanitizeName(options.TestSpec.Type_),
 			testkube.TestLabelExecutor: options.ExecutorName,
+			testkube.TestLabelTestName: options.TestName,
 		},
 	}
 }
@@ -703,6 +704,12 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 		}
 
 		job.Labels[key] = value
+
+		if job.Spec.Template.Labels == nil {
+			job.Spec.Template.Labels = make(map[string]string)
+		}
+
+		job.Spec.Template.Labels[key] = value
 	}
 
 	envs := append(executor.RunnerEnvVars, secretEnvVars...)
