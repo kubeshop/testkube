@@ -24,11 +24,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-const (
-	curlDefaultCommand = "curl"
-	curlDefaultArgs    = "-is"
-)
-
 // CurlRunner is used to run curl commands.
 type CurlRunner struct {
 	Params  envs.Params
