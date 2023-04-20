@@ -109,6 +109,11 @@ func NewRunTestCmd() *cobra.Command {
 				scraperTemplateContent = string(b)
 			}
 
+			mode := ""
+			if cmd.Flag("args-mode").Changed {
+				mode = argsMode
+			}
+
 			var executions []testkube.Execution
 			client, namespace := common.GetClient(cmd)
 			options := apiv1.ExecuteTestOptions{
@@ -117,7 +122,7 @@ func NewRunTestCmd() *cobra.Command {
 				ExecutionLabels:               executionLabels,
 				Command:                       command,
 				Args:                          executorArgs,
-				ArgsMode:                      argsMode,
+				ArgsMode:                      mode,
 				SecretEnvs:                    secretEnvs,
 				HTTPProxy:                     httpProxy,
 				HTTPSProxy:                    httpsProxy,
@@ -247,7 +252,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&secretVariables, "secret-variable", "s", map[string]string{}, "execution secret variable passed to executor")
 	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in executor")
 	cmd.Flags().StringArrayVarP(&binaryArgs, "args", "", []string{}, "executor binary additional arguments")
-	cmd.Flags().StringVarP(&argsMode, "args-mode", "append", "", "usage mode for argumnets. one of append|override")
+	cmd.Flags().StringVarP(&argsMode, "args-mode", "", "append", "usage mode for argumnets. one of append|override")
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
 	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "downlaod artifacts automatically")

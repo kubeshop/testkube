@@ -311,13 +311,15 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 			}
 		}
 
+		s.logger.Infow("args mode", request.ArgsMode, "test mode", test.ExecutionRequest.ArgsMode)
+
 		// Combine test executor args with execution args
 		if len(request.Command) == 0 {
 			request.Command = test.ExecutionRequest.Command
 		}
 
-		if request.ArgsMode == string(testkube.ArgsModeTypeAppend) || request.ArgsMode == "" {
-			request.Args = append(test.ExecutionRequest.Args, request.Args...)
+		if len(request.Args) == 0 {
+			request.Args = test.ExecutionRequest.Args
 		}
 
 		if request.ActiveDeadlineSeconds == 0 && test.ExecutionRequest.ActiveDeadlineSeconds != 0 {

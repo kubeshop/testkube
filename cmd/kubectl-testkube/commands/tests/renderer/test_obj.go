@@ -90,8 +90,8 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 
 		if len(test.ExecutionRequest.Args) > 0 {
 			ui.Warn("  Args:                   ", test.ExecutionRequest.Args...)
-			ui.Warn("  Args mode:              ", test.ExecutionRequest.ArgsMode)
 		}
+		ui.Warn("  Args mode:              ", test.ExecutionRequest.ArgsMode)
 
 		if len(test.ExecutionRequest.Envs) > 0 {
 			ui.NL()

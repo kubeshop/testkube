@@ -522,17 +522,19 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 	}
 
 	if argsMode == string(testkube.ArgsModeTypeAppend) || argsMode == "" {
-		args = options.ExecutorSpec.Args
-
-		if options.TestSpec.ExecutionRequest != nil {
-			args = append(args, options.TestSpec.ExecutionRequest.Args...)
+		args = options.Request.Args
+		if options.TestSpec.ExecutionRequest != nil && len(args) == 0 {
+			args = options.TestSpec.ExecutionRequest.Args
 		}
 
-		args = append(args, options.Request.Args...)
+		args = append(options.ExecutorSpec.Args, args...)
 	}
 
 	if argsMode == string(testkube.ArgsModeTypeOverride) {
 		args = options.Request.Args
+		if options.TestSpec.ExecutionRequest != nil && len(args) == 0 {
+			args = options.TestSpec.ExecutionRequest.Args
+		}
 	}
 
 	var command []string

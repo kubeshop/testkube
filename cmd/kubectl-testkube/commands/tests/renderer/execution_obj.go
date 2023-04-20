@@ -44,7 +44,6 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 
 	if len(execution.Args) > 0 {
 		ui.Warn("Args:             ", execution.Args...)
-		ui.Warn("Args mode:        ", execution.ArgsMode)
 	}
 
 	if execution.Content != nil && execution.Content.Repository != nil {
