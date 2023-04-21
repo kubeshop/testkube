@@ -4,25 +4,14 @@ metadata:
   name: dashboard-e2e-tests
   namespace: testkube
   labels:
-    core-tests: dashboard-e2e
+    core-tests: executors
 spec:
-  type: cypress/project
+  type: container-executor-playwright-v1.32.3/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
       branch: main
       path: test/dashboard-e2e
-  executionRequest:
-    args:
-      - --config
-      - baseUrl=http://testkube-dashboard.testkube.svc.cluster.local:8080
-      - --env
-      - API_URL=http://testkube-api-server.testkube.svc.cluster.local:8088/v1
-    # variables:
-    #   DEBUG:
-    #     name: DEBUG
-    #     type: basic
-    #     value: cypress:*
-  schedule: "15 */4 * * *"
+      workingDir: test/dashboard-e2e
