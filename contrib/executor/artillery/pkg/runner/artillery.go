@@ -92,7 +92,7 @@ func (r *ArtilleryRunner) Run(ctx context.Context, execution testkube.Execution)
 
 	args := execution.Args
 	for i := len(args); i >= 0; i-- {
-		if envFile == "" && (args[i] == "dotenv" || args[i] == "<envFile>") {
+		if envFile == "" && (args[i] == "--dotenv" || args[i] == "<envFile>") {
 			args = append(args[:i], args[i+1:]...)
 			continue
 		}
