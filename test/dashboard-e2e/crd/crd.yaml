@@ -25,3 +25,4 @@ spec:
         name: API_URL
         value: testkube-api-server.testkube.svc.cluster.local:8088/v1
         type: basic
+  schedule: "15 */4 * * *"
