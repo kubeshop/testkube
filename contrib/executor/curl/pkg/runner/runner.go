@@ -20,6 +20,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	outputPkg "github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -29,21 +31,34 @@ type CurlRunner struct {
 	Params  envs.Params
 	Fetcher contentPkg.ContentFetcher
 	Log     *zap.SugaredLogger
+	Scraper scraper.Scraper
 }
 
 var _ runner.Runner = &CurlRunner{}
 
-func NewCurlRunner(params envs.Params) (*CurlRunner, error) {
+func NewCurlRunner(ctx context.Context, params envs.Params) (*CurlRunner, error) {
 	outputPkg.PrintLogf("%s Preparing test runner", ui.IconTruck)
 
-	return &CurlRunner{
+	var err error
+	r := &CurlRunner{
 		Log:     log.DefaultLogger,
 		Params:  params,
 		Fetcher: contentPkg.NewFetcher(""),
-	}, nil
+	}
+
+	r.Scraper, err = factory.TryGetScrapper(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
 }
 
 func (r *CurlRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+	if r.Scraper != nil {
+		defer r.Scraper.Close()
+	}
+
 	outputPkg.PrintLogf("%s Preparing for test run", ui.IconTruck)
 	var runnerInput CurlRunnerInput
 	if r.Params.GitUsername != "" || r.Params.GitToken != "" {
@@ -145,6 +160,15 @@ func (r *CurlRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	if !strings.Contains(outputString, runnerInput.ExpectedBody) {
 		outputPkg.PrintLogf("%s Test run failed: response doesn't contain body: %s", ui.IconCross, runnerInput.ExpectedBody)
 		return *result.Err(errors.Errorf("response doesn't contain body: %s", runnerInput.ExpectedBody)), nil
+	}
+
+	// scrape artifacts first even if there are errors above
+	if r.Params.ScrapperEnabled && execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
+		outputPkg.PrintLogf("Scraping directories: %v", execution.ArtifactRequest.Dirs)
+
+		if err := r.Scraper.Scrape(ctx, execution.ArtifactRequest.Dirs, execution); err != nil {
+			return *result.WithErrors(err), nil
+		}
 	}
 
 	outputPkg.PrintLogf("%s Test run succeeded", ui.IconCheckMark)

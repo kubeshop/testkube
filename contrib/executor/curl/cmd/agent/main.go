@@ -16,12 +16,13 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
 	params, err := envs.LoadTestkubeVariables()
 	if err != nil {
 		output.PrintError(os.Stderr, errors.Errorf("could not initialize cURL Executor environment variables: %v", err))
 		os.Exit(1)
 	}
-	r, err := runner.NewCurlRunner(params)
+	r, err := runner.NewCurlRunner(ctx, params)
 	if err != nil {
 		log.Fatalf("%s Could not run cURL tests: %s", ui.IconCross, err.Error())
 	}
