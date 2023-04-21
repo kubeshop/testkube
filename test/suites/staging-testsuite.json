@@ -7,6 +7,7 @@
         {"execute": {"name": "k6-executor-smoke"}},
         {"execute": {"name": "container-executor-curl-smoke"}},
         {"execute" :{"name": "cypress-11-executor-smoke-chrome"}},
-        {"execute" :{"name": "cypress-default-executor-smoke-electron-testsource"}}
+        {"execute" :{"name": "cypress-default-executor-smoke-electron-testsource"}},
+        {"execute" :{"name": "dashboard-e2e-tests"}}
     ]
 }
