@@ -1,13 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 import { TestDataHandler } from '../data-handlers/test-data-handlers';
-// const testDataHandler=new TestDataHandler();
 import { ApiHelpers } from '../api/api-helpers';
-// const apiHelpers=new ApiHelpers(Cypress.env('API_URL'));
 import { MainPage } from '../pages/MainPage';
-// const mainPage=new MainPage();
 import { TestExecutionsPage } from '../pages/TestExecutionsPage';
-// const testExecutionsPage=new TestExecutionsPage();
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
