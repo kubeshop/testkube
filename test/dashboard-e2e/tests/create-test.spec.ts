@@ -15,7 +15,6 @@ import { CreateTestPage } from '../pages/CreateTestPage';
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem('isGADisabled', '1');
-    window.localStorage.setItem('apiEndpoint', 'http://localhost:8088/v1') //TODO: temporary hardcoded
   });
 });
 
@@ -26,7 +25,7 @@ for (const testName of testNames) {
     const testDataHandler=new TestDataHandler()
     const testData = testDataHandler.getTest(testName)
   
-    const apiHelpers=new ApiHelpers('http://localhost:8088/v1') //TODO: temporary hardcoded
+    const apiHelpers=new ApiHelpers(process.env.API_URL)
     await apiHelpers.assureTestNotCreated(testData.name)
     const mainPage=new MainPage(page)
     await mainPage.visitMainPage()

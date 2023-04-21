@@ -12,6 +12,16 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: main
+      branch: dashboard-e2e-playwright # TODO: update before merge
       path: test/dashboard-e2e
       workingDir: test/dashboard-e2e
+  executionRequest:
+    variables:
+      BASE_URL:
+        name: BASE_URL
+        value: http://testkube-dashboard.testkube.svc.cluster.local:8080
+        type: basic
+      API_URL:
+        name: API_URL
+        value: testkube-api-server.testkube.svc.cluster.local:8088/v1
+        type: basic

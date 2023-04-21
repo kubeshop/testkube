@@ -6,7 +6,11 @@ export class MainPage{
     }
 
     async visitMainPage(){
-      await this.page.goto('http://localhost:8080'); //TODO: temporary hardcoded
+      await this.page.goto(`/apiEndpoint?apiEndpoint=${process.env.API_URL}`);
+    
+      await this.page.addInitScript(() => {
+        window.localStorage.setItem('isGADisabled', '1');
+      });
     }
 
     async openCreateTestDialog() {
