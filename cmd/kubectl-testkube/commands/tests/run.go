@@ -83,9 +83,6 @@ func NewRunTestCmd() *cobra.Command {
 			executorArgs, err := testkube.PrepareExecutorArgs(binaryArgs)
 			ui.ExitOnError("getting args", err)
 
-			err = validateArtifactRequest(artifactStorageClassName, artifactVolumeMountPath, artifactDirs)
-			ui.ExitOnError("validating artifact flags", err)
-
 			envConfigMaps, envSecrets, err := newEnvReferencesFromFlags(cmd)
 			ui.WarnOnError("getting env config maps and secrets", err)
 
@@ -141,7 +138,7 @@ func NewRunTestCmd() *cobra.Command {
 				},
 			}
 
-			if artifactStorageClassName != "" && artifactVolumeMountPath != "" {
+			if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(artifactDirs) != 0 {
 				options.ArtifactRequest = &testkube.ArtifactRequest{
 					StorageClassName: artifactStorageClassName,
 					VolumeMountPath:  artifactVolumeMountPath,
@@ -270,7 +267,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
 	cmd.Flags().StringVar(&artifactStorageClassName, "artifact-storage-class-name", "", "artifact storage class name for container executor")
 	cmd.Flags().StringVar(&artifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
-	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for container executor")
+	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for scraping")
 	cmd.Flags().StringVar(&jobTemplate, "job-template", "", "job template file path for extensions to job template")
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
 	cmd.Flags().StringVarP(&gitCommit, "git-commit", "", "", "if uri is git repository we can use commit id (sha) parameter")

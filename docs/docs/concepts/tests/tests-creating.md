@@ -427,9 +427,11 @@ spec:
           - "/bin/runner"
           - '{{ .Jsn }}'
         {{- if .ArtifactRequest }}
+          {{- if .ArtifactRequest.VolumeMountPath }}
         volumeMounts:
           - name: artifact-volume
             mountPath: {{ .ArtifactRequest.VolumeMountPath }}
+          {{- end }}
         {{- end }}
         resources:
           limits:

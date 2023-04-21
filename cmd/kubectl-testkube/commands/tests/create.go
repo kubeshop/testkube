@@ -101,9 +101,6 @@ func NewCreateTestsCmd() *cobra.Command {
 				ui.ExitOnError("validating passed flags", err)
 			}
 
-			err = validateArtifactRequest(flags.ArtifactStorageClassName, flags.ArtifactVolumeMountPath, flags.ArtifactDirs)
-			ui.ExitOnError("validating artifact flags", err)
-
 			options, err := NewUpsertTestOptionsFromFlags(cmd)
 			ui.ExitOnError("getting test options", err)
 
@@ -239,16 +236,6 @@ func validateExecutorTypeAndContent(executorType, contentType string, executors 
 
 		if !contentValid {
 			return fmt.Errorf("invalid content type '%s' use one of: %v", contentType, contentTypes)
-		}
-	}
-
-	return nil
-}
-
-func validateArtifactRequest(artifactStorageClassName, artifactVolumeMountPath string, artifactDirs []string) error {
-	if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(artifactDirs) != 0 {
-		if artifactStorageClassName == "" || artifactVolumeMountPath == "" {
-			return fmt.Errorf("both artifact storage class name and mount path should be provided")
 		}
 	}
 

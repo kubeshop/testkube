@@ -51,6 +51,10 @@ func (r *ScraperRunner) Run(ctx context.Context, execution testkube.Execution) (
 		return *result.Err(errors.Errorf("executor only support artifact based tests")), nil
 	}
 
+	if execution.ArtifactRequest.VolumeMountPath == "" || execution.ArtifactRequest.StorageClassName == "" {
+		return *result.Err(errors.Errorf("artifact request should have not empty volume mount path and storage class name")), nil
+	}
+
 	_, err = os.Stat(execution.ArtifactRequest.VolumeMountPath)
 	if errors.Is(err, os.ErrNotExist) {
 		return result, err

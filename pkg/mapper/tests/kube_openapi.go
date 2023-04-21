@@ -136,7 +136,7 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 		TestSuiteSecretUUID:   specExecutionRequest.TestSuiteSecretUUID,
 		Command:               specExecutionRequest.Command,
 		Args:                  specExecutionRequest.Args,
-		ArgsMode:              specExecutionRequest.ArgsMode,
+		ArgsMode:              string(specExecutionRequest.ArgsMode),
 		Image:                 specExecutionRequest.Image,
 		ImagePullSecrets:      MapImagePullSecrets(specExecutionRequest.ImagePullSecrets),
 		Envs:                  specExecutionRequest.Envs,

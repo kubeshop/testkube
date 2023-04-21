@@ -226,7 +226,7 @@ func newArtifactRequestFromFlags(cmd *cobra.Command) (request *testkube.Artifact
 		return nil, err
 	}
 
-	if artifactStorageClassName != "" && artifactVolumeMountPath != "" {
+	if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(dirs) != 0 {
 		request = &testkube.ArtifactRequest{
 			StorageClassName: artifactStorageClassName,
 			VolumeMountPath:  artifactVolumeMountPath,
