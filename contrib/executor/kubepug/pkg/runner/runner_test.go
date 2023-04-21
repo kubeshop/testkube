@@ -25,6 +25,12 @@ func TestRunString_Integration(t *testing.T) {
 
 		execution := testkube.NewQueuedExecution()
 		execution.Content = testkube.NewStringTestContent("")
+		execution.Command = []string{"kubepug"}
+		execution.Args = []string{
+			"--format=json",
+			"--input-file",
+			"<runPath>",
+		}
 
 		result, err := runner.Run(ctx, *execution)
 
@@ -42,6 +48,12 @@ func TestRunString_Integration(t *testing.T) {
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"kubepug"}
+		execution.Args = []string{
+			"--format=json",
+			"--input-file",
+			"<runPath>",
+		}
 		execution.Content = testkube.NewStringTestContent(`
 apiVersion: v1
 kind: ConfigMap
@@ -71,6 +83,12 @@ metadata:
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"kubepug"}
+		execution.Args = []string{
+			"--format=json",
+			"--input-file",
+			"<runPath>",
+		}
 		execution.Content = testkube.NewStringTestContent(`
 apiVersion: v1
 conditions:
@@ -106,6 +124,12 @@ func TestRunFileURI_Integration(t *testing.T) {
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"kubepug"}
+		execution.Args = []string{
+			"--format=json",
+			"--input-file",
+			"<runPath>",
+		}
 		execution.Content = &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeFileURI),
 			Uri: "https://gist.githubusercontent.com/vLia/" +
@@ -128,6 +152,12 @@ func TestRunFileURI_Integration(t *testing.T) {
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"kubepug"}
+		execution.Args = []string{
+			"--format=json",
+			"--input-file",
+			"<runPath>",
+		}
 		execution.Content = &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeFileURI),
 			Uri: "https://gist.githubusercontent.com/vLia/" +
@@ -157,6 +187,12 @@ func TestRunGitFile_Integration(t *testing.T) {
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"kubepug"}
+		execution.Args = []string{
+			"--format=json",
+			"--input-file",
+			"<runPath>",
+		}
 		execution.Content = &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeGitFile),
 			Repository: &testkube.Repository{
@@ -178,6 +214,12 @@ func TestRunGitFile_Integration(t *testing.T) {
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"kubepug"}
+		execution.Args = []string{
+			"--format=json",
+			"--input-file",
+			"<runPath>",
+		}
 		execution.Content = &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeGitFile),
 			Repository: &testkube.Repository{
@@ -210,6 +252,12 @@ func TestRunGitDirectory_Integration(t *testing.T) {
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"kubepug"}
+		execution.Args = []string{
+			"--format=json",
+			"--input-file",
+			"<runPath>",
+		}
 		execution.Content = &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeGitDir),
 			Repository: &testkube.Repository{
@@ -243,6 +291,12 @@ func TestRunWithSpecificK8sVersion_Integration(t *testing.T) {
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"kubepug"}
+		execution.Args = []string{
+			"--format=json",
+			"--input-file",
+			"<runPath>",
+		}
 		execution.Content = testkube.NewStringTestContent(`
 apiVersion: v1
 conditions:
@@ -271,7 +325,11 @@ metadata:
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"kubepug"}
 		execution.Args = []string{
+			"--format=json",
+			"--input-file",
+			"<runPath>",
 			"--k8s-version=v1.18.0", // last version v1/ComponentStatus was valid
 		}
 		execution.Content = testkube.NewStringTestContent(`
