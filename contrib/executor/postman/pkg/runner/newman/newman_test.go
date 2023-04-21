@@ -23,7 +23,7 @@ func TestRun_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 	t.Parallel()
 	// given
-	runner, err := NewNewmanRunner(envs.Params{})
+	runner, err := NewNewmanRunner(context.Background(), envs.Params{})
 	assert.NoError(t, err)
 
 	// and test server for getting newman responses
