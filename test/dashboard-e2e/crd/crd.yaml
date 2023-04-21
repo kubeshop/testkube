@@ -12,7 +12,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: dashboard-e2e-playwright # TODO: update before merge
+      branch: main
       path: test/dashboard-e2e
       workingDir: test/dashboard-e2e
   executionRequest:
