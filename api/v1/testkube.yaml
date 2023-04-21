@@ -3963,24 +3963,21 @@ components:
         - $ref: "#/components/schemas/RepositoryParameters"
 
     ArtifactRequest:
-      description: artifact request body for container executors with test artifacts
+      description: artifact request body with test artifacts
       type: object
-      required:
-        - storageClassName
-        - volumeMountPath
       properties:
         storageClassName:
           type: string
-          description: artifact storage class name
+          description: artifact storage class name for container executor
           example: artifact-volume-local
         volumeMountPath:
           type: string
-          description: artifact volume mount path
+          description: artifact volume mount path for container executor
         dirs:
           type: array
           items:
             type: string
-          description: artifact directories
+          description: artifact directories for scraping
 
     ArtifactUpdateRequest:
       description: artifact request update body
@@ -4117,7 +4114,7 @@ components:
           example: execution-c01d7cf6-ec3f-47f0-9556-a5d6e9009a43
         artifactRequest:
           $ref: "#/components/schemas/ArtifactRequest"
-          description: configuration parameters for storing container executor test artifacts
+          description: configuration parameters for storing test artifacts
         jobTemplate:
           type: string
           description: job template extensions

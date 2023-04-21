@@ -196,7 +196,7 @@ func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
 	cmd.Flags().Int64Var(&flags.Timeout, "timeout", 0, "duration in seconds for test to timeout. 0 disables timeout.")
 	cmd.Flags().StringVar(&flags.ArtifactStorageClassName, "artifact-storage-class-name", "", "artifact storage class name for container executor")
 	cmd.Flags().StringVar(&flags.ArtifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
-	cmd.Flags().StringArrayVarP(&flags.ArtifactDirs, "artifact-dir", "", []string{}, "artifact dirs for container executor")
+	cmd.Flags().StringArrayVarP(&flags.ArtifactDirs, "artifact-dir", "", []string{}, "artifact dirs for scraping")
 	cmd.Flags().StringVar(&flags.JobTemplate, "job-template", "", "job template file path for extensions to job template")
 	cmd.Flags().StringVarP(&flags.PreRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	cmd.Flags().StringVar(&flags.ScraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
