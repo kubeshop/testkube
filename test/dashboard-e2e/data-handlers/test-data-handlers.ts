@@ -1,4 +1,4 @@
-const testsData = require('../fixtures/tests.json')
+import testsData from '../fixtures/tests.json'
 
 export class TestDataHandler {
     getTest(testName) {
