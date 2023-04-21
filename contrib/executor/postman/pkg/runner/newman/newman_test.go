@@ -39,6 +39,17 @@ func TestRun_Integration(t *testing.T) {
 
 	execution := testkube.Execution{
 		Content: testkube.NewStringTestContent(fmt.Sprintf(exampleCollection, port, port)),
+		Command: []string{"newman"},
+		Args: []string{
+			"run",
+			"<runPath>",
+			"-e",
+			"<envFile>",
+			"--reporters",
+			"cli,json",
+			"--reporter-json-export",
+			"<reportFile>",
+		},
 	}
 
 	ctx := context.Background()
