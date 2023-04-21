@@ -1,4 +1,4 @@
-# testkube create test
+## testkube create test
 
 Create new Test
 
@@ -13,7 +13,8 @@ testkube create test [flags]
 ### Options
 
 ```
-      --artifact-dir stringArray                   artifact dirs for container executor
+      --args-mode string                           usage mode for arguments. one of append|override (default "append")
+      --artifact-dir stringArray                   artifact dirs for scraping
       --artifact-storage-class-name string         artifact storage class name for container executor
       --artifact-volume-mount-path string          artifact volume mount path for container executor
       --command stringArray                        command passed to image in executor
