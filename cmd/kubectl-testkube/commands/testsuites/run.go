@@ -136,7 +136,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitCommit, "git-commit", "", "", "if uri is git repository we can use commit id (sha) parameter")
 	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
 	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
-	cmd.Flags().StringVar(&runningContext, "context", "", "running context description for test execution")
+	cmd.Flags().StringVar(&runningContext, "context", "", "running context description for test suite execution")
 
 	return cmd
 }
