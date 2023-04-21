@@ -1,6 +1,6 @@
 import superagent from 'superagent'
 
-class ApiHelpers {
+export class ApiHelpers {
     constructor(apiUrl) {
         this.API_URL = apiUrl;
     }
@@ -145,4 +145,3 @@ class ApiHelpers {
         }
     }
 }
-export default ApiHelpers

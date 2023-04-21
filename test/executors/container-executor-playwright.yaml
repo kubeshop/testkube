@@ -1,6 +1,20 @@
 apiVersion: executor.testkube.io/v1
 kind: Executor
 metadata:
+  name: container-executor-playwright-v1.32.3
+  namespace: testkube
+spec:
+  image: mcr.microsoft.com/playwright:v1.32.3-focal
+  command: ["/bin/sh", "-c"]
+  args:
+  - "npm install; npx playwright test"
+  executor_type: container
+  types:
+  - container-executor-playwright-v1.32.3/test
+---
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
   name: container-executor-playwright-v1.31.1
   namespace: testkube
 spec:
