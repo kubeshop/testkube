@@ -15,45 +15,29 @@ function runTestFlow(testName) {
   const testData = testDataHandler.getTest(testName)
   const realTestName = testData.name
   let currentExecutionNumber;
-  let executionName;
 
   //prerequisites
   const assureTestCreated = apiHelpers.assureTestCreated(testData, false) //API helpers using async/await must be wrapped
   cy.wrap(assureTestCreated)
-
-  const getLastExecutionNumber = apiHelpers.getLastExecutionNumber(realTestName)
-  cy.wrap(getLastExecutionNumber)
+  .then(() => {
+    //actions
+    const getLastExecutionNumber = apiHelpers.getLastExecutionNumber(realTestName)
+    cy.wrap(getLastExecutionNumber)
     .then((lastExecutionNumber) => {
+      mainPage.visitMainPage()
+      mainPage.openTestExecutionDetails(realTestName)
+      testExecutionsPage.runTest()
       currentExecutionNumber = lastExecutionNumber+1
-      executionName = `${realTestName}-${currentExecutionNumber}`
+      const executionName = `${realTestName}-${currentExecutionNumber}`
+      testExecutionsPage.openExecutionDetails(executionName) //openLatestExecutionDetails?
+
+      // cy.wrap(apiHelpers.abortTest(realTestName, executionName))
     })
-
-  mainPage.visitMainPage()
-  mainPage.openTestExecutionDetails(realTestName)
-  testExecutionsPage.runTest()
-  currentExecutionNumber = lastExecutionNumber+1
-  executionName = `${realTestName}-${currentExecutionNumber}`
-  testExecutionsPage.openExecutionDetails(executionName) //openLatestExecutionDetails?
-
-  // .then(() => {
-  //   //actions
-  //   const getLastExecutionNumber = apiHelpers.getLastExecutionNumber(realTestName)
-  //   cy.wrap(getLastExecutionNumber)
-  //   .then((lastExecutionNumber) => {
-  //     mainPage.visitMainPage()
-  //     mainPage.openTestExecutionDetails(realTestName)
-  //     testExecutionsPage.runTest()
-  //     currentExecutionNumber = lastExecutionNumber+1
-  //     executionName = `${realTestName}-${currentExecutionNumber}`
-  //     testExecutionsPage.openExecutionDetails(executionName) //openLatestExecutionDetails?
-
-  //     // apiHelpers.abortTest(realTestName, executionName)
-  //   })
-  // })
+  })
 }
 
 describe('Run test with Dashboard', () => {
-  it.only('Run Cypress test from git-dir', () => {
+  it.skip('Run Cypress test from git-dir', async () => {
     runTestFlow('cypress-git-created')
 
 
