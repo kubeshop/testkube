@@ -138,6 +138,15 @@ func (r *CurlRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		return *result.Err(err), nil
 	}
 
+	// scrape artifacts first even if there are errors above
+	if r.Params.ScrapperEnabled && execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
+		outputPkg.PrintLogf("Scraping directories: %v", execution.ArtifactRequest.Dirs)
+
+		if err := r.Scraper.Scrape(ctx, execution.ArtifactRequest.Dirs, execution); err != nil {
+			return *result.WithErrors(err), nil
+		}
+	}
+
 	outputString := string(output)
 	result.Output = outputString
 	responseStatus, err := getResponseCode(outputString)
@@ -160,15 +169,6 @@ func (r *CurlRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	if !strings.Contains(outputString, runnerInput.ExpectedBody) {
 		outputPkg.PrintLogf("%s Test run failed: response doesn't contain body: %s", ui.IconCross, runnerInput.ExpectedBody)
 		return *result.Err(errors.Errorf("response doesn't contain body: %s", runnerInput.ExpectedBody)), nil
-	}
-
-	// scrape artifacts first even if there are errors above
-	if r.Params.ScrapperEnabled && execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
-		outputPkg.PrintLogf("Scraping directories: %v", execution.ArtifactRequest.Dirs)
-
-		if err := r.Scraper.Scrape(ctx, execution.ArtifactRequest.Dirs, execution); err != nil {
-			return *result.WithErrors(err), nil
-		}
 	}
 
 	outputPkg.PrintLogf("%s Test run succeeded", ui.IconCheckMark)
