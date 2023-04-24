@@ -17,6 +17,7 @@ dockers:
     goarch: amd64
     image_templates:
       - "kubeshop/testkube-cypress-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-amd64"
+      - "kubeshop/testkube-cypress-executor:{{ .ShortCommit }}-{{ .Env.EXECUTOR_VERSION }}-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -29,6 +30,7 @@ dockers:
     goarch: arm64
     image_templates:
       - "kubeshop/testkube-cypress-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-arm64v8"
+      - "kubeshop/testkube-cypress-executor:{{ .ShortCommit }}-{{ .Env.EXECUTOR_VERSION }}-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"

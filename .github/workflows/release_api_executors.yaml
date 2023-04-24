@@ -10,7 +10,7 @@ permissions:
 jobs:
   release_api:
     needs: create_branch
-    uses: "kubeshop/testkube/.github/workflows/docker-build.yaml@main"
+    uses: "kubeshop/testkube/.github/workflows/docker-build-tag.yaml@main"
 
   create_branch:
     runs-on: ubuntu-latest

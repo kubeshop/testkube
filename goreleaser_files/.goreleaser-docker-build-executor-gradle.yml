@@ -46,6 +46,7 @@ dockers:
       - "kubeshop/testkube-gradle-executor:jdk11-amd64"
       - "kubeshop/testkube-gradle-executor:{{ .Version }}-amd64"
       - "kubeshop/testkube-gradle-executor:latest-amd64"
+      - "kubeshop/testkube-gradle-executor:{{ .ShortCommit }}-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -61,6 +62,7 @@ dockers:
       - "kubeshop/testkube-gradle-executor:jdk11-arm64v8"
       - "kubeshop/testkube-gradle-executor:{{ .Version }}-arm64v8"
       - "kubeshop/testkube-gradle-executor:latest-arm64v8"
+      - "kubeshop/testkube-gradle-executor:{{ .ShortCommit }}-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -160,6 +162,10 @@ docker_manifests:
     image_templates:
       - kubeshop/testkube-gradle-executor:{{ .Version }}-amd64
       - kubeshop/testkube-gradle-executor:{{ .Version }}-arm64v8
+  - name_template: kubeshop/testkube-gradle-executor:{{ .ShortCommit }}
+    image_templates:
+      - kubeshop/testkube-gradle-executor:{{ .ShortCommit }}-amd64
+      - kubeshop/testkube-gradle-executor:{{ .ShortCommit }}-arm64v8
 
 release:
   disable: true

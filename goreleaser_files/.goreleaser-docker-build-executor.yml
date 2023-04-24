@@ -18,6 +18,7 @@ dockers:
     image_templates:
       - "kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .Version }}-amd64"
       - "kubeshop/testkube-{{ .Env.EXECUTOR }}:latest-amd64"
+      - "kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .ShortCommit }}-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -33,6 +34,7 @@ dockers:
     image_templates:
       - "kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .Version }}-arm64v8"
       - "kubeshop/testkube-{{ .Env.EXECUTOR }}:latest-arm64v8"
+      - "kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .ShortCommit }}-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -46,6 +48,10 @@ docker_manifests:
     image_templates:
       - kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .Version }}-amd64
       - kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .Version }}-arm64v8
+  - name_template: kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .ShortCommit }}
+    image_templates:
+      - kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .ShortCommit }}-amd64
+      - kubeshop/testkube-{{ .Env.EXECUTOR }}:{{ .ShortCommit }}-arm64v8
   - name_template: kubeshop/testkube-{{ .Env.EXECUTOR }}:latest
     image_templates:
       - kubeshop/testkube-{{ .Env.EXECUTOR }}:latest-amd64
