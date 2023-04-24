@@ -160,9 +160,8 @@ func (c *JobExecutor) Logs(ctx context.Context, id string) (out chan output.Outp
 
 		for l := range logs {
 			entry, err := output.GetLogEntry(l)
-			if err != nil && entry.Type_ != output.TypeUnknown {
-				out <- output.NewOutputError(err)
-				return
+			if err != nil {
+				c.Log.Errorw("error parsing log entry", "error", err)
 			}
 			out <- entry
 		}
