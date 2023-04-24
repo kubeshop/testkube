@@ -17,6 +17,10 @@ spec:
       workingDir: test/dashboard-e2e
   executionRequest:
     variables:
+      CI:
+        name: CI
+        value: "1"
+        type: basic
       BASE_URL:
         name: BASE_URL
         value: http://testkube-dashboard.testkube.svc.cluster.local:8080
