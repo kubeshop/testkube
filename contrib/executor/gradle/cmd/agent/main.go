@@ -24,6 +24,5 @@ func main() {
 		output.PrintError(os.Stderr, errors.Errorf("could not initialize runner: %v", err))
 		os.Exit(1)
 	}
-
 	agent.Run(ctx, r, os.Args)
 }
