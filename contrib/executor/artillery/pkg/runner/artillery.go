@@ -90,7 +90,7 @@ func (r *ArtilleryRunner) Run(ctx context.Context, execution testkube.Execution)
 	testReportFile := filepath.Join(testDir, "test-report.json")
 
 	args := execution.Args
-	for i := len(args); i >= 0; i-- {
+	for i := len(args) - 1; i >= 0; i-- {
 		if envFile == "" && (args[i] == "--dotenv" || args[i] == "<envFile>") {
 			args = append(args[:i], args[i+1:]...)
 			continue

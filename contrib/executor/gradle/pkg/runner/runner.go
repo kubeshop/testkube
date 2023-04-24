@@ -117,7 +117,7 @@ func (r *GradleRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		project = directory
 	}
 
-	for i := len(args); i >= 0; i-- {
+	for i := len(args) - 1; i >= 0; i-- {
 		if taskName == "" && args[i] == "<taskName>" {
 			args = append(args[:i], args[i+1:]...)
 			continue
