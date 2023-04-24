@@ -6,7 +6,7 @@ on:
       - switch-to-goreleaser
 
 jobs:
-  docker:
+  api:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -116,7 +116,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor.yml --snaphost
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor.yml --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           EXECUTOR: ${{ matrix.executor }}
@@ -171,7 +171,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeter.yml --snaphost
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeter.yml --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
 
@@ -182,7 +182,6 @@ jobs:
   executor_maven:
     runs-on: ubuntu-latest
     steps:
-
       - name: Checkout
         uses: actions/checkout@v2
 
@@ -236,7 +235,6 @@ jobs:
   executor_gradle:
     runs-on: ubuntu-latest
     steps:
-
       - name: Checkout
         uses: actions/checkout@v2
 
