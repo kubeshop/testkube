@@ -46,7 +46,8 @@ func TestRunGradle_Integration(t *testing.T) {
 				Branch: "main",
 			},
 		}
-		execution.Args = []string{"test"}
+		execution.Command = []string{"gradle"}
+		execution.Args = []string{"test", "--no-daemon", "<taskName>", "-p", "<projectDir>"}
 
 		// when
 		result, err := runner.Run(ctx, *execution)
@@ -80,6 +81,8 @@ func TestRunGradle_Integration(t *testing.T) {
 				Branch: "main",
 			},
 		}
+		execution.Command = []string{"gradle"}
+		execution.Args = []string{"--no-daemon", "<taskName>", "-p", "<projectDir>"}
 		assert.NoError(t, os.Setenv("TESTKUBE_GRADLE", "true"))
 
 		// when
@@ -108,6 +111,8 @@ func TestRunErrors_Integration(t *testing.T) {
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"gradle"}
+		execution.Args = []string{"--no-daemon", "<taskName>", "-p", "<projectDir>"}
 
 		// when
 		_, err = runner.Run(ctx, *execution)
@@ -129,6 +134,8 @@ func TestRunErrors_Integration(t *testing.T) {
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "gradle/project"
 		execution.Content = testkube.NewStringTestContent("")
+		execution.Command = []string{"gradle"}
+		execution.Args = []string{"--no-daemon", "<taskName>", "-p", "<projectDir>"}
 
 		// when
 		_, err = runner.Run(ctx, *execution)
@@ -161,7 +168,8 @@ func TestRunErrors_Integration(t *testing.T) {
 				Branch: "main",
 			},
 		}
-
+		execution.Command = []string{"gradle"}
+		execution.Args = []string{"--no-daemon", "<taskName>", "-p", "<projectDir>"}
 		// when
 		result, err := runner.Run(ctx, *execution)
 
