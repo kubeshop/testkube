@@ -16,8 +16,6 @@ dockers:
     goos: linux
     goarch: amd64
     image_templates:
-      - "kubeshop/testkube-jmeter-executor:{{ .Version }}-amd64"
-      - "kubeshop/testkube-jmeter-executor:latest-amd64"
       - "kubeshop/testkube-jmeter-executor:{{ .ShortCommit }}-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
@@ -30,40 +28,6 @@ dockers:
     - ./contrib/executor/jmeter/plugins/jmeter-plugins-functions-2.1.jar
     - ./contrib/executor/jmeter/plugins/jmeter-plugins-manager-1.3.jar
     - ./contrib/executor/jmeter/scripts/entrypoint.sh
-
-  - dockerfile: "./contrib/executor/jmeter/build/agent/Dockerfile"
-    use: buildx
-    goos: linux
-    goarch: arm64
-    image_templates:
-      - "kubeshop/testkube-jmeter-executor:{{ .Version }}-arm64v8"
-      - "kubeshop/testkube-jmeter-executor:latest-arm64v8"
-      - "kubeshop/testkube-jmeter-executor:{{ .ShortCommit }}-arm64v8"
-    build_flag_templates:
-      - "--platform=linux/arm64/v8"
-      - "--label=org.opencontainers.image.created={{ .Date }}"
-      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-      - "--label=org.opencontainers.image.version={{ .Version }}"
-    extra_files:
-    - ./contrib/executor/jmeter/lib/jmeter-plugins-cmn-jmeter-0.6.jar
-    - ./contrib/executor/jmeter/plugins/jmeter-plugins-functions-2.1.jar
-    - ./contrib/executor/jmeter/plugins/jmeter-plugins-manager-1.3.jar
-    - ./contrib/executor/jmeter/scripts/entrypoint.sh
-
-docker_manifests:
-  - name_template: kubeshop/testkube-jmeter-executor:{{ .Version }}
-    image_templates:
-      - kubeshop/testkube-jmeter-executor:{{ .Version }}-amd64
-      - kubeshop/testkube-jmeter-executor:{{ .Version }}-arm64v8
-  - name_template: kubeshop/testkube-jmeter-executor:{{ .ShortCommit }}
-    image_templates:
-      - kubeshop/testkube-jmeter-executor:{{ .ShortCommit }}-amd64
-      - kubeshop/testkube-jmeter-executor:{{ .ShortCommit }}-arm64v8
-  - name_template: kubeshop/testkube-jmeter-executor-executor:latest
-    image_templates:
-      - kubeshop/testkube-jmeter-executor:latest-amd64
-      - kubeshop/testkube-jmeter-executor:latest-arm64v8
 
 release:
   disable: true

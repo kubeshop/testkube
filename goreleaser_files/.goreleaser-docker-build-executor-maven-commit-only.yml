@@ -11,7 +11,7 @@ builds:
       - arm64
     mod_timestamp: "{{ .CommitTimestamp }}"
 dockers:
- - dockerfile: "./contrib/executor/maven/build/agent/Dockerfile.jdk11"
+  - dockerfile: "./contrib/executor/maven/build/agent/Dockerfile.jdk11"
     use: buildx
     goos: linux
     goarch: amd64
