@@ -110,7 +110,7 @@ func TestRunErrors_Integration(t *testing.T) {
 		execution := testkube.NewQueuedExecution()
 
 		// when
-		_, err := runner.Run(ctx, *execution)
+		_, err = runner.Run(ctx, *execution)
 
 		// then
 		assert.Error(t, err)
@@ -131,7 +131,7 @@ func TestRunErrors_Integration(t *testing.T) {
 		execution.Content = testkube.NewStringTestContent("")
 
 		// when
-		_, err := runner.Run(ctx, *execution)
+		_, err = runner.Run(ctx, *execution)
 
 		// then
 		assert.EqualError(t, err, "gradle executor handles only repository based tests, but repository is nil")
