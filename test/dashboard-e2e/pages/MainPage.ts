@@ -14,10 +14,11 @@ export class MainPage{
     }
 
     async openCreateTestDialog() {
-        await this.page.click('button[data-test="add-a-new-test-btn"]')
+      await this.page.click('button[data-test="add-a-new-test-btn"]')
     }
 
     async openTestExecutionDetails(realTestName) {
+      await this.page.locator(`input[data-cy="search-filter"]`).fill(realTestName)
       await this.page.click(`xpath=//div[@data-test="tests-list-item" and .//span[text()="${realTestName}"]]`)
     }
 }
