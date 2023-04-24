@@ -1,0 +1,30 @@
+builds:
+  - id: "linux"
+    main: "./contrib/executor/playwright/cmd/agent"
+    binary: "playwright"
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    mod_timestamp: "{{ .CommitTimestamp }}"
+dockers:
+  - dockerfile: "./contrib/executor/playwright/build/agent/Dockerfile.npm"
+    use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "kubeshop/testkube-playwright-executor:{{ .ShortCommit }}-amd64"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+release:
+  disable: true
+
+snapshot:
+  name_template: '{{ .ShortCommit }}'

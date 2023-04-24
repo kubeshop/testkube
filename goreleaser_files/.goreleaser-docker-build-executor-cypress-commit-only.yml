@@ -1,0 +1,30 @@
+builds:
+  - id: "linux"
+    main: "./contrib/executor/cypress/cmd/agent"
+    binary: "cypress"
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    mod_timestamp: "{{ .CommitTimestamp }}"
+dockers:
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress11"
+    use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "kubeshop/testkube-cypress-executor:{{ .ShortCommit }}"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      -
+snapshot:
+  name_template: '{{ .Version }}'
+
+release:
+  disable: true

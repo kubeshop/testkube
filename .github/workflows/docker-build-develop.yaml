@@ -51,7 +51,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build.yml --snapshot
+          args: release -f goreleaser_files/.goreleaser-docker-build-commit-only.yml --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
@@ -116,7 +116,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor.yml --snapshot
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-commit-only.yml --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           EXECUTOR: ${{ matrix.executor }}
@@ -171,7 +171,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeter.yml --snapshot
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeter-commit-only.yml --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
 
@@ -224,7 +224,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-maven.yml --snapshot
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-maven-commit-only.yml --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
 
@@ -277,7 +277,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-gradle.yml --snapshot
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-gradle-commit-only.yml --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
 
@@ -288,7 +288,6 @@ jobs:
   executor_cypress:
     runs-on: ubuntu-latest
     steps:
-
       - name: Checkout
         uses: actions/checkout@v2
 
@@ -331,10 +330,9 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-cypress.yml --snapshot
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-cypress-commit-only.yml --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          EXECUTOR_VERSION: cypress11
 
       - name: Push image to the Registry
         run: |
@@ -385,10 +383,11 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-playwright.yml --snapshot
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-playwright-commit-only.yml --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
 
       - name: Push image to the Registry
         run: |
           docker push kubeshop/testkube-playwright-executor:${{ steps.github_sha.outputs.sha_short }}
+

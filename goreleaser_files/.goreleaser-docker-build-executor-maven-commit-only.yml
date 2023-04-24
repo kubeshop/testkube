@@ -1,0 +1,30 @@
+builds:
+  - id: "linux"
+    main: "./contrib/executor/maven/cmd/agent"
+    binary: "maven"
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    mod_timestamp: "{{ .CommitTimestamp }}"
+dockers:
+ - dockerfile: "./contrib/executor/maven/build/agent/Dockerfile.jdk11"
+    use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "kubeshop/testkube-maven-executor:{{ .ShortCommit }}"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+release:
+  disable: true
+
+snapshot:
+  name_template: '{{ .ShortCommit }}'
