@@ -140,10 +140,18 @@ func TestRun_Integration(t *testing.T) {
 			"-o",
 			"<reportFile>",
 			"<envVars>",
+			"-Jthreads",
+			"10",
+			"-Jrampup",
+			"0",
+			"-Jloopcount",
+			"1",
+			"-Jip",
+			"sampleip",
+			"-Jport",
+			"1234",
 		}
 		writeTestContent(t, tempDir, "../../examples/kubeshop.jmx")
-
-		execution.Args = []string{"-Jthreads", "10", "-Jrampup", "0", "-Jloopcount", "1", "-Jip", "sampleip", "-Jport", "1234"}
 
 		result, err := runner.Run(ctx, *execution)
 
