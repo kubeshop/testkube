@@ -2,7 +2,7 @@
 FROM golang:1.18 as builder
 
 # build k6 0.36.0 with prometheus support
-ENV K6_VERSION=v0.43.1
+ENV K6_VERSION=v0.44.0
 RUN go install go.k6.io/xk6/cmd/xk6@v0.9.0 && xk6 build $K6_VERSION --with github.com/grafana/xk6-output-prometheus-remote@latest
 
 WORKDIR contrib/executor/k6/build
@@ -12,7 +12,7 @@ ENV GOOS=linux
 COPY . .
 RUN cd contrib/executor/k6/cmd/agent;go build -o /build/runner -mod mod -a .
 
-FROM loadimpact/k6:0.43.1
+FROM loadimpact/k6:0.44.0
 WORKDIR /home/k6
 COPY --from=builder /go/k6 /usr/bin/k6
 COPY --from=builder /build/runner /bin/runner
