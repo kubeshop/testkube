@@ -8,33 +8,46 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kubeshop/testkube/pkg/envs"
-
+	"github.com/joshdk/go-junit"
 	"github.com/pkg/errors"
 
-	"github.com/joshdk/go-junit"
-
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func NewRunner(params envs.Params) *GradleRunner {
+func NewRunner(ctx context.Context, params envs.Params) (*GradleRunner, error) {
 	output.PrintLogf("%s Preparing test runner", ui.IconTruck)
 
-	return &GradleRunner{
+	var err error
+	r := &GradleRunner{
 		params: params,
 	}
+
+	r.Scraper, err = factory.TryGetScrapper(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
 }
 
 type GradleRunner struct {
-	params envs.Params
+	params  envs.Params
+	Scraper scraper.Scraper
 }
 
 func (r *GradleRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+	if r.Scraper != nil {
+		defer r.Scraper.Close()
+	}
+
 	output.PrintLogf("%s Preparing for test run", ui.IconTruck)
 	err = r.Validate(execution)
 	if err != nil {
@@ -76,28 +89,52 @@ func (r *GradleRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	}
 
 	// determine the Gradle command to use
-	gradleCommand := "gradle"
+	gradleCommand := ""
+	if len(execution.Command) != 0 {
+		gradleCommand = execution.Command[0]
+	}
+
 	gradleWrapper := filepath.Join(directory, "gradlew")
 	_, err = os.Stat(gradleWrapper)
-	if err == nil {
+	if gradleCommand == "gradle" && err == nil {
 		// then we use the wrapper instead
 		gradleCommand = "./gradlew"
 	}
 
 	// pass additional executor arguments/flags to Gradle
-	args := []string{"--no-daemon"}
-	args = append(args, execution.Args...)
-
+	args := execution.Args
+	var taskName string
 	task := strings.Split(execution.TestType, "/")[1]
 	if !strings.EqualFold(task, "project") {
 		// then use the test subtype as task name
-		args = append(args, task)
+		taskName = task
 	}
 
 	runPath := directory
+	var project string
 	if execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
 		runPath = filepath.Join(r.params.DataDir, "repo", execution.Content.Repository.WorkingDir)
-		args = append(args, "-p", directory)
+		project = directory
+	}
+
+	for i := len(args); i >= 0; i-- {
+		if taskName == "" && args[i] == "<taskName>" {
+			args = append(args[:i], args[i+1:]...)
+			continue
+		}
+
+		if project == "" && (args[i] == "-p" || args[i] == "<projectDir>") {
+			args = append(args[:i], args[i+1:]...)
+			continue
+		}
+
+		if args[i] == "<taskName>" {
+			args[i] = taskName
+		}
+
+		if args[i] == "<projectDir>" {
+			args[i] = project
+		}
 	}
 
 	output.PrintEvent("Running task: "+task, directory, gradleCommand, args)
@@ -124,6 +161,15 @@ func (r *GradleRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		} else {
 			// Gradle was unable to run at all
 			return result, nil
+		}
+	}
+
+	// scrape artifacts first even if there are errors above
+	if r.params.ScrapperEnabled && execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
+		output.PrintLogf("Scraping directories: %v", execution.ArtifactRequest.Dirs)
+
+		if err := r.Scraper.Scrape(ctx, execution.ArtifactRequest.Dirs, execution); err != nil {
+			return *result.WithErrors(err), nil
 		}
 	}
 

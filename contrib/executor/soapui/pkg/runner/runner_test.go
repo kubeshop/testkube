@@ -7,16 +7,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/utils/test"
-
 	"github.com/golang/mock/gomock"
-
-	"github.com/kubeshop/testkube/pkg/envs"
-	"github.com/kubeshop/testkube/pkg/executor/scraper"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/envs"
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
 func TestRun_Integration(t *testing.T) {

@@ -8,15 +8,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/utils/test"
-
-	"github.com/kubeshop/testkube/pkg/envs"
-
 	cp "github.com/otiai10/copy"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/envs"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
 func TestRunGradle_Integration(t *testing.T) {
@@ -37,7 +34,9 @@ func TestRunGradle_Integration(t *testing.T) {
 
 		// given
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "gradle/project"
 		execution.Content = &testkube.TestContent{
@@ -69,7 +68,9 @@ func TestRunGradle_Integration(t *testing.T) {
 
 		// given
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "gradle/test"
 		execution.Content = &testkube.TestContent{
@@ -103,7 +104,9 @@ func TestRunErrors_Integration(t *testing.T) {
 		t.Parallel()
 		// given
 		params := envs.Params{DataDir: "/unknown"}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 
 		// when
@@ -120,7 +123,9 @@ func TestRunErrors_Integration(t *testing.T) {
 
 		// given
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "gradle/project"
 		execution.Content = testkube.NewStringTestContent("")
@@ -144,7 +149,9 @@ func TestRunErrors_Integration(t *testing.T) {
 
 		// given
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "gradle/project"
 		execution.Content = &testkube.TestContent{
