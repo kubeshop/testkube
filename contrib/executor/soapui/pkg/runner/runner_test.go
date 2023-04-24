@@ -109,11 +109,14 @@ func TestRun_Integration(t *testing.T) {
 			params := envs.Params{DataDir: tempDir, ScrapperEnabled: true}
 			runner := SoapUIRunner{
 				SoapUILogsPath: "/logs",
-				SoapUIExecPath: file.Name(),
 				Params:         params,
 				Scraper:        test.scraperBuilder(),
 			}
 
+			test.execution.Command = []string{
+				"/bin/sh",
+				file.Name(),
+			}
 			res, err := runner.Run(context.Background(), test.execution)
 			if test.expectedError == "" {
 				assert.NoError(t, err)
