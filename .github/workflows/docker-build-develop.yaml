@@ -78,6 +78,8 @@ jobs:
  #   if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/switch-to-goreleaser' && contains([startsWith(item, 'contrib/executor/${{ matrix.executor }}/**') true) for item in github.event.head_commit.modified) }}
    # if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/switch-to-goreleaser' && contains(github.event.head_commit.modified, 'contrib/executor/${{ matrix.executor }}/') }}
    # if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/switch-to-goreleaser' && (contains(github.event.head_commit.modified, 'contrib/executor/${{ matrix.executor }}/**') || contains(github.event.head_commit.removed, 'contrib/executor/${{ matrix.executor }}/**') ) }}
+    if: ${{ github.event_name == 'push' && github.event.head_commit.modified_files | contains('contrib/executor/${{ matrix.executor }}/**') }}
+
 
     steps:
       - name: Debugging step
