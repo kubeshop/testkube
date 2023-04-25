@@ -11,3 +11,4 @@ ENV PATH="$HOME/.kubepug/:${PATH}"
 WORKDIR /root/
 USER 1001
 ENTRYPOINT ["/bin/runner"]
+##test
