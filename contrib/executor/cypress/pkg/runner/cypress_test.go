@@ -7,13 +7,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/utils/test"
-
-	"github.com/kubeshop/testkube/pkg/envs"
-
 	cp "github.com/otiai10/copy"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/kubeshop/testkube/pkg/utils/test"
+	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
