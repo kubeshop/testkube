@@ -18,7 +18,6 @@ dockers:
     image_templates:
       - "kubeshop/testkube-jmeter-executor:{{ .Version }}-amd64"
       - "kubeshop/testkube-jmeter-executor:latest-amd64"
-      - "kubeshop/testkube-jmeter-executor:{{ .ShortCommit }}-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -38,7 +37,6 @@ dockers:
     image_templates:
       - "kubeshop/testkube-jmeter-executor:{{ .Version }}-arm64v8"
       - "kubeshop/testkube-jmeter-executor:latest-arm64v8"
-      - "kubeshop/testkube-jmeter-executor:{{ .ShortCommit }}-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -56,10 +54,6 @@ docker_manifests:
     image_templates:
       - kubeshop/testkube-jmeter-executor:{{ .Version }}-amd64
       - kubeshop/testkube-jmeter-executor:{{ .Version }}-arm64v8
-  - name_template: kubeshop/testkube-jmeter-executor:{{ .ShortCommit }}
-    image_templates:
-      - kubeshop/testkube-jmeter-executor:{{ .ShortCommit }}-amd64
-      - kubeshop/testkube-jmeter-executor:{{ .ShortCommit }}-arm64v8
   - name_template: kubeshop/testkube-jmeter-executor-executor:latest
     image_templates:
       - kubeshop/testkube-jmeter-executor:latest-amd64

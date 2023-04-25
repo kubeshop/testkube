@@ -43,7 +43,6 @@ dockers:
     goarch: amd64
     image_templates:
       - "kubeshop/testkube-maven-executor:{{ .Version }}-jdk11-amd64"
-      - "kubeshop/testkube-maven-executor:{{ .ShortCommit }}-arm64v8"
       - "kubeshop/testkube-maven-executor:jdk11-amd64"
       - "kubeshop/testkube-maven-executor:{{ .Version }}-amd64"
       - "kubeshop/testkube-maven-executor:latest-amd64"
@@ -59,7 +58,6 @@ dockers:
     goarch: arm64
     image_templates:
       - "kubeshop/testkube-maven-executor:{{ .Version }}-jdk11-arm64v8"
-      - "kubeshop/testkube-maven-executor:{{ .ShortCommit }}-arm64v8"
       - "kubeshop/testkube-maven-executor:jdk11-arm64v8"
       - "kubeshop/testkube-maven-executor:{{ .Version }}-arm64v8"
       - "kubeshop/testkube-maven-executor:latest-arm64v8"
@@ -162,10 +160,6 @@ docker_manifests:
     image_templates:
       - kubeshop/testkube-maven-executor:{{ .Version }}-amd64
       - kubeshop/testkube-maven-executor:{{ .Version }}-arm64v8
-  - name_template: kubeshop/testkube-maven-executor:{{ .ShortCommit }}
-    image_templates:
-      - kubeshop/testkube-maven-executor:{{ .ShortCommit }}-amd64
-      - kubeshop/testkube-maven-executor:{{ .ShortCommit }}-arm64v8
 
 release:
   disable: true

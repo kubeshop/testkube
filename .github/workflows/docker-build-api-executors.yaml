@@ -1,4 +1,4 @@
-name: release
+name: Docker images build for API and Executors
 on:
   push:
 #    tags:

@@ -1,9 +1,8 @@
-name: Docker images build develop
+name: Docker images build release
 on:
   push:
     branches:
-      - develop
-      - switch-to-goreleaser
+      - release_**
 
 jobs:
   api:
@@ -77,13 +76,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - uses: dorny/paths-filter@v2
-        id: changes
-        with:
-          filters: |
-            src:
-              - 'contrib/executor/${{ matrix.executor }}/**'
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 
@@ -131,15 +123,6 @@ jobs:
       - name: Push Docker images
         run: |
           docker push kubeshop/testkube-${{ matrix.executor }}:${{ steps.github_sha.outputs.sha_short }}
-
-      - name: Repository Dispatch
-        if: steps.changes.outputs.src == 'true'
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.CI_BOT_TOKEN }}
-          repository: kubeshop/helm-charts
-          event-type: trigger-workflow-executor
-          client-payload: '{"image_tag_executor": "${{ steps.github_sha.outputs.sha_short }}", "executor_name": "${{ matrix.executor }}"}'
 
   executor_jmeter:
     runs-on: ubuntu-latest
@@ -407,12 +390,36 @@ jobs:
         run: |
           docker push kubeshop/testkube-playwright-executor:${{ steps.github_sha.outputs.sha_short }}
 
-#      #Trigger Helm repo workflow to deploy API to the Develop cluster
+  create_release_branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create a release branch in helm-chars repo
+        run: |
+
+          # Set up variables for repository and branch name
+          REPO_OWNER=kubeshop
+          REPO_NAME=helm-charts
+          BRANCH_NAME=${GITHUB_REF}
+
+          # Set up authentication using a personal access token
+          AUTH_HEADER="Authorization: Bearer ${{ secrets.CI_BOT_TOKEN }}"
+
+          # Check if branch already exists
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' -H "${AUTH_HEADER}" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/branches/${BRANCH_NAME}")
+
+          # If branch doesn't exist, create it
+          if [ "${STATUS}" -eq 404 ]; then
+            curl -X POST -H "${AUTH_HEADER}" -d '{"ref": "'"${BRANCH_NAME}"'","sha": "'"$(curl -s -H "${AUTH_HEADER}" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/git/refs/heads/main" | jq -r '.object.sha')"'"}' "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/git/refs"
+            echo "Created branch ${BRANCH_NAME} in ${REPO_OWNER}/${REPO_NAME}"
+          else
+            echo "Branch ${BRANCH_NAME} already exists in ${REPO_OWNER}/${REPO_NAME}"
+          fi
+
+#      #Trigger Helm repo workflow to deploy API to Stage cluster
 #      - name: Repository Dispatch
 #        uses: peter-evans/repository-dispatch@v2
 #        with:
 #          token: ${{ secrets.CI_BOT_TOKEN }}
 #          repository: kubeshop/helm-charts
-#          event-type: trigger-workflow-api-develop
+#          event-type: trigger-workflow-api-release
 #          client-payload: '{"image_tag_api": "${{ steps.github_sha.outputs.sha_short }}"}'
-
