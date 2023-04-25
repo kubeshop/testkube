@@ -1,4 +1,5 @@
 # Base image with adding prometheus support version 0.2.4
+
 # FROM golang:1.18 as builder
 # RUN go install go.k6.io/xk6/cmd/xk6@v0.9.0 && xk6 build $K6_VERSION --with github.com/grafana/xk6-output-prometheus-remote@latest
 

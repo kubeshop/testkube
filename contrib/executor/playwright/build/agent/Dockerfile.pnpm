@@ -1,4 +1,5 @@
 ## Base image consists of:
+
 # FROM mcr.microsoft.com/playwright:v1.30.0-focal
 # RUN apt-get update && apt-get install -y zip
 # RUN npm install -g pnpm
