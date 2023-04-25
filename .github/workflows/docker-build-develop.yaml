@@ -73,16 +73,10 @@ jobs:
         executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template ]
 
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/switch-to-goreleaser' && contains(github.event.head_commit.modified, 'contrib/executor/${{ matrix.executor }}/**') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-
-      - uses: dorny/paths-filter@v2
-        id: changes
-        with:
-          filters: |
-            src:
-              - 'contrib/executor/${{ matrix.executor }}/**'
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -133,7 +127,6 @@ jobs:
           docker push kubeshop/testkube-${{ matrix.executor }}:${{ steps.github_sha.outputs.sha_short }}
 
       - name: Repository Dispatch
-        if: steps.changes.outputs.src == 'true'
         uses: peter-evans/repository-dispatch@v2
         with:
           token: ${{ secrets.CI_BOT_TOKEN }}
