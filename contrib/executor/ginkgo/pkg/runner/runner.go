@@ -249,12 +249,24 @@ func BuildGinkgoArgs(params map[string]string, path, runPath, reportFile string,
 	output.PrintLogf("%s Building Ginkgo arguments from params", ui.IconWorld)
 
 	args := execution.Args
-	for k, p := range params {
-		if p == "" {
-			continue
-		}
-		if k != "GinkgoTestPackage" {
-			args = append(args, strings.Split(p, " ")...)
+	for i := range args {
+		if args[i] == "<envVars>" {
+			var envVars []string
+			for k, p := range params {
+				if p == "" {
+					continue
+				}
+				if k != "GinkgoTestPackage" {
+					envVars = append(envVars, strings.Split(p, " ")...)
+				}
+			}
+
+			newArgs := make([]string, len(args)+len(envVars)-1)
+			copy(newArgs, args[:i])
+			copy(newArgs[i:], envVars)
+			copy(newArgs[i+len(envVars):], args[i+1:])
+			args = newArgs
+			break
 		}
 	}
 

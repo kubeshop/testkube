@@ -63,6 +63,7 @@ func TestRun_Integration(t *testing.T) {
 					"--trace",
 					"--junit-report",
 					"<reportFile>",
+					"<envVars>",
 					"<runPath>",
 				},
 			})
@@ -111,6 +112,7 @@ func TestRun_Integration(t *testing.T) {
 					"--trace",
 					"--junit-report",
 					"<reportFile>",
+					"<envVars>",
 					"<runPath>",
 				},
 			})
