@@ -62,7 +62,7 @@ func TestRun_Integration(t *testing.T) {
 					"--keep-going",
 					"--trace",
 					"--junit-report",
-					"report.xml",
+					"<reportFile>",
 					"<runPath>",
 				},
 			})
@@ -110,7 +110,7 @@ func TestRun_Integration(t *testing.T) {
 					"--keep-going",
 					"--trace",
 					"--junit-report",
-					"report.xml",
+					"<reportFile>",
 					"<runPath>",
 				},
 			})

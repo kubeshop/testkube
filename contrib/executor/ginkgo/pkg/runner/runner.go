@@ -95,8 +95,16 @@ func (r *GinkgoRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		path = filepath.Join(r.Params.DataDir, "repo", execution.Content.Repository.Path)
 	}
 
+	reportFile := "report.xml"
+	if ginkgoParams["GinkgoJunitReport"] != "" {
+		values := strings.Split(ginkgoParams["GinkgoJunitReport"], " ")
+		if len(values) > 1 {
+			reportFile = values[1]
+		}
+	}
+
 	// Set up ginkgo potential args
-	args, err := BuildGinkgoArgs(ginkgoParams, path, runPath, execution)
+	args, err := BuildGinkgoArgs(ginkgoParams, path, runPath, reportFile, execution)
 	if err != nil {
 		return result, err
 	}
@@ -133,13 +141,12 @@ func (r *GinkgoRunner) Run(ctx context.Context, execution testkube.Execution) (r
 			return result, moveErr
 		}
 	}
-	if ginkgoParams["GinkgoJunitReport"] != "" {
-		moveErr := MoveReport(runPath, reportsPath, strings.Split(ginkgoParams["GinkgoJunitReport"], " ")[1])
-		if moveErr != nil {
-			output.PrintLogf("%s could not move Junit report: %s", ui.IconCross, moveErr.Error())
-			return result, moveErr
-		}
+
+	moveErr := MoveReport(runPath, reportsPath, reportFile)
+	if moveErr != nil {
+		output.PrintLogf("%s could not move Junit report: %s", ui.IconCross, moveErr.Error())
 	}
+
 	if ginkgoParams["GinkgoTeamCityReport"] != "" {
 		moveErr := MoveReport(runPath, reportsPath, strings.Split(ginkgoParams["GinkgoTeamCityReport"], " ")[1])
 		if moveErr != nil {
@@ -147,9 +154,12 @@ func (r *GinkgoRunner) Run(ctx context.Context, execution testkube.Execution) (r
 			return result, moveErr
 		}
 	}
-	suites, serr := junit.IngestFile(filepath.Join(reportsPath, strings.Split(ginkgoParams["GinkgoJunitReport"], " ")[1]))
-	result = MapJunitToExecutionResults(out, suites)
-	output.PrintLogf("%s Mapped Junit to Execution Results...", ui.IconCheckMark)
+
+	suites, serr := junit.IngestFile(filepath.Join(reportsPath, reportFile))
+	if serr == nil {
+		result = MapJunitToExecutionResults(out, suites)
+		output.PrintLogf("%s Mapped Junit to Execution Results...", ui.IconCheckMark)
+	}
 
 	// scrape artifacts first even if there are errors above
 
@@ -235,7 +245,7 @@ func FindGinkgoParams(execution *testkube.Execution, defaultParams map[string]st
 	return retVal
 }
 
-func BuildGinkgoArgs(params map[string]string, path, runPath string, execution testkube.Execution) ([]string, error) {
+func BuildGinkgoArgs(params map[string]string, path, runPath, reportFile string, execution testkube.Execution) ([]string, error) {
 	output.PrintLogf("%s Building Ginkgo arguments from params", ui.IconWorld)
 
 	args := execution.Args
@@ -269,6 +279,10 @@ func BuildGinkgoArgs(params map[string]string, path, runPath string, execution t
 
 		if args[i] == "<runPath>" {
 			args[i] = rp
+		}
+
+		if args[i] == "<reportFile>" {
+			args[i] = reportFile
 		}
 	}
 
