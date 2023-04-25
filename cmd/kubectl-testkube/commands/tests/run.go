@@ -56,6 +56,7 @@ func NewRunTestCmd() *cobra.Command {
 		uploadTimeout            string
 		format                   string
 		masks                    []string
+		runningContext           string
 	)
 
 	cmd := &cobra.Command{
@@ -126,7 +127,8 @@ func NewRunTestCmd() *cobra.Command {
 				EnvConfigMaps:                 envConfigMaps,
 				EnvSecrets:                    envSecrets,
 				RunningContext: &testkube.RunningContext{
-					Type_: string(testkube.RunningContextTypeUserCLI),
+					Type_:   string(testkube.RunningContextTypeUserCLI),
+					Context: runningContext,
 				},
 			}
 
@@ -275,6 +277,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&uploadTimeout, "upload-timeout", "", "timeout to use when uploading files, example: 30s")
 	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")
 	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
+	cmd.Flags().StringVar(&runningContext, "context", "", "running context description for test execution")
 
 	return cmd
 }

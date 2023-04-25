@@ -18,6 +18,7 @@ testkube run test <testName> [flags]
       --artifact-storage-class-name string         artifact storage class name for container executor
       --artifact-volume-mount-path string          artifact volume mount path for container executor
       --concurrency int                            concurrency level for multiple test execution (default 10)
+      --context string                             running context description for test execution
       --copy-files stringArray                     file path mappings from host to pod of form source:destination
   -d, --download-artifacts                         downlaod artifacts automatically
       --download-dir string                        download dir (default "artifacts")

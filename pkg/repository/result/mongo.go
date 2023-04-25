@@ -465,6 +465,10 @@ func (r *MongoRepository) DeleteByTest(ctx context.Context, testName string) (er
 	if err != nil {
 		return
 	}
+	err = r.DeleteExecutionNumber(ctx, testName)
+	if err != nil {
+		return
+	}
 	_, err = r.ResultsColl.DeleteMany(ctx, bson.M{"testname": testName})
 	return
 }
@@ -475,6 +479,10 @@ func (r *MongoRepository) DeleteByTestSuite(ctx context.Context, testSuiteName s
 	if err != nil {
 		return
 	}
+	err = r.DeleteExecutionNumber(ctx, testSuiteName)
+	if err != nil {
+		return
+	}
 	_, err = r.ResultsColl.DeleteMany(ctx, bson.M{"testsuitename": testSuiteName})
 	return
 }
@@ -482,6 +490,10 @@ func (r *MongoRepository) DeleteByTestSuite(ctx context.Context, testSuiteName s
 // DeleteAll deletes all execution results
 func (r *MongoRepository) DeleteAll(ctx context.Context) (err error) {
 	err = r.OutputRepository.DeleteAllOutput(ctx)
+	if err != nil {
+		return
+	}
+	err = r.DeleteAllExecutionNumbers(ctx, false)
 	if err != nil {
 		return
 	}
@@ -511,6 +523,11 @@ func (r *MongoRepository) DeleteByTests(ctx context.Context, testNames []string)
 	if err != nil {
 		return
 	}
+
+	err = r.DeleteExecutionNumbers(ctx, testNames)
+	if err != nil {
+		return
+	}
 	_, err = r.ResultsColl.DeleteMany(ctx, filter)
 	return
 }
@@ -537,6 +554,12 @@ func (r *MongoRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames
 	if err != nil {
 		return
 	}
+
+	err = r.DeleteExecutionNumbers(ctx, testSuiteNames)
+	if err != nil {
+		return
+	}
+
 	_, err = r.ResultsColl.DeleteMany(ctx, filter)
 	return
 }
@@ -547,6 +570,12 @@ func (r *MongoRepository) DeleteForAllTestSuites(ctx context.Context) (err error
 	if err != nil {
 		return
 	}
+
+	err = r.DeleteAllExecutionNumbers(ctx, true)
+	if err != nil {
+		return
+	}
+
 	_, err = r.ResultsColl.DeleteMany(ctx, bson.M{"testsuitename": bson.M{"$ne": ""}})
 	return
 }
