@@ -106,7 +106,11 @@ func (r *SoapUIRunner) Run(ctx context.Context, execution testkube.Execution) (r
 // setUpEnvironment sets up the COMMAND_LINE environment variable to
 // contain the incoming arguments and to point to the test file path
 func setUpEnvironment(args []string, testFilePath string) {
-	args = append(args, testFilePath)
+	for i := range args {
+		if args[i] == "<runPath>" {
+			args[i] = testFilePath
+		}
+	}
 	os.Setenv("COMMAND_LINE", strings.Join(args, " "))
 }
 

@@ -114,6 +114,9 @@ func TestRun_Integration(t *testing.T) {
 				"/bin/sh",
 				file.Name(),
 			}
+			test.execution.Args = []string{
+				"<runPath>",
+			}
 			res, err := runner.Run(context.Background(), test.execution)
 			if test.expectedError == "" {
 				assert.NoError(t, err)

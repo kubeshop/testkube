@@ -6,13 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/utils/test"
-
-	"github.com/kubeshop/testkube/pkg/envs"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/envs"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
 func TestRunFiles_Integration(t *testing.T) {
@@ -29,10 +27,20 @@ func TestRunFiles_Integration(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.Content = testkube.NewStringTestContent("")
 		execution.TestType = "k6/script"
+		execution.Command = []string{
+			"k6",
+		}
+		execution.Args = []string{
+			"<k6command>",
+			"<envVars>",
+			"<runPath>",
+		}
 		writeTestContent(t, tempDir, "../../examples/k6-test-script.js")
 
 		// when
@@ -52,10 +60,20 @@ func TestRunFiles_Integration(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.Content = testkube.NewStringTestContent("")
 		execution.TestType = "k6/script"
+		execution.Command = []string{
+			"k6",
+		}
+		execution.Args = []string{
+			"<k6command>",
+			"<envVars>",
+			"<runPath>",
+		}
 		writeTestContent(t, tempDir, "../../examples/k6-test-failing-script.js")
 
 		// when
@@ -75,11 +93,24 @@ func TestRunFiles_Integration(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.Content = testkube.NewStringTestContent("")
 		execution.TestType = "k6/run"
-		execution.Args = []string{"--vus", "2", "--duration", "1s"}
+		execution.Command = []string{
+			"k6",
+		}
+		execution.Args = []string{
+			"<k6command>",
+			"<envVars>",
+			"<runPath>",
+			"--vus",
+			"2",
+			"--duration",
+			"1s",
+		}
 		writeTestContent(t, tempDir, "../../examples/k6-test-script.js")
 
 		// when
@@ -99,10 +130,20 @@ func TestRunFiles_Integration(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.Content = testkube.NewStringTestContent("")
 		execution.TestType = "k6/script"
+		execution.Command = []string{
+			"k6",
+		}
+		execution.Args = []string{
+			"<k6command>",
+			"<envVars>",
+			"<runPath>",
+		}
 		execution.Envs = map[string]string{"TARGET_HOSTNAME": "kubeshop.github.io"}
 		writeTestContent(t, tempDir, "../../examples/k6-test-environment.js")
 
@@ -130,10 +171,20 @@ func TestRunAdvanced_Integration(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.Content = testkube.NewStringTestContent("")
 		execution.TestType = "k6/run"
+		execution.Command = []string{
+			"k6",
+		}
+		execution.Args = []string{
+			"<k6command>",
+			"<envVars>",
+			"<runPath>",
+		}
 		writeTestContent(t, tempDir, "../../examples/k6-test-scenarios.js")
 
 		// when
@@ -153,10 +204,20 @@ func TestRunAdvanced_Integration(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.Content = testkube.NewStringTestContent("")
 		execution.TestType = "k6/script"
+		execution.Command = []string{
+			"k6",
+		}
+		execution.Args = []string{
+			"<k6command>",
+			"<envVars>",
+			"<runPath>",
+		}
 		writeTestContent(t, tempDir, "../../examples/k6-test-thresholds.js")
 
 		// when
@@ -195,7 +256,9 @@ func TestRunDirs_Integtaion(t *testing.T) {
 
 	t.Run("Run k6 from directory with script argument", func(t *testing.T) {
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.Content = &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeGitDir),
@@ -205,7 +268,17 @@ func TestRunDirs_Integtaion(t *testing.T) {
 			},
 		}
 		execution.TestType = "k6/script"
-		execution.Args = []string{"--duration", "1s", "k6-test-script.js"}
+		execution.Command = []string{
+			"k6",
+		}
+		execution.Args = []string{
+			"<k6command>",
+			"<envVars>",
+			"<runPath>",
+			"--duration",
+			"1s",
+			"k6-test-script.js",
+		}
 
 		// when
 		result, err := runner.Run(ctx, *execution)
@@ -231,10 +304,20 @@ func TestRunErrors_Integration(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.Content = testkube.NewStringTestContent("")
 		execution.TestType = "k6/script"
+		execution.Command = []string{
+			"k6",
+		}
+		execution.Args = []string{
+			"<k6command>",
+			"<envVars>",
+			"<runPath>",
+		}
 
 		// when
 		result, err := runner.Run(ctx, *execution)
@@ -253,11 +336,24 @@ func TestRunErrors_Integration(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.Content = testkube.NewStringTestContent("")
 		execution.TestType = "k6/script"
-		execution.Args = []string{"--vues", "2", "--duration", "5"}
+		execution.Command = []string{
+			"k6",
+		}
+		execution.Args = []string{
+			"<k6command>",
+			"<envVars>",
+			"<runPath>",
+			"--vues",
+			"2",
+			"--duration",
+			"5",
+		}
 
 		// when
 		result, err := runner.Run(ctx, *execution)
@@ -276,7 +372,9 @@ func TestRunErrors_Integration(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.Content = &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeGitDir),
@@ -287,7 +385,14 @@ func TestRunErrors_Integration(t *testing.T) {
 			},
 		}
 		execution.TestType = "k6/script"
-		execution.Args = []string{}
+		execution.Command = []string{
+			"k6",
+		}
+		execution.Args = []string{
+			"<k6command>",
+			"<envVars>",
+			"<runPath>",
+		}
 
 		// when
 		result, err := runner.Run(ctx, *execution)
