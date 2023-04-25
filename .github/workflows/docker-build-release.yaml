@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - release_**
-  #    - switch-to-goreleaser
+      - switch-to-goreleaser
 
 jobs:
   api:
@@ -51,7 +51,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-commit-only.yml --snapshot
+          args: release -f goreleaser_files/.goreleaser-docker-build-api-commit-only.yml --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
