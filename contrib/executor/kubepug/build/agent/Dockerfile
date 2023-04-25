@@ -1,7 +1,11 @@
-FROM bitnami/kubectl
+# Base image consists of
+#  FROM bitnami/kubectl
+#  USER root
+#  RUN apt-get update && apt-get install -y wget
+
+FROM kubeshop/testkube-kubepug-executor:base
 COPY kubepug /bin/runner
 USER root
-RUN apt-get update && apt-get install -y wget
 RUN mkdir -p $HOME/.kubepug  && \
     cd $HOME/.kubepug && \
     wget https://github.com/rikatz/kubepug/releases/download/v1.1.3/kubepug_linux_amd64.tar.gz && \

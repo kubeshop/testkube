@@ -1,9 +1,11 @@
-FROM smartbear/soapuios-testrunner
-COPY soapui /bin/runner
+# Base image consists of:
+# FROM smartbear/soapuios-testrunner
+# RUN apt-get update && apt-get install -y git && \
+    #  chmod 777 /usr/local/SmartBear && \
+    #  useradd -m -d /home/soapui -s /bin/bash -u 1001 -r -g root soapui
 
-RUN apt-get update && apt-get install -y git && \
-    chmod 777 /usr/local/SmartBear && \
-    useradd -m -d /home/soapui -s /bin/bash -u 1001 -r -g root soapui
+FROM kubeshop/testkube-soapui-executor:base
+COPY soapui /bin/runner
 USER 1001
 
 ENTRYPOINT ["/bin/runner"]

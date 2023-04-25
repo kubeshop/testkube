@@ -1,8 +1,11 @@
-FROM mcr.microsoft.com/playwright:v1.30.0-focal
+## Base image consists of:
+# FROM mcr.microsoft.com/playwright:v1.30.0-focal
+# RUN apt-get update && apt-get install -y zip
+# RUN npm install -g pnpm
+
+FROM kubeshop/testkube-playwright-executor:pnpm-base
 COPY playwright /bin/runner
 
-RUN apt-get update && apt-get install -y zip
-RUN npm install -g pnpm
 RUN mkdir /home/runner
 WORKDIR /home/runner/
 

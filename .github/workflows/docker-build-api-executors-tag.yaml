@@ -1,4 +1,4 @@
-name: Docker images building and pushing for executors
+name: Docker images building and pushing for API and executors
 on:
   push:
     tags:
@@ -400,7 +400,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
 
   update_api_helm_charts:
-    needs: [api ]
+    needs: [api]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

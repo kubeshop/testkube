@@ -1,18 +1,18 @@
-#built a base images with the following packages:
-#FROM node:17
-#RUN apt-get update && apt-get install -y libgtk2.0-0 \
-#   libgtk-3-0 \
-#   libgbm-dev \
-#   libnotify-dev \
-#   libgconf-2-4 \
-#   libnss3 \
-#   libxss1 \
-#   libasound2 \
-#   libxtst6 \
-#   xauth \
-#   xvfb \
-# 	git
-#RUN npm install -g cypress browserslist@latest
+## Base image consists of:
+ # FROM node:17
+ # RUN apt-get update && apt-get install -y libgtk2.0-0 \
+    #  libgtk-3-0 \
+    #  libgbm-dev \
+    #  libnotify-dev \
+    #  libgconf-2-4 \
+    #  libnss3 \
+    #  libxss1 \
+    #  libasound2 \
+    #  libxtst6 \
+    #  xauth \
+    #  xvfb \
+    #  it
+# RUN npm install -g cypress browserslist@latest
 
 FROM kubeshop/testkube-cypress-executor:npm-base
 COPY cypress /bin/runner
