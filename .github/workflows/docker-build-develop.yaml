@@ -73,14 +73,6 @@ jobs:
         executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template ]
 
     runs-on: ubuntu-latest
-  #  if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/switch-to-goreleaser' && contains(github.event.head_commit.modified, 'contrib/executor/${{ matrix.executor }}/**') }}
-  #  if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/switch-to-goreleaser' && any(startsWith(item, 'contrib/executor/${{ matrix.executor }}/**')) for item in github.event.head_commit.modified) }}
- #   if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/switch-to-goreleaser' && contains([startsWith(item, 'contrib/executor/${{ matrix.executor }}/**') true) for item in github.event.head_commit.modified) }}
-   # if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/switch-to-goreleaser' && contains(github.event.head_commit.modified, 'contrib/executor/${{ matrix.executor }}/') }}
-   # if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/switch-to-goreleaser' && (contains(github.event.head_commit.modified, 'contrib/executor/${{ matrix.executor }}/**') || contains(github.event.head_commit.removed, 'contrib/executor/${{ matrix.executor }}/**') ) }}
-   # if: ${{ github.ref == 'refs/heads/switch-to-goreleaser' && contains(github.event.head_commit.modified_files, 'contrib/executor/k6/build/agent/Dockerfile') }}
-
-
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -91,21 +83,24 @@ jobs:
         with:
           files: contrib/executor/${{ matrix.executor }}/**
 
-#      - name: Set up QEMU
-#        uses: docker/setup-qemu-action@v1
-#
-#      - name: Set up Docker Buildx
-#        uses: docker/setup-buildx-action@v1
-#
-#      - name: Go Cache
-#        uses: actions/cache@v2
-#        with:
-#          path: |
-#            ~/go/pkg/mod
-#            ~/.cache/go-build
-#          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
+      - name: Set up QEMU
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/setup-buildx-action@v1
+
+      - name: Go Cache
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Docker Cache
         if: steps.changed-files-specific.outputs.any_changed == 'true'
@@ -116,39 +111,42 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-#      - name: Login to DockerHub
-#        uses: docker/login-action@v1
-#        with:
-#          username: ${{ secrets.DOCKERHUB_USERNAME }}
-#          password: ${{ secrets.DOCKERHUB_TOKEN }}
-#
-#      - name: Step
-#        id: github_sha
-#        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
-#
-#      - name: Release
-#        if: steps.changed-files-specific.outputs.any_changed == 'true'
-#        uses: goreleaser/goreleaser-action@v4
-#        with:
-#          distribution: goreleaser
-#          version: latest
-#          args: release -f goreleaser_files/.goreleaser-docker-build-executor-commit-only.yml --snapshot
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-#          EXECUTOR: ${{ matrix.executor }}
-#
-#      - name: Push Docker images
-#        if: steps.changed-files-specific.outputs.any_changed == 'true'
-#        run: |
-#          docker push kubeshop/testkube-${{ matrix.executor }}:${{ steps.github_sha.outputs.sha_short }}
+      - name: Login to DockerHub
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-#      - name: Repository Dispatch
-#        uses: peter-evans/repository-dispatch@v2
-#        with:
-#          token: ${{ secrets.CI_BOT_TOKEN }}
-#          repository: kubeshop/helm-charts
-#          event-type: trigger-workflow-executor
-#          client-payload: '{"image_tag_executor": "${{ steps.github_sha.outputs.sha_short }}", "executor_name": "${{ matrix.executor }}"}'
+      - name: Step
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        id: github_sha
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+
+      - name: Release
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-commit-only.yml --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          EXECUTOR: ${{ matrix.executor }}
+
+      - name: Push Docker images
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        run: |
+          docker push kubeshop/testkube-${{ matrix.executor }}:${{ steps.github_sha.outputs.sha_short }}
+
+      - name: Repository Dispatch
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          repository: kubeshop/helm-charts
+          event-type: trigger-workflow-executor
+          client-payload: '{"image_tag_executor": "${{ steps.github_sha.outputs.sha_short }}", "executor_name": "${{ matrix.executor }}"}'
 
 #  executor_jmeter:
 #    runs-on: ubuntu-latest
