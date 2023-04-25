@@ -85,11 +85,7 @@ func (r *MavenRunner) Run(ctx context.Context, execution testkube.Execution) (re
 	}
 
 	// determine the Maven command to use
-	mavenCommand := ""
-	if len(execution.Command) != 0 {
-		mavenCommand = execution.Command[0]
-	}
-
+	mavenCommand := strings.Join(execution.Command, " ")
 	mavenWrapper := filepath.Join(directory, "mvnw")
 	_, err = os.Stat(mavenWrapper)
 	if mavenCommand == "mvn" && err == nil {

@@ -89,11 +89,7 @@ func (r *GradleRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	}
 
 	// determine the Gradle command to use
-	gradleCommand := ""
-	if len(execution.Command) != 0 {
-		gradleCommand = execution.Command[0]
-	}
-
+	gradleCommand := strings.Join(execution.Command, " ")
 	gradleWrapper := filepath.Join(directory, "gradlew")
 	_, err = os.Stat(gradleWrapper)
 	if gradleCommand == "gradle" && err == nil {
