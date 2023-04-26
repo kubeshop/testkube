@@ -43,7 +43,6 @@ jobs:
           args: release -f goreleaser_files/.goreleaser-docker-build-api.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           VERSION: ${{ steps.vars.outputs.tag }}
           COMMIT: ${{ github.sha }}
           ANALYTICS_TRACKING_ID: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}

@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM alpine
 COPY scraper /bin/runner
 RUN apk --no-cache add ca-certificates git

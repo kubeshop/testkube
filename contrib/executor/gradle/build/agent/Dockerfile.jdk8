@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM gradle:7.4.2-jdk8
 COPY gradle /bin/runner
 

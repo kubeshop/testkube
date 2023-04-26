@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM justb4/jmeter:5.5
 COPY jmeter /bin/runner
 

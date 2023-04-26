@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM golang:1.18-alpine
 RUN go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo
 RUN cp `which ginkgo` /ginkgo

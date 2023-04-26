@@ -5,6 +5,7 @@
 #  RUN apk --no-cache add ca-certificates && \
 #      apk --no-cache add curl git
 
+# syntax=docker/dockerfile:1
 FROM kubeshop/testkube-curl-executor:base
 COPY curl /bin/runner
 

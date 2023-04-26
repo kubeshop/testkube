@@ -4,6 +4,7 @@
 # RUN apt-get update && apt-get install -y zip
 # RUN npm install -g pnpm
 
+# syntax=docker/dockerfile:1
 FROM kubeshop/testkube-playwright-executor:pnpm-base
 COPY playwright /bin/runner
 

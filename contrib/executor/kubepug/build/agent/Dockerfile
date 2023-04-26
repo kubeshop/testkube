@@ -3,6 +3,7 @@
 #  USER root
 #  RUN apt-get update && apt-get install -y wget
 
+# syntax=docker/dockerfile:1
 FROM kubeshop/testkube-kubepug-executor:base
 COPY kubepug /bin/runner
 USER root
