@@ -60,7 +60,7 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 		return result, err
 	}
 
-	var k6command string
+	var k6Command string
 	k6TestType := strings.Split(execution.TestType, "/")
 	if len(k6TestType) != 2 {
 		outputPkg.PrintLogf("%s Invalid test type %s", ui.IconCross, execution.TestType)
@@ -69,9 +69,9 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 
 	k6Subtype := k6TestType[1]
 	if k6Subtype == K6Cloud {
-		k6command = K6Cloud
+		k6Command = K6Cloud
 	} else {
-		k6command = K6Run
+		k6Command = K6Run
 	}
 
 	var envVars []string
@@ -143,8 +143,8 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 	}
 
 	for i := range args {
-		if args[i] == "<k6command>" {
-			args[i] = k6command
+		if args[i] == "<k6Command>" {
+			args[i] = k6Command
 		}
 
 		if args[i] == "<runPath>" {

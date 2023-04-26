@@ -37,7 +37,7 @@ func TestRunFiles_Integration(t *testing.T) {
 			"k6",
 		}
 		execution.Args = []string{
-			"<k6command>",
+			"<k6Command>",
 			"<envVars>",
 			"<runPath>",
 		}
@@ -70,7 +70,7 @@ func TestRunFiles_Integration(t *testing.T) {
 			"k6",
 		}
 		execution.Args = []string{
-			"<k6command>",
+			"<k6Command>",
 			"<envVars>",
 			"<runPath>",
 		}
@@ -103,7 +103,7 @@ func TestRunFiles_Integration(t *testing.T) {
 			"k6",
 		}
 		execution.Args = []string{
-			"<k6command>",
+			"<k6Command>",
 			"<envVars>",
 			"<runPath>",
 			"--vus",
@@ -140,7 +140,7 @@ func TestRunFiles_Integration(t *testing.T) {
 			"k6",
 		}
 		execution.Args = []string{
-			"<k6command>",
+			"<k6Command>",
 			"<envVars>",
 			"<runPath>",
 		}
@@ -181,7 +181,7 @@ func TestRunAdvanced_Integration(t *testing.T) {
 			"k6",
 		}
 		execution.Args = []string{
-			"<k6command>",
+			"<k6Command>",
 			"<envVars>",
 			"<runPath>",
 		}
@@ -214,7 +214,7 @@ func TestRunAdvanced_Integration(t *testing.T) {
 			"k6",
 		}
 		execution.Args = []string{
-			"<k6command>",
+			"<k6Command>",
 			"<envVars>",
 			"<runPath>",
 		}
@@ -272,7 +272,7 @@ func TestRunDirs_Integtaion(t *testing.T) {
 			"k6",
 		}
 		execution.Args = []string{
-			"<k6command>",
+			"<k6Command>",
 			"<envVars>",
 			"<runPath>",
 			"--duration",
@@ -314,7 +314,7 @@ func TestRunErrors_Integration(t *testing.T) {
 			"k6",
 		}
 		execution.Args = []string{
-			"<k6command>",
+			"<k6Command>",
 			"<envVars>",
 			"<runPath>",
 		}
@@ -346,7 +346,7 @@ func TestRunErrors_Integration(t *testing.T) {
 			"k6",
 		}
 		execution.Args = []string{
-			"<k6command>",
+			"<k6Command>",
 			"<envVars>",
 			"<runPath>",
 			"--vues",
@@ -389,7 +389,7 @@ func TestRunErrors_Integration(t *testing.T) {
 			"k6",
 		}
 		execution.Args = []string{
-			"<k6command>",
+			"<k6Command>",
 			"<envVars>",
 			"<runPath>",
 		}
