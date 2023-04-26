@@ -94,17 +94,17 @@ func (s *Scheduler) executeTestSuite(ctx context.Context, testSuite testkube.Tes
 }
 
 func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteExecution *testkube.TestSuiteExecution, request testkube.TestSuiteExecutionRequest) {
-	defer s.runAfterEachStep(ctx, testsuiteExecution, wg)
-
 	s.logger.Infow("Running steps", "test", testsuiteExecution.Name)
 
 	hasFailedSteps := false
 	cancelSteps := false
 	var stepResult *testkube.TestSuiteStepExecutionResult
-
 	var abortionStatus *testkube.TestSuiteExecutionStatus
-	abortChan := make(chan *testkube.TestSuiteExecutionStatus)
 
+	defer s.sendNotificationEvents(testsuiteExecution, abortionStatus, hasFailedSteps)
+	defer s.runAfterEachStep(ctx, testsuiteExecution, wg)
+
+	abortChan := make(chan *testkube.TestSuiteExecutionStatus)
 	go s.abortionCheck(ctx, testsuiteExecution, request.Timeout, abortChan)
 
 	for i := range testsuiteExecution.StepResults {
@@ -155,6 +155,15 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 		}
 	}
 
+	s.metrics.IncExecuteTestSuite(*testsuiteExecution)
+
+	err := s.testExecutionResults.Update(ctx, *testsuiteExecution)
+	if err != nil {
+		s.logger.Errorw("saving final test suite execution result error", "error", err)
+	}
+}
+
+func (s *Scheduler) sendNotificationEvents(testsuiteExecution *testkube.TestSuiteExecution, abortionStatus *testkube.TestSuiteExecutionStatus, hasFailedSteps bool) {
 	if *testsuiteExecution.Status == testkube.ABORTING_TestSuiteExecutionStatus {
 		if abortionStatus != nil && *abortionStatus == testkube.TIMEOUT_TestSuiteExecutionStatus {
 			s.events.Notify(testkube.NewEventEndTestSuiteTimeout(testsuiteExecution))
@@ -169,13 +178,6 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 	} else {
 		testsuiteExecution.Status = testkube.TestSuiteExecutionStatusPassed
 		s.events.Notify(testkube.NewEventEndTestSuiteSuccess(testsuiteExecution))
-	}
-
-	s.metrics.IncExecuteTestSuite(*testsuiteExecution)
-
-	err := s.testExecutionResults.Update(ctx, *testsuiteExecution)
-	if err != nil {
-		s.logger.Errorw("saving final test suite execution result error", "error", err)
 	}
 }
 

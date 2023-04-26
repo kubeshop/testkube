@@ -65,6 +65,9 @@ func (s *Notifier) SendMessage(channelID string, message string) error {
 
 // SendEvent composes an event message and sends it to slack
 func (s *Notifier) SendEvent(event *testkube.Event) error {
+	if event.TestSuiteExecution != nil {
+		log.DefaultLogger.Infow("################## EndTime is ", "EndTime", event.TestSuiteExecution.EndTime)
+	}
 
 	message, name, err := s.composeMessage(event)
 	if err != nil {
