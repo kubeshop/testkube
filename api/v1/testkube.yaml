@@ -4103,6 +4103,9 @@ components:
         jobTemplate:
           type: string
           description: job template extensions
+        cronjobTemplate:
+          type: string
+          description: cronjob template extensions
         contentRequest:
           $ref: "#/components/schemas/TestContentRequest"
           description: adjusting parameters for test content
