@@ -78,7 +78,7 @@ func TestNewExecutorJobSpecEmptyArgs(t *testing.T) {
 	jobOptions := &JobOptions{
 		Name:        "name",
 		Namespace:   "namespace",
-		InitImage:   "kubeshop/testkube-executor-init:0.7.10",
+		InitImage:   "kubeshop/testkube-init-executor:0.7.10",
 		Image:       "ubuntu",
 		JobTemplate: defaultJobTemplate,
 		Args:        []string{},
@@ -94,7 +94,7 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 	jobOptions := &JobOptions{
 		Name:                  "name",
 		Namespace:             "namespace",
-		InitImage:             "kubeshop/testkube-executor-init:0.7.10",
+		InitImage:             "kubeshop/testkube-init-executor:0.7.10",
 		Image:                 "curl",
 		JobTemplate:           defaultJobTemplate,
 		ImagePullSecrets:      []string{"secret-name"},

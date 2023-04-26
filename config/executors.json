@@ -279,20 +279,20 @@
     }
   },
   {
-    "name": "executor-scraper",
+    "name": "scraper-executor",
     "executor": {
       "executorType": "scraper",
-      "image": "kubeshop/testkube-executor-scraper:1.10.39",
+      "image": "kubeshop/testkube-scraper-executor:1.10.39",
       "types": [
 
       ]
     }
   },
   {
-    "name": "executor-init",
+    "name": "init-executor",
     "executor": {
       "executorType": "init",
-      "image": "kubeshop/testkube-executor-init:1.10.39",
+      "image": "kubeshop/testkube-init-executor:1.10.39",
       "types": [
 
       ]

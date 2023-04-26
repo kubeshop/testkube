@@ -1,4 +1,4 @@
-NAME ?= testkube-executor-scraper
+NAME ?= testkube-scraper-executor
 BIN_DIR ?= $(HOME)/bin
 
 build:
