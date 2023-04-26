@@ -19,7 +19,11 @@ func GetLogEntry(b []byte) (out Output, err error) {
 	dec := json.NewDecoder(r)
 	err = dec.Decode(&out)
 	if err != nil {
-		return out, err
+		return Output{
+			Type_:   TypeParsingError,
+			Content: fmt.Sprintf("ERROR can't get log entry: %s, (((%s)))", err, string(b)),
+			Time:    time.Now(),
+		}, nil
 	}
 	if out.Type_ == "" {
 		out.Type_ = TypeUnknown
@@ -60,7 +64,7 @@ func ParseRunnerOutput(b []byte) (*testkube.ExecutionResult, error) {
 			break
 		}
 		result.Err(errors.New("found result log with no content"))
-	case TypeError:
+	case TypeError, TypeParsingError:
 		result.Err(fmt.Errorf(log.Content))
 	default:
 		result.Err(fmt.Errorf("wrong log type was found as last log: %v", log))
