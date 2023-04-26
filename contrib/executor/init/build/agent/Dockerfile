@@ -8,8 +8,8 @@ ARG TARGETOS TARGETARCH
 
 RUN cd contrib/executor/init/cmd/agent;GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /runner -mod mod -a .
 
-FROM alpine
-RUN apk --no-cache add ca-certificates git
+FROM alpine/git
+RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 RUN git config --global user.name "testkube"
 RUN chmod a=rw /root/.gitconfig
