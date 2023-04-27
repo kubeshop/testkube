@@ -83,7 +83,7 @@ spec:
   repeats: {{ .Repeats }}
   {{- end }}
   {{- if .ExecutionRequest }}
-  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne .ExecutionRequest.Timeout 0)}}
+  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne .ExecutionRequest.Timeout 0) (.ExecutionRequest.CronJobTemplate)}}
   executionRequest:
     {{- if .ExecutionRequest.Name }}
     name: {{ .ExecutionRequest.Name }}
@@ -130,7 +130,7 @@ spec:
     {{- if ne .ExecutionRequest.Timeout 0 }}
     timeout: {{ .ExecutionRequest.Timeout }}
     {{- end}}
-     {{- if ne .ExecutionRequest.CronJobTemplate 0 }}
+    {{- if .ExecutionRequest.CronJobTemplate }}
     cronJobTemplate: {{ .ExecutionRequest.CronJobTemplate }}
     {{- end}}
   {{- end }}
