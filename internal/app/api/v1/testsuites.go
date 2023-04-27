@@ -685,6 +685,37 @@ func (s TestkubeAPI) ListTestSuiteArtifactsHandler() fiber.Handler {
 	}
 }
 
+// AbortTestSuiteHandler for aborting a TestSuite with id
+func (s TestkubeAPI) AbortTestSuiteHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		name := c.Params("id")
+		if name == "" {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("failed to abort test suite: id cannot be empty"))
+		}
+		errPrefix := fmt.Sprintf("failed to abort test suite %s", name)
+		filter := testresult.NewExecutionsFilter().WithName(name).WithStatus(string(testkube.RUNNING_ExecutionStatus))
+		executions, err := s.TestExecutionResults.GetExecutions(ctx, filter)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: executions with test syute name %s not found", errPrefix, name))
+			}
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not get executions: %w", errPrefix, err))
+		}
+
+		for _, execution := range executions {
+			execution.Status = testkube.TestSuiteExecutionStatusAborting
+			err = s.TestExecutionResults.Update(c.Context(), execution)
+
+			if err != nil {
+				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not update test suite execution: %w", errPrefix, err))
+			}
+		}
+
+		return c.Status(http.StatusNoContent).SendString("")
+	}
+}
+
 func (s TestkubeAPI) AbortTestSuiteExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		s.Log.Infow("aborting test suite execution", "executionID", c.Params("executionID"))
@@ -695,14 +726,14 @@ func (s TestkubeAPI) AbortTestSuiteExecutionHandler() fiber.Handler {
 			return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test suite with execution id/name %s not found", errPrefix, id))
 		}
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not test execution: %w", errPrefix, err))
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not abort test suite execution: %w", errPrefix, err))
 		}
 
 		execution.Status = testkube.TestSuiteExecutionStatusAborting
 		err = s.TestExecutionResults.Update(c.Context(), execution)
 
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not update test execution: %w", errPrefix, err))
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not update test suite execution: %w", errPrefix, err))
 		}
 
 		return c.Status(http.StatusNoContent).SendString("")

@@ -275,6 +275,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	testsuites.Delete("/", s.DeleteTestSuitesHandler())
 	testsuites.Get("/:id", s.GetTestSuiteHandler())
 	testsuites.Delete("/:id", s.DeleteTestSuiteHandler())
+	testsuites.Post("/:id/abort", s.AbortTestSuiteHandler())
 
 	testsuites.Post("/:id/executions", s.ExecuteTestSuitesHandler())
 	testsuites.Get("/:id/executions", s.ListTestSuiteExecutionsHandler())
