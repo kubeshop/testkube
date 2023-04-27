@@ -158,6 +158,7 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsuitesv2.TestSuiteExe
 		HttpProxy:       specExecutionRequest.HttpProxy,
 		HttpsProxy:      specExecutionRequest.HttpsProxy,
 		Timeout:         specExecutionRequest.Timeout,
+		CronJobTemplate: specExecutionRequest.CronJobTemplate,
 	}
 }
 

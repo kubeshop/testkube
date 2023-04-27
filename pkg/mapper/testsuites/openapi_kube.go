@@ -130,6 +130,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.TestSu
 		HttpProxy:       executionRequest.HttpProxy,
 		HttpsProxy:      executionRequest.HttpsProxy,
 		Timeout:         executionRequest.Timeout,
+		CronJobTemaplte: executionRequest.CronJobTemplate,
 	}
 }
 
@@ -225,6 +226,10 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 		{
 			executionRequest.HttpsProxy,
 			&request.HttpsProxy,
+		},
+		{
+			executionRequest.CronJobTemplate,
+			&request.CronJobTemplate,
 		},
 	}
 

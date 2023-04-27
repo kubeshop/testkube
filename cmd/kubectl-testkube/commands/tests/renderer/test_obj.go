@@ -121,6 +121,10 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 			ui.Warn("  Job template:           ", "\n", test.ExecutionRequest.JobTemplate)
 		}
 
+		if test.ExecutionRequest.CronJobTemplate != "" {
+			ui.Warn("  Cron job template:      ", "\n", test.ExecutionRequest.CronJobTemplate)
+		}
+
 		if test.ExecutionRequest.PreRunScript != "" {
 			ui.Warn("  Pre run script:         ", "\n", test.ExecutionRequest.PreRunScript)
 		}

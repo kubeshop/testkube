@@ -60,8 +60,10 @@ type ExecutionRequest struct {
 	BucketName      string           `json:"bucketName,omitempty"`
 	ArtifactRequest *ArtifactRequest `json:"artifactRequest,omitempty"`
 	// job template extensions
-	JobTemplate    string              `json:"jobTemplate,omitempty"`
-	ContentRequest *TestContentRequest `json:"contentRequest,omitempty"`
+	JobTemplate string `json:"jobTemplate,omitempty"`
+	// cron job template extensions
+	CronJobTemplate string              `json:"cronJobTemplate,omitempty"`
+	ContentRequest  *TestContentRequest `json:"contentRequest,omitempty"`
 	// script to run before test execution
 	PreRunScript string `json:"preRunScript,omitempty"`
 	// scraper template extensions

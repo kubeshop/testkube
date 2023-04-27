@@ -130,6 +130,9 @@ spec:
     {{- if ne .ExecutionRequest.Timeout 0 }}
     timeout: {{ .ExecutionRequest.Timeout }}
     {{- end}}
+     {{- if ne .ExecutionRequest.CronJobTemplate 0 }}
+    cronJobTemplate: {{ .ExecutionRequest.CronJobTemplate }}
+    {{- end}}
   {{- end }}
   {{- end }}
 {{- if .Status }}
