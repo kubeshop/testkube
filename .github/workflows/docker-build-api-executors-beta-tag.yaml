@@ -387,9 +387,6 @@ jobs:
     needs: [ api, single_executor, executor_jmeter, executor_maven, executor_gradle, executor_cypress, executor_cypress_manifest, executor_playwright ]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
       - name: Get tag
         id: tag
         uses: dawidd6/action-get-tag@v1
