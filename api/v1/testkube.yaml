@@ -643,6 +643,45 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+
+  /test-suites/{id}/abort:
+    post:
+      tags:
+        - test-suites
+        - api
+      parameters:
+        - $ref: "#/components/parameters/Name"
+      summary: "Abort all executions of a test suite"
+      description: "Abort all test executions of a test suite"
+      operationId: abortTestSuiteExecutions
+      responses:
+        204:
+          description: "no content"
+        404:
+          description: "no execution found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with aborting test suite execution"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /test-suite-with-executions:
     get:
       tags:
@@ -863,7 +902,7 @@ paths:
         - $ref: "#/components/parameters/executionID"
       tags:
         - api
-        - testssuite
+        - test-suites
         - executions
       summary: "Aborts testsuite execution"
       description: "Aborts testsuite execution with given executionID"
@@ -1041,7 +1080,6 @@ paths:
         - $ref: "#/components/parameters/executionID"
       tags:
         - api
-        - testssuite
         - executions
       summary: "Aborts testsuite execution"
       description: "Aborts testsuite execution with given executionID"
