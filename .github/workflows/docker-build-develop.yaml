@@ -54,8 +54,6 @@ jobs:
           args: release -f goreleaser_files/.goreleaser-docker-build-api-commit-only.yml --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          COMMIT: ${{ github.sha }}
           ANALYTICS_TRACKING_ID: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
           ANALYTICS_API_KEY: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
           SLACK_BOT_CLIENT_ID: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}
