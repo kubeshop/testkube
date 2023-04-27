@@ -130,7 +130,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.TestSu
 		HttpProxy:       executionRequest.HttpProxy,
 		HttpsProxy:      executionRequest.HttpsProxy,
 		Timeout:         executionRequest.Timeout,
-		CronJobTemaplte: executionRequest.CronJobTemplate,
+		CronJobTemplate: executionRequest.CronJobTemplate,
 	}
 }
 
