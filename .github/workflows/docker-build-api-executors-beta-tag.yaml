@@ -110,6 +110,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           EXECUTOR: ${{ matrix.executor }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   executor_jmeter:
     runs-on: ubuntu-latest
@@ -122,6 +125,7 @@ jobs:
         uses: docker/setup-qemu-action@v1
 
       - name: Set up Docker Buildx
+        id: buildx
         uses: docker/setup-buildx-action@v1
 
       - name: Go Cache
@@ -156,6 +160,9 @@ jobs:
           args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeter.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   executor_maven:
     runs-on: ubuntu-latest
@@ -167,6 +174,7 @@ jobs:
         uses: docker/setup-qemu-action@v1
 
       - name: Set up Docker Buildx
+        id: buildx
         uses: docker/setup-buildx-action@v1
 
       - name: Go Cache
@@ -201,6 +209,9 @@ jobs:
           args: release -f goreleaser_files/.goreleaser-docker-build-executor-maven.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   executor_gradle:
     runs-on: ubuntu-latest
@@ -213,6 +224,7 @@ jobs:
         uses: docker/setup-qemu-action@v1
 
       - name: Set up Docker Buildx
+        id: buildx
         uses: docker/setup-buildx-action@v1
 
       - name: Go Cache
@@ -247,6 +259,9 @@ jobs:
           args: release -f goreleaser_files/.goreleaser-docker-build-executor-gradle.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   executor_cypress:
     strategy:
@@ -263,6 +278,7 @@ jobs:
         uses: docker/setup-qemu-action@v1
 
       - name: Set up Docker Buildx
+        id: buildx
         uses: docker/setup-buildx-action@v1
 
       - name: Go Cache
@@ -293,11 +309,7 @@ jobs:
         id: tag
         uses: dawidd6/action-get-tag@v1
         with:
-          # Optionally strip `v` prefix
           strip_v: true
-
-      - name: Use tag
-        run: echo ${{steps.tag.outputs.tag}}
 
       - name: Release
         uses: goreleaser/goreleaser-action@v4
@@ -308,6 +320,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           EXECUTOR_VERSION: ${{ matrix.version }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
       - name: Push multi-arch image to the Registry
         run: |
@@ -327,6 +342,7 @@ jobs:
         uses: docker/setup-qemu-action@v1
 
       - name: Set up Docker Buildx
+        id: buildx
         uses: docker/setup-buildx-action@v1
 
       -  name: Login to DockerHub
@@ -356,6 +372,7 @@ jobs:
         uses: docker/setup-qemu-action@v1
 
       - name: Set up Docker Buildx
+        id: buildx
         uses: docker/setup-buildx-action@v1
 
       - name: Go Cache
@@ -390,12 +407,14 @@ jobs:
           args: release -f goreleaser_files/.goreleaser-docker-build-executor-playwright.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   trigger_deployment:
     needs: [ api, single_executor, executor_jmeter, executor_maven, executor_gradle, executor_cypress, executor_cypress_manifest, executor_playwright ]
     runs-on: ubuntu-latest
     steps:
-
       - name: Get tag
         id: tag
         uses: dawidd6/action-get-tag@v1

@@ -16,6 +16,7 @@ jobs:
         uses: docker/setup-qemu-action@v1
 
       - name: Set up Docker Buildx
+        id: buildx
         uses: docker/setup-buildx-action@v1
 
       - name: Go Cache
@@ -60,6 +61,9 @@ jobs:
           SLACK_BOT_CLIENT_SECRET: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}
           SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
           CLOUD_SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
       - name: Push Docker images
         run: |
@@ -95,6 +99,7 @@ jobs:
 
       - name: Set up Docker Buildx
         if: steps.changed-files-specific.outputs.any_changed == 'true'
+        id: buildx
         uses: docker/setup-buildx-action@v1
 
       - name: Go Cache
@@ -139,6 +144,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           EXECUTOR: ${{ matrix.executor }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
       - name: Push Docker images
         if: steps.changed-files-specific.outputs.any_changed == 'true'
@@ -173,6 +181,7 @@ jobs:
 
       - name: Set up Docker Buildx
         if: steps.changed-files-specific.outputs.any_changed == 'true'
+        id: buildx
         uses: docker/setup-buildx-action@v1
 
       - name: Go Cache
@@ -216,6 +225,9 @@ jobs:
           args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeter-commit-only.yml --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
       - name: Push Docker images
         if: steps.changed-files-specific.outputs.any_changed == 'true'
@@ -249,6 +261,7 @@ jobs:
 
       - name: Set up Docker Buildx
         if: steps.changed-files-specific.outputs.any_changed == 'true'
+        id: buildx
         uses: docker/setup-buildx-action@v1
 
       - name: Go Cache
@@ -292,6 +305,9 @@ jobs:
           args: release -f goreleaser_files/.goreleaser-docker-build-executor-maven-commit-only.yml --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
       - name: Push Docker images
         if: steps.changed-files-specific.outputs.any_changed == 'true'
@@ -325,6 +341,7 @@ jobs:
 
       - name: Set up Docker Buildx
         if: steps.changed-files-specific.outputs.any_changed == 'true'
+        id: buildx
         uses: docker/setup-buildx-action@v1
 
       - name: Go Cache
@@ -368,6 +385,9 @@ jobs:
           args: release -f goreleaser_files/.goreleaser-docker-build-executor-gradle-commit-only.yml --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
       - name: Push Docker images
         if: steps.changed-files-specific.outputs.any_changed == 'true'
@@ -401,6 +421,7 @@ jobs:
 
       - name: Set up Docker Buildx
         if: steps.changed-files-specific.outputs.any_changed == 'true'
+        id: buildx
         uses: docker/setup-buildx-action@v1
 
       - name: Go Cache
@@ -444,6 +465,9 @@ jobs:
           args: release -f goreleaser_files/.goreleaser-docker-build-executor-cypress-commit-only.yml --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
       - name: Push image to the Registry
         if: steps.changed-files-specific.outputs.any_changed == 'true'
@@ -476,6 +500,7 @@ jobs:
         uses: docker/setup-qemu-action@v1
 
       - name: Set up Docker Buildx
+        id: buildx
         if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/setup-buildx-action@v1
 
@@ -520,6 +545,9 @@ jobs:
           args: release -f goreleaser_files/.goreleaser-docker-build-executor-playwright-commit-only.yml --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
       - name: Push image to the Registry
         if: steps.changed-files-specific.outputs.any_changed == 'true'
