@@ -107,7 +107,7 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.storage.accessKey       | yes         | minio123                             |
 | testkube-api.storage.scrapperEnabled | yes         | true                                 |
 | testkube-api.slackToken              | yes         | ""                                   |
-| testkube-api.slackTemplate           | yes         | ""                                   |
+| testkube-api.slackSecret             | yes         | ""                                   |
 | testkube-api.slackConfig             | yes         | ""                                   |
 | testkube-api.jobServiceAccountName   | yes         | ""                                   |
 | testkube-api.logs.storage            | no          | "minio"                              |

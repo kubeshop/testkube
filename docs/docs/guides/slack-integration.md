@@ -83,6 +83,35 @@ For example:
 
 This will send notifications to the channel with the id `C01234567` for the test and test suites with labels `label1:value1`; tests with the labels "sanity" and "testName2" and test suites with the labels "test-suite1" and "test-suite2"; on events with the labels "end-test-failed", "end-test-timeout", "end-testsuite-failed" and "end-testsuite-timeout"; and to the channel with the id `C07654342` for tests with labels `label3:value4`, tests with the labels "integration-test1" and "integration-test2" and test suites with the labels "integration-test-suite1" and "integration-test-suite2" on all events.
 
+
+## Adjust Slack Config using helm values
+
+For convenience, you can also adjust the slack config using helm values but you have to use yaml format. For example:
+
+```yaml
+  # -- Slack config for the events, tests, testsuites and channels
+  slackConfig:
+    - ChannelID: ""
+      selector: 
+        label1: "value1"
+      testName: 
+        - "sanity"
+        - "testName2"
+      testSuiteName:
+        - "test-suite1"
+        - "test-suite2"
+      events:
+        - "start-test"
+        - "end-test-success"
+        - "end-test-failed"
+        - "end-test-aborted"
+        - "end-test-timeout"
+        - "start-testsuite"
+        - "end-testsuite-success"
+        - "end-testsuite-failed"
+        - "end-testsuite-aborted"
+        - "end-testsuite-timeout"
+```
 ## Configure Message Template
 
 The default message is [/charts/testkube-api/slack-template.json](https://github.com/kubeshop/helm-charts/blob/311ff9f6fc38dfb5196b91a6f63ee7d3f59f7f4b/charts/testkube-api/slack-template.json) and is written using [Slack block kit builder](https://app.slack.com/block-kit-builder) and Golang templates. You can customize it depending on your needs. The following structure is referenced in the template where it is getting the data to show:
