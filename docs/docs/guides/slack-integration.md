@@ -84,9 +84,9 @@ For example:
 This will send notifications to the channel with the id `C01234567` for the test and test suites with labels `label1:value1`; tests with the labels "sanity" and "testName2" and test suites with the labels "test-suite1" and "test-suite2"; on events with the labels "end-test-failed", "end-test-timeout", "end-testsuite-failed" and "end-testsuite-timeout"; and to the channel with the id `C07654342` for tests with labels `label3:value4`, tests with the labels "integration-test1" and "integration-test2" and test suites with the labels "integration-test-suite1" and "integration-test-suite2" on all events.
 
 
-## Adjust Slack Config using helm values
+## Adjust Slack Config Using Helm Values
 
-For convenience, you can also adjust the slack config using helm values but you have to use yaml format. For example:
+For convenience, you can also adjust the Slack config using Helm values but you have to use YAML format. For example:
 
 ```yaml
   # -- Slack config for the events, tests, testsuites and channels
