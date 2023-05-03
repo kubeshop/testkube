@@ -61,7 +61,6 @@ dockers:
     goarch: amd64
     image_templates:
       - "kubeshop/testkube-playwright-executor:{{ .Version }}-amd64"
-      - "kubeshop/testkube-playwright-executor:{{ .ShortCommit }}-amd64"
       - "kubeshop/testkube-playwright-executor:{{ .Version }}-npm-amd64"
       - "kubeshop/testkube-playwright-executor:npm-amd64"
       - "kubeshop/testkube-playwright-executor:latest-amd64"
@@ -80,7 +79,6 @@ dockers:
     goarch: arm64
     image_templates:
       - "kubeshop/testkube-playwright-executor:{{ .Version }}-arm64v8"
-      - "kubeshop/testkube-playwright-executor:{{ .ShortCommit }}-arm64v8"
       - "kubeshop/testkube-playwright-executor:{{ .Version }}-npm-arm64v8"
       - "kubeshop/testkube-playwright-executor:npm-arm64v8"
       - "kubeshop/testkube-playwright-executor:latest-arm64v8"
@@ -158,9 +156,6 @@ docker_manifests:
     image_templates:
       - kubeshop/testkube-playwright-executor:{{ .Version }}-amd64
       - kubeshop/testkube-playwright-executor:{{ .Version }}-arm64v8
-  - name_template: kubeshop/testkube-playwright-executor:{{ .ShortCommit }}
-    image_templates:
-      - kubeshop/testkube-playwright-executor:{{ .ShortCommit }}-amd64
-      - kubeshop/testkube-playwright-executor:{{ .ShortCommit }}-arm64v8
+
 release:
   disable: true

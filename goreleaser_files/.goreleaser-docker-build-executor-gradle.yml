@@ -12,8 +12,8 @@ env:
 
 builds:
   - id: "linux"
-    main: "./contrib/executor/{{ .Env.EXECUTOR }}/cmd/agent"
-    binary: "{{ .Env.EXECUTOR }}"
+    main: "./contrib/executor/gradle/cmd/agent"
+    binary: "gradle"
     env:
       - CGO_ENABLED=0
     goos:
@@ -23,13 +23,13 @@ builds:
       - arm64
     mod_timestamp: "{{ .CommitTimestamp }}"
 dockers:
-  - dockerfile: "./contrib/executor/{{ .Env.EXECUTOR }}/build/agent/Dockerfile.{{ .Env.EXECUTOR_VERSION }}"
+  - dockerfile: "./contrib/executor/gradle/build/agent/Dockerfile.jdk8"
     use: buildx
     goos: linux
     goarch: amd64
     image_templates:
-      - "kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-amd64"
-      - "kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Env.EXECUTOR_VERSION }}-amd64"
+      - "kubeshop/testkube-gradle-executor:{{ .Version }}-jdk8-amd64"
+      - "kubeshop/testkube-gradle-executor:jdk8-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -39,13 +39,13 @@ dockers:
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
 
-  - dockerfile: "./contrib/executor/{{ .Env.EXECUTOR }}/build/agent/Dockerfile.{{ .Env.EXECUTOR_VERSION }}"
+  - dockerfile: "./contrib/executor/gradle/build/agent/Dockerfile.jdk8"
     use: buildx
     goos: linux
     goarch: arm64
     image_templates:
-      - "kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-arm64v8"
-      - "kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Env.EXECUTOR_VERSION }}-arm64v8"
+      - "kubeshop/testkube-gradle-executor:{{ .Version }}-jdk8-arm64v8"
+      - "kubeshop/testkube-gradle-executor:jdk8-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -55,13 +55,15 @@ dockers:
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
 
-  - dockerfile: "./contrib/executor/{{ .Env.EXECUTOR }}/build/agent/Dockerfile.jdk11"
+  - dockerfile: "./contrib/executor/gradle/build/agent/Dockerfile.jdk11"
     use: buildx
     goos: linux
     goarch: amd64
     image_templates:
-      - "kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Version }}-amd64"
-      - "kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:latest-amd64"
+      - "kubeshop/testkube-gradle-executor:{{ .Version }}-jdk11-amd64"
+      - "kubeshop/testkube-gradle-executor:jdk11-amd64"
+      - "kubeshop/testkube-gradle-executor:{{ .Version }}-amd64"
+      - "kubeshop/testkube-gradle-executor:latest-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -71,13 +73,15 @@ dockers:
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
 
-  - dockerfile: "./contrib/executor/{{ .Env.EXECUTOR }}/build/agent/Dockerfile.jdk11"
+  - dockerfile: "./contrib/executor/gradle/build/agent/Dockerfile.jdk11"
     use: buildx
     goos: linux
     goarch: arm64
     image_templates:
-      - "kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Version }}-arm64v8"
-      - "kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:latest-arm64v8"
+      - "kubeshop/testkube-gradle-executor:{{ .Version }}-jdk11-arm64v8"
+      - "kubeshop/testkube-gradle-executor:jdk11-arm64v8"
+      - "kubeshop/testkube-gradle-executor:{{ .Version }}-arm64v8"
+      - "kubeshop/testkube-gradle-executor:latest-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -87,112 +91,111 @@ dockers:
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
 
-#  - dockerfile: "./contrib/executor/{{ .Env.EXECUTOR }}/build/agent/Dockerfile.jdk17"
-#    use: buildx
-#    goos: linux
-#    goarch: amd64
-#    image_templates:
-#      - "kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Version }}-jdk17-amd64"
-#      - "kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:jdk17-amd64"
-#    build_flag_templates:
-#      - "--platform=linux/amd64"
-#      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-#      - "--label=org.opencontainers.image.created={{ .Date}}"
-#      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-#      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
-#      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
-#      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
-#
-#  - dockerfile: "./contrib/executor/{{ .Env.EXECUTOR }}/build/agent/Dockerfile.jdk17"
-#    use: buildx
-#    goos: linux
-#    goarch: arm64
-#    image_templates:
-#      - "kubeshop/testkube-gradle-executor:{{ .Version }}-jdk17-arm64v8"
-#      - "kubeshop/testkube-gradle-executor:jdk17-arm64v8"
-#    build_flag_templates:
-#      - "--platform=linux/arm64/v8"
-#      - "--label=org.opencontainers.image.created={{ .Date }}"
-#      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-#      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-#      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
-#      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
-#      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
-#
-#  - dockerfile: "./contrib/executor/gradle/build/agent/Dockerfile.jdk18"
-#    use: buildx
-#    goos: linux
-#    goarch: amd64
-#    image_templates:
-#      - "kubeshop/testkube-gradle-executor:{{ .Version }}-jdk18-amd64"
-#      - "kubeshop/testkube-gradle-executor:jdk18-amd64"
-#    build_flag_templates:
-#      - "--platform=linux/amd64"
-#      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-#      - "--label=org.opencontainers.image.created={{ .Date}}"
-#      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-#      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
-#      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
-#      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
-#
-#  - dockerfile: "./contrib/executor/gradle/build/agent/Dockerfile.jdk18"
-#    use: buildx
-#    goos: linux
-#    goarch: arm64
-#    image_templates:
-#      - "kubeshop/testkube-gradle-executor:{{ .Version }}-jdk18-arm64v8"
-#      - "kubeshop/testkube-gradle-executor:jdk18-arm64v8"
-#    build_flag_templates:
-#      - "--platform=linux/arm64/v8"
-#      - "--label=org.opencontainers.image.created={{ .Date }}"
-#      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-#      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-#      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
-#      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
-#      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+  - dockerfile: "./contrib/executor/gradle/build/agent/Dockerfile.jdk17"
+    use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "kubeshop/testkube-gradle-executor:{{ .Version }}-jdk17-amd64"
+      - "kubeshop/testkube-gradle-executor:jdk17-amd64"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
+      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
+      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+
+  - dockerfile: "./contrib/executor/gradle/build/agent/Dockerfile.jdk17"
+    use: buildx
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "kubeshop/testkube-gradle-executor:{{ .Version }}-jdk17-arm64v8"
+      - "kubeshop/testkube-gradle-executor:jdk17-arm64v8"
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
+      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
+      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+
+  - dockerfile: "./contrib/executor/gradle/build/agent/Dockerfile.jdk18"
+    use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "kubeshop/testkube-gradle-executor:{{ .Version }}-jdk18-amd64"
+      - "kubeshop/testkube-gradle-executor:jdk18-amd64"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
+      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
+      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+
+  - dockerfile: "./contrib/executor/gradle/build/agent/Dockerfile.jdk18"
+    use: buildx
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "kubeshop/testkube-gradle-executor:{{ .Version }}-jdk18-arm64v8"
+      - "kubeshop/testkube-gradle-executor:jdk18-arm64v8"
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
+      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
+      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
 
 docker_manifests:
-  - name_template: kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}
+  - name_template: kubeshop/testkube-gradle-executor:{{ .Version }}-jdk8
     image_templates:
-      - kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-amd64
-      - kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-arm64v8
-  - name_template: kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Env.EXECUTOR_VERSION }}
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk8-amd64
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk8-arm64v8
+  - name_template: kubeshop/testkube-gradle-executor:jdk8
     image_templates:
-      - kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Env.EXECUTOR_VERSION }}-amd64
-      - kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Env.EXECUTOR_VERSION }}-arm64v8
-  - name_template: kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Version }}-jdk11
+      - kubeshop/testkube-gradle-executor:jdk8-amd64
+      - kubeshop/testkube-gradle-executor:jdk8-arm64v8
+  - name_template: kubeshop/testkube-gradle-executor:{{ .Version }}-jdk11
     image_templates:
-      - kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Version }}-jdk11-amd64
-      - kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Version }}-jdk11-arm64v8
-  - name_template: kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:jdk11
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk11-amd64
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk11-arm64v8
+  - name_template: kubeshop/testkube-gradle-executor:jdk11
     image_templates:
-      - kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:jdk11-amd64
-      - kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:jdk11-arm64v8
-#  - name_template: kubeshop/testkube-gradle-executor:{{ .Version }}-jdk17
-#    image_templates:
-#      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk17-amd64
-#      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk17-arm64v8
-#  - name_template: kubeshop/testkube-gradle-executor:jdk17
-#    image_templates:
-#      - kubeshop/testkube-gradle-executor:jdk17-amd64
-#      - kubeshop/testkube-gradle-executor:jdk17-arm64v8
-#  - name_template: kubeshop/testkube-gradle-executor:{{ .Version }}-jdk18
-#    image_templates:
-#      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk18-amd64
-#      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk18-arm64v8
-#  - name_template: kubeshop/testkube-gradle-executor:jdk18
-#    image_templates:
-#      - kubeshop/testkube-gradle-executor:jdk18-amd64
-#      - kubeshop/testkube-gradle-executor:jdk18-arm64v8
-  - name_template: kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:latest
+      - kubeshop/testkube-gradle-executor:jdk11-amd64
+      - kubeshop/testkube-gradle-executor:jdk11-arm64v8
+  - name_template: kubeshop/testkube-gradle-executor:{{ .Version }}-jdk17
     image_templates:
-      - kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:latest-amd64
-      - kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:latest-arm64v8
-  - name_template: kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Version }}
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk17-amd64
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk17-arm64v8
+  - name_template: kubeshop/testkube-gradle-executor:jdk17
     image_templates:
-      - kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Version }}-amd64
-      - kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Version }}-arm64v8
-
+      - kubeshop/testkube-gradle-executor:jdk17-amd64
+      - kubeshop/testkube-gradle-executor:jdk17-arm64v8
+  - name_template: kubeshop/testkube-gradle-executor:{{ .Version }}-jdk18
+    image_templates:
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk18-amd64
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk18-arm64v8
+  - name_template: kubeshop/testkube-gradle-executor:jdk18
+    image_templates:
+      - kubeshop/testkube-gradle-executor:jdk18-amd64
+      - kubeshop/testkube-gradle-executor:jdk18-arm64v8
+  - name_template: kubeshop/testkube-gradle-executor:latest
+    image_templates:
+      - kubeshop/testkube-gradle-executor:latest-amd64
+      - kubeshop/testkube-gradle-executor:latest-arm64v8
+  - name_template: kubeshop/testkube-gradle-executor:{{ .Version }}
+    image_templates:
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-amd64
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-arm64v8
 
 release:
   disable: true
