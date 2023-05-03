@@ -3,8 +3,8 @@
 Testkube allows running Gradle based tasks that could also be tests. For example, we can easily run JUnit tests in Testkube. 
 
 Default command for this executor: gradle
-Default arguments for this executor command: --no-daemon <taskName> -p <projectDir>
-(parameters in <> are calculated at test execution)
+Default arguments for this executor command: --no-daemon &lt;taskName&gt; -p &lt;projectDir&gt;
+(parameters in &lt;&gt; are calculated at test execution)
 
 ## **Test Environment**
 

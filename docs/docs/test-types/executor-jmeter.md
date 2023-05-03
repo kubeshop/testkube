@@ -4,9 +4,9 @@ import Admonition from "@theme/Admonition";
 
 [JMeter](https://jmeter.apache.org/) is an integral part of Testkube. The Testkube JMeter executor is installed by default during the Testkube installation.
 
-Default command for this executor: <entryPoint>
-Default arguments for this executor command: -n -j <logFile> -t <runPath> -l <jtlFile> -e -o <reportFile> <envVars>
-(parameters in <> are calculated at test execution)
+Default command for this executor: &lt;entryPoint&gt;
+Default arguments for this executor command: -n -j &lt;logFile&gt; -t &lt;runPath&gt; -l &lt;jtlFile&gt; -e -o &lt;reportFile&gt; &lt;envVars&gt;
+(parameters in &lt;&gt; are calculated at test execution)
 
 <iframe width="100%" height="315" src="https://www.youtube.com/embed/iF7BcVqTeO0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 

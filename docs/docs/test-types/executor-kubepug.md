@@ -4,8 +4,8 @@
 For security, Testkube only supports scanning input files via the KubePug executor.
 
 Default command for this executor: kubepug
-Default arguments for this executor command: --format=json --input-file <runPath>
-(parameters in <> are calculated at test execution)
+Default arguments for this executor command: --format=json --input-file &lt;runPath&gt;
+(parameters in &lt;&gt; are calculated at test execution)
 
 Running the KubePug Testkube executor does not require any special installation; Testkube comes with the ability to run Kubepug immediately after installation.
 

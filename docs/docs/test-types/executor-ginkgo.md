@@ -5,8 +5,8 @@ import Admonition from "@theme/Admonition";
 Our dedicated Ginkgo executor allows running Ginkgo tests with Testkube - directly from your Git repository.
 
 Default command for this executor: ginkgo
-Default arguments for this executor command: -r -p --randomize-all --randomize-suites --keep-going --trace --junit-report <reportFile> <envVars> <runPath>
-(parameters in <> are calculated at test execution)
+Default arguments for this executor command: -r -p --randomize-all --randomize-suites --keep-going --trace --junit-report &lt;reportFile&gt; &lt;envVars&gt; &lt;runPath&gt;
+(parameters in &lt;&gt; are calculated at test execution)
 
 export const ExecutorInfo = () => {
   return (
