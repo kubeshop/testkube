@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
-FROM alpine
+FROM ubuntu
 COPY init /bin/runner
-RUN apk --no-cache add ca-certificates git
+RUN apt-get update
+RUN apt-get install ca-certificates git -y
 WORKDIR /root/
 RUN git config --global user.name "testkube"
 RUN chmod a=rw /root/.gitconfig
