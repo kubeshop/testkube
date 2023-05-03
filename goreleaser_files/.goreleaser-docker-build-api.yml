@@ -29,9 +29,7 @@ dockers:
     goos: linux
     goarch: amd64
     image_templates:
-      - "kubeshop/testkube-api-server:{{ .ShortCommit }}-amd64"
       - "kubeshop/testkube-api-server:{{ .Version }}-amd64"
-      - "kubeshop/testkube-api-server:latest-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -56,9 +54,7 @@ dockers:
     goos: linux
     goarch: arm64
     image_templates:
-      - "kubeshop/testkube-api-server:{{ .ShortCommit }}-arm64v8"
       - "kubeshop/testkube-api-server:{{ .Version }}-arm64v8"
-      - "kubeshop/testkube-api-server:latest-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -79,18 +75,14 @@ dockers:
       - "--build-arg=CLOUD_SEGMENTIO_KEY={{ .Env.CLOUD_SEGMENTIO_KEY }}"
 
 docker_manifests:
-  - name_template: kubeshop/testkube-api-server:{{ .ShortCommit }}
-    image_templates:
-      - kubeshop/testkube-api-server:{{ .ShortCommit }}-amd64
-      - kubeshop/testkube-api-server:{{ .ShortCommit }}-arm64v8
   - name_template: kubeshop/testkube-api-server:{{ .Version }}
     image_templates:
       - kubeshop/testkube-api-server:{{ .Version }}-amd64
       - kubeshop/testkube-api-server:{{ .Version }}-arm64v8
   - name_template: kubeshop/testkube-api-server:latest
     image_templates:
-      - kubeshop/testkube-api-server:latest-amd64
-      - kubeshop/testkube-api-server:latest-arm64v8
+      - kubeshop/testkube-api-server:{{ .Version }}-amd64
+      - kubeshop/testkube-api-server:{{ .Version }}-arm64v8
 
 release:
   disable: true

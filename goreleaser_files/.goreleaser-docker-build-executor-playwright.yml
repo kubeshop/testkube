@@ -29,7 +29,6 @@ dockers:
     goarch: amd64
     image_templates:
       - "kubeshop/testkube-playwright-executor:{{ .Version }}-pnpm-amd64"
-      - "kubeshop/testkube-playwright-executor:pnpm-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -45,7 +44,6 @@ dockers:
     goarch: arm64
     image_templates:
       - "kubeshop/testkube-playwright-executor:{{ .Version }}-pnpm-arm64v8"
-      - "kubeshop/testkube-playwright-executor:pnpm-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -60,10 +58,7 @@ dockers:
     goos: linux
     goarch: amd64
     image_templates:
-      - "kubeshop/testkube-playwright-executor:{{ .Version }}-amd64"
       - "kubeshop/testkube-playwright-executor:{{ .Version }}-npm-amd64"
-      - "kubeshop/testkube-playwright-executor:npm-amd64"
-      - "kubeshop/testkube-playwright-executor:latest-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -78,10 +73,7 @@ dockers:
     goos: linux
     goarch: arm64
     image_templates:
-      - "kubeshop/testkube-playwright-executor:{{ .Version }}-arm64v8"
       - "kubeshop/testkube-playwright-executor:{{ .Version }}-npm-arm64v8"
-      - "kubeshop/testkube-playwright-executor:npm-arm64v8"
-      - "kubeshop/testkube-playwright-executor:latest-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -97,7 +89,6 @@ dockers:
     goarch: amd64
     image_templates:
       - "kubeshop/testkube-playwright-executor:{{ .Version }}-yarn-amd64"
-      - "kubeshop/testkube-playwright-executor:yarn-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -113,7 +104,6 @@ dockers:
     goarch: arm64
     image_templates:
       - "kubeshop/testkube-playwright-executor:{{ .Version }}-yarn-arm64v8"
-      - "kubeshop/testkube-playwright-executor:yarn-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -130,32 +120,32 @@ docker_manifests:
       - kubeshop/testkube-playwright-executor:{{ .Version }}-npm-arm64v8
   - name_template: kubeshop/testkube-playwright-executor:npm
     image_templates:
-      - kubeshop/testkube-playwright-executor:npm-amd64
-      - kubeshop/testkube-playwright-executor:npm-arm64v8
+      - kubeshop/testkube-playwright-executor:{{ .Version }}-npm-amd64
+      - kubeshop/testkube-playwright-executor:{{ .Version }}-npm-arm64v8
   - name_template: kubeshop/testkube-playwright-executor:{{ .Version }}-pnpm
     image_templates:
       - kubeshop/testkube-playwright-executor:{{ .Version }}-pnpm-amd64
       - kubeshop/testkube-playwright-executor:{{ .Version }}-pnpm-arm64v8
   - name_template: kubeshop/testkube-playwright-executor:pnpm
     image_templates:
-      - kubeshop/testkube-playwright-executor:pnpm-amd64
-      - kubeshop/testkube-playwright-executor:pnpm-arm64v8
+      - kubeshop/testkube-playwright-executor:{{ .Version }}-pnpm-amd64
+      - kubeshop/testkube-playwright-executor:{{ .Version }}-pnpm-arm64v8
   - name_template: kubeshop/testkube-playwright-executor:{{ .Version }}-yarn
     image_templates:
       - kubeshop/testkube-playwright-executor:{{ .Version }}-yarn-amd64
       - kubeshop/testkube-playwright-executor:{{ .Version }}-yarn-arm64v8
   - name_template: kubeshop/testkube-playwright-executor:yarn
     image_templates:
-      - kubeshop/testkube-playwright-executor:yarn-amd64
-      - kubeshop/testkube-playwright-executor:yarn-arm64v8
+      - kubeshop/testkube-playwright-executor:{{ .Version }}-yarn-amd64
+      - kubeshop/testkube-playwright-executor:{{ .Version }}-yarn-arm64v8
   - name_template: kubeshop/testkube-playwright-executor:latest
     image_templates:
-      - kubeshop/testkube-playwright-executor:latest-amd64
-      - kubeshop/testkube-playwright-executor:latest-arm64v8
+      - kubeshop/testkube-playwright-executor:{{ .Version }}-npm-amd64
+      - kubeshop/testkube-playwright-executor:{{ .Version }}-npm-arm64v8
   - name_template: kubeshop/testkube-playwright-executor:{{ .Version }}
     image_templates:
-      - kubeshop/testkube-playwright-executor:{{ .Version }}-amd64
-      - kubeshop/testkube-playwright-executor:{{ .Version }}-arm64v8
+      - kubeshop/testkube-playwright-executor:{{ .Version }}-npm-amd64
+      - kubeshop/testkube-playwright-executor:{{ .Version }}-npm-arm64v8
 
 release:
   disable: true

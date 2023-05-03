@@ -179,11 +179,11 @@ docker_manifests:
   - name_template: kubeshop/testkube-maven-executor:latest
     image_templates:
       - kubeshop/testkube-maven-executor:{{ .Version }}-jdk11-amd64
-      - kubeshop/testkube-maven-executor:{{ .Version }}-jdk11-amd64
+      - kubeshop/testkube-maven-executor:{{ .Version }}-jdk11-arm64v8
   - name_template: kubeshop/testkube-maven-executor:{{ .Version }}
     image_templates:
       - kubeshop/testkube-maven-executor:{{ .Version }}-jdk11-amd64
-      - kubeshop/testkube-maven-executor:{{ .Version }}-jdk11-amd64
+      - kubeshop/testkube-maven-executor:{{ .Version }}-jdk11-arm64v8
 
 release:
   disable: true

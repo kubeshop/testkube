@@ -29,7 +29,6 @@ dockers:
     goarch: amd64
     image_templates:
       - "kubeshop/testkube-gradle-executor:{{ .Version }}-jdk8-amd64"
-      - "kubeshop/testkube-gradle-executor:jdk8-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -45,7 +44,6 @@ dockers:
     goarch: arm64
     image_templates:
       - "kubeshop/testkube-gradle-executor:{{ .Version }}-jdk8-arm64v8"
-      - "kubeshop/testkube-gradle-executor:jdk8-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -61,9 +59,6 @@ dockers:
     goarch: amd64
     image_templates:
       - "kubeshop/testkube-gradle-executor:{{ .Version }}-jdk11-amd64"
-      - "kubeshop/testkube-gradle-executor:jdk11-amd64"
-      - "kubeshop/testkube-gradle-executor:{{ .Version }}-amd64"
-      - "kubeshop/testkube-gradle-executor:latest-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -79,9 +74,6 @@ dockers:
     goarch: arm64
     image_templates:
       - "kubeshop/testkube-gradle-executor:{{ .Version }}-jdk11-arm64v8"
-      - "kubeshop/testkube-gradle-executor:jdk11-arm64v8"
-      - "kubeshop/testkube-gradle-executor:{{ .Version }}-arm64v8"
-      - "kubeshop/testkube-gradle-executor:latest-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -97,7 +89,6 @@ dockers:
     goarch: amd64
     image_templates:
       - "kubeshop/testkube-gradle-executor:{{ .Version }}-jdk17-amd64"
-      - "kubeshop/testkube-gradle-executor:jdk17-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -113,7 +104,6 @@ dockers:
     goarch: arm64
     image_templates:
       - "kubeshop/testkube-gradle-executor:{{ .Version }}-jdk17-arm64v8"
-      - "kubeshop/testkube-gradle-executor:jdk17-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -129,7 +119,6 @@ dockers:
     goarch: amd64
     image_templates:
       - "kubeshop/testkube-gradle-executor:{{ .Version }}-jdk18-amd64"
-      - "kubeshop/testkube-gradle-executor:jdk18-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -145,7 +134,6 @@ dockers:
     goarch: arm64
     image_templates:
       - "kubeshop/testkube-gradle-executor:{{ .Version }}-jdk18-arm64v8"
-      - "kubeshop/testkube-gradle-executor:jdk18-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -162,40 +150,40 @@ docker_manifests:
       - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk8-arm64v8
   - name_template: kubeshop/testkube-gradle-executor:jdk8
     image_templates:
-      - kubeshop/testkube-gradle-executor:jdk8-amd64
-      - kubeshop/testkube-gradle-executor:jdk8-arm64v8
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk8-amd64
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk8-arm64v8
   - name_template: kubeshop/testkube-gradle-executor:{{ .Version }}-jdk11
     image_templates:
       - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk11-amd64
       - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk11-arm64v8
   - name_template: kubeshop/testkube-gradle-executor:jdk11
     image_templates:
-      - kubeshop/testkube-gradle-executor:jdk11-amd64
-      - kubeshop/testkube-gradle-executor:jdk11-arm64v8
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk11-amd64
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk11-arm64v8
   - name_template: kubeshop/testkube-gradle-executor:{{ .Version }}-jdk17
     image_templates:
       - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk17-amd64
       - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk17-arm64v8
   - name_template: kubeshop/testkube-gradle-executor:jdk17
     image_templates:
-      - kubeshop/testkube-gradle-executor:jdk17-amd64
-      - kubeshop/testkube-gradle-executor:jdk17-arm64v8
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk17-amd64
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk17-arm64v8
   - name_template: kubeshop/testkube-gradle-executor:{{ .Version }}-jdk18
     image_templates:
       - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk18-amd64
       - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk18-arm64v8
   - name_template: kubeshop/testkube-gradle-executor:jdk18
     image_templates:
-      - kubeshop/testkube-gradle-executor:jdk18-amd64
-      - kubeshop/testkube-gradle-executor:jdk18-arm64v8
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk18-amd64
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk18-arm64v8
   - name_template: kubeshop/testkube-gradle-executor:latest
     image_templates:
-      - kubeshop/testkube-gradle-executor:latest-amd64
-      - kubeshop/testkube-gradle-executor:latest-arm64v8
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk11-amd64
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk11-arm64v8
   - name_template: kubeshop/testkube-gradle-executor:{{ .Version }}
     image_templates:
-      - kubeshop/testkube-gradle-executor:{{ .Version }}-amd64
-      - kubeshop/testkube-gradle-executor:{{ .Version }}-arm64v8
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk11-amd64
+      - kubeshop/testkube-gradle-executor:{{ .Version }}-jdk11-arm64v8
 
 release:
   disable: true
