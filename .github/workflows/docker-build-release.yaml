@@ -34,7 +34,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Step
+      - name: Get github sha
         id: github_sha
         run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
 
