@@ -39,7 +39,7 @@ dockers:
       - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
-      - "--build-arg=TOKEN={{ .Env.TOKEN }}"
+      - "--build-arg=TOKEN={{ .Env.GITHUB_TOKEN }}"
       - "--build-arg=VERSION={{ .Version }}"
       - "--build-arg=COMMIT={{ .FullCommit }}"
       - "--build-arg=ANALYTICS_TRACKING_ID={{ .Env.ANALYTICS_TRACKING_ID }}"

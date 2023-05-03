@@ -29,14 +29,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Docker Cache
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
       - name: Login to DockerHub
         uses: docker/login-action@v1
         with:
@@ -55,8 +47,6 @@ jobs:
           args: release -f goreleaser_files/.goreleaser-docker-build-api-commit-only.yml --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          COMMIT: ${{ github.sha }}
           ANALYTICS_TRACKING_ID: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
           ANALYTICS_API_KEY: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
           SLACK_BOT_CLIENT_ID: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}
@@ -114,15 +104,6 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-
-      - name: Docker Cache
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
 
       - name: Login to DockerHub
         if: steps.changed-files-specific.outputs.any_changed == 'true'
@@ -197,15 +178,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Docker Cache
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
       - name: Login to DockerHub
         if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/login-action@v1
@@ -276,15 +248,6 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-
-      - name: Docker Cache
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
 
       - name: Login to DockerHub
         if: steps.changed-files-specific.outputs.any_changed == 'true'
@@ -357,15 +320,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Docker Cache
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
       - name: Login to DockerHub
         if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/login-action@v1
@@ -436,15 +390,6 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-
-      - name: Docker Cache
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
 
       - name: Login to DockerHub
         if: steps.changed-files-specific.outputs.any_changed == 'true'
@@ -517,15 +462,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Docker Cache
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
       - name: Login to DockerHub
         if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/login-action@v1
@@ -564,8 +500,6 @@ jobs:
           repository: kubeshop/helm-charts
           event-type: trigger-workflow-executor-release
           client-payload: '{"image_tag_executor": "${{ steps.github_sha.outputs.sha_short }}", "executor_name": "cypress"}'
-
-
 
   create_release_branch:
     runs-on: ubuntu-latest

@@ -29,23 +29,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Docker Cache
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
       - name: Login to DockerHub
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: getting Tag name pushed.
-        id: vars
-        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
 
       - name: Release
         uses: goreleaser/goreleaser-action@v4
@@ -55,8 +43,6 @@ jobs:
           args: release -f goreleaser_files/.goreleaser-docker-build-api.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          VERSION: ${{ steps.vars.outputs.tag }}
-          COMMIT: ${{ github.sha }}
           ANALYTICS_TRACKING_ID: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
           ANALYTICS_API_KEY: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
           SLACK_BOT_CLIENT_ID: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}
@@ -94,14 +80,6 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-
-      - name: Docker Cache
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -146,14 +124,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Docker Cache
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
       - name: Login to DockerHub
         uses: docker/login-action@v1
         with:
@@ -194,14 +164,6 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-
-      - name: Docker Cache
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -244,14 +206,6 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-
-      - name: Docker Cache
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -298,14 +252,6 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-
-      - name: Docker Cache
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -411,14 +357,6 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
-
-    - name: Docker Cache
-      uses: actions/cache@v2
-      with:
-        path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-buildx-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-buildx-
 
     - name: Login to DockerHub
       uses: docker/login-action@v1
