@@ -70,7 +70,7 @@ docker_manifests:
     image_templates:
       - kubeshop/testkube-jmeter-executor:{{ .Version }}-amd64
       - kubeshop/testkube-jmeter-executor:{{ .Version }}-arm64v8
-  - name_template: kubeshop/testkube-jmeter-executor-executor:latest
+  - name_template: kubeshop/testkube-jmeter-executor:latest
     image_templates:
       - kubeshop/testkube-jmeter-executor:{{ .Version }}-amd64
       - kubeshop/testkube-jmeter-executor:{{ .Version }}-arm64v8
