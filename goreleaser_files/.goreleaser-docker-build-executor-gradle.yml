@@ -186,8 +186,8 @@ docker_manifests:
 #      - kubeshop/testkube-gradle-executor:jdk18-arm64v8
   - name_template: kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:latest
     image_templates:
-      - kubeshop/testkube-gradle-{{ .Env.EXECUTOR }}:latest-amd64
-      - kubeshop/testkube-gradle-{{ .Env.EXECUTOR }}:latest-arm64v8
+      - kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:latest-amd64
+      - kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:latest-arm64v8
   - name_template: kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Version }}
     image_templates:
       - kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Version }}-amd64
