@@ -38,3 +38,20 @@ for (const testName of testNames) {
     await commonHelpers.validateTest(testData, createdTestData)
   });
 }
+
+
+test.skip(`Create test from File`, async ({ page }) => {
+
+});
+
+test.skip(`Create test from String`, async ({ page }) => {
+
+});
+
+test.skip(`Create test from Git source`, async ({ page }) => {
+
+});
+
+test.skip(`Create test with Labels`, async ({ page }) => {
+
+});
