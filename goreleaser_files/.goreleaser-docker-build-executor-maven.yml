@@ -61,9 +61,6 @@ dockers:
     goarch: amd64
     image_templates:
       - "kubeshop/testkube-maven-executor:{{ .Version }}-jdk11-amd64"
-      - "kubeshop/testkube-maven-executor:jdk11-amd64"
-      - "kubeshop/testkube-maven-executor:{{ .Version }}-amd64"
-      - "kubeshop/testkube-maven-executor:latest-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -79,9 +76,6 @@ dockers:
     goarch: arm64
     image_templates:
       - "kubeshop/testkube-maven-executor:{{ .Version }}-jdk11-arm64v8"
-      - "kubeshop/testkube-maven-executor:jdk11-arm64v8"
-      - "kubeshop/testkube-maven-executor:{{ .Version }}-arm64v8"
-      - "kubeshop/testkube-maven-executor:latest-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -170,8 +164,8 @@ docker_manifests:
       - kubeshop/testkube-maven-executor:{{ .Version }}-jdk11-arm64v8
   - name_template: kubeshop/testkube-maven-executor:jdk11
     image_templates:
-      - kubeshop/testkube-maven-executor:jdk11-amd64
-      - kubeshop/testkube-maven-executor:jdk11-arm64v8
+      - kubeshop/testkube-maven-executor:{{ .Version }}-jdk11-amd64
+      - kubeshop/testkube-maven-executor:{{ .Version }}-jdk11-arm64v8
   - name_template: kubeshop/testkube-maven-executor:{{ .Version }}-jdk17
     image_templates:
       - kubeshop/testkube-maven-executor:{{ .Version }}-jdk17-amd64
@@ -190,12 +184,12 @@ docker_manifests:
       - kubeshop/testkube-maven-executor:jdk18-arm64v8
   - name_template: kubeshop/testkube-maven-executor:latest
     image_templates:
-      - kubeshop/testkube-maven-executor:latest-amd64
-      - kubeshop/testkube-maven-executor:latest-arm64v8
+      - kubeshop/testkube-maven-executor:{{ .Version }}-jdk11-amd64
+      - kubeshop/testkube-maven-executor:{{ .Version }}-jdk11-amd64
   - name_template: kubeshop/testkube-maven-executor:{{ .Version }}
     image_templates:
-      - kubeshop/testkube-maven-executor:{{ .Version }}-amd64
-      - kubeshop/testkube-maven-executor:{{ .Version }}-arm64v8
+      - kubeshop/testkube-maven-executor:{{ .Version }}-jdk11-amd64
+      - kubeshop/testkube-maven-executor:{{ .Version }}-jdk11-amd64
 
 release:
   disable: true
