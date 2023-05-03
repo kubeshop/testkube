@@ -362,7 +362,7 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   trigger_deployment:
-    needs: [ api, single_executor, executor_jmeter, executor_maven, executor_gradle, executor_cypress, executor_cypress_manifest, executor_playwright ]
+    needs: [ api, single_executor, executor_jmeter, executor_gradle_maven,  executor_cypress, executor_cypress_manifest, executor_playwright ]
     runs-on: ubuntu-latest
     steps:
       - name: Get tag
