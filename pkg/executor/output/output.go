@@ -9,11 +9,14 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-const TypeLogEvent = "event"
-const TypeLogLine = "line"
-const TypeError = "error"
-const TypeResult = "result"
-const TypeUnknown = "unknown"
+const (
+	TypeLogEvent     = "event"
+	TypeLogLine      = "line"
+	TypeError        = "error"
+	TypeParsingError = "parsing-error"
+	TypeResult       = "result"
+	TypeUnknown      = "unknown"
+)
 
 // NewOutputEvent returns new Output struct of type event
 func NewOutputEvent(message string) Output {
@@ -57,7 +60,7 @@ type Output testkube.ExecutorOutput
 // String
 func (out Output) String() string {
 	switch out.Type_ {
-	case TypeError, TypeLogLine, TypeLogEvent:
+	case TypeError, TypeParsingError, TypeLogLine, TypeLogEvent:
 		return out.Content
 	case TypeResult:
 		b, _ := json.Marshal(out.Result)

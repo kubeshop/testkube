@@ -126,6 +126,12 @@ func (c TestSuiteClient) AbortTestSuiteExecution(executionID string) error {
 	return c.testSuiteExecutionTransport.ExecuteMethod(http.MethodPatch, uri, "", false)
 }
 
+// AbortTestSuiteExecutions aborts all test suite executions
+func (c TestSuiteClient) AbortTestSuiteExecutions(testSuiteName string) error {
+	uri := c.testSuiteExecutionTransport.GetURI("/test-suites/%s/abort", testSuiteName)
+	return c.testSuiteExecutionTransport.ExecuteMethod(http.MethodPost, uri, "", false)
+}
+
 // GetTestSuiteExecutionArtifacts returns test suite execution artifacts by excution id
 func (c TestSuiteClient) GetTestSuiteExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error) {
 	uri := c.testSuiteArtifactTransport.GetURI("/test-suite-executions/%s/artifacts", executionID)

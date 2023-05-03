@@ -28,3 +28,22 @@ func NewAbortTestSuiteExecutionCmd() *cobra.Command {
 		},
 	}
 }
+
+func NewAbortTestSuiteExecutionsCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:     "testsuiteexecutions <testSuiteName>",
+		Aliases: []string{"tses", "testsuites-executions", "testsuite-executions"},
+		Short:   "Abort all test suite executions",
+		Args:    validator.TestSuiteName,
+		Run: func(cmd *cobra.Command, args []string) {
+			testSuiteName := args[0]
+
+			client, _ := common.GetClient(cmd)
+
+			err := client.AbortTestSuiteExecutions(testSuiteName)
+			ui.ExitOnError(fmt.Sprintf("aborting testsuite executions for test suite %s", testSuiteName), err)
+
+			ui.SuccessAndExit("Succesfully aborted all test suite executions", testSuiteName)
+		},
+	}
+}

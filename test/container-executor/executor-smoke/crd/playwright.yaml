@@ -6,7 +6,7 @@ metadata:
   labels:
     core-tests: executors
 spec:
-  type: container-executor-playwright-v1.31.1/test
+  type: container-executor-playwright-v1.32.3/test
   content:
     type: git
     repository:
