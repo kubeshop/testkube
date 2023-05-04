@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - develop
+      - update-flow
 
 jobs:
   api:
@@ -60,14 +61,6 @@ jobs:
         run: |
           docker push kubeshop/testkube-api-server:${{ steps.github_sha.outputs.sha_short }}
 
-      - name: Repository Dispatch
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.CI_BOT_TOKEN }}
-          repository: kubeshop/helm-charts
-          event-type: trigger-workflow-api-develop
-          client-payload: '{"image_tag_api": "${{ steps.github_sha.outputs.sha_short }}"}'
-
   single_executor:
     strategy:
       matrix:
@@ -78,23 +71,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Get changed files
-        id: changed-files-specific
-        uses: tj-actions/changed-files@v35
-        with:
-          files: contrib/executor/${{ matrix.executor }}/**
-
       - name: Set up QEMU
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/setup-qemu-action@v1
 
       - name: Set up Docker Buildx
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         id: buildx
         uses: docker/setup-buildx-action@v1
 
       - name: Go Cache
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: actions/cache@v2
         with:
           path: |
@@ -105,19 +89,16 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Login to DockerHub
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Step
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         id: github_sha
         run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
 
       - name: Release
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: goreleaser/goreleaser-action@v4
         with:
           distribution: goreleaser
@@ -131,18 +112,8 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
       - name: Push Docker images
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         run: |
           docker push kubeshop/testkube-${{ matrix.executor }}-executor:${{ steps.github_sha.outputs.sha_short }}
-
-      - name: Repository Dispatch
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.CI_BOT_TOKEN }}
-          repository: kubeshop/helm-charts
-          event-type: trigger-workflow-executor-develop
-          client-payload: '{"image_tag_executor": "${{ steps.github_sha.outputs.sha_short }}", "executor_name": "${{ matrix.executor }}"}'
 
   executor_jmeter:
     runs-on: ubuntu-latest
@@ -151,23 +122,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Get changed files
-        id: changed-files-specific
-        uses: tj-actions/changed-files@v35
-        with:
-          files: contrib/executor/jmeter/**
-
       - name: Set up QEMU
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/setup-qemu-action@v1
 
       - name: Set up Docker Buildx
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         id: buildx
         uses: docker/setup-buildx-action@v1
 
       - name: Go Cache
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: actions/cache@v2
         with:
           path: |
@@ -178,19 +140,16 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Login to DockerHub
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Get commit sha
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         id: github_sha
         run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
 
       - name: Release
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: goreleaser/goreleaser-action@v4
         with:
           distribution: goreleaser
@@ -203,18 +162,8 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
       - name: Push Docker images
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         run: |
           docker push kubeshop/testkube-jmeter-executor:${{ steps.github_sha.outputs.sha_short }}
-
-      - name: Repository Dispatch
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.CI_BOT_TOKEN }}
-          repository: kubeshop/helm-charts
-          event-type: trigger-workflow-executor-develop
-          client-payload: '{"image_tag_executor": "${{ steps.github_sha.outputs.sha_short }}", "executor_name": "jmeter"}'
 
   executor_maven:
     runs-on: ubuntu-latest
@@ -222,23 +171,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Get changed files
-        id: changed-files-specific
-        uses: tj-actions/changed-files@v35
-        with:
-          files: contrib/executor/maven/**
-
       - name: Set up QEMU
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/setup-qemu-action@v1
 
       - name: Set up Docker Buildx
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         id: buildx
         uses: docker/setup-buildx-action@v1
 
       - name: Go Cache
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: actions/cache@v2
         with:
           path: |
@@ -249,19 +189,16 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Login to DockerHub
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Get commit sha
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         id: github_sha
         run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
 
       - name: Release
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: goreleaser/goreleaser-action@v4
         with:
           distribution: goreleaser
@@ -274,18 +211,8 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
       - name: Push Docker images
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         run: |
           docker push kubeshop/testkube-maven-executor:${{ steps.github_sha.outputs.sha_short }}
-
-      - name: Repository Dispatch
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.CI_BOT_TOKEN }}
-          repository: kubeshop/helm-charts
-          event-type: trigger-workflow-executor-develop
-          client-payload: '{"image_tag_executor": "${{ steps.github_sha.outputs.sha_short }}", "executor_name": "maven"}'
 
   executor_gradle:
     runs-on: ubuntu-latest
@@ -293,23 +220,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Get changed files
-        id: changed-files-specific
-        uses: tj-actions/changed-files@v35
-        with:
-          files: contrib/executor/gradle/**
-
       - name: Set up QEMU
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/setup-qemu-action@v1
 
       - name: Set up Docker Buildx
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         id: buildx
         uses: docker/setup-buildx-action@v1
 
       - name: Go Cache
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: actions/cache@v2
         with:
           path: |
@@ -320,19 +238,16 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Login to DockerHub
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Get commit sha
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         id: github_sha
         run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
 
       - name: Release
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: goreleaser/goreleaser-action@v4
         with:
           distribution: goreleaser
@@ -345,18 +260,8 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
       - name: Push Docker images
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         run: |
           docker push kubeshop/testkube-gradle-executor:${{ steps.github_sha.outputs.sha_short }}
-
-      - name: Repository Dispatch
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.CI_BOT_TOKEN }}
-          repository: kubeshop/helm-charts
-          event-type: trigger-workflow-executor-develop
-          client-payload: '{"image_tag_executor": "${{ steps.github_sha.outputs.sha_short }}", "executor_name": "gradle"}'
 
   executor_cypress:
     runs-on: ubuntu-latest
@@ -364,23 +269,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Get changed files
-        id: changed-files-specific
-        uses: tj-actions/changed-files@v35
-        with:
-          files: contrib/executor/cypress/**
-
       - name: Set up QEMU
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/setup-qemu-action@v1
 
       - name: Set up Docker Buildx
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         id: buildx
         uses: docker/setup-buildx-action@v1
 
       - name: Go Cache
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: actions/cache@v2
         with:
           path: |
@@ -391,19 +287,16 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Login to DockerHub
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Get commit sha
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         id: github_sha
         run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
 
       - name: Release
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: goreleaser/goreleaser-action@v4
         with:
           distribution: goreleaser
@@ -416,18 +309,8 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
       - name: Push image to the Registry
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         run: |
           docker push kubeshop/testkube-cypress-executor:${{ steps.github_sha.outputs.sha_short }}
-
-      - name: Repository Dispatch
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.CI_BOT_TOKEN }}
-          repository: kubeshop/helm-charts
-          event-type: trigger-workflow-executor-develop
-          client-payload: '{"image_tag_executor": "${{ steps.github_sha.outputs.sha_short }}", "executor_name": "cypress"}'
 
   executor_playwright:
     runs-on: ubuntu-latest
@@ -435,23 +318,14 @@ jobs:
       -  name: Checkout
          uses: actions/checkout@v2
 
-      - name: Get changed files
-        id: changed-files-specific
-        uses: tj-actions/changed-files@v35
-        with:
-          files: contrib/executor/playwright/**
-
       - name: Set up QEMU
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/setup-qemu-action@v1
 
       - name: Set up Docker Buildx
         id: buildx
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/setup-buildx-action@v1
 
       - name: Go Cache
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: actions/cache@v2
         with:
           path: |
@@ -462,19 +336,16 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Login to DockerHub
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Get commit sha
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         id: github_sha
         run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
 
       - name: Release
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: goreleaser/goreleaser-action@v4
         with:
           distribution: goreleaser
@@ -487,15 +358,24 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
       - name: Push image to the Registry
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         run: |
           docker push kubeshop/testkube-playwright-executor:${{ steps.github_sha.outputs.sha_short }}
 
+  workflow_dispatch:
+    needs: [api, single_executor, executor_jmeter, executor_maven, executor_gradle, executor_cypress, executor_playwright]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Get commit sha
+        id: github_sha
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+
       - name: Repository Dispatch
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
         uses: peter-evans/repository-dispatch@v2
         with:
           token: ${{ secrets.CI_BOT_TOKEN }}
           repository: kubeshop/helm-charts
-          event-type: trigger-workflow-executor-develop
-          client-payload: '{"image_tag_executor": "${{ steps.github_sha.outputs.sha_short }}", "executor_name": "cypress"}'
+          event-type: trigger-workflow-api-develop
+          client-payload: '{"image_tag_api": "${{ steps.github_sha.outputs.sha_short }}"}'
