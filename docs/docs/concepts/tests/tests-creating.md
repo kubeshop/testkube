@@ -344,6 +344,10 @@ testkube run test maven-example-file-test --args "--settings" --args "/data/uplo
 
 By default, there is a 10 second timeout limit on all requests on the client side, and a 1 GB body size limit on the server side. To update the timeout, use `--upload-timeout` with [Go-compatible duration formats](https://pkg.go.dev/time#ParseDuration).
 
+### Redefining the Prebuilt Executor command and arguments
+
+
+
 ### Changing the Default Job Template Used for Test Execution
 
 You can always create your own custom executor with its own job template definition used for test execution. But sometimes you just need to adjust an existing job template of a standard Testkube executor with a few parameters. In this case you can use additional parameter `--job-template` when you create or run the test:
