@@ -1,0 +1,526 @@
+name: Docker images build release
+on:
+  push:
+    branches:
+      - release_**
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Go Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get github sha
+        id: github_sha
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+
+      - name: Release
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-api-commit-only.yml --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          ANALYTICS_TRACKING_ID: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
+          ANALYTICS_API_KEY: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
+          SLACK_BOT_CLIENT_ID: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}
+          SLACK_BOT_CLIENT_SECRET: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}
+          SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
+          CLOUD_SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+
+      - name: Push Docker images
+        run: |
+          docker push kubeshop/testkube-api-server:${{ steps.github_sha.outputs.sha_short }}
+
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          repository: kubeshop/helm-charts
+          event-type: trigger-workflow-api-release
+          client-payload: '{"image_tag_api": "${{ steps.github_sha.outputs.sha_short }}"}'
+
+  single_executor:
+    strategy:
+      matrix:
+        executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template ]
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Get changed files
+        id: changed-files-specific
+        uses: tj-actions/changed-files@v35
+        with:
+          files: contrib/executor/${{ matrix.executor }}/**
+
+      - name: Set up QEMU
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Go Cache
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Login to DockerHub
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Step
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        id: github_sha
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+
+      - name: Release
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-commit-only.yml --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          EXECUTOR: ${{ matrix.executor }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+
+      - name: Push Docker images
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        run: |
+          docker push kubeshop/testkube-${{ matrix.executor }}-executor:${{ steps.github_sha.outputs.sha_short }}
+
+      - name: Repository Dispatch
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          repository: kubeshop/helm-charts
+          event-type: trigger-workflow-executor-release
+          client-payload: '{"image_tag_executor": "${{ steps.github_sha.outputs.sha_short }}", "executor_name": "${{ matrix.executor }}"}'
+
+  executor_jmeter:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Get changed files
+        id: changed-files-specific
+        uses: tj-actions/changed-files@v35
+        with:
+          files: contrib/executor/jmeter/**
+
+      - name: Set up QEMU
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Go Cache
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Login to DockerHub
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get commit sha
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        id: github_sha
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+
+      - name: Release
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeter-commit-only.yml --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+
+      - name: Push Docker images
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        run: |
+          docker push kubeshop/testkube-jmeter-executor:${{ steps.github_sha.outputs.sha_short }}
+
+      - name: Repository Dispatch
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          repository: kubeshop/helm-charts
+          event-type: trigger-workflow-executor-release
+          client-payload: '{"image_tag_executor": "${{ steps.github_sha.outputs.sha_short }}", "executor_name": "jmeter"}'
+
+  executor_maven:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Get changed files
+        id: changed-files-specific
+        uses: tj-actions/changed-files@v35
+        with:
+          files: contrib/executor/maven/**
+
+      - name: Set up QEMU
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Go Cache
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Login to DockerHub
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get commit sha
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        id: github_sha
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+
+      - name: Release
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-maven-commit-only.yml --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+
+      - name: Push Docker images
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        run: |
+          docker push kubeshop/testkube-maven-executor:${{ steps.github_sha.outputs.sha_short }}
+
+      - name: Repository Dispatch
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          repository: kubeshop/helm-charts
+          event-type: trigger-workflow-executor-release
+          client-payload: '{"image_tag_executor": "${{ steps.github_sha.outputs.sha_short }}", "executor_name": "maven"}'
+
+  executor_gradle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Get changed files
+        id: changed-files-specific
+        uses: tj-actions/changed-files@v35
+        with:
+          files: contrib/executor/gradle/**
+
+      - name: Set up QEMU
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Go Cache
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Login to DockerHub
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get commit sha
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        id: github_sha
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+
+      - name: Release
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-gradle-commit-only.yml --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+
+      - name: Push Docker images
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        run: |
+          docker push kubeshop/testkube-gradle-executor:${{ steps.github_sha.outputs.sha_short }}
+
+      - name: Repository Dispatch
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          repository: kubeshop/helm-charts
+          event-type: trigger-workflow-executor-release
+          client-payload: '{"image_tag_executor": "${{ steps.github_sha.outputs.sha_short }}", "executor_name": "gradle"}'
+
+  executor_cypress:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Get changed files
+        id: changed-files-specific
+        uses: tj-actions/changed-files@v35
+        with:
+          files: contrib/executor/cypress/**
+
+      - name: Set up QEMU
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Go Cache
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Login to DockerHub
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get commit sha
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        id: github_sha
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+
+      - name: Release
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-cypress-commit-only.yml --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+
+      - name: Push image to the Registry
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        run: |
+          docker push kubeshop/testkube-cypress-executor:${{ steps.github_sha.outputs.sha_short }}
+
+      - name: Repository Dispatch
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          repository: kubeshop/helm-charts
+          event-type: trigger-workflow-executor-release
+          client-payload: '{"image_tag_executor": "${{ steps.github_sha.outputs.sha_short }}", "executor_name": "cypress"}'
+
+  executor_playwright:
+    runs-on: ubuntu-latest
+    steps:
+      -  name: Checkout
+         uses: actions/checkout@v2
+
+      - name: Get changed files
+        id: changed-files-specific
+        uses: tj-actions/changed-files@v35
+        with:
+          files: contrib/executor/playwright/**
+
+      - name: Set up QEMU
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        id: buildx
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/setup-buildx-action@v1
+
+      - name: Go Cache
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Login to DockerHub
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get commit sha
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        id: github_sha
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+
+      - name: Release
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-playwright-commit-only.yml --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+
+      - name: Push image to the Registry
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        run: |
+          docker push kubeshop/testkube-playwright-executor:${{ steps.github_sha.outputs.sha_short }}
+
+      - name: Repository Dispatch
+        if: steps.changed-files-specific.outputs.any_changed == 'true'
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          repository: kubeshop/helm-charts
+          event-type: trigger-workflow-executor-release
+          client-payload: '{"image_tag_executor": "${{ steps.github_sha.outputs.sha_short }}", "executor_name": "cypress"}'
+
+  create_release_branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create a release branch in helm-chars repo
+        run: |
+
+          # Set up variables for repository and branch name
+          REPO_OWNER=kubeshop
+          REPO_NAME=helm-charts
+          BRANCH_NAME=${GITHUB_REF}
+
+          # Set up authentication using a personal access token
+          AUTH_HEADER="Authorization: Bearer ${{ secrets.CI_BOT_TOKEN }}"
+
+          # Check if branch already exists
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' -H "${AUTH_HEADER}" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/branches/${BRANCH_NAME}")
+
+          # If branch doesn't exist, create it
+          if [ "${STATUS}" -eq 404 ]; then
+            curl -X POST -H "${AUTH_HEADER}" -d '{"ref": "'"${BRANCH_NAME}"'","sha": "'"$(curl -s -H "${AUTH_HEADER}" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/git/refs/heads/main" | jq -r '.object.sha')"'"}' "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/git/refs"
+            echo "Created branch ${BRANCH_NAME} in ${REPO_OWNER}/${REPO_NAME}"
+          else
+            echo "Branch ${BRANCH_NAME} already exists in ${REPO_OWNER}/${REPO_NAME}"
+          fi

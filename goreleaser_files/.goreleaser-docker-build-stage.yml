@@ -1,0 +1,50 @@
+env:
+  # Goreleaser always uses the docker buildx builder with name "default"; see
+  # https://github.com/goreleaser/goreleaser/pull/3199
+  # To use a builder other than "default", set this variable.
+  # Necessary for, e.g., GitHub actions cache integration.
+  - DOCKER_BUILDX_BUILDER={{ if index .Env "DOCKER_BUILDX_BUILDER"  }}{{ .Env.DOCKER_BUILDX_BUILDER }}{{ else }}default{{ end }}
+  # Setup to enable Docker to use, e.g., the GitHub actions cache; see
+  # https://docs.docker.com/build/building/cache/backends/
+  # https://github.com/moby/buildkit#export-cache
+  - DOCKER_BUILDX_CACHE_FROM={{ if index .Env "DOCKER_BUILDX_CACHE_FROM"  }}{{ .Env.DOCKER_BUILDX_CACHE_FROM }}{{ else }}type=registry{{ end }}
+  - DOCKER_BUILDX_CACHE_TO={{ if index .Env "DOCKER_BUILDX_CACHE_TO"  }}{{ .Env.DOCKER_BUILDX_CACHE_TO }}{{ else }}type=inline{{ end }}
+
+project_name: testkube-api-server
+builds:
+  - id: "linux"
+    main: ./cmd/api-server
+    binary: testkube-api-server
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    mod_timestamp: "{{ .CommitTimestamp }}"
+dockers:
+  - dockerfile: ./build/api-server/Dockerfile
+    use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "kubeshop/testkube-api-server:{{ .ShortCommit }}"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--build-arg=TOKEN={{ .Env.TOKEN }}"
+      - "--build-arg=VERSION={{ .Version }}"
+      - "--build-arg=COMMIT={{ .FullCommit }}"
+      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
+      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
+      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+      - "--build-arg=ANALYTICS_TRACKING_ID={{ .Env.ANALYTICS_TRACKING_ID }}"
+      - "--build-arg=ANALYTICS_API_KEY={{ .Env.ANALYTICS_API_KEY }}"
+      - "--build-arg=SLACK_BOT_CLIENT_ID={{ .Env.SLACK_BOT_CLIENT_ID}}"
+      - "--build-arg=SLACK_BOT_CLIENT_SECRET={{ .Env.SLACK_BOT_CLIENT_SECRET }}"
+      - "--build-arg=SEGMENTIO_KEY={{ .Env.SEGMENTIO_KEY }}"
+      - "--build-arg=CLOUD_SEGMENTIO_KEY={{ .Env.CLOUD_SEGMENTIO_KEY }}"
+      -

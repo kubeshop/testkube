@@ -1,19 +1,14 @@
-# syntax=docker/dockerfile:1
-FROM golang:1.18
-WORKDIR contrib/executor/curl/build
-COPY . .
-ENV CGO_ENABLED=0 
-ENV GOOS=linux
-
-RUN cd contrib/executor/curl/cmd/agent;go build -o /runner -mod mod -a .
-
 # TODO add valid dockerfile with executor
-FROM alpine
-RUN apk --no-cache add ca-certificates && \
-    apk --no-cache add curl git
+
+## Base image consists of
+#  FROM alpine
+#  RUN apk --no-cache add ca-certificates && \
+#      apk --no-cache add curl git
+
+# syntax=docker/dockerfile:1
+FROM kubeshop/testkube-curl-executor:base
+COPY curl /bin/runner
+
 WORKDIR /root/
-COPY --from=0 /runner /bin/runner
-
 USER 1001
-
 ENTRYPOINT ["/bin/runner"]

@@ -4156,6 +4156,9 @@ components:
         jobTemplate:
           type: string
           description: job template extensions
+        cronJobTemplate:
+          type: string
+          description: cron job template extensions
         contentRequest:
           $ref: "#/components/schemas/TestContentRequest"
           description: adjusting parameters for test content
@@ -4248,6 +4251,9 @@ components:
         runningContext:
           $ref: "#/components/schemas/RunningContext"
           description: running context for the test suite execution
+        cronJobTemplate:
+          type: string
+          description: cron job template extensions
 
     TestSuiteExecutionUpdateRequest:
       description: test suite execution update request body

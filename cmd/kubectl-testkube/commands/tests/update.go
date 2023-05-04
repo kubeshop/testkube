@@ -48,6 +48,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 		artifactVolumeMountPath  string
 		artifactDirs             []string
 		jobTemplate              string
+		cronJobTemplate          string
 		preRunScript             string
 		scraperTemplate          string
 		negativeTest             bool
@@ -101,7 +102,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringToStringVarP(&variables, "variable", "v", nil, "variable key value pair: -v key1=value1")
 	cmd.Flags().StringToStringVarP(&secretVariables, "secret-variable", "s", nil, "secret variable key value pair: -s key1=value1")
-	cmd.Flags().StringVarP(&schedule, "schedule", "", "", "test schedule in a cronjob form: * * * * *")
+	cmd.Flags().StringVarP(&schedule, "schedule", "", "", "test schedule in a cron job form: * * * * *")
 	cmd.Flags().StringArrayVarP(&command, "command", "", []string{}, "command passed to image in executor")
 	cmd.Flags().StringArrayVarP(&executorArgs, "executor-args", "", []string{}, "executor binary additional arguments")
 	cmd.Flags().StringVarP(&argsMode, "args-mode", "", "append", "usage mode for arguments. one of append|override")
@@ -125,6 +126,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVar(&artifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
 	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for scraping")
 	cmd.Flags().StringVar(&jobTemplate, "job-template", "", "job template file path for extensions to job template")
+	cmd.Flags().StringVar(&cronJobTemplate, "cronjob-template", "", "cron job template file path for extensions to cron job template")
 	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
 	cmd.Flags().BoolVar(&negativeTest, "negative-test", false, "negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa")

@@ -159,6 +159,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 		Command:               executionRequest.Command,
 		ArtifactRequest:       artifactRequest,
 		JobTemplate:           executionRequest.JobTemplate,
+		CronJobTemplate:       executionRequest.CronJobTemplate,
 		PreRunScript:          executionRequest.PreRunScript,
 		ScraperTemplate:       executionRequest.ScraperTemplate,
 		NegativeTest:          executionRequest.NegativeTest,
@@ -448,6 +449,10 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 		{
 			executionRequest.PreRunScript,
 			&request.PreRunScript,
+		},
+		{
+			executionRequest.CronJobTemplate,
+			&request.CronJobTemplate,
 		},
 		{
 			executionRequest.ScraperTemplate,

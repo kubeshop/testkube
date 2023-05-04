@@ -28,7 +28,7 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 	if ts.ExecutionRequest != nil {
 		ui.Warn("Execution request: ")
 		if ts.ExecutionRequest.Name != "" {
-			ui.Warn("  Name:        ", ts.ExecutionRequest.Name)
+			ui.Warn("  Name:              ", ts.ExecutionRequest.Name)
 		}
 
 		if len(ts.ExecutionRequest.Variables) > 0 {
@@ -36,11 +36,15 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 		}
 
 		if ts.ExecutionRequest.HttpProxy != "" {
-			ui.Warn("  Http proxy:  ", ts.ExecutionRequest.HttpProxy)
+			ui.Warn("  Http proxy:        ", ts.ExecutionRequest.HttpProxy)
 		}
 
 		if ts.ExecutionRequest.HttpsProxy != "" {
-			ui.Warn("  Https proxy: ", ts.ExecutionRequest.HttpsProxy)
+			ui.Warn("  Https proxy:       ", ts.ExecutionRequest.HttpsProxy)
+		}
+
+		if ts.ExecutionRequest.CronJobTemplate != "" {
+			ui.Warn("  Cron job template: ", ts.ExecutionRequest.CronJobTemplate)
 		}
 	}
 

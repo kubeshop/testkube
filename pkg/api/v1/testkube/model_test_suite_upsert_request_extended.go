@@ -20,5 +20,9 @@ func (testSuite *TestSuiteUpsertRequest) QuoteTestSuiteTextFields() {
 				testSuite.ExecutionRequest.Variables[key] = value
 			}
 		}
+
+		if testSuite.ExecutionRequest.CronJobTemplate != "" {
+			testSuite.ExecutionRequest.CronJobTemplate = fmt.Sprintf("%q", testSuite.ExecutionRequest.CronJobTemplate)
+		}
 	}
 }

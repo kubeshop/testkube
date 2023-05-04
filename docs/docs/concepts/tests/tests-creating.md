@@ -390,6 +390,27 @@ spec:
 ```
 Add `imagePullSecrets` option if you use your own Image Registry. This will add the secret for both `init` and `executor` containers.
 
+
+### Changing the Default CronJob Template Used for Scheduled Test Execution
+
+Sometimes you need to adjust an existing cron job template for scheduled tests with a few parameters. In this case you can use additional parameter `--cronjob-template` when you create the test:
+
+```sh
+testkube create test --git-branch main --git-uri https://github.com/kubeshop/testkube-example-cypress-project.git --git-path "cypress" --name template-test --type cypress/project --cronjob-template cronjob.yaml --schedule "*/5 * * * *"
+```
+
+Where `cronjob.yaml` file contains adjusted cron job template parts for merging with default cron job template:
+
+```yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  annotations:
+    test: kube
+```
+
+When such a test is created you will see additional annotations for its cron job, when the default cron job template doesn't have any annotations.
+
 ### Executing a Prerun Script
 
 If you need to provide additional configuration for your executor environment, you can submit a prerun script to be executed before the test is started. For example, we have a simple shell script stored in `script.sh` file:

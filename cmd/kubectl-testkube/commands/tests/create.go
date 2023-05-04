@@ -39,6 +39,7 @@ type CreateCommonFlags struct {
 	ArtifactVolumeMountPath  string
 	ArtifactDirs             []string
 	JobTemplate              string
+	CronJobTemplate          string
 	PreRunScript             string
 	ScraperTemplate          string
 	NegativeTest             bool
@@ -176,7 +177,7 @@ func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
 	cmd.Flags().StringToStringVarP(&flags.Labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringToStringVarP(&flags.Variables, "variable", "v", nil, "variable key value pair: --variable key1=value1")
 	cmd.Flags().StringToStringVarP(&flags.SecretVariables, "secret-variable", "s", nil, "secret variable key value pair: --secret-variable key1=value1")
-	cmd.Flags().StringVarP(&flags.Schedule, "schedule", "", "", "test schedule in a cronjob form: * * * * *")
+	cmd.Flags().StringVarP(&flags.Schedule, "schedule", "", "", "test schedule in a cron job form: * * * * *")
 	cmd.Flags().StringArrayVar(&flags.Command, "command", []string{}, "command passed to image in executor")
 	cmd.Flags().StringArrayVarP(&flags.ExecutorArgs, "executor-args", "", []string{}, "executor binary additional arguments")
 	cmd.Flags().StringVarP(&flags.ArgsMode, "args-mode", "", "append", "usage mode for arguments. one of append|override")
@@ -195,6 +196,7 @@ func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
 	cmd.Flags().StringVar(&flags.ArtifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
 	cmd.Flags().StringArrayVarP(&flags.ArtifactDirs, "artifact-dir", "", []string{}, "artifact dirs for scraping")
 	cmd.Flags().StringVar(&flags.JobTemplate, "job-template", "", "job template file path for extensions to job template")
+	cmd.Flags().StringVar(&flags.CronJobTemplate, "cronjob-template", "", "cron job template file path for extensions to cron job template")
 	cmd.Flags().StringVarP(&flags.PreRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	cmd.Flags().StringVar(&flags.ScraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
 	cmd.Flags().BoolVar(&flags.NegativeTest, "negative-test", false, "negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa")

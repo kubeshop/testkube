@@ -131,6 +131,7 @@ func TestGetExecuteOptions(t *testing.T) {
 		ActiveDeadlineSeconds: 10,
 		ArtifactRequest:       &testkube.ArtifactRequest{},
 		JobTemplate:           "",
+		CronJobTemplate:       "",
 		PreRunScript:          "",
 		ScraperTemplate:       "",
 		EnvConfigMaps: []testkube.EnvReference{
