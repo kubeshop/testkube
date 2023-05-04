@@ -34,4 +34,6 @@ type TestSuiteExecutionUpdateRequest struct {
 	Timeout        *int32                     `json:"timeout,omitempty"`
 	ContentRequest **TestContentUpdateRequest `json:"contentRequest,omitempty"`
 	RunningContext *RunningContext            `json:"runningContext,omitempty"`
+	// cron job template extensions
+	CronJobTemplate *string `json:"cronJobTemplate,omitempty"`
 }
