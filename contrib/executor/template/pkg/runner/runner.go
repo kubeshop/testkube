@@ -5,21 +5,23 @@ import (
 	"os"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func NewRunner() *ExampleRunner {
+func NewRunner(params envs.Params) *ExampleRunner {
 	return &ExampleRunner{
-		Fetcher: content.NewFetcher(""),
+		params: params,
 	}
 }
 
 // ExampleRunner for template - change me to some valid runner
 type ExampleRunner struct {
-	Fetcher content.ContentFetcher
+	params envs.Params
 }
 
 var _ runner.Runner = &ExampleRunner{}
@@ -29,9 +31,9 @@ func (r *ExampleRunner) Run(ctx context.Context, execution testkube.Execution) (
 	// use `execution.Variables` for variables passed from Test/Execution
 	// variables of type "secret" will be automatically decoded
 	env.NewManager().GetReferenceVars(execution.Variables)
-	path, err := r.Fetcher.Fetch(execution.Content)
+	path, _, err := content.GetPathAndWorkingDir(execution.Content, r.params.DataDir)
 	if err != nil {
-		return result, err
+		output.PrintLogf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.params.DataDir)
 	}
 
 	output.PrintEvent("created content path", path)

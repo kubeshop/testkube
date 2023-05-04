@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/envs"
 )
 
 func TestRun(t *testing.T) {
@@ -14,7 +15,7 @@ func TestRun(t *testing.T) {
 
 	t.Run("runner should run test based on execution data", func(t *testing.T) {
 		// given
-		runner := NewRunner()
+		runner := NewRunner(envs.Params{})
 		execution := testkube.NewQueuedExecution()
 		execution.Content = testkube.NewStringTestContent("hello I'm test content")
 
