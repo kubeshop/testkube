@@ -346,7 +346,15 @@ By default, there is a 10 second timeout limit on all requests on the client sid
 
 ### Redefining the Prebuilt Executor command and arguments
 
+Each of Testkube Prebuilt executors has a default command and arguments it uses to execute the test. They are provided as a part of Executor CRD and can be either ovveriden or appended during test creation or execution, for example:
 
+```sh
+testkube create test --name maven-example-test --git-uri https://github.com/kubeshop/testkube-executor-maven.git --git-path examples/hello-maven --type maven/test --git-branch main --command "mvn" --args-mode "override" --executor-args="--settings <settingsFile> <goalName> -Duser.home <mavenHome>"
+```
+
+```sh title="Expected output:"
+Test created maven-example-test 🥇
+```
 
 ### Changing the Default Job Template Used for Test Execution
 
