@@ -499,5 +499,3 @@ jobs:
           repository: kubeshop/helm-charts
           event-type: trigger-workflow-executor-develop
           client-payload: '{"image_tag_executor": "${{ steps.github_sha.outputs.sha_short }}", "executor_name": "cypress"}'
-
-
