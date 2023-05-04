@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -28,7 +27,6 @@ import (
 // CurlRunner is used to run curl commands.
 type CurlRunner struct {
 	Params  envs.Params
-	Fetcher contentPkg.ContentFetcher
 	Log     *zap.SugaredLogger
 	Scraper scraper.Scraper
 }
@@ -40,9 +38,8 @@ func NewCurlRunner(ctx context.Context, params envs.Params) (*CurlRunner, error)
 
 	var err error
 	r := &CurlRunner{
-		Log:     log.DefaultLogger,
-		Params:  params,
-		Fetcher: contentPkg.NewFetcher(""),
+		Log:    log.DefaultLogger,
+		Params: params,
 	}
 
 	r.Scraper, err = factory.TryGetScrapper(ctx, params)
@@ -60,16 +57,10 @@ func (r *CurlRunner) Run(ctx context.Context, execution testkube.Execution) (res
 
 	outputPkg.PrintLogf("%s Preparing for test run", ui.IconTruck)
 	var runnerInput CurlRunnerInput
-	if r.Params.GitUsername != "" || r.Params.GitToken != "" {
-		if execution.Content != nil && execution.Content.Repository != nil {
-			execution.Content.Repository.Username = r.Params.GitUsername
-			execution.Content.Repository.Token = r.Params.GitToken
-		}
-	}
 
-	path, err := r.Fetcher.Fetch(execution.Content)
+	path, workingDir, err := contentPkg.GetPathAndWorkingDir(execution.Content, r.Params.DataDir)
 	if err != nil {
-		return result, err
+		outputPkg.PrintLogf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.Params.DataDir)
 	}
 
 	fileInfo, err := os.Stat(path)
@@ -123,11 +114,7 @@ func (r *CurlRunner) Run(ctx context.Context, execution testkube.Execution) (res
 
 	args = append(args, execution.Args...)
 
-	runPath := ""
-	if execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
-		runPath = filepath.Join(r.Params.DataDir, "repo", execution.Content.Repository.WorkingDir)
-	}
-
+	runPath := workingDir
 	outputPkg.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
 	output, err := executor.Run(runPath, command, envManager, args...)
 	output = envManager.ObfuscateSecrets(output)
