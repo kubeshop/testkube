@@ -164,7 +164,6 @@ func cleanup(files []*os.File) error {
 }
 
 func Test_PrepareVariablesFile(t *testing.T) {
-	// client client.Client, parentName string, parentType client.TestingType, filePath string, timeout time.Duration
 	t.Run("File does not exist should return error", func(t *testing.T) {
 		_, _, err := PrepareVariablesFile(client.APIClient{}, "parent", client.Test, "/this-file-does-not-exist", 0)
 		assert.Error(t, err)

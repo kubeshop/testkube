@@ -199,6 +199,7 @@ func addEnvToTests(tests map[string]client.UpsertTestOptions,
 					ui.Warn(fmt.Sprintf("read variables file %s got an error: %v", filename, err))
 					continue
 				}
+
 				envTest := test
 				envTest.Name = utils.SanitizeName(envTest.Name + "-" + envName)
 				if test.ExecutionRequest != nil {
@@ -209,6 +210,7 @@ func addEnvToTests(tests map[string]client.UpsertTestOptions,
 				if envTest.ExecutionRequest == nil {
 					envTest.ExecutionRequest = &testkube.ExecutionRequest{}
 				}
+
 				envTest.ExecutionRequest.VariablesFile = fmt.Sprintf("%q", strings.TrimSpace(string(data)))
 				testMap[envTest.Name] = envTest
 			}
