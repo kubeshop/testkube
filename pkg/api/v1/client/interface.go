@@ -156,7 +156,9 @@ type ExecuteTestOptions struct {
 	ExecutionVariables            map[string]testkube.Variable
 	ExecutionVariablesFileContent string
 	ExecutionLabels               map[string]string
+	Command                       []string
 	Args                          []string
+	ArgsMode                      string
 	Envs                          map[string]string
 	SecretEnvs                    map[string]string
 	HTTPProxy                     string

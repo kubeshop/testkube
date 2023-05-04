@@ -28,7 +28,6 @@ func NewRunner(ctx context.Context, params envs.Params) (*SoapUIRunner, error) {
 
 	var err error
 	r := &SoapUIRunner{
-		SoapUIExecPath: "/usr/local/SmartBear/EntryPoint.sh",
 		SoapUILogsPath: "/home/soapui/.soapuios/logs",
 		Params:         params,
 	}
@@ -43,7 +42,6 @@ func NewRunner(ctx context.Context, params envs.Params) (*SoapUIRunner, error) {
 
 // SoapUIRunner runs SoapUI tests
 type SoapUIRunner struct {
-	SoapUIExecPath string
 	SoapUILogsPath string
 	Scraper        scraper.Scraper
 	Params         envs.Params
@@ -91,6 +89,10 @@ func (r *SoapUIRunner) Run(ctx context.Context, execution testkube.Execution) (r
 
 	if r.Params.ScrapperEnabled {
 		directories := []string{r.SoapUILogsPath}
+		if execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
+			directories = append(directories, execution.ArtifactRequest.Dirs...)
+		}
+
 		output.PrintLogf("Scraping directories: %v", directories)
 
 		if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
@@ -104,7 +106,11 @@ func (r *SoapUIRunner) Run(ctx context.Context, execution testkube.Execution) (r
 // setUpEnvironment sets up the COMMAND_LINE environment variable to
 // contain the incoming arguments and to point to the test file path
 func setUpEnvironment(args []string, testFilePath string) {
-	args = append(args, testFilePath)
+	for i := range args {
+		if args[i] == "<runPath>" {
+			args[i] = testFilePath
+		}
+	}
 	os.Setenv("COMMAND_LINE", strings.Join(args, " "))
 }
 
@@ -119,7 +125,9 @@ func (r *SoapUIRunner) runSoapUI(execution *testkube.Execution) testkube.Executi
 		runPath = filepath.Join(r.Params.DataDir, "repo", execution.Content.Repository.WorkingDir)
 	}
 
-	output, err := executor.Run(runPath, "/bin/sh", envManager, r.SoapUIExecPath)
+	command := strings.Join(execution.Command, " ")
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(execution.Args, " "))
+	output, err := executor.Run(runPath, command, envManager, execution.Args...)
 	output = envManager.ObfuscateSecrets(output)
 	if err != nil {
 		return testkube.ExecutionResult{

@@ -57,6 +57,8 @@ func NewRunTestCmd() *cobra.Command {
 		format                   string
 		masks                    []string
 		runningContext           string
+		command                  []string
+		argsMode                 string
 	)
 
 	cmd := &cobra.Command{
@@ -80,9 +82,6 @@ func NewRunTestCmd() *cobra.Command {
 
 			executorArgs, err := testkube.PrepareExecutorArgs(binaryArgs)
 			ui.ExitOnError("getting args", err)
-
-			err = validateArtifactRequest(artifactStorageClassName, artifactVolumeMountPath, artifactDirs)
-			ui.ExitOnError("validating artifact flags", err)
 
 			envConfigMaps, envSecrets, err := newEnvReferencesFromFlags(cmd)
 			ui.WarnOnError("getting env config maps and secrets", err)
@@ -108,13 +107,20 @@ func NewRunTestCmd() *cobra.Command {
 				scraperTemplateContent = string(b)
 			}
 
+			mode := ""
+			if cmd.Flag("args-mode").Changed {
+				mode = argsMode
+			}
+
 			var executions []testkube.Execution
 			client, namespace := common.GetClient(cmd)
 			options := apiv1.ExecuteTestOptions{
 				ExecutionVariables:            variables,
 				ExecutionVariablesFileContent: paramsFileContent,
 				ExecutionLabels:               executionLabels,
+				Command:                       command,
 				Args:                          executorArgs,
+				ArgsMode:                      mode,
 				SecretEnvs:                    secretEnvs,
 				HTTPProxy:                     httpProxy,
 				HTTPSProxy:                    httpsProxy,
@@ -132,7 +138,7 @@ func NewRunTestCmd() *cobra.Command {
 				},
 			}
 
-			if artifactStorageClassName != "" && artifactVolumeMountPath != "" {
+			if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(artifactDirs) != 0 {
 				options.ArtifactRequest = &testkube.ArtifactRequest{
 					StorageClassName: artifactStorageClassName,
 					VolumeMountPath:  artifactVolumeMountPath,
@@ -243,7 +249,9 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&variablesFile, "variables-file", "", "", "variables file path, e.g. postman env file - will be passed to executor if supported")
 	cmd.Flags().StringToStringVarP(&variables, "variable", "v", map[string]string{}, "execution variable passed to executor")
 	cmd.Flags().StringToStringVarP(&secretVariables, "secret-variable", "s", map[string]string{}, "execution secret variable passed to executor")
+	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in executor")
 	cmd.Flags().StringArrayVarP(&binaryArgs, "args", "", []string{}, "executor binary additional arguments")
+	cmd.Flags().StringVarP(&argsMode, "args-mode", "", "append", "usage mode for argumnets. one of append|override")
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
 	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "downlaod artifacts automatically")
@@ -259,7 +267,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
 	cmd.Flags().StringVar(&artifactStorageClassName, "artifact-storage-class-name", "", "artifact storage class name for container executor")
 	cmd.Flags().StringVar(&artifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
-	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for container executor")
+	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for scraping")
 	cmd.Flags().StringVar(&jobTemplate, "job-template", "", "job template file path for extensions to job template")
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
 	cmd.Flags().StringVarP(&gitCommit, "git-commit", "", "", "if uri is git repository we can use commit id (sha) parameter")

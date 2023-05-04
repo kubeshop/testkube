@@ -6,15 +6,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/utils/test"
-
-	"github.com/kubeshop/testkube/pkg/envs"
-
+	cp "github.com/otiai10/copy"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-
-	cp "github.com/otiai10/copy"
+	"github.com/kubeshop/testkube/pkg/envs"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
 func TestRun_Integration(t *testing.T) {
@@ -48,6 +45,14 @@ func TestRun_Integration(t *testing.T) {
 					Branch: "master",
 					Path:   "",
 				},
+			},
+			Command: []string{
+				"<depManager>",
+			},
+			Args: []string{
+				"<depCommand>",
+				"playwright",
+				"test",
 			},
 		})
 

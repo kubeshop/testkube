@@ -224,6 +224,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	)
 
 	execution.Envs = options.Request.Envs
+	execution.Command = options.Request.Command
 	execution.Args = options.Request.Args
 	execution.VariablesFile = options.Request.VariablesFile
 	execution.Uploads = options.Request.Uploads
@@ -264,8 +265,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 	if test.ExecutionRequest != nil {
 		// Test variables lowest priority, then test suite, then test suite execution / test execution
 		request.Variables = mergeVariables(test.ExecutionRequest.Variables, request.Variables)
-		// Combine test executor args with execution args
-		request.Args = append(request.Args, test.ExecutionRequest.Args...)
+
 		request.Envs = mergeEnvs(request.Envs, test.ExecutionRequest.Envs)
 		request.SecretEnvs = mergeEnvs(request.SecretEnvs, test.ExecutionRequest.SecretEnvs)
 		request.EnvConfigMaps = mergeEnvReferences(request.EnvConfigMaps, test.ExecutionRequest.EnvConfigMaps)
@@ -299,12 +299,25 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 				test.ExecutionRequest.ScraperTemplate,
 				&request.ScraperTemplate,
 			},
+			{
+				test.ExecutionRequest.ArgsMode,
+				&request.ArgsMode,
+			},
 		}
 
 		for _, field := range fields {
 			if *field.destination == "" && field.source != "" {
 				*field.destination = field.source
 			}
+		}
+
+		// Combine test executor args with execution args
+		if len(request.Command) == 0 {
+			request.Command = test.ExecutionRequest.Command
+		}
+
+		if len(request.Args) == 0 {
+			request.Args = test.ExecutionRequest.Args
 		}
 
 		if request.ActiveDeadlineSeconds == 0 && test.ExecutionRequest.ActiveDeadlineSeconds != 0 {
@@ -336,16 +349,15 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 
 	var imagePullSecrets []string
 	switch {
-	case len(request.ImagePullSecrets) != 0:
+	case len(executorCR.Spec.ImagePullSecrets) != 0:
+		imagePullSecrets = mapK8sImagePullSecrets(executorCR.Spec.ImagePullSecrets)
 
-		imagePullSecrets = mapImagePullSecrets(request.ImagePullSecrets)
 	case testCR.Spec.ExecutionRequest != nil &&
 		len(testCR.Spec.ExecutionRequest.ImagePullSecrets) != 0:
-
 		imagePullSecrets = mapK8sImagePullSecrets(testCR.Spec.ExecutionRequest.ImagePullSecrets)
-	case len(executorCR.Spec.ImagePullSecrets) != 0:
 
-		imagePullSecrets = mapK8sImagePullSecrets(executorCR.Spec.ImagePullSecrets)
+	case len(request.ImagePullSecrets) != 0:
+		imagePullSecrets = mapImagePullSecrets(request.ImagePullSecrets)
 	}
 
 	configMapVars := make(map[string]testkube.Variable, 0)
@@ -386,6 +398,14 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 
 	if len(secretVars) != 0 {
 		request.Variables = mergeVariables(secretVars, request.Variables)
+	}
+
+	if len(request.Command) == 0 {
+		request.Command = executorCR.Spec.Command
+	}
+
+	if request.ArgsMode == string(testkube.ArgsModeTypeAppend) || request.ArgsMode == "" {
+		request.Args = append(executorCR.Spec.Args, request.Args...)
 	}
 
 	return client.ExecuteOptions{

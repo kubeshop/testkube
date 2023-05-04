@@ -1,4 +1,4 @@
-# testkube run test
+## testkube run test
 
 Starts new test
 
@@ -14,9 +14,11 @@ testkube run test <testName> [flags]
 
 ```
       --args stringArray                           executor binary additional arguments
-      --artifact-dir stringArray                   artifact dirs for container executor
+      --args-mode string                           usage mode for argumnets. one of append|override (default "append")
+      --artifact-dir stringArray                   artifact dirs for scraping
       --artifact-storage-class-name string         artifact storage class name for container executor
       --artifact-volume-mount-path string          artifact volume mount path for container executor
+      --command stringArray                        command passed to image in executor
       --concurrency int                            concurrency level for multiple test execution (default 10)
       --context string                             running context description for test execution
       --copy-files stringArray                     file path mappings from host to pod of form source:destination

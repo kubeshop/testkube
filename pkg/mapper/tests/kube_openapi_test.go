@@ -90,6 +90,7 @@ func TestMapTestCRToAPI(t *testing.T) {
 			Variables:     map[string]testkube.Variable{},
 			VariablesFile: "",
 			Args:          []string{"-v", "-X", "GET", "https://testkube.kubeshop.io"},
+			ArgsMode:      "",
 			Command:       []string{"curl"},
 			Image:         "curlimages/curl:7.85.0",
 			ImagePullSecrets: []testkube.LocalObjectReference{

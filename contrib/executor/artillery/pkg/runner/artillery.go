@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
-
-	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
@@ -18,6 +17,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -72,28 +72,42 @@ func (r *ArtilleryRunner) Run(ctx context.Context, execution testkube.Execution)
 	}
 
 	testDir, _ := filepath.Split(path)
-	args := []string{"run", path}
 	envManager := env.NewManagerWithVars(execution.Variables)
 	envManager.GetReferenceVars(envManager.Variables)
 
+	var envFile string
 	if len(envManager.Variables) != 0 {
-		envFile, err := CreateEnvFile(envManager.Variables)
+		envFile, err = CreateEnvFile(envManager.Variables)
 		if err != nil {
 			return result, err
 		}
 
 		defer os.Remove(envFile)
-		args = append(args, "--dotenv", envFile)
 		output.PrintEvent("created dotenv file", envFile)
 	}
 
 	// artillery test result output file
 	testReportFile := filepath.Join(testDir, "test-report.json")
 
-	// append args from execution
-	args = append(args, "-o", testReportFile)
+	args := execution.Args
+	for i := len(args) - 1; i >= 0; i-- {
+		if envFile == "" && (args[i] == "--dotenv" || args[i] == "<envFile>") {
+			args = append(args[:i], args[i+1:]...)
+			continue
+		}
 
-	args = append(args, execution.Args...)
+		if args[i] == "<envFile>" {
+			args[i] = envFile
+		}
+
+		if args[i] == "<reportFile>" {
+			args[i] = testReportFile
+		}
+
+		if args[i] == "<runPath>" {
+			args[i] = path
+		}
+	}
 
 	runPath := testDir
 	if execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
@@ -101,7 +115,9 @@ func (r *ArtilleryRunner) Run(ctx context.Context, execution testkube.Execution)
 	}
 
 	// run executor
-	out, rerr := executor.Run(runPath, "artillery", envManager, args...)
+	command := strings.Join(execution.Command, " ")
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
+	out, rerr := executor.Run(runPath, command, envManager, args...)
 
 	out = envManager.ObfuscateSecrets(out)
 
@@ -118,6 +134,10 @@ func (r *ArtilleryRunner) Run(ctx context.Context, execution testkube.Execution)
 		directories := []string{
 			testReportFile,
 		}
+		if execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
+			directories = append(directories, execution.ArtifactRequest.Dirs...)
+		}
+
 		err = r.Scraper.Scrape(ctx, directories, execution)
 		if err != nil {
 			return *result.Err(err), errors.Wrap(err, "error scraping artifacts for Artillery executor")

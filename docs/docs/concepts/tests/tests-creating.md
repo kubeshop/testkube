@@ -344,6 +344,18 @@ testkube run test maven-example-file-test --args "--settings" --args "/data/uplo
 
 By default, there is a 10 second timeout limit on all requests on the client side, and a 1 GB body size limit on the server side. To update the timeout, use `--upload-timeout` with [Go-compatible duration formats](https://pkg.go.dev/time#ParseDuration).
 
+### Redefining the Prebuilt Executor command and arguments
+
+Each of Testkube Prebuilt executors has a default command and arguments it uses to execute the test. They are provided as a part of Executor CRD and can be either ovveriden or appended during test creation or execution, for example:
+
+```sh
+testkube create test --name maven-example-test --git-uri https://github.com/kubeshop/testkube-executor-maven.git --git-path examples/hello-maven --type maven/test --git-branch main --command "mvn" --args-mode "override" --executor-args="--settings <settingsFile> <goalName> -Duser.home <mavenHome>"
+```
+
+```sh title="Expected output:"
+Test created maven-example-test 🥇
+```
+
 ### Changing the Default Job Template Used for Test Execution
 
 You can always create your own custom executor with its own job template definition used for test execution. But sometimes you just need to adjust an existing job template of a standard Testkube executor with a few parameters. In this case you can use additional parameter `--job-template` when you create or run the test:
@@ -448,9 +460,11 @@ spec:
           - "/bin/runner"
           - '{{ .Jsn }}'
         {{- if .ArtifactRequest }}
+          {{- if .ArtifactRequest.VolumeMountPath }}
         volumeMounts:
           - name: artifact-volume
             mountPath: {{ .ArtifactRequest.VolumeMountPath }}
+          {{- end }}
         {{- end }}
         resources:
           limits:

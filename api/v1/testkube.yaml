@@ -3608,12 +3608,24 @@ components:
           example:
             record: "true"
             prefix: "some-"
+        command:
+          type: array
+          description: "executor image command"
+          example: ["curl"]
+          items:
+            type: string
         args:
           type: array
           description: "additional arguments/flags passed to executor binary"
           example: ["--concurrency", "2", "--remote", "--some", "blabla"]
           items:
             type: string
+        args_mode:
+          type: string
+          description: usage mode for arguments
+          enum:
+            - append
+            - override
         variables:
           $ref: "#/components/schemas/Variables"
         variablesFile:
@@ -3671,7 +3683,7 @@ components:
           example: execution-c01d7cf6-ec3f-47f0-9556-a5d6e9009a43
         artifactRequest:
           $ref: "#/components/schemas/ArtifactRequest"
-          description: configuration parameters for storing container executor test artifacts
+          description: configuration parameters for storing test artifacts
         preRunScript:
           type: string
           description: script to run before test execution
@@ -3989,24 +4001,21 @@ components:
         - $ref: "#/components/schemas/RepositoryParameters"
 
     ArtifactRequest:
-      description: artifact request body for container executors with test artifacts
+      description: artifact request body with test artifacts
       type: object
-      required:
-        - storageClassName
-        - volumeMountPath
       properties:
         storageClassName:
           type: string
-          description: artifact storage class name
+          description: artifact storage class name for container executor
           example: artifact-volume-local
         volumeMountPath:
           type: string
-          description: artifact volume mount path
+          description: artifact volume mount path for container executor
         dirs:
           type: array
           items:
             type: string
-          description: artifact directories
+          description: artifact directories for scraping
 
     ArtifactUpdateRequest:
       description: artifact request update body
@@ -4059,7 +4068,7 @@ components:
           example: "7934600f-b367-48dd-b981-4353304362fb"
         command:
           type: array
-          description: "container executor image command"
+          description: "executor image command"
           items:
             type: string
           example:
@@ -4073,6 +4082,12 @@ components:
             - "--repeats"
             - "5"
             - "--insecure"
+        args_mode:
+          type: string
+          description: usage mode for arguments
+          enum:
+            - append
+            - override 
         image:
           type: string
           description: container image, executor will run inside this image
@@ -4137,7 +4152,7 @@ components:
           example: execution-c01d7cf6-ec3f-47f0-9556-a5d6e9009a43
         artifactRequest:
           $ref: "#/components/schemas/ArtifactRequest"
-          description: configuration parameters for storing container executor test artifacts
+          description: configuration parameters for storing test artifacts
         jobTemplate:
           type: string
           description: job template extensions
@@ -4339,14 +4354,14 @@ components:
             $ref: "#/components/schemas/LocalObjectReference"
         command:
           type: array
-          description: "container executor image command"
+          description: "executor image command"
           items:
             type: string
           example:
             - "curl"
         args:
           type: array
-          description: "additional executor binary arguments"
+          description: "additional executor binary argument"
           items:
             type: string
           example:

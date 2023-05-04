@@ -5,13 +5,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/utils/test"
-
-	"github.com/kubeshop/testkube/pkg/envs"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/envs"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
 const repoURI = "https://github.com/kubeshop/testkube-executor-ginkgo.git"
@@ -53,6 +51,21 @@ func TestRun_Integration(t *testing.T) {
 					},
 				},
 				Variables: vars,
+				Command: []string{
+					"ginkgo",
+				},
+				Args: []string{
+					"-r",
+					"-p",
+					"--randomize-all",
+					"--randomize-suites",
+					"--keep-going",
+					"--trace",
+					"--junit-report",
+					"<reportFile>",
+					"<envVars>",
+					"<runPath>",
+				},
 			})
 
 		assert.Equal(t, testkube.ExecutionStatusPassed, result.Status)
@@ -87,6 +100,21 @@ func TestRun_Integration(t *testing.T) {
 					},
 				},
 				Variables: vars,
+				Command: []string{
+					"ginkgo",
+				},
+				Args: []string{
+					"-r",
+					"-p",
+					"--randomize-all",
+					"--randomize-suites",
+					"--keep-going",
+					"--trace",
+					"--junit-report",
+					"<reportFile>",
+					"<envVars>",
+					"<runPath>",
+				},
 			})
 
 		assert.Equal(t, testkube.ExecutionStatusFailed, result.Status)

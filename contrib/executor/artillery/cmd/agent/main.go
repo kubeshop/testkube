@@ -7,11 +7,10 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/kubeshop/testkube/pkg/envs"
-	"github.com/kubeshop/testkube/pkg/executor/output"
-
 	"github.com/kubeshop/testkube/contrib/executor/artillery/pkg/runner"
+	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor/agent"
+	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 

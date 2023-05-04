@@ -226,7 +226,7 @@ func newArtifactRequestFromFlags(cmd *cobra.Command) (request *testkube.Artifact
 		return nil, err
 	}
 
-	if artifactStorageClassName != "" && artifactVolumeMountPath != "" {
+	if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(dirs) != 0 {
 		request = &testkube.ArtifactRequest{
 			StorageClassName: artifactStorageClassName,
 			VolumeMountPath:  artifactVolumeMountPath,
@@ -335,6 +335,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		return nil, err
 	}
 
+	argsMode := cmd.Flag("args-mode").Value.String()
 	executionName := cmd.Flag("execution-name").Value.String()
 	envs, err := cmd.Flags().GetStringToString("env")
 	if err != nil {
@@ -441,6 +442,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		Image:                 image,
 		Command:               command,
 		Args:                  executorArgs,
+		ArgsMode:              argsMode,
 		ImagePullSecrets:      imageSecrets,
 		Envs:                  envs,
 		SecretEnvs:            secretEnvs,
@@ -771,6 +773,10 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 		{
 			"https-proxy",
 			&request.HttpsProxy,
+		},
+		{
+			"args-mode",
+			&request.ArgsMode,
 		},
 	}
 

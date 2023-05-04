@@ -5,6 +5,10 @@ import Admonition from "@theme/Admonition";
 
 Starting from the Testkube Helm chart version 1.9.5, it is possible to use Testkube to manage your Playwright tests inside your Kubernetes cluster.
 
+Default command for this executor: &lt;depManager&gt;
+Default arguments for this executor command: &lt;depCommand&gt; playwright test
+(parameters in &lt;&gt; are calculated at test execution)
+
 export const ExecutorInfo = () => {
    return (
     <div>

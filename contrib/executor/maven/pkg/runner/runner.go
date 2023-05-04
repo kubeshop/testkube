@@ -8,35 +8,48 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kubeshop/testkube/pkg/envs"
-
+	"github.com/joshdk/go-junit"
 	"github.com/pkg/errors"
 
-	"github.com/joshdk/go-junit"
-
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	outputPkg "github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func NewRunner(params envs.Params) *MavenRunner {
+func NewRunner(ctx context.Context, params envs.Params) (*MavenRunner, error) {
 	outputPkg.PrintLogf("%s Preparing test runner", ui.IconTruck)
 
-	return &MavenRunner{
+	var err error
+	r := &MavenRunner{
 		params: params,
 	}
+
+	r.Scraper, err = factory.TryGetScrapper(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
 }
 
 type MavenRunner struct {
-	params envs.Params
+	params  envs.Params
+	Scraper scraper.Scraper
 }
 
 var _ runner.Runner = &MavenRunner{}
 
 func (r *MavenRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+	if r.Scraper != nil {
+		defer r.Scraper.Close()
+	}
+
 	outputPkg.PrintLogf("%s Preparing for test run", ui.IconTruck)
 	err = r.Validate(execution)
 	if err != nil {
@@ -72,10 +85,10 @@ func (r *MavenRunner) Run(ctx context.Context, execution testkube.Execution) (re
 	}
 
 	// determine the Maven command to use
-	mavenCommand := "mvn"
+	mavenCommand := strings.Join(execution.Command, " ")
 	mavenWrapper := filepath.Join(directory, "mvnw")
 	_, err = os.Stat(mavenWrapper)
-	if err == nil {
+	if mavenCommand == "mvn" && err == nil {
 		// then we use the wrapper instead
 		mavenCommand = "./mvnw"
 	}
@@ -84,33 +97,33 @@ func (r *MavenRunner) Run(ctx context.Context, execution testkube.Execution) (re
 	envManager.GetReferenceVars(envManager.Variables)
 
 	// pass additional executor arguments/flags to Gradle
-	var args []string
-	args = append(args, execution.Args...)
-
+	args := execution.Args
+	var settingsXML string
 	if execution.VariablesFile != "" {
 		outputPkg.PrintLogf("%s Creating settings.xml file", ui.IconWorld)
-		settingsXML, err := createSettingsXML(directory, execution.VariablesFile)
+		settingsXML, err = createSettingsXML(directory, execution.VariablesFile)
 		if err != nil {
 			outputPkg.PrintLogf("%s Could not create settings.xml", ui.IconCross)
 			return *result.Err(errors.New("could not create settings.xml")), nil
 		}
 		outputPkg.PrintLogf("%s Successfully created settings.xml", ui.IconCheckMark)
-		args = append(args, "--settings", settingsXML)
 	}
 
 	goal := strings.Split(execution.TestType, "/")[1]
+	var goalName string
 	if !strings.EqualFold(goal, "project") {
 		// use the test subtype as goal or phase when != project
 		// in case of project there is need to pass additional args
-		args = append(args, goal)
+		goalName = goal
 	}
 
 	// workaround for https://github.com/eclipse/che/issues/13926
 	os.Unsetenv("MAVEN_CONFIG")
 
 	currentUser, err := user.Current()
+	var mavenHome string
 	if err == nil && currentUser.Name == "maven" {
-		args = append(args, "-Duser.home=/home/maven")
+		mavenHome = "/home/maven"
 	}
 
 	runPath := directory
@@ -118,6 +131,36 @@ func (r *MavenRunner) Run(ctx context.Context, execution testkube.Execution) (re
 		runPath = filepath.Join(r.params.DataDir, "repo", execution.Content.Repository.WorkingDir)
 	}
 
+	for i := len(args) - 1; i >= 0; i-- {
+		if goalName == "" && args[i] == "<goalName>" {
+			args = append(args[:i], args[i+1:]...)
+			continue
+		}
+
+		if settingsXML == "" && (args[i] == "--settings" || args[i] == "<settingsFile>") {
+			args = append(args[:i], args[i+1:]...)
+			continue
+		}
+
+		if mavenHome == "" && (args[i] == "--Duser.home" || args[i] == "<mavenHome>") {
+			args = append(args[:i], args[i+1:]...)
+			continue
+		}
+
+		if args[i] == "<goalName>" {
+			args[i] = goalName
+		}
+
+		if args[i] == "<settingsFile>" {
+			args[i] = settingsXML
+		}
+
+		if args[i] == "<mavenHome>" {
+			args[i] = mavenHome
+		}
+	}
+
+	outputPkg.PrintEvent("Running goal: "+goal, mavenHome, mavenCommand, args)
 	output, err := executor.Run(runPath, mavenCommand, envManager, args...)
 	output = envManager.ObfuscateSecrets(output)
 
@@ -134,6 +177,15 @@ func (r *MavenRunner) Run(ctx context.Context, execution testkube.Execution) (re
 		} else {
 			// Gradle was unable to run at all
 			return result, nil
+		}
+	}
+
+	// scrape artifacts first even if there are errors above
+	if r.params.ScrapperEnabled && execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
+		outputPkg.PrintLogf("Scraping directories: %v", execution.ArtifactRequest.Dirs)
+
+		if err := r.Scraper.Scrape(ctx, execution.ArtifactRequest.Dirs, execution); err != nil {
+			return *result.WithErrors(err), nil
 		}
 	}
 

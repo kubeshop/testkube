@@ -4,13 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/utils/test"
-
-	"github.com/kubeshop/testkube/pkg/envs"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/envs"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
 func TestRunString_Integration(t *testing.T) {
@@ -22,9 +20,17 @@ func TestRunString_Integration(t *testing.T) {
 	t.Run("runner should return success and empty result on empty string", func(t *testing.T) {
 		t.Parallel()
 
-		runner := NewRunner(envs.Params{})
+		runner, err := NewRunner(context.Background(), envs.Params{})
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.Content = testkube.NewStringTestContent("")
+		execution.Command = []string{"kubepug"}
+		execution.Args = []string{
+			"--format=json",
+			"--input-file",
+			"<runPath>",
+		}
 
 		result, err := runner.Run(ctx, *execution)
 
@@ -38,8 +44,16 @@ func TestRunString_Integration(t *testing.T) {
 	t.Run("runner should return success and empty result on passing yaml", func(t *testing.T) {
 		t.Parallel()
 
-		runner := NewRunner(envs.Params{})
+		runner, err := NewRunner(context.Background(), envs.Params{})
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"kubepug"}
+		execution.Args = []string{
+			"--format=json",
+			"--input-file",
+			"<runPath>",
+		}
 		execution.Content = testkube.NewStringTestContent(`
 apiVersion: v1
 kind: ConfigMap
@@ -65,8 +79,16 @@ metadata:
 	t.Run("runner should return failure and list of deprecated APIs result on yaml containing deprecated API", func(t *testing.T) {
 		t.Parallel()
 
-		runner := NewRunner(envs.Params{})
+		runner, err := NewRunner(context.Background(), envs.Params{})
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"kubepug"}
+		execution.Args = []string{
+			"--format=json",
+			"--input-file",
+			"<runPath>",
+		}
 		execution.Content = testkube.NewStringTestContent(`
 apiVersion: v1
 conditions:
@@ -98,8 +120,16 @@ func TestRunFileURI_Integration(t *testing.T) {
 	t.Run("runner should return success on valid yaml gist file URI", func(t *testing.T) {
 		t.Parallel()
 
-		runner := NewRunner(envs.Params{})
+		runner, err := NewRunner(context.Background(), envs.Params{})
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"kubepug"}
+		execution.Args = []string{
+			"--format=json",
+			"--input-file",
+			"<runPath>",
+		}
 		execution.Content = &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeFileURI),
 			Uri: "https://gist.githubusercontent.com/vLia/" +
@@ -118,8 +148,16 @@ func TestRunFileURI_Integration(t *testing.T) {
 	t.Run("runner should return failure on yaml gist file URI with deprecated/deleted APIs", func(t *testing.T) {
 		t.Parallel()
 
-		runner := NewRunner(envs.Params{})
+		runner, err := NewRunner(context.Background(), envs.Params{})
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"kubepug"}
+		execution.Args = []string{
+			"--format=json",
+			"--input-file",
+			"<runPath>",
+		}
 		execution.Content = &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeFileURI),
 			Uri: "https://gist.githubusercontent.com/vLia/" +
@@ -145,8 +183,16 @@ func TestRunGitFile_Integration(t *testing.T) {
 	t.Run("runner should return error on non-existent Git path", func(t *testing.T) {
 		t.Parallel()
 
-		runner := NewRunner(envs.Params{})
+		runner, err := NewRunner(context.Background(), envs.Params{})
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"kubepug"}
+		execution.Args = []string{
+			"--format=json",
+			"--input-file",
+			"<runPath>",
+		}
 		execution.Content = &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeGitFile),
 			Repository: &testkube.Repository{
@@ -156,7 +202,7 @@ func TestRunGitFile_Integration(t *testing.T) {
 			},
 		}
 
-		_, err := runner.Run(ctx, *execution)
+		_, err = runner.Run(ctx, *execution)
 
 		assert.Error(t, err)
 	})
@@ -164,8 +210,16 @@ func TestRunGitFile_Integration(t *testing.T) {
 	t.Run("runner should return deprecated and deleted APIs on Git file containing deprecated and delete API definitions", func(t *testing.T) {
 		t.Parallel()
 
-		runner := NewRunner(envs.Params{})
+		runner, err := NewRunner(context.Background(), envs.Params{})
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"kubepug"}
+		execution.Args = []string{
+			"--format=json",
+			"--input-file",
+			"<runPath>",
+		}
 		execution.Content = &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeGitFile),
 			Repository: &testkube.Repository{
@@ -194,8 +248,16 @@ func TestRunGitDirectory_Integration(t *testing.T) {
 	t.Run("runner should return success on manifests from Git directory", func(t *testing.T) {
 		t.Parallel()
 
-		runner := NewRunner(envs.Params{})
+		runner, err := NewRunner(context.Background(), envs.Params{})
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"kubepug"}
+		execution.Args = []string{
+			"--format=json",
+			"--input-file",
+			"<runPath>",
+		}
 		execution.Content = &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeGitDir),
 			Repository: &testkube.Repository{
@@ -225,8 +287,16 @@ func TestRunWithSpecificK8sVersion_Integration(t *testing.T) {
 		"on yaml containing deprecated API with current K8s version", func(t *testing.T) {
 		t.Parallel()
 
-		runner := NewRunner(envs.Params{})
+		runner, err := NewRunner(context.Background(), envs.Params{})
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"kubepug"}
+		execution.Args = []string{
+			"--format=json",
+			"--input-file",
+			"<runPath>",
+		}
 		execution.Content = testkube.NewStringTestContent(`
 apiVersion: v1
 conditions:
@@ -251,9 +321,15 @@ metadata:
 	t.Run("runner should return success on yaml containing deprecated API with old K8s version", func(t *testing.T) {
 		t.Parallel()
 
-		runner := NewRunner(envs.Params{})
+		runner, err := NewRunner(context.Background(), envs.Params{})
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"kubepug"}
 		execution.Args = []string{
+			"--format=json",
+			"--input-file",
+			"<runPath>",
 			"--k8s-version=v1.18.0", // last version v1/ComponentStatus was valid
 		}
 		execution.Content = testkube.NewStringTestContent(`

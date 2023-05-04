@@ -6,13 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/utils/test"
-
 	"github.com/kubeshop/testkube/pkg/envs"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
 func TestRun_Integration(t *testing.T) {
@@ -37,6 +35,22 @@ func TestRun_Integration(t *testing.T) {
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "jmeter/test"
 		execution.Content = testkube.NewStringTestContent("")
+		execution.Command = []string{
+			"<entryPoint>",
+		}
+		execution.Args = []string{
+			"-n",
+			"-j",
+			"<logFile>",
+			"-t",
+			"<runPath>",
+			"-l",
+			"<jtlFile>",
+			"-e",
+			"-o",
+			"<reportFile>",
+			"<envVars>",
+		}
 		writeTestContent(t, tempDir, "../../examples/kubeshop.jmx")
 
 		execution.Variables = map[string]testkube.Variable{}
@@ -66,6 +80,22 @@ func TestRun_Integration(t *testing.T) {
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "jmeter/test"
 		execution.Content = testkube.NewStringTestContent("")
+		execution.Command = []string{
+			"<entryPoint>",
+		}
+		execution.Args = []string{
+			"-n",
+			"-j",
+			"<logFile>",
+			"-t",
+			"<runPath>",
+			"-l",
+			"<jtlFile>",
+			"-e",
+			"-o",
+			"<reportFile>",
+			"<envVars>",
+		}
 		writeTestContent(t, tempDir, "../../examples/kubeshop_failed.jmx")
 
 		execution.Variables = map[string]testkube.Variable{}
@@ -95,9 +125,33 @@ func TestRun_Integration(t *testing.T) {
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "jmeter/test"
 		execution.Content = testkube.NewStringTestContent("")
+		execution.Command = []string{
+			"<entryPoint>",
+		}
+		execution.Args = []string{
+			"-n",
+			"-j",
+			"<logFile>",
+			"-t",
+			"<runPath>",
+			"-l",
+			"<jtlFile>",
+			"-e",
+			"-o",
+			"<reportFile>",
+			"<envVars>",
+			"-Jthreads",
+			"10",
+			"-Jrampup",
+			"0",
+			"-Jloopcount",
+			"1",
+			"-Jip",
+			"sampleip",
+			"-Jport",
+			"1234",
+		}
 		writeTestContent(t, tempDir, "../../examples/kubeshop.jmx")
-
-		execution.Args = []string{"-Jthreads", "10", "-Jrampup", "0", "-Jloopcount", "1", "-Jip", "sampleip", "-Jport", "1234"}
 
 		result, err := runner.Run(ctx, *execution)
 

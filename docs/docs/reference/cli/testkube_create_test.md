@@ -1,4 +1,4 @@
-# testkube create test
+## testkube create test
 
 Create new Test
 
@@ -13,10 +13,11 @@ testkube create test [flags]
 ### Options
 
 ```
-      --artifact-dir stringArray                   artifact dirs for container executor
+      --args-mode string                           usage mode for arguments. one of append|override (default "append")
+      --artifact-dir stringArray                   artifact dirs for scraping
       --artifact-storage-class-name string         artifact storage class name for container executor
       --artifact-volume-mount-path string          artifact volume mount path for container executor
-      --command stringArray                        command passed to image in container executor
+      --command stringArray                        command passed to image in executor
       --copy-files stringArray                     file path mappings from host to pod of form source:destination
       --cronjob-template string                    cron job template file path for extensions to cron job template
       --env stringToString                         envs in a form of name1=val1 passed to executor (default [])

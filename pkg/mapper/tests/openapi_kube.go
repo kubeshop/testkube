@@ -147,6 +147,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 		TestSecretUUID:        executionRequest.TestSecretUUID,
 		TestSuiteSecretUUID:   executionRequest.TestSuiteSecretUUID,
 		Args:                  executionRequest.Args,
+		ArgsMode:              testsv3.ArgsModeType(executionRequest.ArgsMode),
 		Envs:                  executionRequest.Envs,
 		SecretEnvs:            executionRequest.SecretEnvs,
 		Sync:                  executionRequest.Sync,
@@ -464,6 +465,11 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 			*field.destination = *field.source
 			emptyExecution = false
 		}
+	}
+
+	if executionRequest.ArgsMode != nil {
+		request.ArgsMode = testsv3.ArgsModeType(*executionRequest.ArgsMode)
+		emptyExecution = false
 	}
 
 	var slices = []struct {

@@ -28,10 +28,12 @@ type ExecutionUpdateRequest struct {
 	TestSecretUUID *string `json:"testSecretUUID,omitempty"`
 	// test suite secret uuid, if it's run as a part of test suite
 	TestSuiteSecretUUID *string `json:"testSuiteSecretUUID,omitempty"`
-	// container executor image command
+	// executor image command
 	Command *[]string `json:"command,omitempty"`
 	// additional executor binary arguments
 	Args *[]string `json:"args,omitempty"`
+	// usage mode for arguments
+	ArgsMode *string `json:"args_mode,omitempty"`
 	// container image, executor will run inside this image
 	Image *string `json:"image,omitempty"`
 	// container image pull secrets

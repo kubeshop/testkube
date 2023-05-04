@@ -52,7 +52,7 @@ func CheckoutCommit(uri, authHeader, path, commit, dir string) (err error) {
 		"git",
 		args...,
 	)
-	output.PrintLogf("Git parameters: %v", obfuscateArgs(args, uri, authHeader))
+	output.PrintLogf("Git parameters: %s", strings.Join(obfuscateArgs(args, uri, authHeader), " "))
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,7 @@ func Checkout(uri, authHeader, branch, commit, dir string) (outputDir string, er
 			"git",
 			args...,
 		)
-		output.PrintLogf("Git parameters: %v", obfuscateArgs(args, uri, authHeader))
+		output.PrintLogf("Git parameters: %s", strings.Join(obfuscateArgs(args, uri, authHeader), " "))
 		if err != nil {
 			return "", err
 		}
@@ -152,7 +152,7 @@ func PartialCheckout(uri, authHeader, path, branch, commit, dir string) (outputD
 			"git",
 			args...,
 		)
-		output.PrintLogf("Git parameters: %v", obfuscateArgs(args, uri, authHeader))
+		output.PrintLogf("Git parameters: %s", strings.Join(obfuscateArgs(args, uri, authHeader), " "))
 		if err != nil {
 			return "", err
 		}

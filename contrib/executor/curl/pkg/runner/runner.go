@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -20,32 +19,45 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	outputPkg "github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
-
-const CurlAdditionalFlags = "-is"
 
 // CurlRunner is used to run curl commands.
 type CurlRunner struct {
 	Params  envs.Params
 	Fetcher contentPkg.ContentFetcher
 	Log     *zap.SugaredLogger
+	Scraper scraper.Scraper
 }
 
 var _ runner.Runner = &CurlRunner{}
 
-func NewCurlRunner(params envs.Params) (*CurlRunner, error) {
+func NewCurlRunner(ctx context.Context, params envs.Params) (*CurlRunner, error) {
 	outputPkg.PrintLogf("%s Preparing test runner", ui.IconTruck)
 
-	return &CurlRunner{
+	var err error
+	r := &CurlRunner{
 		Log:     log.DefaultLogger,
 		Params:  params,
 		Fetcher: contentPkg.NewFetcher(""),
-	}, nil
+	}
+
+	r.Scraper, err = factory.TryGetScrapper(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
 }
 
 func (r *CurlRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+	if r.Scraper != nil {
+		defer r.Scraper.Close()
+	}
+
 	outputPkg.PrintLogf("%s Preparing for test run", ui.IconTruck)
 	var runnerInput CurlRunnerInput
 	if r.Params.GitUsername != "" || r.Params.GitToken != "" {
@@ -92,15 +104,23 @@ func (r *CurlRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	}
 	outputPkg.PrintLogf("%s Successfully filled the input templates", ui.IconCheckMark)
 
-	command := runnerInput.Command[0]
+	command := ""
+	var args []string
+	if len(execution.Command) != 0 {
+		command = execution.Command[0]
+		args = execution.Command[1:]
+	}
+
+	if len(runnerInput.Command) != 0 {
+		command = runnerInput.Command[0]
+		args = runnerInput.Command[1:]
+	}
+
 	if command != "curl" {
 		outputPkg.PrintLogf("%s you can run only `curl` commands with this executor but passed: `%s`", ui.IconCross, command)
 		return result, errors.Errorf("you can run only `curl` commands with this executor but passed: `%s`", command)
 	}
 
-	runnerInput.Command[0] = CurlAdditionalFlags
-
-	args := runnerInput.Command
 	args = append(args, execution.Args...)
 
 	runPath := ""
@@ -108,12 +128,22 @@ func (r *CurlRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		runPath = filepath.Join(r.Params.DataDir, "repo", execution.Content.Repository.WorkingDir)
 	}
 
+	outputPkg.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
 	output, err := executor.Run(runPath, command, envManager, args...)
 	output = envManager.ObfuscateSecrets(output)
 
 	if err != nil {
 		r.Log.Errorf("Error occured when running a command %s", err)
 		return *result.Err(err), nil
+	}
+
+	// scrape artifacts first even if there are errors above
+	if r.Params.ScrapperEnabled && execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
+		outputPkg.PrintLogf("Scraping directories: %v", execution.ArtifactRequest.Dirs)
+
+		if err := r.Scraper.Scrape(ctx, execution.ArtifactRequest.Dirs, execution); err != nil {
+			return *result.WithErrors(err), nil
+		}
 	}
 
 	outputString := string(output)

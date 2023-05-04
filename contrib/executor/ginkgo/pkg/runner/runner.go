@@ -7,11 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pkg/errors"
-
-	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
-
 	"github.com/joshdk/go-junit"
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
@@ -21,11 +18,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 var ginkgoDefaultParams = InitializeGinkgoParams()
-var ginkgoBin = "ginkgo"
 
 func NewGinkgoRunner(ctx context.Context, params envs.Params) (*GinkgoRunner, error) {
 	output.PrintLogf("%s Preparing test runner", ui.IconTruck)
@@ -98,13 +95,19 @@ func (r *GinkgoRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		path = filepath.Join(r.Params.DataDir, "repo", execution.Content.Repository.Path)
 	}
 
+	reportFile := "report.xml"
+	if ginkgoParams["GinkgoJunitReport"] != "" {
+		values := strings.Split(ginkgoParams["GinkgoJunitReport"], " ")
+		if len(values) > 1 {
+			reportFile = values[1]
+		}
+	}
+
 	// Set up ginkgo potential args
-	ginkgoArgs, err := BuildGinkgoArgs(ginkgoParams, path, runPath)
+	args, err := BuildGinkgoArgs(ginkgoParams, path, runPath, reportFile, execution)
 	if err != nil {
 		return result, err
 	}
-	ginkgoPassThroughFlags := BuildGinkgoPassThroughFlags(execution)
-	ginkgoArgsAndFlags := append(ginkgoArgs, ginkgoPassThroughFlags...)
 
 	// set up reports directory
 	reportsPath := filepath.Join(path, "reports")
@@ -118,14 +121,16 @@ func (r *GinkgoRunner) Run(ctx context.Context, execution testkube.Execution) (r
 
 	// check Ginkgo version
 	output.PrintLogf("%s Checking Ginkgo CLI version", ui.IconTruck)
-	_, err = executor.Run(runPath, ginkgoBin, envManager, "version")
+	command := strings.Join(execution.Command, " ")
+	_, err = executor.Run(runPath, command, envManager, "version")
 	if err != nil {
 		output.PrintLogf("%s error checking Ginkgo CLI version: %s", ui.IconCross, err.Error())
 		return result, err
 	}
 
 	// run executor here
-	out, err := executor.Run(runPath, ginkgoBin, envManager, ginkgoArgsAndFlags...)
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
+	out, err := executor.Run(runPath, command, envManager, args...)
 	out = envManager.ObfuscateSecrets(out)
 
 	// generate report/result
@@ -136,13 +141,12 @@ func (r *GinkgoRunner) Run(ctx context.Context, execution testkube.Execution) (r
 			return result, moveErr
 		}
 	}
-	if ginkgoParams["GinkgoJunitReport"] != "" {
-		moveErr := MoveReport(runPath, reportsPath, strings.Split(ginkgoParams["GinkgoJunitReport"], " ")[1])
-		if moveErr != nil {
-			output.PrintLogf("%s could not move Junit report: %s", ui.IconCross, moveErr.Error())
-			return result, moveErr
-		}
+
+	moveErr := MoveReport(runPath, reportsPath, reportFile)
+	if moveErr != nil {
+		output.PrintLogf("%s could not move Junit report: %s", ui.IconCross, moveErr.Error())
 	}
+
 	if ginkgoParams["GinkgoTeamCityReport"] != "" {
 		moveErr := MoveReport(runPath, reportsPath, strings.Split(ginkgoParams["GinkgoTeamCityReport"], " ")[1])
 		if moveErr != nil {
@@ -150,15 +154,22 @@ func (r *GinkgoRunner) Run(ctx context.Context, execution testkube.Execution) (r
 			return result, moveErr
 		}
 	}
-	suites, serr := junit.IngestFile(filepath.Join(reportsPath, strings.Split(ginkgoParams["GinkgoJunitReport"], " ")[1]))
-	result = MapJunitToExecutionResults(out, suites)
-	output.PrintLogf("%s Mapped Junit to Execution Results...", ui.IconCheckMark)
+
+	suites, serr := junit.IngestFile(filepath.Join(reportsPath, reportFile))
+	if serr == nil {
+		result = MapJunitToExecutionResults(out, suites)
+		output.PrintLogf("%s Mapped Junit to Execution Results...", ui.IconCheckMark)
+	}
 
 	// scrape artifacts first even if there are errors above
 
 	if r.Params.ScrapperEnabled {
 		directories := []string{
 			reportsPath,
+		}
+
+		if execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
+			directories = append(directories, execution.ArtifactRequest.Dirs...)
 		}
 
 		if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
@@ -184,30 +195,30 @@ func InitializeGinkgoParams() map[string]string {
 
 	ginkgoParams := make(map[string]string)
 	ginkgoParams["GinkgoTestPackage"] = ""
-	ginkgoParams["GinkgoRecursive"] = "-r"                          // -r
-	ginkgoParams["GinkgoParallel"] = "-p"                           // -p
-	ginkgoParams["GinkgoParallelProcs"] = ""                        // --procs N
-	ginkgoParams["GinkgoCompilers"] = ""                            // --compilers N
-	ginkgoParams["GinkgoRandomize"] = "--randomize-all"             // --randomize-all
-	ginkgoParams["GinkgoRandomizeSuites"] = "--randomize-suites"    // --randomize-suites
-	ginkgoParams["GinkgoLabelFilter"] = ""                          // --label-filter QUERY
-	ginkgoParams["GinkgoFocusFilter"] = ""                          // --focus REGEXP
-	ginkgoParams["GinkgoSkipFilter"] = ""                           // --skip REGEXP
-	ginkgoParams["GinkgoUntilItFails"] = ""                         // --until-it-fails
-	ginkgoParams["GinkgoRepeat"] = ""                               // --repeat N
-	ginkgoParams["GinkgoFlakeAttempts"] = ""                        // --flake-attempts N
-	ginkgoParams["GinkgoTimeout"] = ""                              // --timeout=duration
-	ginkgoParams["GinkgoSkipPackage"] = ""                          // --skip-package list,of,packages
-	ginkgoParams["GinkgoFailFast"] = ""                             // --fail-fast
-	ginkgoParams["GinkgoKeepGoing"] = "--keep-going"                // --keep-going
-	ginkgoParams["GinkgoFailOnPending"] = ""                        // --fail-on-pending
-	ginkgoParams["GinkgoCover"] = ""                                // --cover
-	ginkgoParams["GinkgoCoverProfile"] = ""                         // --coverprofile cover.profile
-	ginkgoParams["GinkgoRace"] = ""                                 // --race
-	ginkgoParams["GinkgoTrace"] = "--trace"                         // --trace
-	ginkgoParams["GinkgoJsonReport"] = ""                           // --json-report report.json [will be stored in reports/filename]
-	ginkgoParams["GinkgoJunitReport"] = "--junit-report report.xml" // --junit-report report.xml [will be stored in reports/filename]
-	ginkgoParams["GinkgoTeamCityReport"] = ""                       // --teamcity-report report.teamcity [will be stored in reports/filename]
+	ginkgoParams["GinkgoRecursive"] = ""       // -r
+	ginkgoParams["GinkgoParallel"] = ""        // -p
+	ginkgoParams["GinkgoParallelProcs"] = ""   // --procs N
+	ginkgoParams["GinkgoCompilers"] = ""       // --compilers N
+	ginkgoParams["GinkgoRandomize"] = ""       // --randomize-all
+	ginkgoParams["GinkgoRandomizeSuites"] = "" // --randomize-suites
+	ginkgoParams["GinkgoLabelFilter"] = ""     // --label-filter QUERY
+	ginkgoParams["GinkgoFocusFilter"] = ""     // --focus REGEXP
+	ginkgoParams["GinkgoSkipFilter"] = ""      // --skip REGEXP
+	ginkgoParams["GinkgoUntilItFails"] = ""    // --until-it-fails
+	ginkgoParams["GinkgoRepeat"] = ""          // --repeat N
+	ginkgoParams["GinkgoFlakeAttempts"] = ""   // --flake-attempts N
+	ginkgoParams["GinkgoTimeout"] = ""         // --timeout=duration
+	ginkgoParams["GinkgoSkipPackage"] = ""     // --skip-package list,of,packages
+	ginkgoParams["GinkgoFailFast"] = ""        // --fail-fast
+	ginkgoParams["GinkgoKeepGoing"] = ""       // --keep-going
+	ginkgoParams["GinkgoFailOnPending"] = ""   // --fail-on-pending
+	ginkgoParams["GinkgoCover"] = ""           // --cover
+	ginkgoParams["GinkgoCoverProfile"] = ""    // --coverprofile cover.profile
+	ginkgoParams["GinkgoRace"] = ""            // --race
+	ginkgoParams["GinkgoTrace"] = ""           // --trace
+	ginkgoParams["GinkgoJsonReport"] = ""      // --json-report report.json [will be stored in reports/filename]
+	ginkgoParams["GinkgoJunitReport"] = ""     // --junit-report report.xml [will be stored in reports/filename]
+	ginkgoParams["GinkgoTeamCityReport"] = ""  // --teamcity-report report.teamcity [will be stored in reports/filename]
 
 	output.PrintLogf("%s Initial Ginkgo parameters prepared: %s", ui.IconCheckMark, ginkgoParams)
 	return ginkgoParams
@@ -234,58 +245,61 @@ func FindGinkgoParams(execution *testkube.Execution, defaultParams map[string]st
 	return retVal
 }
 
-func BuildGinkgoArgs(params map[string]string, path, runPath string) ([]string, error) {
+func BuildGinkgoArgs(params map[string]string, path, runPath, reportFile string, execution testkube.Execution) ([]string, error) {
 	output.PrintLogf("%s Building Ginkgo arguments from params", ui.IconWorld)
 
-	var args []string
-	for k, p := range params {
-		if p == "" {
-			continue
-		}
-		if k != "GinkgoTestPackage" {
-			args = append(args, strings.Split(p, " ")...)
+	args := execution.Args
+	for i := range args {
+		if args[i] == "<envVars>" {
+			var envVars []string
+			for k, p := range params {
+				if p == "" {
+					continue
+				}
+				if k != "GinkgoTestPackage" {
+					envVars = append(envVars, strings.Split(p, " ")...)
+				}
+			}
+
+			newArgs := make([]string, len(args)+len(envVars)-1)
+			copy(newArgs, args[:i])
+			copy(newArgs[i:], envVars)
+			copy(newArgs[i+len(envVars):], args[i+1:])
+			args = newArgs
+			break
 		}
 	}
 
+	var rp string
 	if params["GinkgoTestPackage"] != "" {
 		if path != runPath {
-			args = append(args, filepath.Join(path, params["GinkgoTestPackage"]))
+			rp = filepath.Join(path, params["GinkgoTestPackage"])
 		} else {
-			args = append(args, params["GinkgoTestPackage"])
+			rp = params["GinkgoTestPackage"]
 		}
 	} else {
 		if path != runPath {
-			args = append(args, path)
+			rp = path
+		}
+	}
+
+	for i := len(args) - 1; i >= 0; i-- {
+		if rp == "" && args[i] == "<runPath>" {
+			args = append(args[:i], args[i+1:]...)
+			continue
+		}
+
+		if args[i] == "<runPath>" {
+			args[i] = rp
+		}
+
+		if args[i] == "<reportFile>" {
+			args[i] = reportFile
 		}
 	}
 
 	output.PrintLogf("%s Ginkgo arguments from params built: %s", ui.IconCheckMark, args)
 	return args, nil
-}
-
-// BuildGinkgoPassThroughFlags should always be called after FindGinkgoParams so that it only
-// acts on the "left over" Variables that are to be treated as pass through
-// flags to GInkgo
-func BuildGinkgoPassThroughFlags(execution testkube.Execution) []string {
-	output.PrintLogf("%s Building Ginkgo flags", ui.IconWorld)
-
-	vars := execution.Variables
-	args := execution.Args
-	var flags []string
-	for _, v := range vars {
-		os.Setenv(v.Name, v.Value)
-	}
-
-	if len(args) > 0 {
-		flags = append(flags, args...)
-	}
-
-	if len(flags) > 0 {
-		flags = append([]string{"--"}, flags...)
-	}
-
-	output.PrintLogf("%s Ginkgo flags built: %s", ui.IconCheckMark, flags)
-	return flags
 }
 
 // Validate checks if Execution has valid data in context of Ginkgo executor

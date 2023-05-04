@@ -23,7 +23,7 @@ func TestRun_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 	t.Parallel()
 	// given
-	runner, err := NewNewmanRunner(envs.Params{})
+	runner, err := NewNewmanRunner(context.Background(), envs.Params{})
 	assert.NoError(t, err)
 
 	// and test server for getting newman responses
@@ -39,6 +39,17 @@ func TestRun_Integration(t *testing.T) {
 
 	execution := testkube.Execution{
 		Content: testkube.NewStringTestContent(fmt.Sprintf(exampleCollection, port, port)),
+		Command: []string{"newman"},
+		Args: []string{
+			"run",
+			"<runPath>",
+			"-e",
+			"<envFile>",
+			"--reporters",
+			"cli,json",
+			"--reporter-json-export",
+			"<reportFile>",
+		},
 	}
 
 	ctx := context.Background()

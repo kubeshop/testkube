@@ -16,12 +16,13 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
 	params, err := envs.LoadTestkubeVariables()
 	if err != nil {
 		output.PrintError(os.Stderr, errors.Errorf("could not initialize Postman Executor environment variables: %v", err))
 		os.Exit(1)
 	}
-	r, err := newman.NewNewmanRunner(params)
+	r, err := newman.NewNewmanRunner(ctx, params)
 	if err != nil {
 		log.Fatalf("%s could not run Postman tests: %s", ui.IconCross, err.Error())
 	}

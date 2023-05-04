@@ -8,15 +8,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/utils/test"
-
-	"github.com/kubeshop/testkube/pkg/envs"
-
 	cp "github.com/otiai10/copy"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/envs"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
 func TestRunGradle_Integration(t *testing.T) {
@@ -37,7 +34,9 @@ func TestRunGradle_Integration(t *testing.T) {
 
 		// given
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "gradle/project"
 		execution.Content = &testkube.TestContent{
@@ -47,7 +46,8 @@ func TestRunGradle_Integration(t *testing.T) {
 				Branch: "main",
 			},
 		}
-		execution.Args = []string{"test"}
+		execution.Command = []string{"gradle"}
+		execution.Args = []string{"test", "--no-daemon", "<taskName>", "-p", "<projectDir>"}
 
 		// when
 		result, err := runner.Run(ctx, *execution)
@@ -69,7 +69,9 @@ func TestRunGradle_Integration(t *testing.T) {
 
 		// given
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "gradle/test"
 		execution.Content = &testkube.TestContent{
@@ -79,6 +81,8 @@ func TestRunGradle_Integration(t *testing.T) {
 				Branch: "main",
 			},
 		}
+		execution.Command = []string{"gradle"}
+		execution.Args = []string{"--no-daemon", "<taskName>", "-p", "<projectDir>"}
 		assert.NoError(t, os.Setenv("TESTKUBE_GRADLE", "true"))
 
 		// when
@@ -103,11 +107,15 @@ func TestRunErrors_Integration(t *testing.T) {
 		t.Parallel()
 		// given
 		params := envs.Params{DataDir: "/unknown"}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"gradle"}
+		execution.Args = []string{"--no-daemon", "<taskName>", "-p", "<projectDir>"}
 
 		// when
-		_, err := runner.Run(ctx, *execution)
+		_, err = runner.Run(ctx, *execution)
 
 		// then
 		assert.Error(t, err)
@@ -120,13 +128,17 @@ func TestRunErrors_Integration(t *testing.T) {
 
 		// given
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "gradle/project"
 		execution.Content = testkube.NewStringTestContent("")
+		execution.Command = []string{"gradle"}
+		execution.Args = []string{"--no-daemon", "<taskName>", "-p", "<projectDir>"}
 
 		// when
-		_, err := runner.Run(ctx, *execution)
+		_, err = runner.Run(ctx, *execution)
 
 		// then
 		assert.EqualError(t, err, "gradle executor handles only repository based tests, but repository is nil")
@@ -144,7 +156,9 @@ func TestRunErrors_Integration(t *testing.T) {
 
 		// given
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "gradle/project"
 		execution.Content = &testkube.TestContent{
@@ -154,7 +168,8 @@ func TestRunErrors_Integration(t *testing.T) {
 				Branch: "main",
 			},
 		}
-
+		execution.Command = []string{"gradle"}
+		execution.Args = []string{"--no-daemon", "<taskName>", "-p", "<projectDir>"}
 		// when
 		result, err := runner.Run(ctx, *execution)
 
