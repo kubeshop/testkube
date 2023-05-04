@@ -1,4 +1,4 @@
-NAME ?= testkube-executor-init
+NAME ?= testkube-init-executor
 BIN_DIR ?= $(HOME)/bin
 
 build:
