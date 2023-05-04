@@ -87,6 +87,9 @@ spec:
     {{- if .ExecutionRequest.VariablesFile }}
     variablesFile: {{ .ExecutionRequest.VariablesFile }}
     {{- end }}
+    {{- if .ExecutionRequest.IsVariablesFileUploaded }}
+    isVariablesFileUploaded: {{ .ExecutionRequest.IsVariablesFileUploaded }}
+    {{- end }}
     {{- if ne (len .ExecutionRequest.Variables) 0 }}
     variables:
     {{- range $key, $value := .ExecutionRequest.Variables }}
