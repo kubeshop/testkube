@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/client"
 )
 
 func Test_readCopyFiles(t *testing.T) {
