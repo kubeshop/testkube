@@ -21,8 +21,12 @@ func TestRunString_Integration(t *testing.T) {
 
 	t.Run("runner should return success and empty result on empty string", func(t *testing.T) {
 		t.Parallel()
-		tempDir := os.TempDir()
-		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte{}, 0644)
+
+		tempDir, err := os.MkdirTemp("", "")
+		assert.NoError(t, err)
+		defer os.RemoveAll(tempDir)
+
+		err = os.WriteFile(filepath.Join(tempDir, "test-content"), []byte{}, 0644)
 		if err != nil {
 			assert.FailNow(t, "Unable to write postman runner test content file")
 		}
@@ -63,8 +67,12 @@ func TestRunString_Integration(t *testing.T) {
 		  resourceVersion: "170745168"
 		  uid: 9bb57467-b5c4-41fe-83a8-9513ae86fbff
 		`
-		tempDir := os.TempDir()
-		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
+
+		tempDir, err := os.MkdirTemp("", "")
+		assert.NoError(t, err)
+		defer os.RemoveAll(tempDir)
+
+		err = os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
 		if err != nil {
 			assert.FailNow(t, "Unable to write postman runner test content file")
 		}
@@ -104,8 +112,12 @@ func TestRunString_Integration(t *testing.T) {
 		  creationTimestamp: null
 		  name: etcd-1
 		`
-		tempDir := os.TempDir()
-		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
+
+		tempDir, err := os.MkdirTemp("", "")
+		assert.NoError(t, err)
+		defer os.RemoveAll(tempDir)
+
+		err = os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
 		if err != nil {
 			assert.FailNow(t, "Unable to write postman runner test content file")
 		}
@@ -320,8 +332,12 @@ func TestRunWithSpecificK8sVersion_Integration(t *testing.T) {
 		  creationTimestamp: null
 		  name: etcd-1
 		`
-		tempDir := os.TempDir()
-		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
+
+		tempDir, err := os.MkdirTemp("", "")
+		assert.NoError(t, err)
+		defer os.RemoveAll(tempDir)
+
+		err = os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
 		if err != nil {
 			assert.FailNow(t, "Unable to write postman runner test content file")
 		}
@@ -361,8 +377,12 @@ func TestRunWithSpecificK8sVersion_Integration(t *testing.T) {
 		  creationTimestamp: null
 		  name: etcd-1
 		`
-		tempDir := os.TempDir()
-		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
+
+		tempDir, err := os.MkdirTemp("", "")
+		assert.NoError(t, err)
+		defer os.RemoveAll(tempDir)
+
+		err = os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
 		if err != nil {
 			assert.FailNow(t, "Unable to write postman runner test content file")
 		}
