@@ -31,6 +31,7 @@ func TestRun(t *testing.T) {
 		// given
 		runner := NewRunner(envs.Params{DataDir: tempDir})
 		execution := testkube.NewQueuedExecution()
+		execution.Content = testkube.NewStringTestContent("")
 
 		// when
 		result, err := runner.Run(ctx, *execution)
