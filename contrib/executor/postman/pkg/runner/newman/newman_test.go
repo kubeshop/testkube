@@ -46,6 +46,7 @@ func TestRun_Integration(t *testing.T) {
 	}
 
 	execution := testkube.Execution{
+		Content: testkube.NewStringTestContent(""),
 		Command: []string{"newman"},
 		Args: []string{
 			"run",
