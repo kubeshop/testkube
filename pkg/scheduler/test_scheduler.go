@@ -225,6 +225,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 
 	execution.Envs = options.Request.Envs
 	execution.Args = options.Request.Args
+	execution.IsVariablesFileUploaded = options.Request.IsVariablesFileUploaded
 	execution.VariablesFile = options.Request.VariablesFile
 	execution.Uploads = options.Request.Uploads
 	execution.BucketName = options.Request.BucketName
@@ -271,14 +272,15 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		request.EnvConfigMaps = mergeEnvReferences(request.EnvConfigMaps, test.ExecutionRequest.EnvConfigMaps)
 		request.EnvSecrets = mergeEnvReferences(request.EnvSecrets, test.ExecutionRequest.EnvSecrets)
 
+		if request.VariablesFile == "" && test.ExecutionRequest.VariablesFile != "" {
+			request.VariablesFile = test.ExecutionRequest.VariablesFile
+			request.IsVariablesFileUploaded = test.ExecutionRequest.IsVariablesFileUploaded
+		}
+
 		var fields = []struct {
 			source      string
 			destination *string
 		}{
-			{
-				test.ExecutionRequest.VariablesFile,
-				&request.VariablesFile,
-			},
 			{
 				test.ExecutionRequest.HttpProxy,
 				&request.HttpProxy,

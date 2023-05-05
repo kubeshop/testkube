@@ -65,13 +65,6 @@ func NewRunTestCmd() *cobra.Command {
 		Short:   "Starts new test",
 		Long:    `Starts new test based on Test Custom Resource name, returns results to console`,
 		Run: func(cmd *cobra.Command, args []string) {
-			paramsFileContent := ""
-			if variablesFile != "" {
-				b, err := os.ReadFile(variablesFile)
-				ui.ExitOnError("reading variables file", err)
-				paramsFileContent = string(b)
-			}
-
 			envs, err := cmd.Flags().GetStringToString("env")
 			ui.WarnOnError("getting envs", err)
 
@@ -110,22 +103,22 @@ func NewRunTestCmd() *cobra.Command {
 
 			var executions []testkube.Execution
 			client, namespace := common.GetClient(cmd)
+
 			options := apiv1.ExecuteTestOptions{
-				ExecutionVariables:            variables,
-				ExecutionVariablesFileContent: paramsFileContent,
-				ExecutionLabels:               executionLabels,
-				Args:                          executorArgs,
-				SecretEnvs:                    secretEnvs,
-				HTTPProxy:                     httpProxy,
-				HTTPSProxy:                    httpsProxy,
-				Envs:                          envs,
-				Image:                         image,
-				JobTemplate:                   jobTemplateContent,
-				PreRunScriptContent:           preRunScriptContent,
-				ScraperTemplate:               scraperTemplateContent,
-				IsNegativeTestChangedOnRun:    false,
-				EnvConfigMaps:                 envConfigMaps,
-				EnvSecrets:                    envSecrets,
+				ExecutionVariables:         variables,
+				ExecutionLabels:            executionLabels,
+				Args:                       executorArgs,
+				SecretEnvs:                 secretEnvs,
+				HTTPProxy:                  httpProxy,
+				HTTPSProxy:                 httpsProxy,
+				Envs:                       envs,
+				Image:                      image,
+				JobTemplate:                jobTemplateContent,
+				PreRunScriptContent:        preRunScriptContent,
+				ScraperTemplate:            scraperTemplateContent,
+				IsNegativeTestChangedOnRun: false,
+				EnvConfigMaps:              envConfigMaps,
+				EnvSecrets:                 envSecrets,
 				RunningContext: &testkube.RunningContext{
 					Type_:   string(testkube.RunningContextTypeUserCLI),
 					Context: runningContext,
@@ -169,15 +162,23 @@ func NewRunTestCmd() *cobra.Command {
 					os.Exit(1)
 				}
 
-				if len(copyFiles) > 0 {
-					var timeout time.Duration
-					if uploadTimeout != "" {
-						timeout, err = time.ParseDuration(uploadTimeout)
-						if err != nil {
-							ui.ExitOnError("invalid upload timeout duration", err)
-						}
+				var timeout time.Duration
+				if uploadTimeout != "" {
+					timeout, err = time.ParseDuration(uploadTimeout)
+					if err != nil {
+						ui.ExitOnError("invalid upload timeout duration", err)
 					}
-					options.BucketName = uuid.New().String()
+				}
+
+				options.BucketName = uuid.New().String()
+				if len(variablesFile) > 0 {
+					options.ExecutionVariablesFileContent, options.IsVariablesFileUploaded, err = PrepareVariablesFile(client, options.BucketName, apiv1.Execution, variablesFile, timeout)
+					if err != nil {
+						ui.ExitOnError("could not prepare variables file", err)
+					}
+				}
+
+				if len(copyFiles) > 0 {
 					err = uploadFiles(client, options.BucketName, apiv1.Execution, copyFiles, timeout)
 					ui.ExitOnError("could not upload files", err)
 				}

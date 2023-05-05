@@ -3,6 +3,7 @@ package tests
 import (
 	"fmt"
 	"os"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -24,6 +25,7 @@ import (
 const (
 	artifactsFormatFolder  = "folder"
 	artifactsFormatArchive = "archive"
+	maxArgSize             = int64(131072) // maximum argument size in linux-based systems is 128 KiB
 )
 
 func printExecutionDetails(execution testkube.Execution) {
@@ -346,17 +348,6 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		return nil, err
 	}
 
-	paramsFileContent := ""
-	variablesFile := cmd.Flag("variables-file").Value.String()
-	if variablesFile != "" {
-		b, err := os.ReadFile(variablesFile)
-		if err != nil {
-			return nil, err
-		}
-
-		paramsFileContent = string(b)
-	}
-
 	httpProxy := cmd.Flag("http-proxy").Value.String()
 	httpsProxy := cmd.Flag("https-proxy").Value.String()
 	image := cmd.Flag("image").Value.String()
@@ -425,7 +416,6 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 
 	request = &testkube.ExecutionRequest{
 		Name:                  executionName,
-		VariablesFile:         paramsFileContent,
 		Variables:             variables,
 		Image:                 image,
 		Command:               command,
@@ -1021,4 +1011,50 @@ func validateSchedule(schedule string) error {
 	}
 
 	return nil
+}
+
+// isFileTooBigForCLI checks the file size found on path and compares it with maxArgSize
+func isFileTooBigForCLI(path string) (bool, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return false, fmt.Errorf("could not open file %s: %w", path, err)
+	}
+	defer func() {
+		err := f.Close()
+		if err != nil {
+			output.PrintLog(fmt.Sprintf("%s could not close file %s: %v", ui.IconWarning, f.Name(), err))
+		}
+	}()
+
+	fileInfo, err := f.Stat()
+	if err != nil {
+		return false, fmt.Errorf("could not get info on file %s: %w", path, err)
+	}
+
+	return fileInfo.Size() < maxArgSize, nil
+}
+
+// PrepareVariablesFile reads variables file, or if the file size is too big
+// it uploads them
+func PrepareVariablesFile(client client.Client, parentName string, parentType client.TestingType, filePath string, timeout time.Duration) (string, bool, error) {
+	isFileSmall, err := isFileTooBigForCLI(filePath)
+	if err != nil {
+		return "", false, fmt.Errorf("could not determine if variables file %s needs to be uploaded: %w", filePath, err)
+	}
+
+	b, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", false, fmt.Errorf("could not read file %s: %w", filePath, err)
+	}
+	if isFileSmall {
+		return string(b), false, nil
+	}
+
+	fileName := path.Base(filePath)
+
+	err = client.UploadFile(parentName, parentType, fileName, b, timeout)
+	if err != nil {
+		return "", false, fmt.Errorf("could not upload variables file for %v with name %s: %w", parentType, parentName, err)
+	}
+	return fileName, true, nil
 }

@@ -155,6 +155,7 @@ type UpdateTestSourceOptions testkube.TestSourceUpdateRequest
 type ExecuteTestOptions struct {
 	ExecutionVariables            map[string]testkube.Variable
 	ExecutionVariablesFileContent string
+	IsVariablesFileUploaded       bool
 	ExecutionLabels               map[string]string
 	Args                          []string
 	Envs                          map[string]string
