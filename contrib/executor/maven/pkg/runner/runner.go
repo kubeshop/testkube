@@ -14,6 +14,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	outputPkg "github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
@@ -235,7 +236,7 @@ func mapStatus(in junit.Status) (out string) {
 // In case it is taken from storage, it will return the path to the file
 func createSettingsXML(directory string, variablesFile string, isUploaded bool) (string, error) {
 	if isUploaded {
-		return "/data/uploads/" + variablesFile, nil
+		return filepath.Join(content.UploadsFolder, variablesFile), nil
 	}
 
 	settingsXML := filepath.Join(directory, "settings.xml")

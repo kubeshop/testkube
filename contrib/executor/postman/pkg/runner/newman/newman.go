@@ -81,7 +81,7 @@ func (r *NewmanRunner) Run(ctx context.Context, execution testkube.Execution) (r
 
 	variablesFileContent := execution.VariablesFile
 	if execution.IsVariablesFileUploaded {
-		b, err := os.ReadFile("/data/uploads" + execution.VariablesFile)
+		b, err := os.ReadFile(filepath.Join(content.UploadsFolder, execution.VariablesFile))
 		if err != nil {
 			return result, fmt.Errorf("could not read uploaded variables file: %w", err)
 		}
