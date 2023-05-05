@@ -54,7 +54,7 @@ func (r *KubepugRunner) Run(ctx context.Context, execution testkube.Execution) (
 
 	path, workingDir, err := content.GetPathAndWorkingDir(execution.Content, r.params.DataDir)
 	if err != nil {
-		output.PrintLogf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.Params.DataDir)
+		output.PrintLogf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.params.DataDir)
 	}
 
 	fileInfo, err := os.Stat(path)
