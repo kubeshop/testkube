@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -94,7 +95,10 @@ func (r *NewmanRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		}
 	}
 
-	runPath := workingDir
+	runPath := ""
+	if workingDir != "" {
+		runPath = filepath.Join(workingDir)
+	}
 	// we'll get error here in case of failed test too so we treat this as
 	// starter test execution with failed status
 	command := strings.Join(execution.Command, " ")
