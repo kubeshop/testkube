@@ -51,7 +51,7 @@ func (r *NewmanRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		defer r.Scraper.Close()
 	}
 
-	output.PrintLog(fmt.Sprintf("%s Preparing for test run", ui.IconTruck))
+	output.PrintLog(fmt.Sprintf("%s Preparing for test run %s", ui.IconTruck, r.Params.DataDir))
 
 	path, workingDir, err := content.GetPathAndWorkingDir(execution.Content, r.Params.DataDir)
 	if err != nil {
