@@ -40,7 +40,7 @@ func TestRun_Integration(t *testing.T) {
 	parts := strings.Split(ts.URL, ":")
 	port := parts[2]
 
-	err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(fmt.Sprintf(exampleCollection, port, port)), 0644)
+	err = os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(fmt.Sprintf(exampleCollection, port, port)), 0644)
 	if err != nil {
 		assert.FailNow(t, "Unable to write postman runner test content file")
 	}
