@@ -22,11 +22,8 @@ func TestRunString_Integration(t *testing.T) {
 	t.Run("runner should return success and empty result on empty string", func(t *testing.T) {
 		t.Parallel()
 
-		tempDir, err := os.MkdirTemp("", "")
-		assert.NoError(t, err)
-		defer os.RemoveAll(tempDir)
-
-		err = os.WriteFile(filepath.Join(tempDir, "test-content"), []byte{}, 0644)
+		tempDir := os.TempDir()
+		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte{}, 0644)
 		if err != nil {
 			assert.FailNow(t, "Unable to write postman runner test content file")
 		}
@@ -56,17 +53,17 @@ func TestRunString_Integration(t *testing.T) {
 		t.Parallel()
 
 		data := `
-		apiVersion: v1
-		kind: ConfigMap
-		metadata:
-		  annotations:
-			control-plane.alpha.kubernetes.io/leader: '{"holderIdentity":"ingress-nginx-controller-646d5d4d67-7nx7r"}'
-		  creationTimestamp: "2021-10-07T13:44:37Z"
-		  name: ingress-controller-leader
-		  namespace: default
-		  resourceVersion: "170745168"
-		  uid: 9bb57467-b5c4-41fe-83a8-9513ae86fbff
-		`
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    control-plane.alpha.kubernetes.io/leader: '{"holderIdentity":"ingress-nginx-controller-646d5d4d67-7nx7r"}'
+  creationTimestamp: "2021-10-07T13:44:37Z"
+  name: ingress-controller-leader
+  namespace: default
+  resourceVersion: "170745168"
+  uid: 9bb57467-b5c4-41fe-83a8-9513ae86fbff
+`
 
 		tempDir, err := os.MkdirTemp("", "")
 		assert.NoError(t, err)
@@ -102,22 +99,19 @@ func TestRunString_Integration(t *testing.T) {
 		t.Parallel()
 
 		data := `
-		apiVersion: v1
-		conditions:
-		- message: '{"health":"true"}'
-		  status: "True"
-		  type: Healthy
-		kind: ComponentStatus
-		metadata:
-		  creationTimestamp: null
-		  name: etcd-1
-		`
+apiVersion: v1
+conditions:
+- message: '{"health":"true"}'
+  status: "True"
+  type: Healthy
+kind: ComponentStatus
+metadata:
+  creationTimestamp: null
+  name: etcd-1
+`
 
-		tempDir, err := os.MkdirTemp("", "")
-		assert.NoError(t, err)
-		defer os.RemoveAll(tempDir)
-
-		err = os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
+		tempDir := os.TempDir()
+		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
 		if err != nil {
 			assert.FailNow(t, "Unable to write postman runner test content file")
 		}
@@ -322,22 +316,19 @@ func TestRunWithSpecificK8sVersion_Integration(t *testing.T) {
 		t.Parallel()
 
 		data := `
-		apiVersion: v1
-		conditions:
-		- message: '{"health":"true"}'
-		  status: "True"
-		  type: Healthy
-		kind: ComponentStatus
-		metadata:
-		  creationTimestamp: null
-		  name: etcd-1
-		`
+apiVersion: v1
+conditions:
+- message: '{"health":"true"}'
+  status: "True"
+  type: Healthy
+kind: ComponentStatus
+metadata:
+  creationTimestamp: null
+  name: etcd-1
+`
 
-		tempDir, err := os.MkdirTemp("", "")
-		assert.NoError(t, err)
-		defer os.RemoveAll(tempDir)
-
-		err = os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
+		tempDir := os.TempDir()
+		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
 		if err != nil {
 			assert.FailNow(t, "Unable to write postman runner test content file")
 		}
@@ -367,22 +358,19 @@ func TestRunWithSpecificK8sVersion_Integration(t *testing.T) {
 		t.Parallel()
 
 		data := `
-		apiVersion: v1
-		conditions:
-		- message: '{"health":"true"}'
-		  status: "True"
-		  type: Healthy
-		kind: ComponentStatus
-		metadata:
-		  creationTimestamp: null
-		  name: etcd-1
-		`
+apiVersion: v1
+conditions:
+- message: '{"health":"true"}'
+  status: "True"
+  type: Healthy
+kind: ComponentStatus
+metadata:
+  creationTimestamp: null
+  name: etcd-1
+`
 
-		tempDir, err := os.MkdirTemp("", "")
-		assert.NoError(t, err)
-		defer os.RemoveAll(tempDir)
-
-		err = os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
+		tempDir := os.TempDir()
+		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
 		if err != nil {
 			assert.FailNow(t, "Unable to write postman runner test content file")
 		}
