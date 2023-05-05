@@ -7,9 +7,9 @@ import (
 )
 
 const (
-	NetDialTimeout      = 5 * time.Second
-	TLSHandshakeTimeout = 5 * time.Second
-	ClientTimeout       = 10 * time.Second
+	NetDialTimeout      = 30 * time.Second
+	TLSHandshakeTimeout = 30 * time.Second
+	ClientTimeout       = 5 * time.Minute
 )
 
 func NewClient() *http.Client {
