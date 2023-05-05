@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -26,8 +25,7 @@ func NewNewmanRunner(ctx context.Context, params envs.Params) (*NewmanRunner, er
 
 	var err error
 	r := &NewmanRunner{
-		Params:  params,
-		Fetcher: content.NewFetcher(""),
+		Params: params,
 	}
 
 	r.Scraper, err = factory.TryGetScrapper(ctx, params)
@@ -41,7 +39,6 @@ func NewNewmanRunner(ctx context.Context, params envs.Params) (*NewmanRunner, er
 // NewmanRunner struct for newman based runner
 type NewmanRunner struct {
 	Params  envs.Params
-	Fetcher content.ContentFetcher
 	Scraper scraper.Scraper
 }
 
@@ -55,16 +52,9 @@ func (r *NewmanRunner) Run(ctx context.Context, execution testkube.Execution) (r
 
 	output.PrintLog(fmt.Sprintf("%s Preparing for test run", ui.IconTruck))
 
-	if r.Params.GitUsername != "" || r.Params.GitToken != "" {
-		if execution.Content != nil && execution.Content.Repository != nil {
-			execution.Content.Repository.Username = r.Params.GitUsername
-			execution.Content.Repository.Token = r.Params.GitToken
-		}
-	}
-
-	path, err := r.Fetcher.Fetch(execution.Content)
+	path, workingDir, err := content.GetPathAndWorkingDir(execution.Content, r.Params.DataDir)
 	if err != nil {
-		return result, err
+		output.PrintLogf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.Params.DataDir)
 	}
 
 	fileInfo, err := os.Stat(path)
@@ -104,11 +94,7 @@ func (r *NewmanRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		}
 	}
 
-	runPath := ""
-	if execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
-		runPath = filepath.Join(r.Params.DataDir, "repo", execution.Content.Repository.WorkingDir)
-	}
-
+	runPath := workingDir
 	// we'll get error here in case of failed test too so we treat this as
 	// starter test execution with failed status
 	command := strings.Join(execution.Command, " ")
