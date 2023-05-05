@@ -3628,6 +3628,10 @@ components:
             - override
         variables:
           $ref: "#/components/schemas/Variables"
+        isVariablesFileUploaded:
+          type: boolean
+          description: in case the variables file is too big, it will be uploaded to storage
+          example: false
         variablesFile:
           type: string
           description: variables file content - need to be in format for particular executor (e.g. postman envs file)
@@ -4051,6 +4055,10 @@ components:
           type: string
           description: test kubernetes namespace ("testkube" when not set)
           example: testkube
+        isVariablesFileUploaded:
+          type: boolean
+          description: in case the variables file is too big, it will be uploaded
+          example: false
         variablesFile:
           type: string
           description: variables file content - need to be in format for particular executor (e.g. postman envs file)

@@ -117,14 +117,22 @@ func NewCreateTestsCmd() *cobra.Command {
 				err = validateExecutorTypeAndContent(options.Type_, contentType, executors)
 				ui.ExitOnError("validating executor type", err)
 
-				if len(flags.CopyFiles) > 0 {
-					var timeout time.Duration
-					if flags.UploadTimeout != "" {
-						timeout, err = time.ParseDuration(flags.UploadTimeout)
-						if err != nil {
-							ui.ExitOnError("invalid upload timeout duration", err)
-						}
+				var timeout time.Duration
+				if flags.UploadTimeout != "" {
+					timeout, err = time.ParseDuration(flags.UploadTimeout)
+					if err != nil {
+						ui.ExitOnError("invalid upload timeout duration", err)
 					}
+				}
+
+				if len(flags.VariablesFile) > 0 {
+					options.ExecutionRequest.VariablesFile, options.ExecutionRequest.IsVariablesFileUploaded, err = PrepareVariablesFile(client, testName, apiv1.Test, flags.VariablesFile, timeout)
+					if err != nil {
+						ui.ExitOnError("could not prepare variables file", err)
+					}
+				}
+
+				if len(flags.CopyFiles) > 0 {
 					err := uploadFiles(client, testName, apiv1.Test, flags.CopyFiles, timeout)
 					ui.ExitOnError("could not upload files", err)
 				}

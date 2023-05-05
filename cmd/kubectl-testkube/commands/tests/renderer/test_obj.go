@@ -105,6 +105,7 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 
 		if test.ExecutionRequest.VariablesFile != "" {
 			ui.Warn("  Variables file:         ", "\n", test.ExecutionRequest.VariablesFile)
+			ui.Warn("  Is file uploaded:       ", "\n", fmt.Sprintf("%t", test.ExecutionRequest.IsVariablesFileUploaded))
 		}
 
 		if test.ExecutionRequest.HttpProxy != "" {

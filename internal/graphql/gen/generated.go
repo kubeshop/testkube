@@ -14,10 +14,11 @@ import (
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
-	"github.com/kubeshop/testkube/internal/graphql/scalars"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
+
+	"github.com/kubeshop/testkube/internal/graphql/scalars"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 // region    ************************** generated!.gotpl **************************
