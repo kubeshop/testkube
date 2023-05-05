@@ -27,8 +27,7 @@ func NewArtilleryRunner(ctx context.Context, params envs.Params) (*ArtilleryRunn
 
 	var err error
 	r := &ArtilleryRunner{
-		Fetcher: content.NewFetcher(""),
-		Params:  params,
+		Params: params,
 	}
 
 	r.Scraper, err = factory.TryGetScrapper(ctx, params)
@@ -42,7 +41,6 @@ func NewArtilleryRunner(ctx context.Context, params envs.Params) (*ArtilleryRunn
 // ArtilleryRunner ...
 type ArtilleryRunner struct {
 	Params  envs.Params
-	Fetcher content.ContentFetcher
 	Scraper scraper.Scraper
 }
 
@@ -59,16 +57,10 @@ func (r *ArtilleryRunner) Run(ctx context.Context, execution testkube.Execution)
 	if err != nil {
 		return result, err
 	}
-	if r.Params.GitUsername != "" || r.Params.GitToken != "" {
-		if execution.Content != nil && execution.Content.Repository != nil {
-			execution.Content.Repository.Username = r.Params.GitUsername
-			execution.Content.Repository.Token = r.Params.GitToken
-		}
-	}
 
-	path, err := r.Fetcher.Fetch(execution.Content)
+	path, workingDir, err := content.GetPathAndWorkingDir(execution.Content, r.Params.DataDir)
 	if err != nil {
-		return result, errors.Errorf("could not fetch test content: %v", err)
+		output.PrintLogf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.Params.DataDir)
 	}
 
 	testDir, _ := filepath.Split(path)
@@ -110,8 +102,8 @@ func (r *ArtilleryRunner) Run(ctx context.Context, execution testkube.Execution)
 	}
 
 	runPath := testDir
-	if execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
-		runPath = filepath.Join(r.Params.DataDir, "repo", execution.Content.Repository.WorkingDir)
+	if workingDir != "" {
+		runPath = workingDir
 	}
 
 	// run executor

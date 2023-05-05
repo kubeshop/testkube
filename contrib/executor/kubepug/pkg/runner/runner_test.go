@@ -23,7 +23,7 @@ func TestRunString_Integration(t *testing.T) {
 		t.Parallel()
 
 		tempDir := os.TempDir()
-		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte{}, 0644)
+		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(""), 0644)
 		if err != nil {
 			assert.FailNow(t, "Unable to write postman runner test content file")
 		}
