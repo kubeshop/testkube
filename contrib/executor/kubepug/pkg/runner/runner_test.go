@@ -2,6 +2,8 @@ package runner
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,8 +21,13 @@ func TestRunString_Integration(t *testing.T) {
 
 	t.Run("runner should return success and empty result on empty string", func(t *testing.T) {
 		t.Parallel()
+		tempDir := os.TempDir()
+		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte{}, 0644)
+		if err != nil {
+			assert.FailNow(t, "Unable to write postman runner test content file")
+		}
 
-		runner, err := NewRunner(context.Background(), envs.Params{})
+		runner, err := NewRunner(context.Background(), envs.Params{DataDir: tempDir})
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
@@ -44,7 +51,25 @@ func TestRunString_Integration(t *testing.T) {
 	t.Run("runner should return success and empty result on passing yaml", func(t *testing.T) {
 		t.Parallel()
 
-		runner, err := NewRunner(context.Background(), envs.Params{})
+		data := `
+		apiVersion: v1
+		kind: ConfigMap
+		metadata:
+		  annotations:
+			control-plane.alpha.kubernetes.io/leader: '{"holderIdentity":"ingress-nginx-controller-646d5d4d67-7nx7r"}'
+		  creationTimestamp: "2021-10-07T13:44:37Z"
+		  name: ingress-controller-leader
+		  namespace: default
+		  resourceVersion: "170745168"
+		  uid: 9bb57467-b5c4-41fe-83a8-9513ae86fbff
+		`
+		tempDir := os.TempDir()
+		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
+		if err != nil {
+			assert.FailNow(t, "Unable to write postman runner test content file")
+		}
+
+		runner, err := NewRunner(context.Background(), envs.Params{DataDir: tempDir})
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
@@ -54,18 +79,7 @@ func TestRunString_Integration(t *testing.T) {
 			"--input-file",
 			"<runPath>",
 		}
-		execution.Content = testkube.NewStringTestContent(`
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  annotations:
-    control-plane.alpha.kubernetes.io/leader: '{"holderIdentity":"ingress-nginx-controller-646d5d4d67-7nx7r"}'
-  creationTimestamp: "2021-10-07T13:44:37Z"
-  name: ingress-controller-leader
-  namespace: default
-  resourceVersion: "170745168"
-  uid: 9bb57467-b5c4-41fe-83a8-9513ae86fbff
-`)
+		execution.Content = testkube.NewStringTestContent("")
 
 		result, err := runner.Run(ctx, *execution)
 
