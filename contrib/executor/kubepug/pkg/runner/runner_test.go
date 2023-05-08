@@ -158,7 +158,7 @@ func TestRunFileURI_Integration(t *testing.T) {
 		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
 		defer os.RemoveAll(tempDir)
 
-		runner, err := NewRunner(context.Background(), envs.Params{})
+		runner, err := NewRunner(context.Background(), envs.Params{DataDir: tempDir})
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
@@ -194,7 +194,7 @@ func TestRunFileURI_Integration(t *testing.T) {
 		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
 		defer os.RemoveAll(tempDir)
 
-		runner, err := NewRunner(context.Background(), envs.Params{})
+		runner, err := NewRunner(context.Background(), envs.Params{DataDir: tempDir})
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
@@ -237,7 +237,7 @@ func TestRunGitFile_Integration(t *testing.T) {
 		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
 		defer os.RemoveAll(tempDir)
 
-		runner, err := NewRunner(context.Background(), envs.Params{})
+		runner, err := NewRunner(context.Background(), envs.Params{DataDir: tempDir})
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
@@ -249,7 +249,7 @@ func TestRunGitFile_Integration(t *testing.T) {
 		}
 
 		repo := &testkube.Repository{
-			Uri:    "https://github.com/kubeshop/testkube-dashboard/",
+			Uri:    "https://github.com/kubeshop/testkube-dashboard",
 			Branch: "main",
 			Path:   "manifests/fake-deployment.yaml",
 		}
@@ -273,7 +273,7 @@ func TestRunGitFile_Integration(t *testing.T) {
 		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
 		defer os.RemoveAll(tempDir)
 
-		runner, err := NewRunner(context.Background(), envs.Params{})
+		runner, err := NewRunner(context.Background(), envs.Params{DataDir: tempDir})
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
@@ -285,7 +285,7 @@ func TestRunGitFile_Integration(t *testing.T) {
 		}
 
 		repo := &testkube.Repository{
-			Uri:    "https://github.com/kubeshop/testkube-dashboard/",
+			Uri:    "https://github.com/kubeshop/testkube-dashboard",
 			Branch: "main",
 			Path:   "manifests/deployment.yaml",
 		}
@@ -320,7 +320,7 @@ func TestRunGitDirectory_Integration(t *testing.T) {
 		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
 		defer os.RemoveAll(tempDir)
 
-		runner, err := NewRunner(context.Background(), envs.Params{})
+		runner, err := NewRunner(context.Background(), envs.Params{DataDir: tempDir})
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
@@ -332,7 +332,7 @@ func TestRunGitDirectory_Integration(t *testing.T) {
 		}
 
 		repo := &testkube.Repository{
-			Uri:    "https://github.com/kubeshop/testkube-dashboard/",
+			Uri:    "https://github.com/kubeshop/testkube-dashboard",
 			Branch: "main",
 			Path:   "manifests",
 		}
