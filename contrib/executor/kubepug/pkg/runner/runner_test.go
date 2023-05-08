@@ -10,6 +10,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
+	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
@@ -22,7 +23,10 @@ func TestRunString_Integration(t *testing.T) {
 	t.Run("runner should return success and empty result on empty string", func(t *testing.T) {
 		t.Parallel()
 
-		tempDir := os.TempDir()
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
+
 		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(""), 0644)
 		if err != nil {
 			assert.FailNow(t, "Unable to write postman runner test content file")
@@ -65,8 +69,8 @@ metadata:
   uid: 9bb57467-b5c4-41fe-83a8-9513ae86fbff
 `
 
-		tempDir, err := os.MkdirTemp("", "")
-		assert.NoError(t, err)
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
 		defer os.RemoveAll(tempDir)
 
 		err = os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
@@ -110,7 +114,10 @@ metadata:
   name: etcd-1
 `
 
-		tempDir := os.TempDir()
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
+
 		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
 		if err != nil {
 			assert.FailNow(t, "Unable to write postman runner test content file")
@@ -138,7 +145,6 @@ metadata:
 	})
 }
 
-/*
 func TestRunFileURI_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 	t.Parallel()
@@ -147,6 +153,10 @@ func TestRunFileURI_Integration(t *testing.T) {
 
 	t.Run("runner should return success on valid yaml gist file URI", func(t *testing.T) {
 		t.Parallel()
+
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
 
 		runner, err := NewRunner(context.Background(), envs.Params{})
 		assert.NoError(t, err)
@@ -158,11 +168,15 @@ func TestRunFileURI_Integration(t *testing.T) {
 			"--input-file",
 			"<runPath>",
 		}
+		uri := "https://gist.githubusercontent.com/vLia/" +
+			"b3df9e43f55fd43d1bca93cdfd5ae27c/raw/535e8db46f33693a793c616fc1e2b4d77c4b06d2/example-k8s-pod-yaml"
 		execution.Content = &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeFileURI),
-			Uri: "https://gist.githubusercontent.com/vLia/" +
-				"b3df9e43f55fd43d1bca93cdfd5ae27c/raw/535e8db46f33693a793c616fc1e2b4d77c4b06d2/example-k8s-pod-yaml",
+			Uri:   uri,
 		}
+
+		_, err = content.NewFetcher(tempDir).FetchURI(uri)
+		assert.NoError(t, err)
 
 		result, err := runner.Run(ctx, *execution)
 
@@ -176,6 +190,10 @@ func TestRunFileURI_Integration(t *testing.T) {
 	t.Run("runner should return failure on yaml gist file URI with deprecated/deleted APIs", func(t *testing.T) {
 		t.Parallel()
 
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
+
 		runner, err := NewRunner(context.Background(), envs.Params{})
 		assert.NoError(t, err)
 
@@ -186,11 +204,15 @@ func TestRunFileURI_Integration(t *testing.T) {
 			"--input-file",
 			"<runPath>",
 		}
+		uri := "https://gist.githubusercontent.com/vLia/" +
+			"91289de9cc8b6953be5f90b0a52fa8d3/raw/47e91d90374659646b46fd661f359b851b815cdf/example-k8s-pod-yaml-deprecated"
 		execution.Content = &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeFileURI),
-			Uri: "https://gist.githubusercontent.com/vLia/" +
-				"91289de9cc8b6953be5f90b0a52fa8d3/raw/47e91d90374659646b46fd661f359b851b815cdf/example-k8s-pod-yaml-deprecated",
+			Uri:   uri,
 		}
+
+		_, err = content.NewFetcher(tempDir).FetchURI(uri)
+		assert.NoError(t, err)
 
 		result, err := runner.Run(ctx, *execution)
 
@@ -211,6 +233,10 @@ func TestRunGitFile_Integration(t *testing.T) {
 	t.Run("runner should return error on non-existent Git path", func(t *testing.T) {
 		t.Parallel()
 
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
+
 		runner, err := NewRunner(context.Background(), envs.Params{})
 		assert.NoError(t, err)
 
@@ -221,13 +247,18 @@ func TestRunGitFile_Integration(t *testing.T) {
 			"--input-file",
 			"<runPath>",
 		}
+
+		repo := &testkube.Repository{
+			Uri:    "https://github.com/kubeshop/testkube-dashboard/",
+			Branch: "main",
+			Path:   "manifests/fake-deployment.yaml",
+		}
+		_, err = content.NewFetcher(tempDir).FetchGit(repo)
+		assert.NoError(t, err)
+
 		execution.Content = &testkube.TestContent{
-			Type_: string(testkube.TestContentTypeGitFile),
-			Repository: &testkube.Repository{
-				Uri:    "https://github.com/kubeshop/testkube-dashboard/",
-				Branch: "main",
-				Path:   "manifests/fake-deployment.yaml",
-			},
+			Type_:      string(testkube.TestContentTypeGitFile),
+			Repository: repo,
 		}
 
 		_, err = runner.Run(ctx, *execution)
@@ -238,6 +269,10 @@ func TestRunGitFile_Integration(t *testing.T) {
 	t.Run("runner should return deprecated and deleted APIs on Git file containing deprecated and delete API definitions", func(t *testing.T) {
 		t.Parallel()
 
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
+
 		runner, err := NewRunner(context.Background(), envs.Params{})
 		assert.NoError(t, err)
 
@@ -248,13 +283,18 @@ func TestRunGitFile_Integration(t *testing.T) {
 			"--input-file",
 			"<runPath>",
 		}
+
+		repo := &testkube.Repository{
+			Uri:    "https://github.com/kubeshop/testkube-dashboard/",
+			Branch: "main",
+			Path:   "manifests/deployment.yaml",
+		}
+		_, err = content.NewFetcher(tempDir).FetchGit(repo)
+		assert.NoError(t, err)
+
 		execution.Content = &testkube.TestContent{
-			Type_: string(testkube.TestContentTypeGitFile),
-			Repository: &testkube.Repository{
-				Uri:    "https://github.com/kubeshop/testkube-dashboard/",
-				Branch: "main",
-				Path:   "manifests/deployment.yaml",
-			},
+			Type_:      string(testkube.TestContentTypeGitFile),
+			Repository: repo,
 		}
 
 		result, err := runner.Run(ctx, *execution)
@@ -276,6 +316,10 @@ func TestRunGitDirectory_Integration(t *testing.T) {
 	t.Run("runner should return success on manifests from Git directory", func(t *testing.T) {
 		t.Parallel()
 
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
+
 		runner, err := NewRunner(context.Background(), envs.Params{})
 		assert.NoError(t, err)
 
@@ -286,13 +330,18 @@ func TestRunGitDirectory_Integration(t *testing.T) {
 			"--input-file",
 			"<runPath>",
 		}
+
+		repo := &testkube.Repository{
+			Uri:    "https://github.com/kubeshop/testkube-dashboard/",
+			Branch: "main",
+			Path:   "manifests",
+		}
+		_, err = content.NewFetcher(tempDir).FetchGit(repo)
+		assert.NoError(t, err)
+
 		execution.Content = &testkube.TestContent{
-			Type_: string(testkube.TestContentTypeGitDir),
-			Repository: &testkube.Repository{
-				Uri:    "https://github.com/kubeshop/testkube-dashboard/",
-				Branch: "main",
-				Path:   "manifests",
-			},
+			Type_:      string(testkube.TestContentTypeGitDir),
+			Repository: repo,
 		}
 
 		result, err := runner.Run(ctx, *execution)
@@ -304,7 +353,7 @@ func TestRunGitDirectory_Integration(t *testing.T) {
 		assert.Equal(t, "passed", result.Steps[1].Status)
 	})
 }
-*/
+
 func TestRunWithSpecificK8sVersion_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 	t.Parallel()
@@ -327,7 +376,10 @@ metadata:
   name: etcd-1
 `
 
-		tempDir := os.TempDir()
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
+
 		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
 		if err != nil {
 			assert.FailNow(t, "Unable to write postman runner test content file")
@@ -369,7 +421,10 @@ metadata:
   name: etcd-1
 `
 
-		tempDir := os.TempDir()
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
+
 		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
 		if err != nil {
 			assert.FailNow(t, "Unable to write postman runner test content file")

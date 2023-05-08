@@ -22,7 +22,10 @@ func TestRun(t *testing.T) {
 	t.Run("runner should run test based on execution data", func(t *testing.T) {
 		t.Parallel()
 
-		tempDir := os.TempDir()
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
+
 		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte("hello I'm test content"), 0644)
 		if err != nil {
 			assert.FailNow(t, "Unable to write template runner test content file")

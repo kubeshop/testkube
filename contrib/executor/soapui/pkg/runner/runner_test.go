@@ -23,7 +23,10 @@ func TestRun_Integration(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	tempDir := os.TempDir()
+	tempDir, err := os.MkdirTemp("", "*")
+	assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+	defer os.RemoveAll(tempDir)
+
 	testXML := "./example/REST-Project-1-soapui-project.xml"
 	writeTestContent(t, tempDir, testXML)
 

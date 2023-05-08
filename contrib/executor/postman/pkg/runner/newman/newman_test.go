@@ -25,7 +25,10 @@ func TestRun_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 	t.Parallel()
 	// given
-	tempDir := os.TempDir()
+	tempDir, err := os.MkdirTemp("", "*")
+	assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+	defer os.RemoveAll(tempDir)
+
 	runner, err := NewNewmanRunner(context.Background(), envs.Params{DataDir: tempDir})
 	assert.NoError(t, err)
 
