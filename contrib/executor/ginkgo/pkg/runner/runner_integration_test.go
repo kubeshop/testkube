@@ -3,10 +3,8 @@ package runner
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"testing"
 
-	cp "github.com/otiai10/copy"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -48,9 +46,8 @@ func TestRun_Integration(t *testing.T) {
 			Branch: "main",
 		}
 
-		repoDir := filepath.Join(tempDir, "repo")
-		assert.NoError(t, os.Mkdir(repoDir, 0755))
-		_ = cp.Copy("../../examples", repoDir)
+		_, err = content.NewFetcher(tempDir).FetchGit(repo)
+		assert.NoError(t, err)
 
 		result, err := runner.Run(
 			ctx,
@@ -108,9 +105,8 @@ func TestRun_Integration(t *testing.T) {
 			Branch: "main",
 		}
 
-		repoDir := filepath.Join(tempDir, "repo")
-		assert.NoError(t, os.Mkdir(repoDir, 0755))
-		_ = cp.Copy("../../examples", repoDir)
+		_, err = content.NewFetcher(tempDir).FetchGit(repo)
+		assert.NoError(t, err)
 
 		result, err := runner.Run(
 			ctx,
