@@ -47,7 +47,7 @@ func TestRun_Integration(t *testing.T) {
 			Branch: "main",
 		}
 		_, err = content.NewFetcher(tempDir).FetchGit(repo)
-		assert.NoErrorf(t, err)
+		assert.NoError(t, err)
 
 		result, err := runner.Run(
 			ctx,
