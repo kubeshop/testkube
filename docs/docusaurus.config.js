@@ -161,25 +161,10 @@ const config = {
         redirects: redirects,
         createRedirects(existingPath) {
           if (existingPath.includes("/cli")) {
-            // Redirect from /cli-reference to /reference/cli
-            return [existingPath.replace("/cli", "/cli-reference")];
+            // Redirect from /cli-reference and /reference/cli (old links) to /cli
+            return [existingPath.replace('/cli', "/cli-reference"), existingPath.replace('/cli', "/reference/cli")];
           }
 
-          if (existingPath.includes("/articles")) {
-            // Redirect from /using-testkube to /articles
-            return [existingPath.replace("/articles", "/using-testkube")];
-          }
-
-          if (
-            existingPath.includes("/guides/going-to-production/authentication")
-          ) {
-            return [
-              existingPath.replace(
-                "/guides/going-to-production/authentication",
-                "/authentication"
-              ),
-            ];
-          }
           return undefined; // Return a falsy value: no redirect created
         },
       },

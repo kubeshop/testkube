@@ -41,11 +41,11 @@ const redirects = [
     to: "/test-types/executor-ginkgo",
   },
   {
-    from: "/executor-curl",
+    from: ["/executor-curl", "/test-types/curl"],
     to: "/test-types/executor-curl",
   },
   {
-    from: "/test-types/executor-custom",
+    from: ["/test-types/executor-custom", "/executor-custom"],
     to: "/test-types/container-executor",
   },
   {
@@ -55,10 +55,6 @@ const redirects = [
   {
     from: "/tests-running",
     to: "/articles/running-tests",
-  },
-  {
-    from: "/tests-creating",
-    to: "/articles/creating-tests",
   },
   {
     from: "/tests-variables",
@@ -89,10 +85,6 @@ const redirects = [
     to: "/articles/getting-test-suites-results",
   },
   {
-    from: "/category/tests",
-    to: "/articles/creating-tests",
-  },
-  {
     from: "/using-testkube/UI",
     to: "/articles/testkube-dashboard",
   },
@@ -101,20 +93,12 @@ const redirects = [
     to: "/articles/common-issues",
   },
   {
-    from: "/integrations/testkube-automation",
+    from: ["/integrations/testkube-automation", "/testkube-automation"],
     to: "/articles/cicd-overview",
   },
   {
-    from: "/guides/tests/tests-creating",
+    from: ["/guides/tests/tests-creating", "/category/tests", "/concepts/tests/tests-creating", "/tests-creating"],
     to: "/articles/creating-tests",
-  },
-  {
-    from: "/guides/exposing-testkube/ingress-nginx",
-    to: "/articles/exposing-testkube-with-ingress-nginx",
-  },
-  {
-    from: "/guides/exposing-testkube/overview",
-    to: "/articles/exposing-testkube",
   },
   {
     from: "/architecture",
@@ -137,11 +121,11 @@ const redirects = [
     to: "/articles/testkube-benefits",
   },
   {
-    from: "/getting-started/index",
+    from: ["/getting-started/index", "/getting-started/installation"],
     to: "/articles/getting-started-overview",
   },
   {
-    from: "/getting-started/step1-installing-cli",
+    from: ["/getting-started/step1-installing-cli", "/cli/installation", "/getting-started/installing-cli"],
     to: "/articles/step1-installing-cli",
   },
   {
@@ -151,10 +135,6 @@ const redirects = [
   {
     from: "/getting-started/step3-creating-first-test",
     to: "/articles/step3-creating-first-test",
-  },
-  {
-    from: "/concepts/tests/tests-creating",
-    to: "/articles/creating-tests",
   },
   {
     from: "/concepts/tests/tests-running",
@@ -217,15 +197,15 @@ const redirects = [
     to: "/articles/test-sources",
   },
   {
-    from: "/guides/going-to-production/exposing-testkube/overview",
+    from: ["/guides/going-to-production/exposing-testkube/overview", "/guides/exposing-testkube/overview"],
     to: "/articles/exposing-testkube",
   },
   {
-    from: "/guides/going-to-production/exposing-testkube/ingress-nginx",
+    from: ["/guides/going-to-production/exposing-testkube/ingress-nginx", "/guides/exposing-testkube/ingress-nginx"],
     to: "/articles/exposing-testkube-with-ingress-nginx",
   },
   {
-    from: "/guides/going-to-production/authentication/oauth-cli",
+    from: ["/guides/going-to-production/authentication/oauth-cli", "/guides/authentication/oauth-cli"],
     to: "/articles/oauth-cli",
   },
   {
@@ -237,7 +217,7 @@ const redirects = [
     to: "/articles/deploying-in-aws",
   },
   {
-    from: "/guides/cicd/index",
+    from: "/guides/cicd",
     to: "/articles/cicd-overview",
   },
   {
@@ -245,7 +225,7 @@ const redirects = [
     to: "/articles/github-actions",
   },
   {
-    from: "/guides/cicd/gitops/index",
+    from: "/guides/cicd/gitops",
     to: "/articles/gitops-overview",
   },
   {
@@ -277,7 +257,7 @@ const redirects = [
     to: "/articles/uninstall",
   },
   {
-    from: "/testkube-cloud/intro",
+    from: ["/testkube-cloud/intro", "/testkube-cloud"],
     to: "/testkube-cloud/articles/intro",
   },
   {
@@ -321,16 +301,20 @@ const redirects = [
     to: "/articles/telemetry",
   },
   {
-    from: "/contributing/intro",
+    from: ["/contributing", "/contributing/contributing"],
     to: "/articles/contributing",
   },
   {
-    from: "/contributing/development/index",
+    from: "/contributing/development",
     to: "/articles/development",
   },
   {
-    from: "/contributing/development/crds",
+    from: ["/contributing/development/crds", "/contributing/development/development-crds/"],
     to: "/articles/crds",
+  },
+  {
+    from: "/getting-started",
+    to: "/articles/getting-started-overview",
   },
 ];
 
