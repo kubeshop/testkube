@@ -3,7 +3,7 @@
 If you are new to the open source community, use this guide to start contributing to projects:
 <https://github.com/firstcontributions/first-contributions>.
 
-Checkout the [development document](development/index.md) for more details about how to develop and run testkube on your machine.
+Checkout the [development document](./development.md) for more details about how to develop and run testkube on your machine.
 
 ## General Guidance for Contributing to a Testkube Project
 
@@ -22,31 +22,3 @@ We would like to limit technical debt from the beginning, so we have defined sim
 
 - Put in comments for non-obvious decisions.
 - Use current Helm/Kubernetes versions.
-
-## Building Diagrams
-
-To build diagrams, install PlantUML:
-
-```sh
-brew install plantuml # on mac
-```
-
-```sh
-sudo apt-get install -y plantuml # on ubuntu linux 
-```
-
-```sh
-pacman -S plantuml # on arch linux
-```
-
-Then run:
-
-```sh
-make diagrams
-```
-
-This generates png files from puml files.
-
-:::tip
-If using vscode, there is a nice extension for the live preview of PlantUML files. 
-::: 

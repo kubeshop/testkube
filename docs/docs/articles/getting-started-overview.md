@@ -3,7 +3,7 @@
 In this section you will:
 
 1. [Install the Testkube CLI](./step1-installing-cli.md).
-2. [Install the Testkube Server components in your cluster](./step2-installing-cluster-components.md). [Alternatively you can use Helm](../reference/helm-chart.md) to do that.
+2. [Install the Testkube Server components in your cluster](./step2-installing-cluster-components.md). [Alternatively you can use Helm](./helm-chart.md) to do that.
 3. [Creating your first Test](./step3-creating-first-test.md).
 
 You can also see the full installation video from our product experts: [Testkube Installation Video](https://www.youtube.com/watch?v=bjQboi3Etys):
@@ -15,5 +15,5 @@ In summary, you now have Testkube setup in your Kubernetes cluster, ready to dis
 - The Testkube CLI allows you to interact with the Testkube server components through k8s CRs or REST API calls made through the [kube apiserver proxy](https://kubernetes.io/docs/concepts/cluster-administration/proxies/).
 
 As usage of Testkube grows within your team, you may choose to:
-* Leverage [managed Testkube cloud](../testkube-cloud/intro.md).
+* Leverage [managed Testkube cloud](../testkube-cloud/articles/intro.md).
 * [Move to production](./going-to-production.md) with your own Testkube installation.

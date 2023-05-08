@@ -66,7 +66,7 @@ const config = {
         specs: [
           {
             spec: "https://raw.githubusercontent.com/kubeshop/testkube/main/api/v1/testkube.yaml",
-            route: "/reference/openapi",
+            route: "/openapi",
           },
         ],
         theme: {
@@ -233,11 +233,11 @@ const config = {
           },
           {
             from: "/helm-charts",
-            to: "/reference/helm-chart",
+            to: "/articles/helm-chart",
           },
           {
             from: "/telemetry",
-            to: "/reference/telemetry",
+            to: "/articles/telemetry",
           },
           {
             from: "/installing",
@@ -246,10 +246,6 @@ const config = {
           {
             from: "/guides/test-suites/testsuites-getting-results",
             to: "/articles/getting-test-suites-results",
-          },
-          {
-            from: "/openapi",
-            to: "/reference/openapi",
           },
           {
             from: "/category/tests",
@@ -281,7 +277,7 @@ const config = {
           },
           {
             from: "/architecture",
-            to: "/reference/architecture",
+            to: "/articles/architecture",
           },
           {
             from: "/integrations/slack-integration",

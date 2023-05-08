@@ -9,7 +9,7 @@ testkube [flags]
 ### Options
 
 ```
-  -a, --api-uri string     api uri, default value read from config if set (default "http://localhost:8088")
+  -a, --api-uri string     api uri, default value read from config if set (default "https://demo.testkube.io/results/v1")
   -c, --client string      client used for connecting to Testkube API one of proxy|direct (default "proxy")
   -h, --help               help for testkube
       --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")

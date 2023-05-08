@@ -129,4 +129,4 @@ Kubernetes API and gets notified by Kubernetes on each event on the watched reso
 
 ## API
 
-Testkube exposes CRUD operations on test triggers in the REST API. Check out the [Open API](../reference/openapi.md) docs for more info.
+Testkube exposes CRUD operations on test triggers in the REST API. Check out the [Open API](../openapi.md) docs for more info.
