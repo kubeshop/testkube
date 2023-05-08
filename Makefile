@@ -171,9 +171,6 @@ cover:
 	@go test -failfast -count=1 -v -tags test  -coverprofile=./testCoverage.txt ./... && go tool cover -html=./testCoverage.txt -o testCoverage.html && rm ./testCoverage.txt
 	open testCoverage.html
 
-diagrams:
-	plantuml ./docs/puml/*.puml -o ../img/
-
 version-bump: version-bump-patch
 
 version-bump-patch:
