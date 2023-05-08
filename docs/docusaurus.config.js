@@ -293,9 +293,9 @@ const config = {
           },
         ],
         createRedirects(existingPath) {
-          if (existingPath.includes("/reference/cli")) {
+          if (existingPath.includes("/cli")) {
             // Redirect from /cli-reference to /reference/cli
-            return [existingPath.replace("/reference/cli", "/cli-reference")];
+            return [existingPath.replace("/cli", "/cli-reference")];
           }
 
           if (existingPath.includes("/articles")) {
