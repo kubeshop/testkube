@@ -376,80 +376,52 @@ jobs:
         DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   update_api_helm_charts:
-    needs: [api]
+    needs: [api, single_executor, executor_jmeter, executor_maven, executor_gradle, executor_cypress, executor_cypress_manifest, executor_playwright]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
         with:
-          fetch-depth: 0
-
-      - name: getting Tag name
-        id: vars
-        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
+          strip_v: false
 
       - name: Editing helm-release repo with version based on a Tag pushed.
         run: |
 
           # Setting up Git:
-
           git clone https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts
           cd ./helm-charts
           git config user.name "kubeshop-bot"
           git config user.email "kubeshop-bot@kubeshop.io"
 
-          git fetch origin "release-$RELEASE_VERSION"
-          git checkout "release-$RELEASE_VERSION"
-
-          # Calling chart releaser script by passing needed folder name:
-          # E.G. in order to relase api-server":
-          # -->> ./chart_releaser.sh --helm-chart-folder api-server
-
           export GH_PUSH_TOKEN
           export RELEASE_VERSION
 
-          cd ./scripts
-          ./chart_releaser.sh --helm-chart-folder testkube-api --main-chart false
+          # Check if release branch exists
+          REPO_OWNER=ypoplavs
+          REPO_NAME=triggered
+          RELEASE_BRANCH_NAME=release-$RELEASE_VERSION
+          echo $RELEASE_VERSION
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' -H "${AUTH_HEADER}" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/branches/${RELEASE_BRANCH_NAME}")
+
+          if [ "${STATUS}" -eq 404 ]; then
+            git fetch origin main
+            git checkout main
+            cd ./scripts
+            ./chart_releaser.sh --helm-chart-folder testkube-api --testkube-executor true
+          else
+            git fetch origin "release-$RELEASE_VERSION"
+            git checkout "release-$RELEASE_VERSION"
+            echo "Switched to release branch"
+            cd ./scripts
+            ./chart_releaser.sh --helm-chart-folder testkube-api --testkube-executor true --branch true
+
+            git checkout main
+            git merge "release-$RELEASE_VERSION"
+            git push --set-upstream https://ypoplavs:$GH_PUSH_TOKEN@github.com/ypoplavs/triggered main
+            git push origin -d "release-$RELEASE_VERSION"
+          fi
 
         env:
           GH_PUSH_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
-
-  update_executors_helm_charts:
-    needs: [single_executor, executor_jmeter, executor_maven, executor_gradle, executor_cypress, executor_cypress_manifest, executor_playwright ]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Editing helm-release repo with version based on a Tag pushed.
-        run: |
-
-          # Setting up Git:
-
-          git clone https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts
-          cd ./helm-charts
-          git config user.name "kubeshop-bot"
-          git config user.email "kubeshop-bot@kubeshop.io"
-
-          git fetch origin "release-$RELEASE_VERSION"
-          git checkout "release-$RELEASE_VERSION"
-
-          # Calling chart releaser script by passing needed folder name:
-          # E.G. in order to relase api-server":
-          # -->> ./chart_releaser.sh --helm-chart-folder api-server
-
-          export GH_PUSH_TOKEN
-          export RELEASE_VERSION
-
-          cd ./scripts
-          executors="artillery curl cypress ginkgo gradle init jmeter k6 kubepug maven playwright postman scraper soapui"
-          for executor in $executors
-          do
-            ./chart_releaser.sh --testkube-executor-name ${executor} --main-chart false --branch true
-          done
-
-          git checkout main
-          git merge "release-$RELEASE_VERSION"
-          # git push origin main
-          git push --set-upstream https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts main
-        env:
-          GH_PUSH_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          RELEASE_VERSION: ${{ github.event.client_payload.release_version }}
