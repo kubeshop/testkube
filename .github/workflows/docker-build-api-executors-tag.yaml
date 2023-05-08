@@ -398,8 +398,8 @@ jobs:
           export RELEASE_VERSION
 
           # Check if release branch exists
-          REPO_OWNER=ypoplavs
-          REPO_NAME=triggered
+          REPO_OWNER=kubeshop
+          REPO_NAME=helm-charts
           RELEASE_BRANCH_NAME=release-$RELEASE_VERSION
           echo $RELEASE_VERSION
           STATUS=$(curl -s -o /dev/null -w '%{http_code}' -H "${AUTH_HEADER}" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/branches/${RELEASE_BRANCH_NAME}")
@@ -418,7 +418,7 @@ jobs:
 
             git checkout main
             git merge "release-$RELEASE_VERSION"
-            git push --set-upstream https://ypoplavs:$GH_PUSH_TOKEN@github.com/ypoplavs/triggered main
+            git push --set-upstream https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts  main
             git push origin -d "release-$RELEASE_VERSION"
           fi
 
