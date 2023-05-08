@@ -9,6 +9,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
+	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
@@ -39,16 +40,21 @@ func TestRun_Integration(t *testing.T) {
 			Type_: testkube.VariableTypeBasic,
 		}
 		vars["GinkgoTestPackage"] = variableOne
+
+		repo := &testkube.Repository{
+			Type_:  "git",
+			Uri:    repoURI,
+			Branch: "main",
+		}
+		_, err = content.NewFetcher(tempDir).FetchGit(repo)
+		assert.NoErrorf(t, err)
+
 		result, err := runner.Run(
 			ctx,
 			testkube.Execution{
 				Content: &testkube.TestContent{
-					Type_: string(testkube.TestContentTypeGitDir),
-					Repository: &testkube.Repository{
-						Type_:  "git",
-						Uri:    repoURI,
-						Branch: "main",
-					},
+					Type_:      string(testkube.TestContentTypeGitDir),
+					Repository: repo,
 				},
 				Variables: vars,
 				Command: []string{
