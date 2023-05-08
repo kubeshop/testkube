@@ -3,6 +3,7 @@
 
 const lightCodeTheme = require("./src/themes/prism-testkube-light");
 const darkCodeTheme = require("./src/themes/prism-testkube-dark");
+const redirects = require("./redirects");
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -157,137 +158,7 @@ const config = {
     [
       "@docusaurus/plugin-client-redirects",
       {
-        redirects: [
-          // /docs/oldDoc -> /docs/newDoc
-          {
-            from: "/executor-cypress",
-            to: "/test-types/executor-cypress",
-          },
-          {
-            from: "/executor-postman",
-            to: "/test-types/executor-postman",
-          },
-          {
-            from: "/executor-soapui",
-            to: "/test-types/executor-soapui",
-          },
-          {
-            from: "/executor-k6",
-            to: "/test-types/executor-k6",
-          },
-          {
-            from: "/executor-jmeter",
-            to: "/test-types/executor-jmeter",
-          },
-          {
-            from: "/executor-kubepug",
-            to: "/test-types/executor-kubepug",
-          },
-          {
-            from: "/executor-artillery",
-            to: "/test-types/executor-artillery",
-          },
-          {
-            from: "/executor-maven",
-            to: "/test-types/executor-maven",
-          },
-          {
-            from: "/executor-gradle",
-            to: "/test-types/executor-gradle",
-          },
-          {
-            from: "/executor-ginkgo",
-            to: "/test-types/executor-ginkgo",
-          },
-          {
-            from: "/executor-curl",
-            to: "/test-types/executor-curl",
-          },
-          {
-            from: "/test-types/executor-custom",
-            to: "/test-types/container-executor",
-          },
-          {
-            from: "/UI",
-            to: "/articles/testkube-dashboard",
-          },
-          {
-            from: "/tests-running",
-            to: "/articles/running-tests",
-          },
-          {
-            from: "/tests-creating",
-            to: "/articles/creating-tests",
-          },
-          {
-            from: "/tests-variables",
-            to: "/articles/adding-tests-variables",
-          },
-          {
-            from: "/testsuites-running",
-            to: "/articles/running-test-suites",
-          },
-          {
-            from: "/testsuites-creating",
-            to: "/articles/creating-test-suites",
-          },
-          {
-            from: "/helm-charts",
-            to: "/articles/helm-chart",
-          },
-          {
-            from: "/telemetry",
-            to: "/articles/telemetry",
-          },
-          {
-            from: "/installing",
-            to: "/articles/getting-started-overview",
-          },
-          {
-            from: "/guides/test-suites/testsuites-getting-results",
-            to: "/articles/getting-test-suites-results",
-          },
-          {
-            from: "/category/tests",
-            to: "/articles/creating-tests",
-          },
-          {
-            from: "/using-testkube/UI",
-            to: "/articles/testkube-dashboard",
-          },
-          {
-            from: "/FAQ",
-            to: "/articles/common-issues",
-          },
-          {
-            from: "/integrations/testkube-automation",
-            to: "/articles/cicd-overview",
-          },
-          {
-            from: "/guides/tests/tests-creating",
-            to: "/articles/creating-tests",
-          },
-          {
-            from: "/guides/exposing-testkube/ingress-nginx",
-            to: "/articles/exposing-testkube-with-ingress-nginx",
-          },
-          {
-            from: "/guides/exposing-testkube/overview",
-            to: "/articles/exposing-testkube",
-          },
-          {
-            from: "/architecture",
-            to: "/articles/architecture",
-          },
-          {
-            from: "/integrations/slack-integration",
-            to: "/articles/slack-integration",
-          },
-          {
-            from: "/integrations",
-            to: "/articles/getting-started-overview",
-          },
-        ],
+        redirects: redirects,
         createRedirects(existingPath) {
           if (existingPath.includes("/cli")) {
             // Redirect from /cli-reference to /reference/cli
