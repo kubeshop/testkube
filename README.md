@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://testkube.io">Website</a>&nbsp;|&nbsp;
-  <a href="https://kubeshop.github.io/testkube">Documentation</a>&nbsp;|&nbsp; 
+  <a href="https://docs.testkube.io">Documentation</a>&nbsp;|&nbsp; 
   <a href="https://twitter.com/testkube_io">Twitter</a>&nbsp;|&nbsp; 
   <a href="https://discord.gg/hfq44wtR6Q">Discord</a>&nbsp;|&nbsp; 
   <a href="https://kubeshop.io/category/testkube">Blog</a>
@@ -75,13 +75,13 @@ Main Testkube components are:
   - [Postman Executor](https://github.com/kubeshop/testkube-executor-postman) - runs Postman Collections
   - [Cypress Executor](https://github.com/kubeshop/testkube-executor-cypress) - runs Cypress Tests
   - [K6 Executor](https://github.com/kubeshop/testkube-executor-k6) - runs K6 performance tests ([@lreimer](https://github.com/lreimer))
-  - [SoapUI](https://kubeshop.github.io/testkube/test-types/executor-soapui/) - runs SoapUI tests
-  - [Kubepug](https://kubeshop.github.io/testkube/test-types/executor-kubepug/) - runs Kubepug tests
-  - [Artillery.io](https://kubeshop.github.io/testkube/test-types/executor-artillery/) - runs Artillery tests
-  - [Curl Executor](https://kubeshop.github.io/testkube/test-types/curl) - runs simple Curl commands
-  - [Maven](https://kubeshop.github.io/testkube/test-types/executor-maven/) - Runs tests written in Java using Maven ([@lreimer](https://github.com/lreimer))
-  - [Gradle](https://kubeshop.github.io/testkube/test-types/executor-gradle/) - Runs tests written in Java using Gradle ([@lreimer](https://github.com/lreimer))
-  - [Ginkgo](https://kubeshop.github.io/testkube/test-types/executor-ginkgo/) - Runs tests written in Go using Ginkgo ([@jdborneman-terminus](https://github.com/jdborneman-terminus))
+  - [SoapUI](https://docs.testkube.io/test-types/executor-soapui/) - runs SoapUI tests
+  - [Kubepug](https://docs.testkube.io/test-types/executor-kubepug/) - runs Kubepug tests
+  - [Artillery.io](https://docs.testkube.io/test-types/executor-artillery/) - runs Artillery tests
+  - [Curl Executor](https://docs.testkube.io/test-types/curl) - runs simple Curl commands
+  - [Maven](https://docs.testkube.io/test-types/executor-maven/) - Runs tests written in Java using Maven ([@lreimer](https://github.com/lreimer))
+  - [Gradle](https://docs.testkube.io/test-types/executor-gradle/) - Runs tests written in Java using Gradle ([@lreimer](https://github.com/lreimer))
+  - [Ginkgo](https://docs.testkube.io/test-types/executor-ginkgo/) - Runs tests written in Go using Ginkgo ([@jdborneman-terminus](https://github.com/jdborneman-terminus))
   - [Executor Template](https://github.com/kubeshop/testkube-executor-template) - for creating your own executors
 - Results DB - for centralized test results aggregation and analysis
 - [Testkube Dashboard](https://github.com/kubeshop/testkube-dashboard) - standalone web application for viewing real-time Testkube test results
@@ -89,11 +89,11 @@ Main Testkube components are:
 
 ## Getting Started
 
-Checkout the [Getting Started](https://kubeshop.github.io/testkube/getting-started/) guides to set up Testkube and run your first tests!
+Checkout the [Getting Started](docs.testkube.io/getting-started/) guides to set up Testkube and run your first tests!
 
 # Documentation
 
-Is available at [https://kubeshop.github.io/testkube](https://kubeshop.github.io/testkube)
+Is available at [docs.testkube.io](docs.testkube.io)
 
 ## Contributing
 

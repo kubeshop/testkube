@@ -19,7 +19,7 @@ The API assumes that the Executor will output JSON data to `STDOUT` and each lin
 
 We love to improve Testkube with additional features suggested by our users!
 
-Please visit our [Contribution](../contributing/intro.md) page to see the guidelines for contributing to the Testkube project.
+Please visit our [Contribution](../articles/contributing.md) page to see the guidelines for contributing to the Testkube project.
 
 # Custom Executors
 
