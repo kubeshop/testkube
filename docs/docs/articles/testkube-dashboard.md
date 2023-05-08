@@ -12,7 +12,7 @@ See the [UI Results Endpoint section](#ui-results-endpoint) below to find the en
 
 `https://demo.testkube.io/?apiEndpoint=...`
 
-Alternatively, the Testkube Dashboard can be opened on your local machine using command `sh kubectl testkube dashboard` which uses port forwarding for accessing your local results endpoint (see more [here](../reference/cli/testkube_dashboard.md)).
+Alternatively, the Testkube Dashboard can be opened on your local machine using command `sh kubectl testkube dashboard` which uses port forwarding for accessing your local results endpoint (see more [here](../cli/testkube_dashboard.md)).
 
 ## Explore the Testkube Dashboard
 
@@ -68,7 +68,7 @@ If you have selected a Test Suite, the Tests contained in that Test Suite will b
 
 ![Variable Tab](../img/variable-tab-1.6.png)
 
-Visit [Using Tests Variables](./tests/tests-variables.md) for a description of adding Variables and Secrets.
+Visit [Using Tests Variables](./adding-tests-variables.md) for a description of adding Variables and Secrets.
 
 ### Definition
 

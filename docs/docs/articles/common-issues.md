@@ -4,7 +4,7 @@
 
 To expose Testkube to the Internet, you will need to create an Ingress for both the Testkube API and the Testkube dashboard.
 
-Check the guides [here](../guides/going-to-production/exposing-testkube/overview.md) for different configurations.
+Check the guides [here](./going-to-production.md) for different configurations.
 
 ## Why is the Testkube Dashboard not working or does not return results?
 
@@ -162,4 +162,4 @@ metadata:
 
 ## Observability
 
-There are two types of storage Mongo and Minio, read more details [here](../guides/logging.md).
+There are two types of storage Mongo and Minio, read more details [here](./logging.md).

@@ -209,27 +209,27 @@ const config = {
           },
           {
             from: "/UI",
-            to: "/concepts/dashboard",
+            to: "/articles/testkube-dashboard",
           },
           {
             from: "/tests-running",
-            to: "/concepts/tests/tests-running",
+            to: "/articles/running-tests",
           },
           {
             from: "/tests-creating",
-            to: "/concepts/tests/tests-creating",
+            to: "/articles/creating-tests",
           },
           {
             from: "/tests-variables",
-            to: "/concepts/tests/tests-variables",
+            to: "/articles/adding-tests-variables",
           },
           {
             from: "/testsuites-running",
-            to: "/concepts/test-suites/testsuites-running",
+            to: "/articles/running-test-suites",
           },
           {
             from: "/testsuites-creating",
-            to: "/concepts/test-suites/testsuites-creating",
+            to: "/articles/creating-test-suites",
           },
           {
             from: "/helm-charts",
@@ -241,11 +241,11 @@ const config = {
           },
           {
             from: "/installing",
-            to: "/getting-started",
+            to: "/articles/getting-started-overview",
           },
           {
             from: "/guides/test-suites/testsuites-getting-results",
-            to: "/concepts/test-suites/testsuites-getting-results",
+            to: "/articles/getting-test-suites-results",
           },
           {
             from: "/openapi",
@@ -253,31 +253,31 @@ const config = {
           },
           {
             from: "/category/tests",
-            to: "/concepts/tests/tests-creating",
+            to: "/articles/creating-tests",
           },
           {
             from: "/using-testkube/UI",
-            to: "/concepts/dashboard",
+            to: "/articles/testkube-dashboard",
           },
           {
             from: "/FAQ",
-            to: "/concepts/common-issues",
+            to: "/articles/common-issues",
           },
           {
             from: "/integrations/testkube-automation",
-            to: "/guides/cicd",
+            to: "/articles/cicd-overview",
           },
           {
             from: "/guides/tests/tests-creating",
-            to: "/concepts/tests/tests-creating",
+            to: "/articles/creating-tests",
           },
           {
             from: "/guides/exposing-testkube/ingress-nginx",
-            to: "/guides/going-to-production/exposing-testkube/ingress-nginx",
+            to: "/articles/exposing-testkube-with-ingress-nginx",
           },
           {
             from: "/guides/exposing-testkube/overview",
-            to: "/guides/going-to-production/exposing-testkube/overview",
+            to: "/articles/exposing-testkube",
           },
           {
             from: "/architecture",
@@ -285,11 +285,11 @@ const config = {
           },
           {
             from: "/integrations/slack-integration",
-            to: "/guides/slack-integration",
+            to: "/articles/slack-integration",
           },
           {
             from: "/integrations",
-            to: "/getting-started",
+            to: "/articles/getting-started-overview",
           },
         ],
         createRedirects(existingPath) {
@@ -298,9 +298,9 @@ const config = {
             return [existingPath.replace("/reference/cli", "/cli-reference")];
           }
 
-          if (existingPath.includes("/concepts")) {
-            // Redirect from /using-testkube to /concepts
-            return [existingPath.replace("/concepts", "/using-testkube")];
+          if (existingPath.includes("/articles")) {
+            // Redirect from /using-testkube to /articles
+            return [existingPath.replace("/articles", "/using-testkube")];
           }
 
           if (

@@ -69,7 +69,7 @@ flux create kustomization testkube-test \
 
 ### 6. Install Testkube in the cluster.
 
-If you don't have the Testkube CLI, follow the instructions [here](../../../getting-started/step1-installing-cli.md) to install it.
+If you don't have the Testkube CLI, follow the instructions [here](./step1-installing-cli.md) to install it.
 
 Run the following command to install Testkube and its components in the cluster:
 
@@ -87,11 +87,11 @@ To create a Kubernetes CRD for the test, run:
 testkube generate tests-crds img/server/tests/postman-collection.json > cluster/testkube/server-postman-test.yaml
 ```
 
-Note: You can [run Testkube from your CI/CD pipeline](https://docs.testkube.io/integrations/testkube-automation/) if you want to automate the creation of the Test CRDs.
+Note: You can [run Testkube from your CI/CD pipeline](./cicd-overview.md) if you want to automate the creation of the Test CRDs.
 
 ### 8. Add the generated test to the Kustomize file.
 
-The name of the test file created in the previous step is **server-postman-test.yaml**. Add that to the Kustomize file located in [cluster/testkube/kustomization.yaml](https://docs.testkube.io/integrations/testkube-automation/):
+The name of the test file created in the previous step is **server-postman-test.yaml**. Add that to the Kustomize file located in `cluster/testkube/kustomization.yaml`:
 
 ```diff
 apiVersion: kustomize.config.k8s.io/v1beta1

@@ -45,7 +45,7 @@ $ openssl rand -hex 16
 
 Register a new Github OAuth application for your personal or organizational account.
 
-![Register new App](../../../img/github_app_request_ui.png)
+![Register new App](../img/github_app_request_ui.png)
 
 Pay attention to the usage of the scheme (http or https) in URIs.
 
@@ -53,7 +53,7 @@ The homepage URL should be the Testkube Dashboard home page http://testdash.test
 
 The authorization callback URL should be a prebuilt page at the Testkube Dashboard http://testdash.testkube.io/oauth2/callback.
 
-![View created App](../../../img/github_app_response_ui.png)
+![View created App](../img/github_app_response_ui.png)
 
 Make note of the generated Client ID and Client Secret.
 

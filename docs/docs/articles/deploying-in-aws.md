@@ -10,7 +10,7 @@ Once the cluster is up and running we need to deploy the AWS Load Balancer Contr
 
 Another important point is [ExternalDNS](https://github.com/kubernetes-sigs/external-dns). It is not compulsory to deploy it into your cluster, but it helps you dynamically manage your DNS records via k8s resources.
 
-And last, but not least - install the Testkube CLI. You can download a binary file from our [installation](https://kubeshop.github.io/testkube/getting-started/installing-cli) page. For how to deploy Testkube to your cluster with all the necessary changes, please see the next section.
+And last, but not least - install the Testkube CLI. You can download a binary file from our [installation](./step1-installing-cli.md) page. For how to deploy Testkube to your cluster with all the necessary changes, please see the next section.
 
 ## Ingress and Service Resources Configuration
 
@@ -87,11 +87,11 @@ helm install --create-namespace testkube kubeshop/testkube --namespace testkube 
 
 After the installation command is complete, you will see the following resources created into your AWS Console.
 
-![AWS Console](../../img/aws-resource-console.png)
+![AWS Console](../img/aws-resource-console.png)
 
-![AWS Console2](../../img/aws-resource-console-2.png)
+![AWS Console2](../img/aws-resource-console-2.png)
 
-![AWS Console3](../../img/aws-resource-console-3.png)
+![AWS Console3](../img/aws-resource-console-3.png)
 
 Please note that the annotations may vary, depending on your Load Balancer schema type, backend-protocols (you may use http only), target-type, etc. However, this is the bare minimum that should be applied to your configuration.
 
@@ -169,7 +169,7 @@ Do not forget to add `apiServerEndpoint` to the values.yaml for `testkube-dashbo
 
 This way we will have 1 Load Balancer with two listener rules pointing on corresponding paths:
 
-![One Load Balancer](../../img/one-load-balancer.png)
+![One Load Balancer](../img/one-load-balancer.png)
 
 ## Give it a go!
 

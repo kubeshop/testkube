@@ -8,7 +8,7 @@ Let’s start with setting things up for our GitOps-powered testing machine!
 
 ### 1. Make sure you have Testkube installed in your cluster.
 
-If you haven't installed Testkube in your cluster yet, visit the [Getting Started guide](../../../getting-started/index.md) for a walkthrough on installing Testkube.
+If you haven't installed Testkube in your cluster yet, visit the [Getting Started guide](./getting-started-overview) for a walkthrough on installing Testkube.
 
 ### 2. Install ArgoCD.
 
@@ -18,7 +18,7 @@ Note: For step 3 in the guide, “Access The Argo CD API Server”, choose the �
 
 ### 3. Install Testkube.
 
-Follow the installation guide for Testkube [here](https://docs.testkube.io/getting-started/overview). Make sure to install the CLI client and the components in your cluster.
+Follow the installation guide for Testkube [here](./getting-started-overview). Make sure to install the CLI client and the components in your cluster.
 
 ### 4. Install a “Hello Kubernetes!” application in your cluster.
 
@@ -205,15 +205,15 @@ kubectl apply -f testkube-application.yaml
 
 On ArgoCD’s dashboard, we will now see the newly created application. Let’s click to get into it and sync our tests.
 
-![ArgoCD Testkube Tests](../../../img/ArgoCD-testkube-tests.png)
+![ArgoCD Testkube Tests](../img/ArgoCD-testkube-tests.png)
 
 And now click on Sync to see your tests created.
 
-![Sync Testing](../../../img/sync-testing.png)
+![Sync Testing](../img/sync-testing.png)
 
 Voilà! Our test collection is created and managed by ArgoCD with every new test created and updated in the GitHub repository containing the tests!
 
-![Test Management with ArgoCD](../../../img/test-management-with-ArgoCD.png)
+![Test Management with ArgoCD](../img/test-management-with-ArgoCD.png)
 
 ### 10. Run ad-hoc tests from the CLI.
 
@@ -225,7 +225,7 @@ testkube get tests
 
 You should see your deployed test artifacts:
 
-![Deployed Artifacts](../../../img/test-artifacts.png)
+![Deployed Artifacts](../img/test-artifacts.png)
 
 To run those tests execute the following command:
 
@@ -236,7 +236,7 @@ testkube tests run hello-kubernetes
 ‍
 The test execution will start in the background. Copy the command from the image below to check the result of the execution of the test:
 
-![Cluster ID in CLI](../../../img/cluster-id-in-CLI.png)
+![Cluster ID in CLI](../img/cluster-id-in-CLI.png)
 
 ```sh
 $ testkube tests execution EXECUTION_ID
@@ -244,7 +244,7 @@ $ testkube tests execution EXECUTION_ID
 
 ‍You should see that the tests have run successfully, as in the image below.
 
-![Viewing Executed Tests](../../../img/viewing-executed-tests.png)
+![Viewing Executed Tests](../img/viewing-executed-tests.png)
 
 ### 11. See test results in the Testkube dashboard.
 
@@ -256,7 +256,7 @@ testkube dashboard
 
 And you will be able to see the results of the execution in the Executions tab as seen in the image below:
 
-![Test Execution Dashboard](../../../img/test-execution-dashboard-1.9.png)
+![Test Execution Dashboard](../img/test-execution-dashboard-1.9.png)
 
 ### 12. Test the flow; update the test and deploy the updated test with ArgoCD.
 
@@ -308,11 +308,11 @@ As you can see, we have added a request status check. Now commit this change to 
 
 If you now go to ArgoCD’s dashboard you’ll see that your tests are out of sync with the deployed artifacts.
 
-![Warnings](../../../img/warnings.png)
+![Warnings](../img/warnings.png)
 
 Click on **Sync** again and apply the changes. With that, your test artifacts are back in sync!
 
-![Applying Changes to CD](../../../img/applying-changes-to-CD.png)
+![Applying Changes to CD](../img/applying-changes-to-CD.png)
 
 We now have an automated test deployment and execution pipeline based on GitOps principles!
 
