@@ -46,8 +46,10 @@ func TestRun_Integration(t *testing.T) {
 			Uri:    repoURI,
 			Branch: "main",
 		}
-		_, err = content.NewFetcher(tempDir).FetchGit(repo)
-		assert.NoError(t, err)
+
+		repoDir := filepath.Join(tempDir, "repo")
+		assert.NoError(t, os.Mkdir(repoDir, 0755))
+		_ = cp.Copy("../../examples", repoDir)
 
 		result, err := runner.Run(
 			ctx,
@@ -104,8 +106,10 @@ func TestRun_Integration(t *testing.T) {
 			Uri:    repoURI,
 			Branch: "main",
 		}
-		_, err = content.NewFetcher(tempDir).FetchGit(repo)
-		assert.NoError(t, err)
+
+		repoDir := filepath.Join(tempDir, "repo")
+		assert.NoError(t, os.Mkdir(repoDir, 0755))
+		_ = cp.Copy("../../examples", repoDir)
 
 		result, err := runner.Run(
 			ctx,
