@@ -41,26 +41,38 @@ func (c RESTClient[T]) List() ([]T, error) {
 	return orgsResponse.Elements, err
 }
 
-func (c RESTClient[T]) Create(entity T) error {
+func (c RESTClient[T]) Create(entity T, overridePath ...string) (e T, err error) {
 	d, err := json.Marshal(entity)
 	if err != nil {
-		return err
+		return e, err
 	}
-	r, err := nethttp.NewRequest("POST", c.BaseUrl+c.Path, bytes.NewBuffer(d))
+
+	path := c.Path
+	if len(overridePath) == 1 {
+		path = overridePath[0]
+	}
+
+	r, err := nethttp.NewRequest("POST", c.BaseUrl+path, bytes.NewBuffer(d))
 	if err != nil {
-		return err
+		return e, err
 	}
+	r.Header.Add("Content-type", "application/json")
 	r.Header.Add("Authorization", "Bearer "+c.Token)
 
 	resp, err := c.Client.Do(r)
 	if err != nil {
-		return err
+		return e, err
 	}
 
 	if resp.StatusCode > 299 {
 		d, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("error creating %s: %s", c.Path, d)
+		return e, fmt.Errorf("error creating %s: %s", c.Path, d)
 	}
 
-	return nil
+	err = json.NewDecoder(resp.Body).Decode(&e)
+	if err != nil {
+		return e, fmt.Errorf("error decoding response: %s", err)
+	}
+
+	return e, nil
 }

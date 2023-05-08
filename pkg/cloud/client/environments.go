@@ -8,7 +8,7 @@ func NewEnvironmentsClient(token string) *EnvironmentsClient {
 	return &EnvironmentsClient{
 		RESTClient: RESTClient[Environment]{
 			BaseUrl: "https://api.testkube.io",
-			Path:    "/organizations",
+			Path:    "/environments",
 			Client:  http.NewClient(),
 			Token:   token,
 		},
@@ -16,10 +16,20 @@ func NewEnvironmentsClient(token string) *EnvironmentsClient {
 }
 
 type Environment struct {
-	Name string `json:"name"`
-	Id   string `json:"id"`
+	Name              string `json:"name"`
+	Id                string `json:"id"`
+	Connected         bool   `json:"connected"`
+	Owner             string `json:"owner"`
+	InstallCommand    string `json:"installCommand,omitempty"`
+	InstallCommandCli string `json:"installCommandCli,omitempty"`
+	OrganizationId    string `json:"organizationId,omitempty"`
+	AgentToken        string `json:"agentToken,omitempty"`
 }
 
 type EnvironmentsClient struct {
 	RESTClient[Environment]
+}
+
+func (c EnvironmentsClient) Create(env Environment) (Environment, error) {
+	return c.RESTClient.Create(env, "/organizations/"+env.Owner+"/environments")
 }

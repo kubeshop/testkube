@@ -1,26 +1,13 @@
 package client
 
 import (
-	"bytes"
-	"io/ioutil"
 	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-type ClientMock struct {
-	body []byte
-	err  error
-}
-
-func (c ClientMock) Do(req *http.Request) (*http.Response, error) {
-	return &http.Response{
-		Body: ioutil.NopCloser(bytes.NewReader(c.body)),
-	}, c.err
-}
-
-func TestGet(t *testing.T) {
+func TestOrganizationsClient_List(t *testing.T) {
 
 	t.Run("error on invalid token", func(t *testing.T) {
 		o := NewOrganizationsClient("token")

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -87,7 +88,6 @@ Namespace:  testkube
 
 	orgId := findId(orgs, orgName)
 
-	pterm.Info.Println("Selected organization", orgName, orgId)
 	ui.NL()
 
 	envName, _ := pterm.DefaultInteractiveTextInput.
@@ -96,7 +96,16 @@ Namespace:  testkube
 
 	pterm.Println()
 
-	pterm.Info.Printfln("You answered: %s", result)
+	envClient := cloudclient.NewEnvironmentsClient(token)
+	env, err := envClient.Create(cloudclient.Environment{Name: envName, Owner: orgId})
+
+	if err != nil {
+		pterm.Error.Println("Failed to create environment", err.Error())
+		return
+	}
+
+	fmt.Printf("%+v\n", env)
+
 }
 
 func checkInfo() pterm.TextPrinter {
@@ -150,7 +159,7 @@ type Organization struct {
 // TODO implement
 func getOrganizations(token string) ([]cloudclient.Organization, error) {
 	c := cloudclient.NewOrganizationsClient(token)
-	return c.Get()
+	return c.List()
 }
 
 func getNames(orgs []cloudclient.Organization) []string {
