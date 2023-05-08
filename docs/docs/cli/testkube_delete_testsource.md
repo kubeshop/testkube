@@ -1,4 +1,4 @@
-# testkube delete testsource
+## testkube delete testsource
 
 Delete test source
 
@@ -21,7 +21,7 @@ testkube delete testsource <testSourceName> [flags]
 ### Options inherited from parent commands
 
 ```
-  -a, --api-uri string     api uri, default value read from config if set (default "http://localhost:8088")
+  -a, --api-uri string     api uri, default value read from config if set (default "https://demo.testkube.io/results/v1")
   -c, --client string      Client used for connecting to testkube API one of proxy|direct (default "proxy")
       --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")
       --oauth-enabled      enable oauth
