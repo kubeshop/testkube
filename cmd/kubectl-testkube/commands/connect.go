@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/pterm/pterm"
 	"github.com/skratchdot/open-golang/open"
@@ -63,10 +64,14 @@ Namespace:  testkube
 		return
 	}
 
+	var token string
 	// TODO: add timeout
-	token := <-tokenChan
-	s.Success()
-
+	select {
+	case token = <-tokenChan:
+		s.Success()
+	case <-time.After(5 * time.Minute):
+		s.Fail("Timeout waiting for auth token")
+	}
 	ui.NL()
 	// Choose organization from orgs available
 	orgs, err := getOrganizations(token)
@@ -85,10 +90,13 @@ Namespace:  testkube
 	pterm.Info.Println("Selected organization", orgName, orgId)
 	ui.NL()
 
-	result, _ := pterm.DefaultInteractiveTextInput.WithMultiLine(false).Show()
-	pterm.Println()
-	pterm.Info.Printfln("You answered: %s", result)
+	envName, _ := pterm.DefaultInteractiveTextInput.
+		WithMultiLine(false).
+		Show("Tell us the name of your environment")
 
+	pterm.Println()
+
+	pterm.Info.Printfln("You answered: %s", result)
 }
 
 func checkInfo() pterm.TextPrinter {

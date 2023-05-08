@@ -4,9 +4,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/http"
 )
 
-func NewOrganizationsClient(token string) *OrganizationsClient {
-	return &OrganizationsClient{
-		RESTClient: RESTClient[Organization]{
+func NewEnvironmentsClient(token string) *EnvironmentsClient {
+	return &EnvironmentsClient{
+		RESTClient: RESTClient[Environment]{
 			BaseUrl: "https://api.testkube.io",
 			Path:    "/organizations",
 			Client:  http.NewClient(),
@@ -15,11 +15,11 @@ func NewOrganizationsClient(token string) *OrganizationsClient {
 	}
 }
 
-type Organization struct {
+type Environment struct {
 	Name string `json:"name"`
 	Id   string `json:"id"`
 }
 
-type OrganizationsClient struct {
-	RESTClient[Organization]
+type EnvironmentsClient struct {
+	RESTClient[Environment]
 }
