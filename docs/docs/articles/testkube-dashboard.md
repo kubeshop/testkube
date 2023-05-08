@@ -12,7 +12,7 @@ See the [UI Results Endpoint section](#ui-results-endpoint) below to find the en
 
 `https://demo.testkube.io/?apiEndpoint=...`
 
-Alternatively, the Testkube Dashboard can be opened on your local machine using command `sh kubectl testkube dashboard` which uses port forwarding for accessing your local results endpoint (see more [here](../cli/testkube_dashboard.md)).
+Alternatively, the Testkube Dashboard can be opened on your local machine using the command `sh kubectl testkube dashboard` which uses port forwarding for accessing your local results endpoint (see more [here](../cli/testkube_dashboard.md)).
 
 ## Explore the Testkube Dashboard
 
