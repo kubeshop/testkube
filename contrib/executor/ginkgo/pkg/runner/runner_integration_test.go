@@ -3,13 +3,14 @@ package runner
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"testing"
 
+	cp "github.com/otiai10/copy"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
-	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
