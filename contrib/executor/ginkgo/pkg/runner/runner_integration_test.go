@@ -82,7 +82,11 @@ func TestRun_Integration(t *testing.T) {
 		t.Skipf("check again is the examples/others test correct")
 		t.Parallel()
 
-		params := envs.Params{GitUsername: "testuser", GitToken: "testtoken"}
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "could not create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
+
+		params := envs.Params{DataDir: tempDir, GitUsername: "testuser", GitToken: "testtoken"}
 		runner, err := NewGinkgoRunner(ctx, params)
 		if err != nil {
 			t.Fail()
@@ -94,16 +98,21 @@ func TestRun_Integration(t *testing.T) {
 			Type_: testkube.VariableTypeBasic,
 		}
 		vars["GinkgoTestPackage"] = variableOne
+
+		repo := &testkube.Repository{
+			Type_:  "git",
+			Uri:    repoURI,
+			Branch: "main",
+		}
+		_, err = content.NewFetcher(tempDir).FetchGit(repo)
+		assert.NoError(t, err)
+
 		result, err := runner.Run(
 			ctx,
 			testkube.Execution{
 				Content: &testkube.TestContent{
-					Type_: string(testkube.TestContentTypeGitDir),
-					Repository: &testkube.Repository{
-						Type_:  "git",
-						Uri:    "https://github.com/kubeshop/testkube-executor-ginkgo.git",
-						Branch: "main",
-					},
+					Type_:      string(testkube.TestContentTypeGitDir),
+					Repository: repo,
 				},
 				Variables: vars,
 				Command: []string{
