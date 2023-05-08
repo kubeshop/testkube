@@ -23,6 +23,15 @@ builds:
       - amd64
       - arm64
     mod_timestamp: "{{ .CommitTimestamp }}"
+    ldflags:
+      -X github.com/kubeshop/testkube/pkg/version.Version={{.Version}}
+      -X github.com/kubeshop/testkube/pkg/version.Commit={{ .FullCommit }}
+      -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID={{ .Env.SLACK_BOT_CLIENT_ID}}
+      -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret={{ .Env.SLACK_BOT_CLIENT_SECRET }}
+      -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID={{ .Env.ANALYTICS_TRACKING_ID }}
+      -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret={{ .Env.ANALYTICS_API_KEY }}
+      -X github.com/kubeshop/testkube/pkg/telemetry.SegmentioKey={{ .Env.SEGMENTIO_KEY }}
+      -X github.com/kubeshop/testkube/pkg/telemetry.CloudSegmentioKey={{ .Env.CLOUD_SEGMENTIO_KEY }}
 dockers:
   - dockerfile: ./build/api-server/Dockerfile
     use: buildx
@@ -39,15 +48,6 @@ dockers:
       - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
-      - "--build-arg=TOKEN={{ .Env.GITHUB_TOKEN }}"
-      - "--build-arg=VERSION={{ .Version }}"
-      - "--build-arg=COMMIT={{ .FullCommit }}"
-      - "--build-arg=ANALYTICS_TRACKING_ID={{ .Env.ANALYTICS_TRACKING_ID }}"
-      - "--build-arg=ANALYTICS_API_KEY={{ .Env.ANALYTICS_API_KEY }}"
-      - "--build-arg=SLACK_BOT_CLIENT_ID={{ .Env.SLACK_BOT_CLIENT_ID}}"
-      - "--build-arg=SLACK_BOT_CLIENT_SECRET={{ .Env.SLACK_BOT_CLIENT_SECRET }}"
-      - "--build-arg=SEGMENTIO_KEY={{ .Env.SEGMENTIO_KEY }}"
-      - "--build-arg=CLOUD_SEGMENTIO_KEY={{ .Env.CLOUD_SEGMENTIO_KEY }}"
 
   - dockerfile: ./build/api-server/Dockerfile
     use: buildx
@@ -64,15 +64,6 @@ dockers:
       - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
-      - "--build-arg=TOKEN={{ .Env.GITHUB_TOKEN }}"
-      - "--build-arg=VERSION={{ .Version }}"
-      - "--build-arg=COMMIT={{ .FullCommit }}"
-      - "--build-arg=ANALYTICS_TRACKING_ID={{ .Env.ANALYTICS_TRACKING_ID }}"
-      - "--build-arg=ANALYTICS_API_KEY={{ .Env.ANALYTICS_API_KEY }}"
-      - "--build-arg=SLACK_BOT_CLIENT_ID={{ .Env.SLACK_BOT_CLIENT_ID}}"
-      - "--build-arg=SLACK_BOT_CLIENT_SECRET={{ .Env.SLACK_BOT_CLIENT_SECRET }}"
-      - "--build-arg=SEGMENTIO_KEY={{ .Env.SEGMENTIO_KEY }}"
-      - "--build-arg=CLOUD_SEGMENTIO_KEY={{ .Env.CLOUD_SEGMENTIO_KEY }}"
 
 docker_manifests:
   - name_template: kubeshop/testkube-api-server:{{ .Version }}
