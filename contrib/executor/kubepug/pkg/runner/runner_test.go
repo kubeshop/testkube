@@ -27,7 +27,7 @@ func TestRunString_Integration(t *testing.T) {
 		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
 		defer os.RemoveAll(tempDir)
 
-		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(""), 0644)
+		err = os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(""), 0644)
 		if err != nil {
 			assert.FailNow(t, "Unable to write postman runner test content file")
 		}
@@ -118,7 +118,7 @@ metadata:
 		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
 		defer os.RemoveAll(tempDir)
 
-		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
+		err = os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
 		if err != nil {
 			assert.FailNow(t, "Unable to write postman runner test content file")
 		}
@@ -380,7 +380,7 @@ metadata:
 		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
 		defer os.RemoveAll(tempDir)
 
-		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
+		err = os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
 		if err != nil {
 			assert.FailNow(t, "Unable to write postman runner test content file")
 		}
@@ -425,7 +425,7 @@ metadata:
 		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
 		defer os.RemoveAll(tempDir)
 
-		err := os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
+		err = os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(data), 0644)
 		if err != nil {
 			assert.FailNow(t, "Unable to write postman runner test content file")
 		}
