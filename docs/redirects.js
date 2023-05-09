@@ -57,10 +57,6 @@ const redirects = [
     to: "/articles/running-tests",
   },
   {
-    from: "/tests-variables",
-    to: "/articles/adding-tests-variables",
-  },
-  {
     from: "/testsuites-running",
     to: "/articles/running-test-suites",
   },
@@ -97,7 +93,7 @@ const redirects = [
     to: "/articles/cicd-overview",
   },
   {
-    from: ["/guides/tests/tests-creating", "/category/tests", "/concepts/tests/tests-creating", "/tests-creating"],
+    from: ["/guides/tests/tests-creating", "/category/tests", "/concepts/tests/tests-creating", "/tests-creating", "/using-testkube/tests/tests-creating"],
     to: "/articles/creating-tests",
   },
   {
@@ -145,7 +141,7 @@ const redirects = [
     to: "/articles/getting-tests-results",
   },
   {
-    from: "/concepts/tests/tests-variables",
+    from: ["/concepts/tests/tests-variables", "/tests-variables"],
     to: "/articles/adding-tests-variables",
   },
   {
