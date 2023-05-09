@@ -344,6 +344,11 @@ testkube run test maven-example-file-test --args "--settings" --args "/data/uplo
 
 By default, there is a 10 second timeout limit on all requests on the client side, and a 1 GB body size limit on the server side. To update the timeout, use `--upload-timeout` with [Go-compatible duration formats](https://pkg.go.dev/time#ParseDuration).
 
+### Configuration files
+
+Some of the executors offer the option so set a special file using the flag `--variables-file` on both test creation and test run. For the Postman executor this is expecting the environment file, for Maven it is `settings.xml`.
+There are many differences between `--variables-file` and `--copy-files`. The former one sets this file directly as the configuration file. With the latter, there is an additional need to set the path explicitly on arguments level. Another difference is that for variables files smaller than 128KB, this will be set on CRD level, and not uploaded to the object storage. This limitation is coming from linux-based systems, this is the default maximum length of arguments.
+
 ### Redefining the Prebuilt Executor command and arguments
 
 Each of Testkube Prebuilt executors has a default command and arguments it uses to execute the test. They are provided as a part of Executor CRD and can be either ovveriden or appended during test creation or execution, for example:
