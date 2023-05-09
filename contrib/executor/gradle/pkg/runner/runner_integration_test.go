@@ -124,7 +124,9 @@ func TestRunErrors_Integration(t *testing.T) {
 	t.Run("unsupported file-content", func(t *testing.T) {
 		t.Parallel()
 
-		tempDir := os.TempDir()
+		tempDir, err := os.MkdirTemp("", "*")
+		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+		defer os.RemoveAll(tempDir)
 
 		// given
 		params := envs.Params{DataDir: tempDir}

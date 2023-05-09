@@ -29,8 +29,7 @@ func NewGinkgoRunner(ctx context.Context, params envs.Params) (*GinkgoRunner, er
 
 	var err error
 	r := &GinkgoRunner{
-		Fetcher: content.NewFetcher(""),
-		Params:  params,
+		Params: params,
 	}
 
 	r.Scraper, err = factory.TryGetScrapper(ctx, params)
@@ -43,7 +42,6 @@ func NewGinkgoRunner(ctx context.Context, params envs.Params) (*GinkgoRunner, er
 
 type GinkgoRunner struct {
 	Params  envs.Params
-	Fetcher content.ContentFetcher
 	Scraper scraper.Scraper
 }
 
@@ -59,21 +57,14 @@ func (r *GinkgoRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		return result, err
 	}
 
-	// Set GitHub user and token params in Content.Repository
-	if r.Params.GitUsername != "" || r.Params.GitToken != "" {
-		if execution.Content != nil && execution.Content.Repository != nil {
-			execution.Content.Repository.Username = r.Params.GitUsername
-			execution.Content.Repository.Token = r.Params.GitToken
-		}
-	}
-
 	// use `execution.Variables` for variables passed from Test/Execution
 	// variables of type "secret" will be automatically decoded
 	envManager := env.NewManagerWithVars(execution.Variables)
 	envManager.GetReferenceVars(envManager.Variables)
-	path, err := r.Fetcher.Fetch(execution.Content)
+
+	path, workingDir, err := content.GetPathAndWorkingDir(execution.Content, r.Params.DataDir)
 	if err != nil {
-		return result, err
+		output.PrintLogf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.Params.DataDir)
 	}
 
 	fileInfo, err := os.Stat(path)
@@ -90,8 +81,8 @@ func (r *GinkgoRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	ginkgoParams := FindGinkgoParams(&execution, ginkgoDefaultParams)
 
 	runPath := path
-	if execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
-		runPath = filepath.Join(r.Params.DataDir, "repo", execution.Content.Repository.WorkingDir)
+	if workingDir != "" {
+		runPath = workingDir
 		path = filepath.Join(r.Params.DataDir, "repo", execution.Content.Repository.Path)
 	}
 

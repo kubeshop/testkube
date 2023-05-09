@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	kubepug "github.com/rikatz/kubepug/pkg/results"
@@ -27,8 +26,7 @@ func NewRunner(ctx context.Context, params envs.Params) (*KubepugRunner, error) 
 
 	var err error
 	r := &KubepugRunner{
-		Fetcher: content.NewFetcher(""),
-		params:  params,
+		params: params,
 	}
 
 	r.Scraper, err = factory.TryGetScrapper(ctx, params)
@@ -41,7 +39,6 @@ func NewRunner(ctx context.Context, params envs.Params) (*KubepugRunner, error) 
 
 // KubepugRunner runs kubepug against cluster
 type KubepugRunner struct {
-	Fetcher content.ContentFetcher
 	params  envs.Params
 	Scraper scraper.Scraper
 }
@@ -55,9 +52,9 @@ func (r *KubepugRunner) Run(ctx context.Context, execution testkube.Execution) (
 	}
 	output.PrintLogf("%s Preparing for test run", ui.IconTruck)
 
-	path, err := r.Fetcher.Fetch(execution.Content)
+	path, workingDir, err := content.GetPathAndWorkingDir(execution.Content, r.params.DataDir)
 	if err != nil {
-		return testkube.ExecutionResult{}, fmt.Errorf("could not get content: %w", err)
+		output.PrintLogf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.params.DataDir)
 	}
 
 	fileInfo, err := os.Stat(path)
@@ -83,11 +80,7 @@ func (r *KubepugRunner) Run(ctx context.Context, execution testkube.Execution) (
 	envManager := env.NewManagerWithVars(execution.Variables)
 	envManager.GetReferenceVars(envManager.Variables)
 
-	runPath := ""
-	if execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
-		runPath = filepath.Join(r.params.DataDir, "repo", execution.Content.Repository.WorkingDir)
-	}
-
+	runPath := workingDir
 	command := strings.Join(execution.Command, " ")
 	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
 	out, err := executor.Run(runPath, command, envManager, args...)

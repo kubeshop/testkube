@@ -13,6 +13,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
@@ -57,16 +58,15 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 	}
 
 	output.PrintLogf("%s Checking test content from %s...", ui.IconBox, execution.Content.Type_)
-	// check that the datadir exists
-	_, err = os.Stat(r.Params.DataDir)
-	if errors.Is(err, os.ErrNotExist) {
-		return result, err
+
+	runPath, workingDir, err := content.GetPathAndWorkingDir(execution.Content, r.Params.DataDir)
+	if err != nil {
+		output.PrintLogf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.Params.DataDir)
 	}
 
-	runPath := filepath.Join(r.Params.DataDir, "repo", execution.Content.Repository.Path)
 	projectPath := runPath
-	if execution.Content.Repository.WorkingDir != "" {
-		runPath = filepath.Join(r.Params.DataDir, "repo", execution.Content.Repository.WorkingDir)
+	if workingDir != "" {
+		runPath = workingDir
 	}
 
 	fileInfo, err := os.Stat(projectPath)
@@ -112,7 +112,7 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 	junitReportPath := filepath.Join(projectPath, "results/junit.xml")
 
 	var project string
-	if execution.Content.Repository.WorkingDir != "" {
+	if workingDir != "" {
 		project = projectPath
 	}
 

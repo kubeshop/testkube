@@ -13,6 +13,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
@@ -60,39 +61,9 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	envManager := env.NewManagerWithVars(execution.Variables)
 	envManager.GetReferenceVars(envManager.Variables)
 
-	gitUsername := r.Params.GitUsername
-	gitToken := r.Params.GitToken
-	if gitUsername != "" || gitToken != "" {
-		if execution.Content != nil && execution.Content.Repository != nil {
-			execution.Content.Repository.Username = gitUsername
-			execution.Content.Repository.Token = gitToken
-		}
-	}
-
-	path := ""
-	workingDir := ""
-	basePath, err := filepath.Abs(r.Params.DataDir)
+	path, workingDir, err := content.GetPathAndWorkingDir(execution.Content, r.Params.DataDir)
 	if err != nil {
 		output.PrintLogf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.Params.DataDir)
-		basePath = r.Params.DataDir
-	}
-	if execution.Content != nil {
-		isStringContentType := execution.Content.Type_ == string(testkube.TestContentTypeString)
-		isFileURIContentType := execution.Content.Type_ == string(testkube.TestContentTypeFileURI)
-		if isStringContentType || isFileURIContentType {
-			path = filepath.Join(basePath, "test-content")
-		}
-
-		isGitFileContentType := execution.Content.Type_ == string(testkube.TestContentTypeGitFile)
-		isGitDirContentType := execution.Content.Type_ == string(testkube.TestContentTypeGitDir)
-		isGitContentType := execution.Content.Type_ == string(testkube.TestContentTypeGit)
-		if isGitFileContentType || isGitDirContentType || isGitContentType {
-			path = filepath.Join(basePath, "repo")
-			if execution.Content.Repository != nil {
-				path = filepath.Join(path, execution.Content.Repository.Path)
-				workingDir = execution.Content.Repository.WorkingDir
-			}
-		}
 	}
 
 	fileInfo, err := os.Stat(path)
@@ -128,9 +99,9 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		params = append(params, fmt.Sprintf("-J%s=%s", value.Name, value.Value))
 	}
 
-	runPath := basePath
+	runPath := r.Params.DataDir
 	if workingDir != "" {
-		runPath = filepath.Join(basePath, "repo", workingDir)
+		runPath = workingDir
 	}
 
 	outputDir := filepath.Join(runPath, "output")
