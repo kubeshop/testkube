@@ -141,7 +141,7 @@ const redirects = [
     to: "/articles/getting-tests-results",
   },
   {
-    from: ["/concepts/tests/tests-variables", "/tests-variables"],
+    from: ["/concepts/tests/tests-variables", "/tests-variables", "/using-testkube/tests/tests-variables"],
     to: "/articles/adding-tests-variables",
   },
   {
