@@ -389,6 +389,7 @@ func main() {
 		storageClient,
 		cfg.GraphqlPort,
 		artifactStorage,
+		cfg.CDEventsTarget,
 	)
 
 	if mode == common.ModeAgent {
