@@ -2,7 +2,7 @@ name: Docker images build release
 on:
   push:
     branches:
-      - release_**
+      - release-**
 
 jobs:
   api:

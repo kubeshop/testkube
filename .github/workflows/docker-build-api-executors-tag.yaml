@@ -416,10 +416,10 @@ jobs:
             cd ./scripts
             ./chart_releaser.sh --helm-chart-folder testkube-api --testkube-executor true --branch true
 
-            git checkout main
-            git merge "release-$RELEASE_VERSION"
-            git push --set-upstream https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts  main
-            git push origin -d "release-$RELEASE_VERSION"
+#            git checkout main
+#            git merge "release-$RELEASE_VERSION"
+#            git push --set-upstream https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts  main
+#            git push origin -d "release-$RELEASE_VERSION"
           fi
 
         env:
