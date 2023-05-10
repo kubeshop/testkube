@@ -66,6 +66,10 @@ func (l *CDEventListener) Notify(event testkube.Event) (result testkube.EventRes
 	}
 
 	ce, err := cdevents.AsCloudEvent(ev)
+	if err != nil {
+		return testkube.NewFailedEventResult(event.Id, err)
+	}
+
 	if result := l.client.Send(context.Background(), *ce); cloudevents.IsUndelivered(result) {
 		return testkube.NewFailedEventResult(event.Id, fmt.Errorf("failed to send, %v", result))
 	}
