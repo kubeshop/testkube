@@ -75,7 +75,7 @@ build-testkube-bin-intel:
 		cmd/kubectl-testkube/main.go
 
 docker-build-api:
-	docker build  --platform linux/x86_64 -t kubeshop/testkube-api-server:$(COMMIT)-dev -f build/api-server/Dockerfile .
+	goreleaser release -f goreleaser_files/.goreleaser-docker-build-api-local.yml  --rm-dist  --snapshot
 
 dev-install-local-executors:
 	kubectl apply --namespace testkube -f https://raw.githubusercontent.com/kubeshop/testkube-operator/main/config/samples/executor_v1_executor.yaml
