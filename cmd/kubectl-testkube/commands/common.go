@@ -39,8 +39,11 @@ func RunMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
 }
 
 type HelmUpgradeOrInstalTestkubeOptions struct {
-	Name, Namespace, Chart, Values, AgentKey, AgentUri string
-	NoDashboard, NoMinio, NoMongo, NoConfirm           bool
+	Name, Namespace, Chart, Values, AgentToken, AgentUri string
+	NoDashboard, NoMinio, NoMongo, NoConfirm             bool
+	MinioReplicas, MongoReplicas, DashboardReplicas      int
+	DryRun                                               bool
+	CloudAgentToken                                      string
 }
 
 func GetCurrentKubernetesContext() (string, error) {
@@ -59,98 +62,105 @@ func GetCurrentKubernetesContext() (string, error) {
 
 func HelmUpgradeOrInstallTestkubeCloud(options HelmUpgradeOrInstalTestkubeOptions, cfg config.Data) error {
 	// use config if set
-	if cfg.CloudContext.AgentKey != "" && options.AgentKey == "" {
-		options.AgentKey = cfg.CloudContext.AgentKey
+	if cfg.CloudContext.AgentKey != "" && options.AgentToken == "" {
+		options.AgentToken = cfg.CloudContext.AgentKey
 	}
 	if cfg.CloudContext.AgentUri != "" && options.AgentUri == "" {
 		options.AgentUri = cfg.CloudContext.AgentUri
 	}
 
-	if options.AgentKey == "" || options.AgentUri == "" {
-		return fmt.Errorf("agentKey and agentUri are required, please pass it with `--agentKey` and `--agentUri` flags")
+	if options.AgentToken == "" || options.AgentUri == "" {
+		return fmt.Errorf("agentKey and agentUri are required, please pass it with `--agent-token` and `--agent-uri` flags")
 	}
 
 	helmPath, err := exec.LookPath("helm")
 	if err != nil {
 		return err
 	}
-	_, err = process.Execute(helmPath, "repo", "add", "kubeshop", "https://kubeshop.github.io/helm-charts")
+
+	// repo update
+	args := []string{"repo", "add", "kubeshop", "https://kubeshop.github.io/helm-charts"}
+	_, err = process.ExecuteWithOptions(process.Options{Command: helmPath, Args: args, DryRun: options.DryRun})
 	if err != nil && !strings.Contains(err.Error(), "Error: repository name (kubeshop) already exists, please specify a different name") {
 		ui.WarnOnError("adding testkube repo", err)
 	}
 
-	_, err = process.Execute(helmPath, "repo", "update")
+	_, err = process.ExecuteWithOptions(process.Options{Command: helmPath, Args: []string{"repo", "update"}, DryRun: options.DryRun})
 	ui.ExitOnError("updating helm repositories", err)
 
-	command := []string{
-		"upgrade", "--install",
-		"--create-namespace", "--namespace", options.Namespace,
-		"--set", "testkube-api.minio.enabled=false",
-		"--set", "testkube-api.mongodb.enabled=false",
+	// upgrade cloud
+	args = []string{
+		"upgrade", "--install", "--create-namespace",
+		"--namespace", options.Namespace,
 		"--set", "testkube-api.cloud.url=" + options.AgentUri,
-		"--set", "testkube-api.cloud.key=" + options.AgentKey,
-		"--set", "testkube-api.minio.enabled=false",
-		"--set", "mongodb.enabled=false",
+		"--set", "testkube-api.cloud.key=" + options.AgentToken,
 	}
 
-	command = append(command, options.Name, options.Chart)
+	args = append(args, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !options.NoDashboard))
+	args = append(args, "--set", fmt.Sprintf("mongodb.enabled=%t", !options.NoMongo))
+	args = append(args, "--set", fmt.Sprintf("testkube-api.minio.enabled=%t", !options.NoMinio))
+
+	args = append(args, "--set", fmt.Sprintf("testkube-api.minio.replicas=%d", options.MinioReplicas))
+	args = append(args, "--set", fmt.Sprintf("mongodb.replicas=%d", options.MongoReplicas))
+	args = append(args, "--set", fmt.Sprintf("testkube-dashboard.replicas=%d", options.DashboardReplicas))
+
+	args = append(args, options.Name, options.Chart)
 
 	if options.Values != "" {
-		command = append(command, "--values", options.Values)
+		args = append(args, "--values", options.Values)
 	}
 
-	out, err := process.Execute(helmPath, command...)
+	out, err := process.ExecuteWithOptions(process.Options{Command: helmPath, Args: args, DryRun: options.DryRun})
 	if err != nil {
 		return err
 	}
 
-	ui.Info(fmt.Sprintf("%v", ui.Verbose))
-
 	ui.Debug("Helm command output:")
-	ui.Debug(helmPath, command...)
+	ui.Debug(helmPath, args...)
 
-	ui.Info("Helm install testkube output", string(out))
+	ui.Debug("Helm install testkube output", string(out))
 
 	return nil
 }
 
 func HelmUpgradeOrInstalTestkube(options HelmUpgradeOrInstalTestkubeOptions) error {
-
 	helmPath, err := exec.LookPath("helm")
 	if err != nil {
 		return err
 	}
 
 	ui.Info("Helm installing testkube framework")
-	_, err = process.Execute(helmPath, "repo", "add", "kubeshop", "https://kubeshop.github.io/helm-charts")
+	args := []string{"repo", "add", "kubeshop", "https://kubeshop.github.io/helm-charts"}
+	_, err = process.ExecuteWithOptions(process.Options{Command: helmPath, Args: args, DryRun: options.DryRun})
 	if err != nil && !strings.Contains(err.Error(), "Error: repository name (kubeshop) already exists, please specify a different name") {
 		ui.WarnOnError("adding testkube repo", err)
 	}
 
-	_, err = process.Execute(helmPath, "repo", "update")
+	_, err = process.ExecuteWithOptions(process.Options{Command: helmPath, Args: []string{"repo", "update"}, DryRun: options.DryRun})
 	ui.ExitOnError("updating helm repositories", err)
 
-	command := []string{"upgrade", "--install", "--create-namespace", "--namespace", options.Namespace}
-	command = append(command, "--set", fmt.Sprintf("testkube-api.minio.enabled=%t", !options.NoMinio))
+	args = []string{"upgrade", "--install", "--create-namespace", "--namespace", options.Namespace}
+	args = append(args, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !options.NoDashboard))
+	args = append(args, "--set", fmt.Sprintf("mongodb.enabled=%t", !options.NoMongo))
+	args = append(args, "--set", fmt.Sprintf("testkube-api.minio.enabled=%t", !options.NoMinio))
 	if options.NoMinio {
-		command = append(command, "--set", "testkube-api.logs.storage=mongo")
+		args = append(args, "--set", "testkube-api.logs.storage=mongo")
 	} else {
-		command = append(command, "--set", "testkube-api.logs.storage=minio")
+		args = append(args, "--set", "testkube-api.logs.storage=minio")
 	}
-	command = append(command, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !options.NoDashboard))
-	command = append(command, "--set", fmt.Sprintf("mongodb.enabled=%t", !options.NoMongo))
-	command = append(command, options.Name, options.Chart)
+
+	args = append(args, options.Name, options.Chart)
 
 	if options.Values != "" {
-		command = append(command, "--values", options.Values)
+		args = append(args, "--values", options.Values)
 	}
 
-	out, err := process.Execute(helmPath, command...)
+	out, err := process.ExecuteWithOptions(process.Options{Command: helmPath, Args: args, DryRun: options.DryRun})
 	if err != nil {
 		return err
 	}
 
-	ui.Info("Helm install testkube output", string(out))
+	ui.Debug("Helm install testkube output", string(out))
 	return nil
 }
 
@@ -159,19 +169,26 @@ func PopulateUpgradeInstallFlags(cmd *cobra.Command, options *HelmUpgradeOrInsta
 	cmd.Flags().StringVar(&options.Name, "name", "testkube", "installation name")
 	cmd.Flags().StringVar(&options.Namespace, "namespace", "testkube", "namespace where to install")
 	cmd.Flags().StringVar(&options.Values, "values", "", "path to Helm values file")
-	cmd.Flags().StringVar(&options.AgentKey, "agentKey", "", "Testkube Cloud agent key [required for cloud mode]")
-	cmd.Flags().StringVar(&options.AgentUri, "agentUri", "", "Testkube Cloud agent URI [required for cloud mode]")
+
+	cmd.Flags().StringVar(&options.AgentToken, "agent-token", "", "Testkube Cloud agent key [required for cloud mode]")
+	cmd.Flags().StringVar(&options.AgentUri, "agent-uri", "agent.testkube.io:443", "Testkube Cloud agent URI [required for cloud mode]")
 
 	cmd.Flags().BoolVar(&options.NoMinio, "no-minio", false, "don't install MinIO")
 	cmd.Flags().BoolVar(&options.NoDashboard, "no-dashboard", false, "don't install dashboard")
 	cmd.Flags().BoolVar(&options.NoMongo, "no-mongo", false, "don't install MongoDB")
 	cmd.Flags().BoolVar(&options.NoConfirm, "no-confirm", false, "don't ask for confirmation - unatended installation mode")
+
+	cmd.Flags().IntVar(&options.MinioReplicas, "minio-replicas", 1, "Scale MinIO replicas")
+	cmd.Flags().IntVar(&options.MongoReplicas, "mongo-replicas", 1, "Scale MongoDB replicas")
+	cmd.Flags().IntVar(&options.DashboardReplicas, "dashboard-replicas", 1, "Don't install MongoDB")
+
+	cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
 }
 
 func PopulateAgentDataToContext(options HelmUpgradeOrInstalTestkubeOptions, cfg config.Data) error {
 	updated := false
-	if options.AgentKey != "" {
-		cfg.CloudContext.AgentKey = options.AgentKey
+	if options.AgentToken != "" {
+		cfg.CloudContext.AgentKey = options.AgentToken
 		updated = true
 	}
 	if options.AgentUri != "" {
@@ -184,4 +201,19 @@ func PopulateAgentDataToContext(options HelmUpgradeOrInstalTestkubeOptions, cfg 
 	}
 
 	return nil
+}
+
+func KubectlScaleDeployment(namespace, deployment string, replicas int) (string, error) {
+	kubectl, err := exec.LookPath("kubectl")
+	if err != nil {
+		return "", err
+	}
+
+	// kubectl patch --namespace=$n deployment $1 -p "{\"spec\":{\"replicas\": $2}}"
+	out, err := process.Execute(kubectl, "patch", "--namespace", namespace, "deployment", deployment, "-p", fmt.Sprintf("{\"spec\":{\"replicas\": %d}}", replicas))
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(string(out)), nil
 }

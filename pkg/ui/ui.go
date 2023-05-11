@@ -45,7 +45,7 @@ func PrintOnError(item string, errors ...error)     { ui.PrintOnError(item, erro
 func WarnOnError(item string, errors ...error)      { ui.WarnOnError(item, errors...) }
 func Logo()                                         { ui.Logo() }
 func LogoNoColor()                                  { ui.LogoNoColor() }
-func NL()                                           { ui.NL() }
+func NL(amount ...int)                              { ui.NL(amount...) }
 func Success(message string, subMessages ...string) { ui.Success(message, subMessages...) }
 func SuccessAndExit(message string, subMessages ...string) {
 	ui.SuccessAndExit(message, subMessages...)
@@ -76,7 +76,9 @@ func ShellCommand(title string, commands ...string)         { ui.ShellCommand(ti
 func Table(tableData TableData, writer io.Writer)           { ui.Table(tableData, writer) }
 func JSONTable(tableData TableData, writer io.Writer) error { return ui.JSONTable(tableData, writer) }
 func NewArrayTable(a [][]string) ArrayTable                 { return ui.NewArrayTable(a) }
+func PrintArrayTable(a [][]string)                          { ui.PrintArrayTable(a) }
 func Confirm(message string) bool                           { return ui.Confirm(message) }
+func TextInput(message string) string                       { return ui.TextInput(message) }
 
 func UseStdout() { ui = uiOut }
 func UseStderr() { ui = uiErr }

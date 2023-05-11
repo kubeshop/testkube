@@ -8,6 +8,21 @@ import (
 	"strings"
 )
 
+type Options struct {
+	Command string
+	Args    []string
+	DryRun  bool
+}
+
+// Execute runs system command and returns whole output also in case of error
+func ExecuteWithOptions(options Options) (out []byte, err error) {
+	if options.DryRun {
+		fmt.Println("$ " + strings.Join(append([]string{options.Command}, options.Args...), " "))
+		return []byte{}, nil
+	}
+	return ExecuteInDir("", options.Command, options.Args...)
+}
+
 // Execute runs system command and returns whole output also in case of error
 func Execute(command string, arguments ...string) (out []byte, err error) {
 	return ExecuteInDir("", command, arguments...)

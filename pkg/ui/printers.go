@@ -6,7 +6,12 @@ import (
 	"strings"
 )
 
-func (ui *UI) NL() {
+func (ui *UI) NL(amount ...int) {
+	if len(amount) > 0 {
+		for i := 0; i < amount[0]-1; i++ {
+			fmt.Fprintln(ui.Writer)
+		}
+	}
 	fmt.Fprintln(ui.Writer)
 }
 

@@ -10,19 +10,24 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/skratchdot/open-golang/open"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
-func NewInteractiveCmd() *cobra.Command {
+var connectOpts = HelmUpgradeOrInstalTestkubeOptions{DryRun: true}
+
+func NewConnectCmd() *cobra.Command {
+
 	cmd := &cobra.Command{
 		Use:     "connect",
 		Aliases: []string{"c"},
-		Short:   "Testkube Cloud interactive mode",
-		Long:    `Interactive mode for Testkube Cloud migrations`,
+		Short:   "Testkube Cloud connect ",
 		Run:     cloudConnect,
 	}
+
+	PopulateUpgradeInstallFlags(cmd, &connectOpts)
 
 	return cmd
 }
@@ -30,119 +35,128 @@ func NewInteractiveCmd() *cobra.Command {
 const (
 	listenAddr      = "127.0.0.1:7899"
 	redirectUrl     = "http://" + listenAddr
+	authUrl         = "https://cloud.testkube.io/?redirectUri="
+	docsUrl         = "https://docs.testkube.io/testkube-cloud/intro"
 	tokenQueryParam = "token"
 )
 
 func cloudConnect(cmd *cobra.Command, args []string) {
 
-	header := pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgDefault, pterm.FgLightMagenta, pterm.Bold)).WithMargin(0)
-	text := pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgDefault, pterm.FgDarkGray)).
-		WithTextStyle(pterm.NewStyle(pterm.BgDefault, pterm.FgGray)).WithMargin(0)
+	h1 := pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgDefault, pterm.Bold)).WithTextStyle(pterm.NewStyle(pterm.FgLightMagenta)).WithMargin(0)
+	h2 := pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgDefault, pterm.Bold)).WithTextStyle(pterm.NewStyle(pterm.FgLightGreen)).WithMargin(0)
+	// text := pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgDefault, pterm.FgDarkGray)).
+	// 	WithTextStyle(pterm.NewStyle(pterm.BgDefault, pterm.FgGray)).WithMargin(0)
 
-	header.Println("Connect your cloud environment:")
-	text.Println("You can learn more about connecting your Testkube instance to the Cloud here:\nhttps://docs.testkube.io/etc")
-	header.Println("You can safely switch between connecting Cloud and disconnecting without losing your data.")
+	text := pterm.DefaultParagraph.WithMaxWidth(100)
+
+	h1.Println("Connect your cloud environment:")
+	text.Println("You can learn more about connecting your Testkube instance to the Cloud here:\n" + docsUrl)
+	h2.Println("You can safely switch between connecting Cloud and disconnecting without losing your data.")
+
+	cfg, err := config.Load()
+	if err != nil {
+		pterm.Error.Printfln("Failed to load config file: %s", err.Error())
+		return
+	}
+
+	var clusterContext string
+	if cfg.ContextType == config.ContextTypeKubeconfig {
+		clusterContext, err = GetCurrentKubernetesContext()
+		if err != nil {
+			pterm.Error.Printfln("Failed to get current kubernetes context: %s", err.Error())
+			return
+		}
+	}
 
 	// TODO: implement context info
-	header.Println("Current status of your Testkube instance")
-	text.Println(`
-Context:    On-Premise (local OSS context)
-Cluster:    cluster
-Namespace:  testkube
-`)
+	h1.Println("Current status of your Testkube instance")
+	ui.InfoGrid(map[string]string{
+		"Context":   string(cfg.ContextType),
+		"Namespace": cfg.Namespace,
+		"Cluster":   clusterContext,
+	})
 
-	header.Println("Login")
-	text.Println("Please open the following link in your browser and log in:\nhttps://cloud.testkube.io/login?redirect_uri=....")
+	authUrlWithRedirect := authUrl + url.QueryEscape(redirectUrl)
 
-	// open browser with login page and redirect to localhost:7899
-	open.Run("https://cloud.testkube.io/?redirectUri=" + url.QueryEscape(redirectUrl))
+	// if no agent is passed create new environment and get its token
+	if connectOpts.AgentToken == "" {
+		h1.Println("Login")
+		text.Println("Your browser should open automatically. If not, please open this link in your browser:")
+		text.Println(authUrlWithRedirect)
+		text.Println("(just login and get back to your terminal)")
+		text.Println("")
 
-	// wait for token received to browser
-	s := spinner("waiting for auth token")
-	tokenChan, err := getToken()
-	if err != nil {
-		s.Fail("Failed to get auth token", err.Error())
+		if ok := ui.Confirm("Continue"); !ok {
+			return
+		}
+
+		// open browser with login page and redirect to localhost:7899
+		open.Run(authUrlWithRedirect)
+
+		token, err := uiGetToken()
+		ui.ExitOnError("getting token", err)
+
+		orgId, err := uiGetOrganizationId(token)
+		ui.ExitOnError("getting token", err)
+
+		envName, err := uiGetEnvName()
+		ui.ExitOnError("getting environment name", err)
+
+		envClient := cloudclient.NewEnvironmentsClient(token)
+		env, err := envClient.Create(cloudclient.Environment{Name: envName, Owner: orgId})
+		if err != nil {
+			pterm.Error.Println("Failed to create environment", err.Error())
+			return
+		}
+		connectOpts.AgentToken = env.AgentToken
+	}
+
+	// scale down not remove
+	connectOpts.NoDashboard = false
+	connectOpts.NoMinio = false
+	connectOpts.NoMongo = false
+	connectOpts.DashboardReplicas = 0
+	connectOpts.MinioReplicas = 0
+	connectOpts.MongoReplicas = 0
+
+	ui.NL(2)
+
+	// TODO expected statsus
+	if ok := ui.Confirm("Proceed with connecting Testkube Cloud?"); !ok {
 		return
 	}
 
-	var token string
-	// TODO: add timeout
-	select {
-	case token = <-tokenChan:
-		s.Success()
-	case <-time.After(5 * time.Minute):
-		s.Fail("Timeout waiting for auth token")
-	}
+	spinner := ui.NewSpinner("Connecting Testkube Cloud")
+
+	err = HelmUpgradeOrInstallTestkubeCloud(connectOpts, cfg)
+	ui.ExitOnError("Installing Testkube Cloud", err)
+	spinner.Success()
+
 	ui.NL()
-	// Choose organization from orgs available
-	orgs, err := getOrganizations(token)
-	if err != nil {
-		pterm.Error.Println("Failed to get organizations", err.Error())
-		return
+
+	spinner = ui.NewSpinner("Scaling down not needed Testkube OSS components")
+	// let's scale down deployment of mongo
+	if connectOpts.MongoReplicas == 0 {
+		KubectlScaleDeployment(connectOpts.Namespace, "testkube-mongodb", connectOpts.MongoReplicas)
+		KubectlScaleDeployment(connectOpts.Namespace, "testkube-minio-testkube", connectOpts.MinioReplicas)
+		KubectlScaleDeployment(connectOpts.Namespace, "testkube-dashboard", connectOpts.DashboardReplicas)
 	}
+	spinner.Success()
 
-	orgNames := getNames(orgs)
-	orgName, _ := pterm.DefaultInteractiveSelect.
-		WithOptions(orgNames).
-		Show()
+	err = PopulateAgentDataToContext(connectOpts, cfg)
+	ui.ExitOnError("Populating agent data to context", err)
 
-	orgId := findId(orgs, orgName)
-
-	ui.NL()
-
-	envName, _ := pterm.DefaultInteractiveTextInput.
-		WithMultiLine(false).
-		Show("Tell us the name of your environment")
-
-	pterm.Println()
-
-	envClient := cloudclient.NewEnvironmentsClient(token)
-	env, err := envClient.Create(cloudclient.Environment{Name: envName, Owner: orgId})
-
-	if err != nil {
-		pterm.Error.Println("Failed to create environment", err.Error())
-		return
-	}
-
-	fmt.Printf("%+v\n", env)
-
+	ui.NL(2)
 }
 
-func checkInfo() pterm.TextPrinter {
-	s := pterm.Info.WithMessageStyle(pterm.NewStyle(pterm.FgWhite, pterm.BgDefault))
-	s.Prefix = pterm.Prefix{Text: " ️", Style: pterm.NewStyle(pterm.FgDefault, pterm.BgDefault)}
-	return s
-}
-
-func checkOk() pterm.TextPrinter {
-	return pterm.Info.
-		WithMessageStyle(pterm.NewStyle(pterm.FgWhite, pterm.BgDefault)).
-		WithPrefix(pterm.Prefix{Text: "✅", Style: pterm.NewStyle(pterm.FgDefault, pterm.BgDefault)})
-}
-func checkFail() pterm.TextPrinter {
-	return pterm.Info.
-		WithMessageStyle(pterm.NewStyle(pterm.FgRed, pterm.BgDefault)).
-		WithPrefix(pterm.Prefix{Text: "❗", Style: pterm.NewStyle(pterm.FgDefault, pterm.BgDefault)})
-
-}
-
-func spinner(t string) *pterm.SpinnerPrinter {
-	s := pterm.DefaultSpinner
-	s.InfoPrinter = checkOk()
-	s.SuccessPrinter = checkOk()
-	s.InfoPrinter = checkInfo()
-	s.FailPrinter = checkFail()
-	sp, _ := s.Start(t)
-	return sp
-}
-
-// TODO implement
+// getToken returns chan to wait for token from http server
+// client need to call / endpoint with token query param
 func getToken() (chan string, error) {
 	tokenChan := make(chan string)
 
 	go func() {
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			tokenChan <- r.URL.Query().Get("token")
+			tokenChan <- r.URL.Query().Get(tokenQueryParam)
 		})
 
 		log.Fatal(http.ListenAndServe(listenAddr, nil))
@@ -156,7 +170,6 @@ type Organization struct {
 	Name string
 }
 
-// TODO implement
 func getOrganizations(token string) ([]cloudclient.Organization, error) {
 	c := cloudclient.NewOrganizationsClient(token)
 	return c.List()
@@ -177,4 +190,55 @@ func findId(orgs []cloudclient.Organization, name string) string {
 		}
 	}
 	return ""
+}
+
+func uiGetOrganizationId(token string) (string, error) {
+	// Choose organization from orgs available
+	orgs, err := getOrganizations(token)
+	if err != nil {
+		pterm.Error.Println("Failed to get organizations", err.Error())
+		return "", fmt.Errorf("failed to get organizations: %s", err.Error())
+	}
+
+	orgNames := getNames(orgs)
+	orgName, _ := pterm.DefaultInteractiveSelect.
+		WithOptions(orgNames).
+		Show()
+
+	orgId := findId(orgs, orgName)
+
+	return orgId, nil
+}
+
+func uiGetToken() (string, error) {
+	// wait for token received to browser
+	s := ui.NewSpinner("waiting for auth token")
+	tokenChan, err := getToken()
+	if err != nil {
+		s.Fail("Failed to get auth token", err.Error())
+		return "", fmt.Errorf("failed to get auth token: %s", err.Error())
+	}
+
+	var token string
+	select {
+	case token = <-tokenChan:
+		s.Success()
+	case <-time.After(5 * time.Minute):
+		s.Fail("Timeout waiting for auth token")
+		return "", fmt.Errorf("timeout waiting for auth token")
+	}
+	ui.NL()
+
+	return token, nil
+}
+
+func uiGetEnvName() (string, error) {
+	for i := 0; i < 3; i++ {
+		if envName := ui.TextInput("Tell us the name of your environment"); envName != "" {
+			return envName, nil
+		}
+		pterm.Error.Println("Environment name cannot be empty")
+	}
+
+	return "", fmt.Errorf("environment name cannot be empty")
 }
