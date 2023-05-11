@@ -166,6 +166,25 @@ func (ui *UI) InfoGrid(table map[string]string) {
 	fmt.Fprintln(ui.Writer)
 }
 
+func (ui *UI) Properties(table [][]string) {
+	for _, properties := range table {
+		if len(properties) > 1 && properties[0] == Separator {
+			fmt.Fprintln(ui.Writer)
+			continue
+		}
+
+		if len(properties) == 1 {
+			fmt.Fprintf(ui.Writer, "  %s\n", Default(properties[0]))
+			fmt.Fprintf(ui.Writer, "  %s\n", Default(strings.Repeat("-", len(properties[0]))))
+		}
+
+		if len(properties) == 2 {
+			fmt.Fprintf(ui.Writer, "  %s: %s\n", White(properties[0]), LightBlue(properties[1]))
+		}
+	}
+	fmt.Fprintln(ui.Writer)
+}
+
 func (ui *UI) Vector(table []string) {
 	for _, v := range table {
 		fmt.Fprintf(ui.Writer, "  %s\n", DarkGray(v))

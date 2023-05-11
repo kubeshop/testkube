@@ -643,7 +643,6 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
-
   /test-suites/{id}/abort:
     post:
       tags:
@@ -3900,6 +3899,10 @@ components:
           type: string
           description: server installaton namespace
           example: "my-testkube"
+        context:
+          type: string
+          description: currently configured testkube API context
+          example: "cloud|oss"
 
     Repository:
       description: repository representation for tests in git repositories

@@ -3,6 +3,7 @@ package v1
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/kubeshop/testkube/pkg/version"
@@ -17,13 +18,16 @@ import (
 const (
 	// cliIngressHeader is cli ingress header
 	cliIngressHeader = "X-CLI-Ingress"
-)
-
-const (
 	// mediaTypeJSON is json media type
 	mediaTypeJSON = "application/json"
 	// mediaTypeYAML is yaml media type
 	mediaTypeYAML = "text/yaml"
+	// cloudEnvVariableName is cloud env variable name
+	cloudEnvVariableName = "TESTKUBE_CLOUD_API_KEY"
+	// contextCloud is cloud context
+	contextCloud = "cloud"
+	// contextOSS is oss context
+	contextOSS = "oss"
 )
 
 // AuthHandler is auth middleware
@@ -49,11 +53,16 @@ func (s *TestkubeAPI) AuthHandler() fiber.Handler {
 
 // InfoHandler is a handler to get info
 func (s *TestkubeAPI) InfoHandler() fiber.Handler {
+	apiContext := contextOSS
+	if os.Getenv(cloudEnvVariableName) != "" {
+		apiContext = contextCloud
+	}
 	return func(c *fiber.Ctx) error {
 		return c.JSON(testkube.ServerInfo{
 			Commit:    version.Commit,
 			Version:   version.Version,
 			Namespace: s.Namespace,
+			Context:   apiContext,
 		})
 	}
 }

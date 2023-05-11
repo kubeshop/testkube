@@ -10,6 +10,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/skratchdot/open-golang/open"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -33,14 +34,28 @@ func NewConnectCmd() *cobra.Command {
 }
 
 const (
-	listenAddr      = "127.0.0.1:7899"
-	redirectUrl     = "http://" + listenAddr
+	listenAddr      = "127.0.0.1:8090"
+	redirectUrl     = "http://" + listenAddr + "/callback"
 	authUrl         = "https://cloud.testkube.io/?redirectUri="
 	docsUrl         = "https://docs.testkube.io/testkube-cloud/intro"
 	tokenQueryParam = "token"
 )
 
+var contextDescription = map[string]string{
+	"":      "Unknown context, try updating your testkube cluster installation",
+	"oss":   "Open Source Testkube",
+	"cloud": "Testkube in Cloud mode",
+}
+
 func cloudConnect(cmd *cobra.Command, args []string) {
+	client, _ := common.GetClient(cmd)
+	info, err := client.GetServerInfo()
+	ui.ExitOnError("getting server info", err)
+
+	var apiContext string
+	if actx, ok := contextDescription[info.Context]; ok {
+		apiContext = actx
+	}
 
 	h1 := pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgDefault, pterm.Bold)).WithTextStyle(pterm.NewStyle(pterm.FgLightMagenta)).WithMargin(0)
 	h2 := pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgDefault, pterm.Bold)).WithTextStyle(pterm.NewStyle(pterm.FgLightGreen)).WithMargin(0)
@@ -70,13 +85,21 @@ func cloudConnect(cmd *cobra.Command, args []string) {
 
 	// TODO: implement context info
 	h1.Println("Current status of your Testkube instance")
-	ui.InfoGrid(map[string]string{
-		"Context":   string(cfg.ContextType),
-		"Namespace": cfg.Namespace,
-		"Cluster":   clusterContext,
+	ui.Properties([][]string{
+		{"Context", apiContext},
+		{"Kubectl context", clusterContext},
+		{"Namespace", cfg.Namespace},
 	})
 
 	authUrlWithRedirect := authUrl + url.QueryEscape(redirectUrl)
+
+	summary := [][]string{
+		{"Testkube mode"},
+		{"Context", contextDescription["cloud"]},
+		{"Kubectl context", clusterContext},
+		{"Namespace", cfg.Namespace},
+		{ui.Separator, ""},
+	}
 
 	// if no agent is passed create new environment and get its token
 	if connectOpts.AgentToken == "" {
@@ -96,7 +119,7 @@ func cloudConnect(cmd *cobra.Command, args []string) {
 		token, err := uiGetToken()
 		ui.ExitOnError("getting token", err)
 
-		orgId, err := uiGetOrganizationId(token)
+		orgId, orgName, err := uiGetOrganizationId(token)
 		ui.ExitOnError("getting token", err)
 
 		envName, err := uiGetEnvName()
@@ -108,6 +131,14 @@ func cloudConnect(cmd *cobra.Command, args []string) {
 			pterm.Error.Println("Failed to create environment", err.Error())
 			return
 		}
+
+		summary = append(summary, []string{"Testkube will be connected to cloud org/env"})
+		summary = append(summary, []string{"Organization Id", orgId})
+		summary = append(summary, []string{"Organization name", orgName})
+		summary = append(summary, []string{"Environment Id", env.Id})
+		summary = append(summary, []string{"Environment name", env.Name})
+		summary = append(summary, []string{ui.Separator, ""})
+
 		connectOpts.AgentToken = env.AgentToken
 	}
 
@@ -119,8 +150,15 @@ func cloudConnect(cmd *cobra.Command, args []string) {
 	connectOpts.MinioReplicas = 0
 	connectOpts.MongoReplicas = 0
 
+	summary = append(summary, []string{"Testkube support services not needed anymore"})
+	summary = append(summary, []string{"MinIO    ", "Stopped and scaled down, (not deleted)"})
+	summary = append(summary, []string{"MongoDB  ", "Stopped and scaled down, (not deleted)"})
+	summary = append(summary, []string{"Dashboard", "Stopped and scaled down, (not deleted)"})
+
 	ui.NL(2)
 
+	h1.Println("Summary of your setup after connecting to Testkube Cloud")
+	ui.Properties(summary)
 	// TODO expected statsus
 	if ok := ui.Confirm("Proceed with connecting Testkube Cloud?"); !ok {
 		return
@@ -155,7 +193,7 @@ func getToken() (chan string, error) {
 	tokenChan := make(chan string)
 
 	go func() {
-		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
 			tokenChan <- r.URL.Query().Get(tokenQueryParam)
 		})
 
@@ -192,12 +230,12 @@ func findId(orgs []cloudclient.Organization, name string) string {
 	return ""
 }
 
-func uiGetOrganizationId(token string) (string, error) {
+func uiGetOrganizationId(token string) (string, string, error) {
 	// Choose organization from orgs available
 	orgs, err := getOrganizations(token)
 	if err != nil {
 		pterm.Error.Println("Failed to get organizations", err.Error())
-		return "", fmt.Errorf("failed to get organizations: %s", err.Error())
+		return "", "", fmt.Errorf("failed to get organizations: %s", err.Error())
 	}
 
 	orgNames := getNames(orgs)
@@ -207,7 +245,7 @@ func uiGetOrganizationId(token string) (string, error) {
 
 	orgId := findId(orgs, orgName)
 
-	return orgId, nil
+	return orgId, orgName, nil
 }
 
 func uiGetToken() (string, error) {

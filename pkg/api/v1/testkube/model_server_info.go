@@ -17,4 +17,6 @@ type ServerInfo struct {
 	Commit string `json:"commit,omitempty"`
 	// server installaton namespace
 	Namespace string `json:"namespace,omitempty"`
+	// currently configured testkube API context
+	Context string `json:"context,omitempty"`
 }

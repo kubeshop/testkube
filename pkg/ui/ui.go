@@ -6,6 +6,10 @@ import (
 	"os"
 )
 
+const (
+	Separator = "separator"
+)
+
 var (
 	uiOut = NewStdoutUI(Verbose)
 	uiErr = NewStderrUI(Verbose)
@@ -71,6 +75,7 @@ func Medal()                                                { ui.Medal() }
 func Completed(message string, subMessages ...string)       { ui.Completed(message, subMessages...) }
 func GroupCompleted(main string, sub ...string)             { ui.GroupCompleted(main, sub...) }
 func InfoGrid(table map[string]string)                      { ui.InfoGrid(table) }
+func Properties(table [][]string)                           { ui.Properties(table) }
 func Vector(table []string)                                 { ui.Vector(table) }
 func ShellCommand(title string, commands ...string)         { ui.ShellCommand(title, commands...) }
 func Table(tableData TableData, writer io.Writer)           { ui.Table(tableData, writer) }
