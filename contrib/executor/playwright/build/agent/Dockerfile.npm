@@ -1,17 +1,15 @@
+## Base image consists of:
+
+# FROM mcr.microsoft.com/playwright:v1.30.0-focal
+# RUN apt-get update && apt-get install -y zip
+
 # syntax=docker/dockerfile:1
-FROM golang:1.18
-WORKDIR contrib/executor/playwright/build
-COPY . .
-ENV CGO_ENABLED=0 
-ENV GOOS=linux
+FROM kubeshop/testkube-playwright-executor:base
+COPY playwright /bin/runner
 
-RUN cd contrib/executor/playwright/cmd/agent;go build -o /runner -mod mod -a .
-
-FROM mcr.microsoft.com/playwright:v1.30.0-focal
-RUN apt-get update && apt-get install -y zip
 RUN mkdir /home/runner
 WORKDIR /home/runner/
-COPY --from=0 /runner /bin/runner
+
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=true
 ENV DEPENDENCY_MANAGER=npm
 ENV CI=1

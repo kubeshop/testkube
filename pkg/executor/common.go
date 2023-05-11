@@ -316,12 +316,12 @@ func SyncDefaultExecutors(
 			continue
 		}
 
-		if executor.Name == "executor-init" {
+		if executor.Name == "init-executor" {
 			images.Init = executor.Executor.Image
 			continue
 		}
 
-		if executor.Name == "executor-scraper" {
+		if executor.Name == "scraper-executor" {
 			images.Scraper = executor.Executor.Image
 			continue
 		}
