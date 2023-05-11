@@ -164,7 +164,7 @@ When running load tests, it is common to run into memory-related issues, for exa
 * on pod/job level
 * on cluster level
 
-In most cases, it is wise to start from setting the right variables for the JVM. As the [README of the underlying image](https://github.com/justb4/docker-jmeter#adjust-java-memory-options) suggest, the available values are `JVM_XMN`, `JVM_XMS` and `JVM_XMX`.
+In most cases, it is wise to start from setting the correct variables for the JVM. As the [README of the underlying image](https://github.com/justb4/docker-jmeter#adjust-java-memory-options) suggests, the available values are `JVM_XMN`, `JVM_XMS` and `JVM_XMX`.
 
 >By default, JMeter reads out the available memory from the host machine and uses a fixed value of 80% of it as a maximum. If this causes Issues, there is the option to use environment variables to adjust the JVM memory Parameters:
 >
@@ -176,6 +176,6 @@ In most cases, it is wise to start from setting the right variables for the JVM.
 >
 >All three use values in Megabyte range.
 
-In case this is not fixing your issue, look into using Testkube job templates to set job-level [requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/).
+If this does not fix your issue, look into using Testkube job templates to set job-level [requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/).
 
 In the very rare case that you are still bumping into memory issues, consider asking your Kubernetes cluster manager about any [resource quotas](https://kubernetes.io/docs/concepts/policy/resource-quotas/).
