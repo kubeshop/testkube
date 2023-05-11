@@ -1,0 +1,17 @@
+full:
+  # -t target URL including the protocol
+  target: https://www.example.com/
+  # -c -u config file or URL
+  config: examples/zap-full.config
+  # -m the number of minutes to spider for (default 1)
+  minutes: -1
+  # -d show debug messages
+  debug: false
+  # -s short output
+  short: true
+  # -l minimum level to show: PASS, IGNORE, INFO, WARN or FAIL
+  level: FAIL
+  # -j use the Ajax spider in addition to the traditional one
+  ajax: true
+  # -I do not fail on WARN
+  fail_on_warn: false
