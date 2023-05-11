@@ -48,4 +48,4 @@ The type of the test CRD should be `curl/test`.
 
 ## API
 
-testkube Executor Curl implements [testkube OpenAPI for executors](https://kubeshop.github.io/testkube/openapi/#operations-tag-executor) (look at executor tag)
+testkube Executor Curl implements [testkube OpenAPI for executors](https://docs.testkube.io/openapi) (look at executor tag)

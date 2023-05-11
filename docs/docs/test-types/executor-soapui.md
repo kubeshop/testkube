@@ -135,7 +135,7 @@ An example of an exported SoapUI test looks the following:
                      <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/&gt;</con:setting>
                   </con:settings>
                   <con:encoding>UTF-8</con:encoding>
-                  <con:endpoint>https://kubeshop.github.io/testkube/</con:endpoint>
+                  <con:endpoint>https://docs.testkube.io</con:endpoint>
                   <con:request />
                   <con:originalUri>https://kubeshop.io</con:originalUri>
                   <con:assertion type="Simple Contains" id="d9497693-01e2-4e3e-8ce5-5a292f9b6e41" name="Contains">

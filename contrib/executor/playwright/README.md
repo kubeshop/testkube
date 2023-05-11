@@ -25,4 +25,4 @@ Otherwise, the test will not automatically terminate when the test fails.
 
 ## API
 
-Playwright executor implements [testkube OpenAPI for executors](https://kubeshop.github.io/testkube/openapi/#operations-tag-executor) (look at executor tag)
+Playwright executor implements [testkube OpenAPI for executors](https://docs.testkube.io/openapi#tag/executor) (look at executor tag)
