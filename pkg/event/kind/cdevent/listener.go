@@ -12,31 +12,28 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/log"
 	cde "github.com/kubeshop/testkube/pkg/mapper/cdevents"
-	"github.com/kubeshop/testkube/pkg/version"
 )
 
 var _ common.Listener = (*CDEventListener)(nil)
 
 func NewCDEventListener(name, selector, clusterID string, events []testkube.EventType, client cloudevents.Client) *CDEventListener {
 	return &CDEventListener{
-		name:       name,
-		Log:        log.DefaultLogger,
-		selector:   selector,
-		events:     events,
-		client:     client,
-		clusterID:  clusterID,
-		appVersion: "testkube-api:" + version.Version,
+		name:      name,
+		Log:       log.DefaultLogger,
+		selector:  selector,
+		events:    events,
+		client:    client,
+		clusterID: clusterID,
 	}
 }
 
 type CDEventListener struct {
-	name       string
-	Log        *zap.SugaredLogger
-	events     []testkube.EventType
-	selector   string
-	client     cloudevents.Client
-	clusterID  string
-	appVersion string
+	name      string
+	Log       *zap.SugaredLogger
+	events    []testkube.EventType
+	selector  string
+	client    cloudevents.Client
+	clusterID string
 }
 
 func (l *CDEventListener) Name() string {
@@ -60,7 +57,7 @@ func (l *CDEventListener) Metadata() map[string]string {
 
 func (l *CDEventListener) Notify(event testkube.Event) (result testkube.EventResult) {
 	// Create the base event
-	ev, err := cde.MapTestkubeEventToCDEvent(event, l.clusterID, l.appVersion)
+	ev, err := cde.MapTestkubeEventToCDEvent(event, l.clusterID)
 	if err != nil {
 		return testkube.NewFailedEventResult(event.Id, err)
 	}
