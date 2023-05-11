@@ -8,7 +8,7 @@ TestKube ZAP Executor is a test executor to run ZED attack proxy scans with [Tes
 
 Your Testkube installation comes directly with the ZAP executor.
 
-In case you want to build and deploy the executor yourself, you need to register and deploy it in your cluster.
+In case you want to build and deploy the executor yourself, you need to build the image first, and then register the executor and deploy it in your cluster.
 ```bash
 kubectl apply -f examples/zap-executor.yaml
 ```

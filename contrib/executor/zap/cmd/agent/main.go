@@ -8,6 +8,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor/agent"
 	"github.com/kubeshop/testkube/pkg/executor/output"
+	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/pkg/errors"
 )
 
@@ -15,12 +16,12 @@ func main() {
 	ctx := context.Background()
 	params, err := envs.LoadTestkubeVariables()
 	if err != nil {
-		output.PrintError(os.Stderr, errors.Errorf("could not initialize JMeter Executor environment variables: %v", err))
+		output.PrintError(os.Stderr, errors.Errorf("%s could not initialize ZAP Executor environment variables: %v", ui.IconCross, err))
 		os.Exit(1)
 	}
 	r, err := runner.NewRunner(ctx, params)
 	if err != nil {
-		output.PrintError(os.Stderr, errors.Wrap(err, "error instantiating JMeter Executor"))
+		output.PrintError(os.Stderr, errors.Errorf("%s error instantiating ZAP Executor: %v", err))
 		os.Exit(1)
 	}
 	agent.Run(ctx, r, os.Args)

@@ -2,7 +2,6 @@ package runner
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,12 +10,17 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
+	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/pkg/errors"
 )
 
+// ZapRunner runs ZAP tests
 type ZapRunner struct {
 	Params  envs.Params
 	ZapHome string
@@ -25,35 +29,49 @@ type ZapRunner struct {
 
 var _ runner.Runner = &ZapRunner{}
 
+// NewRunner creates a new ZapRunner
 func NewRunner(ctx context.Context, params envs.Params) (*ZapRunner, error) {
-	return &ZapRunner{
+	output.PrintLogf("%s Preparing test runner", ui.IconTruck)
+
+	var err error
+	r := &ZapRunner{
 		Params:  params,
 		ZapHome: os.Getenv("ZAP_HOME"),
-	}, nil
+	}
+
+	r.Scraper, err = factory.TryGetScrapper(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
 }
 
+// Run executes the test and returns the test results
 func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
 	if r.Scraper != nil {
 		defer r.Scraper.Close()
 	}
+	output.PrintLogf("%s Preparing for test run", ui.IconTruck)
 
-	// check that the datadir exists
-	_, err = os.Stat(r.Params.DataDir)
-	if errors.Is(err, os.ErrNotExist) {
+	testFile, workingDir, err := content.GetPathAndWorkingDir(execution.Content, r.Params.DataDir)
+	if err != nil {
+		output.PrintLogf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.Params.DataDir)
+	}
+
+	fileInfo, err := os.Stat(testFile)
+	if err != nil {
 		return result, err
 	}
 
-	var directory string
 	var zapConfig string
 
-	if execution.Content.IsFile() {
-		// use the given file config as ZAP config YAML
-		directory = r.Params.DataDir
-		zapConfig = filepath.Join(r.Params.DataDir, "test-content")
-	} else if len(execution.Args) > 0 {
+	if fileInfo.IsDir() {
 		// assume the ZAP config YAML has been passed as test argument
-		directory = filepath.Join(r.Params.DataDir, "repo")
-		zapConfig = filepath.Join(directory, execution.Args[len(execution.Args)-1])
+		zapConfig = filepath.Join(workingDir, execution.Args[len(execution.Args)-1])
+	} else {
+		// use the given file config as ZAP config YAML
+		zapConfig = testFile
 	}
 
 	options := Options{}
@@ -64,7 +82,12 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 
 	// determine the actual ZAP script and args to run
 	scanType := strings.Split(execution.TestType, "/")[1]
-	reportFile := fmt.Sprintf("%s-report.html", execution.TestName)
+	reportFolder := filepath.Join(r.Params.DataDir, "reports")
+	err = os.Mkdir(reportFolder, 0700)
+	if err != nil {
+		return *result.WithErrors(err), nil
+	}
+	reportFile := filepath.Join(reportFolder, fmt.Sprintf("%s-report.html", execution.TestName))
 	scriptName := zapScript(scanType)
 	args := zapArgs(scanType, options, reportFile)
 
@@ -82,11 +105,11 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 
 	// when using file based ZAP parameters it expects a /zap/wrk directory
 	// we simply symlink the directory
-	os.Symlink(directory, filepath.Join(r.ZapHome, "wrk"))
+	os.Symlink(r.Params.DataDir, filepath.Join(r.ZapHome, "wrk"))
 
-	output.PrintEvent("Running", r.ZapHome, scriptName, args)
-	output, err := executor.Run(r.ZapHome, scriptName, envManager, args...)
-	output = envManager.ObfuscateSecrets(output)
+	output.PrintLogf("%s Running ZAP test in directory %s with the script %s and the following arguments: %s", ui.IconMicroscope, r.ZapHome, scriptName, args)
+	logs, err := executor.Run(r.ZapHome, scriptName, envManager, args...)
+	logs = envManager.ObfuscateSecrets(logs)
 
 	if err == nil {
 		result.Status = testkube.ExecutionStatusPassed
@@ -101,7 +124,7 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 		}
 	}
 
-	result.Output = string(output)
+	result.Output = string(logs)
 	result.OutputType = "text/plain"
 
 	// prepare step results based on output
@@ -129,7 +152,18 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 		}
 	}
 
-	// TODO maybe upload the report file as artifact
+	if r.Params.ScrapperEnabled {
+		directories := []string{reportFolder}
+		if execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
+			directories = append(directories, execution.ArtifactRequest.Dirs...)
+		}
+
+		output.PrintLogf("Scraping directories: %v", directories)
+
+		if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
+			return *result.Err(err), errors.Wrap(err, "error scraping artifacts from ZAP executor")
+		}
+	}
 
 	return result, err
 }
