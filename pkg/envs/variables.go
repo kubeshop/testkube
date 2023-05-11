@@ -22,6 +22,8 @@ type Params struct {
 	DataDir             string // RUNNER_DATADIR
 	GitUsername         string // RUNNER_GITUSERNAME
 	GitToken            string // RUNNER_GITTOKEN
+	ClusterID           string // RUNNER_CLUSTERID
+	CDEventsTarget      string // RUNNER_CDEVENTS_TARGET
 	CloudMode           bool   `envconfig:"RUNNER_CLOUD_MODE"`             // RUNNER_CLOUD_MODE
 	CloudAPIKey         string `envconfig:"RUNNER_CLOUD_API_KEY"`          // RUNNER_CLOUD_API_KEY
 	CloudAPITLSInsecure bool   `envconfig:"RUNNER_CLOUD_API_TLS_INSECURE"` // RUNNER_CLOUD_API_TLS_INSECURE
@@ -56,6 +58,8 @@ func printParams(params Params) {
 	output.PrintLogf("RUNNER_GITUSERNAME=\"%s\"", params.GitUsername)
 	printSensitiveParam("RUNNER_GITTOKEN", params.GitToken)
 	output.PrintLogf("RUNNER_DATADIR=\"%s\"", params.DataDir)
+	output.PrintLogf("RUNNER_CLUSTERID=\"%s\"", params.ClusterID)
+	output.PrintLogf("RUNNER_CDEVENTS_TARGET=\"%s\"", params.CDEventsTarget)
 	output.PrintLogf("RUNNER_CLOUD_MODE=\"%t\"", params.CloudMode)
 	output.PrintLogf("RUNNER_CLOUD_API_TLS_INSECURE=\"%t\"", params.CloudAPITLSInsecure)
 	output.PrintLogf("RUNNER_CLOUD_API_URL=\"%s\"", params.CloudAPIURL)

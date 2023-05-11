@@ -315,6 +315,7 @@ func main() {
 		clientset,
 		cfg.TestkubeRegistry,
 		cfg.TestkubePodStartTimeout,
+		clusterId,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating executor client", err)
@@ -338,6 +339,7 @@ func main() {
 		testsClientV3,
 		cfg.TestkubeRegistry,
 		cfg.TestkubePodStartTimeout,
+		clusterId,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating container executor", err)
