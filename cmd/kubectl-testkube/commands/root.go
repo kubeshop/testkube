@@ -50,8 +50,7 @@ func init() {
 	RootCmd.AddCommand(NewCreateTicketCmd())
 
 	RootCmd.AddCommand(NewAgentCmd())
-	RootCmd.AddCommand(NewConnectCmd())
-	RootCmd.AddCommand(NewDisconnectCmd())
+	RootCmd.AddCommand(NewCloudCmd())
 
 	RootCmd.SetHelpCommand(NewHelpCmd())
 }

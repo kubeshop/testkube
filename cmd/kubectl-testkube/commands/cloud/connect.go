@@ -1,4 +1,4 @@
-package commands
+package cloud
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var connectOpts = HelmUpgradeOrInstalTestkubeOptions{DryRun: true}
+var connectOpts = common.HelmUpgradeOrInstalTestkubeOptions{DryRun: true}
 
 func NewConnectCmd() *cobra.Command {
 
@@ -28,7 +28,7 @@ func NewConnectCmd() *cobra.Command {
 		Run:     cloudConnect,
 	}
 
-	PopulateUpgradeInstallFlags(cmd, &connectOpts)
+	common.PopulateUpgradeInstallFlags(cmd, &connectOpts)
 
 	return cmd
 }
@@ -76,7 +76,7 @@ func cloudConnect(cmd *cobra.Command, args []string) {
 
 	var clusterContext string
 	if cfg.ContextType == config.ContextTypeKubeconfig {
-		clusterContext, err = GetCurrentKubernetesContext()
+		clusterContext, err = common.GetCurrentKubernetesContext()
 		if err != nil {
 			pterm.Error.Printfln("Failed to get current kubernetes context: %s", err.Error())
 			return
@@ -160,28 +160,66 @@ func cloudConnect(cmd *cobra.Command, args []string) {
 	h1.Println("Summary of your setup after connecting to Testkube Cloud")
 	ui.Properties(summary)
 	// TODO expected statsus
+
+	//         Connect your cloud environment:        You can learn more about connecting your Testkube instance to the Cloud here:         https://docs.testkube.io/etc...
+
+	//         You can safely switch between connecting Cloud and disconnecting without losing your data.STATUS  Current status of your Testkube instance
+
+	//         Context:   On premise (local OSS context)
+	//         Cluster:   Cluster name        Namespace: Testkube
+	// LOGIN   Login        Please open the following link in your browser and log in:         https://cloud.testkube.io/login?redirect_uri=....
+	// ORG     Organisation        Select the organisation you want to connect this instance to        ● My-Org-1        ○ Another Org
+	// ENV     Environment
+	//         Create an environment on Cloud for this instance        Tell us the name of your new environment        > my-env-1        ⏳ Creating environment         ✅ Environment created        ❌ Environment creation failed – your plan does only support 2 environments
+	//         SANITY  Summary of your setup after connecting:         Context:   Cloud
+	//         Cluster:   Cluster name        Namespace: Testkube        Org. name: My-Org-1        Env. name: my-env-1        Minio:     stopped and scaled down (not deleted)        MongoDB:   stopped and scaled down (not deleted)        Dashboard: stopped and scaled down (not deleted)        Shall we start connecting?
+
+	// 		Remember: All your historical data and artifacts will be safe in case you want to rollback
+
+	// 		● Yes        ○ No        CONNECT        ✅ Updating context to Cloud         ✅ Stopping Minio        ✅ Stopping Dashboard UI        ⏳ Stopping MongoDB
+
+	//         ✅ Connection finished successfully        🎉 Happy testing!
+
+	//         You can now login to Testkube Cloud and validate your connection:        https://cloud.testkube.io/org/123/env/123
+
+	//         In case you want to roll back you can simply run the following command in your CLI:
+	//         $ testkube cloud disconnect environment
+
+	ui.NL()
+	ui.Warn("Remember: All your historical data and artifacts will be safe in case you want to rollback")
+	ui.NL()
+
 	if ok := ui.Confirm("Proceed with connecting Testkube Cloud?"); !ok {
 		return
 	}
 
 	spinner := ui.NewSpinner("Connecting Testkube Cloud")
 
-	err = HelmUpgradeOrInstallTestkubeCloud(connectOpts, cfg)
+	err = common.HelmUpgradeOrInstallTestkubeCloud(connectOpts, cfg)
 	ui.ExitOnError("Installing Testkube Cloud", err)
 	spinner.Success()
 
 	ui.NL()
 
-	spinner = ui.NewSpinner("Scaling down not needed Testkube OSS components")
 	// let's scale down deployment of mongo
 	if connectOpts.MongoReplicas == 0 {
-		KubectlScaleDeployment(connectOpts.Namespace, "testkube-mongodb", connectOpts.MongoReplicas)
-		KubectlScaleDeployment(connectOpts.Namespace, "testkube-minio-testkube", connectOpts.MinioReplicas)
-		KubectlScaleDeployment(connectOpts.Namespace, "testkube-dashboard", connectOpts.DashboardReplicas)
+		spinner = ui.NewSpinner("Scaling down MongoDB")
+		common.KubectlScaleDeployment(connectOpts.Namespace, "testkube-mongodb", connectOpts.MongoReplicas)
+		spinner.Success()
 	}
-	spinner.Success()
+	if connectOpts.MinioReplicas == 0 {
+		spinner = ui.NewSpinner("Scaling down MinIO")
+		common.KubectlScaleDeployment(connectOpts.Namespace, "testkube-minio-testkube", connectOpts.MinioReplicas)
+		spinner.Success()
+	}
+	if connectOpts.DashboardReplicas == 0 {
+		spinner = ui.NewSpinner("Scaling down Dashbaord")
+		common.KubectlScaleDeployment(connectOpts.Namespace, "testkube-dashboard", connectOpts.DashboardReplicas)
+		spinner.Success()
+	}
 
-	err = PopulateAgentDataToContext(connectOpts, cfg)
+	ui.H2("Testkube Cloud is connected to your Testkube instance, saving local configuration")
+	err = common.PopulateAgentDataToContext(connectOpts, cfg)
 	ui.ExitOnError("Populating agent data to context", err)
 
 	ui.NL(2)

@@ -1,4 +1,4 @@
-package commands
+package common
 
 import (
 	"fmt"
@@ -7,7 +7,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/internal/migrations"
 	"github.com/kubeshop/testkube/pkg/migrator"
@@ -16,7 +15,7 @@ import (
 )
 
 func RunMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
-	client, _ := common.GetClient(cmd)
+	client, _ := GetClient(cmd)
 	info, err := client.GetServerInfo()
 	ui.ExitOnError("getting server info", err)
 

@@ -4,7 +4,29 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/pterm/pterm"
 )
+
+var (
+	h1        = pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgDefault, pterm.Bold)).WithTextStyle(pterm.NewStyle(pterm.FgLightMagenta)).WithMargin(0)
+	h2        = pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgDefault, pterm.Bold)).WithTextStyle(pterm.NewStyle(pterm.FgLightGreen)).WithMargin(0)
+	paragraph = pterm.DefaultParagraph.WithMaxWidth(100)
+)
+
+// H1 prints h1 like header
+func (ui *UI) H1(text string) {
+	h1.WithWriter(ui.Writer).Println(text)
+}
+
+// H1 prints h2 like header
+func (ui *UI) H2(text string) {
+	h2.WithWriter(ui.Writer).Println(text)
+}
+
+func (ui *UI) Paragraph(text string) {
+	paragraph.WithWriter(ui.Writer).Println(text)
+}
 
 func (ui *UI) NL(amount ...int) {
 	if len(amount) > 0 {

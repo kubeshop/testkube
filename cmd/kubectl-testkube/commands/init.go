@@ -3,13 +3,14 @@ package commands
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
 func NewInitCmd() *cobra.Command {
-	var options HelmUpgradeOrInstalTestkubeOptions
+	var options common.HelmUpgradeOrInstalTestkubeOptions
 
 	cmd := &cobra.Command{
 		Use:     "init",
@@ -34,7 +35,7 @@ func NewInitCmd() *cobra.Command {
 				ui.Warn("Please be sure you're on valid kubectl context before continuing!")
 				ui.NL()
 
-				currentContext, err := GetCurrentKubernetesContext()
+				currentContext, err := common.GetCurrentKubernetesContext()
 				ui.ExitOnError("getting current context", err)
 				ui.Alert("Current kubectl context:", currentContext)
 				ui.NL()
@@ -55,11 +56,11 @@ func NewInitCmd() *cobra.Command {
 				}
 			}
 
-			err = HelmUpgradeOrInstalTestkube(options)
+			err = common.HelmUpgradeOrInstalTestkube(options)
 			ui.ExitOnError("Installing testkube", err)
 
 			if cfg.ContextType == config.ContextTypeCloud {
-				err = PopulateAgentDataToContext(options, cfg)
+				err = common.PopulateAgentDataToContext(options, cfg)
 				ui.ExitOnError("Storing agent data in context", err)
 			} else {
 				ui.Info(`To help improve the quality of Testkube, we collect anonymous basic telemetry data.  Head out to https://kubeshop.github.io/testkube/telemetry/ to read our policy or feel free to:`)
@@ -75,7 +76,7 @@ func NewInitCmd() *cobra.Command {
 		},
 	}
 
-	PopulateUpgradeInstallFlags(cmd, &options)
+	common.PopulateUpgradeInstallFlags(cmd, &options)
 
 	return cmd
 }
