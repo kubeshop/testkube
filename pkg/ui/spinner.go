@@ -18,7 +18,7 @@ var (
 
 func NewSpinner(t string) *pterm.SpinnerPrinter {
 	s := pterm.DefaultSpinner.
-		WithSequence(`⠋ `, `⠹ `, `⠼ `, `⠦ `, `⠇ `)
+		WithSequence(` ⠋ `, ` ⠹ `, ` ⠼ `, ` ⠦ `, ` ⠇ `)
 	s.SuccessPrinter = checkOkPrinter
 	s.InfoPrinter = checkInfoPrinter
 	s.FailPrinter = checkFailPrinter

@@ -62,6 +62,7 @@ func Alert(message string, subMessages ...string) { ui.Alert(message, subMessage
 func LogLine(message string)                      { ui.LogLine(message) }
 func Debug(message string, subMessages ...string) { ui.Debug(message, subMessages...) }
 func Info(message string, subMessages ...string)  { ui.Info(message, subMessages...) }
+func Link(message string, subMessages ...string)  { ui.Link(message, subMessages...) }
 func Err(err error)                               { ui.Err(err) }
 func Errf(err string, params ...interface{})      { ui.Errf(err, params...) }
 func Fail(err error)                              { ui.Fail(err) }

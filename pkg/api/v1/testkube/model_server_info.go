@@ -19,4 +19,8 @@ type ServerInfo struct {
 	Namespace string `json:"namespace,omitempty"`
 	// currently configured testkube API context
 	Context string `json:"context,omitempty"`
+	// cloud organization id
+	OrgId string `json:"orgId,omitempty"`
+	// cloud env id
+	EnvId string `json:"envId,omitempty"`
 }

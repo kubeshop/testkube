@@ -67,6 +67,10 @@ func cloudDisconnect(cmd *cobra.Command, args []string) {
 		{"Kubectl context", clusterContext},
 		{"Namespace", cfg.Namespace},
 		{ui.Separator, ""},
+
+		{"Testkube is connected to cloud organizations environment"},
+		{"Organization Id", info.OrgId},
+		{"Environment Id", info.EnvId},
 	}
 
 	ui.Properties(summary)
@@ -74,19 +78,6 @@ func cloudDisconnect(cmd *cobra.Command, args []string) {
 	if ok := ui.Confirm("Shall we disconnect your cloud environment now?"); !ok {
 		return
 	}
-
-	//         Disconnect your cloud environment:        You can learn more about disconnecting your Testkube instance to the Cloud here:         https://docs.testkube.io/etc...
-	// 	You can safely switch between connecting Cloud and disconnecting without losing your data.
-	// 	STATUS  Current status of your Testkube instance
-	// 	Context:   Cloud
-	// 	Cluster:   Cluster name        Namespace: Testkube        Org. name: My-Org-1        Env. name: my-env-1
-	// LOGIN   Login        Please open the following link in your browser and log in:         https://cloud.testkube.io/login?redirect_uri=....
-	// SANITY  Summary of your setup after disconnecting:         Context:   On premise
-	// 	Cluster:   Cluster name        Namespace: Testkube        Minio:     started and scaled up         MongoDB:   started and scaled up
-	// 	Dashboard: started and scaled up         Shall we disconnect your cloud environment now?        ● Yes        ○ No        DISCONNECT        ✅ Updating context to local OSS instance         ✅ Starting Minio        ✅ Starting Dashboard UI        ⏳ Starting MongoDB
-	// 	✅ Disconnect finished successfully        🎉 Happy testing!
-	// 	You can now open your local Dashboard and validate the successfull disconnect:        https://localhost:3823?api_uri=xxxxx
-	//         $
 
 	// resurrect all scaled down deployments
 	disconnectOpts.NoDashboard = false
@@ -120,4 +111,9 @@ func cloudDisconnect(cmd *cobra.Command, args []string) {
 		common.KubectlScaleDeployment(connectOpts.Namespace, "testkube-dashboard", connectOpts.DashboardReplicas)
 		spinner.Success()
 	}
+
+	ui.NL()
+	ui.Success("Disconnect finished successfully")
+	ui.NL()
+	ui.ShellCommand("You can now open your local Dashboard and validate the successfull disconnect:", "testkube dashboard")
 }

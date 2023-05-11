@@ -123,6 +123,7 @@ func cloudConnect(cmd *cobra.Command, args []string) {
 
 		connectOpts.CloudOrgId = orgId
 		connectOpts.CloudEnvId = env.Id
+		connectOpts.CloudAgentToken = env.AgentToken
 
 		summary = append(summary, []string{"Testkube will be connected to cloud org/env"})
 		summary = append(summary, []string{"Organization Id", connectOpts.CloudOrgId})
@@ -131,7 +132,6 @@ func cloudConnect(cmd *cobra.Command, args []string) {
 		summary = append(summary, []string{"Environment name", env.Name})
 		summary = append(summary, []string{ui.Separator, ""})
 
-		connectOpts.CloudAgentToken = env.AgentToken
 	}
 
 	// validate if user created env - or was passed from flags
@@ -203,7 +203,8 @@ func cloudConnect(cmd *cobra.Command, args []string) {
 	ui.ShellCommand("In case you want to roll back you can simply run the following command in your CLI:", "testkube cloud disconnect")
 
 	ui.Success("You can now login to Testkube Cloud and validate your connection:")
-	ui.Info("https://cloud.testkube.io/organization/%s/environment/%s", connectOpts.CloudOrgId, connectOpts.CloudEnvId)
+	ui.Link("https://cloud.testkube.io/organization/" + connectOpts.CloudOrgId + "/environment/" + connectOpts.CloudEnvId)
+	ui.NL(2)
 }
 
 // getToken returns chan to wait for token from http server

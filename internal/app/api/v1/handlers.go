@@ -22,8 +22,12 @@ const (
 	mediaTypeJSON = "application/json"
 	// mediaTypeYAML is yaml media type
 	mediaTypeYAML = "text/yaml"
-	// cloudEnvVariableName is cloud env variable name
-	cloudEnvVariableName = "TESTKUBE_CLOUD_API_KEY"
+
+	// env names for cloud context
+	cloudApiKeyEnvName = "TESTKUBE_CLOUD_API_KEY"
+	cloudEnvIdEnvName  = "TESTKUBE_CLOUD_API_KEY"
+	cloudOrgIdEnvName  = "TESTKUBE_CLOUD_API_KEY"
+
 	// contextCloud is cloud context
 	contextCloud = "cloud"
 	// contextOSS is oss context
@@ -54,7 +58,7 @@ func (s *TestkubeAPI) AuthHandler() fiber.Handler {
 // InfoHandler is a handler to get info
 func (s *TestkubeAPI) InfoHandler() fiber.Handler {
 	apiContext := contextOSS
-	if os.Getenv(cloudEnvVariableName) != "" {
+	if os.Getenv(cloudApiKeyEnvName) != "" {
 		apiContext = contextCloud
 	}
 	return func(c *fiber.Ctx) error {
@@ -63,6 +67,8 @@ func (s *TestkubeAPI) InfoHandler() fiber.Handler {
 			Version:   version.Version,
 			Namespace: s.Namespace,
 			Context:   apiContext,
+			EnvId:     os.Getenv(cloudEnvIdEnvName),
+			OrgId:     os.Getenv(cloudOrgIdEnvName),
 		})
 	}
 }
