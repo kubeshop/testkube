@@ -23,8 +23,8 @@ func NewUpgradeCmd() *cobra.Command {
 			ui.NL()
 
 			// set to cloud context explicitly when user pass agent key and store the key later
-			if options.AgentToken != "" {
-				cfg.CloudContext.AgentKey = options.AgentToken
+			if options.CloudAgentToken != "" {
+				cfg.CloudContext.AgentKey = options.CloudAgentToken
 				cfg.ContextType = config.ContextTypeCloud
 			}
 

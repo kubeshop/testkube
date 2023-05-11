@@ -38,11 +38,14 @@ func RunMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
 }
 
 type HelmUpgradeOrInstalTestkubeOptions struct {
-	Name, Namespace, Chart, Values, AgentToken, AgentUri string
-	NoDashboard, NoMinio, NoMongo, NoConfirm             bool
-	MinioReplicas, MongoReplicas, DashboardReplicas      int
-	DryRun                                               bool
-	CloudAgentToken                                      string
+	Name, Namespace, Chart, Values                  string
+	NoDashboard, NoMinio, NoMongo, NoConfirm        bool
+	MinioReplicas, MongoReplicas, DashboardReplicas int
+	// Cloud only params
+	CloudAgentToken, CloudAgentUri string
+	CloudOrgId, CloudEnvId         string
+	// For debug
+	DryRun bool
 }
 
 func GetCurrentKubernetesContext() (string, error) {
@@ -61,14 +64,14 @@ func GetCurrentKubernetesContext() (string, error) {
 
 func HelmUpgradeOrInstallTestkubeCloud(options HelmUpgradeOrInstalTestkubeOptions, cfg config.Data) error {
 	// use config if set
-	if cfg.CloudContext.AgentKey != "" && options.AgentToken == "" {
-		options.AgentToken = cfg.CloudContext.AgentKey
+	if cfg.CloudContext.AgentKey != "" && options.CloudAgentToken == "" {
+		options.CloudAgentToken = cfg.CloudContext.AgentKey
 	}
-	if cfg.CloudContext.AgentUri != "" && options.AgentUri == "" {
-		options.AgentUri = cfg.CloudContext.AgentUri
+	if cfg.CloudContext.AgentUri != "" && options.CloudAgentUri == "" {
+		options.CloudAgentUri = cfg.CloudContext.AgentUri
 	}
 
-	if options.AgentToken == "" || options.AgentUri == "" {
+	if options.CloudAgentToken == "" || options.CloudAgentUri == "" {
 		return fmt.Errorf("agentKey and agentUri are required, please pass it with `--agent-token` and `--agent-uri` flags")
 	}
 
@@ -91,8 +94,8 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmUpgradeOrInstalTestkubeOption
 	args = []string{
 		"upgrade", "--install", "--create-namespace",
 		"--namespace", options.Namespace,
-		"--set", "testkube-api.cloud.url=" + options.AgentUri,
-		"--set", "testkube-api.cloud.key=" + options.AgentToken,
+		"--set", "testkube-api.cloud.url=" + options.CloudAgentUri,
+		"--set", "testkube-api.cloud.key=" + options.CloudAgentToken,
 	}
 
 	args = append(args, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !options.NoDashboard))
@@ -169,8 +172,10 @@ func PopulateUpgradeInstallFlags(cmd *cobra.Command, options *HelmUpgradeOrInsta
 	cmd.Flags().StringVar(&options.Namespace, "namespace", "testkube", "namespace where to install")
 	cmd.Flags().StringVar(&options.Values, "values", "", "path to Helm values file")
 
-	cmd.Flags().StringVar(&options.AgentToken, "agent-token", "", "Testkube Cloud agent key [required for cloud mode]")
-	cmd.Flags().StringVar(&options.AgentUri, "agent-uri", "agent.testkube.io:443", "Testkube Cloud agent URI [required for cloud mode]")
+	cmd.Flags().StringVar(&options.CloudAgentToken, "agent-token", "", "Testkube Cloud agent key [required for cloud mode]")
+	cmd.Flags().StringVar(&options.CloudAgentUri, "agent-uri", "agent.testkube.io:443", "Testkube Cloud agent URI [required for cloud mode]")
+	cmd.Flags().StringVar(&options.CloudOrgId, "org-id", "", "Testkube Cloud organization ID")
+	cmd.Flags().StringVar(&options.CloudEnvId, "env-id", "", "Testkube Cloud agent key")
 
 	cmd.Flags().BoolVar(&options.NoMinio, "no-minio", false, "don't install MinIO")
 	cmd.Flags().BoolVar(&options.NoDashboard, "no-dashboard", false, "don't install dashboard")
@@ -186,12 +191,12 @@ func PopulateUpgradeInstallFlags(cmd *cobra.Command, options *HelmUpgradeOrInsta
 
 func PopulateAgentDataToContext(options HelmUpgradeOrInstalTestkubeOptions, cfg config.Data) error {
 	updated := false
-	if options.AgentToken != "" {
-		cfg.CloudContext.AgentKey = options.AgentToken
+	if options.CloudAgentToken != "" {
+		cfg.CloudContext.AgentKey = options.CloudAgentToken
 		updated = true
 	}
-	if options.AgentUri != "" {
-		cfg.CloudContext.AgentUri = options.AgentUri
+	if options.CloudAgentUri != "" {
+		cfg.CloudContext.AgentUri = options.CloudAgentUri
 		updated = true
 	}
 

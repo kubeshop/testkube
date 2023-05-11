@@ -1,6 +1,8 @@
 package cloud
 
 import (
+	"strings"
+
 	"github.com/pterm/pterm"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -37,6 +39,16 @@ func cloudDisconnect(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	client, _ := common.GetClient(cmd)
+	info, err := client.GetServerInfo()
+	firstInstall := err != nil && strings.Contains(err.Error(), "not found")
+	if err != nil && !firstInstall {
+		ui.Failf("Can't get testkube cluster information: %s", err.Error())
+	}
+	var apiContext string
+	if actx, ok := contextDescription[info.Context]; ok {
+		apiContext = actx
+	}
 	var clusterContext string
 	if cfg.ContextType == config.ContextTypeKubeconfig {
 		clusterContext, err = common.GetCurrentKubernetesContext()
@@ -48,15 +60,33 @@ func cloudDisconnect(cmd *cobra.Command, args []string) {
 
 	// TODO: implement context info
 	ui.H1("Current status of your Testkube instance")
-	ui.Properties([][]string{
-		{"Context", string(cfg.ContextType)},
-		{"Namespace", cfg.Namespace},
-		{"Cluster", clusterContext},
-	})
 
-	if ok := ui.Confirm("Continue"); !ok {
+	summary := [][]string{
+		{"Testkube mode"},
+		{"Context", apiContext},
+		{"Kubectl context", clusterContext},
+		{"Namespace", cfg.Namespace},
+		{ui.Separator, ""},
+	}
+
+	ui.Properties(summary)
+
+	if ok := ui.Confirm("Shall we disconnect your cloud environment now?"); !ok {
 		return
 	}
+
+	//         Disconnect your cloud environment:        You can learn more about disconnecting your Testkube instance to the Cloud here:         https://docs.testkube.io/etc...
+	// 	You can safely switch between connecting Cloud and disconnecting without losing your data.
+	// 	STATUS  Current status of your Testkube instance
+	// 	Context:   Cloud
+	// 	Cluster:   Cluster name        Namespace: Testkube        Org. name: My-Org-1        Env. name: my-env-1
+	// LOGIN   Login        Please open the following link in your browser and log in:         https://cloud.testkube.io/login?redirect_uri=....
+	// SANITY  Summary of your setup after disconnecting:         Context:   On premise
+	// 	Cluster:   Cluster name        Namespace: Testkube        Minio:     started and scaled up         MongoDB:   started and scaled up
+	// 	Dashboard: started and scaled up         Shall we disconnect your cloud environment now?        ● Yes        ○ No        DISCONNECT        ✅ Updating context to local OSS instance         ✅ Starting Minio        ✅ Starting Dashboard UI        ⏳ Starting MongoDB
+	// 	✅ Disconnect finished successfully        🎉 Happy testing!
+	// 	You can now open your local Dashboard and validate the successfull disconnect:        https://localhost:3823?api_uri=xxxxx
+	//         $
 
 	// resurrect all scaled down deployments
 	disconnectOpts.NoDashboard = false

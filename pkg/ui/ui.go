@@ -86,6 +86,7 @@ func JSONTable(tableData TableData, writer io.Writer) error { return ui.JSONTabl
 func NewArrayTable(a [][]string) ArrayTable                 { return ui.NewArrayTable(a) }
 func PrintArrayTable(a [][]string)                          { ui.PrintArrayTable(a) }
 func Confirm(message string) bool                           { return ui.Confirm(message) }
+func Select(title string, options []string) string          { return ui.Select(title, options) }
 func TextInput(message string) string                       { return ui.TextInput(message) }
 
 func UseStdout() { ui = uiOut }

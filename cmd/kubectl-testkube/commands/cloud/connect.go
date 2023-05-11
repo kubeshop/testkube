@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/pterm/pterm"
@@ -49,42 +50,33 @@ var contextDescription = map[string]string{
 
 func cloudConnect(cmd *cobra.Command, args []string) {
 	client, _ := common.GetClient(cmd)
+
 	info, err := client.GetServerInfo()
-	ui.ExitOnError("getting server info", err)
+	firstInstall := err != nil && strings.Contains(err.Error(), "not found")
+	if err != nil && !firstInstall {
+		ui.Failf("Can't get testkube cluster information: %s", err.Error())
+	}
 
 	var apiContext string
 	if actx, ok := contextDescription[info.Context]; ok {
 		apiContext = actx
 	}
 
-	h1 := pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgDefault, pterm.Bold)).WithTextStyle(pterm.NewStyle(pterm.FgLightMagenta)).WithMargin(0)
-	h2 := pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgDefault, pterm.Bold)).WithTextStyle(pterm.NewStyle(pterm.FgLightGreen)).WithMargin(0)
-	// text := pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgDefault, pterm.FgDarkGray)).
-	// 	WithTextStyle(pterm.NewStyle(pterm.BgDefault, pterm.FgGray)).WithMargin(0)
-
-	text := pterm.DefaultParagraph.WithMaxWidth(100)
-
-	h1.Println("Connect your cloud environment:")
-	text.Println("You can learn more about connecting your Testkube instance to the Cloud here:\n" + docsUrl)
-	h2.Println("You can safely switch between connecting Cloud and disconnecting without losing your data.")
+	ui.H1("Connect your cloud environment:")
+	ui.Paragraph("You can learn more about connecting your Testkube instance to the Cloud here:\n" + docsUrl)
+	ui.H2("You can safely switch between connecting Cloud and disconnecting without losing your data.")
 
 	cfg, err := config.Load()
-	if err != nil {
-		pterm.Error.Printfln("Failed to load config file: %s", err.Error())
-		return
-	}
+	ui.ExitOnError("loading config", err)
 
 	var clusterContext string
 	if cfg.ContextType == config.ContextTypeKubeconfig {
 		clusterContext, err = common.GetCurrentKubernetesContext()
-		if err != nil {
-			pterm.Error.Printfln("Failed to get current kubernetes context: %s", err.Error())
-			return
-		}
+		ui.ExitOnError("getting current kubernetes context", err)
 	}
 
 	// TODO: implement context info
-	h1.Println("Current status of your Testkube instance")
+	ui.H1("Current status of your Testkube instance")
 	ui.Properties([][]string{
 		{"Context", apiContext},
 		{"Kubectl context", clusterContext},
@@ -102,12 +94,12 @@ func cloudConnect(cmd *cobra.Command, args []string) {
 	}
 
 	// if no agent is passed create new environment and get its token
-	if connectOpts.AgentToken == "" {
-		h1.Println("Login")
-		text.Println("Your browser should open automatically. If not, please open this link in your browser:")
-		text.Println(authUrlWithRedirect)
-		text.Println("(just login and get back to your terminal)")
-		text.Println("")
+	if connectOpts.CloudAgentToken == "" {
+		ui.H1("Login")
+		ui.Paragraph("Your browser should open automatically. If not, please open this link in your browser:")
+		ui.Paragraph(authUrlWithRedirect)
+		ui.Paragraph("(just login and get back to your terminal)")
+		ui.Paragraph("")
 
 		if ok := ui.Confirm("Continue"); !ok {
 			return
@@ -120,26 +112,34 @@ func cloudConnect(cmd *cobra.Command, args []string) {
 		ui.ExitOnError("getting token", err)
 
 		orgId, orgName, err := uiGetOrganizationId(token)
-		ui.ExitOnError("getting token", err)
+		ui.ExitOnError("getting organization", err)
 
 		envName, err := uiGetEnvName()
 		ui.ExitOnError("getting environment name", err)
 
 		envClient := cloudclient.NewEnvironmentsClient(token)
 		env, err := envClient.Create(cloudclient.Environment{Name: envName, Owner: orgId})
-		if err != nil {
-			pterm.Error.Println("Failed to create environment", err.Error())
-			return
-		}
+		ui.ExitOnError("creating environment", err)
+
+		connectOpts.CloudOrgId = orgId
+		connectOpts.CloudEnvId = env.Id
 
 		summary = append(summary, []string{"Testkube will be connected to cloud org/env"})
-		summary = append(summary, []string{"Organization Id", orgId})
+		summary = append(summary, []string{"Organization Id", connectOpts.CloudOrgId})
 		summary = append(summary, []string{"Organization name", orgName})
-		summary = append(summary, []string{"Environment Id", env.Id})
+		summary = append(summary, []string{"Environment Id", connectOpts.CloudEnvId})
 		summary = append(summary, []string{"Environment name", env.Name})
 		summary = append(summary, []string{ui.Separator, ""})
 
-		connectOpts.AgentToken = env.AgentToken
+		connectOpts.CloudAgentToken = env.AgentToken
+	}
+
+	// validate if user created env - or was passed from flags
+	if connectOpts.CloudEnvId == "" {
+		ui.Failf("You need pass valid environment id to connect to cloud")
+	}
+	if connectOpts.CloudOrgId == "" {
+		ui.Failf("You need pass valid organization id to connect to cloud")
 	}
 
 	// scale down not remove
@@ -150,6 +150,7 @@ func cloudConnect(cmd *cobra.Command, args []string) {
 	connectOpts.MinioReplicas = 0
 	connectOpts.MongoReplicas = 0
 
+	// update summary
 	summary = append(summary, []string{"Testkube support services not needed anymore"})
 	summary = append(summary, []string{"MinIO    ", "Stopped and scaled down, (not deleted)"})
 	summary = append(summary, []string{"MongoDB  ", "Stopped and scaled down, (not deleted)"})
@@ -157,33 +158,8 @@ func cloudConnect(cmd *cobra.Command, args []string) {
 
 	ui.NL(2)
 
-	h1.Println("Summary of your setup after connecting to Testkube Cloud")
+	ui.H1("Summary of your setup after connecting to Testkube Cloud")
 	ui.Properties(summary)
-	// TODO expected statsus
-
-	//         Connect your cloud environment:        You can learn more about connecting your Testkube instance to the Cloud here:         https://docs.testkube.io/etc...
-
-	//         You can safely switch between connecting Cloud and disconnecting without losing your data.STATUS  Current status of your Testkube instance
-
-	//         Context:   On premise (local OSS context)
-	//         Cluster:   Cluster name        Namespace: Testkube
-	// LOGIN   Login        Please open the following link in your browser and log in:         https://cloud.testkube.io/login?redirect_uri=....
-	// ORG     Organisation        Select the organisation you want to connect this instance to        ● My-Org-1        ○ Another Org
-	// ENV     Environment
-	//         Create an environment on Cloud for this instance        Tell us the name of your new environment        > my-env-1        ⏳ Creating environment         ✅ Environment created        ❌ Environment creation failed – your plan does only support 2 environments
-	//         SANITY  Summary of your setup after connecting:         Context:   Cloud
-	//         Cluster:   Cluster name        Namespace: Testkube        Org. name: My-Org-1        Env. name: my-env-1        Minio:     stopped and scaled down (not deleted)        MongoDB:   stopped and scaled down (not deleted)        Dashboard: stopped and scaled down (not deleted)        Shall we start connecting?
-
-	// 		Remember: All your historical data and artifacts will be safe in case you want to rollback
-
-	// 		● Yes        ○ No        CONNECT        ✅ Updating context to Cloud         ✅ Stopping Minio        ✅ Stopping Dashboard UI        ⏳ Stopping MongoDB
-
-	//         ✅ Connection finished successfully        🎉 Happy testing!
-
-	//         You can now login to Testkube Cloud and validate your connection:        https://cloud.testkube.io/org/123/env/123
-
-	//         In case you want to roll back you can simply run the following command in your CLI:
-	//         $ testkube cloud disconnect environment
 
 	ui.NL()
 	ui.Warn("Remember: All your historical data and artifacts will be safe in case you want to rollback")
@@ -223,6 +199,11 @@ func cloudConnect(cmd *cobra.Command, args []string) {
 	ui.ExitOnError("Populating agent data to context", err)
 
 	ui.NL(2)
+
+	ui.ShellCommand("In case you want to roll back you can simply run the following command in your CLI:", "testkube cloud disconnect")
+
+	ui.Success("You can now login to Testkube Cloud and validate your connection:")
+	ui.Info("https://cloud.testkube.io/organization/%s/environment/%s", connectOpts.CloudOrgId, connectOpts.CloudEnvId)
 }
 
 // getToken returns chan to wait for token from http server
@@ -272,15 +253,11 @@ func uiGetOrganizationId(token string) (string, string, error) {
 	// Choose organization from orgs available
 	orgs, err := getOrganizations(token)
 	if err != nil {
-		pterm.Error.Println("Failed to get organizations", err.Error())
 		return "", "", fmt.Errorf("failed to get organizations: %s", err.Error())
 	}
 
 	orgNames := getNames(orgs)
-	orgName, _ := pterm.DefaultInteractiveSelect.
-		WithOptions(orgNames).
-		Show()
-
+	orgName := ui.Select("Choose organization", orgNames)
 	orgId := findId(orgs, orgName)
 
 	return orgId, orgName, nil
