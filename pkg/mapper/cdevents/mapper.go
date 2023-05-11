@@ -41,7 +41,7 @@ func MapTestkubeEventQueuedTestToCDEvent(event testkube.Event, clusterID string)
 	if event.TestExecution != nil {
 		ev.SetSubjectTestCase(&cdevents.TestCaseRunQueuedSubjectContentTestCase{
 			Id:   event.TestExecution.TestName,
-			Type: event.TestExecution.TestType,
+			Type: "e2e",
 		})
 
 		ev.SetSubjectEnvironment(&cdevents.Reference{
@@ -82,7 +82,7 @@ func MapTestkubeEventStartTestToCDEvent(event testkube.Event, clusterID string) 
 	if event.TestExecution != nil {
 		ev.SetSubjectTestCase(&cdevents.TestCaseRunStartedSubjectContentTestCase{
 			Id:   event.TestExecution.TestName,
-			Type: event.TestExecution.TestType,
+			Type: "e2e",
 		})
 
 		ev.SetSubjectEnvironment(&cdevents.Reference{
@@ -123,7 +123,7 @@ func MapTestkubeEventFinishTestToCDEvent(event testkube.Event, clusterID string)
 	if event.TestExecution != nil {
 		ev.SetSubjectTestCase(&cdevents.TestCaseRunFinishedSubjectContentTestCase{
 			Id:   event.TestExecution.TestName,
-			Type: event.TestExecution.TestType,
+			Type: "e2e",
 		})
 
 		ev.SetSubjectEnvironment(&cdevents.Reference{
