@@ -15,13 +15,13 @@ kubectl apply -f examples/zap-executor.yaml
 
 Issue the following commands to create and start a ZAP test for a given YAML configuration file:
 ```bash
-kubectl testkube create test --file examples/zap-api.conf --type "zap/api" --name api-test --variables-file examples/zap-api.yaml
+testkube create test --git-uri https://github.com/kubeshop/testkube-executor-zap.git --type "zap/api" --name api-test10 --executor-args "examples/zap-api.yaml" --git-branch main
 kubectl testkube run test --watch api-test
 
-kubectl testkube create test --file examples/zap-baseline.conf --type "zap/baseline" --name baseline-test --args "-c" --args "/data/uploads/zap-baseline.conf" --copy-files examples/zap-baseline.conf:zap-baseline.conf
+testkube create test --git-uri https://github.com/kubeshop/testkube-executor-zap.git --type "zap/baseline" --name baseline-test10 --executor-args "examples/zap-baseline.yaml" --git-branch main
 kubectl testkube run test --watch baseline-test
 
-kubectl testkube create test --file examples/zap-full.conf --type "zap/full" --name full-test --variables-file examples/zap-full.yaml
+testkube create test --git-uri https://github.com/kubeshop/testkube-executor-zap.git --type "zap/full" --name full-test10 --executor-args "examples/zap-full.yaml" --git-branch main
 kubectl testkube run test --watch full-test
 ```
 
