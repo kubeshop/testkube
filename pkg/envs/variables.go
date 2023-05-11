@@ -22,8 +22,8 @@ type Params struct {
 	DataDir             string // RUNNER_DATADIR
 	GitUsername         string // RUNNER_GITUSERNAME
 	GitToken            string // RUNNER_GITTOKEN
-	ClusterID           string // RUNNER_CLUSTERID
-	CDEventsTarget      string // RUNNER_CDEVENTS_TARGET
+	ClusterID           string `envconfig:"RUNNER_CLUSTERID"`              // RUNNER_CLUSTERID
+	CDEventsTarget      string `envconfig:"RUNNER_CDEVENTS_TARGET"`        // RUNNER_CDEVENTS_TARGET
 	CloudMode           bool   `envconfig:"RUNNER_CLOUD_MODE"`             // RUNNER_CLOUD_MODE
 	CloudAPIKey         string `envconfig:"RUNNER_CLOUD_API_KEY"`          // RUNNER_CLOUD_API_KEY
 	CloudAPITLSInsecure bool   `envconfig:"RUNNER_CLOUD_API_TLS_INSECURE"` // RUNNER_CLOUD_API_TLS_INSECURE

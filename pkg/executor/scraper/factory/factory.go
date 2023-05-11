@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/agent"
@@ -76,7 +77,15 @@ func GetScraper(ctx context.Context, params envs.Params, extractorType Extractor
 		return nil, errors.Errorf("unknown uploader type: %s", uploaderType)
 	}
 
-	return scraper.NewExtractLoadScraper(extractor, loader), nil
+	var cdeventsClient cloudevents.Client
+	if params.CDEventsTarget != "" {
+		cdeventsClient, err = cloudevents.NewClientHTTP(cloudevents.WithTarget(params.CDEventsTarget))
+		if err != nil {
+			log.DefaultLogger.Warnf("failing to create cloud event client %w", err)
+		}
+	}
+
+	return scraper.NewExtractLoadScraper(extractor, loader, cdeventsClient, params.ClusterID), nil
 }
 
 func getCloudLoader(ctx context.Context, params envs.Params) (uploader *cloudscraper.CloudUploader, err error) {
