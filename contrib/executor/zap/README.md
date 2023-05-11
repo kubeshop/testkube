@@ -15,14 +15,19 @@ kubectl apply -f examples/zap-executor.yaml
 
 Issue the following commands to create and start a ZAP test for a given YAML configuration file:
 ```bash
-kubectl testkube create test --file examples/zap-api.yaml --type "zap/api" --name api-test
+kubectl testkube create test --file examples/zap-api.conf --type "zap/api" --name api-test --variables-file examples/zap-api.yaml
 kubectl testkube run test --watch api-test
 
-kubectl testkube create test --file examples/zap-baseline.yaml --type "zap/baseline" --name baseline-test
+kubectl testkube create test --file examples/zap-baseline.conf --type "zap/baseline" --name baseline-test --args "-c" --args "/data/uploads/zap-baseline.conf" --copy-files examples/zap-baseline.conf:zap-baseline.conf
 kubectl testkube run test --watch baseline-test
 
-kubectl testkube create test --file examples/zap-full.yaml --type "zap/full" --name full-test
+kubectl testkube create test --file examples/zap-full.conf --type "zap/full" --name full-test --variables-file examples/zap-full.yaml
 kubectl testkube run test --watch full-test
+```
+
+```
+kubectl testkube create test --file examples/zap-tk-file.conf --type "zap/baseline" --name baseline-test --args "-c" --args "/data/uploads/zap-tk-file.conf" --copy-files examples/zap-tk-file.conf:zap-tk-file.conf
+kubectl testkube run test --watch baseline-test
 ```
 
 The required ZAP arguments and options need to be specified via a dedicated YAML configuration file, e.g.
@@ -60,4 +65,4 @@ api:
 
 # Issues and enchancements 
 
-Please report any [issues](https://github.com/kubeshop/testkube/issues).
+Please report all [issues](https://github.com/kubeshop/testkube/issues).

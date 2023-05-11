@@ -24,6 +24,4 @@ func main() {
 		os.Exit(1)
 	}
 	agent.Run(ctx, r, os.Args)
-
-	agent.Run(runner.NewRunner(), os.Args)
 }

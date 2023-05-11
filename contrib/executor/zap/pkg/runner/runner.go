@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -84,15 +83,6 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 	// when using file based ZAP parameters it expects a /zap/wrk directory
 	// we simply symlink the directory
 	os.Symlink(directory, filepath.Join(r.ZapHome, "wrk"))
-
-	entries, err := os.ReadDir(r.ZapHome)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, e := range entries {
-		fmt.Println(e.Name())
-	}
 
 	output.PrintEvent("Running", r.ZapHome, scriptName, args)
 	output, err := executor.Run(r.ZapHome, scriptName, envManager, args...)

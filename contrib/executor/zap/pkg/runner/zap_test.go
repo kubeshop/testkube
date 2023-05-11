@@ -29,7 +29,7 @@ func TestUnmarshal(t *testing.T) {
 		assert.False(t, args.API.Short)
 		assert.Equal(t, 5, args.API.Delay)
 		assert.Equal(t, 60, args.API.Time)
-		assert.Equal(t, "examples/context.config", args.API.Context)
+		assert.Equal(t, "examples/context.conf", args.API.Context)
 		assert.Equal(t, "anonymous", args.API.User)
 		assert.Equal(t, "-config aaa=bbb", args.API.ZapOptions)
 	})
