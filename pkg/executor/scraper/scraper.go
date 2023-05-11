@@ -1,11 +1,14 @@
 package scraper
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 
 	cdevents "github.com/cdevents/sdk-go/pkg/api"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/gabriel-vasile/mimetype"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -56,7 +59,15 @@ func (s *ExtractLoadScraper) Close() error {
 }
 
 func (s *ExtractLoadScraper) sendCDEvent(execution testkube.Execution, object *Object) error {
-	ev, err := cde.MapTestkubeArtifactToCDEvent(&execution, s.clusterID, "", "")
+	header := bytes.NewBuffer(nil)
+	mtype, err := mimetype.DetectReader(io.TeeReader(object.Data, header))
+	if err != nil {
+		log.DefaultLogger.Warnf("failing to detect mime type %w", err)
+	}
+
+	object.Data = io.MultiReader(header, object.Data)
+
+	ev, err := cde.MapTestkubeArtifactToCDEvent(&execution, s.clusterID, "report", mtype.String())
 	if err != nil {
 		return err
 	}
