@@ -1,10 +1,10 @@
 package cloud
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -14,6 +14,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
+	"github.com/kubeshop/testkube/pkg/cloudlogin"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -83,8 +84,6 @@ func cloudConnect(cmd *cobra.Command, args []string) {
 		{"Namespace", cfg.Namespace},
 	})
 
-	authUrlWithRedirect := authUrl + url.QueryEscape(redirectUrl)
-
 	summary := [][]string{
 		{"Testkube mode"},
 		{"Context", contextDescription["cloud"]},
@@ -95,6 +94,10 @@ func cloudConnect(cmd *cobra.Command, args []string) {
 
 	// if no agent is passed create new environment and get its token
 	if connectOpts.CloudAgentToken == "" {
+		authUrlWithRedirect, tokenChan, err := cloudlogin.CloudLogin(context.Background(), "https://api.testkube.io/idp")
+		if err != nil {
+			ui.ExitOnError("getting current kubernetes context", err)
+		}
 		ui.H1("Login")
 		ui.Paragraph("Your browser should open automatically. If not, please open this link in your browser:")
 		ui.Paragraph(authUrlWithRedirect)
@@ -108,7 +111,7 @@ func cloudConnect(cmd *cobra.Command, args []string) {
 		// open browser with login page and redirect to localhost:7899
 		open.Run(authUrlWithRedirect)
 
-		token, err := uiGetToken()
+		token, err := uiGetToken(tokenChan)
 		ui.ExitOnError("getting token", err)
 
 		orgId, orgName, err := uiGetOrganizationId(token)
@@ -265,14 +268,9 @@ func uiGetOrganizationId(token string) (string, string, error) {
 	return orgId, orgName, nil
 }
 
-func uiGetToken() (string, error) {
+func uiGetToken(tokenChan chan string) (string, error) {
 	// wait for token received to browser
 	s := ui.NewSpinner("waiting for auth token")
-	tokenChan, err := getToken()
-	if err != nil {
-		s.Fail("Failed to get auth token", err.Error())
-		return "", fmt.Errorf("failed to get auth token: %s", err.Error())
-	}
 
 	var token string
 	select {
