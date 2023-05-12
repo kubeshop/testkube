@@ -123,15 +123,17 @@ func (a *Options) UnmarshalYAML(yamlFile string) (err error) {
 
 func (a *Options) ToFullScanArgs(filename string) (args []string) {
 	args = []string{}
+	// don't fail on warnings
+	args = append(args, "-I")
 	args = appendTargetArg(args, a.Full.Target)
-	args = appendConfigArg(args, a.Full.Config)
+	args = appendConfigArg("full", args, a.Full.Config)
 	args = appendMinutesArg(args, a.Full.Minutes)
 	args = appendDebugArg(args, a.Full.Debug)
 	args = appendDelayArg(args, a.Full.Delay)
 	args = appendFailOnWarnArg(args, a.Full.FailOnWarn)
 	args = appendAjaxSpiderArg(args, a.Full.Ajax)
 	args = appendLevelArg(args, a.Full.Level)
-	args = appendConfigArg(args, a.Full.Context)
+	args = appendContextArg(args, a.Full.Context)
 	args = appendShortArg(args, a.Full.Short)
 	args = appendTimeArg(args, a.Full.Time)
 	args = appendUserArg(args, a.Full.User)
@@ -142,8 +144,10 @@ func (a *Options) ToFullScanArgs(filename string) (args []string) {
 
 func (a *Options) ToBaselineScanArgs(filename string) (args []string) {
 	args = []string{}
+	// don't fail on warnings
+	args = append(args, "-I")
 	args = appendTargetArg(args, a.Baseline.Target)
-	args = appendConfigArg(args, a.Baseline.Config)
+	args = appendConfigArg("baseline", args, a.Baseline.Config)
 	args = appendMinutesArg(args, a.Baseline.Minutes)
 	args = appendDebugArg(args, a.Baseline.Debug)
 	args = appendDelayArg(args, a.Baseline.Delay)
@@ -162,9 +166,11 @@ func (a *Options) ToBaselineScanArgs(filename string) (args []string) {
 
 func (a *Options) ToApiScanArgs(filename string) (args []string) {
 	args = []string{}
+	// don't fail on warnings
+	args = append(args, "-I")
 	args = appendTargetArg(args, a.API.Target)
 	args = appendFormatArg(args, a.API.Format)
-	args = appendConfigArg(args, a.API.Config)
+	args = appendConfigArg("api", args, a.API.Config)
 	args = appendDebugArg(args, a.API.Debug)
 	args = appendDelayArg(args, a.API.Delay)
 	args = appendFailOnWarnArg(args, a.API.FailOnWarn)
@@ -220,16 +226,19 @@ func appendStringArg(args []string, arg string, value string) []string {
 	}
 }
 
-func appendConfigArg(args []string, format string) []string {
-	if len(format) > 0 {
-		if strings.Index(format, "http") == 0 {
-			return append(args, "-u", format)
-		} else {
-			return append(args, "-c", format)
-		}
-	} else {
+func appendConfigArg(t string, args []string, format string) []string {
+	if len(format) == 0 {
 		return args
 	}
+
+	if strings.Index(format, "http") == 0 {
+		return append(args, "-u", format)
+	}
+
+	if t == "api" {
+		return append(args, "-z", format)
+	}
+	return append(args, "-c", format)
 }
 
 func appendDebugArg(args []string, debug bool) []string {

@@ -8,15 +8,15 @@ api:
   # -S safe mode this will skip the active scan and perform a baseline scan
   safe: true
   # -c config file
-  config: examples/zap-tk-api.conf
+  config: /data/uploads/zap-tk-api.conf
   # -d show debug messages
   debug: true
   # -s short output
   short: false
   # -l minimum level to show: PASS, IGNORE, INFO, WARN or FAIL
   level: INFO
-  # -c context file
-  context: examples/context.conf
+  # -n context file
+  # context: examples/context.conf
   # username to use for authenticated scans
   user: anonymous
   # delay in seconds to wait for passive scanning

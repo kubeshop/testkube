@@ -72,6 +72,7 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 		zapConfig = filepath.Join(workingDir, execution.Args[len(execution.Args)-1])
 	} else {
 		// use the given file config as ZAP config YAML
+		workingDir = r.Params.DataDir
 		zapConfig = testFile
 	}
 
@@ -110,7 +111,7 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 
 	// when using file based ZAP parameters it expects a /zap/wrk directory
 	// we simply symlink the directory
-	os.Symlink(r.Params.DataDir, filepath.Join(r.ZapHome, "wrk"))
+	os.Symlink(workingDir, filepath.Join(r.ZapHome, "wrk"))
 
 	output.PrintLogf("%s Running ZAP test", ui.IconMicroscope)
 	logs, err := executor.Run(r.ZapHome, scriptName, envManager, args...)
