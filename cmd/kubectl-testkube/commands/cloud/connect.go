@@ -80,13 +80,13 @@ func NewConnectCmd() *cobra.Command {
 
 			// if no agent is passed create new environment and get its token
 			if opts.CloudAgentToken == "" {
-				authUrlWithRedirect, tokenChan, err := cloudlogin.CloudLogin(context.Background(), opts.CloudUris.Auth)
+				authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), opts.CloudUris.Auth)
 				if err != nil {
 					ui.ExitOnError("getting current kubernetes context", err)
 				}
 				ui.H1("Login")
 				ui.Paragraph("Your browser should open automatically. If not, please open this link in your browser:")
-				ui.Link(authUrlWithRedirect)
+				ui.Link(authUrl)
 				ui.Paragraph("(just login and get back to your terminal)")
 				ui.Paragraph("")
 
@@ -95,7 +95,7 @@ func NewConnectCmd() *cobra.Command {
 				}
 
 				// open browser with login page and redirect to localhost
-				open.Run(authUrlWithRedirect)
+				open.Run(authUrl)
 
 				token, err := uiGetToken(tokenChan)
 				ui.ExitOnError("getting token", err)
