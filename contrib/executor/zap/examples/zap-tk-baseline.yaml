@@ -2,7 +2,7 @@ baseline:
   # -t target URL including the protocol
   target: https://www.example.com/
   # -c -u config file or URL
-  config: examples/zap-baseline.conf
+  config: examples/zap-tk-baseline.conf
   # -m the number of minutes to spider for (default 1)
   minutes: 3
   # -D delay in seconds to wait for passive scanning
