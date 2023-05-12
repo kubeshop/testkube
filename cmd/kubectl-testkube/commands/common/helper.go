@@ -14,36 +14,16 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func RunMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
-	client, _ := GetClient(cmd)
-	info, err := client.GetServerInfo()
-	ui.ExitOnError("getting server info", err)
-
-	if info.Version == "" {
-		ui.Failf("Can't detect cluster version")
-	}
-
-	ui.Info("Available migrations for", info.Version)
-	results := migrations.Migrator.GetValidMigrations(info.Version, migrator.MigrationTypeClient)
-	if len(results) == 0 {
-		ui.Warn("No migrations available for", info.Version)
-		return false, nil
-	}
-
-	for _, migration := range results {
-		fmt.Printf("- %+v - %s\n", migration.Version(), migration.Info())
-	}
-
-	return true, migrations.Migrator.Run(info.Version, migrator.MigrationTypeClient)
-}
-
-type HelmUpgradeOrInstalTestkubeOptions struct {
+type HelmOptions struct {
 	Name, Namespace, Chart, Values                  string
 	NoDashboard, NoMinio, NoMongo, NoConfirm        bool
 	MinioReplicas, MongoReplicas, DashboardReplicas int
 	// Cloud only params
-	CloudAgentToken, CloudAgentUri string
-	CloudOrgId, CloudEnvId         string
+	CloudAgentToken        string
+	CloudIdToken           string
+	CloudRootDomain        string
+	CloudOrgId, CloudEnvId string
+	CloudUris              CloudUris
 	// For debug
 	DryRun bool
 }
@@ -62,17 +42,22 @@ func GetCurrentKubernetesContext() (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-func HelmUpgradeOrInstallTestkubeCloud(options HelmUpgradeOrInstalTestkubeOptions, cfg config.Data) error {
+func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data) error {
 	// use config if set
 	if cfg.CloudContext.AgentKey != "" && options.CloudAgentToken == "" {
 		options.CloudAgentToken = cfg.CloudContext.AgentKey
 	}
-	if cfg.CloudContext.AgentUri != "" && options.CloudAgentUri == "" {
-		options.CloudAgentUri = cfg.CloudContext.AgentUri
+
+	if cfg.CloudContext.RootDomain != "" && options.CloudRootDomain == "" {
+		options.CloudUris = NewCloudUris(cfg.CloudContext.RootDomain)
 	}
 
-	if options.CloudAgentToken == "" || options.CloudAgentUri == "" {
-		return fmt.Errorf("agentKey and agentUri are required, please pass it with `--agent-token` and `--agent-uri` flags")
+	// if cfg.CloudContext.AgentUri != "" && options.CloudAgentUri == "" {
+	// 	options.CloudAgentUri = cfg.CloudContext.AgentUri
+	// }
+
+	if options.CloudAgentToken == "" {
+		return fmt.Errorf("agent key and agent uri are required, please pass it with `--agent-token` and `--agent-uri` flags")
 	}
 
 	helmPath, err := exec.LookPath("helm")
@@ -94,7 +79,7 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmUpgradeOrInstalTestkubeOption
 	args = []string{
 		"upgrade", "--install", "--create-namespace",
 		"--namespace", options.Namespace,
-		"--set", "testkube-api.cloud.url=" + options.CloudAgentUri,
+		"--set", "testkube-api.cloud.url=" + options.CloudUris.Agent,
 		"--set", "testkube-api.cloud.key=" + options.CloudAgentToken,
 	}
 
@@ -125,7 +110,7 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmUpgradeOrInstalTestkubeOption
 	return nil
 }
 
-func HelmUpgradeOrInstalTestkube(options HelmUpgradeOrInstalTestkubeOptions) error {
+func HelmUpgradeOrInstalTestkube(options HelmOptions) error {
 	helmPath, err := exec.LookPath("helm")
 	if err != nil {
 		return err
@@ -166,16 +151,19 @@ func HelmUpgradeOrInstalTestkube(options HelmUpgradeOrInstalTestkubeOptions) err
 	return nil
 }
 
-func PopulateUpgradeInstallFlags(cmd *cobra.Command, options *HelmUpgradeOrInstalTestkubeOptions) {
-	cmd.Flags().StringVar(&options.Chart, "chart", "kubeshop/testkube", "chart name")
-	cmd.Flags().StringVar(&options.Name, "name", "testkube", "installation name")
+func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
+	return
+	cmd.Flags().StringVar(&options.Chart, "chart", "kubeshop/testkube", "chart name (usually you don't need to change it)")
+	cmd.Flags().StringVar(&options.Name, "name", "testkube", "installation name (usually you don't need to change it)")
 	cmd.Flags().StringVar(&options.Namespace, "namespace", "testkube", "namespace where to install")
 	cmd.Flags().StringVar(&options.Values, "values", "", "path to Helm values file")
 
 	cmd.Flags().StringVar(&options.CloudAgentToken, "agent-token", "", "Testkube Cloud agent key [required for cloud mode]")
-	cmd.Flags().StringVar(&options.CloudAgentUri, "agent-uri", "agent.testkube.io:443", "Testkube Cloud agent URI [required for cloud mode]")
-	cmd.Flags().StringVar(&options.CloudOrgId, "org-id", "", "Testkube Cloud organization ID")
-	cmd.Flags().StringVar(&options.CloudEnvId, "env-id", "", "Testkube Cloud agent key")
+	cmd.Flags().StringVar(&options.CloudOrgId, "org-id", "", "Testkube Cloud organization id [required for cloud mode]")
+	cmd.Flags().StringVar(&options.CloudEnvId, "env-id", "", "Testkube Cloud environment id [required for cloud mode]")
+
+	cmd.Flags().StringVar(&options.CloudRootDomain, "cloud-root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for cloud mode]")
+	options.CloudUris = NewCloudUris(options.CloudRootDomain)
 
 	cmd.Flags().BoolVar(&options.NoMinio, "no-minio", false, "don't install MinIO")
 	cmd.Flags().BoolVar(&options.NoDashboard, "no-dashboard", false, "don't install dashboard")
@@ -187,16 +175,31 @@ func PopulateUpgradeInstallFlags(cmd *cobra.Command, options *HelmUpgradeOrInsta
 	cmd.Flags().IntVar(&options.DashboardReplicas, "dashboard-replicas", 1, "Don't install MongoDB")
 
 	cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
+
+	fmt.Printf("inside %+v\n\n\n", options)
+
 }
 
-func PopulateAgentDataToContext(options HelmUpgradeOrInstalTestkubeOptions, cfg config.Data) error {
+func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 	updated := false
 	if options.CloudAgentToken != "" {
 		cfg.CloudContext.AgentKey = options.CloudAgentToken
 		updated = true
 	}
-	if options.CloudAgentUri != "" {
-		cfg.CloudContext.AgentUri = options.CloudAgentUri
+	if options.CloudUris.Api != "" {
+		cfg.CloudContext.AgentUri = options.CloudUris.Api
+		updated = true
+	}
+	if options.CloudUris.Ui != "" {
+		cfg.CloudContext.UiUri = options.CloudUris.Ui
+		updated = true
+	}
+	if options.CloudUris.Api != "" {
+		cfg.CloudContext.ApiUri = options.CloudUris.Api
+		updated = true
+	}
+	if options.CloudIdToken != "" {
+		cfg.CloudContext.ApiKey = options.CloudIdToken
 		updated = true
 	}
 
@@ -220,4 +223,27 @@ func KubectlScaleDeployment(namespace, deployment string, replicas int) (string,
 	}
 
 	return strings.TrimSpace(string(out)), nil
+}
+
+func RunMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
+	client, _ := GetClient(cmd)
+	info, err := client.GetServerInfo()
+	ui.ExitOnError("getting server info", err)
+
+	if info.Version == "" {
+		ui.Failf("Can't detect cluster version")
+	}
+
+	ui.Info("Available migrations for", info.Version)
+	results := migrations.Migrator.GetValidMigrations(info.Version, migrator.MigrationTypeClient)
+	if len(results) == 0 {
+		ui.Warn("No migrations available for", info.Version)
+		return false, nil
+	}
+
+	for _, migration := range results {
+		fmt.Printf("- %+v - %s\n", migration.Version(), migration.Info())
+	}
+
+	return true, migrations.Migrator.Run(info.Version, migrator.MigrationTypeClient)
 }

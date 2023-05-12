@@ -4,10 +4,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/http"
 )
 
-func NewOrganizationsClient(token string) *OrganizationsClient {
+func NewOrganizationsClient(rootDomain, token string) *OrganizationsClient {
 	return &OrganizationsClient{
 		RESTClient: RESTClient[Organization]{
-			BaseUrl: "https://api.testkube.io",
+			BaseUrl: "https://api." + rootDomain,
 			Path:    "/organizations",
 			Client:  http.NewClient(),
 			Token:   token,

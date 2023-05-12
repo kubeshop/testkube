@@ -232,9 +232,9 @@ func (ui *UI) calculateMessageLength(message string, subMessages ...string) int 
 }
 
 func (ui *UI) Link(message string, subMessages ...string) {
-	fmt.Fprintf(ui.Writer, "%s", LightMagenta(message))
+	fmt.Fprintf(ui.Writer, "%s", LightGray(message))
 	for _, sub := range subMessages {
-		fmt.Fprintf(ui.Writer, " %s", LightMagenta(sub))
+		fmt.Fprintf(ui.Writer, " %s", LightGray(sub))
 	}
 	fmt.Fprintln(ui.Writer)
 }

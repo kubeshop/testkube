@@ -3,8 +3,6 @@ package cloud
 import (
 	"context"
 	"fmt"
-	"log"
-	"net/http"
 	"strings"
 	"time"
 
@@ -19,253 +17,214 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var connectOpts = common.HelmUpgradeOrInstalTestkubeOptions{DryRun: true}
-
-func NewConnectCmd() *cobra.Command {
-
-	cmd := &cobra.Command{
-		Use:     "connect",
-		Aliases: []string{"c"},
-		Short:   "Testkube Cloud connect ",
-		Run:     cloudConnect,
-	}
-
-	common.PopulateUpgradeInstallFlags(cmd, &connectOpts)
-
-	return cmd
-}
-
 const (
 	listenAddr      = "127.0.0.1:8090"
-	redirectUrl     = "http://" + listenAddr + "/callback"
 	authUrl         = "https://cloud.testkube.io/?redirectUri="
 	docsUrl         = "https://docs.testkube.io/testkube-cloud/intro"
 	tokenQueryParam = "token"
 )
 
+func NewConnectCmd() *cobra.Command {
+	var opts = common.HelmOptions{}
+
+	cmd := &cobra.Command{
+		Use:     "connect",
+		Aliases: []string{"c"},
+		Short:   "Testkube Cloud connect ",
+		Run: func(cmd *cobra.Command, args []string) {
+
+			// create new cloud uris
+			opts.CloudUris = common.NewCloudUris(opts.CloudRootDomain)
+
+			client, _ := common.GetClient(cmd)
+
+			info, err := client.GetServerInfo()
+			firstInstall := err != nil && strings.Contains(err.Error(), "not found")
+			if err != nil && !firstInstall {
+				ui.Failf("Can't get testkube cluster information: %s", err.Error())
+			}
+
+			var apiContext string
+			if actx, ok := contextDescription[info.Context]; ok {
+				apiContext = actx
+			}
+
+			ui.H1("Connect your cloud environment:")
+			ui.Paragraph("You can learn more about connecting your Testkube instance to the Cloud here:\n" + docsUrl)
+			ui.H2("You can safely switch between connecting Cloud and disconnecting without losing your data.")
+
+			cfg, err := config.Load()
+			ui.ExitOnError("loading config", err)
+
+			var clusterContext string
+			if cfg.ContextType == config.ContextTypeKubeconfig {
+				clusterContext, err = common.GetCurrentKubernetesContext()
+				ui.ExitOnError("getting current kubernetes context", err)
+			}
+
+			// TODO: implement context info
+			ui.H1("Current status of your Testkube instance")
+			ui.Properties([][]string{
+				{"Context", apiContext},
+				{"Kubectl context", clusterContext},
+				{"Namespace", cfg.Namespace},
+			})
+
+			newStatus := [][]string{
+				{"Testkube mode"},
+				{"Context", contextDescription["cloud"]},
+				{"Kubectl context", clusterContext},
+				{"Namespace", cfg.Namespace},
+				{ui.Separator, ""},
+			}
+
+			// if no agent is passed create new environment and get its token
+			if opts.CloudAgentToken == "" {
+				authUrlWithRedirect, tokenChan, err := cloudlogin.CloudLogin(context.Background(), opts.CloudUris.Auth)
+				if err != nil {
+					ui.ExitOnError("getting current kubernetes context", err)
+				}
+				ui.H1("Login")
+				ui.Paragraph("Your browser should open automatically. If not, please open this link in your browser:")
+				ui.Link(authUrlWithRedirect)
+				ui.Paragraph("(just login and get back to your terminal)")
+				ui.Paragraph("")
+
+				if ok := ui.Confirm("Continue"); !ok {
+					return
+				}
+
+				// open browser with login page and redirect to localhost
+				open.Run(authUrlWithRedirect)
+
+				token, err := uiGetToken(tokenChan)
+				ui.ExitOnError("getting token", err)
+
+				orgId, orgName, err := uiGetOrganizationId(opts.CloudRootDomain, token)
+				ui.ExitOnError("getting organization", err)
+
+				envName, err := uiGetEnvName()
+				ui.ExitOnError("getting environment name", err)
+
+				envClient := cloudclient.NewEnvironmentsClient(opts.CloudRootDomain, token)
+				env, err := envClient.Create(cloudclient.Environment{Name: envName, Owner: orgId})
+				ui.ExitOnError("creating environment", err)
+
+				opts.CloudOrgId = orgId
+				opts.CloudEnvId = env.Id
+				opts.CloudAgentToken = env.AgentToken
+
+				newStatus = append(
+					newStatus,
+					[][]string{
+						{"Testkube will be connected to cloud org/env"},
+						{"Organization Id", opts.CloudOrgId},
+						{"Organization name", orgName},
+						{"Environment Id", opts.CloudEnvId},
+						{"Environment name", env.Name},
+						{ui.Separator, ""},
+					}...)
+
+			}
+
+			// validate if user created env - or was passed from flags
+			if opts.CloudEnvId == "" {
+				ui.Failf("You need pass valid environment id to connect to cloud")
+			}
+			if opts.CloudOrgId == "" {
+				ui.Failf("You need pass valid organization id to connect to cloud")
+			}
+
+			// update summary
+			newStatus = append(newStatus, []string{"Testkube support services not needed anymore"})
+			newStatus = append(newStatus, []string{"MinIO    ", "Stopped and scaled down, (not deleted)"})
+			newStatus = append(newStatus, []string{"MongoDB  ", "Stopped and scaled down, (not deleted)"})
+			newStatus = append(newStatus, []string{"Dashboard", "Stopped and scaled down, (not deleted)"})
+
+			ui.NL(2)
+
+			ui.H1("Summary of your setup after connecting to Testkube Cloud")
+			ui.Properties(newStatus)
+
+			ui.NL()
+			ui.Warn("Remember: All your historical data and artifacts will be safe in case you want to rollback")
+			ui.NL()
+
+			if ok := ui.Confirm("Proceed with connecting Testkube Cloud?"); !ok {
+				return
+			}
+
+			spinner := ui.NewSpinner("Connecting Testkube Cloud")
+
+			err = common.HelmUpgradeOrInstallTestkubeCloud(opts, cfg)
+			ui.ExitOnError("Installing Testkube Cloud", err)
+			spinner.Success()
+
+			ui.NL()
+
+			// let's scale down deployment of mongo
+			if opts.MongoReplicas == 0 {
+				spinner = ui.NewSpinner("Scaling down MongoDB")
+				common.KubectlScaleDeployment(opts.Namespace, "testkube-mongodb", opts.MongoReplicas)
+				spinner.Success()
+			}
+			if opts.MinioReplicas == 0 {
+				spinner = ui.NewSpinner("Scaling down MinIO")
+				common.KubectlScaleDeployment(opts.Namespace, "testkube-minio-testkube", opts.MinioReplicas)
+				spinner.Success()
+			}
+			if opts.DashboardReplicas == 0 {
+				spinner = ui.NewSpinner("Scaling down Dashbaord")
+				common.KubectlScaleDeployment(opts.Namespace, "testkube-dashboard", opts.DashboardReplicas)
+				spinner.Success()
+			}
+
+			ui.H2("Testkube Cloud is connected to your Testkube instance, saving local configuration")
+			err = common.PopulateAgentDataToContext(opts, cfg)
+			ui.ExitOnError("Populating agent data to context", err)
+
+			ui.NL(2)
+
+			ui.ShellCommand("In case you want to roll back you can simply run the following command in your CLI:", "testkube cloud disconnect")
+
+			ui.Success("You can now login to Testkube Cloud and validate your connection:")
+			ui.NL()
+			ui.Link("https://cloud." + opts.CloudRootDomain + "/organization/" + opts.CloudOrgId + "/environment/" + opts.CloudEnvId + "/dashboard/tests")
+
+			ui.NL(2)
+		},
+	}
+
+	cmd.Flags().StringVar(&opts.Chart, "chart", "kubeshop/testkube", "chart name (usually you don't need to change it)")
+	cmd.Flags().StringVar(&opts.Name, "name", "testkube", "installation name (usually you don't need to change it)")
+	cmd.Flags().StringVar(&opts.Namespace, "namespace", "testkube", "namespace where to install")
+	cmd.Flags().StringVar(&opts.Values, "values", "", "path to Helm values file")
+
+	cmd.Flags().StringVar(&opts.CloudAgentToken, "agent-token", "", "Testkube Cloud agent key [required for cloud mode]")
+	cmd.Flags().StringVar(&opts.CloudOrgId, "org-id", "", "Testkube Cloud organization id [required for cloud mode]")
+	cmd.Flags().StringVar(&opts.CloudEnvId, "env-id", "", "Testkube Cloud environment id [required for cloud mode]")
+
+	cmd.Flags().StringVar(&opts.CloudRootDomain, "cloud-root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for cloud mode]")
+
+	cmd.Flags().BoolVar(&opts.NoMinio, "no-minio", false, "don't install MinIO")
+	cmd.Flags().BoolVar(&opts.NoDashboard, "no-dashboard", false, "don't install dashboard")
+	cmd.Flags().BoolVar(&opts.NoMongo, "no-mongo", false, "don't install MongoDB")
+
+	cmd.Flags().IntVar(&opts.MinioReplicas, "minio-replicas", 0, "MinIO replicas")
+	cmd.Flags().IntVar(&opts.MongoReplicas, "mongo-replicas", 0, "MongoDB replicas")
+	cmd.Flags().IntVar(&opts.DashboardReplicas, "dashboard-replicas", 0, "Dashboard replicas")
+
+	cmd.Flags().BoolVar(&opts.NoConfirm, "no-confirm", false, "don't ask for confirmation - unatended installation mode")
+
+	cmd.Flags().BoolVar(&opts.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
+
+	return cmd
+}
+
 var contextDescription = map[string]string{
 	"":      "Unknown context, try updating your testkube cluster installation",
 	"oss":   "Open Source Testkube",
 	"cloud": "Testkube in Cloud mode",
-}
-
-func cloudConnect(cmd *cobra.Command, args []string) {
-	client, _ := common.GetClient(cmd)
-
-	info, err := client.GetServerInfo()
-	firstInstall := err != nil && strings.Contains(err.Error(), "not found")
-	if err != nil && !firstInstall {
-		ui.Failf("Can't get testkube cluster information: %s", err.Error())
-	}
-
-	var apiContext string
-	if actx, ok := contextDescription[info.Context]; ok {
-		apiContext = actx
-	}
-
-	ui.H1("Connect your cloud environment:")
-	ui.Paragraph("You can learn more about connecting your Testkube instance to the Cloud here:\n" + docsUrl)
-	ui.H2("You can safely switch between connecting Cloud and disconnecting without losing your data.")
-
-	cfg, err := config.Load()
-	ui.ExitOnError("loading config", err)
-
-	var clusterContext string
-	if cfg.ContextType == config.ContextTypeKubeconfig {
-		clusterContext, err = common.GetCurrentKubernetesContext()
-		ui.ExitOnError("getting current kubernetes context", err)
-	}
-
-	// TODO: implement context info
-	ui.H1("Current status of your Testkube instance")
-	ui.Properties([][]string{
-		{"Context", apiContext},
-		{"Kubectl context", clusterContext},
-		{"Namespace", cfg.Namespace},
-	})
-
-	summary := [][]string{
-		{"Testkube mode"},
-		{"Context", contextDescription["cloud"]},
-		{"Kubectl context", clusterContext},
-		{"Namespace", cfg.Namespace},
-		{ui.Separator, ""},
-	}
-
-	// if no agent is passed create new environment and get its token
-	if connectOpts.CloudAgentToken == "" {
-		authUrlWithRedirect, tokenChan, err := cloudlogin.CloudLogin(context.Background(), "https://api.testkube.io/idp")
-		if err != nil {
-			ui.ExitOnError("getting current kubernetes context", err)
-		}
-		ui.H1("Login")
-		ui.Paragraph("Your browser should open automatically. If not, please open this link in your browser:")
-		ui.Paragraph(authUrlWithRedirect)
-		ui.Paragraph("(just login and get back to your terminal)")
-		ui.Paragraph("")
-
-		if ok := ui.Confirm("Continue"); !ok {
-			return
-		}
-
-		// open browser with login page and redirect to localhost:7899
-		open.Run(authUrlWithRedirect)
-
-		token, err := uiGetToken(tokenChan)
-		ui.ExitOnError("getting token", err)
-
-		orgId, orgName, err := uiGetOrganizationId(token)
-		ui.ExitOnError("getting organization", err)
-
-		envName, err := uiGetEnvName()
-		ui.ExitOnError("getting environment name", err)
-
-		envClient := cloudclient.NewEnvironmentsClient(token)
-		env, err := envClient.Create(cloudclient.Environment{Name: envName, Owner: orgId})
-		ui.ExitOnError("creating environment", err)
-
-		connectOpts.CloudOrgId = orgId
-		connectOpts.CloudEnvId = env.Id
-		connectOpts.CloudAgentToken = env.AgentToken
-
-		summary = append(summary, []string{"Testkube will be connected to cloud org/env"})
-		summary = append(summary, []string{"Organization Id", connectOpts.CloudOrgId})
-		summary = append(summary, []string{"Organization name", orgName})
-		summary = append(summary, []string{"Environment Id", connectOpts.CloudEnvId})
-		summary = append(summary, []string{"Environment name", env.Name})
-		summary = append(summary, []string{ui.Separator, ""})
-
-	}
-
-	// validate if user created env - or was passed from flags
-	if connectOpts.CloudEnvId == "" {
-		ui.Failf("You need pass valid environment id to connect to cloud")
-	}
-	if connectOpts.CloudOrgId == "" {
-		ui.Failf("You need pass valid organization id to connect to cloud")
-	}
-
-	// scale down not remove
-	connectOpts.NoDashboard = false
-	connectOpts.NoMinio = false
-	connectOpts.NoMongo = false
-	connectOpts.DashboardReplicas = 0
-	connectOpts.MinioReplicas = 0
-	connectOpts.MongoReplicas = 0
-
-	// update summary
-	summary = append(summary, []string{"Testkube support services not needed anymore"})
-	summary = append(summary, []string{"MinIO    ", "Stopped and scaled down, (not deleted)"})
-	summary = append(summary, []string{"MongoDB  ", "Stopped and scaled down, (not deleted)"})
-	summary = append(summary, []string{"Dashboard", "Stopped and scaled down, (not deleted)"})
-
-	ui.NL(2)
-
-	ui.H1("Summary of your setup after connecting to Testkube Cloud")
-	ui.Properties(summary)
-
-	ui.NL()
-	ui.Warn("Remember: All your historical data and artifacts will be safe in case you want to rollback")
-	ui.NL()
-
-	if ok := ui.Confirm("Proceed with connecting Testkube Cloud?"); !ok {
-		return
-	}
-
-	spinner := ui.NewSpinner("Connecting Testkube Cloud")
-
-	err = common.HelmUpgradeOrInstallTestkubeCloud(connectOpts, cfg)
-	ui.ExitOnError("Installing Testkube Cloud", err)
-	spinner.Success()
-
-	ui.NL()
-
-	// let's scale down deployment of mongo
-	if connectOpts.MongoReplicas == 0 {
-		spinner = ui.NewSpinner("Scaling down MongoDB")
-		common.KubectlScaleDeployment(connectOpts.Namespace, "testkube-mongodb", connectOpts.MongoReplicas)
-		spinner.Success()
-	}
-	if connectOpts.MinioReplicas == 0 {
-		spinner = ui.NewSpinner("Scaling down MinIO")
-		common.KubectlScaleDeployment(connectOpts.Namespace, "testkube-minio-testkube", connectOpts.MinioReplicas)
-		spinner.Success()
-	}
-	if connectOpts.DashboardReplicas == 0 {
-		spinner = ui.NewSpinner("Scaling down Dashbaord")
-		common.KubectlScaleDeployment(connectOpts.Namespace, "testkube-dashboard", connectOpts.DashboardReplicas)
-		spinner.Success()
-	}
-
-	ui.H2("Testkube Cloud is connected to your Testkube instance, saving local configuration")
-	err = common.PopulateAgentDataToContext(connectOpts, cfg)
-	ui.ExitOnError("Populating agent data to context", err)
-
-	ui.NL(2)
-
-	ui.ShellCommand("In case you want to roll back you can simply run the following command in your CLI:", "testkube cloud disconnect")
-
-	ui.Success("You can now login to Testkube Cloud and validate your connection:")
-	ui.NL()
-	ui.Link("https://cloud.testkube.io/organization/" + connectOpts.CloudOrgId + "/environment/" + connectOpts.CloudEnvId + "/dashboard/tests")
-	ui.NL(2)
-}
-
-// getToken returns chan to wait for token from http server
-// client need to call / endpoint with token query param
-func getToken() (chan string, error) {
-	tokenChan := make(chan string)
-
-	go func() {
-		http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
-			tokenChan <- r.URL.Query().Get(tokenQueryParam)
-		})
-
-		log.Fatal(http.ListenAndServe(listenAddr, nil))
-	}()
-
-	return tokenChan, nil
-}
-
-type Organization struct {
-	Id   string
-	Name string
-}
-
-func getOrganizations(token string) ([]cloudclient.Organization, error) {
-	c := cloudclient.NewOrganizationsClient(token)
-	return c.List()
-}
-
-func getNames(orgs []cloudclient.Organization) []string {
-	var names []string
-	for _, org := range orgs {
-		names = append(names, org.Name)
-	}
-	return names
-}
-
-func findId(orgs []cloudclient.Organization, name string) string {
-	for _, org := range orgs {
-		if org.Name == name {
-			return org.Id
-		}
-	}
-	return ""
-}
-
-func uiGetOrganizationId(token string) (string, string, error) {
-	// Choose organization from orgs available
-	orgs, err := getOrganizations(token)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to get organizations: %s", err.Error())
-	}
-
-	orgNames := getNames(orgs)
-	orgName := ui.Select("Choose organization", orgNames)
-	orgId := findId(orgs, orgName)
-
-	return orgId, orgName, nil
 }
 
 func uiGetToken(tokenChan chan string) (string, error) {

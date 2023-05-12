@@ -10,7 +10,7 @@ import (
 )
 
 func NewUpgradeCmd() *cobra.Command {
-	var options common.HelmUpgradeOrInstalTestkubeOptions
+	var options common.HelmOptions
 
 	cmd := &cobra.Command{
 		Use:     "upgrade",
@@ -75,7 +75,7 @@ func NewUpgradeCmd() *cobra.Command {
 		},
 	}
 
-	common.PopulateUpgradeInstallFlags(cmd, &options)
+	common.PopulateHelmFlags(cmd, &options)
 
 	return cmd
 }
