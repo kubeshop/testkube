@@ -81,7 +81,7 @@ func GetScraper(ctx context.Context, params envs.Params, extractorType Extractor
 	if params.CDEventsTarget != "" {
 		cdeventsClient, err = cloudevents.NewClientHTTP(cloudevents.WithTarget(params.CDEventsTarget))
 		if err != nil {
-			log.DefaultLogger.Warnf("failing to create cloud event client %w", err)
+			log.DefaultLogger.Warnf("failed to create cloud event client %w", err)
 		}
 	}
 

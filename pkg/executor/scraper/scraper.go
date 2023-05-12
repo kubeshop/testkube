@@ -46,7 +46,7 @@ func (s *ExtractLoadScraper) Scrape(ctx context.Context, paths []string, executi
 		Extract(ctx, paths, func(ctx context.Context, object *Object) error {
 			if s.cdeventsClient != nil {
 				if err := s.sendCDEvent(execution, object); err != nil {
-					log.DefaultLogger.Warnf("failing to send cd event %w", err)
+					log.DefaultLogger.Warnf("failed to send cd event %w", err)
 				}
 			}
 
@@ -62,7 +62,7 @@ func (s *ExtractLoadScraper) sendCDEvent(execution testkube.Execution, object *O
 	header := bytes.NewBuffer(nil)
 	mtype, err := mimetype.DetectReader(io.TeeReader(object.Data, header))
 	if err != nil {
-		log.DefaultLogger.Warnf("failing to detect mime type %w", err)
+		log.DefaultLogger.Warnf("failed to detect mime type %w", err)
 	}
 
 	object.Data = io.MultiReader(header, object.Data)
