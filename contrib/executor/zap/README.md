@@ -70,6 +70,6 @@ api:
   fail_on_warn: false
 ```
 
-# Issues and enchancements
+# Issues and Enchancements
 
 Please report all [issues](https://github.com/kubeshop/testkube/issues).
