@@ -82,7 +82,7 @@ func TestCloudScraper_ArchiveFilesystemExtractor_Integration(t *testing.T) {
 		Execute(gomock.Any(), cloudscraper.CmdScraperPutObjectSignedURL, gomock.Eq(req2)).
 		Return([]byte(`{"URL":"`+testServer.URL+`/dummy"}`), nil)
 
-	s := scraper.NewExtractLoadScraper(extractor, cloudLoader)
+	s := scraper.NewExtractLoadScraper(extractor, cloudLoader, nil, "")
 	execution := testkube.Execution{
 		Id:            "my-execution-id",
 		TestName:      "my-test",
@@ -168,7 +168,7 @@ func TestCloudScraper_RecursiveFilesystemExtractor_Integration(t *testing.T) {
 		Execute(gomock.Any(), cloudscraper.CmdScraperPutObjectSignedURL, gomock.Eq(req3)).
 		Return([]byte(`{"URL":"`+testServer.URL+`/dummy"}`), nil)
 
-	s := scraper.NewExtractLoadScraper(extractor, cloudLoader)
+	s := scraper.NewExtractLoadScraper(extractor, cloudLoader, nil, "")
 	execution := testkube.Execution{
 		Id:            "my-execution-id",
 		TestName:      "my-test",

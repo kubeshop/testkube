@@ -54,7 +54,7 @@ func TestMinIOScraper_Archive_Integration(t *testing.T) {
 	}
 
 	execution := testkube.Execution{Id: "minio-test"}
-	s := scraper.NewExtractLoadScraper(extractor, loader)
+	s := scraper.NewExtractLoadScraper(extractor, loader, nil, "")
 	err = s.Scrape(context.Background(), []string{tempDir}, execution)
 	if err != nil {
 		t.Fatalf("error scraping: %v", err)
@@ -108,7 +108,7 @@ func TestMinIOScraper_Recursive_Integration(t *testing.T) {
 	}
 
 	execution := testkube.Execution{Id: "minio-test"}
-	s := scraper.NewExtractLoadScraper(extractor, loader)
+	s := scraper.NewExtractLoadScraper(extractor, loader, nil, "")
 	err = s.Scrape(context.Background(), []string{tempDir}, execution)
 	if err != nil {
 		t.Fatalf("error scraping: %v", err)

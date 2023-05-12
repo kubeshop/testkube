@@ -6,11 +6,14 @@ require (
 	github.com/99designs/gqlgen v0.17.27
 	github.com/Masterminds/semver v1.5.0
 	github.com/adhocore/gronx v1.1.2
+	github.com/cdevents/sdk-go v0.3.0
 	github.com/cli/cli/v2 v2.20.2
+	github.com/cloudevents/sdk-go/v2 v2.14.0
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
 	github.com/fasthttp/websocket v1.5.0
 	github.com/fluxcd/pkg/apis/event v0.2.0
+	github.com/gabriel-vasile/mimetype v1.4.2
 	github.com/gofiber/adaptor/v2 v2.1.29
 	github.com/gofiber/fiber/v2 v2.39.0
 	github.com/gofiber/websocket/v2 v2.1.1
@@ -58,13 +61,11 @@ require (
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/briandowns/spinner v1.19.0 // indirect
-	github.com/cdevents/sdk-go v0.3.0 // indirect
 	github.com/charmbracelet/glamour v0.5.1-0.20220727184942-e70ff2d969da // indirect
 	github.com/cli/browser v1.1.0 // indirect
 	github.com/cli/go-gh v0.1.3-0.20221102170023-e3ec45fb1d1b // indirect
 	github.com/cli/safeexec v1.0.0 // indirect
 	github.com/cli/shurcooL-graphql v0.0.2 // indirect
-	github.com/cloudevents/sdk-go/v2 v2.14.0 // indirect
 	github.com/dlclark/regexp2 v1.8.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
