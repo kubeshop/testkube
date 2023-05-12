@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,16 +12,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const ApiScan = `api:
-   target: https://www.qaware.de`
-
 func TestRun(t *testing.T) {
 	// setup
-	tempDir := os.TempDir()
 	os.Setenv("ZAP_HOME", "../../zap/")
 
 	t.Run("Run successful API scan", func(t *testing.T) {
 		// given
+		tempDir, err := ioutil.TempDir(os.TempDir(), "")
+		assert.NoError(t, err)
 		runner, err := NewRunner(context.TODO(), envs.Params{
 			DataDir: tempDir,
 		})
@@ -40,10 +39,16 @@ func TestRun(t *testing.T) {
 		assert.Len(t, result.Steps, 2)
 		assert.Equal(t, result.Steps[0].Name, "Vulnerable JS Library [10003]")
 		assert.Equal(t, result.Steps[0].Status, string(testkube.PASSED_ExecutionStatus))
+
+		// clean-up
+		err = os.RemoveAll(tempDir)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Run API scan with PASS and WARN", func(t *testing.T) {
 		// given
+		tempDir, err := ioutil.TempDir(os.TempDir(), "")
+		assert.NoError(t, err)
 		runner, err := NewRunner(context.TODO(), envs.Params{
 			DataDir: tempDir,
 		})
@@ -63,10 +68,16 @@ func TestRun(t *testing.T) {
 		assert.Len(t, result.Steps, 2)
 		assert.Equal(t, result.Steps[1].Name, "Re-examine Cache-control Directives [10015] x 12")
 		assert.Equal(t, result.Steps[1].Status, string(testkube.PASSED_ExecutionStatus))
+
+		// clean-up
+		err = os.RemoveAll(tempDir)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Run API scan with WARN and FailOnWarn", func(t *testing.T) {
 		// given
+		tempDir, err := ioutil.TempDir(os.TempDir(), "")
+		assert.NoError(t, err)
 		runner, err := NewRunner(context.TODO(), envs.Params{
 			DataDir: tempDir,
 		})
@@ -86,10 +97,16 @@ func TestRun(t *testing.T) {
 		assert.Len(t, result.Steps, 2)
 		assert.Equal(t, result.Steps[1].Name, "Re-examine Cache-control Directives [10015] x 12")
 		assert.Equal(t, result.Steps[1].Status, string(testkube.FAILED_ExecutionStatus))
+
+		// clean-up
+		err = os.RemoveAll(tempDir)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Run API scan with FAIL", func(t *testing.T) {
 		// given
+		tempDir, err := ioutil.TempDir(os.TempDir(), "")
+		assert.NoError(t, err)
 		runner, err := NewRunner(context.TODO(), envs.Params{
 			DataDir: tempDir,
 		})
@@ -109,10 +126,16 @@ func TestRun(t *testing.T) {
 		assert.Len(t, result.Steps, 1)
 		assert.Equal(t, result.Steps[0].Name, "Unknown issue")
 		assert.Equal(t, result.Steps[0].Status, string(testkube.FAILED_ExecutionStatus))
+
+		// clean-up
+		err = os.RemoveAll(tempDir)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Run Baseline scan with PASS", func(t *testing.T) {
 		// given
+		tempDir, err := ioutil.TempDir(os.TempDir(), "")
+		assert.NoError(t, err)
 		runner, err := NewRunner(context.TODO(), envs.Params{
 			DataDir: tempDir,
 		})
@@ -130,10 +153,16 @@ func TestRun(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, result.Status, testkube.ExecutionStatusPassed)
 		assert.Len(t, result.Steps, 2)
+
+		// clean-up
+		err = os.RemoveAll(tempDir)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Run Baseline scan with WARN", func(t *testing.T) {
 		// given
+		tempDir, err := ioutil.TempDir(os.TempDir(), "")
+		assert.NoError(t, err)
 		runner, err := NewRunner(context.TODO(), envs.Params{
 			DataDir: tempDir,
 		})
@@ -152,10 +181,16 @@ func TestRun(t *testing.T) {
 		assert.Equal(t, result.Status, testkube.ExecutionStatusPassed)
 		assert.Len(t, result.Steps, 2)
 		assert.Equal(t, result.Steps[1].Status, string(testkube.PASSED_ExecutionStatus))
+
+		// clean-up
+		err = os.RemoveAll(tempDir)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Run Full scan with FAIL", func(t *testing.T) {
 		// given
+		tempDir, err := ioutil.TempDir(os.TempDir(), "")
+		assert.NoError(t, err)
 		runner, err := NewRunner(context.TODO(), envs.Params{
 			DataDir: tempDir,
 		})
@@ -175,6 +210,10 @@ func TestRun(t *testing.T) {
 		assert.Len(t, result.Steps, 2)
 		assert.Equal(t, result.Steps[0].Status, string(testkube.FAILED_ExecutionStatus))
 		assert.Equal(t, result.Steps[1].Status, string(testkube.FAILED_ExecutionStatus))
+
+		// clean-up
+		err = os.RemoveAll(tempDir)
+		assert.NoError(t, err)
 	})
 }
 

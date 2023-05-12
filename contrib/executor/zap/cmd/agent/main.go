@@ -21,7 +21,7 @@ func main() {
 	}
 	r, err := runner.NewRunner(ctx, params)
 	if err != nil {
-		output.PrintError(os.Stderr, errors.Errorf("%s error instantiating ZAP Executor: %v", err))
+		output.PrintError(os.Stderr, errors.Errorf("%s error instantiating ZAP Executor: %v", ui.IconCross, err))
 		os.Exit(1)
 	}
 	agent.Run(ctx, r, os.Args)
