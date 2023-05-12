@@ -9,19 +9,21 @@ TestKube ZAP Executor is a test executor to run ZED attack proxy scans with [Tes
 Your Testkube installation comes directly with the ZAP executor.
 
 In case you want to build and deploy the executor yourself, you need to build the image first, and then register the executor and deploy it in your cluster.
+
 ```bash
 kubectl apply -f examples/zap-executor.yaml
 ```
 
 Issue the following commands to create and start a ZAP test for a given YAML configuration file:
+
 ```bash
-testkube create test --git-uri https://github.com/kubeshop/testkube-executor-zap.git --type "zap/api" --name api-test10 --executor-args "examples/zap-api.yaml" --git-branch main
+testkube create test --git-uri https://github.com/kubeshop/testkube.git --type "zap/api" --name api-test --executor-args "contrib/executor/zap/examples/zap-api.yaml" --git-branch main --git-path "contrib/executor/zap"
 kubectl testkube run test --watch api-test
 
-testkube create test --git-uri https://github.com/kubeshop/testkube-executor-zap.git --type "zap/baseline" --name baseline-test10 --executor-args "examples/zap-baseline.yaml" --git-branch main
+testkube create test --git-uri https://github.com/kubeshop/testkube.git --type "zap/baseline" --name baseline-test --executor-args "contrib/executor/zap/examples/zap-baseline.yaml" --git-branch main --git-path "contrib/executor/zap"
 kubectl testkube run test --watch baseline-test
 
-testkube create test --git-uri https://github.com/kubeshop/testkube-executor-zap.git --type "zap/full" --name full-test10 --executor-args "examples/zap-full.yaml" --git-branch main
+testkube create test --git-uri https://github.com/kubeshop/testkube.git --type "zap/full" --name full-test --executor-args "contrib/executor/zap/examples/zap-full.yaml" --git-branch main --git-path "contrib/executor/zap"
 kubectl testkube run test --watch full-test
 ```
 
@@ -31,6 +33,7 @@ kubectl testkube run test --watch baseline-test
 ```
 
 The required ZAP arguments and options need to be specified via a dedicated YAML configuration file, e.g.
+
 ```yaml
 api:
   # -t the target API definition
@@ -63,6 +66,6 @@ api:
   fail_on_warn: false
 ```
 
-# Issues and enchancements 
+# Issues and enchancements
 
 Please report all [issues](https://github.com/kubeshop/testkube/issues).

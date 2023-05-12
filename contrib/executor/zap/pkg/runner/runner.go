@@ -39,6 +39,7 @@ func NewRunner(ctx context.Context, params envs.Params) (*ZapRunner, error) {
 		ZapHome: os.Getenv("ZAP_HOME"),
 	}
 
+	output.PrintLogf("%s Preparing scraper", ui.IconTruck)
 	r.Scraper, err = factory.TryGetScrapper(ctx, params)
 	if err != nil {
 		return nil, err
@@ -74,6 +75,7 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 		zapConfig = testFile
 	}
 
+	output.PrintLogf("%s Reading options", ui.IconWorld)
 	options := Options{}
 	err = options.UnmarshalYAML(zapConfig)
 	if err != nil {
@@ -81,16 +83,19 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 	}
 
 	// determine the actual ZAP script and args to run
+	output.PrintLogf("%s Processing test type", ui.IconWorld)
 	scanType := strings.Split(execution.TestType, "/")[1]
 	reportFolder := filepath.Join(r.Params.DataDir, "reports")
 	err = os.Mkdir(reportFolder, 0700)
 	if err != nil {
 		return *result.WithErrors(err), nil
 	}
+	output.PrintLogf("%s Preparing reports folder", ui.IconFile)
 	reportFile := filepath.Join(reportFolder, fmt.Sprintf("%s-report.html", execution.TestName))
 	scriptName := zapScript(scanType)
 	args := zapArgs(scanType, options, reportFile)
 
+	output.PrintLogf("%s Preparing variables", ui.IconWorld)
 	envManager := env.NewManagerWithVars(execution.Variables)
 	envManager.GetReferenceVars(envManager.Variables)
 	// simply set the ENVs to use during execution
@@ -107,10 +112,11 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 	// we simply symlink the directory
 	os.Symlink(r.Params.DataDir, filepath.Join(r.ZapHome, "wrk"))
 
-	output.PrintLogf("%s Running ZAP test in directory %s with the script %s and the following arguments: %s", ui.IconMicroscope, r.ZapHome, scriptName, args)
+	output.PrintLogf("%s Running ZAP test", ui.IconMicroscope)
 	logs, err := executor.Run(r.ZapHome, scriptName, envManager, args...)
 	logs = envManager.ObfuscateSecrets(logs)
 
+	output.PrintLogf("%s Calculating results", ui.IconMicroscope)
 	if err == nil {
 		result.Status = testkube.ExecutionStatusPassed
 	} else {
@@ -158,7 +164,7 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 			directories = append(directories, execution.ArtifactRequest.Dirs...)
 		}
 
-		output.PrintLogf("Scraping directories: %v", directories)
+		output.PrintLogf("%s Scraping directories: %v", ui.IconCabinet, directories)
 
 		if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
 			return *result.Err(err), errors.Wrap(err, "error scraping artifacts from ZAP executor")
