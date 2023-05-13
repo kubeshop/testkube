@@ -138,7 +138,18 @@ func GetClusterType() string {
 		if strings.Contains(pod.Name, "azure-") || strings.Contains(pod.Name, "-azuredisk-") || strings.Contains(pod.Name, "-azurefile-") {
 			return "aks"
 		}
-
+		if strings.Contains(pod.Name, "openshift") || strings.Contains(pod.Name, "oc-") {
+			return "openshift"
+		}
+		if strings.Contains(pod.Name, "k3d-") {
+			return "k3d"
+		}
+		if strings.Contains(pod.Name, "k3s-") {
+			return "k3s"
+		}
+		if strings.Contains(pod.Name, "microk8s-") {
+			return "microk8s"
+		}
 	}
 
 	return "others"
