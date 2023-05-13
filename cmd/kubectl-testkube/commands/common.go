@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
+	"github.com/briandowns/spinner"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -122,6 +124,10 @@ func HelmUpgradeOrInstalTestkube(options HelmUpgradeOrInstalTestkubeOptions) err
 	}
 
 	ui.Info("Helm installing testkube framework")
+
+	s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
+	s.Start()
+
 	_, err = process.Execute(helmPath, "repo", "add", "kubeshop", "https://kubeshop.github.io/helm-charts")
 	if err != nil && !strings.Contains(err.Error(), "Error: repository name (kubeshop) already exists, please specify a different name") {
 		ui.WarnOnError("adding testkube repo", err)
@@ -146,6 +152,8 @@ func HelmUpgradeOrInstalTestkube(options HelmUpgradeOrInstalTestkubeOptions) err
 	}
 
 	out, err := process.Execute(helmPath, command...)
+	s.Stop()
+
 	if err != nil {
 		return err
 	}
