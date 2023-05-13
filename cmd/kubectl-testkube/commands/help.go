@@ -38,7 +38,7 @@ func NewHelpCmd() *cobra.Command {
 			ui.Printf(RootCmd.Flags().FlagUsages())
 			ui.Print(ui.LightGray("Use \"kubectl testkube [command] --help\" for more information about a command."))
 			ui.NL()
-			ui.Printf("%s   %s", ui.LightGray("Docs & Support:"), ui.White("https://kubeshop.github.io/testkube/"))
+			ui.Printf("%s   %s", ui.LightGray("Docs & Support:"), ui.White("https://docs.testkube.io"))
 			ui.NL()
 		},
 	}

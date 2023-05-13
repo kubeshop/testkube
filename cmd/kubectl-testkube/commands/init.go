@@ -62,7 +62,7 @@ func NewInitCmd() *cobra.Command {
 				err = PopulateAgentDataToContext(options, cfg)
 				ui.ExitOnError("Storing agent data in context", err)
 			} else {
-				ui.Info(`To help improve the quality of Testkube, we collect anonymous basic telemetry data.  Head out to https://kubeshop.github.io/testkube/telemetry/ to read our policy or feel free to:`)
+				ui.Info(`To help improve the quality of Testkube, we collect anonymous basic telemetry data.  Head out to https://docs.testkube.io/articles/telemetry to read our policy or feel free to:`)
 
 				ui.NL()
 				ui.ShellCommand("disable telemetry by typing", "testkube disable telemetry")
