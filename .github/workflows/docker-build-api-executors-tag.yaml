@@ -237,7 +237,8 @@ jobs:
   executor_cypress:
     strategy:
       matrix:
-        version: [cypress8, cypress9, cypress10, cypress11, yarn, npm]
+        version:
+          [cypress8, cypress9, cypress10, cypress11, cypress12, yarn, npm]
 
     runs-on: ubuntu-latest
     steps:
