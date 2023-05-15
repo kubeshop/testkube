@@ -2,11 +2,13 @@ package common
 
 import "fmt"
 
+const defaultAgentPort = 443
+
 func NewCloudUris(rootDomain string) CloudUris {
 	return CloudUris{
 		RootDomain: rootDomain,
 		Api:        fmt.Sprintf("https://api.%s", rootDomain),
-		Agent:      fmt.Sprintf("agent.%s:443", rootDomain),
+		Agent:      fmt.Sprintf("agent.%s:%d", rootDomain, defaultAgentPort),
 		Ui:         fmt.Sprintf("https://cloud.%s", rootDomain),
 		Auth:       fmt.Sprintf("https://api.%s/idp", rootDomain),
 	}
