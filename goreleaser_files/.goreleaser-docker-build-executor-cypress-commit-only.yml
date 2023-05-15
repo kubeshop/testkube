@@ -23,7 +23,7 @@ builds:
       - arm64
     mod_timestamp: "{{ .CommitTimestamp }}"
 dockers:
-  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress11"
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress12"
     use: buildx
     goos: linux
     goarch: amd64
