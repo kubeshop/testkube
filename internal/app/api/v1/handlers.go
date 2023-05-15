@@ -25,8 +25,8 @@ const (
 
 	// env names for cloud context
 	cloudApiKeyEnvName = "TESTKUBE_CLOUD_API_KEY"
-	cloudEnvIdEnvName  = "TESTKUBE_CLOUD_API_KEY"
-	cloudOrgIdEnvName  = "TESTKUBE_CLOUD_API_KEY"
+	cloudEnvIdEnvName  = "TESTKUBE_CLOUD_ENV_ID"
+	cloudOrgIdEnvName  = "TESTKUBE_CLOUD_ORG_ID"
 
 	// contextCloud is cloud context
 	contextCloud = "cloud"
