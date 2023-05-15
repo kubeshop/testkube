@@ -1,8 +1,9 @@
 package commands
 
 import (
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/cloud"
 	"github.com/spf13/cobra"
+
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/cloud"
 )
 
 func NewCloudCmd() *cobra.Command {

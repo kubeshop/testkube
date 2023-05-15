@@ -9,12 +9,13 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/skratchdot/open-golang/open"
 
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
 	"github.com/kubeshop/testkube/pkg/cloudlogin"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 const (
