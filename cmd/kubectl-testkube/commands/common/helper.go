@@ -52,10 +52,6 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data) err
 		options.CloudUris = NewCloudUris(cfg.CloudContext.RootDomain)
 	}
 
-	// if cfg.CloudContext.AgentUri != "" && options.CloudAgentUri == "" {
-	// 	options.CloudAgentUri = cfg.CloudContext.AgentUri
-	// }
-
 	if options.CloudAgentToken == "" {
 		return fmt.Errorf("agent key and agent uri are required, please pass it with `--agent-token` and `--agent-uri` flags")
 	}

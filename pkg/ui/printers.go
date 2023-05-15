@@ -29,7 +29,7 @@ func (ui *UI) Paragraph(text string) {
 }
 
 func (ui *UI) NL(amount ...int) {
-	if len(amount) > 0 {
+	if len(amount) > 0 && amount[0] > 0 {
 		for i := 0; i < amount[0]-1; i++ {
 			fmt.Fprintln(ui.Writer)
 		}

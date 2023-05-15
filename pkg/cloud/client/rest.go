@@ -65,7 +65,10 @@ func (c RESTClient[T]) Create(entity T, overridePath ...string) (e T, err error)
 	}
 
 	if resp.StatusCode > 299 {
-		d, _ := io.ReadAll(resp.Body)
+		d, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return e, fmt.Errorf("error creating %s: can't read response: %s", c.Path, err)
+		}
 		return e, fmt.Errorf("error creating %s: %s", c.Path, d)
 	}
 
