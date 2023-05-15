@@ -60,7 +60,15 @@ const sidebars = {
             "articles/getting-test-suites-results",
           ],
         },
-        "articles/testkube-dashboard",
+        {
+          type: "category",
+          label: "Testkube Dashboard",
+          link: {
+            type: "doc",
+            id: "articles/testkube-dashboard",
+          },
+          items: ["articles/testkube-dashboard-api-endpoint"],
+        },
         "articles/adding-tests-secrets",
         "articles/scheduling-tests",
         "articles/artifacts-storage",
@@ -68,7 +76,7 @@ const sidebars = {
         "articles/test-triggers",
         "articles/testkube-dependencies",
         "articles/common-issues",
-        "articles/test-sources"
+        "articles/test-sources",
       ],
     },
     {
@@ -86,17 +94,12 @@ const sidebars = {
                 type: "doc",
                 id: "articles/exposing-testkube",
               },
-              items: [
-                "articles/exposing-testkube-with-ingress-nginx",
-              ],
+              items: ["articles/exposing-testkube-with-ingress-nginx"],
             },
             {
               type: "category",
               label: "Authentication",
-              items: [
-                "articles/oauth-cli",
-                "articles/oauth-dashboard",
-              ],
+              items: ["articles/oauth-cli", "articles/oauth-dashboard"],
             },
             "articles/deploying-in-aws",
           ],
