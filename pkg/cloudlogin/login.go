@@ -18,7 +18,6 @@ const (
 func CloudLogin(ctx context.Context, providerURL string) (string, chan string, error) {
 	provider, err := oidc.NewProvider(ctx, providerURL)
 	if err != nil {
-		//fmt.Fprintf(os.Stderr, "Failed to retrieve provider configuration: %v\n", err)
 		return "", nil, err
 	}
 

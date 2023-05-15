@@ -199,6 +199,7 @@ func NewConnectCmd() *cobra.Command {
 	cmd.Flags().StringVar(&opts.Values, "values", "", "path to Helm values file")
 
 	cmd.Flags().StringVar(&opts.CloudAgentToken, "agent-token", "", "Testkube Cloud agent key [required for cloud mode]")
+	cmd.Flags().StringVar(&opts.CloudAgentUri, "agent-uri", "", "Testkube Cloud agent uri")
 	cmd.Flags().StringVar(&opts.CloudOrgId, "org-id", "", "Testkube Cloud organization id [required for cloud mode]")
 	cmd.Flags().StringVar(&opts.CloudEnvId, "env-id", "", "Testkube Cloud environment id [required for cloud mode]")
 

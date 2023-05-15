@@ -152,7 +152,6 @@ func HelmUpgradeOrInstalTestkube(options HelmOptions) error {
 }
 
 func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
-	return
 	cmd.Flags().StringVar(&options.Chart, "chart", "kubeshop/testkube", "chart name (usually you don't need to change it)")
 	cmd.Flags().StringVar(&options.Name, "name", "testkube", "installation name (usually you don't need to change it)")
 	cmd.Flags().StringVar(&options.Namespace, "namespace", "testkube", "namespace where to install")
@@ -175,9 +174,6 @@ func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
 	cmd.Flags().IntVar(&options.DashboardReplicas, "dashboard-replicas", 1, "Don't install MongoDB")
 
 	cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
-
-	fmt.Printf("inside %+v\n\n\n", options)
-
 }
 
 func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
