@@ -1,42 +1,21 @@
-# Transition from Testkube OSS
+# Migrating from Testkube Open Source
 
-To migrate Testkube OSS to Cloud you need to install Testkube in Cloud Agent mode. Testkube Cloud Agent is the Testkube engine for managing test runs into your cluster. It sends data to Testkube's Cloud Servers. Its main responsibility is to manage test workloads and to get insight into Testkube resources stored in the cluster.
+If you have started using Testkube using the Open Source installation, you can migrate this instace to be managed using Testkube Cloud. 
 
+To connect your Testkube Open Source instance you will need to modify your Testkube installation to be in Cloud Agent mode. Testkube Cloud Agent is the Testkube engine for controlling your Testkube instance using the managed solution. It sends data to Testkube's Cloud Servers.
 
-## Installing the Agent
+::: note
 
-Please follow the [install steps](installing-agent.md) to get started using the Testkube Agent.
+Currently we are supporting uploading existing test logs and artifacts from your Testkube Open Source instance. This is planned for coming releases.
+s
+::: 
 
-You will copy the Helm command to install Testkube in your cluster:
+## Instructions
 
-```sh
-helm repo add kubeshop https://kubeshop.github.io/helm-charts
-helm repo update
-helm upgrade \
-  --install \
-  --create-namespace testkube kubeshop/testkube \
-  --set mongodb.enabled=false \
-  --namespace testkube \
-  --set testkube-api.minio.enabled=false \
-  --set testkube-api.cloud.key=tkcagnt_YOUR_TOKEN
-```
-
-:::danger
-
-Please keep in mind that the default install will REMOVE existing MongoDB, MinIO and Dashboard pods!
-
-To keep the pods, set the below options to true (3 values for MongoDB, MinIO, Dashboard):
+1. Run the following command which will walk you through the migration process:
 
 ```sh
- --set testkube-api.minio.enabled=true --set mongodb.enabled=true --set testkube-dashboard.enabled=true
+testkube cloud connect
 ```
 
-:::
-
-## Setting the Testkube CLI Context to Agent Mode
-
-Please follow the [context management guide](managing-cli-context.md) to configure your Testkube CLI in Cloud mode.
-
-## Migrating the Testkube Resources
-
-Currently there is no automatic migration tool for existing Testkube OSS resources. This is planned for coming releases.
+2. [Set your CLI Context to talk to Testkube Cloud](./managing-cli-context.md)
