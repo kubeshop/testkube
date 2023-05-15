@@ -10,8 +10,9 @@ follow='false'
 schedule='false'
 executor_type='all'
 custom_testsuite=''
+branch_overwrite=''
 
-while getopts 'hdcrfse:t:v' flag; do
+while getopts 'hdcrfse:t:b:v' flag; do
   case "${flag}" in
     h) help='true' ;; # TODO: describe params
     d) delete='true' ;;
@@ -21,6 +22,7 @@ while getopts 'hdcrfse:t:v' flag; do
     s) schedule='true' ;;
     e) executor_type="${OPTARG}" ;;
     t) custom_testsuite="${OPTARG}" ;;
+    b) branch_overwrite="${OPTARG}" ;;
     v) set -x ;;
   esac
 done
@@ -55,7 +57,15 @@ run_follow_testsuite() { # testsuite_name
     follow_param=' -f'
   fi
 
-  testkube run testsuite $1 $follow_param
+  branch_overwrite_param=''
+  if [ -n "$branch_overwrite" ] ; then
+    echo "Not empty" # TODO: remove before merge
+    branch_overwrite_param=" --git-branch $branch_overwrite"
+    echo "$branch_overwrite_param"
+  fi
+
+
+  testkube run testsuite $1 $follow_param $branch_overwrite_param
 }
 
 common_run() { # name, test_crd_file, testsuite_name, testsuite_file, custom_executor_crd_file
