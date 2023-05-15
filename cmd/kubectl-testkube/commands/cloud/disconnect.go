@@ -74,7 +74,7 @@ func NewDisconnectCmd() *cobra.Command {
 
 			ui.NL(2)
 
-			spinner := ui.NewSpinner("Connecting back to Testkube OSS")
+			spinner := ui.NewSpinner("Disonnecting from Testkube Cloud")
 
 			err = common.HelmUpgradeOrInstalTestkube(opts)
 			ui.ExitOnError("Installing Testkube Cloud", err)
@@ -100,7 +100,7 @@ func NewDisconnectCmd() *cobra.Command {
 			ui.NL()
 			ui.Success("Disconnect finished successfully")
 			ui.NL()
-			ui.ShellCommand("You can now open your local Dashboard and validate the successfull disconnect:", "testkube dashboard")
+			ui.ShellCommand("You can now open your local Dashboard and validate the successfull disconnect", "testkube dashboard")
 		},
 	}
 

@@ -79,7 +79,7 @@ func NewConnectCmd() *cobra.Command {
 			}
 
 			// if no agent is passed create new environment and get its token
-			if opts.CloudAgentToken == "" {
+			if opts.CloudAgentToken == "" && opts.CloudOrgId == "" && opts.CloudEnvId == "" {
 				authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), opts.CloudUris.Auth)
 				if err != nil {
 					ui.ExitOnError("getting current kubernetes context", err)
@@ -124,7 +124,6 @@ func NewConnectCmd() *cobra.Command {
 						{"Environment name", env.Name},
 						{ui.Separator, ""},
 					}...)
-
 			}
 
 			// validate if user created env - or was passed from flags
@@ -147,7 +146,7 @@ func NewConnectCmd() *cobra.Command {
 			ui.Properties(newStatus)
 
 			ui.NL()
-			ui.Warn("Remember: All your historical data and artifacts will be safe in case you want to rollback")
+			ui.Warn("Remember: All your historical data and artifacts will be safe in case you want to rollback. OSS and cloud executions will be separated.")
 			ui.NL()
 
 			if ok := ui.Confirm("Proceed with connecting Testkube Cloud?"); !ok {
@@ -155,7 +154,6 @@ func NewConnectCmd() *cobra.Command {
 			}
 
 			spinner := ui.NewSpinner("Connecting Testkube Cloud")
-
 			err = common.HelmUpgradeOrInstallTestkubeCloud(opts, cfg)
 			ui.ExitOnError("Installing Testkube Cloud", err)
 			spinner.Success()
