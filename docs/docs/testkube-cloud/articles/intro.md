@@ -1,23 +1,17 @@
-# Intro
+# Testkube Cloud
 
-Testkube Cloud is the managed version of Testkube with the main purpose of orchestrating multiple clusters. 
-All test results and test artifacts are stored into Testkube Cloud internal data storages. Testkube cloud 
-will provide you with additional tests insights and is able to limit access for your users only to a subset 
-of environments.
+Testkube Cloud is the managed version of Testkube with the main purpose of:
+- Orchestrating tests throughout multiple clusters 
+- Managing different environments for testing (development, staging, production, etc.) 
+- Enabling enterprise authentication and RBAC
+- Simplifying test artifacts storage
 
-Testkube Cloud is in Alpha phase - so feel free to give us feedback! 
+## How it works? 
 
+The way Testkube Cloud works is by installing adding an agent to the Testkube installation in your cluster, which then connects with Testkube's servers. This allows Testkube to offer these added functionalities while you can still benefit from Testkube's main feature of running your testing tools inside your cluster. 
 
-## Testkube Cloud Agent - Installation Manual
+## Getting started 
 
-Testkube Cloud is able to connect to Testkube Agents. Testkube Agent is the Testkube engine for managing test runs into your cluster.
-It is also responsible for getting insight into Testkube resources stored in the cluster.
-
-Testkube Agent opens a networking connection into Testkube Cloud API, which is always active with the main purpose of listening for Testkube Cloud commands.
-
-Your existing Open Source Testkube installation can be converted into a Testkube Cloud agent; data will be passed and managed by 
-Testkube servers (Coming Soon!)
-
-## Installing the Agent
-
-Please follow the [install steps](installing-agent.md) to get started using the Testkube Agent.
+You can start using Testkube Cloud by either: 
+- [**Migrating Testkube Open Source**](./migrating-testkube-oss.md) your existing Testkube Open Source instance to a Cloud instance
+- Creating a fresh installation, using [cloud.testkube.io](https://cloud.testkube.io)
