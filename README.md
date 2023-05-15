@@ -89,7 +89,7 @@ Main Testkube components are:
 
 ## Getting Started
 
-Checkout the [Getting Started](docs.testkube.io/getting-started/) guides to set up Testkube and run your first tests!
+Checkout the [Getting Started](https://docs.testkube.io/articles/getting-started-overview) guides to set up Testkube and run your first tests!
 
 # Documentation
 

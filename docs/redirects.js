@@ -61,7 +61,11 @@ const redirects = [
     to: "/articles/running-test-suites",
   },
   {
-    from: "/testsuites-creating",
+    from: [
+      "/testsuites-creating",
+      "/concepts/test-suites/testsuites-creating",
+      "/using-testkube/test-suites/testsuites-creating",
+    ],
     to: "/articles/creating-test-suites",
   },
   {
@@ -93,7 +97,13 @@ const redirects = [
     to: "/articles/cicd-overview",
   },
   {
-    from: ["/guides/tests/tests-creating", "/category/tests", "/concepts/tests/tests-creating", "/tests-creating", "/using-testkube/tests/tests-creating"],
+    from: [
+      "/guides/tests/tests-creating",
+      "/category/tests",
+      "/concepts/tests/tests-creating",
+      "/tests-creating",
+      "/using-testkube/tests/tests-creating",
+    ],
     to: "/articles/creating-tests",
   },
   {
@@ -121,7 +131,11 @@ const redirects = [
     to: "/articles/getting-started-overview",
   },
   {
-    from: ["/getting-started/step1-installing-cli", "/cli/installation", "/getting-started/installing-cli"],
+    from: [
+      "/getting-started/step1-installing-cli",
+      "/cli/installation",
+      "/getting-started/installing-cli",
+    ],
     to: "/articles/step1-installing-cli",
   },
   {
@@ -141,12 +155,12 @@ const redirects = [
     to: "/articles/getting-tests-results",
   },
   {
-    from: ["/concepts/tests/tests-variables", "/tests-variables", "/using-testkube/tests/tests-variables"],
+    from: [
+      "/concepts/tests/tests-variables",
+      "/tests-variables",
+      "/using-testkube/tests/tests-variables",
+    ],
     to: "/articles/adding-tests-variables",
-  },
-  {
-    from: "/concepts/test-suites/testsuites-creating",
-    to: "/articles/creating-test-suites",
   },
   {
     from: "/concepts/test-suites/testsuites-running",
@@ -177,7 +191,7 @@ const redirects = [
     to: "/articles/metrics",
   },
   {
-    from: "/concepts/triggers",
+    from: ["/concepts/triggers", "/using-testkube/triggers"],
     to: "/articles/test-triggers",
   },
   {
@@ -193,15 +207,24 @@ const redirects = [
     to: "/articles/test-sources",
   },
   {
-    from: ["/guides/going-to-production/exposing-testkube/overview", "/guides/exposing-testkube/overview"],
+    from: [
+      "/guides/going-to-production/exposing-testkube/overview",
+      "/guides/exposing-testkube/overview",
+    ],
     to: "/articles/exposing-testkube",
   },
   {
-    from: ["/guides/going-to-production/exposing-testkube/ingress-nginx", "/guides/exposing-testkube/ingress-nginx"],
+    from: [
+      "/guides/going-to-production/exposing-testkube/ingress-nginx",
+      "/guides/exposing-testkube/ingress-nginx",
+    ],
     to: "/articles/exposing-testkube-with-ingress-nginx",
   },
   {
-    from: ["/guides/going-to-production/authentication/oauth-cli", "/guides/authentication/oauth-cli"],
+    from: [
+      "/guides/going-to-production/authentication/oauth-cli",
+      "/guides/authentication/oauth-cli",
+    ],
     to: "/articles/oauth-cli",
   },
   {
@@ -305,7 +328,10 @@ const redirects = [
     to: "/articles/development",
   },
   {
-    from: ["/contributing/development/crds", "/contributing/development/development-crds/"],
+    from: [
+      "/contributing/development/crds",
+      "/contributing/development/development-crds/",
+    ],
     to: "/articles/crds",
   },
   {

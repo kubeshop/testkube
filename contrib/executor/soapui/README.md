@@ -157,7 +157,7 @@ In case you need this feature, please create an issue in the Testkube repository
 
 # API
 
-Testkube Executor SoapUI implements [testkube OpenAPI for executors](https://kubeshop.github.io/testkube/openapi/#operations-tag-executor) (look at executor tag)
+Testkube Executor SoapUI implements [testkube OpenAPI for executors](https://docs.testkube.io/openapi#tag/executor) (look at executor tag)
 
 # Issues and enchancements
 

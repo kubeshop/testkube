@@ -6,7 +6,6 @@ on:
     paths-ignore:
       - 'docs/**'
 
-
 jobs:
   api:
     runs-on: ubuntu-latest

@@ -6,14 +6,6 @@ The Testkube Dashboard provides a simple web-based user interface for monitoring
 
 The URL to access the Testkube Dashboard is [https://demo.testkube.io](https://demo.testkube.io), which, when first loaded, will prompt for the results endpoint of your Testkube installation. Click the **Settings** icon at the bottom left of the screen to return to change the Testkube API endpoint.
 
-![dashboard-endpoint-prompt.png](../img/dashboard-endpoint-prompt-1.6.png)
-
-See the [UI Results Endpoint section](#ui-results-endpoint) below to find the endpoint to open the dashboard. Once you have the results endpoint, you can append it to the above URL (as an apiEndpoint parameter) for a direct link to the dashboard with your results:
-
-`https://demo.testkube.io/?apiEndpoint=...`
-
-Alternatively, the Testkube Dashboard can be opened on your local machine using the command `sh kubectl testkube dashboard` which uses port forwarding for accessing your local results endpoint (see more [here](../cli/testkube_dashboard.md)).
-
 ## Explore the Testkube Dashboard
 
 The Testkube Dashboard displays the current status of Tests and Test Suites executed in your environment.

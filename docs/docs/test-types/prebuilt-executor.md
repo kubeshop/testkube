@@ -190,7 +190,7 @@ Currently, in other languages, you'll need to manage this on your own.
 
 ## **Resources**
 
-- [OpenAPI spec details](https://kubeshop.github.io/testkube/reference/openapi/).
+- [OpenAPI spec details](http://docs.testkube.io/openapi).
 - [Spec in YAML file](https://raw.githubusercontent.com/kubeshop/testkube/main/api/v1/testkube.yaml).
 
 Go-based resources for input and output objects:

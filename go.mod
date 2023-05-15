@@ -6,6 +6,7 @@ require (
 	github.com/99designs/gqlgen v0.17.27
 	github.com/Masterminds/semver v1.5.0
 	github.com/adhocore/gronx v1.1.2
+	github.com/briandowns/spinner v1.19.0
 	github.com/cdevents/sdk-go v0.3.0
 	github.com/cli/cli/v2 v2.20.2
 	github.com/cloudevents/sdk-go/v2 v2.14.0
@@ -60,7 +61,6 @@ require (
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
-	github.com/briandowns/spinner v1.19.0 // indirect
 	github.com/charmbracelet/glamour v0.5.1-0.20220727184942-e70ff2d969da // indirect
 	github.com/cli/browser v1.1.0 // indirect
 	github.com/cli/go-gh v0.1.3-0.20221102170023-e3ec45fb1d1b // indirect
