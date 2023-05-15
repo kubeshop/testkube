@@ -59,11 +59,8 @@ run_follow_testsuite() { # testsuite_name
 
   branch_overwrite_param=''
   if [ -n "$branch_overwrite" ] ; then
-    echo "Not empty" # TODO: remove before merge
     branch_overwrite_param=" --git-branch $branch_overwrite"
-    echo "$branch_overwrite_param"
   fi
-
 
   testkube run testsuite $1 $follow_param $branch_overwrite_param
 }
