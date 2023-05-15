@@ -4,7 +4,7 @@ on:
     branches:
       - release-**
     paths-ignore:
-      - "docs/**"
+      - 'docs/**'
 
 jobs:
   api:
@@ -65,20 +65,7 @@ jobs:
   single_executor:
     strategy:
       matrix:
-        executor:
-          [
-            artillery,
-            curl,
-            example,
-            ginkgo,
-            k6,
-            kubepug,
-            postman,
-            soapui,
-            init,
-            scraper,
-            template,
-          ]
+        executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template ]
 
     runs-on: ubuntu-latest
     steps:
@@ -132,6 +119,7 @@ jobs:
   executor_jmeter:
     runs-on: ubuntu-latest
     steps:
+
       - name: Checkout
         uses: actions/checkout@v2
 
@@ -328,8 +316,8 @@ jobs:
   executor_playwright:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      -  name: Checkout
+         uses: actions/checkout@v2
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -375,16 +363,7 @@ jobs:
           docker push kubeshop/testkube-playwright-executor:${{ steps.github_sha.outputs.sha_short }}
 
   workflow_dispatch:
-    needs:
-      [
-        api,
-        single_executor,
-        executor_jmeter,
-        executor_maven,
-        executor_gradle,
-        executor_cypress,
-        executor_playwright,
-      ]
+    needs: [ api, single_executor, executor_jmeter, executor_maven, executor_gradle, executor_cypress, executor_playwright ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -426,3 +405,4 @@ jobs:
           else
             echo "Branch ${BRANCH_NAME} already exists in ${REPO_OWNER}/${REPO_NAME}"
           fi
+
