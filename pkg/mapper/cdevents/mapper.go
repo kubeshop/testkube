@@ -1,6 +1,7 @@
 package cdevents
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -11,14 +12,18 @@ import (
 
 // MapTestkubeEventToCDEvent maps OpenAPI spec Event to CDEvent CDEventReader
 func MapTestkubeEventToCDEvent(tkEvent testkube.Event, clusterID string) (cdevents.CDEventReader, error) {
-	switch tkEvent.Type_ {
-	case testkube.EventStartTest:
+	if tkEvent.Type_ == nil {
+		return nil, errors.New("empty event type")
+	}
+
+	switch *tkEvent.Type_ {
+	case *testkube.EventStartTest:
 		return MapTestkubeEventStartTestToCDEvent(tkEvent, clusterID)
-	case testkube.EventEndTestAborted, testkube.EventEndTestFailed, testkube.EventEndTestTimeout, testkube.EventEndTestSuccess:
+	case *testkube.EventEndTestAborted, *testkube.EventEndTestFailed, *testkube.EventEndTestTimeout, *testkube.EventEndTestSuccess:
 		return MapTestkubeEventFinishTestToCDEvent(tkEvent, clusterID)
-	case testkube.EventStartTestSuite:
+	case *testkube.EventStartTestSuite:
 		return MapTestkubeEventStartTestSuiteToCDEvent(tkEvent, clusterID)
-	case testkube.EventEndTestSuiteAborted, testkube.EventEndTestSuiteFailed, testkube.EventEndTestSuiteTimeout, testkube.EventEndTestSuiteSuccess:
+	case *testkube.EventEndTestSuiteAborted, *testkube.EventEndTestSuiteFailed, *testkube.EventEndTestSuiteTimeout, *testkube.EventEndTestSuiteSuccess:
 		return MapTestkubeEventFinishTestSuiteToCDEvent(tkEvent, clusterID)
 	}
 
@@ -38,6 +43,7 @@ func MapTestkubeEventQueuedTestToCDEvent(event testkube.Event, clusterID string)
 	}
 
 	ev.SetSubjectSource(clusterID)
+	ev.SetSource(clusterID)
 	if event.TestExecution != nil {
 		ev.SetSubjectTestCase(&cdevents.TestCaseRunQueuedSubjectContentTestCase{
 			Id:   event.TestExecution.TestName,
@@ -79,6 +85,7 @@ func MapTestkubeEventStartTestToCDEvent(event testkube.Event, clusterID string) 
 	}
 
 	ev.SetSubjectSource(clusterID)
+	ev.SetSource(clusterID)
 	if event.TestExecution != nil {
 		ev.SetSubjectTestCase(&cdevents.TestCaseRunStartedSubjectContentTestCase{
 			Id:   event.TestExecution.TestName,
@@ -120,6 +127,7 @@ func MapTestkubeEventFinishTestToCDEvent(event testkube.Event, clusterID string)
 	}
 
 	ev.SetSubjectSource(clusterID)
+	ev.SetSource(clusterID)
 	if event.TestExecution != nil {
 		ev.SetSubjectTestCase(&cdevents.TestCaseRunFinishedSubjectContentTestCase{
 			Id:   event.TestExecution.TestName,
@@ -170,6 +178,7 @@ func MapTestkubeArtifactToCDEvent(execution *testkube.Execution, clusterID, form
 
 	ev.SetSubjectId(execution.Name)
 	ev.SetSubjectSource(clusterID)
+	ev.SetSource(clusterID)
 	ev.SetSubjectTestCaseRun(&cdevents.Reference{
 		Id:     execution.TestName,
 		Source: clusterID,
@@ -194,6 +203,7 @@ func MapTestkubeEventQueuedTestSuiteToCDEvent(event testkube.Event, clusterID st
 	}
 
 	ev.SetSubjectSource(clusterID)
+	ev.SetSource(clusterID)
 	if event.TestSuiteExecution != nil {
 		if event.TestSuiteExecution.TestSuite != nil {
 			ev.SetSubjectTestSuite(&cdevents.TestSuiteRunQueuedSubjectContentTestSuite{
@@ -229,6 +239,7 @@ func MapTestkubeEventStartTestSuiteToCDEvent(event testkube.Event, clusterID str
 	}
 
 	ev.SetSubjectSource(clusterID)
+	ev.SetSource(clusterID)
 	if event.TestSuiteExecution != nil {
 		if event.TestSuiteExecution.TestSuite != nil {
 			ev.SetSubjectTestSuite(&cdevents.TestSuiteRunStartedSubjectContentTestSuite{
@@ -264,6 +275,7 @@ func MapTestkubeEventFinishTestSuiteToCDEvent(event testkube.Event, clusterID st
 	}
 
 	ev.SetSubjectSource(clusterID)
+	ev.SetSource(clusterID)
 	if event.TestSuiteExecution != nil {
 		if event.TestSuiteExecution.TestSuite != nil {
 			ev.SetSubjectTestSuite(&cdevents.TestSuiteRunFinishedSubjectContentTestSuite{
