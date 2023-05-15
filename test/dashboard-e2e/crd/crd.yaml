@@ -11,7 +11,7 @@ spec:
     type: git
     repository:
       type: git
-      uri: https://github.com/kubeshop/testkube
+      uri: https://github.com/kubeshop/testkube-dashboard
       branch: main
       path: test/dashboard-e2e
       workingDir: test/dashboard-e2e
