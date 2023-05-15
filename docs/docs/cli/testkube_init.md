@@ -9,8 +9,8 @@ testkube init [flags]
 ### Options
 
 ```
-      --agentKey string    Testkube Cloud agent key [required for cloud mode]
-      --agentUri string    Testkube Cloud agent URI [required for cloud mode]
+      --agent-key string   Testkube Cloud agent key [required for cloud mode]
+      --agent-uri string   Testkube Cloud agent URI [required for cloud mode]
       --chart string       chart name (default "kubeshop/testkube")
   -h, --help               help for init
       --name string        installation name (default "testkube")

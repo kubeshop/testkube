@@ -157,6 +157,7 @@ func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
 	cmd.Flags().StringVar(&options.Namespace, "namespace", "testkube", "namespace where to install")
 	cmd.Flags().StringVar(&options.Values, "values", "", "path to Helm values file")
 
+	cmd.Flags().StringVar(&options.CloudUris.Agent, "agent-uri", "", "Testkube Cloud agent URI [required for cloud mode]")
 	cmd.Flags().StringVar(&options.CloudAgentToken, "agent-token", "", "Testkube Cloud agent key [required for cloud mode]")
 	cmd.Flags().StringVar(&options.CloudOrgId, "org-id", "", "Testkube Cloud organization id [required for cloud mode]")
 	cmd.Flags().StringVar(&options.CloudEnvId, "env-id", "", "Testkube Cloud environment id [required for cloud mode]")
@@ -168,10 +169,6 @@ func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
 	cmd.Flags().BoolVar(&options.NoDashboard, "no-dashboard", false, "don't install dashboard")
 	cmd.Flags().BoolVar(&options.NoMongo, "no-mongo", false, "don't install MongoDB")
 	cmd.Flags().BoolVar(&options.NoConfirm, "no-confirm", false, "don't ask for confirmation - unatended installation mode")
-
-	cmd.Flags().IntVar(&options.MinioReplicas, "minio-replicas", 1, "Scale MinIO replicas")
-	cmd.Flags().IntVar(&options.MongoReplicas, "mongo-replicas", 1, "Scale MongoDB replicas")
-	cmd.Flags().IntVar(&options.DashboardReplicas, "dashboard-replicas", 1, "Don't install MongoDB")
 
 	cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
 }
