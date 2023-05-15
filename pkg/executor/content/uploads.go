@@ -15,7 +15,7 @@ type CopyFilesPlacer struct {
 }
 
 const (
-	defaultCopyPath = "/data/uploads/"
+	UploadsFolder = "/data/uploads/"
 )
 
 func NewCopyFilesPlacer(client storage.Client) *CopyFilesPlacer {
@@ -27,7 +27,7 @@ func NewCopyFilesPlacer(client storage.Client) *CopyFilesPlacer {
 // PlaceFiles downloads the files from minio and places them into the /data/uploads directory.
 // A warning will be shown in case there was an error placing the files.
 func (p CopyFilesPlacer) PlaceFiles(ctx context.Context, testName, executionBucket string) {
-	output.PrintEvent(fmt.Sprintf("%s Placing files from buckets into %s", ui.IconFile, defaultCopyPath))
+	output.PrintEvent(fmt.Sprintf("%s Placing files from buckets into %s", ui.IconFile, UploadsFolder))
 
 	var buckets []string
 	if testName != "" {
@@ -37,7 +37,7 @@ func (p CopyFilesPlacer) PlaceFiles(ctx context.Context, testName, executionBuck
 		buckets = append(buckets, p.client.GetValidBucketName("execution", executionBucket))
 	}
 
-	err := p.client.PlaceFiles(ctx, buckets, defaultCopyPath)
+	err := p.client.PlaceFiles(ctx, buckets, UploadsFolder)
 	if err != nil {
 		output.PrintLogf("%s Could not place files: %s", ui.IconWarning, err.Error())
 	}

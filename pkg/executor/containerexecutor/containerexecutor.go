@@ -173,7 +173,8 @@ func (c *ContainerExecutor) Logs(ctx context.Context, id string) (out chan outpu
 		}
 
 		ids := []string{id}
-		if supportArtifacts && execution.ArtifactRequest != nil {
+		if supportArtifacts && execution.ArtifactRequest != nil &&
+			execution.ArtifactRequest.VolumeMountPath != "" && execution.ArtifactRequest.StorageClassName != "" {
 			ids = append(ids, id+"-scraper")
 		}
 
@@ -279,7 +280,8 @@ func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Ex
 		return nil, err
 	}
 
-	if jobOptions.ArtifactRequest != nil {
+	if jobOptions.ArtifactRequest != nil &&
+		jobOptions.ArtifactRequest.VolumeMountPath != "" && jobOptions.ArtifactRequest.StorageClassName != "" {
 		c.log.Debug("creating persistent volume claim with options", "options", jobOptions)
 		pvcsClient := c.clientSet.CoreV1().PersistentVolumeClaims(c.namespace)
 		pvcSpec, err := NewPersistentVolumeClaimSpec(c.log, jobOptions)
@@ -337,7 +339,8 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	}
 
 	var scraperLogs []byte
-	if jobOptions.ArtifactRequest != nil {
+	if jobOptions.ArtifactRequest != nil &&
+		jobOptions.ArtifactRequest.VolumeMountPath != "" && jobOptions.ArtifactRequest.StorageClassName != "" {
 		c.log.Debug("creating scraper job with options", "options", jobOptions)
 		jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
 		scraperSpec, err := NewScraperJobSpec(c.log, jobOptions)
@@ -516,42 +519,51 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testku
 func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOptions {
 	// for args, command and image, HTTP request takes priority, then test spec, then executor
 	var args []string
-	switch {
-	case len(options.Request.Args) != 0:
+	argsMode := options.Request.ArgsMode
+	if options.TestSpec.ExecutionRequest != nil && argsMode == "" {
+		argsMode = string(options.TestSpec.ExecutionRequest.ArgsMode)
+	}
+
+	if argsMode == string(testkube.ArgsModeTypeAppend) || argsMode == "" {
 		args = options.Request.Args
+		if options.TestSpec.ExecutionRequest != nil && len(args) == 0 {
+			args = options.TestSpec.ExecutionRequest.Args
+		}
 
-	case options.TestSpec.ExecutionRequest != nil &&
-		len(options.TestSpec.ExecutionRequest.Args) != 0:
-		args = options.TestSpec.ExecutionRequest.Args
+		args = append(options.ExecutorSpec.Args, args...)
+	}
 
-	case len(options.ExecutorSpec.Command) != 0:
-		args = options.ExecutorSpec.Args
+	if argsMode == string(testkube.ArgsModeTypeOverride) {
+		args = options.Request.Args
+		if options.TestSpec.ExecutionRequest != nil && len(args) == 0 {
+			args = options.TestSpec.ExecutionRequest.Args
+		}
 	}
 
 	var command []string
 	switch {
-	case len(options.Request.Command) != 0:
-		command = options.Request.Command
+	case len(options.ExecutorSpec.Command) != 0:
+		command = options.ExecutorSpec.Command
 
 	case options.TestSpec.ExecutionRequest != nil &&
 		len(options.TestSpec.ExecutionRequest.Command) != 0:
 		command = options.TestSpec.ExecutionRequest.Command
 
-	case len(options.ExecutorSpec.Command) != 0:
-		command = options.ExecutorSpec.Command
+	case len(options.Request.Command) != 0:
+		command = options.Request.Command
 	}
 
 	var image string
 	switch {
-	case options.Request.Image != "":
-		image = options.Request.Image
+	case options.ExecutorSpec.Image != "":
+		image = options.ExecutorSpec.Image
 
 	case options.TestSpec.ExecutionRequest != nil &&
 		options.TestSpec.ExecutionRequest.Image != "":
 		image = options.TestSpec.ExecutionRequest.Image
 
-	case options.ExecutorSpec.Image != "":
-		image = options.ExecutorSpec.Image
+	case options.Request.Image != "":
+		image = options.Request.Image
 	}
 
 	var workingDir string

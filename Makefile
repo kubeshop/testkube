@@ -74,8 +74,9 @@ build-testkube-bin-intel:
 		-o "$(BIN_DIR)/kubectl-testkube" \
 		cmd/kubectl-testkube/main.go
 
+#make docker-build-api SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-api-server:latest
 docker-build-api:
-	docker build  --platform linux/x86_64 -t kubeshop/testkube-api-server:$(COMMIT)-dev -f build/api-server/Dockerfile .
+	goreleaser release -f goreleaser_files/.goreleaser-docker-build-api.yml --rm-dist --snapshot
 
 dev-install-local-executors:
 	kubectl apply --namespace testkube -f https://raw.githubusercontent.com/kubeshop/testkube-operator/main/config/samples/executor_v1_executor.yaml
@@ -170,9 +171,6 @@ test-api-on-cluster:
 cover:
 	@go test -failfast -count=1 -v -tags test  -coverprofile=./testCoverage.txt ./... && go tool cover -html=./testCoverage.txt -o testCoverage.html && rm ./testCoverage.txt
 	open testCoverage.html
-
-diagrams:
-	plantuml ./docs/puml/*.puml -o ../img/
 
 version-bump: version-bump-patch
 

@@ -4,6 +4,10 @@ import Admonition from "@theme/Admonition";
 
 [JMeter](https://jmeter.apache.org/) is an integral part of Testkube. The Testkube JMeter executor is installed by default during the Testkube installation.
 
+Default command for this executor: &lt;entryPoint&gt;
+Default arguments for this executor command: -n -j &lt;logFile&gt; -t &lt;runPath&gt; -l &lt;jtlFile&gt; -e -o &lt;reportFile&gt; &lt;envVars&gt;
+(parameters in &lt;&gt; are calculated at test execution)
+
 <iframe width="100%" height="315" src="https://www.youtube.com/embed/iF7BcVqTeO0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
 
@@ -153,4 +157,25 @@ A JMeter test will be successful in Testkube when all checks and thresholds are 
 and the JMeter executor is configured to store the `report.jtl` file after the test run. You can get the file from the "Artifacts" tab in the execution results in the Testkube Dashboard, 
 or download it with the `testkube get artifacts EXECUTION_ID` command.
 
+### **JMeter Memory Consumption**
 
+When running load tests, it is common to run into memory-related issues, for example the `OOMKilled` status in Kubernetes. There are three areas where the memory requests and limits can be set:
+* on JVM level, inside the pod
+* on pod/job level
+* on cluster level
+
+In most cases, it is wise to start from setting the correct variables for the JVM. As the [README of the underlying image](https://github.com/justb4/docker-jmeter#adjust-java-memory-options) suggests, the available values are `JVM_XMN`, `JVM_XMS` and `JVM_XMX`.
+
+>By default, JMeter reads out the available memory from the host machine and uses a fixed value of 80% of it as a maximum. If this causes Issues, there is the option to use environment variables to adjust the JVM memory Parameters:
+>
+>JVM_XMN to adjust maximum nursery size
+>
+>JVM_XMS to adjust initial heap size
+>
+>JVM_XMX to adjust maximum heap size
+>
+>All three use values in Megabyte range.
+
+If this does not fix your issue, look into using Testkube job templates to set job-level [requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/).
+
+In the very rare case that you are still bumping into memory issues, consider asking your Kubernetes cluster manager about any [resource quotas](https://kubernetes.io/docs/concepts/policy/resource-quotas/).

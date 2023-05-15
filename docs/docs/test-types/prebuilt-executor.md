@@ -19,7 +19,7 @@ The API assumes that the Executor will output JSON data to `STDOUT` and each lin
 
 We love to improve Testkube with additional features suggested by our users!
 
-Please visit our [Contribution](../contributing/intro.md) page to see the guidelines for contributing to the Testkube project.
+Please visit our [Contribution](../articles/contributing.md) page to see the guidelines for contributing to the Testkube project.
 
 # Custom Executors
 
@@ -190,7 +190,7 @@ Currently, in other languages, you'll need to manage this on your own.
 
 ## **Resources**
 
-- [OpenAPI spec details](https://kubeshop.github.io/testkube/reference/openapi/).
+- [OpenAPI spec details](http://docs.testkube.io/openapi).
 - [Spec in YAML file](https://raw.githubusercontent.com/kubeshop/testkube/main/api/v1/testkube.yaml).
 
 Go-based resources for input and output objects:

@@ -7,14 +7,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/utils/test"
-
-	"github.com/kubeshop/testkube/pkg/envs"
-
 	cp "github.com/otiai10/copy"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/envs"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
 func TestRun_Integration(t *testing.T) {
@@ -50,6 +48,20 @@ func TestRun_Integration(t *testing.T) {
 					Path:   "",
 				},
 			},
+			Command: []string{
+				"./node_modules/cypress/bin/cypress",
+			},
+			Args: []string{
+				"run",
+				"--reporter",
+				"junit",
+				"--reporter-options",
+				"mochaFile=<reportFile>,toConsole=false",
+				"--project",
+				"<projectPath>",
+				"--env",
+				"<envVars>",
+			},
 		})
 
 	assert.NoErrorf(t, err, "Cypress Test Failed: ResultErr: %v, Err: %v ", result.ErrorMessage, err)
@@ -71,6 +83,21 @@ func TestRunErrors(t *testing.T) {
 		}
 
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{
+			"./node_modules/cypress/bin/cypress",
+		}
+
+		execution.Args = []string{
+			"run",
+			"--reporter",
+			"junit",
+			"--reporter-options",
+			"mochaFile=<reportFile>,toConsole=false",
+			"--project",
+			"<projectPath>",
+			"--env",
+			"<envVars>",
+		}
 
 		// when
 		_, err = runner.Run(ctx, *execution)

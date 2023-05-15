@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
@@ -14,41 +15,47 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 	"github.com/kubeshop/testkube/pkg/tmp"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func NewNewmanRunner(params envs.Params) (*NewmanRunner, error) {
+func NewNewmanRunner(ctx context.Context, params envs.Params) (*NewmanRunner, error) {
 	output.PrintLog(fmt.Sprintf("%s Preparing test runner", ui.IconTruck))
 
-	return &NewmanRunner{
-		Params:  params,
-		Fetcher: content.NewFetcher(""),
-	}, nil
+	var err error
+	r := &NewmanRunner{
+		Params: params,
+	}
+
+	r.Scraper, err = factory.TryGetScrapper(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
 }
 
 // NewmanRunner struct for newman based runner
 type NewmanRunner struct {
 	Params  envs.Params
-	Fetcher content.ContentFetcher
+	Scraper scraper.Scraper
 }
 
 var _ runner.Runner = &NewmanRunner{}
 
 // Run runs particular test content on top of newman binary
 func (r *NewmanRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
-	output.PrintLog(fmt.Sprintf("%s Preparing for test run", ui.IconTruck))
-
-	if r.Params.GitUsername != "" || r.Params.GitToken != "" {
-		if execution.Content != nil && execution.Content.Repository != nil {
-			execution.Content.Repository.Username = r.Params.GitUsername
-			execution.Content.Repository.Token = r.Params.GitToken
-		}
+	if r.Scraper != nil {
+		defer r.Scraper.Close()
 	}
 
-	path, err := r.Fetcher.Fetch(execution.Content)
+	output.PrintLog(fmt.Sprintf("%s Preparing for test run", ui.IconTruck))
+
+	path, workingDir, err := content.GetPathAndWorkingDir(execution.Content, r.Params.DataDir)
 	if err != nil {
-		return result, err
+		output.PrintLogf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.Params.DataDir)
 	}
 
 	fileInfo, err := os.Stat(path)
@@ -62,8 +69,18 @@ func (r *NewmanRunner) Run(ctx context.Context, execution testkube.Execution) (r
 
 	envManager := env.NewManagerWithVars(execution.Variables)
 	envManager.GetReferenceVars(envManager.Variables)
+
+	variablesFileContent := execution.VariablesFile
+	if execution.IsVariablesFileUploaded {
+		b, err := os.ReadFile(filepath.Join(content.UploadsFolder, execution.VariablesFile))
+		if err != nil {
+			return result, fmt.Errorf("could not read uploaded variables file: %w", err)
+		}
+		variablesFileContent = string(b)
+	}
+
 	// write params to tmp file
-	envReader, err := NewEnvFileReader(envManager.Variables, execution.VariablesFile, envManager.GetSecretEnvs())
+	envReader, err := NewEnvFileReader(envManager.Variables, variablesFileContent, envManager.GetSecretEnvs())
 	if err != nil {
 		return result, err
 	}
@@ -73,20 +90,30 @@ func (r *NewmanRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	}
 
 	tmpName := tmp.Name() + ".json"
+	args := execution.Args
+	for i := range args {
+		if args[i] == "<envFile>" {
+			args[i] = envpath
+		}
 
-	args := []string{
-		"run", path, "-e", envpath, "--reporters", "cli,json", "--reporter-json-export", tmpName,
+		if args[i] == "<reportFile>" {
+			args[i] = tmpName
+		}
+
+		if args[i] == "<runPath>" {
+			args[i] = path
+		}
 	}
-	args = append(args, execution.Args...)
 
 	runPath := ""
-	if execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
-		runPath = filepath.Join(r.Params.DataDir, "repo", execution.Content.Repository.WorkingDir)
+	if workingDir != "" {
+		runPath = filepath.Join(workingDir)
 	}
-
 	// we'll get error here in case of failed test too so we treat this as
 	// starter test execution with failed status
-	out, err := executor.Run(runPath, "newman", envManager, args...)
+	command := strings.Join(execution.Command, " ")
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
+	out, err := executor.Run(runPath, command, envManager, args...)
 
 	out = envManager.ObfuscateSecrets(out)
 
@@ -100,6 +127,15 @@ func (r *NewmanRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	// convert newman result to OpenAPI struct
 	result = MapMetadataToResult(newmanResult)
 	output.PrintLog(fmt.Sprintf("%s Mapped Newman result successfully", ui.IconCheckMark))
+
+	// scrape artifacts first even if there are errors above
+	if r.Params.ScrapperEnabled && execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
+		output.PrintLogf("Scraping directories: %v", execution.ArtifactRequest.Dirs)
+
+		if err := r.Scraper.Scrape(ctx, execution.ArtifactRequest.Dirs, execution); err != nil {
+			return *result.WithErrors(err), nil
+		}
+	}
 
 	// catch errors if any
 	if err != nil {

@@ -30,7 +30,7 @@ export let options = {
 };
 
 export function testkube() {
-  check(http.get('https://kubeshop.github.io/testkube/', {
+  check(http.get('https://docs.testkube.io', {
       tags: {'kind': 'html'},
   }), {
       "Testkube is OK": (res) => res.status === 200,

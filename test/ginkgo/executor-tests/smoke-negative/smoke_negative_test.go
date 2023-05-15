@@ -7,7 +7,7 @@ import (
 
 var _ = Describe("Smoke", func() {
 	Describe("Ginkgo smoke test", func() {
-		It("Negative test - should always fail", func(){
+		It("Negative test - should always fail", func() {
 			Expect(true).To(Equal(false))
 		})
 	})

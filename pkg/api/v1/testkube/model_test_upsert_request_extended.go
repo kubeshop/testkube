@@ -20,6 +20,7 @@ func (test *TestUpsertRequest) QuoteTestTextFields() {
 		var fields = []*string{
 			&test.ExecutionRequest.VariablesFile,
 			&test.ExecutionRequest.JobTemplate,
+			&test.ExecutionRequest.CronJobTemplate,
 			&test.ExecutionRequest.PreRunScript,
 			&test.ExecutionRequest.ScraperTemplate,
 		}

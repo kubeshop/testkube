@@ -166,7 +166,14 @@ func processPostmanFiles(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		test.ExecutionRequest = &testkube.ExecutionRequest{Args: flags.ExecutorArgs, Envs: flags.Envs, Variables: vars, PreRunScript: scriptBody}
+		test.ExecutionRequest = &testkube.ExecutionRequest{
+			Command:      flags.Command,
+			Args:         flags.ExecutorArgs,
+			ArgsMode:     flags.ArgsMode,
+			Envs:         flags.Envs,
+			Variables:    vars,
+			PreRunScript: scriptBody,
+		}
 		detectedTests[testName] = test
 		return nil
 	})

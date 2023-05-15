@@ -128,3 +128,81 @@ func TestFetcher_Integration(t *testing.T) {
 		})
 	})
 }
+
+func TestFetcher_GetPathAndWorkingDir(t *testing.T) {
+	t.Parallel()
+
+	var tests = []struct {
+		content    testkube.TestContent
+		dataDir    string
+		path       string
+		workingDir string
+		err        error
+	}{
+		{
+			content: testkube.TestContent{
+				Type_: string(testkube.TestContentTypeString),
+			},
+			dataDir:    "/data",
+			path:       "/data/test-content",
+			workingDir: "",
+		},
+		{
+			content: testkube.TestContent{
+				Type_: string(testkube.TestContentTypeFileURI),
+			},
+			dataDir:    "/data",
+			path:       "/data/test-content",
+			workingDir: "",
+		},
+		{
+			content: testkube.TestContent{
+				Type_: string(testkube.TestContentTypeGit),
+				Repository: &testkube.Repository{
+					Path:       "path",
+					WorkingDir: "working-dir",
+				},
+			},
+			dataDir:    "/data",
+			path:       "/data/repo/path",
+			workingDir: "/data/repo/working-dir",
+		},
+		{
+			content: testkube.TestContent{
+				Type_: string(testkube.TestContentTypeGitDir),
+				Repository: &testkube.Repository{
+					Path:       "path",
+					WorkingDir: "working-dir",
+				},
+			},
+			dataDir:    "/data",
+			path:       "/data/repo/path",
+			workingDir: "/data/repo/working-dir",
+		},
+		{
+			content: testkube.TestContent{
+				Type_: string(testkube.TestContentTypeGitFile),
+				Repository: &testkube.Repository{
+					Path:       "path",
+					WorkingDir: "working-dir",
+				},
+			},
+			dataDir:    "/data",
+			path:       "/data/repo/path",
+			workingDir: "/data/repo/working-dir",
+		},
+		{
+			dataDir:    "/data",
+			path:       "",
+			workingDir: "",
+		},
+	}
+
+	for _, test := range tests {
+		path, workingDir, err := GetPathAndWorkingDir(&test.content, test.dataDir)
+
+		assert.NoError(t, err)
+		assert.Equal(t, test.path, path)
+		assert.Equal(t, test.workingDir, workingDir)
+	}
+}

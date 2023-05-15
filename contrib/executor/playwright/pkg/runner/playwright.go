@@ -5,12 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"strings"
 
 	"github.com/pkg/errors"
-
-	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
@@ -18,6 +15,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -74,25 +73,40 @@ func (r *PlaywrightRunner) Run(ctx context.Context, execution testkube.Execution
 		output.PrintLogf("%s Dependencies successfully installed", ui.IconBox)
 	}
 
-	var runner string
-	var args []string
-
+	var depManager, depCommand string
 	if r.dependency == "pnpm" {
-		runner = "pnpm"
-		args = []string{"dlx", "playwright", "test"}
+		depManager = "pnpm"
+		depCommand = "dlx"
 	} else {
-		runner = "npx"
-		args = []string{"playwright", "test"}
+		depManager = "npx"
 	}
 
-	args = append(args, execution.Args...)
+	args := execution.Args
+	for i := range execution.Command {
+		if execution.Command[i] == "<depManager>" {
+			execution.Command[i] = depManager
+		}
+	}
+
+	for i := len(args) - 1; i >= 0; i-- {
+		if depCommand == "" && args[i] == "<depCommand>" {
+			args = append(args[:i], args[i+1:]...)
+			continue
+		}
+
+		if args[i] == "<depCommand>" {
+			args[i] = depCommand
+		}
+	}
 
 	envManager := env.NewManagerWithVars(execution.Variables)
 	envManager.GetReferenceVars(envManager.Variables)
 
-	output.PrintEvent("Running", runPath, "playwright", args)
-	out, runErr := executor.Run(runPath, runner, envManager, args...)
+	command := strings.Join(execution.Command, " ")
+	output.PrintEvent("Running", runPath, command, args)
+	out, runErr := executor.Run(runPath, command, envManager, args...)
 	out = envManager.ObfuscateSecrets(out)
+
 	if runErr != nil {
 		output.PrintLogf("%s Test run failed", ui.IconCross)
 		result = testkube.ExecutionResult{
@@ -109,7 +123,8 @@ func (r *PlaywrightRunner) Run(ctx context.Context, execution testkube.Execution
 	}
 
 	if r.Params.ScrapperEnabled {
-		if err = scrapeArtifacts(ctx, r, execution); err != nil {
+		reportFile := "playwright-report"
+		if err = scrapeArtifacts(ctx, r, execution, reportFile); err != nil {
 			return result, err
 		}
 	}
@@ -125,25 +140,28 @@ func (r *PlaywrightRunner) GetType() runner.Type {
 	return runner.TypeMain
 }
 
-func scrapeArtifacts(ctx context.Context, r *PlaywrightRunner, execution testkube.Execution) (err error) {
+func scrapeArtifacts(ctx context.Context, r *PlaywrightRunner, execution testkube.Execution, reportName string) (err error) {
 	projectPath := filepath.Join(r.Params.DataDir, "repo", execution.Content.Repository.Path)
 
-	originalName := "playwright-report"
-	compressedName := originalName + "-zip"
-
+	compressedName := reportName + "-zip"
 	if _, err := executor.Run(projectPath, "mkdir", nil, compressedName); err != nil {
 		output.PrintLogf("%s Artifact scraping failed: making dir %s", ui.IconCross, compressedName)
 		return errors.Errorf("mkdir error: %v", err)
 	}
 
-	if _, err := executor.Run(projectPath, "zip", nil, compressedName+"/"+originalName+".zip", "-r", originalName); err != nil {
-		output.PrintLogf("%s Artifact scraping failed: zipping reports %s", ui.IconCross, originalName)
+	if _, err := executor.Run(projectPath, "zip", nil, compressedName+"/"+reportName+".zip", "-r", reportName); err != nil {
+		output.PrintLogf("%s Artifact scraping failed: zipping reports %s", ui.IconCross, reportName)
 		return errors.Errorf("zip error: %v", err)
 	}
 
 	directories := []string{
 		filepath.Join(projectPath, compressedName),
 	}
+
+	if execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
+		directories = append(directories, execution.ArtifactRequest.Dirs...)
+	}
+
 	output.PrintLogf("Scraping directories: %v", directories)
 
 	if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {

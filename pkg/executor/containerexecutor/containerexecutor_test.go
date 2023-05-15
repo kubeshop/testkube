@@ -81,6 +81,7 @@ func TestNewExecutorJobSpecEmptyArgs(t *testing.T) {
 		InitImage:   "kubeshop/testkube-init-executor:0.7.10",
 		Image:       "ubuntu",
 		JobTemplate: defaultJobTemplate,
+		Command:     []string{},
 		Args:        []string{},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
@@ -139,6 +140,7 @@ func TestNewExecutorJobSpecWithoutInitImage(t *testing.T) {
 		InitImage:   "",
 		Image:       "ubuntu",
 		JobTemplate: defaultJobTemplate,
+		Command:     []string{},
 		Args:        []string{},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)

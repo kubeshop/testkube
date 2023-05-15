@@ -2,9 +2,12 @@ name: Code build and checks
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
+    paths-ignore: "docs/**"
   pull_request:
-    branches: [main]
+    paths-ignore: "docs/**"
+    branches: [main, develop]
+  
 
 jobs:
   unit-tests:

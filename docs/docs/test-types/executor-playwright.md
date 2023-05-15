@@ -5,6 +5,10 @@ import Admonition from "@theme/Admonition";
 
 Starting from the Testkube Helm chart version 1.9.5, it is possible to use Testkube to manage your Playwright tests inside your Kubernetes cluster.
 
+Default command for this executor: &lt;depManager&gt;
+Default arguments for this executor command: &lt;depCommand&gt; playwright test
+(parameters in &lt;&gt; are calculated at test execution)
+
 export const ExecutorInfo = () => {
    return (
     <div>
@@ -98,4 +102,4 @@ ENV PWTEST_SKIP_TEST_OUTPUT=1
 
 ### Using Different Playwright Versions
 
-The Testkube Playwright executor supports only one version for now: 1.30.0. In case this does not suffice, the [container executor docs](https://kubeshop.github.io/testkube/test-types/container-executor/#creating-and-configuring-container-executor-playwright) contains instructions on how to set up your own executor with a different version of Playwright.
+The Testkube Playwright executor supports only one version for now: 1.30.0. In case this does not suffice, the [container executor docs](http://docs.testkube.io/test-types/container-executor/#creating-and-configuring-a-container-executor-playwright) contains instructions on how to set up your own executor with a different version of Playwright.

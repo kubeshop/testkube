@@ -7,14 +7,11 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-
-	"github.com/kubeshop/testkube/pkg/executor/scraper"
-
-	"github.com/kubeshop/testkube/pkg/envs"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/envs"
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
 )
 
 func TestRun(t *testing.T) {
@@ -23,7 +20,7 @@ func TestRun(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	e := testkube.Execution{ArtifactRequest: &testkube.ArtifactRequest{VolumeMountPath: "."}}
+	e := testkube.Execution{ArtifactRequest: &testkube.ArtifactRequest{VolumeMountPath: ".", StorageClassName: "standard"}}
 	tests := []struct {
 		name           string
 		scraper        func(id string, directories []string) error
@@ -48,7 +45,7 @@ func TestRun(t *testing.T) {
 		{
 			name:           "failing scraper",
 			scraper:        func(id string, directories []string) error { return errors.New("Scraping failed") },
-			execution:      testkube.Execution{ArtifactRequest: &testkube.ArtifactRequest{VolumeMountPath: "."}},
+			execution:      testkube.Execution{ArtifactRequest: &testkube.ArtifactRequest{VolumeMountPath: ".", StorageClassName: "standard"}},
 			expectedError:  "error scraping artifacts from container executor: Scraping failed",
 			expectedStatus: testkube.ExecutionStatusFailed,
 			scraperBuilder: func() scraper.Scraper {

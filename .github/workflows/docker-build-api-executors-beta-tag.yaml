@@ -56,7 +56,6 @@ jobs:
     strategy:
       matrix:
         executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template ]
-
     runs-on: ubuntu-latest
     steps:
 
@@ -227,7 +226,7 @@ jobs:
   executor_cypress:
     strategy:
       matrix:
-        version: [ cypress8, cypress9, cypress10, cypress11, yarn, npm ]
+        version: [ cypress8, cypress9, cypress10, cypress11, cypress12, yarn, npm ]
 
     runs-on: ubuntu-latest
     steps:
@@ -309,7 +308,7 @@ jobs:
 
       - name: Create manifests
         run: |
-          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress11-arm64v8
+          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-arm64v8
           docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}
 
   executor_playwright:

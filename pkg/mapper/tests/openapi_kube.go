@@ -137,32 +137,35 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 	}
 
 	return &testsv3.ExecutionRequest{
-		Name:                  executionRequest.Name,
-		TestSuiteName:         executionRequest.TestSuiteName,
-		Number:                executionRequest.Number,
-		ExecutionLabels:       executionRequest.ExecutionLabels,
-		Namespace:             executionRequest.Namespace,
-		VariablesFile:         executionRequest.VariablesFile,
-		Variables:             MapCRDVariables(executionRequest.Variables),
-		TestSecretUUID:        executionRequest.TestSecretUUID,
-		TestSuiteSecretUUID:   executionRequest.TestSuiteSecretUUID,
-		Args:                  executionRequest.Args,
-		Envs:                  executionRequest.Envs,
-		SecretEnvs:            executionRequest.SecretEnvs,
-		Sync:                  executionRequest.Sync,
-		HttpProxy:             executionRequest.HttpProxy,
-		HttpsProxy:            executionRequest.HttpsProxy,
-		Image:                 executionRequest.Image,
-		ImagePullSecrets:      mapImagePullSecrets(executionRequest.ImagePullSecrets),
-		ActiveDeadlineSeconds: executionRequest.ActiveDeadlineSeconds,
-		Command:               executionRequest.Command,
-		ArtifactRequest:       artifactRequest,
-		JobTemplate:           executionRequest.JobTemplate,
-		PreRunScript:          executionRequest.PreRunScript,
-		ScraperTemplate:       executionRequest.ScraperTemplate,
-		NegativeTest:          executionRequest.NegativeTest,
-		EnvConfigMaps:         mapEnvReferences(executionRequest.EnvConfigMaps),
-		EnvSecrets:            mapEnvReferences(executionRequest.EnvSecrets),
+		Name:                    executionRequest.Name,
+		TestSuiteName:           executionRequest.TestSuiteName,
+		Number:                  executionRequest.Number,
+		ExecutionLabels:         executionRequest.ExecutionLabels,
+		Namespace:               executionRequest.Namespace,
+		IsVariablesFileUploaded: executionRequest.IsVariablesFileUploaded,
+		VariablesFile:           executionRequest.VariablesFile,
+		Variables:               MapCRDVariables(executionRequest.Variables),
+		TestSecretUUID:          executionRequest.TestSecretUUID,
+		TestSuiteSecretUUID:     executionRequest.TestSuiteSecretUUID,
+		Args:                    executionRequest.Args,
+		ArgsMode:                testsv3.ArgsModeType(executionRequest.ArgsMode),
+		Envs:                    executionRequest.Envs,
+		SecretEnvs:              executionRequest.SecretEnvs,
+		Sync:                    executionRequest.Sync,
+		HttpProxy:               executionRequest.HttpProxy,
+		HttpsProxy:              executionRequest.HttpsProxy,
+		Image:                   executionRequest.Image,
+		ImagePullSecrets:        mapImagePullSecrets(executionRequest.ImagePullSecrets),
+		ActiveDeadlineSeconds:   executionRequest.ActiveDeadlineSeconds,
+		Command:                 executionRequest.Command,
+		ArtifactRequest:         artifactRequest,
+		JobTemplate:             executionRequest.JobTemplate,
+		CronJobTemplate:         executionRequest.CronJobTemplate,
+		PreRunScript:            executionRequest.PreRunScript,
+		ScraperTemplate:         executionRequest.ScraperTemplate,
+		NegativeTest:            executionRequest.NegativeTest,
+		EnvConfigMaps:           mapEnvReferences(executionRequest.EnvConfigMaps),
+		EnvSecrets:              mapEnvReferences(executionRequest.EnvSecrets),
 	}
 }
 
@@ -449,6 +452,10 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 			&request.PreRunScript,
 		},
 		{
+			executionRequest.CronJobTemplate,
+			&request.CronJobTemplate,
+		},
+		{
 			executionRequest.ScraperTemplate,
 			&request.ScraperTemplate,
 		},
@@ -459,6 +466,11 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 			*field.destination = *field.source
 			emptyExecution = false
 		}
+	}
+
+	if executionRequest.ArgsMode != nil {
+		request.ArgsMode = testsv3.ArgsModeType(*executionRequest.ArgsMode)
+		emptyExecution = false
 	}
 
 	var slices = []struct {

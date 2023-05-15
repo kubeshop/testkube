@@ -9,7 +9,7 @@ export let options = {
 };
 
 export default function () {
-  check(http.get('https://kubeshop.github.io/testkube/', {
+  check(http.get('https://docs.testkube.io', {
       tags: {'kind': 'html'},
   }), {
       "status is 200": (res) => res.status === 200,
