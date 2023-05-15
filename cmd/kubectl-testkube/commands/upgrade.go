@@ -26,6 +26,7 @@ func NewUpgradeCmd() *cobra.Command {
 			if options.CloudAgentToken != "" {
 				cfg.CloudContext.AgentKey = options.CloudAgentToken
 				cfg.ContextType = config.ContextTypeCloud
+				options.CloudUris = common.NewCloudUris(options.CloudRootDomain)
 			}
 
 			if !options.NoConfirm {
