@@ -13,7 +13,7 @@ func TestEnvironmentsClient_Create(t *testing.T) {
 	t.Run("error on response", func(t *testing.T) {
 		// given
 		o := NewEnvironmentsClient("testkube.dev", "token")
-		o.RESTClient.Client = ClientMock{err: http.ErrNoLocation}
+		o.RESTClient.Client = ClientMock{err: http.ErrNoLocation, validateRequestFunc: func(req *http.Request) error { return nil }}
 
 		// when
 		_, err := o.Create(Environment{})
