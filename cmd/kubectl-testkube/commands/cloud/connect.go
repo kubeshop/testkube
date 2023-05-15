@@ -20,7 +20,6 @@ import (
 
 const (
 	listenAddr      = "127.0.0.1:8090"
-	authUrl         = "https://cloud.testkube.io/?redirectUri="
 	docsUrl         = "https://docs.testkube.io/testkube-cloud/intro"
 	tokenQueryParam = "token"
 )
