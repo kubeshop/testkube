@@ -218,7 +218,7 @@ func MapTestkubeEventQueuedTestSuiteToCDEvent(event testkube.Event, clusterID st
 
 		if event.TestSuiteExecution.RunningContext != nil {
 			ev.SetSubjectTrigger(&cdevents.TestSuiteRunQueuedSubjectContentTrigger{
-				Type: MapTestkubeRunningContextTypeToCDEventTiggerType(event.TestExecution.RunningContext.Type_),
+				Type: MapTestkubeRunningContextTypeToCDEventTiggerType(event.TestSuiteExecution.RunningContext.Type_),
 			})
 		}
 	}
@@ -254,7 +254,7 @@ func MapTestkubeEventStartTestSuiteToCDEvent(event testkube.Event, clusterID str
 
 		if event.TestSuiteExecution.RunningContext != nil {
 			ev.SetSubjectTrigger(&cdevents.TestSuiteRunStartedSubjectContentTrigger{
-				Type: MapTestkubeRunningContextTypeToCDEventTiggerType(event.TestExecution.RunningContext.Type_),
+				Type: MapTestkubeRunningContextTypeToCDEventTiggerType(event.TestSuiteExecution.RunningContext.Type_),
 			})
 		}
 	}
