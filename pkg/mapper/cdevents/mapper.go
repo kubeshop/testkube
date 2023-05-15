@@ -50,8 +50,13 @@ func MapTestkubeEventQueuedTestToCDEvent(event testkube.Event, clusterID string)
 			Type: "e2e",
 		})
 
+		namespace := event.TestExecution.TestNamespace
+		if namespace == "" && event.TestSuiteExecution != nil && event.TestSuiteExecution.TestSuite != nil {
+			namespace = event.TestSuiteExecution.TestSuite.Namespace
+		}
+
 		ev.SetSubjectEnvironment(&cdevents.Reference{
-			Id:     event.TestExecution.TestNamespace,
+			Id:     namespace,
 			Source: clusterID,
 		})
 
@@ -92,8 +97,13 @@ func MapTestkubeEventStartTestToCDEvent(event testkube.Event, clusterID string) 
 			Type: "e2e",
 		})
 
+		namespace := event.TestExecution.TestNamespace
+		if namespace == "" && event.TestSuiteExecution != nil && event.TestSuiteExecution.TestSuite != nil {
+			namespace = event.TestSuiteExecution.TestSuite.Namespace
+		}
+
 		ev.SetSubjectEnvironment(&cdevents.Reference{
-			Id:     event.TestExecution.TestNamespace,
+			Id:     namespace,
 			Source: clusterID,
 		})
 
@@ -134,8 +144,13 @@ func MapTestkubeEventFinishTestToCDEvent(event testkube.Event, clusterID string)
 			Type: "e2e",
 		})
 
+		namespace := event.TestExecution.TestNamespace
+		if namespace == "" && event.TestSuiteExecution != nil && event.TestSuiteExecution.TestSuite != nil {
+			namespace = event.TestSuiteExecution.TestSuite.Namespace
+		}
+
 		ev.SetSubjectEnvironment(&cdevents.Reference{
-			Id:     event.TestExecution.TestNamespace,
+			Id:     namespace,
 			Source: clusterID,
 		})
 
