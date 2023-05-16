@@ -16,6 +16,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	outputPkg "github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
@@ -87,9 +88,10 @@ func (r *MavenRunner) Run(ctx context.Context, execution testkube.Execution) (re
 	var args []string
 	args = append(args, execution.Args...)
 
+	var settingsXML string
 	if execution.VariablesFile != "" {
 		outputPkg.PrintLogf("%s Creating settings.xml file", ui.IconWorld)
-		settingsXML, err := createSettingsXML(directory, execution.VariablesFile)
+		settingsXML, err = createSettingsXML(directory, execution.VariablesFile, execution.IsVariablesFileUploaded)
 		if err != nil {
 			outputPkg.PrintLogf("%s Could not create settings.xml", ui.IconCross)
 			return *result.Err(errors.New("could not create settings.xml")), nil
@@ -179,10 +181,15 @@ func mapStatus(in junit.Status) (out string) {
 	}
 }
 
-// createSettingsXML saves the settings.xml to maven config folder and adds it to the list of arguments
-func createSettingsXML(directory string, content string) (string, error) {
+// createSettingsXML saves the settings.xml to maven config folder and adds it to the list of arguments.
+// In case it is taken from storage, it will return the path to the file
+func createSettingsXML(directory string, variablesFile string, isUploaded bool) (string, error) {
+	if isUploaded {
+		return filepath.Join(content.UploadsFolder, variablesFile), nil
+	}
+
 	settingsXML := filepath.Join(directory, "settings.xml")
-	err := os.WriteFile(settingsXML, []byte(content), 0644)
+	err := os.WriteFile(settingsXML, []byte(variablesFile), 0644)
 	if err != nil {
 		return "", errors.Errorf("could not create settings.xml: %v", err)
 	}

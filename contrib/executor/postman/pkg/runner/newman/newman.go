@@ -62,8 +62,18 @@ func (r *NewmanRunner) Run(ctx context.Context, execution testkube.Execution) (r
 
 	envManager := env.NewManagerWithVars(execution.Variables)
 	envManager.GetReferenceVars(envManager.Variables)
+
+	variablesFileContent := execution.VariablesFile
+	if execution.IsVariablesFileUploaded {
+		b, err := os.ReadFile(filepath.Join(content.UploadsFolder, execution.VariablesFile))
+		if err != nil {
+			return result, fmt.Errorf("could not read uploaded variables file: %w", err)
+		}
+		variablesFileContent = string(b)
+	}
+
 	// write params to tmp file
-	envReader, err := NewEnvFileReader(envManager.Variables, execution.VariablesFile, envManager.GetSecretEnvs())
+	envReader, err := NewEnvFileReader(envManager.Variables, variablesFileContent, envManager.GetSecretEnvs())
 	if err != nil {
 		return result, err
 	}

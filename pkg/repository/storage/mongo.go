@@ -12,9 +12,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/log"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
 // MongoSSLConfig contains the configurations necessary for an SSL connection

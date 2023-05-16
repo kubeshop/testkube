@@ -344,6 +344,11 @@ testkube run test maven-example-file-test --args "--settings" --args "/data/uplo
 
 By default, there is a 10 second timeout limit on all requests on the client side, and a 1 GB body size limit on the server side. To update the timeout, use `--upload-timeout` with [Go-compatible duration formats](https://pkg.go.dev/time#ParseDuration).
 
+### Configuration Files
+
+Some of the executors offer the option to set a special file using the flag `--variables-file` on both test creation and test run. For the Postman executor, this expects an environment file, for Maven it is `settings.xml`.
+There are many differences between `--variables-file` and `--copy-files`. The former one sets this file directly as the configuration file. With the latter, there is an additional need to set the path explicitly on the arguments level. Another difference is that for variables files smaller than 128KB, this will be set on the CRD level and not uploaded to the object storage. This limitation comes from linux-based systems where this is the default maximum length of arguments.
+
 ### Changing the Default Job Template Used for Test Execution
 
 You can always create your own custom executor with its own job template definition used for test execution. But sometimes you just need to adjust an existing job template of a standard Testkube executor with a few parameters. In this case you can use additional parameter `--job-template` when you create or run the test:
@@ -384,6 +389,7 @@ spec:
         - name: yourSecretName
 
 ```
+
 Add `imagePullSecrets` option if you use your own Image Registry. This will add the secret for both `init` and `executor` containers.
 
 ### Executing a Prerun Script
@@ -448,6 +454,7 @@ testkube create test --file test/postman/LocalHealth.postman_collection.json --n
 ```
 
 ### Automatically Add All ConfigMap and Secret Keys to Test Variables
+
 You may want to automatcially add all keys from your ConfigMap and Secret to your test. For this, you will need to provide them as additional
 parameters when you create or run the test using the `--variable-configmap` and `--variable-secret` options and they will be automatically added during test execution. All ConfigMap keys will be added with `key` as the variable name for Basic variables and all Secret keys will be added with key as variable name for Secret variables:
 

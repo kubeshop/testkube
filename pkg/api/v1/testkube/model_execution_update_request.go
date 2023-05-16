@@ -21,6 +21,8 @@ type ExecutionUpdateRequest struct {
 	ExecutionLabels *map[string]string `json:"executionLabels,omitempty"`
 	// test kubernetes namespace (\"testkube\" when not set)
 	Namespace *string `json:"namespace,omitempty"`
+	// in case the variables file is too big, it will be uploaded
+	IsVariablesFileUploaded *bool `json:"isVariablesFileUploaded,omitempty"`
 	// variables file content - need to be in format for particular executor (e.g. postman envs file)
 	VariablesFile *string              `json:"variablesFile,omitempty"`
 	Variables     *map[string]Variable `json:"variables,omitempty"`

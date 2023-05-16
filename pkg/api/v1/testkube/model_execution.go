@@ -35,6 +35,8 @@ type Execution struct {
 	// additional arguments/flags passed to executor binary
 	Args      []string            `json:"args,omitempty"`
 	Variables map[string]Variable `json:"variables,omitempty"`
+	// in case the variables file is too big, it will be uploaded to storage
+	IsVariablesFileUploaded bool `json:"isVariablesFileUploaded,omitempty"`
 	// variables file content - need to be in format for particular executor (e.g. postman envs file)
 	VariablesFile string `json:"variablesFile,omitempty"`
 	// test secret uuid
