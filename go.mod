@@ -107,6 +107,7 @@ require (
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
+	github.com/sashabaranov/go-openai v1.9.4 // indirect
 	github.com/savsgio/gotils v0.0.0-20220530130905-52f3993e8d6d // indirect
 	github.com/segmentio/backo-go v1.0.1 // indirect
 	github.com/shurcooL/githubv4 v0.0.0-20220922232305-70b4d362a8cb // indirect
