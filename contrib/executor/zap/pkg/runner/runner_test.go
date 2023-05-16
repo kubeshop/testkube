@@ -26,6 +26,8 @@ func TestRun(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"<pythonScriptPath>"}
+		execution.Args = []string{"<fileArgs>"}
 		execution.TestName = "simple-api-scan"
 		execution.TestType = "zap/api"
 		execution.Content = testkube.NewStringTestContent("")
@@ -55,6 +57,8 @@ func TestRun(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"<pythonScriptPath>"}
+		execution.Args = []string{"<fileArgs>"}
 		execution.TestName = "warn-api-scan"
 		execution.TestType = "zap/api"
 		execution.Content = testkube.NewStringTestContent("")
@@ -75,7 +79,7 @@ func TestRun(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("Run API scan with WARN and DontFailOnWarn", func(t *testing.T) {
+	t.Run("Run API scan with WARN and FailOnWarn", func(t *testing.T) {
 		// given
 		tempDir, err := ioutil.TempDir(os.TempDir(), "")
 		assert.NoError(t, err)
@@ -84,17 +88,19 @@ func TestRun(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		execution := testkube.NewQueuedExecution()
-		execution.TestName = "do-not-fail-on-warn-api-scan"
+		execution.Command = []string{"<pythonScriptPath>"}
+		execution.Args = []string{"<fileArgs>"}
+		execution.TestName = "fail-on-warn-api-scan"
 		execution.TestType = "zap/api"
 		execution.Content = testkube.NewStringTestContent("")
-		writeTestContent(t, tempDir, "../../examples/test-api-dont-fail-on-warn.yaml")
+		writeTestContent(t, tempDir, "../../examples/test-api-fail-on-warn.yaml")
 
 		// when
 		result, err := runner.Run(context.TODO(), *execution)
 
 		// then
-		assert.NoError(t, err)
-		assert.Equal(t, result.Status, testkube.ExecutionStatusPassed)
+		assert.Error(t, err)
+		assert.Equal(t, result.Status, testkube.ExecutionStatusFailed)
 		assert.Len(t, result.Steps, 2)
 		assert.Equal(t, result.Steps[1].Name, "Re-examine Cache-control Directives [10015] x 12")
 		assert.Equal(t, result.Steps[1].Status, string(testkube.FAILED_ExecutionStatus))
@@ -113,6 +119,8 @@ func TestRun(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"<pythonScriptPath>"}
+		execution.Args = []string{"<fileArgs>"}
 		execution.TestName = "fail-api-scan"
 		execution.TestType = "zap/api"
 		execution.Content = testkube.NewStringTestContent("")
@@ -142,6 +150,8 @@ func TestRun(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"<pythonScriptPath>"}
+		execution.Args = []string{"<fileArgs>"}
 		execution.TestName = "baseline-scan"
 		execution.TestType = "zap/baseline"
 		execution.Content = testkube.NewStringTestContent("")
@@ -169,6 +179,8 @@ func TestRun(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"<pythonScriptPath>"}
+		execution.Args = []string{"<fileArgs>"}
 		execution.TestName = "baseline-warn-scan"
 		execution.TestType = "zap/baseline"
 		execution.Content = testkube.NewStringTestContent("")
@@ -197,6 +209,8 @@ func TestRun(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"<pythonScriptPath>"}
+		execution.Args = []string{"<fileArgs>"}
 		execution.TestName = "full-fail-scan"
 		execution.TestType = "zap/full"
 		execution.Content = testkube.NewStringTestContent("")
