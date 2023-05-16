@@ -16,7 +16,7 @@ api:
   # -l minimum level to show: PASS, IGNORE, INFO, WARN or FAIL
   level: INFO
   # -n context file
-  # context: examples/context.conf
+  # context: /data/uploads/context.conf
   # username to use for authenticated scans
   user: anonymous
   # delay in seconds to wait for passive scanning

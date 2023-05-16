@@ -23,7 +23,7 @@ kubectl testkube run test --watch api-test
 kubectl testkube create test --file contrib/executor/zap/examples/zap-tk-baseline.yaml --type "zap/baseline" --name baseline-test --copy-files contrib/executor/zap/examples/zap-tk-baseline.conf:zap-tk-baseline.conf
 kubectl testkube run test --watch baseline-test
 
-kubectl testkube create test --file examples/zap-tk-full.yaml --type "zap/full" --name full-test --copy-files examples/zap-tk-full.conf:zap-tk-full.conf
+kubectl testkube create test --file contrib/executor/zap/examples/zap-tk-full.yaml --type "zap/full" --name full-test --copy-files contrib/executor/zap/examples/zap-tk-full.conf:zap-tk-full.conf
 kubectl testkube run test --watch full-test
 
 testkube create test --git-uri https://github.com/kubeshop/testkube-zap-executor.git --type "zap/api" --name api-test --executor-args "examples/zap-tk-api.yaml" --git-branch main
