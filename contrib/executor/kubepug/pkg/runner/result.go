@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
-
 	kubepug "github.com/rikatz/kubepug/pkg/results"
 )
 

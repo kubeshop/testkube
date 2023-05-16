@@ -7,16 +7,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/utils/test"
-
 	"github.com/golang/mock/gomock"
-
-	"github.com/kubeshop/testkube/pkg/envs"
-	"github.com/kubeshop/testkube/pkg/executor/scraper"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/envs"
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
 func TestRun_Integration(t *testing.T) {
@@ -26,7 +23,10 @@ func TestRun_Integration(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	tempDir := os.TempDir()
+	tempDir, err := os.MkdirTemp("", "*")
+	assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+	defer os.RemoveAll(tempDir)
+
 	testXML := "./example/REST-Project-1-soapui-project.xml"
 	writeTestContent(t, tempDir, testXML)
 
@@ -109,11 +109,17 @@ func TestRun_Integration(t *testing.T) {
 			params := envs.Params{DataDir: tempDir, ScrapperEnabled: true}
 			runner := SoapUIRunner{
 				SoapUILogsPath: "/logs",
-				SoapUIExecPath: file.Name(),
 				Params:         params,
 				Scraper:        test.scraperBuilder(),
 			}
 
+			test.execution.Command = []string{
+				"/bin/sh",
+				file.Name(),
+			}
+			test.execution.Args = []string{
+				"<runPath>",
+			}
 			res, err := runner.Run(context.Background(), test.execution)
 			if test.expectedError == "" {
 				assert.NoError(t, err)

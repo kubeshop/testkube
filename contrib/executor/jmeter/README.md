@@ -25,7 +25,7 @@ The following plugins are installed by default:
 * [JMeter Plugins Manager 1.3](https://jmeter-plugins.org/wiki/PluginsManager/)
 * [Custom JMeter Functions 2.1](https://jmeter-plugins.org/wiki/Functions/)
 
-You can add more JMeter plugins either when creating or executing a JMeter test by leveraging Testkube's [copy files](https://kubeshop.github.io/testkube/concepts/tests/tests-running#mapping-local-filese) functionality.
+You can add more JMeter plugins either when creating or executing a JMeter test by leveraging Testkube's [copy files](https://docs.testkube.io/articles/running-tests#mapping-local-files) functionality.
 
 JMeter Plugin JAR files need to be copied to the `uploads` directory in the Executor container.
 

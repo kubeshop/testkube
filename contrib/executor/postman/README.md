@@ -22,4 +22,4 @@ These secrets envs are defined when the test execution is initiated.
 
 ## Architecture
 
-Look at [architecture diagrams in docs](https://kubeshop.github.io/testkube/architecture/)
+Look at [architecture diagrams in docs](https://docs.testkube.io/articles/architecture)

@@ -7,17 +7,17 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kubeshop/testkube/pkg/executor/scraper"
-
 	"github.com/joshdk/go-junit"
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
 	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -58,16 +58,15 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 	}
 
 	output.PrintLogf("%s Checking test content from %s...", ui.IconBox, execution.Content.Type_)
-	// check that the datadir exists
-	_, err = os.Stat(r.Params.DataDir)
-	if errors.Is(err, os.ErrNotExist) {
-		return result, err
+
+	runPath, workingDir, err := content.GetPathAndWorkingDir(execution.Content, r.Params.DataDir)
+	if err != nil {
+		output.PrintLogf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.Params.DataDir)
 	}
 
-	runPath := filepath.Join(r.Params.DataDir, "repo", execution.Content.Repository.Path)
 	projectPath := runPath
-	if execution.Content.Repository.WorkingDir != "" {
-		runPath = filepath.Join(r.Params.DataDir, "repo", execution.Content.Repository.WorkingDir)
+	if workingDir != "" {
+		runPath = workingDir
 	}
 
 	fileInfo, err := os.Stat(projectPath)
@@ -94,7 +93,8 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 	}
 
 	// handle project local Cypress version install (`Cypress` app)
-	out, err = executor.Run(runPath, "./node_modules/cypress/bin/cypress", nil, "install")
+	command := strings.Join(execution.Command, " ")
+	out, err = executor.Run(runPath, command, nil, "install")
 	if err != nil {
 		return result, errors.Errorf("cypress binary install error: %v\n\n%s", err, out)
 	}
@@ -110,18 +110,36 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 	}
 
 	junitReportPath := filepath.Join(projectPath, "results/junit.xml")
-	args := []string{"run", "--reporter", "junit", "--reporter-options", fmt.Sprintf("mochaFile=%s,toConsole=false", junitReportPath),
-		"--env", strings.Join(envVars, ",")}
 
-	if execution.Content.Repository.WorkingDir != "" {
-		args = append(args, "--project", projectPath)
+	var project string
+	if workingDir != "" {
+		project = projectPath
 	}
 
 	// append args from execution
-	args = append(args, execution.Args...)
+	args := execution.Args
+	for i := len(args) - 1; i >= 0; i-- {
+		if project == "" && (args[i] == "--project" || args[i] == "<projectPath>") {
+			args = append(args[:i], args[i+1:]...)
+			continue
+		}
+
+		if args[i] == "<projectPath>" {
+			args[i] = project
+		}
+
+		if strings.Contains(args[i], "<reportFile>") {
+			args[i] = strings.ReplaceAll(args[i], "<reportFile>", junitReportPath)
+		}
+
+		if args[i] == "<envVars>" {
+			args[i] = strings.Join(envVars, ",")
+		}
+	}
 
 	// run cypress inside repo directory ignore execution error in case of failed test
-	out, err = executor.Run(runPath, "./node_modules/cypress/bin/cypress", envManager, args...)
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
+	out, err = executor.Run(runPath, command, envManager, args...)
 	out = envManager.ObfuscateSecrets(out)
 	suites, serr := junit.IngestFile(junitReportPath)
 	result = MapJunitToExecutionResults(out, suites)
@@ -132,6 +150,10 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 		directories := []string{
 			filepath.Join(projectPath, "cypress/videos"),
 			filepath.Join(projectPath, "cypress/screenshots"),
+		}
+
+		if execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
+			directories = append(directories, execution.ArtifactRequest.Dirs...)
 		}
 
 		output.PrintLogf("Scraping directories: %v", directories)

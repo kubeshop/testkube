@@ -92,7 +92,7 @@ func TestGetExecuteOptions(t *testing.T) {
 			ExecutorType:     "job",
 			URI:              "",
 			Image:            "cypress",
-			Args:             nil,
+			Args:             []string{},
 			Command:          []string{"run"},
 			ImagePullSecrets: []k8sv1.LocalObjectReference{{Name: "secret-name1"}, {Name: "secret-name2"}},
 			Features:         nil,
@@ -113,8 +113,9 @@ func TestGetExecuteOptions(t *testing.T) {
 		Namespace:        "namespace",
 		VariablesFile:    "",
 		Variables:        map[string]testkube.Variable{"var": testkube.Variable{Name: "one"}},
-		Command:          []string{},
+		Command:          []string{"run"},
 		Args:             []string{},
+		ArgsMode:         "",
 		Image:            "executor-image",
 		ImagePullSecrets: []testkube.LocalObjectReference{},
 		Envs: map[string]string{
@@ -130,6 +131,7 @@ func TestGetExecuteOptions(t *testing.T) {
 		ActiveDeadlineSeconds: 10,
 		ArtifactRequest:       &testkube.ArtifactRequest{},
 		JobTemplate:           "",
+		CronJobTemplate:       "",
 		PreRunScript:          "",
 		ScraperTemplate:       "",
 		EnvConfigMaps: []testkube.EnvReference{

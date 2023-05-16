@@ -14,6 +14,13 @@ const (
 	TestContentTypeEmpty   TestContentType = ""
 )
 
+type ArgsModeType string
+
+const (
+	ArgsModeTypeAppend   ArgsModeType = "append"
+	ArgsModeTypeOverride ArgsModeType = "override"
+)
+
 var ErrTestContentTypeNotFile = fmt.Errorf("unsupported content type use one of: file-uri, git-file, string")
 var ErrTestContentTypeNotDir = fmt.Errorf("unsupported content type use one of: git-dir")
 

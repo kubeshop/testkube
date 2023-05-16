@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -23,7 +25,11 @@ func TestRun_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 	t.Parallel()
 	// given
-	runner, err := NewNewmanRunner(envs.Params{})
+	tempDir, err := os.MkdirTemp("", "*")
+	assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
+	defer os.RemoveAll(tempDir)
+
+	runner, err := NewNewmanRunner(context.Background(), envs.Params{DataDir: tempDir})
 	assert.NoError(t, err)
 
 	// and test server for getting newman responses
@@ -37,8 +43,24 @@ func TestRun_Integration(t *testing.T) {
 	parts := strings.Split(ts.URL, ":")
 	port := parts[2]
 
+	err = os.WriteFile(filepath.Join(tempDir, "test-content"), []byte(fmt.Sprintf(exampleCollection, port, port)), 0644)
+	if err != nil {
+		assert.FailNow(t, "Unable to write postman runner test content file")
+	}
+
 	execution := testkube.Execution{
-		Content: testkube.NewStringTestContent(fmt.Sprintf(exampleCollection, port, port)),
+		Content: testkube.NewStringTestContent(""),
+		Command: []string{"newman"},
+		Args: []string{
+			"run",
+			"<runPath>",
+			"-e",
+			"<envFile>",
+			"--reporters",
+			"cli,json",
+			"--reporter-json-export",
+			"<reportFile>",
+		},
 	}
 
 	ctx := context.Background()

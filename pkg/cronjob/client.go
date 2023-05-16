@@ -13,6 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	batchv1 "k8s.io/client-go/applyconfigurations/batch/v1"
 	"k8s.io/client-go/kubernetes"
+	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
+	"sigs.k8s.io/kustomize/kyaml/yaml/merge2"
 
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -29,23 +31,25 @@ type Client struct {
 }
 
 type CronJobOptions struct {
-	Schedule string
-	Resource string
-	Data     string
-	Labels   map[string]string
+	Schedule                  string
+	Resource                  string
+	Data                      string
+	Labels                    map[string]string
+	CronJobTemplateExtensions string
 }
 
 type templateParameters struct {
-	Id              string
-	Name            string
-	Namespace       string
-	ServiceName     string
-	ServicePort     int
-	Schedule        string
-	Resource        string
-	CronJobTemplate string
-	Data            string
-	Labels          map[string]string
+	Id                        string
+	Name                      string
+	Namespace                 string
+	ServiceName               string
+	ServicePort               int
+	Schedule                  string
+	Resource                  string
+	CronJobTemplate           string
+	CronJobTemplateExtensions string
+	Data                      string
+	Labels                    map[string]string
 }
 
 // NewClient is a method to create new cron job client
@@ -84,16 +88,17 @@ func (c *Client) Apply(id, name string, options CronJobOptions) error {
 	ctx := context.Background()
 
 	parameters := templateParameters{
-		Id:              id,
-		Name:            name,
-		Namespace:       c.Namespace,
-		ServiceName:     c.serviceName,
-		ServicePort:     c.servicePort,
-		Schedule:        options.Schedule,
-		Resource:        options.Resource,
-		CronJobTemplate: c.cronJobTemplate,
-		Data:            options.Data,
-		Labels:          options.Labels,
+		Id:                        id,
+		Name:                      name,
+		Namespace:                 c.Namespace,
+		ServiceName:               c.serviceName,
+		ServicePort:               c.servicePort,
+		Schedule:                  options.Schedule,
+		Resource:                  options.Resource,
+		CronJobTemplate:           c.cronJobTemplate,
+		CronJobTemplateExtensions: options.CronJobTemplateExtensions,
+		Data:                      options.Data,
+		Labels:                    options.Labels,
 	}
 
 	cronJobSpec, err := NewApplySpec(c.Log, parameters)
@@ -161,19 +166,35 @@ func (c *Client) DeleteAll(resource, selector string) error {
 
 // NewApplySpec is a method to return cron job apply spec
 func NewApplySpec(log *zap.SugaredLogger, parameters templateParameters) (*batchv1.CronJobApplyConfiguration, error) {
-	tmpl, err := template.New("cronjob").Parse(parameters.CronJobTemplate)
+	tmpl, err := template.New("cronJob").Parse(parameters.CronJobTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("creating cron job spec from options.CronJobTemplate error: %w", err)
 	}
 
 	parameters.Data = strings.ReplaceAll(parameters.Data, "'", "''''")
 	var buffer bytes.Buffer
-	if err = tmpl.ExecuteTemplate(&buffer, "cronjob", parameters); err != nil {
+	if err = tmpl.ExecuteTemplate(&buffer, "cronJob", parameters); err != nil {
 		return nil, fmt.Errorf("executing cron job spec template: %w", err)
 	}
 
 	var cronJob batchv1.CronJobApplyConfiguration
 	cronJobSpec := buffer.String()
+	if parameters.CronJobTemplateExtensions != "" {
+		tmplExt, err := template.New("cronJobExt").Parse(parameters.CronJobTemplateExtensions)
+		if err != nil {
+			return nil, fmt.Errorf("creating cron job extensions spec from default template error: %w", err)
+		}
+
+		var bufferExt bytes.Buffer
+		if err = tmplExt.ExecuteTemplate(&bufferExt, "cronJobExt", parameters); err != nil {
+			return nil, fmt.Errorf("executing cron job extensions spec default template: %w", err)
+		}
+
+		if cronJobSpec, err = merge2.MergeStrings(bufferExt.String(), cronJobSpec, false, kyaml.MergeOptions{}); err != nil {
+			return nil, fmt.Errorf("merging cron job spec templates: %w", err)
+		}
+	}
+
 	log.Debug("Cron job specification", cronJobSpec)
 	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(cronJobSpec), len(cronJobSpec))
 	if err := decoder.Decode(&cronJob); err != nil {

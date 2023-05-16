@@ -16,7 +16,7 @@
       ],
       "meta": {
         "iconURI": "playwright",
-        "docsURI": "https://kubeshop.github.io/testkube/test-types/executor-playwright"
+        "docsURI": "https://docs.testkube.io/test-types/executor-playwright"
       }
     }
   },
@@ -39,7 +39,7 @@
       ],
       "meta": {
         "iconURI": "jmeter",
-        "docsURI": "https://kubeshop.github.io/testkube/test-types/executor-jmeter"
+        "docsURI": "https://docs.testkube.io/test-types/executor-jmeter"
       }
     }
   },
@@ -64,7 +64,7 @@
       ],
       "meta": {
         "iconURI": "ginkgo",
-        "docsURI": "https://kubeshop.github.io/testkube/test-types/executor-ginkgo"
+        "docsURI": "https://docs.testkube.io/test-types/executor-ginkgo"
       }
     }
   },
@@ -87,7 +87,7 @@
       ],
       "meta": {
         "iconURI": "maven",
-        "docsURI": "https://kubeshop.github.io/testkube/test-types/executor-maven"
+        "docsURI": "https://docs.testkube.io/test-types/executor-maven"
       }
     }
   },
@@ -110,7 +110,7 @@
       ],
       "meta": {
         "iconURI": "gradle",
-        "docsURI": "https://kubeshop.github.io/testkube/test-types/executor-gradle"
+        "docsURI": "https://docs.testkube.io/test-types/executor-gradle"
       }
     }
   },
@@ -135,7 +135,7 @@
       ],
       "meta": {
         "iconURI": "kubepug",
-        "docsURI": "https://kubeshop.github.io/testkube/test-types/executor-kubepug"
+        "docsURI": "https://docs.testkube.io/test-types/executor-kubepug"
       }
     }
   },
@@ -158,7 +158,7 @@
       ],
       "meta": {
         "iconURI": "soapui",
-        "docsURI": "https://kubeshop.github.io/testkube/test-types/executor-soapui"
+        "docsURI": "https://docs.testkube.io/test-types/executor-soapui"
       }
     }
   },
@@ -182,7 +182,7 @@
       ],
       "meta": {
         "iconURI": "k6",
-        "docsURI": "https://kubeshop.github.io/testkube/test-types/executor-k6"
+        "docsURI": "https://docs.testkube.io/test-types/executor-k6"
       }
     }
   },
@@ -204,7 +204,7 @@
       ],
       "meta": {
         "iconURI": "cypress",
-        "docsURI": "https://kubeshop.github.io/testkube/test-types/executor-cypress"
+        "docsURI": "https://docs.testkube.io/test-types/executor-cypress"
       }
     }
   },
@@ -227,7 +227,7 @@
       ],
       "meta": {
         "iconURI": "curl",
-        "docsURI": "https://kubeshop.github.io/testkube/test-types/executor-curl"
+        "docsURI": "https://docs.testkube.io/test-types/executor-curl"
       }
     }
   },
@@ -250,7 +250,7 @@
       ],
       "meta": {
         "iconURI": "postman",
-        "docsURI": "https://kubeshop.github.io/testkube/test-types/executor-postman"
+        "docsURI": "https://docs.testkube.io/test-types/executor-postman"
       }
     }
   },
@@ -274,7 +274,7 @@
       ],
       "meta": {
         "iconURI": "artillery",
-        "docsURI": "https://kubeshop.github.io/testkube/test-types/executor-artillery"
+        "docsURI": "https://docs.testkube.io/test-types/executor-artillery"
       }
     }
   },

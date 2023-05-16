@@ -18,4 +18,4 @@ Please follow the main [Testkube repository](https://github.com/kubeshop/testkub
 
 ## API
 
-Executor scraper implements [testkube OpenAPI for executors](https://kubeshop.github.io/testkube/openapi/#operations-tag-executor) (look at executor tag)
+Executor scraper implements [testkube OpenAPI for executors](https://docs.testkube.io/openapi#tag/executor) (look at executor tag)

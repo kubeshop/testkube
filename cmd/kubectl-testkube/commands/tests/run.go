@@ -57,6 +57,8 @@ func NewRunTestCmd() *cobra.Command {
 		format                   string
 		masks                    []string
 		runningContext           string
+		command                  []string
+		argsMode                 string
 	)
 
 	cmd := &cobra.Command{
@@ -65,13 +67,6 @@ func NewRunTestCmd() *cobra.Command {
 		Short:   "Starts new test",
 		Long:    `Starts new test based on Test Custom Resource name, returns results to console`,
 		Run: func(cmd *cobra.Command, args []string) {
-			paramsFileContent := ""
-			if variablesFile != "" {
-				b, err := os.ReadFile(variablesFile)
-				ui.ExitOnError("reading variables file", err)
-				paramsFileContent = string(b)
-			}
-
 			envs, err := cmd.Flags().GetStringToString("env")
 			ui.WarnOnError("getting envs", err)
 
@@ -80,9 +75,6 @@ func NewRunTestCmd() *cobra.Command {
 
 			executorArgs, err := testkube.PrepareExecutorArgs(binaryArgs)
 			ui.ExitOnError("getting args", err)
-
-			err = validateArtifactRequest(artifactStorageClassName, artifactVolumeMountPath, artifactDirs)
-			ui.ExitOnError("validating artifact flags", err)
 
 			envConfigMaps, envSecrets, err := newEnvReferencesFromFlags(cmd)
 			ui.WarnOnError("getting env config maps and secrets", err)
@@ -108,31 +100,38 @@ func NewRunTestCmd() *cobra.Command {
 				scraperTemplateContent = string(b)
 			}
 
+			mode := ""
+			if cmd.Flag("args-mode").Changed {
+				mode = argsMode
+			}
+
 			var executions []testkube.Execution
 			client, namespace := common.GetClient(cmd)
+
 			options := apiv1.ExecuteTestOptions{
-				ExecutionVariables:            variables,
-				ExecutionVariablesFileContent: paramsFileContent,
-				ExecutionLabels:               executionLabels,
-				Args:                          executorArgs,
-				SecretEnvs:                    secretEnvs,
-				HTTPProxy:                     httpProxy,
-				HTTPSProxy:                    httpsProxy,
-				Envs:                          envs,
-				Image:                         image,
-				JobTemplate:                   jobTemplateContent,
-				PreRunScriptContent:           preRunScriptContent,
-				ScraperTemplate:               scraperTemplateContent,
-				IsNegativeTestChangedOnRun:    false,
-				EnvConfigMaps:                 envConfigMaps,
-				EnvSecrets:                    envSecrets,
+				ExecutionVariables:         variables,
+				ExecutionLabels:            executionLabels,
+				Command:                    command,
+				Args:                       executorArgs,
+				ArgsMode:                   mode,
+				SecretEnvs:                 secretEnvs,
+				HTTPProxy:                  httpProxy,
+				HTTPSProxy:                 httpsProxy,
+				Envs:                       envs,
+				Image:                      image,
+				JobTemplate:                jobTemplateContent,
+				PreRunScriptContent:        preRunScriptContent,
+				ScraperTemplate:            scraperTemplateContent,
+				IsNegativeTestChangedOnRun: false,
+				EnvConfigMaps:              envConfigMaps,
+				EnvSecrets:                 envSecrets,
 				RunningContext: &testkube.RunningContext{
 					Type_:   string(testkube.RunningContextTypeUserCLI),
 					Context: runningContext,
 				},
 			}
 
-			if artifactStorageClassName != "" && artifactVolumeMountPath != "" {
+			if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(artifactDirs) != 0 {
 				options.ArtifactRequest = &testkube.ArtifactRequest{
 					StorageClassName: artifactStorageClassName,
 					VolumeMountPath:  artifactVolumeMountPath,
@@ -169,15 +168,23 @@ func NewRunTestCmd() *cobra.Command {
 					os.Exit(1)
 				}
 
-				if len(copyFiles) > 0 {
-					var timeout time.Duration
-					if uploadTimeout != "" {
-						timeout, err = time.ParseDuration(uploadTimeout)
-						if err != nil {
-							ui.ExitOnError("invalid upload timeout duration", err)
-						}
+				var timeout time.Duration
+				if uploadTimeout != "" {
+					timeout, err = time.ParseDuration(uploadTimeout)
+					if err != nil {
+						ui.ExitOnError("invalid upload timeout duration", err)
 					}
-					options.BucketName = uuid.New().String()
+				}
+
+				options.BucketName = uuid.New().String()
+				if len(variablesFile) > 0 {
+					options.ExecutionVariablesFileContent, options.IsVariablesFileUploaded, err = PrepareVariablesFile(client, options.BucketName, apiv1.Execution, variablesFile, timeout)
+					if err != nil {
+						ui.ExitOnError("could not prepare variables file", err)
+					}
+				}
+
+				if len(copyFiles) > 0 {
 					err = uploadFiles(client, options.BucketName, apiv1.Execution, copyFiles, timeout)
 					ui.ExitOnError("could not upload files", err)
 				}
@@ -243,7 +250,9 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&variablesFile, "variables-file", "", "", "variables file path, e.g. postman env file - will be passed to executor if supported")
 	cmd.Flags().StringToStringVarP(&variables, "variable", "v", map[string]string{}, "execution variable passed to executor")
 	cmd.Flags().StringToStringVarP(&secretVariables, "secret-variable", "s", map[string]string{}, "execution secret variable passed to executor")
+	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in executor")
 	cmd.Flags().StringArrayVarP(&binaryArgs, "args", "", []string{}, "executor binary additional arguments")
+	cmd.Flags().StringVarP(&argsMode, "args-mode", "", "append", "usage mode for argumnets. one of append|override")
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
 	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "downlaod artifacts automatically")
@@ -259,7 +268,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
 	cmd.Flags().StringVar(&artifactStorageClassName, "artifact-storage-class-name", "", "artifact storage class name for container executor")
 	cmd.Flags().StringVar(&artifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
-	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for container executor")
+	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for scraping")
 	cmd.Flags().StringVar(&jobTemplate, "job-template", "", "job template file path for extensions to job template")
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
 	cmd.Flags().StringVarP(&gitCommit, "git-commit", "", "", "if uri is git repository we can use commit id (sha) parameter")

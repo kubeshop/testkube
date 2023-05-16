@@ -46,7 +46,7 @@ This is a nuspec. It mostly adheres to https://docs.nuget.org/create/Nuspec-Refe
     <licenseUrl>https://github.com/kubeshop/testkube/blob/164c3c9e3445f1c215f4eabc8dadeebe1596fede/LICENSE</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <projectSourceUrl>https://github.com/kubeshop/testkube</projectSourceUrl>
-    <docsUrl>https://kubeshop.github.io/testkube/</docsUrl>
+    <docsUrl>https://docs.testkube.io/</docsUrl>
     <!--<mailingListUrl></mailingListUrl>-->
     <bugTrackerUrl>https://github.com/kubeshop/testkube/issues</bugTrackerUrl>
     <tags>testkube kubeshop k8s testing</tags>

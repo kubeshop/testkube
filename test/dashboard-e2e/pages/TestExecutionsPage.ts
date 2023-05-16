@@ -7,7 +7,7 @@ export class TestExecutionsPage{
     }
     
     async runTest() {
-        await this.page.click('div[class="ant-page-header-heading"] button')
+        await this.page.click('//span[@class="ant-page-header-heading-extra"]//button[.//span]') //TODO: data-test needed
     }
     
     async openExecutionDetails(executionName) {

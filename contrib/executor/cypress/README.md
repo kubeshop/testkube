@@ -18,4 +18,4 @@ Please follow to main testkube repository for reporting any [issues](https://git
 
 ## API 
 
-Cypress executor implements [testkube OpenAPI for executors](https://kubeshop.github.io/testkube/openapi/#operations-tag-executor) (look at executor tag)
+Cypress executor implements [testkube OpenAPI for executors](https://docs.testkube.io/openapi#tag/executor) (look at executor tag)

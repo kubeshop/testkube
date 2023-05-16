@@ -10,10 +10,11 @@ import (
 
 func NewSetContextCmd() *cobra.Command {
 	var (
-		org, env, apiKey, apiUri string
-		agentKey, agentUri       string
-		kubeconfig               bool
-		namespace                string
+		org, env, apiKey string
+		agentKey         string
+		kubeconfig       bool
+		namespace        string
+		rootDomain       string
 	)
 
 	cmd := &cobra.Command{
@@ -32,8 +33,8 @@ func NewSetContextCmd() *cobra.Command {
 
 			switch cfg.ContextType {
 			case config.ContextTypeCloud:
-				if org == "" && env == "" && apiKey == "" && agentKey == "" && agentUri == "" && apiUri == "" {
-					ui.Errf("Please provide at least one of the following flags: --org, --env, --api-key, --cloud-api-uri, --cloud-agent-key, --cloud-agent-uri")
+				if org == "" && env == "" && apiKey == "" && agentKey == "" && rootDomain == "" {
+					ui.Errf("Please provide at least one of the following flags: --org, --env, --api-key, --cloud-root-domain, --cloud-agent-key")
 				}
 
 				if org != "" {
@@ -49,9 +50,12 @@ func NewSetContextCmd() *cobra.Command {
 				if apiKey != "" {
 					cfg.CloudContext.ApiKey = apiKey
 				}
-				if apiUri != "" {
-					cfg.CloudContext.ApiUri = apiUri
-				}
+
+				// set uris based on root domain
+				uris := common.NewCloudUris(rootDomain)
+				cfg.CloudContext.ApiUri = uris.Api
+				cfg.CloudContext.UiUri = uris.Ui
+				cfg.CloudContext.AgentUri = uris.Agent
 
 			case config.ContextTypeKubeconfig:
 				// kubeconfig special use cases
@@ -78,7 +82,7 @@ func NewSetContextCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&env, "env", "e", "", "Testkube Cloud Environment ID")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "Testkube namespace to use for CLI commands")
 	cmd.Flags().StringVarP(&apiKey, "api-key", "k", "", "API Key for Testkube Cloud")
-	cmd.Flags().StringVarP(&apiUri, "cloud-api-uri", "", "https://api.testkube.io", "Testkube Cloud API URI - defaults to api.testksube.io")
+	cmd.Flags().StringVarP(&rootDomain, "cloud-root-domain", "", "testkube.io", "defaults to testkube.io, usually you don't need to change it")
 
 	return cmd
 }

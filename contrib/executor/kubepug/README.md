@@ -122,4 +122,4 @@ For more info go to [main Testkube repo](https://github.com/kubeshop/testkube)
 
 ![Twitter](https://img.shields.io/twitter/follow/thekubeshop?style=social) ![Discord](https://img.shields.io/discord/884464549347074049)
 
-#### [Documentation](https://kubeshop.github.io/testkube) | [Discord](https://discord.gg/hfq44wtR6Q)
+#### [Documentation](https://docs.testkube.io) | [Discord](https://discord.gg/hfq44wtR6Q)

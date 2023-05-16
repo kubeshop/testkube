@@ -3,15 +3,15 @@ package runner
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/utils/test"
-
-	"github.com/kubeshop/testkube/pkg/envs"
-
+	cp "github.com/otiai10/copy"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/envs"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
 func TestRun(t *testing.T) {
@@ -26,6 +26,9 @@ func TestRun(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "*")
 		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
 		defer os.RemoveAll(tempDir)
+		repoDir := filepath.Join(tempDir, "repo")
+		assert.NoError(t, os.Mkdir(repoDir, 0755))
+		_ = cp.Copy("../../examples", repoDir)
 
 		params := envs.Params{DataDir: tempDir}
 		runner, err := NewArtilleryRunner(ctx, params)

@@ -6,16 +6,14 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/kubeshop/testkube/pkg/executor/scraper"
-
 	"github.com/pkg/errors"
-
-	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 )
 
 // NewRunner creates scraper runner
@@ -49,6 +47,10 @@ func (r *ScraperRunner) Run(ctx context.Context, execution testkube.Execution) (
 	// check that the artifact dir exists
 	if execution.ArtifactRequest == nil {
 		return *result.Err(errors.Errorf("executor only support artifact based tests")), nil
+	}
+
+	if execution.ArtifactRequest.VolumeMountPath == "" || execution.ArtifactRequest.StorageClassName == "" {
+		return *result.Err(errors.Errorf("artifact request should have not empty volume mount path and storage class name")), nil
 	}
 
 	_, err = os.Stat(execution.ArtifactRequest.VolumeMountPath)

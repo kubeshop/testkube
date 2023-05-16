@@ -135,7 +135,7 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "https://kubeshop.github.io/testkube/",
+					"raw": "https://docs.testkube.io/",
 					"protocol": "https",
 					"host": [
 						"kubeshop",

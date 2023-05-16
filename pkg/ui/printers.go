@@ -4,9 +4,36 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/pterm/pterm"
 )
 
-func (ui *UI) NL() {
+var (
+	h1        = pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgDefault, pterm.Bold)).WithTextStyle(pterm.NewStyle(pterm.FgLightMagenta)).WithMargin(0)
+	h2        = pterm.DefaultHeader.WithBackgroundStyle(pterm.NewStyle(pterm.BgDefault, pterm.Bold)).WithTextStyle(pterm.NewStyle(pterm.FgLightGreen)).WithMargin(0)
+	paragraph = pterm.DefaultParagraph.WithMaxWidth(100)
+)
+
+// H1 prints h1 like header
+func (ui *UI) H1(text string) {
+	h1.WithWriter(ui.Writer).Println(text)
+}
+
+// H1 prints h2 like header
+func (ui *UI) H2(text string) {
+	h2.WithWriter(ui.Writer).Println(text)
+}
+
+func (ui *UI) Paragraph(text string) {
+	paragraph.WithWriter(ui.Writer).Println(text)
+}
+
+func (ui *UI) NL(amount ...int) {
+	if len(amount) > 0 && amount[0] > 0 {
+		for i := 0; i < amount[0]-1; i++ {
+			fmt.Fprintln(ui.Writer)
+		}
+	}
 	fmt.Fprintln(ui.Writer)
 }
 
@@ -161,6 +188,25 @@ func (ui *UI) InfoGrid(table map[string]string) {
 	fmt.Fprintln(ui.Writer)
 }
 
+func (ui *UI) Properties(table [][]string) {
+	for _, properties := range table {
+		if len(properties) > 1 && properties[0] == Separator {
+			fmt.Fprintln(ui.Writer)
+			continue
+		}
+
+		if len(properties) == 1 {
+			fmt.Fprintf(ui.Writer, "  %s\n", Default(properties[0]))
+			fmt.Fprintf(ui.Writer, "  %s\n", Default(strings.Repeat("-", len(properties[0]))))
+		}
+
+		if len(properties) == 2 {
+			fmt.Fprintf(ui.Writer, "  %s: %s\n", White(properties[0]), LightBlue(properties[1]))
+		}
+	}
+	fmt.Fprintln(ui.Writer)
+}
+
 func (ui *UI) Vector(table []string) {
 	for _, v := range table {
 		fmt.Fprintf(ui.Writer, "  %s\n", DarkGray(v))
@@ -183,4 +229,12 @@ func (ui *UI) calculateMessageLength(message string, subMessages ...string) int 
 	}
 
 	return sum + len(message)
+}
+
+func (ui *UI) Link(message string, subMessages ...string) {
+	fmt.Fprintf(ui.Writer, "%s", LightGray(message))
+	for _, sub := range subMessages {
+		fmt.Fprintf(ui.Writer, " %s", LightGray(sub))
+	}
+	fmt.Fprintln(ui.Writer)
 }
