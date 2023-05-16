@@ -349,18 +349,6 @@ By default, there is a 10 second timeout limit on all requests on the client sid
 Some of the executors offer the option to set a special file using the flag `--variables-file` on both test creation and test run. For the Postman executor, this expects an environment file, for Maven it is `settings.xml`.
 There are many differences between `--variables-file` and `--copy-files`. The former one sets this file directly as the configuration file. With the latter, there is an additional need to set the path explicitly on the arguments level. Another difference is that for variables files smaller than 128KB, this will be set on the CRD level and not uploaded to the object storage. This limitation comes from linux-based systems where this is the default maximum length of arguments.
 
-### Redefining the Prebuilt Executor command and arguments
-
-Each of Testkube Prebuilt executors has a default command and arguments it uses to execute the test. They are provided as a part of Executor CRD and can be either ovveriden or appended during test creation or execution, for example:
-
-```sh
-testkube create test --name maven-example-test --git-uri https://github.com/kubeshop/testkube-executor-maven.git --git-path examples/hello-maven --type maven/test --git-branch main --command "mvn" --args-mode "override" --executor-args="--settings <settingsFile> <goalName> -Duser.home <mavenHome>"
-```
-
-```sh title="Expected output:"
-Test created maven-example-test 🥇
-```
-
 ### Changing the Default Job Template Used for Test Execution
 
 You can always create your own custom executor with its own job template definition used for test execution. But sometimes you just need to adjust an existing job template of a standard Testkube executor with a few parameters. In this case you can use additional parameter `--job-template` when you create or run the test:
