@@ -225,6 +225,9 @@ func (s *TestkubeAPI) InitRoutes() {
 	executors.Delete("/:name", s.DeleteExecutorHandler())
 	executors.Delete("/", s.DeleteExecutorsHandler())
 
+	ai := s.Routes.Group("/ai")
+	ai.Get("/test-executions/:executionId", s.AnalyzeTestExecution())
+
 	webhooks := s.Routes.Group("/webhooks")
 
 	webhooks.Post("/", s.CreateWebhookHandler())

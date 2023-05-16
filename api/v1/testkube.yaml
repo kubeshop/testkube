@@ -55,39 +55,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/TestTriggerKeyMap"
 
-  /ai/analysis/test-execution/{executionId}:
-    get:
-      tags:
-        - api
-      summary: "Get test execution analysis"
-      description: "AI powered analysis of test execution"
-      operationId: aiAnalyzeTestExecution
-      responses:
-        200:
-          description: "successful operation"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TestTrigger"
-            text/yaml:
-              schema:
-                type: string
-        400:
-          description: "problem with test trigger definition - probably some bad input occurs (invalid JSON body or similar)"
-          content:
-            application/problem+json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Problem"
-        502:
-          description: problem communicating with kubernetes cluster
-          content:
-            application/problem+json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Problem"
 
   /triggers:
     get:
@@ -1331,6 +1298,43 @@ paths:
                   $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting execution's artifacts from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+
+
+
+  /executions/{executionId}/ai:
+    get:
+      tags:
+        - api
+      summary: "Get test execution analysis"
+      description: "AI powered analysis of test execution"
+      operationId: aiAnalyzeTestExecution
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiAnalysisResponse"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with request, probably not failed execution was passed, or other Kubernetes / API / Storage issues"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
           content:
             application/problem+json:
               schema:
@@ -4734,6 +4738,16 @@ components:
             items:
               type: string
             example: ["logline1", "logline2", "logline3"]
+
+    AiAnalysisResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: message with test analysis description
+          example: ""
 
     TestTrigger:
       type: object
