@@ -12,12 +12,6 @@ import (
 type ApiOptions struct {
 	// target API definition, OpenAPI or SOAP, local file or URL
 	Target string `yaml:"target"`
-	// openapi, soap, or graphql
-	Format string `yaml:"format"`
-	// the hostname to override in the (remote) OpenAPI spec
-	Hostname string `yaml:"hostname"`
-	// safe mode this will skip the active scan and perform a baseline scan
-	Safe bool `default:"false" yaml:"safe"`
 	// config file or URL to use to INFO, IGNORE or FAIL warnings
 	Config string `yaml:"config"`
 	// show debug messages
@@ -33,11 +27,17 @@ type ApiOptions struct {
 	// delay in seconds to wait for passive scanning
 	Delay int `yaml:"delay"`
 	// max time in minutes to wait for ZAP to start and the passive scan to run
-	Time int `default:"0" yaml:"time"`
-	// ZAP command line options
+	Time       int    `default:"0" yaml:"time"`
 	ZapOptions string `yaml:"zap_options"`
 	// fail the scan on WARN issues, default true
 	FailOnWarn bool `default:"true" yaml:"fail_on_warn"`
+	// openapi, soap, or graphql
+	Format string `yaml:"format"`
+	// the hostname to override in the (remote) OpenAPI spec
+	Hostname string `yaml:"hostname"`
+	// safe mode this will skip the active scan and perform a baseline scan
+	Safe bool `default:"false" yaml:"safe"`
+	// ZAP command line options
 }
 
 type BaselineOptions struct {
@@ -55,8 +55,6 @@ type BaselineOptions struct {
 	Context string `yaml:"context"`
 	// username to use for authenticated scans - must be defined in the given context file
 	User string `yaml:"user"`
-	// the number of minutes to spider for (default 1)
-	Minutes int `default:"1" yaml:"minutes"`
 	// delay in seconds to wait for passive scanning
 	Delay int `yaml:"delay"`
 	// max time in minutes to wait for ZAP to start and the passive scan to run
@@ -67,6 +65,8 @@ type BaselineOptions struct {
 	ZapOptions string `yaml:"zap_options"`
 	// fail the scan on WARN issues, default true
 	FailOnWarn bool `default:"true" yaml:"fail_on_warn"`
+	// the number of minutes to spider for (default 1)
+	Minutes int `default:"1" yaml:"minutes"`
 }
 
 type FullOptions struct {
@@ -84,8 +84,6 @@ type FullOptions struct {
 	Context string `yaml:"context"`
 	// username to use for authenticated scans - must be defined in the given context file
 	User string `yaml:"user"`
-	// the number of minutes to spider for (default -1, unlimited)
-	Minutes int `default:"-1" yaml:"minutes"`
 	// delay in seconds to wait for passive scanning
 	Delay int `yaml:"delay"`
 	// max time in minutes to wait for ZAP to start and the passive scan to run
@@ -96,6 +94,8 @@ type FullOptions struct {
 	ZapOptions string `yaml:"zap_options"`
 	// fail the scan on WARN issues, default true
 	FailOnWarn bool `default:"true" yaml:"fail_on_warn"`
+	// the number of minutes to spider for (default 1)
+	Minutes int `default:"1" yaml:"minutes"`
 }
 
 type Options struct {
@@ -124,7 +124,6 @@ func (a *Options) UnmarshalYAML(yamlFile string) (err error) {
 func (a *Options) ToFullScanArgs(filename string) (args []string) {
 	args = []string{}
 	// don't fail on warnings
-	args = append(args, "-I")
 	args = appendTargetArg(args, a.Full.Target)
 	args = appendConfigArg("full", args, a.Full.Config)
 	args = appendMinutesArg(args, a.Full.Minutes)
@@ -145,7 +144,6 @@ func (a *Options) ToFullScanArgs(filename string) (args []string) {
 func (a *Options) ToBaselineScanArgs(filename string) (args []string) {
 	args = []string{}
 	// don't fail on warnings
-	args = append(args, "-I")
 	args = appendTargetArg(args, a.Baseline.Target)
 	args = appendConfigArg("baseline", args, a.Baseline.Config)
 	args = appendMinutesArg(args, a.Baseline.Minutes)
@@ -167,7 +165,6 @@ func (a *Options) ToBaselineScanArgs(filename string) (args []string) {
 func (a *Options) ToApiScanArgs(filename string) (args []string) {
 	args = []string{}
 	// don't fail on warnings
-	args = append(args, "-I")
 	args = appendTargetArg(args, a.API.Target)
 	args = appendFormatArg(args, a.API.Format)
 	args = appendConfigArg("api", args, a.API.Config)

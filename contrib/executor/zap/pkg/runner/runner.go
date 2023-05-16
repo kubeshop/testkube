@@ -76,45 +76,48 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 		zapConfig = testFile
 	}
 
-	output.PrintLogf("%s Reading options", ui.IconWorld)
-	options := Options{}
-	err = options.UnmarshalYAML(zapConfig)
-	if err != nil {
-		return *result.WithErrors(err), nil
-	}
-
-	// determine the actual ZAP script and args to run
+	// determine the ZAP script
 	output.PrintLogf("%s Processing test type", ui.IconWorld)
 	scanType := strings.Split(execution.TestType, "/")[1]
+	for i := range execution.Command {
+		if execution.Command[i] == "<pythonScriptPath>" {
+			execution.Command[i] = zapScript(scanType)
+		}
+	}
+	command := strings.Join(execution.Command, " ")
+	output.PrintLogf("%s Using command: %s", ui.IconCheckMark, command)
+
+	output.PrintLogf("%s Preparing reports folder", ui.IconFile)
 	reportFolder := filepath.Join(r.Params.DataDir, "reports")
 	err = os.Mkdir(reportFolder, 0700)
 	if err != nil {
 		return *result.WithErrors(err), nil
 	}
-	output.PrintLogf("%s Preparing reports folder", ui.IconFile)
 	reportFile := filepath.Join(reportFolder, fmt.Sprintf("%s-report.html", execution.TestName))
-	scriptName := zapScript(scanType)
+
+	output.PrintLogf("%s Building arguments", ui.IconWorld)
+	output.PrintLogf("%s Reading options from file", ui.IconWorld)
+	options := Options{}
+	err = options.UnmarshalYAML(zapConfig)
+	if err != nil {
+		return *result.WithErrors(err), nil
+	}
 	args := zapArgs(scanType, options, reportFile)
+	output.PrintLogf("%s Reading execution arguments", ui.IconWorld)
+	args = MergeArgs(args, reportFile, execution)
+	output.PrintLogf("%s Arguments are ready: %s", ui.IconCheckMark, args)
 
 	output.PrintLogf("%s Preparing variables", ui.IconWorld)
 	envManager := env.NewManagerWithVars(execution.Variables)
 	envManager.GetReferenceVars(envManager.Variables)
-	// simply set the ENVs to use during execution
-	for _, env := range execution.Variables {
-		os.Setenv(env.Name, env.Value)
-	}
-
-	// convert executor env variables to runner env variables
-	for key, value := range execution.Envs {
-		os.Setenv(key, value)
-	}
+	output.PrintLogf("%s Variables are prepared", ui.IconCheckMark)
 
 	// when using file based ZAP parameters it expects a /zap/wrk directory
 	// we simply symlink the directory
 	os.Symlink(workingDir, filepath.Join(r.ZapHome, "wrk"))
 
 	output.PrintLogf("%s Running ZAP test", ui.IconMicroscope)
-	logs, err := executor.Run(r.ZapHome, scriptName, envManager, args...)
+	logs, err := executor.Run(r.ZapHome, command, envManager, args...)
 	logs = envManager.ObfuscateSecrets(logs)
 
 	output.PrintLogf("%s Calculating results", ui.IconMicroscope)
@@ -226,4 +229,22 @@ func warnStatus(scanType string, options Options) string {
 	} else {
 		return string(testkube.PASSED_ExecutionStatus)
 	}
+}
+
+// MergeArgs merges the arguments read from file with the arguments read from the execution
+func MergeArgs(fileArgs []string, reportFile string, execution testkube.Execution) []string {
+	output.PrintLogf("%s Merging file arguments with execution arguments", ui.IconWorld)
+
+	args := execution.Args
+	for i := range args {
+		if args[i] == "<fileArgs>" {
+			newArgs := make([]string, len(args)+len(fileArgs)-1)
+			copy(newArgs, args[:i])
+			copy(newArgs[i:], fileArgs)
+			copy(newArgs[i+len(fileArgs):], args[i+1:])
+			args = newArgs
+			break
+		}
+	}
+	return args
 }
