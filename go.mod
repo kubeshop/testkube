@@ -32,6 +32,7 @@ require (
 	github.com/prometheus/client_golang v1.14.0
 	github.com/pterm/pterm v0.12.59
 	github.com/rikatz/kubepug v1.4.0
+	github.com/sashabaranov/go-openai v1.9.4
 	github.com/segmentio/analytics-go/v3 v3.2.1
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/slack-go/slack v0.11.4

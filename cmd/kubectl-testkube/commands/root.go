@@ -21,6 +21,8 @@ var (
 
 func init() {
 	// New commands
+	RootCmd.AddCommand(NewAICmd())
+
 	RootCmd.AddCommand(NewCreateCmd())
 	RootCmd.AddCommand(NewUpdateCmd())
 
