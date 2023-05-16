@@ -8,6 +8,7 @@ require (
 	github.com/adhocore/gronx v1.1.2
 	github.com/cli/cli/v2 v2.20.2
 	github.com/coreos/go-oidc v2.2.1+incompatible
+	github.com/creasty/defaults v1.7.0
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
 	github.com/fasthttp/websocket v1.5.0
@@ -190,7 +191,7 @@ require (
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
+	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apiextensions-apiserver v0.25.3 // indirect
 	k8s.io/component-base v0.25.3 // indirect
 	k8s.io/klog/v2 v2.80.1 // indirect
