@@ -486,7 +486,7 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 			updatedTest, err = s.TestsClient.Update(testSpec)
 		}
 
-		s.Metrics.IncUpdateTest(updatedTest.Spec.Type_, err)
+		s.Metrics.IncUpdateTest(testSpec.Spec.Type_, err)
 
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not update test %w", errPrefix, err))
