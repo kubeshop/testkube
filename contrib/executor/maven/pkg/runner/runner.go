@@ -88,6 +88,7 @@ func (r *MavenRunner) Run(ctx context.Context, execution testkube.Execution) (re
 	var args []string
 	args = append(args, execution.Args...)
 
+	var settingsXML string
 	if execution.VariablesFile != "" {
 		outputPkg.PrintLogf("%s Creating settings.xml file", ui.IconWorld)
 		settingsXML, err = createSettingsXML(directory, execution.VariablesFile, execution.IsVariablesFileUploaded)
