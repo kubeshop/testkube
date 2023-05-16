@@ -65,7 +65,7 @@ func (a OpenAI) GenerateTest(ctx context.Context, testType string, testParameter
 		return "", err
 	}
 
-	fmt.Println("\n\n", resp.Choices, "\n\n")
+	fmt.Println("\n\n", resp.Choices)
 
 	return resp.Choices[0].Message.Content, nil
 }
