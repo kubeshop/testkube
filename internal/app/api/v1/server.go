@@ -129,7 +129,7 @@ func NewTestkubeAPI(
 	s.Events.Loader.Register(s.slackLoader)
 
 	if cdeventsTarget != "" {
-		cdeventLoader, err := cdevent.NewCDEventLoader(cdeventsTarget, clusterId, testkube.AllEventTypes)
+		cdeventLoader, err := cdevent.NewCDEventLoader(cdeventsTarget, clusterId, namespace, testkube.AllEventTypes)
 		if err == nil {
 			s.Events.Loader.Register(cdeventLoader)
 		} else {

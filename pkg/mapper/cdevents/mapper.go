@@ -11,16 +11,16 @@ import (
 )
 
 // MapTestkubeEventToCDEvent maps OpenAPI spec Event to CDEvent CDEventReader
-func MapTestkubeEventToCDEvent(tkEvent testkube.Event, clusterID string) (cdevents.CDEventReader, error) {
+func MapTestkubeEventToCDEvent(tkEvent testkube.Event, clusterID, defaultNamespace string) (cdevents.CDEventReader, error) {
 	if tkEvent.Type_ == nil {
 		return nil, errors.New("empty event type")
 	}
 
 	switch *tkEvent.Type_ {
 	case *testkube.EventStartTest:
-		return MapTestkubeEventStartTestToCDEvent(tkEvent, clusterID)
+		return MapTestkubeEventStartTestToCDEvent(tkEvent, clusterID, defaultNamespace)
 	case *testkube.EventEndTestAborted, *testkube.EventEndTestFailed, *testkube.EventEndTestTimeout, *testkube.EventEndTestSuccess:
-		return MapTestkubeEventFinishTestToCDEvent(tkEvent, clusterID)
+		return MapTestkubeEventFinishTestToCDEvent(tkEvent, clusterID, defaultNamespace)
 	case *testkube.EventStartTestSuite:
 		return MapTestkubeEventStartTestSuiteToCDEvent(tkEvent, clusterID)
 	case *testkube.EventEndTestSuiteAborted, *testkube.EventEndTestSuiteFailed, *testkube.EventEndTestSuiteTimeout, *testkube.EventEndTestSuiteSuccess:
@@ -31,7 +31,7 @@ func MapTestkubeEventToCDEvent(tkEvent testkube.Event, clusterID string) (cdeven
 }
 
 // MapTestkubeEventQueuedTestToCDEvent maps OpenAPI spec Queued Test Event to CDEvent CDEventReader
-func MapTestkubeEventQueuedTestToCDEvent(event testkube.Event, clusterID string) (cdevents.CDEventReader, error) {
+func MapTestkubeEventQueuedTestToCDEvent(event testkube.Event, clusterID, defaultNamespace string) (cdevents.CDEventReader, error) {
 	// Create the base event
 	ev, err := cdevents.NewTestCaseRunQueuedEvent()
 	if err != nil {
@@ -47,12 +47,12 @@ func MapTestkubeEventQueuedTestToCDEvent(event testkube.Event, clusterID string)
 	if event.TestExecution != nil {
 		ev.SetSubjectTestCase(&cdevents.TestCaseRunQueuedSubjectContentTestCase{
 			Id:   event.TestExecution.TestName,
-			Type: "e2e",
+			Type: MapTestkubeTestTypeToCDEventTestCaseType(event.TestExecution.TestType),
 		})
 
 		namespace := event.TestExecution.TestNamespace
-		if namespace == "" && event.TestSuiteExecution != nil && event.TestSuiteExecution.TestSuite != nil {
-			namespace = event.TestSuiteExecution.TestSuite.Namespace
+		if namespace == "" {
+			namespace = defaultNamespace
 		}
 
 		ev.SetSubjectEnvironment(&cdevents.Reference{
@@ -65,20 +65,20 @@ func MapTestkubeEventQueuedTestToCDEvent(event testkube.Event, clusterID string)
 				Type: MapTestkubeRunningContextTypeToCDEventTiggerType(event.TestExecution.RunningContext.Type_),
 			})
 		}
-	}
 
-	if event.TestSuiteExecution != nil {
-		ev.SetSubjectTestSuiteRun(&cdevents.Reference{
-			Id:     event.TestSuiteExecution.Name,
-			Source: clusterID,
-		})
+		if event.TestExecution.TestSuiteName != "" {
+			ev.SetSubjectTestSuiteRun(&cdevents.Reference{
+				Id:     event.TestExecution.TestSuiteName,
+				Source: clusterID,
+			})
+		}
 	}
 
 	return ev, nil
 }
 
 // MapTestkubeEventStartTestToCDEvent maps OpenAPI spec Start Test Event to CDEvent CDEventReader
-func MapTestkubeEventStartTestToCDEvent(event testkube.Event, clusterID string) (cdevents.CDEventReader, error) {
+func MapTestkubeEventStartTestToCDEvent(event testkube.Event, clusterID, defaultNamespace string) (cdevents.CDEventReader, error) {
 	// Create the base event
 	ev, err := cdevents.NewTestCaseRunStartedEvent()
 	if err != nil {
@@ -94,12 +94,12 @@ func MapTestkubeEventStartTestToCDEvent(event testkube.Event, clusterID string) 
 	if event.TestExecution != nil {
 		ev.SetSubjectTestCase(&cdevents.TestCaseRunStartedSubjectContentTestCase{
 			Id:   event.TestExecution.TestName,
-			Type: "e2e",
+			Type: MapTestkubeTestTypeToCDEventTestCaseType(event.TestExecution.TestType),
 		})
 
 		namespace := event.TestExecution.TestNamespace
-		if namespace == "" && event.TestSuiteExecution != nil && event.TestSuiteExecution.TestSuite != nil {
-			namespace = event.TestSuiteExecution.TestSuite.Namespace
+		if namespace == "" {
+			namespace = defaultNamespace
 		}
 
 		ev.SetSubjectEnvironment(&cdevents.Reference{
@@ -112,20 +112,20 @@ func MapTestkubeEventStartTestToCDEvent(event testkube.Event, clusterID string) 
 				Type: MapTestkubeRunningContextTypeToCDEventTiggerType(event.TestExecution.RunningContext.Type_),
 			})
 		}
-	}
 
-	if event.TestSuiteExecution != nil {
-		ev.SetSubjectTestSuiteRun(&cdevents.Reference{
-			Id:     event.TestSuiteExecution.Name,
-			Source: clusterID,
-		})
+		if event.TestExecution.TestSuiteName != "" {
+			ev.SetSubjectTestSuiteRun(&cdevents.Reference{
+				Id:     event.TestExecution.TestSuiteName,
+				Source: clusterID,
+			})
+		}
 	}
 
 	return ev, nil
 }
 
 // MapTestkubeEventFinishTestToCDEvent maps OpenAPI spec Failed, Aborted, Timeout, Success Test Event to CDEvent CDEventReader
-func MapTestkubeEventFinishTestToCDEvent(event testkube.Event, clusterID string) (cdevents.CDEventReader, error) {
+func MapTestkubeEventFinishTestToCDEvent(event testkube.Event, clusterID, defaultNamespace string) (cdevents.CDEventReader, error) {
 	// Create the base event
 	ev, err := cdevents.NewTestCaseRunFinishedEvent()
 	if err != nil {
@@ -141,12 +141,12 @@ func MapTestkubeEventFinishTestToCDEvent(event testkube.Event, clusterID string)
 	if event.TestExecution != nil {
 		ev.SetSubjectTestCase(&cdevents.TestCaseRunFinishedSubjectContentTestCase{
 			Id:   event.TestExecution.TestName,
-			Type: "e2e",
+			Type: MapTestkubeTestTypeToCDEventTestCaseType(event.TestExecution.TestType),
 		})
 
 		namespace := event.TestExecution.TestNamespace
-		if namespace == "" && event.TestSuiteExecution != nil && event.TestSuiteExecution.TestSuite != nil {
-			namespace = event.TestSuiteExecution.TestSuite.Namespace
+		if namespace == "" {
+			namespace = defaultNamespace
 		}
 
 		ev.SetSubjectEnvironment(&cdevents.Reference{
@@ -171,13 +171,13 @@ func MapTestkubeEventFinishTestToCDEvent(event testkube.Event, clusterID string)
 		if event.TestExecution.IsPassed() {
 			ev.SetSubjectOutcome("pass")
 		}
-	}
 
-	if event.TestSuiteExecution != nil {
-		ev.SetSubjectTestSuiteRun(&cdevents.Reference{
-			Id:     event.TestSuiteExecution.Name,
-			Source: clusterID,
-		})
+		if event.TestExecution.TestSuiteName != "" {
+			ev.SetSubjectTestSuiteRun(&cdevents.Reference{
+				Id:     event.TestExecution.TestSuiteName,
+				Source: clusterID,
+			})
+		}
 	}
 
 	return ev, nil
@@ -344,6 +344,33 @@ func MapTestkubeRunningContextTypeToCDEventTiggerType(contextType string) string
 		return "event"
 	case testkube.RunningContextTypeScheduler:
 		return "schedule"
+	}
+
+	return "other"
+}
+
+// MapTestkubeTestTypeToCDEventTestCaseType maps OpenAPI spec Test Type to CDEvent Test case Type
+func MapTestkubeTestTypeToCDEventTestCaseType(testType string) string {
+	var types = map[string]string{
+		"artillery/":  "performance",
+		"curl/":       "functional",
+		"cypress/":    "functional",
+		"ginkgo/":     "unit",
+		"gradle/":     "integration",
+		"jmeter/":     "performance",
+		"k6/":         "performance",
+		"kubepug/":    "compliance",
+		"maven/":      "integration",
+		"playwright/": "functional",
+		"postman/":    "functional",
+		"soapui/":     "functional",
+		"zap/":        "security",
+	}
+
+	for key, value := range types {
+		if strings.Contains(testType, key) {
+			return value
+		}
 	}
 
 	return "other"
