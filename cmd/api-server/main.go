@@ -203,7 +203,7 @@ func main() {
 			cfg.StorageSSL,
 		)
 		if err = minioClient.Connect(); err != nil {
-			// ui.ExitOnError("Connecting to minio", err)
+			ui.ExitOnError("Connecting to minio", err)
 		}
 		if expErr := minioClient.SetExpirationPolicy(cfg.StorageExpiration); expErr != nil {
 			log.DefaultLogger.Errorw("Error setting expiration policy", "error", expErr)
