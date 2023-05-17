@@ -44,7 +44,7 @@ func GenerateTarballMetaFile() ArchiveFilesystemExtractorOpts {
 	}
 }
 
-func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths []string, process ProcessFn) error {
+func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths []string, process ProcessFn, notify NotifyFn) error {
 	var archiveFiles []*archive.File
 	for _, dir := range paths {
 		log.DefaultLogger.Infof("scraping artifacts in directory: %v", dir)
@@ -72,6 +72,11 @@ func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths []string
 					return errors.Wrapf(err, "error creating archive file for path %s", path)
 				}
 				archiveFiles = append(archiveFiles, archiveFile)
+
+				if err := notify(ctx, path); err != nil {
+					log.DefaultLogger.Warnf("error notifying for file %s", path)
+				}
+
 				return nil
 			},
 		)
@@ -189,7 +194,7 @@ func NewRecursiveFilesystemExtractor(fs filesystem.FileSystem) *RecursiveFilesys
 	return &RecursiveFilesystemExtractor{fs: fs}
 }
 
-func (e *RecursiveFilesystemExtractor) Extract(ctx context.Context, paths []string, process ProcessFn) error {
+func (e *RecursiveFilesystemExtractor) Extract(ctx context.Context, paths []string, process ProcessFn, notify NotifyFn) error {
 	for _, dir := range paths {
 		log.DefaultLogger.Infof("scraping artifacts in directory: %v", dir)
 
@@ -209,6 +214,10 @@ func (e *RecursiveFilesystemExtractor) Extract(ctx context.Context, paths []stri
 				if fileInfo.IsDir() {
 					log.DefaultLogger.Infof("skipping directory %s", path)
 					return nil
+				}
+
+				if err := notify(ctx, path); err != nil {
+					log.DefaultLogger.Warnf("error notifying for file %s", path)
 				}
 
 				reader, err := e.fs.OpenFileBuffered(path)

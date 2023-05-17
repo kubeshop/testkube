@@ -16,10 +16,12 @@ const (
 
 //go:generate mockgen -destination=./mock_extractor.go -package=scraper "github.com/kubeshop/testkube/pkg/executor/scraper" Extractor
 type Extractor interface {
-	Extract(ctx context.Context, paths []string, process ProcessFn) error
+	Extract(ctx context.Context, paths []string, process ProcessFn, notify NotifyFn) error
 }
 
 type ProcessFn func(ctx context.Context, object *Object) error
+
+type NotifyFn func(ctx context.Context, path string) error
 
 type Object struct {
 	Name     string

@@ -1,10 +1,8 @@
 package scraper
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
 
 	cdevents "github.com/cdevents/sdk-go/pkg/api"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -43,29 +41,30 @@ func NewExtractLoadScraper(extractor Extractor, loader Uploader, cdeventsClient 
 func (s *ExtractLoadScraper) Scrape(ctx context.Context, paths []string, execution testkube.Execution) error {
 	return s.
 		extractor.
-		Extract(ctx, paths, func(ctx context.Context, object *Object) error {
-			if s.cdeventsClient != nil {
-				if err := s.sendCDEvent(execution, object); err != nil {
-					log.DefaultLogger.Warnf("failed to send cd event %w", err)
+		Extract(ctx, paths,
+			func(ctx context.Context, object *Object) error {
+				return s.loader.Upload(ctx, object, execution)
+			},
+			func(ctx context.Context, path string) error {
+				if s.cdeventsClient != nil {
+					if err := s.sendCDEvent(execution, path); err != nil {
+						return err
+					}
 				}
-			}
 
-			return s.loader.Upload(ctx, object, execution)
-		})
+				return nil
+			})
 }
 
 func (s *ExtractLoadScraper) Close() error {
 	return s.loader.Close()
 }
 
-func (s *ExtractLoadScraper) sendCDEvent(execution testkube.Execution, object *Object) error {
-	header := bytes.NewBuffer(nil)
-	mtype, err := mimetype.DetectReader(io.TeeReader(object.Data, header))
+func (s *ExtractLoadScraper) sendCDEvent(execution testkube.Execution, path string) error {
+	mtype, err := mimetype.DetectFile(path)
 	if err != nil {
 		log.DefaultLogger.Warnf("failed to detect mime type %w", err)
 	}
-
-	object.Data = io.MultiReader(header, object.Data)
 
 	ev, err := cde.MapTestkubeArtifactToCDEvent(&execution, s.clusterID, mtype.String())
 	if err != nil {
