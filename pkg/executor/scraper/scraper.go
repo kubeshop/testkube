@@ -67,7 +67,7 @@ func (s *ExtractLoadScraper) sendCDEvent(execution testkube.Execution, object *O
 
 	object.Data = io.MultiReader(header, object.Data)
 
-	ev, err := cde.MapTestkubeArtifactToCDEvent(&execution, s.clusterID, "report", mtype.String())
+	ev, err := cde.MapTestkubeArtifactToCDEvent(&execution, s.clusterID, mtype.String())
 	if err != nil {
 		return err
 	}

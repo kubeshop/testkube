@@ -184,7 +184,7 @@ func MapTestkubeEventFinishTestToCDEvent(event testkube.Event, clusterID, defaul
 }
 
 // MapTestkubeArtifactToCDEvent maps OpenAPI spec Artifact to CDEvent CDEventReader
-func MapTestkubeArtifactToCDEvent(execution *testkube.Execution, clusterID, format, outputType string) (cdevents.CDEventReader, error) {
+func MapTestkubeArtifactToCDEvent(execution *testkube.Execution, clusterID, format string) (cdevents.CDEventReader, error) {
 	// Create the base event
 	ev, err := cdevents.NewTestOutputPublishedEvent()
 	if err != nil {
@@ -200,7 +200,7 @@ func MapTestkubeArtifactToCDEvent(execution *testkube.Execution, clusterID, form
 	})
 
 	ev.SetSubjectFormat(format)
-	ev.SetSubjectOutputType(outputType)
+	ev.SetSubjectOutputType(MapMimeTypeToCDEventOutputType(format))
 
 	return ev, nil
 }
@@ -349,7 +349,7 @@ func MapTestkubeRunningContextTypeToCDEventTiggerType(contextType string) string
 	return "other"
 }
 
-// MapTestkubeTestTypeToCDEventTestCaseType maps OpenAPI spec Test Type to CDEvent Test case Type
+// MapTestkubeTestTypeToCDEventTestCaseType maps OpenAPI spec Test Type to CDEvent Test Case Type
 func MapTestkubeTestTypeToCDEventTestCaseType(testType string) string {
 	var types = map[string]string{
 		"artillery/":  "performance",
@@ -369,6 +369,43 @@ func MapTestkubeTestTypeToCDEventTestCaseType(testType string) string {
 
 	for key, value := range types {
 		if strings.Contains(testType, key) {
+			return value
+		}
+	}
+
+	return "other"
+}
+
+// MapMimeTypeToCDEventOutputType maps mime type to CDEvent Output Type
+func MapMimeTypeToCDEventOutputType(mimeType string) string {
+	if strings.Contains(mimeType, "video/") || strings.Contains(mimeType, "audio/") {
+		return "video"
+	}
+
+	if strings.Contains(mimeType, "image/") {
+		return "image"
+	}
+
+	if strings.Contains(mimeType, "text/") {
+		return "report"
+	}
+
+	var types = map[string]string{
+		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":         "report",
+		"application/vnd.openxmlformats-officedocument.wordprocessingml.document":   "report",
+		"application/vnd.openxmlformats-officedocument.presentationml.presentation": "report",
+		"application/vnd.oasis.opendocument.text":                                   "report",
+		"application/vnd.oasis.opendocument.spreadsheet":                            "report",
+		"application/vnd.oasis.opendocument.presentation":                           "report",
+		"application/pdf":               "report",
+		"application/vnd.ms-excel":      "report",
+		"application/vnd.ms-powerpoint": "report",
+		"application/msword":            "report",
+		"application/json":              "log",
+	}
+
+	for key, value := range types {
+		if mimeType == key {
 			return value
 		}
 	}
