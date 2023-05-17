@@ -1,0 +1,27 @@
+api:
+  # -t the target API definition
+  target: https://www.example.com/pass/openapi.json
+  # -f the API format, openapi, soap, or graphql
+  format: openapi
+  # -O the hostname to override in the (remote) OpenAPI spec
+  hostname: https://www.example.com
+  # -S safe mode this will skip the active scan and perform a baseline scan
+  safe: true
+  # -c config file
+  config: examples/zap-api.conf
+  # -d show debug messages
+  debug: true
+  # -s short output
+  short: false
+  # -l minimum level to show: PASS, IGNORE, INFO, WARN or FAIL
+  level: INFO
+  # -c context file
+  context: examples/context.config
+  # username to use for authenticated scans
+  user: anonymous
+  # delay in seconds to wait for passive scanning
+  delay: 5
+  # max time in minutes to wait for ZAP to start and the passive scan to run
+  time: 60
+  # ZAP command line options
+  zap_options: -config aaa=bbb

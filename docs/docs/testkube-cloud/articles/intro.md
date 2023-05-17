@@ -13,5 +13,5 @@ The way Testkube Cloud works is by installing adding an agent to the Testkube in
 ## Getting started 
 
 You can start using Testkube Cloud by either: 
-- [**Migrating Testkube Open Source**](./migrating-testkube-oss.md) your existing Testkube Open Source instance to a Cloud instance
+- [**Migrating Testkube Open Source**](./transition-from-oss.md) your existing Testkube Open Source instance to a Cloud instance
 - Creating a fresh installation, using [cloud.testkube.io](https://cloud.testkube.io)

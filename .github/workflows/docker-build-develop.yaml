@@ -65,7 +65,7 @@ jobs:
   single_executor:
     strategy:
       matrix:
-        executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template ]
+        executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template, zap ]
 
     runs-on: ubuntu-latest
     steps:
