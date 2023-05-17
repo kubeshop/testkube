@@ -115,11 +115,6 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 
 	s.logger.Infow("test started", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
 
-	// notify immediately only when sync run otherwise job results handler need notify about test finish
-	if options.Sync && execution.ExecutionResult != nil && *execution.ExecutionResult.Status != testkube.RUNNING_ExecutionStatus {
-		s.events.Notify(testkube.NewEventEndTestSuccess(&execution))
-	}
-
 	return execution, nil
 }
 
