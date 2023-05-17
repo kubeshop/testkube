@@ -2,42 +2,55 @@
 
 ## Installation Steps
 
-1. To add a new agent, create a new environment in: 
+1. To add a new agent, create a new environment: 
 
-![creating-environment](https://user-images.githubusercontent.com/30776/207018935-2e1c9d27-2e84-42f2-89c7-faa81ac6eabd.jpg)
+![Create Environment](../../img/creating-environment.jpeg)
 
+<!-- ![creating-environment](https://user-images.githubusercontent.com/30776/207018935-2e1c9d27-2e84-42f2-89c7-faa81ac6eabd.jpg) -->
 
-![Pass info](https://user-images.githubusercontent.com/30776/206459262-7e8e5987-f30a-41a5-aada-02a58bfc8b31.png)
+![Pass Info](../../img/pass-info.png)
+
+<!-- ![Pass info](https://user-images.githubusercontent.com/30776/206459262-7e8e5987-f30a-41a5-aada-02a58bfc8b31.png) -->
 
 2. Fill in the environment name: 
 
-![Fill in env name](https://user-images.githubusercontent.com/30776/206459469-ceb3dd3d-0eb5-48ca-89be-6debc807b5d3.png)
+![Fill in Env Name](../../img/fill-in-env-name.png)
+
+<!-- ![Fill in env name](https://user-images.githubusercontent.com/30776/206459469-ceb3dd3d-0eb5-48ca-89be-6debc807b5d3.png) -->
 
 3. Copy the Helm install command into the terminal to install a new Testkube environment in Agent mode: 
 
-![Copy helm command](https://user-images.githubusercontent.com/30776/206459486-8c7a50a0-4c7c-43f0-ae6a-5a84941f3613.png)
+![Copy Helm Command](../../img/copy-helm-command.png)
+
+<!-- ![Copy helm command](https://user-images.githubusercontent.com/30776/206459486-8c7a50a0-4c7c-43f0-ae6a-5a84941f3613.png) -->
 
 4. Run the command in your terminal.
 
 You will need *Helm* installed and `kubectl` configured with access to your Kubernetes cluster: 
-- To install `helm` just follow [install instrcutions on Helm web site](https://helm.sh/docs/intro/install/)
-- To install `kubectl` follow [Kubernetes docs](https://kubernetes.io/docs/tasks/tools/)
+- To install `helm` just follow the [install instrcutions on the Helm web site](https://helm.sh/docs/intro/install/).
+- To install `kubectl` follow [Kubernetes docs](https://kubernetes.io/docs/tasks/tools/).
 
-![install-steps 1](https://user-images.githubusercontent.com/30776/229802501-69a76f00-8e56-41de-b3d5-8315b6902cc2.png)
+![Install Steps 1](../../img/install-steps.png)
 
-5. After some time, you should see Helm installation notice: 
+<!-- ![install-steps 1](https://user-images.githubusercontent.com/30776/229802501-69a76f00-8e56-41de-b3d5-8315b6902cc2.png) -->
 
-![Install steps 2](https://user-images.githubusercontent.com/30776/206460312-86211dd2-dc50-48be-b33b-11f07720df0a.png)
+5. After some time, you should see the Helm installation notice: 
+
+![Install Steps 2](../../img/install-steps-2.png)
+
+<!-- ![Install steps 2](https://user-images.githubusercontent.com/30776/206460312-86211dd2-dc50-48be-b33b-11f07720df0a.png) -->
 
 
 ## Validating the Installation 
 
 Testkube Cloud will notify if the installation is successful. 
 
-* A green indicator means that your cluster was able to connect to Testkube Cloud.
+* A green indicator means that your cluster was able to connect to the Testkube Cloud.
 * A red indicator indicates that the Testkube Agent can't connect to the Testkube Cloud API (Testkube needs some time to establish a connection, max time is 2-3 minutes).
 
-![Validate install](https://user-images.githubusercontent.com/30776/206461244-f885c270-fc57-4919-9330-89a1ce5ad082.png)
+![Validat Install](../../img/validate-install.png)
+
+<!-- ![Validate install](https://user-images.githubusercontent.com/30776/206461244-f885c270-fc57-4919-9330-89a1ce5ad082.png) -->
 
 In case of a RED status you can try to debug the issues with the command below:
 
