@@ -17,7 +17,7 @@ func (s TestkubeAPI) AnalyzeTestExecution() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := context.Background()
 
-		execution, err := s.ExecutionResults.Get(ctx, c.Params("executionId"))
+		execution, err := s.ExecutionResults.Get(ctx, c.Params("executionID"))
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get execution details: %w", err))
 		}
