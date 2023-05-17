@@ -20,6 +20,8 @@ type CloudContext struct {
 	ApiUri       string `json:"apiUri,omitempty"`
 	AgentKey     string `json:"agentKey,omitempty"`
 	AgentUri     string `json:"agentUri,omitempty"`
+	RootDomain   string `json:"rootDomain,omitempty"`
+	UiUri        string `json:"uiUri,omitempty"`
 }
 
 type Data struct {

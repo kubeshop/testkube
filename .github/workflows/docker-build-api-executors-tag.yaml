@@ -55,7 +55,7 @@ jobs:
   single_executor:
     strategy:
       matrix:
-        executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template ]
+        executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template, zap ]
 
     runs-on: ubuntu-latest
     steps:
@@ -397,10 +397,10 @@ jobs:
           export GH_PUSH_TOKEN
           export RELEASE_VERSION
 
-          # Check if release branch exists
+          # Check if release branch exists in helm-charts repository
           REPO_OWNER=kubeshop
           REPO_NAME=helm-charts
-          RELEASE_BRANCH_NAME=release-$RELEASE_VERSION
+          RELEASE_BRANCH_NAME=release/$SERVICE/$RELEASE_VERSION
           echo $RELEASE_VERSION
           STATUS=$(curl -s -o /dev/null -w '%{http_code}' -H "${AUTH_HEADER}" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/branches/${RELEASE_BRANCH_NAME}")
 
@@ -408,15 +408,16 @@ jobs:
             git fetch origin main
             git checkout main
             cd ./scripts
-            ./chart_releaser.sh --helm-chart-folder testkube-api --testkube-executor true
+            ./chart_releaser.sh --helm-chart-folder testkube-$SERVICE --testkube-executor true
           else
-            git fetch origin "release-$RELEASE_VERSION"
-            git checkout "release-$RELEASE_VERSION"
+            git fetch origin "release/$SERVICE/$RELEASE_VERSION"
+            git checkout "release/$SERVICE/$RELEASE_VERSION"
             echo "Switched to release branch"
             cd ./scripts
-            ./chart_releaser.sh --helm-chart-folder testkube-api --testkube-executor true --branch true
+            ./chart_releaser.sh --helm-chart-folder testkube-$SERVICE --testkube-executor true --branch true
           fi
 
         env:
+          SERVICE: api
           GH_PUSH_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           RELEASE_VERSION: ${{ steps.tag.outputs.tag }}
