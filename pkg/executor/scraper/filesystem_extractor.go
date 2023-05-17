@@ -67,15 +67,15 @@ func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths []string
 					return nil
 				}
 
+				if err := notify(ctx, path); err != nil {
+					log.DefaultLogger.Warnf("error notifying for file %s", path)
+				}
+
 				archiveFile, err := e.newArchiveFile(dir, path)
 				if err != nil {
 					return errors.Wrapf(err, "error creating archive file for path %s", path)
 				}
 				archiveFiles = append(archiveFiles, archiveFile)
-
-				if err := notify(ctx, path); err != nil {
-					log.DefaultLogger.Warnf("error notifying for file %s", path)
-				}
 
 				return nil
 			},
