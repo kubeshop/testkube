@@ -48,6 +48,7 @@ func ExitOnError(item string, errors ...error)      { ui.ExitOnError(item, error
 func PrintOnError(item string, errors ...error)     { ui.PrintOnError(item, errors...) }
 func WarnOnError(item string, errors ...error)      { ui.WarnOnError(item, errors...) }
 func Logo()                                         { ui.Logo() }
+func LogoString() string                            { return ui.LogoString() }
 func LogoNoColor()                                  { ui.LogoNoColor() }
 func NL(amount ...int)                              { ui.NL(amount...) }
 func H1(message string)                             { ui.H1(message) }

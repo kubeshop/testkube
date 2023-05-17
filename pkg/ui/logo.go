@@ -23,3 +23,7 @@ func (ui *UI) LogoNoColor() {
 	fmt.Fprint(ui.Writer, logo)
 	fmt.Fprintln(ui.Writer)
 }
+
+func (ui *UI) LogoString() string {
+	return logo
+}

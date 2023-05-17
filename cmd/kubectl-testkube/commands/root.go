@@ -51,6 +51,7 @@ func init() {
 
 	RootCmd.AddCommand(NewAgentCmd())
 	RootCmd.AddCommand(NewCloudCmd())
+	RootCmd.AddCommand(NewInteractiveCmd())
 
 	RootCmd.SetHelpCommand(NewHelpCmd())
 }

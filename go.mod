@@ -33,6 +33,7 @@ require (
 	github.com/prometheus/client_golang v1.14.0
 	github.com/pterm/pterm v0.12.59
 	github.com/rikatz/kubepug v1.4.0
+	github.com/rivo/tview v0.0.0-20221029100920-c4a7e501810d
 	github.com/segmentio/analytics-go/v3 v3.2.1
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/slack-go/slack v0.11.4
@@ -73,6 +74,8 @@ require (
 	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/fatih/color v1.14.0 // indirect
+	github.com/gdamore/encoding v1.0.0 // indirect
+	github.com/gdamore/tcell/v2 v2.5.3 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
 	github.com/go-openapi/jsonreference v0.20.1 // indirect
