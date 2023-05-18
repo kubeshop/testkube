@@ -52,6 +52,7 @@ func TestArchiveFilesystemExtractor_Extract_NoMeta_Integration(t *testing.T) {
 	}
 
 	notifyFn := func(ctx context.Context, path string) error {
+		assert.Equal(t, "artifacts.tar.gz", path)
 		return nil
 	}
 
@@ -121,6 +122,7 @@ func TestArchiveFilesystemExtractor_Extract_Meta_Integration(t *testing.T) {
 	}
 
 	notifyFn := func(ctx context.Context, path string) error {
+		assert.Equal(t, "artifacts.tar.gz", path)
 		return nil
 	}
 
@@ -179,6 +181,10 @@ func TestRecursiveFilesystemExtractor_Extract_Integration(t *testing.T) {
 	}
 
 	notifyFn := func(ctx context.Context, path string) error {
+		if path != "file1.text" && path != "file2.txt" && path != "subdir/file3.txt" {
+			t.Fatalf("unexpected file: %s", path)
+		}
+
 		return nil
 	}
 
@@ -219,6 +225,7 @@ func TestRecursiveFilesystemExtractor_Extract_RelPath_Integration(t *testing.T) 
 	}
 
 	notifyFn := func(ctx context.Context, path string) error {
+		assert.Equal(t, "subdir/file1.txt", path)
 		return nil
 	}
 
