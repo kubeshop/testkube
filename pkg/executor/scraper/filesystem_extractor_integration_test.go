@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/kubeshop/testkube/pkg/utils/test"
@@ -52,7 +53,9 @@ func TestArchiveFilesystemExtractor_Extract_NoMeta_Integration(t *testing.T) {
 	}
 
 	notifyFn := func(ctx context.Context, path string) error {
-		assert.Equal(t, "artifacts.tar.gz", path)
+		if !strings.Contains(path, "file1.txt") && !strings.Contains(path, "file2.txt") && !strings.Contains(path, "subdir/file3.txt") {
+			t.Fatalf("Unexpected path: %s", path)
+		}
 		return nil
 	}
 
@@ -122,7 +125,9 @@ func TestArchiveFilesystemExtractor_Extract_Meta_Integration(t *testing.T) {
 	}
 
 	notifyFn := func(ctx context.Context, path string) error {
-		assert.Equal(t, "artifacts.tar.gz", path)
+		if !strings.Contains(path, "file1.txt") && !strings.Contains(path, "file2.txt") && !strings.Contains(path, "subdir/file3.txt") {
+			t.Fatalf("Unexpected path: %s", path)
+		}
 		return nil
 	}
 
