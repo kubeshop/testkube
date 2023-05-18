@@ -11,8 +11,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-const executionID = "id-1"
-
 var testEventTypes = []testkube.EventType{*testkube.EventStartTest}
 
 func TestCDEventListener_Notify(t *testing.T) {
@@ -89,8 +87,8 @@ func TestCDEventListener_Notify(t *testing.T) {
 
 func exampleExecution() *testkube.Execution {
 	execution := testkube.NewQueuedExecution()
-	execution.Name = executionID
-	execution.TestName = "id"
+	execution.Name = "test-1"
+	execution.TestName = "test"
 	execution.TestNamespace = "testkube"
 	return execution
 }
