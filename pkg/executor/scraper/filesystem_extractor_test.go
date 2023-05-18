@@ -97,6 +97,7 @@ func TestArchiveFilesystemExtractor_Extract_NoMeta(t *testing.T) {
 	}
 
 	notifyFn := func(ctx context.Context, path string) error {
+		assert.Equal(t, "/my/directory/file1", path)
 		return nil
 	}
 
@@ -164,6 +165,7 @@ func TestArchiveFilesystemExtractor_Extract_Meta(t *testing.T) {
 	}
 
 	notifyFn := func(ctx context.Context, path string) error {
+		assert.Equal(t, "/my/directory/file1", path)
 		return nil
 	}
 
@@ -189,6 +191,7 @@ func TestRecursiveFilesystemExtractor_ExtractEmpty(t *testing.T) {
 	}
 
 	notifyFn := func(ctx context.Context, path string) error {
+		t.Fatalf("notifyFn should not be called when no files were scraped")
 		return nil
 	}
 
@@ -213,6 +216,7 @@ func TestArchiveFilesystemExtractor_ExtractEmpty(t *testing.T) {
 	}
 
 	notifyFn := func(ctx context.Context, path string) error {
+		t.Fatalf("notifyFn should not be called when no files were scraped")
 		return nil
 	}
 
