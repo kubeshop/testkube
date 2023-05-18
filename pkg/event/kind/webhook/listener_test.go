@@ -17,8 +17,9 @@ const executionID = "id-1"
 var testEventTypes = []testkube.EventType{testkube.EventType("")}
 
 func TestWebhookListener_Notify(t *testing.T) {
-
+	t.Parallel()
 	t.Run("send event success response", func(t *testing.T) {
+		t.Parallel()
 		// given
 		testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var event testkube.Event
@@ -44,6 +45,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 	})
 
 	t.Run("send event failed response", func(t *testing.T) {
+		t.Parallel()
 		// given
 		testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadGateway)
@@ -66,6 +68,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 	})
 
 	t.Run("send event bad uri", func(t *testing.T) {
+		t.Parallel()
 		// given
 
 		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testEventTypes, "")
@@ -81,6 +84,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 	})
 
 	t.Run("send event success response using payload field", func(t *testing.T) {
+		t.Parallel()
 		// given
 		testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			body := bytes.NewBuffer([]byte{})
