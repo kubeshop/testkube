@@ -7,8 +7,6 @@ You can look at your Kubernetes clusters from a single dashboard and easily swit
 
 ![multiple clusters](../../img/multiple-clusters.jpeg)
 
-<!-- ![multiple clusters](https://user-images.githubusercontent.com/30776/208391158-a42d1f56-950f-48c3-bcfb-2768054b4704.jpeg) -->
-
 
 ## Storing Results
 
@@ -26,8 +24,6 @@ After installation, the Testkube Agent connects to Testkube Cloud and starts lis
 Additionally the Agent is connecting to the Testkube Cloud REST API.
 
 ![network](../../img/network.jpeg)
-
-<!-- ![network](https://user-images.githubusercontent.com/30776/208391192-6f04ce7a-2c8a-4892-bc01-3a3b04cd3ddc.jpeg) -->
 
 Testkube Agent is connecting to `https://api.testkube.io` on port `8088` for HTTPS connection and on port `8089` for GRPC connection.  
 
