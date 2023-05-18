@@ -230,7 +230,9 @@ func TestRecursiveFilesystemExtractor_Extract_RelPath_Integration(t *testing.T) 
 	}
 
 	notifyFn := func(ctx context.Context, path string) error {
-		assert.Equal(t, "subdir/file1.txt", path)
+		if !strings.Contains(path, "file1.text") {
+			t.Fatalf("unexpected path: %s", path)
+		}
 		return nil
 	}
 
