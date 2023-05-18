@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -15,14 +16,19 @@ import (
 )
 
 var (
-	executionsTable    *tview.Table
-	testsTable         *tview.Table
-	executionsView     *tview.TextView
-	app                = tview.NewApplication()
-	pages              = tview.NewPages()
-	header             = newPrimitive("Testkube interactive demo")
-	currentTest        string
-	currentExecutionId string
+	executionsTable        *tview.Table
+	testsTable             *tview.Table
+	executionsView         *tview.TextView
+	app                    = tview.NewApplication()
+	pages                  = tview.NewPages()
+	fpages                 = tview.NewPages()
+	header                 = newPrimitive("Testkube interactive demo")
+	executionsFooter       = newPrimitive("Executions: [f] -> failed [a] -> all ")
+	testsFooter            = newPrimitive("Tests: [f] -> failed [a] -> all ")
+	currentTest            string
+	currentExecutionId     string
+	currentExecutionStatus string
+	currentTestStatus      string
 )
 
 func NewInteractiveCmd() *cobra.Command {
@@ -34,13 +40,7 @@ func NewInteractiveCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			client, _ := common.GetClient(cmd)
 
-			executionsView = newPrimitive(ui.LogoString(), tcell.ColorPurple)
-			executionsView.SetDoneFunc(func(key tcell.Key) {
-				if key == tcell.KeyEscape {
-					executionsView.SetText(ui.LogoString()).SetTextColor(tcell.ColorPurple)
-					app.SetFocus(executionsTable)
-				}
-			})
+			executionsView = NewExecutionsView()
 
 			testsTable = NewTestsTable(client)
 			loadDataToTestTable(testsTable, client)
@@ -51,12 +51,16 @@ func NewInteractiveCmd() *cobra.Command {
 			pages.AddPage("executions", executionsTable, true, true)
 			pages.SwitchToPage("tests")
 
+			fpages.AddPage("tests", testsFooter, true, true)
+			fpages.AddPage("executions", executionsFooter, true, true)
+			fpages.SwitchToPage("tests")
+
 			grid := tview.NewGrid().
 				SetRows(1, 0, 1).
-				SetColumns(-1, -2).
+				SetColumns(-3, -4).
 				SetBorders(true).
 				AddItem(header, 0, 0, 1, 2, 0, 0, false).
-				AddItem(newPrimitive("Copyright (c) Testkube LLC"), 2, 0, 1, 2, 0, 0, false)
+				AddItem(fpages, 2, 0, 1, 2, 0, 0, false)
 
 			// Layout for screens narrower than 100 cells (menu and side bar are hidden).
 			grid.AddItem(pages, 1, 0, 1, 1, 0, 0, true)
@@ -69,11 +73,24 @@ func NewInteractiveCmd() *cobra.Command {
 					currentExecutionId = execution.Id
 					executionsTable.Select(1, 0)
 				}
+				if k == tcell.KeyCtrlL {
+					if name, _ := pages.GetFrontPage(); name == "tests" {
+						loadDataToTestTable(testsTable, client)
+					} else {
+						loadDataToExecutionsTable(executionsTable, client, currentTest)
+					}
+
+					if currentExecutionId != "" {
+						loadExecution(client, currentExecutionId)
+					}
+
+				}
 				return event
 			})
 
+			// go watchTests(client)
 			go watchExecutions(client)
-			go watchExecutionDetails(client)
+			// go watchExecutionDetails(client)
 
 			if err := app.SetRoot(grid, true).
 				SetFocus(testsTable).
@@ -110,15 +127,21 @@ func loadDataToTestTable(table *tview.Table, client c.Client) *tview.Table {
 			SetBackgroundColor(tcell.ColorDefault).
 			SetAlign(tview.AlignLeft))
 
-	for i, e := range data {
-		table.SetCell(i+1, 0,
+	i := 1
+	for _, e := range data {
+		if currentTestStatus != "" && *e.LatestExecution.Status != testkube.ExecutionStatus(currentTestStatus) {
+			continue
+		}
+		table.SetCell(i, 0,
 			tview.NewTableCell(e.Test.Name).
 				SetTextColor(tcell.ColorGray).
 				SetBackgroundColor(tcell.ColorDefault).
 				SetAlign(tview.AlignLeft))
 
-		table.SetCell(i+1, 1,
-			tview.NewTableCell(e.Test.Type_).
+		tt := strings.Split(e.Test.Type_, "/")[0]
+
+		table.SetCell(i, 1,
+			tview.NewTableCell(tt).
 				SetTextColor(tcell.ColorGray).
 				SetBackgroundColor(tcell.ColorDefault).
 				SetAlign(tview.AlignLeft))
@@ -129,11 +152,13 @@ func loadDataToTestTable(table *tview.Table, client c.Client) *tview.Table {
 			status = string(*e.LatestExecution.Status)
 		}
 
-		table.SetCell(i+1, 2,
+		table.SetCell(i, 2,
 			tview.NewTableCell(status).
 				SetTextColor(color).
 				SetBackgroundColor(tcell.ColorDefault).
 				SetAlign(tview.AlignLeft))
+
+		i++
 
 	}
 
@@ -162,8 +187,14 @@ func loadDataToExecutionsTable(table *tview.Table, client c.Client, testName str
 			SetBackgroundColor(tcell.ColorDefault).
 			SetAlign(tview.AlignLeft))
 
-	for i, e := range data.Results {
-		table.SetCell(i+1, 0,
+	i := 1
+	for _, e := range data.Results {
+		// filter out status here as there is no option in api client
+		if currentExecutionStatus != "" && *e.Status != testkube.ExecutionStatus(currentExecutionStatus) {
+			continue
+		}
+
+		table.SetCell(i, 0,
 			tview.NewTableCell(e.Name).
 				SetTextColor(tcell.ColorGray).
 				SetBackgroundColor(tcell.ColorDefault).
@@ -177,7 +208,7 @@ func loadDataToExecutionsTable(table *tview.Table, client c.Client, testName str
 		}
 		duration = duration.Round(time.Millisecond * 100)
 
-		table.SetCell(i+1, 1,
+		table.SetCell(i, 1,
 			tview.NewTableCell(duration.String()).
 				SetTextColor(tcell.ColorGray).
 				SetBackgroundColor(tcell.ColorDefault).
@@ -195,12 +226,13 @@ func loadDataToExecutionsTable(table *tview.Table, client c.Client, testName str
 			color = tcell.ColorGray
 		}
 
-		table.SetCell(i+1, 2,
+		table.SetCell(i, 2,
 			tview.NewTableCell(string(*e.Status)).
 				SetTextColor(color).
 				SetBackgroundColor(tcell.ColorDefault).
 				SetAlign(tview.AlignLeft))
 
+		i++
 	}
 }
 
@@ -221,7 +253,12 @@ func loadExecution(client c.Client, executionId string) {
 	executionsView.Clear()
 	executionsView.SetText("loading execution...")
 	executionsView.SetTextColor(tcell.ColorWhite)
-	execution, _ := client.GetExecution(executionId)
+	execution, err := client.GetExecution(executionId)
+
+	if err != nil {
+		executionsView.SetText(fmt.Sprintf("error: [red]%s[white]", err.Error()))
+		return
+	}
 
 	if execution.ExecutionResult == nil {
 		return
@@ -230,10 +267,10 @@ func loadExecution(client c.Client, executionId string) {
 	status := string(*execution.ExecutionResult.Status)
 
 	executionsView.SetText(
-		fmt.Sprintf(`Execution: %s
-Status: %s
+		fmt.Sprintf(`[gray]Execution: [blue]%s[gray]
+Status: [yellow]%s[white]
 ----------------
-Log: 
+[gray]Log: 
 		`,
 			execution.Name,
 			status,
@@ -276,6 +313,17 @@ func getStatusColor(result *testkube.ExecutionSummary) tcell.Color {
 	return tcell.ColorGray
 }
 
+func NewExecutionsView() *tview.TextView {
+	executionsView = newPrimitive(ui.LogoString(), tcell.ColorPurple)
+	executionsView.SetDoneFunc(func(key tcell.Key) {
+		if key == tcell.KeyEscape {
+			executionsView.SetText(ui.LogoString()).SetTextColor(tcell.ColorPurple)
+			app.SetFocus(executionsTable)
+		}
+	})
+	return executionsView
+}
+
 func NewTestsTable(client c.Client) *tview.Table {
 	testsTable := tview.NewTable().
 		SetBorders(false).
@@ -286,15 +334,30 @@ func NewTestsTable(client c.Client) *tview.Table {
 			if key == tcell.KeyEscape {
 				app.Stop()
 			}
-			if key == tcell.KeyEnter {
-
-			}
 		})
+
+	testsTable.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyCtrlL {
+			loadDataToTestTable(testsTable, client)
+			// loadDataToExecutionsTable(executionsTable, client, currentTest)
+		}
+		if event.Rune() == 'f' {
+			currentTestStatus = "failed"
+			loadDataToTestTable(testsTable, client)
+		}
+		if event.Rune() == 'a' {
+			currentTestStatus = ""
+			loadDataToTestTable(testsTable, client)
+		}
+
+		return event
+	})
 
 	testsTable.SetSelectedFunc(func(row int, column int) {
 		currentTest = testsTable.GetCell(row, 0).Text
 		loadDataToExecutionsTable(executionsTable, client, currentTest)
 		pages.SwitchToPage("executions")
+		fpages.SwitchToPage("executions")
 		executionsTable.ScrollToBeginning()
 	})
 
@@ -307,17 +370,35 @@ func NewExecutionsTable(client c.Client) *tview.Table {
 		SetSelectable(true, false).
 		Select(0, 0).
 		SetDoneFunc(func(key tcell.Key) {
-			header.SetText(fmt.Sprintf("%+v", key))
 			if key == tcell.KeyEscape {
+				executionsView.SetText(ui.LogoString()).SetTextColor(tcell.ColorPurple)
 				pages.SwitchToPage("tests")
-			}
-			if key == tcell.KeyEnter {
+				fpages.SwitchToPage("tests")
+				loadDataToTestTable(testsTable, client)
 			}
 		})
 	executionsTable.SetSelectedFunc(func(row int, column int) {
 		currentExecutionId = executionsTable.GetCell(row, 0).Text
 		loadExecution(client, currentExecutionId)
 		app.SetFocus(executionsView)
+	})
+	executionsTable.SetSelectionChangedFunc(func(row int, column int) {
+	})
+	executionsTable.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyCtrlL {
+			loadDataToExecutionsTable(executionsTable, client, currentTest)
+		}
+
+		if event.Rune() == 'f' {
+			currentExecutionStatus = "failed"
+			loadDataToExecutionsTable(executionsTable, client, currentTest)
+		}
+		if event.Rune() == 'a' {
+			currentExecutionStatus = ""
+			loadDataToExecutionsTable(executionsTable, client, currentTest)
+		}
+
+		return event
 	})
 
 	return executionsTable
@@ -328,14 +409,23 @@ func watchExecutions(client c.Client) {
 		if currentTest != "" {
 			header.SetText(fmt.Sprintf("Testkube interactive demo - %s", currentTest))
 			loadDataToExecutionsTable(executionsTable, client, currentTest)
-			app.ForceDraw()
 		}
 		time.Sleep(time.Second)
 	}
 }
 
+func watchTests(client c.Client) {
+	for {
+		loadDataToTestTable(testsTable, client)
+		time.Sleep(time.Second)
+	}
+}
+
 func watchExecutionDetails(client c.Client) {
-	if currentExecutionId != "" {
-		loadExecution(client, currentExecutionId)
+	for {
+		if currentExecutionId != "" {
+			loadExecution(client, currentExecutionId)
+		}
+		time.Sleep(time.Second)
 	}
 }
