@@ -77,6 +77,10 @@ var RunnerEnvVars = []corev1.EnvVar{
 		Value: "/data",
 	},
 	{
+		Name:  "RUNNER_CDEVENTS_TARGET",
+		Value: os.Getenv("CDEVENTS_TARGET"),
+	},
+	{
 		Name:  "RUNNER_CLOUD_MODE",
 		Value: getRunnerCloudMode(),
 	},

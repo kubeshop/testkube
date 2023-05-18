@@ -58,6 +58,7 @@ type Config struct {
 	GraphqlPort                       string        `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
 	TestkubeRegistry                  string        `envconfig:"TESTKUBE_REGISTRY" default:""`
 	TestkubePodStartTimeout           time.Duration `envconfig:"TESTKUBE_POD_START_TIMEOUT" default:"30m"`
+	CDEventsTarget                    string        `envconfig:"CDEVENTS_TARGET" default:""`
 }
 
 func Get() (*Config, error) {

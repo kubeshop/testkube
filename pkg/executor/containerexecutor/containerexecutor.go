@@ -60,6 +60,7 @@ func NewContainerExecutor(
 	testsClient testsv3.Interface,
 	registry string,
 	podStartTimeout time.Duration,
+	clusterID string,
 ) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -81,6 +82,7 @@ func NewContainerExecutor(
 		executorsClient:    executorsClient,
 		registry:           registry,
 		podStartTimeout:    podStartTimeout,
+		clusterID:          clusterID,
 	}, nil
 }
 
@@ -104,6 +106,7 @@ type ContainerExecutor struct {
 	executorsClient    executorsclientv1.Interface
 	registry           string
 	podStartTimeout    time.Duration
+	clusterID          string
 }
 
 type JobOptions struct {
@@ -140,6 +143,7 @@ type JobOptions struct {
 	EnvSecrets                []testkube.EnvReference
 	Labels                    map[string]string
 	Registry                  string
+	ClusterID                 string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -275,7 +279,7 @@ func (c *ContainerExecutor) ExecuteSync(ctx context.Context, execution *testkube
 func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
 	jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
 
-	jobOptions, err := NewJobOptions(c.images, c.templates, c.serviceAccountName, c.registry, execution, options)
+	jobOptions, err := NewJobOptions(c.images, c.templates, c.serviceAccountName, c.registry, c.clusterID, execution, options)
 	if err != nil {
 		return nil, err
 	}

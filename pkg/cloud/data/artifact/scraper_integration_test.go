@@ -10,6 +10,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
@@ -82,7 +83,20 @@ func TestCloudScraper_ArchiveFilesystemExtractor_Integration(t *testing.T) {
 		Execute(gomock.Any(), cloudscraper.CmdScraperPutObjectSignedURL, gomock.Eq(req2)).
 		Return([]byte(`{"URL":"`+testServer.URL+`/dummy"}`), nil)
 
-	s := scraper.NewExtractLoadScraper(extractor, cloudLoader)
+	// given
+	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := cloudevents.NewEventFromHTTPRequest(r)
+		// then
+		assert.NoError(t, err)
+	})
+
+	svr := httptest.NewServer(testHandler)
+	defer svr.Close()
+
+	client, err := cloudevents.NewClientHTTP(cloudevents.WithTarget(svr.URL))
+	assert.NoError(t, err)
+
+	s := scraper.NewExtractLoadScraper(extractor, cloudLoader, client, "")
 	execution := testkube.Execution{
 		Id:            "my-execution-id",
 		TestName:      "my-test",
@@ -168,7 +182,20 @@ func TestCloudScraper_RecursiveFilesystemExtractor_Integration(t *testing.T) {
 		Execute(gomock.Any(), cloudscraper.CmdScraperPutObjectSignedURL, gomock.Eq(req3)).
 		Return([]byte(`{"URL":"`+testServer.URL+`/dummy"}`), nil)
 
-	s := scraper.NewExtractLoadScraper(extractor, cloudLoader)
+	// given
+	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := cloudevents.NewEventFromHTTPRequest(r)
+		// then
+		assert.NoError(t, err)
+	})
+
+	svr := httptest.NewServer(testHandler)
+	defer svr.Close()
+
+	client, err := cloudevents.NewClientHTTP(cloudevents.WithTarget(svr.URL))
+	assert.NoError(t, err)
+
+	s := scraper.NewExtractLoadScraper(extractor, cloudLoader, client, "")
 	execution := testkube.Execution{
 		Id:            "my-execution-id",
 		TestName:      "my-test",
