@@ -186,7 +186,7 @@ func TestRecursiveFilesystemExtractor_Extract_Integration(t *testing.T) {
 	}
 
 	notifyFn := func(ctx context.Context, path string) error {
-		if path != "file1.text" && path != "file2.txt" && path != "subdir/file3.txt" {
+		if !strings.Contains(path, "file1.text") && !strings.Contains(path, "file2.txt") && !strings.Contains(path, "subdir/file3.txt") {
 			t.Fatalf("unexpected file: %s", path)
 		}
 
