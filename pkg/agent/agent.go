@@ -26,6 +26,7 @@ import (
 
 const (
 	apiKeyMeta         = "api-key"
+	clusterIDMeta      = "cluster-id"
 	healthcheckCommand = "healthcheck"
 )
 
@@ -62,6 +63,8 @@ type Agent struct {
 	sendTimeout         time.Duration
 	receiveTimeout      time.Duration
 	healthcheckInterval time.Duration
+
+	clusterID string
 }
 
 func NewAgent(logger *zap.SugaredLogger,
@@ -71,6 +74,7 @@ func NewAgent(logger *zap.SugaredLogger,
 	workerCount int,
 	logStreamWorkerCount int,
 	logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error),
+	clusterID string,
 ) (*Agent, error) {
 	return &Agent{
 		handler:                 handler,
@@ -88,6 +92,7 @@ func NewAgent(logger *zap.SugaredLogger,
 		logStreamRequestBuffer:  make(chan *cloud.LogsStreamRequest, bufferSizePerWorker*logStreamWorkerCount),
 		logStreamResponseBuffer: make(chan *cloud.LogsStreamResponse, bufferSizePerWorker*logStreamWorkerCount),
 		logStreamFunc:           logStreamFunc,
+		clusterID:               clusterID,
 	}, nil
 }
 
@@ -193,6 +198,8 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 
 func (ag *Agent) runCommandLoop(ctx context.Context) error {
 	ctx = AddAPIKeyMeta(ctx, ag.apiKey)
+
+	ctx = metadata.AppendToOutgoingContext(ctx, clusterIDMeta, ag.clusterID)
 
 	ag.logger.Infow("initiating streaming connection with Cloud API")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
