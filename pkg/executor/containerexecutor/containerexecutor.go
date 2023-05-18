@@ -25,6 +25,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/executor/knexecutor"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -199,6 +200,10 @@ func (c *ContainerExecutor) Logs(ctx context.Context, id string) (out chan outpu
 // Execute starts new external test execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
 func (c *ContainerExecutor) Execute(ctx context.Context, execution *testkube.Execution, options client.ExecuteOptions) (*testkube.ExecutionResult, error) {
+	if execution.TestType == "knative" {
+		return knexecutor.Execute(execution)
+	}
+
 	executionResult := testkube.NewRunningExecutionResult()
 	execution.ExecutionResult = executionResult
 
@@ -239,6 +244,10 @@ func (c *ContainerExecutor) Execute(ctx context.Context, execution *testkube.Exe
 // ExecuteSync starts new external test execution, reads data and returns ID
 // Execution is started synchronously client will be blocked
 func (c *ContainerExecutor) ExecuteSync(ctx context.Context, execution *testkube.Execution, options client.ExecuteOptions) (*testkube.ExecutionResult, error) {
+	if execution.TestType == "knative" {
+		return knexecutor.Execute(execution)
+	}
+
 	executionResult := testkube.NewRunningExecutionResult()
 	execution.ExecutionResult = executionResult
 
