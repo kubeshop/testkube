@@ -78,8 +78,9 @@ build-testkube-bin-intel:
 docker-build-api:
 	goreleaser release -f goreleaser_files/.goreleaser-docker-build-api.yml --rm-dist --snapshot
 
-dev-docker-build-executors:
-	docker build -t testkube-zap-executor:dev -f contrib/executor/zap/build/agent/Dockerfile.dev .
+#make docker-build-executor EXECUTOR=zap GITHUB_TOKEN=*** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-zap-executor:latest
+docker-build-executor:
+	goreleaser release -f goreleaser_files/.goreleaser-docker-build-executor.yml --rm-dist --snapshot
 
 dev-install-local-executors:
 	kubectl apply --namespace testkube -f https://raw.githubusercontent.com/kubeshop/testkube-operator/main/config/samples/executor_v1_executor.yaml
