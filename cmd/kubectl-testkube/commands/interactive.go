@@ -223,6 +223,12 @@ func loadExecution(client c.Client, executionId string) {
 	executionsView.SetTextColor(tcell.ColorWhite)
 	execution, _ := client.GetExecution(executionId)
 
+	if execution.ExecutionResult == nil {
+		return
+	}
+
+	status := string(*execution.ExecutionResult.Status)
+
 	executionsView.SetText(
 		fmt.Sprintf(`Execution: %s
 Status: %s
@@ -230,21 +236,27 @@ Status: %s
 Log: 
 		`,
 			execution.Name,
-			*execution.ExecutionResult.Status,
+			status,
 		))
+
 	executionsView.SetTextAlign(tview.AlignLeft)
 
-	if *execution.ExecutionResult.Status == testkube.RUNNING_ExecutionStatus {
-		logs, _ := client.Logs(currentExecutionId)
-		for l := range logs {
-			executionsView.SetText(executionsView.GetText(false) + l.Content)
-			executionsView.ScrollToEnd()
-		}
-		return
-	} else {
-		executionsView.SetText(executionsView.GetText(false) + execution.ExecutionResult.Output)
-		executionsView.ScrollToBeginning()
+	// TODO: some issues with getting logs
+	// if status == string(testkube.RUNNING_ExecutionStatus) {
+	// 	logs, _ := client.Logs(currentExecutionId)
+	// 	for l := range logs {
+	// 		executionsView.SetText(executionsView.GetText(false) + l.Content)
+	// 		executionsView.ScrollToEnd()
+	// 	}
+	// 	return
+	// } else {
+	logs := "getting logs ..."
+	if execution.ExecutionResult.Output != "" {
+		logs = execution.ExecutionResult.Output
 	}
+	executionsView.SetText(executionsView.GetText(false) + logs)
+	executionsView.ScrollToBeginning()
+	// }
 
 }
 
