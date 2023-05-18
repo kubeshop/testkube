@@ -267,10 +267,10 @@ func loadExecution(client c.Client, executionId string) {
 	status := string(*execution.ExecutionResult.Status)
 
 	executionsView.SetText(
-		fmt.Sprintf(`[gray]Execution: [blue]%s[gray]
-Status: [yellow]%s[white]
+		fmt.Sprintf(`execution: %s
+status: %s
 ----------------
-[gray]Log: 
+log: 
 		`,
 			execution.Name,
 			status,
@@ -291,6 +291,8 @@ Status: [yellow]%s[white]
 	if execution.ExecutionResult.Output != "" {
 		logs = execution.ExecutionResult.Output
 	}
+
+	logs = strings.Replace(logs, "\n\n\n\n", "", -1)
 	executionsView.SetText(executionsView.GetText(false) + logs)
 	executionsView.ScrollToBeginning()
 	// }
