@@ -65,13 +65,12 @@ func (s TestkubeAPI) AnalyzeTestExecutionSSE() fiber.Handler {
 			l.Errorf("execution status is not failed, I can analyze only failed executions")
 			return err
 		}
+		stream, err := ai.AnalyzeTestExecutionStream(ctx, execution)
+		if err != nil {
+			l.Errorf("can't get analysis stream: %v", err)
+		}
 
 		c.Context().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
-			stream, err := ai.AnalyzeTestExecutionStream(ctx, execution)
-			if err != nil {
-				l.Errorf("can't get analysis stream: %v", err)
-			}
-
 			for line := range stream {
 				l.Debugw("sending log line to websocket", "line", line)
 				fmt.Fprintf(w, "data: %s\n\n", line)

@@ -1,0 +1,48 @@
+{
+	"info": {
+		"_postman_id": "13703019-19f6-48db-a17a-0d97b27295e6",
+		"name": "Random-Fail",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "3706349"
+	},
+	"item": [
+		{
+			"name": "Website",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// random failure",
+							"pm.expect(Math.random(), \"Can't find information about recent Testkube work on your page, is page updated?\").to.be.lte(0.5);",
+							""
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://wysocki.consulting",
+					"protocol": "https",
+					"host": [
+						"wysocki",
+						"consulting"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
