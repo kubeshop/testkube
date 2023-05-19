@@ -70,7 +70,8 @@ func Failf(err string, params ...interface{})     { ui.Failf(err, params...) }
 func CommandOutput(output []byte, command string, params ...string) {
 	ui.CommandOutput(output, command, params...)
 }
-func Print(message string, subMessages ...string)           { ui.Print(message, subMessages...) }
+func Print(message string)                                  { ui.Print(message) }
+func Println(message string, subMessages ...string)         { ui.Println(message, subMessages...) }
 func Printf(format string, data ...any)                     { ui.Printf(format, data...) }
 func PrintDot()                                             { ui.PrintDot() }
 func PrintEnabled(message string, subMessages ...string)    { ui.PrintEnabled(message, subMessages...) }

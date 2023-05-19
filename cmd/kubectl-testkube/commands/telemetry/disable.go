@@ -15,7 +15,7 @@ func NewDisableTelemetryCmd() *cobra.Command {
 		Short: "disable collecting of anonymous telemetry data",
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.NL()
-			ui.Print(ui.IconRocket + "  Disabling telemetry on the testkube CLI")
+			ui.Println(ui.IconRocket + "  Disabling telemetry on the testkube CLI")
 
 			cfg, err := config.Load()
 			if err == nil {

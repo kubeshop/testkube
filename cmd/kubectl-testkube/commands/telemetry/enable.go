@@ -15,7 +15,7 @@ func NewEnableTelemetryCmd() *cobra.Command {
 		Short: "Enable collecting of anonymous telemetry data",
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.NL()
-			ui.Print(ui.IconRocket + "  Enabling telemetry on the testkube CLI")
+			ui.Println(ui.IconRocket + "  Enabling telemetry on the testkube CLI")
 
 			cfg, err := config.Load()
 			if err == nil {

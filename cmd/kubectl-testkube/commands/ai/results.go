@@ -45,17 +45,16 @@ func NewResultsAnalysisCmd() *cobra.Command {
 				{"Test status", ui.Red(*execution.ExecutionResult.Status)},
 			})
 
-			s := ui.NewSpinner("Analyzing test execution with AI")
-			resp, err := ai.NewOpenAI(os.Getenv("OPENAI_KEY")).AnalyzeTestExecution(ctx, execution)
-			if err != nil {
-				s.Fail(err.Error())
-			} else {
-				s.Success()
+			ui.H2("AI Analysis:")
+			stream, err := ai.NewOpenAI(os.Getenv("OPENAI_KEY")).AnalyzeTestExecutionStream(ctx, execution)
+			ui.ExitOnError("analyzing test execution", err)
+
+			for resp := range stream {
+				ui.Print(resp)
 			}
 
-			ui.H2("AI Analysis completed")
-			ui.Paragraph(resp)
-
+			ui.NL(2)
+			ui.Success("Done")
 		},
 	}
 

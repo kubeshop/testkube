@@ -26,17 +26,17 @@ func NewHelpCmd() *cobra.Command {
 		Short: "Help about any command",
 		Long:  "Display the available commands and flags",
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Print(RootCmd.Short)
+			ui.Println(RootCmd.Short)
 			ui.NL()
-			ui.Print(ui.LightGray("Usage"))
+			ui.Println(ui.LightGray("Usage"))
 			ui.Printf(fmt.Sprintf("%s %s", ui.White(RootCmd.Use), ui.LightGray("[flags]")))
 			ui.Printf("%s %s", ui.White(RootCmd.Use), ui.LightGray("[command]"))
 			ui.NL()
 			usage := helpMessageByGroups(RootCmd)
-			ui.Print(usage)
-			ui.Print(ui.LightGray("Flags"))
+			ui.Println(usage)
+			ui.Println(ui.LightGray("Flags"))
 			ui.Printf(RootCmd.Flags().FlagUsages())
-			ui.Print(ui.LightGray("Use \"kubectl testkube [command] --help\" for more information about a command."))
+			ui.Println(ui.LightGray("Use \"kubectl testkube [command] --help\" for more information about a command."))
 			ui.NL()
 			ui.Printf("%s   %s", ui.LightGray("Docs & Support:"), ui.White("https://docs.testkube.io"))
 			ui.NL()

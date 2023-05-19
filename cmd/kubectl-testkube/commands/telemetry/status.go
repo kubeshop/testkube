@@ -14,7 +14,7 @@ func NewStatusTelemetryCmd() *cobra.Command {
 		Short: "Get telemetry status",
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.NL()
-			ui.Print(ui.IconRocket + "  Getting telemetry status on the testkube CLI and API")
+			ui.Println(ui.IconRocket + "  Getting telemetry status on the testkube CLI and API")
 
 			cfg, err := config.Load()
 			ui.ExitOnError("   Loading config file failed", err)

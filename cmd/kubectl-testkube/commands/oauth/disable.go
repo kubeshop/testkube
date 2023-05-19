@@ -14,7 +14,7 @@ func NewDisableOAuthCmd() *cobra.Command {
 		Short: "disable oauth authentication for direct api",
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.NL()
-			ui.Print(ui.IconRocket + "  Disabling OAuth authentication for direct api")
+			ui.Println(ui.IconRocket + "  Disabling OAuth authentication for direct api")
 			cfg, err := config.Load()
 
 			if err == nil {

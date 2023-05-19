@@ -17,7 +17,7 @@ func NewStatusCmd() *cobra.Command {
 		Annotations: map[string]string{cmdGroupAnnotation: cmdGroupCommands},
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.NL()
-			ui.Print(ui.IconRocket + "  Getting status on the testkube CLI")
+			ui.Println(ui.IconRocket + "  Getting status on the testkube CLI")
 
 			cfg, err := config.Load()
 			ui.ExitOnError("   Loading config file failed", err)

@@ -14,7 +14,7 @@ func NewStatusOAuthCmd() *cobra.Command {
 		Short: "Get oauth status",
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.NL()
-			ui.Print(ui.IconRocket + "  Getting OAuth status")
+			ui.Println(ui.IconRocket + "  Getting OAuth status")
 
 			cfg, err := config.Load()
 			ui.ExitOnError("   Loading config file failed", err)

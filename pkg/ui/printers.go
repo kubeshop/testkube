@@ -85,7 +85,11 @@ func (ui *UI) Debug(message string, subMessages ...string) {
 	fmt.Fprintln(ui.Writer)
 }
 
-func (ui *UI) Print(message string, subMessages ...string) {
+func (ui *UI) Print(message string) {
+	fmt.Fprintf(ui.Writer, "%s", White(message))
+}
+
+func (ui *UI) Println(message string, subMessages ...string) {
 	fmt.Fprintf(ui.Writer, "%s", White(message))
 	for _, sub := range subMessages {
 		fmt.Fprintf(ui.Writer, " %s", White(sub))
