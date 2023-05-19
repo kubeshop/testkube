@@ -49,6 +49,7 @@ const sidebars = {
             "articles/running-tests",
             "articles/getting-tests-results",
             "articles/adding-tests-variables",
+            "articles/adding-timeout"
           ],
         },
         {
