@@ -183,7 +183,7 @@ const redirects = [
     to: "/articles/scheduling-tests",
   },
   {
-    from: ["/concepts/artifacts-storage", "using-testkube/artifacts-storage"],
+    from: ["/concepts/artifacts-storage", "/using-testkube/artifacts-storage"],
     to: "/articles/artifacts-storage",
   },
   {
