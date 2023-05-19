@@ -15,16 +15,15 @@ Testkube executor provides an abstraction over cURL that allow you to create JSO
 
 Below is an example of how to format the test:
 
-```js
+```json
 {
   "command": [
     "curl",
-    "https://reqbin.com/echo/get/json",
+    "https://jsonplaceholder.typicode.com/todos/1",
     "-H",
     "'Accept: application/json'"
   ],
-  "expected_status": "200",
-  "expected_body": "{\"success\":\"true\"}"
+  "expected_status": "200"
 }
 ```
 
@@ -33,11 +32,11 @@ You can also find this test in the Testkube repository: https://github.com/kubes
 ## Example Test
 In this example we will use the following cURL test: https://github.com/kubeshop/testkube/blob/main/test/curl/executor-tests/curl-smoke-test.json.
 
-```js
+```json
 {
 	"command": [
 	  "curl",
-	  "https://testkube.io/"
+	  "https://jsonplaceholder.typicode.com/todos/1"
 	],
 	"expected_status": "200"
 }
@@ -214,8 +213,7 @@ The third option to create the Test is to use a Test CRD. If you already have th
 You can also get a definition while using the `testkube create test` command by adding `--crd-only`.
 In that case, the test won't be created but the definition will be displayed.
 
-Output:
-```sh
+```sh title="Expected output:"
 testkube create test --name curl-test --type curl/test --test-content-type git-file --git-uri https://github.com/kubeshop/testkube.git --git-branch main --git-path test/curl/executor-tests/curl-smoke-test.json --crd-only
 ```
 
