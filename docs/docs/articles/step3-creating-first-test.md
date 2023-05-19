@@ -91,7 +91,7 @@ First, let's create a `postman-collection.json` file containing a Postman test (
 And create the test by running the command:
 
 ```sh
-testkube create test --file postman_collection.json --type postman/collection --name my-first-test
+testkube create test --file postman-collection.json --type postman/collection --name my-first-test
 ```
 
 :::note
