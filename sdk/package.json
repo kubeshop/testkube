@@ -1,15 +1,24 @@
 {
-  "name": "oazapfts",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "@testkube/sdk",
+  "version": "0.1.3",
+  "description": "Typescript SDK for running Testkube tests and creating pipelines.",
+  "main": "dist/testkube.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
+  "author": "Abdallah Abedraba",
   "license": "ISC",
   "dependencies": {
     "oazapfts": "^4.7.1"
-  }
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kubeshop/testkube.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kubeshop/testkube/issues"
+  },
+  "homepage": "https://github.com/kubeshop/testkube#readme"
 }
