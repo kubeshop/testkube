@@ -1342,6 +1342,43 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+
+  /executions/{executionId}/ai/stream:
+    get:
+      tags:
+        - api
+      summary: "Get test execution analysis"
+      description: "AI powered analysis of test execution"
+      operationId: aiAnalyzeTestExecution
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiAnalysisResponse"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with request, probably not failed execution was passed, or other Kubernetes / API / Storage issues"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+
+
   /executions/{id}/logs:
     get:
       parameters:

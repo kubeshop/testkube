@@ -7,12 +7,13 @@ import (
 	"os"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/websocket/v2"
 
 	"github.com/kubeshop/testkube/pkg/ai"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func (s TestkubeAPI) AnalyzeTestExecution() fiber.Handler {
+func (s TestkubeAPI) AnalyzeTestExecutionSync() fiber.Handler {
 	ai := ai.NewOpenAI(os.Getenv("OPENAI_KEY"))
 	return func(c *fiber.Ctx) error {
 		ctx := context.Background()
@@ -36,4 +37,44 @@ func (s TestkubeAPI) AnalyzeTestExecution() fiber.Handler {
 			Message: resp,
 		})
 	}
+}
+
+func (s TestkubeAPI) AnalyzeTestExecution() fiber.Handler {
+	ai := ai.NewOpenAI(os.Getenv("OPENAI_KEY"))
+
+	return websocket.New(func(c *websocket.Conn) {
+		defer c.Conn.Close()
+
+		ctx := context.Background()
+		executionId := c.Params("executionID")
+		l := s.Log.With("executionID", executionId)
+
+		l.Debugw("starting AI result analysis", "executionID", executionId)
+
+		execution, err := s.ExecutionResults.Get(ctx, executionId)
+		if err != nil {
+			return
+		}
+
+		if *execution.ExecutionResult.Status != *testkube.ExecutionStatusFailed {
+			l.Errorf("execution status is not failed, I can analyze only failed executions")
+		}
+
+		stream, err := ai.AnalyzeTestExecutionStream(ctx, execution)
+		if err != nil {
+			l.Errorf("can't get analysis stream: %v", err)
+		}
+
+		for line := range stream {
+			l.Debugw("sending log line to websocket", "line", line)
+			_ = c.WriteJSON(AIResponseChunk{Message: line})
+		}
+
+		_ = c.WriteJSON(AIResponseChunk{Message: "\n\n"})
+		_ = c.WriteJSON(AIResponseChunk{Message: "DONE"})
+	})
+}
+
+type AIResponseChunk struct {
+	Message string `json:"message"`
 }

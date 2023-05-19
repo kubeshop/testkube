@@ -239,6 +239,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	executions.Post("/", s.ExecuteTestsHandler())
 	executions.Get("/:executionID", s.GetExecutionHandler())
 	executions.Get("/:executionID/ai", s.AnalyzeTestExecution())
+	executions.Get("/:executionID/ai/sync", s.AnalyzeTestExecutionSync())
 
 	executions.Get("/:executionID/artifacts", s.ListArtifactsHandler())
 	executions.Get("/:executionID/logs", s.ExecutionLogsHandler())
