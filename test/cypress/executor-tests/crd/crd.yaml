@@ -1,6 +1,94 @@
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
+  name: cypress-12-executor-smoke-electron
+  namespace: testkube
+  labels:
+    core-tests: executors
+spec:
+  type: cypress:v12/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: test/cypress/executor-tests/cypress-12
+  executionRequest:
+    variables:
+      CYPRESS_CUSTOM_ENV:
+        name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+        type: basic
+    args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - video=false
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-12-executor-smoke-chrome
+  namespace: testkube
+  labels:
+    core-tests: executors
+spec:
+  type: cypress:v12/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: test/cypress/executor-tests/cypress-12
+  executionRequest:
+    variables:
+      CYPRESS_CUSTOM_ENV:
+        name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+        type: basic
+    args:
+      - --browser
+      - chrome
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - video=false
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-12-executor-smoke-firefox
+  namespace: testkube
+  labels:
+    core-tests: executors
+spec:
+  type: cypress:v12/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: test/cypress/executor-tests/cypress-12
+  executionRequest:
+    variables:
+      CYPRESS_CUSTOM_ENV:
+        name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+        type: basic
+    args:
+      - --browser
+      - chrome
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - video=false
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
   name: cypress-11-executor-smoke-electron
   namespace: testkube
   labels:
@@ -189,7 +277,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube
       branch: main
-      path: test/cypress/executor-tests/cypress-11
+      path: test/cypress/executor-tests/cypress-12
   executionRequest:
     variables:
       CYPRESS_CUSTOM_ENV:
@@ -214,7 +302,7 @@ spec:
     type: git
     uri: https://github.com/kubeshop/testkube.git
     branch: main
-    path: test/cypress/executor-tests/cypress-11
+    path: test/cypress/executor-tests/cypress-12
 ---
 # cypress-default-executor-smoke-electron-testsource - Test
 apiVersion: tests.testkube.io/v3
@@ -226,7 +314,7 @@ spec:
   type: cypress/project
   content:
     repository:
-      path: test/cypress/executor-tests/cypress-11
+      path: test/cypress/executor-tests/cypress-12
   source: testsource-cypress-default-executor-smoke-electron-testsource
   executionRequest:
     variables:
