@@ -15,3 +15,9 @@ spec:
       branch: main
       path: test/playwright/executor-tests/playwright-project
       workingDir: test/playwright/executor-tests/playwright-project
+  executionRequest:
+    artifactRequest:
+      storageClassName: standard
+      volumeMountPath: /data/artifacts
+      dirs:
+        - ./

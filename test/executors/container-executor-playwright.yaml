@@ -7,10 +7,12 @@ spec:
   image: mcr.microsoft.com/playwright:v1.32.3-focal
   command: ["/bin/sh", "-c"]
   args:
-  - "npm install && CI=1 npx playwright test"
+  - "npm ci && CI=1 npx playwright test --output /data/artifacts"
   executor_type: container
   types:
   - container-executor-playwright-v1.32.3/test
+  features:
+  - artifacts
 ---
 apiVersion: executor.testkube.io/v1
 kind: Executor
@@ -21,7 +23,9 @@ spec:
   image: mcr.microsoft.com/playwright:v1.31.1-focal
   command: ["/bin/sh", "-c"]
   args:
-  - "npm install; npx playwright test"
+  - "npm ci; npx playwright test --output /data/artifacts"
   executor_type: container
   types:
   - container-executor-playwright-v1.31.1/test
+  features:
+  - artifacts
