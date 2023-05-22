@@ -11,7 +11,7 @@ import (
 
 var _ common.ListenerLoader = (*CDEventLoader)(nil)
 
-func NewCDEventLoader(target, clusterID, defaultNamespace string, events []testkube.EventType) (*CDEventLoader, error) {
+func NewCDEventLoader(target, clusterID, defaultNamespace, dashboardURI string, events []testkube.EventType) (*CDEventLoader, error) {
 	c, err := cloudevents.NewClientHTTP(cloudevents.WithTarget(target))
 	if err != nil {
 		return nil, err
@@ -23,6 +23,7 @@ func NewCDEventLoader(target, clusterID, defaultNamespace string, events []testk
 		client:           c,
 		clusterID:        clusterID,
 		defaultNamespace: defaultNamespace,
+		dashboardURI:     dashboardURI,
 	}, nil
 }
 
@@ -33,6 +34,7 @@ type CDEventLoader struct {
 	client           cloudevents.Client
 	clusterID        string
 	defaultNamespace string
+	dashboardURI     string
 }
 
 func (r *CDEventLoader) Kind() string {
@@ -41,5 +43,5 @@ func (r *CDEventLoader) Kind() string {
 
 // Load returns single listener for cd eventt
 func (r *CDEventLoader) Load() (listeners common.Listeners, err error) {
-	return common.Listeners{NewCDEventListener("cdevent", "", r.clusterID, r.defaultNamespace, r.events, r.client)}, nil
+	return common.Listeners{NewCDEventListener("cdevent", "", r.clusterID, r.defaultNamespace, r.dashboardURI, r.events, r.client)}, nil
 }

@@ -11,10 +11,10 @@ package testkube
 
 // artifact request update body
 type ArtifactUpdateRequest struct {
-	// artifact storage class name
-	StorageClassName *string `json:"storageClassName"`
-	// artifact volume mount path
-	VolumeMountPath *string `json:"volumeMountPath"`
-	// artifact directories
+	// artifact storage class name for container executor
+	StorageClassName *string `json:"storageClassName,omitempty"`
+	// artifact volume mount path for container executor
+	VolumeMountPath *string `json:"volumeMountPath,omitempty"`
+	// artifact directories for scraping
 	Dirs *[]string `json:"dirs,omitempty"`
 }

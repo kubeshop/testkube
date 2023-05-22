@@ -17,7 +17,7 @@ import (
 
 var _ common.Listener = (*CDEventListener)(nil)
 
-func NewCDEventListener(name, selector, clusterID, defaultNamespace string, events []testkube.EventType, client cloudevents.Client) *CDEventListener {
+func NewCDEventListener(name, selector, clusterID, defaultNamespace, dashboardURI string, events []testkube.EventType, client cloudevents.Client) *CDEventListener {
 	return &CDEventListener{
 		name:             name,
 		Log:              log.DefaultLogger,
@@ -26,6 +26,7 @@ func NewCDEventListener(name, selector, clusterID, defaultNamespace string, even
 		client:           client,
 		clusterID:        clusterID,
 		defaultNamespace: defaultNamespace,
+		dashboardURI:     dashboardURI,
 	}
 }
 
@@ -37,6 +38,7 @@ type CDEventListener struct {
 	client           cloudevents.Client
 	clusterID        string
 	defaultNamespace string
+	dashboardURI     string
 }
 
 func (l *CDEventListener) Name() string {
@@ -60,7 +62,7 @@ func (l *CDEventListener) Metadata() map[string]string {
 
 func (l *CDEventListener) Notify(event testkube.Event) (result testkube.EventResult) {
 	// Create the base event
-	ev, err := cde.MapTestkubeEventToCDEvent(event, l.clusterID, l.defaultNamespace)
+	ev, err := cde.MapTestkubeEventToCDEvent(event, l.clusterID, l.defaultNamespace, l.dashboardURI)
 	if err != nil {
 		return testkube.NewFailedEventResult(event.Id, err)
 	}

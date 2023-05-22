@@ -392,6 +392,7 @@ func main() {
 		cfg.GraphqlPort,
 		artifactStorage,
 		cfg.CDEventsTarget,
+		cfg.TestkubeDashboardURI,
 	)
 
 	if mode == common.ModeAgent {
