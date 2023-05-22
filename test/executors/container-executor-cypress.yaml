@@ -8,3 +8,5 @@ spec:
   executor_type: container
   types:
   - container-executor-cypress-v12.7.0/test
+  features:
+  - artifacts
