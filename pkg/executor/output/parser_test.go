@@ -147,7 +147,7 @@ RUNNER_GITUSERNAME=""
 RUNNER_GITTOKEN=""
 RUNNER_DATADIR="/data"
 RUNNER_CDEVENTS_TARGET=""
-RUNNER_DASHBOARD_URI = ""
+RUNNER_DASHBOARD_URI=""
 RUNNER_CLUSTERID=""
 ❌ can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.com/kubeshop/testkube.git Branch: Commit: Path:test/cypress/executor-smoke/cypress-11 Username: Token: UsernameSecret:<nil> TokenSecret:<nil> WorkingDir:}
 can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.com/kubeshop/testkube.git Branch: Commit: Path:test/cypress/executor-smoke/cypress-11 Username: Token: UsernameSecret:<nil> TokenSecret:<nil> WorkingDir:}
