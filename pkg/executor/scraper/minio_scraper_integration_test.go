@@ -71,7 +71,7 @@ func TestMinIOScraper_Archive_Integration(t *testing.T) {
 	client, err := cloudevents.NewClientHTTP(cloudevents.WithTarget(svr.URL))
 	assert.NoError(t, err)
 
-	s := scraper.NewExtractLoadScraper(extractor, loader, client, "")
+	s := scraper.NewExtractLoadScraper(extractor, loader, client, "", "")
 	err = s.Scrape(context.Background(), []string{tempDir}, execution)
 	if err != nil {
 		t.Fatalf("error scraping: %v", err)
@@ -139,7 +139,7 @@ func TestMinIOScraper_Recursive_Integration(t *testing.T) {
 	client, err := cloudevents.NewClientHTTP(cloudevents.WithTarget(svr.URL))
 	assert.NoError(t, err)
 
-	s := scraper.NewExtractLoadScraper(extractor, loader, client, "")
+	s := scraper.NewExtractLoadScraper(extractor, loader, client, "", "")
 	err = s.Scrape(context.Background(), []string{tempDir}, execution)
 	if err != nil {
 		t.Fatalf("error scraping: %v", err)
