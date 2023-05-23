@@ -4843,6 +4843,11 @@ components:
           type: string
           description: test trigger condition reason
           example: NewReplicaSetAvailable
+        ttl:
+          type: integer
+          format: int32
+          description: duration in seconds in the past from current time when the condition is still valid 
+          example: 1          
 
     TestTriggerConditionStatuses:
       description: supported kubernetes condition statuses for test triggers
