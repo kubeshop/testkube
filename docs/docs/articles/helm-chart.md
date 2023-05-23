@@ -112,6 +112,8 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.jobServiceAccountName   | yes         | ""                                   |
 | testkube-api.logs.storage            | no          | "minio"                              |
 | testkube-api.logs.bucket             | no          | "testkube-logs"                      |
+| testkube-api.cdeventsTarget          | yes         | ""                                   |
+| testkube-api.dashboardUri            | yes         | ""                                   |
 
 >For more configuration parameters of a `MongoDB` chart please visit: 
 <https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>
