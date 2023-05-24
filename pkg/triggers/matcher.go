@@ -135,7 +135,8 @@ outer:
 				resourceCondition, ok := conditionMap[triggerCondition.Type_]
 				if !ok || resourceCondition.Status == nil || triggerCondition.Status == nil ||
 					*resourceCondition.Status != *triggerCondition.Status ||
-					(triggerCondition.Reason != "" && triggerCondition.Reason != resourceCondition.Reason) {
+					(triggerCondition.Reason != "" && triggerCondition.Reason != resourceCondition.Reason) ||
+					(triggerCondition.Ttl != 0 && triggerCondition.Ttl < resourceCondition.Ttl) {
 					matched = false
 					break
 				}
