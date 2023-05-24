@@ -27,14 +27,17 @@ type ExtractLoadScraper struct {
 	loader         Uploader
 	cdeventsClient cloudevents.Client
 	clusterID      string
+	dashboardURI   string
 }
 
-func NewExtractLoadScraper(extractor Extractor, loader Uploader, cdeventsClient cloudevents.Client, clusterID string) *ExtractLoadScraper {
+func NewExtractLoadScraper(extractor Extractor, loader Uploader, cdeventsClient cloudevents.Client,
+	clusterID, dashboardURI string) *ExtractLoadScraper {
 	return &ExtractLoadScraper{
 		extractor:      extractor,
 		loader:         loader,
 		cdeventsClient: cdeventsClient,
 		clusterID:      clusterID,
+		dashboardURI:   dashboardURI,
 	}
 }
 
@@ -66,7 +69,7 @@ func (s *ExtractLoadScraper) sendCDEvent(execution testkube.Execution, path stri
 		log.DefaultLogger.Warnf("failed to detect mime type %w", err)
 	}
 
-	ev, err := cde.MapTestkubeArtifactToCDEvent(&execution, s.clusterID, mtype.String())
+	ev, err := cde.MapTestkubeArtifactToCDEvent(&execution, s.clusterID, path, mtype.String(), s.dashboardURI)
 	if err != nil {
 		return err
 	}

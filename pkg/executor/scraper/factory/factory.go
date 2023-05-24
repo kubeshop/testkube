@@ -85,7 +85,7 @@ func GetScraper(ctx context.Context, params envs.Params, extractorType Extractor
 		}
 	}
 
-	return scraper.NewExtractLoadScraper(extractor, loader, cdeventsClient, params.ClusterID), nil
+	return scraper.NewExtractLoadScraper(extractor, loader, cdeventsClient, params.ClusterID, params.DashboardURI), nil
 }
 
 func getCloudLoader(ctx context.Context, params envs.Params) (uploader *cloudscraper.CloudUploader, err error) {

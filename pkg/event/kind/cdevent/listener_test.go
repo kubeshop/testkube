@@ -32,7 +32,7 @@ func TestCDEventListener_Notify(t *testing.T) {
 		client, err := cloudevents.NewClientHTTP(cloudevents.WithTarget(svr.URL))
 		assert.NoError(t, err)
 
-		l := NewCDEventListener("cdeli", "", "clusterID", "", testEventTypes, client)
+		l := NewCDEventListener("cdeli", "", "clusterID", "", "", testEventTypes, client)
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -57,7 +57,7 @@ func TestCDEventListener_Notify(t *testing.T) {
 		client, err := cloudevents.NewClientHTTP(cloudevents.WithTarget(svr.URL))
 		assert.NoError(t, err)
 
-		l := NewCDEventListener("cdeli", "", "clusterID", "", testEventTypes, client)
+		l := NewCDEventListener("cdeli", "", "clusterID", "", "", testEventTypes, client)
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -77,7 +77,7 @@ func TestCDEventListener_Notify(t *testing.T) {
 		client, err := cloudevents.NewClientHTTP(cloudevents.WithTarget("abcdef"))
 		assert.NoError(t, err)
 
-		l := NewCDEventListener("cdeli", "", "clusterID", "", testEventTypes, client)
+		l := NewCDEventListener("cdeli", "", "clusterID", "", "", testEventTypes, client)
 
 		// when
 		r := l.Notify(testkube.Event{

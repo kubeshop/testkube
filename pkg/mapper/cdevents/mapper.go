@@ -3,6 +3,7 @@ package cdevents
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	cdevents "github.com/cdevents/sdk-go/pkg/api"
@@ -11,27 +12,27 @@ import (
 )
 
 // MapTestkubeEventToCDEvent maps OpenAPI spec Event to CDEvent CDEventReader
-func MapTestkubeEventToCDEvent(tkEvent testkube.Event, clusterID, defaultNamespace string) (cdevents.CDEventReader, error) {
+func MapTestkubeEventToCDEvent(tkEvent testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdevents.CDEventReader, error) {
 	if tkEvent.Type_ == nil {
 		return nil, errors.New("empty event type")
 	}
 
 	switch *tkEvent.Type_ {
 	case *testkube.EventStartTest:
-		return MapTestkubeEventStartTestToCDEvent(tkEvent, clusterID, defaultNamespace)
+		return MapTestkubeEventStartTestToCDEvent(tkEvent, clusterID, defaultNamespace, dashboardURI)
 	case *testkube.EventEndTestAborted, *testkube.EventEndTestFailed, *testkube.EventEndTestTimeout, *testkube.EventEndTestSuccess:
-		return MapTestkubeEventFinishTestToCDEvent(tkEvent, clusterID, defaultNamespace)
+		return MapTestkubeEventFinishTestToCDEvent(tkEvent, clusterID, defaultNamespace, dashboardURI)
 	case *testkube.EventStartTestSuite:
-		return MapTestkubeEventStartTestSuiteToCDEvent(tkEvent, clusterID)
+		return MapTestkubeEventStartTestSuiteToCDEvent(tkEvent, clusterID, dashboardURI)
 	case *testkube.EventEndTestSuiteAborted, *testkube.EventEndTestSuiteFailed, *testkube.EventEndTestSuiteTimeout, *testkube.EventEndTestSuiteSuccess:
-		return MapTestkubeEventFinishTestSuiteToCDEvent(tkEvent, clusterID)
+		return MapTestkubeEventFinishTestSuiteToCDEvent(tkEvent, clusterID, dashboardURI)
 	}
 
 	return nil, fmt.Errorf("not supported event type %s", tkEvent.Type_)
 }
 
 // MapTestkubeEventQueuedTestToCDEvent maps OpenAPI spec Queued Test Event to CDEvent CDEventReader
-func MapTestkubeEventQueuedTestToCDEvent(event testkube.Event, clusterID, defaultNamespace string) (cdevents.CDEventReader, error) {
+func MapTestkubeEventQueuedTestToCDEvent(event testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdevents.CDEventReader, error) {
 	// Create the base event
 	ev, err := cdevents.NewTestCaseRunQueuedEvent()
 	if err != nil {
@@ -48,6 +49,7 @@ func MapTestkubeEventQueuedTestToCDEvent(event testkube.Event, clusterID, defaul
 		ev.SetSubjectTestCase(&cdevents.TestCaseRunQueuedSubjectContentTestCase{
 			Id:   event.TestExecution.TestName,
 			Type: MapTestkubeTestTypeToCDEventTestCaseType(event.TestExecution.TestType),
+			Uri:  fmt.Sprintf("%s/tests/executions/%s", dashboardURI, event.TestExecution.TestName),
 		})
 
 		namespace := event.TestExecution.TestNamespace
@@ -78,7 +80,7 @@ func MapTestkubeEventQueuedTestToCDEvent(event testkube.Event, clusterID, defaul
 }
 
 // MapTestkubeEventStartTestToCDEvent maps OpenAPI spec Start Test Event to CDEvent CDEventReader
-func MapTestkubeEventStartTestToCDEvent(event testkube.Event, clusterID, defaultNamespace string) (cdevents.CDEventReader, error) {
+func MapTestkubeEventStartTestToCDEvent(event testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdevents.CDEventReader, error) {
 	// Create the base event
 	ev, err := cdevents.NewTestCaseRunStartedEvent()
 	if err != nil {
@@ -95,6 +97,7 @@ func MapTestkubeEventStartTestToCDEvent(event testkube.Event, clusterID, default
 		ev.SetSubjectTestCase(&cdevents.TestCaseRunStartedSubjectContentTestCase{
 			Id:   event.TestExecution.TestName,
 			Type: MapTestkubeTestTypeToCDEventTestCaseType(event.TestExecution.TestType),
+			Uri:  fmt.Sprintf("%s/tests/executions/%s", dashboardURI, event.TestExecution.TestName),
 		})
 
 		namespace := event.TestExecution.TestNamespace
@@ -125,7 +128,7 @@ func MapTestkubeEventStartTestToCDEvent(event testkube.Event, clusterID, default
 }
 
 // MapTestkubeEventFinishTestToCDEvent maps OpenAPI spec Failed, Aborted, Timeout, Success Test Event to CDEvent CDEventReader
-func MapTestkubeEventFinishTestToCDEvent(event testkube.Event, clusterID, defaultNamespace string) (cdevents.CDEventReader, error) {
+func MapTestkubeEventFinishTestToCDEvent(event testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdevents.CDEventReader, error) {
 	// Create the base event
 	ev, err := cdevents.NewTestCaseRunFinishedEvent()
 	if err != nil {
@@ -142,6 +145,7 @@ func MapTestkubeEventFinishTestToCDEvent(event testkube.Event, clusterID, defaul
 		ev.SetSubjectTestCase(&cdevents.TestCaseRunFinishedSubjectContentTestCase{
 			Id:   event.TestExecution.TestName,
 			Type: MapTestkubeTestTypeToCDEventTestCaseType(event.TestExecution.TestType),
+			Uri:  fmt.Sprintf("%s/tests/executions/%s", dashboardURI, event.TestExecution.TestName),
 		})
 
 		namespace := event.TestExecution.TestNamespace
@@ -184,14 +188,14 @@ func MapTestkubeEventFinishTestToCDEvent(event testkube.Event, clusterID, defaul
 }
 
 // MapTestkubeArtifactToCDEvent maps OpenAPI spec Artifact to CDEvent CDEventReader
-func MapTestkubeArtifactToCDEvent(execution *testkube.Execution, clusterID, format string) (cdevents.CDEventReader, error) {
+func MapTestkubeArtifactToCDEvent(execution *testkube.Execution, clusterID, path, format, dashboardURI string) (cdevents.CDEventReader, error) {
 	// Create the base event
 	ev, err := cdevents.NewTestOutputPublishedEvent()
 	if err != nil {
 		return nil, err
 	}
 
-	ev.SetSubjectId(execution.Name)
+	ev.SetSubjectId(filepath.Join(execution.Name, path))
 	ev.SetSubjectSource(clusterID)
 	ev.SetSource(clusterID)
 	ev.SetSubjectTestCaseRun(&cdevents.Reference{
@@ -201,12 +205,13 @@ func MapTestkubeArtifactToCDEvent(execution *testkube.Execution, clusterID, form
 
 	ev.SetSubjectFormat(format)
 	ev.SetSubjectOutputType(MapMimeTypeToCDEventOutputType(format))
+	ev.SetSubjectUri(fmt.Sprintf("%s/tests/executions/%s/execution/%s", dashboardURI, execution.TestName, execution.Id))
 
 	return ev, nil
 }
 
 // MapTestkubeEventQueuedTestSuiteToCDEvent maps OpenAPI spec Queued Test Suite Event to CDEvent CDEventReader
-func MapTestkubeEventQueuedTestSuiteToCDEvent(event testkube.Event, clusterID string) (cdevents.CDEventReader, error) {
+func MapTestkubeEventQueuedTestSuiteToCDEvent(event testkube.Event, clusterID, dashboardURI string) (cdevents.CDEventReader, error) {
 	// Create the base event
 	ev, err := cdevents.NewTestSuiteRunQueuedEvent()
 	if err != nil {
@@ -222,7 +227,8 @@ func MapTestkubeEventQueuedTestSuiteToCDEvent(event testkube.Event, clusterID st
 	if event.TestSuiteExecution != nil {
 		if event.TestSuiteExecution.TestSuite != nil {
 			ev.SetSubjectTestSuite(&cdevents.TestSuiteRunQueuedSubjectContentTestSuite{
-				Id: event.TestSuiteExecution.TestSuite.Name,
+				Id:  event.TestSuiteExecution.TestSuite.Name,
+				Url: fmt.Sprintf("%s/test-suites/executions/%s", dashboardURI, event.TestSuiteExecution.TestSuite.Name),
 			})
 
 			ev.SetSubjectEnvironment(&cdevents.Reference{
@@ -242,7 +248,7 @@ func MapTestkubeEventQueuedTestSuiteToCDEvent(event testkube.Event, clusterID st
 }
 
 // MapTestkubeEventStartTestSuiteToCDEvent maps OpenAPI spec Start Test Suite Event to CDEvent CDEventReader
-func MapTestkubeEventStartTestSuiteToCDEvent(event testkube.Event, clusterID string) (cdevents.CDEventReader, error) {
+func MapTestkubeEventStartTestSuiteToCDEvent(event testkube.Event, clusterID, dashboardURI string) (cdevents.CDEventReader, error) {
 	// Create the base event
 	ev, err := cdevents.NewTestSuiteRunStartedEvent()
 	if err != nil {
@@ -258,7 +264,8 @@ func MapTestkubeEventStartTestSuiteToCDEvent(event testkube.Event, clusterID str
 	if event.TestSuiteExecution != nil {
 		if event.TestSuiteExecution.TestSuite != nil {
 			ev.SetSubjectTestSuite(&cdevents.TestSuiteRunStartedSubjectContentTestSuite{
-				Id: event.TestSuiteExecution.TestSuite.Name,
+				Id:  event.TestSuiteExecution.TestSuite.Name,
+				Uri: fmt.Sprintf("%s/test-suites/executions/%s", dashboardURI, event.TestSuiteExecution.TestSuite.Name),
 			})
 
 			ev.SetSubjectEnvironment(&cdevents.Reference{
@@ -278,7 +285,7 @@ func MapTestkubeEventStartTestSuiteToCDEvent(event testkube.Event, clusterID str
 }
 
 // MapTestkubeEventFinishTestSuiteToCDEvent maps OpenAPI spec Failed, Aborted, Timeout, Success Test Event to CDEvent CDEventReader
-func MapTestkubeEventFinishTestSuiteToCDEvent(event testkube.Event, clusterID string) (cdevents.CDEventReader, error) {
+func MapTestkubeEventFinishTestSuiteToCDEvent(event testkube.Event, clusterID, dashboardURI string) (cdevents.CDEventReader, error) {
 	// Create the base event
 	ev, err := cdevents.NewTestSuiteRunFinishedEvent()
 	if err != nil {
@@ -294,7 +301,8 @@ func MapTestkubeEventFinishTestSuiteToCDEvent(event testkube.Event, clusterID st
 	if event.TestSuiteExecution != nil {
 		if event.TestSuiteExecution.TestSuite != nil {
 			ev.SetSubjectTestSuite(&cdevents.TestSuiteRunFinishedSubjectContentTestSuite{
-				Id: event.TestSuiteExecution.TestSuite.Name,
+				Id:  event.TestSuiteExecution.TestSuite.Name,
+				Uri: fmt.Sprintf("%s/test-suites/executions/%s", dashboardURI, event.TestSuiteExecution.TestSuite.Name),
 			})
 
 			ev.SetSubjectEnvironment(&cdevents.Reference{

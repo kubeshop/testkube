@@ -28,7 +28,7 @@ func TestMapTestkubeEventQueuedTestToCDEvent(t *testing.T) {
 	clusterID := "cluster-1"
 	defaultNamespace := "default"
 
-	ev, err := MapTestkubeEventQueuedTestToCDEvent(event, clusterID, defaultNamespace)
+	ev, err := MapTestkubeEventQueuedTestToCDEvent(event, clusterID, defaultNamespace, "")
 	if err != nil {
 		t.Errorf("Error mapping event: %v", err)
 		return
@@ -60,6 +60,11 @@ func TestMapTestkubeEventQueuedTestToCDEvent(t *testing.T) {
 	testType := cde.Subject.Content.TestCase.Type
 	if testType != "unit" {
 		t.Errorf("Unexpected test case type: %s", testType)
+	}
+
+	testURI := cde.Subject.Content.TestCase.Uri
+	if testURI != "/tests/executions/Test 1" {
+		t.Errorf("Unexpected test case uri: %s", testURI)
 	}
 
 	envID := cde.Subject.Content.Environment.Id
@@ -106,7 +111,7 @@ func TestMapTestkubeEventStatTestToCDEvent(t *testing.T) {
 	clusterID := "cluster-1"
 	defaultNamespace := "default"
 
-	ev, err := MapTestkubeEventStartTestToCDEvent(event, clusterID, defaultNamespace)
+	ev, err := MapTestkubeEventStartTestToCDEvent(event, clusterID, defaultNamespace, "")
 	if err != nil {
 		t.Errorf("Error mapping event: %v", err)
 		return
@@ -138,6 +143,11 @@ func TestMapTestkubeEventStatTestToCDEvent(t *testing.T) {
 	testType := cde.Subject.Content.TestCase.Type
 	if testType != "unit" {
 		t.Errorf("Unexpected test case type: %s", testType)
+	}
+
+	testURI := cde.Subject.Content.TestCase.Uri
+	if testURI != "/tests/executions/Test 1" {
+		t.Errorf("Unexpected test case uri: %s", testURI)
 	}
 
 	envID := cde.Subject.Content.Environment.Id
@@ -186,7 +196,7 @@ func TestMapTestkubeEventFinishTestToCDEvent(t *testing.T) {
 	clusterID := "cluster-1"
 	defaultNamespace := "default"
 
-	ev, err := MapTestkubeEventFinishTestToCDEvent(event, clusterID, defaultNamespace)
+	ev, err := MapTestkubeEventFinishTestToCDEvent(event, clusterID, defaultNamespace, "")
 	if err != nil {
 		t.Errorf("Error mapping event: %v", err)
 		return
@@ -218,6 +228,11 @@ func TestMapTestkubeEventFinishTestToCDEvent(t *testing.T) {
 	testType := cde.Subject.Content.TestCase.Type
 	if testType != "unit" {
 		t.Errorf("Unexpected test case type: %s", testType)
+	}
+
+	testURI := cde.Subject.Content.TestCase.Uri
+	if testURI != "/tests/executions/Test 1" {
+		t.Errorf("Unexpected test case uri: %s", testURI)
 	}
 
 	envID := cde.Subject.Content.Environment.Id
@@ -268,7 +283,7 @@ func TestMapTestkubeEventQueuedTestSuiteToCDEvent(t *testing.T) {
 	}
 	clusterID := "cluster-1"
 
-	ev, err := MapTestkubeEventQueuedTestSuiteToCDEvent(event, clusterID)
+	ev, err := MapTestkubeEventQueuedTestSuiteToCDEvent(event, clusterID, "")
 	if err != nil {
 		t.Errorf("Error mapping event: %v", err)
 		return
@@ -295,6 +310,11 @@ func TestMapTestkubeEventQueuedTestSuiteToCDEvent(t *testing.T) {
 	suiteID := cde.Subject.Content.TestSuite.Id
 	if suiteID != "Suite 1" {
 		t.Errorf("Unexpected test suite id: %s", suiteID)
+	}
+
+	suiteURI := cde.Subject.Content.TestSuite.Url
+	if suiteURI != "/test-suites/executions/Suite 1" {
+		t.Errorf("Unexpected test case uri: %s", suiteURI)
 	}
 
 	envID := cde.Subject.Content.Environment.Id
@@ -330,7 +350,7 @@ func TestMapTestkubeEventStartTestSuiteToCDEvent(t *testing.T) {
 	}
 	clusterID := "cluster-1"
 
-	ev, err := MapTestkubeEventStartTestSuiteToCDEvent(event, clusterID)
+	ev, err := MapTestkubeEventStartTestSuiteToCDEvent(event, clusterID, "")
 	if err != nil {
 		t.Errorf("Error mapping event: %v", err)
 		return
@@ -357,6 +377,11 @@ func TestMapTestkubeEventStartTestSuiteToCDEvent(t *testing.T) {
 	suiteID := cde.Subject.Content.TestSuite.Id
 	if suiteID != "Suite 1" {
 		t.Errorf("Unexpected test suite id: %s", suiteID)
+	}
+
+	suiteURI := cde.Subject.Content.TestSuite.Uri
+	if suiteURI != "/test-suites/executions/Suite 1" {
+		t.Errorf("Unexpected test case uri: %s", suiteURI)
 	}
 
 	envID := cde.Subject.Content.Environment.Id
@@ -399,7 +424,7 @@ func TestMapTestkubeEventFinishTestSuiteToCDEvent(t *testing.T) {
 	}
 	clusterID := "cluster-1"
 
-	ev, err := MapTestkubeEventFinishTestSuiteToCDEvent(event, clusterID)
+	ev, err := MapTestkubeEventFinishTestSuiteToCDEvent(event, clusterID, "")
 	if err != nil {
 		t.Errorf("Error mapping event: %v", err)
 		return
@@ -426,6 +451,11 @@ func TestMapTestkubeEventFinishTestSuiteToCDEvent(t *testing.T) {
 	suiteID := cde.Subject.Content.TestSuite.Id
 	if suiteID != "Suite 1" {
 		t.Errorf("Unexpected test suite id: %s", suiteID)
+	}
+
+	suiteURI := cde.Subject.Content.TestSuite.Uri
+	if suiteURI != "/test-suites/executions/Suite 1" {
+		t.Errorf("Unexpected test case uri: %s", suiteURI)
 	}
 
 	envID := cde.Subject.Content.Environment.Id

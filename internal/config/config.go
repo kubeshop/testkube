@@ -59,6 +59,7 @@ type Config struct {
 	TestkubeRegistry                  string        `envconfig:"TESTKUBE_REGISTRY" default:""`
 	TestkubePodStartTimeout           time.Duration `envconfig:"TESTKUBE_POD_START_TIMEOUT" default:"30m"`
 	CDEventsTarget                    string        `envconfig:"CDEVENTS_TARGET" default:""`
+	TestkubeDashboardURI              string        `envconfig:"TESTKUBE_DASHBOARD_URI" default:""`
 }
 
 func Get() (*Config, error) {

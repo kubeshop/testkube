@@ -126,6 +126,7 @@ func TestParseRunnerOutput(t *testing.T) {
 {"type":"line","content":"RUNNER_GITTOKEN=\"\"","time":"2023-01-17T15:29:17.921801596Z"}
 {"type":"line","content":"RUNNER_DATADIR=\"/data\"","time":"2023-01-17T15:29:17.921803138Z"}
 {"type":"line","content":"RUNNER_CDEVENTS_TARGET=\"\"","time":"2023-01-17T15:29:17.921801596Z"}
+{"type":"line","content":"RUNNER_DASHBOARD_URI=\"\"","time":"2023-01-17T15:29:17.921801596Z"}
 {"type":"line","content":"RUNNER_CLUSTERID=\"\"","time":"2023-01-17T15:29:17.921801596Z"}
 {"type":"error","content":"❌ can't find branch or commit in params, repo:\u0026{Type_:git-file Uri:https://github.com/kubeshop/testkube.git Branch: Commit: Path:test/cypress/executor-smoke/cypress-11 Username: Token: UsernameSecret:\u003cnil\u003e TokenSecret:\u003cnil\u003e WorkingDir:}","time":"2023-01-17T15:29:17.921940304Z"}
 {"type":"error","content":"can't find branch or commit in params, repo:\u0026{Type_:git-file Uri:https://github.com/kubeshop/testkube.git Branch: Commit: Path:test/cypress/executor-smoke/cypress-11 Username: Token: UsernameSecret:\u003cnil\u003e TokenSecret:\u003cnil\u003e WorkingDir:}","time":"2023-01-17T15:29:17.921946638Z"}
@@ -146,6 +147,7 @@ RUNNER_GITUSERNAME=""
 RUNNER_GITTOKEN=""
 RUNNER_DATADIR="/data"
 RUNNER_CDEVENTS_TARGET=""
+RUNNER_DASHBOARD_URI=""
 RUNNER_CLUSTERID=""
 ❌ can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.com/kubeshop/testkube.git Branch: Commit: Path:test/cypress/executor-smoke/cypress-11 Username: Token: UsernameSecret:<nil> TokenSecret:<nil> WorkingDir:}
 can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.com/kubeshop/testkube.git Branch: Commit: Path:test/cypress/executor-smoke/cypress-11 Username: Token: UsernameSecret:<nil> TokenSecret:<nil> WorkingDir:}
@@ -196,6 +198,7 @@ could not start process: fork/exec ./zap-api-scan.py: no such file or directory
 {"type":"line","content":"RUNNER_GITTOKEN=\"\"","time":"2023-01-19T15:22:25.867986013Z"}
 {"type":"line","content":"RUNNER_DATADIR=\"/data\"","time":"2023-01-19T15:22:25.867987596Z"}
 {"type":"line","content":"RUNNER_CDEVENTS_TARGET=\"\"","time":"2023-01-17T15:29:17.921801596Z"}
+{"type":"line","content":"RUNNER_DASHBOARD_URI=\"\"","time":"2023-01-17T15:29:17.921801596Z"}
 {"type":"line","content":"RUNNER_CLUSTERID=\"\"","time":"2023-01-17T15:29:17.921801596Z"}
 {"type":"event","content":"running test [63c960287104b0fa0b7a45ef]","time":"2023-01-19T15:22:25.868132888Z"}
 {"type":"line","content":"🚚 Preparing for test run","time":"2023-01-19T15:22:25.868161346Z"}
@@ -216,6 +219,7 @@ RUNNER_GITUSERNAME=""
 RUNNER_GITTOKEN=""
 RUNNER_DATADIR="/data"
 RUNNER_CDEVENTS_TARGET=""
+RUNNER_DASHBOARD_URI=""
 RUNNER_CLUSTERID=""
 running test [63c960287104b0fa0b7a45ef]
 🚚 Preparing for test run
@@ -249,6 +253,7 @@ can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.
 {"type":"line","content":"RUNNER_GITTOKEN=\"\"","time":"2023-01-19T15:22:25.867986013Z"}
 {"type":"line","content":"RUNNER_DATADIR=\"/data\"","time":"2023-01-19T15:22:25.867987596Z"}
 {"type":"line","content":"RUNNER_CDEVENTS_TARGET=\"\"","time":"2023-01-17T15:29:17.921801596Z"}
+{"type":"line","content":"RUNNER_DASHBOARD_URI=\"\"","time":"2023-01-17T15:29:17.921801596Z"}
 {"type":"line","content":"RUNNER_CLUSTERID=\"\"","time":"2023-01-17T15:29:17.921801596Z"}
 {"type":"event","content":"running test [63c960287104b0fa0b7a45ef]","time":"2023-01-19T15:22:25.868132888Z"}
 {"type":"line","content":"🚚 Preparing for test run","time":"2023-01-19T15:22:25.868161346Z"}
@@ -275,6 +280,7 @@ RUNNER_GITUSERNAME=""
 RUNNER_GITTOKEN=""
 RUNNER_DATADIR="/data"
 RUNNER_CDEVENTS_TARGET=""
+RUNNER_DASHBOARD_URI=""
 RUNNER_CLUSTERID=""
 running test [63c960287104b0fa0b7a45ef]
 🚚 Preparing for test run
@@ -309,6 +315,7 @@ can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.
 {"type":"line","content":"RUNNER_GITTOKEN=\"\"","time":"2023-01-20T12:44:15.718986174Z"}
 {"type":"line","content":"RUNNER_DATADIR=\"/data\"","time":"2023-01-20T12:44:15.718989049Z"}
 {"type":"line","content":"RUNNER_CDEVENTS_TARGET=\"\"","time":"2023-01-17T15:29:17.921801596Z"}
+{"type":"line","content":"RUNNER_DASHBOARD_URI=\"\"","time":"2023-01-17T15:29:17.921801596Z"}
 {"type":"line","content":"RUNNER_CLUSTERID=\"\"","time":"2023-01-17T15:29:17.921801596Z"}
 {"type":"event","content":"running test [63ca8c8988564860327a16b5]","time":"2023-01-20T12:44:15.719276383Z"}
 {"type":"line","content":"🚚 Preparing for test run","time":"2023-01-20T12:44:15.719285633Z"}
@@ -329,6 +336,7 @@ RUNNER_GITUSERNAME=""
 RUNNER_GITTOKEN=""
 RUNNER_DATADIR="/data"
 RUNNER_CDEVENTS_TARGET=""
+RUNNER_DASHBOARD_URI=""
 RUNNER_CLUSTERID=""
 running test [63ca8c8988564860327a16b5]
 🚚 Preparing for test run

@@ -80,6 +80,7 @@ func NewTestkubeAPI(
 	graphqlPort string,
 	artifactsStorage storage.ArtifactsStorage,
 	cdeventsTarget string,
+	dashboardURI string,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -129,7 +130,7 @@ func NewTestkubeAPI(
 	s.Events.Loader.Register(s.slackLoader)
 
 	if cdeventsTarget != "" {
-		cdeventLoader, err := cdevent.NewCDEventLoader(cdeventsTarget, clusterId, namespace, testkube.AllEventTypes)
+		cdeventLoader, err := cdevent.NewCDEventLoader(cdeventsTarget, clusterId, namespace, dashboardURI, testkube.AllEventTypes)
 		if err == nil {
 			s.Events.Loader.Register(cdeventLoader)
 		} else {
