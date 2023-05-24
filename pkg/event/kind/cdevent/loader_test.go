@@ -9,7 +9,7 @@ import (
 func TestWebhookLoader(t *testing.T) {
 	t.Parallel()
 
-	cdeventLoader, err := NewCDEventLoader("target", "", "", nil)
+	cdeventLoader, err := NewCDEventLoader("target", "", "", "", nil)
 	assert.NoError(t, err)
 
 	listeners, err := cdeventLoader.Load()

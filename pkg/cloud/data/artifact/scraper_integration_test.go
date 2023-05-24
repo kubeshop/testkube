@@ -96,7 +96,7 @@ func TestCloudScraper_ArchiveFilesystemExtractor_Integration(t *testing.T) {
 	client, err := cloudevents.NewClientHTTP(cloudevents.WithTarget(svr.URL))
 	assert.NoError(t, err)
 
-	s := scraper.NewExtractLoadScraper(extractor, cloudLoader, client, "")
+	s := scraper.NewExtractLoadScraper(extractor, cloudLoader, client, "", "")
 	execution := testkube.Execution{
 		Id:            "my-execution-id",
 		TestName:      "my-test",
@@ -195,7 +195,7 @@ func TestCloudScraper_RecursiveFilesystemExtractor_Integration(t *testing.T) {
 	client, err := cloudevents.NewClientHTTP(cloudevents.WithTarget(svr.URL))
 	assert.NoError(t, err)
 
-	s := scraper.NewExtractLoadScraper(extractor, cloudLoader, client, "")
+	s := scraper.NewExtractLoadScraper(extractor, cloudLoader, client, "", "")
 	execution := testkube.Execution{
 		Id:            "my-execution-id",
 		TestName:      "my-test",
