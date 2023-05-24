@@ -3,6 +3,8 @@ on:
   push:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+-*"
+env:
+  ALPINE_IMAGE: alpine:3.18.0
 
 jobs:
   api:
@@ -51,6 +53,7 @@ jobs:
           DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
 
   single_executor:
     strategy:
@@ -97,6 +100,7 @@ jobs:
           DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
 
   executor_jmeter:
     runs-on: ubuntu-latest

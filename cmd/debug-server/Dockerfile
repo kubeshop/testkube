@@ -7,7 +7,7 @@ ENV GOOS=linux
 
 RUN go build -o /app main.go
 
-FROM alpine:latest  
+FROM ${ALPINE_IMAGE}
 RUN apk --no-cache add ca-certificates libssl1.1
 WORKDIR /root/
 COPY --from=0 /app /bin/app

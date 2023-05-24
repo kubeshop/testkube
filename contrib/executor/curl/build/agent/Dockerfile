@@ -1,7 +1,7 @@
 # TODO add valid dockerfile with executor
 
 ## Base image consists of
-#  FROM alpine
+#  FROM alpine:3.18.0
 #  RUN apk --no-cache add ca-certificates && \
 #      apk --no-cache add curl git
 

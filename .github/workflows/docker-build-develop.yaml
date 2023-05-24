@@ -3,8 +3,11 @@ on:
   push:
     branches:
       - develop
+      - feat/add-parametrization
     paths-ignore:
       - 'docs/**'
+env:
+  ALPINE_IMAGE: alpine:3.18.0
 
 jobs:
   api:
@@ -57,6 +60,7 @@ jobs:
           DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
 
       - name: Push Docker images
         run: |
