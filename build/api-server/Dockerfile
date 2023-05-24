@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1
+ARG ALPINE_VERSION
 FROM $ALPINE_IMAGE
 RUN apk --no-cache add ca-certificates libssl1.1 git
 WORKDIR /root/
