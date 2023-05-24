@@ -15,6 +15,14 @@ The Testkube API Server exposes a `/metrics` endpoint that can be consumed by Pr
 * `testkube_testtriggers_bulk_deletes_count` - The total number of test trigger bulk delete events.
 * `testkube_test_aborts_count` - The total number of tests aborted by type events.
 
+Note: as the metrics also include labels with the associated test name (see below), no metrics are produced unless some tests were run since last api-server restart 
+
+```
+# HELP testkube_test_executions_count The total number of test executions
+# TYPE testkube_test_executions_count counter
+testkube_test_executions_count{name="test-website",result="passed",type="curl-container/test"} 1
+```
+
 ## Installation
 
 If a Prometheus operator is not installed, please follow the steps here: [https://grafana.com/docs/grafana-cloud/quickstart/prometheus_operator/](https://grafana.com/docs/grafana-cloud/quickstart/prometheus_operator/).

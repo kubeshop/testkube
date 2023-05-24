@@ -6,7 +6,16 @@ Participation in this program is optional. You may [opt-out](#how-to-opt-out) if
 
 The data collected is always anonymous, not traceable to the source, and only used in aggregate form. 
 
-Telemetry collects and scrambles information about the host when the API server is bootstrapped for the first time. 
+## Dashboard telemetry
+
+The webui dashboard collects user consent and then sends telemetry to the following services:
+* app.posthog.com
+* api.segment.io
+* google analytics
+
+## API-server telemetry
+
+Api server Telemetry collects and scrambles information about the host when the API server is bootstrapped for the first time. 
 
 The collected data looks like this.
 
@@ -30,7 +39,7 @@ The collected data looks like this.
 }
 ```
 
-## What We Collect
+### What We Collect
 
 The telemetry data we use in our metrics is limited to:
 
@@ -40,6 +49,8 @@ The telemetry data we use in our metrics is limited to:
  - The number of unique active cluster installations.
  - The number of people who disable telemetry.
  - The number of unique sessions in the Testkube Dashboard.
+
+It is sent to https://analytics.testkube.io and https://www.google-analytics.com
 
 ## How to Opt Out?
 
