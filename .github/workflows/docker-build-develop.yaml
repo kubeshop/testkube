@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - develop
-      - feat/add-parametrization
     paths-ignore:
       - 'docs/**'
 env:
