@@ -21,7 +21,7 @@ func MapCRDConditionsToAPI(conditions []corev1.PodCondition, currentTime time.Ti
 			Type_:  string(condition.Type),
 			Status: (*testtriggersv1.TestTriggerConditionStatuses)(&condition.Status),
 			Reason: condition.Reason,
-			Ttl:    int32(currentTime.Sub(latestTime)),
+			Ttl:    int32(currentTime.Sub(latestTime) / time.Second),
 		})
 	}
 
