@@ -16,7 +16,7 @@ func MapCRDConditionsToAPI(conditions []appsv1.StatefulSetCondition, currentTime
 			Type_:  string(condition.Type),
 			Status: (*testtriggersv1.TestTriggerConditionStatuses)(&condition.Status),
 			Reason: condition.Reason,
-			Ttl:    currentTime.Sub(condition.LastTransitionTime.Time),
+			Ttl:    int32(currentTime.Sub(condition.LastTransitionTime.Time)),
 		})
 	}
 

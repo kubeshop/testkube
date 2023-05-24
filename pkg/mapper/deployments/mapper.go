@@ -13,14 +13,14 @@ func MapCRDConditionsToAPI(conditions []appsv1.DeploymentCondition, currentTime 
 	var results []testtriggersv1.TestTriggerCondition
 	for _, condition := range conditions {
 		latestTime := condition.LastTransitionTime.Time
-		if condition.LastUpdateTime.Time.After(t) {
+		if condition.LastUpdateTime.Time.After(latestTime) {
 			latestTime = condition.LastUpdateTime.Time
 		}
 		results = append(results, testtriggersv1.TestTriggerCondition{
 			Type_:  string(condition.Type),
 			Status: (*testtriggersv1.TestTriggerConditionStatuses)(&condition.Status),
 			Reason: condition.Reason,
-			Ttl:    currentTime.Sub(latestTime),
+			Ttl:    int32(currentTime.Sub(latestTime)),
 		})
 	}
 
