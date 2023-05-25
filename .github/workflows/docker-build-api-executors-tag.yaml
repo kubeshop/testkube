@@ -394,7 +394,7 @@ jobs:
         run: |
 
           # Setting up Git:
-          git clone https://kubeshop-bot:$GH_PUSH_TOKEN@github.com/kubeshop/helm-charts
+          git clone https://kubeshop-bot:$GH_TOKEN@github.com/kubeshop/helm-charts
           cd ./helm-charts
           git config user.name "kubeshop-bot"
           git config user.email "kubeshop-bot@kubeshop.io"
