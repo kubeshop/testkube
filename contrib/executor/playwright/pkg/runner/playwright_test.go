@@ -32,7 +32,7 @@ func TestRun_Integration(t *testing.T) {
 	ctx := context.Background()
 
 	params := envs.Params{DataDir: tempDir}
-	runner, err := NewPlaywrightRunner(ctx, "pnpm", params)
+	runner, err := NewPlaywrightRunner(ctx, "npm", params)
 	if err != nil {
 		t.Fail()
 	}
