@@ -66,6 +66,7 @@ func mapConditionSpecCRD(conditionSpec *testkube.TestTriggerConditionSpec) *test
 			Type_:  condition.Type_,
 			Status: (*testsv1.TestTriggerConditionStatuses)(condition.Status),
 			Reason: condition.Reason,
+			Ttl:    condition.Ttl,
 		})
 	}
 

@@ -136,6 +136,7 @@ func TestExecute(t *testing.T) {
 					Type_:  "Progressing",
 					Status: &status,
 					Reason: "NewReplicaSetAvailable",
+					Ttl:    60,
 				}},
 			},
 			Action:       "run",

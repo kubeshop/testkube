@@ -55,6 +55,9 @@ spec:
       {{- if $exp.Reason }}
       reason: {{ $exp.Reason }}
       {{- end }}
+      {{- if $exp.Ttl }}
+      ttl: {{ $exp.Ttl }}
+      {{- end }}    
     {{- end }}
     {{- end }}
   {{- end }}

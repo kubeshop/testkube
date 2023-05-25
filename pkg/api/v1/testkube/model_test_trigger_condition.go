@@ -16,4 +16,6 @@ type TestTriggerCondition struct {
 	Type_ string `json:"type"`
 	// test trigger condition reason
 	Reason string `json:"reason,omitempty"`
+	// duration in seconds in the past from current time when the condition is still valid
+	Ttl int32 `json:"ttl,omitempty"`
 }

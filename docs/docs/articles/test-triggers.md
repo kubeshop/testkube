@@ -76,6 +76,7 @@ conditionSpec:
     - type: test trigger condition type
       status: test trigger condition status, supported values - True, False, Unknown
       reason: test trigger condition reason
+      ttl: test trigger condition ttl
 ```
 
 ### Supported Values
@@ -110,6 +111,7 @@ spec:
     - type: Progressing
       status: "True"
       reason: "NewReplicaSetAvailable"
+      ttl: 60
     - type: Available
       status: "True"
   action: run
