@@ -147,6 +147,7 @@ func MapUpdateToSpec(request testkube.TestSourceUpdateRequest, testSource *tests
 		}
 
 		empty := true
+		fake := ""
 		var fields = []struct {
 			source      *string
 			destination *string
@@ -178,6 +179,14 @@ func MapUpdateToSpec(request testkube.TestSourceUpdateRequest, testSource *tests
 			{
 				(*request.Repository).CertificateSecret,
 				&testSource.Spec.Repository.CertificateSecret,
+			},
+			{
+				(*request.Repository).Username,
+				&fake,
+			},
+			{
+				(*request.Repository).Token,
+				&fake,
 			},
 		}
 
