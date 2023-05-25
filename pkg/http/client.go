@@ -18,6 +18,7 @@ func NewClient() *http.Client {
 			Timeout: NetDialTimeout,
 		}).Dial,
 		TLSHandshakeTimeout: TLSHandshakeTimeout,
+		Proxy:               http.ProxyFromEnvironment,
 	}
 	return &http.Client{
 		Timeout:   ClientTimeout,
