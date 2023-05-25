@@ -45,7 +45,7 @@ jobs:
           DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
         with:
-          destination_container_repo: ${{ github.repository }}
+          destination_container_repo: kubeshop/testkube-api-server
           provider: dockerhub
           short_description: 'Testkube Kubernetes API Server'
           readme_file: './README.md'
