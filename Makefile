@@ -74,8 +74,14 @@ build-testkube-bin-intel:
 		-o "$(BIN_DIR)/kubectl-testkube" \
 		cmd/kubectl-testkube/main.go
 
+#make docker-build-api SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-api-server:latest  ALPINE_IMAGE=alpine:3.18.0
 docker-build-api:
-	docker build  --platform linux/x86_64 -t kubeshop/testkube-api-server:$(COMMIT)-dev -f build/api-server/Dockerfile .
+	goreleaser release -f goreleaser_files/.goreleaser-docker-build-api.yml --rm-dist --snapshot
+
+#make docker-build-executor EXECUTOR=zap GITHUB_TOKEN=*** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-zap-executor:latest
+#add ALPINE_IMAGE=alpine:3.18.0 env var for building of curl and scraper executor
+docker-build-executor:
+	goreleaser release -f goreleaser_files/.goreleaser-docker-build-executor.yml --rm-dist --snapshot
 
 dev-install-local-executors:
 	kubectl apply --namespace testkube -f https://raw.githubusercontent.com/kubeshop/testkube-operator/main/config/samples/executor_v1_executor.yaml
