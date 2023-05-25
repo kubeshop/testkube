@@ -110,6 +110,17 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Push README to Dockerhub
+        uses: christian-korneck/update-container-description-action@v1
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+        with:
+          destination_container_repo: "kubeshop/testkube-${{ matrix.executor }}-executor"
+          provider: dockerhub
+          short_description: 'Testkube ${{ matrix.executor }} executor'
+          readme_file: "./contrib/executor/${{ matrix.executor }}/README.md"
+
       - name: Step
         id: github_sha
         run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
@@ -162,6 +173,17 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Push README to Dockerhub
+        uses: christian-korneck/update-container-description-action@v1
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+        with:
+          destination_container_repo: "kubeshop/testkube-jmeter-executor"
+          provider: dockerhub
+          short_description: 'Testkube jmeter executor'
+          readme_file: "./contrib/executor/jmeter/README.md"
+
       - name: Get commit sha
         id: github_sha
         run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
@@ -210,6 +232,17 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push README to Dockerhub
+        uses: christian-korneck/update-container-description-action@v1
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+        with:
+          destination_container_repo: "kubeshop/testkube-maven-executor"
+          provider: dockerhub
+          short_description: 'Testkube maven executor'
+          readme_file: "./contrib/executor/maven/README.md"
 
       - name: Get commit sha
         id: github_sha
@@ -260,6 +293,17 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Push README to Dockerhub
+        uses: christian-korneck/update-container-description-action@v1
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+        with:
+          destination_container_repo: "kubeshop/testkube-gradle-executor"
+          provider: dockerhub
+          short_description: 'Testkube gradle executor'
+          readme_file: "./contrib/executor/gradle/README.md"
+
       - name: Get commit sha
         id: github_sha
         run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
@@ -309,6 +353,17 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Push README to Dockerhub
+        uses: christian-korneck/update-container-description-action@v1
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+        with:
+          destination_container_repo: "kubeshop/testkube-cypress-executor"
+          provider: dockerhub
+          short_description: 'Testkube cypress executor'
+          readme_file: "./contrib/executor/cypress/README.md"
+
       - name: Get commit sha
         id: github_sha
         run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
@@ -357,6 +412,17 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push README to Dockerhub
+        uses: christian-korneck/update-container-description-action@v1
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+        with:
+          destination_container_repo: "kubeshop/testkube-playwright-executor"
+          provider: dockerhub
+          short_description: 'Testkube playwright executor'
+          readme_file: "./contrib/executor/playwright/README.md"
 
       - name: Get commit sha
         id: github_sha
