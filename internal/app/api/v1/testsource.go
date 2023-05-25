@@ -9,6 +9,7 @@ import (
 
 	testsourcev1 "github.com/kubeshop/testkube-operator/apis/testsource/v1"
 	"github.com/kubeshop/testkube-operator/client/testsources/v1"
+	"github.com/kubeshop/testkube-operator/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -37,7 +38,7 @@ func (s TestkubeAPI) CreateTestSourceHandler() fiber.Handler {
 		testSource.Namespace = s.Namespace
 		var secrets map[string]string
 		if request.Repository != nil {
-			secrets = getTestSecretsData(request.Repository.Username, request.Repository.Token)
+			secrets = createTestSecretsData(request.Repository.Username, request.Repository.Token)
 		}
 
 		created, err := s.TestSourcesClient.Create(&testSource, testsources.Option{Secrets: secrets})
@@ -82,16 +83,12 @@ func (s TestkubeAPI) UpdateTestSourceHandler() fiber.Handler {
 			username := (*request.Repository).Username
 			token := (*request.Repository).Token
 			if username != nil || token != nil {
-				var uValue, tValue string
-				if username != nil {
-					uValue = *username
+				data, err := s.SecretClient.Get(secret.GetMetadataName(name, client.SecretSource))
+				if err != nil && !errors.IsNotFound(err) {
+					return s.Error(c, http.StatusBadGateway, err)
 				}
 
-				if token != nil {
-					tValue = *token
-				}
-
-				option = &testsources.Option{Secrets: getTestSecretsData(uValue, tValue)}
+				option = &testsources.Option{Secrets: updateTestSecretsData(data, username, token)}
 			}
 		}
 
