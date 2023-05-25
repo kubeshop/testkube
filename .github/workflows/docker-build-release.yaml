@@ -518,7 +518,7 @@ jobs:
           RELEASE_TAG=$(basename "${OLD_BRANCH_NAME}")
 
           # Set up the new branch name
-          NEW_BRANCH_NAME="refs/heads/release/operator/${RELEASE_TAG}"
+          NEW_BRANCH_NAME="refs/heads/release/api/${RELEASE_TAG}"
 
           # Set up authentication using a personal access token
           AUTH_HEADER="Authorization: Bearer ${{ secrets.CI_BOT_TOKEN }}"
