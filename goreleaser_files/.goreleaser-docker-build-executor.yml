@@ -39,6 +39,7 @@ dockers:
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
       - "--build-arg=TOKEN={{ .Env.GITHUB_TOKEN }}"
+      - "--build-arg=ALPINE_IMAGE={{ .Env.ALPINE_IMAGE }}"
 
   - dockerfile: "./contrib/executor/{{ .Env.EXECUTOR }}/build/agent/Dockerfile"
     use: buildx
@@ -56,6 +57,7 @@ dockers:
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
       - "--build-arg=TOKEN={{ .Env.GITHUB_TOKEN }}"
+      - "--build-arg=ALPINE_IMAGE={{ .Env.ALPINE_IMAGE }}"
 
 docker_manifests:
   - name_template: kubeshop/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Version }}
