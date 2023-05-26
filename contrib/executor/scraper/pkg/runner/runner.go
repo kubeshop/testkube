@@ -49,11 +49,16 @@ func (r *ScraperRunner) Run(ctx context.Context, execution testkube.Execution) (
 		return *result.Err(errors.Errorf("executor only support artifact based tests")), nil
 	}
 
-	if execution.ArtifactRequest.VolumeMountPath == "" || execution.ArtifactRequest.StorageClassName == "" {
-		return *result.Err(errors.Errorf("artifact request should have not empty volume mount path and storage class name")), nil
+	if execution.ArtifactRequest.StorageClassName == "" {
+		return *result.Err(errors.Errorf("artifact request should have not empty storage class name")), nil
 	}
 
-	_, err = os.Stat(execution.ArtifactRequest.VolumeMountPath)
+	mountPath := "/data/artifacts"
+	if execution.ArtifactRequest.VolumeMountPath != "" {
+		mountPath = execution.ArtifactRequest.VolumeMountPath
+	}
+
+	_, err = os.Stat(mountPath)
 	if errors.Is(err, os.ErrNotExist) {
 		return result, err
 	}
@@ -65,7 +70,7 @@ func (r *ScraperRunner) Run(ctx context.Context, execution testkube.Execution) (
 		}
 
 		for i := range directories {
-			directories[i] = filepath.Join(execution.ArtifactRequest.VolumeMountPath, directories[i])
+			directories[i] = filepath.Join(mountPath, directories[i])
 		}
 
 		output.PrintLog(fmt.Sprintf("Scraping directories: %v", directories))

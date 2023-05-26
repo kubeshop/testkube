@@ -83,8 +83,13 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		output.PrintLogf("%s Could not chmod for data dir: %s", ui.IconCross, err.Error())
 	}
 
-	if execution.ArtifactRequest != nil && execution.ArtifactRequest.VolumeMountPath != "" {
-		_, err = executor.Run(execution.ArtifactRequest.VolumeMountPath, "chmod", nil, []string{"-R", "777", "."}...)
+	if execution.ArtifactRequest != nil {
+		mountPath := "/data/artifacts"
+		if execution.ArtifactRequest.VolumeMountPath != "" {
+			mountPath = execution.ArtifactRequest.VolumeMountPath
+		}
+
+		_, err = executor.Run(mountPath, "chmod", nil, []string{"-R", "777", "."}...)
 		if err != nil {
 			output.PrintLogf("%s Could not chmod for artifacts dir: %s", ui.IconCross, err.Error())
 		}
