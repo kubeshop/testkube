@@ -58,7 +58,6 @@ const (
 
 	pollTimeout  = 24 * time.Hour
 	pollInterval = 200 * time.Millisecond
-	volumeDir    = "/data"
 	// pollJobStatus is interval for checking if job timeout occurred
 	pollJobStatus = 1 * time.Second
 	// timeoutIndicator is string that is added to job logs when timeout occurs

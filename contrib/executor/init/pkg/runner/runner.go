@@ -84,7 +84,7 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	}
 
 	if execution.ArtifactRequest != nil {
-		mountPath := "/data/artifacts"
+		mountPath := filepath.Join(r.Params.DataDir, "artifacts")
 		if execution.ArtifactRequest.VolumeMountPath != "" {
 			mountPath = execution.ArtifactRequest.VolumeMountPath
 		}

@@ -3,21 +3,21 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	v1 "k8s.io/api/core/v1"
-
-	testsourcev1 "github.com/kubeshop/testkube-operator/apis/testsource/v1"
-
 	"github.com/pkg/errors"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
-
+	"github.com/kubeshop/testkube/pkg/executor"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/workerpool"
+	testsourcev1 "github.com/kubeshop/testkube-operator/apis/testsource/v1"	
 )
+
 
 const (
 	containerType = "container"
@@ -322,6 +322,9 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		}
 
 		request.ArtifactRequest = mergeArtifacts(request.ArtifactRequest, test.ExecutionRequest.ArtifactRequest)
+		if request.ArtifactRequest != nil && request.ArtifactRequest.VolumeMountPath == "" {
+			request.ArtifactRequest.VolumeMountPath = filepath.Join(executor.VolumeDir, "artifacts")
+		}
 
 		s.logger.Infow("checking for negative test change", "test", test.Name, "negativeTest", request.NegativeTest, "isNegativeTestChangedOnRun", request.IsNegativeTestChangedOnRun)
 		if !request.IsNegativeTestChangedOnRun {

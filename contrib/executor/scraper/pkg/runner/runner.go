@@ -53,7 +53,7 @@ func (r *ScraperRunner) Run(ctx context.Context, execution testkube.Execution) (
 		return *result.Err(errors.Errorf("artifact request should have not empty storage class name")), nil
 	}
 
-	mountPath := "/data/artifacts"
+	mountPath := filepath.Join(r.Params.DataDir, "artifacts")
 	if execution.ArtifactRequest.VolumeMountPath != "" {
 		mountPath = execution.ArtifactRequest.VolumeMountPath
 	}
