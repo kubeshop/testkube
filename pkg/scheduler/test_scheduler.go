@@ -5,19 +5,18 @@ import (
 	"fmt"
 	"path/filepath"
 
-	v1 "k8s.io/api/core/v1"
 	"github.com/pkg/errors"
+	v1 "k8s.io/api/core/v1"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	testsourcev1 "github.com/kubeshop/testkube-operator/apis/testsource/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/client"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/workerpool"
-	testsourcev1 "github.com/kubeshop/testkube-operator/apis/testsource/v1"	
 )
-
 
 const (
 	containerType = "container"
