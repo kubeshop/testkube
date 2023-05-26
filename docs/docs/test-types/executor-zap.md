@@ -1,8 +1,8 @@
 import Admonition from "@theme/Admonition";
 
-# OWASP Zed Attack Proxy executor
+# OWASP Zed Attack Proxy Executor
 
-Starting from version 1.12, Testkube has a dedicated executor for running ZAP tests. All you need to do is populate a file with the necessary parameters, and create a Testkube test.
+Starting from version 1.12, Testkube has a dedicated executor for running ZAP tests. All you need to do is populate a file with the necessary parameters and create a Testkube test.
 
 Default command for this executor is &lt;pythonScriptPath&gt;, which will be calculated based on the test type.
 
@@ -30,7 +30,7 @@ export const ExecutorInfo = () => {
 
 ## **Creating a ZAP Test**
 
-The official ZAP Docker image, on which the executor was built, lets you run three types of tests: baseline, full and api scans. Depending on which of these functionalities you want to leverage, the test creation looks slightly different. Not only the type of the test (`--type`) needs to be specified differently, but also the configuration file will have some parameters that do not work with all types.
+The official ZAP Docker image, on which the executor was built, lets you run three types of tests: baseline, full and API scans. Depending on which of these functionalities you want to leverage, the test creation looks slightly different. Not only the type of the test (`--type`) needs to be specified differently, but the configuration file will also have some parameters that do not work with all types.
 
 An example create test CLI command will look like:
 
@@ -123,7 +123,7 @@ Another file that was passed in is `contrib/executor/zap/examples/zap-tk-api.con
 .
 ```
 
-For further files that should be passed in as parameter to the executor, use the `--copy-files` feature when developing locally. These files will be uploaded to the path `/data/uploads` by default.
+For additional files that should be passed in as parameter to the executor, use the `--copy-files` feature when developing locally. These files will be uploaded to the path `/data/uploads` by default.
 
 ## **Creating a Git-based ZAP Test**
 
@@ -178,7 +178,7 @@ To get a more detailed report, you can run:
 testkube get execution zap-api-test-1
 ```
 
-Another indicator of how the tests went are the report files created. These are uploaded as artifacts into the object storage used by Testkube, and can be retrieved using both the Testkube CLI and the Testkube UI.
+Another indicator of how the tests completed are the report files created. These are uploaded as artifacts into the object storage used by Testkube, and can be retrieved using both the Testkube CLI and the Testkube UI.
 
 ## **References**
 
