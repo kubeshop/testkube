@@ -2,7 +2,7 @@ name: Docker images pre-release building and pushing for API and executors
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+-*"
+      - "v[0-9]+.[0-9]+.[0-9]+"
 env:
   ALPINE_IMAGE: alpine:3.18.0
 
