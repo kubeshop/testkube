@@ -5,7 +5,7 @@ metadata:
   namespace: testkube
 spec:
   executor_type: job
-  image: vlia/testkube-zap-executor:0.0.1
+  image: kubeshop/testkube-zap-executor:latest
   types:
     - zap/api
     - zap/baseline

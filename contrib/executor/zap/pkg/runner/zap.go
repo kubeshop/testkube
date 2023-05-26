@@ -27,7 +27,8 @@ type ApiOptions struct {
 	// delay in seconds to wait for passive scanning
 	Delay int `yaml:"delay"`
 	// max time in minutes to wait for ZAP to start and the passive scan to run
-	Time       int    `default:"0" yaml:"time"`
+	Time int `default:"0" yaml:"time"`
+	// ZAP command line options
 	ZapOptions string `yaml:"zap_options"`
 	// fail the scan on WARN issues, default true
 	FailOnWarn bool `default:"true" yaml:"fail_on_warn"`
@@ -37,7 +38,6 @@ type ApiOptions struct {
 	Hostname string `yaml:"hostname"`
 	// safe mode this will skip the active scan and perform a baseline scan
 	Safe bool `default:"false" yaml:"safe"`
-	// ZAP command line options
 }
 
 type BaselineOptions struct {
