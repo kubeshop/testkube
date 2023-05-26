@@ -51,6 +51,10 @@ const (
 	GitTokenSecretName = "git-token"
 	// GitTokenEnvVarName is git token environment var name
 	GitTokenEnvVarName = "RUNNER_GITTOKEN"
+	// SecretTest is a test secret
+	SecretTest = "secrets"
+	// SecretSource is a source secret
+	SecretSource = "source-secrets"
 
 	pollTimeout  = 24 * time.Hour
 	pollInterval = 200 * time.Millisecond

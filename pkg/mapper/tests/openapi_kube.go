@@ -305,6 +305,7 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 		}
 
 		emptyRepository := true
+		fake := ""
 		var fields = []struct {
 			source      *string
 			destination *string
@@ -336,6 +337,14 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 			{
 				(*content.Repository).CertificateSecret,
 				&testContent.Repository.CertificateSecret,
+			},
+			{
+				(*content.Repository).Username,
+				&fake,
+			},
+			{
+				(*content.Repository).Token,
+				&fake,
 			},
 		}
 
