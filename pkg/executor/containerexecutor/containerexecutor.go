@@ -178,7 +178,7 @@ func (c *ContainerExecutor) Logs(ctx context.Context, id string) (out chan outpu
 
 		ids := []string{id}
 		if supportArtifacts && execution.ArtifactRequest != nil &&
-			execution.ArtifactRequest.VolumeMountPath != "" && execution.ArtifactRequest.StorageClassName != "" {
+			execution.ArtifactRequest.StorageClassName != "" {
 			ids = append(ids, id+"-scraper")
 		}
 
@@ -285,7 +285,7 @@ func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Ex
 	}
 
 	if jobOptions.ArtifactRequest != nil &&
-		jobOptions.ArtifactRequest.VolumeMountPath != "" && jobOptions.ArtifactRequest.StorageClassName != "" {
+		jobOptions.ArtifactRequest.StorageClassName != "" {
 		c.log.Debug("creating persistent volume claim with options", "options", jobOptions)
 		pvcsClient := c.clientSet.CoreV1().PersistentVolumeClaims(c.namespace)
 		pvcSpec, err := NewPersistentVolumeClaimSpec(c.log, jobOptions)
@@ -344,7 +344,7 @@ func (c *ContainerExecutor) updateResultsFromPod(
 
 	var scraperLogs []byte
 	if jobOptions.ArtifactRequest != nil &&
-		jobOptions.ArtifactRequest.VolumeMountPath != "" && jobOptions.ArtifactRequest.StorageClassName != "" {
+		jobOptions.ArtifactRequest.StorageClassName != "" {
 		c.log.Debug("creating scraper job with options", "options", jobOptions)
 		jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
 		scraperSpec, err := NewScraperJobSpec(c.log, jobOptions)

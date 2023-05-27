@@ -28,6 +28,8 @@ import (
 var ErrPodInitializing = errors.New("PodInitializing")
 
 const (
+	// VolumeDir is volume dir
+	VolumeDir            = "/data"
 	defaultLogLinesCount = 100
 	// GitUsernameSecretName is git username secret name
 	GitUsernameSecretName = "git-username"
@@ -74,7 +76,7 @@ var RunnerEnvVars = []corev1.EnvVar{
 	},
 	{
 		Name:  "RUNNER_DATADIR",
-		Value: "/data",
+		Value: VolumeDir,
 	},
 	{
 		Name:  "RUNNER_CDEVENTS_TARGET",
