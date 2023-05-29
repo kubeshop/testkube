@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - develop
-      - feat/add-sbom
     paths-ignore:
       - 'docs/**'
 env:
@@ -66,323 +65,323 @@ jobs:
         run: |
           docker push kubeshop/testkube-api-server:${{ steps.github_sha.outputs.sha_short }}
 
-#  single_executor:
-#    strategy:
-#      matrix:
-#        executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template, zap ]
-#
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v2
-#
-#      - name: Set up QEMU
-#        uses: docker/setup-qemu-action@v1
-#
-#      - name: Set up Docker Buildx
-#        id: buildx
-#        uses: docker/setup-buildx-action@v1
-#
-#      - name: Go Cache
-#        uses: actions/cache@v2
-#        with:
-#          path: |
-#            ~/go/pkg/mod
-#            ~/.cache/go-build
-#          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
-#
-#      - name: Login to DockerHub
-#        uses: docker/login-action@v1
-#        with:
-#          username: ${{ secrets.DOCKERHUB_USERNAME }}
-#          password: ${{ secrets.DOCKERHUB_TOKEN }}
-#
-#      - name: Step
-#        id: github_sha
-#        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
-#
-#      - name: Release
-#        uses: goreleaser/goreleaser-action@v4
-#        with:
-#          distribution: goreleaser
-#          version: latest
-#          args: release -f goreleaser_files/.goreleaser-docker-build-executor-commit-only.yml --snapshot
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-#          EXECUTOR: ${{ matrix.executor }}
-#          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-#          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-#          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-#          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
-#
-#      - name: Push Docker images
-#        run: |
-#          docker push kubeshop/testkube-${{ matrix.executor }}-executor:${{ steps.github_sha.outputs.sha_short }}
-#
-#  executor_jmeter:
-#    runs-on: ubuntu-latest
-#    steps:
-#
-#      - name: Checkout
-#        uses: actions/checkout@v2
-#
-#      - name: Set up QEMU
-#        uses: docker/setup-qemu-action@v1
-#
-#      - name: Set up Docker Buildx
-#        id: buildx
-#        uses: docker/setup-buildx-action@v1
-#
-#      - name: Go Cache
-#        uses: actions/cache@v2
-#        with:
-#          path: |
-#            ~/go/pkg/mod
-#            ~/.cache/go-build
-#          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
-#
-#      - name: Login to DockerHub
-#        uses: docker/login-action@v1
-#        with:
-#          username: ${{ secrets.DOCKERHUB_USERNAME }}
-#          password: ${{ secrets.DOCKERHUB_TOKEN }}
-#
-#      - name: Get commit sha
-#        id: github_sha
-#        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
-#
-#      - name: Release
-#        uses: goreleaser/goreleaser-action@v4
-#        with:
-#          distribution: goreleaser
-#          version: latest
-#          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeter-commit-only.yml --snapshot
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-#          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-#          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-#          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-#
-#      - name: Push Docker images
-#        run: |
-#          docker push kubeshop/testkube-jmeter-executor:${{ steps.github_sha.outputs.sha_short }}
-#
-#  executor_maven:
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v2
-#
-#      - name: Set up QEMU
-#        uses: docker/setup-qemu-action@v1
-#
-#      - name: Set up Docker Buildx
-#        id: buildx
-#        uses: docker/setup-buildx-action@v1
-#
-#      - name: Go Cache
-#        uses: actions/cache@v2
-#        with:
-#          path: |
-#            ~/go/pkg/mod
-#            ~/.cache/go-build
-#          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
-#
-#      - name: Login to DockerHub
-#        uses: docker/login-action@v1
-#        with:
-#          username: ${{ secrets.DOCKERHUB_USERNAME }}
-#          password: ${{ secrets.DOCKERHUB_TOKEN }}
-#
-#      - name: Get commit sha
-#        id: github_sha
-#        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
-#
-#      - name: Release
-#        uses: goreleaser/goreleaser-action@v4
-#        with:
-#          distribution: goreleaser
-#          version: latest
-#          args: release -f goreleaser_files/.goreleaser-docker-build-executor-maven-commit-only.yml --snapshot
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-#          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-#          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-#          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-#
-#      - name: Push Docker images
-#        run: |
-#          docker push kubeshop/testkube-maven-executor:${{ steps.github_sha.outputs.sha_short }}
-#
-#  executor_gradle:
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v2
-#
-#      - name: Set up QEMU
-#        uses: docker/setup-qemu-action@v1
-#
-#      - name: Set up Docker Buildx
-#        id: buildx
-#        uses: docker/setup-buildx-action@v1
-#
-#      - name: Go Cache
-#        uses: actions/cache@v2
-#        with:
-#          path: |
-#            ~/go/pkg/mod
-#            ~/.cache/go-build
-#          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
-#
-#      - name: Login to DockerHub
-#        uses: docker/login-action@v1
-#        with:
-#          username: ${{ secrets.DOCKERHUB_USERNAME }}
-#          password: ${{ secrets.DOCKERHUB_TOKEN }}
-#
-#      - name: Get commit sha
-#        id: github_sha
-#        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
-#
-#      - name: Release
-#        uses: goreleaser/goreleaser-action@v4
-#        with:
-#          distribution: goreleaser
-#          version: latest
-#          args: release -f goreleaser_files/.goreleaser-docker-build-executor-gradle-commit-only.yml --snapshot
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-#          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-#          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-#          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-#
-#      - name: Push Docker images
-#        run: |
-#          docker push kubeshop/testkube-gradle-executor:${{ steps.github_sha.outputs.sha_short }}
-#
-#  executor_cypress:
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v2
-#
-#      - name: Set up QEMU
-#        uses: docker/setup-qemu-action@v1
-#
-#      - name: Set up Docker Buildx
-#        id: buildx
-#        uses: docker/setup-buildx-action@v1
-#
-#      - name: Go Cache
-#        uses: actions/cache@v2
-#        with:
-#          path: |
-#            ~/go/pkg/mod
-#            ~/.cache/go-build
-#          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
-#
-#      - name: Login to DockerHub
-#        uses: docker/login-action@v1
-#        with:
-#          username: ${{ secrets.DOCKERHUB_USERNAME }}
-#          password: ${{ secrets.DOCKERHUB_TOKEN }}
-#
-#      - name: Get commit sha
-#        id: github_sha
-#        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
-#
-#      - name: Release
-#        uses: goreleaser/goreleaser-action@v4
-#        with:
-#          distribution: goreleaser
-#          version: latest
-#          args: release -f goreleaser_files/.goreleaser-docker-build-executor-cypress-commit-only.yml --snapshot
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-#          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-#          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-#          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-#
-#      - name: Push image to the Registry
-#        run: |
-#          docker push kubeshop/testkube-cypress-executor:${{ steps.github_sha.outputs.sha_short }}
-#
-#  executor_playwright:
-#    runs-on: ubuntu-latest
-#    steps:
-#      -  name: Checkout
-#         uses: actions/checkout@v2
-#
-#      - name: Set up QEMU
-#        uses: docker/setup-qemu-action@v1
-#
-#      - name: Set up Docker Buildx
-#        id: buildx
-#        uses: docker/setup-buildx-action@v1
-#
-#      - name: Go Cache
-#        uses: actions/cache@v2
-#        with:
-#          path: |
-#            ~/go/pkg/mod
-#            ~/.cache/go-build
-#          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
-#
-#      - name: Login to DockerHub
-#        uses: docker/login-action@v1
-#        with:
-#          username: ${{ secrets.DOCKERHUB_USERNAME }}
-#          password: ${{ secrets.DOCKERHUB_TOKEN }}
-#
-#      - name: Get commit sha
-#        id: github_sha
-#        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
-#
-#      - name: Release
-#        uses: goreleaser/goreleaser-action@v4
-#        with:
-#          distribution: goreleaser
-#          version: latest
-#          args: release -f goreleaser_files/.goreleaser-docker-build-executor-playwright-commit-only.yml --snapshot
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-#          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-#          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-#          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-#
-#      - name: Push image to the Registry
-#        run: |
-#          docker push kubeshop/testkube-playwright-executor:${{ steps.github_sha.outputs.sha_short }}
-#
-#  workflow_dispatch:
-#    needs: [api, single_executor, executor_jmeter, executor_maven, executor_gradle, executor_cypress, executor_playwright]
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v2
-#
-#      - name: Get commit sha
-#        id: github_sha
-#        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
-#
-#      - name: Repository Dispatch
-#        uses: peter-evans/repository-dispatch@v2
-#        with:
-#          token: ${{ secrets.CI_BOT_TOKEN }}
-#          repository: kubeshop/helm-charts
-#          event-type: trigger-workflow-api-develop
-#          client-payload: '{"image_tag_api": "${{ steps.github_sha.outputs.sha_short }}"}'
+  single_executor:
+    strategy:
+      matrix:
+        executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template, zap ]
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Go Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Step
+        id: github_sha
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+
+      - name: Release
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-commit-only.yml --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          EXECUTOR: ${{ matrix.executor }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+
+      - name: Push Docker images
+        run: |
+          docker push kubeshop/testkube-${{ matrix.executor }}-executor:${{ steps.github_sha.outputs.sha_short }}
+
+  executor_jmeter:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Go Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get commit sha
+        id: github_sha
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+
+      - name: Release
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeter-commit-only.yml --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+
+      - name: Push Docker images
+        run: |
+          docker push kubeshop/testkube-jmeter-executor:${{ steps.github_sha.outputs.sha_short }}
+
+  executor_maven:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Go Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get commit sha
+        id: github_sha
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+
+      - name: Release
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-maven-commit-only.yml --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+
+      - name: Push Docker images
+        run: |
+          docker push kubeshop/testkube-maven-executor:${{ steps.github_sha.outputs.sha_short }}
+
+  executor_gradle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Go Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get commit sha
+        id: github_sha
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+
+      - name: Release
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-gradle-commit-only.yml --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+
+      - name: Push Docker images
+        run: |
+          docker push kubeshop/testkube-gradle-executor:${{ steps.github_sha.outputs.sha_short }}
+
+  executor_cypress:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Go Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get commit sha
+        id: github_sha
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+
+      - name: Release
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-cypress-commit-only.yml --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+
+      - name: Push image to the Registry
+        run: |
+          docker push kubeshop/testkube-cypress-executor:${{ steps.github_sha.outputs.sha_short }}
+
+  executor_playwright:
+    runs-on: ubuntu-latest
+    steps:
+      -  name: Checkout
+         uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Go Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get commit sha
+        id: github_sha
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+
+      - name: Release
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-playwright-commit-only.yml --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+
+      - name: Push image to the Registry
+        run: |
+          docker push kubeshop/testkube-playwright-executor:${{ steps.github_sha.outputs.sha_short }}
+
+  workflow_dispatch:
+    needs: [api, single_executor, executor_jmeter, executor_maven, executor_gradle, executor_cypress, executor_playwright]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Get commit sha
+        id: github_sha
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          repository: kubeshop/helm-charts
+          event-type: trigger-workflow-api-develop
+          client-payload: '{"image_tag_api": "${{ steps.github_sha.outputs.sha_short }}"}'
 

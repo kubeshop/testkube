@@ -413,6 +413,8 @@ jobs:
       run: |
         docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8
         docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}
+        cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64 --yes
+        cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8 --yes
         cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }} --yes
 
         docker manifest create kubeshop/testkube-cypress-executor:${{ matrix.version }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8

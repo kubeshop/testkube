@@ -4,8 +4,8 @@ on:
   push:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+-*"
+
 permissions:
-  contents: write # needed to write releases
   id-token: write # needed for keyless signing
 
 jobs:
@@ -68,8 +68,8 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      - uses: sigstore/cosign-installer@v3.0.5         # installs cosign
-      - uses: anchore/sbom-action/download-syft@v0.14.2 # installs syft
+      - uses: sigstore/cosign-installer@v3.0.5
+      - uses: anchore/sbom-action/download-syft@v0.14.2
       - name: Download Artifacts for Linux
         uses: actions/download-artifact@master
         with:

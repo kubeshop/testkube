@@ -23,13 +23,9 @@ archives:
 checksum:
   name_template: "checksums.txt"
 
-# create a source tarball
-# https://goreleaser.com/customization/source/
 source:
   enabled: true
 
-# creates SBOMs of all archives and the source tarball using syft
-# https://goreleaser.com/customization/sbom
 sboms:
   - artifacts: archive
   - id: source
