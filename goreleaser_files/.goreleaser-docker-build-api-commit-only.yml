@@ -58,7 +58,7 @@ signs:
       - '--output-signature=${signature}'
       - '${artifact}'
       - "--yes"
-    artifacts: binary
+    artifacts: all
     output: true
 
 # signs our docker image
