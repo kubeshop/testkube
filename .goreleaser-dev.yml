@@ -32,7 +32,7 @@ source:
 # https://goreleaser.com/customization/sbom
 sboms:
   - artifacts: archive
-  - id: source # Two different sbom configurations need two different IDs
+  - id: source 
     artifacts: source
 
 signs:
@@ -43,7 +43,7 @@ signs:
       - '--output-certificate=${certificate}'
       - '--output-signature=${signature}'
       - '${artifact}'
-      - "--yes" # needed on cosign 2.0.0+
+      - "--yes"
     artifacts: checksum
     output: true
 changelog:
