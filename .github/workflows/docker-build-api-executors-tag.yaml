@@ -7,6 +7,9 @@ on:
 env:
   ALPINE_IMAGE: alpine:3.18.0
 
+permissions:
+  id-token: write # needed for keyless signing with cosign
+
 jobs:
   api:
     runs-on: ubuntu-latest

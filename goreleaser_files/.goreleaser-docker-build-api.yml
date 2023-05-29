@@ -80,8 +80,6 @@ docker_manifests:
 release:
   disable: true
 
-# signs our docker image
-# https://goreleaser.com/customization/docker_sign
 docker_signs:
   - cmd: cosign
     artifacts: all
@@ -89,4 +87,4 @@ docker_signs:
     args:
       - 'sign'
       - '${artifact}'
-      - "--yes" # needed on cosign 2.0.0+
+      - "--yes"
