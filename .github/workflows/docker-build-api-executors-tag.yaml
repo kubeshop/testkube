@@ -84,12 +84,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - uses: sigstore/cosign-installer@v3.0.5
+      - uses: anchore/sbom-action/download-syft@v0.14.2
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: Go Cache
         uses: actions/cache@v2
@@ -138,6 +141,9 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v2
+
+      - uses: sigstore/cosign-installer@v3.0.5
+      - uses: anchore/sbom-action/download-syft@v0.14.2
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -191,6 +197,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - uses: sigstore/cosign-installer@v3.0.5
+      - uses: anchore/sbom-action/download-syft@v0.14.2
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 
@@ -243,6 +252,9 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v2
+
+      - uses: sigstore/cosign-installer@v3.0.5
+      - uses: anchore/sbom-action/download-syft@v0.14.2
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -371,8 +383,12 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
+
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
+
+    - uses: sigstore/cosign-installer@v3.0.5
+    - uses: anchore/sbom-action/download-syft@v0.14.2
 
     - name: Set up Docker Buildx
       id: buildx
@@ -397,18 +413,24 @@ jobs:
       run: |
         docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8
         docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}
+        cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }} --yes
 
         docker manifest create kubeshop/testkube-cypress-executor:${{ matrix.version }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8
         docker manifest push -p kubeshop/testkube-cypress-executor:${{ matrix.version }}
+        cosign sign kubeshop/testkube-cypress-executor:${{ matrix.version }} --yes
 
         docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-arm64v8
         docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}
+        cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --yes
+
 
         docker manifest create kubeshop/testkube-cypress-executor:latest --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-arm64v8
         docker manifest push -p kubeshop/testkube-cypress-executor:latest
+        cosign sign kubeshop/testkube-cypress-executor:latest --yes
 
         docker manifest create kubeshop/testkube-cypress-executor:legacy --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-npm-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-npm-arm64v8
         docker manifest push -p kubeshop/testkube-cypress-executor:legacy
+        cosign sign kubeshop/testkube-cypress-executor:legacy --yes
 
 
   executor_playwright:
@@ -416,6 +438,9 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v2
+
+    - uses: sigstore/cosign-installer@v3.0.5
+    - uses: anchore/sbom-action/download-syft@v0.14.2
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
