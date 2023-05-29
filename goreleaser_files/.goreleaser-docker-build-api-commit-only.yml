@@ -49,23 +49,12 @@ dockers:
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
       - "--build-arg=ALPINE_IMAGE={{ .Env.ALPINE_IMAGE }}"
 
-signs:
-  - cmd: cosign
-    certificate: '${artifact}.pem'
-    args:
-      - sign-blob
-      - '--output-certificate=${certificate}'
-      - '--output-signature=${signature}'
-      - '${artifact}'
-      - "--yes"
-    artifacts: binary
-    output: true
 
 # signs our docker image
 # https://goreleaser.com/customization/docker_sign
 docker_signs:
   - cmd: cosign
-    artifacts: images
+    artifacts: all
     output: true
     args:
       - 'sign'
