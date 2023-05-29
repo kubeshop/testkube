@@ -25,12 +25,12 @@ builds:
     mod_timestamp: "{{ .CommitTimestamp }}"
     ldflags: -X github.com/kubeshop/testkube/pkg/version.Version={{ .Version }}
       -X github.com/kubeshop/testkube/pkg/version.Commit={{ .FullCommit }}
-#      -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID={{ .Env.SLACK_BOT_CLIENT_ID}}
-#      -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret={{ .Env.SLACK_BOT_CLIENT_SECRET }}
-#      -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID={{ .Env.ANALYTICS_TRACKING_ID }}
-#      -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret={{ .Env.ANALYTICS_API_KEY }}
-#      -X github.com/kubeshop/testkube/pkg/telemetry.SegmentioKey={{ .Env.SEGMENTIO_KEY }}
-#      -X github.com/kubeshop/testkube/pkg/telemetry.CloudSegmentioKey={{ .Env.CLOUD_SEGMENTIO_KEY }}
+      -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID={{ .Env.SLACK_BOT_CLIENT_ID}}
+      -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret={{ .Env.SLACK_BOT_CLIENT_SECRET }}
+      -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID={{ .Env.ANALYTICS_TRACKING_ID }}
+      -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret={{ .Env.ANALYTICS_API_KEY }}
+      -X github.com/kubeshop/testkube/pkg/telemetry.SegmentioKey={{ .Env.SEGMENTIO_KEY }}
+      -X github.com/kubeshop/testkube/pkg/telemetry.CloudSegmentioKey={{ .Env.CLOUD_SEGMENTIO_KEY }}
 dockers:
   - dockerfile: ./build/api-server/Dockerfile
     use: buildx
@@ -47,7 +47,7 @@ dockers:
       - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
-#      - "--build-arg=ALPINE_IMAGE={{ .Env.ALPINE_IMAGE }}"
+      - "--build-arg=ALPINE_IMAGE={{ .Env.ALPINE_IMAGE }}"
 
 signs:
   - cmd: cosign
@@ -58,7 +58,7 @@ signs:
       - '--output-signature=${signature}'
       - '${artifact}'
       - "--yes"
-    artifacts: all
+    artifacts: binary
     output: true
 
 # signs our docker image
