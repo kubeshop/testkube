@@ -35,6 +35,7 @@ func NewEnvFileReader(m map[string]testkube.Variable, paramsFile string, secretE
 		envFile.PrependParams(envFromSecret)
 	}
 
+	secretVars := make(map[string]testkube.Variable)
 	for name, variable := range m {
 		if !variable.IsSecret() {
 			continue
@@ -43,11 +44,16 @@ func NewEnvFileReader(m map[string]testkube.Variable, paramsFile string, secretE
 		// create env structure from passed secret
 		envFromSecret, err := NewEnvFileFromString(variable.Value)
 		if err != nil {
-			output.PrintEvent("skipping secret variable for env file", name)
+			output.PrintEvent("adding secret variable for env file", name)
+			secretVars[name] = variable
 			continue
 		}
 
 		envFile.PrependParams(envFromSecret)
+	}
+
+	if len(secretVars) != 0 {
+		envFile.PrependParams(NewEnvFileFromSecretVariablesMap(secretVars))
 	}
 
 	b, err := json.Marshal(envFile)
@@ -71,6 +77,20 @@ func NewEnvFileFromVariablesMap(m map[string]testkube.Variable) (envFile EnvFile
 			continue
 		}
 
+		envFile.Values = append(envFile.Values, Value{Key: v.Name, Value: v.Value, Enabled: true})
+	}
+
+	return
+}
+
+func NewEnvFileFromSecretVariablesMap(m map[string]testkube.Variable) (envFile EnvFile) {
+	envFile.ID = "executor-secret-file"
+	envFile.Name = "executor-secret-file"
+	envFile.PostmanVariableScope = "environment"
+	envFile.PostmanExportedAt = time.Now()
+	envFile.PostmanExportedUsing = "Postman/9.15.13"
+
+	for _, v := range m {
 		envFile.Values = append(envFile.Values, Value{Key: v.Name, Value: v.Value, Enabled: true})
 	}
 
