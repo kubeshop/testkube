@@ -84,7 +84,7 @@ release:
 # https://goreleaser.com/customization/docker_sign
 docker_signs:
   - cmd: cosign
-    artifacts: images
+    artifacts: all
     output: true
     args:
       - 'sign'
