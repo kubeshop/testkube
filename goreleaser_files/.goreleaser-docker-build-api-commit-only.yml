@@ -25,12 +25,12 @@ builds:
     mod_timestamp: "{{ .CommitTimestamp }}"
     ldflags: -X github.com/kubeshop/testkube/pkg/version.Version={{ .Version }}
       -X github.com/kubeshop/testkube/pkg/version.Commit={{ .FullCommit }}
-      -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID={{ .Env.SLACK_BOT_CLIENT_ID}}
-      -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret={{ .Env.SLACK_BOT_CLIENT_SECRET }}
-      -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID={{ .Env.ANALYTICS_TRACKING_ID }}
-      -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret={{ .Env.ANALYTICS_API_KEY }}
-      -X github.com/kubeshop/testkube/pkg/telemetry.SegmentioKey={{ .Env.SEGMENTIO_KEY }}
-      -X github.com/kubeshop/testkube/pkg/telemetry.CloudSegmentioKey={{ .Env.CLOUD_SEGMENTIO_KEY }}
+#      -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID={{ .Env.SLACK_BOT_CLIENT_ID}}
+#      -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret={{ .Env.SLACK_BOT_CLIENT_SECRET }}
+#      -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID={{ .Env.ANALYTICS_TRACKING_ID }}
+#      -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret={{ .Env.ANALYTICS_API_KEY }}
+#      -X github.com/kubeshop/testkube/pkg/telemetry.SegmentioKey={{ .Env.SEGMENTIO_KEY }}
+#      -X github.com/kubeshop/testkube/pkg/telemetry.CloudSegmentioKey={{ .Env.CLOUD_SEGMENTIO_KEY }}
 dockers:
   - dockerfile: ./build/api-server/Dockerfile
     use: buildx
@@ -58,7 +58,7 @@ signs:
       - '--output-signature=${signature}'
       - '${artifact}'
       - "--yes"
-    artifacts: binary
+    artifacts: all
     output: true
 
 # signs our docker image
