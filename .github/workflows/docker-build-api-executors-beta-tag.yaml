@@ -338,9 +338,9 @@ jobs:
 
       - name: Sign images with cosign
         run: |
-          cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-amd64
-          cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-arm64v8
-          cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}
+          cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-amd64 --yes
+          cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-arm64v8 --yes
+          cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --yes
 
   executor_playwright:
     runs-on: ubuntu-latest
