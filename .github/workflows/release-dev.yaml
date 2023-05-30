@@ -7,6 +7,7 @@ on:
 
 permissions:
   id-token: write # needed for keyless signing
+  contents: write
 
 jobs:
   pre_build:
