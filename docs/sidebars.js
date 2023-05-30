@@ -68,7 +68,11 @@ const sidebars = {
             type: "doc",
             id: "articles/testkube-dashboard",
           },
-          items: ["articles/testkube-dashboard-api-endpoint"],
+          items: [
+            "articles/testkube-dashboard-explore",
+            "articles/testkube-dashboard-general-settings",
+            "articles/testkube-dashboard-api-endpoint",
+          ],
         },
         "articles/adding-tests-secrets",
         "articles/scheduling-tests",

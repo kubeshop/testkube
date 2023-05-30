@@ -1,4 +1,4 @@
-# Organizations Management
+# Organization Management
 
 
 To manage your organization settings click "Manage Organization" from organizations drop-down menu:
