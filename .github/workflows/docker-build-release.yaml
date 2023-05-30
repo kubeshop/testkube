@@ -1,5 +1,6 @@
 name: Docker images build release
 on:
+  workflow_dispatch:
   push:
     branches:
       - release/**
