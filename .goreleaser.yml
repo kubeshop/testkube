@@ -23,6 +23,26 @@ archives:
 checksum:
   name_template: "checksums.txt"
 
+source:
+  enabled: true
+
+sboms:
+  - artifacts: archive
+  - id: source
+    artifacts: source
+
+signs:
+  - cmd: cosign
+    certificate: '${artifact}.pem'
+    args:
+      - sign-blob
+      - '--output-certificate=${certificate}'
+      - '--output-signature=${signature}'
+      - '${artifact}'
+      - "--yes"
+    artifacts: all
+    output: true
+
 changelog:
   sort: asc
   use: github

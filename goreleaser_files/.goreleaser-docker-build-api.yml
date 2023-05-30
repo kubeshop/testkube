@@ -79,3 +79,12 @@ docker_manifests:
 
 release:
   disable: true
+
+docker_signs:
+  - cmd: cosign
+    artifacts: all
+    output: true
+    args:
+      - 'sign'
+      - '${artifact}'
+      - "--yes"
