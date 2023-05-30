@@ -6,12 +6,18 @@ on:
 env:
   ALPINE_IMAGE: alpine:3.18.0
 
+permissions:
+  id-token: write # needed for keyless signing with cosign
+
 jobs:
   api:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+
+      - uses: sigstore/cosign-installer@v3.0.5
+      - uses: anchore/sbom-action/download-syft@v0.14.2
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -66,6 +72,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - uses: sigstore/cosign-installer@v3.0.5
+      - uses: anchore/sbom-action/download-syft@v0.14.2
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 
@@ -110,6 +119,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - uses: sigstore/cosign-installer@v3.0.5
+      - uses: anchore/sbom-action/download-syft@v0.14.2
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 
@@ -150,6 +162,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+
+      - uses: sigstore/cosign-installer@v3.0.5
+      - uses: anchore/sbom-action/download-syft@v0.14.2
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -192,6 +207,9 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v2
+
+      - uses: sigstore/cosign-installer@v3.0.5
+      - uses: anchore/sbom-action/download-syft@v0.14.2
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -295,6 +313,9 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 
+      - uses: sigstore/cosign-installer@v3.0.5
+      - uses: anchore/sbom-action/download-syft@v0.14.2
+
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v1
@@ -316,11 +337,20 @@ jobs:
           docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-arm64v8
           docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}
 
+      - name: Sign images with cosign
+        run: |
+          cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-amd64 --yes
+          cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-arm64v8 --yes
+          cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --yes
+
   executor_playwright:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+
+      - uses: sigstore/cosign-installer@v3.0.5
+      - uses: anchore/sbom-action/download-syft@v0.14.2
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
