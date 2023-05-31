@@ -67,13 +67,12 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 	}
 
 	var zapConfig string
-
+	workingDir = r.Params.DataDir
 	if fileInfo.IsDir() {
 		// assume the ZAP config YAML has been passed as test argument
-		zapConfig = filepath.Join(workingDir, execution.Args[len(execution.Args)-1])
+		zapConfig = filepath.Join(testFile, execution.Args[len(execution.Args)-1])
 	} else {
 		// use the given file config as ZAP config YAML
-		workingDir = r.Params.DataDir
 		zapConfig = testFile
 	}
 
