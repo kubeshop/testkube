@@ -24,4 +24,4 @@ spec:
     args:
       - -e
       - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
-      - test/k6/executor-tests/k6-smoke-test.js # should be possible to remove path after working_dir feature
+      - k6-smoke-test.js
