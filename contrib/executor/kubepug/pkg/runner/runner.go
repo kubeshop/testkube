@@ -81,7 +81,7 @@ func (r *KubepugRunner) Run(ctx context.Context, execution testkube.Execution) (
 	envManager.GetReferenceVars(envManager.Variables)
 
 	runPath := workingDir
-	command := strings.Join(execution.Command, " ")
+	command, args := executor.MergeCommandAndArgs(execution.Command, args)
 	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
 	out, err := executor.Run(runPath, command, envManager, args...)
 	out = envManager.ObfuscateSecrets(out)

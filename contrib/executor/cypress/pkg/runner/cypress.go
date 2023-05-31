@@ -93,8 +93,8 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 	}
 
 	// handle project local Cypress version install (`Cypress` app)
-	command := strings.Join(execution.Command, " ")
-	out, err = executor.Run(runPath, command, nil, "install")
+	command, args := executor.MergeCommandAndArgs(execution.Command, []string{"install"})
+	out, err = executor.Run(runPath, command, nil, args...)
 	if err != nil {
 		return result, errors.Errorf("cypress binary install error: %v\n\n%s", err, out)
 	}
@@ -117,7 +117,7 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 	}
 
 	// append args from execution
-	args := execution.Args
+	args = execution.Args
 	for i := len(args) - 1; i >= 0; i-- {
 		if project == "" && (args[i] == "--project" || args[i] == "<projectPath>") {
 			args = append(args[:i], args[i+1:]...)
@@ -138,6 +138,7 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 	}
 
 	// run cypress inside repo directory ignore execution error in case of failed test
+	command, args = executor.MergeCommandAndArgs(execution.Command, args)
 	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
 	out, err = executor.Run(runPath, command, envManager, args...)
 	out = envManager.ObfuscateSecrets(out)

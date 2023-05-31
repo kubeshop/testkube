@@ -95,7 +95,7 @@ func (r *GinkgoRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	}
 
 	// Set up ginkgo potential args
-	args, err := BuildGinkgoArgs(ginkgoParams, path, runPath, reportFile, execution)
+	ginkgoArgs, err := BuildGinkgoArgs(ginkgoParams, path, runPath, reportFile, execution)
 	if err != nil {
 		return result, err
 	}
@@ -112,14 +112,15 @@ func (r *GinkgoRunner) Run(ctx context.Context, execution testkube.Execution) (r
 
 	// check Ginkgo version
 	output.PrintLogf("%s Checking Ginkgo CLI version", ui.IconTruck)
-	command := strings.Join(execution.Command, " ")
-	_, err = executor.Run(runPath, command, envManager, "version")
+	command, args := executor.MergeCommandAndArgs(execution.Command, []string{"version"})
+	_, err = executor.Run(runPath, command, envManager, args...)
 	if err != nil {
 		output.PrintLogf("%s error checking Ginkgo CLI version: %s", ui.IconCross, err.Error())
 		return result, err
 	}
 
 	// run executor here
+	command, args = executor.MergeCommandAndArgs(execution.Command, ginkgoArgs)
 	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
 	out, err := executor.Run(runPath, command, envManager, args...)
 	out = envManager.ObfuscateSecrets(out)

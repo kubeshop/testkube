@@ -107,11 +107,11 @@ func (r *NewmanRunner) Run(ctx context.Context, execution testkube.Execution) (r
 
 	runPath := ""
 	if workingDir != "" {
-		runPath = filepath.Join(workingDir)
+		runPath = workingDir
 	}
 	// we'll get error here in case of failed test too so we treat this as
 	// starter test execution with failed status
-	command := strings.Join(execution.Command, " ")
+	command, args := executor.MergeCommandAndArgs(execution.Command, args)
 	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
 	out, err := executor.Run(runPath, command, envManager, args...)
 

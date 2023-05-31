@@ -107,7 +107,7 @@ func (r *ArtilleryRunner) Run(ctx context.Context, execution testkube.Execution)
 	}
 
 	// run executor
-	command := strings.Join(execution.Command, " ")
+	command, args := executor.MergeCommandAndArgs(execution.Command, args)
 	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
 	out, rerr := executor.Run(runPath, command, envManager, args...)
 
