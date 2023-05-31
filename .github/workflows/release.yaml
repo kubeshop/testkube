@@ -7,7 +7,6 @@ on:
 
 env:
   TESTKUBE_CHOCO_REPO: https://chocolatey.kubeshop.io/
-  ALPINE_IMAGE: alpine:3.18.0
 
 jobs:
   pre_build:

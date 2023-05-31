@@ -9,6 +9,7 @@ env:
   # https://github.com/moby/buildkit#export-cache
   - DOCKER_BUILDX_CACHE_FROM={{ if index .Env "DOCKER_BUILDX_CACHE_FROM"  }}{{ .Env.DOCKER_BUILDX_CACHE_FROM }}{{ else }}type=registry{{ end }}
   - DOCKER_BUILDX_CACHE_TO={{ if index .Env "DOCKER_BUILDX_CACHE_TO"  }}{{ .Env.DOCKER_BUILDX_CACHE_TO }}{{ else }}type=inline{{ end }}
+  - ALPINE_IMAGE=alpine:3.18.0
 
 before:
   hooks:
