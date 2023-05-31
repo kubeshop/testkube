@@ -31,7 +31,7 @@ func Run(dir string, command string, envMngr env.Interface, arguments ...string)
 }
 
 // MergeCommandAndArgs prepares command and args for Run method
-func MergeCommandAndArgs(command []string, arguments []string) (string, []string) {
+func MergeCommandAndArgs(command, arguments []string) (string, []string) {
 	cmd := ""
 	if len(command) > 0 {
 		cmd = command[0]
