@@ -120,8 +120,8 @@ func (r *GinkgoRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	}
 
 	// run executor here
-	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, strings.Join(execution.Command, " "), strings.Join(ginkgoArgs, " "))
 	command, args = executor.MergeCommandAndArgs(execution.Command, ginkgoArgs)
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
 	out, err := executor.Run(runPath, command, envManager, args...)
 	out = envManager.ObfuscateSecrets(out)
 
