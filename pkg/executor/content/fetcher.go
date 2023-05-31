@@ -298,7 +298,10 @@ func GetPathAndWorkingDir(content *testkube.TestContent, dataDir string) (path, 
 		if isGitFileContentType || isGitDirContentType || isGitContentType {
 			path = filepath.Join(basePath, "repo")
 			if content.Repository != nil {
-				workingDir = filepath.Join(path, content.Repository.WorkingDir)
+				if content.Repository.WorkingDir != "" {
+					workingDir = filepath.Join(path, content.Repository.WorkingDir)
+				}
+
 				path = filepath.Join(path, content.Repository.Path)
 			}
 		}
