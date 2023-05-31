@@ -86,7 +86,8 @@ func (r *MavenRunner) Run(ctx context.Context, execution testkube.Execution) (re
 	}
 
 	// determine the Maven command to use
-	mavenCommand := strings.Join(execution.Command, " ")
+	// pass additional executor arguments/flags to Maven
+	mavenCommand, args := executor.MergeCommandAndArgs(execution.Command, execution.Args)
 	mavenWrapper := filepath.Join(directory, "mvnw")
 	_, err = os.Stat(mavenWrapper)
 	if mavenCommand == "mvn" && err == nil {
@@ -97,8 +98,6 @@ func (r *MavenRunner) Run(ctx context.Context, execution testkube.Execution) (re
 	envManager := env.NewManagerWithVars(execution.Variables)
 	envManager.GetReferenceVars(envManager.Variables)
 
-	// pass additional executor arguments/flags to Gradle
-	args := execution.Args
 	var settingsXML string
 	if execution.VariablesFile != "" {
 		outputPkg.PrintLogf("%s Creating settings.xml file", ui.IconWorld)

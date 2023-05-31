@@ -85,8 +85,7 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 			execution.Command[i] = zapScript(scanType)
 		}
 	}
-	command := strings.Join(execution.Command, " ")
-	output.PrintLogf("%s Using command: %s", ui.IconCheckMark, command)
+	output.PrintLogf("%s Using command: %s", ui.IconCheckMark, strings.Join(execution.Command, " "))
 
 	output.PrintLogf("%s Preparing reports folder", ui.IconFile)
 	reportFolder := filepath.Join(r.Params.DataDir, "reports")
@@ -118,6 +117,7 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 	os.Symlink(workingDir, filepath.Join(r.ZapHome, "wrk"))
 
 	output.PrintLogf("%s Running ZAP test", ui.IconMicroscope)
+	command, args := executor.MergeCommandAndArgs(execution.Command, args)
 	logs, err := executor.Run(r.ZapHome, command, envManager, args...)
 	logs = envManager.ObfuscateSecrets(logs)
 
