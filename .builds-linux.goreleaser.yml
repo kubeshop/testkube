@@ -7,7 +7,7 @@ env:
   # Setup to enable Docker to use, e.g., the GitHub actions cache; see
   # https://docs.docker.com/build/building/cache/backends/
   # https://github.com/moby/buildkit#export-cache
-  - DOCKER_BUILDX_CACHE_FROM={{ if index .Env "DOCKER_BUILDX_CACHE_FROM"  }}{{ .Env.DOCKER_BUILDX_CACHE_FROM }}{{ else }}type=inline{{ end }}
+  - DOCKER_BUILDX_CACHE_FROM={{ if index .Env "DOCKER_BUILDX_CACHE_FROM"  }}{{ .Env.DOCKER_BUILDX_CACHE_FROM }}{{ else }}type=registry,ref=docker.io/kubeshop/testkube-cli:latest{{ end }}
   - DOCKER_BUILDX_CACHE_TO={{ if index .Env "DOCKER_BUILDX_CACHE_TO"  }}{{ .Env.DOCKER_BUILDX_CACHE_TO }}{{ else }}type=inline{{ end }}
   - ALPINE_IMAGE=alpine:3.18.0
 
