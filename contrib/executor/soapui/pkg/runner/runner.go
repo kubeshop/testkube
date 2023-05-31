@@ -111,7 +111,7 @@ func (r *SoapUIRunner) runSoapUI(execution *testkube.Execution, workingDir strin
 	runPath := workingDir
 	command := strings.Join(execution.Command, " ")
 	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(execution.Args, " "))
-	output, err := executor.Run(runPath, command, envManager, execution.Args...)
+	output, err := executor.Run(runPath, command, envManager)
 	output = envManager.ObfuscateSecrets(output)
 	if err != nil {
 		return testkube.ExecutionResult{
