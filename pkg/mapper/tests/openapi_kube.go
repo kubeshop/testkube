@@ -148,6 +148,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 		TestSecretUUID:          executionRequest.TestSecretUUID,
 		TestSuiteSecretUUID:     executionRequest.TestSuiteSecretUUID,
 		Args:                    executionRequest.Args,
+		ArgsMode:                testsv3.ArgsModeType(executionRequest.ArgsMode),
 		Envs:                    executionRequest.Envs,
 		SecretEnvs:              executionRequest.SecretEnvs,
 		Sync:                    executionRequest.Sync,
@@ -159,6 +160,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 		Command:                 executionRequest.Command,
 		ArtifactRequest:         artifactRequest,
 		JobTemplate:             executionRequest.JobTemplate,
+		CronJobTemplate:         executionRequest.CronJobTemplate,
 		PreRunScript:            executionRequest.PreRunScript,
 		ScraperTemplate:         executionRequest.ScraperTemplate,
 		NegativeTest:            executionRequest.NegativeTest,
@@ -303,6 +305,7 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 		}
 
 		emptyRepository := true
+		fake := ""
 		var fields = []struct {
 			source      *string
 			destination *string
@@ -334,6 +337,14 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 			{
 				(*content.Repository).CertificateSecret,
 				&testContent.Repository.CertificateSecret,
+			},
+			{
+				(*content.Repository).Username,
+				&fake,
+			},
+			{
+				(*content.Repository).Token,
+				&fake,
 			},
 		}
 
@@ -450,6 +461,10 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 			&request.PreRunScript,
 		},
 		{
+			executionRequest.CronJobTemplate,
+			&request.CronJobTemplate,
+		},
+		{
 			executionRequest.ScraperTemplate,
 			&request.ScraperTemplate,
 		},
@@ -460,6 +475,11 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 			*field.destination = *field.source
 			emptyExecution = false
 		}
+	}
+
+	if executionRequest.ArgsMode != nil {
+		request.ArgsMode = testsv3.ArgsModeType(*executionRequest.ArgsMode)
+		emptyExecution = false
 	}
 
 	var slices = []struct {

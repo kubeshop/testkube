@@ -81,6 +81,7 @@ func TestNewExecutorJobSpecEmptyArgs(t *testing.T) {
 		InitImage:   "kubeshop/testkube-init-executor:0.7.10",
 		Image:       "ubuntu",
 		JobTemplate: defaultJobTemplate,
+		Command:     []string{},
 		Args:        []string{},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
@@ -119,10 +120,13 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "RUNNER_SSL", Value: "false"},
 		{Name: "RUNNER_SCRAPPERENABLED", Value: "false"},
 		{Name: "RUNNER_DATADIR", Value: "/data"},
+		{Name: "RUNNER_CDEVENTS_TARGET", Value: ""},
+		{Name: "RUNNER_DASHBOARD_URI", Value: ""},
 		{Name: "RUNNER_CLOUD_MODE", Value: "false"},
 		{Name: "RUNNER_CLOUD_API_KEY", Value: ""},
 		{Name: "RUNNER_CLOUD_API_URL", Value: ""},
 		{Name: "RUNNER_CLOUD_API_TLS_INSECURE", Value: "false"},
+		{Name: "RUNNER_CLUSTERID", Value: ""},
 		{Name: "key", Value: "value"},
 		{Name: "aa", Value: "bb"},
 	}
@@ -139,6 +143,7 @@ func TestNewExecutorJobSpecWithoutInitImage(t *testing.T) {
 		InitImage:   "",
 		Image:       "ubuntu",
 		JobTemplate: defaultJobTemplate,
+		Command:     []string{},
 		Args:        []string{},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
@@ -152,6 +157,7 @@ func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 	jobOptions, _ := NewJobOptions(
 		executor.Images{},
 		executor.Templates{},
+		"",
 		"",
 		"",
 		testkube.Execution{
@@ -187,6 +193,7 @@ func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 		executor.Templates{},
 		"",
 		"",
+		"",
 		testkube.Execution{
 			Id:            "name",
 			TestName:      "name-test-1",
@@ -218,6 +225,7 @@ func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
 	jobOptions, _ := NewJobOptions(
 		executor.Images{},
 		executor.Templates{},
+		"",
 		"",
 		"",
 		testkube.Execution{

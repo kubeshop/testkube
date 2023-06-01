@@ -7,28 +7,38 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kubeshop/testkube/pkg/envs"
-
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	outputPkg "github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func NewRunner(params envs.Params) *K6Runner {
+func NewRunner(ctx context.Context, params envs.Params) (*K6Runner, error) {
 	outputPkg.PrintLogf("%s Preparing test runner", ui.IconTruck)
 
-	return &K6Runner{
+	var err error
+	r := &K6Runner{
 		Params: params,
 	}
+
+	r.Scraper, err = factory.TryGetScrapper(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
 }
 
 type K6Runner struct {
-	Params envs.Params
+	Params  envs.Params
+	Scraper scraper.Scraper
 }
 
 var _ runner.Runner = &K6Runner{}
@@ -37,6 +47,10 @@ const K6Cloud = "cloud"
 const K6Run = "run"
 
 func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+	if r.Scraper != nil {
+		defer r.Scraper.Close()
+	}
+
 	outputPkg.PrintLogf("%s Preparing for test run", ui.IconTruck)
 
 	// check that the datadir exists
@@ -46,8 +60,7 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 		return result, err
 	}
 
-	var args []string
-
+	var k6Command string
 	k6TestType := strings.Split(execution.TestType, "/")
 	if len(k6TestType) != 2 {
 		outputPkg.PrintLogf("%s Invalid test type %s", ui.IconCross, execution.TestType)
@@ -56,18 +69,19 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 
 	k6Subtype := k6TestType[1]
 	if k6Subtype == K6Cloud {
-		args = append(args, K6Cloud)
+		k6Command = K6Cloud
 	} else {
-		args = append(args, K6Run)
+		k6Command = K6Run
 	}
 
+	var envVars []string
 	envManager := env.NewManagerWithVars(execution.Variables)
 	envManager.GetReferenceVars(envManager.Variables)
 	for _, variable := range envManager.Variables {
 		if variable.Name != "K6_CLOUD_TOKEN" {
 			// pass to k6 using -e option
 			envvar := fmt.Sprintf("%s=%s", variable.Name, variable.Value)
-			args = append(args, "-e", envvar)
+			envVars = append(envVars, "-e", envvar)
 		}
 	}
 
@@ -77,21 +91,19 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 		if key != "K6_CLOUD_TOKEN" {
 			// pass to k6 using -e option
 			envvar := fmt.Sprintf("%s=%s", key, value)
-			args = append(args, "-e", envvar)
+			envVars = append(envVars, "-e", envvar)
 		}
 	}
 
-	// pass additional executor arguments/flags to k6
-	args = append(args, execution.Args...)
-
 	var directory string
-
+	var testPath string
+	args := execution.Args
 	// in case of a test file execution we will pass the
 	// file path as final parameter to k6
 	if execution.Content.Type_ == string(testkube.TestContentTypeString) ||
 		execution.Content.Type_ == string(testkube.TestContentTypeFileURI) {
 		directory = r.Params.DataDir
-		args = append(args, "test-content")
+		testPath = "test-content"
 	}
 
 	// in case of Git directory we will run k6 here and
@@ -114,13 +126,15 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 		}
 
 		if fileInfo.IsDir() {
-			args[len(args)-1] = filepath.Join(path, args[len(args)-1])
+			testPath = filepath.Join(path, args[len(args)-1])
+			args = append(args[:len(args)-1], args[len(args):]...)
+
 		} else {
-			args = append(args, path)
+			testPath = path
 		}
 
 		// sanity checking for test script
-		scriptFile := filepath.Join(directory, workingDir, args[len(args)-1])
+		scriptFile := filepath.Join(directory, workingDir, testPath)
 		fileInfo, err = os.Stat(scriptFile)
 		if errors.Is(err, os.ErrNotExist) || fileInfo.IsDir() {
 			outputPkg.PrintLogf("%s k6 test script %s not found", ui.IconCross, scriptFile)
@@ -128,14 +142,46 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 		}
 	}
 
-	outputPkg.PrintEvent("Running", directory, "k6", args)
+	for i := range args {
+		if args[i] == "<k6Command>" {
+			args[i] = k6Command
+		}
+
+		if args[i] == "<runPath>" {
+			args[i] = testPath
+		}
+	}
+
+	for i := range args {
+		if args[i] == "<envVars>" {
+			newArgs := make([]string, len(args)+len(envVars)-1)
+			copy(newArgs, args[:i])
+			copy(newArgs[i:], envVars)
+			copy(newArgs[i+len(envVars):], args[i+1:])
+			args = newArgs
+			break
+		}
+	}
+
+	command, args := executor.MergeCommandAndArgs(execution.Command, args)
+	outputPkg.PrintEvent("Running", directory, command, args)
 	runPath := directory
 	if execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
 		runPath = filepath.Join(directory, execution.Content.Repository.WorkingDir)
 	}
 
-	output, err := executor.Run(runPath, "k6", envManager, args...)
+	output, err := executor.Run(runPath, command, envManager, args...)
 	output = envManager.ObfuscateSecrets(output)
+
+	// scrape artifacts first even if there are errors above
+	if r.Params.ScrapperEnabled && execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
+		outputPkg.PrintLogf("Scraping directories: %v", execution.ArtifactRequest.Dirs)
+
+		if err := r.Scraper.Scrape(ctx, execution.ArtifactRequest.Dirs, execution); err != nil {
+			return *result.WithErrors(err), nil
+		}
+	}
+
 	return finalExecutionResult(string(output), err), nil
 }
 

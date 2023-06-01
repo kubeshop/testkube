@@ -8,20 +8,19 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kubeshop/testkube/pkg/repository/result"
-
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"
+	"k8s.io/apimachinery/pkg/api/errors"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	"github.com/kubeshop/testkube-operator/client/tests/v3"
+	"github.com/kubeshop/testkube-operator/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	executionsmapper "github.com/kubeshop/testkube/pkg/mapper/executions"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
-
-	"k8s.io/apimachinery/pkg/api/errors"
+	"github.com/kubeshop/testkube/pkg/repository/result"
 )
 
 // GetTestHandler is method for getting an existing test
@@ -403,7 +402,7 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 		test.Namespace = s.Namespace
 		var secrets map[string]string
 		if request.Content != nil && request.Content.Repository != nil {
-			secrets = getTestSecretsData(request.Content.Repository.Username, request.Content.Repository.Token)
+			secrets = createTestSecretsData(request.Content.Repository.Username, request.Content.Repository.Token)
 		}
 
 		createdTest, err := s.TestsClient.Create(test, tests.Option{Secrets: secrets})
@@ -466,16 +465,12 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 			username := (*(*request.Content).Repository).Username
 			token := (*(*request.Content).Repository).Token
 			if username != nil || token != nil {
-				var uValue, tValue string
-				if username != nil {
-					uValue = *username
+				data, err := s.SecretClient.Get(secret.GetMetadataName(name, client.SecretTest))
+				if err != nil && !errors.IsNotFound(err) {
+					return s.Error(c, http.StatusBadGateway, err)
 				}
 
-				if token != nil {
-					tValue = *token
-				}
-
-				option = &tests.Option{Secrets: getTestSecretsData(uValue, tValue)}
+				option = &tests.Option{Secrets: updateTestSecretsData(data, username, token)}
 			}
 		}
 
@@ -603,7 +598,7 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 	}
 }
 
-func getTestSecretsData(username, token string) map[string]string {
+func createTestSecretsData(username, token string) map[string]string {
 	if username == "" && token == "" {
 		return nil
 	}
@@ -615,6 +610,30 @@ func getTestSecretsData(username, token string) map[string]string {
 
 	if token != "" {
 		data[client.GitTokenSecretName] = token
+	}
+
+	return data
+}
+
+func updateTestSecretsData(data map[string]string, username, token *string) map[string]string {
+	if data == nil {
+		data = make(map[string]string)
+	}
+
+	if username != nil {
+		if *username == "" {
+			delete(data, client.GitUsernameSecretName)
+		} else {
+			data[client.GitUsernameSecretName] = *username
+		}
+	}
+
+	if token != nil {
+		if *token == "" {
+			delete(data, client.GitTokenSecretName)
+		} else {
+			data[client.GitTokenSecretName] = *token
+		}
 	}
 
 	return data

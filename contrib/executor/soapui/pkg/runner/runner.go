@@ -3,7 +3,6 @@ package runner
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
@@ -14,6 +13,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
@@ -28,7 +28,6 @@ func NewRunner(ctx context.Context, params envs.Params) (*SoapUIRunner, error) {
 
 	var err error
 	r := &SoapUIRunner{
-		SoapUIExecPath: "/usr/local/SmartBear/EntryPoint.sh",
 		SoapUILogsPath: "/home/soapui/.soapuios/logs",
 		Params:         params,
 	}
@@ -43,7 +42,6 @@ func NewRunner(ctx context.Context, params envs.Params) (*SoapUIRunner, error) {
 
 // SoapUIRunner runs SoapUI tests
 type SoapUIRunner struct {
-	SoapUIExecPath string
 	SoapUILogsPath string
 	Scraper        scraper.Scraper
 	Params         envs.Params
@@ -58,21 +56,9 @@ func (r *SoapUIRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	}
 	output.PrintLogf("%s Preparing for test run", ui.IconTruck)
 
-	testFile := ""
-	if execution.Content != nil {
-		if execution.Content.Type_ == string(testkube.TestContentTypeString) ||
-			execution.Content.Type_ == string(testkube.TestContentTypeFileURI) {
-			testFile = filepath.Join(r.Params.DataDir, "test-content")
-		}
-
-		if execution.Content.Type_ == string(testkube.TestContentTypeGitFile) ||
-			execution.Content.Type_ == string(testkube.TestContentTypeGitDir) ||
-			execution.Content.Type_ == string(testkube.TestContentTypeGit) {
-			testFile = filepath.Join(r.Params.DataDir, "repo")
-			if execution.Content.Repository != nil {
-				testFile = filepath.Join(testFile, execution.Content.Repository.Path)
-			}
-		}
+	testFile, workingDir, err := content.GetPathAndWorkingDir(execution.Content, r.Params.DataDir)
+	if err != nil {
+		output.PrintLogf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.Params.DataDir)
 	}
 
 	setUpEnvironment(execution.Args, testFile)
@@ -87,10 +73,14 @@ func (r *SoapUIRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	}
 
 	output.PrintLogf("%s Running SoapUI tests", ui.IconMicroscope)
-	result = r.runSoapUI(&execution)
+	result = r.runSoapUI(&execution, workingDir)
 
 	if r.Params.ScrapperEnabled {
 		directories := []string{r.SoapUILogsPath}
+		if execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
+			directories = append(directories, execution.ArtifactRequest.Dirs...)
+		}
+
 		output.PrintLogf("Scraping directories: %v", directories)
 
 		if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
@@ -104,22 +94,24 @@ func (r *SoapUIRunner) Run(ctx context.Context, execution testkube.Execution) (r
 // setUpEnvironment sets up the COMMAND_LINE environment variable to
 // contain the incoming arguments and to point to the test file path
 func setUpEnvironment(args []string, testFilePath string) {
-	args = append(args, testFilePath)
+	for i := range args {
+		if args[i] == "<runPath>" {
+			args[i] = testFilePath
+		}
+	}
 	os.Setenv("COMMAND_LINE", strings.Join(args, " "))
 }
 
 // runSoapUI runs the SoapUI executable and returns the output
-func (r *SoapUIRunner) runSoapUI(execution *testkube.Execution) testkube.ExecutionResult {
+func (r *SoapUIRunner) runSoapUI(execution *testkube.Execution, workingDir string) testkube.ExecutionResult {
 
 	envManager := env.NewManagerWithVars(execution.Variables)
 	envManager.GetReferenceVars(envManager.Variables)
 
-	runPath := ""
-	if execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
-		runPath = filepath.Join(r.Params.DataDir, "repo", execution.Content.Repository.WorkingDir)
-	}
-
-	output, err := executor.Run(runPath, "/bin/sh", envManager, r.SoapUIExecPath)
+	runPath := workingDir
+	command, args := executor.MergeCommandAndArgs(execution.Command, nil)
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, strings.Join(execution.Command, " "), strings.Join(execution.Args, " "))
+	output, err := executor.Run(runPath, command, envManager, args...)
 	output = envManager.ObfuscateSecrets(output)
 	if err != nil {
 		return testkube.ExecutionResult{

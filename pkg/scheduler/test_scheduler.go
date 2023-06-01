@@ -3,18 +3,17 @@ package scheduler
 import (
 	"context"
 	"fmt"
-
-	v1 "k8s.io/api/core/v1"
-
-	testsourcev1 "github.com/kubeshop/testkube-operator/apis/testsource/v1"
+	"path/filepath"
 
 	"github.com/pkg/errors"
+	v1 "k8s.io/api/core/v1"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	testsourcev1 "github.com/kubeshop/testkube-operator/apis/testsource/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
-
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
@@ -114,11 +113,6 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	}
 
 	s.logger.Infow("test started", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
-
-	// notify immediately only when sync run otherwise job results handler need notify about test finish
-	if options.Sync && execution.ExecutionResult != nil && *execution.ExecutionResult.Status != testkube.RUNNING_ExecutionStatus {
-		s.events.Notify(testkube.NewEventEndTestSuccess(&execution))
-	}
 
 	return execution, nil
 }
@@ -224,6 +218,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	)
 
 	execution.Envs = options.Request.Envs
+	execution.Command = options.Request.Command
 	execution.Args = options.Request.Args
 	execution.IsVariablesFileUploaded = options.Request.IsVariablesFileUploaded
 	execution.VariablesFile = options.Request.VariablesFile
@@ -265,8 +260,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 	if test.ExecutionRequest != nil {
 		// Test variables lowest priority, then test suite, then test suite execution / test execution
 		request.Variables = mergeVariables(test.ExecutionRequest.Variables, request.Variables)
-		// Combine test executor args with execution args
-		request.Args = append(request.Args, test.ExecutionRequest.Args...)
+
 		request.Envs = mergeEnvs(request.Envs, test.ExecutionRequest.Envs)
 		request.SecretEnvs = mergeEnvs(request.SecretEnvs, test.ExecutionRequest.SecretEnvs)
 		request.EnvConfigMaps = mergeEnvReferences(request.EnvConfigMaps, test.ExecutionRequest.EnvConfigMaps)
@@ -301,6 +295,10 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 				test.ExecutionRequest.ScraperTemplate,
 				&request.ScraperTemplate,
 			},
+			{
+				test.ExecutionRequest.ArgsMode,
+				&request.ArgsMode,
+			},
 		}
 
 		for _, field := range fields {
@@ -309,11 +307,23 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 			}
 		}
 
+		// Combine test executor args with execution args
+		if len(request.Command) == 0 {
+			request.Command = test.ExecutionRequest.Command
+		}
+
+		if len(request.Args) == 0 {
+			request.Args = test.ExecutionRequest.Args
+		}
+
 		if request.ActiveDeadlineSeconds == 0 && test.ExecutionRequest.ActiveDeadlineSeconds != 0 {
 			request.ActiveDeadlineSeconds = test.ExecutionRequest.ActiveDeadlineSeconds
 		}
 
 		request.ArtifactRequest = mergeArtifacts(request.ArtifactRequest, test.ExecutionRequest.ArtifactRequest)
+		if request.ArtifactRequest != nil && request.ArtifactRequest.VolumeMountPath == "" {
+			request.ArtifactRequest.VolumeMountPath = filepath.Join(executor.VolumeDir, "artifacts")
+		}
 
 		s.logger.Infow("checking for negative test change", "test", test.Name, "negativeTest", request.NegativeTest, "isNegativeTestChangedOnRun", request.IsNegativeTestChangedOnRun)
 		if !request.IsNegativeTestChangedOnRun {
@@ -338,16 +348,15 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 
 	var imagePullSecrets []string
 	switch {
-	case len(request.ImagePullSecrets) != 0:
+	case len(executorCR.Spec.ImagePullSecrets) != 0:
+		imagePullSecrets = mapK8sImagePullSecrets(executorCR.Spec.ImagePullSecrets)
 
-		imagePullSecrets = mapImagePullSecrets(request.ImagePullSecrets)
 	case testCR.Spec.ExecutionRequest != nil &&
 		len(testCR.Spec.ExecutionRequest.ImagePullSecrets) != 0:
-
 		imagePullSecrets = mapK8sImagePullSecrets(testCR.Spec.ExecutionRequest.ImagePullSecrets)
-	case len(executorCR.Spec.ImagePullSecrets) != 0:
 
-		imagePullSecrets = mapK8sImagePullSecrets(executorCR.Spec.ImagePullSecrets)
+	case len(request.ImagePullSecrets) != 0:
+		imagePullSecrets = mapImagePullSecrets(request.ImagePullSecrets)
 	}
 
 	configMapVars := make(map[string]testkube.Variable, 0)
@@ -388,6 +397,14 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 
 	if len(secretVars) != 0 {
 		request.Variables = mergeVariables(secretVars, request.Variables)
+	}
+
+	if len(request.Command) == 0 {
+		request.Command = executorCR.Spec.Command
+	}
+
+	if request.ArgsMode == string(testkube.ArgsModeTypeAppend) || request.ArgsMode == "" {
+		request.Args = append(executorCR.Spec.Args, request.Args...)
 	}
 
 	return client.ExecuteOptions{

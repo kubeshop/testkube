@@ -92,7 +92,8 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 		job.Spec.Template.Labels[key] = value
 	}
 
-	envs := append(executor.RunnerEnvVars, secretEnvVars...)
+	envs := append(executor.RunnerEnvVars, corev1.EnvVar{Name: "RUNNER_CLUSTERID", Value: options.ClusterID})
+	envs = append(envs, secretEnvVars...)
 	if options.HTTPProxy != "" {
 		envs = append(envs, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
 	}
@@ -155,7 +156,7 @@ func NewScraperJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.Jo
 		return nil, fmt.Errorf("decoding scraper job spec error: %w", err)
 	}
 
-	envs := executor.RunnerEnvVars
+	envs := append(executor.RunnerEnvVars, corev1.EnvVar{Name: "RUNNER_CLUSTERID", Value: options.ClusterID})
 	if options.HTTPProxy != "" {
 		envs = append(envs, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
 	}
@@ -196,7 +197,7 @@ func NewPersistentVolumeClaimSpec(log *zap.SugaredLogger, options *JobOptions) (
 }
 
 // NewJobOptions provides job options for templates
-func NewJobOptions(images executor.Images, templates executor.Templates, serviceAccountName, registry string,
+func NewJobOptions(images executor.Images, templates executor.Templates, serviceAccountName, registry, clusterID string,
 	execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
@@ -220,5 +221,6 @@ func NewJobOptions(images executor.Images, templates executor.Templates, service
 	jobOptions.Variables = execution.Variables
 	jobOptions.ServiceAccountName = serviceAccountName
 	jobOptions.Registry = registry
+	jobOptions.ClusterID = clusterID
 	return jobOptions, nil
 }

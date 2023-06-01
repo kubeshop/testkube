@@ -26,7 +26,7 @@ func NewSlackLoader(messageTemplate, configString string, events []testkube.Even
 	}
 }
 
-// SlackLoader is a reconciler for websocket events for now it returns single listener for slack
+// SlackLoader is a reconciler for slack events for now it returns single listener for slack
 type SlackLoader struct {
 	Log           *zap.SugaredLogger
 	events        []testkube.EventType

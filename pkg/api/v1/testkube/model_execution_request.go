@@ -30,10 +30,12 @@ type ExecutionRequest struct {
 	TestSecretUUID string `json:"testSecretUUID,omitempty"`
 	// test suite secret uuid, if it's run as a part of test suite
 	TestSuiteSecretUUID string `json:"testSuiteSecretUUID,omitempty"`
-	// container executor image command
+	// executor image command
 	Command []string `json:"command,omitempty"`
 	// additional executor binary arguments
 	Args []string `json:"args,omitempty"`
+	// usage mode for arguments
+	ArgsMode string `json:"args_mode,omitempty"`
 	// container image, executor will run inside this image
 	Image string `json:"image,omitempty"`
 	// container image pull secrets
@@ -62,8 +64,10 @@ type ExecutionRequest struct {
 	BucketName      string           `json:"bucketName,omitempty"`
 	ArtifactRequest *ArtifactRequest `json:"artifactRequest,omitempty"`
 	// job template extensions
-	JobTemplate    string              `json:"jobTemplate,omitempty"`
-	ContentRequest *TestContentRequest `json:"contentRequest,omitempty"`
+	JobTemplate string `json:"jobTemplate,omitempty"`
+	// cron job template extensions
+	CronJobTemplate string              `json:"cronJobTemplate,omitempty"`
+	ContentRequest  *TestContentRequest `json:"contentRequest,omitempty"`
 	// script to run before test execution
 	PreRunScript string `json:"preRunScript,omitempty"`
 	// scraper template extensions

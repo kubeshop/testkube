@@ -4,6 +4,10 @@ import Admonition from "@theme/Admonition";
 
 [SoapUI](https://www.soapui.org) is an open-source tool used for the end-to-end testing of REST, SOAP and GraphQL APIs, as well as JMS, JDBC and other web services. Testkube supports the SoapUI executor implementation.
 
+Default command for this executor: /bin/sh /usr/local/SmartBear/EntryPoint.sh
+Default arguments for this executor command: &lt;runPath&gt;
+(parameters in &lt;&gt; are calculated at test execution)
+
 **Check out our [blog post](https://kubeshop.io/blog/run-kubernetes-tests-with-soapui-and-testkube) to follow tutorial steps to Learn how to run functional tests in Kubernetes with SoapUI and Testkube.**
 
 Testkube supports the [SoapUI](https://www.soapui.org) executor implementation.
@@ -131,7 +135,7 @@ An example of an exported SoapUI test looks the following:
                      <con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/&gt;</con:setting>
                   </con:settings>
                   <con:encoding>UTF-8</con:encoding>
-                  <con:endpoint>https://kubeshop.github.io/testkube/</con:endpoint>
+                  <con:endpoint>https://docs.testkube.io</con:endpoint>
                   <con:request />
                   <con:originalUri>https://kubeshop.io</con:originalUri>
                   <con:assertion type="Simple Contains" id="d9497693-01e2-4e3e-8ce5-5a292f9b6e41" name="Contains">

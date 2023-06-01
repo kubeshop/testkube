@@ -15,4 +15,5 @@ var (
 	LightBlue    = color.FgLightBlue.Render
 	LightMagenta = color.FgLightMagenta.Render
 	DarkGray     = color.FgDarkGray.Render
+	Default      = color.FgDefault.Render
 )

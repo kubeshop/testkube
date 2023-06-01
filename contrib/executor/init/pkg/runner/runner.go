@@ -5,8 +5,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/kubeshop/testkube/pkg/storage/minio"
-
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -15,6 +13,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
+	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -85,7 +84,12 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	}
 
 	if execution.ArtifactRequest != nil {
-		_, err = executor.Run(execution.ArtifactRequest.VolumeMountPath, "chmod", nil, []string{"-R", "777", "."}...)
+		mountPath := filepath.Join(r.Params.DataDir, "artifacts")
+		if execution.ArtifactRequest.VolumeMountPath != "" {
+			mountPath = execution.ArtifactRequest.VolumeMountPath
+		}
+
+		_, err = executor.Run(mountPath, "chmod", nil, []string{"-R", "777", "."}...)
 		if err != nil {
 			output.PrintLogf("%s Could not chmod for artifacts dir: %s", ui.IconCross, err.Error())
 		}

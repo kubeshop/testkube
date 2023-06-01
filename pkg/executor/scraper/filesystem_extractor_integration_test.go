@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/kubeshop/testkube/pkg/utils/test"
@@ -51,9 +52,16 @@ func TestArchiveFilesystemExtractor_Extract_NoMeta_Integration(t *testing.T) {
 		return nil
 	}
 
+	notifyFn := func(ctx context.Context, path string) error {
+		if !strings.Contains(path, "file1.txt") && !strings.Contains(path, "file2.txt") && !strings.Contains(path, "subdir/file3.txt") {
+			t.Fatalf("Unexpected path: %s", path)
+		}
+		return nil
+	}
+
 	extractor := scraper.NewArchiveFilesystemExtractor(filesystem.NewOSFileSystem())
 	scrapeDirs := []string{tempDir}
-	err = extractor.Extract(context.Background(), scrapeDirs, processFn)
+	err = extractor.Extract(context.Background(), scrapeDirs, processFn, notifyFn)
 	require.NoError(t, err)
 	assert.Equal(t, 1, processCallCount)
 }
@@ -116,9 +124,16 @@ func TestArchiveFilesystemExtractor_Extract_Meta_Integration(t *testing.T) {
 		return nil
 	}
 
+	notifyFn := func(ctx context.Context, path string) error {
+		if !strings.Contains(path, "file1.txt") && !strings.Contains(path, "file2.txt") && !strings.Contains(path, "subdir/file3.txt") {
+			t.Fatalf("Unexpected path: %s", path)
+		}
+		return nil
+	}
+
 	extractor := scraper.NewArchiveFilesystemExtractor(filesystem.NewOSFileSystem(), scraper.GenerateTarballMetaFile())
 	scrapeDirs := []string{tempDir}
-	err = extractor.Extract(context.Background(), scrapeDirs, processFn)
+	err = extractor.Extract(context.Background(), scrapeDirs, processFn, notifyFn)
 	require.NoError(t, err)
 	assert.Equal(t, 2, processCallCount)
 }
@@ -170,9 +185,17 @@ func TestRecursiveFilesystemExtractor_Extract_Integration(t *testing.T) {
 		return nil
 	}
 
+	notifyFn := func(ctx context.Context, path string) error {
+		if !strings.Contains(path, "file1.txt") && !strings.Contains(path, "file2.txt") && !strings.Contains(path, "subdir/file3.txt") {
+			t.Fatalf("unexpected file: %s", path)
+		}
+
+		return nil
+	}
+
 	extractor := scraper.NewRecursiveFilesystemExtractor(filesystem.NewOSFileSystem())
 	scrapeDirs := []string{tempDir, "/nonexistent"}
-	err = extractor.Extract(context.Background(), scrapeDirs, processFn)
+	err = extractor.Extract(context.Background(), scrapeDirs, processFn, notifyFn)
 	require.NoError(t, err)
 	assert.Equal(t, processCallCount, 3)
 }
@@ -206,9 +229,16 @@ func TestRecursiveFilesystemExtractor_Extract_RelPath_Integration(t *testing.T) 
 		return nil
 	}
 
+	notifyFn := func(ctx context.Context, path string) error {
+		if !strings.Contains(path, "file1.txt") {
+			t.Fatalf("unexpected path: %s", path)
+		}
+		return nil
+	}
+
 	extractor := scraper.NewRecursiveFilesystemExtractor(filesystem.NewOSFileSystem())
 	scrapeDirs := []string{filepath.Join(tempDir, "file1.txt"), "/nonexistent"}
-	err = extractor.Extract(context.Background(), scrapeDirs, processFn)
+	err = extractor.Extract(context.Background(), scrapeDirs, processFn, notifyFn)
 	require.NoError(t, err)
 	assert.Equal(t, processCallCount, 1)
 }

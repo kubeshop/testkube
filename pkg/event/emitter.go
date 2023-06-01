@@ -170,7 +170,7 @@ func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
 	log := e.Log.With("listen-on", l.Events(), "queue-group", l.Name(), "selector", l.Selector(), "metadata", l.Metadata())
 	return func(event testkube.Event) error {
 		if event.Valid(l.Selector(), l.Events()) {
-			l.Notify(event)
+			log.Infow("notification result", l.Notify(event))
 			log.Infow("listener notified", event.Log()...)
 		} else {
 			log.Infow("dropping event not matching selector or type", event.Log()...)

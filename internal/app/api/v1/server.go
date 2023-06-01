@@ -13,6 +13,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 
 	"github.com/kubeshop/testkube/pkg/version"
@@ -35,6 +36,7 @@ import (
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/event"
+	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
@@ -77,6 +79,8 @@ func NewTestkubeAPI(
 	storage storage.Client,
 	graphqlPort string,
 	artifactsStorage storage.ArtifactsStorage,
+	cdeventsTarget string,
+	dashboardURI string,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -124,6 +128,15 @@ func NewTestkubeAPI(
 	s.Events.Loader.Register(webhook.NewWebhookLoader(webhookClient))
 	s.Events.Loader.Register(s.WebsocketLoader)
 	s.Events.Loader.Register(s.slackLoader)
+
+	if cdeventsTarget != "" {
+		cdeventLoader, err := cdevent.NewCDEventLoader(cdeventsTarget, clusterId, namespace, dashboardURI, testkube.AllEventTypes)
+		if err == nil {
+			s.Events.Loader.Register(cdeventLoader)
+		} else {
+			s.Log.Debug("cdevents init error", "error", err.Error())
+		}
+	}
 
 	s.InitEnvs()
 	s.InitRoutes()

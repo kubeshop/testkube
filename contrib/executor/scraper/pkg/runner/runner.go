@@ -6,16 +6,14 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/kubeshop/testkube/pkg/executor/scraper"
-
 	"github.com/pkg/errors"
-
-	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 )
 
 // NewRunner creates scraper runner
@@ -51,7 +49,16 @@ func (r *ScraperRunner) Run(ctx context.Context, execution testkube.Execution) (
 		return *result.Err(errors.Errorf("executor only support artifact based tests")), nil
 	}
 
-	_, err = os.Stat(execution.ArtifactRequest.VolumeMountPath)
+	if execution.ArtifactRequest.StorageClassName == "" {
+		return *result.Err(errors.Errorf("artifact request should have not empty storage class name")), nil
+	}
+
+	mountPath := filepath.Join(r.Params.DataDir, "artifacts")
+	if execution.ArtifactRequest.VolumeMountPath != "" {
+		mountPath = execution.ArtifactRequest.VolumeMountPath
+	}
+
+	_, err = os.Stat(mountPath)
 	if errors.Is(err, os.ErrNotExist) {
 		return result, err
 	}
@@ -63,7 +70,7 @@ func (r *ScraperRunner) Run(ctx context.Context, execution testkube.Execution) (
 		}
 
 		for i := range directories {
-			directories[i] = filepath.Join(execution.ArtifactRequest.VolumeMountPath, directories[i])
+			directories[i] = filepath.Join(mountPath, directories[i])
 		}
 
 		output.PrintLog(fmt.Sprintf("Scraping directories: %v", directories))

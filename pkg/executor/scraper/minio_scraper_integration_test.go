@@ -2,12 +2,15 @@ package scraper_test
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -54,7 +57,21 @@ func TestMinIOScraper_Archive_Integration(t *testing.T) {
 	}
 
 	execution := testkube.Execution{Id: "minio-test"}
-	s := scraper.NewExtractLoadScraper(extractor, loader)
+
+	// given
+	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := cloudevents.NewEventFromHTTPRequest(r)
+		// then
+		assert.NoError(t, err)
+	})
+
+	svr := httptest.NewServer(testHandler)
+	defer svr.Close()
+
+	client, err := cloudevents.NewClientHTTP(cloudevents.WithTarget(svr.URL))
+	assert.NoError(t, err)
+
+	s := scraper.NewExtractLoadScraper(extractor, loader, client, "", "")
 	err = s.Scrape(context.Background(), []string{tempDir}, execution)
 	if err != nil {
 		t.Fatalf("error scraping: %v", err)
@@ -108,7 +125,21 @@ func TestMinIOScraper_Recursive_Integration(t *testing.T) {
 	}
 
 	execution := testkube.Execution{Id: "minio-test"}
-	s := scraper.NewExtractLoadScraper(extractor, loader)
+
+	// given
+	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := cloudevents.NewEventFromHTTPRequest(r)
+		// then
+		assert.NoError(t, err)
+	})
+
+	svr := httptest.NewServer(testHandler)
+	defer svr.Close()
+
+	client, err := cloudevents.NewClientHTTP(cloudevents.WithTarget(svr.URL))
+	assert.NoError(t, err)
+
+	s := scraper.NewExtractLoadScraper(extractor, loader, client, "", "")
 	err = s.Scrape(context.Background(), []string{tempDir}, execution)
 	if err != nil {
 		t.Fatalf("error scraping: %v", err)

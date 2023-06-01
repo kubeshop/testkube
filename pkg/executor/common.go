@@ -28,6 +28,8 @@ import (
 var ErrPodInitializing = errors.New("PodInitializing")
 
 const (
+	// VolumeDir is volume dir
+	VolumeDir            = "/data"
 	defaultLogLinesCount = 100
 	// GitUsernameSecretName is git username secret name
 	GitUsernameSecretName = "git-username"
@@ -74,7 +76,11 @@ var RunnerEnvVars = []corev1.EnvVar{
 	},
 	{
 		Name:  "RUNNER_DATADIR",
-		Value: "/data",
+		Value: VolumeDir,
+	},
+	{
+		Name:  "RUNNER_CDEVENTS_TARGET",
+		Value: os.Getenv("CDEVENTS_TARGET"),
 	},
 	{
 		Name:  "RUNNER_CLOUD_MODE",
@@ -91,6 +97,10 @@ var RunnerEnvVars = []corev1.EnvVar{
 	{
 		Name:  "RUNNER_CLOUD_API_URL",
 		Value: os.Getenv("TESTKUBE_CLOUD_URL"),
+	},
+	{
+		Name:  "RUNNER_DASHBOARD_URI",
+		Value: os.Getenv("TESTKUBE_DASHBOARD_URI"),
 	},
 }
 
@@ -339,6 +349,8 @@ func SyncDefaultExecutors(
 				Types:        executor.Executor.Types,
 				ExecutorType: executorv1.ExecutorType(executor.Executor.ExecutorType),
 				Image:        executor.Executor.Image,
+				Command:      executor.Executor.Command,
+				Args:         executor.Executor.Args,
 				Features:     executorsmapper.MapFeaturesToCRD(executor.Executor.Features),
 				ContentTypes: executorsmapper.MapContentTypesToCRD(executor.Executor.ContentTypes),
 				Meta:         executorsmapper.MapMetaToCRD(executor.Executor.Meta),

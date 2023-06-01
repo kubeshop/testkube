@@ -3,7 +3,6 @@ FROM cypress/included:12.12.0
 COPY cypress /bin/runner
 
 # run as a root in order to install to /root/cache and write to shared data volume
- 
 RUN mkdir /home/runner
 
 WORKDIR /home/runner/

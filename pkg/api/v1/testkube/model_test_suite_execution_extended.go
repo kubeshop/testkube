@@ -135,3 +135,11 @@ func (e *TestSuiteExecution) IsPassed() bool {
 func (e *TestSuiteExecution) IsFailed() bool {
 	return *e.Status == FAILED_TestSuiteExecutionStatus
 }
+
+func (e *TestSuiteExecution) IsAborted() bool {
+	return *e.Status == ABORTED_TestSuiteExecutionStatus
+}
+
+func (e *TestSuiteExecution) IsTimeout() bool {
+	return *e.Status == TIMEOUT_TestSuiteExecutionStatus
+}

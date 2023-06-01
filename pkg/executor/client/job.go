@@ -51,10 +51,13 @@ const (
 	GitTokenSecretName = "git-token"
 	// GitTokenEnvVarName is git token environment var name
 	GitTokenEnvVarName = "RUNNER_GITTOKEN"
+	// SecretTest is a test secret
+	SecretTest = "secrets"
+	// SecretSource is a source secret
+	SecretSource = "source-secrets"
 
 	pollTimeout  = 24 * time.Hour
 	pollInterval = 200 * time.Millisecond
-	volumeDir    = "/data"
 	// pollJobStatus is interval for checking if job timeout occurred
 	pollJobStatus = 1 * time.Second
 	// timeoutIndicator is string that is added to job logs when timeout occurs
@@ -75,6 +78,7 @@ func NewJobExecutor(
 	clientset kubernetes.Interface,
 	registry string,
 	podStartTimeout time.Duration,
+	clusterID string,
 ) (client *JobExecutor, err error) {
 	return &JobExecutor{
 		ClientSet:          clientset,
@@ -90,6 +94,7 @@ func NewJobExecutor(
 		testsClient:        testsClient,
 		registry:           registry,
 		podStartTimeout:    podStartTimeout,
+		clusterID:          clusterID,
 	}, nil
 }
 
@@ -113,6 +118,7 @@ type JobExecutor struct {
 	testsClient        testsv3.Interface
 	registry           string
 	podStartTimeout    time.Duration
+	clusterID          string
 }
 
 type JobOptions struct {
@@ -140,6 +146,7 @@ type JobOptions struct {
 	EnvSecrets            []testkube.EnvReference
 	Labels                map[string]string
 	Registry              string
+	ClusterID             string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -289,7 +296,7 @@ func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) 
 // CreateJob creates new Kubernetes job based on execution and execute options
 func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
-	jobOptions, err := NewJobOptions(c.images.Init, c.jobTemplate, c.serviceAccountName, c.registry, execution, options)
+	jobOptions, err := NewJobOptions(c.images.Init, c.jobTemplate, c.serviceAccountName, c.registry, c.clusterID, execution, options)
 	if err != nil {
 		return err
 	}
@@ -711,7 +718,8 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 		job.Spec.Template.Labels[key] = value
 	}
 
-	envs := append(executor.RunnerEnvVars, secretEnvVars...)
+	envs := append(executor.RunnerEnvVars, corev1.EnvVar{Name: "RUNNER_CLUSTERID", Value: options.ClusterID})
+	envs = append(envs, secretEnvVars...)
 	if options.HTTPProxy != "" {
 		envs = append(envs, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
 	}
@@ -737,7 +745,8 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	return &job, nil
 }
 
-func NewJobOptions(initImage, jobTemplate string, serviceAccountName, registry string, execution testkube.Execution, options ExecuteOptions) (jobOptions JobOptions, err error) {
+func NewJobOptions(initImage, jobTemplate string, serviceAccountName, registry, clusterID string,
+	execution testkube.Execution, options ExecuteOptions) (jobOptions JobOptions, err error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
 		return jobOptions, err
@@ -755,6 +764,7 @@ func NewJobOptions(initImage, jobTemplate string, serviceAccountName, registry s
 	jobOptions.Variables = execution.Variables
 	jobOptions.ServiceAccountName = serviceAccountName
 	jobOptions.Registry = registry
+	jobOptions.ClusterID = clusterID
 
 	return
 }

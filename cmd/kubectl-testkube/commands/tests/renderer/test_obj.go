@@ -84,9 +84,14 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 			renderer.RenderVariables(test.ExecutionRequest.Variables)
 		}
 
+		if len(test.ExecutionRequest.Command) > 0 {
+			ui.Warn("  Command:                ", test.ExecutionRequest.Command...)
+		}
+
 		if len(test.ExecutionRequest.Args) > 0 {
 			ui.Warn("  Args:                   ", test.ExecutionRequest.Args...)
 		}
+		ui.Warn("  Args mode:              ", test.ExecutionRequest.ArgsMode)
 
 		if len(test.ExecutionRequest.Envs) > 0 {
 			ui.NL()
@@ -120,6 +125,10 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 
 		if test.ExecutionRequest.JobTemplate != "" {
 			ui.Warn("  Job template:           ", "\n", test.ExecutionRequest.JobTemplate)
+		}
+
+		if test.ExecutionRequest.CronJobTemplate != "" {
+			ui.Warn("  Cron job template:      ", "\n", test.ExecutionRequest.CronJobTemplate)
 		}
 
 		if test.ExecutionRequest.PreRunScript != "" {

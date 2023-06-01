@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -14,9 +13,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
 	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -60,39 +61,9 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	envManager := env.NewManagerWithVars(execution.Variables)
 	envManager.GetReferenceVars(envManager.Variables)
 
-	gitUsername := r.Params.GitUsername
-	gitToken := r.Params.GitToken
-	if gitUsername != "" || gitToken != "" {
-		if execution.Content != nil && execution.Content.Repository != nil {
-			execution.Content.Repository.Username = gitUsername
-			execution.Content.Repository.Token = gitToken
-		}
-	}
-
-	path := ""
-	workingDir := ""
-	basePath, err := filepath.Abs(r.Params.DataDir)
+	path, workingDir, err := content.GetPathAndWorkingDir(execution.Content, r.Params.DataDir)
 	if err != nil {
 		output.PrintLogf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.Params.DataDir)
-		basePath = r.Params.DataDir
-	}
-	if execution.Content != nil {
-		isStringContentType := execution.Content.Type_ == string(testkube.TestContentTypeString)
-		isFileURIContentType := execution.Content.Type_ == string(testkube.TestContentTypeFileURI)
-		if isStringContentType || isFileURIContentType {
-			path = filepath.Join(basePath, "test-content")
-		}
-
-		isGitFileContentType := execution.Content.Type_ == string(testkube.TestContentTypeGitFile)
-		isGitDirContentType := execution.Content.Type_ == string(testkube.TestContentTypeGitDir)
-		isGitContentType := execution.Content.Type_ == string(testkube.TestContentTypeGit)
-		if isGitFileContentType || isGitDirContentType || isGitContentType {
-			path = filepath.Join(basePath, "repo")
-			if execution.Content.Repository != nil {
-				path = filepath.Join(path, execution.Content.Repository.Path)
-				workingDir = execution.Content.Repository.WorkingDir
-			}
-		}
 	}
 
 	fileInfo, err := os.Stat(path)
@@ -128,9 +99,9 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		params = append(params, fmt.Sprintf("-J%s=%s", value.Name, value.Value))
 	}
 
-	runPath := basePath
+	runPath := r.Params.DataDir
 	if workingDir != "" {
-		runPath = filepath.Join(basePath, "repo", workingDir)
+		runPath = workingDir
 	}
 
 	outputDir := filepath.Join(runPath, "output")
@@ -149,16 +120,49 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	jtlPath := filepath.Join(outputDir, "report.jtl")
 	reportPath := filepath.Join(outputDir, "report")
 	jmeterLogPath := filepath.Join(outputDir, "jmeter.log")
-	args := []string{"-n", "-j", jmeterLogPath, "-t", path, "-l", jtlPath, "-e", "-o", reportPath}
-	args = append(args, params...)
+	args := execution.Args
+	for i := range args {
+		if args[i] == "<runPath>" {
+			args[i] = path
+		}
 
-	// append args from execution
-	args = append(args, execution.Args...)
+		if args[i] == "<jtlFile>" {
+			args[i] = jtlPath
+		}
+
+		if args[i] == "<reportFile>" {
+			args[i] = reportPath
+		}
+
+		if args[i] == "<logFile>" {
+			args[i] = jmeterLogPath
+		}
+	}
+
+	for i := range args {
+		if args[i] == "<envVars>" {
+			newArgs := make([]string, len(args)+len(params)-1)
+			copy(newArgs, args[:i])
+			copy(newArgs[i:], params)
+			copy(newArgs[i+len(params):], args[i+1:])
+			args = newArgs
+			break
+		}
+	}
+
 	output.PrintLogf("%s Using arguments: %v", ui.IconWorld, args)
 
-	mainCmd := getEntrypoint()
+	entryPoint := getEntryPoint()
+	for i := range execution.Command {
+		if execution.Command[i] == "<entryPoint>" {
+			execution.Command[i] = entryPoint
+		}
+	}
+
+	command, args := executor.MergeCommandAndArgs(execution.Command, args)
 	// run JMeter inside repo directory ignore execution error in case of failed test
-	out, err := executor.Run(runPath, mainCmd, envManager, args...)
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
+	out, err := executor.Run(runPath, command, envManager, args...)
 	if err != nil {
 		return *result.WithErrors(errors.Errorf("jmeter run error: %v", err)), nil
 	}
@@ -179,9 +183,11 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		directories := []string{
 			outputDir,
 		}
+		if execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
+			directories = append(directories, execution.ArtifactRequest.Dirs...)
+		}
 
 		output.PrintLogf("Scraping directories: %v", directories)
-
 		if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
 			return *executionResult.Err(err), errors.Wrap(err, "error scraping artifacts for JMeter executor")
 		}
@@ -190,7 +196,7 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	return executionResult, nil
 }
 
-func getEntrypoint() (entrypoint string) {
+func getEntryPoint() (entrypoint string) {
 	if entrypoint = os.Getenv("ENTRYPOINT_CMD"); entrypoint != "" {
 		return entrypoint
 	}

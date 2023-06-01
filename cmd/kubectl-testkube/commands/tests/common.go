@@ -228,7 +228,7 @@ func newArtifactRequestFromFlags(cmd *cobra.Command) (request *testkube.Artifact
 		return nil, err
 	}
 
-	if artifactStorageClassName != "" && artifactVolumeMountPath != "" {
+	if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(dirs) != 0 {
 		request = &testkube.ArtifactRequest{
 			StorageClassName: artifactStorageClassName,
 			VolumeMountPath:  artifactVolumeMountPath,
@@ -337,6 +337,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		return nil, err
 	}
 
+	argsMode := cmd.Flag("args-mode").Value.String()
 	executionName := cmd.Flag("execution-name").Value.String()
 	envs, err := cmd.Flags().GetStringToString("env")
 	if err != nil {
@@ -387,6 +388,17 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		jobTemplateContent = string(b)
 	}
 
+	cronJobTemplateContent := ""
+	cronJobTemplate := cmd.Flag("cronjob-template").Value.String()
+	if cronJobTemplate != "" {
+		b, err := os.ReadFile(cronJobTemplate)
+		if err != nil {
+			return nil, err
+		}
+
+		cronJobTemplateContent = string(b)
+	}
+
 	preRunScriptContent := ""
 	preRunScript := cmd.Flag("prerun-script").Value.String()
 	if preRunScript != "" {
@@ -420,6 +432,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		Image:                 image,
 		Command:               command,
 		Args:                  executorArgs,
+		ArgsMode:              argsMode,
 		ImagePullSecrets:      imageSecrets,
 		Envs:                  envs,
 		SecretEnvs:            secretEnvs,
@@ -427,6 +440,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		HttpsProxy:            httpsProxy,
 		ActiveDeadlineSeconds: timeout,
 		JobTemplate:           jobTemplateContent,
+		CronJobTemplate:       cronJobTemplateContent,
 		PreRunScript:          preRunScriptContent,
 		ScraperTemplate:       scraperTemplateContent,
 		NegativeTest:          negativeTest,
@@ -750,6 +764,10 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 			"https-proxy",
 			&request.HttpsProxy,
 		},
+		{
+			"args-mode",
+			&request.ArgsMode,
+		},
 	}
 
 	var nonEmpty bool
@@ -884,6 +902,22 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 		}
 
 		request.JobTemplate = &jobTemplateContent
+		nonEmpty = true
+	}
+
+	if cmd.Flag("cronjob-template").Changed {
+		cronJobTemplateContent := ""
+		cronJobTemplate := cmd.Flag("cronjob-template").Value.String()
+		if cronJobTemplate != "" {
+			b, err := os.ReadFile(cronJobTemplate)
+			if err != nil {
+				return nil, err
+			}
+
+			cronJobTemplateContent = string(b)
+		}
+
+		request.CronJobTemplate = &cronJobTemplateContent
 		nonEmpty = true
 	}
 

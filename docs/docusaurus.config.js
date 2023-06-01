@@ -3,6 +3,7 @@
 
 const lightCodeTheme = require("./src/themes/prism-testkube-light");
 const darkCodeTheme = require("./src/themes/prism-testkube-dark");
+const redirects = require("./redirects");
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -66,7 +67,7 @@ const config = {
         specs: [
           {
             spec: "https://raw.githubusercontent.com/kubeshop/testkube/main/api/v1/testkube.yaml",
-            route: "/reference/openapi",
+            route: "/openapi",
           },
         ],
         theme: {
@@ -136,183 +137,28 @@ const config = {
         // Optional: see doc section below
         contextualSearch: false,
 
-        // Optional: Specify domains where the navigation should occur through window.location instead on history.push. Useful when our Algolia config crawls multiple documentation sites and we want to navigate with window.location.href to them.
-        // externalUrlRegex: "external\\.com|domain\\.com",
-
-        // Optional: Algolia search parameters
-        searchParameters: {},
-
         // Optional: path for search page that enabled by default (`false` to disable it)
-        searchPagePath: "search",
+        searchPagePath: false,
 
         //... other Algolia params
       },
       colorMode: {
         defaultMode: "dark",
         disableSwitch: false,
-        respectPrefersColorScheme: false,
+        respectPrefersColorScheme: true,
       },
     },
   plugins: [
     [
       "@docusaurus/plugin-client-redirects",
       {
-        redirects: [
-          // /docs/oldDoc -> /docs/newDoc
-          {
-            from: "/executor-cypress",
-            to: "/test-types/executor-cypress",
-          },
-          {
-            from: "/executor-postman",
-            to: "/test-types/executor-postman",
-          },
-          {
-            from: "/executor-soapui",
-            to: "/test-types/executor-soapui",
-          },
-          {
-            from: "/executor-k6",
-            to: "/test-types/executor-k6",
-          },
-          {
-            from: "/executor-jmeter",
-            to: "/test-types/executor-jmeter",
-          },
-          {
-            from: "/executor-kubepug",
-            to: "/test-types/executor-kubepug",
-          },
-          {
-            from: "/executor-artillery",
-            to: "/test-types/executor-artillery",
-          },
-          {
-            from: "/executor-maven",
-            to: "/test-types/executor-maven",
-          },
-          {
-            from: "/executor-gradle",
-            to: "/test-types/executor-gradle",
-          },
-          {
-            from: "/executor-ginkgo",
-            to: "/test-types/executor-ginkgo",
-          },
-          {
-            from: "/executor-curl",
-            to: "/test-types/executor-curl",
-          },
-          {
-            from: "/test-types/executor-custom",
-            to: "/test-types/container-executor",
-          },
-          {
-            from: "/UI",
-            to: "/concepts/dashboard",
-          },
-          {
-            from: "/tests-running",
-            to: "/concepts/tests/tests-running",
-          },
-          {
-            from: "/tests-creating",
-            to: "/concepts/tests/tests-creating",
-          },
-          {
-            from: "/tests-variables",
-            to: "/concepts/tests/tests-variables",
-          },
-          {
-            from: "/testsuites-running",
-            to: "/concepts/test-suites/testsuites-running",
-          },
-          {
-            from: "/testsuites-creating",
-            to: "/concepts/test-suites/testsuites-creating",
-          },
-          {
-            from: "/helm-charts",
-            to: "/reference/helm-chart",
-          },
-          {
-            from: "/telemetry",
-            to: "/reference/telemetry",
-          },
-          {
-            from: "/installing",
-            to: "/getting-started",
-          },
-          {
-            from: "/guides/test-suites/testsuites-getting-results",
-            to: "/concepts/test-suites/testsuites-getting-results",
-          },
-          {
-            from: "/openapi",
-            to: "/reference/openapi",
-          },
-          {
-            from: "/category/tests",
-            to: "/concepts/tests/tests-creating",
-          },
-          {
-            from: "/using-testkube/UI",
-            to: "/concepts/dashboard",
-          },
-          {
-            from: "/FAQ",
-            to: "/concepts/common-issues",
-          },
-          {
-            from: "/integrations/testkube-automation",
-            to: "/guides/cicd",
-          },
-          {
-            from: "/guides/tests/tests-creating",
-            to: "/concepts/tests/tests-creating",
-          },
-          {
-            from: "/guides/exposing-testkube/ingress-nginx",
-            to: "/guides/going-to-production/exposing-testkube/ingress-nginx",
-          },
-          {
-            from: "/guides/exposing-testkube/overview",
-            to: "/guides/going-to-production/exposing-testkube/overview",
-          },
-          {
-            from: "/architecture",
-            to: "/reference/architecture",
-          },
-          {
-            from: "/integrations/slack-integration",
-            to: "/guides/slack-integration",
-          },
-          {
-            from: "/integrations",
-            to: "/getting-started",
-          },
-        ],
+        redirects: redirects,
         createRedirects(existingPath) {
-          if (existingPath.includes("/reference/cli")) {
-            // Redirect from /cli-reference to /reference/cli
-            return [existingPath.replace("/reference/cli", "/cli-reference")];
+          if (existingPath.includes("/cli")) {
+            // Redirect from /cli-reference and /reference/cli (old links) to /cli
+            return [existingPath.replace('/cli', "/cli-reference"), existingPath.replace('/cli', "/reference/cli")];
           }
 
-          if (existingPath.includes("/concepts")) {
-            // Redirect from /using-testkube to /concepts
-            return [existingPath.replace("/concepts", "/using-testkube")];
-          }
-
-          if (
-            existingPath.includes("/guides/going-to-production/authentication")
-          ) {
-            return [
-              existingPath.replace(
-                "/guides/going-to-production/authentication",
-                "/authentication"
-              ),
-            ];
-          }
           return undefined; // Return a falsy value: no redirect created
         },
       },

@@ -20,7 +20,7 @@ func (l DummyLoader) List(selector string) (*executorsv1.WebhookList, error) {
 }
 
 func TestWebhookLoader(t *testing.T) {
-
+	t.Parallel()
 	webhooksLoader := NewWebhookLoader(&DummyLoader{})
 	listeners, err := webhooksLoader.Load()
 

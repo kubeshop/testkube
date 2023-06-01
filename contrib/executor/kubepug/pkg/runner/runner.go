@@ -5,48 +5,56 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
-
-	"github.com/kubeshop/testkube/pkg/envs"
-
-	"github.com/pkg/errors"
 
 	kubepug "github.com/rikatz/kubepug/pkg/results"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
+	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func NewRunner(params envs.Params) *KubepugRunner {
+func NewRunner(ctx context.Context, params envs.Params) (*KubepugRunner, error) {
 	output.PrintLogf("%s Preparing test runner", ui.IconTruck)
 
-	return &KubepugRunner{
-		Fetcher: content.NewFetcher(""),
-		params:  params,
+	var err error
+	r := &KubepugRunner{
+		params: params,
 	}
+
+	r.Scraper, err = factory.TryGetScrapper(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
 }
 
 // KubepugRunner runs kubepug against cluster
 type KubepugRunner struct {
-	Fetcher content.ContentFetcher
 	params  envs.Params
+	Scraper scraper.Scraper
 }
 
 var _ runner.Runner = &KubepugRunner{}
 
 // Run runs the kubepug executable and parses it's output to be Testkube-compatible
 func (r *KubepugRunner) Run(ctx context.Context, execution testkube.Execution) (testkube.ExecutionResult, error) {
+	if r.Scraper != nil {
+		defer r.Scraper.Close()
+	}
 	output.PrintLogf("%s Preparing for test run", ui.IconTruck)
 
-	path, err := r.Fetcher.Fetch(execution.Content)
+	path, workingDir, err := content.GetPathAndWorkingDir(execution.Content, r.params.DataDir)
 	if err != nil {
-		return testkube.ExecutionResult{}, fmt.Errorf("could not get content: %w", err)
+		output.PrintLogf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.params.DataDir)
 	}
 
 	fileInfo, err := os.Stat(path)
@@ -72,16 +80,23 @@ func (r *KubepugRunner) Run(ctx context.Context, execution testkube.Execution) (
 	envManager := env.NewManagerWithVars(execution.Variables)
 	envManager.GetReferenceVars(envManager.Variables)
 
-	runPath := ""
-	if execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
-		runPath = filepath.Join(r.params.DataDir, "repo", execution.Content.Repository.WorkingDir)
-	}
-
-	out, err := executor.Run(runPath, "kubepug", envManager, args...)
+	runPath := workingDir
+	command, args := executor.MergeCommandAndArgs(execution.Command, args)
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
+	out, err := executor.Run(runPath, command, envManager, args...)
 	out = envManager.ObfuscateSecrets(out)
 	if err != nil {
 		output.PrintLogf("%s Could not execute kubepug: %s", ui.IconCross, err.Error())
 		return testkube.ExecutionResult{}, fmt.Errorf("could not execute kubepug: %w", err)
+	}
+
+	// scrape artifacts first even if there are errors above
+	if r.params.ScrapperEnabled && execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
+		output.PrintLogf("Scraping directories: %v", execution.ArtifactRequest.Dirs)
+
+		if err := r.Scraper.Scrape(ctx, execution.ArtifactRequest.Dirs, execution); err != nil {
+			return testkube.ExecutionResult{}, fmt.Errorf("could not scrape kubepug directories: %w", err)
+		}
 	}
 
 	var kubepugResult kubepug.Result
@@ -163,15 +178,12 @@ func getResultStatus(r kubepug.Result) *testkube.ExecutionStatus {
 
 // buildArgs builds up the arguments for
 func buildArgs(args []string, inputPath string) ([]string, error) {
-	for _, a := range args {
-		if strings.Contains(a, "--format") {
-			return []string{}, fmt.Errorf("the Testkube Kubepug executor does not accept the \"--format\" parameter: %s", a)
-		}
-		if strings.Contains(a, "--input-file") {
-			return []string{}, errors.Errorf("the Testkube Kubepug executor does not accept the \"--input-file\" parameter: %s", a)
+	for i := range args {
+		if args[i] == "<runPath>" {
+			args[i] = inputPath
 		}
 	}
-	return append(args, "--format=json", "--input-file", inputPath), nil
+	return args, nil
 }
 
 // GetType returns runner type

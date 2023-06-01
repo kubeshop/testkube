@@ -157,7 +157,9 @@ type ExecuteTestOptions struct {
 	ExecutionVariablesFileContent string
 	IsVariablesFileUploaded       bool
 	ExecutionLabels               map[string]string
+	Command                       []string
 	Args                          []string
+	ArgsMode                      string
 	Envs                          map[string]string
 	SecretEnvs                    map[string]string
 	HTTPProxy                     string

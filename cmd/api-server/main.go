@@ -315,6 +315,7 @@ func main() {
 		clientset,
 		cfg.TestkubeRegistry,
 		cfg.TestkubePodStartTimeout,
+		clusterId,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating executor client", err)
@@ -338,6 +339,7 @@ func main() {
 		testsClientV3,
 		cfg.TestkubeRegistry,
 		cfg.TestkubePodStartTimeout,
+		clusterId,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating container executor", err)
@@ -389,12 +391,14 @@ func main() {
 		storageClient,
 		cfg.GraphqlPort,
 		artifactStorage,
+		cfg.CDEventsTarget,
+		cfg.TestkubeDashboardURI,
 	)
 
 	if mode == common.ModeAgent {
 		log.DefaultLogger.Info("starting agent service")
 
-		agentHandle, err := agent.NewAgent(log.DefaultLogger, api.Mux.Handler(), cfg.TestkubeCloudAPIKey, grpcClient, cfg.TestkubeCloudWorkerCount, cfg.TestkubeCloudLogStreamWorkerCount, api.GetLogsStream)
+		agentHandle, err := agent.NewAgent(log.DefaultLogger, api.Mux.Handler(), cfg.TestkubeCloudAPIKey, grpcClient, cfg.TestkubeCloudWorkerCount, cfg.TestkubeCloudLogStreamWorkerCount, api.GetLogsStream, clusterId)
 		if err != nil {
 			ui.ExitOnError("Starting agent", err)
 		}

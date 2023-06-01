@@ -278,3 +278,34 @@ func (f Fetcher) CalculateGitContentType(repo testkube.Repository) (string, erro
 	}
 	return string(testkube.TestContentTypeGitFile), nil
 }
+
+// GetPathAndWorkingDir returns path to git based file or dir saved in local temp directory and working dir
+func GetPathAndWorkingDir(content *testkube.TestContent, dataDir string) (path, workingDir string, err error) {
+	basePath, err := filepath.Abs(dataDir)
+	if err != nil {
+		basePath = dataDir
+	}
+	if content != nil {
+		isStringContentType := content.Type_ == string(testkube.TestContentTypeString)
+		isFileURIContentType := content.Type_ == string(testkube.TestContentTypeFileURI)
+		if isStringContentType || isFileURIContentType {
+			path = filepath.Join(basePath, "test-content")
+		}
+
+		isGitFileContentType := content.Type_ == string(testkube.TestContentTypeGitFile)
+		isGitDirContentType := content.Type_ == string(testkube.TestContentTypeGitDir)
+		isGitContentType := content.Type_ == string(testkube.TestContentTypeGit)
+		if isGitFileContentType || isGitDirContentType || isGitContentType {
+			path = filepath.Join(basePath, "repo")
+			if content.Repository != nil {
+				if content.Repository.WorkingDir != "" {
+					workingDir = filepath.Join(path, content.Repository.WorkingDir)
+				}
+
+				path = filepath.Join(path, content.Repository.Path)
+			}
+		}
+	}
+
+	return path, workingDir, err
+}

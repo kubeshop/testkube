@@ -7,7 +7,7 @@ import (
 )
 
 func TestListenerName(t *testing.T) {
-
+	t.Parallel()
 	// given
 	in := "webhooks.http://localhost:8080/something/else.start-test"
 

@@ -7,15 +7,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/utils/test"
-
-	"github.com/kubeshop/testkube/pkg/envs"
-
 	cp "github.com/otiai10/copy"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/envs"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
 func TestRun_Integration(t *testing.T) {
@@ -36,7 +33,9 @@ func TestRun_Integration(t *testing.T) {
 
 		// given
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "maven/test"
 		execution.Content = &testkube.TestContent{
@@ -46,6 +45,8 @@ func TestRun_Integration(t *testing.T) {
 				Branch: "main",
 			},
 		}
+		execution.Command = []string{"mvn"}
+		execution.Args = []string{"--settings", "<settingsFile>", "<goalName>", "-Duser.home", "<mavenHome>"}
 
 		execution.Variables = map[string]testkube.Variable{
 			"wrapper": {Name: "TESTKUBE_MAVEN_WRAPPER", Value: "true", Type_: testkube.VariableTypeBasic},
@@ -73,7 +74,9 @@ func TestRun_Integration(t *testing.T) {
 
 		// given
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "maven/project"
 		execution.Content = &testkube.TestContent{
@@ -83,7 +86,8 @@ func TestRun_Integration(t *testing.T) {
 				Branch: "main",
 			},
 		}
-		execution.Args = []string{"test"}
+		execution.Command = []string{"mvn"}
+		execution.Args = []string{"test", "--settings", "<settingsFile>", "<goalName>", "-Duser.home", "<mavenHome>"}
 		execution.Variables = map[string]testkube.Variable{
 			"wrapper": {Name: "TESTKUBE_MAVEN", Value: "true", Type_: testkube.VariableTypeBasic},
 		}
@@ -110,7 +114,9 @@ func TestRun_Integration(t *testing.T) {
 
 		// given
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "maven/test"
 		execution.Content = &testkube.TestContent{
@@ -120,6 +126,8 @@ func TestRun_Integration(t *testing.T) {
 				Branch: "main",
 			},
 		}
+		execution.Command = []string{"mvn"}
+		execution.Args = []string{"--settings", "<settingsFile>", "<goalName>", "-Duser.home", "<mavenHome>"}
 		execution.Envs = map[string]string{"TESTKUBE_MAVEN_WRAPPER": "true"}
 
 		assert.NoError(t, os.Setenv("TESTKUBE_MAVEN_WRAPPER", "true"))
@@ -144,7 +152,9 @@ func TestRun_Integration(t *testing.T) {
 
 		// given
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "maven/test"
 		execution.Content = &testkube.TestContent{
@@ -154,6 +164,8 @@ func TestRun_Integration(t *testing.T) {
 				Branch: "main",
 			},
 		}
+		execution.Command = []string{"mvn"}
+		execution.Args = []string{"--settings", "<settingsFile>", "<goalName>", "-Duser.home", "<mavenHome>"}
 		execution.Variables = map[string]testkube.Variable{
 			"wrapper": {Name: "TESTKUBE_MAVEN", Value: "true", Type_: testkube.VariableTypeBasic},
 		}
@@ -182,11 +194,15 @@ func TestRunErrors_Integration(t *testing.T) {
 		t.Parallel()
 		// given
 		params := envs.Params{DataDir: "/unknown"}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
+		execution.Command = []string{"mvn"}
+		execution.Args = []string{"--settings", "<settingsFile>", "<goalName>", "-Duser.home", "<mavenHome>"}
 
 		// when
-		_, err := runner.Run(ctx, *execution)
+		_, err = runner.Run(ctx, *execution)
 
 		// then
 		assert.Error(t, err)
@@ -201,10 +217,14 @@ func TestRunErrors_Integration(t *testing.T) {
 
 		// given
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "maven/test"
 		execution.Content = testkube.NewStringTestContent("")
+		execution.Command = []string{"mvn"}
+		execution.Args = []string{"--settings", "<settingsFile>", "<goalName>", "-Duser.home", "<mavenHome>"}
 
 		// when
 		_, err = runner.Run(ctx, *execution)
@@ -225,7 +245,9 @@ func TestRunErrors_Integration(t *testing.T) {
 
 		// given
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "maven/test"
 		execution.Content = &testkube.TestContent{
@@ -235,6 +257,8 @@ func TestRunErrors_Integration(t *testing.T) {
 				Branch: "main",
 			},
 		}
+		execution.Command = []string{"mvn"}
+		execution.Args = []string{"--settings", "<settingsFile>", "<goalName>", "-Duser.home", "<mavenHome>"}
 
 		// when
 		result, err := runner.Run(ctx, *execution)
@@ -264,7 +288,9 @@ func TestRunMavenProject_Integration(t *testing.T) {
 
 		// given
 		params := envs.Params{DataDir: tempDir}
-		runner := NewRunner(params)
+		runner, err := NewRunner(context.Background(), params)
+		assert.NoError(t, err)
+
 		execution := testkube.NewQueuedExecution()
 		execution.TestType = "maven/project"
 		execution.Content = &testkube.TestContent{
@@ -274,7 +300,8 @@ func TestRunMavenProject_Integration(t *testing.T) {
 				Branch: "main",
 			},
 		}
-		execution.Args = []string{"test"}
+		execution.Command = []string{"mvn"}
+		execution.Args = []string{"test", "--settings", "<settingsFile>", "<goalName>", "-Duser.home", "<mavenHome>"}
 		execution.Variables = map[string]testkube.Variable{
 			"wrapper": {Name: "TESTKUBE_MAVEN", Value: "true", Type_: testkube.VariableTypeBasic},
 		}
