@@ -4,17 +4,16 @@
 
 1. Deploy NGINX Ingress Controller into your k8s cluster. Please see the link for more details: [NGINX Ingress Controller](https://kubernetes.github.io/ingress-nginx/).
 
-2. (Optional) To use TLS it is required to have any certificate management tool installed. At Testkube and in this guide we will use [cert-manager](https://cert-manager.io/), but it might differ depending on your set-up.
+2. (Optional) To use TLS, the installation of any certificate management tool is required. At Testkube and in this guide we will use [cert-manager](https://cert-manager.io/), but it might differ depending on your set-up.
 
-3. Add Testkube helm-chart to your repositories, using this command:
+3. Add the Testkube helm-chart to your repositories, using this command:
 ```sh
 helm repo add kubeshop https://kubeshop.github.io/helm-charts && helm repo update
 ```
 
 ## Exposing Testkube 
 
-In order to expose Testkube to the outside world we need to enable two Ingresses -  Testkube's UI API and Testkube's dashboard. Update `values.yaml` file that later will be passed to the `helm install` command. To enable the Testkube Ingresses, please use the following code configuration:
-
+In order to expose Testkube to the outside world we need to enable two Ingresses -  Testkube's UI API and Testkube's dashboard. Update the `values.yaml` file that will later be passed to the `helm install` command. To enable the Testkube Ingresses, please use the following code configuration:
 ```aidl
 testkube-api:
   uiIngress:
@@ -59,7 +58,7 @@ testkube-dashboard:
 
 :::note
 
-Keep in mind that hosts have to be identical for the `dashboard` and for the `api` with different paths though. 
+Keep in mind that hosts have to be identical for the `dashboard` and for the `api` with different paths. 
 
 Also, do not forget to add `apiServerEndpoint` to the `values.yaml` for the `testkube-dashboard`, e.g.: apiServerEndpoint: "your-host.com/results".
 
@@ -80,7 +79,7 @@ Once the `values.yaml` file is ready, we can deploy Testkube into a cluster:
 helm install --create-namespace testkube kubeshop/testkube --namespace testkube --values values.yaml
 ```
 
-After installation is completed you may get the address of the Ingresses with the following commands:
+After the installation is complete, discover the address of the Ingresses with the following commands:
 
 ```sh
 kubectl get ingress -n testkube
