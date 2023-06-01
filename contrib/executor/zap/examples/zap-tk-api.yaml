@@ -8,7 +8,7 @@ api:
   # -S safe mode this will skip the active scan and perform a baseline scan
   safe: true
   # -c config file
-  config: contrib/executor/zap/examples/zap-tk-api.conf
+  config: /data/uploads/zap-tk-api.conf
   # -d show debug messages
   debug: true
   # -s short output
