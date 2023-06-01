@@ -49,7 +49,7 @@ spec:
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: maven-executor-smoke-jdk18  # expected failure - ENVs not set
+  name: maven-executor-smoke-jdk18-negative # expected failure - ENVs not set
   namespace: testkube
   labels:
     core-tests: executors-negative
