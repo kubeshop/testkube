@@ -26,14 +26,14 @@ kubectl testkube run test --watch baseline-test
 kubectl testkube create test --file contrib/executor/zap/examples/zap-tk-full.yaml --type "zap/full" --name full-test --copy-files contrib/executor/zap/examples/zap-tk-full.conf:zap-tk-full.conf
 kubectl testkube run test --watch full-test
 
-testkube create test --git-uri https://github.com/kubeshop/testkube-zap-executor.git --type "zap/api" --name api-test --executor-args "examples/zap-tk-api.yaml" --git-branch main
-kubectl testkube run test --watch api-test
+kubectl testkube create test --git-uri https://github.com/kubeshop/testkube.git --type "zap/api" --name git-api-test --executor-args "zap-api.yaml" --git-branch main --git-path contrib/executor/zap/examples
+kubectl testkube run test --watch git-api-test
 
-testkube create test --git-uri https://github.com/kubeshop/testkube-zap-executor.git --type "zap/baseline" --name baseline-test --executor-args "examples/zap-tk-baseline.yaml" --git-branch main
-kubectl testkube run test --watch baseline-test
+kubectl testkube create test --git-uri https://github.com/kubeshop/testkube.git --type "zap/baseline" --name git-baseline-test --executor-args "zap-baseline.yaml" --git-branch main --git-path contrib/executor/zap/examples
+kubectl testkube run test --watch git-baseline-test **
 
-testkube create test --git-uri https://github.com/kubeshop/testkube-zap-executor.git --type "zap/full" --name full-test --executor-args "examples/zap-tk-full.yaml" --git-branch main
-kubectl testkube run test --watch full-test
+kubectl testkube create test --git-uri https://github.com/kubeshop/testkube.git --type "zap/full" --name git-full-test --executor-args "zap-full.yaml" --git-branch main --git-path contrib/executor/zap/examples
+kubectl testkube run test --watch full-test-git
 ```
 
 The required ZAP arguments and options need to be specified via a dedicated YAML configuration file, e.g.

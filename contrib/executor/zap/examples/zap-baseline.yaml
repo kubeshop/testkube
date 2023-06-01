@@ -2,7 +2,7 @@ baseline:
   # -t target URL including the protocol
   target: https://www.example.com/
   # -c -u config file or URL
-  config: examples/zap-baseline.conf
+  config: /data/repo/contrib/executor/zap/examples/zap-baseline.conf
   # -m the number of minutes to spider for (default 1)
   minutes: 3
   # -D delay in seconds to wait for passive scanning
@@ -15,3 +15,5 @@ baseline:
   level: INFO
   # -j use the Ajax spider in addition to the traditional one
   ajax: false
+  # -I fail on warn
+  fail_on_warn: false

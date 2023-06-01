@@ -130,8 +130,9 @@ For additional files that should be passed in as parameter to the executor, use 
 For tests running on production, you should use a Git repository to keep track of the changes the test went through. When running these tests, Testkube will clone the repository every time. An example test creation command would look something like this:
 
 ```bash
-$ testkube create test --git-uri https://github.com/kubeshop/testkube-zap-executor.git --type "zap/api" --name zap-api-test --executor-args "examples/zap-tk-api.yaml" --git-branch main
-Test created testkube / zap-api-test 🥇
+$ testkube create test --git-uri https://github.com/kubeshop/testkube.git --type "zap/api" --name git-zap-api-test --executor-args "zap-api.yaml" --git-branch main --git-path contrib/executor/zap/examples
+kubectl testkube run test --watch git-zap-api-test
+Test created testkube / git-zap-api-test 🥇
 ```
 
 Please note that for using Git-based tests, the executor is expecting the test file as the last `--executor-args` argument. The path to the config file should be specified in this `yaml` file.
