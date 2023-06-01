@@ -401,6 +401,7 @@ spec:
         - name: yourSecretName
 
 ```
+
 Add `imagePullSecrets` option if you use your own Image Registry. This will add the secret for both `init` and `executor` containers.
 
 
@@ -488,6 +489,7 @@ testkube create test --file test/postman/LocalHealth.postman_collection.json --n
 ```
 
 ### Automatically Add All ConfigMap and Secret Keys to Test Variables
+
 You may want to automatcially add all keys from your ConfigMap and Secret to your test. For this, you will need to provide them as additional
 parameters when you create or run the test using the `--variable-configmap` and `--variable-secret` options and they will be automatically added during test execution. All ConfigMap keys will be added with `key` as the variable name for Basic variables and all Secret keys will be added with key as variable name for Secret variables:
 
