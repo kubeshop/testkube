@@ -15,10 +15,6 @@ api:
   short: false
   # -l minimum level to show: PASS, IGNORE, INFO, WARN or FAIL
   level: INFO
-  # -n context file
-  # context: /data/uploads/context.conf
-  # username to use for authenticated scans
-  user: anonymous
   # delay in seconds to wait for passive scanning
   delay: 5
   # max time in minutes to wait for ZAP to start and the passive scan to run
