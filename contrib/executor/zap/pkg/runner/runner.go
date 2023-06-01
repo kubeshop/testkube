@@ -56,7 +56,7 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 	}
 	output.PrintLogf("%s Preparing for test run", ui.IconTruck)
 
-	testFile, workingDir, err := content.GetPathAndWorkingDir(execution.Content, r.Params.DataDir)
+	testFile, _, err := content.GetPathAndWorkingDir(execution.Content, r.Params.DataDir)
 	if err != nil {
 		output.PrintLogf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.Params.DataDir)
 	}
@@ -67,7 +67,7 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 	}
 
 	var zapConfig string
-	workingDir = r.Params.DataDir
+	workingDir := r.Params.DataDir
 	if fileInfo.IsDir() {
 		// assume the ZAP config YAML has been passed as test argument
 		zapConfig = filepath.Join(testFile, execution.Args[len(execution.Args)-1])
