@@ -93,7 +93,7 @@ Checkout the [Getting Started](https://docs.testkube.io/articles/getting-started
 
 # Documentation
 
-Is available at [docs.testkube.io](docs.testkube.io)
+Is available at [docs.testkube.io](https://docs.testkube.io)
 
 ## Contributing
 
