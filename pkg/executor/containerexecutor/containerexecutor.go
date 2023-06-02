@@ -595,11 +595,6 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		jobDelaySeconds = jobArtifactDelaySeconds
 	}
 
-	jobTemplate := options.ExecutorSpec.JobTemplate
-	if options.Request.JobTemplate != "" {
-		jobTemplate = options.Request.JobTemplate
-	}
-
 	return &JobOptions{
 		Image:                     image,
 		ImagePullSecrets:          options.ImagePullSecretNames,
@@ -618,7 +613,8 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		ActiveDeadlineSeconds:     options.Request.ActiveDeadlineSeconds,
 		ArtifactRequest:           artifactRequest,
 		DelaySeconds:              jobDelaySeconds,
-		JobTemplateExtensions:     jobTemplate,
+		JobTemplate:               options.ExecutorSpec.Image,
+		JobTemplateExtensions:     options.Request.JobTemplate,
 		ScraperTemplateExtensions: options.Request.ScraperTemplate,
 		EnvConfigMaps:             options.Request.EnvConfigMaps,
 		EnvSecrets:                options.Request.EnvSecrets,
