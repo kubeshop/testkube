@@ -613,6 +613,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		ActiveDeadlineSeconds:     options.Request.ActiveDeadlineSeconds,
 		ArtifactRequest:           artifactRequest,
 		DelaySeconds:              jobDelaySeconds,
+		JobTemplate:               options.ExecutorSpec.JobTemplate,
 		JobTemplateExtensions:     options.Request.JobTemplate,
 		ScraperTemplateExtensions: options.Request.ScraperTemplate,
 		EnvConfigMaps:             options.Request.EnvConfigMaps,
