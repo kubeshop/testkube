@@ -63,7 +63,8 @@ var RootCmd = &cobra.Command{
 	},
 
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
-		clientCfg, _ := config.Load()
+		clientCfg, err := config.Load()
+		ui.WarnOnError("loading config", err)
 
 		client, _ := common.GetClient(cmd)
 		serverCfg, err := client.GetConfig()
@@ -72,8 +73,10 @@ var RootCmd = &cobra.Command{
 		if clientCfg.TelemetryEnabled != serverCfg.EnableTelemetry && err == nil {
 			if serverCfg.EnableTelemetry {
 				clientCfg.EnableAnalytics()
+				ui.Debug("Sync telemetry on CLI with API", "enabled")
 			} else {
 				clientCfg.DisableAnalytics()
+				ui.Debug("Sync telemetry on CLI with API", "disabled")
 			}
 
 			err = config.Save(clientCfg)
