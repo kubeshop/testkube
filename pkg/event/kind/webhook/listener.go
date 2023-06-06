@@ -99,7 +99,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 			log.Errorw("executing webhook template error", "error", err)
 			return testkube.NewFailedEventResult(event.Id, err)
 		}
-		body.Reset()
+
 		_, err = body.Write(buffer.Bytes())
 	} else {
 		err := json.NewEncoder(body).Encode(event)
