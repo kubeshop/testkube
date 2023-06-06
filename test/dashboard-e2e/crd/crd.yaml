@@ -25,4 +25,8 @@ spec:
         name: API_URL
         value: testkube-api-server.testkube.svc.cluster.local:8088/v1
         type: basic
+      DASHBOARD_API_URL:
+        name: DASHBOARD_API_URL
+        value: testkube-api-server.testkube.svc.cluster.local:8088/v1
+        type: basic
   schedule: "15 */4 * * *"
