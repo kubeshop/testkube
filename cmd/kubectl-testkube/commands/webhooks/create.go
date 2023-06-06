@@ -93,7 +93,7 @@ func NewCreateWebhookCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&selector, "selector", "", "", "expression to select tests and test suites for webhook events: --selector app=backend")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringVarP(&payloadObjectField, "payload-field", "", "", "field to use for notification object payload")
-	cmd.Flags().StringVarP(&payloadTemplate, "payload-template", "", "", "if webhoo needs to send a custom notification, then a path to template file should be provided")
+	cmd.Flags().StringVarP(&payloadTemplate, "payload-template", "", "", "if webhook needs to send a custom notification, then a path to template file should be provided")
 	cmd.Flags().StringToStringVarP(&headers, "header", "", nil, "webhook header value pair: --header Content-Type=application/xml")
 
 	return cmd
