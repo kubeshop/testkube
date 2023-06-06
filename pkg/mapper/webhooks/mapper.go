@@ -17,6 +17,8 @@ func MapCRDToAPI(item executorv1.Webhook) testkube.Webhook {
 		Selector:           item.Spec.Selector,
 		Labels:             item.Labels,
 		PayloadObjectField: item.Spec.PayloadObjectField,
+		PayloadTemplate:    item.Spec.PayloadTemplate,
+		Headers:            item.Spec.Headers,
 	}
 }
 
@@ -49,6 +51,8 @@ func MapAPIToCRD(request testkube.WebhookCreateRequest) executorv1.Webhook {
 			Events:             MapEventTypesToStringArray(request.Events),
 			Selector:           request.Selector,
 			PayloadObjectField: request.PayloadObjectField,
+			PayloadTemplate:    request.PayloadTemplate,
+			Headers:            request.Headers,
 		},
 	}
 }

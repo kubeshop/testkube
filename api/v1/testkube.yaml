@@ -4533,6 +4533,17 @@ components:
         payloadObjectField:
           type: string
           description: will load the generated payload for notification inside the object
+        payloadTemplate:
+          type: string
+          description: golang based template for notification paylod
+        headers:
+          type: object
+          description: "webhook headers"
+          additionalProperties:
+            type: string
+          example:
+            env: "Content-Type"
+            app: "application/xml"
         labels:
           type: object
           description: "webhook labels"

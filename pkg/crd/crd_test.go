@@ -22,6 +22,8 @@ func TestGenerateYAML(t *testing.T) {
 				Selector:           "app=backend",
 				Labels:             map[string]string{"key1": "value1"},
 				PayloadObjectField: "text",
+				PayloadTemplate:    "{{ .Id }}",
+				Headers:            map[string]string{"Content-Type": "appication/xml"},
 			},
 		}
 
@@ -45,6 +47,8 @@ func TestGenerateYAML(t *testing.T) {
 				Selector:           "app=backend",
 				Labels:             map[string]string{"key1": "value1"},
 				PayloadObjectField: "text",
+				PayloadTemplate:    "{{ .Id }}",
+				Headers:            map[string]string{"Content-Type": "appication/xml"},
 			},
 			{
 				Name:               "name2",
@@ -54,6 +58,8 @@ func TestGenerateYAML(t *testing.T) {
 				Selector:           "app=backend",
 				Labels:             map[string]string{"key2": "value2"},
 				PayloadObjectField: "text",
+				PayloadTemplate:    "{{ .Id }}",
+				Headers:            map[string]string{"Content-Type": "appication/xml"},
 			},
 		}
 
