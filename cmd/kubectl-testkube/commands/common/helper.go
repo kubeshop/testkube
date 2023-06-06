@@ -77,6 +77,7 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data) err
 		"--namespace", options.Namespace,
 		"--set", "testkube-api.cloud.url=" + options.CloudUris.Agent,
 		"--set", "testkube-api.cloud.key=" + options.CloudAgentToken,
+		"--set", "testkube-api.cloud.migrate=true",
 	}
 
 	args = append(args, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !options.NoDashboard))
