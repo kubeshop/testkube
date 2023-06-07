@@ -129,11 +129,9 @@ For additional files that should be passed in as parameter to the executor, use 
 
 For tests running on production, you should use a Git repository to keep track of the changes the test went through. When running these tests, Testkube will clone the repository every time. An example test creation command would look something like this:
 
-```sh
-testkube create test --git-uri https://github.com/kubeshop/testkube.git --type "zap/api" --name git-zap-api-test --executor-args "zap-api.yaml" --git-branch main --git-path contrib/executor/zap/examples
-```
-
-```sh title="Output:"
+```bash
+$ testkube create test --git-uri https://github.com/kubeshop/testkube.git --type "zap/api" --name git-zap-api-test --executor-args "zap-api.yaml" --git-branch main --git-path contrib/executor/zap/examples
+kubectl testkube run test --watch git-zap-api-test
 Test created testkube / git-zap-api-test 🥇
 ```
 
