@@ -4535,7 +4535,7 @@ components:
           description: will load the generated payload for notification inside the object
         payloadTemplate:
           type: string
-          description: golang based template for notification paylod
+          description: golang based template for notification payload
         headers:
           type: object
           description: "webhook headers"
