@@ -17,6 +17,12 @@ spec:
   - end-test
   - end-test-success
   - end-test-failed
+  selector: ""
+  payloadobjectfield: ""
+  payloadtemplate: | 
+    {"text": "event id {{ .Id }}"}
+  headers:
+    X-Token: "12345"
 ```
 
 And then apply with: 
@@ -25,4 +31,5 @@ And then apply with:
 kubectl apply -f webhook.yaml
 ```
 
-Here you'll be able to pass events depending on which webhooks you want to be triggered. Testkube will pass `Event` which can have `type` and `testExecution` or `testsuiteExecution` fields.
+Here you'll be able to pass events depending on which webhooks you want to be triggered. Testkube will pass `Event` which can have `type` and `testExecution` or `testsuiteExecution` fields. You can run webhook for any test/test suite or only matched with selector expression. It's possible to provide additional headers as well as define your golang based template to create your own payload body based on `Event` object.
+
