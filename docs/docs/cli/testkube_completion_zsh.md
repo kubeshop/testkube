@@ -13,7 +13,7 @@ to enable it.  You can execute the following once:
 
 To load completions in your current shell session:
 
-	source <(testkube completion zsh); compdef _testkube testkube
+	source <(testkube completion zsh)
 
 To load completions for every new session, execute once:
 
