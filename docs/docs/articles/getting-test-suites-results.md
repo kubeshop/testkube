@@ -7,7 +7,6 @@ testkube get tse
 ```
 
 ```sh title="Expected output:"
-kubectl testkube get tse
 
   ID                       | TEST SUITE NAME                | EXECUTION NAME                        | STATUS  | STEPS | LABELS        
 ---------------------------+--------------------------------+---------------------------------------+---------+-------+---------------
