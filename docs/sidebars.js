@@ -141,6 +141,7 @@ const sidebars = {
           ],
         },
         "articles/webhooks",
+        "articles/cd-events",
         "articles/slack-integration",
         "articles/generate-test-crds",
         "articles/logging",
