@@ -1,5 +1,9 @@
 # .golangci.yml
 
+run:
+  build-tags:
+    - integration
+
 linters:
   disable-all: true
   enable:
@@ -7,6 +11,7 @@ linters:
     - revive
     - govet
     - unused
+    - staticcheck
 
 linters-settings:
   govet:

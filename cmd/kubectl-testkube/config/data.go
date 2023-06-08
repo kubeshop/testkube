@@ -18,6 +18,10 @@ type CloudContext struct {
 	Organization string `json:"organization,omitempty"`
 	ApiKey       string `json:"apiKey,omitempty"`
 	ApiUri       string `json:"apiUri,omitempty"`
+	AgentKey     string `json:"agentKey,omitempty"`
+	AgentUri     string `json:"agentUri,omitempty"`
+	RootDomain   string `json:"rootDomain,omitempty"`
+	UiUri        string `json:"uiUri,omitempty"`
 }
 
 type Data struct {
@@ -25,6 +29,10 @@ type Data struct {
 	Namespace        string     `json:"namespace,omitempty"`
 	Initialized      bool       `json:"initialized,omitempty"`
 	APIURI           string     `json:"apiURI,omitempty"`
+	APIServerName    string     `json:"apiServerName,omitempty"`
+	APIServerPort    int        `json:"apiServerPort,omitempty"`
+	DashboardName    string     `json:"dashboardName,omitempty"`
+	DashboardPort    int        `json:"dashboardPort,omitempty"`
 	OAuth2Data       OAuth2Data `json:"oauth2Data"`
 
 	ContextType  ContextType  `json:"contextType,omitempty"`

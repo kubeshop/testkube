@@ -1,0 +1,14 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: zap-executor
+  namespace: testkube
+spec:
+  executor_type: job
+  image: kubeshop/testkube-zap-executor:latest
+  types:
+    - zap/api
+    - zap/baseline
+    - zap/full
+  features:
+    - artifacts

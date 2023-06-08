@@ -46,6 +46,26 @@ func TestMapTestCRToAPI(t *testing.T) {
 					"TESTKUBE": "1",
 				},
 				Sync: false,
+				EnvConfigMaps: []testsv3.EnvReference{
+					{
+						LocalObjectReference: v1.LocalObjectReference{
+							Name: "configmap",
+						},
+						Mount:          true,
+						MountPath:      "/data",
+						MapToVariables: false,
+					},
+				},
+				EnvSecrets: []testsv3.EnvReference{
+					{
+						LocalObjectReference: v1.LocalObjectReference{
+							Name: "secret",
+						},
+						Mount:          false,
+						MountPath:      "",
+						MapToVariables: true,
+					},
+				},
 			},
 		},
 	}
@@ -70,6 +90,7 @@ func TestMapTestCRToAPI(t *testing.T) {
 			Variables:     map[string]testkube.Variable{},
 			VariablesFile: "",
 			Args:          []string{"-v", "-X", "GET", "https://testkube.kubeshop.io"},
+			ArgsMode:      "",
 			Command:       []string{"curl"},
 			Image:         "curlimages/curl:7.85.0",
 			ImagePullSecrets: []testkube.LocalObjectReference{
@@ -79,6 +100,26 @@ func TestMapTestCRToAPI(t *testing.T) {
 				"TESTKUBE": "1",
 			},
 			Sync: false,
+			EnvConfigMaps: []testkube.EnvReference{
+				{
+					Reference: &testkube.LocalObjectReference{
+						Name: "configmap",
+					},
+					Mount:          true,
+					MountPath:      "/data",
+					MapToVariables: false,
+				},
+			},
+			EnvSecrets: []testkube.EnvReference{
+				{
+					Reference: &testkube.LocalObjectReference{
+						Name: "secret",
+					},
+					Mount:          false,
+					MountPath:      "",
+					MapToVariables: true,
+				},
+			},
 		},
 	}
 	assert.Equal(t, want, got)

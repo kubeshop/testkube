@@ -16,8 +16,8 @@ func TestService_matchConditionsRetry(t *testing.T) {
 
 	retry := 0
 	e := &watcherEvent{
-		resource:  "pod",
-		name:      "test-pod",
+		resource:  "deployment",
+		name:      "test-deployment",
 		namespace: "testkube",
 		labels:    nil,
 		object:    nil,
@@ -35,6 +35,7 @@ func TestService_matchConditionsRetry(t *testing.T) {
 					Type_:  "Progressing",
 					Status: &status,
 					Reason: "NewReplicaSetAvailable",
+					Ttl:    60,
 				},
 				{
 					Type_:  "Available",
@@ -49,8 +50,8 @@ func TestService_matchConditionsRetry(t *testing.T) {
 	testTrigger1 := &testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
 		Spec: testtriggersv1.TestTriggerSpec{
-			Resource:         "pod",
-			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-pod"},
+			Resource:         "deployment",
+			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
 			Event:            "modified",
 			ConditionSpec: &testtriggersv1.TestTriggerConditionSpec{
 				Timeout: timeout,
@@ -59,6 +60,7 @@ func TestService_matchConditionsRetry(t *testing.T) {
 						Type_:  "Progressing",
 						Status: &status,
 						Reason: "NewReplicaSetAvailable",
+						Ttl:    60,
 					},
 					{
 						Type_:  "Available",
@@ -93,23 +95,22 @@ func TestService_matchConditionsRetry(t *testing.T) {
 func TestService_matchConditionsTimeout(t *testing.T) {
 	t.Parallel()
 
-	retry := 0
 	e := &watcherEvent{
-		resource:  "pod",
-		name:      "test-pod",
+		resource:  "deployment",
+		name:      "test-deployment",
 		namespace: "testkube",
 		labels:    nil,
 		object:    nil,
 		eventType: "modified",
 		causes:    nil,
 		conditionsGetter: func() ([]testtriggersv1.TestTriggerCondition, error) {
-			retry++
 			status := testtriggersv1.FALSE_TestTriggerConditionStatuses
 			return []testtriggersv1.TestTriggerCondition{
 				{
 					Type_:  "Progressing",
 					Status: &status,
 					Reason: "NewReplicaSetAvailable",
+					Ttl:    60,
 				},
 				{
 					Type_:  "Available",
@@ -124,8 +125,8 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 	testTrigger1 := &testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
 		Spec: testtriggersv1.TestTriggerSpec{
-			Resource:         "pod",
-			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-pod"},
+			Resource:         "deployment",
+			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
 			Event:            "modified",
 			ConditionSpec: &testtriggersv1.TestTriggerConditionSpec{
 				Timeout: timeout,
@@ -134,6 +135,7 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 						Type_:  "Progressing",
 						Status: &status,
 						Reason: "NewReplicaSetAvailable",
+						Ttl:    60,
 					},
 					{
 						Type_:  "Available",
@@ -162,15 +164,14 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 
 	err := s.match(context.Background(), e)
 	assert.ErrorIs(t, err, ErrConditionTimeout)
-	assert.Equal(t, 2, retry)
 }
 
 func TestService_match(t *testing.T) {
 	t.Parallel()
 
 	e := &watcherEvent{
-		resource:  "pod",
-		name:      "test-pod",
+		resource:  "deployment",
+		name:      "test-deployment",
 		namespace: "testkube",
 		labels:    nil,
 		object:    nil,
@@ -183,6 +184,7 @@ func TestService_match(t *testing.T) {
 					Type_:  "Progressing",
 					Status: &status,
 					Reason: "NewReplicaSetAvailable",
+					Ttl:    60,
 				},
 				{
 					Type_:  "Available",
@@ -196,8 +198,8 @@ func TestService_match(t *testing.T) {
 	testTrigger1 := &testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
 		Spec: testtriggersv1.TestTriggerSpec{
-			Resource:         "pod",
-			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-pod"},
+			Resource:         "deployment",
+			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
 			Event:            "modified",
 			ConditionSpec: &testtriggersv1.TestTriggerConditionSpec{
 				Conditions: []testtriggersv1.TestTriggerCondition{
@@ -205,6 +207,7 @@ func TestService_match(t *testing.T) {
 						Type_:  "Progressing",
 						Status: &status,
 						Reason: "NewReplicaSetAvailable",
+						Ttl:    60,
 					},
 					{
 						Type_:  "Available",

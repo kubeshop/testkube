@@ -17,6 +17,7 @@ func NewTestSuiteClient(
 	testSuiteWithExecutionTransport Transport[testkube.TestSuiteWithExecution],
 	testSuiteWithExecutionSummaryTransport Transport[testkube.TestSuiteWithExecutionSummary],
 	testSuiteExecutionsResultTransport Transport[testkube.TestSuiteExecutionsResult],
+	testSuiteArtifactTransport Transport[testkube.Artifact],
 ) TestSuiteClient {
 	return TestSuiteClient{
 		testSuiteTransport:                     testSuiteTransport,
@@ -24,6 +25,7 @@ func NewTestSuiteClient(
 		testSuiteWithExecutionTransport:        testSuiteWithExecutionTransport,
 		testSuiteWithExecutionSummaryTransport: testSuiteWithExecutionSummaryTransport,
 		testSuiteExecutionsResultTransport:     testSuiteExecutionsResultTransport,
+		testSuiteArtifactTransport:             testSuiteArtifactTransport,
 	}
 }
 
@@ -34,6 +36,7 @@ type TestSuiteClient struct {
 	testSuiteWithExecutionTransport        Transport[testkube.TestSuiteWithExecution]
 	testSuiteWithExecutionSummaryTransport Transport[testkube.TestSuiteWithExecutionSummary]
 	testSuiteExecutionsResultTransport     Transport[testkube.TestSuiteExecutionsResult]
+	testSuiteArtifactTransport             Transport[testkube.Artifact]
 }
 
 // GetTestSuite returns single test suite by id
@@ -123,18 +126,31 @@ func (c TestSuiteClient) AbortTestSuiteExecution(executionID string) error {
 	return c.testSuiteExecutionTransport.ExecuteMethod(http.MethodPatch, uri, "", false)
 }
 
+// AbortTestSuiteExecutions aborts all test suite executions
+func (c TestSuiteClient) AbortTestSuiteExecutions(testSuiteName string) error {
+	uri := c.testSuiteExecutionTransport.GetURI("/test-suites/%s/abort", testSuiteName)
+	return c.testSuiteExecutionTransport.ExecuteMethod(http.MethodPost, uri, "", false)
+}
+
+// GetTestSuiteExecutionArtifacts returns test suite execution artifacts by excution id
+func (c TestSuiteClient) GetTestSuiteExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error) {
+	uri := c.testSuiteArtifactTransport.GetURI("/test-suite-executions/%s/artifacts", executionID)
+	return c.testSuiteArtifactTransport.ExecuteMultiple(http.MethodGet, uri, nil, nil)
+}
+
 // ExecuteTestSuite starts new external test suite execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
 func (c TestSuiteClient) ExecuteTestSuite(id, executionName string, options ExecuteTestSuiteOptions) (execution testkube.TestSuiteExecution, err error) {
 	uri := c.testSuiteExecutionTransport.GetURI("/test-suites/%s/executions", id)
 	executionRequest := testkube.TestSuiteExecutionRequest{
-		Name:             executionName,
-		Variables:        options.ExecutionVariables,
-		HttpProxy:        options.HTTPProxy,
-		HttpsProxy:       options.HTTPSProxy,
-		ExecutionLabels:  options.ExecutionLabels,
-		ContentRequest:   options.ContentRequest,
-		ConcurrencyLevel: options.ConcurrencyLevel,
+		Name:            executionName,
+		Variables:       options.ExecutionVariables,
+		HttpProxy:       options.HTTPProxy,
+		HttpsProxy:      options.HTTPSProxy,
+		ExecutionLabels: options.ExecutionLabels,
+		ContentRequest:  options.ContentRequest,
+		RunningContext:  options.RunningContext,
+		ConcurrencyLevel: options.ConcurrencyLevel,		
 	}
 
 	body, err := json.Marshal(executionRequest)
@@ -150,12 +166,13 @@ func (c TestSuiteClient) ExecuteTestSuite(id, executionName string, options Exec
 func (c TestSuiteClient) ExecuteTestSuites(selector string, concurrencyLevel int, options ExecuteTestSuiteOptions) (executions []testkube.TestSuiteExecution, err error) {
 	uri := c.testSuiteExecutionTransport.GetURI("/test-suite-executions")
 	executionRequest := testkube.TestSuiteExecutionRequest{
-		Variables:        options.ExecutionVariables,
-		HttpProxy:        options.HTTPProxy,
-		HttpsProxy:       options.HTTPSProxy,
-		ExecutionLabels:  options.ExecutionLabels,
-		ContentRequest:   options.ContentRequest,
-		ConcurrencyLevel: options.ConcurrencyLevel,
+		Variables:       options.ExecutionVariables,
+		HttpProxy:       options.HTTPProxy,
+		HttpsProxy:      options.HTTPSProxy,
+		ExecutionLabels: options.ExecutionLabels,
+		ContentRequest:  options.ContentRequest,
+		RunningContext:  options.RunningContext,
+		ConcurrencyLevel: options.ConcurrencyLevel,		
 	}
 
 	body, err := json.Marshal(executionRequest)

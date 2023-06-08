@@ -1,0 +1,11 @@
+# syntax=docker/dockerfile:1
+FROM cypress/included:10.7.0
+COPY cypress /bin/runner
+# run as a root in order to install to /root/cache and write to shared data volume
+ 
+RUN mkdir /home/runner
+
+WORKDIR /home/runner/
+ENV DEPENDENCY_MANAGER=npm
+
+ENTRYPOINT ["/bin/runner"]

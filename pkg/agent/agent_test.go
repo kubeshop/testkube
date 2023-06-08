@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
 
@@ -24,6 +25,8 @@ import (
 
 func TestCommandExecution(t *testing.T) {
 	url := "localhost:9999"
+	ctx, cancel := context.WithCancel(context.Background())
+
 	go func() {
 		lis, err := net.Listen("tcp", url)
 		if err != nil {
@@ -32,7 +35,7 @@ func TestCommandExecution(t *testing.T) {
 
 		var opts []grpc.ServerOption
 		grpcServer := grpc.NewServer(opts...)
-		cloud.RegisterTestKubeCloudAPIServer(grpcServer, newServer())
+		cloud.RegisterTestKubeCloudAPIServer(grpcServer, newServer(ctx))
 		grpcServer.Serve(lis)
 	}()
 
@@ -50,13 +53,14 @@ func TestCommandExecution(t *testing.T) {
 
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 
+	var logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error)
+
 	logger, _ := zap.NewDevelopment()
-	agent, err := agent.NewAgent(logger.Sugar(), m, "api-key", grpcClient)
+	agent, err := agent.NewAgent(logger.Sugar(), m, "api-key", grpcClient, 5, 5, logStreamFunc, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
 	g, groupCtx := errgroup.WithContext(ctx)
 	g.Go(func() error {
 		return agent.Run(groupCtx)
@@ -72,9 +76,16 @@ func TestCommandExecution(t *testing.T) {
 
 type CloudServer struct {
 	cloud.UnimplementedTestKubeCloudAPIServer
+	ctx context.Context
 }
 
-func (cs *CloudServer) Execute(srv cloud.TestKubeCloudAPI_ExecuteServer) error {
+func (cs *CloudServer) GetLogsStream(srv cloud.TestKubeCloudAPI_GetLogsStreamServer) error {
+	<-cs.ctx.Done()
+
+	return nil
+}
+
+func (cs *CloudServer) ExecuteAsync(srv cloud.TestKubeCloudAPI_ExecuteAsyncServer) error {
 	md, ok := metadata.FromIncomingContext(srv.Context())
 	if !ok {
 		panic("no metadata")
@@ -112,6 +123,6 @@ func (cs *CloudServer) Send(srv cloud.TestKubeCloudAPI_SendServer) error {
 	}
 
 }
-func newServer() *CloudServer {
-	return &CloudServer{}
+func newServer(ctx context.Context) *CloudServer {
+	return &CloudServer{ctx: ctx}
 }

@@ -48,19 +48,42 @@ func init() {
 	RootCmd.AddCommand(NewConfigCmd())
 	RootCmd.AddCommand(NewDebugCmd())
 	RootCmd.AddCommand(NewCreateTicketCmd())
+
+	RootCmd.AddCommand(NewAgentCmd())
+	RootCmd.AddCommand(NewCloudCmd())
+
 	RootCmd.SetHelpCommand(NewHelpCmd())
 }
 
 var RootCmd = &cobra.Command{
 	Use:   "testkube",
 	Short: "Testkube entrypoint for kubectl plugin",
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		ui.SetVerbose(verbose)
+	},
 
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
-		ui.SetVerbose(verbose)
+		clientCfg, err := config.Load()
+		ui.WarnOnError("loading config", err)
 
-		cfg, _ := config.Load()
+		client, _ := common.GetClient(cmd)
+		serverCfg, err := client.GetConfig()
+		ui.WarnOnError("getting config", err)
 
-		if cfg.TelemetryEnabled {
+		if clientCfg.TelemetryEnabled != serverCfg.EnableTelemetry && err == nil {
+			if serverCfg.EnableTelemetry {
+				clientCfg.EnableAnalytics()
+				ui.Debug("Sync telemetry on CLI with API", "enabled")
+			} else {
+				clientCfg.DisableAnalytics()
+				ui.Debug("Sync telemetry on CLI with API", "disabled")
+			}
+
+			err = config.Save(clientCfg)
+			ui.WarnOnError("syncing config", err)
+		}
+
+		if clientCfg.TelemetryEnabled {
 			ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
 			out, err := telemetry.SendCmdEvent(cmd, common.Version)
 			if ui.Verbose && err != nil {
@@ -69,12 +92,12 @@ var RootCmd = &cobra.Command{
 			ui.Debug("telemetry send event response", out)
 
 			// trigger init event only for first run
-			cfg, err := config.Load()
+			clientCfg, err := config.Load()
 			ui.WarnOnError("loading config", err)
 
-			if !cfg.Initialized {
-				cfg.SetInitialized()
-				err := config.Save(cfg)
+			if !clientCfg.Initialized {
+				clientCfg.SetInitialized()
+				err := config.Save(clientCfg)
 				ui.WarnOnError("saving config", err)
 
 				ui.Debug("sending 'init' event")
@@ -85,7 +108,6 @@ var RootCmd = &cobra.Command{
 				}
 				ui.Debug("telemetry init event response", out)
 			}
-
 		}
 	},
 

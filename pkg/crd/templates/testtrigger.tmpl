@@ -32,7 +32,7 @@ spec:
         {{- if .ResourceSelector.LabelSelector.MatchExpressions }}
         matchExpressions:
             {{- range $exp := .ResourceSelector.LabelSelector.MatchExpressions }}
-            key: {{ $exp.Key }}
+          - key: {{ $exp.Key }}
             operator: {{ $exp.Operator }}
             values: {{ $exp.Values }}
             {{- end }}
@@ -55,6 +55,9 @@ spec:
       {{- if $exp.Reason }}
       reason: {{ $exp.Reason }}
       {{- end }}
+      {{- if $exp.Ttl }}
+      ttl: {{ $exp.Ttl }}
+      {{- end }}    
     {{- end }}
     {{- end }}
   {{- end }}
@@ -83,7 +86,7 @@ spec:
         {{- if .TestSelector.LabelSelector.MatchExpressions }}
         matchExpressions:
             {{- range $exp := .TestSelector.LabelSelector.MatchExpressions }}
-            key: {{ $exp.Key }}
+          - key: {{ $exp.Key }}
             operator: {{ $exp.Operator }}
             values: {{ $exp.Values }}
             {{- end }}

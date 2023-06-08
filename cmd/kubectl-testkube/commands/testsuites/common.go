@@ -139,7 +139,7 @@ func NewTestSuiteUpsertOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 	options.Namespace = cmd.Flag("namespace").Value.String()
 	options.Labels = labels
 
-	variables, err := common.CreateVariables(cmd)
+	variables, err := common.CreateVariables(cmd, false)
 	if err != nil {
 		return options, fmt.Errorf("invalid variables %w", err)
 	}
@@ -154,13 +154,25 @@ func NewTestSuiteUpsertOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 		return options, fmt.Errorf("validating schedule %w", err)
 	}
 
+	cronJobTemplateContent := ""
+	cronJobTemplate := cmd.Flag("cronjob-template").Value.String()
+	if cronJobTemplate != "" {
+		b, err := os.ReadFile(cronJobTemplate)
+		if err != nil {
+			return options, err
+		}
+
+		cronJobTemplateContent = string(b)
+	}
+
 	options.Schedule = schedule
 	options.ExecutionRequest = &testkube.TestSuiteExecutionRequest{
-		Variables:  variables,
-		Name:       cmd.Flag("execution-name").Value.String(),
-		HttpProxy:  cmd.Flag("http-proxy").Value.String(),
-		HttpsProxy: cmd.Flag("https-proxy").Value.String(),
-		Timeout:    timeout,
+		Variables:       variables,
+		Name:            cmd.Flag("execution-name").Value.String(),
+		HttpProxy:       cmd.Flag("http-proxy").Value.String(),
+		HttpsProxy:      cmd.Flag("https-proxy").Value.String(),
+		Timeout:         timeout,
+		CronJobTemplate: cronJobTemplateContent,
 	}
 
 	return options, nil
@@ -243,7 +255,7 @@ func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 	var executionRequest testkube.TestSuiteExecutionUpdateRequest
 	var nonEmpty bool
 	if cmd.Flag("variable").Changed || cmd.Flag("secret-variable").Changed || cmd.Flag("secret-variable-reference").Changed {
-		variables, err := common.CreateVariables(cmd)
+		variables, err := common.CreateVariables(cmd, false)
 		if err != nil {
 			return options, fmt.Errorf("invalid variables %w", err)
 		}
@@ -259,6 +271,22 @@ func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 		}
 
 		executionRequest.Timeout = &timeout
+		nonEmpty = true
+	}
+
+	if cmd.Flag("cronjob-template").Changed {
+		cronJobTemplateContent := ""
+		cronJobTemplate := cmd.Flag("cronjob-template").Value.String()
+		if cronJobTemplate != "" {
+			b, err := os.ReadFile(cronJobTemplate)
+			if err != nil {
+				return options, err
+			}
+
+			cronJobTemplateContent = string(b)
+		}
+
+		executionRequest.CronJobTemplate = &cronJobTemplateContent
 		nonEmpty = true
 	}
 

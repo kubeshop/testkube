@@ -25,6 +25,7 @@ type Params struct {
 	TestSource       string     `json:"test_source,omitempty"`
 	TestSuiteSteps   int32      `json:"test_suite_steps,omitempty"`
 	Context          RunContext `json:"context,omitempty"`
+	ClusterType      string     `json:"cluster_type,omitempty"`
 }
 
 type Event struct {
@@ -66,7 +67,7 @@ type RunContext struct {
 	EnvironmentId  string
 }
 
-func NewCLIPayload(context RunContext, id, name, version, category string) Payload {
+func NewCLIPayload(context RunContext, id, name, version, category, clusterType string) Payload {
 	machineID := GetMachineID()
 	return Payload{
 		ClientID: id,
@@ -83,12 +84,13 @@ func NewCLIPayload(context RunContext, id, name, version, category string) Paylo
 					OperatingSystem: runtime.GOOS,
 					Architecture:    runtime.GOARCH,
 					Context:         context,
+					ClusterType:     clusterType,
 				},
 			}},
 	}
 }
 
-func NewAPIPayload(clusterId, name, version, host string) Payload {
+func NewAPIPayload(clusterId, name, version, host, clusterType string) Payload {
 	return Payload{
 		ClientID: clusterId,
 		UserID:   clusterId,
@@ -105,13 +107,14 @@ func NewAPIPayload(clusterId, name, version, host string) Payload {
 					Architecture:    runtime.GOARCH,
 					MachineID:       GetMachineID(),
 					ClusterID:       clusterId,
+					ClusterType:     clusterType,
 				},
 			}},
 	}
 }
 
 // NewCreatePayload prepares payload for Test or Test suite creation
-func NewCreatePayload(name string, params CreateParams) Payload {
+func NewCreatePayload(name, clusterType string, params CreateParams) Payload {
 	return Payload{
 		ClientID: params.ClusterID,
 		UserID:   params.ClusterID,
@@ -132,13 +135,14 @@ func NewCreatePayload(name string, params CreateParams) Payload {
 					TestType:        params.TestType,
 					TestSource:      params.TestSource,
 					TestSuiteSteps:  params.TestSuiteSteps,
+					ClusterType:     clusterType,
 				},
 			}},
 	}
 }
 
 // NewRunPayload prepares payload for Test or Test suite execution
-func NewRunPayload(name string, params RunParams) Payload {
+func NewRunPayload(name, clusterType string, params RunParams) Payload {
 	return Payload{
 		ClientID: params.ClusterID,
 		UserID:   params.ClusterID,
@@ -159,6 +163,7 @@ func NewRunPayload(name string, params RunParams) Payload {
 					TestType:        params.TestType,
 					DurationMs:      params.DurationMs,
 					Status:          params.Status,
+					ClusterType:     clusterType,
 				},
 			}},
 	}
@@ -173,7 +178,7 @@ const (
 func AnonymizeHost(host string) string {
 	if strings.Contains(host, "testkube.io") {
 		return APIHostTestkubeInternal
-	} else if strings.Contains(host, "localhost:8088") {
+	} else if strings.Contains(host, "localhost:") {
 		return APIHostLocal
 	}
 

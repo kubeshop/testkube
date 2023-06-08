@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/kubeshop/testkube/pkg/repository/config"
+
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 
@@ -21,7 +23,7 @@ import (
 	testsuitesv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/config"
+	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -47,7 +49,8 @@ func TestExecute(t *testing.T) {
 	mockTestSuitesClient := testsuitesv3.NewMockInterface(mockCtrl)
 	mockTestSourcesClient := testsourcesv1.NewMockInterface(mockCtrl)
 	mockSecretClient := secret.NewMockInterface(mockCtrl)
-	configMap := config.NewMockRepository(mockCtrl)
+	configMapConfig := config.NewMockRepository(mockCtrl)
+	mockConfigMapClient := configmap.NewMockInterface(mockCtrl)
 
 	mockExecutor := client.NewMockExecutor(mockCtrl)
 
@@ -110,7 +113,8 @@ func TestExecute(t *testing.T) {
 		mockSecretClient,
 		mockEventEmitter,
 		log.DefaultLogger,
-		configMap,
+		configMapConfig,
+		mockConfigMapClient,
 	)
 	s := &Service{
 		triggerStatus:    make(map[statusKey]*triggerStatus),
@@ -124,14 +128,15 @@ func TestExecute(t *testing.T) {
 	testTrigger := testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
 		Spec: testtriggersv1.TestTriggerSpec{
-			Resource:         "pod",
-			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-pod"},
+			Resource:         "deployment",
+			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
 			Event:            "created",
 			ConditionSpec: &testtriggersv1.TestTriggerConditionSpec{
 				Conditions: []testtriggersv1.TestTriggerCondition{{
 					Type_:  "Progressing",
 					Status: &status,
 					Reason: "NewReplicaSetAvailable",
+					Ttl:    60,
 				}},
 			},
 			Action:       "run",

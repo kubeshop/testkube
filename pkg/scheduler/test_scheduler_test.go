@@ -13,8 +13,10 @@ import (
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/secret"
 )
 
 func TestParamsNilAssign(t *testing.T) {
@@ -59,8 +61,16 @@ func TestGetExecuteOptions(t *testing.T) {
 
 	mockTestsClient := testsclientv3.NewMockInterface(mockCtrl)
 	mockExecutorsClient := executorsclientv1.NewMockInterface(mockCtrl)
+	mockSecretClient := secret.NewMockInterface(mockCtrl)
+	mockConfigMapClient := configmap.NewMockInterface(mockCtrl)
 
-	sc := Scheduler{testsClient: mockTestsClient, executorsClient: mockExecutorsClient, logger: log.DefaultLogger}
+	sc := Scheduler{
+		testsClient:     mockTestsClient,
+		executorsClient: mockExecutorsClient,
+		logger:          log.DefaultLogger,
+		secretClient:    mockSecretClient,
+		configMapClient: mockConfigMapClient,
+	}
 
 	mockTest := testsv3.Test{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "some-test"},
@@ -82,7 +92,7 @@ func TestGetExecuteOptions(t *testing.T) {
 			ExecutorType:     "job",
 			URI:              "",
 			Image:            "cypress",
-			Args:             nil,
+			Args:             []string{},
 			Command:          []string{"run"},
 			ImagePullSecrets: []k8sv1.LocalObjectReference{{Name: "secret-name1"}, {Name: "secret-name2"}},
 			Features:         nil,
@@ -94,6 +104,7 @@ func TestGetExecuteOptions(t *testing.T) {
 
 	mockTestsClient.EXPECT().Get("id").Return(&mockTest, nil).Times(1)
 	mockExecutorsClient.EXPECT().GetByType(mockExecutorTypes).Return(&mockExecutor, nil)
+	mockConfigMapClient.EXPECT().Get(gomock.Any(), "configmap").Times(1)
 
 	req := testkube.ExecutionRequest{
 		Name:             "id-1",
@@ -102,8 +113,9 @@ func TestGetExecuteOptions(t *testing.T) {
 		Namespace:        "namespace",
 		VariablesFile:    "",
 		Variables:        map[string]testkube.Variable{"var": testkube.Variable{Name: "one"}},
-		Command:          []string{},
+		Command:          []string{"run"},
 		Args:             []string{},
+		ArgsMode:         "",
 		Image:            "executor-image",
 		ImagePullSecrets: []testkube.LocalObjectReference{},
 		Envs: map[string]string{
@@ -119,8 +131,32 @@ func TestGetExecuteOptions(t *testing.T) {
 		ActiveDeadlineSeconds: 10,
 		ArtifactRequest:       &testkube.ArtifactRequest{},
 		JobTemplate:           "",
+		CronJobTemplate:       "",
 		PreRunScript:          "",
 		ScraperTemplate:       "",
+		EnvConfigMaps: []testkube.EnvReference{
+			{
+				Reference: &testkube.LocalObjectReference{
+					Name: "configmap",
+				},
+				Mount:          true,
+				MountPath:      "/data",
+				MapToVariables: true,
+			},
+		},
+		EnvSecrets: []testkube.EnvReference{
+			{
+				Reference: &testkube.LocalObjectReference{
+					Name: "secret-1",
+				},
+				Mount:          true,
+				MountPath:      "/data",
+				MapToVariables: false,
+			},
+		},
+		RunningContext: &testkube.RunningContext{
+			Type_: string(testkube.RunningContextTypeUserCLI),
+		},
 	}
 
 	got, err := sc.getExecuteOptions("namespace", "id", req)

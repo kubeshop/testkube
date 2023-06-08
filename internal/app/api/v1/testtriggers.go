@@ -9,7 +9,6 @@ import (
 
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/gofiber/fiber/v2"
@@ -29,10 +28,12 @@ const testTriggerMaxNameLength = 57
 // CreateTestTriggerHandler is a handler for creating test trigger objects
 func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to create test trigger"
+
 		var request testkube.TestTriggerUpsertRequest
 		err := c.BodyParser(&request)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %w", errPrefix, err))
 		}
 
 		testTrigger := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(request)
@@ -44,6 +45,7 @@ func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 		if testTrigger.Name == "" {
 			testTrigger.Name = generateTestTriggerName(&testTrigger)
 		}
+		errPrefix = errPrefix + " " + testTrigger.Name
 
 		s.Log.Infow("creating test trigger", "testTrigger", testTrigger)
 
@@ -52,7 +54,7 @@ func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 		s.Metrics.IncCreateTestTrigger(err)
 
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not create test trigger: %w", errPrefix, err))
 		}
 
 		c.Status(http.StatusCreated)
@@ -71,21 +73,27 @@ func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 // UpdateTestTriggerHandler is a handler for updates an existing TestTrigger CRD based on TestTrigger content
 func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to update test trigger"
+
 		var request testkube.TestTriggerUpsertRequest
 		err := c.BodyParser(&request)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %w", errPrefix, err))
 		}
 
 		namespace := s.Namespace
 		if request.Namespace != "" {
 			namespace = request.Namespace
 		}
+		errPrefix = errPrefix + " " + request.Name
 
 		// we need to get resource first and load its metadata.ResourceVersion
 		testTrigger, err := s.TestKubeClientset.TestsV1().TestTriggers(namespace).Get(c.UserContext(), request.Name, v1.GetOptions{})
 		if err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
+			if k8serrors.IsNotFound(err) {
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: client could not find test trigger: %w", errPrefix, err))
+			}
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get test trigger: %w", errPrefix, err))
 		}
 
 		// map TestSuite but load spec only to not override metadata.ResourceVersion
@@ -97,7 +105,7 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 		s.Metrics.IncUpdateTestTrigger(err)
 
 		if err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not update test trigger: %w", errPrefix, err))
 		}
 
 		apiTestTrigger := testtriggersmapper.MapCRDToAPI(testTrigger)
@@ -114,24 +122,31 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 // BulkUpdateTestTriggersHandler is a handler for bulk updates an existing TestTrigger CRDs based on array of TestTrigger content
 func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to bulk update test triggers"
+
 		var request []testkube.TestTriggerUpsertRequest
 		err := c.BodyParser(&request)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %w", errPrefix, err))
 		}
 
-		namespaces, err := s.Clientset.CoreV1().Namespaces().List(c.UserContext(), v1.ListOptions{})
-		if err != nil {
-			return errors.Wrap(err, "error fetching list of all namespaces")
+		namespaces := make(map[string]struct{}, 0)
+		for _, upsertRequest := range request {
+			namespace := s.Namespace
+			if upsertRequest.Namespace != "" {
+				namespace = upsertRequest.Namespace
+			}
+
+			namespaces[namespace] = struct{}{}
 		}
-		for _, ns := range namespaces.Items {
+
+		for namespace := range namespaces {
 			err = s.TestKubeClientset.
 				TestsV1().
-				TestTriggers(ns.Name).
+				TestTriggers(namespace).
 				DeleteCollection(c.UserContext(), v1.DeleteOptions{}, v1.ListOptions{})
-
 			if err != nil && !k8serrors.IsNotFound(err) {
-				return s.Error(c, http.StatusBadGateway, errors.Wrap(err, "error cleaning triggers before reapply"))
+				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: error cleaning triggers before reapply", errPrefix))
 			}
 		}
 
@@ -139,8 +154,8 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 
 		testTriggers := make([]testkube.TestTrigger, 0, len(request))
 
-		namespace := s.Namespace
 		for _, upsertRequest := range request {
+			namespace := s.Namespace
 			if upsertRequest.Namespace != "" {
 				namespace = upsertRequest.Namespace
 			}
@@ -158,7 +173,7 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 			s.Metrics.IncCreateTestTrigger(err)
 
 			if err != nil {
-				return errors.Wrap(err, "error reapplying triggers after clean")
+				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: error reapplying triggers after clean", errPrefix))
 			}
 
 			testTriggers = append(testTriggers, testtriggersmapper.MapCRDToAPI(testTrigger))
@@ -180,13 +195,15 @@ func (s *TestkubeAPI) GetTestTriggerHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", s.Namespace)
 		name := c.Params("id")
+		errPrefix := fmt.Sprintf("failed to get test trigger %s", name)
+
 		testTrigger, err := s.TestKubeClientset.TestsV1().TestTriggers(namespace).Get(c.UserContext(), name, v1.GetOptions{})
 		if err != nil {
 			if k8serrors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, err)
+				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: client could not find test trigger: %w", errPrefix, err))
 			}
 
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get test trigger: %w", errPrefix, err))
 		}
 
 		c.Status(http.StatusOK)
@@ -207,16 +224,18 @@ func (s *TestkubeAPI) DeleteTestTriggerHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		namespace := c.Query("namespace", s.Namespace)
 		name := c.Params("id")
+		errPrefix := fmt.Sprintf("failed to delete test trigger %s", name)
+
 		err := s.TestKubeClientset.TestsV1().TestTriggers(namespace).Delete(c.UserContext(), name, v1.DeleteOptions{})
 
 		s.Metrics.IncDeleteTestTrigger(err)
 
 		if err != nil {
 			if k8serrors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, err)
+				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: client could not find test trigger: %w", errPrefix, err))
 			}
 
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test trigger: %w", errPrefix, err))
 		}
 
 		return c.SendStatus(http.StatusNoContent)
@@ -226,12 +245,14 @@ func (s *TestkubeAPI) DeleteTestTriggerHandler() fiber.Handler {
 // DeleteTestTriggersHandler is a handler for deleting all or selected TestTriggers
 func (s *TestkubeAPI) DeleteTestTriggersHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to delete test triggers"
+
 		namespace := c.Query("namespace", s.Namespace)
 		selector := c.Query("selector")
 		if selector != "" {
 			_, err := labels.Parse(selector)
 			if err != nil {
-				return errors.WithMessage(err, "error validating selector")
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: error validating selector: %w", errPrefix, err))
 			}
 		}
 		listOpts := v1.ListOptions{LabelSelector: selector}
@@ -241,10 +262,10 @@ func (s *TestkubeAPI) DeleteTestTriggersHandler() fiber.Handler {
 
 		if err != nil {
 			if k8serrors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, err)
+				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: client could not find test trigger: %w", errPrefix, err))
 			}
 
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not bulk delete test triggers: %w", errPrefix, err))
 		}
 
 		return c.SendStatus(http.StatusNoContent)
@@ -254,18 +275,20 @@ func (s *TestkubeAPI) DeleteTestTriggersHandler() fiber.Handler {
 // ListTestTriggersHandler is a handler for listing all available TestTriggers
 func (s *TestkubeAPI) ListTestTriggersHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to delete test triggers"
+
 		namespace := c.Query("namespace", s.Namespace)
 		selector := c.Query("selector")
 		if selector != "" {
 			_, err := labels.Parse(selector)
 			if err != nil {
-				return errors.WithMessage(err, "error validating selector")
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: error validating selector: %w", errPrefix, err))
 			}
 		}
 		opts := v1.ListOptions{LabelSelector: selector}
 		testTriggers, err := s.TestKubeClientset.TestsV1().TestTriggers(namespace).List(c.UserContext(), opts)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not list test triggers: %w", errPrefix, err))
 		}
 
 		c.Status(http.StatusOK)

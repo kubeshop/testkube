@@ -60,6 +60,9 @@ spec:
       {{- if .Content.Repository.WorkingDir }}
       workingDir: {{ .Content.Repository.WorkingDir }}
       {{- end }}
+      {{- if .Content.Repository.AuthType }}
+      authType: {{ .Content.Repository.AuthType }}
+      {{- end }} 
     {{- end }}
     {{- if .Content.Data }}
     data: {{ .Content.Data }}
@@ -76,13 +79,16 @@ spec:
   schedule: {{ .Schedule }}
   {{- end }}
   {{- if .ExecutionRequest }}
-  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.NegativeTest) (.ExecutionRequest.VariablesFile) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (ne (len .ExecutionRequest.Envs) 0) (ne (len .ExecutionRequest.SecretEnvs) 0) (.ExecutionRequest.Image) (ne (len .ExecutionRequest.Command) 0) (ne (len .ExecutionRequest.ImagePullSecrets) 0) (ne .ExecutionRequest.ActiveDeadlineSeconds 0) (.ExecutionRequest.ArtifactRequest) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.PreRunScript) (.ExecutionRequest.ScraperTemplate)}}
+  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.NegativeTest) (.ExecutionRequest.VariablesFile) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (ne (len .ExecutionRequest.Envs) 0) (ne (len .ExecutionRequest.SecretEnvs) 0) (.ExecutionRequest.Image) (ne (len .ExecutionRequest.Command) 0) (.ExecutionRequest.ArgsMode) (ne (len .ExecutionRequest.ImagePullSecrets) 0) (ne .ExecutionRequest.ActiveDeadlineSeconds 0) (.ExecutionRequest.ArtifactRequest) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.CronJobTemplate) (.ExecutionRequest.PreRunScript) (.ExecutionRequest.ScraperTemplate) (ne (len .ExecutionRequest.EnvConfigMaps) 0) (ne (len .ExecutionRequest.EnvSecrets) 0) }}
   executionRequest:
     {{- if .ExecutionRequest.Name }}
     name: {{ .ExecutionRequest.Name }}
     {{- end }}
     {{- if .ExecutionRequest.VariablesFile }}
     variablesFile: {{ .ExecutionRequest.VariablesFile }}
+    {{- end }}
+    {{- if .ExecutionRequest.IsVariablesFileUploaded }}
+    isVariablesFileUploaded: {{ .ExecutionRequest.IsVariablesFileUploaded }}
     {{- end }}
     {{- if ne (len .ExecutionRequest.Variables) 0 }}
     variables:
@@ -105,6 +111,16 @@ spec:
             key: {{ $value.SecretRef.Key }}
             {{- end }}
         {{- end }}
+        {{- if $value.ConfigMapRef }}
+        valueFrom:
+          configMapKeyRef:
+            {{- if $value.ConfigMapRef.Name }}
+            name: {{ $value.ConfigMapRef.Name }}
+            {{- end }}
+            {{- if $value.ConfigMapRef.Key }}
+            key: {{ $value.ConfigMapRef.Key }}
+            {{- end }}
+        {{- end }}
     {{- end }}
     {{- end }}
     {{- if ne (len .ExecutionRequest.Args) 0 }}
@@ -113,6 +129,9 @@ spec:
       - {{ . }}
     {{- end }}
     {{- end }}
+    {{- if .ExecutionRequest.ArgsMode }}
+    argsMode: {{ .ExecutionRequest.ArgsMode }}
+    {{- end }}    
     {{- if ne (len .ExecutionRequest.Envs) 0 }}
     envs:
     {{- range $key, $value := .ExecutionRequest.Envs }}
@@ -170,11 +189,42 @@ spec:
     {{- if .ExecutionRequest.JobTemplate }}
     jobTemplate: {{ .ExecutionRequest.JobTemplate }}
     {{- end }}
+    {{- if .ExecutionRequest.CronJobTemplate }}
+    cronJobTemplate: {{ .ExecutionRequest.CronJobTemplate }}
+    {{- end }}
     {{- if .ExecutionRequest.PreRunScript }}
     preRunScript: {{ .ExecutionRequest.PreRunScript }}
     {{- end }}
     {{- if .ExecutionRequest.ScraperTemplate }}
     scraperTemplate: {{ .ExecutionRequest.ScraperTemplate }}
+    {{- end }}
+    {{- if ne (len .ExecutionRequest.EnvConfigMaps) 0 }}
+    envConfigMaps:
+    {{- range $configMap := .ExecutionRequest.EnvConfigMaps }}
+    - mount: {{ $configMap.Mount }}
+      {{- if $configMap.MountPath }}
+      mountPath: {{ $configMap.MountPath }}
+      {{- end }}
+      mapToVariables: {{ $configMap.MapToVariables }}
+      {{- if $configMap.Reference }}
+      reference: 
+        name: {{ $configMap.Reference.Name }}
+      {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- if ne (len .ExecutionRequest.EnvSecrets) 0 }}
+    envSecrets:
+    {{- range $secret := .ExecutionRequest.EnvSecrets }}
+    - mount: {{ $secret.Mount }}
+      {{- if $secret.MountPath }}
+      mountPath: {{ $secret.MountPath }}
+      {{- end }}
+      mapToVariables: {{ $secret.MapToVariables }}
+      {{- if $secret.Reference }}
+      reference: 
+        name: {{ $secret.Reference.Name }}
+      {{- end }}
+    {{- end }}
     {{- end }}
   {{- end }}
   {{- end }}

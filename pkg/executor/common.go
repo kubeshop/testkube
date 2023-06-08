@@ -3,8 +3,6 @@ package executor
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -13,7 +11,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,7 +21,6 @@ import (
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	secretenv "github.com/kubeshop/testkube/pkg/executor/secret"
 	"github.com/kubeshop/testkube/pkg/log"
 	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"
 )
@@ -32,17 +28,13 @@ import (
 var ErrPodInitializing = errors.New("PodInitializing")
 
 const (
+	// VolumeDir is volume dir
+	VolumeDir            = "/data"
 	defaultLogLinesCount = 100
 	// GitUsernameSecretName is git username secret name
 	GitUsernameSecretName = "git-username"
-	// GitUsernameEnvVarName is git username environment var name
-	GitUsernameEnvVarName = "RUNNER_GITUSERNAME"
 	// GitTokenSecretName is git token secret name
 	GitTokenSecretName = "git-token"
-	// GitTokenEnvVarName is git token environment var name
-	GitTokenEnvVarName = "RUNNER_GITTOKEN"
-	pollTimeout        = 24 * time.Hour
-	pollInterval       = 200 * time.Millisecond
 )
 
 var RunnerEnvVars = []corev1.EnvVar{
@@ -63,8 +55,8 @@ var RunnerEnvVars = []corev1.EnvVar{
 		Value: os.Getenv("STORAGE_SECRETACCESSKEY"),
 	},
 	{
-		Name:  "RUNNER_LOCATION",
-		Value: os.Getenv("STORAGE_LOCATION"),
+		Name:  "RUNNER_REGION",
+		Value: os.Getenv("STORAGE_REGION"),
 	},
 	{
 		Name:  "RUNNER_TOKEN",
@@ -76,23 +68,62 @@ var RunnerEnvVars = []corev1.EnvVar{
 	},
 	{
 		Name:  "RUNNER_SSL",
-		Value: os.Getenv("STORAGE_SSL"),
+		Value: getOr("STORAGE_SSL", "false"),
 	},
 	{
 		Name:  "RUNNER_SCRAPPERENABLED",
-		Value: os.Getenv("SCRAPPERENABLED"),
+		Value: getOr("SCRAPPERENABLED", "false"),
 	},
 	{
 		Name:  "RUNNER_DATADIR",
-		Value: "/data",
+		Value: VolumeDir,
 	},
+	{
+		Name:  "RUNNER_CDEVENTS_TARGET",
+		Value: os.Getenv("CDEVENTS_TARGET"),
+	},
+	{
+		Name:  "RUNNER_CLOUD_MODE",
+		Value: getRunnerCloudMode(),
+	},
+	{
+		Name:  "RUNNER_CLOUD_API_KEY",
+		Value: os.Getenv("TESTKUBE_CLOUD_API_KEY"),
+	},
+	{
+		Name:  "RUNNER_CLOUD_API_TLS_INSECURE",
+		Value: getOr("TESTKUBE_CLOUD_TLS_INSECURE", "false"),
+	},
+	{
+		Name:  "RUNNER_CLOUD_API_URL",
+		Value: os.Getenv("TESTKUBE_CLOUD_URL"),
+	},
+	{
+		Name:  "RUNNER_DASHBOARD_URI",
+		Value: os.Getenv("TESTKUBE_DASHBOARD_URI"),
+	},
+}
+
+func getOr(key, defaultVal string) string {
+	if val, ok := os.LookupEnv(key); ok {
+		return val
+	}
+	return defaultVal
+}
+
+func getRunnerCloudMode() string {
+	val := "false"
+	if os.Getenv("TESTKUBE_CLOUD_API_KEY") != "" {
+		val = "true"
+	}
+	return val
 }
 
 // Templates contains templates for executor
 type Templates struct {
-	Job     string
-	PVC     string
-	Scraper string
+	Job     string `json:"job"`
+	PVC     string `json:"pvc"`
+	Scraper string `json:"scraper"`
 }
 
 // Images contains images for executor
@@ -113,7 +144,7 @@ func IsPodReady(ctx context.Context, c kubernetes.Interface, podName, namespace 
 			return true, nil
 		}
 
-		if err = isPodFailed(pod); err != nil {
+		if err = IsPodFailed(pod); err != nil {
 			return true, err
 		}
 
@@ -133,7 +164,7 @@ func IsPodLoggable(ctx context.Context, c kubernetes.Interface, podName, namespa
 			return true, nil
 		}
 
-		if err = isPodFailed(pod); err != nil {
+		if err = IsPodFailed(pod); err != nil {
 			return true, err
 		}
 
@@ -141,10 +172,10 @@ func IsPodLoggable(ctx context.Context, c kubernetes.Interface, podName, namespa
 	}
 }
 
-// isWaitStateFailed defines possible failed wait state
+// IsWaitStateFailed defines possible failed wait state
 // those states are defined and throwed as errors in Kubernetes runtime
 // https://github.com/kubernetes/kubernetes/blob/127f33f63d118d8d61bebaba2a240c60f71c824a/pkg/kubelet/kuberuntime/kuberuntime_container.go#L59
-func isWaitStateFailed(state string) bool {
+func IsWaitStateFailed(state string) bool {
 	var failedWaitingStates = []string{
 		"CreateContainerConfigError",
 		"PreCreateHookError",
@@ -162,8 +193,9 @@ func isWaitStateFailed(state string) bool {
 	return false
 }
 
+// IsPodFailed checks if pod failed
 // pod can be in wait state with reason which is error for us on the end
-func isPodFailed(pod *corev1.Pod) (err error) {
+func IsPodFailed(pod *corev1.Pod) (err error) {
 	if pod.Status.Phase == corev1.PodFailed {
 		return errors.New(pod.Status.Message)
 	}
@@ -171,7 +203,7 @@ func isPodFailed(pod *corev1.Pod) (err error) {
 	for _, initContainerStatus := range pod.Status.InitContainerStatuses {
 		waitState := initContainerStatus.State.Waiting
 		// TODO there could be more edge cases but didn't found any constants in go libraries
-		if waitState != nil && isWaitStateFailed(waitState.Reason) {
+		if waitState != nil && IsWaitStateFailed(waitState.Reason) {
 			return errors.New(waitState.Message)
 		}
 	}
@@ -212,7 +244,7 @@ func GetPodLogs(ctx context.Context, c kubernetes.Interface, namespace string, p
 	}
 
 	for _, container := range containers {
-		containerLogs, err := getContainerLogs(ctx, c, &pod, container, namespace, &count)
+		containerLogs, err := GetContainerLogs(ctx, c, &pod, container, namespace, &count)
 		if err != nil {
 			if errors.Is(err, ErrPodInitializing) {
 				return logs, nil
@@ -226,16 +258,9 @@ func GetPodLogs(ctx context.Context, c kubernetes.Interface, namespace string, p
 	return logs, nil
 }
 
-func getContainerLogs(
-	ctx context.Context,
-	c kubernetes.Interface,
-	pod *corev1.Pod,
-	container, namespace string,
-	tailLines *int64,
-) ([]byte, error) {
+// GetContainerLogs returns container logs
+func GetContainerLogs(ctx context.Context, c kubernetes.Interface, pod *corev1.Pod, container, namespace string, tailLines *int64) ([]byte, error) {
 	podLogOptions := corev1.PodLogOptions{
-		Follow:    false,
-		TailLines: tailLines,
 		Container: container,
 	}
 
@@ -285,95 +310,15 @@ func AbortJob(ctx context.Context, c kubernetes.Interface, namespace string, job
 	}, nil
 }
 
-func PrepareEnvs(envs map[string]string) []corev1.EnvVar {
-	var env []corev1.EnvVar
-	for k, v := range envs {
-		env = append(env, corev1.EnvVar{
-			Name:  k,
-			Value: v,
-		})
-	}
-
-	return env
-}
-
-// PrepareSecretEnvs prepares all the secrets for templating
-func PrepareSecretEnvs(secretEnvs map[string]string, variables map[string]testkube.Variable,
-	usernameSecret, tokenSecret *testkube.SecretRef) []corev1.EnvVar {
-
-	secretEnvVars := secretenv.NewEnvManager().Prepare(secretEnvs, variables)
-
-	// prepare git credentials
-	var data = []struct {
-		envVar    string
-		secretRef *testkube.SecretRef
-	}{
-		{
-			GitUsernameEnvVarName,
-			usernameSecret,
-		},
-		{
-			GitTokenEnvVarName,
-			tokenSecret,
-		},
-	}
-
-	for _, value := range data {
-		if value.secretRef != nil {
-			secretEnvVars = append(secretEnvVars, corev1.EnvVar{
-				Name: value.envVar,
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: value.secretRef.Name,
-						},
-						Key: value.secretRef.Key,
-					},
-				},
-			})
-		}
-	}
-
-	return secretEnvVars
-}
-
-// NewTemplatesFromEnv returns base64 encoded templates from nev
-func NewTemplatesFromEnv(env string) (t Templates, err error) {
-	err = envconfig.Process(env, &t)
-	if err != nil {
-		return t, err
-	}
-	templates := []*string{&t.Job, &t.PVC, &t.Scraper}
-	for i := range templates {
-		if *templates[i] != "" {
-			dataDecoded, err := base64.StdEncoding.DecodeString(*templates[i])
-			if err != nil {
-				return t, err
-			}
-
-			*templates[i] = string(dataDecoded)
-		}
-	}
-
-	return t, nil
-}
-
 // SyncDefaultExecutors creates or updates default executors
-func SyncDefaultExecutors(executorsClient executorsclientv1.Interface, namespace, data string, readOnlyExecutors bool) (
-	images Images, err error) {
-	var executors []testkube.ExecutorDetails
-
-	if data == "" {
+func SyncDefaultExecutors(
+	executorsClient executorsclientv1.Interface,
+	namespace string,
+	executors []testkube.ExecutorDetails,
+	readOnlyExecutors bool,
+) (images Images, err error) {
+	if len(executors) == 0 {
 		return images, nil
-	}
-
-	dataDecoded, err := base64.StdEncoding.DecodeString(data)
-	if err != nil {
-		return images, err
-	}
-
-	if err := json.Unmarshal(dataDecoded, &executors); err != nil {
-		return images, err
 	}
 
 	for _, executor := range executors {
@@ -381,12 +326,12 @@ func SyncDefaultExecutors(executorsClient executorsclientv1.Interface, namespace
 			continue
 		}
 
-		if executor.Name == "executor-init" {
+		if executor.Name == "init-executor" {
 			images.Init = executor.Executor.Image
 			continue
 		}
 
-		if executor.Name == "executor-scraper" {
+		if executor.Name == "scraper-executor" {
 			images.Scraper = executor.Executor.Image
 			continue
 		}
@@ -402,8 +347,10 @@ func SyncDefaultExecutors(executorsClient executorsclientv1.Interface, namespace
 			},
 			Spec: executorv1.ExecutorSpec{
 				Types:        executor.Executor.Types,
-				ExecutorType: executor.Executor.ExecutorType,
+				ExecutorType: executorv1.ExecutorType(executor.Executor.ExecutorType),
 				Image:        executor.Executor.Image,
+				Command:      executor.Executor.Command,
+				Args:         executor.Executor.Args,
 				Features:     executorsmapper.MapFeaturesToCRD(executor.Executor.Features),
 				ContentTypes: executorsmapper.MapContentTypesToCRD(executor.Executor.ContentTypes),
 				Meta:         executorsmapper.MapMetaToCRD(executor.Executor.Meta),
@@ -427,4 +374,25 @@ func SyncDefaultExecutors(executorsClient executorsclientv1.Interface, namespace
 	}
 
 	return images, nil
+}
+
+// GetPodErrorMessage return pod error message
+func GetPodErrorMessage(pod *corev1.Pod) string {
+	if pod.Status.Message != "" {
+		return pod.Status.Message
+	}
+
+	for _, initContainerStatus := range pod.Status.InitContainerStatuses {
+		if initContainerStatus.State.Terminated != nil && initContainerStatus.State.Terminated.Message != "" {
+			return initContainerStatus.State.Terminated.Message
+		}
+	}
+
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if containerStatus.State.Terminated != nil && containerStatus.State.Terminated.Message != "" {
+			return containerStatus.State.Terminated.Message
+		}
+	}
+
+	return ""
 }

@@ -2,7 +2,6 @@ package bus
 
 import (
 	"fmt"
-	"os"
 	"sync"
 
 	"github.com/nats-io/nats.go"
@@ -12,20 +11,15 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
-var _ Bus = &NATSBus{}
+var _ Bus = (*NATSBus)(nil)
 
 const (
 	SubscribeBuffer  = 1
 	SubscriptionName = "events"
 )
 
-func NewNATSConnection() (*nats.EncodedConn, error) {
-	natsURI := "localhost"
-	if uri, ok := os.LookupEnv("NATS_URI"); ok {
-		natsURI = uri
-	}
-
-	nc, err := nats.Connect(natsURI)
+func NewNATSConnection(uri string) (*nats.EncodedConn, error) {
+	nc, err := nats.Connect(uri)
 	if err != nil {
 		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
 		return nil, err
@@ -52,16 +46,28 @@ type NATSBus struct {
 	subscriptions sync.Map
 }
 
+// Publish publishes event to NATS on events topic
 func (n *NATSBus) Publish(event testkube.Event) error {
-	return n.nc.Publish(SubscriptionName, event)
+	return n.PublishTopic(SubscriptionName, event)
 }
 
+// Subscribe subscribes to NATS events topic
 func (n *NATSBus) Subscribe(queueName string, handler Handler) error {
+	return n.SubscribeTopic(SubscriptionName, queueName, handler)
+}
+
+// PublishTopic publishes event to NATS on given topic
+func (n *NATSBus) PublishTopic(topic string, event testkube.Event) error {
+	return n.nc.Publish(topic, event)
+}
+
+// SubscribeTopic subscribes to NATS topic
+func (n *NATSBus) SubscribeTopic(topic, queueName string, handler Handler) error {
 	// sanitize names for NATS
 	queue := common.ListenerName(queueName)
 
 	// async subscribe on queue
-	s, err := n.nc.QueueSubscribe(SubscriptionName, queue, handler)
+	s, err := n.nc.QueueSubscribe(topic, queue, handler)
 
 	if err == nil {
 		// store subscription for later unsubscribe

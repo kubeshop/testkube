@@ -8,10 +8,11 @@ import (
 
 // Config for HTTP server
 type Config struct {
-	Port      int
-	Fullname  string
-	ClusterID string
-	Http      fiber.Config
+	Port          int
+	Fullname      string
+	ClusterID     string
+	HttpBodyLimit int `envconfig:"HTTP_BODY_LIMIT"`
+	Http          fiber.Config
 }
 
 // Addr returns port based address

@@ -4,13 +4,16 @@
 package git
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
+	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/process"
 )
 
 // CheckoutCommit checks out specific commit
-func CheckoutCommit(uri, path, commit, dir string) (err error) {
+func CheckoutCommit(uri, authHeader, path, commit, dir string) (err error) {
 	repoDir := dir + "/repo"
 	if err = os.Mkdir(repoDir, 0750); err != nil {
 		return err
@@ -35,15 +38,22 @@ func CheckoutCommit(uri, path, commit, dir string) (err error) {
 		return err
 	}
 
-	if _, err = process.ExecuteInDir(
+	args := []string{}
+	// Appends the HTTP Authorization header to the git clone args to
+	// authenticate using a bearer token. More info:
+	// https://confluence.atlassian.com/bitbucketserver/http-access-tokens-939515499.html
+	if authHeader != "" {
+		args = append(args, "-c", fmt.Sprintf("http.extraHeader='%s'", authHeader))
+	}
+
+	args = append(args, "fetch", "--depth", "1", "origin", commit)
+	_, err = process.ExecuteInDir(
 		repoDir,
 		"git",
-		"fetch",
-		"--depth",
-		"1",
-		"origin",
-		commit,
-	); err != nil {
+		args...,
+	)
+	output.PrintLogf("Git parameters: %s", strings.Join(obfuscateArgs(args, uri, authHeader), " "))
+	if err != nil {
 		return err
 	}
 
@@ -72,7 +82,7 @@ func CheckoutCommit(uri, path, commit, dir string) (err error) {
 }
 
 // Checkout will checkout directory from Git repository
-func Checkout(uri, branch, commit, dir string) (outputDir string, err error) {
+func Checkout(uri, authHeader, branch, commit, dir string) (outputDir string, err error) {
 	tmpDir := dir
 	if tmpDir == "" {
 		tmpDir, err = os.MkdirTemp("", "git-checkout")
@@ -87,17 +97,25 @@ func Checkout(uri, branch, commit, dir string) (outputDir string, err error) {
 			args = append(args, "-b", branch)
 		}
 
+		// Appends the HTTP Authorization header to the git clone args to
+		// authenticate using a bearer token. More info:
+		// https://confluence.atlassian.com/bitbucketserver/http-access-tokens-939515499.html
+		if authHeader != "" {
+			args = append(args, "-c", fmt.Sprintf("http.extraHeader='%s'", authHeader))
+		}
+
 		args = append(args, "--depth", "1", uri, "repo")
 		_, err = process.ExecuteInDir(
 			tmpDir,
 			"git",
 			args...,
 		)
+		output.PrintLogf("Git parameters: %s", strings.Join(obfuscateArgs(args, uri, authHeader), " "))
 		if err != nil {
 			return "", err
 		}
 	} else {
-		if err = CheckoutCommit(uri, "", commit, tmpDir); err != nil {
+		if err = CheckoutCommit(uri, authHeader, "", commit, tmpDir); err != nil {
 			return "", err
 		}
 	}
@@ -106,7 +124,7 @@ func Checkout(uri, branch, commit, dir string) (outputDir string, err error) {
 }
 
 // PartialCheckout will checkout only given directory from Git repository
-func PartialCheckout(uri, path, branch, commit, dir string) (outputDir string, err error) {
+func PartialCheckout(uri, authHeader, path, branch, commit, dir string) (outputDir string, err error) {
 	tmpDir := dir
 	if tmpDir == "" {
 		tmpDir, err = os.MkdirTemp("", "git-sparse-checkout")
@@ -121,12 +139,20 @@ func PartialCheckout(uri, path, branch, commit, dir string) (outputDir string, e
 			args = append(args, "-b", branch)
 		}
 
+		// Appends the HTTP Authorization header to the git clone args to
+		// authenticate using a bearer token. More info:
+		// https://confluence.atlassian.com/bitbucketserver/http-access-tokens-939515499.html
+		if authHeader != "" {
+			args = append(args, "-c", fmt.Sprintf("http.extraHeader='%s'", authHeader))
+		}
+
 		args = append(args, "--depth", "1", "--filter", "blob:none", "--sparse", uri, "repo")
 		_, err = process.ExecuteInDir(
 			tmpDir,
 			"git",
 			args...,
 		)
+		output.PrintLogf("Git parameters: %s", strings.Join(obfuscateArgs(args, uri, authHeader), " "))
 		if err != nil {
 			return "", err
 		}
@@ -136,16 +162,29 @@ func PartialCheckout(uri, path, branch, commit, dir string) (outputDir string, e
 			"git",
 			"sparse-checkout",
 			"set",
+			"--no-cone",
 			path,
 		)
 		if err != nil {
 			return "", err
 		}
 	} else {
-		if err = CheckoutCommit(uri, path, commit, tmpDir); err != nil {
+		if err = CheckoutCommit(uri, authHeader, path, commit, tmpDir); err != nil {
 			return "", err
 		}
 	}
 
 	return tmpDir + "/repo/" + path, nil
+}
+
+func obfuscateArgs(args []string, uri, authHeader string) []string {
+	for i := range args {
+		for _, value := range []string{uri, authHeader} {
+			if value != "" {
+				args[i] = strings.ReplaceAll(args[i], value, strings.Repeat("*", len(value)))
+			}
+		}
+	}
+
+	return args
 }

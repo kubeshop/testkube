@@ -19,7 +19,7 @@ func TestPodHasError(t *testing.T) {
 		pod := succeededPod()
 
 		// when
-		err := isPodFailed(pod)
+		err := IsPodFailed(pod)
 
 		//then
 		assert.NoError(t, err)
@@ -30,7 +30,7 @@ func TestPodHasError(t *testing.T) {
 		pod := failedPod()
 
 		// when
-		err := isPodFailed(pod)
+		err := IsPodFailed(pod)
 
 		//then
 		assert.EqualError(t, err, "pod failed")
@@ -41,7 +41,7 @@ func TestPodHasError(t *testing.T) {
 		pod := failedInitContainer()
 
 		// when
-		err := isPodFailed(pod)
+		err := IsPodFailed(pod)
 
 		//then
 		assert.EqualError(t, err, "secret nonexistingsecret not found")

@@ -4,14 +4,17 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/repository/config"
 
 	"github.com/kubeshop/testkube/pkg/version"
 
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 
-	"github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/utils"
@@ -19,6 +22,7 @@ import (
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	testsuitev3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsuitesclientv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
 	testkubeclientsetv1 "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
@@ -59,6 +63,9 @@ type Service struct {
 	testResultRepository          testresult.Repository
 	logger                        *zap.SugaredLogger
 	configMap                     config.Repository
+	executorsClient               executorsclientv1.Interface
+	testkubeNamespace             string
+	watcherNamespaces             []string
 }
 
 type Option func(*Service)
@@ -74,11 +81,11 @@ func NewService(
 	leaseBackend LeaseBackend,
 	logger *zap.SugaredLogger,
 	configMap config.Repository,
+	executorsClient executorsclientv1.Interface,
 	opts ...Option,
 ) *Service {
 	identifier := fmt.Sprintf(defaultIdentifierFormat, utils.RandAlphanum(10))
 	s := &Service{
-		informers:                     newK8sInformers(clientset, testKubeClientset),
 		identifier:                    identifier,
 		clusterID:                     defaultClusterID,
 		scraperInterval:               defaultScraperInterval,
@@ -96,6 +103,7 @@ func NewService(
 		leaseBackend:                  leaseBackend,
 		logger:                        logger,
 		configMap:                     configMap,
+		executorsClient:               executorsClient,
 		watchFromDate:                 time.Now(),
 		triggerStatus:                 make(map[statusKey]*triggerStatus),
 	}
@@ -106,6 +114,8 @@ func NewService(
 	for _, opt := range opts {
 		opt(s)
 	}
+
+	s.informers = newK8sInformers(clientset, testKubeClientset, s.testkubeNamespace, s.watcherNamespaces)
 
 	return s
 }
@@ -152,6 +162,23 @@ func WithScraperInterval(interval time.Duration) Option {
 func WithExecutor(executor ExecutorF) Option {
 	return func(s *Service) {
 		s.executor = executor
+	}
+}
+
+func WithTestkubeNamespace(namespace string) Option {
+	return func(s *Service) {
+		s.testkubeNamespace = namespace
+	}
+}
+
+func WithWatcherNamespaces(namespaces string) Option {
+	return func(s *Service) {
+		for _, namespace := range strings.Split(namespaces, ",") {
+			value := strings.TrimSpace(namespace)
+			if value != "" {
+				s.watcherNamespaces = append(s.watcherNamespaces, value)
+			}
+		}
 	}
 }
 
@@ -207,7 +234,7 @@ func (s *Service) addTest(test *testsv3.Test) {
 
 	var dataSource string
 	if test.Spec.Content != nil {
-		dataSource = test.Spec.Content.Type_
+		dataSource = string(test.Spec.Content.Type_)
 	}
 
 	out, err := telemetry.SendCreateEvent("testkube_api_create_test", telemetry.CreateParams{
@@ -222,6 +249,51 @@ func (s *Service) addTest(test *testsv3.Test) {
 		s.logger.Debugw("sending create test telemetry event error", "error", err)
 	} else {
 		s.logger.Debugw("sending create test telemetry event", "output", out)
+	}
+
+	if test.Labels == nil {
+		test.Labels = make(map[string]string)
+	}
+
+	test.Labels[testkube.TestLabelTestType] = utils.SanitizeName(test.Spec.Type_)
+	executorCR, err := s.executorsClient.GetByType(test.Spec.Type_)
+	if err == nil {
+		test.Labels[testkube.TestLabelExecutor] = executorCR.Name
+	} else {
+		s.logger.Debugw("can't get executor spec", "error", err)
+	}
+
+	if _, err = s.testsClient.Update(test); err != nil {
+		s.logger.Debugw("can't update test spec", "error", err)
+	}
+}
+
+func (s *Service) updateTest(test *testsv3.Test) {
+	changed := false
+	if test.Labels == nil {
+		test.Labels = make(map[string]string)
+	}
+
+	testType := utils.SanitizeName(test.Spec.Type_)
+	if test.Labels[testkube.TestLabelTestType] != testType {
+		test.Labels[testkube.TestLabelTestType] = testType
+		changed = true
+	}
+
+	executorCR, err := s.executorsClient.GetByType(test.Spec.Type_)
+	if err == nil {
+		if test.Labels[testkube.TestLabelExecutor] != executorCR.Name {
+			test.Labels[testkube.TestLabelExecutor] = executorCR.Name
+			changed = true
+		}
+	} else {
+		s.logger.Debugw("can't get executor spec", "error", err)
+	}
+
+	if changed {
+		if _, err = s.testsClient.Update(test); err != nil {
+			s.logger.Debugw("can't update test spec", "error", err)
+		}
 	}
 }
 

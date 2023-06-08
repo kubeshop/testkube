@@ -29,11 +29,18 @@ type Execution struct {
 	Name string `json:"name,omitempty"`
 	// execution number
 	Number int32 `json:"number,omitempty"`
-	// environment variables passed to executor
+	// Environment variables passed to executor.
+	// Deprecated: use Basic Variables instead
 	Envs map[string]string `json:"envs,omitempty"`
+	// executor image command
+	Command []string `json:"command,omitempty"`
 	// additional arguments/flags passed to executor binary
-	Args      []string            `json:"args,omitempty"`
+	Args []string `json:"args,omitempty"`
+	// usage mode for arguments
+	ArgsMode  string              `json:"args_mode,omitempty"`
 	Variables map[string]Variable `json:"variables,omitempty"`
+	// in case the variables file is too big, it will be uploaded to storage
+	IsVariablesFileUploaded bool `json:"isVariablesFileUploaded,omitempty"`
 	// variables file content - need to be in format for particular executor (e.g. postman envs file)
 	VariablesFile string `json:"variablesFile,omitempty"`
 	// test secret uuid
@@ -58,5 +65,6 @@ type Execution struct {
 	BucketName      string           `json:"bucketName,omitempty"`
 	ArtifactRequest *ArtifactRequest `json:"artifactRequest,omitempty"`
 	// script to run before test execution
-	PreRunScript string `json:"preRunScript,omitempty"`
+	PreRunScript   string          `json:"preRunScript,omitempty"`
+	RunningContext *RunningContext `json:"runningContext,omitempty"`
 }

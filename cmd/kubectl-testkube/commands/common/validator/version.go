@@ -20,7 +20,9 @@ func PersistentPreRunVersionCheck(cmd *cobra.Command, clientVersion string) {
 	client, _ := common.GetClient(cmd)
 	info, err := client.GetServerInfo()
 	if err != nil {
-		ui.Warn(err.Error())
+		// omit check of versions if we can't get server info
+		// e.g. when there is not cloud token yet
+		ui.Debug(err.Error())
 		return
 	}
 

@@ -29,6 +29,22 @@ func GetClient(cmd *cobra.Command) (client.Client, string) {
 	cfg, err := config.Load()
 	ui.ExitOnError("loading config file", err)
 
+	// set kubeconfig as default config type
+	if cfg.ContextType == "" {
+		cfg.ContextType = config.ContextTypeKubeconfig
+	}
+
+	if cfg.APIServerName == "" {
+		cfg.APIServerName = config.APIServerName
+	}
+
+	if cfg.APIServerPort == 0 {
+		cfg.APIServerPort = config.APIServerPort
+	}
+
+	options.APIServerName = cfg.APIServerName
+	options.APIServerPort = cfg.APIServerPort
+
 	switch cfg.ContextType {
 	case config.ContextTypeKubeconfig:
 		if oauthEnabled {

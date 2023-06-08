@@ -11,6 +11,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/repository/config"
+
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/version"
@@ -30,11 +32,10 @@ import (
 
 	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
-	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/telemetry"
@@ -50,10 +51,13 @@ const (
 	GitTokenSecretName = "git-token"
 	// GitTokenEnvVarName is git token environment var name
 	GitTokenEnvVarName = "RUNNER_GITTOKEN"
+	// SecretTest is a test secret
+	SecretTest = "secrets"
+	// SecretSource is a source secret
+	SecretSource = "source-secrets"
 
 	pollTimeout  = 24 * time.Hour
 	pollInterval = 200 * time.Millisecond
-	volumeDir    = "/data"
 	// pollJobStatus is interval for checking if job timeout occurred
 	pollJobStatus = 1 * time.Second
 	// timeoutIndicator is string that is added to job logs when timeout occurs
@@ -61,26 +65,36 @@ const (
 )
 
 // NewJobExecutor creates new job executor
-func NewJobExecutor(repo result.Repository, namespace string, images executor.Images,
-	templates executor.Templates, serviceAccountName string, metrics ExecutionCounter,
-	emiter *event.Emitter, configMap config.Repository, testsClient testsv3.Interface) (client *JobExecutor, err error) {
-	clientSet, err := k8sclient.ConnectToK8s()
-	if err != nil {
-		return client, err
-	}
-
+func NewJobExecutor(
+	repo result.Repository,
+	namespace string,
+	images executor.Images,
+	jobTemplate string,
+	serviceAccountName string,
+	metrics ExecutionCounter,
+	emiter *event.Emitter,
+	configMap config.Repository,
+	testsClient testsv3.Interface,
+	clientset kubernetes.Interface,
+	registry string,
+	podStartTimeout time.Duration,
+	clusterID string,
+) (client *JobExecutor, err error) {
 	return &JobExecutor{
-		ClientSet:          clientSet,
+		ClientSet:          clientset,
 		Repository:         repo,
 		Log:                log.DefaultLogger,
 		Namespace:          namespace,
 		images:             images,
-		templates:          templates,
+		jobTemplate:        jobTemplate,
 		serviceAccountName: serviceAccountName,
 		metrics:            metrics,
 		Emitter:            emiter,
 		configMap:          configMap,
 		testsClient:        testsClient,
+		registry:           registry,
+		podStartTimeout:    podStartTimeout,
+		clusterID:          clusterID,
 	}, nil
 }
 
@@ -92,16 +106,19 @@ type ExecutionCounter interface {
 type JobExecutor struct {
 	Repository         result.Repository
 	Log                *zap.SugaredLogger
-	ClientSet          *kubernetes.Clientset
+	ClientSet          kubernetes.Interface
 	Namespace          string
 	Cmd                string
 	images             executor.Images
-	templates          executor.Templates
+	jobTemplate        string
 	serviceAccountName string
 	metrics            ExecutionCounter
 	Emitter            *event.Emitter
 	configMap          config.Repository
 	testsClient        testsv3.Interface
+	registry           string
+	podStartTimeout    time.Duration
+	clusterID          string
 }
 
 type JobOptions struct {
@@ -114,6 +131,7 @@ type JobOptions struct {
 	TestName              string
 	InitImage             string
 	JobTemplate           string
+	Envs                  map[string]string
 	SecretEnvs            map[string]string
 	HTTPProxy             string
 	HTTPSProxy            string
@@ -124,6 +142,11 @@ type JobOptions struct {
 	ActiveDeadlineSeconds int64
 	ServiceAccountName    string
 	JobTemplateExtensions string
+	EnvConfigMaps         []testkube.EnvReference
+	EnvSecrets            []testkube.EnvReference
+	Labels                map[string]string
+	Registry              string
+	ClusterID             string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -145,8 +168,7 @@ func (c *JobExecutor) Logs(ctx context.Context, id string) (out chan output.Outp
 		for l := range logs {
 			entry, err := output.GetLogEntry(l)
 			if err != nil {
-				out <- output.NewOutputError(err)
-				return
+				c.Log.Errorw("error parsing log entry", "error", err)
 			}
 			out <- entry
 		}
@@ -274,7 +296,7 @@ func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) 
 // CreateJob creates new Kubernetes job based on execution and execute options
 func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
-	jobOptions, err := NewJobOptions(c.images.Init, c.templates.Job, c.serviceAccountName, execution, options)
+	jobOptions, err := NewJobOptions(c.images.Init, c.jobTemplate, c.serviceAccountName, c.registry, c.clusterID, execution, options)
 	if err != nil {
 		return err
 	}
@@ -300,11 +322,16 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 		}
 	}()
 
-	// wait for complete
-	l.Debug("poll immediate waiting for pod to succeed")
-	if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
+	// wait for pod
+	l.Debug("poll immediate waiting for pod")
+	if err = wait.PollImmediate(pollInterval, c.podStartTimeout, executor.IsPodLoggable(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
+		l.Errorw("waiting for pod started error", "error", err)
+	} else if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
 		// continue on poll err and try to get logs later
 		l.Errorw("waiting for pod complete error", "error", err)
+	}
+	if err != nil {
+		execution.ExecutionResult.Err(err)
 	}
 	l.Debug("poll immediate end")
 
@@ -321,9 +348,13 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 		l.Errorw("parse output error", "error", err)
 		return execution.ExecutionResult, err
 	}
+
+	if execution.ExecutionResult.IsFailed() && execution.ExecutionResult.ErrorMessage == "" {
+		execution.ExecutionResult.ErrorMessage = executor.GetPodErrorMessage(&pod)
+	}
+
 	// saving result in the defer function
 	return execution.ExecutionResult, nil
-
 }
 
 func (c *JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, execution *testkube.Execution, result *testkube.ExecutionResult, isNegativeTest bool, passedErr error) error {
@@ -451,9 +482,11 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 	return JobOptions{
 		Image:                 options.ExecutorSpec.Image,
 		ImageOverride:         options.ImageOverride,
+		ImagePullSecrets:      options.ImagePullSecretNames,
 		JobTemplate:           options.ExecutorSpec.JobTemplate,
 		TestName:              options.TestName,
 		Namespace:             options.Namespace,
+		Envs:                  options.Request.Envs,
 		SecretEnvs:            options.Request.SecretEnvs,
 		HTTPProxy:             options.Request.HttpProxy,
 		HTTPSProxy:            options.Request.HttpsProxy,
@@ -462,6 +495,13 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		CertificateSecret:     options.CertificateSecret,
 		ActiveDeadlineSeconds: options.Request.ActiveDeadlineSeconds,
 		JobTemplateExtensions: options.Request.JobTemplate,
+		EnvConfigMaps:         options.Request.EnvConfigMaps,
+		EnvSecrets:            options.Request.EnvSecrets,
+		Labels: map[string]string{
+			testkube.TestLabelTestType: utils.SanitizeName(options.TestSpec.Type_),
+			testkube.TestLabelExecutor: options.ExecutorName,
+			testkube.TestLabelTestName: options.TestName,
+		},
 	}
 }
 
@@ -494,7 +534,10 @@ func (c *JobExecutor) TailJobLogs(ctx context.Context, id string, logs chan []by
 
 			default:
 				l.Debugw("tailing job logs: waiting for pod to be ready")
-				if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodLoggable(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
+				if err = wait.PollImmediate(pollInterval, c.podStartTimeout, executor.IsPodLoggable(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
+					l.Errorw("poll immediate error when tailing logs", "error", err)
+					return err
+				} else if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
 					l.Errorw("poll immediate error when tailing logs", "error", err)
 					return c.GetLastLogLineError(ctx, pod)
 				}
@@ -591,7 +634,10 @@ func (c *JobExecutor) GetLastLogLineError(ctx context.Context, pod corev1.Pod) e
 // Abort aborts K8S by job name
 func (c *JobExecutor) Abort(ctx context.Context, execution *testkube.Execution) (result *testkube.ExecutionResult, err error) {
 	l := c.Log.With("execution", execution.Id)
-	result, _ = executor.AbortJob(ctx, c.ClientSet, c.Namespace, execution.Id)
+	result, err = executor.AbortJob(ctx, c.ClientSet, c.Namespace, execution.Id)
+	if err != nil {
+		l.Errorw("error aborting job", "execution", execution.Id, "error", err)
+	}
 	l.Debugw("job aborted", "execution", execution.Id, "result", result)
 	if err := c.stopExecution(ctx, l, execution, result, false, nil); err != nil {
 		l.Errorw("error stopping execution on job executor abort", "error", err)
@@ -619,8 +665,9 @@ func (c *JobExecutor) Timeout(ctx context.Context, jobName string) (result *test
 
 // NewJobSpec is a method to create new job spec
 func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error) {
-	secretEnvVars := executor.PrepareSecretEnvs(options.SecretEnvs, options.Variables,
-		options.UsernameSecret, options.TokenSecret)
+	envManager := env.NewManager()
+	secretEnvVars := append(envManager.PrepareSecrets(options.SecretEnvs, options.Variables),
+		envManager.PrepareGitCredentials(options.UsernameSecret, options.TokenSecret)...)
 
 	tmpl, err := template.New("job").Parse(options.JobTemplate)
 	if err != nil {
@@ -657,21 +704,38 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 		return nil, errors.Errorf("decoding job spec error: %v", err)
 	}
 
-	env := append(executor.RunnerEnvVars, secretEnvVars...)
+	for key, value := range options.Labels {
+		if job.Labels == nil {
+			job.Labels = make(map[string]string)
+		}
+
+		job.Labels[key] = value
+
+		if job.Spec.Template.Labels == nil {
+			job.Spec.Template.Labels = make(map[string]string)
+		}
+
+		job.Spec.Template.Labels[key] = value
+	}
+
+	envs := append(executor.RunnerEnvVars, corev1.EnvVar{Name: "RUNNER_CLUSTERID", Value: options.ClusterID})
+	envs = append(envs, secretEnvVars...)
 	if options.HTTPProxy != "" {
-		env = append(env, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
+		envs = append(envs, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
 	}
 
 	if options.HTTPSProxy != "" {
-		env = append(env, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
+		envs = append(envs, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
 	}
 
+	envs = append(envs, envManager.PrepareEnvs(options.Envs, options.Variables)...)
+
 	for i := range job.Spec.Template.Spec.InitContainers {
-		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, env...)
+		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, envs...)
 	}
 
 	for i := range job.Spec.Template.Spec.Containers {
-		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, env...)
+		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, envs...)
 		// override container image if provided
 		if options.ImageOverride != "" {
 			job.Spec.Template.Spec.Containers[i].Image = options.ImageOverride
@@ -681,7 +745,8 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	return &job, nil
 }
 
-func NewJobOptions(initImage, jobTemplate string, serviceAccountName string, execution testkube.Execution, options ExecuteOptions) (jobOptions JobOptions, err error) {
+func NewJobOptions(initImage, jobTemplate string, serviceAccountName, registry, clusterID string,
+	execution testkube.Execution, options ExecuteOptions) (jobOptions JobOptions, err error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
 		return jobOptions, err
@@ -697,7 +762,9 @@ func NewJobOptions(initImage, jobTemplate string, serviceAccountName string, exe
 		jobOptions.JobTemplate = jobTemplate
 	}
 	jobOptions.Variables = execution.Variables
-	jobOptions.ImagePullSecrets = options.ImagePullSecretNames
 	jobOptions.ServiceAccountName = serviceAccountName
+	jobOptions.Registry = registry
+	jobOptions.ClusterID = clusterID
+
 	return
 }

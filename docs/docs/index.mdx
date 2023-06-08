@@ -1,63 +1,131 @@
----
-sidebar_position: 0
-sidebar_label: Welcome
-hide_table_of_contents: true
----
+import DocCard from "../src/theme/DocCard";
+import clsx from "clsx";
 
-import Card from "@site/src/components/Card";
-import CardWrapper from "@site/src/components/CardWrapper";
+# Testkube Documentation
 
-# Testkube
+Welcome to our documentation!
+This is the place where you'll find everything you need to get ramped up and start testing with Testkube.
 
-<p class="intro--index">
-  <small>
-    Testkube is a Kubernetes-native testing framework for Testers and Developers that allows you to automate the executions 
-    of your existing testing tools inside your Kubernetes cluster, removing all the complexity from your CI/CD/GitOps pipelines.
-  </small>
-</p>
+## What is Testkube?
 
-Tests are meant to be part of a cluster's state and can be executed as needed:
+Testkube is a Kubernetes-native testing framework for Testers, Developers, and DevOps practitioners that allows you to automate the executions of your existing testing tools inside your Kubernetes cluster, removing all the complexity from your CI/CD pipelines.
 
-- Manually via kubectl CLI.
-- Externally triggered via API (CI, external tooling, etc).
-- Automatically on deployment of annotated/labeled services/pods/etc (WIP).
+## Try It Out!
 
-### Testkube helps you:
+export const DocCardList = (input) => (
+  <section className={clsx("row indent--min")}>
+    {[
+      {
+        icon: "🛠",
+        label: "Get started",
+        description:
+          "Get up and running by installing the Testkube CLI and its components within minutes.",
+        href: "/articles/getting-started-overview",
+        type: "intro",
+      },
+      {
+        icon: "🏎💨",
+        label: "Run your first test",
+        description:
+          "Learn how to create, run, and display the results for your first test.",
+        href: "/articles/step3-creating-first-test",
+        type: "intro",
+      },
+      {
+        icon: "🚀",
+        label: "Connect to your CI/CD",
+        description:
+          "Incorporate Testkube into your CI/CD environment with the tools you already use.",
+        href: "/articles/cicd-overview",
+        type: "intro",
+      },
+    ].map((item, i) => (
+      <article key={i} className="col padding--sm intro__card">
+        <DocCard item={item} />
+      </article>
+    ))}
+  </section>
+);
 
-- Avoid vendor lock-in for test orchestration and execution in CI/CD pipelines.
-- Make it easy to orchestrate and run any kinds of tests - functional, load/performance, security, compliance, etc.,
-  in your clusters, without having to wrap them in docker-images or provide network access.
-- Make it possible to decouple test execution from build processes, allowing engineers to run specific tests whenever needed.
-- Centralize all test results in a consistent format for actionable QA analytics.
-- Provide a modular architecture for adding new types of test scripts and executors.
+<DocCardList />
 
-### The main Testkube components are:
+## Tool Support
+To start testing with Testkube, choose your favorite testing tool:
 
-- Kubectl plugin - simple - installed w/o 3rd party repositories (like Krew etc), communicates with API server.
-- API Server - Work orchestrator, Runs executors, gathers execution results.
-- Custom Resource Descriptors (CRD) Operator - Watches Testkube Custom Resources (CR), handles changes, communicates with API Server.
-- Executors - Run tests defined for specific runner.
-- Results DB - For centralized test results management.
-- A simple browser-based [User Interface](3-using-testkube/UI.md) for monitoring test results.
+export const ToolList = (input) => (
+  <section className={clsx("row indent--min")}>
+    {[
+      {
+        description: "Cypress",
+        href: "/test-types/executor-cypress", 
+        type: "tool_icons",
+      },
+      {
+        description: "k6",
+        href: "/test-types/executor-k6",
+        type: "tool_icons",
+      },
+      {
+        description: "Postman",
+        href: "/test-types/executor-postman",
+        type: "tool_icons",
+      },
+      {
+        description: "Ginkgo",
+        href: "/test-types/executor-ginkgo",
+        type: "tool_icons",
+      },
+      {
+        description: "JMeter",
+        href: "/test-types/executor-jmeter",
+        type: "tool_icons",
+      },
+      {
+        description: "Gradle",
+        href: "/test-types/executor-gradle",
+        type: "tool_icons",
+      },
+      {
+        description: "Maven",
+        href: "/test-types/executor-maven",
+        type: "tool_icons",
+      },
+      {
+        description: "Artillery",
+        href: "/test-types/executor-artillery",
+        type: "tool_icons",
+      },
+      {
+        description: "Playwright",
+        href: "/test-types/executor-playwright",
+        type: "tool_icons",
+      },
+      {
+        description: "KubePug",
+        href: "/test-types/executor-kubepug",
+        type: "tool_icons",
+      },
+      {
+        description: "cURL",
+        href: "/test-types/executor-curl",
+        type: "tool_icons",
+      },
+    ].map((item, i) => (
+      <article key={i} className="nopadding tools__card">
+        <DocCard item={item} />
+      </article>
+    ))}
+  </section>
+);
+
+<ToolList />
 
 
-### Testkube Cloud
+## Advantages of Using Testkube
 
-- Testkube managed solution for enterprises
-- It can manage complexinty of storing artifacts and test execution results for you
-- It can manage multiple clusters
-- It can manage your organisation and access the structure
-- It can manage API keys access for easier integration into CI/CD systems
+With Testkube, tests are part of a cluster's state and can be executed as needed:
 
-## Blog Posts
-
-Check out our [blog posts](https://testkube.io/blog) that highlight Testkube functionality, provide tutorials and keep you up to date on our latest releases.
-
-Release Notes:
-
-- [Testkube Release v1.8](https://testkube.io/blog/testkube-v18-release-notes) - December 13, 2022
-- [Testkube Release v1.7](https://testkube.io/blog/testkube-v17-release-notes) - November 9, 2022
-
-## Questions or Comments?
-
-What do you think of Testkube? We'd LOVE to hear from you! Please share your experiences and, of course, ideas on how we can make it better. Feel free to reach out on our [Discord server](https://discord.gg/uNuhy6GDyn).
+- ✨Automatically on deployment of annotated/labeled Kubernetes objects (services, pods, etc)
+- ⏲️ On a schedule
+- 🧑‍💻 Manually via Testkube's CLI or Open Source Dashboard
+- ⚡ Externally triggered via API

@@ -24,7 +24,9 @@ func NewAbortCmd() *cobra.Command {
 		}}
 
 	cmd.AddCommand(tests.NewAbortExecutionCmd())
+	cmd.AddCommand(tests.NewAbortExecutionsCmd())
 	cmd.AddCommand(testsuites.NewAbortTestSuiteExecutionCmd())
+	cmd.AddCommand(testsuites.NewAbortTestSuiteExecutionsCmd())
 
 	return cmd
 }

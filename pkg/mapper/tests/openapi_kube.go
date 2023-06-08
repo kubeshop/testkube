@@ -63,6 +63,17 @@ func MapCRDVariables(in map[string]testkube.Variable) map[string]testsv3.Variabl
 			}
 		}
 
+		if v.ConfigMapRef != nil {
+			variable.ValueFrom = corev1.EnvVarSource{
+				ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: v.ConfigMapRef.Name,
+					},
+					Key: v.ConfigMapRef.Key,
+				},
+			}
+		}
+
 		out[k] = variable
 	}
 	return out
@@ -84,6 +95,7 @@ func MapContentToSpecContent(content *testkube.TestContent) (specContent *testsv
 			Path:              content.Repository.Path,
 			WorkingDir:        content.Repository.WorkingDir,
 			CertificateSecret: content.Repository.CertificateSecret,
+			AuthType:          testsv3.GitAuthType(content.Repository.AuthType),
 		}
 
 		if content.Repository.UsernameSecret != nil {
@@ -105,7 +117,7 @@ func MapContentToSpecContent(content *testkube.TestContent) (specContent *testsv
 		Repository: repository,
 		Data:       content.Data,
 		Uri:        content.Uri,
-		Type_:      content.Type_,
+		Type_:      testsv3.TestContentType(content.Type_),
 	}
 }
 
@@ -125,30 +137,35 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 	}
 
 	return &testsv3.ExecutionRequest{
-		Name:                  executionRequest.Name,
-		TestSuiteName:         executionRequest.TestSuiteName,
-		Number:                executionRequest.Number,
-		ExecutionLabels:       executionRequest.ExecutionLabels,
-		Namespace:             executionRequest.Namespace,
-		VariablesFile:         executionRequest.VariablesFile,
-		Variables:             MapCRDVariables(executionRequest.Variables),
-		TestSecretUUID:        executionRequest.TestSecretUUID,
-		TestSuiteSecretUUID:   executionRequest.TestSuiteSecretUUID,
-		Args:                  executionRequest.Args,
-		Envs:                  executionRequest.Envs,
-		SecretEnvs:            executionRequest.SecretEnvs,
-		Sync:                  executionRequest.Sync,
-		HttpProxy:             executionRequest.HttpProxy,
-		HttpsProxy:            executionRequest.HttpsProxy,
-		Image:                 executionRequest.Image,
-		ImagePullSecrets:      mapImagePullSecrets(executionRequest.ImagePullSecrets),
-		ActiveDeadlineSeconds: executionRequest.ActiveDeadlineSeconds,
-		Command:               executionRequest.Command,
-		ArtifactRequest:       artifactRequest,
-		JobTemplate:           executionRequest.JobTemplate,
-		PreRunScript:          executionRequest.PreRunScript,
-		ScraperTemplate:       executionRequest.ScraperTemplate,
-		NegativeTest:          executionRequest.NegativeTest,
+		Name:                    executionRequest.Name,
+		TestSuiteName:           executionRequest.TestSuiteName,
+		Number:                  executionRequest.Number,
+		ExecutionLabels:         executionRequest.ExecutionLabels,
+		Namespace:               executionRequest.Namespace,
+		IsVariablesFileUploaded: executionRequest.IsVariablesFileUploaded,
+		VariablesFile:           executionRequest.VariablesFile,
+		Variables:               MapCRDVariables(executionRequest.Variables),
+		TestSecretUUID:          executionRequest.TestSecretUUID,
+		TestSuiteSecretUUID:     executionRequest.TestSuiteSecretUUID,
+		Args:                    executionRequest.Args,
+		ArgsMode:                testsv3.ArgsModeType(executionRequest.ArgsMode),
+		Envs:                    executionRequest.Envs,
+		SecretEnvs:              executionRequest.SecretEnvs,
+		Sync:                    executionRequest.Sync,
+		HttpProxy:               executionRequest.HttpProxy,
+		HttpsProxy:              executionRequest.HttpsProxy,
+		Image:                   executionRequest.Image,
+		ImagePullSecrets:        mapImagePullSecrets(executionRequest.ImagePullSecrets),
+		ActiveDeadlineSeconds:   executionRequest.ActiveDeadlineSeconds,
+		Command:                 executionRequest.Command,
+		ArtifactRequest:         artifactRequest,
+		JobTemplate:             executionRequest.JobTemplate,
+		CronJobTemplate:         executionRequest.CronJobTemplate,
+		PreRunScript:            executionRequest.PreRunScript,
+		ScraperTemplate:         executionRequest.ScraperTemplate,
+		NegativeTest:            executionRequest.NegativeTest,
+		EnvConfigMaps:           mapEnvReferences(executionRequest.EnvConfigMaps),
+		EnvSecrets:              mapEnvReferences(executionRequest.EnvSecrets),
 	}
 }
 
@@ -156,6 +173,29 @@ func mapImagePullSecrets(secrets []testkube.LocalObjectReference) (res []v1.Loca
 	for _, secret := range secrets {
 		res = append(res, v1.LocalObjectReference{Name: secret.Name})
 	}
+	return res
+}
+
+func mapEnvReferences(envs []testkube.EnvReference) []testsv3.EnvReference {
+	if envs == nil {
+		return nil
+	}
+	var res []testsv3.EnvReference
+	for _, env := range envs {
+		if env.Reference == nil {
+			continue
+		}
+
+		res = append(res, testsv3.EnvReference{
+			LocalObjectReference: v1.LocalObjectReference{
+				Name: env.Reference.Name,
+			},
+			Mount:          env.Mount,
+			MountPath:      env.MountPath,
+			MapToVariables: env.MapToVariables,
+		})
+	}
+
 	return res
 }
 
@@ -228,10 +268,6 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 		destination *string
 	}{
 		{
-			content.Type_,
-			&testContent.Type_,
-		},
-		{
 			content.Data,
 			&testContent.Data,
 		},
@@ -246,6 +282,11 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 			*field.destination = *field.source
 			emptyContent = false
 		}
+	}
+
+	if content.Type_ != nil {
+		testContent.Type_ = testsv3.TestContentType(*content.Type_)
+		emptyContent = false
 	}
 
 	if content.Repository != nil {
@@ -264,6 +305,7 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 		}
 
 		emptyRepository := true
+		fake := ""
 		var fields = []struct {
 			source      *string
 			destination *string
@@ -296,6 +338,14 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 				(*content.Repository).CertificateSecret,
 				&testContent.Repository.CertificateSecret,
 			},
+			{
+				(*content.Repository).Username,
+				&fake,
+			},
+			{
+				(*content.Repository).Token,
+				&fake,
+			},
 		}
 
 		for _, field := range fields {
@@ -303,6 +353,11 @@ func MapUpdateContentToSpecContent(content *testkube.TestContentUpdate, testCont
 				*field.destination = *field.source
 				emptyRepository = false
 			}
+		}
+
+		if (*content.Repository).AuthType != nil {
+			testContent.Repository.AuthType = testsv3.GitAuthType(*(*content.Repository).AuthType)
+			emptyRepository = false
 		}
 
 		if (*content.Repository).UsernameSecret != nil {
@@ -406,6 +461,10 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 			&request.PreRunScript,
 		},
 		{
+			executionRequest.CronJobTemplate,
+			&request.CronJobTemplate,
+		},
+		{
 			executionRequest.ScraperTemplate,
 			&request.ScraperTemplate,
 		},
@@ -416,6 +475,11 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 			*field.destination = *field.source
 			emptyExecution = false
 		}
+	}
+
+	if executionRequest.ArgsMode != nil {
+		request.ArgsMode = testsv3.ArgsModeType(*executionRequest.ArgsMode)
+		emptyExecution = false
 	}
 
 	var slices = []struct {
@@ -480,6 +544,16 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 
 	if executionRequest.ImagePullSecrets != nil {
 		request.ImagePullSecrets = mapImagePullSecrets(*executionRequest.ImagePullSecrets)
+		emptyExecution = false
+	}
+
+	if executionRequest.EnvConfigMaps != nil {
+		request.EnvConfigMaps = mapEnvReferences(*executionRequest.EnvConfigMaps)
+		emptyExecution = false
+	}
+
+	if executionRequest.EnvSecrets != nil {
+		request.EnvSecrets = mapEnvReferences(*executionRequest.EnvSecrets)
 		emptyExecution = false
 	}
 

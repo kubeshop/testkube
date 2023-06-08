@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/client"
 )
 
 func Test_readCopyFiles(t *testing.T) {
@@ -115,6 +118,42 @@ func createCopyFiles() ([]*os.File, error) {
 	return files, nil
 }
 
+// createTempFile creates temporary file with the given content
+func createTempFile(content string) (*os.File, error) {
+	file, err := os.CreateTemp("", "variables.txt")
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = file.WriteString(content)
+	if err != nil {
+		return nil, err
+	}
+
+	return file, nil
+}
+
+// createLargeFile creates temporary file of the given size
+func createLargeFile(size int64) (*os.File, error) {
+	fd, err := os.CreateTemp("", "variables.txt")
+	if err != nil {
+		return nil, err
+	}
+	_, err = fd.Seek(size-1, 0)
+	if err != nil {
+		return nil, err
+	}
+	_, err = fd.Write([]byte{0})
+	if err != nil {
+		return nil, err
+	}
+	err = fd.Close()
+	if err != nil {
+		return nil, err
+	}
+	return fd, nil
+}
+
 func cleanup(files []*os.File) error {
 	for _, f := range files {
 		err := os.Remove(f.Name())
@@ -123,4 +162,42 @@ func cleanup(files []*os.File) error {
 		}
 	}
 	return nil
+}
+
+func Test_PrepareVariablesFile(t *testing.T) {
+	t.Run("File does not exist should return error", func(t *testing.T) {
+		_, _, err := PrepareVariablesFile(client.APIClient{}, "parent", client.Test, "/this-file-does-not-exist", 0)
+		assert.Error(t, err)
+	})
+	t.Run("File small enough should return contents", func(t *testing.T) {
+		fileContent := "variables file"
+		file, err := createTempFile(fileContent)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, file)
+
+		contents, isUploaded, err := PrepareVariablesFile(client.APIClient{}, "parent", client.Test, file.Name(), 0)
+		assert.NoError(t, err)
+		assert.False(t, isUploaded)
+		assert.Equal(t, fileContent, contents)
+	})
+	t.Run("Big file should be uploaded", func(t *testing.T) {
+		file, err := createLargeFile(maxArgSize + 1)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, file)
+
+		isCalled := false
+		mockClient := client.APIClient{
+			CopyFileClient: &client.MockCopyFileAPI{
+				UploadFileFn: func(parentName string, parentType client.TestingType, filePath string, fileContent []byte, timeout time.Duration) error {
+					isCalled = true
+					return nil
+				},
+			},
+		}
+		path, isUploaded, err := PrepareVariablesFile(mockClient, "parent", client.Test, file.Name(), 0)
+		assert.NoError(t, err)
+		assert.True(t, isUploaded)
+		assert.Contains(t, path, "variables.txt")
+		assert.True(t, isCalled)
+	})
 }

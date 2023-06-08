@@ -10,7 +10,7 @@ metadata:
 spec:
   type: gradle:jdk18/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube-executor-gradle.git
@@ -33,7 +33,7 @@ metadata:
 spec:
   type: gradle:jdk17/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube-executor-gradle.git
@@ -56,7 +56,7 @@ metadata:
 spec:
   type: gradle:jdk11/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube-executor-gradle.git
@@ -79,7 +79,7 @@ metadata:
 spec:
   type: gradle:jdk8/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube-executor-gradle.git
@@ -102,7 +102,7 @@ metadata:
 spec:
   type: gradle:jdk18/test
   content:
-    type: git-dir
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube-executor-gradle.git

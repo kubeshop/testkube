@@ -13,6 +13,14 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
+//go:generate mockgen -destination=./mock_client.go -package=configmap "github.com/kubeshop/testkube/pkg/configmap" Interface
+type Interface interface {
+	Get(ctx context.Context, id string) (map[string]string, error)
+	Create(ctx context.Context, id string, stringData map[string]string) error
+	Apply(ctx context.Context, id string, stringData map[string]string) error
+	Update(ctx context.Context, id string, stringData map[string]string) error
+}
+
 // Client provide methods to manage configmaps
 type Client struct {
 	ClientSet *kubernetes.Clientset

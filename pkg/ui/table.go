@@ -38,6 +38,11 @@ func (ui *UI) NewArrayTable(a [][]string) ArrayTable {
 	return ArrayTable(a)
 }
 
+func (ui *UI) PrintArrayTable(a [][]string) {
+	t := ui.NewArrayTable(a)
+	ui.Table(t, ui.Writer)
+}
+
 type ArrayTable [][]string
 
 func (a ArrayTable) Table() (header []string, data [][]string) {

@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 
+	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	v3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -24,15 +25,18 @@ import (
 var ctx = context.Background()
 
 func TestExecuteAsync(t *testing.T) {
+	t.Parallel()
+
 	ce := ContainerExecutor{
-		clientSet:   getFakeClient("1"),
-		log:         logger(),
-		repository:  FakeResultRepository{},
-		metrics:     FakeMetricCounter{},
-		emitter:     FakeEmitter{},
-		namespace:   "default",
-		configMap:   FakeConfigRepository{},
-		testsClient: FakeTestsClient{},
+		clientSet:       getFakeClient("1"),
+		log:             logger(),
+		repository:      FakeResultRepository{},
+		metrics:         FakeMetricCounter{},
+		emitter:         FakeEmitter{},
+		namespace:       "default",
+		configMap:       FakeConfigRepository{},
+		testsClient:     FakeTestsClient{},
+		executorsClient: FakeExecutorsClient{},
 	}
 
 	execution := &testkube.Execution{Id: "1"}
@@ -47,15 +51,18 @@ func TestExecuteAsync(t *testing.T) {
 }
 
 func TestExecuteSync(t *testing.T) {
+	t.Parallel()
+
 	ce := ContainerExecutor{
-		clientSet:   getFakeClient("1"),
-		log:         logger(),
-		repository:  FakeResultRepository{},
-		metrics:     FakeMetricCounter{},
-		emitter:     FakeEmitter{},
-		namespace:   "default",
-		configMap:   FakeConfigRepository{},
-		testsClient: FakeTestsClient{},
+		clientSet:       getFakeClient("1"),
+		log:             logger(),
+		repository:      FakeResultRepository{},
+		metrics:         FakeMetricCounter{},
+		emitter:         FakeEmitter{},
+		namespace:       "default",
+		configMap:       FakeConfigRepository{},
+		testsClient:     FakeTestsClient{},
+		executorsClient: FakeExecutorsClient{},
 	}
 
 	execution := &testkube.Execution{Id: "1"}
@@ -66,12 +73,15 @@ func TestExecuteSync(t *testing.T) {
 }
 
 func TestNewExecutorJobSpecEmptyArgs(t *testing.T) {
+	t.Parallel()
+
 	jobOptions := &JobOptions{
 		Name:        "name",
 		Namespace:   "namespace",
-		InitImage:   "kubeshop/testkube-executor-init:0.7.10",
+		InitImage:   "kubeshop/testkube-init-executor:0.7.10",
 		Image:       "ubuntu",
 		JobTemplate: defaultJobTemplate,
+		Command:     []string{},
 		Args:        []string{},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
@@ -80,10 +90,12 @@ func TestNewExecutorJobSpecEmptyArgs(t *testing.T) {
 }
 
 func TestNewExecutorJobSpecWithArgs(t *testing.T) {
+	t.Parallel()
+
 	jobOptions := &JobOptions{
 		Name:                  "name",
 		Namespace:             "namespace",
-		InitImage:             "kubeshop/testkube-executor-init:0.7.10",
+		InitImage:             "kubeshop/testkube-init-executor:0.7.10",
 		Image:                 "curl",
 		JobTemplate:           defaultJobTemplate,
 		ImagePullSecrets:      []string{"secret-name"},
@@ -91,7 +103,7 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		Args:                  []string{"-v", "https://testkube.kubeshop.io"},
 		ActiveDeadlineSeconds: 100,
 		Envs:                  map[string]string{"key": "value"},
-		Variables:             map[string]testkube.Variable{"aa": {Name: "name", Value: "value", Type_: testkube.VariableTypeBasic}},
+		Variables:             map[string]testkube.Variable{"aa": {Name: "aa", Value: "bb", Type_: testkube.VariableTypeBasic}},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
@@ -102,26 +114,36 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "RUNNER_ENDPOINT", Value: ""},
 		{Name: "RUNNER_ACCESSKEYID", Value: ""},
 		{Name: "RUNNER_SECRETACCESSKEY", Value: ""},
-		{Name: "RUNNER_LOCATION", Value: ""},
+		{Name: "RUNNER_REGION", Value: ""},
 		{Name: "RUNNER_TOKEN", Value: ""},
 		{Name: "RUNNER_BUCKET", Value: ""},
-		{Name: "RUNNER_SSL", Value: ""},
-		{Name: "RUNNER_SCRAPPERENABLED", Value: ""},
+		{Name: "RUNNER_SSL", Value: "false"},
+		{Name: "RUNNER_SCRAPPERENABLED", Value: "false"},
 		{Name: "RUNNER_DATADIR", Value: "/data"},
-		{Name: "NAME", Value: "value"},
+		{Name: "RUNNER_CDEVENTS_TARGET", Value: ""},
+		{Name: "RUNNER_DASHBOARD_URI", Value: ""},
+		{Name: "RUNNER_CLOUD_MODE", Value: "false"},
+		{Name: "RUNNER_CLOUD_API_KEY", Value: ""},
+		{Name: "RUNNER_CLOUD_API_URL", Value: ""},
+		{Name: "RUNNER_CLOUD_API_TLS_INSECURE", Value: "false"},
+		{Name: "RUNNER_CLUSTERID", Value: ""},
 		{Name: "key", Value: "value"},
+		{Name: "aa", Value: "bb"},
 	}
 
-	assert.Equal(t, wantEnvs, spec.Spec.Template.Spec.Containers[0].Env)
+	assert.ElementsMatch(t, wantEnvs, spec.Spec.Template.Spec.Containers[0].Env)
 }
 
 func TestNewExecutorJobSpecWithoutInitImage(t *testing.T) {
+	t.Parallel()
+
 	jobOptions := &JobOptions{
 		Name:        "name",
 		Namespace:   "namespace",
 		InitImage:   "",
 		Image:       "ubuntu",
 		JobTemplate: defaultJobTemplate,
+		Command:     []string{},
 		Args:        []string{},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
@@ -130,9 +152,13 @@ func TestNewExecutorJobSpecWithoutInitImage(t *testing.T) {
 }
 
 func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
+	t.Parallel()
+
 	jobOptions, _ := NewJobOptions(
 		executor.Images{},
 		executor.Templates{},
+		"",
+		"",
 		"",
 		testkube.Execution{
 			Id:            "name",
@@ -160,9 +186,13 @@ func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 }
 
 func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
+	t.Parallel()
+
 	jobOptions, _ := NewJobOptions(
 		executor.Images{},
 		executor.Templates{},
+		"",
+		"",
 		"",
 		testkube.Execution{
 			Id:            "name",
@@ -190,9 +220,13 @@ func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 }
 
 func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
+	t.Parallel()
+
 	jobOptions, _ := NewJobOptions(
 		executor.Images{},
 		executor.Templates{},
+		"",
+		"",
 		"",
 		testkube.Execution{
 			Id:            "name",
@@ -377,8 +411,8 @@ func (FakeConfigRepository) Get(ctx context.Context) (testkube.Config, error) {
 	return testkube.Config{}, nil
 }
 
-func (FakeConfigRepository) Upsert(ctx context.Context, config testkube.Config) error {
-	return nil
+func (FakeConfigRepository) Upsert(ctx context.Context, config testkube.Config) (testkube.Config, error) {
+	return config, nil
 }
 
 type FakeTestsClient struct {
@@ -441,5 +475,36 @@ func (FakeTestsClient) DeleteByLabels(selector string) error {
 }
 
 func (FakeTestsClient) UpdateStatus(test *testsv3.Test) error {
+	return nil
+}
+
+type FakeExecutorsClient struct {
+}
+
+func (FakeExecutorsClient) List(selector string) (*executorv1.ExecutorList, error) {
+	return &executorv1.ExecutorList{}, nil
+}
+
+func (FakeExecutorsClient) Get(name string) (*executorv1.Executor, error) {
+	return &executorv1.Executor{}, nil
+}
+
+func (FakeExecutorsClient) GetByType(executorType string) (*executorv1.Executor, error) {
+	return &executorv1.Executor{}, nil
+}
+
+func (FakeExecutorsClient) Create(executor *executorv1.Executor) (*executorv1.Executor, error) {
+	return &executorv1.Executor{}, nil
+}
+
+func (FakeExecutorsClient) Delete(name string) error {
+	return nil
+}
+
+func (FakeExecutorsClient) Update(executor *executorv1.Executor) (*executorv1.Executor, error) {
+	return &executorv1.Executor{}, nil
+}
+
+func (FakeExecutorsClient) DeleteByLabels(selector string) error {
 	return nil
 }

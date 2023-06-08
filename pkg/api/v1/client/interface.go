@@ -1,6 +1,8 @@
 package client
 
 import (
+	"time"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 )
@@ -39,8 +41,10 @@ type ExecutionAPI interface {
 	GetExecution(executionID string) (execution testkube.Execution, err error)
 	ListExecutions(id string, limit int, selector string) (executions testkube.ExecutionsResult, err error)
 	AbortExecution(test string, id string) error
+	AbortExecutions(test string) error
 	GetExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadFile(executionID, fileName, destination string) (artifact string, err error)
+	DownloadArchive(executionID, destination string, masks []string) (archive string, err error)
 }
 
 // TestSuiteAPI describes test suite api methods
@@ -63,6 +67,8 @@ type TestSuiteExecutionAPI interface {
 	ListTestSuiteExecutions(testsuite string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error)
 	WatchTestSuiteExecution(executionID string) (execution chan testkube.TestSuiteExecution, err error)
 	AbortTestSuiteExecution(executionID string) error
+	AbortTestSuiteExecutions(testSuiteName string) error
+	GetTestSuiteExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 }
 
 // ExecutorAPI describes executor api methods
@@ -108,7 +114,7 @@ type TestSourceAPI interface {
 
 // CopyFileAPI describes methods to handle files in the object storage
 type CopyFileAPI interface {
-	UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte) error
+	UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte, timeout time.Duration) error
 }
 
 // TODO consider replacing below types by testkube.*
@@ -149,8 +155,11 @@ type UpdateTestSourceOptions testkube.TestSourceUpdateRequest
 type ExecuteTestOptions struct {
 	ExecutionVariables            map[string]testkube.Variable
 	ExecutionVariablesFileContent string
+	IsVariablesFileUploaded       bool
 	ExecutionLabels               map[string]string
+	Command                       []string
 	Args                          []string
+	ArgsMode                      string
 	Envs                          map[string]string
 	SecretEnvs                    map[string]string
 	HTTPProxy                     string
@@ -165,6 +174,9 @@ type ExecuteTestOptions struct {
 	ScraperTemplate               string
 	NegativeTest                  bool
 	IsNegativeTestChangedOnRun    bool
+	EnvConfigMaps                 []testkube.EnvReference
+	EnvSecrets                    []testkube.EnvReference
+	RunningContext                *testkube.RunningContext
 }
 
 // ExecuteTestSuiteOptions contains test suite run options
@@ -174,6 +186,7 @@ type ExecuteTestSuiteOptions struct {
 	HTTPSProxy         string
 	ExecutionLabels    map[string]string
 	ContentRequest     *testkube.TestContentRequest
+	RunningContext     *testkube.RunningContext	
 	ConcurrencyLevel   int32
 }
 
@@ -204,5 +217,5 @@ type Transport[A All] interface {
 	ExecuteMethod(method, uri, selector string, isContentExpected bool) error
 	GetURI(pathTemplate string, params ...interface{}) string
 	GetLogs(uri string, logs chan output.Output) error
-	GetFile(uri, fileName, destination string) (name string, err error)
+	GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error)
 }

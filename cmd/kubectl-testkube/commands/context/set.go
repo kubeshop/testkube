@@ -3,14 +3,18 @@ package context
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func NewSetContextCmd() *cobra.Command {
 	var (
-		org, env, apiKey, apiUri string
-		kubeconfig               bool
+		org, env, apiKey string
+		agentKey         string
+		kubeconfig       bool
+		namespace        string
+		rootDomain       string
 	)
 
 	cmd := &cobra.Command{
@@ -29,8 +33,8 @@ func NewSetContextCmd() *cobra.Command {
 
 			switch cfg.ContextType {
 			case config.ContextTypeCloud:
-				if org == "" && env == "" && apiKey == "" {
-					ui.Errf("Please provide at least one of the following flags: --org, --env, --api-key")
+				if org == "" && env == "" && apiKey == "" && agentKey == "" && rootDomain == "" {
+					ui.Errf("Please provide at least one of the following flags: --org, --env, --api-key, --cloud-root-domain, --cloud-agent-key")
 				}
 
 				if org != "" {
@@ -45,8 +49,14 @@ func NewSetContextCmd() *cobra.Command {
 				}
 				if apiKey != "" {
 					cfg.CloudContext.ApiKey = apiKey
-					cfg.CloudContext.ApiUri = apiUri
 				}
+
+				// set uris based on root domain
+				uris := common.NewCloudUris(rootDomain)
+				cfg.CloudContext.ApiUri = uris.Api
+				cfg.CloudContext.UiUri = uris.Ui
+				cfg.CloudContext.AgentUri = uris.Agent
+
 			case config.ContextTypeKubeconfig:
 				// kubeconfig special use cases
 
@@ -54,20 +64,25 @@ func NewSetContextCmd() *cobra.Command {
 				ui.Errf("Unknown context type: %s", cfg.ContextType)
 			}
 
+			if namespace != "" {
+				cfg.Namespace = namespace
+			}
+
 			err = config.Save(cfg)
 			ui.ExitOnError("saving config file", err)
 
 			ui.Success("Your config was updated with new values")
 			ui.NL()
-			uiPrintCloudContext(string(cfg.ContextType), cfg.CloudContext)
+			common.UiPrintContext(cfg)
 		},
 	}
 
 	cmd.Flags().BoolVarP(&kubeconfig, "kubeconfig", "", false, "reset context mode for CLI to default kubeconfig based")
-	cmd.Flags().StringVarP(&org, "org", "o", "", "Testkube Cloud organization ID")
-	cmd.Flags().StringVarP(&env, "env", "e", "", "Testkube Cloud environment ID")
+	cmd.Flags().StringVarP(&org, "org", "o", "", "Testkube Cloud Organization ID")
+	cmd.Flags().StringVarP(&env, "env", "e", "", "Testkube Cloud Environment ID")
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "Testkube namespace to use for CLI commands")
 	cmd.Flags().StringVarP(&apiKey, "api-key", "k", "", "API Key for Testkube Cloud")
-	cmd.Flags().StringVarP(&apiUri, "cloud-api-uri", "", "", "https://api.testkube.io")
+	cmd.Flags().StringVarP(&rootDomain, "cloud-root-domain", "", "testkube.io", "defaults to testkube.io, usually you don't need to change it")
 
 	return cmd
 }

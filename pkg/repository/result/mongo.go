@@ -17,11 +17,19 @@ import (
 	"github.com/kubeshop/testkube/pkg/storage"
 )
 
-var _ Repository = &MongoRepository{}
+var _ Repository = (*MongoRepository)(nil)
 
 const (
 	CollectionResults   = "results"
 	CollectionSequences = "sequences"
+	// OutputPrefixSize is the size of the beginning of execution output in case this doesn't fit into Mongo
+	OutputPrefixSize = 1 * 1024 * 1024
+	// OutputMaxSize is the size of the execution output in case this doesn't fit into the 16 MB limited by Mongo
+	OutputMaxSize = 14 * 1024 * 1024
+	// OverflownOutputWarn is the message that lets the user know the output had to be trimmed
+	OverflownOutputWarn = "WARNING: Output was shortened in order to fit into MongoDB."
+	// StepMaxCount is the maximum number of steps saved into Mongo - due to the 16 MB document size limitation
+	StepMaxCount = 100
 )
 
 func NewMongoRepository(db *mongo.Database, allowDiskUse bool, opts ...MongoRepositoryOpt) *MongoRepository {
@@ -347,12 +355,16 @@ func (r *MongoRepository) Update(ctx context.Context, result testkube.Execution)
 
 func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result testkube.Execution) (err error) {
 	output := result.ExecutionResult.Output
+	result.ExecutionResult = result.ExecutionResult.GetDeepCopy()
 	result.ExecutionResult.Output = ""
+	result.ExecutionResult.Steps = cleanSteps(result.ExecutionResult.Steps)
+
 	_, err = r.ResultsColl.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"executionresult": result.ExecutionResult}})
 	if err != nil {
 		return
 	}
-	err = r.OutputRepository.UpdateOutput(ctx, id, result.TestName, result.TestSuiteName, output)
+
+	err = r.OutputRepository.UpdateOutput(ctx, id, result.TestName, result.TestSuiteName, cleanOutput(output))
 	return
 }
 
@@ -453,6 +465,10 @@ func (r *MongoRepository) DeleteByTest(ctx context.Context, testName string) (er
 	if err != nil {
 		return
 	}
+	err = r.DeleteExecutionNumber(ctx, testName)
+	if err != nil {
+		return
+	}
 	_, err = r.ResultsColl.DeleteMany(ctx, bson.M{"testname": testName})
 	return
 }
@@ -463,6 +479,10 @@ func (r *MongoRepository) DeleteByTestSuite(ctx context.Context, testSuiteName s
 	if err != nil {
 		return
 	}
+	err = r.DeleteExecutionNumber(ctx, testSuiteName)
+	if err != nil {
+		return
+	}
 	_, err = r.ResultsColl.DeleteMany(ctx, bson.M{"testsuitename": testSuiteName})
 	return
 }
@@ -470,6 +490,10 @@ func (r *MongoRepository) DeleteByTestSuite(ctx context.Context, testSuiteName s
 // DeleteAll deletes all execution results
 func (r *MongoRepository) DeleteAll(ctx context.Context) (err error) {
 	err = r.OutputRepository.DeleteAllOutput(ctx)
+	if err != nil {
+		return
+	}
+	err = r.DeleteAllExecutionNumbers(ctx, false)
 	if err != nil {
 		return
 	}
@@ -499,6 +523,11 @@ func (r *MongoRepository) DeleteByTests(ctx context.Context, testNames []string)
 	if err != nil {
 		return
 	}
+
+	err = r.DeleteExecutionNumbers(ctx, testNames)
+	if err != nil {
+		return
+	}
 	_, err = r.ResultsColl.DeleteMany(ctx, filter)
 	return
 }
@@ -525,6 +554,12 @@ func (r *MongoRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames
 	if err != nil {
 		return
 	}
+
+	err = r.DeleteExecutionNumbers(ctx, testSuiteNames)
+	if err != nil {
+		return
+	}
+
 	_, err = r.ResultsColl.DeleteMany(ctx, filter)
 	return
 }
@@ -535,6 +570,12 @@ func (r *MongoRepository) DeleteForAllTestSuites(ctx context.Context) (err error
 	if err != nil {
 		return
 	}
+
+	err = r.DeleteAllExecutionNumbers(ctx, true)
+	if err != nil {
+		return
+	}
+
 	_, err = r.ResultsColl.DeleteMany(ctx, bson.M{"testsuitename": bson.M{"$ne": ""}})
 	return
 }
@@ -583,4 +624,27 @@ func (r *MongoRepository) GetTestMetrics(ctx context.Context, name string, limit
 	}
 
 	return metrics, nil
+}
+
+// cleanOutput makes sure the output fits into the limits imposed by Mongo;
+// if needed it trims the string
+// it keeps the first OutputPrefixSize of strings in case there were errors on init
+// it adds a warning that the logs were trimmed
+// it adds the last OutputMaxSize-OutputPrefixSize-OverflownOutputWarnSize bytes to the end
+func cleanOutput(output string) string {
+	if len(output) >= OutputMaxSize {
+		prefix := output[:OutputPrefixSize]
+		suffix := output[len(output)-OutputMaxSize+OutputPrefixSize+len(OverflownOutputWarn):]
+		output = fmt.Sprintf("%s\n%s\n%s", prefix, OverflownOutputWarn, suffix)
+	}
+	return output
+}
+
+// cleanSteps trims the list of ExecutionStepResults in case there's too many elements to make sure it fits into mongo
+func cleanSteps(steps []testkube.ExecutionStepResult) []testkube.ExecutionStepResult {
+	l := len(steps)
+	if l > StepMaxCount {
+		steps = steps[l-StepMaxCount:]
+	}
+	return steps
 }

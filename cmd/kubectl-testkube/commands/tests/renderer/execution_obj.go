@@ -26,6 +26,11 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 	ui.Warn("Start time:       ", execution.StartTime.String())
 	ui.Warn("End time:         ", execution.EndTime.String())
 	ui.Warn("Duration:         ", execution.Duration)
+	if execution.RunningContext != nil {
+		ui.Warn("Running context:")
+		ui.Warn("Type:   ", execution.RunningContext.Type_)
+		ui.Warn("Context:", execution.RunningContext.Context)
+	}
 
 	if len(execution.Labels) > 0 {
 		ui.Warn("Labels:           ", testkube.MapToString(execution.Labels))
@@ -33,8 +38,12 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 
 	renderer.RenderVariables(execution.Variables)
 
+	if len(execution.Command) > 0 {
+		ui.Warn("Command:          ", execution.Command...)
+	}
+
 	if len(execution.Args) > 0 {
-		ui.Warn("Args:    ", execution.Args...)
+		ui.Warn("Args:             ", execution.Args...)
 	}
 
 	if execution.Content != nil && execution.Content.Repository != nil {
@@ -44,9 +53,10 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 		ui.Warn("  Path:           ", execution.Content.Repository.Path)
 		ui.Warn("  Working dir:    ", execution.Content.Repository.WorkingDir)
 		ui.Warn("  Certificate:    ", execution.Content.Repository.CertificateSecret)
+		ui.Warn("  Auth type:      ", execution.Content.Repository.AuthType)
 	}
 
-	render.RenderExecutionResult(&execution)
+	render.RenderExecutionResult(&execution, false)
 
 	ui.NL()
 

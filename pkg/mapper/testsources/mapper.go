@@ -19,6 +19,7 @@ func MapCRDToAPI(item testsourcev1.TestSource) testkube.TestSource {
 			Path:              item.Spec.Repository.Path,
 			WorkingDir:        item.Spec.Repository.WorkingDir,
 			CertificateSecret: item.Spec.Repository.CertificateSecret,
+			AuthType:          string(item.Spec.Repository.AuthType),
 		}
 
 		if item.Spec.Repository.UsernameSecret != nil {
@@ -39,7 +40,7 @@ func MapCRDToAPI(item testsourcev1.TestSource) testkube.TestSource {
 	return testkube.TestSource{
 		Name:       item.Name,
 		Namespace:  item.Namespace,
-		Type_:      item.Spec.Type_,
+		Type_:      string(item.Spec.Type_),
 		Uri:        item.Spec.Uri,
 		Data:       item.Spec.Data,
 		Repository: repository,
@@ -59,6 +60,7 @@ func MapAPIToCRD(request testkube.TestSourceUpsertRequest) testsourcev1.TestSour
 			Path:              request.Repository.Path,
 			WorkingDir:        request.Repository.WorkingDir,
 			CertificateSecret: request.Repository.CertificateSecret,
+			AuthType:          testsourcev1.GitAuthType(request.Repository.AuthType),
 		}
 
 		if request.Repository.UsernameSecret != nil {
@@ -83,7 +85,7 @@ func MapAPIToCRD(request testkube.TestSourceUpsertRequest) testsourcev1.TestSour
 			Labels:    request.Labels,
 		},
 		Spec: testsourcev1.TestSourceSpec{
-			Type_:      request.Type_,
+			Type_:      testsourcev1.TestSourceType(request.Type_),
 			Uri:        request.Uri,
 			Data:       request.Data,
 			Repository: repository,
@@ -106,10 +108,6 @@ func MapUpdateToSpec(request testkube.TestSourceUpdateRequest, testSource *tests
 			&testSource.Namespace,
 		},
 		{
-			request.Type_,
-			&testSource.Spec.Type_,
-		},
-		{
 			request.Data,
 			&testSource.Spec.Data,
 		},
@@ -123,6 +121,10 @@ func MapUpdateToSpec(request testkube.TestSourceUpdateRequest, testSource *tests
 		if field.source != nil {
 			*field.destination = *field.source
 		}
+	}
+
+	if request.Type_ != nil {
+		testSource.Spec.Type_ = testsourcev1.TestSourceType(*request.Type_)
 	}
 
 	if request.Labels != nil {
@@ -145,6 +147,7 @@ func MapUpdateToSpec(request testkube.TestSourceUpdateRequest, testSource *tests
 		}
 
 		empty := true
+		fake := ""
 		var fields = []struct {
 			source      *string
 			destination *string
@@ -177,6 +180,14 @@ func MapUpdateToSpec(request testkube.TestSourceUpdateRequest, testSource *tests
 				(*request.Repository).CertificateSecret,
 				&testSource.Spec.Repository.CertificateSecret,
 			},
+			{
+				(*request.Repository).Username,
+				&fake,
+			},
+			{
+				(*request.Repository).Token,
+				&fake,
+			},
 		}
 
 		for _, field := range fields {
@@ -184,6 +195,11 @@ func MapUpdateToSpec(request testkube.TestSourceUpdateRequest, testSource *tests
 				*field.destination = *field.source
 				empty = false
 			}
+		}
+
+		if (*request.Repository).AuthType != nil {
+			testSource.Spec.Repository.AuthType = testsourcev1.GitAuthType(*(*request.Repository).AuthType)
+			empty = false
 		}
 
 		if (*request.Repository).UsernameSecret != nil {

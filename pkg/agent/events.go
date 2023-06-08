@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -15,7 +16,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 )
 
-var _ common.ListenerLoader = &Agent{}
+var _ common.ListenerLoader = (*Agent)(nil)
 
 func (ag *Agent) Kind() string {
 	return "agent"
@@ -57,7 +58,7 @@ func (ag *Agent) Notify(event testkube.Event) (result testkube.EventResult) {
 }
 
 func (ag *Agent) runEventLoop(ctx context.Context) error {
-	var opts []grpc.CallOption
+	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name)}
 	md := metadata.Pairs(apiKeyMeta, ag.apiKey)
 	ctx = metadata.NewOutgoingContext(ctx, md)
 

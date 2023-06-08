@@ -19,14 +19,16 @@ const (
 
 // Options contains client options
 type Options struct {
-	Namespace    string
-	ApiUri       string
-	ApiPath      string
-	Token        *oauth2.Token
-	Provider     oauth.ProviderType
-	ClientID     string
-	ClientSecret string
-	Scopes       []string
+	Namespace     string
+	ApiUri        string
+	ApiPath       string
+	Token         *oauth2.Token
+	Provider      oauth.ProviderType
+	ClientID      string
+	ClientSecret  string
+	Scopes        []string
+	APIServerName string
+	APIServerPort int
 
 	// Testkube Cloud
 	CloudApiPathPrefix string
@@ -41,10 +43,10 @@ func GetClient(clientType ClientType, options Options) (client Client, err error
 	sseClient := phttp.NewSSEClient()
 
 	switch clientType {
+
 	case ClientCloud:
 		ConfigureClient(httpClient, nil, options.CloudApiKey)
 		ConfigureClient(sseClient, nil, options.CloudApiKey)
-		// merge PATH prefix wirt
 		client = NewDirectAPIClient(httpClient, sseClient, options.ApiUri, options.CloudApiPathPrefix)
 
 	case ClientDirect:
@@ -66,7 +68,7 @@ func GetClient(clientType ClientType, options Options) (client Client, err error
 			return client, err
 		}
 
-		client = NewProxyAPIClient(clientset, NewAPIConfig(options.Namespace))
+		client = NewProxyAPIClient(clientset, NewAPIConfig(options.Namespace, options.APIServerName, options.APIServerPort))
 	default:
 		return client, fmt.Errorf("unsupported client type %s", clientType)
 	}

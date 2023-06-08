@@ -1,0 +1,62 @@
+2022-11-03 09:23:58,163 INFO o.a.j.u.JMeterUtils: Setting Locale to en_EN
+2022-11-03 09:23:58,175 INFO o.a.j.JMeter: Loading user properties from: /opt/homebrew/Cellar/jmeter/5.5/libexec/bin/user.properties
+2022-11-03 09:23:58,175 INFO o.a.j.JMeter: Loading system properties from: /opt/homebrew/Cellar/jmeter/5.5/libexec/bin/system.properties
+2022-11-03 09:23:58,178 INFO o.a.j.JMeter: Copyright (c) 1998-2022 The Apache Software Foundation
+2022-11-03 09:23:58,178 INFO o.a.j.JMeter: Version 5.5
+2022-11-03 09:23:58,178 INFO o.a.j.JMeter: java.version=19
+2022-11-03 09:23:58,178 INFO o.a.j.JMeter: java.vm.name=OpenJDK 64-Bit Server VM
+2022-11-03 09:23:58,178 INFO o.a.j.JMeter: os.name=Mac OS X
+2022-11-03 09:23:58,178 INFO o.a.j.JMeter: os.arch=aarch64
+2022-11-03 09:23:58,178 INFO o.a.j.JMeter: os.version=12.4
+2022-11-03 09:23:58,178 INFO o.a.j.JMeter: file.encoding=UTF-8
+2022-11-03 09:23:58,178 INFO o.a.j.JMeter: java.awt.headless=true
+2022-11-03 09:23:58,178 INFO o.a.j.JMeter: Max memory     =1073741824
+2022-11-03 09:23:58,178 INFO o.a.j.JMeter: Available Processors =10
+2022-11-03 09:23:58,183 INFO o.a.j.JMeter: Default Locale=English (EN)
+2022-11-03 09:23:58,183 INFO o.a.j.JMeter: JMeter  Locale=English (EN)
+2022-11-03 09:23:58,183 INFO o.a.j.JMeter: JMeterHome=/opt/homebrew/Cellar/jmeter/5.5/libexec
+2022-11-03 09:23:58,183 INFO o.a.j.JMeter: user.dir  =/Users/exu/code/kube/testkube-executor-jmeter/examples
+2022-11-03 09:23:58,183 INFO o.a.j.JMeter: PWD       =/Users/exu/code/kube/testkube-executor-jmeter/examples
+2022-11-03 09:23:58,185 INFO o.a.j.JMeter: IP: 192.168.1.7 Name: 192.168.1.7 FullName: 192.168.1.7
+2022-11-03 09:23:58,190 INFO o.a.j.s.FileServer: Default base='/Users/exu/code/kube/testkube-executor-jmeter/examples'
+2022-11-03 09:23:58,190 INFO o.a.j.s.FileServer: Set new base='/Users/exu/code/kube/testkube-executor-jmeter/examples'
+2022-11-03 09:23:58,291 INFO o.a.j.s.SaveService: Testplan (JMX) version: 2.2. Testlog (JTL) version: 2.2
+2022-11-03 09:23:58,307 INFO o.a.j.s.SaveService: Using SaveService properties version 5.0
+2022-11-03 09:23:58,309 INFO o.a.j.s.SaveService: Using SaveService properties file encoding UTF-8
+2022-11-03 09:23:58,310 INFO o.a.j.s.SaveService: Loading file: kubeshop.jmx
+2022-11-03 09:23:58,333 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/html is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2022-11-03 09:23:58,333 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for application/xhtml+xml is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2022-11-03 09:23:58,333 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for application/xml is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2022-11-03 09:23:58,333 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/xml is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2022-11-03 09:23:58,333 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/vnd.wap.wml is org.apache.jmeter.protocol.http.parser.RegexpHTMLParser
+2022-11-03 09:23:58,334 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/css is org.apache.jmeter.protocol.http.parser.CssParser
+2022-11-03 09:23:58,340 INFO o.a.j.JMeter: Creating summariser <summary>
+2022-11-03 09:23:58,349 INFO o.a.j.e.StandardJMeterEngine: Running the test!
+2022-11-03 09:23:58,350 INFO o.a.j.s.SampleEvent: List of sample_variables: []
+2022-11-03 09:23:58,350 INFO o.a.j.s.SampleEvent: List of sample_variables: []
+2022-11-03 09:23:58,352 INFO o.a.j.e.u.CompoundVariable: Note: Function class names must contain the string: '.functions.'
+2022-11-03 09:23:58,352 INFO o.a.j.e.u.CompoundVariable: Note: Function class names must not contain the string: '.gui.'
+2022-11-03 09:23:58,382 INFO o.a.j.JMeter: Running test (1667463838382)
+2022-11-03 09:23:58,395 INFO o.a.j.e.StandardJMeterEngine: Starting ThreadGroup: 1 : Thread Group
+2022-11-03 09:23:58,395 INFO o.a.j.e.StandardJMeterEngine: Starting 1 threads for group Thread Group.
+2022-11-03 09:23:58,395 INFO o.a.j.e.StandardJMeterEngine: Thread will continue on error
+2022-11-03 09:23:58,395 INFO o.a.j.t.ThreadGroup: Starting thread group... number=1 threads=1 ramp-up=1 delayedStart=false
+2022-11-03 09:23:58,397 INFO o.a.j.t.ThreadGroup: Started thread group number 1
+2022-11-03 09:23:58,397 INFO o.a.j.e.StandardJMeterEngine: All thread groups have been started
+2022-11-03 09:23:58,398 INFO o.a.j.t.JMeterThread: Thread started: Thread Group 1-1
+2022-11-03 09:23:58,406 INFO o.a.j.p.h.s.HTTPHCAbstractImpl: Local host = 192.168.1.7
+2022-11-03 09:23:58,409 INFO o.a.j.p.h.s.HTTPHC4Impl: HTTP request retry count = 0
+2022-11-03 09:23:58,410 INFO o.a.j.s.SampleResult: Note: Sample TimeStamps are START times
+2022-11-03 09:23:58,410 INFO o.a.j.s.SampleResult: sampleresult.default.encoding is set to ISO-8859-1
+2022-11-03 09:23:58,410 INFO o.a.j.s.SampleResult: sampleresult.useNanoTime=true
+2022-11-03 09:23:58,410 INFO o.a.j.s.SampleResult: sampleresult.nanoThreadSleep=5000
+2022-11-03 09:23:58,456 INFO o.a.j.p.h.s.h.LazyLayeredConnectionSocketFactory: Setting up HTTPS TrustAll Socket Factory
+2022-11-03 09:23:58,459 INFO o.a.j.u.JsseSSLManager: Using default SSL protocol: TLS
+2022-11-03 09:23:58,459 INFO o.a.j.u.JsseSSLManager: SSL session context: per-thread
+2022-11-03 09:23:58,538 INFO o.a.j.u.SSLManager: JmeterKeyStore Location:  type JKS
+2022-11-03 09:23:58,540 INFO o.a.j.u.SSLManager: KeyStore created OK
+2022-11-03 09:23:58,540 WARN o.a.j.u.SSLManager: Keystore file not found, loading empty keystore
+2022-11-03 09:23:58,813 INFO o.a.j.t.JMeterThread: Thread is done: Thread Group 1-1
+2022-11-03 09:23:58,813 INFO o.a.j.t.JMeterThread: Thread finished: Thread Group 1-1
+2022-11-03 09:23:58,815 INFO o.a.j.e.StandardJMeterEngine: Notifying test listeners of end of test
+2022-11-03 09:23:58,816 INFO o.a.j.r.Summariser: summary =      1 in 00:00:00 =    2.3/s Avg:   362 Min:   362 Max:   362 Err:     0 (0.00%)

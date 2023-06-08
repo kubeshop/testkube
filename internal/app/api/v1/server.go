@@ -2,10 +2,19 @@ package v1
 
 import (
 	"context"
-	"encoding/base64"
+	"io"
+	"net"
 	"os"
+	"reflect"
 	"strconv"
+	"sync"
+	"syscall"
 	"time"
+
+	"github.com/pkg/errors"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/repository/config"
 
 	"github.com/kubeshop/testkube/pkg/version"
 
@@ -26,25 +35,25 @@ import (
 	testsuitesclientv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/event"
+	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
-	kubeexecutor "github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/storage"
-	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
-const HeartbeatInterval = time.Hour
+const (
+	HeartbeatInterval    = time.Hour
+	DefaultHttpBodyLimit = 1 * 1024 * 1024 * 1024 // 1GB - needed for file uploads
+)
 
 func NewTestkubeAPI(
 	namespace string,
@@ -64,8 +73,14 @@ func NewTestkubeAPI(
 	executor client.Executor,
 	containerExecutor client.Executor,
 	metrics metrics.Metrics,
-	templates kubeexecutor.Templates,
+	jobTemplate string,
 	scheduler *scheduler.Scheduler,
+	slackLoader *slack.SlackLoader,
+	storage storage.Client,
+	graphqlPort string,
+	artifactsStorage storage.ArtifactsStorage,
+	cdeventsTarget string,
+	dashboardURI string,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -76,6 +91,10 @@ func NewTestkubeAPI(
 	}
 
 	httpConfig.ClusterID = clusterId
+	httpConfig.Http.BodyLimit = httpConfig.HttpBodyLimit
+	if httpConfig.HttpBodyLimit == 0 {
+		httpConfig.Http.BodyLimit = DefaultHttpBodyLimit
+	}
 
 	s := TestkubeAPI{
 		HTTPServer:           server.NewServer(httpConfig),
@@ -95,8 +114,12 @@ func NewTestkubeAPI(
 		ConfigMap:            configMap,
 		Executor:             executor,
 		ContainerExecutor:    containerExecutor,
-		templates:            templates,
+		jobTemplate:          jobTemplate,
 		scheduler:            scheduler,
+		slackLoader:          slackLoader,
+		Storage:              storage,
+		graphqlPort:          graphqlPort,
+		artifactsStorage:     artifactsStorage,
 	}
 
 	// will be reused in websockets handler
@@ -104,10 +127,18 @@ func NewTestkubeAPI(
 
 	s.Events.Loader.Register(webhook.NewWebhookLoader(webhookClient))
 	s.Events.Loader.Register(s.WebsocketLoader)
-	s.Events.Loader.Register(s.getSlackLoader())
+	s.Events.Loader.Register(s.slackLoader)
+
+	if cdeventsTarget != "" {
+		cdeventLoader, err := cdevent.NewCDEventLoader(cdeventsTarget, clusterId, namespace, dashboardURI, testkube.AllEventTypes)
+		if err == nil {
+			s.Events.Loader.Register(cdeventLoader)
+		} else {
+			s.Log.Debug("cdevents init error", "error", err.Error())
+		}
+	}
 
 	s.InitEnvs()
-	s.InitStorage()
 	s.InitRoutes()
 
 	return s
@@ -134,9 +165,12 @@ type TestkubeAPI struct {
 	WebsocketLoader      *ws.WebsocketLoader
 	Events               *event.Emitter
 	ConfigMap            config.Repository
-	templates            kubeexecutor.Templates
+	jobTemplate          string
 	scheduler            *scheduler.Scheduler
 	Clientset            kubernetes.Interface
+	slackLoader          *slack.SlackLoader
+	graphqlPort          string
+	artifactsStorage     storage.ArtifactsStorage
 }
 
 type storageParams struct {
@@ -144,7 +178,7 @@ type storageParams struct {
 	Endpoint        string
 	AccessKeyId     string
 	SecretAccessKey string
-	Location        string
+	Region          string
 	Token           string
 	Bucket          string
 }
@@ -175,7 +209,7 @@ func (s TestkubeAPI) SendTelemetryStartEvent(ctx context.Context) {
 	}
 }
 
-// Init initializes api server settings
+// InitEnvs initializes api server settings
 func (s *TestkubeAPI) InitEnvs() {
 	if err := envconfig.Process("STORAGE", &s.storageParams); err != nil {
 		s.Log.Infow("Processing STORAGE environment config", err)
@@ -184,16 +218,6 @@ func (s *TestkubeAPI) InitEnvs() {
 	if err := envconfig.Process("TESTKUBE_OAUTH", &s.oauthParams); err != nil {
 		s.Log.Infow("Processing TESTKUBE_OAUTH environment config", err)
 	}
-}
-
-func (s *TestkubeAPI) InitStorage() {
-	s.Storage = minio.NewClient(s.storageParams.Endpoint,
-		s.storageParams.AccessKeyId,
-		s.storageParams.SecretAccessKey,
-		s.storageParams.Location,
-		s.storageParams.Token,
-		s.storageParams.Bucket,
-		s.storageParams.SSL)
 }
 
 func (s *TestkubeAPI) InitRoutes() {
@@ -231,6 +255,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	executions.Get("/:executionID/logs", s.ExecutionLogsHandler())
 	executions.Get("/:executionID/logs/stream", s.ExecutionLogsStreamHandler())
 	executions.Get("/:executionID/artifacts/:filename", s.GetArtifactHandler())
+	executions.Get("/:executionID/artifact-archive", s.GetArtifactArchiveHandler())
 
 	tests := s.Routes.Group("/tests")
 
@@ -241,6 +266,7 @@ func (s *TestkubeAPI) InitRoutes() {
 
 	tests.Get("/:id", s.GetTestHandler())
 	tests.Delete("/:id", s.DeleteTestHandler())
+	tests.Post("/:id/abort", s.AbortTestHandler())
 
 	tests.Get("/:id/metrics", s.TestMetricsHandler())
 
@@ -262,21 +288,24 @@ func (s *TestkubeAPI) InitRoutes() {
 	testsuites.Delete("/", s.DeleteTestSuitesHandler())
 	testsuites.Get("/:id", s.GetTestSuiteHandler())
 	testsuites.Delete("/:id", s.DeleteTestSuiteHandler())
+	testsuites.Post("/:id/abort", s.AbortTestSuiteHandler())
 
 	testsuites.Post("/:id/executions", s.ExecuteTestSuitesHandler())
 	testsuites.Get("/:id/executions", s.ListTestSuiteExecutionsHandler())
 	testsuites.Get("/:id/executions/:executionID", s.GetTestSuiteExecutionHandler())
+	testsuites.Get("/:id/executions/:executionID/artifacts", s.ListTestSuiteArtifactsHandler())
 	testsuites.Patch("/:id/executions/:executionID", s.AbortTestSuiteExecutionHandler())
 
 	testsuites.Get("/:id/tests", s.ListTestSuiteTestsHandler())
 
 	testsuites.Get("/:id/metrics", s.TestSuiteMetricsHandler())
 
-	testExecutions := s.Routes.Group("/test-suite-executions")
-	testExecutions.Get("/", s.ListTestSuiteExecutionsHandler())
-	testExecutions.Post("/", s.ExecuteTestSuitesHandler())
-	testExecutions.Get("/:executionID", s.GetTestSuiteExecutionHandler())
-	testExecutions.Patch("/:executionID", s.AbortTestSuiteExecutionHandler())
+	testSuiteExecutions := s.Routes.Group("/test-suite-executions")
+	testSuiteExecutions.Get("/", s.ListTestSuiteExecutionsHandler())
+	testSuiteExecutions.Post("/", s.ExecuteTestSuitesHandler())
+	testSuiteExecutions.Get("/:executionID", s.GetTestSuiteExecutionHandler())
+	testSuiteExecutions.Get("/:executionID/artifacts", s.ListTestSuiteArtifactsHandler())
+	testSuiteExecutions.Patch("/:executionID", s.AbortTestSuiteExecutionHandler())
 
 	testSuiteWithExecutions := s.Routes.Group("/test-suite-with-executions")
 	testSuiteWithExecutions.Get("/", s.ListTestSuiteWithExecutionsHandler())
@@ -323,6 +352,9 @@ func (s *TestkubeAPI) InitRoutes() {
 	files := s.Routes.Group("/uploads")
 	files.Post("/", s.UploadFiles())
 
+	repositories := s.Routes.Group("/repositories")
+	repositories.Post("/", s.ValidateRepositoryHandler())
+
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor
 	s.Mux.Mount("/results", s.Mux)
@@ -335,6 +367,73 @@ func (s *TestkubeAPI) InitRoutes() {
 	s.Log.Infow("dashboard uri", "uri", dashboardURI)
 	s.Mux.All("/", proxy.Forward(dashboardURI))
 
+	// set up proxy for the internal GraphQL server
+	s.Mux.All("/graphql", func(c *fiber.Ctx) error {
+		// Connect to server
+		serverConn, err := net.Dial("tcp", ":"+s.graphqlPort)
+		if err != nil {
+			s.Log.Errorw("could not connect to GraphQL server as a proxy", "error", err)
+			return err
+		}
+
+		// Resend headers to the server
+		_, err = serverConn.Write(c.Request().Header.Header())
+		if err != nil {
+			serverConn.Close()
+			s.Log.Errorw("error while sending headers to GraphQL server", "error", err)
+			return err
+		}
+
+		// Resend body to the server
+		_, err = serverConn.Write(c.Body())
+		if err != nil && err != io.EOF {
+			serverConn.Close()
+			s.Log.Errorw("error while reading GraphQL client data", "error", err)
+			return err
+		}
+
+		// Handle optional WebSocket connection
+		c.Context().HijackSetNoResponse(true)
+		c.Context().Hijack(func(clientConn net.Conn) {
+			// Close the connection afterward
+			defer serverConn.Close()
+			defer clientConn.Close()
+
+			// Extract Unix connection
+			serverSock, ok := serverConn.(*net.TCPConn)
+			if !ok {
+				s.Log.Errorw("error while building TCPConn out ouf serverConn", "error", err)
+				return
+			}
+			clientSock, ok := reflect.Indirect(reflect.ValueOf(clientConn)).FieldByName("Conn").Interface().(*net.TCPConn)
+			if !ok {
+				s.Log.Errorw("error while building TCPConn out of hijacked connection", "error", err)
+				return
+			}
+
+			// Duplex communication between client and GraphQL server
+			var wg sync.WaitGroup
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				_, err := io.Copy(clientSock, serverSock)
+				if err != nil && err != io.EOF && !errors.Is(err, syscall.ECONNRESET) && !errors.Is(err, syscall.EPIPE) {
+					s.Log.Errorw("error while reading GraphQL client data", "error", err)
+				}
+				serverSock.CloseWrite()
+			}()
+			go func() {
+				defer wg.Done()
+				_, err = io.Copy(serverSock, clientSock)
+				if err != nil && err != io.EOF {
+					s.Log.Errorw("error while reading GraphQL server data", "error", err)
+				}
+				clientSock.CloseWrite()
+			}()
+			wg.Wait()
+		})
+		return nil
+	})
 }
 
 func (s TestkubeAPI) StartTelemetryHeartbeats(ctx context.Context) {
@@ -427,21 +526,4 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 	}
 
 	return filter
-}
-
-func (s TestkubeAPI) getSlackLoader() *slack.SlackLoader {
-	messageTemplate := os.Getenv("SLACK_TEMPLATE")
-
-	templateDecoded, err := base64.StdEncoding.DecodeString(messageTemplate)
-	if err != nil {
-		s.Log.Errorw("error while decoding slack template", "error", err.Error())
-	}
-
-	configString := os.Getenv("SLACK_CONFIG")
-	configDecoded, err := base64.StdEncoding.DecodeString(configString)
-	if err != nil {
-		s.Log.Errorw("error while decoding slack config", "error", err.Error())
-	}
-
-	return slack.NewSlackLoader(string(templateDecoded), string(configDecoded), testkube.AllEventTypes)
 }

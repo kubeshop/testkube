@@ -8,6 +8,21 @@ import (
 	"strings"
 )
 
+type Options struct {
+	Command string
+	Args    []string
+	DryRun  bool
+}
+
+// Execute runs system command and returns whole output also in case of error
+func ExecuteWithOptions(options Options) (out []byte, err error) {
+	if options.DryRun {
+		fmt.Println("$ " + strings.Join(append([]string{options.Command}, options.Args...), " "))
+		return []byte{}, nil
+	}
+	return ExecuteInDir("", options.Command, options.Args...)
+}
+
 // Execute runs system command and returns whole output also in case of error
 func Execute(command string, arguments ...string) (out []byte, err error) {
 	return ExecuteInDir("", command, arguments...)
@@ -25,12 +40,20 @@ func ExecuteInDir(dir string, command string, arguments ...string) (out []byte, 
 	cmd.Stderr = buffer
 
 	if err = cmd.Start(); err != nil {
-		return buffer.Bytes(), fmt.Errorf("could not start process: %w", err)
+		rErr := fmt.Errorf("could not start process with command: %s  error: %w\noutput: %s", command, err, buffer.String())
+		if cmd.ProcessState != nil {
+			rErr = fmt.Errorf("could not start process with command: %s, exited with code:%d  error: %w\noutput: %s", command, cmd.ProcessState.ExitCode(), err, buffer.String())
+		}
+		return buffer.Bytes(), rErr
 	}
 
 	if err = cmd.Wait(); err != nil {
 		// TODO clean error output (currently it has buffer too - need to refactor in cmd)
-		return buffer.Bytes(), fmt.Errorf("process error: %w\noutput: %s", err, buffer.String())
+		rErr := fmt.Errorf("could not start process with command: %s  error: %w\noutput: %s", command, err, buffer.String())
+		if cmd.ProcessState != nil {
+			rErr = fmt.Errorf("could not start process with command: %s, exited with code:%d  error: %w\noutput: %s", command, cmd.ProcessState.ExitCode(), err, buffer.String())
+		}
+		return buffer.Bytes(), rErr
 	}
 
 	return buffer.Bytes(), nil
@@ -50,11 +73,19 @@ func LoggedExecuteInDir(dir string, writer io.Writer, command string, arguments 
 	cmd.Stderr = w
 
 	if err = cmd.Start(); err != nil {
-		return buffer.Bytes(), fmt.Errorf("could not start process: %w", err)
+		rErr := fmt.Errorf("could not start process with command: %s  error: %w\noutput: %s", command, err, buffer.String())
+		if cmd.ProcessState != nil {
+			rErr = fmt.Errorf("could not start process with command: %s, exited with code:%d  error: %w\noutput: %s", command, cmd.ProcessState.ExitCode(), err, buffer.String())
+		}
+		return buffer.Bytes(), rErr
 	}
 
 	if err = cmd.Wait(); err != nil {
-		return buffer.Bytes(), fmt.Errorf("process error: %w", err)
+		rErr := fmt.Errorf("process started with command: %s  error: %w\noutput: %s", command, err, buffer.String())
+		if cmd.ProcessState != nil {
+			rErr = fmt.Errorf("process started with command: %s, exited with code:%d  error: %w\noutput: %s", command, cmd.ProcessState.ExitCode(), err, buffer.String())
+		}
+		return buffer.Bytes(), rErr
 	}
 
 	return buffer.Bytes(), nil
@@ -73,7 +104,16 @@ func ExecuteAsyncInDir(dir string, command string, arguments ...string) (cmd *ex
 	}
 
 	if err = cmd.Start(); err != nil {
-		return cmd, fmt.Errorf("process error: %w", err)
+		output := ""
+		out, errOut := cmd.Output()
+		if errOut == nil {
+			output = string(out)
+		}
+		rErr := fmt.Errorf("process started with command: %s  error: %w\noutput: %s", command, err, output)
+		if cmd.ProcessState != nil {
+			rErr = fmt.Errorf("process started with command: %s, exited with code:%d  error: %w\noutput: %s", command, cmd.ProcessState.ExitCode(), err, output)
+		}
+		return cmd, rErr
 	}
 
 	return cmd, nil

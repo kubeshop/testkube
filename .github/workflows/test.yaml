@@ -1,0 +1,184 @@
+name: Code build and checks
+
+on:
+  push:
+    branches: [main, develop]
+    paths-ignore: "docs/**"
+  pull_request:
+    paths-ignore: "docs/**"
+    branches: [main, develop]
+  
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      # setup-go@v4 handles Go cache by default
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.18
+
+      - name: Setup gotestsum
+        run: go install gotest.tools/gotestsum@latest
+
+      - name: Unit Test
+        id: unit_test
+        run: gotestsum --format short-verbose --junitfile unit-tests.xml --jsonfile unit-tests.json -- -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Unit Test Summary
+        if: always()
+        uses: test-summary/action@v2
+        with:
+          paths: |
+            unit-tests.xml
+
+      - name: Annotate Unit Tests
+        if: always()
+        uses: guyarb/golang-test-annotations@v0.6.0
+        with:
+          test-results: unit-tests.json
+
+      - name: Upload code coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-test-coverage
+          path: coverage.out
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Send coverage report to Codecov
+        if: always()
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.out
+          flags: unittests
+          name: codecov-testkube-unit-tests
+          verbose: true
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    services:
+      mongo:
+        image: bitnami/mongodb
+        ports:
+          - 27017:27017
+      nats:
+        image: bitnami/nats
+        ports:
+          - 4222:4222
+          - 6222:6222
+          - 8222:8222
+      minio:
+        image: bitnami/minio
+        ports:
+          - 9000:9000
+          - 9001:9001
+        env:
+          MINIO_ROOT_USER: minio99
+          MINIO_ROOT_PASSWORD: minio123
+
+    steps:
+      - uses: actions/checkout@v3
+
+      # setup-go@v4 handles Go cache by default
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.18
+
+      - name : Set up Java@11
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'adopt'
+          java-version: '11'
+
+      - name: Install node@19
+        uses: actions/setup-node@v3
+        with:
+          node-version: 19
+
+      - name: Install pnpm@8.1
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.1.0
+
+      - name: Install Artillery@2.0
+        run: npm install -g artillery@2.0.0-31
+
+      - name: Install kubepug@1.4
+        uses: cpanato/kubepug-installer@main
+        with:
+          kubepug-release: '1.4.0'
+
+      - name: Install k6
+        run: |
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Set up JMeter@5.5
+        run: |
+          wget https://downloads.apache.org//jmeter/binaries/apache-jmeter-5.5.zip
+          unzip apache-jmeter-5.5.zip
+          mv apache-jmeter-5.5 jmeter
+          sudo mv jmeter /opt
+          echo "/opt/jmeter/bin" >> $GITHUB_PATH
+
+      - name: Set up Newman@5.3
+        run: |
+          npm install -g newman@5.3.2
+
+      - name: Install Ginkgo@2.9
+        run: go install github.com/onsi/ginkgo/v2/ginkgo@v2.9.2
+
+      - name: Set up gotestsum@v1.9
+        run: go install gotest.tools/gotestsum@v1.9.0
+
+      - name: Set up Playwright
+        run: pnpx playwright install --with-deps
+
+      - name: Set up git
+        run: sudo apt-get install -y git
+
+      - name: Integration Tests
+        run: INTEGRATION=y gotestsum --format short-verbose --junitfile integration-tests.xml --jsonfile integration-tests.json -- -run _Integration -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Integration Test Summary
+        if: always()
+        uses: test-summary/action@v2
+        with:
+          paths: |
+            integration-tests.xml
+
+      - name: Annotate Integration Tests
+        if: always()
+        uses: guyarb/golang-test-annotations@v0.6.0
+        with:
+          test-results: integration-tests.json
+
+      - name: Upload code coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: integration-test-coverage
+          path: coverage.out
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Send coverage report to Codecov
+        if: always()
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.out
+          flags: integrationtests
+          name: codecov-testkube-integration-tests
+          verbose: true

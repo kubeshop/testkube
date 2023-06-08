@@ -10,9 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/kubeshop/testkube/pkg/rand"
 	"github.com/kubeshop/testkube/test/e2e/testkube"
-	"github.com/stretchr/testify/require"
 )
 
 var namespace = "testkube"

@@ -1,0 +1,10 @@
+# syntax=docker/dockerfile:1
+FROM maven:3.8.6-openjdk-8
+COPY maven /bin/runner
+
+RUN useradd -m -d /home/maven -s /bin/bash -u 1001 -r -g root maven
+ENV MAVEN_CONFIG "/home/maven/.m2"
+USER 1001
+
+# do no overwrite the entrypoint
+CMD ["/bin/runner"]

@@ -19,6 +19,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/executor/env"
 )
 
 //go:embed templates/job.tmpl
@@ -26,14 +27,28 @@ var defaultJobTemplate string
 
 // NewExecutorJobSpec is a method to create new executor job spec
 func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.Job, error) {
-	secretEnvVars := executor.PrepareSecretEnvs(options.SecretEnvs, options.Variables,
-		options.UsernameSecret, options.TokenSecret)
+	envManager := env.NewManager()
+	secretEnvVars := append(envManager.PrepareSecrets(options.SecretEnvs, options.Variables),
+		envManager.PrepareGitCredentials(options.UsernameSecret, options.TokenSecret)...)
 
 	tmpl, err := template.New("job").Parse(options.JobTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("creating job spec from executor template error: %w", err)
 	}
+
 	options.Jsn = strings.ReplaceAll(options.Jsn, "'", "''")
+	for i := range options.Command {
+		if options.Command[i] != "" {
+			options.Command[i] = fmt.Sprintf("%q", options.Command[i])
+		}
+	}
+
+	for i := range options.Args {
+		if options.Args[i] != "" {
+			options.Args[i] = fmt.Sprintf("%q", options.Args[i])
+		}
+	}
+
 	var buffer bytes.Buffer
 	if err = tmpl.ExecuteTemplate(&buffer, "job", options); err != nil {
 		return nil, fmt.Errorf("executing job spec executor template: %w", err)
@@ -63,28 +78,38 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 		return nil, fmt.Errorf("decoding executor job spec error: %w", err)
 	}
 
-	env := append(executor.RunnerEnvVars, secretEnvVars...)
+	for key, value := range options.Labels {
+		if job.Labels == nil {
+			job.Labels = make(map[string]string)
+		}
+
+		job.Labels[key] = value
+
+		if job.Spec.Template.Labels == nil {
+			job.Spec.Template.Labels = make(map[string]string)
+		}
+
+		job.Spec.Template.Labels[key] = value
+	}
+
+	envs := append(executor.RunnerEnvVars, corev1.EnvVar{Name: "RUNNER_CLUSTERID", Value: options.ClusterID})
+	envs = append(envs, secretEnvVars...)
 	if options.HTTPProxy != "" {
-		env = append(env, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
+		envs = append(envs, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
 	}
 
 	if options.HTTPSProxy != "" {
-		env = append(env, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
+		envs = append(envs, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
 	}
 
-	for _, variable := range options.Variables {
-		if variable.Type_ != nil && *variable.Type_ == testkube.BASIC_VariableType {
-			env = append(env, corev1.EnvVar{Name: strings.ToUpper(variable.Name), Value: variable.Value})
-		}
-	}
-	env = append(env, executor.PrepareEnvs(options.Envs)...)
+	envs = append(envs, envManager.PrepareEnvs(options.Envs, options.Variables)...)
 
 	for i := range job.Spec.Template.Spec.InitContainers {
-		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, env...)
+		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, envs...)
 	}
 
 	for i := range job.Spec.Template.Spec.Containers {
-		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, env...)
+		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, envs...)
 		// override container image if provided
 		if options.ImageOverride != "" {
 			job.Spec.Template.Spec.Containers[i].Image = options.ImageOverride
@@ -131,17 +156,17 @@ func NewScraperJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.Jo
 		return nil, fmt.Errorf("decoding scraper job spec error: %w", err)
 	}
 
-	env := executor.RunnerEnvVars
+	envs := append(executor.RunnerEnvVars, corev1.EnvVar{Name: "RUNNER_CLUSTERID", Value: options.ClusterID})
 	if options.HTTPProxy != "" {
-		env = append(env, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
+		envs = append(envs, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
 	}
 
 	if options.HTTPSProxy != "" {
-		env = append(env, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
+		envs = append(envs, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
 	}
 
 	for i := range job.Spec.Template.Spec.Containers {
-		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, env...)
+		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, envs...)
 	}
 
 	return &job, nil
@@ -172,7 +197,8 @@ func NewPersistentVolumeClaimSpec(log *zap.SugaredLogger, options *JobOptions) (
 }
 
 // NewJobOptions provides job options for templates
-func NewJobOptions(images executor.Images, templates executor.Templates, serviceAccountName string, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
+func NewJobOptions(images executor.Images, templates executor.Templates, serviceAccountName, registry, clusterID string,
+	execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
 		return nil, err
@@ -185,16 +211,18 @@ func NewJobOptions(images executor.Images, templates executor.Templates, service
 	jobOptions.Jsn = string(jsn)
 	jobOptions.InitImage = images.Init
 	jobOptions.ScraperImage = images.Scraper
-	jobOptions.JobTemplate = templates.Job
 	if jobOptions.JobTemplate == "" {
-		jobOptions.JobTemplate = defaultJobTemplate
+		jobOptions.JobTemplate = templates.Job
+		if jobOptions.JobTemplate == "" {
+			jobOptions.JobTemplate = defaultJobTemplate
+		}
 	}
 
 	jobOptions.ScraperTemplate = templates.Scraper
 	jobOptions.PVCTemplate = templates.PVC
 	jobOptions.Variables = execution.Variables
-	jobOptions.ImagePullSecrets = options.ImagePullSecretNames
-	jobOptions.Envs = options.Request.Envs
 	jobOptions.ServiceAccountName = serviceAccountName
+	jobOptions.Registry = registry
+	jobOptions.ClusterID = clusterID
 	return jobOptions, nil
 }

@@ -7,6 +7,7 @@
         {"batch": [{"execute": {"name": "k6-executor-smoke"}}]},
         {"batch": [{"execute": {"name": "container-executor-curl-smoke"}}]},
         {"batch": [{"execute" :{"name": "cypress-11-executor-smoke-chrome"}}]},
-        {"batch": [{"execute" :{"name": "cypress-default-executor-smoke-electron-testsource-git-dir"}}]}
+        {"batch": [{"execute" :{"name": "cypress-default-executor-smoke-electron-testsource"}}]},
+        {"batch": [{"execute" :{"name": "dashboard-e2e-tests"}}]}      
     ]
 }

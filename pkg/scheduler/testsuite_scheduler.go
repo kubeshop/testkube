@@ -389,6 +389,10 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 			ExecutionLabels:       request.ExecutionLabels,
 			ActiveDeadlineSeconds: int64(request.Timeout),
 			ContentRequest:        request.ContentRequest,
+			RunningContext: &testkube.RunningContext{
+				Type_:   string(testkube.RunningContextTypeTestSuite),
+				Context: testsuiteExecution.Name,
+			},
 		}
 
 		requests := make([]workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution], len(testTuples))

@@ -55,7 +55,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/TestTriggerKeyMap"
 
-
   /triggers:
     get:
       tags:
@@ -79,6 +78,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with selector parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: problem communicating with kubernetes cluster
           content:
@@ -187,6 +194,22 @@ paths:
       responses:
         204:
           description: "no content"
+        400:
+          description: "problem with selector parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "test trigger not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: problem communicating with kubernetes cluster
           content:
@@ -217,6 +240,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        404:
+          description: "test trigger not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: problem communicating with kubernetes cluster
           content:
@@ -261,6 +292,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+        404:
+          description: "test trigger not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: problem communicating with kubernetes cluster
           content:
@@ -283,6 +322,14 @@ paths:
       responses:
         204:
           description: "no content"
+        404:
+          description: "test trigger not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: problem communicating with kubernetes cluster
           content:
@@ -320,8 +367,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TestSuite"
-        500:
-          description: "problem with creating test suite"
+        400:
+          description: "problem with test suite definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -351,8 +406,16 @@ paths:
             text/yaml:
               schema:
                 type: string
-        500:
-          description: "problem with getting test suites from storage"
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with listing test suites from kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -371,6 +434,14 @@ paths:
       responses:
         204:
           description: "no content"
+        404:
+          description: "test suite not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -400,8 +471,24 @@ paths:
             text/yaml:
               schema:
                 type: string
+        404:
+          description: "test suite not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
-          description: "problem with getting test suite from storage"
+          description: "could not get execution result from the database"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -440,6 +527,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+        404:
+          description: "test suite not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -461,6 +556,14 @@ paths:
       responses:
         204:
           description: "no content"
+        404:
+          description: "test suite not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -492,7 +595,7 @@ paths:
             text/yaml:
               schema:
                 type: string
-        502:
+        500:
           description: "problem with read information from storage"
           content:
             application/problem+json:
@@ -523,6 +626,52 @@ paths:
             text/yaml:
               schema:
                 type: string
+        404:
+          description: "test suite not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /test-suites/{id}/abort:
+    post:
+      tags:
+        - test-suites
+        - api
+      parameters:
+        - $ref: "#/components/parameters/Name"
+      summary: "Abort all executions of a test suite"
+      description: "Abort all test executions of a test suite"
+      operationId: abortTestSuiteExecutions
+      responses:
+        204:
+          description: "no content"
+        404:
+          description: "no execution found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with aborting test suite execution"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -558,8 +707,24 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with input"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting test suite with executions from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with getting test suite from Kubernetes clusteer"
           content:
             application/problem+json:
               schema:
@@ -631,8 +796,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
-        502:
-          description: "problem with communicating with kubernetes cluster"
+        404:
+          description: "test suite not found"
           content:
             application/problem+json:
               schema:
@@ -641,6 +806,14 @@ paths:
                   $ref: "#/components/schemas/Problem"
         500:
           description: "problem with test suite execution"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -698,8 +871,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TestSuiteExecution"
+        404:
+          description: "test not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting test suite executions from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with Kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -712,22 +901,67 @@ paths:
         - $ref: "#/components/parameters/executionID"
       tags:
         - api
-        - testssuite
+        - test-suites
         - executions
       summary: "Aborts testsuite execution"
       description: "Aborts testsuite execution with given executionID"
       operationId: abortTestSuiteExecution
       responses:
-        502:
-          description: "problem with read information from kubernetes cluster"
+        204:
+          description: "no content"
+        404:
+          description: "test suite not found"
           content:
             application/problem+json:
               schema:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
-        204:
-          description: "no content"
+        500:
+          description: "problem with read information from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /test-suites/{id}/executions/{executionID}/artifacts:
+    get:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/executionID"
+      tags:
+        - api
+        - test-suites
+        - executions
+      summary: "Get test suite execution artifacts"
+      description: "Returns test suite execution artifacts with given executionID"
+      operationId: getTestSuiteExecutionArtifactsByTestsuite
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Artifact"
+        404:
+          description: "test suite not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with getting test suite executions from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /test-suite-executions:
     post:
       parameters:
@@ -845,7 +1079,6 @@ paths:
         - $ref: "#/components/parameters/executionID"
       tags:
         - api
-        - testssuite
         - executions
       summary: "Aborts testsuite execution"
       description: "Aborts testsuite execution with given executionID"
@@ -861,6 +1094,34 @@ paths:
                   $ref: "#/components/schemas/Problem"
         204:
           description: "no content"
+
+  /test-suite-executions/{executionID}/artifacts:
+    get:
+      parameters:
+        - $ref: "#/components/parameters/executionID"
+      tags:
+        - api
+        - test-suites
+        - executions
+      summary: "Get test suite execution artifacts"
+      description: "Returns test suite execution artifacts with given executionID"
+      operationId: getTestSuiteExecutionArtifacts
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Artifact"
+        500:
+          description: "problem with getting test suite executions from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /executions:
     post:
       parameters:
@@ -893,6 +1154,14 @@ paths:
                   $ref: "#/components/schemas/ExecutionResult"
         400:
           description: "problem with request body"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "test not found"
           content:
             application/problem+json:
               schema:
@@ -939,6 +1208,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExecutionsResult"
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting test executions from storage"
           content:
@@ -965,8 +1242,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Execution"
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting test executions from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with reading secrets from kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -994,6 +1287,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Artifact"
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting execution's artifacts from storage"
           content:
@@ -1052,8 +1353,53 @@ paths:
               schema:
                 type: string
                 format: binary
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting artifacts from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /executions/{id}/artifact-archive:
+    get:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/Mask"
+      tags:
+        - artifacts
+        - executions
+        - api
+      summary: "Download artifact archive"
+      description: "Download the artifact archive from the given execution"
+      operationId: downloadArchive
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with getting artifact archive from storage"
           content:
             application/problem+json:
               schema:
@@ -1084,6 +1430,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "invalid parameters"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1147,6 +1501,22 @@ paths:
       responses:
         204:
           description: "no content"
+        404:
+          description: "no tests found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with deleting tests and their executions"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1188,6 +1558,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+        404:
+          description: "test not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -1216,6 +1594,22 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "invalid parameters"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "test not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1236,6 +1630,60 @@ paths:
       responses:
         204:
           description: "no content"
+        404:
+          description: "no tests found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with deleting test and its executions"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /tests/{id}/abort:
+    post:
+      tags:
+        - tests
+        - api
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      summary: "Abort all executions of a test"
+      description: "Abort all test executions"
+      operationId: abortTestExecutions
+      responses:
+        204:
+          description: "no content"
+        404:
+          description: "no execution found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with aborting test execution"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1267,6 +1715,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        500:
+          description: "problem with getting metrics"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from storage"
           content:
@@ -1302,6 +1758,22 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "invalid parameters"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with getting tests and their executions"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1331,6 +1803,30 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "invalid parameters"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "no tests found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with getting tests and their executions"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1368,6 +1864,14 @@ paths:
                 $ref: "#/components/schemas/ExecutionResult"
         400:
           description: "problem with request body"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "test not found"
           content:
             application/problem+json:
               schema:
@@ -1413,6 +1917,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExecutionsResult"
+        404:
+          description: "test or execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting test executions from storage"
           content:
@@ -1441,8 +1953,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Execution"
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting test executions from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with reading secrets from kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -1461,6 +1989,8 @@ paths:
       description: "Aborts execution with given executionID"
       operationId: abortExecution
       responses:
+        204:
+          description: "no content"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1469,9 +1999,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
-        204:
-          description: "no content"
-
   /executors:
     get:
       tags:
@@ -1494,6 +2021,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1607,6 +2142,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -1649,6 +2192,14 @@ paths:
                 $ref: "#/components/schemas/ExecutorDetails"
         400:
           description: "problem with executor definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "executor not found"
           content:
             application/problem+json:
               schema:
@@ -1720,6 +2271,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -1805,6 +2364,14 @@ paths:
       responses:
         204:
           description: webhook deleted successfuly
+        404:
+          description: "webhook not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -1833,8 +2400,16 @@ paths:
             text/yaml:
               schema:
                 type: string
-        502:
-          description: "problem with communicating with kubernetes cluster"
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "webhook not found"
           content:
             application/problem+json:
               schema:
@@ -1843,6 +2418,14 @@ paths:
                   $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting webhook data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -1871,7 +2454,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Config"
-        502:
+        400:
+          description: "problem with input"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "config not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
           description: "problem with updating key in cluster storage"
           content:
             application/problem+json:
@@ -1892,7 +2491,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Config"
-        502:
+        404:
+          description: "config not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
           description: "problem with getting config from cluster storage"
           content:
             application/problem+json:
@@ -1915,7 +2522,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/DebugInfo"
         500:
-          description: "problem with getting debug information"
+          description: "problem with getting execution logs from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with getting debug information from the Kuberenetes cluster"
           content:
             application/problem+json:
               schema:
@@ -1945,6 +2560,14 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with read information from kubernetes cluster"
           content:
@@ -2086,6 +2709,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+        404:
+          description: "test source not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -2133,6 +2764,22 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "test source not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
           description: "problem with communicating with kubernetes cluster"
           content:
@@ -2149,6 +2796,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+
   /uploads:
     post:
       tags:
@@ -2170,8 +2818,59 @@ paths:
             text/yaml:
               schema:
                 type: string
+        400:
+          description: "problem with the input"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         500:
           description: "could not upload file"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /repositories:
+    post:
+      tags:
+        - repository
+        - api
+      summary: "Validate new repository"
+      description: "Validate new repository based on variables passed in request"
+      operationId: validateRepository
+      requestBody:
+        description: repository request body data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Repository"
+      responses:
+        204:
+          description: "no content"
+        400:
+          description: "problem with repository definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with creating folder for partial git checkout"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster or git server"
           content:
             application/problem+json:
               schema:
@@ -2277,6 +2976,8 @@ components:
           $ref: "#/components/schemas/VariableType"
         secretRef:
           $ref: "#/components/schemas/SecretRef"
+        configMapRef:
+          $ref: "#/components/schemas/ConfigMapRef"
 
     VariableType:
       type: string
@@ -2304,6 +3005,23 @@ components:
         - key
       type: object
       description: Testkube internal reference for secret storage in Kubernetes secrets
+      properties:
+        namespace:
+          type: string
+          description: object kubernetes namespace
+        name:
+          type: string
+          description: object name
+        key:
+          type: string
+          description: object key
+
+    ConfigMapRef:
+      required:
+        - name
+        - key
+      type: object
+      description: Testkube internal reference for data in Kubernetes config maps
       properties:
         namespace:
           type: string
@@ -2533,8 +3251,9 @@ components:
         status:
           $ref: "#/components/schemas/TestSuiteExecutionStatus"
         envs:
+          deprecated: true
           type: object
-          description: "environment variables passed to executor"
+          description: "Environment variables passed to executor. Deprecated: use Basic Variables instead"
           additionalProperties:
             type: string
           example:
@@ -2583,6 +3302,9 @@ components:
           example:
             env: "prod"
             app: "backend"
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
+          description: running context for the test suite execution
 
     TestSuiteExecutionStatus:
       type: string
@@ -2807,8 +3529,11 @@ components:
           enum:
             - string
             - file-uri
+            # Deprecated: use git instead
             - git-file
+            # Deprecated: use git instead
             - git-dir
+            - git
         repository:
           $ref: "#/components/schemas/Repository"
         data:
@@ -2987,21 +3712,38 @@ components:
           description: "execution number"
           example: 1
         envs:
+          deprecated: true
           type: object
-          description: "environment variables passed to executor"
+          description: "Environment variables passed to executor. Deprecated: use Basic Variables instead"
           additionalProperties:
             type: string
           example:
             record: "true"
             prefix: "some-"
+        command:
+          type: array
+          description: "executor image command"
+          example: ["curl"]
+          items:
+            type: string
         args:
           type: array
           description: "additional arguments/flags passed to executor binary"
           example: ["--concurrency", "2", "--remote", "--some", "blabla"]
           items:
             type: string
+        args_mode:
+          type: string
+          description: usage mode for arguments
+          enum:
+            - append
+            - override
         variables:
           $ref: "#/components/schemas/Variables"
+        isVariablesFileUploaded:
+          type: boolean
+          description: in case the variables file is too big, it will be uploaded to storage
+          example: false
         variablesFile:
           type: string
           description: variables file content - need to be in format for particular executor (e.g. postman envs file)
@@ -3057,11 +3799,14 @@ components:
           example: execution-c01d7cf6-ec3f-47f0-9556-a5d6e9009a43
         artifactRequest:
           $ref: "#/components/schemas/ArtifactRequest"
-          description: configuration parameters for storing container executor test artifacts
+          description: configuration parameters for storing test artifacts
         preRunScript:
           type: string
           description: script to run before test execution
-          example:  "echo -n '$SECRET_ENV' > ./secret_file"
+          example: "echo -n '$SECRET_ENV' > ./secret_file"
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
+          description: running context for the test execution
 
     Artifact:
       type: object
@@ -3073,6 +3818,10 @@ components:
         size:
           type: integer
           description: file size in bytes
+        executionName:
+          type: string
+          description: execution name that produced the artifact
+          example: "test-1"
 
     ExecutionsResult:
       description: the result for a page of executions
@@ -3151,6 +3900,9 @@ components:
           example:
             env: "prod"
             app: "backend"
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
+          description: running context for the test execution
 
     ExecutionStatus:
       type: string
@@ -3275,7 +4027,19 @@ components:
         namespace:
           type: string
           description: server installaton namespace
-          example: "my-testkube"         
+          example: "my-testkube"
+        context:
+          type: string
+          description: currently configured testkube API context
+          example: "cloud|oss"
+        orgId:
+          type: string
+          description: cloud organization id
+          example: "tkcorg_xxxx"
+        envId:
+          type: string
+          description: cloud env id
+          example: "tkcenv_xxxx"
 
     Repository:
       description: repository representation for tests in git repositories
@@ -3317,11 +4081,17 @@ components:
           $ref: "#/components/schemas/SecretRef"
         certificateSecret:
           type: string
-          description: secret with certificate for private repositories
+          description: secret with certificate for private repositories. Should contain one key ending with .crt such as "mycorp.crt", whose value is the certificate file content, suitable for git config http.sslCAInfo
         workingDir:
           type: string
           description: if provided we checkout the whole repository and run test from this directory
           example: "/"
+        authType:
+          type: string
+          enum:
+            - basic
+            - header
+          description: auth type for git requests
 
     RepositoryParameters:
       description: repository parameters for tests in git repositories
@@ -3359,24 +4129,21 @@ components:
         - $ref: "#/components/schemas/RepositoryParameters"
 
     ArtifactRequest:
-      description: artifact request body for container executors with test artifacts
+      description: artifact request body with test artifacts
       type: object
-      required:
-        - storageClassName
-        - volumeMountPath
       properties:
         storageClassName:
           type: string
-          description: artifact storage class name
+          description: artifact storage class name for container executor
           example: artifact-volume-local
         volumeMountPath:
           type: string
-          description: artifact volume mount path
+          description: artifact volume mount path for container executor
         dirs:
           type: array
           items:
             type: string
-          description: artifact directories
+          description: artifact directories for scraping
 
     ArtifactUpdateRequest:
       description: artifact request update body
@@ -3417,6 +4184,10 @@ components:
           type: string
           description: test kubernetes namespace ("testkube" when not set)
           example: testkube
+        isVariablesFileUploaded:
+          type: boolean
+          description: in case the variables file is too big, it will be uploaded
+          example: false
         variablesFile:
           type: string
           description: variables file content - need to be in format for particular executor (e.g. postman envs file)
@@ -3434,7 +4205,7 @@ components:
           example: "7934600f-b367-48dd-b981-4353304362fb"
         command:
           type: array
-          description: "container executor image command"
+          description: "executor image command"
           items:
             type: string
           example:
@@ -3448,6 +4219,12 @@ components:
             - "--repeats"
             - "5"
             - "--insecure"
+        args_mode:
+          type: string
+          description: usage mode for arguments
+          enum:
+            - append
+            - override 
         image:
           type: string
           description: container image, executor will run inside this image
@@ -3458,16 +4235,18 @@ components:
           items:
             $ref: "#/components/schemas/LocalObjectReference"
         envs:
+          deprecated: true
           type: object
-          description: "environment variables passed to executor"
+          description: "Environment variables passed to executor. Deprecated: use Basic Variables instead"
           additionalProperties:
             type: string
           example:
             record: "true"
             prefix: "some-"
         secretEnvs:
+          deprecated: true
           type: object
-          description: "execution variables passed to executor from secrets"
+          description: "Execution variables passed to executor from secrets. Deprecated: use Secret Variables instead"
           additionalProperties:
             type: string
           example:
@@ -3510,21 +4289,37 @@ components:
           example: execution-c01d7cf6-ec3f-47f0-9556-a5d6e9009a43
         artifactRequest:
           $ref: "#/components/schemas/ArtifactRequest"
-          description: configuration parameters for storing container executor test artifacts
+          description: configuration parameters for storing test artifacts
         jobTemplate:
           type: string
           description: job template extensions
+        cronJobTemplate:
+          type: string
+          description: cron job template extensions
         contentRequest:
           $ref: "#/components/schemas/TestContentRequest"
           description: adjusting parameters for test content
         preRunScript:
           type: string
           description: script to run before test execution
-          example:  "echo -n '$SECRET_ENV' > ./secret_file"
+          example: "echo -n '$SECRET_ENV' > ./secret_file"
         scraperTemplate:
           type: string
-          description: scraper template extensions         
-  
+          description: scraper template extensions
+        envConfigMaps:
+          type: array
+          description: "config map references"
+          items:
+            $ref: "#/components/schemas/EnvReference"
+        envSecrets:
+          type: array
+          description: "secret references"
+          items:
+            $ref: "#/components/schemas/EnvReference"
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
+          description: running context for the test execution
+
     ExecutionUpdateRequest:
       description: test execution request update body
       type: object
@@ -3590,6 +4385,12 @@ components:
         contentRequest:
           $ref: "#/components/schemas/TestContentRequest"
           description: adjusting parameters for test content
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
+          description: running context for the test suite execution
+        cronJobTemplate:
+          type: string
+          description: cron job template extensions
         concurrencyLevel:
           type: integer
           format: int32
@@ -3713,14 +4514,14 @@ components:
             $ref: "#/components/schemas/LocalObjectReference"
         command:
           type: array
-          description: "container executor image command"
+          description: "executor image command"
           items:
             type: string
           example:
             - "curl"
         args:
           type: array
-          description: "additional executor binary arguments"
+          description: "additional executor binary argument"
           items:
             type: string
           example:
@@ -3800,7 +4601,7 @@ components:
           format: date-time
           description: Timestamp of log
           example: "2018-03-20T09:12:28Z"
-  
+
     ExecutorMeta:
       description: Executor meta data
       type: object
@@ -3812,7 +4613,7 @@ components:
         docsURI:
           description: URI for executor docs
           type: string
-          example: https://kubeshop.github.io/testkube/test-types/executor-k6
+          example: https://docs.testkube.io/test-types/executor-k6
         tooltips:
           type: object
           description: executor tooltips
@@ -3828,12 +4629,31 @@ components:
       allOf:
         - $ref: "#/components/schemas/ExecutorMeta"
 
+    RunningContext:
+      description: running context for test or test suite execution
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          description: One of possible context types
+          enum:
+            - userCLI
+            - userUI
+            - testsuite
+            - testtrigger
+            - scheduler
+        context:
+          type: string
+          description: Context value depending from its type
+
     Webhook:
       description: CRD based webhook data
       type: object
       required:
         - uri
-        - types
+        - events
       properties:
         name:
           type: string
@@ -3851,6 +4671,20 @@ components:
         selector:
           type: string
           description: Labels to filter for tests and test suites
+        payloadObjectField:
+          type: string
+          description: will load the generated payload for notification inside the object
+        payloadTemplate:
+          type: string
+          description: golang based template for notification payload
+        headers:
+          type: object
+          description: "webhook headers"
+          additionalProperties:
+            type: string
+          example:
+            env: "Content-Type"
+            app: "application/xml"
         labels:
           type: object
           description: "webhook labels"
@@ -3866,16 +4700,34 @@ components:
       required:
         - type
         - id
+        - resourceId
+        - resource
       properties:
         id:
           type: string
           description: UUID of event
+        resource:
+          $ref: "#/components/schemas/EventResource"
+        resourceId:
+          type: string
+          description: ID of resource
         type:
           $ref: "#/components/schemas/EventType"
         testExecution:
           $ref: "#/components/schemas/Execution"
         testSuiteExecution:
           $ref: "#/components/schemas/TestSuiteExecution"
+
+    EventResource:
+      type: string
+      enum:
+        - test
+        - testsuite
+        - executor
+        - trigger
+        - webhook
+        - testexecution
+        - testsuiteexecution
 
     EventType:
       type: string
@@ -3890,6 +4742,9 @@ components:
         - end-testsuite-failed
         - end-testsuite-aborted
         - end-testsuite-timeout
+        - created
+        - updated
+        - deleted
 
     EventResult:
       description: Listener result after sending particular event
@@ -3940,7 +4795,7 @@ components:
           $ref: "#/components/schemas/TestSuite"
         latestExecution:
           $ref: "#/components/schemas/TestSuiteExecution"
-  
+
     TestSuiteWithExecutionSummary:
       description: Test suite with latest execution result
       type: object
@@ -4048,6 +4903,26 @@ components:
         name:
           type: string
 
+    EnvReference:
+      description: Reference to env resource
+      type: object
+      required:
+        - reference
+      properties:
+        reference:
+          $ref: "#/components/schemas/LocalObjectReference"
+        mount:
+          type: boolean
+          description: whether we shoud mount resource
+          example: /etc/data
+        mountPath:
+          type: string
+          description: where we shoud mount resource
+        mapToVariables:
+          type: boolean
+          description: whether we shoud map to variables from resource
+          default: false
+
     TestTriggerSelector:
       type: object
       properties:
@@ -4120,6 +4995,11 @@ components:
           type: string
           description: test trigger condition reason
           example: NewReplicaSetAvailable
+        ttl:
+          type: integer
+          format: int32
+          description: duration in seconds in the past from current time when the condition is still valid 
+          example: 1          
 
     TestTriggerConditionStatuses:
       description: supported kubernetes condition statuses for test triggers
@@ -4128,7 +5008,7 @@ components:
         - "True"
         - "False"
         - "Unknown"
-  
+
     TestTriggerKeyMap:
       type: object
       required:
@@ -4142,7 +5022,17 @@ components:
           items:
             type: string
           description: list of supported values for resources
-          example: ["pod", "deployment", "statefulset", "daemonset", "service", "ingress", "event", "configmap"]
+          example:
+            [
+              "pod",
+              "deployment",
+              "statefulset",
+              "daemonset",
+              "service",
+              "ingress",
+              "event",
+              "configmap",
+            ]
         actions:
           type: array
           items:
@@ -4162,7 +5052,11 @@ components:
             items:
               type: string
           description: mapping between resources and supported events
-          example: { "pod": ["created", "modified", "deleted"], "deployment": ["created", "modified", "deleted"] }
+          example:
+            {
+              "pod": ["created", "modified", "deleted"],
+              "deployment": ["created", "modified", "deleted"],
+            }
 
     TestSourceBatchRequest:
       description: Test source batch request
@@ -4370,23 +5264,30 @@ components:
       schema:
         type: string
         description: Name of the object
+    Mask:
+      in: query
+      name: mask
+      schema:
+        type: string
+        description: mask to filter files
+      required: false
   requestBodies:
     UploadsBody:
       description: "Upload files request body data"
       required: true
       content:
         multipart/form-data:
-           schema:
-              type: object
-              properties:
-                parentName:
-                  type: string
-                  example: "test-1"
-                parentType:
-                  type: string
-                  enum:
-                   - test
-                   - execution
-                filePath:
-                  type: string
-                  example: folder/file.txt
+          schema:
+            type: object
+            properties:
+              parentName:
+                type: string
+                example: "test-1"
+              parentType:
+                type: string
+                enum:
+                  - test
+                  - execution
+              filePath:
+                type: string
+                example: folder/file.txt

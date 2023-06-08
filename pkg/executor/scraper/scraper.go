@@ -1,56 +1,87 @@
 package scraper
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/kubeshop/testkube/pkg/executor/output"
-	"github.com/kubeshop/testkube/pkg/storage/minio"
-	"github.com/kubeshop/testkube/pkg/ui"
+	cdevents "github.com/cdevents/sdk-go/pkg/api"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/gabriel-vasile/mimetype"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/log"
+	cde "github.com/kubeshop/testkube/pkg/mapper/cdevents"
 )
 
-// Scraper is responsible for collecting and persisting the necessary artifacts
+// Scraper is responsible for collecting and persisting the execution artifacts
+//
+//go:generate mockgen -destination=./mock_scraper.go -package=scraper "github.com/kubeshop/testkube/pkg/executor/scraper" Scraper
 type Scraper interface {
-	// Scrape gets artifacts from the directories present in the execution with executionID
-	Scrape(executionID string, directories []string) error
+	// Scrape gets artifacts from the provided paths and the provided execution
+	Scrape(ctx context.Context, paths []string, execution testkube.Execution) error
+	Close() error
 }
 
-// NewMinioScraper returns a Minio implementation of the Scraper
-func NewMinioScraper(endpoint, accessKeyID, secretAccessKey, location, token, bucket string, ssl bool) *MinioScraper {
+type ExtractLoadScraper struct {
+	extractor      Extractor
+	loader         Uploader
+	cdeventsClient cloudevents.Client
+	clusterID      string
+	dashboardURI   string
+}
 
-	return &MinioScraper{
-		Endpoint:        endpoint,
-		AccessKeyID:     accessKeyID,
-		SecretAccessKey: secretAccessKey,
-		Location:        location,
-		Token:           token,
-		Bucket:          bucket,
-		Ssl:             ssl,
+func NewExtractLoadScraper(extractor Extractor, loader Uploader, cdeventsClient cloudevents.Client,
+	clusterID, dashboardURI string) *ExtractLoadScraper {
+	return &ExtractLoadScraper{
+		extractor:      extractor,
+		loader:         loader,
+		cdeventsClient: cdeventsClient,
+		clusterID:      clusterID,
+		dashboardURI:   dashboardURI,
+	}
+}
+
+func (s *ExtractLoadScraper) Scrape(ctx context.Context, paths []string, execution testkube.Execution) error {
+	return s.
+		extractor.
+		Extract(ctx, paths,
+			func(ctx context.Context, object *Object) error {
+				return s.loader.Upload(ctx, object, execution)
+			},
+			func(ctx context.Context, path string) error {
+				if s.cdeventsClient != nil {
+					if err := s.sendCDEvent(execution, path); err != nil {
+						return err
+					}
+				}
+
+				return nil
+			})
+}
+
+func (s *ExtractLoadScraper) Close() error {
+	return s.loader.Close()
+}
+
+func (s *ExtractLoadScraper) sendCDEvent(execution testkube.Execution, path string) error {
+	mtype, err := mimetype.DetectFile(path)
+	if err != nil {
+		log.DefaultLogger.Warnf("failed to detect mime type %w", err)
 	}
 
-}
-
-// MinioScraper manages getting artifacts from job pods
-type MinioScraper struct {
-	Endpoint, AccessKeyID, SecretAccessKey, Location, Token, Bucket string
-	Ssl                                                             bool
-}
-
-// Scrape gets artifacts from pod based on execution ID and directories list
-func (s MinioScraper) Scrape(id string, directories []string) error {
-	output.PrintLog(fmt.Sprintf("%s Scraping artifacts %s", ui.IconCabinet, directories))
-	client := minio.NewClient(s.Endpoint, s.AccessKeyID, s.SecretAccessKey, s.Location, s.Token, s.Bucket, s.Ssl) // create storage client
-	err := client.Connect()
+	ev, err := cde.MapTestkubeArtifactToCDEvent(&execution, s.clusterID, path, mtype.String(), s.dashboardURI)
 	if err != nil {
-		output.PrintLog(fmt.Sprintf("%s Failed to scrape artifacts: %s", ui.IconCross, err.Error()))
-		return fmt.Errorf("error occured creating minio client: %w", err)
-	}
-
-	err = client.ScrapeArtefacts(id, directories...)
-	if err != nil {
-		output.PrintLog(fmt.Sprintf("%s Failed to scrape artifacts: %s", ui.IconCross, err.Error()))
 		return err
 	}
 
-	output.PrintLog(fmt.Sprintf("%s Successfully scraped artifacts", ui.IconCheckMark))
+	ce, err := cdevents.AsCloudEvent(ev)
+	if err != nil {
+		return err
+	}
+
+	if result := s.cdeventsClient.Send(context.Background(), *ce); cloudevents.IsUndelivered(result) {
+		return fmt.Errorf("failed to send, %v", result)
+	}
+
 	return nil
 }

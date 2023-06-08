@@ -194,6 +194,14 @@ func (e Execution) IsTimeout() bool {
 	return *e.ExecutionResult.Status == TIMEOUT_ExecutionStatus
 }
 
+func (e Execution) IsPassed() bool {
+	if e.ExecutionResult == nil {
+		return true
+	}
+
+	return *e.ExecutionResult.Status == PASSED_ExecutionStatus
+}
+
 func (e *Execution) WithID() *Execution {
 	if e.Id == "" {
 		e.Id = primitive.NewObjectID().Hex()

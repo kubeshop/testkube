@@ -49,7 +49,11 @@ func MergeVariablesAndParams(variables map[string]testsv3.Variable, params map[s
 			}
 		}
 		if v.Type_ == commonv1.VariableTypeBasic {
-			out[k] = testkube.NewBasicVariable(v.Name, v.Value)
+			if v.ValueFrom.ConfigMapKeyRef == nil {
+				out[k] = testkube.NewBasicVariable(v.Name, v.Value)
+			} else {
+				out[k] = testkube.NewConfigMapVariableReference(v.Name, v.ValueFrom.ConfigMapKeyRef.Name, v.ValueFrom.ConfigMapKeyRef.Key)
+			}
 		}
 	}
 
@@ -61,7 +65,7 @@ func MapTestContentFromSpec(specContent *testsv3.TestContent) *testkube.TestCont
 
 	content := &testkube.TestContent{}
 	if specContent != nil {
-		content.Type_ = specContent.Type_
+		content.Type_ = string(specContent.Type_)
 		content.Data = specContent.Data
 		content.Uri = specContent.Uri
 		if specContent.Repository != nil {
@@ -73,6 +77,7 @@ func MapTestContentFromSpec(specContent *testsv3.TestContent) *testkube.TestCont
 				Path:              specContent.Repository.Path,
 				WorkingDir:        specContent.Repository.WorkingDir,
 				CertificateSecret: specContent.Repository.CertificateSecret,
+				AuthType:          string(specContent.Repository.AuthType),
 			}
 
 			if specContent.Repository.UsernameSecret != nil {
@@ -120,30 +125,35 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 	}
 
 	return &testkube.ExecutionRequest{
-		Name:                  specExecutionRequest.Name,
-		TestSuiteName:         specExecutionRequest.TestSuiteName,
-		Number:                specExecutionRequest.Number,
-		ExecutionLabels:       specExecutionRequest.ExecutionLabels,
-		Namespace:             specExecutionRequest.Namespace,
-		VariablesFile:         specExecutionRequest.VariablesFile,
-		Variables:             MergeVariablesAndParams(specExecutionRequest.Variables, nil),
-		TestSecretUUID:        specExecutionRequest.TestSecretUUID,
-		TestSuiteSecretUUID:   specExecutionRequest.TestSuiteSecretUUID,
-		Command:               specExecutionRequest.Command,
-		Args:                  specExecutionRequest.Args,
-		Image:                 specExecutionRequest.Image,
-		ImagePullSecrets:      MapImagePullSecrets(specExecutionRequest.ImagePullSecrets),
-		Envs:                  specExecutionRequest.Envs,
-		SecretEnvs:            specExecutionRequest.SecretEnvs,
-		Sync:                  specExecutionRequest.Sync,
-		HttpProxy:             specExecutionRequest.HttpProxy,
-		HttpsProxy:            specExecutionRequest.HttpsProxy,
-		ActiveDeadlineSeconds: specExecutionRequest.ActiveDeadlineSeconds,
-		ArtifactRequest:       artifactRequest,
-		JobTemplate:           specExecutionRequest.JobTemplate,
-		PreRunScript:          specExecutionRequest.PreRunScript,
-		ScraperTemplate:       specExecutionRequest.ScraperTemplate,
-		NegativeTest:          specExecutionRequest.NegativeTest,
+		Name:                    specExecutionRequest.Name,
+		TestSuiteName:           specExecutionRequest.TestSuiteName,
+		Number:                  specExecutionRequest.Number,
+		ExecutionLabels:         specExecutionRequest.ExecutionLabels,
+		Namespace:               specExecutionRequest.Namespace,
+		IsVariablesFileUploaded: specExecutionRequest.IsVariablesFileUploaded,
+		VariablesFile:           specExecutionRequest.VariablesFile,
+		Variables:               MergeVariablesAndParams(specExecutionRequest.Variables, nil),
+		TestSecretUUID:          specExecutionRequest.TestSecretUUID,
+		TestSuiteSecretUUID:     specExecutionRequest.TestSuiteSecretUUID,
+		Command:                 specExecutionRequest.Command,
+		Args:                    specExecutionRequest.Args,
+		ArgsMode:                string(specExecutionRequest.ArgsMode),
+		Image:                   specExecutionRequest.Image,
+		ImagePullSecrets:        MapImagePullSecrets(specExecutionRequest.ImagePullSecrets),
+		Envs:                    specExecutionRequest.Envs,
+		SecretEnvs:              specExecutionRequest.SecretEnvs,
+		Sync:                    specExecutionRequest.Sync,
+		HttpProxy:               specExecutionRequest.HttpProxy,
+		HttpsProxy:              specExecutionRequest.HttpsProxy,
+		ActiveDeadlineSeconds:   specExecutionRequest.ActiveDeadlineSeconds,
+		ArtifactRequest:         artifactRequest,
+		JobTemplate:             specExecutionRequest.JobTemplate,
+		CronJobTemplate:         specExecutionRequest.CronJobTemplate,
+		PreRunScript:            specExecutionRequest.PreRunScript,
+		ScraperTemplate:         specExecutionRequest.ScraperTemplate,
+		NegativeTest:            specExecutionRequest.NegativeTest,
+		EnvConfigMaps:           MapEnvReferences(specExecutionRequest.EnvConfigMaps),
+		EnvSecrets:              MapEnvReferences(specExecutionRequest.EnvSecrets),
 	}
 }
 
@@ -175,4 +185,24 @@ func MapStatusFromSpec(specStatus testsv3.TestStatus) *testkube.TestStatus {
 			EndTime:   specStatus.LatestExecution.EndTime.Time,
 		},
 	}
+}
+
+// MapEnvReferences maps CRD to OpenAPI spec EnvReference
+func MapEnvReferences(envs []testsv3.EnvReference) []testkube.EnvReference {
+	if envs == nil {
+		return nil
+	}
+	var res []testkube.EnvReference
+	for _, env := range envs {
+		res = append(res, testkube.EnvReference{
+			Reference: &testkube.LocalObjectReference{
+				Name: env.Name,
+			},
+			Mount:          env.Mount,
+			MountPath:      env.MountPath,
+			MapToVariables: env.MapToVariables,
+		})
+	}
+
+	return res
 }

@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
+	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -183,8 +183,23 @@ func (t DirectClient[A]) GetLogs(uri string, logs chan output.Output) error {
 }
 
 // GetFile returns file artifact
-func (t DirectClient[A]) GetFile(uri, fileName, destination string) (name string, err error) {
-	resp, err := t.client.Get(uri)
+func (t DirectClient[A]) GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error) {
+	req, err := http.NewRequest(http.MethodGet, uri, nil)
+	if err != nil {
+		return "", err
+	}
+
+	q := req.URL.Query()
+	for key, values := range params {
+		for _, value := range values {
+			if value != "" {
+				q.Add(key, value)
+			}
+		}
+	}
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := t.client.Do(req)
 	if err != nil {
 		return name, err
 	}
@@ -194,8 +209,17 @@ func (t DirectClient[A]) GetFile(uri, fileName, destination string) (name string
 		return name, fmt.Errorf("error: %d", resp.StatusCode)
 	}
 
-	split := strings.Split(fileName, "/")
-	f, err := os.Create(filepath.Join(destination, split[len(split)-1]))
+	target := filepath.Join(destination, fileName)
+	dir := filepath.Dir(target)
+	if _, err := os.Stat(dir); errors.Is(err, os.ErrNotExist) {
+		if err = os.MkdirAll(dir, os.ModePerm); err != nil {
+			return name, err
+		}
+	} else if err != nil {
+		return name, err
+	}
+
+	f, err := os.Create(target)
 	if err != nil {
 		return name, err
 	}

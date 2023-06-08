@@ -3,14 +3,15 @@
 
 const lightCodeTheme = require("./src/themes/prism-testkube-light");
 const darkCodeTheme = require("./src/themes/prism-testkube-dark");
+const redirects = require("./redirects");
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: "Testkube Documentation",
   tagline:
     "Your somewhat opinionated and friendly Kubernetes testing framework",
-  url: "https://testkube.kubeshop.io",
-  baseUrl: "/testkube/",
+  url: "https://docs.testkube.io",
+  baseUrl: "/",
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
   favicon: "img/logo.svg",
@@ -27,12 +28,19 @@ const config = {
     defaultLocale: "en",
     locales: ["en"],
   },
-
+  scripts: [
+    {
+      src: "https://app.usercentrics.eu/browser-ui/latest/loader.js",
+      id: "usercentrics-cmp",
+      "data-settings-id": "WQ2gSqnsK",
+      async: true,
+    },
+  ],
   presets: [
     [
       "classic",
       /** @type {import('@docusaurus/preset-classic').Options} */
-      ({
+      {
         docs: {
           routeBasePath: "/",
           sidebarPath: require.resolve("./sidebars.js"),
@@ -44,10 +52,13 @@ const config = {
         theme: {
           customCss: require.resolve("./src/css/custom.css"),
         },
-        googleAnalytics: {
-          trackingID: "UA-204665550-6",
+        gtag: {
+          trackingID: "G-G7HWN1EDK5",
         },
-      }),
+        googleTagManager: {
+          containerId: "GTM-PQK4DKN",
+        },
+      },
     ],
     [
       "redocusaurus",
@@ -68,7 +79,7 @@ const config = {
 
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
-    ({
+    {
       navbar: {
         logo: {
           alt: "Testkube",
@@ -126,102 +137,30 @@ const config = {
         // Optional: see doc section below
         contextualSearch: false,
 
-        // Optional: Specify domains where the navigation should occur through window.location instead on history.push. Useful when our Algolia config crawls multiple documentation sites and we want to navigate with window.location.href to them.
-        // externalUrlRegex: "external\\.com|domain\\.com",
-
-        // Optional: Algolia search parameters
-        searchParameters: {},
-
         // Optional: path for search page that enabled by default (`false` to disable it)
-        searchPagePath: "search",
+        searchPagePath: false,
 
         //... other Algolia params
       },
       colorMode: {
         defaultMode: "dark",
         disableSwitch: false,
-        respectPrefersColorScheme: false,
+        respectPrefersColorScheme: true,
       },
-    }),
+    },
   plugins: [
     [
       "@docusaurus/plugin-client-redirects",
       {
-        redirects: [
-          // /docs/oldDoc -> /docs/newDoc
-          {
-            from: "/executor-cypress",
-            to: "/test-types/executor-cypress",
-          },
-          {
-            from: "/executor-postman",
-            to: "/test-types/executor-postman",
-          },
-          {
-            from: "/executor-soapui",
-            to: "/test-types/executor-soapui",
-          },
-          {
-            from: "/executor-k6",
-            to: "/test-types/executor-k6",
-          },
-          {
-            from: "/executor-jmeter",
-            to: "/test-types/executor-jmeter",
-          },
-          {
-            from: "/executor-kubepug",
-            to: "/test-types/executor-kubepug",
-          },
-          {
-            from: "/executor-artillery",
-            to: "/test-types/executor-artillery",
-          },
-          {
-            from: "/executor-maven",
-            to: "/test-types/executor-maven",
-          },
-          {
-            from: "/executor-gradle",
-            to: "/test-types/executor-gradle",
-          },
-          {
-            from: "/executor-ginkgo",
-            to: "/test-types/executor-ginkgo",
-          },
-          {
-            from: "/executor-curl",
-            to: "/test-types/executor-curl",
-          },
-          {
-            from: "/executor-custom",
-            to: "/test-types/executor-custom",
-          },
-          {
-            from: "/UI",
-            to: "/using-testkube/UI",
-          },
-          {
-            from: "/tests-running",
-            to: "/using-testkube/tests/tests-running",
-          },
-          {
-            from: "/tests-creating",
-            to: "/using-testkube/tests/tests-creating",
-          },
-          {
-            from: "/tests-variables",
-            to: "/using-testkube/tests/tests-variables",
-          },
-          {
-            from: "/testsuites-running",
-            to: "/using-testkube/test-suites/testsuites-running",
-          },
-          {
-            from: "/testsuites-creating",
-            to: "/using-testkube/test-suites/testsuites-creating",
-          },
-        ],
+        redirects: redirects,
+        createRedirects(existingPath) {
+          if (existingPath.includes("/cli")) {
+            // Redirect from /cli-reference and /reference/cli (old links) to /cli
+            return [existingPath.replace('/cli', "/cli-reference"), existingPath.replace('/cli', "/reference/cli")];
+          }
+
+          return undefined; // Return a falsy value: no redirect created
+        },
       },
     ],
   ],

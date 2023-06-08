@@ -124,7 +124,7 @@ func (e *Emitter) UpdateListeners(listeners common.Listeners) {
 
 // Notify notifies emitter with webhook
 func (e *Emitter) Notify(event testkube.Event) {
-	err := e.Bus.Publish(event)
+	err := e.Bus.PublishTopic(event.Topic(), event)
 	e.Log.Infow("event published", append(event.Log(), "error", err)...)
 }
 
@@ -152,7 +152,7 @@ func (e *Emitter) Listen(ctx context.Context) {
 
 func (e *Emitter) startListener(l common.Listener) {
 	e.Log.Infow("starting listener", l.Name(), l.Metadata())
-	err := e.Bus.Subscribe(l.Name(), e.notifyHandler(l))
+	err := e.Bus.SubscribeTopic("events.>", l.Name(), e.notifyHandler(l))
 	if err != nil {
 		e.Log.Errorw("error subscribing to event", "error", err)
 	}
@@ -170,7 +170,7 @@ func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
 	log := e.Log.With("listen-on", l.Events(), "queue-group", l.Name(), "selector", l.Selector(), "metadata", l.Metadata())
 	return func(event testkube.Event) error {
 		if event.Valid(l.Selector(), l.Events()) {
-			l.Notify(event)
+			log.Infow("notification result", l.Notify(event))
 			log.Infow("listener notified", event.Log()...)
 		} else {
 			log.Infow("dropping event not matching selector or type", event.Log()...)
@@ -191,7 +191,6 @@ func (e *Emitter) Reconcile(ctx context.Context) {
 			e.UpdateListeners(listeners)
 			e.Log.Debugw("reconciled listeners", e.Listeners.Log()...)
 			time.Sleep(reconcileInterval)
-
 		}
 	}
 }

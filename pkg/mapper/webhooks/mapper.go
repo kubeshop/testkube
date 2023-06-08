@@ -10,17 +10,28 @@ import (
 // MapCRDToAPI maps Webhook CRD to OpenAPI spec Webhook
 func MapCRDToAPI(item executorv1.Webhook) testkube.Webhook {
 	return testkube.Webhook{
-		Name:      item.Name,
-		Namespace: item.Namespace,
-		Uri:       item.Spec.Uri,
-		Events:    MapStringArrayToCRDEvents(item.Spec.Events),
-		Selector:  item.Spec.Selector,
-		Labels:    item.Labels,
+		Name:               item.Name,
+		Namespace:          item.Namespace,
+		Uri:                item.Spec.Uri,
+		Events:             MapEventArrayToCRDEvents(item.Spec.Events),
+		Selector:           item.Spec.Selector,
+		Labels:             item.Labels,
+		PayloadObjectField: item.Spec.PayloadObjectField,
+		PayloadTemplate:    item.Spec.PayloadTemplate,
+		Headers:            item.Spec.Headers,
 	}
 }
 
 // MapStringArrayToCRDEvents maps string array of event types to OpenAPI spec list of EventType
 func MapStringArrayToCRDEvents(items []string) (events []testkube.EventType) {
+	for _, e := range items {
+		events = append(events, testkube.EventType(e))
+	}
+	return
+}
+
+// MapEventArrayToCRDEvents maps event array of event types to OpenAPI spec list of EventType
+func MapEventArrayToCRDEvents(items []executorv1.EventType) (events []testkube.EventType) {
 	for _, e := range items {
 		events = append(events, testkube.EventType(e))
 	}
@@ -36,17 +47,20 @@ func MapAPIToCRD(request testkube.WebhookCreateRequest) executorv1.Webhook {
 			Labels:    request.Labels,
 		},
 		Spec: executorv1.WebhookSpec{
-			Uri:      request.Uri,
-			Events:   MapEventTypesToStringArray(request.Events),
-			Selector: request.Selector,
+			Uri:                request.Uri,
+			Events:             MapEventTypesToStringArray(request.Events),
+			Selector:           request.Selector,
+			PayloadObjectField: request.PayloadObjectField,
+			PayloadTemplate:    request.PayloadTemplate,
+			Headers:            request.Headers,
 		},
 	}
 }
 
 // MapEventTypesToStringArray maps OpenAPI spec list of EventType to string array
-func MapEventTypesToStringArray(eventTypes []testkube.EventType) (arr []string) {
+func MapEventTypesToStringArray(eventTypes []testkube.EventType) (arr []executorv1.EventType) {
 	for _, et := range eventTypes {
-		arr = append(arr, string(et))
+		arr = append(arr, executorv1.EventType(et))
 	}
 	return
 }

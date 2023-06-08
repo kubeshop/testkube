@@ -15,7 +15,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-var _ Repository = &MongoRepository{}
+var _ Repository = (*MongoRepository)(nil)
 
 const CollectionName = "testresults"
 

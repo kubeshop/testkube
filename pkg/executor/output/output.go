@@ -9,10 +9,14 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-const TypeLogEvent = "event"
-const TypeLogLine = "line"
-const TypeError = "error"
-const TypeResult = "result"
+const (
+	TypeLogEvent     = "event"
+	TypeLogLine      = "line"
+	TypeError        = "error"
+	TypeParsingError = "parsing-error"
+	TypeResult       = "result"
+	TypeUnknown      = "unknown"
+)
 
 // NewOutputEvent returns new Output struct of type event
 func NewOutputEvent(message string) Output {
@@ -56,7 +60,7 @@ type Output testkube.ExecutorOutput
 // String
 func (out Output) String() string {
 	switch out.Type_ {
-	case TypeError, TypeLogLine, TypeLogEvent:
+	case TypeError, TypeParsingError, TypeLogLine, TypeLogEvent:
 		return out.Content
 	case TypeResult:
 		b, _ := json.Marshal(out.Result)
@@ -74,6 +78,13 @@ func PrintError(w io.Writer, err error) {
 
 // PrintLog - prints log line as output json
 func PrintLog(message string) {
+	out, _ := json.Marshal(NewOutputLine([]byte(message)))
+	fmt.Printf("%s\n", out)
+}
+
+// PrintLogf - prints log line as output json and supports sprintf formatting
+func PrintLogf(format string, args ...any) {
+	message := fmt.Sprintf(format, args...)
 	out, _ := json.Marshal(NewOutputLine([]byte(message)))
 	fmt.Printf("%s\n", out)
 }

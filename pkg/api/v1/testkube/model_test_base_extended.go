@@ -7,6 +7,15 @@ import (
 	"strings"
 )
 
+const (
+	//TestLabelTestType is a test label for a test type
+	TestLabelTestType = "test-type"
+	// TestLabelExecutor is a test label for an executor
+	TestLabelExecutor = "executor"
+	// TestLabelTestName is a test label for a test name
+	TestLabelTestName = "test-name"
+)
+
 type Tests []Test
 
 func (t Tests) Table() (header []string, output [][]string) {
@@ -67,6 +76,7 @@ func (test *Test) QuoteTestTextFields() {
 		var fields = []*string{
 			&test.ExecutionRequest.VariablesFile,
 			&test.ExecutionRequest.JobTemplate,
+			&test.ExecutionRequest.CronJobTemplate,
 			&test.ExecutionRequest.PreRunScript,
 			&test.ExecutionRequest.ScraperTemplate,
 		}

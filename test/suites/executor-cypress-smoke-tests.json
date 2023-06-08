@@ -2,6 +2,9 @@
 	"name": "executor-cypress-smoke-tests",
 	"description": "Cypress executor smoke tests",
 	"steps": [
+		{"batch": [{"execute": {"name": "cypress-12-executor-smoke-electron"}}]},
+		{"batch": [{"execute": {"name": "cypress-12-executor-smoke-chrome"}}]},
+		{"batch": [{"execute": {"name": "cypress-12-executor-smoke-firefox"}}]},
 		{"batch": [{"execute": {"name": "cypress-11-executor-smoke-electron"}}]},
 		{"batch": [{"execute": {"name": "cypress-11-executor-smoke-chrome"}}]},
 		{"batch": [{"execute": {"name": "cypress-11-executor-smoke-firefox"}}]},
@@ -15,6 +18,11 @@
 		{"batch": [{"execute": {"name": "cypress-8-executor-smoke-chrome"}}]},
 		{"batch": [{"execute": {"name": "cypress-8-executor-smoke-firefox"}}]},
 		{"batch": [{"execute": {"name": "cypress-default-executor-smoke-electron"}}]},
-		{"batch": [{"execute": {"name": "cypress-default-executor-smoke-electron-testsource-git-dir"}}]}
+		{"batch": [{"execute": {"name": "cypress-default-executor-smoke-electron-git-dir"}}]},
+		{"batch": [{"execute": {"name": "cypress-default-executor-smoke-electron-testsource"}}]},
+		{"batch": [{"execute": {"name": "cypress-default-executor-smoke-electron-testsource-git-dir"}}]},
+		{"batch": [{"execute": {"name": "cypress-default-executor-smoke-yarn"}}]},
+		{"batch": [{"execute": {"name": "cypress-default-executor-smoke-video-recording-enabled"}}]},
+		{"batch": [{"execute": {"name": "cypress-default-executor-smoke-electron-negative"}}]}
 	]
 }

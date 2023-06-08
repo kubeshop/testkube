@@ -14,7 +14,7 @@ func MapCRDToAPI(item executorv1.Executor) testkube.ExecutorUpsertRequest {
 		Name:             item.Name,
 		Namespace:        item.Namespace,
 		Labels:           item.Labels,
-		ExecutorType:     item.Spec.ExecutorType,
+		ExecutorType:     string(item.Spec.ExecutorType),
 		Types:            item.Spec.Types,
 		Uri:              item.Spec.URI,
 		Image:            item.Spec.Image,
@@ -37,7 +37,7 @@ func MapAPIToCRD(request testkube.ExecutorUpsertRequest) executorv1.Executor {
 			Labels:    request.Labels,
 		},
 		Spec: executorv1.ExecutorSpec{
-			ExecutorType:     request.ExecutorType,
+			ExecutorType:     executorv1.ExecutorType(request.ExecutorType),
 			Types:            request.Types,
 			URI:              request.Uri,
 			Image:            request.Image,
@@ -57,7 +57,7 @@ func MapExecutorCRDToExecutorDetails(item executorv1.Executor) testkube.Executor
 	return testkube.ExecutorDetails{
 		Name: item.Name,
 		Executor: &testkube.Executor{
-			ExecutorType:     item.Spec.ExecutorType,
+			ExecutorType:     string(item.Spec.ExecutorType),
 			Image:            item.Spec.Image,
 			ImagePullSecrets: mapImagePullSecretsToAPI(item.Spec.ImagePullSecrets),
 			Command:          item.Spec.Command,
@@ -156,10 +156,6 @@ func MapUpdateToSpec(request testkube.ExecutorUpdateRequest, executor *executorv
 			&executor.Namespace,
 		},
 		{
-			request.ExecutorType,
-			&executor.Spec.ExecutorType,
-		},
-		{
 			request.Image,
 			&executor.Spec.Image,
 		},
@@ -177,6 +173,10 @@ func MapUpdateToSpec(request testkube.ExecutorUpdateRequest, executor *executorv
 		if field.source != nil {
 			*field.destination = *field.source
 		}
+	}
+
+	if request.ExecutorType != nil {
+		executor.Spec.ExecutorType = executorv1.ExecutorType(*request.ExecutorType)
 	}
 
 	var slices = []struct {

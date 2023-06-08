@@ -6,6 +6,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/repository/config"
+	"github.com/kubeshop/testkube/pkg/utils"
+
 	"github.com/kubeshop/testkube/pkg/repository/result"
 
 	"github.com/kubeshop/testkube/pkg/version"
@@ -20,7 +23,6 @@ import (
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/config"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -54,8 +56,11 @@ func NewContainerExecutor(
 	metrics ExecutionCounter,
 	emiter EventEmitter,
 	configMap config.Repository,
-	executorsClient *executorsclientv1.ExecutorsClient,
+	executorsClient executorsclientv1.Interface,
 	testsClient testsv3.Interface,
+	registry string,
+	podStartTimeout time.Duration,
+	clusterID string,
 ) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -73,8 +78,11 @@ func NewContainerExecutor(
 		serviceAccountName: serviceAccountName,
 		metrics:            metrics,
 		emitter:            emiter,
-		executorsClient:    executorsClient,
 		testsClient:        testsClient,
+		executorsClient:    executorsClient,
+		registry:           registry,
+		podStartTimeout:    podStartTimeout,
+		clusterID:          clusterID,
 	}, nil
 }
 
@@ -93,9 +101,12 @@ type ContainerExecutor struct {
 	metrics            ExecutionCounter
 	emitter            EventEmitter
 	configMap          config.Repository
-	executorsClient    *executorsclientv1.ExecutorsClient
 	serviceAccountName string
 	testsClient        testsv3.Interface
+	executorsClient    executorsclientv1.Interface
+	registry           string
+	podStartTimeout    time.Duration
+	clusterID          string
 }
 
 type JobOptions struct {
@@ -128,6 +139,11 @@ type JobOptions struct {
 	DelaySeconds              int
 	JobTemplateExtensions     string
 	ScraperTemplateExtensions string
+	EnvConfigMaps             []testkube.EnvReference
+	EnvSecrets                []testkube.EnvReference
+	Labels                    map[string]string
+	Registry                  string
+	ClusterID                 string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -161,14 +177,15 @@ func (c *ContainerExecutor) Logs(ctx context.Context, id string) (out chan outpu
 		}
 
 		ids := []string{id}
-		if supportArtifacts && execution.ArtifactRequest != nil {
+		if supportArtifacts && execution.ArtifactRequest != nil &&
+			execution.ArtifactRequest.StorageClassName != "" {
 			ids = append(ids, id+"-scraper")
 		}
 
 		for _, podName := range ids {
 			logs := make(chan []byte)
 
-			if err := TailJobLogs(ctx, c.log, c.clientSet, c.namespace, podName, logs); err != nil {
+			if err := TailJobLogs(ctx, c.log, c.clientSet, c.namespace, podName, c.podStartTimeout, logs); err != nil {
 				out <- output.NewOutputError(err)
 				return
 			}
@@ -262,12 +279,13 @@ func (c *ContainerExecutor) ExecuteSync(ctx context.Context, execution *testkube
 func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
 	jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
 
-	jobOptions, err := NewJobOptions(c.images, c.templates, c.serviceAccountName, execution, options)
+	jobOptions, err := NewJobOptions(c.images, c.templates, c.serviceAccountName, c.registry, c.clusterID, execution, options)
 	if err != nil {
 		return nil, err
 	}
 
-	if jobOptions.ArtifactRequest != nil {
+	if jobOptions.ArtifactRequest != nil &&
+		jobOptions.ArtifactRequest.StorageClassName != "" {
 		c.log.Debug("creating persistent volume claim with options", "options", jobOptions)
 		pvcsClient := c.clientSet.CoreV1().PersistentVolumeClaims(c.namespace)
 		pvcSpec, err := NewPersistentVolumeClaimSpec(c.log, jobOptions)
@@ -304,11 +322,16 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	// save stop time and final state
 	defer c.stopExecution(ctx, execution, execution.ExecutionResult)
 
-	// wait for complete
-	l.Debug("poll immediate waiting for executor pod to succeed")
-	if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.clientSet, executorPod.Name, c.namespace)); err != nil {
+	// wait for pod
+	l.Debug("poll immediate waiting for executor pod")
+	if err = wait.PollImmediate(pollInterval, c.podStartTimeout, executor.IsPodLoggable(ctx, c.clientSet, executorPod.Name, c.namespace)); err != nil {
+		l.Errorw("waiting for executor pod started error", "error", err)
+	} else if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.clientSet, executorPod.Name, c.namespace)); err != nil {
 		// continue on poll err and try to get logs later
 		l.Errorw("waiting for executor pod complete error", "error", err)
+	}
+	if err != nil {
+		execution.ExecutionResult.Err(err)
 	}
 	l.Debug("poll executor immediate end")
 
@@ -320,7 +343,8 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	}
 
 	var scraperLogs []byte
-	if jobOptions.ArtifactRequest != nil {
+	if jobOptions.ArtifactRequest != nil &&
+		jobOptions.ArtifactRequest.StorageClassName != "" {
 		c.log.Debug("creating scraper job with options", "options", jobOptions)
 		jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
 		scraperSpec, err := NewScraperJobSpec(c.log, jobOptions)
@@ -343,7 +367,9 @@ func (c *ContainerExecutor) updateResultsFromPod(
 		for _, scraperPod := range scraperPods.Items {
 			if scraperPod.Status.Phase != corev1.PodRunning && scraperPod.Labels["job-name"] == scraperPodName {
 				l.Debug("poll immediate waiting for scraper pod to succeed")
-				if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.clientSet, scraperPod.Name, c.namespace)); err != nil {
+				if err = wait.PollImmediate(pollInterval, c.podStartTimeout, executor.IsPodLoggable(ctx, c.clientSet, scraperPod.Name, c.namespace)); err != nil {
+					l.Errorw("waiting for scraper pod started error", "error", err)
+				} else if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.clientSet, scraperPod.Name, c.namespace)); err != nil {
 					// continue on poll err and try to get logs later
 					l.Errorw("waiting for scraper pod complete error", "error", err)
 				}
@@ -400,6 +426,10 @@ func (c *ContainerExecutor) updateResultsFromPod(
 
 	executorLogs = append(executorLogs, scraperLogs...)
 	execution.ExecutionResult.Output = string(executorLogs)
+
+	if execution.ExecutionResult.IsFailed() && execution.ExecutionResult.ErrorMessage == "" {
+		execution.ExecutionResult.ErrorMessage = executor.GetPodErrorMessage(latestExecutorPod)
+	}
 
 	l.Infow("container execution completed saving result", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
 	err = c.repository.UpdateResult(ctx, execution.Id, *execution)
@@ -493,42 +523,51 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testku
 func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOptions {
 	// for args, command and image, HTTP request takes priority, then test spec, then executor
 	var args []string
-	switch {
-	case len(options.Request.Args) != 0:
+	argsMode := options.Request.ArgsMode
+	if options.TestSpec.ExecutionRequest != nil && argsMode == "" {
+		argsMode = string(options.TestSpec.ExecutionRequest.ArgsMode)
+	}
+
+	if argsMode == string(testkube.ArgsModeTypeAppend) || argsMode == "" {
 		args = options.Request.Args
+		if options.TestSpec.ExecutionRequest != nil && len(args) == 0 {
+			args = options.TestSpec.ExecutionRequest.Args
+		}
 
-	case options.TestSpec.ExecutionRequest != nil &&
-		len(options.TestSpec.ExecutionRequest.Args) != 0:
-		args = options.TestSpec.ExecutionRequest.Args
+		args = append(options.ExecutorSpec.Args, args...)
+	}
 
-	case len(options.ExecutorSpec.Command) != 0:
-		args = options.ExecutorSpec.Args
+	if argsMode == string(testkube.ArgsModeTypeOverride) {
+		args = options.Request.Args
+		if options.TestSpec.ExecutionRequest != nil && len(args) == 0 {
+			args = options.TestSpec.ExecutionRequest.Args
+		}
 	}
 
 	var command []string
 	switch {
-	case len(options.Request.Command) != 0:
-		command = options.Request.Command
+	case len(options.ExecutorSpec.Command) != 0:
+		command = options.ExecutorSpec.Command
 
 	case options.TestSpec.ExecutionRequest != nil &&
 		len(options.TestSpec.ExecutionRequest.Command) != 0:
 		command = options.TestSpec.ExecutionRequest.Command
 
-	case len(options.ExecutorSpec.Command) != 0:
-		command = options.ExecutorSpec.Command
+	case len(options.Request.Command) != 0:
+		command = options.Request.Command
 	}
 
 	var image string
 	switch {
-	case options.Request.Image != "":
-		image = options.Request.Image
+	case options.ExecutorSpec.Image != "":
+		image = options.ExecutorSpec.Image
 
 	case options.TestSpec.ExecutionRequest != nil &&
 		options.TestSpec.ExecutionRequest.Image != "":
 		image = options.TestSpec.ExecutionRequest.Image
 
-	case options.ExecutorSpec.Image != "":
-		image = options.ExecutorSpec.Image
+	case options.Request.Image != "":
+		image = options.Request.Image
 	}
 
 	var workingDir string
@@ -564,6 +603,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		WorkingDir:                workingDir,
 		TestName:                  options.TestName,
 		Namespace:                 options.Namespace,
+		Envs:                      options.Request.Envs,
 		SecretEnvs:                options.Request.SecretEnvs,
 		HTTPProxy:                 options.Request.HttpProxy,
 		HTTPSProxy:                options.Request.HttpsProxy,
@@ -573,8 +613,16 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		ActiveDeadlineSeconds:     options.Request.ActiveDeadlineSeconds,
 		ArtifactRequest:           artifactRequest,
 		DelaySeconds:              jobDelaySeconds,
+		JobTemplate:               options.ExecutorSpec.JobTemplate,
 		JobTemplateExtensions:     options.Request.JobTemplate,
 		ScraperTemplateExtensions: options.Request.ScraperTemplate,
+		EnvConfigMaps:             options.Request.EnvConfigMaps,
+		EnvSecrets:                options.Request.EnvSecrets,
+		Labels: map[string]string{
+			testkube.TestLabelTestType: utils.SanitizeName(options.TestSpec.Type_),
+			testkube.TestLabelExecutor: options.ExecutorName,
+			testkube.TestLabelTestName: options.TestName,
+		},
 	}
 }
 

@@ -1,10 +1,24 @@
 package common
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
+
+func hasGitParamsInCmd(cmd *cobra.Command) bool {
+	var fields = []string{"git-uri", "git-branch", "git-commit", "git-path", "git-username", "git-token",
+		"git-username-secret", "git-token-secret", "git-working-dir", "git-certificate-secret", "git-auth-type"}
+	for _, field := range fields {
+		if cmd.Flag(field).Changed {
+			return true
+		}
+	}
+
+	return false
+}
 
 // NewRepositoryFromFlags creates repository from command flags
 func NewRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository, err error) {
@@ -24,16 +38,11 @@ func NewRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository
 		return nil, err
 	}
 
-	gitCertificateSecret, err := cmd.Flags().GetString("git-certificate-secret")
-	if err != nil {
-		return nil, err
-	}
-
 	gitWorkingDir := cmd.Flag("git-working-dir").Value.String()
+	gitCertificateSecret := cmd.Flag("git-certificate-secret").Value.String()
+	gitAuthType := cmd.Flag("git-auth-type").Value.String()
 
-	hasGitParams := gitBranch != "" || gitCommit != "" || gitPath != "" || gitUri != "" || gitToken != "" || gitUsername != "" ||
-		len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0 || gitWorkingDir != "" || gitCertificateSecret != ""
-
+	hasGitParams := hasGitParamsInCmd(cmd)
 	if !hasGitParams {
 		return nil, nil
 	}
@@ -48,6 +57,7 @@ func NewRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository
 		Token:             gitToken,
 		CertificateSecret: gitCertificateSecret,
 		WorkingDir:        gitWorkingDir,
+		AuthType:          gitAuthType,
 	}
 
 	for key, val := range gitUsernameSecret {
@@ -103,6 +113,14 @@ func NewRepositoryUpdateFromFlags(cmd *cobra.Command) (repository *testkube.Repo
 			"git-working-dir",
 			&repository.WorkingDir,
 		},
+		{
+			"git-certificate-secret",
+			&repository.CertificateSecret,
+		},
+		{
+			"git-auth-type",
+			&repository.AuthType,
+		},
 	}
 
 	var nonEmpty bool
@@ -152,4 +170,66 @@ func NewRepositoryUpdateFromFlags(cmd *cobra.Command) (repository *testkube.Repo
 	}
 
 	return nil, nil
+}
+
+// ValidateUpsertOptions validates upsert options
+func ValidateUpsertOptions(cmd *cobra.Command, sourceName string) error {
+	gitUri := cmd.Flag("git-uri").Value.String()
+	gitBranch := cmd.Flag("git-branch").Value.String()
+	gitCommit := cmd.Flag("git-commit").Value.String()
+	gitUsername := cmd.Flag("git-username").Value.String()
+	gitToken := cmd.Flag("git-token").Value.String()
+	gitUsernameSecret, err := cmd.Flags().GetStringToString("git-username-secret")
+	if err != nil {
+		return err
+	}
+
+	gitTokenSecret, err := cmd.Flags().GetStringToString("git-token-secret")
+	if err != nil {
+		return err
+	}
+
+	gitAuthType := cmd.Flag("git-auth-type").Value.String()
+	file := cmd.Flag("file").Value.String()
+	uri := cmd.Flag("uri").Value.String()
+
+	hasGitParams := hasGitParamsInCmd(cmd)
+	if hasGitParams && uri != "" {
+		return fmt.Errorf("found git params and `--uri` flag, please use `--git-uri` for git based repo or `--uri` without git based params")
+	}
+
+	if hasGitParams && file != "" {
+		return fmt.Errorf("found git params and `--file` flag, please use `--git-uri` for git based repo or `--file` without git based params")
+	}
+
+	if file != "" && uri != "" {
+		return fmt.Errorf("please pass only one of `--file` and `--uri`")
+	}
+
+	if hasGitParams {
+		if gitUri == "" && sourceName == "" {
+			return fmt.Errorf("please pass valid `--git-uri` flag")
+		}
+		if gitBranch != "" && gitCommit != "" {
+			return fmt.Errorf("please pass only one of `--git-branch` or `--git-commit`")
+		}
+	}
+
+	if len(gitUsernameSecret) > 1 {
+		return fmt.Errorf("please pass only one secret reference for git username")
+	}
+
+	if len(gitTokenSecret) > 1 {
+		return fmt.Errorf("please pass only one secret reference for git token")
+	}
+
+	if gitAuthType != string(testkube.GitAuthTypeBasic) && gitAuthType != string(testkube.GitAuthTypeHeader) {
+		return fmt.Errorf("please pass one of `basic` or `header` for git auth type")
+	}
+
+	if (gitUsername != "" || gitToken != "") && (len(gitUsernameSecret) > 0 || len(gitTokenSecret) > 0) {
+		return fmt.Errorf("please pass only one auth method for git repository")
+	}
+
+	return nil
 }

@@ -13,6 +13,7 @@ import (
 )
 
 type MessageArgs struct {
+	ExecutionID   string
 	ExecutionName string
 	EventType     string
 	Namespace     string
@@ -92,7 +93,10 @@ func (s *Notifier) SendEvent(event *testkube.Event) error {
 			}
 
 			if err != nil {
-				log.DefaultLogger.Warnw("error while posting message to channel", "channelID", channelID, "error", err.Error())
+				log.DefaultLogger.Warnw("error while posting message to channel",
+					"channelID", channelID,
+					"error", err.Error(),
+					"slackMessageOptions", slack.MsgOptionBlocks(message.Blocks.BlockSet...))
 				return err
 			}
 
@@ -150,7 +154,7 @@ func (s *Notifier) composeMessage(event *testkube.Event) (view *slack.Message, n
 	view = &slack.Message{}
 	err = json.Unmarshal(message, view)
 	if err != nil {
-		log.DefaultLogger.Warnw("error while creating slack specific message", "error", err.Error())
+		log.DefaultLogger.Warnw("error while creating slack specific message", "error", err.Error(), "message", string(message))
 		return nil, "", err
 	}
 
@@ -165,6 +169,7 @@ func (s *Notifier) composeTestsuiteMessage(execution *testkube.TestSuiteExecutio
 	}
 
 	args := MessageArgs{
+		ExecutionID:   execution.Id,
 		ExecutionName: execution.Name,
 		EventType:     string(eventType),
 		Namespace:     execution.TestSuite.Namespace,
@@ -184,7 +189,7 @@ func (s *Notifier) composeTestsuiteMessage(execution *testkube.TestSuiteExecutio
 	var message bytes.Buffer
 	err = t.Execute(&message, args)
 	if err != nil {
-		log.DefaultLogger.Warnw("error while executing slack template", "error", err.Error())
+		log.DefaultLogger.Warnw("error while executing slack template", "error", err.Error(), "template", s.messageTemplate, "args", args)
 		return nil, err
 	}
 	return message.Bytes(), nil
@@ -193,11 +198,12 @@ func (s *Notifier) composeTestsuiteMessage(execution *testkube.TestSuiteExecutio
 func (s *Notifier) composeTestMessage(execution *testkube.Execution, eventType testkube.EventType) ([]byte, error) {
 	t, err := template.New("message").Parse(s.messageTemplate)
 	if err != nil {
-		log.DefaultLogger.Warnw("error while parsing slack template", "error", err.Error())
+		log.DefaultLogger.Warnw("error while parsing slack template", "error", err.Error(), "template", s.messageTemplate)
 		return nil, err
 	}
 
 	args := MessageArgs{
+		ExecutionID:   execution.Id,
 		ExecutionName: execution.Name,
 		EventType:     string(eventType),
 		Namespace:     execution.TestNamespace,
@@ -217,7 +223,7 @@ func (s *Notifier) composeTestMessage(execution *testkube.Execution, eventType t
 	var message bytes.Buffer
 	err = t.Execute(&message, args)
 	if err != nil {
-		log.DefaultLogger.Warnw("error while executing slack template", "error", err.Error())
+		log.DefaultLogger.Warnw("error while executing slack template", "error", err.Error(), "template", s.messageTemplate, "args", args)
 		return nil, err
 	}
 	return message.Bytes(), nil

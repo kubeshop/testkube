@@ -22,8 +22,6 @@ func NewRunTestSuiteCmd() *cobra.Command {
 		variables                map[string]string
 		secretVariables          map[string]string
 		executionLabels          map[string]string
-		downloadArtifactsEnabled bool
-		downloadDir              string
 		selectors                []string
 		concurrencyLevel         int
 		httpProxy, httpsProxy    string
@@ -32,6 +30,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 		gitCommit                string
 		gitPath                  string
 		gitWorkingDir            string
+		runningContext           string
 	)
 
 	cmd := &cobra.Command{
@@ -46,14 +45,18 @@ func NewRunTestSuiteCmd() *cobra.Command {
 
 			var executions []testkube.TestSuiteExecution
 
-			variables, err := common.CreateVariables(cmd)
+			variables, err := common.CreateVariables(cmd, false)
 			ui.WarnOnError("getting variables", err)
 			options := apiv1.ExecuteTestSuiteOptions{
 				ExecutionVariables: variables,
 				HTTPProxy:          httpProxy,
 				HTTPSProxy:         httpsProxy,
 				ExecutionLabels:    executionLabels,
-				ConcurrencyLevel:   int32(concurrencyLevel),
+				RunningContext: &testkube.RunningContext{
+					Type_:   string(testkube.RunningContextTypeUserCLI),
+					Context: runningContext,
+				},
+				ConcurrencyLevel: int32(concurrencyLevel),
 			}
 
 			if gitBranch != "" || gitCommit != "" || gitPath != "" || gitWorkingDir != "" {
@@ -124,8 +127,6 @@ func NewRunTestSuiteCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&variables, "variable", "v", map[string]string{}, "execution variables passed to executor")
 	cmd.Flags().StringToStringVarP(&secretVariables, "secret-variable", "s", map[string]string{}, "execution variables passed to executor")
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
-	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
-	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "download artifacts automatically")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().IntVar(&concurrencyLevel, "concurrency", 10, "concurrency level for multiple test suite execution")
 	cmd.Flags().StringVar(&httpProxy, "http-proxy", "", "http proxy for executor containers")
@@ -136,6 +137,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitCommit, "git-commit", "", "", "if uri is git repository we can use commit id (sha) parameter")
 	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
 	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
+	cmd.Flags().StringVar(&runningContext, "context", "", "running context description for test suite execution")
 
 	return cmd
 }

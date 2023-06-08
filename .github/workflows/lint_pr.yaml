@@ -1,4 +1,4 @@
-name: "Linting"
+name: "Linting pr"
 
 on:
   pull_request_target:

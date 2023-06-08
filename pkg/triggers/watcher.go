@@ -5,6 +5,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	appsinformerv1 "k8s.io/client-go/informers/apps/v1"
 	coreinformerv1 "k8s.io/client-go/informers/core/v1"
 	networkinginformerv1 "k8s.io/client-go/informers/networking/v1"
@@ -30,48 +31,46 @@ import (
 )
 
 type k8sInformers struct {
-	podInformer          coreinformerv1.PodInformer
-	deploymentInformer   appsinformerv1.DeploymentInformer
-	daemonsetInformer    appsinformerv1.DaemonSetInformer
-	statefulsetInformer  appsinformerv1.StatefulSetInformer
-	serviceInformer      coreinformerv1.ServiceInformer
-	ingressInformer      networkinginformerv1.IngressInformer
-	clusterEventInformer coreinformerv1.EventInformer
-	testTriggerInformer  testkubeinformerv1.TestTriggerInformer
-	testSuiteInformer    testkubeinformerv3.TestSuiteInformer
-	testInformer         testkubeinformerv3.TestInformer
-	configMapInformer    coreinformerv1.ConfigMapInformer
+	podInformers          []coreinformerv1.PodInformer
+	deploymentInformers   []appsinformerv1.DeploymentInformer
+	daemonsetInformers    []appsinformerv1.DaemonSetInformer
+	statefulsetInformers  []appsinformerv1.StatefulSetInformer
+	serviceInformers      []coreinformerv1.ServiceInformer
+	ingressInformers      []networkinginformerv1.IngressInformer
+	clusterEventInformers []coreinformerv1.EventInformer
+	configMapInformers    []coreinformerv1.ConfigMapInformer
+
+	testTriggerInformer testkubeinformerv1.TestTriggerInformer
+	testSuiteInformer   testkubeinformerv3.TestSuiteInformer
+	testInformer        testkubeinformerv3.TestInformer
 }
 
-func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned.Interface) *k8sInformers {
-	f := informers.NewSharedInformerFactory(clientset, 0)
-	podInformer := f.Core().V1().Pods()
-	deploymentInformer := f.Apps().V1().Deployments()
-	daemonsetInformer := f.Apps().V1().DaemonSets()
-	statefulsetInformer := f.Apps().V1().StatefulSets()
-	serviceInformer := f.Core().V1().Services()
-	ingressInformer := f.Networking().V1().Ingresses()
-	clusterEventInformer := f.Core().V1().Events()
-	configMapInformer := f.Core().V1().ConfigMaps()
-
-	testkubeInformerFactory := externalversions.NewSharedInformerFactory(testKubeClientset, 0)
-	testTriggerInformer := testkubeInformerFactory.Tests().V1().TestTriggers()
-	testSuiteInformer := testkubeInformerFactory.Tests().V3().TestSuites()
-	testInformer := testkubeInformerFactory.Tests().V3().Tests()
-
-	return &k8sInformers{
-		podInformer:          podInformer,
-		deploymentInformer:   deploymentInformer,
-		daemonsetInformer:    daemonsetInformer,
-		statefulsetInformer:  statefulsetInformer,
-		serviceInformer:      serviceInformer,
-		ingressInformer:      ingressInformer,
-		clusterEventInformer: clusterEventInformer,
-		testTriggerInformer:  testTriggerInformer,
-		testSuiteInformer:    testSuiteInformer,
-		testInformer:         testInformer,
-		configMapInformer:    configMapInformer,
+func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned.Interface,
+	testkubeNamespace string, watcherNamespaces []string) *k8sInformers {
+	var k8sInformers k8sInformers
+	if len(watcherNamespaces) == 0 {
+		watcherNamespaces = append(watcherNamespaces, v1.NamespaceAll)
 	}
+
+	for _, namespace := range watcherNamespaces {
+		f := informers.NewSharedInformerFactoryWithOptions(clientset, 0, informers.WithNamespace(namespace))
+		k8sInformers.podInformers = append(k8sInformers.podInformers, f.Core().V1().Pods())
+		k8sInformers.deploymentInformers = append(k8sInformers.deploymentInformers, f.Apps().V1().Deployments())
+		k8sInformers.daemonsetInformers = append(k8sInformers.daemonsetInformers, f.Apps().V1().DaemonSets())
+		k8sInformers.statefulsetInformers = append(k8sInformers.statefulsetInformers, f.Apps().V1().StatefulSets())
+		k8sInformers.serviceInformers = append(k8sInformers.serviceInformers, f.Core().V1().Services())
+		k8sInformers.ingressInformers = append(k8sInformers.ingressInformers, f.Networking().V1().Ingresses())
+		k8sInformers.clusterEventInformers = append(k8sInformers.clusterEventInformers, f.Core().V1().Events())
+		k8sInformers.configMapInformers = append(k8sInformers.configMapInformers, f.Core().V1().ConfigMaps())
+	}
+
+	testkubeInformerFactory := externalversions.NewSharedInformerFactoryWithOptions(
+		testKubeClientset, 0, externalversions.WithNamespace(testkubeNamespace))
+	k8sInformers.testTriggerInformer = testkubeInformerFactory.Tests().V1().TestTriggers()
+	k8sInformers.testSuiteInformer = testkubeInformerFactory.Tests().V3().TestSuites()
+	k8sInformers.testInformer = testkubeInformerFactory.Tests().V3().Tests()
+
+	return &k8sInformers
 }
 
 func (s *Service) runWatcher(ctx context.Context, leaseChan chan bool) {
@@ -97,7 +96,7 @@ func (s *Service) runWatcher(ctx context.Context, leaseChan chan bool) {
 			} else {
 				if !running {
 					s.logger.Infof("trigger service: instance %s in cluster %s acquired lease", s.identifier, s.clusterID)
-					s.informers = newK8sInformers(s.clientset, s.testKubeClientset)
+					s.informers = newK8sInformers(s.clientset, s.testKubeClientset, s.testkubeNamespace, s.watcherNamespaces)
 					stopChan = make(chan struct{})
 					s.runInformers(ctx, stopChan)
 					running = true
@@ -112,40 +111,89 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 		s.logger.Errorf("trigger service: error running k8s informers: informers are nil")
 		return
 	}
-	s.informers.podInformer.Informer().AddEventHandler(s.podEventHandler(ctx))
-	s.informers.deploymentInformer.Informer().AddEventHandler(s.deploymentEventHandler(ctx))
-	s.informers.daemonsetInformer.Informer().AddEventHandler(s.daemonSetEventHandler(ctx))
-	s.informers.statefulsetInformer.Informer().AddEventHandler(s.statefulSetEventHandler(ctx))
-	s.informers.serviceInformer.Informer().AddEventHandler(s.serviceEventHandler(ctx))
-	s.informers.ingressInformer.Informer().AddEventHandler(s.ingressEventHandler(ctx))
-	s.informers.clusterEventInformer.Informer().AddEventHandler(s.clusterEventEventHandler(ctx))
+
+	for i := range s.informers.podInformers {
+		s.informers.podInformers[i].Informer().AddEventHandler(s.podEventHandler(ctx))
+	}
+
+	for i := range s.informers.deploymentInformers {
+		s.informers.deploymentInformers[i].Informer().AddEventHandler(s.deploymentEventHandler(ctx))
+	}
+
+	for i := range s.informers.daemonsetInformers {
+		s.informers.daemonsetInformers[i].Informer().AddEventHandler(s.daemonSetEventHandler(ctx))
+	}
+
+	for i := range s.informers.statefulsetInformers {
+		s.informers.statefulsetInformers[i].Informer().AddEventHandler(s.statefulSetEventHandler(ctx))
+	}
+
+	for i := range s.informers.serviceInformers {
+		s.informers.serviceInformers[i].Informer().AddEventHandler(s.serviceEventHandler(ctx))
+	}
+
+	for i := range s.informers.ingressInformers {
+		s.informers.ingressInformers[i].Informer().AddEventHandler(s.ingressEventHandler(ctx))
+	}
+
+	for i := range s.informers.clusterEventInformers {
+		s.informers.clusterEventInformers[i].Informer().AddEventHandler(s.clusterEventEventHandler(ctx))
+	}
+
+	for i := range s.informers.configMapInformers {
+		s.informers.configMapInformers[i].Informer().AddEventHandler(s.configMapEventHandler(ctx))
+	}
+
 	s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler())
 	s.informers.testSuiteInformer.Informer().AddEventHandler(s.testSuiteEventHandler())
 	s.informers.testInformer.Informer().AddEventHandler(s.testEventHandler())
-	s.informers.configMapInformer.Informer().AddEventHandler(s.configMapEventHandler(ctx))
 
-	s.logger.Debugf("trigger service: starting pod informer")
-	go s.informers.podInformer.Informer().Run(stop)
-	s.logger.Debugf("trigger service: starting deployment informer")
-	go s.informers.deploymentInformer.Informer().Run(stop)
-	s.logger.Debugf("trigger service: starting daemonset informer")
-	go s.informers.daemonsetInformer.Informer().Run(stop)
-	s.logger.Debugf("trigger service: starting statefulset informer")
-	go s.informers.statefulsetInformer.Informer().Run(stop)
-	s.logger.Debugf("trigger service: starting service informer")
-	go s.informers.serviceInformer.Informer().Run(stop)
-	s.logger.Debugf("trigger service: starting ingress informer")
-	go s.informers.ingressInformer.Informer().Run(stop)
-	s.logger.Debugf("trigger service: starting cluster event informer")
-	go s.informers.clusterEventInformer.Informer().Run(stop)
+	s.logger.Debugf("trigger service: starting pod informers")
+	for i := range s.informers.podInformers {
+		go s.informers.podInformers[i].Informer().Run(stop)
+	}
+
+	s.logger.Debugf("trigger service: starting deployment informers")
+	for i := range s.informers.deploymentInformers {
+		go s.informers.deploymentInformers[i].Informer().Run(stop)
+	}
+
+	s.logger.Debugf("trigger service: starting daemonset informers")
+	for i := range s.informers.daemonsetInformers {
+		go s.informers.daemonsetInformers[i].Informer().Run(stop)
+	}
+
+	s.logger.Debugf("trigger service: starting statefulset informers")
+	for i := range s.informers.statefulsetInformers {
+		go s.informers.statefulsetInformers[i].Informer().Run(stop)
+	}
+
+	s.logger.Debugf("trigger service: starting service informers")
+	for i := range s.informers.serviceInformers {
+		go s.informers.serviceInformers[i].Informer().Run(stop)
+	}
+
+	s.logger.Debugf("trigger service: starting ingress informers")
+	for i := range s.informers.ingressInformers {
+		go s.informers.ingressInformers[i].Informer().Run(stop)
+	}
+
+	s.logger.Debugf("trigger service: starting cluster event informers")
+	for i := range s.informers.clusterEventInformers {
+		go s.informers.clusterEventInformers[i].Informer().Run(stop)
+	}
+
+	s.logger.Debugf("trigger service: starting config map informers")
+	for i := range s.informers.configMapInformers {
+		go s.informers.configMapInformers[i].Informer().Run(stop)
+	}
+
 	s.logger.Debugf("trigger service: starting test trigger informer")
 	go s.informers.testTriggerInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting test suite informer")
 	go s.informers.testSuiteInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting test informer")
 	go s.informers.testInformer.Informer().Run(stop)
-	s.logger.Debugf("trigger service: starting config map informer")
-	go s.informers.configMapInformer.Informer().Run(stop)
 }
 
 func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {
@@ -652,6 +700,18 @@ func (s *Service) testEventHandler() cache.ResourceEventHandlerFuncs {
 				test.Namespace, test.Name,
 			)
 			s.addTest(test)
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			test, ok := newObj.(*testsv3.Test)
+			if !ok {
+				s.logger.Errorf("failed to process update test event due to it being an unexpected type, received type %+v", newObj)
+				return
+			}
+			s.logger.Debugf(
+				"trigger service: watcher component: updating test %s/%s",
+				test.Namespace, test.Name,
+			)
+			s.updateTest(test)
 		},
 	}
 }

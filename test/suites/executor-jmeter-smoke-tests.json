@@ -3,6 +3,8 @@
 	"description": "jmeter executor smoke tests",
 	"steps": [
 		{"batch": [{"execute": {"name": "jmeter-executor-smoke"}}]},
-		{"batch": [{"execute": {"name": "jmeter-executor-smoke-negative"}}]}
+		{"batch": [{"execute": {"name": "jmeter-executor-smoke-directory"}}]},
+		{"batch": [{"execute": {"name": "jmeter-executor-smoke-negative"}}]},
+		{"batch": [{"execute": {"name": "jmeter-executor-smoke-env-and-property-values"}}]}
 	]
 }

@@ -29,7 +29,7 @@ func MapCRDToAPI(crd *testsv1.TestTrigger) testkube.TestTrigger {
 		Labels:           crd.Labels,
 		Resource:         &resource,
 		ResourceSelector: mapSelectorFromCRD(crd.Spec.ResourceSelector),
-		Event:            crd.Spec.Event,
+		Event:            string(crd.Spec.Event),
 		ConditionSpec:    mapConditionSpecFromCRD(crd.Spec.ConditionSpec),
 		Action:           &action,
 		Execution:        &execution,
@@ -77,6 +77,7 @@ func mapConditionSpecFromCRD(conditionSpec *testsv1.TestTriggerConditionSpec) *t
 			Type_:  condition.Type_,
 			Status: (*testkube.TestTriggerConditionStatuses)(condition.Status),
 			Reason: condition.Reason,
+			Ttl:    condition.Ttl,
 		})
 	}
 

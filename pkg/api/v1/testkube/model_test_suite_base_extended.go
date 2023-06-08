@@ -65,5 +65,9 @@ func (t *TestSuite) QuoteTestSuiteTextFields() {
 				t.ExecutionRequest.Variables[key] = value
 			}
 		}
+
+		if t.ExecutionRequest.CronJobTemplate != "" {
+			t.ExecutionRequest.CronJobTemplate = fmt.Sprintf("%q", t.ExecutionRequest.CronJobTemplate)
+		}
 	}
 }

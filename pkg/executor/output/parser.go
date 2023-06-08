@@ -18,6 +18,16 @@ func GetLogEntry(b []byte) (out Output, err error) {
 	r := bytes.NewReader(b)
 	dec := json.NewDecoder(r)
 	err = dec.Decode(&out)
+	if err != nil {
+		return Output{
+			Type_:   TypeParsingError,
+			Content: fmt.Sprintf("ERROR can't get log entry: %s, (((%s)))", err, string(b)),
+			Time:    time.Now(),
+		}, nil
+	}
+	if out.Type_ == "" {
+		out.Type_ = TypeUnknown
+	}
 	return out, err
 }
 
@@ -54,7 +64,7 @@ func ParseRunnerOutput(b []byte) (*testkube.ExecutionResult, error) {
 			break
 		}
 		result.Err(errors.New("found result log with no content"))
-	case TypeError:
+	case TypeError, TypeParsingError:
 		result.Err(fmt.Errorf(log.Content))
 	default:
 		result.Err(fmt.Errorf("wrong log type was found as last log: %v", log))
@@ -115,6 +125,12 @@ func parseLogs(b []byte) ([]Output, error) {
 				Content: message,
 				Result:  log.Result,
 			})
+			continue
+		}
+		// skip appending log entry if log content is empty
+		// this can happen due to scraper logging progress or other libraries having internal logs
+		// and GetLogEntry returns an empty Output
+		if log.Content == "" {
 			continue
 		}
 		logs = append(logs, log)

@@ -12,9 +12,16 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 testCoverage.html
+unit-tests.xml
+unit-tests.json
+integration-tests.xml
+integration-tests.json
 
 # Dependency directories (remove the comment below to include it)
 vendor/
+
+# Node modulesz
+**/node_modules
 
 ### JetBrains
 .idea

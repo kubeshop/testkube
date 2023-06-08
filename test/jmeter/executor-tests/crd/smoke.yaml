@@ -8,12 +8,57 @@ metadata:
 spec:
   type: jmeter/test
   content:
-    type: git-file
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
       path: test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeter-executor-smoke-directory
+  namespace: testkube
+  labels:
+    core-tests: executors
+spec:
+  type: jmeter/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/jmeter/executor-tests
+  executionRequest:
+    args:
+      - "jmeter-executor-smoke.jmx"
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeter-executor-smoke-env-and-property-values
+  namespace: testkube
+  labels:
+    core-tests: executors
+spec:
+  type: jmeter/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/jmeter/executor-tests/jmeter-executor-smoke-env-and-property.jmx
+  executionRequest:
+    variables:
+      URL_ENV:
+        name: URL_ENV
+        value: "testkube.io"
+        type: basic
+    args:
+      - "-JURL_PROPERTY=testkube.io"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -25,7 +70,7 @@ metadata:
 spec:
   type: jmeter/test
   content:
-    type: git-file
+    type: git
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube.git

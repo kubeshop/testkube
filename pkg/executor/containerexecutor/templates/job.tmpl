@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ .Name }}
+  name: "{{ .Name }}"
   namespace: {{ .Namespace }}
 spec:
   {{- if gt .ActiveDeadlineSeconds 0 }}
@@ -12,8 +12,12 @@ spec:
 	    {{- if ne .InitImage "" }}
       initContainers:
       - name: {{ .Name }}-init
+        {{- if .Registry }}
+        image: {{ .Registry }}/{{ .InitImage }}
+        {{- else }}
         image: {{ .InitImage }}
-        imagePullPolicy: Always
+        {{- end }}
+        imagePullPolicy: IfNotPresent
         command:
           - "/bin/runner"
           - '{{ .Jsn }}'
@@ -25,14 +29,32 @@ spec:
           mountPath: /etc/certs
         {{- end }}
         {{- if .ArtifactRequest }}
+          {{- if .ArtifactRequest.VolumeMountPath }}
         - name: artifact-volume
           mountPath: {{ .ArtifactRequest.VolumeMountPath }}
+          {{- end }}
+        {{- end }}
+        {{- range $configmap := .EnvConfigMaps }}
+        {{- if and $configmap.Mount $configmap.Reference }}
+        - name: {{ $configmap.Reference.Name }}
+          mountPath: {{ $configmap.MountPath }}
+        {{- end }}
+        {{- end }}
+        {{- range $secret := .EnvSecrets }}
+        {{- if and $secret.Mount $secret.Reference }}
+        - name: {{ $secret.Reference.Name }}
+          mountPath: {{ $secret.MountPath }}
+        {{- end }}
         {{- end }}
       {{- end }}
       containers:
-      - name: {{ .Name }}
+      - name: "{{ .Name }}"
+        {{- if .Registry }}
+        image: {{ .Registry }}/{{ .Image }}
+        {{- else }}
         image: {{ .Image }}
-        imagePullPolicy: Always
+        {{- end }}
+        imagePullPolicy: IfNotPresent
 	    	{{- if gt (len .Command) 0 }}
         command:
         {{- range $cmd := .Command }}
@@ -56,8 +78,22 @@ spec:
           mountPath: /etc/certs
         {{- end }}
         {{- if .ArtifactRequest }}
+          {{- if .ArtifactRequest.VolumeMountPath }}
         - name: artifact-volume
           mountPath: {{ .ArtifactRequest.VolumeMountPath }}
+          {{- end }}
+        {{- end }}
+        {{- range $configmap := .EnvConfigMaps }}
+        {{- if and $configmap.Mount $configmap.Reference }}
+        - name: {{ $configmap.Reference.Name }}
+          mountPath: {{ $configmap.MountPath }}
+        {{- end }}
+        {{- end }}
+        {{- range $secret := .EnvSecrets }}
+        {{- if and $secret.Mount $secret.Reference }}
+        - name: {{ $secret.Reference.Name }}
+          mountPath: {{ $secret.MountPath }}
+        {{- end }}
         {{- end }}
       volumes:
       - name: data-volume
@@ -68,9 +104,25 @@ spec:
           secretName: {{ .CertificateSecret }}
       {{- end }}
       {{- if .ArtifactRequest }}
+        {{- if and .ArtifactRequest.VolumeMountPath .ArtifactRequest.StorageClassName }}
       - name: artifact-volume
         persistentVolumeClaim:
           claimName: {{ .Name }}-pvc
+        {{- end }}
+      {{- end }}
+      {{- range $configmap := .EnvConfigMaps }}
+      {{- if and $configmap.Mount $configmap.Reference }}
+      - name: {{ $configmap.Reference.Name }}
+        configmap:
+          name: {{ $configmap.Reference.Name }}
+      {{- end }}
+      {{- end }}
+      {{- range $secret := .EnvSecrets }}
+      {{- if and $secret.Mount $secret.Reference }}
+      - name: {{ $secret.Reference.Name }}
+        secret:
+          secretName: {{ $secret.Reference.Name }}
+      {{- end }}
       {{- end }}
       restartPolicy: Never
       {{- if .ServiceAccountName }}

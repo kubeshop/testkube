@@ -27,18 +27,16 @@ import (
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
-// GetTestSuiteHandler for getting test object
+// CreateTestSuiteHandler for getting test object
 func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to create test suite"
 		var request testkube.TestSuiteUpsertRequest
-		data := c.Body()
-		if string(c.Request().Header.ContentType()) != mediaTypeJSON {
-			return s.Error(c, http.StatusBadRequest, fiber.ErrUnprocessableEntity)
+		err := c.BodyParser(&request)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %w", errPrefix, err))
 		}
-
-		if err := json.Unmarshal(data, &request); err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
-		}
+		errPrefix = errPrefix + " " + request.Name
 
 		emptyBatch := true
 		for _, step := range request.Steps {
@@ -73,7 +71,7 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 		s.Metrics.IncCreateTestSuite(err)
 
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not create test suite: %w", errPrefix, err))
 		}
 
 		c.Status(http.StatusCreated)
@@ -84,14 +82,12 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 // UpdateTestSuiteHandler updates an existing TestSuite CR based on TestSuite content
 func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var request testkube.TestSuiteUpdateRequest
-		data := c.Body()
-		if string(c.Request().Header.ContentType()) != mediaTypeJSON {
-			return s.Error(c, http.StatusBadRequest, fiber.ErrUnprocessableEntity)
-		}
+		errPrefix := "failed to update test suite"
 
-		if err := json.Unmarshal(data, &request); err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+		var request testkube.TestSuiteUpdateRequest
+		err := c.BodyParser(&request)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %w", errPrefix, err))
 		}
 
 		if request.Steps != nil {
@@ -117,15 +113,16 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 		if request.Name != nil {
 			name = *request.Name
 		}
+		errPrefix = errPrefix + " " + name
 
 		// we need to get resource first and load its metadata.ResourceVersion
 		testSuite, err := s.TestsSuitesClient.Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return s.Error(c, http.StatusNotFound, err)
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test suite not found: %w", errPrefix, err))
 			}
 
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get test suite: %w", errPrefix, err))
 		}
 
 		// map TestSuite but load spec only to not override metadata.ResourceVersion
@@ -136,7 +133,7 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 		s.Metrics.IncUpdateTestSuite(err)
 
 		if err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not update test suite: %w", errPrefix, err))
 		}
 
 		return c.JSON(updatedTestSuite)
@@ -147,13 +144,15 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
+		errPrefix := "failed to get test suite " + name
+
 		crTestSuite, err := s.TestsSuitesClient.Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, err)
+				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: test suite not found: %w", errPrefix, err))
 			}
 
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get test suite: %w", errPrefix, err))
 		}
 
 		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
@@ -171,13 +170,14 @@ func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
+		errPrefix := fmt.Sprintf("failed to get test suite %s with execution", name)
 		crTestSuite, err := s.TestsSuitesClient.Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, err)
+				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: test suite not found: %w", errPrefix, err))
 			}
 
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get test suite: %w", errPrefix, err))
 		}
 
 		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
@@ -190,12 +190,12 @@ func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 		ctx := c.Context()
 		startExecution, startErr := s.TestExecutionResults.GetLatestByTestSuite(ctx, name, "starttime")
 		if startErr != nil && startErr != mongo.ErrNoDocuments {
-			return s.Error(c, http.StatusInternalServerError, startErr)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not get execution by start time :%w", errPrefix, startErr))
 		}
 
 		endExecution, endErr := s.TestExecutionResults.GetLatestByTestSuite(ctx, name, "endtime")
 		if endErr != nil && endErr != mongo.ErrNoDocuments {
-			return s.Error(c, http.StatusInternalServerError, endErr)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not get execution by end time :%w", errPrefix, endErr))
 		}
 
 		testSuiteWithExecution := testkube.TestSuiteWithExecution{
@@ -221,23 +221,25 @@ func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
+		errPrefix := fmt.Sprintf("failed to delete test suite %s", name)
+
 		err := s.TestsSuitesClient.Delete(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, err)
+				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: test suite not found: %w", errPrefix, err))
 			}
 
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test suite: %w", errPrefix, err))
 		}
 
 		// delete executions for test
 		if err = s.ExecutionResults.DeleteByTestSuite(c.Context(), name); err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test suite test executions: %w", errPrefix, err))
 		}
 
 		// delete executions for test suite
 		if err = s.TestExecutionResults.DeleteByTestSuite(c.Context(), name); err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test suite executions: %w", errPrefix, err))
 		}
 
 		return c.SendStatus(http.StatusNoContent)
@@ -247,16 +249,19 @@ func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 // DeleteTestSuitesHandler for deleting all TestSuites
 func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to delete test suites"
+
 		var err error
 		var testSuiteNames []string
 		selector := c.Query("selector")
 		if selector == "" {
 			err = s.TestsSuitesClient.DeleteAll()
 		} else {
-			testSuiteList, err := s.TestsSuitesClient.List(selector)
+			var testSuiteList *testsuitesv2.TestSuiteList
+			testSuiteList, err = s.TestsSuitesClient.List(selector)
 			if err != nil {
 				if !errors.IsNotFound(err) {
-					return s.Error(c, http.StatusBadGateway, err)
+					return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not list test suites: %w", errPrefix, err))
 				}
 			} else {
 				for _, item := range testSuiteList.Items {
@@ -269,10 +274,10 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, err)
+				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: test suite not found: %w", errPrefix, err))
 			}
 
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test suites: %w", errPrefix, err))
 		}
 
 		// delete all executions for tests
@@ -283,7 +288,7 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 		}
 
 		if err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not list test suite test executions: %w", errPrefix, err))
 		}
 
 		// delete all executions for test suites
@@ -294,7 +299,7 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 		}
 
 		if err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not list test suite executions: %w", errPrefix, err))
 		}
 
 		return c.SendStatus(http.StatusNoContent)
@@ -323,9 +328,11 @@ func (s TestkubeAPI) getFilteredTestSuitesList(c *fiber.Ctx) (*testsuitesv3.Test
 // ListTestSuitesHandler for getting list of all available TestSuites
 func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to list test suites"
+
 		crTestSuites, err := s.getFilteredTestSuitesList(c)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not list test suites: %w", errPrefix, err))
 		}
 
 		testSuites := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTestSuites)
@@ -345,6 +352,7 @@ func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 // TestSuiteMetricsHandler returns basic metrics for given testsuite
 func (s TestkubeAPI) TestSuiteMetricsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to get test suite metrics"
 		const (
 			DefaultLastDays = 0
 			DefaultLimit    = 0
@@ -364,7 +372,7 @@ func (s TestkubeAPI) TestSuiteMetricsHandler() fiber.Handler {
 
 		metrics, err := s.TestExecutionResults.GetTestSuiteMetrics(context.Background(), testSuiteName, limit, last)
 		if err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: failed to get metrics from client: %w", errPrefix, err))
 		}
 
 		return c.JSON(metrics)
@@ -432,9 +440,11 @@ func (s TestkubeAPI) getLatestTestSuiteExecutions(ctx context.Context, testSuite
 // ListTestSuiteWithExecutionsHandler for getting list of all available TestSuite with latest executions
 func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to list test suites with executions"
+
 		crTestSuites, err := s.getFilteredTestSuitesList(c)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not list test suites: %w", errPrefix, err))
 		}
 
 		testSuites := testsuitesmapper.MapTestSuiteListKubeToAPI(*crTestSuites)
@@ -447,16 +457,15 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 			return s.getCRDs(c, data, err)
 		}
 
-		ctx := c.Context()
 		results := make([]testkube.TestSuiteWithExecutionSummary, 0, len(testSuites))
 		testSuiteNames := make([]string, len(testSuites))
 		for i := range testSuites {
 			testSuiteNames[i] = testSuites[i].Name
 		}
 
-		executionMap, err := s.getLatestTestSuiteExecutions(ctx, testSuiteNames)
+		executionMap, err := s.getLatestTestSuiteExecutions(c.Context(), testSuiteNames)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not list test suite executions from db: %w", errPrefix, err))
 		}
 
 		for i := range testSuites {
@@ -496,7 +505,7 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 		if status != "" {
 			statusList, err := testkube.ParseTestSuiteExecutionStatusList(status, ",")
 			if err != nil {
-				return s.Error(c, http.StatusBadRequest, fmt.Errorf("test suite execution status filter invalid: %w", err))
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: test suite execution status filter invalid: %w", errPrefix, err))
 			}
 
 			statusMap := statusList.ToMap()
@@ -518,7 +527,7 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 			pageSize = testresult.PageDefaultLimit
 			page, err = strconv.Atoi(pageParam)
 			if err != nil {
-				return s.Error(c, http.StatusBadRequest, fmt.Errorf("test suite page filter invalid: %w", err))
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: test suite page filter invalid: %w", errPrefix, err))
 			}
 		}
 
@@ -526,7 +535,7 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 		if pageSizeParam != "" {
 			pageSize, err = strconv.Atoi(pageSizeParam)
 			if err != nil {
-				s.Error(c, http.StatusBadRequest, fmt.Errorf("test suite page size filter invalid: %w", err))
+				s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: test suite page size filter invalid: %w", errPrefix, err))
 			}
 		}
 
@@ -548,12 +557,11 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 
 func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		ctx := context.Background()
-
+		errPrefix := "failed to execute test suite"
 		var request testkube.TestSuiteExecutionRequest
 		err := c.BodyParser(&request)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("test execution request body invalid: %w", err))
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: test execution request body invalid: %w", errPrefix, err))
 		}
 
 		name := c.Params("id")
@@ -562,20 +570,21 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 
 		var testSuites []testsuitesv3.TestSuite
 		if name != "" {
+			errPrefix = errPrefix + " " + name
 			testSuite, err := s.TestsSuitesClient.Get(name)
 			if err != nil {
 				if errors.IsNotFound(err) {
-					return s.Warn(c, http.StatusNotFound, err)
+					return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: test suite not found: %w", errPrefix, err))
 				}
 
-				return s.Error(c, http.StatusBadGateway, err)
+				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could get test suite: %w", errPrefix, err))
 			}
 
 			testSuites = append(testSuites, *testSuite)
 		} else {
 			testSuiteList, err := s.TestsSuitesClient.List(selector)
 			if err != nil {
-				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("can't get test suites: %w", err))
+				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: can't list test suites: %w", errPrefix, err))
 			}
 
 			testSuites = append(testSuites, testSuiteList.Items...)
@@ -585,13 +594,13 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 		if len(testSuites) != 0 {
 			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", strconv.Itoa(scheduler.DefaultConcurrencyLevel)))
 			if err != nil {
-				return s.Error(c, http.StatusBadRequest, fmt.Errorf("can't detect concurrency level: %w", err))
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: can't detect concurrency level: %w", errPrefix, err))
 			}
 
 			workerpoolService := workerpool.New[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution](concurrencyLevel)
 
 			go workerpoolService.SendRequests(s.scheduler.PrepareTestSuiteRequests(testSuites, request))
-			go workerpoolService.Run(ctx)
+			go workerpoolService.Run(c.Context())
 
 			for r := range workerpoolService.GetResponses() {
 				results = append(results, r.Result)
@@ -601,7 +610,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 		s.Log.Debugw("executing test", "name", name, "selector", selector)
 		if name != "" && len(results) != 0 {
 			if results[0].IsFailed() {
-				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("Test suite failed %v", name))
+				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: Test suite failed %v", errPrefix, name))
 			}
 
 			c.Status(http.StatusCreated)
@@ -615,21 +624,22 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 
 func (s TestkubeAPI) ListTestSuiteExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		ctx := context.Background()
+		errPrefix := "failed to list test suite execution"
 		filter := getExecutionsFilterFromRequest(c)
 
+		ctx := c.Context()
 		executionsTotals, err := s.TestExecutionResults.GetExecutionsTotals(ctx, filter)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not get total executions: %w", errPrefix, err))
 		}
 		allExecutionsTotals, err := s.TestExecutionResults.GetExecutionsTotals(ctx)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not get all total executions: %w", errPrefix, err))
 		}
 
 		executions, err := s.TestExecutionResults.GetExecutions(ctx, filter)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not get executions: %w", errPrefix, err))
 		}
 
 		return c.JSON(testkube.TestSuiteExecutionsResult{
@@ -642,14 +652,15 @@ func (s TestkubeAPI) ListTestSuiteExecutionsHandler() fiber.Handler {
 
 func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		ctx := context.Background()
 		id := c.Params("executionID")
-		execution, err := s.TestExecutionResults.Get(ctx, id)
+		errPrefix := fmt.Sprintf("failed to get test suite execution %s", id)
+
+		execution, err := s.TestExecutionResults.Get(c.Context(), id)
 		if err == mongo.ErrNoDocuments {
-			return s.Error(c, http.StatusNotFound, fmt.Errorf("test suite with execution id/name %s not found", id))
+			return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test suite with execution id/name %s not found", errPrefix, id))
 		}
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not get test suite executions from db: %w", errPrefix, err))
 		}
 
 		execution.Duration = types.FormatDuration(execution.Duration)
@@ -658,13 +669,13 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 		if execution.SecretUUID != "" && execution.TestSuite != nil {
 			secretMap, err = s.TestsSuitesClient.GetSecretTestSuiteVars(execution.TestSuite.Name, execution.SecretUUID)
 			if err != nil {
-				return s.Error(c, http.StatusInternalServerError, err)
+				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get test suite secrets: %w", errPrefix, err))
 			}
 		}
 
 		for key, value := range secretMap {
 			if variable, ok := execution.Variables[key]; ok && value != "" {
-				variable.Value = string(value)
+				variable.Value = value
 				variable.SecretRef = nil
 				execution.Variables[key] = variable
 			}
@@ -674,24 +685,93 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 	}
 }
 
+func (s TestkubeAPI) ListTestSuiteArtifactsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		s.Log.Infow("listing testsuite artifacts", "executionID", c.Params("executionID"))
+		id := c.Params("executionID")
+		errPrefix := fmt.Sprintf("failed to list test suite artifacts %s", id)
+		execution, err := s.TestExecutionResults.Get(c.Context(), id)
+		if err == mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test suite with execution id/name %s not found", errPrefix, id))
+		}
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not get test suite execution from db: %w", errPrefix, err))
+		}
+
+		var artifacts []testkube.Artifact
+		for _, stepResult := range execution.StepResults {
+			if stepResult.Execution.Id == "" {
+				continue
+			}
+			stepArtifacts, err := s.artifactsStorage.ListFiles(c.Context(), stepResult.Execution.Id, stepResult.Execution.TestName, stepResult.Execution.TestSuiteName)
+			if err != nil {
+				s.Log.Warnw("can't list artifacts", "executionID", stepResult.Execution.Id, "error", err)
+				continue
+			}
+			s.Log.Debugw("listing artifacts for step", "executionID", stepResult.Execution.Id, "artifacts", stepArtifacts)
+			for i := range stepArtifacts {
+				stepArtifacts[i].ExecutionName = stepResult.Execution.Name
+				artifacts = append(artifacts, stepArtifacts[i])
+			}
+		}
+
+		if err != nil {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not list artifacts: %w", errPrefix, err))
+		}
+
+		return c.JSON(artifacts)
+	}
+}
+
+// AbortTestSuiteHandler for aborting a TestSuite with id
+func (s TestkubeAPI) AbortTestSuiteHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		name := c.Params("id")
+		if name == "" {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("failed to abort test suite: id cannot be empty"))
+		}
+		errPrefix := fmt.Sprintf("failed to abort test suite %s", name)
+		filter := testresult.NewExecutionsFilter().WithName(name).WithStatus(string(testkube.RUNNING_ExecutionStatus))
+		executions, err := s.TestExecutionResults.GetExecutions(ctx, filter)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: executions with test syute name %s not found", errPrefix, name))
+			}
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not get executions: %w", errPrefix, err))
+		}
+
+		for _, execution := range executions {
+			execution.Status = testkube.TestSuiteExecutionStatusAborting
+			err = s.TestExecutionResults.Update(c.Context(), execution)
+
+			if err != nil {
+				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not update test suite execution: %w", errPrefix, err))
+			}
+		}
+
+		return c.Status(http.StatusNoContent).SendString("")
+	}
+}
+
 func (s TestkubeAPI) AbortTestSuiteExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		s.Log.Infow("aborting test suite execution", "executionID", c.Params("executionID"))
-		ctx := context.Background()
 		id := c.Params("executionID")
-		execution, err := s.TestExecutionResults.Get(ctx, id)
+		errPrefix := fmt.Sprintf("failed to abort test suite execution %s", id)
+		execution, err := s.TestExecutionResults.Get(c.Context(), id)
 		if err == mongo.ErrNoDocuments {
-			return s.Error(c, http.StatusNotFound, fmt.Errorf("test suite with execution id/name %s not found", id))
+			return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test suite with execution id/name %s not found", errPrefix, id))
 		}
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not abort test suite execution: %w", errPrefix, err))
 		}
 
 		execution.Status = testkube.TestSuiteExecutionStatusAborting
-		err = s.TestExecutionResults.Update(ctx, execution)
+		err = s.TestExecutionResults.Update(c.Context(), execution)
 
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not update test suite execution: %w", errPrefix, err))
 		}
 
 		return c.Status(http.StatusNoContent).SendString("")
@@ -702,23 +782,24 @@ func (s TestkubeAPI) AbortTestSuiteExecutionHandler() fiber.Handler {
 func (s TestkubeAPI) ListTestSuiteTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
+		errPrefix := fmt.Sprintf("failed to list tests for test suite %s", name)
 		crTestSuite, err := s.TestsSuitesClient.Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, err)
+				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: test suite with id/name %s not found", errPrefix, name))
 			}
 
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could get test suite: %w", errPrefix, err))
 		}
 
 		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
 		crTests, err := s.TestsClient.ListByNames(testSuite.GetTestNames())
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, err)
+				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: test suite tests with id/name %s not found", errPrefix, testSuite.GetTestNames()))
 			}
 
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could get tests for test suite: %w", errPrefix, err))
 		}
 
 		return c.JSON(testsmapper.MapTestArrayKubeToAPI(crTests))

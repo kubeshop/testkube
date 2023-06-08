@@ -3,12 +3,15 @@ package agent
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/version"
 
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/encoding/gzip"
 
 	"github.com/pkg/errors"
 	"github.com/valyala/fasthttp"
@@ -23,8 +26,12 @@ import (
 
 const (
 	apiKeyMeta         = "api-key"
+	clusterIDMeta      = "cluster-id"
 	healthcheckCommand = "healthcheck"
 )
+
+// buffer up to five messages per worker
+const bufferSizePerWorker = 5
 
 func NewGRPCConnection(ctx context.Context, isInsecure bool, server string, logger *zap.SugaredLogger) (*grpc.ClientConn, error) {
 	creds := credentials.NewTLS(nil)
@@ -43,22 +50,49 @@ type Agent struct {
 	logger  *zap.SugaredLogger
 	apiKey  string
 
+	workerCount    int
+	requestBuffer  chan *cloud.ExecuteRequest
+	responseBuffer chan *cloud.ExecuteResponse
+
+	logStreamWorkerCount    int
+	logStreamRequestBuffer  chan *cloud.LogsStreamRequest
+	logStreamResponseBuffer chan *cloud.LogsStreamResponse
+	logStreamFunc           func(ctx context.Context, executionID string) (chan output.Output, error)
+
 	events              chan testkube.Event
 	sendTimeout         time.Duration
 	receiveTimeout      time.Duration
 	healthcheckInterval time.Duration
+
+	clusterID string
 }
 
-func NewAgent(logger *zap.SugaredLogger, handler fasthttp.RequestHandler, apiKey string, client cloud.TestKubeCloudAPIClient) (*Agent, error) {
+func NewAgent(logger *zap.SugaredLogger,
+	handler fasthttp.RequestHandler,
+	apiKey string,
+	client cloud.TestKubeCloudAPIClient,
+	workerCount int,
+	logStreamWorkerCount int,
+	logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error),
+	clusterID string,
+) (*Agent, error) {
 	return &Agent{
-		handler:             handler,
-		logger:              logger,
-		apiKey:              apiKey,
-		client:              client,
-		events:              make(chan testkube.Event),
-		receiveTimeout:      5 * time.Minute,
-		sendTimeout:         30 * time.Second,
-		healthcheckInterval: 30 * time.Second,
+		handler:                 handler,
+		logger:                  logger,
+		apiKey:                  apiKey,
+		client:                  client,
+		events:                  make(chan testkube.Event),
+		workerCount:             workerCount,
+		requestBuffer:           make(chan *cloud.ExecuteRequest, bufferSizePerWorker*workerCount),
+		responseBuffer:          make(chan *cloud.ExecuteResponse, bufferSizePerWorker*workerCount),
+		receiveTimeout:          5 * time.Minute,
+		sendTimeout:             30 * time.Second,
+		healthcheckInterval:     30 * time.Second,
+		logStreamWorkerCount:    logStreamWorkerCount,
+		logStreamRequestBuffer:  make(chan *cloud.LogsStreamRequest, bufferSizePerWorker*logStreamWorkerCount),
+		logStreamResponseBuffer: make(chan *cloud.LogsStreamResponse, bufferSizePerWorker*logStreamWorkerCount),
+		logStreamFunc:           logStreamFunc,
+		clusterID:               clusterID,
 	}, nil
 }
 
@@ -83,7 +117,18 @@ func (ag *Agent) run(ctx context.Context) (err error) {
 	})
 
 	g.Go(func() error {
+		return ag.runWorkers(groupCtx, ag.workerCount)
+	})
+
+	g.Go(func() error {
 		return ag.runEventLoop(groupCtx)
+	})
+
+	g.Go(func() error {
+		return ag.runLogStreamLoop(groupCtx)
+	})
+	g.Go(func() error {
+		return ag.runLogStreamWorker(groupCtx, ag.logStreamWorkerCount)
 	})
 
 	err = g.Wait()
@@ -112,7 +157,7 @@ func (ag *Agent) sendResponse(ctx context.Context, stream cloud.TestKubeCloudAPI
 
 		return ctx.Err()
 	case <-t.C:
-		return errors.New("too slow")
+		return errors.New("send response too slow")
 	}
 }
 
@@ -135,7 +180,7 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 		err := resp.err
 
 		if err != nil {
-			ag.logger.Errorf("agent stream recv: %v", err)
+			ag.logger.Errorf("agent stream receive: %v", err)
 			return nil, err
 		}
 	case <-ctx.Done():
@@ -145,7 +190,7 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 
 		return nil, ctx.Err()
 	case <-t.C:
-		return nil, errors.New("too slow")
+		return nil, errors.New("stream receive too slow")
 	}
 
 	return cmd, nil
@@ -154,80 +199,116 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 func (ag *Agent) runCommandLoop(ctx context.Context) error {
 	ctx = AddAPIKeyMeta(ctx, ag.apiKey)
 
-	//TODO figure out how to retry this method in case of network failure
+	ctx = metadata.AppendToOutgoingContext(ctx, clusterIDMeta, ag.clusterID)
 
 	ag.logger.Infow("initiating streaming connection with Cloud API")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
-	var opts []grpc.CallOption
-	stream, err := ag.client.Execute(ctx, opts...)
+	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
+	stream, err := ag.client.ExecuteAsync(ctx, opts...)
 	if err != nil {
 		ag.logger.Errorf("failed to execute: %w", err)
 		return errors.Wrap(err, "failed to setup stream")
 	}
 
-	for {
-		cmd, err := ag.receiveCommand(ctx, stream)
+	// GRPC stream have special requirements for concurrency on SendMsg, and RecvMsg calls.
+	// Please check https://github.com/grpc/grpc-go/blob/master/Documentation/concurrency.md
+	g, groupCtx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		for {
+			cmd, err := ag.receiveCommand(groupCtx, stream)
+			if err != nil {
+				return err
+			}
+
+			ag.requestBuffer <- cmd
+		}
+	})
+
+	g.Go(func() error {
+		for {
+			select {
+			case resp := <-ag.responseBuffer:
+				err := ag.sendResponse(groupCtx, stream, resp)
+				if err != nil {
+					return err
+				}
+			case <-groupCtx.Done():
+				return groupCtx.Err()
+			}
+		}
+	})
+
+	err = g.Wait()
+
+	return err
+}
+
+func (ag *Agent) runWorkers(ctx context.Context, numWorkers int) error {
+	g, groupCtx := errgroup.WithContext(ctx)
+	for i := 0; i < numWorkers; i++ {
+		g.Go(func() error {
+			for {
+				select {
+				case cmd := <-ag.requestBuffer:
+					select {
+					case ag.responseBuffer <- ag.executeCommand(groupCtx, cmd):
+					case <-groupCtx.Done():
+						return groupCtx.Err()
+					}
+				case <-groupCtx.Done():
+					return groupCtx.Err()
+				}
+			}
+		})
+	}
+	return g.Wait()
+}
+
+func (ag *Agent) executeCommand(ctx context.Context, cmd *cloud.ExecuteRequest) *cloud.ExecuteResponse {
+	switch {
+	case cmd.Url == healthcheckCommand:
+		return &cloud.ExecuteResponse{MessageId: cmd.MessageId, Status: 0}
+	default:
+		req := &fasthttp.RequestCtx{}
+		r := fasthttp.AcquireRequest()
+		r.Header.SetHost("localhost")
+		r.Header.SetMethod(cmd.Method)
+
+		for k, values := range cmd.Headers {
+			for _, value := range values.Header {
+				r.Header.Add(k, value)
+			}
+		}
+		r.SetBody(cmd.Body)
+		uri := &fasthttp.URI{}
+
+		err := uri.Parse(nil, []byte(cmd.Url))
 		if err != nil {
-			return err
+			ag.logger.Errorf("agent bad command url: %w", err)
+			resp := &cloud.ExecuteResponse{MessageId: cmd.MessageId, Status: 400, Body: []byte(fmt.Sprintf("bad command url: %s", err))}
+			return resp
 		}
-		switch {
-		case cmd.Url == healthcheckCommand:
-			resp := &cloud.ExecuteResponse{Status: 0}
+		r.SetURI(uri)
 
-			err = ag.sendResponse(ctx, stream, resp)
-			if err != nil {
-				ag.logger.Errorf("stream send: %w", err)
-				return err
+		req.Init(r, nil, nil)
+		ag.handler(req)
+
+		fasthttp.ReleaseRequest(r)
+
+		headers := make(map[string]*cloud.HeaderValue)
+		req.Response.Header.VisitAll(func(key, value []byte) {
+			_, ok := headers[string(key)]
+			if !ok {
+				headers[string(key)] = &cloud.HeaderValue{Header: []string{string(value)}}
+				return
 			}
-		default:
-			req := &fasthttp.RequestCtx{}
-			r := fasthttp.AcquireRequest()
-			r.Header.SetHost("localhost")
-			r.Header.SetMethod(cmd.Method)
 
-			for k, values := range cmd.Headers {
-				for _, value := range values.Header {
-					r.Header.Add(k, value)
-				}
-			}
-			r.SetBody(cmd.Body)
-			uri := &fasthttp.URI{}
+			headers[string(key)].Header = append(headers[string(key)].Header, string(value))
+		})
 
-			err = uri.Parse(nil, []byte(cmd.Url))
-			if err != nil {
-				ag.logger.Errorf("agent bad command url: %w", err)
-				resp := &cloud.ExecuteResponse{Status: 400, Body: []byte(fmt.Sprintf("bad command url: %s", err))}
-				if err := stream.Send(resp); err != nil {
-					ag.logger.Errorf("stream send: %w", err)
-				}
-				return err
-			}
-			r.SetURI(uri)
+		resp := &cloud.ExecuteResponse{MessageId: cmd.MessageId, Headers: headers, Status: int64(req.Response.StatusCode()), Body: req.Response.Body()}
 
-			req.Init(r, nil, nil)
-			ag.handler(req)
-
-			fasthttp.ReleaseRequest(r)
-
-			headers := make(map[string]*cloud.HeaderValue)
-			req.Response.Header.VisitAll(func(key, value []byte) {
-				_, ok := headers[string(key)]
-				if !ok {
-					headers[string(key)] = &cloud.HeaderValue{Header: []string{string(value)}}
-					return
-				}
-
-				headers[string(key)].Header = append(headers[string(key)].Header, string(value))
-			})
-
-			resp := &cloud.ExecuteResponse{Headers: headers, Status: int64(req.Response.StatusCode()), Body: req.Response.Body()}
-
-			err = ag.sendResponse(ctx, stream, resp)
-			if err != nil {
-				ag.logger.Errorf("error stream send: %w", err)
-				return err
-			}
-		}
+		return resp
 	}
 }
 

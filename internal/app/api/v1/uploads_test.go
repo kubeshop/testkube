@@ -2,7 +2,6 @@ package v1
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -10,27 +9,32 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+
+	"github.com/kubeshop/testkube/pkg/storage"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/minio/minio-go/v7"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/server"
 )
 
 func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
+	t.Parallel()
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockArtifactsStorage := storage.NewMockArtifactsStorage(mockCtrl)
+
 	app := fiber.New()
-	storage := MockStorage{}
-	storage.GetValidBucketNameFn = func(parentType string, parentName string) string {
-		return fmt.Sprintf("%s-%s", parentType, parentName)
-	}
 	s := &TestkubeAPI{
 		HTTPServer: server.HTTPServer{
 			Mux: app,
 			Log: log.DefaultLogger,
 		},
-		Storage: &storage,
+		artifactsStorage: mockArtifactsStorage,
 	}
 	route := "/uploads"
 
@@ -46,10 +50,12 @@ func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
 		expectedBucketName  string
 		expectedFileContent []byte
 		expectedObjectSize  int64
+		setupMocks          func()
 	}{
 		{
 			name:         "no file",
 			expectedCode: fiber.StatusBadRequest,
+			setupMocks:   func() {},
 		},
 		{
 			name:                "file specified on execution",
@@ -61,6 +67,10 @@ func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
 			expectedBucketName:  "execution-1",
 			expectedFileContent: []byte("first file"),
 			expectedObjectSize:  int64(10),
+			setupMocks: func() {
+				mockArtifactsStorage.EXPECT().GetValidBucketName("execution", "1").Return("execution-1")
+				mockArtifactsStorage.EXPECT().UploadFile(gomock.Any(), "execution-1", "/data/file1", gomock.Any(), int64(10)).Return(nil)
+			},
 		},
 		{
 			name:                "file specified on test",
@@ -72,6 +82,10 @@ func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
 			expectedBucketName:  "test-2",
 			expectedFileContent: []byte("second file"),
 			expectedObjectSize:  int64(11),
+			setupMocks: func() {
+				mockArtifactsStorage.EXPECT().GetValidBucketName("test", "2").Return("test-2")
+				mockArtifactsStorage.EXPECT().UploadFile(gomock.Any(), "test-2", "/data/file2", gomock.Any(), int64(11)).Return(nil)
+			},
 		},
 		{
 			name:                "file specified on test suite",
@@ -83,27 +97,19 @@ func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
 			expectedBucketName:  "test-suite-3",
 			expectedFileContent: []byte("third file"),
 			expectedObjectSize:  int64(10),
+			setupMocks: func() {
+				mockArtifactsStorage.EXPECT().GetValidBucketName("test-suite", "3").Return("test-suite-3")
+				mockArtifactsStorage.EXPECT().UploadFile(gomock.Any(), "test-suite-3", "/data/file3", gomock.Any(), int64(10)).Return(nil)
+			},
 		},
 	}
 
-	for _, tt := range tests {
+	for i := range tests {
+		tt := tests[i]
 		t.Run(tt.name, func(t *testing.T) {
-			storage.UploadFileFn = func(bucket string, filePath string, reader io.Reader, objectSize int64) error {
-				assert.Equal(t, tt.expectedBucketName, bucket)
-				assert.Equal(t, tt.filePath, filePath)
-				assert.Equal(t, tt.expectedObjectSize, objectSize)
+			t.Parallel()
 
-				assert.NotEmpty(t, reader)
-				file := make([]byte, tt.expectedObjectSize)
-				n, err := io.ReadFull(reader, file)
-				assert.NoError(t, err)
-				assert.Positive(t, n)
-				assert.Equal(t, tt.expectedObjectSize, int64(n))
-				assert.Equal(t, tt.fileContent, file)
-
-				return nil
-			}
-
+			tt.setupMocks()
 			body := &bytes.Buffer{}
 			writer := multipart.NewWriter(body)
 			part, err := writer.CreateFormFile("attachment", filepath.Base(tt.filePath))
@@ -111,23 +117,23 @@ func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
 				t.Error(err)
 			}
 
-			if _, err := io.Copy(part, bytes.NewBuffer(tt.fileContent)); err != nil {
+			if _, err = io.Copy(part, bytes.NewBuffer(tt.fileContent)); err != nil {
 				t.Error(err)
 			}
-			err = writer.WriteField("parentName", tt.parentName)
-			if err != nil {
+
+			if err = writer.WriteField("parentName", tt.parentName); err != nil {
 				t.Error(err)
 			}
-			err = writer.WriteField("parentType", tt.parentType)
-			if err != nil {
+
+			if err = writer.WriteField("parentType", tt.parentType); err != nil {
 				t.Error(err)
 			}
-			err = writer.WriteField("filePath", tt.filePath)
-			if err != nil {
+
+			if err = writer.WriteField("filePath", tt.filePath); err != nil {
 				t.Error(err)
 			}
-			err = writer.Close()
-			if err != nil {
+
+			if err = writer.Close(); err != nil {
 				t.Error(err)
 			}
 
@@ -139,74 +145,4 @@ func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
 			assert.Equal(t, tt.expectedCode, resp.StatusCode, tt.name)
 		})
 	}
-}
-
-type MockStorage struct {
-	UploadFileFn         func(bucket string, filePath string, reader io.Reader, objectSize int64) error
-	PlaceFilesFn         func(buckets []string, prefix string) error
-	GetValidBucketNameFn func(parentType string, parentName string) string
-}
-
-func (m MockStorage) CreateBucket(bucket string) error {
-	panic("not implemented")
-}
-
-func (m MockStorage) DeleteBucket(bucket string, force bool) error {
-	panic("not implemented")
-}
-func (m MockStorage) ListBuckets() ([]string, error) {
-	panic("not implemented")
-}
-func (m MockStorage) ListFiles(bucketFolder string) ([]testkube.Artifact, error) {
-	panic("not implemented")
-}
-func (m MockStorage) SaveFile(bucketFolder, filePath string) error {
-	panic("not implemented")
-}
-func (m MockStorage) DownloadFile(bucketFolder, file string) (*minio.Object, error) {
-	panic("not implemented")
-}
-func (m MockStorage) UploadFile(bucketFolder string, filePath string, reader io.Reader, objectSize int64) error {
-	if m.UploadFileFn == nil {
-		panic("not implemented")
-	}
-	return m.UploadFileFn(bucketFolder, filePath, reader, objectSize)
-}
-
-func (m MockStorage) PlaceFiles(buckets []string, prefix string) error {
-	if m.PlaceFilesFn == nil {
-		panic("not implemented")
-	}
-	return m.PlaceFilesFn(buckets, prefix)
-}
-
-func (m MockStorage) GetValidBucketName(parentType string, parentName string) string {
-	if m.GetValidBucketNameFn == nil {
-		panic("not implemented")
-	}
-	return m.GetValidBucketNameFn(parentType, parentName)
-}
-
-func (m MockStorage) DeleteFile(bucket, filePath string) error {
-	panic("not implemented")
-}
-
-func (m MockStorage) ListFilesFromBucket(bucket string) ([]testkube.Artifact, error) {
-	panic("not implemented")
-}
-
-func (m MockStorage) SaveFileToBucket(bucket, bucketFolder, filePath string) error {
-	panic("not implemented")
-}
-
-func (m MockStorage) DownloadFileFromBucket(bucket, bucketFolder, file string) (*minio.Object, error) {
-	panic("not implemented")
-}
-
-func (m MockStorage) UploadFileToBucket(bucket, bucketFolder, filePath string, reader io.Reader, objectSize int64) error {
-	panic("not implemented")
-}
-
-func (m MockStorage) DeleteFileFromBucket(bucket, bucketFolder, file string) error {
-	panic("not implemented")
 }

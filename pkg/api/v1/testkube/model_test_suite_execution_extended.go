@@ -24,14 +24,15 @@ func NewQueuedTestSuiteExecution(name, namespace string) *TestSuiteExecution {
 func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutionRequest) TestSuiteExecution {
 
 	testExecution := TestSuiteExecution{
-		Id:         primitive.NewObjectID().Hex(),
-		StartTime:  time.Now(),
-		Name:       request.Name,
-		Status:     TestSuiteExecutionStatusRunning,
-		SecretUUID: request.SecretUUID,
-		TestSuite:  testSuite.GetObjectRef(),
-		Labels:     common.MergeMaps(testSuite.Labels, request.ExecutionLabels),
-		Variables:  map[string]Variable{},
+		Id:             primitive.NewObjectID().Hex(),
+		StartTime:      time.Now(),
+		Name:           request.Name,
+		Status:         TestSuiteExecutionStatusRunning,
+		SecretUUID:     request.SecretUUID,
+		TestSuite:      testSuite.GetObjectRef(),
+		Labels:         common.MergeMaps(testSuite.Labels, request.ExecutionLabels),
+		Variables:      map[string]Variable{},
+		RunningContext: request.RunningContext,
 	}
 
 	if testSuite.ExecutionRequest != nil {
@@ -203,4 +204,12 @@ func (e *TestSuiteExecution) IsPassed() bool {
 
 func (e *TestSuiteExecution) IsFailed() bool {
 	return e.Status != nil && *e.Status == FAILED_TestSuiteExecutionStatus
+}
+
+func (e *TestSuiteExecution) IsAborted() bool {
+	return *e.Status == ABORTED_TestSuiteExecutionStatus
+}
+
+func (e *TestSuiteExecution) IsTimeout() bool {
+	return *e.Status == TIMEOUT_TestSuiteExecutionStatus
 }

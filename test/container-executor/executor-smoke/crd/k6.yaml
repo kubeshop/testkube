@@ -1,0 +1,39 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: container-executor-k6-smoke
+  namespace: testkube
+  labels:
+    core-tests: executors
+spec:
+  type: container-executor-k6-0.43.1/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: test/k6/executor-tests/k6-smoke-test-without-envs.js
+      workingDir: test/k6/executor-tests
+  executionRequest:
+    args: ["run", "k6-smoke-test-without-envs.js"]
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: container-executor-k6-smoke-git-file
+  namespace: testkube
+  labels:
+    core-tests: executors
+spec:
+  type: container-executor-k6-0.43.1/test
+  content:
+    type: git-file
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: test/k6/executor-tests/k6-smoke-test-without-envs.js
+      workingDir: test/k6/executor-tests
+  executionRequest:
+    args: ["run", "k6-smoke-test-without-envs.js"]

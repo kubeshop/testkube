@@ -98,7 +98,7 @@ spec:
   repeats: {{ .Repeats }}
   {{- end }}
   {{- if .ExecutionRequest }}
-  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne .ExecutionRequest.Timeout 0)}}
+  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne .ExecutionRequest.Timeout 0) (.ExecutionRequest.CronJobTemplate)}}
   executionRequest:
     {{- if .ExecutionRequest.Name }}
     name: {{ .ExecutionRequest.Name }}
@@ -124,6 +124,16 @@ spec:
             key: {{ $value.SecretRef.Key }}
             {{- end }}
         {{- end }}
+        {{- if $value.ConfigMapRef }}
+        valueFrom:
+          configMapKeyRef:
+            {{- if $value.ConfigMapRef.Name }}
+            name: {{ $value.ConfigMapRef.Name }}
+            {{- end }}
+            {{- if $value.ConfigMapRef.Key }}
+            key: {{ $value.ConfigMapRef.Key }}
+            {{- end }}
+        {{- end }}
     {{- end }}
     {{- end }}
     {{- if .ExecutionRequest.HttpProxy }}
@@ -134,6 +144,9 @@ spec:
     {{- end}}
     {{- if ne .ExecutionRequest.Timeout 0 }}
     timeout: {{ .ExecutionRequest.Timeout }}
+    {{- end}}
+    {{- if .ExecutionRequest.CronJobTemplate }}
+    cronJobTemplate: {{ .ExecutionRequest.CronJobTemplate }}
     {{- end}}
   {{- end }}
   {{- end }}

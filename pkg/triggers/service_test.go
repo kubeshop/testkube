@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/repository/config"
+
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 
@@ -23,7 +25,7 @@ import (
 	faketestkube "github.com/kubeshop/testkube-operator/pkg/clientset/versioned/fake"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/config"
+	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -54,7 +56,8 @@ func TestService_Run(t *testing.T) {
 	mockTestSuitesClient := testsuitesv3.NewMockInterface(mockCtrl)
 	mockTestSourcesClient := testsourcesv1.NewMockInterface(mockCtrl)
 	mockSecretClient := secret.NewMockInterface(mockCtrl)
-	configMap := config.NewMockRepository(mockCtrl)
+	configMapConfig := config.NewMockRepository(mockCtrl)
+	mockConfigMapClient := configmap.NewMockInterface(mockCtrl)
 
 	mockExecutor := client.NewMockExecutor(mockCtrl)
 
@@ -125,7 +128,8 @@ func TestService_Run(t *testing.T) {
 		mockSecretClient,
 		mockEventEmitter,
 		testLogger,
-		configMap,
+		configMapConfig,
+		mockConfigMapClient,
 	)
 
 	mockLeaseBackend := NewMockLeaseBackend(mockCtrl)
@@ -145,7 +149,8 @@ func TestService_Run(t *testing.T) {
 		mockTestResultRepository,
 		mockLeaseBackend,
 		testLogger,
-		configMap,
+		configMapConfig,
+		mockExecutorsClient,
 		WithClusterID(testClusterID),
 		WithIdentifier(testIdentifier),
 		WithScraperInterval(50*time.Millisecond),

@@ -3,16 +3,16 @@ package scheduler
 import (
 	"context"
 	"fmt"
-
-	v1 "k8s.io/api/core/v1"
-
-	testsourcev1 "github.com/kubeshop/testkube-operator/apis/testsource/v1"
+	"path/filepath"
 
 	"github.com/pkg/errors"
+	v1 "k8s.io/api/core/v1"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	testsourcev1 "github.com/kubeshop/testkube-operator/apis/testsource/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/workerpool"
@@ -113,11 +113,6 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	}
 
 	s.logger.Infow("test started", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
-
-	// notify immediately onlly when sync run otherwise job results handler need notify about test finish
-	if options.Sync && execution.ExecutionResult != nil && *execution.ExecutionResult.Status != testkube.RUNNING_ExecutionStatus {
-		s.events.Notify(testkube.NewEventEndTestSuccess(&execution))
-	}
 
 	return execution, nil
 }
@@ -224,12 +219,15 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	)
 
 	execution.Envs = options.Request.Envs
+	execution.Command = options.Request.Command
 	execution.Args = options.Request.Args
+	execution.IsVariablesFileUploaded = options.Request.IsVariablesFileUploaded
 	execution.VariablesFile = options.Request.VariablesFile
 	execution.Uploads = options.Request.Uploads
 	execution.BucketName = options.Request.BucketName
 	execution.ArtifactRequest = options.Request.ArtifactRequest
 	execution.PreRunScript = options.Request.PreRunScript
+	execution.RunningContext = options.Request.RunningContext
 
 	return execution
 }
@@ -248,6 +246,10 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		}
 
 		testCR.Spec = mergeContents(testCR.Spec, testSourceCR.Spec)
+
+		if testSourceCR.Spec.Type_ == "" && testSourceCR.Spec.Repository.Type_ == "git" {
+			testCR.Spec.Content.Type_ = testsv3.TestContentType(testkube.TestContentTypeGit)
+		}
 	}
 
 	if request.ContentRequest != nil {
@@ -259,19 +261,21 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 	if test.ExecutionRequest != nil {
 		// Test variables lowest priority, then test suite, then test suite execution / test execution
 		request.Variables = mergeVariables(test.ExecutionRequest.Variables, request.Variables)
-		// Combine test executor args with execution args
-		request.Args = append(request.Args, test.ExecutionRequest.Args...)
+
 		request.Envs = mergeEnvs(request.Envs, test.ExecutionRequest.Envs)
 		request.SecretEnvs = mergeEnvs(request.SecretEnvs, test.ExecutionRequest.SecretEnvs)
+		request.EnvConfigMaps = mergeEnvReferences(request.EnvConfigMaps, test.ExecutionRequest.EnvConfigMaps)
+		request.EnvSecrets = mergeEnvReferences(request.EnvSecrets, test.ExecutionRequest.EnvSecrets)
+
+		if request.VariablesFile == "" && test.ExecutionRequest.VariablesFile != "" {
+			request.VariablesFile = test.ExecutionRequest.VariablesFile
+			request.IsVariablesFileUploaded = test.ExecutionRequest.IsVariablesFileUploaded
+		}
 
 		var fields = []struct {
 			source      string
 			destination *string
 		}{
-			{
-				test.ExecutionRequest.VariablesFile,
-				&request.VariablesFile,
-			},
 			{
 				test.ExecutionRequest.HttpProxy,
 				&request.HttpProxy,
@@ -292,6 +296,10 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 				test.ExecutionRequest.ScraperTemplate,
 				&request.ScraperTemplate,
 			},
+			{
+				test.ExecutionRequest.ArgsMode,
+				&request.ArgsMode,
+			},
 		}
 
 		for _, field := range fields {
@@ -300,11 +308,23 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 			}
 		}
 
+		// Combine test executor args with execution args
+		if len(request.Command) == 0 {
+			request.Command = test.ExecutionRequest.Command
+		}
+
+		if len(request.Args) == 0 {
+			request.Args = test.ExecutionRequest.Args
+		}
+
 		if request.ActiveDeadlineSeconds == 0 && test.ExecutionRequest.ActiveDeadlineSeconds != 0 {
 			request.ActiveDeadlineSeconds = test.ExecutionRequest.ActiveDeadlineSeconds
 		}
 
 		request.ArtifactRequest = mergeArtifacts(request.ArtifactRequest, test.ExecutionRequest.ArtifactRequest)
+		if request.ArtifactRequest != nil && request.ArtifactRequest.VolumeMountPath == "" {
+			request.ArtifactRequest.VolumeMountPath = filepath.Join(executor.VolumeDir, "artifacts")
+		}
 
 		s.logger.Infow("checking for negative test change", "test", test.Name, "negativeTest", request.NegativeTest, "isNegativeTestChangedOnRun", request.IsNegativeTestChangedOnRun)
 		if !request.IsNegativeTestChangedOnRun {
@@ -329,16 +349,63 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 
 	var imagePullSecrets []string
 	switch {
-	case len(request.ImagePullSecrets) != 0:
+	case len(executorCR.Spec.ImagePullSecrets) != 0:
+		imagePullSecrets = mapK8sImagePullSecrets(executorCR.Spec.ImagePullSecrets)
 
-		imagePullSecrets = mapImagePullSecrets(request.ImagePullSecrets)
 	case testCR.Spec.ExecutionRequest != nil &&
 		len(testCR.Spec.ExecutionRequest.ImagePullSecrets) != 0:
-
 		imagePullSecrets = mapK8sImagePullSecrets(testCR.Spec.ExecutionRequest.ImagePullSecrets)
-	case len(executorCR.Spec.ImagePullSecrets) != 0:
 
-		imagePullSecrets = mapK8sImagePullSecrets(executorCR.Spec.ImagePullSecrets)
+	case len(request.ImagePullSecrets) != 0:
+		imagePullSecrets = mapImagePullSecrets(request.ImagePullSecrets)
+	}
+
+	configMapVars := make(map[string]testkube.Variable, 0)
+	for _, configMap := range request.EnvConfigMaps {
+		if configMap.Reference == nil || !configMap.MapToVariables {
+			continue
+		}
+
+		data, err := s.configMapClient.Get(context.Background(), configMap.Reference.Name)
+		if err != nil {
+			return options, errors.Errorf("can't get config map: %v", err)
+		}
+
+		for key := range data {
+			configMapVars[key] = testkube.NewConfigMapVariableReference(key, configMap.Reference.Name, key)
+		}
+	}
+
+	if len(configMapVars) != 0 {
+		request.Variables = mergeVariables(configMapVars, request.Variables)
+	}
+
+	secretVars := make(map[string]testkube.Variable, 0)
+	for _, secret := range request.EnvSecrets {
+		if secret.Reference == nil || !secret.MapToVariables {
+			continue
+		}
+
+		data, err := s.secretClient.Get(secret.Reference.Name)
+		if err != nil {
+			return options, errors.Errorf("can't get secret: %v", err)
+		}
+
+		for key := range data {
+			secretVars[key] = testkube.NewSecretVariableReference(key, secret.Reference.Name, key)
+		}
+	}
+
+	if len(secretVars) != 0 {
+		request.Variables = mergeVariables(secretVars, request.Variables)
+	}
+
+	if len(request.Command) == 0 {
+		request.Command = executorCR.Spec.Command
+	}
+
+	if request.ArgsMode == string(testkube.ArgsModeTypeAppend) || request.ArgsMode == "" {
+		request.Args = append(executorCR.Spec.Args, request.Args...)
 	}
 
 	return client.ExecuteOptions{
@@ -390,7 +457,7 @@ func mergeContents(test testsv3.TestSpec, testSource testsourcev1.TestSourceSpec
 	}
 
 	if test.Content.Type_ == "" {
-		test.Content.Type_ = testSource.Type_
+		test.Content.Type_ = testsv3.TestContentType(testSource.Type_)
 	}
 
 	if test.Content.Data == "" {
@@ -448,6 +515,9 @@ func mergeContents(test testsv3.TestSpec, testSource testsourcev1.TestSourceSpec
 			test.Content.Repository.CertificateSecret = testSource.Repository.CertificateSecret
 		}
 
+		if test.Content.Repository.AuthType == "" {
+			test.Content.Repository.AuthType = testsv3.GitAuthType(testSource.Repository.AuthType)
+		}
 	}
 
 	return test
@@ -501,7 +571,7 @@ func adjustContent(test testsv3.TestSpec, content *testkube.TestContentRequest) 
 	}
 
 	switch testkube.TestContentType(test.Content.Type_) {
-	case testkube.TestContentTypeGitFile, testkube.TestContentTypeGitDir:
+	case testkube.TestContentTypeGitFile, testkube.TestContentTypeGitDir, testkube.TestContentTypeGit:
 		if test.Content.Repository == nil {
 			return test
 		}
@@ -526,4 +596,46 @@ func adjustContent(test testsv3.TestSpec, content *testkube.TestContentRequest) 
 	}
 
 	return test
+}
+
+func mergeEnvReferences(envs1 []testkube.EnvReference, envs2 []testkube.EnvReference) []testkube.EnvReference {
+	envs := make(map[string]testkube.EnvReference, 0)
+	for i := range envs1 {
+		if envs1[i].Reference == nil {
+			continue
+		}
+
+		envs[envs1[i].Reference.Name] = envs1[i]
+	}
+
+	for i := range envs2 {
+		if envs2[i].Reference == nil {
+			continue
+		}
+
+		if value, ok := envs[envs2[i].Reference.Name]; !ok {
+			envs[envs2[i].Reference.Name] = envs2[i]
+		} else {
+			if !value.Mount {
+				value.Mount = envs2[i].Mount
+			}
+
+			if value.MountPath == "" {
+				value.MountPath = envs2[i].MountPath
+			}
+
+			if !value.MapToVariables {
+				value.MapToVariables = envs2[i].MapToVariables
+			}
+
+			envs[envs2[i].Reference.Name] = value
+		}
+	}
+
+	res := make([]testkube.EnvReference, 0)
+	for key := range envs {
+		res = append(res, envs[key])
+	}
+
+	return res
 }

@@ -132,10 +132,13 @@ func (c TestClient) ExecuteTest(id, executionName string, options ExecuteTestOpt
 	uri := c.executionTransport.GetURI("/tests/%s/executions", id)
 	request := testkube.ExecutionRequest{
 		Name:                       executionName,
+		IsVariablesFileUploaded:    options.IsVariablesFileUploaded,
 		VariablesFile:              options.ExecutionVariablesFileContent,
 		Variables:                  options.ExecutionVariables,
 		Envs:                       options.Envs,
+		Command:                    options.Command,
 		Args:                       options.Args,
+		ArgsMode:                   options.ArgsMode,
 		SecretEnvs:                 options.SecretEnvs,
 		HttpProxy:                  options.HTTPProxy,
 		HttpsProxy:                 options.HTTPSProxy,
@@ -150,6 +153,9 @@ func (c TestClient) ExecuteTest(id, executionName string, options ExecuteTestOpt
 		ScraperTemplate:            options.ScraperTemplate,
 		NegativeTest:               options.NegativeTest,
 		IsNegativeTestChangedOnRun: options.IsNegativeTestChangedOnRun,
+		EnvConfigMaps:              options.EnvConfigMaps,
+		EnvSecrets:                 options.EnvSecrets,
+		RunningContext:             options.RunningContext,
 	}
 
 	body, err := json.Marshal(request)
@@ -165,10 +171,13 @@ func (c TestClient) ExecuteTest(id, executionName string, options ExecuteTestOpt
 func (c TestClient) ExecuteTests(selector string, concurrencyLevel int, options ExecuteTestOptions) (executions []testkube.Execution, err error) {
 	uri := c.executionTransport.GetURI("/executions")
 	request := testkube.ExecutionRequest{
+		IsVariablesFileUploaded:    options.IsVariablesFileUploaded,
 		VariablesFile:              options.ExecutionVariablesFileContent,
 		Variables:                  options.ExecutionVariables,
 		Envs:                       options.Envs,
+		Command:                    options.Command,
 		Args:                       options.Args,
+		ArgsMode:                   options.ArgsMode,
 		SecretEnvs:                 options.SecretEnvs,
 		HttpProxy:                  options.HTTPProxy,
 		HttpsProxy:                 options.HTTPSProxy,
@@ -181,6 +190,7 @@ func (c TestClient) ExecuteTests(selector string, concurrencyLevel int, options 
 		ScraperTemplate:            options.ScraperTemplate,
 		NegativeTest:               options.NegativeTest,
 		IsNegativeTestChangedOnRun: options.IsNegativeTestChangedOnRun,
+		RunningContext:             options.RunningContext,
 	}
 
 	body, err := json.Marshal(request)
@@ -200,6 +210,12 @@ func (c TestClient) ExecuteTests(selector string, concurrencyLevel int, options 
 func (c TestClient) AbortExecution(testID, id string) error {
 	uri := c.executionTransport.GetURI("/tests/%s/executions/%s", testID, id)
 	return c.executionTransport.ExecuteMethod(http.MethodPatch, uri, "", false)
+}
+
+// AbortExecutions aborts all the executions of a test
+func (c TestClient) AbortExecutions(testID string) error {
+	uri := c.executionTransport.GetURI("/tests/%s/abort", testID)
+	return c.executionTransport.ExecuteMethod(http.MethodPost, uri, "", false)
 }
 
 // ListExecutions list all executions for given test name
@@ -234,7 +250,13 @@ func (c TestClient) GetExecutionArtifacts(executionID string) (artifacts testkub
 // DownloadFile downloads file
 func (c TestClient) DownloadFile(executionID, fileName, destination string) (artifact string, err error) {
 	uri := c.executionTransport.GetURI("/executions/%s/artifacts/%s", executionID, url.QueryEscape(fileName))
-	return c.executionTransport.GetFile(uri, fileName, destination)
+	return c.executionTransport.GetFile(uri, fileName, destination, nil)
+}
+
+// DownloadArchive downloads archive
+func (c TestClient) DownloadArchive(executionID, destination string, masks []string) (archive string, err error) {
+	uri := c.executionTransport.GetURI("/executions/%s/artifact-archive", executionID)
+	return c.executionTransport.GetFile(uri, fmt.Sprintf("%s.tar.gz", executionID), destination, map[string][]string{"mask": masks})
 }
 
 // GetServerInfo returns server info

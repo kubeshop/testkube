@@ -77,6 +77,7 @@ func (f *FilterImpl) WithType(objectType string) *FilterImpl {
 	f.FObjectType = objectType
 	return f
 }
+
 func (f *FilterImpl) TestName() string {
 	return f.FTestName
 }

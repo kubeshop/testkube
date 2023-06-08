@@ -7,9 +7,9 @@ concurrency:
 on:
   push:
     branches:
-      - main
+      - develop
     paths:
-      - 'docs/**'
+      - "docs/**"
 
 defaults:
   run:

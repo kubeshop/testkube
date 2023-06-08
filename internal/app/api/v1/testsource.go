@@ -9,6 +9,7 @@ import (
 
 	testsourcev1 "github.com/kubeshop/testkube-operator/apis/testsource/v1"
 	"github.com/kubeshop/testkube-operator/client/testsources/v1"
+	"github.com/kubeshop/testkube-operator/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -17,10 +18,11 @@ import (
 
 func (s TestkubeAPI) CreateTestSourceHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to create test source"
 		var request testkube.TestSourceUpsertRequest
 		err := c.BodyParser(&request)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %s", errPrefix, err))
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
@@ -36,12 +38,12 @@ func (s TestkubeAPI) CreateTestSourceHandler() fiber.Handler {
 		testSource.Namespace = s.Namespace
 		var secrets map[string]string
 		if request.Repository != nil {
-			secrets = getTestSecretsData(request.Repository.Username, request.Repository.Token)
+			secrets = createTestSecretsData(request.Repository.Username, request.Repository.Token)
 		}
 
 		created, err := s.TestSourcesClient.Create(&testSource, testsources.Option{Secrets: secrets})
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not create test source: %w", errPrefix, err))
 		}
 
 		c.Status(http.StatusCreated)
@@ -51,22 +53,23 @@ func (s TestkubeAPI) CreateTestSourceHandler() fiber.Handler {
 
 func (s TestkubeAPI) UpdateTestSourceHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to update test source"
 		var request testkube.TestSourceUpdateRequest
 		err := c.BodyParser(&request)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %s", errPrefix, err))
 		}
 
 		var name string
 		if request.Name != nil {
 			name = *request.Name
 		}
-
+		errPrefix = errPrefix + " " + name
 		// we need to get resource first and load its metadata.ResourceVersion
 		testSource, err := s.TestSourcesClient.Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return s.Error(c, http.StatusNotFound, err)
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test source not found: %w", errPrefix, err))
 			}
 
 			return s.Error(c, http.StatusBadGateway, err)
@@ -80,16 +83,12 @@ func (s TestkubeAPI) UpdateTestSourceHandler() fiber.Handler {
 			username := (*request.Repository).Username
 			token := (*request.Repository).Token
 			if username != nil || token != nil {
-				var uValue, tValue string
-				if username != nil {
-					uValue = *username
+				data, err := s.SecretClient.Get(secret.GetMetadataName(name, client.SecretSource))
+				if err != nil && !errors.IsNotFound(err) {
+					return s.Error(c, http.StatusBadGateway, err)
 				}
 
-				if token != nil {
-					tValue = *token
-				}
-
-				option = &testsources.Option{Secrets: getTestSecretsData(uValue, tValue)}
+				option = &testsources.Option{Secrets: updateTestSecretsData(data, username, token)}
 			}
 		}
 
@@ -101,7 +100,7 @@ func (s TestkubeAPI) UpdateTestSourceHandler() fiber.Handler {
 		}
 
 		if err != nil {
-			return s.Error(c, http.StatusBadGateway, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client coult not update test source: %w", errPrefix, err))
 		}
 
 		return c.JSON(updatedTestSource)
@@ -110,9 +109,11 @@ func (s TestkubeAPI) UpdateTestSourceHandler() fiber.Handler {
 
 func (s TestkubeAPI) ListTestSourcesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to list test sources"
+
 		list, err := s.TestSourcesClient.List(c.Query("selector"))
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not list test sources: %s", errPrefix, err))
 		}
 
 		results := []testkube.TestSource{}
@@ -138,10 +139,14 @@ func (s TestkubeAPI) ListTestSourcesHandler() fiber.Handler {
 func (s TestkubeAPI) GetTestSourceHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("name")
+		errPrefix := "failed to get test source" + name
 
 		item, err := s.TestSourcesClient.Get(name)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			if errors.IsNotFound(err) {
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: client could not find test source: %w", errPrefix, err))
+			}
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get test source: %w", errPrefix, err))
 		}
 
 		result := testsourcesmapper.MapCRDToAPI(*item)
@@ -161,10 +166,11 @@ func (s TestkubeAPI) GetTestSourceHandler() fiber.Handler {
 func (s TestkubeAPI) DeleteTestSourceHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("name")
+		errPrefix := "failed to delete test source" + name
 
 		err := s.TestSourcesClient.Delete(name)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test source: %w", errPrefix, err))
 		}
 
 		c.Status(http.StatusNoContent)
@@ -174,9 +180,10 @@ func (s TestkubeAPI) DeleteTestSourceHandler() fiber.Handler {
 
 func (s TestkubeAPI) DeleteTestSourcesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to delete test sources"
 		err := s.TestSourcesClient.DeleteByLabels(c.Query("selector"))
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test sources: %w", errPrefix, err))
 		}
 
 		c.Status(http.StatusNoContent)
@@ -186,16 +193,18 @@ func (s TestkubeAPI) DeleteTestSourcesHandler() fiber.Handler {
 
 func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to batch process test sources"
+
 		var request testkube.TestSourceBatchRequest
 		err := c.BodyParser(&request)
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %s", errPrefix, err))
 		}
 
 		testSourceBatch := make(map[string]testkube.TestSourceUpsertRequest, len(request.Batch))
 		for _, item := range request.Batch {
 			if _, ok := testSourceBatch[item.Name]; ok {
-				return s.Error(c, http.StatusBadRequest, fmt.Errorf("test source with duplicated id/name %s", item.Name))
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: test source with duplicated id/name %s", errPrefix, item.Name))
 			}
 
 			testSourceBatch[item.Name] = item
@@ -203,7 +212,7 @@ func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 
 		list, err := s.TestSourcesClient.List("")
 		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not list test sources: %w", errPrefix, err))
 		}
 
 		testSourceMap := make(map[string]testsourcev1.TestSource, len(list.Items))
@@ -225,7 +234,7 @@ func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 
 				created, err := s.TestSourcesClient.Create(&testSource, testsources.Option{Secrets: getTestSourceSecretsData(username, token)})
 				if err != nil {
-					return s.Error(c, http.StatusBadRequest, err)
+					return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not create test source %s: %w", errPrefix, testSource.Name, err))
 				}
 
 				result.Created = append(result.Created, created.Name)
@@ -235,7 +244,7 @@ func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 
 				updated, err := s.TestSourcesClient.Update(&existed, testsources.Option{Secrets: getTestSourceSecretsData(username, token)})
 				if err != nil {
-					return s.Error(c, http.StatusBadGateway, err)
+					return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not update test source %s: %w", errPrefix, testSource.Name, err))
 				}
 
 				result.Updated = append(result.Updated, updated.Name)
@@ -246,7 +255,7 @@ func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 			if _, ok := testSourceBatch[name]; !ok {
 				err := s.TestSourcesClient.Delete(name)
 				if err != nil {
-					return s.Error(c, http.StatusBadRequest, err)
+					return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test source %s: %w", errPrefix, name, err))
 				}
 
 				result.Deleted = append(result.Deleted, name)

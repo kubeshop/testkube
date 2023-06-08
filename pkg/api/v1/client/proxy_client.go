@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
@@ -21,13 +22,13 @@ import (
 func GetClientSet(overrideHost string) (clientset kubernetes.Interface, err error) {
 	clcfg, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
 	if err != nil {
-		return clientset, err
+		return clientset, errors.Wrap(err, "failed to get clientset config")
 	}
 
 	restcfg, err := clientcmd.NewNonInteractiveClientConfig(
 		*clcfg, "", &clientcmd.ConfigOverrides{}, nil).ClientConfig()
 	if err != nil {
-		return clientset, err
+		return clientset, errors.Wrap(err, "failed to get non-interactive client config")
 	}
 
 	// override host is needed to override kubeconfig kubernetes proxy host name
@@ -149,22 +150,41 @@ func (t ProxyClient[A]) GetLogs(uri string, logs chan output.Output) error {
 }
 
 // GetFile returns file artifact
-func (t ProxyClient[A]) GetFile(uri, fileName, destination string) (name string, err error) {
-	req, err := t.getProxy(http.MethodGet).
+func (t ProxyClient[A]) GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error) {
+	req := t.getProxy(http.MethodGet).
 		Suffix(uri).
-		SetHeader("Accept", "text/event-stream").
-		Stream(context.Background())
+		SetHeader("Accept", "text/event-stream")
+
+	for key, values := range params {
+		for _, value := range values {
+			if value != "" {
+				req.Param(key, value)
+			}
+		}
+	}
+
+	stream, err := req.Stream(context.Background())
 	if err != nil {
 		return name, err
 	}
-	defer req.Close()
+	defer stream.Close()
 
-	f, err := os.Create(filepath.Join(destination, filepath.Base(fileName)))
+	target := filepath.Join(destination, fileName)
+	dir := filepath.Dir(target)
+	if _, err := os.Stat(dir); errors.Is(err, os.ErrNotExist) {
+		if err = os.MkdirAll(dir, os.ModePerm); err != nil {
+			return name, err
+		}
+	} else if err != nil {
+		return name, err
+	}
+
+	f, err := os.Create(target)
 	if err != nil {
 		return name, err
 	}
 
-	if _, err = f.ReadFrom(req); err != nil {
+	if _, err = f.ReadFrom(stream); err != nil {
 		return name, err
 	}
 

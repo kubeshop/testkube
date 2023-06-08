@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"context"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -70,7 +71,7 @@ func getPodConditions(ctx context.Context, clientset kubernetes.Interface, objec
 		return nil, err
 	}
 
-	return pods.MapCRDConditionsToAPI(pod.Status.Conditions), nil
+	return pods.MapCRDConditionsToAPI(pod.Status.Conditions, time.Now()), nil
 }
 
 func getDeploymentConditions(
@@ -83,7 +84,7 @@ func getDeploymentConditions(
 		return nil, err
 	}
 
-	return deployments.MapCRDConditionsToAPI(deployment.Status.Conditions), nil
+	return deployments.MapCRDConditionsToAPI(deployment.Status.Conditions, time.Now()), nil
 }
 
 func getDaemonSetConditions(
@@ -96,7 +97,7 @@ func getDaemonSetConditions(
 		return nil, err
 	}
 
-	return daemonsets.MapCRDConditionsToAPI(daemonset.Status.Conditions), nil
+	return daemonsets.MapCRDConditionsToAPI(daemonset.Status.Conditions, time.Now()), nil
 }
 
 func getStatefulSetConditions(
@@ -109,7 +110,7 @@ func getStatefulSetConditions(
 		return nil, err
 	}
 
-	return statefulsets.MapCRDConditionsToAPI(statefulset.Status.Conditions), nil
+	return statefulsets.MapCRDConditionsToAPI(statefulset.Status.Conditions, time.Now()), nil
 }
 
 func getServiceConditions(
@@ -122,5 +123,5 @@ func getServiceConditions(
 		return nil, err
 	}
 
-	return services.MapCRDConditionsToAPI(service.Status.Conditions), nil
+	return services.MapCRDConditionsToAPI(service.Status.Conditions, time.Now()), nil
 }

@@ -3,6 +3,9 @@ package tests
 import (
 	"fmt"
 	"os"
+	"path"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,6 +20,12 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/test/detector"
 	"github.com/kubeshop/testkube/pkg/ui"
+)
+
+const (
+	artifactsFormatFolder  = "folder"
+	artifactsFormatArchive = "archive"
+	maxArgSize             = int64(131072) // maximum argument size in linux-based systems is 128 KiB
 )
 
 func printExecutionDetails(execution testkube.Execution) {
@@ -40,7 +49,7 @@ func printExecutionDetails(execution testkube.Execution) {
 	ui.NL()
 }
 
-func DownloadArtifacts(id, dir string, client apiclientv1.Client) {
+func DownloadArtifacts(id, dir, format string, masks []string, client apiclientv1.Client) {
 	artifacts, err := client.GetExecutionArtifacts(id)
 	ui.ExitOnError("getting artifacts ", err)
 
@@ -50,10 +59,71 @@ func DownloadArtifacts(id, dir string, client apiclientv1.Client) {
 	if len(artifacts) > 0 {
 		ui.Info("Getting artifacts", fmt.Sprintf("count = %d", len(artifacts)), "\n")
 	}
-	for _, artifact := range artifacts {
-		f, err := client.DownloadFile(id, artifact.Name, dir)
-		ui.ExitOnError("downloading file: "+f, err)
-		ui.Warn(" - downloading file ", f)
+
+	if format != artifactsFormatFolder && format != artifactsFormatArchive {
+		ui.Failf("invalid artifacts format: %s. use one of folder|archive", format)
+	}
+
+	var regexps []*regexp.Regexp
+	for _, mask := range masks {
+		values := strings.Split(mask, ",")
+		for _, value := range values {
+			re, err := regexp.Compile(value)
+			ui.ExitOnError("checking mask "+value, err)
+
+			regexps = append(regexps, re)
+		}
+	}
+
+	if format == artifactsFormatFolder {
+		for _, artifact := range artifacts {
+			found := len(regexps) == 0
+			for i := range regexps {
+				if found = regexps[i].MatchString(artifact.Name); found {
+					break
+				}
+			}
+
+			if !found {
+				continue
+			}
+
+			f, err := client.DownloadFile(id, artifact.Name, dir)
+			ui.ExitOnError("downloading file: "+f, err)
+			ui.Warn(" - downloading file ", f)
+		}
+	}
+
+	if format == artifactsFormatArchive {
+		const readinessCheckTimeout = time.Second
+		ticker := time.NewTicker(readinessCheckTimeout)
+		defer ticker.Stop()
+
+		ch := make(chan string)
+		defer close(ch)
+
+		go func() {
+			f, err := client.DownloadArchive(id, dir, masks)
+			ui.ExitOnError("downloading archive: "+f, err)
+
+			ch <- f
+		}()
+
+		var archive string
+		ui.Warn(" - preparing archive ")
+
+	outloop:
+		for {
+			select {
+			case <-ticker.C:
+				ui.PrintDot()
+			case archive = <-ch:
+				ui.NL()
+				break outloop
+			}
+		}
+
+		ui.Warn(" - downloading archive ", archive)
 	}
 
 	ui.NL()
@@ -128,14 +198,16 @@ func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err
 	if len(fileContent) > 0 && testContentType == "" {
 		testContentType = string(testkube.TestContentTypeString)
 	}
-
-	repository, err := common.NewRepositoryFromFlags(cmd)
-	if err != nil {
-		return nil, err
+	var repository *testkube.Repository
+	if cmd.Flag("git-uri") != nil {
+		repository, err = common.NewRepositoryFromFlags(cmd)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if repository != nil && testContentType == "" {
-		testContentType = string(testkube.TestContentTypeGitDir)
+		testContentType = string(testkube.TestContentTypeGit)
 	}
 
 	content = &testkube.TestContent{
@@ -156,7 +228,7 @@ func newArtifactRequestFromFlags(cmd *cobra.Command) (request *testkube.Artifact
 		return nil, err
 	}
 
-	if artifactStorageClassName != "" && artifactVolumeMountPath != "" {
+	if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(dirs) != 0 {
 		request = &testkube.ArtifactRequest{
 			StorageClassName: artifactStorageClassName,
 			VolumeMountPath:  artifactVolumeMountPath,
@@ -167,8 +239,90 @@ func newArtifactRequestFromFlags(cmd *cobra.Command) (request *testkube.Artifact
 	return request, nil
 }
 
+func newEnvReferencesFromFlags(cmd *cobra.Command) (envConfigMaps, envSecrets []testkube.EnvReference, err error) {
+	mountConfigMaps, err := cmd.Flags().GetStringToString("mount-configmap")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	variableConfigMaps, err := cmd.Flags().GetStringArray("variable-configmap")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	mountSecrets, err := cmd.Flags().GetStringToString("mount-secret")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	variableSecrets, err := cmd.Flags().GetStringArray("variable-secret")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	mapConfigMaps := make(map[string]testkube.EnvReference)
+	for configMap, path := range mountConfigMaps {
+		mapConfigMaps[configMap] = testkube.EnvReference{
+			Reference: &testkube.LocalObjectReference{
+				Name: configMap,
+			},
+			Mount:     true,
+			MountPath: path,
+		}
+	}
+
+	for _, configMap := range variableConfigMaps {
+		if value, ok := mapConfigMaps[configMap]; ok {
+			value.MapToVariables = true
+			mapConfigMaps[configMap] = value
+		} else {
+			mapConfigMaps[configMap] = testkube.EnvReference{
+				Reference: &testkube.LocalObjectReference{
+					Name: configMap,
+				},
+				MapToVariables: true,
+			}
+		}
+	}
+
+	for _, value := range mapConfigMaps {
+		envConfigMaps = append(envConfigMaps, value)
+	}
+
+	mapSecrets := make(map[string]testkube.EnvReference)
+	for secret, path := range mountSecrets {
+		mapSecrets[secret] = testkube.EnvReference{
+			Reference: &testkube.LocalObjectReference{
+				Name: secret,
+			},
+			Mount:     true,
+			MountPath: path,
+		}
+	}
+
+	for _, secret := range variableSecrets {
+		if value, ok := mapSecrets[secret]; ok {
+			value.MapToVariables = true
+			mapSecrets[secret] = value
+		} else {
+			mapSecrets[secret] = testkube.EnvReference{
+				Reference: &testkube.LocalObjectReference{
+					Name: secret,
+				},
+				MapToVariables: true,
+			}
+		}
+	}
+
+	for _, value := range mapSecrets {
+		envSecrets = append(envSecrets, value)
+	}
+
+	return envConfigMaps, envSecrets, nil
+}
+
 func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.ExecutionRequest, err error) {
-	variables, err := common.CreateVariables(cmd)
+	variables, err := common.CreateVariables(cmd, false)
 	if err != nil {
 		return nil, err
 	}
@@ -183,6 +337,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		return nil, err
 	}
 
+	argsMode := cmd.Flag("args-mode").Value.String()
 	executionName := cmd.Flag("execution-name").Value.String()
 	envs, err := cmd.Flags().GetStringToString("env")
 	if err != nil {
@@ -192,17 +347,6 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 	secretEnvs, err := cmd.Flags().GetStringToString("secret-env")
 	if err != nil {
 		return nil, err
-	}
-
-	paramsFileContent := ""
-	variablesFile := cmd.Flag("variables-file").Value.String()
-	if variablesFile != "" {
-		b, err := os.ReadFile(variablesFile)
-		if err != nil {
-			return nil, err
-		}
-
-		paramsFileContent = string(b)
 	}
 
 	httpProxy := cmd.Flag("http-proxy").Value.String()
@@ -244,6 +388,17 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		jobTemplateContent = string(b)
 	}
 
+	cronJobTemplateContent := ""
+	cronJobTemplate := cmd.Flag("cronjob-template").Value.String()
+	if cronJobTemplate != "" {
+		b, err := os.ReadFile(cronJobTemplate)
+		if err != nil {
+			return nil, err
+		}
+
+		cronJobTemplateContent = string(b)
+	}
+
 	preRunScriptContent := ""
 	preRunScript := cmd.Flag("prerun-script").Value.String()
 	if preRunScript != "" {
@@ -266,13 +421,18 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		scraperTemplateContent = string(b)
 	}
 
+	envConfigMaps, envSecrets, err := newEnvReferencesFromFlags(cmd)
+	if err != nil {
+		return nil, err
+	}
+
 	request = &testkube.ExecutionRequest{
 		Name:                  executionName,
-		VariablesFile:         paramsFileContent,
 		Variables:             variables,
 		Image:                 image,
 		Command:               command,
 		Args:                  executorArgs,
+		ArgsMode:              argsMode,
 		ImagePullSecrets:      imageSecrets,
 		Envs:                  envs,
 		SecretEnvs:            secretEnvs,
@@ -280,9 +440,12 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		HttpsProxy:            httpsProxy,
 		ActiveDeadlineSeconds: timeout,
 		JobTemplate:           jobTemplateContent,
+		CronJobTemplate:       cronJobTemplateContent,
 		PreRunScript:          preRunScriptContent,
 		ScraperTemplate:       scraperTemplateContent,
 		NegativeTest:          negativeTest,
+		EnvConfigMaps:         envConfigMaps,
+		EnvSecrets:            envSecrets,
 	}
 
 	request.ArtifactRequest, err = newArtifactRequestFromFlags(cmd)
@@ -301,6 +464,7 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.Upse
 	}
 
 	name := cmd.Flag("name").Value.String()
+	file := cmd.Flag("file").Value.String()
 	executorType := cmd.Flag("type").Value.String()
 	namespace := cmd.Flag("namespace").Value.String()
 	labels, err := cmd.Flags().GetStringToString("label")
@@ -318,7 +482,10 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.Upse
 		return options, err
 	}
 
-	sourceName := cmd.Flag("source").Value.String()
+	sourceName := ""
+	if cmd.Flag("source") != nil {
+		sourceName = cmd.Flag("source").Value.String()
+	}
 	options = apiclientv1.UpsertTestOptions{
 		Name:      name,
 		Type_:     executorType,
@@ -338,8 +505,11 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.Upse
 	// try to detect type if none passed
 	if executorType == "" {
 		d := detector.NewDefaultDetector()
-		if detectedType, ok := d.Detect(options); ok {
-			ui.Info("Detected test test type", detectedType)
+		if detectedType, ok := d.Detect(file, options); ok {
+			crdOnly, _ := strconv.ParseBool(cmd.Flag("crd-only").Value.String())
+			if !crdOnly {
+				ui.Info("Detected test type", detectedType)
+			}
 			options.Type_ = detectedType
 		}
 	}
@@ -406,7 +576,7 @@ func mergeCopyFiles(testFiles []string, executionFiles []string) ([]string, erro
 	return result, nil
 }
 
-func uploadFiles(client client.Client, parentName string, parentType client.TestingType, files []string) error {
+func uploadFiles(client client.Client, parentName string, parentType client.TestingType, files []string, timeout time.Duration) error {
 	for _, f := range files {
 		paths := strings.Split(f, ":")
 		if len(paths) != 2 {
@@ -417,7 +587,7 @@ func uploadFiles(client client.Client, parentName string, parentType client.Test
 			return fmt.Errorf("could not read file: %w", err)
 		}
 
-		err = client.UploadFile(parentName, parentType, paths[1], contents)
+		err = client.UploadFile(parentName, parentType, paths[1], contents, timeout)
 		if err != nil {
 			return fmt.Errorf("could not upload file %s for %v with name %s: %w", paths[0], parentType, parentName, err)
 		}
@@ -594,6 +764,10 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 			"https-proxy",
 			&request.HttpsProxy,
 		},
+		{
+			"args-mode",
+			&request.ArgsMode,
+		},
 	}
 
 	var nonEmpty bool
@@ -606,7 +780,7 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 	}
 
 	if cmd.Flag("variable").Changed || cmd.Flag("secret-variable").Changed || cmd.Flag("secret-variable-reference").Changed {
-		variables, err := common.CreateVariables(cmd)
+		variables, err := common.CreateVariables(cmd, false)
 		if err != nil {
 			return nil, err
 		}
@@ -731,6 +905,22 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 		nonEmpty = true
 	}
 
+	if cmd.Flag("cronjob-template").Changed {
+		cronJobTemplateContent := ""
+		cronJobTemplate := cmd.Flag("cronjob-template").Value.String()
+		if cronJobTemplate != "" {
+			b, err := os.ReadFile(cronJobTemplate)
+			if err != nil {
+				return nil, err
+			}
+
+			cronJobTemplateContent = string(b)
+		}
+
+		request.CronJobTemplate = &cronJobTemplateContent
+		nonEmpty = true
+	}
+
 	if cmd.Flag("prerun-script").Changed {
 		preRunScriptContent := ""
 		preRunScript := cmd.Flag("prerun-script").Value.String()
@@ -760,6 +950,24 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 		}
 
 		request.ScraperTemplate = &scraperTemplateContent
+		nonEmpty = true
+	}
+
+	if cmd.Flag("mount-configmap").Changed || cmd.Flag("variable-configmap").Changed {
+		envConfigMaps, _, err := newEnvReferencesFromFlags(cmd)
+		if err != nil {
+			return nil, err
+		}
+		request.EnvConfigMaps = &envConfigMaps
+		nonEmpty = true
+	}
+
+	if cmd.Flag("mount-secret").Changed || cmd.Flag("variable-secret").Changed {
+		_, envSecrets, err := newEnvReferencesFromFlags(cmd)
+		if err != nil {
+			return nil, err
+		}
+		request.EnvSecrets = &envSecrets
 		nonEmpty = true
 	}
 
@@ -837,4 +1045,50 @@ func validateSchedule(schedule string) error {
 	}
 
 	return nil
+}
+
+// isFileTooBigForCLI checks the file size found on path and compares it with maxArgSize
+func isFileTooBigForCLI(path string) (bool, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return false, fmt.Errorf("could not open file %s: %w", path, err)
+	}
+	defer func() {
+		err := f.Close()
+		if err != nil {
+			output.PrintLog(fmt.Sprintf("%s could not close file %s: %v", ui.IconWarning, f.Name(), err))
+		}
+	}()
+
+	fileInfo, err := f.Stat()
+	if err != nil {
+		return false, fmt.Errorf("could not get info on file %s: %w", path, err)
+	}
+
+	return fileInfo.Size() < maxArgSize, nil
+}
+
+// PrepareVariablesFile reads variables file, or if the file size is too big
+// it uploads them
+func PrepareVariablesFile(client client.Client, parentName string, parentType client.TestingType, filePath string, timeout time.Duration) (string, bool, error) {
+	isFileSmall, err := isFileTooBigForCLI(filePath)
+	if err != nil {
+		return "", false, fmt.Errorf("could not determine if variables file %s needs to be uploaded: %w", filePath, err)
+	}
+
+	b, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", false, fmt.Errorf("could not read file %s: %w", filePath, err)
+	}
+	if isFileSmall {
+		return string(b), false, nil
+	}
+
+	fileName := path.Base(filePath)
+
+	err = client.UploadFile(parentName, parentType, fileName, b, timeout)
+	if err != nil {
+		return "", false, fmt.Errorf("could not upload variables file for %v with name %s: %w", parentType, parentName, err)
+	}
+	return fileName, true, nil
 }
