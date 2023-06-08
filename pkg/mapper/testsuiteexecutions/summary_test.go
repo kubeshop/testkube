@@ -183,8 +183,8 @@ func getBatchExecutions() []testkube.TestSuiteExecution {
 		Id:   "tid1",
 		Name: "script1",
 		TestSuite: &testkube.ObjectRef{
-			"testkube",
-			"testsuite1",
+			Namespace: "testkube",
+			Name:      "testsuite1",
 		},
 		Status:             testkube.TestSuiteExecutionStatusFailed,
 		Envs:               map[string]string{"var": "key"},
@@ -219,8 +219,8 @@ func getBatchExecutions() []testkube.TestSuiteExecution {
 		Id:   "tid2",
 		Name: "script2",
 		TestSuite: &testkube.ObjectRef{
-			"testkube",
-			"testsuite2",
+			Namespace: "testkube",
+			Name:      "testsuite2",
 		},
 		Status:             testkube.TestSuiteExecutionStatusPassed,
 		Envs:               map[string]string{"var": "key"},

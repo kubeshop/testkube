@@ -20,7 +20,7 @@ func TestMapTestSuiteListKubeToAPI(t *testing.T) {
 						Execute: []testsuitesv3.TestSuiteStepSpec{
 							{
 								Delay: &testsuitesv3.TestSuiteStepDelay{
-									Duration: metav1.Duration{time.Second},
+									Duration: metav1.Duration{Duration: time.Second},
 								},
 							},
 						},
@@ -44,7 +44,7 @@ func TestMapTestSuiteListKubeToAPI(t *testing.T) {
 						Execute: []testsuitesv3.TestSuiteStepSpec{
 							{
 								Delay: &testsuitesv3.TestSuiteStepDelay{
-									Duration: metav1.Duration{time.Second},
+									Duration: metav1.Duration{Duration: time.Second},
 								},
 							},
 						},

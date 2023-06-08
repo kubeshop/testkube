@@ -157,7 +157,7 @@ func mapTestStepToCRD(step testkube.TestSuiteStep) (stepSpec testsuitesv3.TestSu
 		}
 
 		stepSpec.Delay = &testsuitesv3.TestSuiteStepDelay{
-			Duration: metav1.Duration{duration},
+			Duration: metav1.Duration{Duration: duration},
 		}
 
 	case testkube.TestSuiteStepTypeExecuteTest:
