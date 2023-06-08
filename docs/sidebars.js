@@ -49,7 +49,7 @@ const sidebars = {
             "articles/running-tests",
             "articles/getting-tests-results",
             "articles/adding-tests-variables",
-            "articles/adding-timeout"
+            "articles/adding-timeout",
           ],
         },
         {
@@ -94,18 +94,10 @@ const sidebars = {
           items: [
             {
               type: "category",
-              label: "Exposing Testkube Dashboard",
-              link: {
-                type: "doc",
-                id: "articles/exposing-testkube",
-              },
-              items: ["articles/exposing-testkube-with-ingress-nginx"],
-            },
-            {
-              type: "category",
               label: "Authentication",
               items: ["articles/oauth-cli", "articles/oauth-dashboard"],
             },
+            "articles/exposing-testkube-with-ingress-nginx",
             "articles/deploying-in-aws",
           ],
         },
