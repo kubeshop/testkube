@@ -2,10 +2,12 @@ package testsuites
 
 import (
 	"testing"
-
-	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 )
 
 func TestMapTestSuiteListKubeToAPI(t *testing.T) {
@@ -18,7 +20,7 @@ func TestMapTestSuiteListKubeToAPI(t *testing.T) {
 						Execute: []testsuitesv3.TestSuiteStepSpec{
 							{
 								Delay: &testsuitesv3.TestSuiteStepDelay{
-									Duration: "1s",
+									Duration: metav1.Duration{time.Second},
 								},
 							},
 						},
@@ -29,9 +31,8 @@ func TestMapTestSuiteListKubeToAPI(t *testing.T) {
 					{
 						Execute: []testsuitesv3.TestSuiteStepSpec{
 							{
-								Test: &testsuitesv3.TestSuiteStepExecute{
-									Namespace: "testkube",
-									Name:      "some-test-name",
+								Test: &testsuitesv3.TestSuiteStepTest{
+									Name: "some-test-name",
 								},
 							},
 						},
@@ -43,7 +44,7 @@ func TestMapTestSuiteListKubeToAPI(t *testing.T) {
 						Execute: []testsuitesv3.TestSuiteStepSpec{
 							{
 								Delay: &testsuitesv3.TestSuiteStepDelay{
-									Duration: "1s",
+									Duration: metav1.Duration{time.Second},
 								},
 							},
 						},

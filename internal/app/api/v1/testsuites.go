@@ -32,8 +32,12 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to create test suite"
 		var request testkube.TestSuiteUpsertRequest
-		err := c.BodyParser(&request)
-		if err != nil {
+		data := c.Body()
+		if string(c.Request().Header.ContentType()) != mediaTypeJSON {
+			return s.Error(c, http.StatusBadRequest, fiber.ErrUnprocessableEntity)
+		}
+
+		if err := json.Unmarshal(data, &request); err != nil {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %w", errPrefix, err))
 		}
 		errPrefix = errPrefix + " " + request.Name
@@ -61,7 +65,11 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 			return s.getCRDs(c, data, err)
 		}
 
-		testSuite := testsuitesmapper.MapTestSuiteUpsertRequestToTestCRD(request)
+		testSuite, err := testsuitesmapper.MapTestSuiteUpsertRequestToTestCRD(request)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
 		testSuite.Namespace = s.Namespace
 
 		s.Log.Infow("creating test suite", "testSuite", testSuite)
@@ -85,8 +93,12 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 		errPrefix := "failed to update test suite"
 
 		var request testkube.TestSuiteUpdateRequest
-		err := c.BodyParser(&request)
-		if err != nil {
+		data := c.Body()
+		if string(c.Request().Header.ContentType()) != mediaTypeJSON {
+			return s.Error(c, http.StatusBadRequest, fiber.ErrUnprocessableEntity)
+		}
+
+		if err := json.Unmarshal(data, &request); err != nil {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %w", errPrefix, err))
 		}
 
@@ -126,7 +138,10 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 		}
 
 		// map TestSuite but load spec only to not override metadata.ResourceVersion
-		testSuiteSpec := testsuitesmapper.MapTestSuiteUpdateRequestToTestCRD(request, testSuite)
+		testSuiteSpec, err := testsuitesmapper.MapTestSuiteUpdateRequestToTestCRD(request, testSuite)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
 
 		updatedTestSuite, err := s.TestsSuitesClient.Update(testSuiteSpec)
 
@@ -257,7 +272,7 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 		if selector == "" {
 			err = s.TestsSuitesClient.DeleteAll()
 		} else {
-			var testSuiteList *testsuitesv2.TestSuiteList
+			var testSuiteList *testsuitesv3.TestSuiteList
 			testSuiteList, err = s.TestsSuitesClient.List(selector)
 			if err != nil {
 				if !errors.IsNotFound(err) {

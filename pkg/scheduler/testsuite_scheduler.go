@@ -340,7 +340,7 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 
 		switch step.Type() {
 		case testkube.TestSuiteStepTypeExecuteTest:
-			executeTestStep := step.Execute
+			executeTestStep := step.Test
 			if executeTestStep == nil {
 				continue
 			}
@@ -353,7 +353,7 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 			l.Info("executing test", "variables", testsuiteExecution.Variables, "request", request)
 
 			testTuples = append(testTuples, testTuple{
-				test:        testkube.Test{Name: executeTestStep.Name, Namespace: executeTestStep.Namespace},
+				test:        testkube.Test{Name: executeTestStep.Name},
 				executionID: execution.Id,
 			})
 		case testkube.TestSuiteStepTypeDelay:
@@ -363,8 +363,14 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 
 			l.Infow("delaying execution", "step", step.FullName(), "delay", step.Delay.Duration)
 
-			if time.Millisecond*time.Duration(step.Delay.Duration) > duration {
-				duration = time.Millisecond * time.Duration(step.Delay.Duration)
+			delay, err := time.ParseDuration(step.Delay.Duration)
+			if err != nil {
+				result.Execute[i].Err(err)
+				continue
+			}
+
+			if delay > duration {
+				duration = delay
 			}
 		default:
 			result.Execute[i].Err(errors.Errorf("can't find handler for execution step type: '%v'", step.Type()))
@@ -467,7 +473,13 @@ func (s *Scheduler) delayWithAbortionCheck(duration time.Duration, testSuiteId s
 				for i := range result.Execute {
 					if result.Execute[i].Step != nil && result.Execute[i].Step.Delay != nil &&
 						result.Execute[i].Execution != nil && result.Execute[i].Execution.ExecutionResult != nil {
-						if time.Millisecond*time.Duration(result.Execute[i].Step.Delay.Duration) < duration {
+						delay, err := time.ParseDuration(result.Execute[i].Step.Delay.Duration)
+						if err != nil {
+							result.Execute[i].Err(err)
+							continue
+						}
+
+						if delay < duration {
 							result.Execute[i].Execution.ExecutionResult.Success()
 							continue
 						}

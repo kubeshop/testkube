@@ -186,7 +186,7 @@ type ExecuteTestSuiteOptions struct {
 	HTTPSProxy         string
 	ExecutionLabels    map[string]string
 	ContentRequest     *testkube.TestContentRequest
-	RunningContext     *testkube.RunningContext	
+	RunningContext     *testkube.RunningContext
 	ConcurrencyLevel   int32
 }
 

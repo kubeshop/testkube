@@ -78,7 +78,7 @@ func mapCRStepToAPI(crstep testsuitesv3.TestSuiteStepSpec) (teststep testkube.Te
 	case crstep.Delay != nil:
 		teststep = testkube.TestSuiteStep{
 			Delay: &testkube.TestSuiteStepDelay{
-				Duration: crstep.Delay.Duration,
+				Duration: crstep.Delay.Duration.String(),
 			},
 		}
 	}

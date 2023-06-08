@@ -3,7 +3,7 @@ module github.com/kubeshop/testkube
 go 1.18
 
 require (
-	github.com/99designs/gqlgen v0.17.32
+	github.com/99designs/gqlgen v0.17.27
 	github.com/Masterminds/semver v1.5.0
 	github.com/adhocore/gronx v1.6.3
 	github.com/cdevents/sdk-go v0.3.0
