@@ -156,6 +156,7 @@ const sidebars = {
         "test-types/executor-jmeter",
         "test-types/executor-k6",
         "test-types/executor-kubepug",
+        "test-types/executor-kubent",
         "test-types/executor-maven",
         "test-types/executor-playwright",
         "test-types/executor-postman",
