@@ -3689,7 +3689,7 @@ components:
           description: configuration parameters for storing test artifacts
         preRunScript:
           type: string
-          description: script to run before test execution (not supported for container executors)
+          description: script to run before test execution
           example: "echo -n '$SECRET_ENV' > ./secret_file"
         runningContext:
           $ref: "#/components/schemas/RunningContext"
@@ -4183,7 +4183,7 @@ components:
           description: adjusting parameters for test content
         preRunScript:
           type: string
-          description: script to run before test execution (not supported for container executors)
+          description: script to run before test execution
           example: "echo -n '$SECRET_ENV' > ./secret_file"
         scraperTemplate:
           type: string
