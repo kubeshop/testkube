@@ -40,7 +40,7 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 
 		emptyBatch := true
 		for _, step := range request.Steps {
-			if len(step.Batch) != 0 {
+			if len(step.Execute) != 0 {
 				emptyBatch = false
 				break
 			}
@@ -93,7 +93,7 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 		if request.Steps != nil {
 			emptyBatch := true
 			for _, step := range *request.Steps {
-				if len(step.Batch) != 0 {
+				if len(step.Execute) != 0 {
 					emptyBatch = false
 					break
 				}

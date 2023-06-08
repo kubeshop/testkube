@@ -17,16 +17,13 @@ spec:
   before:
   {{- range .Before }}
   - stopOnFailure: {{ .StopOnFailure }}
-    {{- if ne (len .Batch) 0 }}
-    batch:
-    {{- range .Batch }}
-      {{- if .Execute }}
-    - execute:
-        {{- if .Execute.Namespace }}
-        namespace: {{ .Execute.Namespace }}
-        {{- end }}
-        {{- if .Execute.Name}}
-        name: {{ .Execute.Name }}
+    {{- if ne (len .Execute) 0 }}
+    execute:
+    {{- range .Execute }}
+      {{- if .Test }}
+    - test:
+        {{- if .Test.Name}}
+        name: {{ .test.Name }}
         {{- end }}
       {{- end }}
       {{- if .Delay }}
@@ -43,16 +40,13 @@ spec:
   steps:
   {{- range .Steps }}
   - stopOnFailure: {{ .StopOnFailure }}
-    {{- if ne (len .Batch) 0 }}
-    batch:
-    {{- range .Batch }}
-      {{- if .Execute }}
-    - execute:
-        {{- if .Execute.Namespace }}
-        namespace: {{ .Execute.Namespace }}
-        {{- end }}
-        {{- if .Execute.Name}}
-        name: {{ .Execute.Name }}
+    {{- if ne (len .Execute) 0 }}
+    execute:
+    {{- range .Execute }}
+      {{- if .Test }}
+    - test:
+        {{- if .Test.Name}}
+        name: {{ .Test.Name }}
         {{- end }}
       {{- end }}
       {{- if .Delay }}
@@ -69,16 +63,13 @@ spec:
   after:
   {{- range .After }}
   - stopOnFailure: {{ .StopOnFailure }}
-    {{- if ne (len .Batch) 0 }}
-    batch:
-    {{- range .Batch }}
-      {{- if .Execute }}
-    - execute:
-        {{- if .Execute.Namespace }}
-        namespace: {{ .Execute.Namespace }}
-        {{- end }}
-        {{- if .Execute.Name}}
-        name: {{ .Execute.Name }}
+    {{- if ne (len .Execute) 0 }}
+    execute:
+    {{- range .Execute }}
+      {{- if .Test }}
+    - test:
+        {{- if .Test.Name}}
+        name: {{ .Test.Name }}
         {{- end }}
       {{- end }}
       {{- if .Delay }}

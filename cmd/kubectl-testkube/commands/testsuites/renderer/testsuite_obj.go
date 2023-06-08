@@ -57,7 +57,7 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 	d := [][]string{{"Names", "Stop on failure"}}
 	for _, batch := range batches {
 		var names []string
-		for _, step := range batch.Batch {
+		for _, step := range batch.Execute {
 			names = append(names, step.FullName())
 		}
 
