@@ -211,6 +211,7 @@ const sidebars = {
           label: "Helm Chart",
         },
         "openapi",
+        "articles/operator-api-reference",
         "articles/architecture",
         "articles/telemetry",
       ],
