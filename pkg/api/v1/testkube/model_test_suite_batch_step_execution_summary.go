@@ -11,5 +11,5 @@ package testkube
 
 // Test suite batch execution summary
 type TestSuiteBatchStepExecutionSummary struct {
-	Batch []TestSuiteStepExecutionSummary `json:"batch,omitempty"`
+	Execute []TestSuiteStepExecutionSummary `json:"execute,omitempty"`
 }

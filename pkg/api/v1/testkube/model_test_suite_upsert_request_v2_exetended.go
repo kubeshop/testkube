@@ -1,5 +1,7 @@
 package testkube
 
+import "time"
+
 // ToTestSuiteUpsertRequest converts to TestSuiteUpsertRequest model
 func (t *TestSuiteUpsertRequestV2) ToTestSuiteUpsertRequest() *TestSuiteUpsertRequest {
 	var before, steps, after []TestSuiteBatchStep
@@ -33,12 +35,22 @@ func (t *TestSuiteUpsertRequestV2) ToTestSuiteUpsertRequest() *TestSuiteUpsertRe
 
 // ToTestSuiteBatchStep converts to ToTestSuiteBatchStep model
 func (s *TestSuiteStepV2) ToTestSuiteBatchStep() *TestSuiteBatchStep {
+	var test *TestSuiteStepExecuteTest
+	if s.Execute != nil {
+		test = &TestSuiteStepExecuteTest{Name: s.Execute.Name}
+	}
+
+	var delay *TestSuiteStepDelay
+	if s.Delay != nil {
+		delay = &TestSuiteStepDelay{Duration: time.Duration(s.Delay.Duration * int32(time.Millisecond)).String()}
+	}
+
 	return &TestSuiteBatchStep{
 		StopOnFailure: s.StopTestOnFailure,
-		Batch: []TestSuiteStep{
+		Execute: []TestSuiteStep{
 			{
-				Execute: s.Execute,
-				Delay:   s.Delay,
+				Test:  test,
+				Delay: delay,
 			},
 		},
 	}

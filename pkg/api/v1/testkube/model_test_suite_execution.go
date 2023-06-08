@@ -38,7 +38,7 @@ type TestSuiteExecution struct {
 	// steps execution results
 	StepResults []TestSuiteStepExecutionResult `json:"stepResults,omitempty"`
 	// batch steps execution results
-	BatchStepResults []TestSuiteBatchStepExecutionResult `json:"batchStepResults,omitempty"`
+	ExecuteStepResults []TestSuiteBatchStepExecutionResult `json:"executeStepResults,omitempty"`
 	// test suite labels
 	Labels         map[string]string `json:"labels,omitempty"`
 	RunningContext *RunningContext   `json:"runningContext,omitempty"`

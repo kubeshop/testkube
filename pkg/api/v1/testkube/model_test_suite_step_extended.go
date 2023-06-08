@@ -1,7 +1,7 @@
 package testkube
 
 func (s TestSuiteStep) Type() *TestSuiteStepType {
-	if s.Execute != nil {
+	if s.Test != nil {
 		return TestSuiteStepTypeExecuteTest
 	}
 	if s.Delay != nil {
@@ -15,7 +15,7 @@ func (s TestSuiteStep) FullName() string {
 	case TestSuiteStepTypeDelay:
 		return s.Delay.FullName()
 	case TestSuiteStepTypeExecuteTest:
-		return s.Execute.FullName()
+		return s.Test.FullName()
 	default:
 		return "unknown"
 	}

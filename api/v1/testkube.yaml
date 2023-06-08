@@ -3056,8 +3056,8 @@ components:
           example:
             - stopOnFailure: true
               execute:
-                namespace: "testkube"
-                name: "example-test"
+                - test:
+                    name: "example-test"
         steps:
           type: array
           items:
@@ -3066,8 +3066,8 @@ components:
           example:
             - stopOnFailure: true
               execute:
-                namespace: "testkube"
-                name: "example-test"
+                - test:
+                    name: "example-test"
         after:
           type: array
           items:
@@ -3076,8 +3076,8 @@ components:
           example:
             - stopOnFailure: true
               execute:
-                namespace: "testkube"
-                name: "example-test"
+                - test:
+                    name: "example-test"
         labels:
           type: object
           description: "test suite labels"
@@ -3186,7 +3186,7 @@ components:
         stopOnFailure:
           type: boolean
           default: true
-        batch:
+        execute:
           type: array
           items:
             $ref: "#/components/schemas/TestSuiteStep"
@@ -3194,7 +3194,7 @@ components:
     TestSuiteStep:
       type: object
       properties:
-        execute:
+        test:
           $ref: "#/components/schemas/TestSuiteStepExecuteTest"
         delay:
           $ref: "#/components/schemas/TestSuiteStepDelay"
@@ -3210,15 +3210,36 @@ components:
           type: boolean
           default: true
         execute:
-          $ref: "#/components/schemas/TestSuiteStepExecuteTest"
+          $ref: "#/components/schemas/TestSuiteStepExecuteTestV2"
         delay:
-          $ref: "#/components/schemas/TestSuiteStepDelay"
+          $ref: "#/components/schemas/TestSuiteStepDelayV2"
 
     TestSuiteStepExecuteTest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: object name
+          example: "name"
+
+    TestSuiteStepExecuteTestV2:
       allOf:
         - $ref: "#/components/schemas/ObjectRef"
 
     TestSuiteStepDelay:
+      type: object
+      required:
+        - duration
+      properties:
+        duration:
+          type: string
+          format: duration
+          example: 1s
+          description: delay duration in time units
+
+    TestSuiteStepDelayV2:
       type: object
       required:
         - duration
@@ -3288,7 +3309,7 @@ components:
           items:
             $ref: "#/components/schemas/TestSuiteStepExecutionResult"
             description: test execution results
-        batchStepResults:
+        executeStepResults:
           type: array
           description: "batch steps execution results"
           items:
@@ -3336,7 +3357,7 @@ components:
       properties:
         step:
           $ref: "#/components/schemas/TestSuiteBatchStep"          
-        batch:
+        execute:
           type: array
           items:
             $ref: "#/components/schemas/TestSuiteStepExecutionResult"
@@ -3438,7 +3459,7 @@ components:
       description: "Test suite batch execution summary"
       type: object
       properties:
-        batch:
+        execute:
           type: array
           items:
             $ref: "#/components/schemas/TestSuiteStepExecutionSummary"

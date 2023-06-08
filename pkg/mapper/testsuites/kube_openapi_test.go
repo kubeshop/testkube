@@ -15,10 +15,10 @@ func TestMapTestSuiteListKubeToAPI(t *testing.T) {
 			Spec: testsuitesv3.TestSuiteSpec{
 				Before: []testsuitesv3.TestSuiteBatchStep{
 					{
-						Batch: []testsuitesv3.TestSuiteStepSpec{
+						Execute: []testsuitesv3.TestSuiteStepSpec{
 							{
 								Delay: &testsuitesv3.TestSuiteStepDelay{
-									Duration: 1000,
+									Duration: "1s",
 								},
 							},
 						},
@@ -27,9 +27,9 @@ func TestMapTestSuiteListKubeToAPI(t *testing.T) {
 
 				Steps: []testsuitesv3.TestSuiteBatchStep{
 					{
-						Batch: []testsuitesv3.TestSuiteStepSpec{
+						Execute: []testsuitesv3.TestSuiteStepSpec{
 							{
-								Execute: &testsuitesv3.TestSuiteStepExecute{
+								Test: &testsuitesv3.TestSuiteStepExecute{
 									Namespace: "testkube",
 									Name:      "some-test-name",
 								},
@@ -40,10 +40,10 @@ func TestMapTestSuiteListKubeToAPI(t *testing.T) {
 
 				After: []testsuitesv3.TestSuiteBatchStep{
 					{
-						Batch: []testsuitesv3.TestSuiteStepSpec{
+						Execute: []testsuitesv3.TestSuiteStepSpec{
 							{
 								Delay: &testsuitesv3.TestSuiteStepDelay{
-									Duration: 1000,
+									Duration: "1s",
 								},
 							},
 						},

@@ -10,6 +10,6 @@
 package testkube
 
 type TestSuiteStep struct {
-	Execute *TestSuiteStepExecuteTest `json:"execute,omitempty"`
-	Delay   *TestSuiteStepDelay       `json:"delay,omitempty"`
+	Test  *TestSuiteStepExecuteTest `json:"test,omitempty"`
+	Delay *TestSuiteStepDelay       `json:"delay,omitempty"`
 }

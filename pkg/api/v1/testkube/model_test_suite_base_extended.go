@@ -39,9 +39,9 @@ func (t TestSuite) GetTestNames() []string {
 	batches = append(batches, t.Steps...)
 	batches = append(batches, t.After...)
 	for _, batch := range batches {
-		for _, step := range batch.Batch {
-			if step.Execute != nil {
-				names = append(names, step.Execute.Name)
+		for _, step := range batch.Execute {
+			if step.Test != nil {
+				names = append(names, step.Test.Name)
 			}
 		}
 	}

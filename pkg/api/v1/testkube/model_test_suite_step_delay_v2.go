@@ -9,7 +9,7 @@
  */
 package testkube
 
-type TestSuiteStepExecuteTest struct {
-	// object name
-	Name string `json:"name"`
+type TestSuiteStepDelayV2 struct {
+	// delay duration in milliseconds
+	Duration int32 `json:"duration"`
 }

@@ -30,12 +30,12 @@ func TestSuiteMapToSummary(t *testing.T) {
 		assert.Equal(t, result[i].Duration, executions[i].Duration)
 		assert.Equal(t, result[i].DurationMs, executions[i].DurationMs)
 		for j := range result[i].Execution {
-			assert.Equal(t, result[i].Execution[j].Batch[0].Id, executions[i].StepResults[j].Execution.Id)
-			assert.Equal(t, result[i].Execution[j].Batch[0].Name, executions[i].StepResults[j].Execution.Name)
-			assert.Equal(t, result[i].Execution[j].Batch[0].TestName, executions[i].StepResults[j].Execution.TestName)
-			assert.Equal(t, result[i].Execution[j].Batch[0].Status, executions[i].StepResults[j].Execution.ExecutionResult.Status)
+			assert.Equal(t, result[i].Execution[j].Execute[0].Id, executions[i].StepResults[j].Execution.Id)
+			assert.Equal(t, result[i].Execution[j].Execute[0].Name, executions[i].StepResults[j].Execution.Name)
+			assert.Equal(t, result[i].Execution[j].Execute[0].TestName, executions[i].StepResults[j].Execution.TestName)
+			assert.Equal(t, result[i].Execution[j].Execute[0].Status, executions[i].StepResults[j].Execution.ExecutionResult.Status)
 			var tp *testkube.TestSuiteStepType
-			if executions[i].StepResults[j].Step.Execute != nil {
+			if executions[i].StepResults[j].Step.Test != nil {
 				tp = testkube.TestSuiteStepTypeExecuteTest
 			}
 
@@ -43,7 +43,7 @@ func TestSuiteMapToSummary(t *testing.T) {
 				tp = testkube.TestSuiteStepTypeDelay
 			}
 
-			assert.Equal(t, result[i].Execution[j].Batch[0].Type_, tp)
+			assert.Equal(t, result[i].Execution[j].Execute[0].Type_, tp)
 		}
 	}
 }
@@ -69,20 +69,20 @@ func TestSuiteMapBatchToSummary(t *testing.T) {
 		assert.Equal(t, result[i].Duration, executions[i].Duration)
 		assert.Equal(t, result[i].DurationMs, executions[i].DurationMs)
 		for j := range result[i].Execution {
-			assert.Equal(t, result[i].Execution[j].Batch[0].Id, executions[i].BatchStepResults[j].Batch[0].Execution.Id)
-			assert.Equal(t, result[i].Execution[j].Batch[0].Name, executions[i].BatchStepResults[j].Batch[0].Execution.Name)
-			assert.Equal(t, result[i].Execution[j].Batch[0].TestName, executions[i].BatchStepResults[j].Batch[0].Execution.TestName)
-			assert.Equal(t, result[i].Execution[j].Batch[0].Status, executions[i].BatchStepResults[j].Batch[0].Execution.ExecutionResult.Status)
+			assert.Equal(t, result[i].Execution[j].Execute[0].Id, executions[i].ExecuteStepResults[j].Execute[0].Execution.Id)
+			assert.Equal(t, result[i].Execution[j].Execute[0].Name, executions[i].ExecuteStepResults[j].Execute[0].Execution.Name)
+			assert.Equal(t, result[i].Execution[j].Execute[0].TestName, executions[i].ExecuteStepResults[j].Execute[0].Execution.TestName)
+			assert.Equal(t, result[i].Execution[j].Execute[0].Status, executions[i].ExecuteStepResults[j].Execute[0].Execution.ExecutionResult.Status)
 			var tp *testkube.TestSuiteStepType
-			if executions[i].BatchStepResults[j].Batch[0].Step.Execute != nil {
+			if executions[i].ExecuteStepResults[j].Execute[0].Step.Test != nil {
 				tp = testkube.TestSuiteStepTypeExecuteTest
 			}
 
-			if executions[i].BatchStepResults[j].Batch[0].Step.Delay != nil {
+			if executions[i].ExecuteStepResults[j].Execute[0].Step.Delay != nil {
 				tp = testkube.TestSuiteStepTypeDelay
 			}
 
-			assert.Equal(t, result[i].Execution[j].Batch[0].Type_, tp)
+			assert.Equal(t, result[i].Execution[j].Execute[0].Type_, tp)
 		}
 	}
 }
@@ -90,7 +90,7 @@ func TestSuiteMapBatchToSummary(t *testing.T) {
 func getExecutions() []testkube.TestSuiteExecution {
 	stepResults1 := []testkube.TestSuiteStepExecutionResult{
 		{
-			Step: &testkube.TestSuiteStep{Execute: &testkube.TestSuiteStepExecuteTest{}},
+			Step: &testkube.TestSuiteStep{Test: &testkube.TestSuiteStepExecuteTest{}},
 			Execution: &testkube.Execution{
 				Id:       "id1",
 				Name:     "name1",
@@ -122,7 +122,7 @@ func getExecutions() []testkube.TestSuiteExecution {
 	execution1.Stop()
 	stepResults2 := []testkube.TestSuiteStepExecutionResult{
 		{
-			Step: &testkube.TestSuiteStep{Execute: &testkube.TestSuiteStepExecuteTest{}},
+			Step: &testkube.TestSuiteStep{Test: &testkube.TestSuiteStepExecuteTest{}},
 			Execution: &testkube.Execution{
 				Id:       "id2",
 				Name:     "name2",
@@ -163,9 +163,9 @@ func getExecutions() []testkube.TestSuiteExecution {
 func getBatchExecutions() []testkube.TestSuiteExecution {
 	stepResults1 := []testkube.TestSuiteBatchStepExecutionResult{
 		{
-			Batch: []testkube.TestSuiteStepExecutionResult{
+			Execute: []testkube.TestSuiteStepExecutionResult{
 				{
-					Step: &testkube.TestSuiteStep{Execute: &testkube.TestSuiteStepExecuteTest{}},
+					Step: &testkube.TestSuiteStep{Test: &testkube.TestSuiteStepExecuteTest{}},
 					Execution: &testkube.Execution{
 						Id:       "id1",
 						Name:     "name1",
@@ -186,22 +186,22 @@ func getBatchExecutions() []testkube.TestSuiteExecution {
 			"testkube",
 			"testsuite1",
 		},
-		Status:           testkube.TestSuiteExecutionStatusFailed,
-		Envs:             map[string]string{"var": "key"},
-		Variables:        map[string]testkube.Variable{"p": testkube.NewBasicVariable("p", "v1")},
-		SecretUUID:       "secret-uuid",
-		StartTime:        time.Now(),
-		EndTime:          time.Now(),
-		BatchStepResults: stepResults1,
-		Labels:           map[string]string{"label": "value"},
+		Status:             testkube.TestSuiteExecutionStatusFailed,
+		Envs:               map[string]string{"var": "key"},
+		Variables:          map[string]testkube.Variable{"p": testkube.NewBasicVariable("p", "v1")},
+		SecretUUID:         "secret-uuid",
+		StartTime:          time.Now(),
+		EndTime:            time.Now(),
+		ExecuteStepResults: stepResults1,
+		Labels:             map[string]string{"label": "value"},
 	}
 
 	execution1.Stop()
 	stepResults2 := []testkube.TestSuiteBatchStepExecutionResult{
 		{
-			Batch: []testkube.TestSuiteStepExecutionResult{
+			Execute: []testkube.TestSuiteStepExecutionResult{
 				{
-					Step: &testkube.TestSuiteStep{Execute: &testkube.TestSuiteStepExecuteTest{}},
+					Step: &testkube.TestSuiteStep{Test: &testkube.TestSuiteStepExecuteTest{}},
 					Execution: &testkube.Execution{
 						Id:       "id2",
 						Name:     "name2",
@@ -222,14 +222,14 @@ func getBatchExecutions() []testkube.TestSuiteExecution {
 			"testkube",
 			"testsuite2",
 		},
-		Status:           testkube.TestSuiteExecutionStatusPassed,
-		Envs:             map[string]string{"var": "key"},
-		Variables:        map[string]testkube.Variable{"p": testkube.NewBasicVariable("p", "v2")},
-		SecretUUID:       "secret-uuid",
-		StartTime:        time.Now(),
-		EndTime:          time.Now(),
-		BatchStepResults: stepResults2,
-		Labels:           map[string]string{"label": "value"},
+		Status:             testkube.TestSuiteExecutionStatusPassed,
+		Envs:               map[string]string{"var": "key"},
+		Variables:          map[string]testkube.Variable{"p": testkube.NewBasicVariable("p", "v2")},
+		SecretUUID:         "secret-uuid",
+		StartTime:          time.Now(),
+		EndTime:            time.Now(),
+		ExecuteStepResults: stepResults2,
+		Labels:             map[string]string{"label": "value"},
 	}
 
 	execution2.Stop()

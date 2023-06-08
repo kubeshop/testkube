@@ -2,12 +2,12 @@
     "name": "staging-testsuite",
     "description": "Staging release tests",
     "steps": [
-        {"batch": [{"execute": {"name": "postman-executor-smoke"}}]},
-        {"batch": [{"execute": {"name": "postman-executor-smoke-testsource"}}]},
-        {"batch": [{"execute": {"name": "k6-executor-smoke"}}]},
-        {"batch": [{"execute": {"name": "container-executor-curl-smoke"}}]},
-        {"batch": [{"execute" :{"name": "cypress-11-executor-smoke-chrome"}}]},
-        {"batch": [{"execute" :{"name": "cypress-default-executor-smoke-electron-testsource"}}]},
-        {"batch": [{"execute" :{"name": "dashboard-e2e-tests"}}]}
+        {"execute": [{"test": {"name": "postman-executor-smoke"}}]},
+        {"execute": [{"test": {"name": "postman-executor-smoke-testsource"}}]},
+        {"execute": [{"test": {"name": "k6-executor-smoke"}}]},
+        {"execute": [{"test": {"name": "container-executor-curl-smoke"}}]},
+        {"execute": [{"test" :{"name": "cypress-11-executor-smoke-chrome"}}]},
+        {"execute": [{"test" :{"name": "cypress-default-executor-smoke-electron-testsource"}}]},
+        {"execute": [{"test" :{"name": "dashboard-e2e-tests"}}]}
     ]
 }

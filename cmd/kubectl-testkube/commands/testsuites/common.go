@@ -101,7 +101,7 @@ func NewTestSuiteUpsertOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 
 	emptyBatch := true
 	for _, step := range options.Steps {
-		if len(step.Batch) != 0 {
+		if len(step.Execute) != 0 {
 			emptyBatch = false
 			break
 		}
@@ -121,7 +121,7 @@ func NewTestSuiteUpsertOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 	}
 
 	for _, step := range options.Steps {
-		if len(step.Batch) == 0 {
+		if len(step.Execute) == 0 {
 			return options, fmt.Errorf("no steps defined for batch step")
 		}
 	}
@@ -194,7 +194,7 @@ func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 		if options.Steps != nil {
 			emptyBatch := true
 			for _, step := range *options.Steps {
-				if len(step.Batch) != 0 {
+				if len(step.Execute) != 0 {
 					emptyBatch = false
 					break
 				}

@@ -15,16 +15,16 @@ func MapToSummary(execution *testkube.TestSuiteExecution) *testkube.TestSuiteExe
 		summary = make([]testkube.TestSuiteBatchStepExecutionSummary, len(execution.StepResults))
 		for i, step := range execution.StepResults {
 			summary[i] = testkube.TestSuiteBatchStepExecutionSummary{
-				Batch: []testkube.TestSuiteStepExecutionSummary{
+				Execute: []testkube.TestSuiteStepExecutionSummary{
 					mapStepExecutionResultToExecutionSummary(step),
 				},
 			}
 		}
 	}
 
-	if len(execution.BatchStepResults) != 0 {
-		summary = make([]testkube.TestSuiteBatchStepExecutionSummary, len(execution.BatchStepResults))
-		for i, step := range execution.BatchStepResults {
+	if len(execution.ExecuteStepResults) != 0 {
+		summary = make([]testkube.TestSuiteBatchStepExecutionSummary, len(execution.ExecuteStepResults))
+		for i, step := range execution.ExecuteStepResults {
 			summary[i] = mapBatchStepExecutionResultToExecutionSummary(step)
 		}
 	}
@@ -58,7 +58,7 @@ func mapStepExecutionResultToExecutionSummary(step testkube.TestSuiteStepExecuti
 	}
 
 	if step.Step != nil {
-		if step.Step.Execute != nil {
+		if step.Step.Test != nil {
 			tp = testkube.TestSuiteStepTypeExecuteTest
 		}
 
@@ -77,12 +77,12 @@ func mapStepExecutionResultToExecutionSummary(step testkube.TestSuiteStepExecuti
 }
 
 func mapBatchStepExecutionResultToExecutionSummary(step testkube.TestSuiteBatchStepExecutionResult) testkube.TestSuiteBatchStepExecutionSummary {
-	batch := make([]testkube.TestSuiteStepExecutionSummary, len(step.Batch))
-	for i, step := range step.Batch {
+	batch := make([]testkube.TestSuiteStepExecutionSummary, len(step.Execute))
+	for i, step := range step.Execute {
 		batch[i] = mapStepExecutionResultToExecutionSummary(step)
 	}
 
 	return testkube.TestSuiteBatchStepExecutionSummary{
-		Batch: batch,
+		Execute: batch,
 	}
 }

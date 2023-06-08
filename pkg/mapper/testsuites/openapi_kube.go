@@ -18,14 +18,14 @@ func MapToTestExecutionSummary(executions []testkube.TestSuiteExecution) []testk
 			executionsSummary = make([]testkube.TestSuiteBatchStepExecutionSummary, len(execution.StepResults))
 			for j, stepResult := range execution.StepResults {
 				executionsSummary[j] = testkube.TestSuiteBatchStepExecutionSummary{
-					Batch: []testkube.TestSuiteStepExecutionSummary{mapStepResultToStepExecutionSummary(stepResult)},
+					Execute: []testkube.TestSuiteStepExecutionSummary{mapStepResultToStepExecutionSummary(stepResult)},
 				}
 			}
 		}
 
-		if len(execution.BatchStepResults) != 0 {
-			executionsSummary = make([]testkube.TestSuiteBatchStepExecutionSummary, len(execution.BatchStepResults))
-			for j, stepResult := range execution.BatchStepResults {
+		if len(execution.ExecuteStepResults) != 0 {
+			executionsSummary = make([]testkube.TestSuiteBatchStepExecutionSummary, len(execution.ExecuteStepResults))
+			for j, stepResult := range execution.ExecuteStepResults {
 				executionsSummary[j] = mapBatchStepResultToExecutionSummary(stepResult)
 			}
 		}
@@ -78,13 +78,13 @@ func mapStepResultToStepExecutionSummary(r testkube.TestSuiteStepExecutionResult
 }
 
 func mapBatchStepResultToExecutionSummary(r testkube.TestSuiteBatchStepExecutionResult) testkube.TestSuiteBatchStepExecutionSummary {
-	batch := make([]testkube.TestSuiteStepExecutionSummary, len(r.Batch))
-	for i := range r.Batch {
-		batch[i] = mapStepResultToStepExecutionSummary(r.Batch[i])
+	batch := make([]testkube.TestSuiteStepExecutionSummary, len(r.Execute))
+	for i := range r.Execute {
+		batch[i] = mapStepResultToStepExecutionSummary(r.Execute[i])
 	}
 
 	return testkube.TestSuiteBatchStepExecutionSummary{
-		Batch: batch,
+		Execute: batch,
 	}
 }
 
@@ -109,14 +109,14 @@ func MapTestSuiteUpsertRequestToTestCRD(request testkube.TestSuiteUpsertRequest)
 
 func mapTestBatchStepsToCRD(batches []testkube.TestSuiteBatchStep) (out []testsuitesv3.TestSuiteBatchStep) {
 	for _, batch := range batches {
-		steps := make([]testsuitesv3.TestSuiteStepSpec, len(batch.Batch))
-		for i := range batch.Batch {
-			steps[i] = mapTestStepToCRD(batch.Batch[i])
+		steps := make([]testsuitesv3.TestSuiteStepSpec, len(batch.Execute))
+		for i := range batch.Execute {
+			steps[i] = mapTestStepToCRD(batch.Execute[i])
 		}
 
 		out = append(out, testsuitesv3.TestSuiteBatchStep{
 			StopOnFailure: batch.StopOnFailure,
-			Batch:         steps,
+			Execute:       steps,
 		})
 	}
 
@@ -132,10 +132,9 @@ func mapTestStepToCRD(step testkube.TestSuiteStep) (stepSpec testsuitesv3.TestSu
 		}
 
 	case testkube.TestSuiteStepTypeExecuteTest:
-		s := step.Execute
-		stepSpec.Execute = &testsuitesv3.TestSuiteStepExecute{
-			Namespace: s.Namespace,
-			Name:      s.Name,
+		s := step.Test
+		stepSpec.Test = &testsuitesv3.TestSuiteStepTest{
+			Name: s.Name,
 		}
 	}
 

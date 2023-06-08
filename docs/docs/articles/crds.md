@@ -118,15 +118,15 @@ spec:
   description: Example Test Suite
   steps:
   - stopOnFailure: false
-    batch:
-    - execute:
+    execute:
+    - test:
         name: testkube-api
-    - execute:
+    - test:
         name: testkube-dashboard
   - stopOnFailure: false
-    batch:
+    execute:
     - delay:
-        duration: 1000
+        duration: 1s
 ```
 
 ## Executors

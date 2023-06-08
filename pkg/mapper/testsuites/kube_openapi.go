@@ -42,14 +42,14 @@ func MapCRToAPI(cr testsuitesv3.TestSuite) (test testkube.TestSuite) {
 
 	for i := range batches {
 		for _, b := range *batches[i].source {
-			steps := make([]testkube.TestSuiteStep, len(b.Batch))
-			for j := range b.Batch {
-				steps[j] = mapCRStepToAPI(b.Batch[j])
+			steps := make([]testkube.TestSuiteStep, len(b.Execute))
+			for j := range b.Execute {
+				steps[j] = mapCRStepToAPI(b.Execute[j])
 			}
 
 			*batches[i].dest = append(*batches[i].dest, testkube.TestSuiteBatchStep{
 				StopOnFailure: b.StopOnFailure,
-				Batch:         steps,
+				Execute:       steps,
 			})
 		}
 	}
@@ -68,11 +68,10 @@ func MapCRToAPI(cr testsuitesv3.TestSuite) (test testkube.TestSuite) {
 func mapCRStepToAPI(crstep testsuitesv3.TestSuiteStepSpec) (teststep testkube.TestSuiteStep) {
 
 	switch true {
-	case crstep.Execute != nil:
+	case crstep.Test != nil:
 		teststep = testkube.TestSuiteStep{
-			Execute: &testkube.TestSuiteStepExecuteTest{
-				Name:      crstep.Execute.Name,
-				Namespace: crstep.Execute.Namespace,
+			Test: &testkube.TestSuiteStepExecuteTest{
+				Name: crstep.Test.Name,
 			},
 		}
 

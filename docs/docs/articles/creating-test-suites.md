@@ -23,13 +23,13 @@ echo '
 	"name": "testkube-suite",
 	"description": "Testkube test suite, api, dashboard and performance",
 	"steps": [
-		{"batch": [{"execute": {"name": "testkube-api"}}, {"execute": {"name": "testkube-dashboard"}}]},
-		{"batch": [{"delay": {"duration": 1000}}]},
-		{"batch": [{"execute": {"name": "testkube-dashboard"}}, {"delay": {"duration": 1000}}, {"execute": {"name": "testkube-homepage"}}]},
-		{"batch": [{"delay": {"duration": 1000}}]},
-		{"batch": [{"execute": {"name": "testkube-api-performance"}}]},
-		{"batch": [{"delay": {"duration": 1000}}]},
-		{"batch": [{"execute": {"name": "testkube-homepage-performance"}}]}
+		{"execute": [{"test": {"name": "testkube-api"}}, {"test": {"name": "testkube-dashboard"}}]},
+		{"execute": [{"delay": {"duration": "1s"}}]},
+		{"execute": [{"test": {"name": "testkube-dashboard"}}, {"delay": {"duration": "1s"}}, {"test": {"name": "testkube-homepage"}}]},
+		{"execute": [{"delay": {"duration": "1s"}}]},
+		{"execute": [{"test": {"name": "testkube-api-performance"}}]},
+		{"execute": [{"delay": {"duration": "1s"}}]},
+		{"execute": [{"test": {"name": "testkube-homepage-performance"}}]}
 	]
 }' | kubectl testkube create testsuite
 ```
@@ -66,38 +66,38 @@ spec:
   description: "Testkube test suite, api, dashboard and performance"
   steps:
   - stopOnFailure: false
-    batch:
-    - execute:
+    execute:
+    - test:
         name: testkube-api
-    - execute:
+    - test:
         name: testkube-dashboard
   - stopOnFailure: false
-    batch:
+    execute:
     - delay:
-        duration: 1000
+        duration: 1s
   - stopOnFailure: false
-    batch:
-    - execute:
+    execute:
+    - test:
         name: testkube-dashboard
     - delay:
-        duration: 1000
-    - execute:
+        duration: 1s
+    - test:
         name: testkube-homepage
   - stopOnFailure: false
-    batch:
+    execute:
     - delay:
-        duration: 1000
+        duration: 1s
   - stopOnFailure: false
-    batch:
-    - execute:
+    execute:
+    - test:
         name: testkube-api-performance
   - stopOnFailure: false
-    batch:
+    execute:
     - delay:
-        duration: 1000
+        duration: 1s
   - stopOnFailure: false
-    batch:
-    - execute:
+    execute:
+    - test:
         name: testkube-homepage-performance
 ```
 

@@ -50,13 +50,13 @@ func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutio
 
 	for i := range batches {
 		var stepResults []TestSuiteStepExecutionResult
-		for j := range batches[i].Batch {
-			stepResults = append(stepResults, NewTestStepQueuedResult(&batches[i].Batch[j]))
+		for j := range batches[i].Execute {
+			stepResults = append(stepResults, NewTestStepQueuedResult(&batches[i].Execute[j]))
 		}
 
-		testExecution.BatchStepResults = append(testExecution.BatchStepResults, TestSuiteBatchStepExecutionResult{
-			Step:  &batches[i],
-			Batch: stepResults,
+		testExecution.ExecuteStepResults = append(testExecution.ExecuteStepResults, TestSuiteBatchStepExecutionResult{
+			Step:    &batches[i],
+			Execute: stepResults,
 		})
 	}
 
@@ -70,8 +70,8 @@ func (e TestSuiteExecution) FailedStepsCount() (count int) {
 		}
 	}
 
-	for _, batchStepResult := range e.BatchStepResults {
-		for _, stepResult := range batchStepResult.Batch {
+	for _, batchStepResult := range e.ExecuteStepResults {
+		for _, stepResult := range batchStepResult.Execute {
 			if stepResult.Execution != nil && stepResult.Execution.IsFailed() {
 				count++
 				break
@@ -146,14 +146,14 @@ func (e TestSuiteExecution) Table() (header []string, output [][]string) {
 		}
 	}
 
-	if len(e.BatchStepResults) != 0 {
+	if len(e.ExecuteStepResults) != 0 {
 		header = []string{"Statuses", "Step", "IDs", "Errors"}
 		output = make([][]string, 0)
 
-		for _, bs := range e.BatchStepResults {
+		for _, bs := range e.ExecuteStepResults {
 			var statuses, names, ids, errorMessages []string
 
-			for _, sr := range bs.Batch {
+			for _, sr := range bs.Execute {
 				status := "no-execution-result"
 				if sr.Execution != nil && sr.Execution.ExecutionResult != nil && sr.Execution.ExecutionResult.Status != nil {
 					status = string(*sr.Execution.ExecutionResult.Status)

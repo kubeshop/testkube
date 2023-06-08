@@ -126,12 +126,12 @@ metadata:
 spec:
   steps:
   - stopOnFailure: false
-    batch:
-    - execute:
+    execute:
+    - test:
         name: testkube-dashboard
     - delay:
-        duration: 1000
-    - execute:
+        duration: 1s
+    - test:
         name: testkube-homepage
 
 status:
