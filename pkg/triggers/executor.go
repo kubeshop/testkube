@@ -4,9 +4,8 @@ import (
 	"context"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"

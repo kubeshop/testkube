@@ -7,14 +7,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/version"
-
 	"github.com/pkg/errors"
 
 	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	"github.com/kubeshop/testkube/pkg/telemetry"
+	"github.com/kubeshop/testkube/pkg/version"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 

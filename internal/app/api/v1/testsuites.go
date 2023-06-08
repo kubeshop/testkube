@@ -9,9 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kubeshop/testkube/pkg/datefilter"
-	"github.com/kubeshop/testkube/pkg/repository/testresult"
-
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -19,9 +16,11 @@ import (
 	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
+	"github.com/kubeshop/testkube/pkg/datefilter"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	testsuiteexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testsuiteexecutions"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
+	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/types"
 	"github.com/kubeshop/testkube/pkg/workerpool"

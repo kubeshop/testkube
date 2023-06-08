@@ -5,15 +5,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/repository/result"
-	"github.com/kubeshop/testkube/pkg/repository/testresult"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/testresult"
 )
 
 func TestService_runExecutionScraper(t *testing.T) {
