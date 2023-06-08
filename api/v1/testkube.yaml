@@ -3689,7 +3689,7 @@ components:
           description: configuration parameters for storing test artifacts
         preRunScript:
           type: string
-          description: script to run before test execution
+          description: script to run before test execution (not supported for container executors)
           example: "echo -n '$SECRET_ENV' > ./secret_file"
         runningContext:
           $ref: "#/components/schemas/RunningContext"
@@ -4183,7 +4183,7 @@ components:
           description: adjusting parameters for test content
         preRunScript:
           type: string
-          description: script to run before test execution
+          description: script to run before test execution (not supported for container executors)
           example: "echo -n '$SECRET_ENV' > ./secret_file"
         scraperTemplate:
           type: string
@@ -4533,17 +4533,6 @@ components:
         payloadObjectField:
           type: string
           description: will load the generated payload for notification inside the object
-        payloadTemplate:
-          type: string
-          description: golang based template for notification payload
-        headers:
-          type: object
-          description: "webhook headers"
-          additionalProperties:
-            type: string
-          example:
-            env: "Content-Type"
-            app: "application/xml"
         labels:
           type: object
           description: "webhook labels"
