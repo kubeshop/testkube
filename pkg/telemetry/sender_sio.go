@@ -25,11 +25,11 @@ type stdLogger struct {
 }
 
 func (l stdLogger) Logf(format string, args ...interface{}) {
-	log.DefaultLogger.Debugw("sending telemetry data", "info", fmt.Sprintf(format, args))
+	log.DefaultLogger.Debugw("sending telemetry data", "info", fmt.Sprintf(format, args...))
 }
 
 func (l stdLogger) Errorf(format string, args ...interface{}) {
-	log.DefaultLogger.Debugw("sending telemetry data", "error", fmt.Sprintf(format, args))
+	log.DefaultLogger.Debugw("sending telemetry data", "error", fmt.Sprintf(format, args...))
 }
 
 // SegmentioSender sends ananymous telemetry data to segment.io
