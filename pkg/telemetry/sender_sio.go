@@ -1,10 +1,13 @@
 package telemetry
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 
 	"github.com/segmentio/analytics-go/v3"
+
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
 const SegmentioEnvVariableName = "TESTKUBE_SEGMENTIO_KEY"
@@ -13,6 +16,21 @@ const CloudEnvVariableName = "TESTKUBE_CLOUD_API_KEY"
 // Brew builds can't be parametrized so we are embedding this one
 var SegmentioKey = "jELokNFNcLeQhxdpGF47PcxCtOLpwVuu"
 var CloudSegmentioKey = ""
+
+func StdLogger() analytics.Logger {
+	return stdLogger{}
+}
+
+type stdLogger struct {
+}
+
+func (l stdLogger) Logf(format string, args ...interface{}) {
+	log.DefaultLogger.Debugw("sending telemetry data", "info", fmt.Sprintf(format, args))
+}
+
+func (l stdLogger) Errorf(format string, args ...interface{}) {
+	log.DefaultLogger.Debugw("sending telemetry data", "error", fmt.Sprintf(format, args))
+}
 
 // SegmentioSender sends ananymous telemetry data to segment.io
 // TODO refactor Sender func as out is not needed (use debug loggers to log output)
@@ -28,7 +46,10 @@ func SegmentioSender(client *http.Client, payload Payload) (out string, err erro
 		}
 	}
 
-	segmentio := analytics.New(SegmentioKey)
+	segmentio, err := analytics.NewWithConfig(SegmentioKey, analytics.Config{Logger: StdLogger()})
+	if err != nil {
+		return out, err
+	}
 	defer segmentio.Close()
 
 	for _, event := range payload.Events {
