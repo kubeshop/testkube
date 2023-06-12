@@ -7,7 +7,7 @@ Use it to run tests and test suites and obtain results directly in the GitHub's 
 ## Usage
 To use the action in your GitHub workflow, use kubeshop/testkube-run-action@v1 action. The configuration options are described in the Inputs section and may vary depending on the Testkube solution you are using (cloud or self-hosted) and your needs.
 
-The most important options you will need are test and testSuite - you should pass a test or test suite name there.
+The most important options you will need are **test** and **testSuite** - you should pass a test or test suite name there.
 
 ### Testkube Cloud
 To use this GitHub Action for the Testkube Cloud, you need to create an API token.
