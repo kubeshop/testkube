@@ -41,7 +41,7 @@ with:
 ### Self-hosted Instance
 
 
-To run the test on self-hosted instance, simply pass url that points to the API, i.e.:
+To run the test on self-hosted instance, simply pass URL that points to the API, i.e.:
 
 ```sh
 uses: kubeshop/testkube-run-action@v1
