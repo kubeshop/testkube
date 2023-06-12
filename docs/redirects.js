@@ -139,8 +139,8 @@ const redirects = [
     to: "/articles/step1-installing-cli",
   },
   {
-    from: "/getting-started/step2-installing-agent",
-    to: "/articles/step2-installing-agent",
+    from: "/getting-started/step2-installing-cluster-components",
+    to: "/articles/step2-installing-cluster-components",
   },
   {
     from: "/getting-started/step3-creating-first-test",
@@ -280,8 +280,8 @@ const redirects = [
     to: "/testkube-cloud/articles/intro",
   },
   {
-    from: "/testkube-cloud/installing-agent",
-    to: "/testkube-cloud/articles/installing-agent",
+    from: "/testkube-cloud/installing-cluster-components",
+    to: "/testkube-cloud/articles/installing-cluster-components",
   },
   {
     from: "/testkube-cloud/transition-from-oss",

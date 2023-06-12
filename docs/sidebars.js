@@ -33,7 +33,7 @@ const sidebars = {
       },
       items: [
         "articles/step1-installing-cli",
-        "articles/step2-installing-agent",
+        "articles/step2-installing-cluster-components",
         "articles/step3-creating-first-test",
       ],
     },
@@ -176,7 +176,7 @@ const sidebars = {
       label: "Testkube Cloud",
       items: [
         "testkube-cloud/articles/intro",
-        "testkube-cloud/articles/installing-agent",
+        "testkube-cloud/articles/installing-cluster-components",
         "testkube-cloud/articles/transition-from-oss",
         "testkube-cloud/articles/organization-management",
         "testkube-cloud/articles/environment-management",
