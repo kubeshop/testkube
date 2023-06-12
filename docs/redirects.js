@@ -280,8 +280,8 @@ const redirects = [
     to: "/testkube-cloud/articles/intro",
   },
   {
-    from: "/testkube-cloud/installing-cluster-components",
-    to: "/testkube-cloud/articles/installing-cluster-components",
+    from: "/testkube-cloud/installing-agent",
+    to: "/testkube-cloud/articles/installing-agent",
   },
   {
     from: "/testkube-cloud/transition-from-oss",
