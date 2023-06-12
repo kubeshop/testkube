@@ -20,7 +20,7 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 	apiURI := cmd.Flag("api-uri").Value.String()
 	oauthEnabled, err := strconv.ParseBool(cmd.Flag("oauth-enabled").Value.String())
 	if err != nil {
-		return nil, "", fmt.Errorf("parsing fla value %w", err)
+		return nil, "", fmt.Errorf("parsing flag value %w", err)
 	}
 
 	options := client.Options{
