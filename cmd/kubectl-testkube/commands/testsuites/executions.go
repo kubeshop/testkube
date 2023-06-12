@@ -25,7 +25,8 @@ func NewTestSuiteExecutionCmd() *cobra.Command {
 		Short:   "Gets TestSuite Execution details",
 		Long:    `Gets TestSuite Execution details by ID, or list if id is not passed`,
 		Run: func(cmd *cobra.Command, args []string) {
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
 
 			if len(args) > 0 {
 				executionID := args[0]
@@ -35,7 +36,8 @@ func NewTestSuiteExecutionCmd() *cobra.Command {
 				ui.ExitOnError("rendering obj", err)
 				uiShellTestSuiteGetCommandBlock(execution.Id)
 			} else {
-				client, _ := common.GetClient(cmd)
+				client, _, err := common.GetClient(cmd)
+				ui.ExitOnError("getting client", err)
 
 				executions, err := client.ListTestSuiteExecutions(testSuiteName, limit,
 					strings.Join(selectors, ","))

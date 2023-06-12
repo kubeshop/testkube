@@ -15,7 +15,9 @@ func NewVersionCmd() *cobra.Command {
 		Short:   "Shows version and build info",
 		Long:    `Shows version and build info`,
 		Run: func(cmd *cobra.Command, args []string) {
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
 			info, err := client.GetServerInfo()
 			if err != nil {
 				info.Version = info.Version + " " + err.Error()

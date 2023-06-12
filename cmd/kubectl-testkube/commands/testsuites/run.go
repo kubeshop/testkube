@@ -41,7 +41,8 @@ func NewRunTestSuiteCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 
 			startTime := time.Now()
-			client, namespace := common.GetClient(cmd)
+			client, namespace, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
 
 			var executions []testkube.TestSuiteExecution
 

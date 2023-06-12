@@ -36,7 +36,8 @@ func NewConnectCmd() *cobra.Command {
 			// create new cloud uris
 			opts.CloudUris = common.NewCloudUris(opts.CloudRootDomain)
 
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
 
 			info, err := client.GetServerInfo()
 			firstInstall := err != nil && strings.Contains(err.Error(), "not found")

@@ -16,7 +16,8 @@ func NewWatchExecutionCmd() *cobra.Command {
 		Long:    `Gets test execution details, until it's in success/error state, blocks until gets complete state`,
 		Args:    validator.ExecutionName,
 		Run: func(cmd *cobra.Command, args []string) {
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
 
 			executionID := args[0]
 			execution, err := client.GetExecution(executionID)

@@ -19,7 +19,9 @@ func NewDeleteTestSuiteCmd() *cobra.Command {
 		Short:   "Delete test suite",
 		Long:    `Delete test suite by name`,
 		Run: func(cmd *cobra.Command, args []string) {
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
 			namespace := cmd.Flag("namespace").Value.String()
 			if deleteAll {
 				err := client.DeleteTestSuites("")

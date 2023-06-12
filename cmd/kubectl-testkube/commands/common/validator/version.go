@@ -17,7 +17,11 @@ var ErrOldClientVersion = fmt.Errorf("client version is older than api version, 
 func PersistentPreRunVersionCheck(cmd *cobra.Command, clientVersion string) {
 	// version validation
 	// if client version is less than server version show warning
-	client, _ := common.GetClient(cmd)
+	client, _, err := common.GetClient(cmd)
+	if err != nil {
+		return
+	}
+
 	info, err := client.GetServerInfo()
 	if err != nil {
 		// omit check of versions if we can't get server info

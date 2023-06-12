@@ -19,7 +19,9 @@ func NewWatchTestSuiteExecutionCmd() *cobra.Command {
 		Args:    validator.ExecutionName,
 		Run: func(cmd *cobra.Command, args []string) {
 
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
 			startTime := time.Now()
 
 			executionID := args[0]
