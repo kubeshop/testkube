@@ -25,7 +25,8 @@ func NewGetTestSourceCmd() *cobra.Command {
 		Short:   "Get test source details",
 		Long:    `Get test source, you can change output format, to get single details pass name as first arg`,
 		Run: func(cmd *cobra.Command, args []string) {
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
 
 			firstEntry := true
 			if len(args) > 0 {

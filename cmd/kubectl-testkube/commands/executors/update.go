@@ -24,7 +24,9 @@ func UpdateExecutorCmd() *cobra.Command {
 				ui.Failf("pass valid name (in '--name' flag)")
 			}
 
-			client, namespace := common.GetClient(cmd)
+			client, namespace, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
 			executor, _ := client.GetExecutor(name)
 			if name != executor.Name {
 				ui.Failf("Executor with name '%s' not exists in namespace %s", name, namespace)

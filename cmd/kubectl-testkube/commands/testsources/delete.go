@@ -19,7 +19,9 @@ func NewDeleteTestSourceCmd() *cobra.Command {
 		Short:   "Delete test source",
 		Long:    `Delete test source, pass test source name which should be deleted`,
 		Run: func(cmd *cobra.Command, args []string) {
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
 			if len(args) > 0 {
 				name = args[0]
 				err := client.DeleteTestSource(name)

@@ -18,9 +18,10 @@ func NewAbortExecutionCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			executionID := args[0]
 
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
 
-			err := client.AbortExecution("test", executionID)
+			err = client.AbortExecution("test", executionID)
 			ui.ExitOnError(fmt.Sprintf("aborting execution %s", executionID), err)
 			ui.SuccessAndExit("Succesfully aborted test", executionID)
 		},
@@ -35,9 +36,10 @@ func NewAbortExecutionsCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			testName := args[0]
 
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
 
-			err := client.AbortExecutions(testName)
+			err = client.AbortExecutions(testName)
 			ui.ExitOnError(fmt.Sprintf("aborting executions of test %s", testName), err)
 			ui.SuccessAndExit("Succesfully aborted all executions of the test", testName)
 		},

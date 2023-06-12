@@ -29,7 +29,9 @@ func NewEnableTelemetryCmd() *cobra.Command {
 				ui.PrintEnabled("Telemetry on CLI", "enabled")
 			}
 
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
 			_, err = client.UpdateConfig(testkube.Config{EnableTelemetry: true})
 
 			if err != nil {

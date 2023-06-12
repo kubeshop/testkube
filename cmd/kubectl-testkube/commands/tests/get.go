@@ -27,7 +27,8 @@ func NewGetTestsCmd() *cobra.Command {
 		Long:    `Getting all available tests from given namespace - if no namespace given "testkube" namespace is used`,
 		Run: func(cmd *cobra.Command, args []string) {
 			namespace := cmd.Flag("namespace").Value.String()
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
 
 			var name string
 			firstEntry := true
