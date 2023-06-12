@@ -7,6 +7,7 @@ type KeyMap struct {
 	Actions    []string            `json:"actions"`
 	Executions []string            `json:"executions"`
 	Events     map[string][]string `json:"events"`
+	Conditions []string            `json:"conditions"`
 }
 
 func NewKeyMap() *KeyMap {
@@ -15,6 +16,7 @@ func NewKeyMap() *KeyMap {
 		Actions:    testtrigger.GetSupportedActions(),
 		Executions: testtrigger.GetSupportedExecutions(),
 		Events:     getSupportedEvents(),
+		Conditions: testtrigger.GetSupportedConditions(),
 	}
 }
 
