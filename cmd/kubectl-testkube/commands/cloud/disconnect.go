@@ -33,7 +33,9 @@ func NewDisconnectCmd() *cobra.Command {
 				return
 			}
 
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
 			info, err := client.GetServerInfo()
 			firstInstall := err != nil && strings.Contains(err.Error(), "not found")
 			if err != nil && !firstInstall {

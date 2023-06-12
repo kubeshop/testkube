@@ -40,7 +40,9 @@ func UpdateTestSuitesCmd() *cobra.Command {
 				ui.Failf("pass valid test suite name (in '--name' flag)")
 			}
 
-			client, namespace := common.GetClient(cmd)
+			client, namespace, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
 			testSuite, _ := client.GetTestSuite(testSuiteName)
 			if testSuiteName != testSuite.Name {
 				ui.Failf("TestSuite with name '%s' not exists in namespace %s", testSuiteName, namespace)

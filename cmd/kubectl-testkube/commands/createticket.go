@@ -15,7 +15,9 @@ func NewCreateTicketCmd() *cobra.Command {
 		Short: "Create bug ticket",
 		Long:  "Create an issue of type bug in the Testkube repository",
 		Run: func(cmd *cobra.Command, args []string) {
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
 			debug, err := debuginfo.GetDebugInfo(client)
 			ui.ExitOnError("get debug info", err)
 			ui.ExitOnError("opening GitHub ticket", github.OpenTicket(debug))

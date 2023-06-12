@@ -1,4 +1,8 @@
-# Ingress-NGINX
+# Exposing Testkube Dashboard with NGINX Ingress
+
+Usually, you would want to share the Testkube Dashboard with your internal company VPN to allow access to other team members without having to provide them access to your Kubernetes cluster. This is achieved by exposing the Testkube Dashboard. 
+
+In this section we cover multiple solutions for different cloud providers.
 
 ## Prerequisites
 
@@ -7,13 +11,15 @@
 2. (Optional) To use TLS, the installation of any certificate management tool is required. At Testkube and in this guide we will use [cert-manager](https://cert-manager.io/), but it might differ depending on your set-up.
 
 3. Add the Testkube helm-chart to your repositories, using this command:
+
 ```sh
 helm repo add kubeshop https://kubeshop.github.io/helm-charts && helm repo update
 ```
 
-## Exposing Testkube 
+## Exposing Testkube
 
-In order to expose Testkube to the outside world we need to enable two Ingresses -  Testkube's UI API and Testkube's dashboard. Update the `values.yaml` file that will later be passed to the `helm install` command. To enable the Testkube Ingresses, please use the following code configuration:
+In order to expose Testkube to the outside world we need to enable two Ingresses - Testkube's UI API and Testkube's dashboard. Update the `values.yaml` file that will later be passed to the `helm install` command. To enable the Testkube Ingresses, please use the following code configuration:
+
 ```aidl
 testkube-api:
   uiIngress:
@@ -29,7 +35,7 @@ testkube-api:
     hosts:
       - your-host.com
     tlsenabled: "true"
-    tls: 
+    tls:
       - hosts:
          - your-host.com
       secretName: testkube-cert-secret
@@ -48,17 +54,17 @@ testkube-dashboard:
   hosts:
     - your-host.com
   tlsenabled: "true"
-  tls: 
+  tls:
     - hosts:
         - your-host.com
       secretName: testkube-cert-secret
-      
+
   apiServerEndpoint: "your-host.com/results"
 ```
 
 :::note
 
-Keep in mind that hosts have to be identical for the `dashboard` and for the `api` with different paths. 
+Keep in mind that hosts have to be identical for the `dashboard` and for the `api` with different paths.
 
 Also, do not forget to add `apiServerEndpoint` to the `values.yaml` for the `testkube-dashboard`, e.g.: apiServerEndpoint: "your-host.com/results".
 
@@ -73,6 +79,7 @@ We highly discourage working in a non-safe environment which is exposed without 
 :::
 
 ## Deployment
+
 Once the `values.yaml` file is ready, we can deploy Testkube into a cluster:
 
 ```aidl

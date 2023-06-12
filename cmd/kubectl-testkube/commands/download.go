@@ -51,7 +51,9 @@ func NewListArtifactsCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			executionID = args[0]
 			cmd.SilenceUsage = true
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
 			artifacts, err := client.GetExecutionArtifacts(executionID)
 			ui.ExitOnError("getting artifacts ", err)
 
@@ -78,7 +80,9 @@ func NewDownloadSingleArtifactsCmd() *cobra.Command {
 			filename := args[1]
 			destination := args[2]
 
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
 			f, err := client.DownloadFile(executionID, filename, destination)
 			ui.ExitOnError("downloading file"+filename, err)
 
@@ -105,7 +109,9 @@ func NewDownloadAllArtifactsCmd() *cobra.Command {
 		Args:    validator.ExecutionName,
 		Run: func(cmd *cobra.Command, args []string) {
 			executionID := args[0]
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
 			tests.DownloadArtifacts(executionID, downloadDir, format, masks, client)
 		},
 	}

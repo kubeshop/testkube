@@ -25,7 +25,8 @@ func NewGetExecutorCmd() *cobra.Command {
 		Short:   "Gets executor details",
 		Long:    `Gets executor, you can change output format`,
 		Run: func(cmd *cobra.Command, args []string) {
-			client, namespace := common.GetClient(cmd)
+			client, namespace, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
 
 			firstEntry := true
 			if len(args) > 0 {

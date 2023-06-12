@@ -49,7 +49,8 @@ func NewCreateWebhookCmd() *cobra.Command {
 
 			var client apiv1.Client
 			if !crdOnly {
-				client, namespace = common.GetClient(cmd)
+				client, namespace, err = common.GetClient(cmd)
+				ui.ExitOnError("getting client", err)
 
 				webhook, _ := client.GetWebhook(name)
 				if name == webhook.Name {

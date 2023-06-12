@@ -3412,7 +3412,14 @@ components:
       properties:
         type:
           type: string
-          description: test type
+          description: | 
+            type of sources a runner can get data from.
+              string: String content (e.g. Postman JSON file).
+              file-uri: content stored on the webserver.
+              git-file: the file stored in the Git repo in the given repository.path field (Deprecated: use git instead).
+              git-dir: the entire git repo or git subdirectory depending on the  repository.path field (Testkube does a shadow clone and sparse checkout to limit IOs in the case of monorepos). (Deprecated: use git instead).
+              git: automatically provisions either a file, directory or whole git repository depending on the repository.path field.
+
           enum:
             - string
             - file-uri
@@ -3689,7 +3696,7 @@ components:
           description: configuration parameters for storing test artifacts
         preRunScript:
           type: string
-          description: script to run before test execution
+          description: script to run before test execution (not supported for container executors)
           example: "echo -n '$SECRET_ENV' > ./secret_file"
         runningContext:
           $ref: "#/components/schemas/RunningContext"
@@ -4183,7 +4190,7 @@ components:
           description: adjusting parameters for test content
         preRunScript:
           type: string
-          description: script to run before test execution
+          description: script to run before test execution (not supported for container executors)
           example: "echo -n '$SECRET_ENV' > ./secret_file"
         scraperTemplate:
           type: string

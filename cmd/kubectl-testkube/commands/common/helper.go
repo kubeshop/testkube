@@ -77,6 +77,7 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data) err
 		"--namespace", options.Namespace,
 		"--set", "testkube-api.cloud.url=" + options.CloudUris.Agent,
 		"--set", "testkube-api.cloud.key=" + options.CloudAgentToken,
+		"--set", "testkube-api.cloud.migrate=true",
 	}
 
 	args = append(args, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !options.NoDashboard))
@@ -214,7 +215,9 @@ func KubectlScaleDeployment(namespace, deployment string, replicas int) (string,
 }
 
 func RunMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
-	client, _ := GetClient(cmd)
+	client, _, err := GetClient(cmd)
+	ui.ExitOnError("getting client", err)
+
 	info, err := client.GetServerInfo()
 	ui.ExitOnError("getting server info", err)
 

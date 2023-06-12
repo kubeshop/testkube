@@ -66,7 +66,11 @@ var RootCmd = &cobra.Command{
 		clientCfg, err := config.Load()
 		ui.WarnOnError("loading config", err)
 
-		client, _ := common.GetClient(cmd)
+		client, _, err := common.GetClient(cmd)
+		if err != nil {
+			return
+		}
+
 		serverCfg, err := client.GetConfig()
 		ui.WarnOnError("getting config", err)
 

@@ -1,6 +1,7 @@
 package common
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -10,16 +11,17 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
-	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 // GetClient returns api client
-func GetClient(cmd *cobra.Command) (client.Client, string) {
+func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 	clientType := cmd.Flag("client").Value.String()
 	namespace := cmd.Flag("namespace").Value.String()
 	apiURI := cmd.Flag("api-uri").Value.String()
 	oauthEnabled, err := strconv.ParseBool(cmd.Flag("oauth-enabled").Value.String())
-	ui.ExitOnError("parsing flag value", err)
+	if err != nil {
+		return nil, "", fmt.Errorf("parsing flag value %w", err)
+	}
 
 	options := client.Options{
 		Namespace: namespace,
@@ -27,7 +29,9 @@ func GetClient(cmd *cobra.Command) (client.Client, string) {
 	}
 
 	cfg, err := config.Load()
-	ui.ExitOnError("loading config file", err)
+	if err != nil {
+		return nil, "", fmt.Errorf("loading config file %w", err)
+	}
 
 	// set kubeconfig as default config type
 	if cfg.ContextType == "" {
@@ -61,7 +65,7 @@ func GetClient(cmd *cobra.Command) (client.Client, string) {
 			}
 
 			if options.Token == nil {
-				ui.ExitOnError("oauth token is empty, please configure your oauth settings first")
+				return nil, "", errors.New("oauth token is empty, please configure your oauth settings first")
 			}
 		}
 	case config.ContextTypeCloud:
@@ -74,7 +78,9 @@ func GetClient(cmd *cobra.Command) (client.Client, string) {
 	}
 
 	c, err := client.GetClient(client.ClientType(clientType), options)
-	ui.ExitOnError("setting up client type", err)
+	if err != nil {
+		return nil, "", fmt.Errorf("setting up client type %w", err)
+	}
 
-	return c, namespace
+	return c, namespace, nil
 }

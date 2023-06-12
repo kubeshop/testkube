@@ -36,7 +36,9 @@ func UpdateTestSourceCmd() *cobra.Command {
 				ui.Failf("pass valid name (in '--name' flag)")
 			}
 
-			client, namespace := common.GetClient(cmd)
+			client, namespace, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
 			testSource, _ := client.GetTestSource(name)
 			if name != testSource.Name {
 				ui.Failf("Test source with name '%s' not exists in namespace %s", name, namespace)
