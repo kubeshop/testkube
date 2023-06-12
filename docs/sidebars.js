@@ -33,7 +33,7 @@ const sidebars = {
       },
       items: [
         "articles/step1-installing-cli",
-        "articles/step2-installing-cluster-components",
+        "articles/step2-installing-agent",
         "articles/step3-creating-first-test",
       ],
     },
