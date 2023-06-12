@@ -101,14 +101,17 @@ There are different inputs available for tests and test suites, as well as for C
 
 ### Test
 
-Required	Name	Description
-✓	test	Test name in the Testkube environment
-✗	ref	Override Git reference (branch, commit, tag) for the test
-✗	preRunScript	Override pre-run script for the test
-✗	variables	Basic variables in the dotenv format
-✗	secretVariables	Secret variables in the dotenv format
-✗	executionName	Override execution name, so you may i.e. mention the PR
-✗	namespace	Set namespace to run test in
+```sh
+| Required | Name            | Description
++----------+-----------------+-----------------------------------------------------------
+|    ✓     | test            | Test name in the Testkube environment.
+|    ✗     | ref             | Override Git reference (branch, commit, tag) for the test.
+|    ✗     | preRunScript    | Override pre-run script for the test.
+|    ✗     | variables       | Basic variables in the dotenv format.
+|    ✗     | secretVariables | Secret variables in the dotenv format.
+|    ✗     | executionName   | Override execution name, so you may i.e. mention the PR.
+|    ✗     | namespace       | Set namespace to run test in.
+```
 
 ### Test Suite
 
