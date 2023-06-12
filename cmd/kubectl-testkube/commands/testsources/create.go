@@ -47,7 +47,8 @@ func NewCreateTestSourceCmd() *cobra.Command {
 			namespace := cmd.Flag("namespace").Value.String()
 			var client apiv1.Client
 			if !crdOnly {
-				client, namespace = common.GetClient(cmd)
+				client, namespace, err = common.GetClient(cmd)
+				ui.ExitOnError("getting client", err)
 
 				testsource, _ := client.GetTestSource(name)
 				if name == testsource.Name {

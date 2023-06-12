@@ -215,7 +215,9 @@ func KubectlScaleDeployment(namespace, deployment string, replicas int) (string,
 }
 
 func RunMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
-	client, _ := GetClient(cmd)
+	client, _, err := GetClient(cmd)
+	ui.ExitOnError("getting client", err)
+
 	info, err := client.GetServerInfo()
 	ui.ExitOnError("getting server info", err)
 

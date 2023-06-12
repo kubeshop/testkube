@@ -69,7 +69,9 @@ func NewUpdateTestsCmd() *cobra.Command {
 				ui.Failf("pass valid test name (in '--name' flag)")
 			}
 
-			client, namespace := common.GetClient(cmd)
+			client, namespace, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
 			test, _ := client.GetTest(testName)
 			if testName != test.Name {
 				ui.Failf("Test with name '%s' not exists in namespace %s", testName, namespace)

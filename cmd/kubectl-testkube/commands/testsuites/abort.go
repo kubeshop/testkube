@@ -19,9 +19,10 @@ func NewAbortTestSuiteExecutionCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			executionID := args[0]
 
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
 
-			err := client.AbortTestSuiteExecution(executionID)
+			err = client.AbortTestSuiteExecution(executionID)
 			ui.ExitOnError(fmt.Sprintf("aborting testsuite execution %s", executionID), err)
 
 			ui.SuccessAndExit("Succesfully aborted test suite", executionID)
@@ -38,9 +39,10 @@ func NewAbortTestSuiteExecutionsCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			testSuiteName := args[0]
 
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
 
-			err := client.AbortTestSuiteExecutions(testSuiteName)
+			err = client.AbortTestSuiteExecutions(testSuiteName)
 			ui.ExitOnError(fmt.Sprintf("aborting testsuite executions for test suite %s", testSuiteName), err)
 
 			ui.SuccessAndExit("Succesfully aborted all test suite executions", testSuiteName)

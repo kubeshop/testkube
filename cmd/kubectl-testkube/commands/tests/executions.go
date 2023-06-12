@@ -26,7 +26,8 @@ func NewGetExecutionCmd() *cobra.Command {
 		Short:   "Lists or gets test executions",
 		Long:    `Getting list of execution for given test name or recent executions if there is no test name passed`,
 		Run: func(cmd *cobra.Command, args []string) {
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
 
 			if len(args) == 1 {
 				executionID := args[0]

@@ -28,7 +28,8 @@ func NewStatusCmd() *cobra.Command {
 				ui.PrintDisabled("Telemetry on CLI", "disabled")
 			}
 
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
 
 			config, err := client.GetConfig()
 			ui.ExitOnError("   Getting API config failed", err)
