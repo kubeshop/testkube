@@ -110,6 +110,7 @@ const sidebars = {
           },
           items: [
             "articles/github-actions",
+            "articles/run-tests-with-github-actions",
             {
               type: "category",
               label: "GitOps",
