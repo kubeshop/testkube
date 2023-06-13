@@ -6,19 +6,19 @@ To get started, sign into [Testkube](https://cloud.testkube.io) and create an ac
 
 ## Installation Steps
 
-1. To add a new agent, create a new environment
+1. To get started after signing in, create your first environment
 
-![Create Environment](../img/creating-environment.jpeg)
+![Create Environment](../img/create-first-environment.png)
 
 2. Fill in the environment name: 
 
 ![Fill in Env Name](../img/fill-in-env-name.png)
 
-3. Copy the Helm install command into the terminal to install a new Testkube environment in Agent mode: 
+3. Copy the Helm install command into your terminal to install the environment and deploy the Testkube agent in your cluster: 
 
 ![Copy Helm Command](../img/copy-helm-command.png)
 
-4. Run the command in your terminal.
+4. Run the command in your terminal and wait for Testkube to detect the connection.
 
 You will need *Helm* installed and `kubectl` configured with access to your Kubernetes cluster: 
 - To install `helm` just follow the [install instrcutions on the Helm web site](https://helm.sh/docs/intro/install/).
