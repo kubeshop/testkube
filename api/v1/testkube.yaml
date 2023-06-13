@@ -3056,8 +3056,7 @@ components:
           example:
             - stopOnFailure: true
               execute:
-                - test:
-                    name: "example-test"
+                - test: "example-test"
         steps:
           type: array
           items:
@@ -3066,8 +3065,7 @@ components:
           example:
             - stopOnFailure: true
               execute:
-                - test:
-                    name: "example-test"
+                - test: "example-test"
         after:
           type: array
           items:
@@ -3076,8 +3074,7 @@ components:
           example:
             - stopOnFailure: true
               execute:
-                - test:
-                    name: "example-test"
+                - test: "example-test"
         labels:
           type: object
           description: "test suite labels"
