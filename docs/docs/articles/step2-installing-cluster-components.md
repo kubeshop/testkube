@@ -2,11 +2,13 @@
 
 Now that you've successfully installed Testkube's CLI, you'll need to install Testkube's agent to initiate a new environment.
 
-To get started, sign into [Testkube](https://cloud.testkube.io) and create an account.
+To get started, sign into [Testkube](https://cloud.testkube.io) and create an account:
+
+![Sign in to Testkube](../img/sign-in.png)
 
 ## Installation Steps
 
-1. To get started after signing in, create your first environment
+1. After signing in, create your first environment
 
 ![Create Environment](../img/create-first-environment.png)
 
