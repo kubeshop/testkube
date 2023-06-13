@@ -10,6 +10,8 @@
 package testkube
 
 type TestSuiteStep struct {
-	Test  *TestSuiteStepExecuteTest `json:"test,omitempty"`
-	Delay *TestSuiteStepDelay       `json:"delay,omitempty"`
+	// object name
+	Test string `json:"test,omitempty"`
+	// delay duration in time units
+	Delay string `json:"delay,omitempty"`
 }

@@ -3195,9 +3195,14 @@ components:
       type: object
       properties:
         test:
-          $ref: "#/components/schemas/TestSuiteStepExecuteTest"
+          type: string
+          description: object name
+          example: "name"
         delay:
-          $ref: "#/components/schemas/TestSuiteStepDelay"
+          type: string
+          format: duration
+          example: 1s
+          description: delay duration in time units
 
     TestSuiteStepV2:
       type: object
@@ -3214,30 +3219,9 @@ components:
         delay:
           $ref: "#/components/schemas/TestSuiteStepDelayV2"
 
-    TestSuiteStepExecuteTest:
-      type: object
-      required:
-        - name
-      properties:
-        name:
-          type: string
-          description: object name
-          example: "name"
-
     TestSuiteStepExecuteTestV2:
       allOf:
         - $ref: "#/components/schemas/ObjectRef"
-
-    TestSuiteStepDelay:
-      type: object
-      required:
-        - duration
-      properties:
-        duration:
-          type: string
-          format: duration
-          example: 1s
-          description: delay duration in time units
 
     TestSuiteStepDelayV2:
       type: object
