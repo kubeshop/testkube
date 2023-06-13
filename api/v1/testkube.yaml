@@ -4923,6 +4923,12 @@ components:
               "pod": ["created", "modified", "deleted"],
               "deployment": ["created", "modified", "deleted"],
             }
+        conditions:
+          type: array
+          items:
+            type: string
+          description: list of supported values for conditions
+          example: ["Available", "Progressing"]
 
     TestSourceBatchRequest:
       description: Test source batch request
