@@ -340,7 +340,7 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 		switch step.Type() {
 		case testkube.TestSuiteStepTypeExecuteTest:
 			executeTestStep := step.Test
-			if executeTestStep == nil {
+			if executeTestStep == "" {
 				continue
 			}
 
@@ -352,17 +352,17 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 			l.Info("executing test", "variables", testsuiteExecution.Variables, "request", request)
 
 			testTuples = append(testTuples, testTuple{
-				test:        testkube.Test{Name: executeTestStep.Name},
+				test:        testkube.Test{Name: executeTestStep},
 				executionID: execution.Id,
 			})
 		case testkube.TestSuiteStepTypeDelay:
-			if step.Delay == nil {
+			if step.Delay == "" {
 				continue
 			}
 
-			l.Infow("delaying execution", "step", step.FullName(), "delay", step.Delay.Duration)
+			l.Infow("delaying execution", "step", step.FullName(), "delay", step.Delay)
 
-			delay, err := time.ParseDuration(step.Delay.Duration)
+			delay, err := time.ParseDuration(step.Delay)
 			if err != nil {
 				result.Execute[i].Err(err)
 				continue
@@ -458,7 +458,7 @@ func (s *Scheduler) delayWithAbortionCheck(duration time.Duration, testSuiteId s
 			s.logger.Infow("delay finished", "testSuiteId", testSuiteId, "duration", duration)
 
 			for i := range result.Execute {
-				if result.Execute[i].Step != nil && result.Execute[i].Step.Delay != nil &&
+				if result.Execute[i].Step != nil && result.Execute[i].Step.Delay != "" &&
 					result.Execute[i].Execution != nil && result.Execute[i].Execution.ExecutionResult != nil {
 					result.Execute[i].Execution.ExecutionResult.Success()
 				}
@@ -470,9 +470,9 @@ func (s *Scheduler) delayWithAbortionCheck(duration time.Duration, testSuiteId s
 				s.logger.Infow("delay aborted", "testSuiteId", testSuiteId, "duration", duration)
 
 				for i := range result.Execute {
-					if result.Execute[i].Step != nil && result.Execute[i].Step.Delay != nil &&
+					if result.Execute[i].Step != nil && result.Execute[i].Step.Delay != "" &&
 						result.Execute[i].Execution != nil && result.Execute[i].Execution.ExecutionResult != nil {
-						delay, err := time.ParseDuration(result.Execute[i].Step.Delay.Duration)
+						delay, err := time.ParseDuration(result.Execute[i].Step.Delay)
 						if err != nil {
 							result.Execute[i].Err(err)
 							continue

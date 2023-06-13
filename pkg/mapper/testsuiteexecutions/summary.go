@@ -58,11 +58,11 @@ func mapStepExecutionResultToExecutionSummary(step testkube.TestSuiteStepExecuti
 	}
 
 	if step.Step != nil {
-		if step.Step.Test != nil {
+		if step.Step.Test != "" {
 			tp = testkube.TestSuiteStepTypeExecuteTest
 		}
 
-		if step.Step.Delay != nil {
+		if step.Step.Delay != "" {
 			tp = testkube.TestSuiteStepTypeDelay
 		}
 	}

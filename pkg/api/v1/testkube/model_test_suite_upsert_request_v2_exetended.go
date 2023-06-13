@@ -35,14 +35,14 @@ func (t *TestSuiteUpsertRequestV2) ToTestSuiteUpsertRequest() *TestSuiteUpsertRe
 
 // ToTestSuiteBatchStep converts to ToTestSuiteBatchStep model
 func (s *TestSuiteStepV2) ToTestSuiteBatchStep() *TestSuiteBatchStep {
-	var test *TestSuiteStepExecuteTest
+	var test string
 	if s.Execute != nil {
-		test = &TestSuiteStepExecuteTest{Name: s.Execute.Name}
+		test = s.Execute.Name
 	}
 
-	var delay *TestSuiteStepDelay
+	var delay string
 	if s.Delay != nil {
-		delay = &TestSuiteStepDelay{Duration: time.Duration(s.Delay.Duration * int32(time.Millisecond)).String()}
+		delay = time.Duration(s.Delay.Duration * int32(time.Millisecond)).String()
 	}
 
 	return &TestSuiteBatchStep{

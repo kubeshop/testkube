@@ -68,18 +68,14 @@ func MapCRToAPI(cr testsuitesv3.TestSuite) (test testkube.TestSuite) {
 func mapCRStepToAPI(crstep testsuitesv3.TestSuiteStepSpec) (teststep testkube.TestSuiteStep) {
 
 	switch true {
-	case crstep.Test != nil:
+	case crstep.Test != "":
 		teststep = testkube.TestSuiteStep{
-			Test: &testkube.TestSuiteStepExecuteTest{
-				Name: crstep.Test.Name,
-			},
+			Test: crstep.Test,
 		}
 
-	case crstep.Delay != nil:
+	case crstep.Delay != "":
 		teststep = testkube.TestSuiteStep{
-			Delay: &testkube.TestSuiteStepDelay{
-				Duration: crstep.Delay.Duration.String(),
-			},
+			Delay: crstep.Delay,
 		}
 	}
 
