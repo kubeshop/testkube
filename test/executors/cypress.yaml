@@ -28,7 +28,7 @@ metadata:
   name: cypress-v10-executor
   namespace: testkube
 spec:
-  image: kubeshop/testkube-cypress-executor:1.1-cypress10
+  image: kubeshop/testkube-cypress-executor:cypress10
   types:
   - cypress:v10/test
   features:
@@ -40,7 +40,7 @@ metadata:
   name: cypress-v9-executor
   namespace: testkube
 spec:
-  image: kubeshop/testkube-cypress-executor:1.1-cypress9
+  image: kubeshop/testkube-cypress-executor:cypress9
   types:
   - cypress:v9/test
   features:
@@ -52,7 +52,7 @@ metadata:
   name: cypress-v8-executor
   namespace: testkube
 spec:
-  image: kubeshop/testkube-cypress-executor:1.1-cypress8
+  image: kubeshop/testkube-cypress-executor:cypress8
   types:
   - cypress:v8/test
   features:
