@@ -106,7 +106,8 @@ func NewRunTestCmd() *cobra.Command {
 			}
 
 			var executions []testkube.Execution
-			client, namespace := common.GetClient(cmd)
+			client, namespace, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
 
 			options := apiv1.ExecuteTestOptions{
 				ExecutionVariables:         variables,

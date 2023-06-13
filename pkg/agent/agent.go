@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"os"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -27,6 +28,7 @@ import (
 const (
 	apiKeyMeta         = "api-key"
 	clusterIDMeta      = "cluster-id"
+	cloudMigrate       = "migrate"
 	healthcheckCommand = "healthcheck"
 )
 
@@ -200,6 +202,7 @@ func (ag *Agent) runCommandLoop(ctx context.Context) error {
 	ctx = AddAPIKeyMeta(ctx, ag.apiKey)
 
 	ctx = metadata.AppendToOutgoingContext(ctx, clusterIDMeta, ag.clusterID)
+	ctx = metadata.AppendToOutgoingContext(ctx, cloudMigrate, os.Getenv("TESTKUBE_CLOUD_MIGRATE"))
 
 	ag.logger.Infow("initiating streaming connection with Cloud API")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.

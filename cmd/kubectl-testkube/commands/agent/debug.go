@@ -28,7 +28,9 @@ func NewAgentDebugCmd() *cobra.Command {
 
 			common.UiPrintContext(cfg)
 
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
 			i, err := client.GetServerInfo()
 			if err != nil {
 				ui.Errf("Error %v", err)

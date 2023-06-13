@@ -89,7 +89,9 @@ func NewCreateTestsCmd() *cobra.Command {
 			namespace := cmd.Flag("namespace").Value.String()
 			var client client.Client
 			if !crdOnly {
-				client, namespace = common.GetClient(cmd)
+				client, namespace, err = common.GetClient(cmd)
+				ui.ExitOnError("getting client", err)
+
 				test, _ := client.GetTest(testName)
 
 				if testName == test.Name {

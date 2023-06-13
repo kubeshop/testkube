@@ -13,7 +13,9 @@ func NewAgentCmd() *cobra.Command {
 		Use:   "agent",
 		Short: "Testkube Cloud Agent related commands",
 		Run: func(cmd *cobra.Command, args []string) {
-			client, _ := common.GetClient(cmd)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
 			info, err := client.GetServerInfo()
 			if err != nil {
 				info.Version = info.Version + " " + err.Error()
