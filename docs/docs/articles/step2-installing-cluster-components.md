@@ -23,7 +23,7 @@ To get started, sign into [Testkube](https://cloud.testkube.io) and create an ac
 4. Run the command in your terminal and wait for Testkube to detect the connection.
 
 You will need *Helm* installed and `kubectl` configured with access to your Kubernetes cluster: 
-- To install `helm` just follow the [install instrcutions on the Helm web site](https://helm.sh/docs/intro/install/).
+- To install `helm` just follow the [install instructions on the Helm web site](https://helm.sh/docs/intro/install/).
 - To install `kubectl` follow [Kubernetes docs](https://kubernetes.io/docs/tasks/tools/).
 
 ![Install Steps 1](../img/install-steps.png)
