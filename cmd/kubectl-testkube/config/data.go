@@ -11,6 +11,9 @@ type ContextType string
 const (
 	ContextTypeCloud      ContextType = "cloud"
 	ContextTypeKubeconfig ContextType = "kubeconfig"
+
+	TokenTypeOIDC = "oidc"
+	TokenTypeAPI  = "api"
 )
 
 type CloudContext struct {
@@ -22,6 +25,7 @@ type CloudContext struct {
 	AgentUri     string `json:"agentUri,omitempty"`
 	RootDomain   string `json:"rootDomain,omitempty"`
 	UiUri        string `json:"uiUri,omitempty"`
+	TokenType    string `json:"tokenType,omitempty"`
 }
 
 type Data struct {

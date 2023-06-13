@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/cloud"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/telemetry"
@@ -51,6 +52,7 @@ func init() {
 
 	RootCmd.AddCommand(NewAgentCmd())
 	RootCmd.AddCommand(NewCloudCmd())
+	RootCmd.AddCommand(cloud.NewLoginCmd())
 
 	RootCmd.SetHelpCommand(NewHelpCmd())
 }
