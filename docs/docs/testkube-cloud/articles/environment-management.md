@@ -10,7 +10,7 @@ You can create a new environment from the "Environments" drop down in the header
 
 ![env-drop-down](../../img/env-drop-down.png)
 
-For installation instructions, follow [Testkube Agent Installation](installing-agent.md)
+For installation instructions, follow [Testkube Agent Installation](installing-cluster-components.md)
 
 ## Changing Environment Settings
 
