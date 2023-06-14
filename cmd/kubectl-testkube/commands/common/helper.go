@@ -169,6 +169,27 @@ func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
 	cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
 }
 
+func PopulateLoginDataToContext(orgID, envID, token string, options HelmOptions, cfg config.Data) error {
+	if options.CloudAgentToken != "" {
+		cfg.CloudContext.AgentKey = options.CloudAgentToken
+	}
+	if options.CloudUris.Api != "" {
+		cfg.CloudContext.AgentUri = options.CloudUris.Api
+	}
+	if options.CloudUris.Ui != "" {
+		cfg.CloudContext.UiUri = options.CloudUris.Ui
+	}
+	if options.CloudUris.Api != "" {
+		cfg.CloudContext.ApiUri = options.CloudUris.Api
+	}
+	cfg.ContextType = config.ContextTypeCloud
+	cfg.CloudContext.Organization = orgID
+	cfg.CloudContext.Environment = envID
+	cfg.CloudContext.ApiKey = token
+
+	return config.Save(cfg)
+}
+
 func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 	updated := false
 	if options.CloudAgentToken != "" {
@@ -191,7 +212,6 @@ func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 		cfg.CloudContext.ApiKey = options.CloudIdToken
 		updated = true
 	}
-
 	if updated {
 		return config.Save(cfg)
 	}

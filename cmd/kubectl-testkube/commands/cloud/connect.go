@@ -79,27 +79,11 @@ func NewConnectCmd() *cobra.Command {
 				{ui.Separator, ""},
 			}
 
+			var token string
 			// if no agent is passed create new environment and get its token
 			if opts.CloudAgentToken == "" && opts.CloudOrgId == "" && opts.CloudEnvId == "" {
-				authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), opts.CloudUris.Auth)
-				if err != nil {
-					ui.ExitOnError("getting current kubernetes context", err)
-				}
-				ui.H1("Login")
-				ui.Paragraph("Your browser should open automatically. If not, please open this link in your browser:")
-				ui.Link(authUrl)
-				ui.Paragraph("(just login and get back to your terminal)")
-				ui.Paragraph("")
-
-				if ok := ui.Confirm("Continue"); !ok {
-					return
-				}
-
-				// open browser with login page and redirect to localhost
-				open.Run(authUrl)
-
-				token, err := uiGetToken(tokenChan)
-				ui.ExitOnError("getting token", err)
+				token, err = LoginUser(opts)
+				ui.ExitOnError("login", err)
 
 				orgId, orgName, err := uiGetOrganizationId(opts.CloudRootDomain, token)
 				ui.ExitOnError("getting organization", err)
@@ -179,8 +163,14 @@ func NewConnectCmd() *cobra.Command {
 			}
 
 			ui.H2("Testkube Cloud is connected to your Testkube instance, saving local configuration")
-			err = common.PopulateAgentDataToContext(opts, cfg)
-			ui.ExitOnError("Populating agent data to context", err)
+
+			ui.H2("Saving testkube cli cloud context")
+			if token == "" {
+				token, err = LoginUser(opts)
+				ui.ExitOnError("user login", err)
+			}
+			err = common.PopulateLoginDataToContext(opts.CloudOrgId, opts.CloudEnvId, token, opts, cfg)
+			ui.ExitOnError("Setting cloud environment context", err)
 
 			ui.NL(2)
 
@@ -252,4 +242,29 @@ func uiGetEnvName() (string, error) {
 	}
 
 	return "", fmt.Errorf("environment name cannot be empty")
+}
+
+func LoginUser(opts common.HelmOptions) (string, error) {
+	authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), opts.CloudUris.Auth)
+	if err != nil {
+		return "", fmt.Errorf("cloud login: %w", err)
+	}
+	ui.H1("Login")
+	ui.Paragraph("Your browser should open automatically. If not, please open this link in your browser:")
+	ui.Link(authUrl)
+	ui.Paragraph("(just login and get back to your terminal)")
+	ui.Paragraph("")
+
+	if ok := ui.Confirm("Continue"); !ok {
+		return "", fmt.Errorf("login cancelled")
+	}
+
+	// open browser with login page and redirect to localhost
+	open.Run(authUrl)
+
+	token, err := uiGetToken(tokenChan)
+	if err != nil {
+		return "", fmt.Errorf("getting token")
+	}
+	return token, nil
 }
