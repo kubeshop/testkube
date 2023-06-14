@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/sashabaranov/go-openai"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 func NewOpenAI(apiKey string) *OpenAI {
