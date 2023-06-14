@@ -20,11 +20,11 @@ func ValidateCloudContext(cfg config.Data) error {
 	}
 
 	if cfg.CloudContext.Environment == "" {
-		return errors.New("please provide environment")
+		return errors.New("please provide Environment")
 	}
 
 	if cfg.CloudContext.Organization == "" {
-		return errors.New("please provide organization")
+		return errors.New("please provide Organization")
 	}
 
 	return nil
