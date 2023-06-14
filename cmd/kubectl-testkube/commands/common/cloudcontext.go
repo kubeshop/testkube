@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -34,4 +35,14 @@ func UiPrintContext(cfg config.Data) {
 			"Telemetry Enabled": fmt.Sprintf("%t", cfg.TelemetryEnabled),
 		})
 	}
+}
+
+func UiCloudContextValidationError(err error) {
+	ui.Errf("Validating cloud context failed: %s", err.Error())
+	ui.NL()
+	ui.Info("Please set valid cloud context using `testkube set context` with valid values")
+	ui.NL()
+	ui.ShellCommand(" testkube set context -c cloud -e tkcenv_XXX -o tkcorg_XXX -k tkcapi_XXX")
+	ui.NL()
+	os.Exit(1)
 }

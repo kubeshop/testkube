@@ -72,14 +72,7 @@ var RootCmd = &cobra.Command{
 		ui.ExitOnError("loading config", err)
 
 		if err = validator.ValidateCloudContext(cfg); err != nil {
-			ui.NL()
-			ui.Errf("Validating cloud context failed: %s", err)
-			ui.NL()
-			ui.Info("Please set valid cloud context using `testkube set context` with valid values")
-			ui.NL()
-			ui.ShellCommand(" testkube set context -c cloud -e tkcenv_XXX -o tkcorg_XXX -k tkcapi_XXX")
-			ui.NL()
-			os.Exit(1)
+			common.UiCloudContextValidationError(err)
 		}
 	},
 
