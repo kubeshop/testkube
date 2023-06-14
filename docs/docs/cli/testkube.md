@@ -35,6 +35,7 @@ testkube [flags]
 * [testkube generate](testkube_generate.md)	 - Generate resources commands
 * [testkube get](testkube_get.md)	 - Get resources
 * [testkube init](testkube_init.md)	 - Install Helm chart registry in current kubectl context and update dependencies
+* [testkube login](testkube_login.md)	 - Login to Testkube Cloud
 * [testkube migrate](testkube_migrate.md)	 - manual migrate command
 * [testkube purge](testkube_purge.md)	 - Uninstall Helm chart registry from current kubectl context
 * [testkube run](testkube_run.md)	 - Runs tests or test suites
