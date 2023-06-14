@@ -37,7 +37,7 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 		}
 
 		if err := json.Unmarshal(data, &request); err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %w", errPrefix, err))
+			s.Log.Warnw("could not parse request", "error", err)
 		}
 		errPrefix = errPrefix + " " + request.Name
 
@@ -98,7 +98,7 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 		}
 
 		if err := json.Unmarshal(data, &request); err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %w", errPrefix, err))
+			s.Log.Warnw("could not parse request", "error", err)
 		}
 
 		if request.Steps != nil {

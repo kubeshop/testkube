@@ -90,13 +90,8 @@ func NewTestSuiteUpsertOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 		return options, fmt.Errorf("empty test suite content")
 	}
 
-	err = json.Unmarshal([]byte(*data), &options)
-	if err != nil {
-		return options, err
-	}
-
-	if len(options.Steps) == 0 {
-		return options, fmt.Errorf("no test suite batch steps provided")
+	if err = json.Unmarshal([]byte(*data), &options); err != nil {
+		ui.Debug("json unmarshaling", err.Error())
 	}
 
 	emptyBatch := true
@@ -186,9 +181,8 @@ func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 	}
 
 	if data != nil {
-		err = json.Unmarshal([]byte(*data), &options)
-		if err != nil {
-			return options, err
+		if err = json.Unmarshal([]byte(*data), &options); err != nil {
+			ui.Debug("json unmarshaling", err.Error())
 		}
 
 		if options.Steps != nil {
