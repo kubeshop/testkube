@@ -5,6 +5,18 @@ metadata:
   namespace: testkube
 spec:
   image: kubeshop/testkube-cypress-executor:cypress12
+  command: ["./node_modules/cypress/bin/cypress"]
+  args: [
+    "run",
+    "--reporter",
+    "junit",
+    "--reporter-options",
+    "mochaFile=<reportFile>,toConsole=false",
+    "--project",
+    "<projectPath>",
+    "--env",
+    "<envVars>"
+  ]
   types:
     - cypress:v12/test
   features:
@@ -17,6 +29,18 @@ metadata:
   namespace: testkube
 spec:
   image: kubeshop/testkube-cypress-executor:cypress11
+  command: ["./node_modules/cypress/bin/cypress"]
+  args: [
+    "run",
+    "--reporter",
+    "junit",
+    "--reporter-options",
+    "mochaFile=<reportFile>,toConsole=false",
+    "--project",
+    "<projectPath>",
+    "--env",
+    "<envVars>"
+  ]
   types:
   - cypress:v11/test
   features:
@@ -29,6 +53,18 @@ metadata:
   namespace: testkube
 spec:
   image: kubeshop/testkube-cypress-executor:cypress10
+  command: ["./node_modules/cypress/bin/cypress"]
+  args: [
+    "run",
+    "--reporter",
+    "junit",
+    "--reporter-options",
+    "mochaFile=<reportFile>,toConsole=false",
+    "--project",
+    "<projectPath>",
+    "--env",
+    "<envVars>"
+  ]
   types:
   - cypress:v10/test
   features:
@@ -41,6 +77,18 @@ metadata:
   namespace: testkube
 spec:
   image: kubeshop/testkube-cypress-executor:cypress9
+  command: ["./node_modules/cypress/bin/cypress"]
+  args: [
+    "run",
+    "--reporter",
+    "junit",
+    "--reporter-options",
+    "mochaFile=<reportFile>,toConsole=false",
+    "--project",
+    "<projectPath>",
+    "--env",
+    "<envVars>"
+  ]
   types:
   - cypress:v9/test
   features:
@@ -53,6 +101,18 @@ metadata:
   namespace: testkube
 spec:
   image: kubeshop/testkube-cypress-executor:cypress8
+  command: ["./node_modules/cypress/bin/cypress"]
+  args: [
+    "run",
+    "--reporter",
+    "junit",
+    "--reporter-options",
+    "mochaFile=<reportFile>,toConsole=false",
+    "--project",
+    "<projectPath>",
+    "--env",
+    "<envVars>"
+  ]
   types:
   - cypress:v8/test
   features:
