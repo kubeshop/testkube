@@ -36,7 +36,7 @@ type TestSuiteExecution struct {
 	// test duration in ms
 	DurationMs int32 `json:"durationMs,omitempty"`
 	// steps execution results
-	StepResults []TestSuiteStepExecutionResult `json:"stepResults,omitempty"`
+	StepResults []TestSuiteStepExecutionResultV2 `json:"stepResults,omitempty"`
 	// batch steps execution results
 	ExecuteStepResults []TestSuiteBatchStepExecutionResult `json:"executeStepResults,omitempty"`
 	// test suite labels

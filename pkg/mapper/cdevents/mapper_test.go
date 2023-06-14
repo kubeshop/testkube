@@ -415,9 +415,13 @@ func TestMapTestkubeEventFinishTestSuiteToCDEvent(t *testing.T) {
 				Type_: "scheduler",
 			},
 			Status: testkube.TestSuiteExecutionStatusFailed,
-			StepResults: []testkube.TestSuiteStepExecutionResult{
+			ExecuteStepResults: []testkube.TestSuiteBatchStepExecutionResult{
 				{
-					Execution: &execution,
+					Execute: []testkube.TestSuiteStepExecutionResult{
+						{
+							Execution: &execution,
+						},
+					},
 				},
 			},
 		},

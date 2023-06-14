@@ -41,7 +41,7 @@ func (s *TestSuiteStepV2) ToTestSuiteBatchStep() *TestSuiteBatchStep {
 	}
 
 	var delay string
-	if s.Delay != nil {
+	if s.Delay != nil && s.Delay.Duration != 0 {
 		delay = time.Duration(s.Delay.Duration * int32(time.Millisecond)).String()
 	}
 

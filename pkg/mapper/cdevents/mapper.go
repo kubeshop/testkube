@@ -320,6 +320,14 @@ func MapTestkubeEventFinishTestSuiteToCDEvent(event testkube.Event, clusterID, d
 				}
 			}
 
+			for _, batch := range event.TestSuiteExecution.ExecuteStepResults {
+				for _, result := range batch.Execute {
+					if result.Execution != nil && result.Execution.ExecutionResult != nil {
+						errs = append(errs, result.Execution.ExecutionResult.ErrorMessage)
+					}
+				}
+			}
+
 			ev.SetSubjectReason(strings.Join(errs, ","))
 		}
 
@@ -329,6 +337,14 @@ func MapTestkubeEventFinishTestSuiteToCDEvent(event testkube.Event, clusterID, d
 			for _, result := range event.TestSuiteExecution.StepResults {
 				if result.Execution != nil && result.Execution.ExecutionResult != nil {
 					errs = append(errs, result.Execution.ExecutionResult.ErrorMessage)
+				}
+			}
+
+			for _, batch := range event.TestSuiteExecution.ExecuteStepResults {
+				for _, result := range batch.Execute {
+					if result.Execution != nil && result.Execution.ExecutionResult != nil {
+						errs = append(errs, result.Execution.ExecutionResult.ErrorMessage)
+					}
 				}
 			}
 

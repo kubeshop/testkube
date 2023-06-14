@@ -35,11 +35,11 @@ func TestSuiteMapToSummary(t *testing.T) {
 			assert.Equal(t, result[i].Execution[j].Execute[0].TestName, executions[i].StepResults[j].Execution.TestName)
 			assert.Equal(t, result[i].Execution[j].Execute[0].Status, executions[i].StepResults[j].Execution.ExecutionResult.Status)
 			var tp *testkube.TestSuiteStepType
-			if executions[i].StepResults[j].Step.Test != "" {
+			if executions[i].StepResults[j].Step.Execute != nil {
 				tp = testkube.TestSuiteStepTypeExecuteTest
 			}
 
-			if executions[i].StepResults[j].Step.Delay != "" {
+			if executions[i].StepResults[j].Step.Delay != nil {
 				tp = testkube.TestSuiteStepTypeDelay
 			}
 
@@ -88,9 +88,9 @@ func TestSuiteMapBatchToSummary(t *testing.T) {
 }
 
 func getExecutions() []testkube.TestSuiteExecution {
-	stepResults1 := []testkube.TestSuiteStepExecutionResult{
+	stepResults1 := []testkube.TestSuiteStepExecutionResultV2{
 		{
-			Step: &testkube.TestSuiteStep{Test: "testname1"},
+			Step: &testkube.TestSuiteStepV2{Execute: &testkube.TestSuiteStepExecuteTestV2{Name: "testname1"}},
 			Execution: &testkube.Execution{
 				Id:       "id1",
 				Name:     "name1",
@@ -120,9 +120,9 @@ func getExecutions() []testkube.TestSuiteExecution {
 	}
 
 	execution1.Stop()
-	stepResults2 := []testkube.TestSuiteStepExecutionResult{
+	stepResults2 := []testkube.TestSuiteStepExecutionResultV2{
 		{
-			Step: &testkube.TestSuiteStep{Test: "testname2"},
+			Step: &testkube.TestSuiteStepV2{Execute: &testkube.TestSuiteStepExecuteTestV2{Name: "testname2"}},
 			Execution: &testkube.Execution{
 				Id:       "id2",
 				Name:     "name2",

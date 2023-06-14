@@ -21,7 +21,7 @@ func MapToTestExecutionSummary(executions []testkube.TestSuiteExecution) []testk
 			executionsSummary = make([]testkube.TestSuiteBatchStepExecutionSummary, len(execution.StepResults))
 			for j, stepResult := range execution.StepResults {
 				executionsSummary[j] = testkube.TestSuiteBatchStepExecutionSummary{
-					Execute: []testkube.TestSuiteStepExecutionSummary{mapStepResultToStepExecutionSummary(stepResult)},
+					Execute: []testkube.TestSuiteStepExecutionSummary{mapStepResultV2ToStepExecutionSummary(stepResult)},
 				}
 			}
 		}
@@ -50,7 +50,7 @@ func MapToTestExecutionSummary(executions []testkube.TestSuiteExecution) []testk
 	return result
 }
 
-func mapStepResultToStepExecutionSummary(r testkube.TestSuiteStepExecutionResult) testkube.TestSuiteStepExecutionSummary {
+func mapStepResultV2ToStepExecutionSummary(r testkube.TestSuiteStepExecutionResultV2) testkube.TestSuiteStepExecutionSummary {
 	var id, testName, name string
 	var status *testkube.ExecutionStatus = testkube.ExecutionStatusPassed
 	var stepType *testkube.TestSuiteStepType
@@ -88,6 +88,36 @@ func mapBatchStepResultToExecutionSummary(r testkube.TestSuiteBatchStepExecution
 
 	return testkube.TestSuiteBatchStepExecutionSummary{
 		Execute: batch,
+	}
+}
+
+func mapStepResultToStepExecutionSummary(r testkube.TestSuiteStepExecutionResult) testkube.TestSuiteStepExecutionSummary {
+	var id, testName, name string
+	var status *testkube.ExecutionStatus = testkube.ExecutionStatusPassed
+	var stepType *testkube.TestSuiteStepType
+
+	if r.Test != nil {
+		testName = r.Test.Name
+	}
+
+	if r.Execution != nil {
+		id = r.Execution.Id
+		if r.Execution.ExecutionResult != nil {
+			status = r.Execution.ExecutionResult.Status
+		}
+	}
+
+	if r.Step != nil {
+		stepType = r.Step.Type()
+		name = r.Step.FullName()
+	}
+
+	return testkube.TestSuiteStepExecutionSummary{
+		Id:       id,
+		Name:     name,
+		TestName: testName,
+		Status:   status,
+		Type_:    stepType,
 	}
 }
 

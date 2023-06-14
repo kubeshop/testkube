@@ -3288,7 +3288,7 @@ components:
           type: array
           description: "steps execution results"
           items:
-            $ref: "#/components/schemas/TestSuiteStepExecutionResult"
+            $ref: "#/components/schemas/TestSuiteStepExecutionResultV2"
             description: test execution results
         executeStepResults:
           type: array
@@ -3331,6 +3331,19 @@ components:
         execution:
           $ref: "#/components/schemas/Execution"
           description: test step execution
+
+    TestSuiteStepExecutionResultV2:
+      description: execution result returned from executor
+      type: object
+      properties:
+        step:
+          $ref: "#/components/schemas/TestSuiteStepV2"
+        test:
+          $ref: "#/components/schemas/ObjectRef"
+          description: object name and namespace
+        execution:
+          $ref: "#/components/schemas/Execution"
+          description: test step execution          
 
     TestSuiteBatchStepExecutionResult:
       description: execution result returned from executor
