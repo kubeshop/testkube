@@ -8,6 +8,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/cloud"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -62,6 +63,24 @@ var RootCmd = &cobra.Command{
 	Short: "Testkube entrypoint for kubectl plugin",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		ui.SetVerbose(verbose)
+
+		if cmd.Name() == "context" {
+			return
+		}
+
+		cfg, err := config.Load()
+		ui.ExitOnError("loading config", err)
+
+		if err = validator.ValidateCloudContext(cfg); err != nil {
+			ui.NL()
+			ui.Errf("Validating cloud context failed: %s", err)
+			ui.NL()
+			ui.Info("Please set valid cloud context using `testkube set context` with valid values")
+			ui.NL()
+			ui.ShellCommand(" testkube set context -c cloud -e tkcenv_XXX -o tkcorg_XXX -k tkcapi_XXX")
+			ui.NL()
+			os.Exit(1)
+		}
 	},
 
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {

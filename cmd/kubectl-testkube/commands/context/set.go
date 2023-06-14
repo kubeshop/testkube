@@ -1,9 +1,12 @@
 package context
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -74,6 +77,16 @@ func NewSetContextCmd() *cobra.Command {
 			ui.Success("Your config was updated with new values")
 			ui.NL()
 			common.UiPrintContext(cfg)
+
+			if err = validator.ValidateCloudContext(cfg); err != nil {
+				ui.Errf("Validating cloud context failed: %s", err.Error())
+				ui.NL()
+				ui.Info("Please set valid cloud context using `testkube set context` with valid values")
+				ui.NL()
+				ui.ShellCommand(" testkube set context -c cloud -e tkcenv_XXX -o tkcorg_XXX -k tkcapi_XXX")
+				ui.NL()
+				os.Exit(1)
+			}
 		},
 	}
 
