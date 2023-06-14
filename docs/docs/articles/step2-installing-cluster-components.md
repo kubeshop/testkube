@@ -1,33 +1,53 @@
-# Step 2 - Install Testkube Cluster Components Using Testkube's CLI
+# Step 2 - Installing the Testkube Agent
 
-:::note 
+Now that you've successfully installed Testkube's CLI, you'll need to install Testkube's agent to initiate a new environment.
 
-Alternative option of installing Testkube Cluster Components is by using Helm. You can find installation instructions [here](./helm-chart.md).
+To get started, sign into [Testkube](https://cloud.testkube.io) and create an account:
 
-::: 
+![Sign in to Testkube](../img/sign-in.png)
 
-The Testkube CLI provides a command to easily deploy the Testkube server components to your cluster.
-Run:
+## Installation Steps
 
-```bash
-testkube init
+1. After signing in, create your first environment
+
+![Create Environment](../img/create-first-environment.png)
+
+2. Fill in the environment name: 
+
+![Fill in Env Name](../img/fill-in-env-name.png)
+
+3. Copy the Helm install command into your terminal to install the environment and deploy the Testkube agent in your cluster: 
+
+![Copy Helm Command](../img/copy-helm-command.png)
+
+4. Run the command in your terminal and wait for Testkube to detect the connection.
+
+You will need *Helm* installed and `kubectl` configured with access to your Kubernetes cluster: 
+- To install `helm` just follow the [install instructions on the Helm web site](https://helm.sh/docs/intro/install/).
+- To install `kubectl` follow [Kubernetes docs](https://kubernetes.io/docs/tasks/tools/).
+
+![Install Steps 1](../img/install-steps.png)
+
+5. After some time, you should see the Helm installation notice: 
+
+![Install Steps 2](../img/install-steps-2.png)
+
+
+## Validating the Installation 
+
+Testkube Cloud will notify if the installation is successful. 
+
+* A green indicator means that your cluster was able to connect to the Testkube Cloud.
+* A red indicator indicates that the Testkube Agent can't connect to the Testkube Cloud API (Testkube needs some time to establish a connection, max time is 2-3 minutes).
+
+![Validate Install](../img/validate-install.png)
+
+In case of a RED status you can try to debug the issues with the command below:
+
+```sh 
+testkube agent debug
 ```
 
-note: you must have your KUBECONFIG pointing to the desired location of the installation.
 
-The above command will install the following components in your Kubernetes cluster:
-
-1. Testkube API
-2. `testkube` namespace
-3. CRDs for Tests, TestSuites, Executors
-4. MongoDB
-5. Minio - default (can be disabled with `--no-minio`)
-6. Dashboard - default (can be disabled with `--no-dashboard` flag)
-
-Confirm that Testkube is running:
-
-```bash
-kubectl get all -n testkube
-```
 
 By default, Testkube is installed in the `testkube` namespace.
