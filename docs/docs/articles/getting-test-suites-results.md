@@ -127,12 +127,9 @@ spec:
   steps:
   - stopOnFailure: false
     execute:
-    - test:
-        name: testkube-dashboard
-    - delay:
-        duration: 1s
-    - test:
-        name: testkube-homepage
+    - test: testkube-dashboard
+    - delay: 1s
+    - test: testkube-homepage
 
 status:
   latestExecution:

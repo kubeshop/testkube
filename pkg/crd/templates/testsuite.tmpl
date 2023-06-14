@@ -21,16 +21,10 @@ spec:
     execute:
     {{- range .Execute }}
       {{- if .Test }}
-    - test:
-        {{- if .Test.Name}}
-        name: {{ .test.Name }}
-        {{- end }}
+    - test: {{ .Test }}
       {{- end }}
       {{- if .Delay }}
-    - delay:
-        {{- if .Delay.Duration }}
-        duration: {{ .Delay.Duration }}
-        {{- end }}
+    - delay: {{ .Delay }}
       {{- end }}
     {{- end }}
     {{- end }}
@@ -44,16 +38,10 @@ spec:
     execute:
     {{- range .Execute }}
       {{- if .Test }}
-    - test:
-        {{- if .Test.Name}}
-        name: {{ .Test.Name }}
-        {{- end }}
+    - test: {{ .Test }}
       {{- end }}
       {{- if .Delay }}
-    - delay:
-        {{- if .Delay.Duration }}
-        duration: {{ .Delay.Duration }}
-        {{- end }}
+    - delay: {{ .Delay }}
       {{- end }}
     {{- end }}
     {{- end }}
@@ -67,16 +55,10 @@ spec:
     execute:
     {{- range .Execute }}
       {{- if .Test }}
-    - test:
-        {{- if .Test.Name}}
-        name: {{ .Test.Name }}
-        {{- end }}
+    - test: {{ .Test }}
       {{- end }}
       {{- if .Delay }}
-    - delay:
-        {{- if .Delay.Duration }}
-        duration: {{ .Delay.Duration }}
-        {{- end }}
+    - delay: {{ .Delay }}
       {{- end }}
     {{- end }}
     {{- end }}

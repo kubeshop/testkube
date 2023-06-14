@@ -2,10 +2,10 @@
 	"name": "executor-gradle-smoke-tests",
 	"description": "gradle executor smoke tests",
 	"steps": [
-		{"execute": [{"test": {"name": "gradle-executor-smoke-jdk18"}}]},
-		{"execute": [{"test": {"name": "gradle-executor-smoke-jdk17"}}]},
-		{"execute": [{"test": {"name": "gradle-executor-smoke-jdk11"}}]},
-		{"execute": [{"test": {"name": "gradle-executor-smoke-jdk8"}}]},
-		{"execute": [{"test": {"name": "gradle-executor-smoke-jdk18-negative"}}]}
+		{"execute": [{"test": "gradle-executor-smoke-jdk18"}]},
+		{"execute": [{"test": "gradle-executor-smoke-jdk17"}]},
+		{"execute": [{"test": "gradle-executor-smoke-jdk11"}]},
+		{"execute": [{"test": "gradle-executor-smoke-jdk8"}]},
+		{"execute": [{"test": "gradle-executor-smoke-jdk18-negative"}]}
 	]
 }

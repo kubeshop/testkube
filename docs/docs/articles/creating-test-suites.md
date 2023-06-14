@@ -23,13 +23,13 @@ echo '
 	"name": "testkube-suite",
 	"description": "Testkube test suite, api, dashboard and performance",
 	"steps": [
-		{"execute": [{"test": {"name": "testkube-api"}}, {"test": {"name": "testkube-dashboard"}}]},
-		{"execute": [{"delay": {"duration": "1s"}}]},
-		{"execute": [{"test": {"name": "testkube-dashboard"}}, {"delay": {"duration": "1s"}}, {"test": {"name": "testkube-homepage"}}]},
-		{"execute": [{"delay": {"duration": "1s"}}]},
-		{"execute": [{"test": {"name": "testkube-api-performance"}}]},
-		{"execute": [{"delay": {"duration": "1s"}}]},
-		{"execute": [{"test": {"name": "testkube-homepage-performance"}}]}
+		{"execute": [{"test": "testkube-api"}, {""test": "testkube-dashboard"}]},
+		{"execute": [{"delay": "1s"}]},
+		{"execute": [{"test": "testkube-dashboard"}, {"delay": "1s"}, {""test": "testkube-homepage"}]},
+		{"execute": [{"delay": "1s"}]},
+		{"execute": [{"test": "testkube-api-performance"}]},
+		{"execute": [{"delay": "1s"}]},
+		{"execute": [{"test": "testkube-homepage-performance"}]}
 	]
 }' | kubectl testkube create testsuite
 ```
@@ -67,38 +67,28 @@ spec:
   steps:
   - stopOnFailure: false
     execute:
-    - test:
-        name: testkube-api
-    - test:
-        name: testkube-dashboard
+    - test: testkube-api
+    - test: testkube-dashboard
   - stopOnFailure: false
     execute:
-    - delay:
-        duration: 1s
+    - delay: 1s
   - stopOnFailure: false
     execute:
-    - test:
-        name: testkube-dashboard
-    - delay:
-        duration: 1s
-    - test:
-        name: testkube-homepage
+    - test: testkube-dashboard
+    - delay: 1s
+    - test: testkube-homepage
   - stopOnFailure: false
     execute:
-    - delay:
-        duration: 1s
+    - delay: 1s
   - stopOnFailure: false
     execute:
-    - test:
-        name: testkube-api-performance
+    - test: testkube-api-performance
   - stopOnFailure: false
     execute:
-    - delay:
-        duration: 1s
+    - delay: 1s
   - stopOnFailure: false
     execute:
-    - test:
-        name: testkube-homepage-performance
+    - test: testkube-homepage-performance
 ```
 
 Your `Test Suite` is defined and you can start running testing workflows.

@@ -119,14 +119,11 @@ spec:
   steps:
   - stopOnFailure: false
     execute:
-    - test:
-        name: testkube-api
-    - test:
-        name: testkube-dashboard
+    - test: testkube-api
+    - test: testkube-dashboard
   - stopOnFailure: false
     execute:
-    - delay:
-        duration: 1s
+    - delay: 1s
 ```
 
 ## Executors
