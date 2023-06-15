@@ -1,4 +1,4 @@
-# Test Triggers
+# Triggers
 
 Testkube allows you to automate running tests and test suites by defining triggers on certain events for various Kubernetes resources.
 
