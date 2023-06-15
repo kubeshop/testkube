@@ -55,8 +55,6 @@ func (c TestClient) GetTest(id string) (test testkube.Test, err error) {
 // GetTestWithExecution returns single test by id with execution
 func (c TestClient) GetTestWithExecution(id string) (test testkube.TestWithExecution, err error) {
 	uri := c.testWithExecutionTransport.GetURI("/test-with-executions/%s", id)
-	fmt.Printf("%+v\n", uri)
-
 	return c.testWithExecutionTransport.Execute(http.MethodGet, uri, nil, nil)
 }
 
