@@ -183,8 +183,8 @@ func PopulateLoginDataToContext(orgID, envID, token string, options HelmOptions,
 		cfg.CloudContext.ApiUri = options.CloudUris.Api
 	}
 	cfg.ContextType = config.ContextTypeCloud
-	cfg.CloudContext.Organization = orgID
-	cfg.CloudContext.Environment = envID
+	cfg.CloudContext.OrganizationId = orgID
+	cfg.CloudContext.EnvironmentId = envID
 	cfg.CloudContext.ApiKey = token
 
 	return config.Save(cfg)

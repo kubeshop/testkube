@@ -5,6 +5,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -32,6 +33,10 @@ func NewVersionCmd() *cobra.Command {
 
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			cfg, err := config.Load()
+			ui.ExitOnError("loading config", err)
+			common.UiContextHeader(cmd, cfg)
+
 			validator.PersistentPreRunVersionCheck(cmd, common.Version)
 		},
 	}
