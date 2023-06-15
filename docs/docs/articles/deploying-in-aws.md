@@ -10,7 +10,7 @@ Once the cluster is up and running we need to deploy the AWS Load Balancer Contr
 
 Another important point is [ExternalDNS](https://github.com/kubernetes-sigs/external-dns). It is not compulsory to deploy it into your cluster, but it helps you dynamically manage your DNS records via k8s resources.
 
-And last, but not least - install the Testkube CLI. You can download a binary file from our [installation](./step1-installing-cli.md) page. For how to deploy Testkube to your cluster with all the necessary changes, please see the next section.
+And last, but not least - install the Testkube CLI. You can download a binary file from our [installation](./step1-installing-cli) page. For how to deploy Testkube to your cluster with all the necessary changes, please see the next section.
 
 ## Ingress and Service Resources Configuration
 
@@ -143,22 +143,22 @@ Except for the Ingress annotation, you need to update the Service manifests with
 
 ```yaml
 service:
- type: ClusterIP
- port: 8080
- annotations:
-   alb.ingress.kubernetes.io/healthcheck-path: "/"
-   alb.ingress.kubernetes.io/healthcheck-port: "8080"
+  type: ClusterIP
+  port: 8080
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: "/"
+    alb.ingress.kubernetes.io/healthcheck-port: "8080"
 ```
 
 **Testkube API Service:**
 
 ```yaml
 service:
- type: ClusterIP
- port: 8088
- annotations:
-   alb.ingress.kubernetes.io/healthcheck-path: "/health"
-   alb.ingress.kubernetes.io/healthcheck-port: "8088"
+  type: ClusterIP
+  port: 8088
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: "/health"
+    alb.ingress.kubernetes.io/healthcheck-port: "8088"
 ```
 
 :::caution
