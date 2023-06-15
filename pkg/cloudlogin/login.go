@@ -34,7 +34,7 @@ func CloudLogin(ctx context.Context, providerURL string) (string, chan string, e
 		code := r.URL.Query().Get("code")
 		if code != "" {
 			ch <- code
-			fmt.Fprintln(w, "Authorization successful.")
+			fmt.Fprintln(w, "Your testkube CLI is now succesfully authenticated. Go back to the terminal to continue.")
 		} else {
 			fmt.Fprintln(w, "Authorization failed.")
 		}

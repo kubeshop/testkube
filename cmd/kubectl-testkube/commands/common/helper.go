@@ -42,7 +42,7 @@ func GetCurrentKubernetesContext() (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data) error {
+func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data, isMigration bool) error {
 	// use config if set
 	if cfg.CloudContext.AgentKey != "" && options.CloudAgentToken == "" {
 		options.CloudAgentToken = cfg.CloudContext.AgentKey
@@ -77,7 +77,16 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data) err
 		"--namespace", options.Namespace,
 		"--set", "testkube-api.cloud.url=" + options.CloudUris.Agent,
 		"--set", "testkube-api.cloud.key=" + options.CloudAgentToken,
-		"--set", "testkube-api.cloud.migrate=true",
+	}
+	if isMigration {
+		args = append(args, "--set", "testkube-api.cloud.migrate=true")
+	}
+
+	if options.CloudEnvId != "" {
+		args = append(args, "--set", fmt.Sprintf("testkube-api.cloud.envId=%s", options.CloudEnvId))
+	}
+	if options.CloudOrgId != "" {
+		args = append(args, "--set", fmt.Sprintf("testkube-api.cloud.orgId=%s", options.CloudOrgId))
 	}
 
 	args = append(args, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !options.NoDashboard))
@@ -212,6 +221,15 @@ func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 		cfg.CloudContext.ApiKey = options.CloudIdToken
 		updated = true
 	}
+	if options.CloudEnvId != "" {
+		cfg.CloudContext.EnvironmentId = options.CloudEnvId
+		updated = true
+	}
+	if options.CloudOrgId != "" {
+		cfg.CloudContext.OrganizationId = options.CloudOrgId
+		updated = true
+	}
+
 	if updated {
 		return config.Save(cfg)
 	}
