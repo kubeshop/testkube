@@ -9,9 +9,9 @@
  */
 package testkube
 
-type TestSuiteStep struct {
-	// object name
-	Test string `json:"test,omitempty"`
-	// delay duration in time units
-	Delay string `json:"delay,omitempty"`
+// execution result returned from executor
+type TestSuiteStepExecutionResultV2 struct {
+	Step      *TestSuiteStepV2 `json:"step,omitempty"`
+	Test      *ObjectRef       `json:"test,omitempty"`
+	Execution *Execution       `json:"execution,omitempty"`
 }

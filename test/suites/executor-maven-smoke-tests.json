@@ -2,8 +2,8 @@
 	"name": "executor-maven-smoke-tests",
 	"description": "maven executor smoke tests",
 	"steps": [
-		{"execute": {"name": "maven-executor-smoke-jdk18"}},
-		{"execute": {"name": "maven-executor-smoke-jdk11"}},
-		{"execute": {"name": "maven-executor-smoke-jdk18-negative"}}
+		{"execute": [{"test": "maven-executor-smoke-jdk18"}]},
+		{"execute": [{"test": "maven-executor-smoke-jdk11"}]},
+		{"execute": [{"test": "maven-executor-smoke-jdk18-negative"}]}
 	]
 }

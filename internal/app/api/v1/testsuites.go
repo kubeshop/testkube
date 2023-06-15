@@ -2,25 +2,26 @@ package v1
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 
-	"github.com/kubeshop/testkube/pkg/datefilter"
-	"github.com/kubeshop/testkube/pkg/repository/testresult"
-
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
 
-	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
+	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
+	"github.com/kubeshop/testkube/pkg/datefilter"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	testsuiteexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testsuiteexecutions"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
+	"github.com/kubeshop/testkube/pkg/repository/testresult"
+	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/types"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
@@ -30,11 +31,32 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to create test suite"
 		var request testkube.TestSuiteUpsertRequest
-		err := c.BodyParser(&request)
-		if err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %w", errPrefix, err))
+		data := c.Body()
+		if string(c.Request().Header.ContentType()) != mediaTypeJSON {
+			return s.Error(c, http.StatusBadRequest, fiber.ErrUnprocessableEntity)
+		}
+
+		if err := json.Unmarshal(data, &request); err != nil {
+			s.Log.Warnw("could not parse request", "error", err)
 		}
 		errPrefix = errPrefix + " " + request.Name
+
+		emptyBatch := true
+		for _, step := range request.Steps {
+			if len(step.Execute) != 0 {
+				emptyBatch = false
+				break
+			}
+		}
+
+		if emptyBatch {
+			var requestV2 testkube.TestSuiteUpsertRequestV2
+			if err := json.Unmarshal(data, &requestV2); err != nil {
+				return s.Error(c, http.StatusBadRequest, err)
+			}
+
+			request = *requestV2.ToTestSuiteUpsertRequest()
+		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			request.QuoteTestSuiteTextFields()
@@ -42,7 +64,11 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 			return s.getCRDs(c, data, err)
 		}
 
-		testSuite := testsuitesmapper.MapTestSuiteUpsertRequestToTestCRD(request)
+		testSuite, err := testsuitesmapper.MapTestSuiteUpsertRequestToTestCRD(request)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
+
 		testSuite.Namespace = s.Namespace
 
 		s.Log.Infow("creating test suite", "testSuite", testSuite)
@@ -66,9 +92,32 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 		errPrefix := "failed to update test suite"
 
 		var request testkube.TestSuiteUpdateRequest
-		err := c.BodyParser(&request)
-		if err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %w", errPrefix, err))
+		data := c.Body()
+		if string(c.Request().Header.ContentType()) != mediaTypeJSON {
+			return s.Error(c, http.StatusBadRequest, fiber.ErrUnprocessableEntity)
+		}
+
+		if err := json.Unmarshal(data, &request); err != nil {
+			s.Log.Warnw("could not parse request", "error", err)
+		}
+
+		if request.Steps != nil {
+			emptyBatch := true
+			for _, step := range *request.Steps {
+				if len(step.Execute) != 0 {
+					emptyBatch = false
+					break
+				}
+			}
+
+			if emptyBatch {
+				var requestV2 testkube.TestSuiteUpdateRequestV2
+				if err := json.Unmarshal(data, &requestV2); err != nil {
+					return s.Error(c, http.StatusBadRequest, err)
+				}
+
+				request = *requestV2.ToTestSuiteUpdateRequest()
+			}
 		}
 
 		var name string
@@ -88,7 +137,10 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 		}
 
 		// map TestSuite but load spec only to not override metadata.ResourceVersion
-		testSuiteSpec := testsuitesmapper.MapTestSuiteUpdateRequestToTestCRD(request, testSuite)
+		testSuiteSpec, err := testsuitesmapper.MapTestSuiteUpdateRequestToTestCRD(request, testSuite)
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, err)
+		}
 
 		updatedTestSuite, err := s.TestsSuitesClient.Update(testSuiteSpec)
 
@@ -219,7 +271,7 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 		if selector == "" {
 			err = s.TestsSuitesClient.DeleteAll()
 		} else {
-			var testSuiteList *testsuitesv2.TestSuiteList
+			var testSuiteList *testsuitesv3.TestSuiteList
 			testSuiteList, err = s.TestsSuitesClient.List(selector)
 			if err != nil {
 				if !errors.IsNotFound(err) {
@@ -268,7 +320,7 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) getFilteredTestSuitesList(c *fiber.Ctx) (*testsuitesv2.TestSuiteList, error) {
+func (s TestkubeAPI) getFilteredTestSuitesList(c *fiber.Ctx) (*testsuitesv3.TestSuiteList, error) {
 	crTestSuites, err := s.TestsSuitesClient.List(c.Query("selector"))
 	if err != nil {
 		return nil, err
@@ -530,7 +582,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 		selector := c.Query("selector")
 		s.Log.Debugw("getting test suite", "name", name, "selector", selector)
 
-		var testSuites []testsuitesv2.TestSuite
+		var testSuites []testsuitesv3.TestSuite
 		if name != "" {
 			errPrefix = errPrefix + " " + name
 			testSuite, err := s.TestsSuitesClient.Get(name)
@@ -554,7 +606,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 
 		var results []testkube.TestSuiteExecution
 		if len(testSuites) != 0 {
-			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", DefaultConcurrencyLevel))
+			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", strconv.Itoa(scheduler.DefaultConcurrencyLevel)))
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: can't detect concurrency level: %w", errPrefix, err))
 			}

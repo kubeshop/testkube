@@ -19,7 +19,7 @@ type TestSuiteExecution struct {
 	Id string `json:"id"`
 	// execution name
 	Name      string                    `json:"name"`
-	TestSuite *ObjectRef                `json:"testSuite,omitempty"`
+	TestSuite *ObjectRef                `json:"testSuite"`
 	Status    *TestSuiteExecutionStatus `json:"status,omitempty"`
 	// Environment variables passed to executor.
 	// Deprecated: use Basic Variables instead
@@ -36,7 +36,9 @@ type TestSuiteExecution struct {
 	// test duration in ms
 	DurationMs int32 `json:"durationMs,omitempty"`
 	// steps execution results
-	StepResults []TestSuiteStepExecutionResult `json:"stepResults,omitempty"`
+	StepResults []TestSuiteStepExecutionResultV2 `json:"stepResults,omitempty"`
+	// batch steps execution results
+	ExecuteStepResults []TestSuiteBatchStepExecutionResult `json:"executeStepResults,omitempty"`
 	// test suite labels
 	Labels         map[string]string `json:"labels,omitempty"`
 	RunningContext *RunningContext   `json:"runningContext,omitempty"`

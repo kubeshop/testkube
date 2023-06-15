@@ -3038,7 +3038,6 @@ components:
       required:
         - name
         - status
-        - steps
       properties:
         name:
           type: string
@@ -3052,7 +3051,73 @@ components:
         before:
           type: array
           items:
-            $ref: "#/components/schemas/TestSuiteStep"
+            $ref: "#/components/schemas/TestSuiteBatchStep"
+          description: Run these batch steps before whole suite
+          example:
+            - stopOnFailure: true
+              execute:
+                - test: "example-test"
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSuiteBatchStep"
+          description: Batch steps to run
+          example:
+            - stopOnFailure: true
+              execute:
+                - test: "example-test"
+        after:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSuiteBatchStep"
+          description: Run these batch steps after whole suite
+          example:
+            - stopOnFailure: true
+              execute:
+                - test: "example-test"
+        labels:
+          type: object
+          description: "test suite labels"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"
+        schedule:
+          type: string
+          description: schedule to run test suite
+          example: "* * * * *"
+        repeats:
+          type: integer
+          default: 1
+          example: 1
+        created:
+          type: string
+          format: date-time
+        executionRequest:
+          $ref: "#/components/schemas/TestSuiteExecutionRequest"
+        status:
+          $ref: "#/components/schemas/TestSuiteStatus"
+
+    TestSuiteV2:
+      type: object
+      required:
+        - name
+        - status
+      properties:
+        name:
+          type: string
+          example: "test-suite1"
+        namespace:
+          type: string
+          example: "testkube"
+        description:
+          type: string
+          example: "collection of tests"
+        before:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSuiteStepV2"
           description: Run this step before whole suite
           example:
             - stopTestOnFailure: true
@@ -3062,7 +3127,7 @@ components:
         steps:
           type: array
           items:
-            $ref: "#/components/schemas/TestSuiteStep"
+            $ref: "#/components/schemas/TestSuiteStepV2"
           description: Steps to run
           example:
             - stopTestOnFailure: true
@@ -3072,7 +3137,7 @@ components:
         after:
           type: array
           items:
-            $ref: "#/components/schemas/TestSuiteStep"
+            $ref: "#/components/schemas/TestSuiteStepV2"
           description: Run this step after whole suite
           example:
             - stopTestOnFailure: true
@@ -3109,7 +3174,34 @@ components:
         - executeTest
         - delay
 
+    TestSuiteBatchStep:
+      description: set of steps run in parallel
+      type: object
+      required:
+        - stopOnFailure
+      properties:
+        stopOnFailure:
+          type: boolean
+          default: true
+        execute:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSuiteStep"
+
     TestSuiteStep:
+      type: object
+      properties:
+        test:
+          type: string
+          description: object name
+          example: "name"
+        delay:
+          type: string
+          format: duration
+          example: 1s
+          description: delay duration in time units
+
+    TestSuiteStepV2:
       type: object
       required:
         - name
@@ -3120,19 +3212,18 @@ components:
           type: boolean
           default: true
         execute:
-          $ref: "#/components/schemas/TestSuiteStepExecuteTest"
+          $ref: "#/components/schemas/TestSuiteStepExecuteTestV2"
         delay:
-          $ref: "#/components/schemas/TestSuiteStepDelay"
+          $ref: "#/components/schemas/TestSuiteStepDelayV2"
 
-    TestSuiteStepExecuteTest:
+    TestSuiteStepExecuteTestV2:
       allOf:
         - $ref: "#/components/schemas/ObjectRef"
 
-    TestSuiteStepDelay:
+    TestSuiteStepDelayV2:
       type: object
       required:
         - duration
-        - name
       properties:
         duration:
           type: integer
@@ -3145,7 +3236,7 @@ components:
       required:
         - id
         - name
-        - test
+        - testSuite
       properties:
         id:
           type: string
@@ -3197,7 +3288,13 @@ components:
           type: array
           description: "steps execution results"
           items:
-            $ref: "#/components/schemas/TestSuiteStepExecutionResult"
+            $ref: "#/components/schemas/TestSuiteStepExecutionResultV2"
+            description: test execution results
+        executeStepResults:
+          type: array
+          description: "batch steps execution results"
+          items:
+            $ref: "#/components/schemas/TestSuiteBatchStepExecutionResult"
             description: test execution results
         labels:
           type: object
@@ -3225,8 +3322,6 @@ components:
     TestSuiteStepExecutionResult:
       description: execution result returned from executor
       type: object
-      required:
-        - status
       properties:
         step:
           $ref: "#/components/schemas/TestSuiteStep"
@@ -3236,6 +3331,30 @@ components:
         execution:
           $ref: "#/components/schemas/Execution"
           description: test step execution
+
+    TestSuiteStepExecutionResultV2:
+      description: execution result returned from executor
+      type: object
+      properties:
+        step:
+          $ref: "#/components/schemas/TestSuiteStepV2"
+        test:
+          $ref: "#/components/schemas/ObjectRef"
+          description: object name and namespace
+        execution:
+          $ref: "#/components/schemas/Execution"
+          description: test step execution          
+
+    TestSuiteBatchStepExecutionResult:
+      description: execution result returned from executor
+      type: object
+      properties:
+        step:
+          $ref: "#/components/schemas/TestSuiteBatchStep"          
+        execute:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSuiteStepExecutionResult"
 
     TestSuiteExecutionsResult:
       description: the result for a page of executions
@@ -3296,7 +3415,7 @@ components:
         execution:
           type: array
           items:
-            $ref: "#/components/schemas/TestSuiteStepExecutionSummary"
+            $ref: "#/components/schemas/TestSuiteBatchStepExecutionSummary"
         labels:
           type: object
           description: "test suite and execution labels"
@@ -3329,6 +3448,15 @@ components:
           $ref: "#/components/schemas/ExecutionStatus"
         type:
           $ref: "#/components/schemas/TestSuiteStepType"
+
+    TestSuiteBatchStepExecutionSummary:
+      description: "Test suite batch execution summary"
+      type: object
+      properties:
+        execute:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSuiteStepExecutionSummary"
 
     TestSuiteStatus:
       type: object
@@ -4050,6 +4178,11 @@ components:
       description: test execution request body
       type: object
       properties:
+        id:
+          type: string
+          description: execution id
+          format: bson objectId
+          example: "62f395e004109209b50edfc1"
         name:
           type: string
           description: test execution custom name
@@ -4280,6 +4413,11 @@ components:
         cronJobTemplate:
           type: string
           description: cron job template extensions
+        concurrencyLevel:
+          type: integer
+          format: int32
+          description: number of tests run in parallel
+          example: 10
 
     TestSuiteExecutionUpdateRequest:
       description: test suite execution update request body
@@ -4311,12 +4449,30 @@ components:
         - $ref: "#/components/schemas/TestSuite"
         - $ref: "#/components/schemas/ObjectRef"
 
+    TestSuiteUpsertRequestV2:
+      description: test suite create request body
+      type: object
+      required:
+        - name
+        - namespace
+      allOf:
+        - $ref: "#/components/schemas/TestSuiteV2"
+        - $ref: "#/components/schemas/ObjectRef"
+
     TestSuiteUpdateRequest:
       description: test suite update body
       type: object
       nullable: true
       allOf:
         - $ref: "#/components/schemas/TestSuite"
+        - $ref: "#/components/schemas/ObjectRef"
+
+    TestSuiteUpdateRequestV2:
+      description: test suite update body
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/TestSuiteV2"
         - $ref: "#/components/schemas/ObjectRef"
 
     TestTriggerUpsertRequest:

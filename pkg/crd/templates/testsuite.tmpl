@@ -1,4 +1,4 @@
-apiVersion: tests.testkube.io/v2
+apiVersion: tests.testkube.io/v3
 kind: TestSuite
 metadata:
   name: {{ .Name }}
@@ -16,63 +16,51 @@ spec:
   {{- if ne (len .Before) 0 }}
   before:
   {{- range .Before }}
-    {{- if .Execute }}
-  - execute:
-      stopOnFailure: {{ .StopTestOnFailure }}
-      {{- if .Execute.Namespace }}
-      namespace: {{ .Execute.Namespace }}
+  - stopOnFailure: {{ .StopOnFailure }}
+    {{- if ne (len .Execute) 0 }}
+    execute:
+    {{- range .Execute }}
+      {{- if .Test }}
+    - test: {{ .Test }}
       {{- end }}
-      {{- if .Execute.Name}}
-      name: {{ .Execute.Name }}
+      {{- if .Delay }}
+    - delay: {{ .Delay }}
       {{- end }}
     {{- end }}
-    {{- if .Delay }}
-  - delay:
-      {{- if .Delay.Duration }}
-      duration: {{ .Delay.Duration }}
-      {{- end }}
     {{- end }}
   {{- end }}
   {{- end }}
   {{- if ne (len .Steps) 0 }}
   steps:
   {{- range .Steps }}
-    {{- if .Execute }}
-  - execute:
-      stopOnFailure: {{ .StopTestOnFailure }}
-      {{- if .Execute.Namespace }}
-      namespace: {{ .Execute.Namespace }}
+  - stopOnFailure: {{ .StopOnFailure }}
+    {{- if ne (len .Execute) 0 }}
+    execute:
+    {{- range .Execute }}
+      {{- if .Test }}
+    - test: {{ .Test }}
       {{- end }}
-      {{- if .Execute.Name }}
-      name: {{ .Execute.Name }}
+      {{- if .Delay }}
+    - delay: {{ .Delay }}
       {{- end }}
     {{- end }}
-    {{- if .Delay }}
-  - delay:
-      {{- if .Delay.Duration }}
-      duration: {{ .Delay.Duration }}
-      {{- end}}
     {{- end }}
   {{- end }}
   {{- end }}
   {{- if ne (len .After) 0 }}
   after:
   {{- range .After }}
-    {{- if .Execute }}
-  - execute:
-      stopOnFailure: {{ .StopTestOnFailure }}
-      {{- if .Execute.Namespace }}
-      namespace: {{ .Execute.Namespace }}
+  - stopOnFailure: {{ .StopOnFailure }}
+    {{- if ne (len .Execute) 0 }}
+    execute:
+    {{- range .Execute }}
+      {{- if .Test }}
+    - test: {{ .Test }}
       {{- end }}
-      {{- if .Execute.Name }}
-      name: {{ .Execute.Name }}
+      {{- if .Delay }}
+    - delay: {{ .Delay }}
       {{- end }}
     {{- end }}
-    {{- if .Delay }}
-  - delay:
-      {{- if .Delay.Duration }}
-      duration: {{ .Delay.Duration }}
-      {{- end }}
     {{- end }}
   {{- end }}
   {{- end }}

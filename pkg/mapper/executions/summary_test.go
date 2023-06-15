@@ -35,6 +35,7 @@ func getExecutions() testkube.Executions {
 	ex1 := new(testkube.ExecutionResult)
 
 	execution1 := testkube.NewExecution(
+		"",
 		"testkube",
 		"script1",
 		"testsuite1",
@@ -53,6 +54,7 @@ func getExecutions() testkube.Executions {
 	ex2 := new(testkube.ExecutionResult)
 
 	execution2 := testkube.NewExecution(
+		"",
 		"testkube",
 		"script1",
 		"testsuite1",

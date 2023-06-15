@@ -32,7 +32,7 @@ import (
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsourcesclientv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
-	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
+	testsuitesclientv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/event"
@@ -61,7 +61,7 @@ func NewTestkubeAPI(
 	testsuiteExecutionsResults testresult.Repository,
 	testsClient *testsclientv3.TestsClient,
 	executorsClient *executorsclientv1.ExecutorsClient,
-	testsuitesClient *testsuitesclientv2.TestSuitesClient,
+	testsuitesClient *testsuitesclientv3.TestSuitesClient,
 	secretClient *secret.Client,
 	webhookClient *executorsclientv1.WebhooksClient,
 	clientset kubernetes.Interface,
@@ -150,7 +150,7 @@ type TestkubeAPI struct {
 	TestExecutionResults testresult.Repository
 	Executor             client.Executor
 	ContainerExecutor    client.Executor
-	TestsSuitesClient    *testsuitesclientv2.TestSuitesClient
+	TestsSuitesClient    *testsuitesclientv3.TestSuitesClient
 	TestsClient          *testsclientv3.TestsClient
 	ExecutorsClient      *executorsclientv1.ExecutorsClient
 	SecretClient         *secret.Client

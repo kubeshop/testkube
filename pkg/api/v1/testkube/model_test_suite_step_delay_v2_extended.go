@@ -2,6 +2,6 @@ package testkube
 
 import "fmt"
 
-func (s TestSuiteStepDelay) FullName() string {
+func (s TestSuiteStepDelayV2) FullName() string {
 	return fmt.Sprintf("delay %dms", s.Duration)
 }

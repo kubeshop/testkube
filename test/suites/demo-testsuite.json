@@ -2,12 +2,12 @@
     "name": "demo-testsuite",
     "description": "Demo release tests",
     "steps": [
-        {"execute": {"name": "postman-executor-smoke"}},
-        {"execute": {"name": "postman-executor-smoke-testsource"}},
-        {"execute": {"name": "k6-executor-smoke"}},
-        {"execute": {"name": "container-executor-curl-smoke"}},
-        {"execute" :{"name": "cypress-11-executor-smoke-chrome"}},
-        {"execute" :{"name": "cypress-default-executor-smoke-electron-testsource"}},
-        {"execute" :{"name": "dashboard-e2e-tests"}}
+        {"execute": [{"test": "postman-executor-smoke"}]},
+        {"execute": [{"test": "postman-executor-smoke-testsource-git-file"}]},
+        {"execute": [{"test": "k6-executor-smoke"}]},
+        {"execute": [{"test": "container-executor-curl-smoke"}]},
+        {"execute": [{"test": "cypress-11-executor-smoke-chrome"}]},
+        {"execute": [{"test": "cypress-default-executor-smoke-electron-testsource"}]},
+        {"execute": [{"test": "dashboard-e2e-tests"}]}      
     ]
 }

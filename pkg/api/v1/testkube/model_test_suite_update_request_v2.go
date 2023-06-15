@@ -14,18 +14,18 @@ import (
 )
 
 // test suite update body
-type TestSuiteUpdateRequest struct {
+type TestSuiteUpdateRequestV2 struct {
 	// object kubernetes namespace
 	Namespace *string `json:"namespace,omitempty"`
 	// object name
 	Name        *string `json:"name"`
 	Description *string `json:"description,omitempty"`
-	// Run these batch steps before whole suite
-	Before *[]TestSuiteBatchStep `json:"before,omitempty"`
-	// Batch steps to run
-	Steps *[]TestSuiteBatchStep `json:"steps,omitempty"`
-	// Run these batch steps after whole suite
-	After *[]TestSuiteBatchStep `json:"after,omitempty"`
+	// Run this step before whole suite
+	Before *[]TestSuiteStepV2 `json:"before,omitempty"`
+	// Steps to run
+	Steps *[]TestSuiteStepV2 `json:"steps,omitempty"`
+	// Run this step after whole suite
+	After *[]TestSuiteStepV2 `json:"after,omitempty"`
 	// test suite labels
 	Labels *map[string]string `json:"labels,omitempty"`
 	// schedule to run test suite

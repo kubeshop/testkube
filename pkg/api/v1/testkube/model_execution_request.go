@@ -11,6 +11,8 @@ package testkube
 
 // test execution request body
 type ExecutionRequest struct {
+	// execution id
+	Id string `json:"id,omitempty"`
 	// test execution custom name
 	Name string `json:"name,omitempty"`
 	// unique test suite name (CRD Test suite name), if it's run as a part of test suite

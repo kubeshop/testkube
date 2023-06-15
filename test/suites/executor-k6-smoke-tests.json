@@ -2,8 +2,8 @@
 	"name": "executor-k6-smoke-tests",
 	"description": "k6 executor smoke tests",
 	"steps": [
-		{"execute": {"name": "k6-executor-smoke"}},
-		{"execute": {"name": "k6-executor-smoke-git-file"}},
-		{"execute": {"name": "k6-executor-smoke-negative"}}
+		{"execute": [{"test": "k6-executor-smoke"}]},
+		{"execute": [{"test": "k6-executor-smoke-git-file"}]},
+		{"execute": [{"test": "k6-executor-smoke-negative"}]}
 	]
 }

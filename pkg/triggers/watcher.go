@@ -3,31 +3,26 @@ package triggers
 import (
 	"context"
 
+	"github.com/google/go-cmp/cmp"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/informers"
 	appsinformerv1 "k8s.io/client-go/informers/apps/v1"
 	coreinformerv1 "k8s.io/client-go/informers/core/v1"
 	networkinginformerv1 "k8s.io/client-go/informers/networking/v1"
 	"k8s.io/client-go/kubernetes"
-
-	"github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
-	testkubeinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"
-	testkubeinformerv2 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v2"
-	testkubeinformerv3 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v3"
-
-	networkingv1 "k8s.io/api/networking/v1"
-
-	"github.com/google/go-cmp/cmp"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	testsuitev2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
+	testsuitev3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
+	"github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube-operator/pkg/informers/externalversions"
+	testkubeinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"
+	testkubeinformerv3 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v3"
 	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
 )
 
@@ -42,7 +37,7 @@ type k8sInformers struct {
 	configMapInformers    []coreinformerv1.ConfigMapInformer
 
 	testTriggerInformer testkubeinformerv1.TestTriggerInformer
-	testSuiteInformer   testkubeinformerv2.TestSuiteInformer
+	testSuiteInformer   testkubeinformerv3.TestSuiteInformer
 	testInformer        testkubeinformerv3.TestInformer
 }
 
@@ -68,7 +63,7 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 	testkubeInformerFactory := externalversions.NewSharedInformerFactoryWithOptions(
 		testKubeClientset, 0, externalversions.WithNamespace(testkubeNamespace))
 	k8sInformers.testTriggerInformer = testkubeInformerFactory.Tests().V1().TestTriggers()
-	k8sInformers.testSuiteInformer = testkubeInformerFactory.Tests().V2().TestSuites()
+	k8sInformers.testSuiteInformer = testkubeInformerFactory.Tests().V3().TestSuites()
 	k8sInformers.testInformer = testkubeInformerFactory.Tests().V3().Tests()
 
 	return &k8sInformers
@@ -660,14 +655,14 @@ func (s *Service) testTriggerEventHandler() cache.ResourceEventHandlerFuncs {
 func (s *Service) testSuiteEventHandler() cache.ResourceEventHandlerFuncs {
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			testSuite, ok := obj.(*testsuitev2.TestSuite)
+			testSuite, ok := obj.(*testsuitev3.TestSuite)
 			if !ok {
 				s.logger.Errorf("failed to process create testsuite event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
 			if inPast(testSuite.CreationTimestamp.Time, s.watchFromDate) {
 				s.logger.Debugf(
-					"trigger service: watcher component: no-op create trigger: testsuite %s/%s was created in the past",
+					"trigger service: watcher component: no-op create test suite: test suite %s/%s was created in the past",
 					testSuite.Namespace, testSuite.Name,
 				)
 				return
@@ -691,7 +686,7 @@ func (s *Service) testEventHandler() cache.ResourceEventHandlerFuncs {
 			}
 			if inPast(test.CreationTimestamp.Time, s.watchFromDate) {
 				s.logger.Debugf(
-					"trigger service: watcher component: no-op create trigger: test %s/%s was created in the past",
+					"trigger service: watcher component: no-op create test: test %s/%s was created in the past",
 					test.Namespace, test.Name,
 				)
 				return

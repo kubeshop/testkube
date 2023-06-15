@@ -143,13 +143,14 @@ func (c TestSuiteClient) GetTestSuiteExecutionArtifacts(executionID string) (art
 func (c TestSuiteClient) ExecuteTestSuite(id, executionName string, options ExecuteTestSuiteOptions) (execution testkube.TestSuiteExecution, err error) {
 	uri := c.testSuiteExecutionTransport.GetURI("/test-suites/%s/executions", id)
 	executionRequest := testkube.TestSuiteExecutionRequest{
-		Name:            executionName,
-		Variables:       options.ExecutionVariables,
-		HttpProxy:       options.HTTPProxy,
-		HttpsProxy:      options.HTTPSProxy,
-		ExecutionLabels: options.ExecutionLabels,
-		ContentRequest:  options.ContentRequest,
-		RunningContext:  options.RunningContext,
+		Name:             executionName,
+		Variables:        options.ExecutionVariables,
+		HttpProxy:        options.HTTPProxy,
+		HttpsProxy:       options.HTTPSProxy,
+		ExecutionLabels:  options.ExecutionLabels,
+		ContentRequest:   options.ContentRequest,
+		RunningContext:   options.RunningContext,
+		ConcurrencyLevel: options.ConcurrencyLevel,
 	}
 
 	body, err := json.Marshal(executionRequest)
@@ -165,12 +166,13 @@ func (c TestSuiteClient) ExecuteTestSuite(id, executionName string, options Exec
 func (c TestSuiteClient) ExecuteTestSuites(selector string, concurrencyLevel int, options ExecuteTestSuiteOptions) (executions []testkube.TestSuiteExecution, err error) {
 	uri := c.testSuiteExecutionTransport.GetURI("/test-suite-executions")
 	executionRequest := testkube.TestSuiteExecutionRequest{
-		Variables:       options.ExecutionVariables,
-		HttpProxy:       options.HTTPProxy,
-		HttpsProxy:      options.HTTPSProxy,
-		ExecutionLabels: options.ExecutionLabels,
-		ContentRequest:  options.ContentRequest,
-		RunningContext:  options.RunningContext,
+		Variables:        options.ExecutionVariables,
+		HttpProxy:        options.HTTPProxy,
+		HttpsProxy:       options.HTTPSProxy,
+		ExecutionLabels:  options.ExecutionLabels,
+		ContentRequest:   options.ContentRequest,
+		RunningContext:   options.RunningContext,
+		ConcurrencyLevel: options.ConcurrencyLevel,
 	}
 
 	body, err := json.Marshal(executionRequest)
