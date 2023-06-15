@@ -139,7 +139,7 @@ func NewConnectCmd() *cobra.Command {
 			}
 
 			spinner := ui.NewSpinner("Connecting Testkube Cloud")
-			err = common.HelmUpgradeOrInstallTestkubeCloud(opts, cfg)
+			err = common.HelmUpgradeOrInstallTestkubeCloud(opts, cfg, true)
 			ui.ExitOnError("Installing Testkube Cloud", err)
 			spinner.Success()
 
