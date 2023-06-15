@@ -2,14 +2,14 @@ package common
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
+
+	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/kubeshop/testkube/pkg/utils/text"
-	"github.com/spf13/cobra"
 )
 
 func UiPrintContext(cfg config.Data) {
@@ -48,7 +48,6 @@ func UiCloudContextValidationError(err error) {
 	ui.NL()
 	ui.ShellCommand(" testkube set context -c cloud -e tkcenv_XXX -o tkcorg_XXX -k tkcapi_XXX")
 	ui.NL()
-	os.Exit(1)
 }
 
 func UiContextHeader(cmd *cobra.Command, cfg config.Data) {
