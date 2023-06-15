@@ -55,8 +55,8 @@ func NewLoginCmd() *cobra.Command {
 			ui.ExitOnError("loading config file", err)
 
 			cfg.ContextType = config.ContextTypeCloud
-			cfg.CloudContext.Organization = orgID
-			cfg.CloudContext.Environment = envID
+			cfg.CloudContext.OrganizationId = orgID
+			cfg.CloudContext.EnvironmentId = envID
 
 			uris := opts.CloudUris
 			cfg.CloudContext.ApiUri = uris.Api

@@ -29,8 +29,6 @@ func NewAgentCmd() *cobra.Command {
 			ui.Info("Build date", common.Date)
 
 		},
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		},
 	}
 
 	cmd.AddCommand(agent.NewAgentDebugCmd())

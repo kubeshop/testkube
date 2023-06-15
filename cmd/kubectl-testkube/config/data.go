@@ -17,15 +17,17 @@ const (
 )
 
 type CloudContext struct {
-	Environment  string `json:"environment,omitempty"`
-	Organization string `json:"organization,omitempty"`
-	ApiKey       string `json:"apiKey,omitempty"`
-	ApiUri       string `json:"apiUri,omitempty"`
-	AgentKey     string `json:"agentKey,omitempty"`
-	AgentUri     string `json:"agentUri,omitempty"`
-	RootDomain   string `json:"rootDomain,omitempty"`
-	UiUri        string `json:"uiUri,omitempty"`
-	TokenType    string `json:"tokenType,omitempty"`
+	EnvironmentId    string `json:"environment,omitempty"`
+	EnvironmentName  string `json:"environmentName,omitempty"`
+	OrganizationId   string `json:"organization,omitempty"`
+	OrganizationName string `json:"organizationName,omitempty"`
+	ApiKey           string `json:"apiKey,omitempty"`
+	ApiUri           string `json:"apiUri,omitempty"`
+	AgentKey         string `json:"agentKey,omitempty"`
+	AgentUri         string `json:"agentUri,omitempty"`
+	RootDomain       string `json:"rootDomain,omitempty"`
+	UiUri            string `json:"uiUri,omitempty"`
+	TokenType        string `json:"tokenType,omitempty"`
 }
 
 type Data struct {

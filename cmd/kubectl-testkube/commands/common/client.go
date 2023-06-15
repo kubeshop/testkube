@@ -70,10 +70,10 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 		}
 	case config.ContextTypeCloud:
 		clientType = string(client.ClientCloud)
-		options.CloudApiPathPrefix = fmt.Sprintf("/organizations/%s/environments/%s/agent", cfg.CloudContext.Organization, cfg.CloudContext.Environment)
+		options.CloudApiPathPrefix = fmt.Sprintf("/organizations/%s/environments/%s/agent", cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId)
 		options.CloudApiKey = cfg.CloudContext.ApiKey
-		options.CloudEnvironment = cfg.CloudContext.Environment
-		options.CloudOrganization = cfg.CloudContext.Organization
+		options.CloudEnvironment = cfg.CloudContext.EnvironmentId
+		options.CloudOrganization = cfg.CloudContext.OrganizationId
 		options.ApiUri = cfg.CloudContext.ApiUri
 	}
 
