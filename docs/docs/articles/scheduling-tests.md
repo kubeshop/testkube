@@ -1,4 +1,4 @@
-# Test and Test Suite Scheduling
+# Scheduling Tests
 
 In order to run Tests and Test Suites on a regular basis, we support a scheduling mechanism for these objects.
 CRDs both for tests and test suites contain a **schedule** field used to define rules for launching them in time.

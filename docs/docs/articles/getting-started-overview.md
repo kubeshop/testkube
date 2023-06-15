@@ -2,7 +2,7 @@
 
 In this section you will:
 
-1. [Install the Testkube CLI](./step1-installing-cli.md).
+1. [Install the Testkube CLI](./step1-installing-cli).
 2. [Install the Testkube Agent](./step2-installing-cluster-components.md).
 3. [Creating your first Test](./step3-creating-first-test.md).
 

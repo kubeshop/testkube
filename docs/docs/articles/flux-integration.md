@@ -69,7 +69,7 @@ flux create kustomization testkube-test \
 
 ### 6. Install Testkube in the cluster.
 
-If you don't have the Testkube CLI, follow the instructions [here](./step1-installing-cli.md) to install it.
+If you don't have the Testkube CLI, follow the instructions [here](./step1-installing-cli) to install it.
 
 Run the following command to install Testkube and its components in the cluster:
 
