@@ -60,18 +60,27 @@ func UiContextHeader(cmd *cobra.Command, cfg config.Data) {
 	header := "\n"
 	separator := "   "
 
+	orgName := cfg.CloudContext.OrganizationName
+	if orgName == "" {
+		orgName = cfg.CloudContext.OrganizationId
+	}
+	envName := cfg.CloudContext.EnvironmentName
+	if envName == "" {
+		envName = cfg.CloudContext.EnvironmentId
+	}
+
 	if cfg.ContextType == config.ContextTypeCloud {
 		header += ui.DarkGray("Context: ") + ui.White(cfg.ContextType) + ui.DarkGray(" ("+Version+")") + separator
 		header += ui.DarkGray("Namespace: ") + ui.White(cfg.Namespace) + separator
-		header += ui.DarkGray("Org: ") + ui.White(cfg.CloudContext.OrganizationName) + separator
-		header += ui.DarkGray("Env: ") + ui.White(cfg.CloudContext.EnvironmentName)
+		header += ui.DarkGray("Org: ") + ui.White(orgName) + separator
+		header += ui.DarkGray("Env: ") + ui.White(envName)
 	} else {
 		header += ui.DarkGray("Context: ") + ui.White(cfg.ContextType) + ui.DarkGray(" ("+Version+")") + separator
 		header += ui.DarkGray("Namespace: ") + ui.White(cfg.Namespace)
 	}
 
 	fmt.Println(header)
-	fmt.Println(strings.Repeat("-", calculateStringSize(header)))
+	fmt.Println(strings.Repeat("─", calculateStringSize(header)))
 }
 
 // calculateStringSize calculates the length of a string, excluding shell color codes.
