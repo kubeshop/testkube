@@ -64,12 +64,15 @@ var RootCmd = &cobra.Command{
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		ui.SetVerbose(verbose)
 
+		cfg, err := config.Load()
+		ui.ExitOnError("loading config", err)
+
+		common.UiContextHeader(cmd, cfg)
+
+		// don't validate context before set
 		if cmd.Name() == "context" {
 			return
 		}
-
-		cfg, err := config.Load()
-		ui.ExitOnError("loading config", err)
 
 		if err = validator.ValidateCloudContext(cfg); err != nil {
 			common.UiCloudContextValidationError(err)
@@ -160,6 +163,7 @@ func Execute() {
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "show additional debug messages")
 	RootCmd.PersistentFlags().StringVarP(&apiURI, "api-uri", "a", apiURI, "api uri, default value read from config if set")
 	RootCmd.PersistentFlags().BoolVarP(&oauthEnabled, "oauth-enabled", "", cfg.OAuth2Data.Enabled, "enable oauth")
+
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

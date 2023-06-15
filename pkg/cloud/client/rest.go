@@ -41,6 +41,29 @@ func (c RESTClient[T]) List() ([]T, error) {
 	return orgsResponse.Elements, err
 }
 
+func (c RESTClient[T]) Get(id string) (e T, err error) {
+	req, err := nethttp.NewRequest("GET", c.BaseUrl+c.Path+"/"+id, nil)
+	req.Header.Add("Authorization", "Bearer "+c.Token)
+	if err != nil {
+		return e, err
+	}
+	resp, err := c.Client.Do(req)
+	if err != nil {
+		return e, err
+	}
+
+	if resp.StatusCode > 299 {
+		d, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return e, fmt.Errorf("error creating %s: can't read response: %s", c.Path, err)
+		}
+		return e, fmt.Errorf("error creating %s: %s", c.Path, d)
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&e)
+	return
+}
+
 func (c RESTClient[T]) Create(entity T, overridePath ...string) (e T, err error) {
 	d, err := json.Marshal(entity)
 	if err != nil {

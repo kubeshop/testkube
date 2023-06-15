@@ -19,11 +19,11 @@ func ValidateCloudContext(cfg config.Data) error {
 		return errors.New("please provide Testkube Cloud API token")
 	}
 
-	if cfg.CloudContext.Environment == "" {
+	if cfg.CloudContext.EnvironmentId == "" {
 		return errors.New("please provide Environment")
 	}
 
-	if cfg.CloudContext.Organization == "" {
+	if cfg.CloudContext.OrganizationId == "" {
 		return errors.New("please provide Organization")
 	}
 

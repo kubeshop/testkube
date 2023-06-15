@@ -3,10 +3,13 @@ package common
 import (
 	"fmt"
 	"os"
+	"regexp"
+	"strings"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/kubeshop/testkube/pkg/utils/text"
+	"github.com/spf13/cobra"
 )
 
 func UiPrintContext(cfg config.Data) {
@@ -15,8 +18,8 @@ func UiPrintContext(cfg config.Data) {
 
 	if cfg.ContextType == config.ContextTypeCloud {
 		contextData := map[string]string{
-			"Organization ID": cfg.CloudContext.Organization,
-			"Environment ID ": cfg.CloudContext.Environment,
+			"Organization":    cfg.CloudContext.OrganizationName + ui.DarkGray(" ("+cfg.CloudContext.OrganizationId+")"),
+			"Environment":     cfg.CloudContext.EnvironmentName + ui.DarkGray(" ("+cfg.CloudContext.EnvironmentId+")"),
 			"API Key        ": text.Obfuscate(cfg.CloudContext.ApiKey),
 			"API URI        ": cfg.CloudContext.ApiUri,
 			"Namespace      ": cfg.Namespace,
@@ -38,6 +41,7 @@ func UiPrintContext(cfg config.Data) {
 }
 
 func UiCloudContextValidationError(err error) {
+	ui.NL()
 	ui.Errf("Validating cloud context failed: %s", err.Error())
 	ui.NL()
 	ui.Info("Please set valid cloud context using `testkube set context` with valid values")
@@ -45,4 +49,37 @@ func UiCloudContextValidationError(err error) {
 	ui.ShellCommand(" testkube set context -c cloud -e tkcenv_XXX -o tkcorg_XXX -k tkcapi_XXX")
 	ui.NL()
 	os.Exit(1)
+}
+
+func UiContextHeader(cmd *cobra.Command, cfg config.Data) {
+	// only show header when output is pretty
+	if cmd.Flag("output") != nil && cmd.Flag("output").Value.String() != "pretty" {
+		return
+	}
+
+	header := "\n"
+	separator := "   "
+
+	if cfg.ContextType == config.ContextTypeCloud {
+		header += ui.DarkGray("Context: ") + ui.White(cfg.ContextType) + ui.DarkGray(" ("+Version+")") + separator
+		header += ui.DarkGray("Namespace: ") + ui.White(cfg.Namespace) + separator
+		header += ui.DarkGray("Org: ") + ui.White(cfg.CloudContext.OrganizationName) + separator
+		header += ui.DarkGray("Env: ") + ui.White(cfg.CloudContext.EnvironmentName)
+	} else {
+		header += ui.DarkGray("Context: ") + ui.White(cfg.ContextType) + ui.DarkGray(" ("+Version+")") + separator
+		header += ui.DarkGray("Namespace: ") + ui.White(cfg.Namespace)
+	}
+
+	fmt.Println(header)
+	fmt.Println(strings.Repeat("-", calculateStringSize(header)))
+}
+
+// calculateStringSize calculates the length of a string, excluding shell color codes.
+func calculateStringSize(s string) int {
+	// Regular expression to match ANSI escape codes.
+	re := regexp.MustCompile(`\x1b[^m]*m`)
+	// Remove the escape codes from the string.
+	s = re.ReplaceAllString(s, "")
+	// Return the length of the string.
+	return len(s) - 1
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsources"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooks"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -26,6 +27,10 @@ func NewCreateCmd() *cobra.Command {
 			ui.PrintOnError("Displaying help", err)
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			cfg, err := config.Load()
+			ui.ExitOnError("loading config", err)
+			common.UiContextHeader(cmd, cfg)
+
 			if !crdOnly {
 				validator.PersistentPreRunVersionCheck(cmd, common.Version)
 			}
