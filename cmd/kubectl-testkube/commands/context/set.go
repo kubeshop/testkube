@@ -1,8 +1,6 @@
 package context
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -72,8 +70,6 @@ func NewSetContextCmd() *cobra.Command {
 
 				cfg.CloudContext.OrganizationName = org.Name
 				cfg.CloudContext.EnvironmentName = env.Name
-
-				fmt.Printf("%+v\n", cfg.CloudContext)
 
 			case config.ContextTypeKubeconfig:
 				// kubeconfig special use cases
