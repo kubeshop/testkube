@@ -185,6 +185,12 @@ const sidebars = {
       label: "Reference",
       items: [
         {
+          type: "doc",
+          id: "articles/helm-chart",
+          label: "Helm Chart",
+        },
+        "articles/crds-reference",
+        {
           type: "category",
           label: "CLI",
           items: [
@@ -194,16 +200,10 @@ const sidebars = {
             },
           ],
         },
-        {
-          type: "doc",
-          id: "articles/helm-chart",
-          label: "Helm Chart",
-        },
         "openapi",
         "articles/metrics",
         "articles/artifacts-storage",
         "articles/testkube-dependencies",
-        "articles/crds-reference",
         "articles/architecture",
         "articles/telemetry",
       ],
