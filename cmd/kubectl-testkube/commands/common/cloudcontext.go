@@ -79,7 +79,7 @@ func UiContextHeader(cmd *cobra.Command, cfg config.Data) {
 	}
 
 	fmt.Println(header)
-	fmt.Println(strings.Repeat("─", calculateStringSize(header)))
+	fmt.Println(strings.Repeat("-", calculateStringSize(header)))
 }
 
 // calculateStringSize calculates the length of a string, excluding shell color codes.
