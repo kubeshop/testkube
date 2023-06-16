@@ -18,8 +18,8 @@ func UiPrintContext(cfg config.Data) {
 
 	if cfg.ContextType == config.ContextTypeCloud {
 		contextData := map[string]string{
-			"Organization":    cfg.CloudContext.OrganizationName + ui.DarkGray(" ("+cfg.CloudContext.OrganizationId+")"),
-			"Environment":     cfg.CloudContext.EnvironmentName + ui.DarkGray(" ("+cfg.CloudContext.EnvironmentId+")"),
+			"Organization   ": cfg.CloudContext.OrganizationName + ui.DarkGray(" ("+cfg.CloudContext.OrganizationId+")"),
+			"Environment    ": cfg.CloudContext.EnvironmentName + ui.DarkGray(" ("+cfg.CloudContext.EnvironmentId+")"),
 			"API Key        ": text.Obfuscate(cfg.CloudContext.ApiKey),
 			"API URI        ": cfg.CloudContext.ApiUri,
 			"Namespace      ": cfg.Namespace,

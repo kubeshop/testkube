@@ -6,14 +6,12 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
-	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func NewSetContextCmd() *cobra.Command {
 	var (
 		org, env, apiKey string
-		agentKey         string
 		kubeconfig       bool
 		namespace        string
 		rootDomain       string
@@ -35,41 +33,11 @@ func NewSetContextCmd() *cobra.Command {
 
 			switch cfg.ContextType {
 			case config.ContextTypeCloud:
-				if org == "" && env == "" && apiKey == "" && agentKey == "" && rootDomain == "" {
-					ui.Errf("Please provide at least one of the following flags: --org, --env, --api-key, --cloud-root-domain, --cloud-agent-key")
+				if org == "" && env == "" && apiKey == "" && rootDomain == "" {
+					ui.Errf("Please provide at least one of the following flags: --org, --env, --api-key, --cloud-root-domain")
 				}
 
-				if org != "" {
-					cfg.CloudContext.OrganizationId = org
-					// reset env when the org is changed
-					if env == "" {
-						cfg.CloudContext.EnvironmentId = ""
-					}
-				}
-				if env != "" {
-					cfg.CloudContext.EnvironmentId = env
-				}
-				if apiKey != "" {
-					cfg.CloudContext.ApiKey = apiKey
-				}
-
-				// set uris based on root domain
-				uris := common.NewCloudUris(rootDomain)
-				cfg.CloudContext.ApiUri = uris.Api
-				cfg.CloudContext.UiUri = uris.Ui
-				cfg.CloudContext.AgentUri = uris.Agent
-
-				orgClient := cloudclient.NewOrganizationsClient(rootDomain, cfg.CloudContext.ApiKey)
-				ui.ExitOnError("getting client", err)
-				org, err := orgClient.Get(cfg.CloudContext.OrganizationId)
-				ui.ExitOnError("getting organization", err)
-
-				envsClient := cloudclient.NewEnvironmentsClient(rootDomain, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId)
-				env, err := envsClient.Get(cfg.CloudContext.EnvironmentId)
-				ui.ExitOnError("getting environment", err)
-
-				cfg.CloudContext.OrganizationName = org.Name
-				cfg.CloudContext.EnvironmentName = env.Name
+				cfg = common.PopulateCloudConfig(cfg, apiKey, org, env, rootDomain)
 
 			case config.ContextTypeKubeconfig:
 				// kubeconfig special use cases
