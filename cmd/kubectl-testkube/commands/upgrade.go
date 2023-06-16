@@ -57,7 +57,7 @@ func NewUpgradeCmd() *cobra.Command {
 
 			if cfg.ContextType == config.ContextTypeCloud {
 				ui.Info("Testkube Cloud agent upgrade started")
-				err = common.HelmUpgradeOrInstallTestkubeCloud(options, cfg)
+				err = common.HelmUpgradeOrInstallTestkubeCloud(options, cfg, false)
 				ui.ExitOnError("Upgrading Testkube Cloud Agent", err)
 				err = common.PopulateAgentDataToContext(options, cfg)
 				ui.ExitOnError("Storing agent data in context", err)
