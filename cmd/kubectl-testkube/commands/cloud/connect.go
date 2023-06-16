@@ -91,7 +91,7 @@ func NewConnectCmd() *cobra.Command {
 				envName, err := uiGetEnvName()
 				ui.ExitOnError("getting environment name", err)
 
-				envClient := cloudclient.NewEnvironmentsClient(opts.CloudRootDomain, token)
+				envClient := cloudclient.NewEnvironmentsClient(opts.CloudRootDomain, token, orgId)
 				env, err := envClient.Create(cloudclient.Environment{Name: envName, Owner: orgId})
 				ui.ExitOnError("creating environment", err)
 
