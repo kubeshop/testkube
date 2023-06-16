@@ -196,6 +196,11 @@ func PopulateLoginDataToContext(orgID, envID, token string, options HelmOptions,
 	cfg.CloudContext.EnvironmentId = envID
 	cfg.CloudContext.ApiKey = token
 
+	cfg, err := PopulateOrgAndEnv(cfg, orgID, envID, options.CloudRootDomain)
+	if err != nil {
+		return err
+	}
+
 	return config.Save(cfg)
 }
 
