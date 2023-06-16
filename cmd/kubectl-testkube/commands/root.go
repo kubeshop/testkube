@@ -64,15 +64,15 @@ var RootCmd = &cobra.Command{
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		ui.SetVerbose(verbose)
 
+		// don't validate context before set and completion
+		if cmd.Name() == "context" || cmd.Parent().Name() == "completion" {
+			return
+		}
+
 		cfg, err := config.Load()
 		ui.ExitOnError("loading config", err)
 
 		common.UiContextHeader(cmd, cfg)
-
-		// don't validate context before set
-		if cmd.Name() == "context" {
-			return
-		}
 
 		if err = validator.ValidateCloudContext(cfg); err != nil {
 			common.UiCloudContextValidationError(err)
