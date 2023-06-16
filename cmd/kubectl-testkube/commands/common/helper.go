@@ -9,6 +9,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/internal/migrations"
+	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
 	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -196,6 +197,11 @@ func PopulateLoginDataToContext(orgID, envID, token string, options HelmOptions,
 	cfg.CloudContext.EnvironmentId = envID
 	cfg.CloudContext.ApiKey = token
 
+	cfg, err := PopulateOrgAndEnvNames(cfg, orgID, envID, options.CloudRootDomain)
+	if err != nil {
+		return err
+	}
+
 	return config.Save(cfg)
 }
 
@@ -275,4 +281,54 @@ func RunMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
 	}
 
 	return true, migrations.Migrator.Run(info.Version, migrator.MigrationTypeClient)
+}
+
+func PopulateOrgAndEnvNames(cfg config.Data, orgId, envId, rootDomain string) (config.Data, error) {
+	if orgId != "" {
+		cfg.CloudContext.OrganizationId = orgId
+		// reset env when the org is changed
+		if envId == "" {
+			cfg.CloudContext.EnvironmentId = ""
+		}
+	}
+	if envId != "" {
+		cfg.CloudContext.EnvironmentId = envId
+	}
+
+	orgClient := cloudclient.NewOrganizationsClient(rootDomain, cfg.CloudContext.ApiKey)
+	org, err := orgClient.Get(cfg.CloudContext.OrganizationId)
+	if err != nil {
+		return cfg, err
+	}
+
+	envsClient := cloudclient.NewEnvironmentsClient(rootDomain, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId)
+	env, err := envsClient.Get(cfg.CloudContext.EnvironmentId)
+	if err != nil {
+		return cfg, err
+	}
+
+	cfg.CloudContext.OrganizationName = org.Name
+	cfg.CloudContext.EnvironmentName = env.Name
+
+	return cfg, nil
+}
+
+func PopulateCloudConfig(cfg config.Data, apiKey, orgId, envId, rootDomain string) config.Data {
+	if apiKey != "" {
+		cfg.CloudContext.ApiKey = apiKey
+	}
+
+	// set uris based on root domain
+	uris := NewCloudUris(rootDomain)
+	cfg.CloudContext.ApiUri = uris.Api
+	cfg.CloudContext.UiUri = uris.Ui
+	cfg.CloudContext.AgentUri = uris.Agent
+
+	var err error
+	cfg, err = PopulateOrgAndEnvNames(cfg, orgId, envId, rootDomain)
+	if err != nil {
+		ui.Failf("Error populating org and env names: %s", err)
+	}
+
+	return cfg
 }
