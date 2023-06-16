@@ -2,9 +2,8 @@ name: Release kubectl-testkube dev
 
 on:
   push:
-  # TODO: enable when PR is ready
-    # tags:
-      # - "v[0-9]+.[0-9]+.[0-9]+-*"
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 permissions:
   id-token: write # needed for keyless signing
@@ -88,6 +87,18 @@ jobs:
         if: matrix.name == 'linux'
         run: |
           docker push kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}
+
+      - name: Push README to Dockerhub
+        if: matrix.name == 'linux'
+        uses: christian-korneck/update-container-description-action@v1
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+        with:
+          destination_container_repo: kubeshop/testkube-cli
+          provider: dockerhub
+          short_description: 'Testkube CLI Docker image'
+          readme_file: './README.md'
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@master
