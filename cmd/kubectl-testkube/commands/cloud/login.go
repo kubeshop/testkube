@@ -65,6 +65,8 @@ func NewLoginCmd() *cobra.Command {
 			cfg.CloudContext.ApiKey = token
 			cfg.CloudContext.TokenType = config.TokenTypeOIDC
 
+			cfg = common.PopulateCloudConfig(cfg, token, orgID, envID, opts.CloudRootDomain)
+
 			err = config.Save(cfg)
 			ui.ExitOnError("saving config file", err)
 

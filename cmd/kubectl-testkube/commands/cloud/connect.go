@@ -170,6 +170,7 @@ func NewConnectCmd() *cobra.Command {
 				ui.ExitOnError("user login", err)
 			}
 			err = common.PopulateLoginDataToContext(opts.CloudOrgId, opts.CloudEnvId, token, opts, cfg)
+
 			ui.ExitOnError("Setting cloud environment context", err)
 
 			ui.NL(2)
