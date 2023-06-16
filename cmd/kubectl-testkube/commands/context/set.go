@@ -4,7 +4,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -38,14 +40,14 @@ func NewSetContextCmd() *cobra.Command {
 				}
 
 				if org != "" {
-					cfg.CloudContext.Organization = org
+					cfg.CloudContext.OrganizationId = org
 					// reset env when the org is changed
 					if env == "" {
-						cfg.CloudContext.Environment = ""
+						cfg.CloudContext.EnvironmentId = ""
 					}
 				}
 				if env != "" {
-					cfg.CloudContext.Environment = env
+					cfg.CloudContext.EnvironmentId = env
 				}
 				if apiKey != "" {
 					cfg.CloudContext.ApiKey = apiKey
@@ -56,6 +58,18 @@ func NewSetContextCmd() *cobra.Command {
 				cfg.CloudContext.ApiUri = uris.Api
 				cfg.CloudContext.UiUri = uris.Ui
 				cfg.CloudContext.AgentUri = uris.Agent
+
+				orgClient := cloudclient.NewOrganizationsClient(rootDomain, cfg.CloudContext.ApiKey)
+				ui.ExitOnError("getting client", err)
+				org, err := orgClient.Get(cfg.CloudContext.OrganizationId)
+				ui.ExitOnError("getting organization", err)
+
+				envsClient := cloudclient.NewEnvironmentsClient(rootDomain, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId)
+				env, err := envsClient.Get(cfg.CloudContext.EnvironmentId)
+				ui.ExitOnError("getting environment", err)
+
+				cfg.CloudContext.OrganizationName = org.Name
+				cfg.CloudContext.EnvironmentName = env.Name
 
 			case config.ContextTypeKubeconfig:
 				// kubeconfig special use cases
@@ -71,9 +85,14 @@ func NewSetContextCmd() *cobra.Command {
 			err = config.Save(cfg)
 			ui.ExitOnError("saving config file", err)
 
+			if err = validator.ValidateCloudContext(cfg); err != nil {
+				common.UiCloudContextValidationError(err)
+			}
+
 			ui.Success("Your config was updated with new values")
 			ui.NL()
 			common.UiPrintContext(cfg)
+
 		},
 	}
 
