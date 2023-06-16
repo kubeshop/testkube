@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
-	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
@@ -19,8 +18,8 @@ func UiPrintContext(cfg config.Data) {
 
 	if cfg.ContextType == config.ContextTypeCloud {
 		contextData := map[string]string{
-			"Organization":    cfg.CloudContext.OrganizationName + ui.DarkGray(" ("+cfg.CloudContext.OrganizationId+")"),
-			"Environment":     cfg.CloudContext.EnvironmentName + ui.DarkGray(" ("+cfg.CloudContext.EnvironmentId+")"),
+			"Organization   ": cfg.CloudContext.OrganizationName + ui.DarkGray(" ("+cfg.CloudContext.OrganizationId+")"),
+			"Environment    ": cfg.CloudContext.EnvironmentName + ui.DarkGray(" ("+cfg.CloudContext.EnvironmentId+")"),
 			"API Key        ": text.Obfuscate(cfg.CloudContext.ApiKey),
 			"API URI        ": cfg.CloudContext.ApiUri,
 			"Namespace      ": cfg.Namespace,
@@ -91,69 +90,4 @@ func calculateStringSize(s string) int {
 	s = re.ReplaceAllString(s, "")
 	// Return the length of the string.
 	return len(s) - 1
-}
-
-func PopulateCloudConfig(cfg config.Data, apiKey, orgId, envId, rootDomain string) config.Data {
-	if orgId != "" {
-		cfg.CloudContext.OrganizationId = orgId
-		// reset env when the org is changed
-		if envId == "" {
-			cfg.CloudContext.EnvironmentId = ""
-		}
-	}
-	if envId != "" {
-		cfg.CloudContext.EnvironmentId = envId
-	}
-	if apiKey != "" {
-		cfg.CloudContext.ApiKey = apiKey
-	}
-
-	// set uris based on root domain
-	uris := NewCloudUris(rootDomain)
-	cfg.CloudContext.ApiUri = uris.Api
-	cfg.CloudContext.UiUri = uris.Ui
-	cfg.CloudContext.AgentUri = uris.Agent
-
-	orgClient := cloudclient.NewOrganizationsClient(rootDomain, cfg.CloudContext.ApiKey)
-	org, err := orgClient.Get(cfg.CloudContext.OrganizationId)
-	ui.ExitOnError("getting organization", err)
-
-	envsClient := cloudclient.NewEnvironmentsClient(rootDomain, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId)
-	env, err := envsClient.Get(cfg.CloudContext.EnvironmentId)
-	ui.ExitOnError("getting environment", err)
-
-	cfg.CloudContext.OrganizationName = org.Name
-	cfg.CloudContext.EnvironmentName = env.Name
-
-	return cfg
-}
-
-func PopulateOrgAndEnv(cfg config.Data, orgId, envId, rootDomain string) (config.Data, error) {
-	if orgId != "" {
-		cfg.CloudContext.OrganizationId = orgId
-		// reset env when the org is changed
-		if envId == "" {
-			cfg.CloudContext.EnvironmentId = ""
-		}
-	}
-	if envId != "" {
-		cfg.CloudContext.EnvironmentId = envId
-	}
-
-	orgClient := cloudclient.NewOrganizationsClient(rootDomain, cfg.CloudContext.ApiKey)
-	org, err := orgClient.Get(cfg.CloudContext.OrganizationId)
-	if err != nil {
-		return cfg, err
-	}
-
-	envsClient := cloudclient.NewEnvironmentsClient(rootDomain, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId)
-	env, err := envsClient.Get(cfg.CloudContext.EnvironmentId)
-	if err != nil {
-		return cfg, err
-	}
-
-	cfg.CloudContext.OrganizationName = org.Name
-	cfg.CloudContext.EnvironmentName = env.Name
-
-	return cfg, nil
 }
