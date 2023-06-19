@@ -108,6 +108,7 @@ const sidebars = {
           items: [
             "articles/github-actions",
             "articles/run-tests-with-github-actions",
+            "articles/testkube-cli-docker",
             {
               type: "category",
               label: "GitOps",
