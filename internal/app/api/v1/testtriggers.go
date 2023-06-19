@@ -1,26 +1,24 @@
 package v1
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"strings"
 
-	"github.com/kubeshop/testkube/pkg/utils"
-
-	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
-
-	"k8s.io/apimachinery/pkg/labels"
-
 	"github.com/gofiber/fiber/v2"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/yaml"
 
+	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/keymap/triggers"
 	triggerskeymapmapper "github.com/kubeshop/testkube/pkg/mapper/keymap/triggers"
 	testtriggersmapper "github.com/kubeshop/testkube/pkg/mapper/testtriggers"
-
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/crd"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 const testTriggerMaxNameLength = 57
@@ -29,22 +27,31 @@ const testTriggerMaxNameLength = 57
 func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to create test trigger"
+		var testTrigger testtriggersv1.TestTrigger
+		if string(c.Request().Header.ContentType()) == mediaTypeYAML {
+			testTriggerSpec := string(c.Body())
+			decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(testTriggerSpec), len(testTriggerSpec))
+			if err := decoder.Decode(&testTriggerSpec); err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse yaml request: %w", errPrefix, err))
+			}
+		} else {
+			var request testkube.TestTriggerUpsertRequest
+			err := c.BodyParser(&request)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse json request: %w", errPrefix, err))
+			}
 
-		var request testkube.TestTriggerUpsertRequest
-		err := c.BodyParser(&request)
-		if err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %w", errPrefix, err))
+			testTrigger = testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(request)
+			// default namespace if not defined in upsert request
+			if testTrigger.Namespace == "" {
+				testTrigger.Namespace = s.Namespace
+			}
+			// default trigger name if not defined in upsert request
+			if testTrigger.Name == "" {
+				testTrigger.Name = generateTestTriggerName(&testTrigger)
+			}
 		}
 
-		testTrigger := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(request)
-		// default namespace if not defined in upsert request
-		if testTrigger.Namespace == "" {
-			testTrigger.Namespace = s.Namespace
-		}
-		// default trigger name if not defined in upsert request
-		if testTrigger.Name == "" {
-			testTrigger.Name = generateTestTriggerName(&testTrigger)
-		}
 		errPrefix = errPrefix + " " + testTrigger.Name
 
 		s.Log.Infow("creating test trigger", "testTrigger", testTrigger)
