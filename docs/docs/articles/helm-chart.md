@@ -120,3 +120,18 @@ The following Helm defaults are used in the `testkube` chart:
 
 >For more configuration parameters of an `NATS` chart please visit: 
 <https://docs.nats.io/running-a-nats-service/nats-kubernetes/helm-charts>
+
+:::note
+
+Please note that we use **global** parameters in our `values.yaml`:
+```
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  labels: {}
+  annotations: {}
+```
+
+They override all sub-chart values for the image parameters if specified. 
+
+:::
