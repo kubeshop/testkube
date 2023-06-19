@@ -2,8 +2,8 @@ name: Release kubectl-testkube dev
 
 on:
   push:
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+-*"
+    # tags:
+      # - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 permissions:
   id-token: write # needed for keyless signing
@@ -81,7 +81,8 @@ jobs:
           DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }
+          DOCKER_IMAGE_TAG: ${{ steps.github_sha.outputs.sha_short }}
 
       - name: Push Docker images
         if: matrix.name == 'linux'

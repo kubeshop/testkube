@@ -41,7 +41,7 @@ dockers:
     goos: linux
     goarch: amd64
     image_templates:
-      - "kubeshop/testkube-cli:{{ .Version }}-amd64"
+      - "kubeshop/testkube-cli:{{ .Env.DOCKER_IMAGE_TAG }}-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -58,7 +58,7 @@ dockers:
     goos: linux
     goarch: arm64
     image_templates:
-      - "kubeshop/testkube-cli:{{ .Version }}-arm64v8"
+      - "kubeshop/testkube-cli:{{ .Env.DOCKER_IMAGE_TAG }}-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -71,14 +71,14 @@ dockers:
       - "--build-arg=ALPINE_IMAGE={{ .Env.ALPINE_IMAGE }}"
 
 docker_manifests:
-  - name_template: kubeshop/testkube-cli:{{ .Version }}
+  - name_template: kubeshop/testkube-cli:{{ .Env.DOCKER_IMAGE_TAG }}
     image_templates:
-      - kubeshop/testkube-cli:{{ .Version }}-amd64
-      - kubeshop/testkube-cli:{{ .Version }}-arm64v8
+      - kubeshop/testkube-cli:{{ .Env.DOCKER_IMAGE_TAG }}-amd64
+      - kubeshop/testkube-cli:{{ .Env.DOCKER_IMAGE_TAG }}-arm64v8
   - name_template: kubeshop/testkube-cli:latest
     image_templates:
-      - kubeshop/testkube-cli:{{ .Version }}-amd64
-      - kubeshop/testkube-cli:{{ .Version }}-arm64v8
+      - kubeshop/testkube-cli:{{ .Env.DOCKER_IMAGE_TAG }}-amd64
+      - kubeshop/testkube-cli:{{ .Env.DOCKER_IMAGE_TAG }}-arm64v8
 
 docker_signs:
   - cmd: cosign
