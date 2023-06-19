@@ -1,6 +1,6 @@
 # Testkube Docker CLI
 
-The easiest way to start managing the tests of your team on a remote Testkube server is to run the Testkube CLI using the official Docker image available starting from Testkube version 1.13. The Testkube CLI Docker image is a self-contained environment that allows you to run Testkube commands in a consistent and isolated manner.
+Starting with Testkube version 1.13, the easiest way to start managing your team's tests on a remote Testkube server is to run the Testkube CLI using the official Docker image. The Testkube CLI Docker image is a self-contained environment that allows you to run Testkube commands in a consistent and isolated manner.
 
 ## Prerequisites
 
@@ -26,7 +26,7 @@ docker pull testkube/cli:latest
 
 ### 2. Building from Source
 
-If you prefer to build the Docker image from source, you can clone the Testkube CLI repository from GitHub and build it locally using goreleaser, the provided Dockerfile and the Makefile. Follow these steps:
+If you prefer to build the Docker image from source, you can clone the Testkube CLI repository from GitHub and build it locally using GoReleaser, the provided Dockerfile and the Makefile. Follow these steps:
 
 1. Clone the Testkube CLI repository:
 
@@ -42,13 +42,13 @@ make docker-build-cli DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubes
 
 ## Running the Testkube CLI Docker Image
 
-Once you have the image, try running the following command pointing to Testkube demo:
+Once you have the image, run the following command pointing to the Testkube demo:
 
 ```bash
 docker run kubeshop/testkube-cli:latest version --namespace testkube --api-uri https://demo.testkube.io/results --client direct
 ```
 
-This command starts a new Docker container with the Testkube CLI image and executes the command `testkube version` pointing to the api-server running on the Testkube demo environment.
+This command starts a new Docker container with the Testkube CLI image and executes the command `testkube version`, pointing to the api-server running on the Testkube demo environment.
 
 There are multiple *client types* you can set for the Testkube CLI:
 
