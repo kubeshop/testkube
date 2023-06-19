@@ -87,7 +87,8 @@ jobs:
       - name: Push Docker images
         if: matrix.name == 'linux'
         run: |
-          docker push kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}
+          docker push kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-arm64v8
+          docker push kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-amd64
 
       - name: Push README to Dockerhub
         if: matrix.name == 'linux'
