@@ -83,11 +83,13 @@ jobs:
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+          DOCKER_IMAGE_TAG: ${{ steps.github_sha.outputs.sha_short }}
       
       - name: Push Docker images
         if: matrix.name == 'linux'
         run: |
-          docker push kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}
+          docker push kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-arm64v8
+          docker push kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-amd64
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@master
