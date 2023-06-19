@@ -66,9 +66,20 @@ func (s TestkubeAPI) UpdateTestSourceHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to update test source"
 		var request testkube.TestSourceUpdateRequest
-		err := c.BodyParser(&request)
-		if err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %s", errPrefix, err))
+		if string(c.Request().Header.ContentType()) == mediaTypeYAML {
+			var testSource testsourcev1.TestSource
+			testSourceSpec := string(c.Body())
+			decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(testSourceSpec), len(testSourceSpec))
+			if err := decoder.Decode(&testSource); err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse yaml request: %w", errPrefix, err))
+			}
+
+			request = testsourcesmapper.MapSpecToUpdate(&testSource)
+		} else {
+			err := c.BodyParser(&request)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse json jrequest: %s", errPrefix, err))
+			}
 		}
 
 		var name string
