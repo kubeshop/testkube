@@ -264,8 +264,7 @@ func MapSpecToUpdate(testSource *testsourcev1.TestSource) (request testkube.Test
 		*field.destination = field.source
 	}
 
-	sourceType := string(testSource.Spec.Type_)
-	request.Type_ = &sourceType
+	request.Type_ = (*string)(&testSource.Spec.Type_)
 
 	request.Labels = &testSource.Labels
 
@@ -311,8 +310,7 @@ func MapSpecToUpdate(testSource *testsourcev1.TestSource) (request testkube.Test
 			*field.destination = field.source
 		}
 
-		authType := string(testSource.Spec.Repository.AuthType)
-		(*request.Repository).AuthType = &authType
+		(*request.Repository).AuthType = (*string)(&testSource.Spec.Repository.AuthType)
 
 		if testSource.Spec.Repository.UsernameSecret != nil {
 			secretRef := &testkube.SecretRef{

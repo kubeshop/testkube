@@ -278,8 +278,7 @@ func MapSpecContentToUpdateContent(testContent *testsv3.TestContent) (content *t
 		*field.destination = field.source
 	}
 
-	contentType := string(testContent.Type_)
-	content.Type_ = &contentType
+	content.Type_ = (*string)(&testContent.Type_)
 
 	if testContent.Repository != nil {
 		repository := &testkube.RepositoryUpdate{}
@@ -323,8 +322,7 @@ func MapSpecContentToUpdateContent(testContent *testsv3.TestContent) (content *t
 			*field.destination = field.source
 		}
 
-		authType := string(testContent.Repository.AuthType)
-		(*content.Repository).AuthType = &authType
+		(*content.Repository).AuthType = (*string)(&testContent.Repository.AuthType)
 
 		if testContent.Repository.UsernameSecret != nil {
 			secetRef := &testkube.SecretRef{
@@ -415,8 +413,7 @@ func MapSpecExecutionRequestToExecutionUpdateRequest(
 		*field.destination = field.source
 	}
 
-	argsMode := string(request.ArgsMode)
-	executionRequest.ArgsMode = &argsMode
+	executionRequest.ArgsMode = (*string)(&request.ArgsMode)
 
 	var slices = []struct {
 		source      *map[string]string

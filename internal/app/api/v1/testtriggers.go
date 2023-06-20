@@ -50,6 +50,11 @@ func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 			if testTrigger.Name == "" {
 				testTrigger.Name = generateTestTriggerName(&testTrigger)
 			}
+
+			if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+				data, err := crd.GenerateYAML(crd.TemplateTestTrigger, []testkube.TestTrigger{testtriggersmapper.MapCRDToAPI(&testTrigger)})
+				return s.getCRDs(c, data, err)
+			}
 		}
 
 		errPrefix = errPrefix + " " + testTrigger.Name
@@ -65,15 +70,7 @@ func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 		}
 
 		c.Status(http.StatusCreated)
-
-		apiTestTrigger := testtriggersmapper.MapCRDToAPI(created)
-
-		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, []testkube.TestTrigger{apiTestTrigger})
-			return s.getCRDs(c, data, err)
-		}
-
-		return c.JSON(apiTestTrigger)
+		return c.JSON(testtriggersmapper.MapCRDToAPI(created))
 	}
 }
 
@@ -81,11 +78,21 @@ func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to update test trigger"
-
 		var request testkube.TestTriggerUpsertRequest
-		err := c.BodyParser(&request)
-		if err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %w", errPrefix, err))
+		if string(c.Request().Header.ContentType()) == mediaTypeYAML {
+			var testTrigger testtriggersv1.TestTrigger
+			testTriggerSpec := string(c.Body())
+			decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(testTriggerSpec), len(testTriggerSpec))
+			if err := decoder.Decode(&testTrigger); err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse yaml request: %w", errPrefix, err))
+			}
+
+			request = testtriggersmapper.MapTestTriggerCRDToTestTriggerUpsertRequest(testTrigger)
+		} else {
+			err := c.BodyParser(&request)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse json request: %w", errPrefix, err))
+			}
 		}
 
 		namespace := s.Namespace
@@ -115,14 +122,7 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not update test trigger: %w", errPrefix, err))
 		}
 
-		apiTestTrigger := testtriggersmapper.MapCRDToAPI(testTrigger)
-
-		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, []testkube.TestTrigger{apiTestTrigger})
-			return s.getCRDs(c, data, err)
-		}
-
-		return c.JSON(apiTestTrigger)
+		return c.JSON(testtriggersmapper.MapCRDToAPI(testTrigger))
 	}
 }
 
@@ -187,11 +187,6 @@ func (s *TestkubeAPI) BulkUpdateTestTriggersHandler() fiber.Handler {
 		}
 
 		s.Metrics.IncBulkUpdateTestTrigger(nil)
-
-		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, testTriggers)
-			return s.getCRDs(c, data, err)
-		}
 
 		return c.JSON(testTriggers)
 	}

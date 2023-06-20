@@ -282,8 +282,7 @@ func MapSpecToUpdate(executor *executorv1.Executor) (request testkube.ExecutorUp
 		*field.destination = field.source
 	}
 
-	executorType := string(executor.Spec.ExecutorType)
-	request.ExecutorType = &executorType
+	request.ExecutorType = (*string)(&executor.Spec.ExecutorType)
 
 	var slices = []struct {
 		source      *[]string

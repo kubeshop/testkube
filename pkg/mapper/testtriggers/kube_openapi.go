@@ -86,3 +86,18 @@ func mapConditionSpecFromCRD(conditionSpec *testsv1.TestTriggerConditionSpec) *t
 		Conditions: conditions,
 	}
 }
+
+func MapTestTriggerCRDToTestTriggerUpsertRequest(request testsv1.TestTrigger) testkube.TestTriggerUpsertRequest {
+	return testkube.TestTriggerUpsertRequest{
+		Name:             request.Name,
+		Namespace:        request.Namespace,
+		Labels:           request.Labels,
+		Resource:         (*testkube.TestTriggerResources)(&request.Spec.Resource),
+		ResourceSelector: mapSelectorFromCRD(request.Spec.ResourceSelector),
+		Event:            string(request.Spec.Event),
+		ConditionSpec:    mapConditionSpecFromCRD(request.Spec.ConditionSpec),
+		Action:           (*testkube.TestTriggerActions)(&request.Spec.Action),
+		Execution:        (*testkube.TestTriggerExecutions)(&request.Spec.Execution),
+		TestSelector:     mapSelectorFromCRD(request.Spec.TestSelector),
+	}
+}
