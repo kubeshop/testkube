@@ -1,11 +1,14 @@
 package telemetry
 
 import (
+	"os"
 	"runtime"
 	"strings"
 
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
+
+const runContextAgent = "agent"
 
 type Params struct {
 	EventCount       int64      `json:"event_count,omitempty"`
@@ -108,6 +111,7 @@ func NewAPIPayload(clusterId, name, version, host, clusterType string) Payload {
 					MachineID:       GetMachineID(),
 					ClusterID:       clusterId,
 					ClusterType:     clusterType,
+					Context:         getAgentContext(),
 				},
 			}},
 	}
@@ -136,6 +140,7 @@ func NewCreatePayload(name, clusterType string, params CreateParams) Payload {
 					TestSource:      params.TestSource,
 					TestSuiteSteps:  params.TestSuiteSteps,
 					ClusterType:     clusterType,
+					Context:         getAgentContext(),
 				},
 			}},
 	}
@@ -164,6 +169,7 @@ func NewRunPayload(name, clusterType string, params RunParams) Payload {
 					DurationMs:      params.DurationMs,
 					Status:          params.Status,
 					ClusterType:     clusterType,
+					Context:         getAgentContext(),
 				},
 			}},
 	}
@@ -183,4 +189,18 @@ func AnonymizeHost(host string) string {
 	}
 
 	return APIHostExternal
+}
+
+func getAgentContext() RunContext {
+	orgID := os.Getenv("TESTKUBE_CLOUD_ORG_ID")
+	envID := os.Getenv("TESTKUBE_CLOUD_ENV_ID")
+
+	if orgID == "" || envID == "" {
+		return RunContext{}
+	}
+	return RunContext{
+		Type:           runContextAgent,
+		EnvironmentId:  envID,
+		OrganizationId: orgID,
+	}
 }
