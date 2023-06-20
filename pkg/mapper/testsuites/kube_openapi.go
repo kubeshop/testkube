@@ -192,3 +192,121 @@ func MapStatusFromSpec(specStatus testsuitesv3.TestSuiteStatus) *testkube.TestSu
 		},
 	}
 }
+
+// MapTestSuiteTestCRDToUpdateRequest maps TestSuite CRD spec to TestSuiteUpdateRequest OpenAPI spec
+func MapTestSuiteTestCRDToUpdateRequest(testSuite *testsuitesv3.TestSuite) (request testkube.TestSuiteUpdateRequest) {
+	var fields = []struct {
+		source      *string
+		destination **string
+	}{
+		{
+			&testSuite.Name,
+			&request.Name,
+		},
+		{
+			&testSuite.Namespace,
+			&request.Namespace,
+		},
+		{
+			&testSuite.Spec.Description,
+			&request.Description,
+		},
+		{
+			&testSuite.Spec.Schedule,
+			&request.Schedule,
+		},
+	}
+
+	for _, field := range fields {
+		*field.destination = field.source
+	}
+
+	before := mapCRDToTestBatchSteps(testSuite.Spec.Before)
+	request.Before = &before
+
+	steps := mapCRDToTestBatchSteps(testSuite.Spec.Steps)
+	request.Before = &steps
+
+	after := mapCRDToTestBatchSteps(testSuite.Spec.After)
+	request.Before = &after
+
+	request.Labels = &testSuite.Labels
+
+	repeats := int32(testSuite.Spec.Repeats)
+	request.Repeats = &repeats
+
+	if testSuite.Spec.ExecutionRequest != nil {
+		value := MapSpecExecutionRequestToExecutionUpdateRequest(testSuite.Spec.ExecutionRequest)
+		request.ExecutionRequest = &value
+	}
+
+	return request
+}
+
+func mapCRDToTestBatchSteps(in []testsuitesv3.TestSuiteBatchStep) (batches []testkube.TestSuiteBatchStep) {
+	for _, batch := range in {
+		steps := make([]testkube.TestSuiteStep, len(batch.Execute))
+		for i := range batch.Execute {
+			steps[i] = mapCRStepToAPI(batch.Execute[i])
+		}
+
+		batches = append(batches, testkube.TestSuiteBatchStep{
+			StopOnFailure: batch.StopOnFailure,
+			Execute:       steps,
+		})
+	}
+
+	return batches
+}
+
+// MapSpecExecutionRequestToExecutionUpdateRequest maps ExecutionRequest CRD spec to ExecutionUpdateRequest OpenAPI spec
+func MapSpecExecutionRequestToExecutionUpdateRequest(request *testsuitesv3.TestSuiteExecutionRequest) (executionRequest *testkube.TestSuiteExecutionUpdateRequest) {
+	executionRequest = &testkube.TestSuiteExecutionUpdateRequest{}
+
+	var fields = []struct {
+		source      *string
+		destination **string
+	}{
+		{
+			&request.Name,
+			&executionRequest.Name,
+		},
+		{
+			&request.Namespace,
+			&executionRequest.Namespace,
+		},
+		{
+			&request.SecretUUID,
+			&executionRequest.SecretUUID,
+		},
+		{
+			&request.HttpProxy,
+			&executionRequest.HttpProxy,
+		},
+		{
+			&request.HttpsProxy,
+			&executionRequest.HttpsProxy,
+		},
+		{
+			&request.CronJobTemplate,
+			&executionRequest.CronJobTemplate,
+		},
+	}
+
+	for _, field := range fields {
+		*field.destination = field.source
+	}
+
+	executionRequest.Labels = &request.Labels
+
+	executionRequest.ExecutionLabels = &request.ExecutionLabels
+
+	executionRequest.Sync = &request.Sync
+
+	executionRequest.Timeout = &request.Timeout
+
+	vars := MergeVariablesAndParams(request.Variables, nil)
+	executionRequest.Variables = &vars
+
+	return executionRequest
+}

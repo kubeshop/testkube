@@ -103,33 +103,43 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to update test suite"
-
 		var request testkube.TestSuiteUpdateRequest
-		data := c.Body()
-		if string(c.Request().Header.ContentType()) != mediaTypeJSON {
-			return s.Error(c, http.StatusBadRequest, fiber.ErrUnprocessableEntity)
-		}
-
-		if err := json.Unmarshal(data, &request); err != nil {
-			s.Log.Warnw("could not parse request", "error", err)
-		}
-
-		if request.Steps != nil {
-			emptyBatch := true
-			for _, step := range *request.Steps {
-				if len(step.Execute) != 0 {
-					emptyBatch = false
-					break
-				}
+		if string(c.Request().Header.ContentType()) == mediaTypeYAML {
+			var testSuite testsuitesv3.TestSuite
+			testSuiteSpec := string(c.Body())
+			decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(testSuiteSpec), len(testSuiteSpec))
+			if err := decoder.Decode(&testSuite); err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse yaml request: %w", errPrefix, err))
 			}
 
-			if emptyBatch {
-				var requestV2 testkube.TestSuiteUpdateRequestV2
-				if err := json.Unmarshal(data, &requestV2); err != nil {
-					return s.Error(c, http.StatusBadRequest, err)
+			request = testsuitesmapper.MapTestSuiteTestCRDToUpdateRequest(&testSuite)
+		} else {
+			data := c.Body()
+			if string(c.Request().Header.ContentType()) != mediaTypeJSON {
+				return s.Error(c, http.StatusBadRequest, fiber.ErrUnprocessableEntity)
+			}
+
+			if err := json.Unmarshal(data, &request); err != nil {
+				s.Log.Warnw("could not parse json request", "error", err)
+			}
+
+			if request.Steps != nil {
+				emptyBatch := true
+				for _, step := range *request.Steps {
+					if len(step.Execute) != 0 {
+						emptyBatch = false
+						break
+					}
 				}
 
-				request = *requestV2.ToTestSuiteUpdateRequest()
+				if emptyBatch {
+					var requestV2 testkube.TestSuiteUpdateRequestV2
+					if err := json.Unmarshal(data, &requestV2); err != nil {
+						return s.Error(c, http.StatusBadRequest, err)
+					}
+
+					request = *requestV2.ToTestSuiteUpdateRequest()
+				}
 			}
 		}
 
