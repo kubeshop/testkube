@@ -22,7 +22,7 @@ jobs:
       - name: OpenAPI Lint Checks
         uses: nwestfall/openapi-action@v1.0.2
         with:
-          github_token: ${{ secrets.CI_BOT_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           file: api/v1/testkube.yaml
 
   lint-go:
