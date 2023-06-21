@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/yaml"
 
 	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -30,46 +32,58 @@ import (
 func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to create test suite"
-		var request testkube.TestSuiteUpsertRequest
-		data := c.Body()
-		if string(c.Request().Header.ContentType()) != mediaTypeJSON {
-			return s.Error(c, http.StatusBadRequest, fiber.ErrUnprocessableEntity)
-		}
-
-		if err := json.Unmarshal(data, &request); err != nil {
-			s.Log.Warnw("could not parse request", "error", err)
-		}
-		errPrefix = errPrefix + " " + request.Name
-
-		emptyBatch := true
-		for _, step := range request.Steps {
-			if len(step.Execute) != 0 {
-				emptyBatch = false
-				break
+		var testSuite testsuitesv3.TestSuite
+		if string(c.Request().Header.ContentType()) == mediaTypeYAML {
+			testSuiteSpec := string(c.Body())
+			decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(testSuiteSpec), len(testSuiteSpec))
+			if err := decoder.Decode(&testSuite); err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse yaml request: %w", errPrefix, err))
 			}
-		}
 
-		if emptyBatch {
-			var requestV2 testkube.TestSuiteUpsertRequestV2
-			if err := json.Unmarshal(data, &requestV2); err != nil {
+			errPrefix = errPrefix + " " + testSuite.Name
+		} else {
+			var request testkube.TestSuiteUpsertRequest
+			data := c.Body()
+			if string(c.Request().Header.ContentType()) != mediaTypeJSON {
+				return s.Error(c, http.StatusBadRequest, fiber.ErrUnprocessableEntity)
+			}
+
+			err := json.Unmarshal(data, &request)
+			if err != nil {
+				s.Log.Warnw("could not parse json request", "error", err)
+			}
+			errPrefix = errPrefix + " " + request.Name
+
+			emptyBatch := true
+			for _, step := range request.Steps {
+				if len(step.Execute) != 0 {
+					emptyBatch = false
+					break
+				}
+			}
+
+			if emptyBatch {
+				var requestV2 testkube.TestSuiteUpsertRequestV2
+				if err := json.Unmarshal(data, &requestV2); err != nil {
+					return s.Error(c, http.StatusBadRequest, err)
+				}
+
+				request = *requestV2.ToTestSuiteUpsertRequest()
+			}
+
+			if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+				request.QuoteTestSuiteTextFields()
+				data, err := crd.GenerateYAML(crd.TemplateTestSuite, []testkube.TestSuiteUpsertRequest{request})
+				return s.getCRDs(c, data, err)
+			}
+
+			testSuite, err = testsuitesmapper.MapTestSuiteUpsertRequestToTestCRD(request)
+			if err != nil {
 				return s.Error(c, http.StatusBadRequest, err)
 			}
 
-			request = *requestV2.ToTestSuiteUpsertRequest()
+			testSuite.Namespace = s.Namespace
 		}
-
-		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			request.QuoteTestSuiteTextFields()
-			data, err := crd.GenerateYAML(crd.TemplateTestSuite, []testkube.TestSuiteUpsertRequest{request})
-			return s.getCRDs(c, data, err)
-		}
-
-		testSuite, err := testsuitesmapper.MapTestSuiteUpsertRequestToTestCRD(request)
-		if err != nil {
-			return s.Error(c, http.StatusBadRequest, err)
-		}
-
-		testSuite.Namespace = s.Namespace
 
 		s.Log.Infow("creating test suite", "testSuite", testSuite)
 
@@ -90,33 +104,44 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to update test suite"
-
 		var request testkube.TestSuiteUpdateRequest
-		data := c.Body()
-		if string(c.Request().Header.ContentType()) != mediaTypeJSON {
-			return s.Error(c, http.StatusBadRequest, fiber.ErrUnprocessableEntity)
-		}
-
-		if err := json.Unmarshal(data, &request); err != nil {
-			s.Log.Warnw("could not parse request", "error", err)
-		}
-
-		if request.Steps != nil {
-			emptyBatch := true
-			for _, step := range *request.Steps {
-				if len(step.Execute) != 0 {
-					emptyBatch = false
-					break
-				}
+		if string(c.Request().Header.ContentType()) == mediaTypeYAML {
+			var testSuite testsuitesv3.TestSuite
+			testSuiteSpec := string(c.Body())
+			decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(testSuiteSpec), len(testSuiteSpec))
+			if err := decoder.Decode(&testSuite); err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse yaml request: %w", errPrefix, err))
 			}
 
-			if emptyBatch {
-				var requestV2 testkube.TestSuiteUpdateRequestV2
-				if err := json.Unmarshal(data, &requestV2); err != nil {
-					return s.Error(c, http.StatusBadRequest, err)
+			request = testsuitesmapper.MapTestSuiteTestCRDToUpdateRequest(&testSuite)
+		} else {
+			data := c.Body()
+			if string(c.Request().Header.ContentType()) != mediaTypeJSON {
+				return s.Error(c, http.StatusBadRequest, fiber.ErrUnprocessableEntity)
+			}
+
+			err := json.Unmarshal(data, &request)
+			if err != nil {
+				s.Log.Warnw("could not parse json request", "error", err)
+			}
+
+			if request.Steps != nil {
+				emptyBatch := true
+				for _, step := range *request.Steps {
+					if len(step.Execute) != 0 {
+						emptyBatch = false
+						break
+					}
 				}
 
-				request = *requestV2.ToTestSuiteUpdateRequest()
+				if emptyBatch {
+					var requestV2 testkube.TestSuiteUpdateRequestV2
+					if err := json.Unmarshal(data, &requestV2); err != nil {
+						return s.Error(c, http.StatusBadRequest, err)
+					}
+
+					request = *requestV2.ToTestSuiteUpdateRequest()
+				}
 			}
 		}
 

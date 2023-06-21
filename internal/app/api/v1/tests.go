@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/yaml"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	"github.com/kubeshop/testkube-operator/client/tests/v3"
@@ -368,41 +370,54 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to create test"
-
-		var request testkube.TestUpsertRequest
-		err := c.BodyParser(&request)
-		if err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: failed to unmarshal request: %w", errPrefix, err))
-		}
-		err = testkube.ValidateUpsertTestRequest(request)
-		if err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: invalid test: %w", errPrefix, err))
-		}
-
-		errPrefix = errPrefix + " " + request.Name
-		if request.ExecutionRequest != nil && request.ExecutionRequest.Args != nil {
-			request.ExecutionRequest.Args, err = testkube.PrepareExecutorArgs(request.ExecutionRequest.Args)
-			if err != nil {
-				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not prepare executor args: %w", errPrefix, err))
-			}
-		}
-
-		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			request.QuoteTestTextFields()
-			data, err := crd.GenerateYAML(crd.TemplateTest, []testkube.TestUpsertRequest{request})
-			if err != nil {
-				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not build CRD: %w", errPrefix, err))
-			}
-			return s.getCRDs(c, data, err)
-		}
-
-		s.Log.Infow("creating test", "request", request)
-
-		test := testsmapper.MapUpsertToSpec(request)
-		test.Namespace = s.Namespace
+		var test *testsv3.Test
 		var secrets map[string]string
-		if request.Content != nil && request.Content.Repository != nil {
-			secrets = createTestSecretsData(request.Content.Repository.Username, request.Content.Repository.Token)
+		if string(c.Request().Header.ContentType()) == mediaTypeYAML {
+			test = &testsv3.Test{}
+			testSpec := string(c.Body())
+			decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(testSpec), len(testSpec))
+			if err := decoder.Decode(&test); err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse yaml request: %w", errPrefix, err))
+			}
+
+			errPrefix = errPrefix + " " + test.Name
+		} else {
+			var request testkube.TestUpsertRequest
+			err := c.BodyParser(&request)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: failed to unmarshal request: %w", errPrefix, err))
+			}
+
+			err = testkube.ValidateUpsertTestRequest(request)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: invalid test: %w", errPrefix, err))
+			}
+
+			errPrefix = errPrefix + " " + request.Name
+			if request.ExecutionRequest != nil && request.ExecutionRequest.Args != nil {
+				request.ExecutionRequest.Args, err = testkube.PrepareExecutorArgs(request.ExecutionRequest.Args)
+				if err != nil {
+					return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not prepare executor args: %w", errPrefix, err))
+				}
+			}
+
+			if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+				request.QuoteTestTextFields()
+				data, err := crd.GenerateYAML(crd.TemplateTest, []testkube.TestUpsertRequest{request})
+				if err != nil {
+					return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not build CRD: %w", errPrefix, err))
+				}
+
+				return s.getCRDs(c, data, err)
+			}
+
+			s.Log.Infow("creating test", "request", request)
+
+			test = testsmapper.MapUpsertToSpec(request)
+			test.Namespace = s.Namespace
+			if request.Content != nil && request.Content.Repository != nil {
+				secrets = createTestSecretsData(request.Content.Repository.Username, request.Content.Repository.Token)
+			}
 		}
 
 		createdTest, err := s.TestsClient.Create(test, tests.Option{Secrets: secrets})
@@ -423,17 +438,29 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to update test"
 		var request testkube.TestUpdateRequest
-		err := c.BodyParser(&request)
-		if err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %w", errPrefix, err))
+		if string(c.Request().Header.ContentType()) == mediaTypeYAML {
+			var test testsv3.Test
+			testSpec := string(c.Body())
+			decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(testSpec), len(testSpec))
+			if err := decoder.Decode(&test); err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse yaml request: %w", errPrefix, err))
+			}
+
+			request = testsmapper.MapSpecToUpdate(&test)
+		} else {
+			err := c.BodyParser(&request)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse json request: %w", errPrefix, err))
+			}
 		}
+
 		var name string
 		if request.Name != nil {
 			name = *request.Name
 			errPrefix = errPrefix + " " + name
 		}
 
-		err = testkube.ValidateUpdateTestRequest(request)
+		err := testkube.ValidateUpdateTestRequest(request)
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: invalid test: %w", errPrefix, err))
 		}
