@@ -649,7 +649,7 @@ paths:
         - test-suites
         - api
       parameters:
-        - $ref: "#/components/parameters/Name"
+        - $ref: "#/components/parameters/ID"
       summary: "Abort all executions of a test suite"
       description: "Abort all test executions of a test suite"
       operationId: abortTestSuiteExecutions
