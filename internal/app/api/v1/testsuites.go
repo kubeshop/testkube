@@ -48,7 +48,8 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 				return s.Error(c, http.StatusBadRequest, fiber.ErrUnprocessableEntity)
 			}
 
-			if err := json.Unmarshal(data, &request); err != nil {
+			err := json.Unmarshal(data, &request)
+			if err != nil {
 				s.Log.Warnw("could not parse json request", "error", err)
 			}
 			errPrefix = errPrefix + " " + request.Name
@@ -76,7 +77,7 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 				return s.getCRDs(c, data, err)
 			}
 
-			testSuite, err := testsuitesmapper.MapTestSuiteUpsertRequestToTestCRD(request)
+			testSuite, err = testsuitesmapper.MapTestSuiteUpsertRequestToTestCRD(request)
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, err)
 			}
@@ -119,7 +120,8 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 				return s.Error(c, http.StatusBadRequest, fiber.ErrUnprocessableEntity)
 			}
 
-			if err := json.Unmarshal(data, &request); err != nil {
+			err := json.Unmarshal(data, &request)
+			if err != nil {
 				s.Log.Warnw("could not parse json request", "error", err)
 			}
 

@@ -373,7 +373,7 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 		var test *testsv3.Test
 		var secrets map[string]string
 		if string(c.Request().Header.ContentType()) == mediaTypeYAML {
-			test := &testsv3.Test{}
+			test = &testsv3.Test{}
 			testSpec := string(c.Body())
 			decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(testSpec), len(testSpec))
 			if err := decoder.Decode(&test); err != nil {
