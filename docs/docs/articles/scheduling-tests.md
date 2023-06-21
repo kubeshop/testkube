@@ -8,7 +8,7 @@ Testkube's schedule data format is the same that is used to define Kubernetes Cr
 
 Testkube uses the scheduling engine from Kubernetes Cron jobs.
 In fact, for each scheduled Test or Test Suite, a special cron job is created from this template:
-<https://github.com/kubeshop/helm-charts/tree/main/charts/testkube-api/cronjob-template.yml>.
+<https://github.com/kubeshop/helm-charts/tree/main/charts/testkube-operator/cronjob-template.yml>.
 Technically, it is a callback to the Testkube API server method, launching either Test or Test Suite execution.
 This works similarly to scheduled Test and Test Suite executions done by external scheduling platforms.
 

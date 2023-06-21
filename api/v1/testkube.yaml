@@ -109,6 +109,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/TestTriggerUpsertRequest"
+          text/yaml:
+            schema:
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -161,9 +164,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/TestTrigger"
-            text/yaml:
-              schema:
-                type: string
         400:
           description: "problem with test trigger definition - probably some bad input occurs (invalid JSON body or similar)"
           content:
@@ -274,6 +274,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/TestTriggerUpsertRequest"
+          text/yaml:
+            schema:
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -281,9 +284,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TestTrigger"
-            text/yaml:
-              schema:
-                type: string
         400:
           description: "problem with test trigger definition - probably some bad input occurs (invalid JSON body or similar)"
           content:
@@ -354,6 +354,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/TestSuiteUpsertRequest"
+          text/yaml:
+            schema:
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -512,6 +515,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/TestSuiteUpdateRequest"
+          text/yaml:
+            schema:
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -592,9 +598,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExecutionsMetrics"
-            text/yaml:
-              schema:
-                type: string
         500:
           description: "problem with read information from storage"
           content:
@@ -649,7 +652,7 @@ paths:
         - test-suites
         - api
       parameters:
-        - $ref: "#/components/parameters/Name"
+        - $ref: "#/components/parameters/ID"
       summary: "Abort all executions of a test suite"
       description: "Abort all test executions of a test suite"
       operationId: abortTestSuiteExecutions
@@ -1460,6 +1463,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/TestUpsertRequest"
+          text/yaml:
+            schema:
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -1543,6 +1549,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/TestUpdateRequest"
+          text/yaml:
+            schema:
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -1712,9 +1721,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExecutionsMetrics"
-            text/yaml:
-              schema:
-                type: string
         500:
           description: "problem with getting metrics"
           content:
@@ -2051,6 +2057,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/ExecutorUpsertRequest"
+          text/yaml:
+            schema:
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -2183,6 +2192,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/ExecutorUpdateRequest"
+          text/yaml:
+            schema:
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -2301,6 +2313,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/WebhookCreateRequest"
+          text/yaml:
+            schema:
+              type: string              
       responses:
         200:
           description: "successful operation"
@@ -2590,6 +2605,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/TestSourceUpsertRequest"
+          text/yaml:
+            schema:
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -2694,6 +2712,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/TestSourceUpdateRequest"
+          text/yaml:
+            schema:
+              type: string
       responses:
         200:
           description: "successful operation"
