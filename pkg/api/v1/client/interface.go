@@ -171,7 +171,7 @@ type ExecuteTestOptions struct {
 	JobTemplate                   string
 	ContentRequest                *testkube.TestContentRequest
 	PreRunScriptContent           string
-	PostRunScriptContent          string	
+	PostRunScriptContent          string
 	ScraperTemplate               string
 	NegativeTest                  bool
 	IsNegativeTestChangedOnRun    bool
