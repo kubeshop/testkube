@@ -79,7 +79,7 @@ spec:
   schedule: {{ .Schedule }}
   {{- end }}
   {{- if .ExecutionRequest }}
-  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.NegativeTest) (.ExecutionRequest.VariablesFile) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (ne (len .ExecutionRequest.Envs) 0) (ne (len .ExecutionRequest.SecretEnvs) 0) (.ExecutionRequest.Image) (ne (len .ExecutionRequest.Command) 0) (.ExecutionRequest.ArgsMode) (ne (len .ExecutionRequest.ImagePullSecrets) 0) (ne .ExecutionRequest.ActiveDeadlineSeconds 0) (.ExecutionRequest.ArtifactRequest) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.CronJobTemplate) (.ExecutionRequest.PreRunScript) (.ExecutionRequest.ScraperTemplate) (ne (len .ExecutionRequest.EnvConfigMaps) 0) (ne (len .ExecutionRequest.EnvSecrets) 0) }}
+  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.NegativeTest) (.ExecutionRequest.VariablesFile) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (ne (len .ExecutionRequest.Envs) 0) (ne (len .ExecutionRequest.SecretEnvs) 0) (.ExecutionRequest.Image) (ne (len .ExecutionRequest.Command) 0) (.ExecutionRequest.ArgsMode) (ne (len .ExecutionRequest.ImagePullSecrets) 0) (ne .ExecutionRequest.ActiveDeadlineSeconds 0) (.ExecutionRequest.ArtifactRequest) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.CronJobTemplate) (.ExecutionRequest.PreRunScript) (.ExecutionRequest.PostRunScript) (.ExecutionRequest.ScraperTemplate) (ne (len .ExecutionRequest.EnvConfigMaps) 0) (ne (len .ExecutionRequest.EnvSecrets) 0) }}
   executionRequest:
     {{- if .ExecutionRequest.Name }}
     name: {{ .ExecutionRequest.Name }}
@@ -194,6 +194,9 @@ spec:
     {{- end }}
     {{- if .ExecutionRequest.PreRunScript }}
     preRunScript: {{ .ExecutionRequest.PreRunScript }}
+    {{- end }}
+    {{- if .ExecutionRequest.PostRunScript }}
+    postRunScript: {{ .ExecutionRequest.PostRunScript }}
     {{- end }}
     {{- if .ExecutionRequest.ScraperTemplate }}
     scraperTemplate: {{ .ExecutionRequest.ScraperTemplate }}

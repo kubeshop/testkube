@@ -72,6 +72,8 @@ type ExecutionUpdateRequest struct {
 	ContentRequest  **TestContentUpdateRequest `json:"contentRequest,omitempty"`
 	// script to run before test execution (not supported for container executors)
 	PreRunScript *string `json:"preRunScript,omitempty"`
+	// script to run after test execution (not supported for container executors)
+	PostRunScript *string `json:"postRunScript,omitempty"`
 	// scraper template extensions
 	ScraperTemplate *string `json:"scraperTemplate,omitempty"`
 	// config *map references

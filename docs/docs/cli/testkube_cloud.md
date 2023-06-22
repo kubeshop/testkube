@@ -27,4 +27,6 @@ testkube cloud [flags]
 * [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
 * [testkube cloud connect](testkube_cloud_connect.md)	 - Testkube Cloud connect 
 * [testkube cloud disconnect](testkube_cloud_disconnect.md)	 - Switch back to Testkube OSS mode, based on active .kube/config file
+* [testkube cloud init](testkube_cloud_init.md)	 - Install Helm chart registry in current kubectl context and update dependencies
+* [testkube cloud login](testkube_cloud_login.md)	 - Login to Testkube Cloud
 
