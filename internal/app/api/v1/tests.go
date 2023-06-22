@@ -16,6 +16,7 @@ import (
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	"github.com/kubeshop/testkube-operator/client/tests/v3"
+	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube-operator/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
@@ -532,12 +533,16 @@ func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: client could not find test: %w", errPrefix, err))
 			}
 
-			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test: %w", errPrefix, err))
+			if _, ok := err.(*testsclientv3.DeleteDependenciesError); ok {
+				return s.Warn(c, http.StatusInternalServerError, fmt.Errorf("client deleted test %s but deleting test dependencies(secrets) returned errors: %w", name, err))
+			}
+
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not delete test: %w", errPrefix, err))
 		}
 
 		// delete executions for test
 		if err = s.ExecutionResults.DeleteByTest(c.Context(), name); err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not delete the executions of the test: %w", errPrefix, err))
+			return s.Warn(c, http.StatusInternalServerError, fmt.Errorf("test %s was deleted but deleting test executions returned error: %w", name, err))
 		}
 
 		return c.SendStatus(http.StatusNoContent)
