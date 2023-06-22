@@ -3847,6 +3847,10 @@ components:
           type: string
           description: script to run before test execution (not supported for container executors)
           example: "echo -n '$SECRET_ENV' > ./secret_file"
+        postRunScript:
+          type: string
+          description: script to run after test execution (not supported for container executors)
+          example: "sleep 30"          
         runningContext:
           $ref: "#/components/schemas/RunningContext"
           description: running context for the test execution
@@ -4346,6 +4350,10 @@ components:
           type: string
           description: script to run before test execution (not supported for container executors)
           example: "echo -n '$SECRET_ENV' > ./secret_file"
+        postRunScript:
+          type: string
+          description: script to run after test execution (not supported for container executors)
+          example: "sleep 30"
         scraperTemplate:
           type: string
           description: scraper template extensions

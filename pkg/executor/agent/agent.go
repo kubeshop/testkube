@@ -56,16 +56,26 @@ func Run(ctx context.Context, r runner.Runner, args []string) {
 	}
 
 	if r.GetType().IsMain() && e.PreRunScript != "" {
-		output.PrintEvent("running script", e.Id)
+		output.PrintEvent("running prerun script", e.Id)
 
-		if err = runScript(e.PreRunScript); err != nil {
-			output.PrintError(os.Stderr, err)
+		if serr := runScript(e.PreRunScript); serr != nil {
+			output.PrintError(os.Stderr, serr)
 			os.Exit(1)
 		}
 	}
 
 	output.PrintEvent("running test", e.Id)
 	result, err := r.Run(ctx, e)
+
+	if r.GetType().IsMain() && e.PostRunScript != "" {
+		output.PrintEvent("running postrun script", e.Id)
+
+		if serr := runScript(e.PostRunScript); serr != nil {
+			output.PrintError(os.Stderr, serr)
+			os.Exit(1)
+		}
+	}
+
 	if err != nil {
 		output.PrintError(os.Stderr, err)
 		os.Exit(1)
@@ -75,7 +85,7 @@ func Run(ctx context.Context, r runner.Runner, args []string) {
 }
 
 func runScript(body string) error {
-	scriptFile, err := os.CreateTemp("", "prerun*.sh")
+	scriptFile, err := os.CreateTemp("", "runscript*.sh")
 	if err != nil {
 		return err
 	}

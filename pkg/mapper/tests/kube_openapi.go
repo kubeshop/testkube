@@ -150,6 +150,7 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 		JobTemplate:             specExecutionRequest.JobTemplate,
 		CronJobTemplate:         specExecutionRequest.CronJobTemplate,
 		PreRunScript:            specExecutionRequest.PreRunScript,
+		PostRunScript:           specExecutionRequest.PostRunScript,
 		ScraperTemplate:         specExecutionRequest.ScraperTemplate,
 		NegativeTest:            specExecutionRequest.NegativeTest,
 		EnvConfigMaps:           MapEnvReferences(specExecutionRequest.EnvConfigMaps),
@@ -398,6 +399,10 @@ func MapSpecExecutionRequestToExecutionUpdateRequest(
 		{
 			&request.PreRunScript,
 			&executionRequest.PreRunScript,
+		},
+		{
+			&request.PostRunScript,
+			&executionRequest.PostRunScript,
 		},
 		{
 			&request.CronJobTemplate,

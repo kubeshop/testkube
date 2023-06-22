@@ -135,6 +135,10 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 			ui.Warn("  Pre run script:         ", "\n", test.ExecutionRequest.PreRunScript)
 		}
 
+		if test.ExecutionRequest.PostRunScript != "" {
+			ui.Warn("  Post run script:         ", "\n", test.ExecutionRequest.PostRunScript)
+		}
+
 		if test.ExecutionRequest.ScraperTemplate != "" {
 			ui.Warn("  Scraper template:       ", "\n", test.ExecutionRequest.ScraperTemplate)
 		}

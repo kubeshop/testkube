@@ -410,6 +410,17 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		preRunScriptContent = string(b)
 	}
 
+	postRunScriptContent := ""
+	postRunScript := cmd.Flag("postrun-script").Value.String()
+	if postRunScript != "" {
+		b, err := os.ReadFile(postRunScript)
+		if err != nil {
+			return nil, err
+		}
+
+		postRunScriptContent = string(b)
+	}
+
 	scraperTemplateContent := ""
 	scraperTemplate := cmd.Flag("scraper-template").Value.String()
 	if scraperTemplate != "" {
@@ -442,6 +453,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		JobTemplate:           jobTemplateContent,
 		CronJobTemplate:       cronJobTemplateContent,
 		PreRunScript:          preRunScriptContent,
+		PostRunScript:         postRunScriptContent,
 		ScraperTemplate:       scraperTemplateContent,
 		NegativeTest:          negativeTest,
 		EnvConfigMaps:         envConfigMaps,
@@ -934,6 +946,22 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 		}
 
 		request.PreRunScript = &preRunScriptContent
+		nonEmpty = true
+	}
+
+	if cmd.Flag("postrun-script").Changed {
+		postRunScriptContent := ""
+		postRunScript := cmd.Flag("postrun-script").Value.String()
+		if postRunScript != "" {
+			b, err := os.ReadFile(postRunScript)
+			if err != nil {
+				return nil, err
+			}
+
+			postRunScriptContent = string(b)
+		}
+
+		request.PostRunScript = &postRunScriptContent
 		nonEmpty = true
 	}
 
