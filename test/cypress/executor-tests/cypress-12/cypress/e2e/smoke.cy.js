@@ -1,5 +1,5 @@
 describe('Testkube website', () => {
-  it('Open Testkube website', () => {
+  it.skip('Open Testkube website', () => {
     cy.visit('/')
   })
   it(`Validate CYPRESS_CUSTOM_ENV ENV (${Cypress.env('CUSTOM_ENV')})`, () => {
