@@ -65,7 +65,7 @@ var RootCmd = &cobra.Command{
 		ui.SetVerbose(verbose)
 
 		// don't validate context before set and completion
-		if cmd.Name() == "context" || cmd.Parent().Name() == "completion" {
+		if cmd.Name() == "context" || (cmd.Parent() != nil && cmd.Parent().Name() == "completion") {
 			return
 		}
 
