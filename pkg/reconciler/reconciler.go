@@ -41,12 +41,10 @@ func (client *Client) Run(ctx context.Context) {
 		case <-timer.C:
 			if err := client.ProcessTests(ctx); err != nil {
 				client.logger.Errorw("error processing tests statuses %w", err)
-				break
 			}
 
 			if err := client.ProcessTestSuites(ctx); err != nil {
 				client.logger.Errorw("error processing test suites statuses %w", err)
-				break
 			}
 		case <-ctx.Done():
 			client.logger.Debugw("reconciliation finished")
