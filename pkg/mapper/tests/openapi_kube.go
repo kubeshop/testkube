@@ -641,3 +641,25 @@ func MapExecutionToTestStatus(execution *testkube.Execution) (specStatus testsv3
 
 	return specStatus
 }
+
+// MapTestSuiteExecutionStatusToExecutionStatus maps test suite execution status to execution status
+func MapTestSuiteExecutionStatusToExecutionStatus(testSuiteStatus *testkube.TestSuiteExecutionStatus) (
+	testStatus *testkube.ExecutionStatus) {
+	switch testSuiteStatus {
+	case testkube.TestSuiteExecutionStatusAborted:
+		testStatus = testkube.ExecutionStatusAborted
+	case testkube.TestSuiteExecutionStatusTimeout:
+		testStatus = testkube.ExecutionStatusTimeout
+	case testkube.TestSuiteExecutionStatusRunning:
+		testStatus = testkube.ExecutionStatusRunning
+	case testkube.TestSuiteExecutionStatusQueued:
+		testStatus = testkube.ExecutionStatusQueued
+	case testkube.TestSuiteExecutionStatusFailed:
+		testStatus = testkube.ExecutionStatusFailed
+	case testkube.TestSuiteExecutionStatusPassed:
+		testStatus = testkube.ExecutionStatusPassed
+
+	}
+
+	return testStatus
+}

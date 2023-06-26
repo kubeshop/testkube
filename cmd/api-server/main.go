@@ -69,6 +69,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/migrator"
+	"github.com/kubeshop/testkube/pkg/reconciler"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -437,6 +438,19 @@ func main() {
 		triggerService.Run(ctx)
 	} else {
 		log.DefaultLogger.Info("test triggers are disabled")
+	}
+
+	if !cfg.DisableReconciler {
+		reconcilerClient := reconciler.NewClient(clientset,
+			resultsRepository,
+			testResultsRepository,
+			log.DefaultLogger,
+			cfg.TestkubeNamespace)
+		g.Go(func() error {
+			return reconcilerClient.Run(ctx)
+		})
+	} else {
+		log.DefaultLogger.Info("reconclier is disabled")
 	}
 
 	// telemetry based functions
