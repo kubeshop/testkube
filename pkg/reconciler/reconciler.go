@@ -6,31 +6,42 @@ import (
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 )
 
+const (
+	reconciliationInterval = 5 * time.Minute
+)
+
 type Client struct {
+	k8sclient            kubernetes.Interface
 	resultRepository     result.Repository
 	testResultRepository testresult.Repository
 	logger               *zap.SugaredLogger
+	namespace            string
 }
 
-func NewClient(resultRepository result.Repository, testResultRepository testresult.Repository,
-	logger *zap.SugaredLogger) (*Client, error) {
+func NewClient(k8sclient kubernetes.Interface, resultRepository result.Repository, testResultRepository testresult.Repository,
+	logger *zap.SugaredLogger, namespace string) (*Client, error) {
 	return &Client{
+		k8sclient:            k8sclient,
 		resultRepository:     resultRepository,
 		testResultRepository: testResultRepository,
 		logger:               logger,
+		namespace:            namespace,
 	}, nil
 }
 
 func (client *Client) Run(ctx context.Context) {
 	client.logger.Debugw("reconciliation started")
 
-	timer := time.NewTimer(5 * time.Minute)
+	timer := time.NewTimer(reconciliationInterval)
 
 	defer func() {
 		timer.Stop()
@@ -60,13 +71,24 @@ func (client *Client) ProcessTests(ctx context.Context) error {
 		return err
 	}
 
+OuterLoop:
 	for _, execution := range executions {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			if true {
-				continue
+			pods, err := executor.GetJobPods(ctx, client.k8sclient.CoreV1().Pods(client.namespace), execution.Id, 1, 1)
+			if err == nil {
+				for _, pod := range pods.Items {
+					if pod.Labels["job-name"] == execution.Id {
+						switch pod.Status.Phase {
+						case corev1.PodFailed:
+							break
+						default:
+							continue OuterLoop
+						}
+					}
+				}
 			}
 
 			execution.ExecutionResult = &testkube.ExecutionResult{
