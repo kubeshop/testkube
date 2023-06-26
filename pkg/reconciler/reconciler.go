@@ -2,6 +2,7 @@ package reconciler
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -11,12 +12,17 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 )
 
 const (
 	reconciliationInterval = 5 * time.Minute
+)
+
+var (
+	errTestkubeAPICrahsed = errors.New("testkube api server crashed")
 )
 
 type Client struct {
@@ -77,7 +83,7 @@ OuterLoop:
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			errMessage := "testkube api server crashed"
+			errMessage := errTestkubeAPICrahsed.Error()
 			pods, err := executor.GetJobPods(ctx, client.k8sclient.CoreV1().Pods(client.namespace), execution.Id, 1, 1)
 			if err == nil {
 			InnerLoop:
@@ -156,6 +162,17 @@ OuterLoop:
 			}
 
 			execution.Status = status
+			for i := range execution.ExecuteStepResults {
+				for j := range execution.ExecuteStepResults[i].Execute {
+					if execution.ExecuteStepResults[i].Execute[j].Execution != nil &&
+						execution.ExecuteStepResults[i].Execute[j].Execution.IsRunning() {
+						execution.ExecuteStepResults[i].Execute[j].Execution.ExecutionResult = &testkube.ExecutionResult{
+							Status:       tests.MapTestSuiteExecutionStatusToExecutionStatus(status),
+							ErrorMessage: errTestkubeAPICrahsed.Error(),
+						}
+					}
+				}
+			}
 			if err = client.testResultRepository.Update(ctx, execution); err != nil {
 				return err
 			}
