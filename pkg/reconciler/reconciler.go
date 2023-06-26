@@ -28,17 +28,17 @@ type Client struct {
 }
 
 func NewClient(k8sclient kubernetes.Interface, resultRepository result.Repository, testResultRepository testresult.Repository,
-	logger *zap.SugaredLogger, namespace string) (*Client, error) {
+	logger *zap.SugaredLogger, namespace string) *Client {
 	return &Client{
 		k8sclient:            k8sclient,
 		resultRepository:     resultRepository,
 		testResultRepository: testResultRepository,
 		logger:               logger,
 		namespace:            namespace,
-	}, nil
+	}
 }
 
-func (client *Client) Run(ctx context.Context) {
+func (client *Client) Run(ctx context.Context) error {
 	client.logger.Debugw("reconciliation started")
 
 	timer := time.NewTimer(reconciliationInterval)
@@ -59,7 +59,7 @@ func (client *Client) Run(ctx context.Context) {
 			}
 		case <-ctx.Done():
 			client.logger.Debugw("reconciliation finished")
-			return
+			return ctx.Err()
 		}
 	}
 }
