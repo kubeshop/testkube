@@ -79,11 +79,12 @@ OuterLoop:
 		default:
 			pods, err := executor.GetJobPods(ctx, client.k8sclient.CoreV1().Pods(client.namespace), execution.Id, 1, 1)
 			if err == nil {
+			InnerLoop:
 				for _, pod := range pods.Items {
 					if pod.Labels["job-name"] == execution.Id {
 						switch pod.Status.Phase {
 						case corev1.PodFailed:
-							break
+							break InnerLoop
 						default:
 							continue OuterLoop
 						}
