@@ -60,6 +60,7 @@ type Config struct {
 	TestkubePodStartTimeout           time.Duration `envconfig:"TESTKUBE_POD_START_TIMEOUT" default:"30m"`
 	CDEventsTarget                    string        `envconfig:"CDEVENTS_TARGET" default:""`
 	TestkubeDashboardURI              string        `envconfig:"TESTKUBE_DASHBOARD_URI" default:""`
+	DisableReconciler                 bool          `envconfig:"DISABLE_RECONCILER" default:"false"`
 }
 
 func Get() (*Config, error) {
