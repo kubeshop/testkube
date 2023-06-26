@@ -77,6 +77,7 @@ OuterLoop:
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
+			errMessage := "testkube api server crashed"
 			pods, err := executor.GetJobPods(ctx, client.k8sclient.CoreV1().Pods(client.namespace), execution.Id, 1, 1)
 			if err == nil {
 			InnerLoop:
@@ -84,6 +85,7 @@ OuterLoop:
 					if pod.Labels["job-name"] == execution.Id {
 						switch pod.Status.Phase {
 						case corev1.PodFailed:
+							errMessage = pod.Status.Message
 							break InnerLoop
 						default:
 							continue OuterLoop
@@ -94,7 +96,7 @@ OuterLoop:
 
 			execution.ExecutionResult = &testkube.ExecutionResult{
 				Status:       testkube.ExecutionStatusFailed,
-				ErrorMessage: "testkube api server crashed",
+				ErrorMessage: errMessage,
 			}
 			if err = client.resultRepository.Update(ctx, execution); err != nil {
 				return err
@@ -122,7 +124,7 @@ OuterLoop:
 		InnerLoop:
 			for _, step := range execution.ExecuteStepResults {
 				for _, execute := range step.Execute {
-					if execute.Step != nil && execute.Step.Type() == testkube.TestSuiteStepTypeExecuteTest {
+					if execute.Step != nil && execute.Step.Type() == testkube.TestSuiteStepTypeExecuteTest && execute.Execution != nil {
 						exec, err := client.resultRepository.Get(ctx, execute.Execution.Id)
 						if err != nil && err != mongo.ErrNoDocuments {
 							return err
