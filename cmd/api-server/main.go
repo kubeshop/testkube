@@ -465,7 +465,7 @@ func main() {
 }
 
 func parseJobTemplate(cfg *config.Config) (template string, err error) {
-	template, err = loadFromBase64StringOrFile(
+	template, err = loadConfigFromStringOrFile(
 		cfg.TestkubeTemplateJob,
 		cfg.TestkubeConfigDir,
 		"job-template.yml",
@@ -479,7 +479,7 @@ func parseJobTemplate(cfg *config.Config) (template string, err error) {
 }
 
 func parseContainerTemplates(cfg *config.Config) (t kubeexecutor.Templates, err error) {
-	t.Job, err = loadFromBase64StringOrFile(
+	t.Job, err = loadConfigFromStringOrFile(
 		cfg.TestkubeContainerTemplateJob,
 		cfg.TestkubeConfigDir,
 		"job-container-template.yml",
@@ -489,7 +489,7 @@ func parseContainerTemplates(cfg *config.Config) (t kubeexecutor.Templates, err 
 		return t, err
 	}
 
-	t.Scraper, err = loadFromBase64StringOrFile(
+	t.Scraper, err = loadConfigFromStringOrFile(
 		cfg.TestkubeContainerTemplateScraper,
 		cfg.TestkubeConfigDir,
 		"job-scraper-template.yml",
@@ -499,7 +499,7 @@ func parseContainerTemplates(cfg *config.Config) (t kubeexecutor.Templates, err 
 		return t, err
 	}
 
-	t.PVC, err = loadFromBase64StringOrFile(
+	t.PVC, err = loadConfigFromStringOrFile(
 		cfg.TestkubeContainerTemplatePVC,
 		cfg.TestkubeConfigDir,
 		"pvc-container-template.yml",
@@ -513,7 +513,7 @@ func parseContainerTemplates(cfg *config.Config) (t kubeexecutor.Templates, err 
 }
 
 func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDetails, err error) {
-	rawExecutors, err := loadFromBase64StringOrFile(
+	rawExecutors, err := loadConfigFromStringOrFile(
 		cfg.TestkubeDefaultExecutors,
 		cfg.TestkubeConfigDir,
 		"executors.json",
@@ -531,7 +531,7 @@ func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDet
 }
 
 func newSlackLoader(cfg *config.Config) (*slack.SlackLoader, error) {
-	slackTemplate, err := loadFromBase64StringOrFile(
+	slackTemplate, err := loadConfigFromStringOrFile(
 		cfg.SlackTemplate,
 		cfg.TestkubeConfigDir,
 		"slack-template.json",
@@ -541,7 +541,7 @@ func newSlackLoader(cfg *config.Config) (*slack.SlackLoader, error) {
 		return nil, err
 	}
 
-	slackConfig, err := loadFromBase64StringOrFile(cfg.SlackConfig, cfg.TestkubeConfigDir, "slack-config.json", "slack config")
+	slackConfig, err := loadConfigFromStringOrFile(cfg.SlackConfig, cfg.TestkubeConfigDir, "slack-config.json", "slack config")
 	if err != nil {
 		return nil, err
 	}
@@ -549,16 +549,21 @@ func newSlackLoader(cfg *config.Config) (*slack.SlackLoader, error) {
 	return slack.NewSlackLoader(slackTemplate, slackConfig, testkube.AllEventTypes), nil
 }
 
-func loadFromBase64StringOrFile(base64Val string, configDir, filename, configType string) (raw string, err error) {
+func loadConfigFromStringOrFile(inputString, configDir, filename, configType string) (raw string, err error) {
 	var data []byte
 
-	if base64Val != "" {
-		data, err = base64.StdEncoding.DecodeString(base64Val)
-		if err != nil {
-			return "", errors.Wrapf(err, "error decoding %s from base64", configType)
+	if inputString != "" {
+		if isBase64Encoded(inputString) {
+			data, err = base64.StdEncoding.DecodeString(inputString)
+			if err != nil {
+				return "", errors.Wrapf(err, "error decoding %s from base64", configType)
+			}
+			raw = string(data)
+			log.DefaultLogger.Infof("parsed %s from base64 env var", configType)
+		} else {
+			raw = inputString
+			log.DefaultLogger.Infof("parsed %s from plain env var", configType)
 		}
-		raw = string(data)
-		log.DefaultLogger.Infof("parsed %s from env var", configType)
 	} else if f, err := os.Open(filepath.Join(configDir, filename)); err == nil {
 		data, err = io.ReadAll(f)
 		if err != nil {
@@ -571,6 +576,16 @@ func loadFromBase64StringOrFile(base64Val string, configDir, filename, configTyp
 	}
 
 	return raw, nil
+}
+
+func isBase64Encoded(base64Val string) bool {
+	decoded, err := base64.StdEncoding.DecodeString(base64Val)
+	if err != nil {
+		return false
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(decoded)
+	return base64Val == encoded
 }
 
 // getMongoSSLConfig builds the necessary SSL connection info from the settings in the environment variables
