@@ -286,7 +286,7 @@ func main() {
 		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
 	}
 	eventBus := bus.NewNATSBus(nc)
-	eventsEmitter := event.NewEmitter(eventBus)
+	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName)
 
 	metrics := metrics.NewMetrics()
 
@@ -401,7 +401,17 @@ func main() {
 	if mode == common.ModeAgent {
 		log.DefaultLogger.Info("starting agent service")
 
-		agentHandle, err := agent.NewAgent(log.DefaultLogger, api.Mux.Handler(), cfg.TestkubeCloudAPIKey, grpcClient, cfg.TestkubeCloudWorkerCount, cfg.TestkubeCloudLogStreamWorkerCount, api.GetLogsStream, clusterId)
+		agentHandle, err := agent.NewAgent(
+			log.DefaultLogger,
+			api.Mux.Handler(),
+			cfg.TestkubeCloudAPIKey,
+			grpcClient,
+			cfg.TestkubeCloudWorkerCount,
+			cfg.TestkubeCloudLogStreamWorkerCount,
+			api.GetLogsStream,
+			clusterId,
+			cfg.TestkubeClusterName,
+		)
 		if err != nil {
 			ui.ExitOnError("Starting agent", err)
 		}
@@ -560,7 +570,7 @@ func newSlackLoader(cfg *config.Config) (*slack.SlackLoader, error) {
 		return nil, err
 	}
 
-	return slack.NewSlackLoader(slackTemplate, slackConfig, testkube.AllEventTypes), nil
+	return slack.NewSlackLoader(slackTemplate, slackConfig, cfg.TestkubeClusterName, testkube.AllEventTypes), nil
 }
 
 func loadFromBase64StringOrFile(base64Val string, configDir, filename, configType string) (raw string, err error) {

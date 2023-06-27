@@ -56,7 +56,7 @@ func TestCommandExecution(t *testing.T) {
 	var logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error)
 
 	logger, _ := zap.NewDevelopment()
-	agent, err := agent.NewAgent(logger.Sugar(), m, "api-key", grpcClient, 5, 5, logStreamFunc, "")
+	agent, err := agent.NewAgent(logger.Sugar(), m, "api-key", grpcClient, 5, 5, logStreamFunc, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
