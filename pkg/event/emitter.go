@@ -20,24 +20,26 @@ const (
 )
 
 // NewEmitter returns new emitter instance
-func NewEmitter(eventBus bus.Bus) *Emitter {
+func NewEmitter(eventBus bus.Bus, clusterName string) *Emitter {
 	return &Emitter{
-		Results:   make(chan testkube.EventResult, eventsBuffer),
-		Log:       log.DefaultLogger,
-		Loader:    NewLoader(),
-		Bus:       eventBus,
-		Listeners: make(common.Listeners, 0),
+		Results:     make(chan testkube.EventResult, eventsBuffer),
+		Log:         log.DefaultLogger,
+		Loader:      NewLoader(),
+		Bus:         eventBus,
+		Listeners:   make(common.Listeners, 0),
+		ClusterName: clusterName,
 	}
 }
 
 // Emitter handles events emitting for webhooks
 type Emitter struct {
-	Results   chan testkube.EventResult
-	Listeners common.Listeners
-	Loader    *Loader
-	Log       *zap.SugaredLogger
-	mutex     sync.Mutex
-	Bus       bus.Bus
+	Results     chan testkube.EventResult
+	Listeners   common.Listeners
+	Loader      *Loader
+	Log         *zap.SugaredLogger
+	mutex       sync.Mutex
+	Bus         bus.Bus
+	ClusterName string
 }
 
 // Register adds new listener
@@ -124,6 +126,7 @@ func (e *Emitter) UpdateListeners(listeners common.Listeners) {
 
 // Notify notifies emitter with webhook
 func (e *Emitter) Notify(event testkube.Event) {
+	event.ClusterName = e.ClusterName
 	err := e.Bus.PublishTopic(event.Topic(), event)
 	e.Log.Infow("event published", append(event.Log(), "error", err)...)
 }

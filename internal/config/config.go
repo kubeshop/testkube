@@ -61,6 +61,7 @@ type Config struct {
 	CDEventsTarget                    string        `envconfig:"CDEVENTS_TARGET" default:""`
 	TestkubeDashboardURI              string        `envconfig:"TESTKUBE_DASHBOARD_URI" default:""`
 	DisableReconciler                 bool          `envconfig:"DISABLE_RECONCILER" default:"false"`
+	TestkubeClusterName               string        `envconfig:"TESTKUBE_CLUSTER_NAME" default:""`
 }
 
 func Get() (*Config, error) {

@@ -4746,7 +4746,7 @@ components:
             app: "backend"
 
     Event:
-      description: CRD based executor data
+      description: Event data
       type: object
       required:
         - type
@@ -4768,6 +4768,9 @@ components:
           $ref: "#/components/schemas/Execution"
         testSuiteExecution:
           $ref: "#/components/schemas/TestSuiteExecution"
+        clusterName:
+          type: string
+          description: cluster name of event      
 
     EventResource:
       type: string

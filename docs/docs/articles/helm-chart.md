@@ -114,6 +114,7 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.logs.bucket             | no          | "testkube-logs"                      |
 | testkube-api.cdeventsTarget          | yes         | ""                                   |
 | testkube-api.dashboardUri            | yes         | ""                                   |
+| testkube-api.clusterName             | yes         | ""                                   |
 
 >For more configuration parameters of a `MongoDB` chart please visit: 
 <https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>
