@@ -54,9 +54,12 @@ func NewInitCmd() *cobra.Command {
 			ui.NL()
 
 			ui.H2("Saving testkube cli cloud context")
-			token, err := LoginUser(options)
-			ui.ExitOnError("user login", err)
-			err = common.PopulateLoginDataToContext(options.CloudOrgId, options.CloudEnvId, token, options, cfg)
+			var token, refreshToken string
+			if !common.IsUserLoggedIn(cfg, options) {
+				token, refreshToken, err = LoginUser(options)
+				ui.ExitOnError("user login", err)
+			}
+			err = common.PopulateLoginDataToContext(options.CloudOrgId, options.CloudEnvId, token, refreshToken, options, cfg)
 			ui.ExitOnError("Setting cloud environment context", err)
 
 			ui.Info(" Happy Testing! 🚀")
