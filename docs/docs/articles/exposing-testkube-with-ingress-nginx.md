@@ -37,27 +37,27 @@ testkube-api:
     tlsenabled: "true"
     tls:
       - hosts:
-         - your-host.com
-      secretName: testkube-cert-secret
+          - your-host.com
+        secretName: testkube-cert-secret
 
 
 testkube-dashboard:
   ingress:
     enabled: "true"
     annotations:
-       kubernetes.io/ingress.class: nginx
-       nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
-       nginx.ingress.kubernetes.io/ssl-redirect: "false"
-       cert-manager.io/cluster-issuer: letsencrypt-prod
-       acme.cert-manager.io/http01-edit-in-place: "true"
-  path: /
-  hosts:
-    - your-host.com
-  tlsenabled: "true"
-  tls:
-    - hosts:
-        - your-host.com
-      secretName: testkube-cert-secret
+      kubernetes.io/ingress.class: nginx
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      acme.cert-manager.io/http01-edit-in-place: "true"
+    path: /
+    hosts:
+      - your-host.com
+    tlsenabled: "true"
+    tls:
+      - hosts:
+          - your-host.com
+        secretName: testkube-cert-secret
 
   apiServerEndpoint: "your-host.com/results"
 ```
