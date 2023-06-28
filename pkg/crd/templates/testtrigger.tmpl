@@ -61,6 +61,24 @@ spec:
     {{- end }}
     {{- end }}
   {{- end }}
+  {{- if .ProbeSpec }}
+  probeSpec:
+    {{- if .ProbeSpec.Timeout }}
+    timeout: {{ .ProbeSpec.Timeout }}
+    {{- end }}
+    {{- if ne (len .ProbeSpec.Probes) 0 }}
+    probes:
+    {{- range $exp := .ProbeSpec.Probes }}
+    - uri: {{ $exp.Uri }}
+      {{- if ne (len $exp.Headers) 0 }}
+      headers:
+      {{- range $key, $value := $exp.Headers }}
+        {{ $key }}: {{ $value }}
+      {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- end }}
+  {{- end }}
   {{- if .Action }}
   action: {{ .Action }}
   {{- end }}
