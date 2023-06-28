@@ -60,6 +60,18 @@ conditionSpec:
       ttl: test trigger condition ttl
 ```
 
+### Resource Probes
+
+Resource Probes allows triggers to be defined based on the probe status.
+
+```yaml
+probeSpec:
+    timeout: duration in seconds the test trigger waits for probes, until its stopped
+    probes:
+    - uri: test trigger probe uri
+      headers: test trigger probe headers
+```
+
 ### Supported Values
 * **Resource**  - pod, deployment, statefulset, daemonset, service, ingress, event, configmap
 * **Action**    - run
@@ -95,6 +107,13 @@ spec:
       ttl: 60
     - type: Available
       status: "True"
+  probeSpec:
+    timeout: 50
+    probes:
+    - uri: https://testkube.io
+      headers:
+        X-Token: "12345"
+    - uri: https://kubeshopppp.io     
   action: run
   execution: testsuite
   testSelector:
