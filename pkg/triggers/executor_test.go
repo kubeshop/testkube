@@ -136,6 +136,12 @@ func TestExecute(t *testing.T) {
 					Ttl:    60,
 				}},
 			},
+			ProbeSpec: &testtriggersv1.TestTriggerProbeSpec{
+				Probes: []testtriggersv1.TestTriggerProbe{{
+					Uri:     "https://testkube.io",
+					Headers: map[string]string{"X-Token": "12345"},
+				}},
+			},
 			Action:       "run",
 			Execution:    "test",
 			TestSelector: testtriggersv1.TestTriggerSelector{Name: "some-test"},

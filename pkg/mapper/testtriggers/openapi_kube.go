@@ -19,6 +19,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 			ResourceSelector: mapSelectorToCRD(request.ResourceSelector),
 			Event:            testsv1.TestTriggerEvent(request.Event),
 			ConditionSpec:    mapConditionSpecCRD(request.ConditionSpec),
+			ProdSpec:         mapProdSpecCRD(request.ProdSpec),
 			Action:           testsv1.TestTriggerAction(*request.Action),
 			Execution:        testsv1.TestTriggerExecution(*request.Execution),
 			TestSelector:     mapSelectorToCRD(request.TestSelector),
@@ -73,5 +74,32 @@ func mapConditionSpecCRD(conditionSpec *testkube.TestTriggerConditionSpec) *test
 	return &testsv1.TestTriggerConditionSpec{
 		Timeout:    conditionSpec.Timeout,
 		Conditions: conditions,
+	}
+}
+
+func mapProbeSpecCRD(probeSpec *testkube.TestTriggerProbeSpec) *testsv1.TestTriggerProbeSpec {
+	if probeSpec == nil {
+		return nil
+	}
+
+	var probes []testsv1.TestTriggerProbe
+	for _, probe := range probeSpec.Probes {
+		var headers map[string]string
+		if len(probe.Headers) != 0 {
+			headers = make(map[string]string, len(probe.Headers))
+			for key, value := range probe.Headers {
+				headers[key] = value
+			}
+		}
+
+		probes = append(probes, testsv1.TestTriggerProbe{
+			Uri:     probe.Uri,
+			Headers: headers,
+		})
+	}
+
+	return &testsv1.TestTriggerProbeSpec{
+		Timeout: probeSpec.Timeout,
+		Probes:  probes,
 	}
 }

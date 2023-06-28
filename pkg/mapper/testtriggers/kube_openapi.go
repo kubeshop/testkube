@@ -31,6 +31,7 @@ func MapCRDToAPI(crd *testsv1.TestTrigger) testkube.TestTrigger {
 		ResourceSelector: mapSelectorFromCRD(crd.Spec.ResourceSelector),
 		Event:            string(crd.Spec.Event),
 		ConditionSpec:    mapConditionSpecFromCRD(crd.Spec.ConditionSpec),
+		ProbeSpec:        mapProbeSpecFromCRD(crd.Spec.ProbeSpec),
 		Action:           &action,
 		Execution:        &execution,
 		TestSelector:     mapSelectorFromCRD(crd.Spec.TestSelector),
@@ -96,8 +97,36 @@ func MapTestTriggerCRDToTestTriggerUpsertRequest(request testsv1.TestTrigger) te
 		ResourceSelector: mapSelectorFromCRD(request.Spec.ResourceSelector),
 		Event:            string(request.Spec.Event),
 		ConditionSpec:    mapConditionSpecFromCRD(request.Spec.ConditionSpec),
+		ProbeSpec:        mapProbeSpecFromCRD(request.Spec.ProbeSpec),
 		Action:           (*testkube.TestTriggerActions)(&request.Spec.Action),
 		Execution:        (*testkube.TestTriggerExecutions)(&request.Spec.Execution),
 		TestSelector:     mapSelectorFromCRD(request.Spec.TestSelector),
+	}
+}
+
+func mapProbeSpecFromCRD(probeSpec *testsv1.TestTriggerProbeSpec) *testkube.TestTriggerProbeSpec {
+	if probeSpec == nil {
+		return nil
+	}
+
+	var probes []testkube.TestTriggerProbe
+	for _, probe := range probeSpec.Probes {
+		var headers map[string]string
+		if len(probe.Headers) != 0 {
+			headers = make(map[string]string, len(probe.Headers))
+			for key, value := range probe.Headers {
+				headers[key] = value
+			}
+		}
+
+		probes = append(probes, testkube.TestTriggerProbe{
+			Uri:     probe.Uri,
+			Headers: headers,
+		})
+	}
+
+	return &testkube.TestTriggerProbeSpec{
+		Timeout: probeSpec.Timeout,
+		Probes:  probes,
 	}
 }
