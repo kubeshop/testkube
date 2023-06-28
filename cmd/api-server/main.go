@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -143,10 +144,11 @@ func main() {
 		mode = common.ModeAgent
 	}
 	if mode == common.ModeAgent {
-		grpcConn, err = agent.NewGRPCConnection(ctx, cfg.TestkubeCloudTLSInsecure, cfg.TestkubeCloudURL, log.DefaultLogger)
+		agentCtx, agentCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		grpcConn, err = agent.NewGRPCConnection(agentCtx, cfg.TestkubeCloudTLSInsecure, cfg.TestkubeCloudURL, log.DefaultLogger)
 		ui.ExitOnError("error creating gRPC connection", err)
 		defer grpcConn.Close()
-
+		defer agentCancel()
 		grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
 	}
 
