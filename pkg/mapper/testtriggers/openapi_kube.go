@@ -19,7 +19,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 			ResourceSelector: mapSelectorToCRD(request.ResourceSelector),
 			Event:            testsv1.TestTriggerEvent(request.Event),
 			ConditionSpec:    mapConditionSpecCRD(request.ConditionSpec),
-			ProdSpec:         mapProdSpecCRD(request.ProdSpec),
+			ProbeSpec:        mapProbeSpecCRD(request.ProbeSpec),
 			Action:           testsv1.TestTriggerAction(*request.Action),
 			Execution:        testsv1.TestTriggerExecution(*request.Execution),
 			TestSelector:     mapSelectorToCRD(request.TestSelector),
