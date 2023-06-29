@@ -196,11 +196,13 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 	}
 
 	l := c.Log.With("executionID", execution.Id, "type", "async")
+	l.Debugw("starting async job", "podCount", len(pods.Items))
 
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
 			// async wait for complete status or error
 			go func(pod corev1.Pod) {
+				l.Debugw("updating results from pod", "pod", pod.Name)
 				_, err := c.updateResultsFromPod(ctx, pod, l, execution, options.Request.NegativeTest)
 				if err != nil {
 					l.Errorw("update results from jobs pod error", "error", err)
@@ -348,6 +350,8 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 		l.Errorw("parse output error", "error", err)
 		return execution.ExecutionResult, err
 	}
+
+	l.Debugw("got execution result execution result", "result", execution.ExecutionResult)
 
 	if execution.ExecutionResult.IsFailed() && execution.ExecutionResult.ErrorMessage == "" {
 		execution.ExecutionResult.ErrorMessage = executor.GetPodErrorMessage(&pod)

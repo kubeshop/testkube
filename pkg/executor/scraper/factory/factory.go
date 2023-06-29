@@ -98,6 +98,9 @@ func getCloudLoader(ctx context.Context, params envs.Params) (uploader *cloudscr
 
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 	cloudExecutor := cloudexecutor.NewCloudGRPCExecutor(grpcClient, grpcConn, params.CloudAPIKey)
+
+	output.PrintLogf("Connected to cloud API: %s", params.CloudAPIURL)
+
 	return cloudscraper.NewCloudUploader(cloudExecutor), nil
 }
 

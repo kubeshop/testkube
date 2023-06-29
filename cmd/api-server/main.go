@@ -150,6 +150,7 @@ func main() {
 		defer grpcConn.Close()
 		defer agentCancel()
 		grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
+		log.DefaultLogger.Debugw("Connected to Testkube Cloud", "url", cfg.TestkubeCloudURL)
 	}
 
 	// k8s
