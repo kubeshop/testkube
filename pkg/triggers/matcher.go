@@ -2,6 +2,10 @@ package triggers
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"net/url"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -29,6 +33,18 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		hasConditions := t.Spec.ConditionSpec != nil && len(t.Spec.ConditionSpec.Conditions) != 0
 		if hasConditions && e.conditionsGetter != nil {
 			matched, err := s.matchConditions(ctx, e, t, s.logger)
+			if err != nil {
+				return err
+			}
+
+			if !matched {
+				continue
+			}
+		}
+
+		hasProbes := t.Spec.ProbeSpec != nil && len(t.Spec.ProbeSpec.Probes) != 0
+		if hasProbes {
+			matched, err := s.matchProbes(ctx, e, t, s.logger)
 			if err != nil {
 				return err
 			}
@@ -148,6 +164,131 @@ outer:
 			delay := s.defaultConditionsCheckBackoff
 			if t.Spec.ConditionSpec.Delay > 0 {
 				delay = time.Duration(t.Spec.ConditionSpec.Delay) * time.Second
+			}
+			time.Sleep(delay)
+		}
+	}
+
+	return true, nil
+}
+
+func checkProbes(ctx context.Context, probes []testtriggersv1.TestTriggerProbe, logger *zap.SugaredLogger) bool {
+	var wg sync.WaitGroup
+	ch := make(chan bool, len(probes))
+	defer close(ch)
+
+	for i := range probes {
+		wg.Add(1)
+
+		go func(probe testtriggersv1.TestTriggerProbe) {
+			defer wg.Done()
+
+			host := probe.Host
+			if probe.Port != 0 {
+				host = fmt.Sprintf("%s:%d", host, probe.Port)
+			}
+
+			if host == "" {
+				ch <- false
+			}
+
+			uri := url.URL{
+				Scheme: probe.Scheme,
+				Host:   host,
+				Path:   probe.Path,
+			}
+			request, err := http.NewRequestWithContext(ctx, http.MethodGet, uri.String(), nil)
+			if err != nil {
+				logger.Debugw("probe request creating error", "error", err)
+				ch <- false
+			}
+
+			for key, value := range probe.Headers {
+				request.Header.Set(key, value)
+			}
+
+			resp, err := http.DefaultClient.Do(request)
+			if err != nil {
+				logger.Debugw("probe send error", "error", err)
+				ch <- false
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode >= 400 {
+				logger.Debugw("probe response with bad status code", "status", resp.StatusCode)
+				ch <- false
+			}
+		}(probes[i])
+	}
+
+	wg.Wait()
+
+	for result := range ch {
+		if !result {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (s *Service) matchProbes(ctx context.Context, e *watcherEvent, t *testtriggersv1.TestTrigger, logger *zap.SugaredLogger) (bool, error) {
+	timeout := s.defaultProbesCheckTimeout
+	if t.Spec.ProbeSpec.Timeout > 0 {
+		timeout = time.Duration(t.Spec.ProbeSpec.Timeout) * time.Second
+	}
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	host := ""
+	if e.addressGetter != nil {
+		var err error
+		host, err = e.addressGetter()
+		if err != nil {
+			logger.Errorf(
+				"trigger service: matcher component: error getting addess for %s %s/%s because of %v",
+				e.resource, e.namespace, e.name, err,
+			)
+			return false, err
+		}
+	}
+
+	for i := range t.Spec.ProbeSpec.Probes {
+		if t.Spec.ProbeSpec.Probes[i].Scheme == "" {
+			t.Spec.ProbeSpec.Probes[i].Scheme = "http"
+		}
+		if t.Spec.ProbeSpec.Probes[i].Host == "" {
+			t.Spec.ProbeSpec.Probes[i].Host = host
+		}
+		if t.Spec.ProbeSpec.Probes[i].Path == "" {
+			t.Spec.ProbeSpec.Probes[i].Path = "/"
+		}
+	}
+
+outer:
+	for {
+		select {
+		case <-timeoutCtx.Done():
+			logger.Errorf(
+				"trigger service: matcher component: error waiting for probes to match for trigger %s/%s by event %s on resource %s %s/%s"+
+					" because context got canceled by timeout or exit signal",
+				t.Namespace, t.Name, e.eventType, e.resource, e.namespace, e.name,
+			)
+			return false, errors.WithStack(ErrConditionTimeout)
+		default:
+			logger.Debugf(
+				"trigger service: matcher component: running probes check iteration for %s %s/%s",
+				e.resource, e.namespace, e.name,
+			)
+
+			matched := checkProbes(timeoutCtx, t.Spec.ProbeSpec.Probes, logger)
+			if matched {
+				break outer
+			}
+
+			delay := s.defaultProbesCheckBackoff
+			if t.Spec.ProbeSpec.Delay > 0 {
+				delay = time.Duration(t.Spec.ProbeSpec.Delay) * time.Second
 			}
 			time.Sleep(delay)
 		}

@@ -33,6 +33,8 @@ const (
 	defaultMaxLeaseDuration       = 1 * time.Minute
 	defaultConditionsCheckBackoff = 1 * time.Second
 	defaultConditionsCheckTimeout = 60 * time.Second
+	defaultProbesCheckBackoff     = 1 * time.Second
+	defaultProbesCheckTimeout     = 60 * time.Second
 	defaultClusterID              = "testkube-api"
 	defaultIdentifierFormat       = "testkube-api-%s"
 )
@@ -48,6 +50,8 @@ type Service struct {
 	maxLeaseDuration              time.Duration
 	defaultConditionsCheckTimeout time.Duration
 	defaultConditionsCheckBackoff time.Duration
+	defaultProbesCheckTimeout     time.Duration
+	defaultProbesCheckBackoff     time.Duration
 	watchFromDate                 time.Time
 	triggerStatus                 map[statusKey]*triggerStatus
 	scheduler                     *scheduler.Scheduler
@@ -89,6 +93,8 @@ func NewService(
 		maxLeaseDuration:              defaultMaxLeaseDuration,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
+		defaultProbesCheckTimeout:     defaultProbesCheckTimeout,
+		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
 		scheduler:                     scheduler,
 		clientset:                     clientset,
 		testKubeClientset:             testKubeClientset,

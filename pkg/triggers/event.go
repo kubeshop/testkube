@@ -2,6 +2,8 @@ package triggers
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,6 +20,8 @@ import (
 
 type conditionsGetterFn func() ([]testtriggersv1.TestTriggerCondition, error)
 
+type addressGetterFn func() (string, error)
+
 type watcherEvent struct {
 	resource         testtrigger.ResourceType
 	name             string
@@ -27,6 +31,7 @@ type watcherEvent struct {
 	eventType        testtrigger.EventType
 	causes           []testtrigger.Cause
 	conditionsGetter conditionsGetterFn
+	addressGetter    addressGetterFn
 }
 
 type watcherOpts func(*watcherEvent)
@@ -40,6 +45,12 @@ func withCauses(causes []testtrigger.Cause) watcherOpts {
 func withConditionsGetter(conditionsGetter conditionsGetterFn) watcherOpts {
 	return func(w *watcherEvent) {
 		w.conditionsGetter = conditionsGetter
+	}
+}
+
+func withAddressGetter(addressGetter addressGetterFn) watcherOpts {
+	return func(w *watcherEvent) {
+		w.addressGetter = addressGetter
 	}
 }
 
@@ -72,6 +83,15 @@ func getPodConditions(ctx context.Context, clientset kubernetes.Interface, objec
 	}
 
 	return pods.MapCRDConditionsToAPI(pod.Status.Conditions, time.Now()), nil
+}
+
+func getPodAdress(ctx context.Context, clientset kubernetes.Interface, object metav1.Object) (string, error) {
+	pod, err := clientset.CoreV1().Pods(object.GetNamespace()).Get(ctx, object.GetName(), metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s.%s.pod.cluster.local", strings.ReplaceAll(pod.Status.PodIP, ".", "-"), object.GetNamespace()), nil
 }
 
 func getDeploymentConditions(
@@ -124,4 +144,8 @@ func getServiceConditions(
 	}
 
 	return services.MapCRDConditionsToAPI(service.Status.Conditions, time.Now()), nil
+}
+
+func getServiceAdress(ctx context.Context, clientset kubernetes.Interface, object metav1.Object) (string, error) {
+	return fmt.Sprintf("%s.%s.svc.cluster.local", object.GetName(), object.GetNamespace()), nil
 }
