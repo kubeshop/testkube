@@ -62,19 +62,14 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 		k8sInformers.ingressInformers = append(k8sInformers.ingressInformers, f.Networking().V1().Ingresses())
 		k8sInformers.clusterEventInformers = append(k8sInformers.clusterEventInformers, f.Core().V1().Events())
 		k8sInformers.configMapInformers = append(k8sInformers.configMapInformers, f.Core().V1().ConfigMaps())
-	}
 
-	var testkubeInformerFactory externalversions.SharedInformerFactory
-	if watchTestkubeCrAllNamespaces == true {
+		var testkubeInformerFactory externalversions.SharedInformerFactory
 		testkubeInformerFactory = externalversions.NewSharedInformerFactoryWithOptions(
-			testKubeClientset, 0)
-	} else {
-		testkubeInformerFactory = externalversions.NewSharedInformerFactoryWithOptions(
-			testKubeClientset, 0, externalversions.WithNamespace(testkubeNamespace))
+			testKubeClientset, 0, externalversions.WithNamespace(namespace))
+		k8sInformers.testTriggerInformers = append(k8sInformers.testTriggerInformers, testkubeInformerFactory.Tests().V1().TestTriggers())
+		k8sInformers.testSuiteInformers = append(k8sInformers.testSuiteInformers, testkubeInformerFactory.Tests().V2().TestSuites())
+		k8sInformers.testInformers = append(k8sInformers.testInformers, testkubeInformerFactory.Tests().V3().Tests())
 	}
-	k8sInformers.testTriggerInformers = append(k8sInformers.testTriggerInformers, testkubeInformerFactory.Tests().V1().TestTriggers())
-	k8sInformers.testSuiteInformers = append(k8sInformers.testSuiteInformers, testkubeInformerFactory.Tests().V2().TestSuites())
-	k8sInformers.testInformers = append(k8sInformers.testInformers, testkubeInformerFactory.Tests().V3().Tests())
 
 	return &k8sInformers
 }
