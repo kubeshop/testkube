@@ -84,6 +84,7 @@ func mapConditionSpecFromCRD(conditionSpec *testsv1.TestTriggerConditionSpec) *t
 
 	return &testkube.TestTriggerConditionSpec{
 		Timeout:    conditionSpec.Timeout,
+		Delay:      conditionSpec.Delay,
 		Conditions: conditions,
 	}
 }
@@ -120,13 +121,17 @@ func mapProbeSpecFromCRD(probeSpec *testsv1.TestTriggerProbeSpec) *testkube.Test
 		}
 
 		probes = append(probes, testkube.TestTriggerProbe{
-			Uri:     probe.Uri,
+			Scheme:  probe.Scheme,
+			Host:    probe.Host,
+			Path:    probe.Path,
+			Port:    probe.Port,
 			Headers: headers,
 		})
 	}
 
 	return &testkube.TestTriggerProbeSpec{
 		Timeout: probeSpec.Timeout,
+		Delay:   probeSpec.Delay,
 		Probes:  probes,
 	}
 }

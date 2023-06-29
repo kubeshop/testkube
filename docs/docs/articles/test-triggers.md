@@ -53,6 +53,7 @@ Resource Conditions allows triggers to be defined based on the status conditions
 ```yaml
 conditionSpec:
     timeout: duration in seconds the test trigger waits for conditions, until its stopped
+    delay: duration in seconds the test trigger waits between condition checks      
     conditions:
     - type: test trigger condition type
       status: test trigger condition status, supported values - True, False, Unknown
@@ -67,9 +68,13 @@ Resource Probes allows triggers to be defined based on the probe status.
 ```yaml
 probeSpec:
     timeout: duration in seconds the test trigger waits for probes, until its stopped
+    delay: duration in seconds the test trigger waits between probes
     probes:
-    - uri: test trigger probe uri
-      headers: test trigger probe headers
+    - scheme: test trigger condition probe scheme to connect to host, default is http
+      host: test trigger condition probe host, default is pod ip or service name
+      path: test trigger condition probe path to check, default is /
+      port: test trigger condition probe port to connect
+      headers: test trigger condition probe headers to submit
 ```
 
 ### Supported Values
@@ -100,6 +105,7 @@ spec:
   event: modified
   conditionSpec:
     timeout: 100
+    delay: 2
     conditions:
     - type: Progressing
       status: "True"
@@ -109,11 +115,16 @@ spec:
       status: "True"
   probeSpec:
     timeout: 50
+    delay: 1
     probes:
-    - uri: https://testkube.io
+    - scheme: http
+      host: testkube-api-server
+      path: /health
+      port: 8088
       headers:
         X-Token: "12345"
-    - uri: https://kubeshopppp.io     
+    - host: testkube-dashboard
+      port: 8080     
   action: run
   execution: testsuite
   testSelector:

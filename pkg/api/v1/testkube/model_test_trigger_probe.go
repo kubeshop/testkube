@@ -11,8 +11,14 @@ package testkube
 
 // supported probe for test triggers
 type TestTriggerProbe struct {
-	// test trigger condition probe uri
-	Uri string `json:"uri"`
-	// probe headers
+	// test trigger condition probe scheme to connect to host, default is http
+	Scheme string `json:"scheme,omitempty"`
+	// test trigger condition probe host, default is pod ip or service name
+	Host string `json:"host,omitempty"`
+	// test trigger condition probe path to check, default is /
+	Path string `json:"path,omitempty"`
+	// test trigger condition probe port to connect
+	Port int32 `json:"port,omitempty"`
+	// test trigger condition probe headers to submit
 	Headers map[string]string `json:"headers,omitempty"`
 }

@@ -47,6 +47,9 @@ spec:
     {{- if .ConditionSpec.Timeout }}
     timeout: {{ .ConditionSpec.Timeout }}
     {{- end }}
+    {{- if .ConditionSpec.Delay }}
+    delay: {{ .ConditionSpec.Delay }}
+    {{- end }}    
     {{- if ne (len .ConditionSpec.Conditions) 0 }}
     conditions:
     {{- range $exp := .ConditionSpec.Conditions }}
@@ -66,10 +69,25 @@ spec:
     {{- if .ProbeSpec.Timeout }}
     timeout: {{ .ProbeSpec.Timeout }}
     {{- end }}
+    {{- if .ProbeSpec.Delay }}
+    delay: {{ .ProbeSpec.Delay }}
+    {{- end }} 
     {{- if ne (len .ProbeSpec.Probes) 0 }}
     probes:
     {{- range $exp := .ProbeSpec.Probes }}
-    - uri: {{ $exp.Uri }}
+    - 
+      {{- if .ProbeSpec.Scheme }}
+      scheme: {{ .ProbeSpec.Scheme }}
+      {{- end }}
+      {{- if .ProbeSpec.Host }}
+      host: {{ .ProbeSpec.Host }}
+      {{- end }}
+      {{- if .ProbeSpec.Path }}
+      path: {{ .ProbeSpec.Path }}
+      {{- end }}
+      {{- if .ProbeSpec.Port }}
+      port: {{ .ProbeSpec.Port }}
+      {{- end }}
       {{- if ne (len $exp.Headers) 0 }}
       headers:
       {{- range $key, $value := $exp.Headers }}

@@ -5035,7 +5035,7 @@ components:
         delay:
           type: integer
           format: int32
-          description: duration in seconds the test trigger waits between condition check
+          description: duration in seconds the test trigger waits between condition checks
           example: 1            
 
     TestTriggerCondition:
@@ -5091,16 +5091,27 @@ components:
     TestTriggerProbe:
       description: supported probe for test triggers
       type: object
-      required:
-        - uri
       properties:
-        uri:
+        scheme:
           type: string
-          description: test trigger condition probe uri
-          example: https://testkube.io
+          description: test trigger condition probe scheme to connect to host, default is http
+          example: http        
+        host:
+          type: string
+          description: test trigger condition probe host, default is pod ip or service name
+          example: testkube-api-server
+        path:
+          type: string
+          description: test trigger condition probe path to check, default is /
+          example: /
+        port:
+          type: integer
+          format: int32
+          description: test trigger condition probe port to connect
+          example: 80        
         headers:
           type: object
-          description: "probe headers"
+          description: test trigger condition probe headers to submit
           additionalProperties:
             type: string
           example:

@@ -14,4 +14,6 @@ type TestTriggerProbeSpec struct {
 	Probes []TestTriggerProbe `json:"probes,omitempty"`
 	// duration in seconds the test trigger waits for probes, until its stopped
 	Timeout int32 `json:"timeout,omitempty"`
+	// duration in seconds the test trigger waits between probes
+	Delay int32 `json:"delay,omitempty"`
 }

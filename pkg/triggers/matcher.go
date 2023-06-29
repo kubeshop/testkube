@@ -145,7 +145,11 @@ outer:
 				break outer
 			}
 
-			time.Sleep(s.defaultConditionsCheckBackoff)
+			delay := s.defaultConditionsCheckBackoff
+			if t.Spec.ConditionSpec.Delay > 0 {
+				delay = time.Duration(t.Spec.ConditionSpec.Delay) * time.Second
+			}
+			time.Sleep(delay)
 		}
 	}
 

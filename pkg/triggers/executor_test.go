@@ -138,7 +138,9 @@ func TestExecute(t *testing.T) {
 			},
 			ProbeSpec: &testtriggersv1.TestTriggerProbeSpec{
 				Probes: []testtriggersv1.TestTriggerProbe{{
-					Uri:     "https://testkube.io",
+					Host:    "testkube-api-server",
+					Path:    "/health",
+					Port:    8088,
 					Headers: map[string]string{"X-Token": "12345"},
 				}},
 			},
