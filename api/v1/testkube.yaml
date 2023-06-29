@@ -5032,6 +5032,11 @@ components:
           format: int32
           description: duration in seconds the test trigger waits for conditions, until its stopped
           example: 1
+        delay:
+          type: integer
+          format: int32
+          description: duration in seconds the test trigger waits between condition check
+          example: 1            
 
     TestTriggerCondition:
       description: supported condition for test triggers
@@ -5077,6 +5082,11 @@ components:
           format: int32
           description: duration in seconds the test trigger waits for probes, until its stopped
           example: 1
+        delay:
+          type: integer
+          format: int32
+          description: duration in seconds the test trigger waits between probes
+          example: 1        
 
     TestTriggerProbe:
       description: supported probe for test triggers
