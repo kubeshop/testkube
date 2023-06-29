@@ -33,6 +33,11 @@ type HelmOptions struct {
 	DryRun bool
 }
 
+const (
+	github = "GitHub"
+	gitlab = "GitLab"
+)
+
 func GetCurrentKubernetesContext() (string, error) {
 	kubectl, err := exec.LookPath("kubectl")
 	if err != nil {
@@ -375,11 +380,14 @@ func PopulateCloudConfig(cfg config.Data, apiKey, orgId, envId, rootDomain strin
 }
 
 func LoginUser(authUri string) (string, string, error) {
-	authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), authUri)
+	ui.H1("Login")
+	connectorID := ui.Select("Choose your login method", []string{github, gitlab})
+
+	authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), authUri, strings.ToLower(connectorID))
 	if err != nil {
 		return "", "", fmt.Errorf("cloud login: %w", err)
 	}
-	ui.H1("Login")
+
 	ui.Paragraph("Your browser should open automatically. If not, please open this link in your browser:")
 	ui.Link(authUrl)
 	ui.Paragraph("(just login and get back to your terminal)")
