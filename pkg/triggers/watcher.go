@@ -9,15 +9,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic/dynamicinformer"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	appsinformerv1 "k8s.io/client-go/informers/apps/v1"
 	"time"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	coreinformerv1 "k8s.io/client-go/informers/core/v1"
 	networkinginformerv1 "k8s.io/client-go/informers/networking/v1"
 	"k8s.io/client-go/kubernetes"
@@ -26,21 +25,12 @@ import (
 	testkubeinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"
 	testkubeinformerv3 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v3"
 
-	networkingv1 "k8s.io/api/networking/v1"
-
-	"github.com/google/go-cmp/cmp"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	testsuitev3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
-	"github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube-operator/pkg/informers/externalversions"
-	testkubeinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"
-	testkubeinformerv3 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v3"
 	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
 )
 
@@ -63,8 +53,8 @@ type k8sInformers struct {
 	testTriggerInformer testkubeinformerv1.TestTriggerInformer
 	testSuiteInformer   testkubeinformerv3.TestSuiteInformer
 	testInformer        testkubeinformerv3.TestInformer
-	triggerCRInformers   map[string]*InformersData
-	crInformers          map[string]*InformersData
+	triggerCRInformers  map[string]*InformersData
+	crInformers         map[string]*InformersData
 }
 
 func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned.Interface, testkubeNamespace string, watcherNamespaces []string) *k8sInformers {
@@ -87,12 +77,12 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 
 	}
 
-		var testkubeInformerFactory externalversions.SharedInformerFactory
-		testkubeInformerFactory = externalversions.NewSharedInformerFactoryWithOptions(
-			testKubeClientset, 0, externalversions.WithNamespace(testkubeNamespace))
-		k8sInformers.testTriggerInformer = testkubeInformerFactory.Tests().V1().TestTriggers()
-		k8sInformers.testSuiteInformer = testkubeInformerFactory.Tests().V3().TestSuites()
-		k8sInformers.testInformer = testkubeInformerFactory.Tests().V3().Tests()
+	var testkubeInformerFactory externalversions.SharedInformerFactory
+	testkubeInformerFactory = externalversions.NewSharedInformerFactoryWithOptions(
+		testKubeClientset, 0, externalversions.WithNamespace(testkubeNamespace))
+	k8sInformers.testTriggerInformer = testkubeInformerFactory.Tests().V1().TestTriggers()
+	k8sInformers.testSuiteInformer = testkubeInformerFactory.Tests().V3().TestSuites()
+	k8sInformers.testInformer = testkubeInformerFactory.Tests().V3().Tests()
 	k8sInformers.triggerCRInformers = make(map[string]*InformersData)
 	k8sInformers.crInformers = make(map[string]*InformersData)
 	return &k8sInformers
@@ -169,9 +159,9 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 		s.informers.configMapInformers[i].Informer().AddEventHandler(s.configMapEventHandler(ctx))
 	}
 
-		s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler(ctx, stop))
-		s.informers.testSuiteInformer.Informer().AddEventHandler(s.testSuiteEventHandler())
-		s.informers.testInformer.Informer().AddEventHandler(s.testEventHandler())
+	s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler(ctx, stop))
+	s.informers.testSuiteInformer.Informer().AddEventHandler(s.testSuiteEventHandler())
+	s.informers.testInformer.Informer().AddEventHandler(s.testEventHandler())
 
 	s.logger.Debugf("trigger service: starting pod informers")
 	for i := range s.informers.podInformers {
@@ -214,11 +204,11 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 	}
 
 	s.logger.Debugf("trigger service: starting test trigger informer")
-		go s.informers.testTriggerInformer.Informer().Run(stop)
+	go s.informers.testTriggerInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting test suite informer")
-		go s.informers.testSuiteInformer.Informer().Run(stop)
+	go s.informers.testSuiteInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting test informer")
-		go s.informers.testInformer.Informer().Run(stop)
+	go s.informers.testInformer.Informer().Run(stop)
 }
 
 func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {

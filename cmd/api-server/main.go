@@ -449,8 +449,6 @@ func main() {
 			triggers.WithHostnameIdentifier(),
 			triggers.WithTestkubeNamespace(cfg.TestkubeNamespace),
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
-			triggers.WatchTestkubeAll(cfg.TestkubeWatchAll),
-			triggers.WatchTestkubeCrNamespaces(cfg.TestkubeCRWatcherNamespaces),
 		)
 		log.DefaultLogger.Info("starting trigger service")
 		triggerService.Run(ctx)
