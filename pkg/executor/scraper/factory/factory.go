@@ -96,11 +96,10 @@ func getCloudLoader(ctx context.Context, params envs.Params) (uploader *cloudscr
 
 	output.PrintLogf("%s Uploading artifacts using Cloud Uploader", ui.IconCheckMark)
 	grpcConn, err := agent.NewGRPCConnection(ctxTimeout, params.CloudAPITLSInsecure, params.CloudAPIURL, log.DefaultLogger)
-	output.PrintLogf("%s Connected to Testkube Cloud", ui.IconCheckMark)
-
 	if err != nil {
 		return nil, err
 	}
+	output.PrintLogf("%s Connected to Testkube Cloud", ui.IconCheckMark)
 
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 	cloudExecutor := cloudexecutor.NewCloudGRPCExecutor(grpcClient, grpcConn, params.CloudAPIKey)
