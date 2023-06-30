@@ -2,8 +2,6 @@ package triggers
 
 import (
 	"context"
-	"k8s.io/apimachinery/pkg/runtime"
-	fake2 "k8s.io/client-go/dynamic/fake"
 	"testing"
 	"time"
 
@@ -141,11 +139,10 @@ func TestService_Run(t *testing.T) {
 
 	fakeTestkubeClientset := faketestkube.NewSimpleClientset()
 	fakeClientset := fake.NewSimpleClientset()
-	fakeDynamicClientset := fake2.NewSimpleDynamicClient(runtime.NewScheme(), nil)
 	s := NewService(
 		sched,
 		fakeClientset,
-		fakeDynamicClientset,
+		nil,
 		fakeTestkubeClientset,
 		mockTestSuitesClient,
 		mockTestsClient,

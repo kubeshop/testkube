@@ -50,21 +50,21 @@ type k8sInformers struct {
 	clusterEventInformers   []coreinformerv1.EventInformer
 	configMapInformers      []coreinformerv1.ConfigMapInformer
 
-	testTriggerInformers []testkubeinformerv1.TestTriggerInformer
-	testSuiteInformers   []testkubeinformerv3.TestSuiteInformer
-	testInformers        []testkubeinformerv3.TestInformer
+	testTriggerInformer testkubeinformerv1.TestTriggerInformer
+	testSuiteInformer   testkubeinformerv3.TestSuiteInformer
+	testInformer        testkubeinformerv3.TestInformer
 	triggerCRInformers   map[string]*InformersData
 	crInformers          map[string]*InformersData
 }
 
-func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned.Interface, testkubeNamespace string, watchK8sResourceNamespaces []string, watchTestkubeAll bool, watchTestkubeCrNamespaces []string) *k8sInformers {
+func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned.Interface, testkubeNamespace string, watcherNamespaces []string) *k8sInformers {
 
 	var k8sInformers k8sInformers
-	if len(watchK8sResourceNamespaces) == 0 {
-		watchK8sResourceNamespaces = append(watchK8sResourceNamespaces, v1.NamespaceAll)
+	if len(watcherNamespaces) == 0 {
+		watcherNamespaces = append(watcherNamespaces, v1.NamespaceAll)
 	}
 
-	for _, namespace := range watchK8sResourceNamespaces {
+	for _, namespace := range watcherNamespaces {
 		f := informers.NewSharedInformerFactoryWithOptions(clientset, 0, informers.WithNamespace(namespace))
 		k8sInformers.podInformers = append(k8sInformers.podInformers, f.Core().V1().Pods())
 		k8sInformers.deploymentInformers = append(k8sInformers.deploymentInformers, f.Apps().V1().Deployments())
@@ -77,22 +77,12 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 
 	}
 
-	if watchTestkubeAll == true {
-		watchTestkubeCrNamespaces = append(watchTestkubeCrNamespaces, v1.NamespaceAll)
-	} else {
-		if len(watchTestkubeCrNamespaces) == 0 {
-			watchTestkubeCrNamespaces = append(watchTestkubeCrNamespaces, testkubeNamespace)
-		}
-	}
-
-	for _, namespace := range watchTestkubeCrNamespaces {
 		var testkubeInformerFactory externalversions.SharedInformerFactory
 		testkubeInformerFactory = externalversions.NewSharedInformerFactoryWithOptions(
-			testKubeClientset, 0, externalversions.WithNamespace(namespace))
-		k8sInformers.testTriggerInformers = append(k8sInformers.testTriggerInformers, testkubeInformerFactory.Tests().V1().TestTriggers())
-		k8sInformers.testSuiteInformers = append(k8sInformers.testSuiteInformers, testkubeInformerFactory.Tests().V3().TestSuites())
-		k8sInformers.testInformers = append(k8sInformers.testInformers, testkubeInformerFactory.Tests().V3().Tests())
-	}
+			testKubeClientset, 0, externalversions.WithNamespace(testkubeNamespace))
+		k8sInformers.testTriggerInformer = testkubeInformerFactory.Tests().V1().TestTriggers()
+		k8sInformers.testSuiteInformer = testkubeInformerFactory.Tests().V3().TestSuites()
+		k8sInformers.testInformer = testkubeInformerFactory.Tests().V3().Tests()
 	k8sInformers.triggerCRInformers = make(map[string]*InformersData)
 	k8sInformers.crInformers = make(map[string]*InformersData)
 	return &k8sInformers
@@ -121,7 +111,7 @@ func (s *Service) runWatcher(ctx context.Context, leaseChan chan bool) {
 			} else {
 				if !running {
 					s.logger.Infof("trigger service: instance %s in cluster %s acquired lease", s.identifier, s.clusterID)
-					s.informers = newK8sInformers(s.clientset, s.testKubeClientset, s.testkubeNamespace, s.watcherNamespaces, s.watchTestkubeAll, s.watchTestkubeCRNamespaces)
+					s.informers = newK8sInformers(s.clientset, s.testKubeClientset, s.testkubeNamespace, s.watcherNamespaces)
 					stopChan = make(chan struct{})
 					s.runInformers(ctx, stopChan)
 					running = true
@@ -169,15 +159,9 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 		s.informers.configMapInformers[i].Informer().AddEventHandler(s.configMapEventHandler(ctx))
 	}
 
-	for i := range s.informers.testTriggerInformers {
-		s.informers.testTriggerInformers[i].Informer().AddEventHandler(s.testTriggerEventHandler(ctx, stop))
-	}
-	for i := range s.informers.testSuiteInformers {
-		s.informers.testSuiteInformers[i].Informer().AddEventHandler(s.testSuiteEventHandler())
-	}
-	for i := range s.informers.testInformers {
-		s.informers.testInformers[i].Informer().AddEventHandler(s.testEventHandler())
-	}
+		s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler(ctx, stop))
+		s.informers.testSuiteInformer.Informer().AddEventHandler(s.testSuiteEventHandler())
+		s.informers.testInformer.Informer().AddEventHandler(s.testEventHandler())
 
 	s.logger.Debugf("trigger service: starting pod informers")
 	for i := range s.informers.podInformers {
@@ -220,17 +204,11 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 	}
 
 	s.logger.Debugf("trigger service: starting test trigger informer")
-	for i := range s.informers.testTriggerInformers {
-		go s.informers.testTriggerInformers[i].Informer().Run(stop)
-	}
+		go s.informers.testTriggerInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting test suite informer")
-	for i := range s.informers.testSuiteInformers {
-		go s.informers.testSuiteInformers[i].Informer().Run(stop)
-	}
+		go s.informers.testSuiteInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting test informer")
-	for i := range s.informers.testInformers {
-		go s.informers.testInformers[i].Informer().Run(stop)
-	}
+		go s.informers.testInformer.Informer().Run(stop)
 }
 
 func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {

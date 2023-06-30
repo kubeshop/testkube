@@ -32,7 +32,7 @@ func TestService_runWatcher_lease(t *testing.T) {
 			clientset:         clientset,
 			testKubeClientset: testKubeClientset,
 			logger:            log.DefaultLogger,
-			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}, false, []string{}),
+			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}),
 		}
 
 		leaseChan := make(chan bool)
@@ -90,7 +90,7 @@ func TestService_runWatcher_lease(t *testing.T) {
 			clientset:         clientset,
 			testKubeClientset: testKubeClientset,
 			logger:            log.DefaultLogger,
-			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}, false, []string{}),
+			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}),
 		}
 
 		leaseChan := make(chan bool)
@@ -130,73 +130,6 @@ func TestService_runWatcher_lease(t *testing.T) {
 		assert.True(t, match, "pod created event should match the test trigger condition")
 	})
 
-	t.Run("create a test trigger in an alternate namespace for pod created and match event on pod creation", func(t *testing.T) {
-		t.Parallel()
-
-		clientset := fake.NewSimpleClientset()
-		testKubeClientset := faketestkube.NewSimpleClientset()
-
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel()
-
-		testNamespace := "testkube"
-		testAlternateNamespace := "testkube-alternate"
-
-		match := false
-		testExecutorF := func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
-			assert.NotEqual(t, testNamespace, trigger.Namespace)
-			assert.Equal(t, "test-trigger-3", trigger.Name)
-			match = true
-			return nil
-		}
-		s := &Service{
-			executor:          testExecutorF,
-			identifier:        "testkube-api",
-			clusterID:         "testkube",
-			triggerStatus:     make(map[statusKey]*triggerStatus),
-			clientset:         clientset,
-			testKubeClientset: testKubeClientset,
-			logger:            log.DefaultLogger,
-			watchTestkubeAll:  true,
-			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}, true, []string{}),
-		}
-
-		leaseChan := make(chan bool)
-		go func() { time.Sleep(50 * time.Millisecond); leaseChan <- true }()
-		go s.runWatcher(ctx, leaseChan)
-
-		time.Sleep(50 * time.Millisecond)
-		leaseChan <- true
-		time.Sleep(50 * time.Millisecond)
-
-		testTrigger := testtriggersv1.TestTrigger{
-			ObjectMeta: metav1.ObjectMeta{Namespace: testAlternateNamespace, Name: "test-trigger-3"},
-			Spec: testtriggersv1.TestTriggerSpec{
-				Resource:         "pod",
-				ResourceSelector: testtriggersv1.TestTriggerSelector{Namespace: testNamespace, Name: "test-pod"},
-				Event:            "created",
-				Action:           "run",
-				Execution:        "test",
-				TestSelector:     testtriggersv1.TestTriggerSelector{Namespace: testAlternateNamespace, Name: "some-test"},
-			},
-		}
-		createdTestTrigger, err := testKubeClientset.TestsV1().TestTriggers(testAlternateNamespace).Create(ctx, &testTrigger, metav1.CreateOptions{})
-		assert.NotNil(t, createdTestTrigger)
-		assert.NoError(t, err)
-
-		time.Sleep(100 * time.Millisecond)
-
-		assert.Len(t, s.triggerStatus, 1)
-		key := newStatusKey(testAlternateNamespace, "test-trigger-3")
-		assert.Contains(t, s.triggerStatus, key)
-
-		testPod := corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace, Name: "test-pod"}}
-		_, err = clientset.CoreV1().Pods(testNamespace).Create(ctx, &testPod, metav1.CreateOptions{})
-		assert.NoError(t, err)
-
-		time.Sleep(100 * time.Millisecond)
-		assert.True(t, match, "pod created event should match the test trigger condition")
-	})
 }
 
 func TestService_runWatcher_noLease(t *testing.T) {
@@ -218,7 +151,7 @@ func TestService_runWatcher_noLease(t *testing.T) {
 			clientset:         clientset,
 			testKubeClientset: testKubeClientset,
 			logger:            log.DefaultLogger,
-			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}, false, []string{}),
+			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}),
 		}
 
 		leaseChan := make(chan bool)
@@ -258,7 +191,7 @@ func TestService_runWatcher_noLease(t *testing.T) {
 			clientset:         clientset,
 			testKubeClientset: testKubeClientset,
 			logger:            log.DefaultLogger,
-			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}, false, []string{}),
+			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}),
 		}
 
 		leaseChan := make(chan bool)
@@ -300,7 +233,7 @@ func TestService_runWatcher_noLease(t *testing.T) {
 			clientset:         clientset,
 			testKubeClientset: testKubeClientset,
 			logger:            log.DefaultLogger,
-			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}, false, []string{}),
+			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}),
 		}
 
 		leaseChan := make(chan bool)
