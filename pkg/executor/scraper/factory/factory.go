@@ -3,6 +3,7 @@ package factory
 import (
 	"context"
 	"fmt"
+	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/pkg/errors"
@@ -89,12 +90,16 @@ func GetScraper(ctx context.Context, params envs.Params, extractorType Extractor
 }
 
 func getCloudLoader(ctx context.Context, params envs.Params) (uploader *cloudscraper.CloudUploader, err error) {
-	output.PrintLog(fmt.Sprintf("%s Uploading artifacts using Cloud Uploader", ui.IconCheckMark))
+	// timeout blocking connection to cloud
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(params.CloudConnectionTimeoutSec)*time.Second)
+	defer cancel()
 
-	grpcConn, err := agent.NewGRPCConnection(ctx, params.CloudAPITLSInsecure, params.CloudAPIURL, log.DefaultLogger)
+	output.PrintLogf("%s Uploading artifacts using Cloud Uploader (timeout:%ds)", ui.IconCheckMark, params.CloudConnectionTimeoutSec)
+	grpcConn, err := agent.NewGRPCConnection(ctxTimeout, params.CloudAPITLSInsecure, params.CloudAPIURL, log.DefaultLogger)
 	if err != nil {
 		return nil, err
 	}
+	output.PrintLogf("%s Connected to Testkube Cloud", ui.IconCheckMark)
 
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 	cloudExecutor := cloudexecutor.NewCloudGRPCExecutor(grpcClient, grpcConn, params.CloudAPIKey)
