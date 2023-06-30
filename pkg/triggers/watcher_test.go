@@ -32,7 +32,7 @@ func TestService_runWatcher_lease(t *testing.T) {
 			clientset:         clientset,
 			testKubeClientset: testKubeClientset,
 			logger:            log.DefaultLogger,
-			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}, false),
+			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}, false, []string{}),
 		}
 
 		leaseChan := make(chan bool)
@@ -90,7 +90,7 @@ func TestService_runWatcher_lease(t *testing.T) {
 			clientset:         clientset,
 			testKubeClientset: testKubeClientset,
 			logger:            log.DefaultLogger,
-			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}, false),
+			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}, false, []string{}),
 		}
 
 		leaseChan := make(chan bool)
@@ -150,15 +150,15 @@ func TestService_runWatcher_lease(t *testing.T) {
 			return nil
 		}
 		s := &Service{
-			executor:                     testExecutorF,
-			identifier:                   "testkube-api",
-			clusterID:                    "testkube",
-			triggerStatus:                make(map[statusKey]*triggerStatus),
-			clientset:                    clientset,
-			testKubeClientset:            testKubeClientset,
-			logger:                       log.DefaultLogger,
-			watchTestkubeCrAllNamespaces: true,
-			informers:                    newK8sInformers(clientset, testKubeClientset, "", []string{}, true),
+			executor:          testExecutorF,
+			identifier:        "testkube-api",
+			clusterID:         "testkube",
+			triggerStatus:     make(map[statusKey]*triggerStatus),
+			clientset:         clientset,
+			testKubeClientset: testKubeClientset,
+			logger:            log.DefaultLogger,
+			watchTestkubeAll:  true,
+			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}, true, []string{}),
 		}
 
 		leaseChan := make(chan bool)
@@ -218,7 +218,7 @@ func TestService_runWatcher_noLease(t *testing.T) {
 			clientset:         clientset,
 			testKubeClientset: testKubeClientset,
 			logger:            log.DefaultLogger,
-			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}, false),
+			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}, false, []string{}),
 		}
 
 		leaseChan := make(chan bool)
@@ -258,7 +258,7 @@ func TestService_runWatcher_noLease(t *testing.T) {
 			clientset:         clientset,
 			testKubeClientset: testKubeClientset,
 			logger:            log.DefaultLogger,
-			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}, false),
+			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}, false, []string{}),
 		}
 
 		leaseChan := make(chan bool)
@@ -300,7 +300,7 @@ func TestService_runWatcher_noLease(t *testing.T) {
 			clientset:         clientset,
 			testKubeClientset: testKubeClientset,
 			logger:            log.DefaultLogger,
-			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}, false),
+			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}, false, []string{}),
 		}
 
 		leaseChan := make(chan bool)

@@ -3,6 +3,7 @@ package triggers
 import (
 	"context"
 	"fmt"
+	"k8s.io/client-go/dynamic"
 	"os"
 	"strings"
 	"time"
@@ -56,6 +57,7 @@ type Service struct {
 	triggerStatus                 map[statusKey]*triggerStatus
 	scheduler                     *scheduler.Scheduler
 	clientset                     kubernetes.Interface
+	dynamicClientset              dynamic.Interface
 	testKubeClientset             testkubeclientsetv1.Interface
 	testSuitesClient              testsuitesclientv2.Interface
 	testsClient                   testsclientv3.Interface
@@ -66,7 +68,8 @@ type Service struct {
 	executorsClient               executorsclientv1.Interface
 	testkubeNamespace             string
 	watcherNamespaces             []string
-	watchTestkubeCrAllNamespaces  bool
+	watchTestkubeAll              bool
+	watchTestkubeCRNamespaces     []string
 }
 
 type Option func(*Service)
@@ -74,6 +77,7 @@ type Option func(*Service)
 func NewService(
 	scheduler *scheduler.Scheduler,
 	clientset kubernetes.Interface,
+	dynamicClientset dynamic.Interface,
 	testKubeClientset testkubeclientsetv1.Interface,
 	testSuitesClient testsuitesclientv2.Interface,
 	testsClient testsclientv3.Interface,
@@ -96,6 +100,7 @@ func NewService(
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		scheduler:                     scheduler,
 		clientset:                     clientset,
+		dynamicClientset:              dynamicClientset,
 		testKubeClientset:             testKubeClientset,
 		testSuitesClient:              testSuitesClient,
 		testsClient:                   testsClient,
@@ -116,7 +121,7 @@ func NewService(
 		opt(s)
 	}
 
-	s.informers = newK8sInformers(clientset, testKubeClientset, s.testkubeNamespace, s.watcherNamespaces, s.watchTestkubeCrAllNamespaces)
+	s.informers = newK8sInformers(clientset, testKubeClientset, s.testkubeNamespace, s.watcherNamespaces, s.watchTestkubeAll, s.watchTestkubeCRNamespaces)
 
 	return s
 }
@@ -183,9 +188,20 @@ func WithWatcherNamespaces(namespaces string) Option {
 	}
 }
 
-func WatchTestkubeCrAllNamespaces(watchTestkubeCrAllNamespaces bool) Option {
+func WatchTestkubeAll(watchTestkubeAll bool) Option {
 	return func(s *Service) {
-		s.watchTestkubeCrAllNamespaces = watchTestkubeCrAllNamespaces
+		s.watchTestkubeAll = watchTestkubeAll
+	}
+}
+
+func WatchTestkubeCrNamespaces(namespaces string) Option {
+	return func(s *Service) {
+		for _, namespace := range strings.Split(namespaces, ",") {
+			value := strings.TrimSpace(namespace)
+			if value != "" {
+				s.watcherNamespaces = append(s.watcherNamespaces, value)
+			}
+		}
 	}
 }
 
