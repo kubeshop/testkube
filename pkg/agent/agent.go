@@ -66,7 +66,8 @@ type Agent struct {
 	receiveTimeout      time.Duration
 	healthcheckInterval time.Duration
 
-	clusterID string
+	clusterID   string
+	clusterName string
 }
 
 func NewAgent(logger *zap.SugaredLogger,
@@ -77,6 +78,7 @@ func NewAgent(logger *zap.SugaredLogger,
 	logStreamWorkerCount int,
 	logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error),
 	clusterID string,
+	clusterName string,
 ) (*Agent, error) {
 	return &Agent{
 		handler:                 handler,

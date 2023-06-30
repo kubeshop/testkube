@@ -513,25 +513,10 @@ jobs:
           export RELEASE_VERSION
           export SERVICE
 
-          # Check if release branch exists in helm-charts repository
-          REPO_OWNER=kubeshop
-          REPO_NAME=helm-charts
-          RELEASE_BRANCH_NAME=release/$SERVICE/$RELEASE_VERSION
-          echo $RELEASE_VERSION
-          STATUS=$(curl -s -o /dev/null -w '%{http_code}' -H "${AUTH_HEADER}" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/branches/${RELEASE_BRANCH_NAME}")
-
-          if [ "${STATUS}" -eq 404 ]; then
-            git fetch origin main
-            git checkout main
-            cd ./scripts
-            ./chart_releaser.sh --helm-chart-folder testkube-$SERVICE --testkube-executor true
-          else
-            git fetch origin "release/$SERVICE/$RELEASE_VERSION"
-            git checkout "release/$SERVICE/$RELEASE_VERSION"
-            echo "Switched to release branch"
-            cd ./scripts
-            ./chart_releaser.sh --helm-chart-folder testkube-$SERVICE --testkube-executor true --branch true
-          fi
+          git fetch origin main
+          git checkout main
+          cd ./scripts
+          ./chart_releaser.sh --helm-chart-folder testkube-$SERVICE --testkube-executor true
 
         env:
           SERVICE: api

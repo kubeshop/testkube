@@ -1,15 +1,19 @@
 package common
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
+	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/internal/migrations"
 	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
+	"github.com/kubeshop/testkube/pkg/cloudlogin"
 	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -179,7 +183,7 @@ func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
 	cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
 }
 
-func PopulateLoginDataToContext(orgID, envID, token string, options HelmOptions, cfg config.Data) error {
+func PopulateLoginDataToContext(orgID, envID, token, refreshToken string, options HelmOptions, cfg config.Data) error {
 	if options.CloudAgentToken != "" {
 		cfg.CloudContext.AgentKey = options.CloudAgentToken
 	}
@@ -195,7 +199,13 @@ func PopulateLoginDataToContext(orgID, envID, token string, options HelmOptions,
 	cfg.ContextType = config.ContextTypeCloud
 	cfg.CloudContext.OrganizationId = orgID
 	cfg.CloudContext.EnvironmentId = envID
-	cfg.CloudContext.ApiKey = token
+	cfg.CloudContext.TokenType = config.TokenTypeOIDC
+	if token != "" {
+		cfg.CloudContext.ApiKey = token
+	}
+	if refreshToken != "" {
+		cfg.CloudContext.RefreshToken = refreshToken
+	}
 
 	cfg, err := PopulateOrgAndEnvNames(cfg, orgID, envID, options.CloudRootDomain)
 	if err != nil {
@@ -233,6 +243,37 @@ func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 	}
 	if options.CloudOrgId != "" {
 		cfg.CloudContext.OrganizationId = options.CloudOrgId
+		updated = true
+	}
+
+	if updated {
+		return config.Save(cfg)
+	}
+
+	return nil
+}
+
+func IsUserLoggedIn(cfg config.Data, options HelmOptions) bool {
+	if options.CloudUris.Api != cfg.CloudContext.ApiUri {
+		//different environment
+		return false
+	}
+
+	if cfg.CloudContext.ApiKey != "" && cfg.CloudContext.RefreshToken != "" {
+		// users with refresh token don't need to login again
+		// since on expired token they will be logged in automatically
+		return true
+	}
+	return false
+}
+func UpdateTokens(cfg config.Data, token, refreshToken string) error {
+	var updated bool
+	if token != cfg.CloudContext.ApiKey {
+		cfg.CloudContext.ApiKey = token
+		updated = true
+	}
+	if refreshToken != cfg.CloudContext.RefreshToken {
+		cfg.CloudContext.RefreshToken = refreshToken
 		updated = true
 	}
 
@@ -331,4 +372,46 @@ func PopulateCloudConfig(cfg config.Data, apiKey, orgId, envId, rootDomain strin
 	}
 
 	return cfg
+}
+
+func LoginUser(authUri string) (string, string, error) {
+	authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), authUri)
+	if err != nil {
+		return "", "", fmt.Errorf("cloud login: %w", err)
+	}
+	ui.H1("Login")
+	ui.Paragraph("Your browser should open automatically. If not, please open this link in your browser:")
+	ui.Link(authUrl)
+	ui.Paragraph("(just login and get back to your terminal)")
+	ui.Paragraph("")
+
+	if ok := ui.Confirm("Continue"); !ok {
+		return "", "", fmt.Errorf("login cancelled")
+	}
+
+	// open browser with login page and redirect to localhost
+	open.Run(authUrl)
+
+	idToken, refreshToken, err := uiGetToken(tokenChan)
+	if err != nil {
+		return "", "", fmt.Errorf("getting token")
+	}
+	return idToken, refreshToken, nil
+}
+
+func uiGetToken(tokenChan chan cloudlogin.Tokens) (string, string, error) {
+	// wait for token received to browser
+	s := ui.NewSpinner("waiting for auth token")
+
+	var token cloudlogin.Tokens
+	select {
+	case token = <-tokenChan:
+		s.Success()
+	case <-time.After(5 * time.Minute):
+		s.Fail("Timeout waiting for auth token")
+		return "", "", fmt.Errorf("timeout waiting for auth token")
+	}
+	ui.NL()
+
+	return token.IDToken, token.RefreshToken, nil
 }

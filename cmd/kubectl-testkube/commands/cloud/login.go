@@ -1,14 +1,10 @@
 package cloud
 
 import (
-	"context"
-
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
-	"github.com/kubeshop/testkube/pkg/cloudlogin"
 	"github.com/kubeshop/testkube/pkg/ui"
 
-	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 )
 
@@ -21,23 +17,8 @@ func NewLoginCmd() *cobra.Command {
 		Short:   "Login to Testkube Cloud",
 		Run: func(cmd *cobra.Command, args []string) {
 			opts.CloudUris = common.NewCloudUris(opts.CloudRootDomain)
-			authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), opts.CloudUris.Auth)
-			ui.ExitOnError("cloud login", err)
-
 			ui.H1("Login")
-			ui.Paragraph("Your browser should open automatically. If not, please open this link in your browser:")
-			ui.Link(authUrl)
-			ui.Paragraph("(just login and get back to your terminal)")
-			ui.Paragraph("")
-
-			if ok := ui.Confirm("Continue"); !ok {
-				return
-			}
-
-			// open browser with login page and redirect to localhost
-			open.Run(authUrl)
-
-			token, err := uiGetToken(tokenChan)
+			token, refreshToken, err := common.LoginUser(opts.CloudUris.Auth)
 			ui.ExitOnError("getting token", err)
 
 			orgID := opts.CloudOrgId
@@ -54,20 +35,7 @@ func NewLoginCmd() *cobra.Command {
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config file", err)
 
-			cfg.ContextType = config.ContextTypeCloud
-			cfg.CloudContext.OrganizationId = orgID
-			cfg.CloudContext.EnvironmentId = envID
-
-			uris := opts.CloudUris
-			cfg.CloudContext.ApiUri = uris.Api
-			cfg.CloudContext.UiUri = uris.Ui
-			cfg.CloudContext.AgentUri = uris.Agent
-			cfg.CloudContext.ApiKey = token
-			cfg.CloudContext.TokenType = config.TokenTypeOIDC
-
-			cfg = common.PopulateCloudConfig(cfg, token, orgID, envID, opts.CloudRootDomain)
-
-			err = config.Save(cfg)
+			err = common.PopulateLoginDataToContext(orgID, envID, token, refreshToken, opts, cfg)
 			ui.ExitOnError("saving config file", err)
 
 			ui.Success("Your config was updated with new values")
