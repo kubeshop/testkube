@@ -67,7 +67,7 @@ func printParams(params Params) {
 	output.PrintLogf("RUNNER_CLOUD_API_TLS_INSECURE=\"%t\"", params.CloudAPITLSInsecure)
 	output.PrintLogf("RUNNER_CLOUD_API_URL=\"%s\"", params.CloudAPIURL)
 	printSensitiveParam("RUNNER_CLOUD_API_KEY", params.CloudAPIKey)
-	output.PrintLogf("RUNNER_CLOUD_CONNECTION_TIMEOUT=\"%s\"", params.CloudConnectionTimeoutSec)
+	output.PrintLogf("RUNNER_CLOUD_CONNECTION_TIMEOUT=%d", params.CloudConnectionTimeoutSec)
 }
 
 // printSensitiveParam shows in logs if a parameter is set or not
