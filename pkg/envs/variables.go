@@ -11,24 +11,25 @@ import (
 
 // Params are the environment variables provided by the Testkube api-server
 type Params struct {
-	Endpoint            string // RUNNER_ENDPOINT
-	AccessKeyID         string // RUNNER_ACCESSKEYID
-	SecretAccessKey     string // RUNNER_SECRETACCESSKEY
-	Region              string // RUNNER_REGION
-	Token               string // RUNNER_TOKEN
-	Bucket              string // RUNNER_BUCKET
-	Ssl                 bool   // RUNNER_SSL
-	ScrapperEnabled     bool   // RUNNER_SCRAPPERENABLED
-	DataDir             string // RUNNER_DATADIR
-	GitUsername         string // RUNNER_GITUSERNAME
-	GitToken            string // RUNNER_GITTOKEN
-	ClusterID           string `envconfig:"RUNNER_CLUSTERID"`              // RUNNER_CLUSTERID
-	CDEventsTarget      string `envconfig:"RUNNER_CDEVENTS_TARGET"`        // RUNNER_CDEVENTS_TARGET
-	DashboardURI        string `envconfig:"RUNNER_DASHBOARD_URI"`          // RUNNER_DASHBOARD_URI
-	CloudMode           bool   `envconfig:"RUNNER_CLOUD_MODE"`             // RUNNER_CLOUD_MODE
-	CloudAPIKey         string `envconfig:"RUNNER_CLOUD_API_KEY"`          // RUNNER_CLOUD_API_KEY
-	CloudAPITLSInsecure bool   `envconfig:"RUNNER_CLOUD_API_TLS_INSECURE"` // RUNNER_CLOUD_API_TLS_INSECURE
-	CloudAPIURL         string `envconfig:"RUNNER_CLOUD_API_URL"`          // RUNNER_CLOUD_API_URL
+	Endpoint                  string // RUNNER_ENDPOINT
+	AccessKeyID               string // RUNNER_ACCESSKEYID
+	SecretAccessKey           string // RUNNER_SECRETACCESSKEY
+	Region                    string // RUNNER_REGION
+	Token                     string // RUNNER_TOKEN
+	Bucket                    string // RUNNER_BUCKET
+	Ssl                       bool   // RUNNER_SSL
+	ScrapperEnabled           bool   // RUNNER_SCRAPPERENABLED
+	DataDir                   string // RUNNER_DATADIR
+	GitUsername               string // RUNNER_GITUSERNAME
+	GitToken                  string // RUNNER_GITTOKEN
+	ClusterID                 string `envconfig:"RUNNER_CLUSTERID"`                             // RUNNER_CLUSTERID
+	CDEventsTarget            string `envconfig:"RUNNER_CDEVENTS_TARGET"`                       // RUNNER_CDEVENTS_TARGET
+	DashboardURI              string `envconfig:"RUNNER_DASHBOARD_URI"`                         // RUNNER_DASHBOARD_URI
+	CloudMode                 bool   `envconfig:"RUNNER_CLOUD_MODE"`                            // RUNNER_CLOUD_MODE
+	CloudAPIKey               string `envconfig:"RUNNER_CLOUD_API_KEY"`                         // RUNNER_CLOUD_API_KEY
+	CloudAPITLSInsecure       bool   `envconfig:"RUNNER_CLOUD_API_TLS_INSECURE"`                // RUNNER_CLOUD_API_TLS_INSECURE
+	CloudAPIURL               string `envconfig:"RUNNER_CLOUD_API_URL"`                         // RUNNER_CLOUD_API_URL
+	CloudConnectionTimeoutSec int    `envconfig:"RUNNER_CLOUD_CONNECTION_TIMEOUT" default:"10"` // RUNNER_CLOUD_CONNECTION_TIMEOUT
 }
 
 // LoadTestkubeVariables loads the parameters provided as environment variables in the Test CRD
@@ -66,6 +67,7 @@ func printParams(params Params) {
 	output.PrintLogf("RUNNER_CLOUD_API_TLS_INSECURE=\"%t\"", params.CloudAPITLSInsecure)
 	output.PrintLogf("RUNNER_CLOUD_API_URL=\"%s\"", params.CloudAPIURL)
 	printSensitiveParam("RUNNER_CLOUD_API_KEY", params.CloudAPIKey)
+	output.PrintLogf("RUNNER_CLOUD_CONNECTION_TIMEOUT=%d", params.CloudConnectionTimeoutSec)
 }
 
 // printSensitiveParam shows in logs if a parameter is set or not
