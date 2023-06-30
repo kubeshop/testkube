@@ -34,7 +34,8 @@ func NewGetCmd() *cobra.Command {
 
 			validator.PersistentPreRunVersionCheck(cmd, common.Version)
 
-		}}
+		},
+	}
 
 	cmd.AddCommand(tests.NewGetTestsCmd())
 	cmd.AddCommand(testsuites.NewGetTestSuiteCmd())
