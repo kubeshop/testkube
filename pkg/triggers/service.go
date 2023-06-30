@@ -18,6 +18,7 @@ import (
 	testsuitesclientv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
 	testkubeclientsetv1 "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
@@ -64,6 +65,7 @@ type Service struct {
 	logger                        *zap.SugaredLogger
 	configMap                     config.Repository
 	executorsClient               executorsclientv1.Interface
+	httpClient                    http.HttpClient
 	testkubeNamespace             string
 	watcherNamespaces             []string
 }
@@ -106,6 +108,7 @@ func NewService(
 		logger:                        logger,
 		configMap:                     configMap,
 		executorsClient:               executorsClient,
+		httpClient:                    http.NewClient(),
 		watchFromDate:                 time.Now(),
 		triggerStatus:                 make(map[statusKey]*triggerStatus),
 	}

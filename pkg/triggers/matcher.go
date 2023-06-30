@@ -14,6 +14,12 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
+	thttp "github.com/kubeshop/testkube/pkg/http"
+)
+
+const (
+	defaultScheme = "http"
+	defaultPath   = "/"
 )
 
 var ErrConditionTimeout = errors.New("timed-out waiting for trigger conditions")
@@ -172,7 +178,7 @@ outer:
 	return true, nil
 }
 
-func checkProbes(ctx context.Context, probes []testtriggersv1.TestTriggerProbe, logger *zap.SugaredLogger) bool {
+func checkProbes(ctx context.Context, httpClient thttp.HttpClient, probes []testtriggersv1.TestTriggerProbe, logger *zap.SugaredLogger) bool {
 	var wg sync.WaitGroup
 	ch := make(chan bool, len(probes))
 	defer close(ch)
@@ -207,7 +213,7 @@ func checkProbes(ctx context.Context, probes []testtriggersv1.TestTriggerProbe, 
 				request.Header.Set(key, value)
 			}
 
-			resp, err := http.DefaultClient.Do(request)
+			resp, err := httpClient.Do(request)
 			if err != nil {
 				logger.Debugw("probe send error", "error", err)
 				ch <- false
@@ -255,13 +261,13 @@ func (s *Service) matchProbes(ctx context.Context, e *watcherEvent, t *testtrigg
 
 	for i := range t.Spec.ProbeSpec.Probes {
 		if t.Spec.ProbeSpec.Probes[i].Scheme == "" {
-			t.Spec.ProbeSpec.Probes[i].Scheme = "http"
+			t.Spec.ProbeSpec.Probes[i].Scheme = defaultScheme
 		}
 		if t.Spec.ProbeSpec.Probes[i].Host == "" {
 			t.Spec.ProbeSpec.Probes[i].Host = host
 		}
 		if t.Spec.ProbeSpec.Probes[i].Path == "" {
-			t.Spec.ProbeSpec.Probes[i].Path = "/"
+			t.Spec.ProbeSpec.Probes[i].Path = defaultPath
 		}
 	}
 
@@ -281,7 +287,7 @@ outer:
 				e.resource, e.namespace, e.name,
 			)
 
-			matched := checkProbes(timeoutCtx, t.Spec.ProbeSpec.Probes, logger)
+			matched := checkProbes(timeoutCtx, s.httpClient, t.Spec.ProbeSpec.Probes, logger)
 			if matched {
 				break outer
 			}
