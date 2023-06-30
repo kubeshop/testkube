@@ -22,7 +22,10 @@ const (
 	defaultPath   = "/"
 )
 
-var ErrConditionTimeout = errors.New("timed-out waiting for trigger conditions")
+var (
+	ErrConditionTimeout = errors.New("timed-out waiting for trigger conditions")
+	ErrProbeTimeout     = errors.New("timed-out waiting for trigger probes")
+)
 
 func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 	for _, status := range s.triggerStatus {
@@ -183,9 +186,8 @@ func checkProbes(ctx context.Context, httpClient thttp.HttpClient, probes []test
 	ch := make(chan bool, len(probes))
 	defer close(ch)
 
+	wg.Add(len(probes))
 	for i := range probes {
-		wg.Add(1)
-
 		go func(probe testtriggersv1.TestTriggerProbe) {
 			defer wg.Done()
 
@@ -196,6 +198,7 @@ func checkProbes(ctx context.Context, httpClient thttp.HttpClient, probes []test
 
 			if host == "" {
 				ch <- false
+				return
 			}
 
 			uri := url.URL{
@@ -207,6 +210,7 @@ func checkProbes(ctx context.Context, httpClient thttp.HttpClient, probes []test
 			if err != nil {
 				logger.Debugw("probe request creating error", "error", err)
 				ch <- false
+				return
 			}
 
 			for key, value := range probe.Headers {
@@ -217,19 +221,24 @@ func checkProbes(ctx context.Context, httpClient thttp.HttpClient, probes []test
 			if err != nil {
 				logger.Debugw("probe send error", "error", err)
 				ch <- false
+				return
 			}
 			defer resp.Body.Close()
 
 			if resp.StatusCode >= 400 {
 				logger.Debugw("probe response with bad status code", "status", resp.StatusCode)
 				ch <- false
+				return
 			}
+
+			ch <- true
 		}(probes[i])
 	}
 
 	wg.Wait()
 
-	for result := range ch {
+	for i := 0; i < len(probes); i++ {
+		result := <-ch
 		if !result {
 			return false
 		}
@@ -280,7 +289,7 @@ outer:
 					" because context got canceled by timeout or exit signal",
 				t.Namespace, t.Name, e.eventType, e.resource, e.namespace, e.name,
 			)
-			return false, errors.WithStack(ErrConditionTimeout)
+			return false, errors.WithStack(ErrProbeTimeout)
 		default:
 			logger.Debugf(
 				"trigger service: matcher component: running probes check iteration for %s %s/%s",
