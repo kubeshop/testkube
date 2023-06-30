@@ -17,7 +17,6 @@ func NewLoginCmd() *cobra.Command {
 		Short:   "Login to Testkube Cloud",
 		Run: func(cmd *cobra.Command, args []string) {
 			opts.CloudUris = common.NewCloudUris(opts.CloudRootDomain)
-			ui.H1("Login")
 			token, refreshToken, err := common.LoginUser(opts.CloudUris.Auth)
 			ui.ExitOnError("getting token", err)
 
