@@ -91,10 +91,10 @@ func GetScraper(ctx context.Context, params envs.Params, extractorType Extractor
 
 func getCloudLoader(ctx context.Context, params envs.Params) (uploader *cloudscraper.CloudUploader, err error) {
 	// timeout blocking connection to cloud
-	ctxTimeout, cancel := context.WithTimeout(ctx, time.Second*10)
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(params.CloudConnectionTimeoutSec))
 	defer cancel()
 
-	output.PrintLogf("%s Uploading artifacts using Cloud Uploader", ui.IconCheckMark)
+	output.PrintLogf("%s Uploading artifacts using Cloud Uploader (timeout:%ds)", ui.IconCheckMark, params.CloudConnectionTimeoutSec)
 	grpcConn, err := agent.NewGRPCConnection(ctxTimeout, params.CloudAPITLSInsecure, params.CloudAPIURL, log.DefaultLogger)
 	if err != nil {
 		return nil, err
