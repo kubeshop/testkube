@@ -20,7 +20,7 @@ type Tokens struct {
 	RefreshToken string
 }
 
-func CloudLogin(ctx context.Context, providerURL string) (string, chan Tokens, error) {
+func CloudLogin(ctx context.Context, providerURL, connectorID string) (string, chan Tokens, error) {
 	provider, err := oidc.NewProvider(ctx, providerURL)
 	if err != nil {
 		return "", nil, err
@@ -47,7 +47,7 @@ func CloudLogin(ctx context.Context, providerURL string) (string, chan Tokens, e
 	go http.ListenAndServe(":8090", nil)
 
 	// Redirect the user to the OIDC provider's login page.
-	authURL := oauth2Config.AuthCodeURL("state", oauth2.AccessTypeOffline)
+	authURL := oauth2Config.AuthCodeURL("state", oauth2.AccessTypeOffline, oauth2.SetAuthURLParam("connector_id", connectorID))
 
 	respCh := make(chan Tokens)
 
