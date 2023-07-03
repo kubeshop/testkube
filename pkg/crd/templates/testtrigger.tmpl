@@ -76,17 +76,17 @@ spec:
     probes:
     {{- range $exp := .ProbeSpec.Probes }}
     - 
-      {{- if .ProbeSpec.Scheme }}
-      scheme: {{ .ProbeSpec.Scheme }}
+      {{- if $exp.Scheme }}
+      scheme: {{ $exp.Scheme }}
       {{- end }}
-      {{- if .ProbeSpec.Host }}
-      host: {{ .ProbeSpec.Host }}
+      {{- if $exp.Host }}
+      host: {{ $exp.Host }}
       {{- end }}
-      {{- if .ProbeSpec.Path }}
-      path: {{ .ProbeSpec.Path }}
+      {{- if $exp.Path }}
+      path: {{ $exp.Path }}
       {{- end }}
-      {{- if .ProbeSpec.Port }}
-      port: {{ .ProbeSpec.Port }}
+      {{- if $exp.Port }}
+      port: {{ $exp.Port }}
       {{- end }}
       {{- if ne (len $exp.Headers) 0 }}
       headers:
