@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
@@ -198,9 +199,9 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 			return getPodConditions(ctx, s.clientset, object)
 		}
 	}
-	getAddrress := func(object metav1.Object) func() (string, error) {
-		return func() (string, error) {
-			return getPodAdress(ctx, s.clientset, object)
+	getAddrress := func(object metav1.Object) func(c context.Context, delay time.Duration) (string, error) {
+		return func(c context.Context, delay time.Duration) (string, error) {
+			return getPodAdress(c, s.clientset, object, delay)
 		}
 	}
 	return cache.ResourceEventHandlerFuncs{
@@ -460,8 +461,8 @@ func (s *Service) serviceEventHandler(ctx context.Context) cache.ResourceEventHa
 			return getServiceConditions(ctx, s.clientset, object)
 		}
 	}
-	getAddrress := func(object metav1.Object) func() (string, error) {
-		return func() (string, error) {
+	getAddrress := func(object metav1.Object) func(c context.Context, delay time.Duration) (string, error) {
+		return func(c context.Context, delay time.Duration) (string, error) {
 			return getServiceAdress(ctx, s.clientset, object)
 		}
 	}

@@ -258,7 +258,7 @@ func (s *Service) matchProbes(ctx context.Context, e *watcherEvent, t *testtrigg
 	host := ""
 	if e.addressGetter != nil {
 		var err error
-		host, err = e.addressGetter()
+		host, err = e.addressGetter(timeoutCtx, s.defaultProbesCheckBackoff)
 		if err != nil {
 			logger.Errorf(
 				"trigger service: matcher component: error getting addess for %s %s/%s because of %v",
