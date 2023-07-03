@@ -61,14 +61,14 @@ func (r *TracetestRunner) Run(ctx context.Context, execution testkube.Execution)
 	te, err := getTracetestEndpointFromVars(envManager)
 	if err != nil {
 		outputPkg.PrintLog(fmt.Sprintf("%s [TracetestRunner]: TRACETEST_ENDPOINT variable was not found: %v", ui.IconCross, err))
-		return result, fmt.Errorf(fmt.Sprintf("variable TRACETEST_ENDPOINT was not found: %v", err))
+		return result, err
 	}
 
 	// Get TRACETEST_OUTPUT_ENDPOINT from execution variables
 	toe, err := getTracetestOutputEndpointFromVars(envManager)
 	if err != nil {
 		outputPkg.PrintLog(fmt.Sprintf("%s [TracetestRunner]: error on processing variables: %v", ui.IconCross, err))
-		return result, fmt.Errorf("error on processing variables: %v", err)
+		return result, err
 	}
 
 	// Prepare args for test run command
