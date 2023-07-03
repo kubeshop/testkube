@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kubeshop/testkube/contrib/executor/tracetest/pkg/command"
 	"github.com/kubeshop/testkube/contrib/executor/tracetest/pkg/model"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
@@ -61,19 +60,16 @@ func (r *TracetestRunner) Run(ctx context.Context, execution testkube.Execution)
 	// Get TRACETEST_ENDPOINT from execution variables
 	te, err := getTracetestEndpointFromVars(envManager)
 	if err != nil {
-		outputPkg.PrintLog(fmt.Sprintf("%s [TracetestRunner]: TRACETEST_ENDPOINT variable was not found", ui.IconCross))
-		return result, err
+		outputPkg.PrintLog(fmt.Sprintf("%s [TracetestRunner]: TRACETEST_ENDPOINT variable was not found: %v", ui.IconCross, err))
+		return result, fmt.Errorf(fmt.Sprintf("variable TRACETEST_ENDPOINT was not found: %v", err))
 	}
 
 	// Get TRACETEST_OUTPUT_ENDPOINT from execution variables
-	toe, _ := getTracetestOutputEndpointFromVars(envManager)
-
-	// Configure Tracetest CLI
-	// err = configureTracetestCLI(te)
-	// if err != nil {
-	//	outputPkg.PrintLog(fmt.Sprintf("%s [TracetestRunner]: Error when configuring the Tracetest CLI", ui.IconCross))
-	//	return result, err
-	// }
+	toe, err := getTracetestOutputEndpointFromVars(envManager)
+	if err != nil {
+		outputPkg.PrintLog(fmt.Sprintf("%s [TracetestRunner]: error on processing variables: %v", ui.IconCross, err))
+		return result, fmt.Errorf("error on processing variables: %v", err)
+	}
 
 	// Prepare args for test run command
 	args, err := buildArgs(execution.Args, te, path)
@@ -135,23 +131,6 @@ func getTracetestOutputEndpointFromVars(envManager *env.Manager) (string, error)
 	}
 
 	return strings.ReplaceAll(v.Value, "\"", ""), nil
-}
-
-// Configure Tracetest CLI
-func configureTracetestCLI(endpoint string) error {
-	outputPkg.PrintLog(fmt.Sprintf("%s [TracetestRunner]: Configuring Tracetest CLI with endpoint %s", ui.IconTruck, endpoint))
-	_, err := command.Run("tracetest", "configure", "--endpoint", endpoint, "--analytics=false")
-	if err != nil {
-		return err
-	}
-
-	// Get Tracetest Version
-	output, err := command.Run("tracetest", "version")
-	if err == nil {
-		outputPkg.PrintLog(fmt.Sprintf("%s [TracetestRunner]: Tracetest CLI version, %s ", ui.IconCheckMark, string(output)))
-	}
-
-	return err
 }
 
 // buildArgs builds up the arguments for

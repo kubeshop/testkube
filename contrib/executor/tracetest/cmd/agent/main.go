@@ -4,11 +4,12 @@ import (
 	"context"
 	"os"
 
+	"github.com/pkg/errors"
+
 	"github.com/kubeshop/testkube/contrib/executor/tracetest/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor/agent"
 	"github.com/kubeshop/testkube/pkg/executor/output"
-	"github.com/pkg/errors"
 )
 
 func main() {
