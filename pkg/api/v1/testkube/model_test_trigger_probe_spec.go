@@ -9,11 +9,11 @@
  */
 package testkube
 
-type TestTriggerConditionSpec struct {
-	// list of test trigger conditions
-	Conditions []TestTriggerCondition `json:"conditions,omitempty"`
-	// duration in seconds the test trigger waits for conditions, until its stopped
+type TestTriggerProbeSpec struct {
+	// list of test trigger probes
+	Probes []TestTriggerProbe `json:"probes,omitempty"`
+	// duration in seconds the test trigger waits for probes, until its stopped
 	Timeout int32 `json:"timeout,omitempty"`
-	// duration in seconds the test trigger waits between condition check
+	// duration in seconds the test trigger waits between probes
 	Delay int32 `json:"delay,omitempty"`
 }

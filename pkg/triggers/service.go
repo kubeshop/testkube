@@ -18,6 +18,7 @@ import (
 	testsuitesclientv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
 	testkubeclientsetv1 "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
@@ -33,6 +34,8 @@ const (
 	defaultMaxLeaseDuration       = 1 * time.Minute
 	defaultConditionsCheckBackoff = 1 * time.Second
 	defaultConditionsCheckTimeout = 60 * time.Second
+	defaultProbesCheckBackoff     = 1 * time.Second
+	defaultProbesCheckTimeout     = 60 * time.Second
 	defaultClusterID              = "testkube-api"
 	defaultIdentifierFormat       = "testkube-api-%s"
 )
@@ -48,6 +51,8 @@ type Service struct {
 	maxLeaseDuration              time.Duration
 	defaultConditionsCheckTimeout time.Duration
 	defaultConditionsCheckBackoff time.Duration
+	defaultProbesCheckTimeout     time.Duration
+	defaultProbesCheckBackoff     time.Duration
 	watchFromDate                 time.Time
 	triggerStatus                 map[statusKey]*triggerStatus
 	scheduler                     *scheduler.Scheduler
@@ -60,6 +65,7 @@ type Service struct {
 	logger                        *zap.SugaredLogger
 	configMap                     config.Repository
 	executorsClient               executorsclientv1.Interface
+	httpClient                    http.HttpClient
 	testkubeNamespace             string
 	watcherNamespaces             []string
 }
@@ -89,6 +95,8 @@ func NewService(
 		maxLeaseDuration:              defaultMaxLeaseDuration,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
+		defaultProbesCheckTimeout:     defaultProbesCheckTimeout,
+		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
 		scheduler:                     scheduler,
 		clientset:                     clientset,
 		testKubeClientset:             testKubeClientset,
@@ -100,6 +108,7 @@ func NewService(
 		logger:                        logger,
 		configMap:                     configMap,
 		executorsClient:               executorsClient,
+		httpClient:                    http.NewClient(),
 		watchFromDate:                 time.Now(),
 		triggerStatus:                 make(map[statusKey]*triggerStatus),
 	}

@@ -22,6 +22,7 @@ type TestTriggerUpsertRequest struct {
 	// listen for event for selected resource
 	Event         string                    `json:"event"`
 	ConditionSpec *TestTriggerConditionSpec `json:"conditionSpec,omitempty"`
+	ProbeSpec     *TestTriggerProbeSpec     `json:"probeSpec,omitempty"`
 	Action        *TestTriggerActions       `json:"action"`
 	Execution     *TestTriggerExecutions    `json:"execution"`
 	TestSelector  *TestTriggerSelector      `json:"testSelector"`

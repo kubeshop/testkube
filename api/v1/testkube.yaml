@@ -4734,8 +4734,7 @@ components:
           additionalProperties:
             type: string
           example:
-            env: "Content-Type"
-            app: "application/xml"
+            Content-Type: "application/xml"
         labels:
           type: object
           description: "webhook labels"
@@ -4943,6 +4942,8 @@ components:
           example: modified
         conditionSpec:
           $ref: "#/components/schemas/TestTriggerConditionSpec"
+        probeSpec:
+          $ref: "#/components/schemas/TestTriggerProbeSpec"          
         action:
           $ref: "#/components/schemas/TestTriggerActions"
         execution:
@@ -5031,6 +5032,11 @@ components:
           format: int32
           description: duration in seconds the test trigger waits for conditions, until its stopped
           example: 1
+        delay:
+          type: integer
+          format: int32
+          description: duration in seconds the test trigger waits between condition checks
+          example: 1            
 
     TestTriggerCondition:
       description: supported condition for test triggers
@@ -5062,6 +5068,54 @@ components:
         - "True"
         - "False"
         - "Unknown"
+
+    TestTriggerProbeSpec:
+      type: object
+      properties:
+        probes:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestTriggerProbe"
+          description: list of test trigger probes
+        timeout:
+          type: integer
+          format: int32
+          description: duration in seconds the test trigger waits for probes, until its stopped
+          example: 1
+        delay:
+          type: integer
+          format: int32
+          description: duration in seconds the test trigger waits between probes
+          example: 1        
+
+    TestTriggerProbe:
+      description: supported probe for test triggers
+      type: object
+      properties:
+        scheme:
+          type: string
+          description: test trigger condition probe scheme to connect to host, default is http
+          example: http        
+        host:
+          type: string
+          description: test trigger condition probe host, default is pod ip or service name
+          example: testkube-api-server
+        path:
+          type: string
+          description: test trigger condition probe path to check, default is /
+          example: /
+        port:
+          type: integer
+          format: int32
+          description: test trigger condition probe port to connect
+          example: 80        
+        headers:
+          type: object
+          description: test trigger condition probe headers to submit
+          additionalProperties:
+            type: string
+          example:
+            Content-Type: "application/xml"
 
     TestTriggerKeyMap:
       type: object
