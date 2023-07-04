@@ -1,6 +1,7 @@
 builds:
   - builder: prebuilt
     goos:
+      - linux
       - windows
       - darwin
     goarch:
@@ -15,8 +16,7 @@ builds:
 archives:
   - id: testkube
     name_template: >-
-      {{ .ProjectName }}_
-      {{ .Version }}_
+      {{ .ProjectName }}_{{.Version}}
       {{- title .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386
