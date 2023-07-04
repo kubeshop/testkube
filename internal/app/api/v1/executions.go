@@ -242,7 +242,7 @@ func (s *TestkubeAPI) GetExecutionHandler() fiber.Handler {
 		ctx := c.Context()
 		id := c.Params("id", "")
 		executionID := c.Params("executionID")
-		errPrefix := "failed to get execution for test '%s' and name '%s'"
+		errPrefix := "failed to get execution " + executionID
 
 		var execution testkube.Execution
 		var err error
