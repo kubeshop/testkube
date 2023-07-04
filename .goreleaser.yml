@@ -12,6 +12,7 @@ builds:
       - v1
     prebuilt:
       path: "{{ .Os }}/testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube{{ .Ext }}"
+binary: kubectl-testkube
 archives:
   - id: testkube
     name_template: >-
