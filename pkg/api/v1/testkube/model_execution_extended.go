@@ -210,7 +210,7 @@ func (e *Execution) WithID() *Execution {
 	return e
 }
 
-func (e *Execution) convertDots(fn func(string) string) Execution {
+func (e *Execution) convertDots(fn func(string) string) *Execution {
 	labels := make(map[string]string, len(e.Labels))
 	for key, value := range e.Labels {
 		labels[fn(key)] = value
@@ -228,13 +228,13 @@ func (e *Execution) convertDots(fn func(string) string) Execution {
 		vars[fn(key)] = value
 	}
 	e.Variables = vars
-	return *e
+	return e
 }
 
-func (e *Execution) EscapeDots() Execution {
+func (e *Execution) EscapeDots() *Execution {
 	return e.convertDots(utils.EscapeDots)
 }
 
-func (e *Execution) UnscapeDots() Execution {
+func (e *Execution) UnscapeDots() *Execution {
 	return e.convertDots(utils.UnescapeDots)
 }

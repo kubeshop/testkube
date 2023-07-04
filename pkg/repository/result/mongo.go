@@ -109,7 +109,7 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.E
 			err = nil
 		}
 	}
-	return result.UnscapeDots(), err
+	return *result.UnscapeDots(), err
 }
 
 func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName string) (result testkube.Execution, err error) {
@@ -123,7 +123,7 @@ func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName s
 			err = nil
 		}
 	}
-	return result.UnscapeDots(), err
+	return *result.UnscapeDots(), err
 }
 
 func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName, sortField string) (result testkube.Execution, err error) {
@@ -139,7 +139,7 @@ func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName, sortFie
 			err = nil
 		}
 	}
-	return result.UnscapeDots(), err
+	return *result.UnscapeDots(), err
 }
 
 func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []string, sortField string) (executions []testkube.Execution, err error) {
@@ -346,7 +346,6 @@ func (r *MongoRepository) Insert(ctx context.Context, result testkube.Execution)
 	result.ExecutionResult.Output = ""
 	result.EscapeDots()
 	_, err = r.ResultsColl.InsertOne(ctx, result)
-	result.UnscapeDots()
 	if err != nil {
 		return
 	}
@@ -359,7 +358,6 @@ func (r *MongoRepository) Update(ctx context.Context, result testkube.Execution)
 	result.ExecutionResult.Output = ""
 	result.EscapeDots()
 	_, err = r.ResultsColl.ReplaceOne(ctx, bson.M{"id": result.Id}, result)
-	result.UnscapeDots()
 	if err != nil {
 		return
 	}
