@@ -270,7 +270,7 @@ func (s *TestkubeAPI) GetExecutionHandler() fiber.Handler {
 		if execution.TestSecretUUID != "" {
 			testSecretMap, err = s.TestsClient.GetSecretTestVars(execution.TestName, execution.TestSecretUUID)
 			if err != nil {
-				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client was unable to get test secrets: %w", errPrefix, err))
+				return s.Error(c, http.StatusBadGateway, fmt.Errorf("client was unable to get test secrets: %w", err))
 			}
 		}
 
@@ -278,7 +278,7 @@ func (s *TestkubeAPI) GetExecutionHandler() fiber.Handler {
 		if execution.TestSuiteSecretUUID != "" {
 			testSuiteSecretMap, err = s.TestsSuitesClient.GetSecretTestSuiteVars(execution.TestSuiteName, execution.TestSuiteSecretUUID)
 			if err != nil {
-				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client was unable to get test suite secrets: %w", errPrefix, err))
+				return s.Error(c, http.StatusBadGateway, fmt.Errorf("client was unable to get test suite secrets: %w", err))
 			}
 		}
 
