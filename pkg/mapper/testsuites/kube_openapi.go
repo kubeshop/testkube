@@ -225,10 +225,10 @@ func MapTestSuiteTestCRDToUpdateRequest(testSuite *testsuitesv3.TestSuite) (requ
 	request.Before = &before
 
 	steps := mapCRDToTestBatchSteps(testSuite.Spec.Steps)
-	request.Before = &steps
+	request.Steps = &steps
 
 	after := mapCRDToTestBatchSteps(testSuite.Spec.After)
-	request.Before = &after
+	request.After = &after
 
 	request.Labels = &testSuite.Labels
 
