@@ -430,7 +430,7 @@ When such a test is created you will see additional annotations for its cron job
 If you need to provide additional configuration for your executor environment, you can submit a prerun/postrun script to be executed before the test is started and after test is completed. For example, we have a simple shell script stored in `pre_script.sh` and `post_script.sh` files:
 
 ```sh
-!/bin/sh
+#!/bin/sh
 
 echo "Storing ssl certificate in file from env secret env"
 echo "$SSL_CERT" > /data/ssl.crt
@@ -439,7 +439,7 @@ echo "$SSL_CERT" > /data/ssl.crt
 and
 
 ```sh
-!/bin/sh
+#!/bin/sh
 
 echo "Sleeping for 30 seconds"
 sleep 30
