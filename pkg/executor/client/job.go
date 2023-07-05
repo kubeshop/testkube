@@ -479,6 +479,15 @@ func (c *JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, e
 
 // NewJobOptionsFromExecutionOptions compose JobOptions based on ExecuteOptions
 func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
+	labels := map[string]string{
+		testkube.TestLabelTestType: utils.SanitizeName(options.TestSpec.Type_),
+		testkube.TestLabelExecutor: options.ExecutorName,
+		testkube.TestLabelTestName: options.TestName,
+	}
+	for key, value := range options.Labels {
+		labels[key] = value
+	}
+
 	return JobOptions{
 		Image:                 options.ExecutorSpec.Image,
 		ImageOverride:         options.ImageOverride,
@@ -497,11 +506,7 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		JobTemplateExtensions: options.Request.JobTemplate,
 		EnvConfigMaps:         options.Request.EnvConfigMaps,
 		EnvSecrets:            options.Request.EnvSecrets,
-		Labels: map[string]string{
-			testkube.TestLabelTestType: utils.SanitizeName(options.TestSpec.Type_),
-			testkube.TestLabelExecutor: options.ExecutorName,
-			testkube.TestLabelTestName: options.TestName,
-		},
+		Labels:                labels,
 	}
 }
 

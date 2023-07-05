@@ -595,6 +595,15 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		jobDelaySeconds = jobArtifactDelaySeconds
 	}
 
+	labels := map[string]string{
+		testkube.TestLabelTestType: utils.SanitizeName(options.TestSpec.Type_),
+		testkube.TestLabelExecutor: options.ExecutorName,
+		testkube.TestLabelTestName: options.TestName,
+	}
+	for key, value := range options.Labels {
+		labels[key] = value
+	}
+
 	return &JobOptions{
 		Image:                     image,
 		ImagePullSecrets:          options.ImagePullSecretNames,
@@ -618,11 +627,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		ScraperTemplateExtensions: options.Request.ScraperTemplate,
 		EnvConfigMaps:             options.Request.EnvConfigMaps,
 		EnvSecrets:                options.Request.EnvSecrets,
-		Labels: map[string]string{
-			testkube.TestLabelTestType: utils.SanitizeName(options.TestSpec.Type_),
-			testkube.TestLabelExecutor: options.ExecutorName,
-			testkube.TestLabelTestName: options.TestName,
-		},
+		Labels:                    labels,
 	}
 }
 
