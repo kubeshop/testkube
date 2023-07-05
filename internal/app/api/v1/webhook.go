@@ -22,7 +22,7 @@ func (s TestkubeAPI) CreateWebhookHandler() fiber.Handler {
 		if string(c.Request().Header.ContentType()) == mediaTypeYAML {
 			webhookSpec := string(c.Body())
 			decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(webhookSpec), len(webhookSpec))
-			if err := decoder.Decode(&webhookSpec); err != nil {
+			if err := decoder.Decode(&webhook); err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse yaml request: %w", errPrefix, err))
 			}
 		} else {
