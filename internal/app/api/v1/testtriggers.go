@@ -31,7 +31,7 @@ func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 		if string(c.Request().Header.ContentType()) == mediaTypeYAML {
 			testTriggerSpec := string(c.Body())
 			decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(testTriggerSpec), len(testTriggerSpec))
-			if err := decoder.Decode(&testTriggerSpec); err != nil {
+			if err := decoder.Decode(&testTrigger); err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse yaml request: %w", errPrefix, err))
 			}
 		} else {
