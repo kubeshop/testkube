@@ -214,14 +214,6 @@ func (e *TestSuiteExecution) IsTimeout() bool {
 	return *e.Status == TIMEOUT_TestSuiteExecutionStatus
 }
 
-func (e *TestSuiteExecution) IsAborted() bool {
-	return *e.Status == ABORTED_TestSuiteExecutionStatus
-}
-
-func (e *TestSuiteExecution) IsTimeout() bool {
-	return *e.Status == TIMEOUT_TestSuiteExecutionStatus
-}
-
 func (e *TestSuiteExecution) convertDots(fn func(string) string) *TestSuiteExecution {
 	labels := make(map[string]string, len(e.Labels))
 	for key, value := range e.Labels {
