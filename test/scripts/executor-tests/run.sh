@@ -37,7 +37,7 @@ print_title() {
 create_update_testsuite_json() { # testsuite_name testsuite_path
   exit_code=0
   type=""
-  testkube --namespace $namespace get testsuite $1 > /dev/null 2>&1 || exit_code=$?
+  kubectl testkube --namespace $namespace get testsuite $1 > /dev/null 2>&1 || exit_code=$?
 
   if [ $exit_code == 0 ] ; then # testsuite already created
     type="update"
@@ -47,9 +47,9 @@ create_update_testsuite_json() { # testsuite_name testsuite_path
 
   if [ "$schedule" = true ] ; then # workaround for appending schedule
     random_minute="$(($RANDOM % 59))"
-    cat $2 | testkube --namespace $namespace $type testsuite --name $1 --label app=testkube --schedule "$random_minute */4 * * *" 
+    cat $2 | kubectl testkube --namespace $namespace $type testsuite --name $1 --label app=kubectl testkube --schedule "$random_minute */4 * * *" 
   else
-    cat $2 | testkube --namespace $namespace $type testsuite --name $1 --label app=testkube
+    cat $2 | kubectl testkube --namespace $namespace $type testsuite --name $1 --label app=kubectl testkube
   fi
 }
 
@@ -68,7 +68,7 @@ run_follow_testsuite() { # testsuite_name
     branch_overwrite_param=" --git-branch $branch_overwrite"
   fi
 
-  testkube --namespace $namespace run testsuite $1 $follow_param $branch_overwrite_param
+  kubectl testkube --namespace $namespace run testsuite $1 $follow_param $branch_overwrite_param
 }
 
 common_run() { # name, test_crd_file, testsuite_name, testsuite_file, custom_executor_crd_file
@@ -85,7 +85,7 @@ common_run() { # name, test_crd_file, testsuite_name, testsuite_file, custom_exe
       kubectl --namespace $namespace delete -f $custom_executor_crd_file --ignore-not-found=true
     fi
     kubectl --namespace $namespace delete -f $test_crd_file --ignore-not-found=true
-    kubectl --namespace $namespace delete testsuite $testsuite_name -ntestkube --ignore-not-found=true
+    kubectl --namespace $namespace delete testsuite $testsuite_name -nkubectl testkube --ignore-not-found=true
   fi
 
   if [ "$create" = true ] ; then
