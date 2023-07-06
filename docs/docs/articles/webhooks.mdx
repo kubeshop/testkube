@@ -5,7 +5,7 @@ import TabItem from "@theme/TabItem";
 
 Webhooks allow you to build or set up integrations and send HTTP POST payloads (your Testkube Execution and its current state) whenever an event is triggered. In this case, when your Tests start or finish.
 
-To set them up when using Testkube, you'll need to create your _Webhook_ as shown in the following format example (you can use https://webhooks.site to create a webhook to test with):
+To set them up when using Testkube, you'll need to create your _Webhook_ as shown in the following format example (you can use https://webhook.site to create a webhook to test with):
 
 <Tabs>
 
@@ -41,12 +41,11 @@ spec:
   uri: http://localhost:8080/events
   events:
     - start-test
-    - end-test
     - end-test-success
     - end-test-failed
   selector: ""
-  payloadobjectfield: ""
-  payloadtemplate: |
+  payloadObjectField: ""
+  payloadTemplate: |
     {"text": "event id {{ .Id }}"}
   headers:
     X-Token: "12345"
