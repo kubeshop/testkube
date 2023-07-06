@@ -136,12 +136,12 @@ func getCustomResourceConditions(
 	object metav1.Object,
 	gvr schema.GroupVersionResource,
 ) ([]testtriggersv1.TestTriggerCondition, error) {
-	customresource, err := dynamicClientset.Resource(gvr).Get(ctx, object.GetName(), metav1.GetOptions{})
+	customresource, err := dynamicClientset.Resource(gvr).Namespace(object.GetNamespace()).Get(ctx, object.GetName(), metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	objWithConditions, _, err := unstructured.NestedMap(customresource.Object, "status")
+	objWithConditions, _, err := unstructured.NestedSlice(customresource.Object, "status", "conditions")
 	if err != nil {
 		return nil, err
 	}

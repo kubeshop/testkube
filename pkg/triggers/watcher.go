@@ -16,7 +16,6 @@ import (
 
 	"github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	testkubeinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"
-	testkubeinformerv2 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v2"
 	testkubeinformerv3 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v3"
 
 	networkingv1 "k8s.io/api/networking/v1"
@@ -46,7 +45,7 @@ type k8sInformers struct {
 	configMapInformers      []coreinformerv1.ConfigMapInformer
 
 	testTriggerInformers []testkubeinformerv1.TestTriggerInformer
-	testSuiteInformers   []testkubeinformerv2.TestSuiteInformer
+	testSuiteInformers   []testkubeinformerv3.TestSuiteInformer
 	testInformers        []testkubeinformerv3.TestInformer
 }
 
@@ -83,7 +82,7 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 		testkubeInformerFactory = externalversions.NewSharedInformerFactoryWithOptions(
 			testKubeClientset, 0, externalversions.WithNamespace(namespace))
 		k8sInformers.testTriggerInformers = append(k8sInformers.testTriggerInformers, testkubeInformerFactory.Tests().V1().TestTriggers())
-		k8sInformers.testSuiteInformers = append(k8sInformers.testSuiteInformers, testkubeInformerFactory.Tests().V2().TestSuites())
+		k8sInformers.testSuiteInformers = append(k8sInformers.testSuiteInformers, testkubeInformerFactory.Tests().V3().TestSuites())
 		k8sInformers.testInformers = append(k8sInformers.testInformers, testkubeInformerFactory.Tests().V3().Tests())
 	}
 
@@ -655,22 +654,19 @@ func (s *Service) testTriggerEventHandler(ctx context.Context, stop <-chan struc
 			)
 			s.addTrigger(t)
 
-			df := dynamicinformer.NewFilteredDynamicSharedInformerFactory(s.dynamicClientset, 0, v1.NamespaceAll, nil)
+			if t.Spec.Resource == testtrigger.ResourceCustomResource {
+				df := dynamicinformer.NewFilteredDynamicSharedInformerFactory(s.dynamicClientset, 0, t.Spec.ResourceSelector.Namespace, nil)
 
-			//gvr := schema.GroupVersionResource{
-			//	Group:    "helm.toolkit.fluxcd.io",
-			//	Version:  "v2beta1",
-			//	Resource: "helmreleases",
-			//}
-			gvr := schema.GroupVersionResource{
-				Group:    t.Spec.CustomResource.Group,
-				Version:  t.Spec.CustomResource.Version,
-				Resource: t.Spec.CustomResource.Resource,
+				gvr := schema.GroupVersionResource{
+					Group:    t.Spec.CustomResource.Group,
+					Version:  t.Spec.CustomResource.Version,
+					Resource: t.Spec.CustomResource.Resource,
+				}
+				customResourceInformer := df.ForResource(gvr)
+				customResourceInformer.Informer().AddEventHandler(s.customResourceEventHandler(ctx, gvr))
+				s.logger.Debugf("trigger service: starting custom resource informers")
+				go customResourceInformer.Informer().Run(stop)
 			}
-			customResourceInformer := df.ForResource(gvr)
-			customResourceInformer.Informer().AddEventHandler(s.customResourceEventHandler(ctx, gvr))
-			s.logger.Debugf("trigger service: starting custom resource informers")
-			go customResourceInformer.Informer().Run(stop)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			t, ok := newObj.(*testtriggersv1.TestTrigger)
@@ -715,15 +711,7 @@ func (s *Service) customResourceEventHandler(ctx context.Context, gvr schema.Gro
 				s.logger.Errorf("failed to process create customResource event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
-			if inPast(customResource.GetCreationTimestamp().Time, s.watchFromDate) {
-				s.logger.Debugf(
-					"trigger customResource: watcher component: no-op create trigger: customResource %s/%s was created in the past",
-					customResource.GetNamespace(), customResource.GetName(),
-				)
-				return
-			}
 			s.logger.Debugf("trigger customResource: watcher component: emiting event: customResource %s/%s created", customResource.GetNamespace(), customResource.GetName())
-			// TODO: testtrigger.ResourceService -> testtrigger.ResourceCustomResource
 			event := newWatcherEvent(testtrigger.EventCreated, customResource, testtrigger.ResourceCustomResource, withConditionsGetter(getConditions(customResource)))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching create customResource event: %v", err)
@@ -747,14 +735,14 @@ func (s *Service) customResourceEventHandler(ctx context.Context, gvr schema.Gro
 				return
 			}
 
-			if newCustomResource.GetGeneration() == newCustomResource.GetGeneration() {
-				s.logger.Debugf("trigger service: watcher component: no-op update trigger: service specs are equal")
+			if oldCustomResource.GetGeneration() == newCustomResource.GetGeneration() {
+				s.logger.Debugf("trigger service: watcher component: no-op update trigger: %s/%s new and old specs are equal", oldCustomResource.GetKind(), oldCustomResource.GetName())
+				return
 			}
 			s.logger.Debugf(
 				"trigger service: watcher component: emiting event: service %s/%s updated",
 				newCustomResource.GetNamespace(), newCustomResource.GetName(),
 			)
-			// TODO: testtrigger.ResourceService -> testtrigger.ResourceCustomResource
 			event := newWatcherEvent(testtrigger.EventModified, newCustomResource, testtrigger.ResourceCustomResource, withConditionsGetter(getConditions(newCustomResource)))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching update service event: %v", err)
@@ -767,7 +755,6 @@ func (s *Service) customResourceEventHandler(ctx context.Context, gvr schema.Gro
 				return
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: customResource %s/%s deleted", customResource.GetNamespace(), customResource.GetName())
-			// TODO: testtrigger.ResourceService -> testtrigger.ResourceCustomResource
 			event := newWatcherEvent(testtrigger.EventDeleted, customResource, testtrigger.ResourceCustomResource, withConditionsGetter(getConditions(customResource)))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching delete customResource event: %v", err)
