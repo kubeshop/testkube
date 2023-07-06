@@ -1,8 +1,0 @@
-{
-	"name": "executor-curl-smoke-tests",
-	"description": "curl executor smoke tests",
-	"steps": [
-		{"execute": [{"test": "curl-executor-smoke"}]},
-		{"execute": [{"test": "curl-executor-smoke-negative"}]}
-	]
-}

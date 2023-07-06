@@ -1,0 +1,76 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: executor-cypress-smoke-tests
+  namespace: testkube
+  labels:
+    app: testkube
+spec:
+  description: "Cypress executor smoke tests"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: cypress-12-executor-smoke-electron
+  - stopOnFailure: false
+    execute:
+    - test: cypress-12-executor-smoke-chrome
+  - stopOnFailure: false
+    execute:
+    - test: cypress-12-executor-smoke-firefox
+  - stopOnFailure: false
+    execute:
+    - test: cypress-11-executor-smoke-electron
+  - stopOnFailure: false
+    execute:
+    - test: cypress-11-executor-smoke-chrome
+  - stopOnFailure: false
+    execute:
+    - test: cypress-11-executor-smoke-firefox
+  - stopOnFailure: false
+    execute:
+    - test: cypress-10-executor-smoke-electron
+  - stopOnFailure: false
+    execute:
+    - test: cypress-10-executor-smoke-chrome
+  - stopOnFailure: false
+    execute:
+    - test: cypress-10-executor-smoke-firefox
+  - stopOnFailure: false
+    execute:
+    - test: cypress-9-executor-smoke-electron
+  - stopOnFailure: false
+    execute:
+    - test: cypress-9-executor-smoke-chrome
+  - stopOnFailure: false
+    execute:
+    - test: cypress-9-executor-smoke-firefox
+  - stopOnFailure: false
+    execute:
+    - test: cypress-8-executor-smoke-electron
+  - stopOnFailure: false
+    execute:
+    - test: cypress-8-executor-smoke-chrome
+  - stopOnFailure: false
+    execute:
+    - test: cypress-8-executor-smoke-firefox
+  - stopOnFailure: false
+    execute:
+    - test: cypress-default-executor-smoke-electron
+  - stopOnFailure: false
+    execute:
+    - test: cypress-default-executor-smoke-electron-git-dir
+  - stopOnFailure: false
+    execute:
+    - test: cypress-default-executor-smoke-electron-testsource
+  - stopOnFailure: false
+    execute:
+    - test: cypress-default-executor-smoke-electron-testsource-git-dir
+  - stopOnFailure: false
+    execute:
+    - test: cypress-default-executor-smoke-yarn
+  - stopOnFailure: false
+    execute:
+    - test: cypress-default-executor-smoke-video-recording-enabled
+  - stopOnFailure: false
+    execute:
+    - test: cypress-default-executor-smoke-electron-negative

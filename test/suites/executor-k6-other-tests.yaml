@@ -1,0 +1,13 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: executor-k6-other-tests
+  namespace: testkube
+  labels:
+    app: testkube
+spec:
+  description: "k6 executor - other tests and edge-cases"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: k6-executor-smoke-directory
