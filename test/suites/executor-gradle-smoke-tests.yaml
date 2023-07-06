@@ -2,7 +2,6 @@ apiVersion: tests.testkube.io/v3
 kind: TestSuite
 metadata:
   name: executor-gradle-smoke-tests
-  namespace: testkube
   labels:
     app: testkube
 spec:

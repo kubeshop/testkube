@@ -2,7 +2,6 @@ apiVersion: executor.testkube.io/v1
 kind: Executor
 metadata:
   name: maven-jdk18-executor
-  namespace: testkube
 spec:
   image: kubeshop/testkube-maven-executor:0.1-jdk18
   types:
@@ -14,7 +13,6 @@ apiVersion: executor.testkube.io/v1
 kind: Executor
 metadata:
   name: maven-jdk11-executor
-  namespace: testkube
 spec:
   image: kubeshop/testkube-maven-executor:0.1-jdk11
   types:
@@ -26,7 +24,6 @@ apiVersion: executor.testkube.io/v1
 kind: Executor
 metadata:
   name: maven-jdk8-executor
-  namespace: testkube
 spec:
   image: kubeshop/testkube-maven-executor:0.1-jdk8
   types:

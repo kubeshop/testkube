@@ -4,7 +4,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: gradle-executor-smoke-jdk18
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -27,7 +26,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: gradle-executor-smoke-jdk17
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -50,7 +48,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: gradle-executor-smoke-jdk11
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -73,7 +70,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: gradle-executor-smoke-jdk8
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -96,7 +92,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: gradle-executor-smoke-jdk18-negative # expected failure - ENVs not set
-  namespace: testkube
   labels:
     core-tests: executors-negative
 spec:

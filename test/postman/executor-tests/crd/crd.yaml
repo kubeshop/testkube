@@ -2,7 +2,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: postman-executor-smoke
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -23,7 +22,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: postman-executor-smoke-git-file # backwards compatibility check
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -45,7 +43,6 @@ apiVersion: tests.testkube.io/v1
 kind: TestSource
 metadata:
   name: testsource-postman-executor-smoke-testsource
-  namespace: testkube
 spec:
   type: git
   repository:
@@ -59,7 +56,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: postman-executor-smoke-testsource
-  namespace: testkube
 spec:
   type: postman/collection
   source: testsource-postman-executor-smoke-testsource
@@ -73,7 +69,6 @@ apiVersion: tests.testkube.io/v1
 kind: TestSource
 metadata:
   name: testsource-postman-executor-smoke-testsource-git-file
-  namespace: testkube
 spec:
   type: git-file # backwards compatibility check
   repository:
@@ -87,7 +82,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: postman-executor-smoke-testsource-git-file
-  namespace: testkube
 spec:
   type: postman/collection
   source: testsource-postman-executor-smoke-testsource-git-file
@@ -101,7 +95,6 @@ apiVersion: tests.testkube.io/v1
 kind: TestSource
 metadata:
   name: testsource-postman-executor-smoke-testsource-overwrite
-  namespace: testkube
 spec:
   type: git
   repository:
@@ -115,7 +108,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: postman-executor-smoke-testsource-overwrite
-  namespace: testkube
 spec:
   type: postman/collection
   source: testsource-postman-executor-smoke-testsource-overwrite
@@ -132,7 +124,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: postman-executor-smoke-negative
-  namespace: testkube
   labels:
     core-tests: executors-negative
 spec:
