@@ -2,7 +2,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: jmeter-executor-smoke
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -19,7 +18,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: jmeter-executor-smoke-directory
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -39,7 +37,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: jmeter-executor-smoke-env-and-property-values
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -64,7 +61,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: jmeter-executor-smoke-negative
-  namespace: testkube
   labels:
     core-tests: executors-negative
 spec:

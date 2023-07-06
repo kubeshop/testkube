@@ -2,7 +2,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: artillery-executor-smoke
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -19,7 +18,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: artillery-executor-smoke-negative
-  namespace: testkube
   labels:
     core-tests: executors-negative
 spec:

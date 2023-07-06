@@ -2,7 +2,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-12-executor-smoke-electron
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -30,7 +29,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-12-executor-smoke-chrome
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -60,7 +58,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-12-executor-smoke-firefox
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -90,7 +87,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-11-executor-smoke-electron
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -118,7 +114,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-11-executor-smoke-chrome
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -148,7 +143,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-11-executor-smoke-firefox
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -178,7 +172,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-default-executor-smoke-electron
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -206,7 +199,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-default-executor-smoke-video-recording-enabled
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -234,7 +226,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-default-executor-smoke-yarn
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -266,7 +257,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-default-executor-smoke-electron-git-dir
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -295,7 +285,6 @@ apiVersion: tests.testkube.io/v1
 kind: TestSource
 metadata:
   name: testsource-cypress-default-executor-smoke-electron-testsource
-  namespace: testkube
 spec:
   type: git
   repository:
@@ -309,7 +298,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-default-executor-smoke-electron-testsource
-  namespace: testkube
 spec:
   type: cypress/project
   content:
@@ -333,7 +321,6 @@ apiVersion: tests.testkube.io/v1
 kind: TestSource
 metadata:
   name: testsource-cypress-default-executor-smoke-electron-testsource-git-dir
-  namespace: testkube
 spec:
   type: git-dir # backwards compatibility check
   repository:
@@ -347,7 +334,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-default-executor-smoke-electron-testsource-git-dir
-  namespace: testkube
 spec:
   type: cypress/project
   content:
@@ -370,7 +356,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-10-executor-smoke-electron
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -398,7 +383,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-10-executor-smoke-chrome
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -428,7 +412,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-10-executor-smoke-firefox
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -458,7 +441,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-9-executor-smoke-electron
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -475,7 +457,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-9-executor-smoke-chrome
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -498,7 +479,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-9-executor-smoke-firefox
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -521,7 +501,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-8-executor-smoke-electron
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -542,7 +521,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-8-executor-smoke-chrome
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -565,7 +543,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-8-executor-smoke-firefox
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -588,7 +565,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-default-executor-smoke-electron-negative
-  namespace: testkube
   labels:
     core-tests: executors-negative
 spec:

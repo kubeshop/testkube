@@ -2,7 +2,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: container-executor-k6-smoke
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -22,7 +21,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: container-executor-k6-smoke-git-file
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
