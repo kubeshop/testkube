@@ -176,6 +176,10 @@ func NewConnectCmd() *cobra.Command {
 
 			ui.ExitOnError("Setting cloud environment context", err)
 
+			ui.NL(2)
+
+			ui.ShellCommand("In case you want to roll back you can simply run the following command in your CLI:", "testkube cloud disconnect")
+
 			ui.Success("You can now login to Testkube Cloud and validate your connection:")
 			ui.NL()
 			ui.Link("https://cloud." + opts.CloudRootDomain + "/organization/" + opts.CloudOrgId + "/environment/" + opts.CloudEnvId + "/dashboard/tests")
