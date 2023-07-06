@@ -173,6 +173,9 @@ func NewConnectCmd() *cobra.Command {
 				ui.ExitOnError("user login", err)
 			}
 			err = common.PopulateLoginDataToContext(opts.CloudOrgId, opts.CloudEnvId, token, refreshToken, opts, cfg)
+
+			ui.ExitOnError("Setting cloud environment context", err)
+
 			ui.Success("You can now login to Testkube Cloud and validate your connection:")
 			ui.NL()
 			ui.Link("https://cloud." + opts.CloudRootDomain + "/organization/" + opts.CloudOrgId + "/environment/" + opts.CloudEnvId + "/dashboard/tests")
