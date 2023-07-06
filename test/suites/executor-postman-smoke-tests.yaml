@@ -1,0 +1,28 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: executor-postman-smoke-tests
+  namespace: testkube
+  labels:
+    app: testkube
+spec:
+  description: "postman executor smoke tests"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: postman-executor-smoke
+  - stopOnFailure: false
+    execute:
+    - test: postman-executor-smoke-git-file
+  - stopOnFailure: false
+    execute:
+    - test: postman-executor-smoke-testsource
+  - stopOnFailure: false
+    execute:
+    - test: postman-executor-smoke-testsource-git-file
+  - stopOnFailure: false
+    execute:
+    - test: postman-executor-smoke-testsource-overwrite
+  - stopOnFailure: false
+    execute:
+    - test: postman-executor-smoke-negative

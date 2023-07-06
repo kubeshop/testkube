@@ -1,0 +1,16 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: executor-ginkgo-smoke-tests
+  namespace: testkube
+  labels:
+    app: testkube
+spec:
+  description: "ginkgo executor smoke tests"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: ginkgo-executor-smoke
+  - stopOnFailure: false
+    execute:
+    - test: ginkgo-executor-smoke-negative

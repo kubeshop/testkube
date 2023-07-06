@@ -1,8 +1,0 @@
-{
-	"name": "executor-ginkgo-smoke-tests",
-	"description": "ginkgo executor smoke tests",
-	"steps": [
-		{"execute": {"name": "ginkgo-executor-smoke"}},
-		{"execute": {"name": "ginkgo-executor-smoke-negative"}}
-	]
-}

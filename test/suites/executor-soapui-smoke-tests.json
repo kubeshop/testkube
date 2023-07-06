@@ -1,8 +1,0 @@
-{
-	"name": "executor-soapui-smoke-tests",
-	"description": "soapui executor smoke tests",
-	"steps": [
-		{"execute": [{"test": "soapui-executor-smoke"}]},
-		{"execute": [{"test": "soapui-executor-smoke-negative"}]}
-	]
-}

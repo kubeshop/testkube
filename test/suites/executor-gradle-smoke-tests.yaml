@@ -1,0 +1,25 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: executor-gradle-smoke-tests
+  namespace: testkube
+  labels:
+    app: testkube
+spec:
+  description: "gradle executor smoke tests"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: gradle-executor-smoke-jdk18
+  - stopOnFailure: false
+    execute:
+    - test: gradle-executor-smoke-jdk17
+  - stopOnFailure: false
+    execute:
+    - test: gradle-executor-smoke-jdk11
+  - stopOnFailure: false
+    execute:
+    - test: gradle-executor-smoke-jdk8
+  - stopOnFailure: false
+    execute:
+    - test: gradle-executor-smoke-jdk18-negative

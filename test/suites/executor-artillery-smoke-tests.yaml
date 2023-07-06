@@ -1,0 +1,12 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: executor-artillery-smoke-tests
+  namespace: testkube
+spec:
+  description: artillery executor smoke tests
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: artillery-executor-smoke
+    - test: artillery-executor-smoke-negative
