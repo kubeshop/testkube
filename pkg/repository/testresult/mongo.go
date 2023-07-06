@@ -47,19 +47,19 @@ type MongoRepositoryOpt func(*MongoRepository)
 
 func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.TestSuiteExecution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&result)
-	return
+	return *result.UnscapeDots(), err
 }
 
 func (r *MongoRepository) GetByNameAndTestSuite(ctx context.Context, name, testSuiteName string) (result testkube.TestSuiteExecution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"name": name, "testsuite.name": testSuiteName}).Decode(&result)
-	return
+	return *result.UnscapeDots(), err
 }
 
 func (r *MongoRepository) GetLatestByTestSuite(ctx context.Context, testSuiteName, sortField string) (result testkube.TestSuiteExecution, err error) {
 	findOptions := options.FindOne()
 	findOptions.SetSort(bson.D{{Key: sortField, Value: -1}})
 	err = r.Coll.FindOne(ctx, bson.M{"testsuite.name": testSuiteName}, findOptions).Decode(&result)
-	return
+	return *result.UnscapeDots(), err
 }
 
 func (r *MongoRepository) GetLatestByTestSuites(ctx context.Context, testSuiteNames []string, sortField string) (executions []testkube.TestSuiteExecution, err error) {
@@ -119,6 +119,9 @@ func (r *MongoRepository) GetLatestByTestSuites(ctx context.Context, testSuiteNa
 		return nil, err
 	}
 
+	for i := range executions {
+		executions[i].UnscapeDots()
+	}
 	return executions, nil
 }
 
@@ -136,6 +139,10 @@ func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (r
 		return result, err
 	}
 	err = cursor.All(ctx, &result)
+
+	for i := range result {
+		result[i].UnscapeDots()
+	}
 	return
 }
 
@@ -206,15 +213,21 @@ func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (res
 		return
 	}
 	err = cursor.All(ctx, &result)
+
+	for i := range result {
+		result[i].UnscapeDots()
+	}
 	return
 }
 
 func (r *MongoRepository) Insert(ctx context.Context, result testkube.TestSuiteExecution) (err error) {
+	result.EscapeDots()
 	_, err = r.Coll.InsertOne(ctx, result)
 	return
 }
 
 func (r *MongoRepository) Update(ctx context.Context, result testkube.TestSuiteExecution) (err error) {
+	result.EscapeDots()
 	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": result.Id}, result)
 	return
 }

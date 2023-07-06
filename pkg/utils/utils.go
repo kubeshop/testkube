@@ -113,3 +113,13 @@ func SanitizeName(path string) string {
 
 	return path
 }
+
+// EscapeDots escapes dots for MongoDB fields
+func EscapeDots(source string) string {
+	return strings.ReplaceAll(source, ".", string([]rune{0xFF0E}))
+}
+
+// UnescapeDots unescapes dots from MongoDB fields
+func UnescapeDots(source string) string {
+	return strings.ReplaceAll(source, string([]rune{0xFF0E}), ".")
+}

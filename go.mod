@@ -15,7 +15,7 @@ require (
 	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0
 	github.com/fasthttp/websocket v1.5.0
 	github.com/fluxcd/pkg/apis/event v0.2.0
-	github.com/gabriel-vasile/mimetype v1.4.1
+	github.com/gabriel-vasile/mimetype v1.4.2
 	github.com/gofiber/adaptor/v2 v2.1.29
 	github.com/gofiber/fiber/v2 v2.39.0
 	github.com/gofiber/websocket/v2 v2.1.1
@@ -105,7 +105,7 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.21 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
-	github.com/muesli/termenv v0.13.0 // indirect
+	github.com/muesli/termenv v0.14.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nats-io/jwt/v2 v2.3.0 // indirect
 	github.com/nats-io/nats-server/v2 v2.8.4 // indirect

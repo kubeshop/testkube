@@ -213,3 +213,40 @@ func (e *TestSuiteExecution) IsAborted() bool {
 func (e *TestSuiteExecution) IsTimeout() bool {
 	return *e.Status == TIMEOUT_TestSuiteExecutionStatus
 }
+
+func (e *TestSuiteExecution) IsAborted() bool {
+	return *e.Status == ABORTED_TestSuiteExecutionStatus
+}
+
+func (e *TestSuiteExecution) IsTimeout() bool {
+	return *e.Status == TIMEOUT_TestSuiteExecutionStatus
+}
+
+func (e *TestSuiteExecution) convertDots(fn func(string) string) *TestSuiteExecution {
+	labels := make(map[string]string, len(e.Labels))
+	for key, value := range e.Labels {
+		labels[fn(key)] = value
+	}
+	e.Labels = labels
+
+	envs := make(map[string]string, len(e.Envs))
+	for key, value := range e.Envs {
+		envs[fn(key)] = value
+	}
+	e.Envs = envs
+
+	vars := make(map[string]Variable, len(e.Variables))
+	for key, value := range e.Variables {
+		vars[fn(key)] = value
+	}
+	e.Variables = vars
+	return e
+}
+
+func (e *TestSuiteExecution) EscapeDots() *TestSuiteExecution {
+	return e.convertDots(utils.EscapeDots)
+}
+
+func (e *TestSuiteExecution) UnscapeDots() *TestSuiteExecution {
+	return e.convertDots(utils.UnescapeDots)
+}

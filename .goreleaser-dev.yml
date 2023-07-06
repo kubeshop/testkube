@@ -14,17 +14,18 @@ builds:
       path: "{{ .Os }}/testkube_{{ .Os }}_{{ .Arch }}{{ with .Amd64 }}_{{ . }}{{ end }}/kubectl-testkube{{ .Ext }}"
     binary: kubectl-testkube
 archives:
-  - replacements:
-      darwin: macOS
-      linux: Linux
-      windows: Windows
-      386: i386
-      amd64: x86_64
+  - id: testkube
+    name_template: >-
+      {{ .ProjectName }}_{{.Version}}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
 checksum:
   name_template: "checksums.txt"
 
 source:
-  enabled: true
+  rlcp: true
 
 sboms:
   - artifacts: archive
