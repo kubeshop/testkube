@@ -52,7 +52,7 @@ func TestEventLoop(t *testing.T) {
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 
 	var logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error)
-	agent, err := agent.NewAgent(logger.Sugar(), nil, "api-key", grpcClient, 5, 5, logStreamFunc, "")
+	agent, err := agent.NewAgent(logger.Sugar(), nil, "api-key", grpcClient, 5, 5, logStreamFunc, "", "")
 	assert.NoError(t, err)
 	go func() {
 		l, err := agent.Load()

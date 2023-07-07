@@ -2,12 +2,13 @@
 	"name": "test-example-1",
 	"description": "Run test several times",
 	"steps": [
-		{"execute": {"namespace": "testkube", "name": "testkube-dashboard"}},
-		{"delay": {"duration": 5000}},
-		{"execute": {"namespace": "testkube", "name": "testkube-todo-api"}},
-		{"delay": {"duration": 5000}},
-		{"execute": {"namespace": "testkube", "name": "testkube-todo-frontend"}},
-		{"delay": {"duration": 5000}},
-		{"execute": {"namespace": "testkube", "name": "kubeshop-site"}}
+		{"execute": [{"test": "testkube-dashboard"}]},
+		{"execute": [{"delay": "5s"}]},
+		{"execute": [{"test": "testkube-todo-api"}]},
+		{"execute": [{"delay": "5s"}]},
+		{"execute": [{"test": "testkube-todo-frontend"}]},
+		{"execute": [{"delay": "5s"}]},
+		{"execute": [{"test": "kubeshop-site"}]}
 	]
 }
+

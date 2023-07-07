@@ -21,12 +21,16 @@ func NewExecutionWithID(id, testType, testName string) *Execution {
 	}
 }
 
-func NewExecution(testNamespace, testName, testSuiteName, executionName, testType string,
+func NewExecution(id, testNamespace, testName, testSuiteName, executionName, testType string,
 	executionNumber int, content *TestContent, result ExecutionResult,
 	variables map[string]Variable, testSecretUUID, testSuiteSecretUUID string,
 	labels map[string]string) Execution {
+	if id == "" {
+		id = primitive.NewObjectID().Hex()
+	}
+
 	return Execution{
-		Id:                  primitive.NewObjectID().Hex(),
+		Id:                  id,
 		TestName:            testName,
 		TestSuiteName:       testSuiteName,
 		TestNamespace:       testNamespace,
@@ -103,11 +107,12 @@ func (e *Execution) Err(err error) Execution {
 	e.ExecutionResult.Err(err)
 	return *e
 }
-func (e *Execution) Errw(msg string, err error) Execution {
+func (e *Execution) Errw(id, msg string, err error) Execution {
 	if e.ExecutionResult == nil {
 		e.ExecutionResult = &ExecutionResult{}
 	}
 
+	e.Id = id
 	e.ExecutionResult.Err(fmt.Errorf(msg, err))
 	return *e
 }

@@ -1,6 +1,8 @@
 package webhooks
 
 import (
+	"fmt"
+	"os"
 	"strconv"
 
 	"github.com/spf13/cobra"
@@ -19,6 +21,8 @@ func NewCreateWebhookCmd() *cobra.Command {
 		selector           string
 		labels             map[string]string
 		payloadObjectField string
+		payloadTemplate    string
+		headers            map[string]string
 	)
 
 	cmd := &cobra.Command{
@@ -35,6 +39,14 @@ func NewCreateWebhookCmd() *cobra.Command {
 			}
 
 			namespace := cmd.Flag("namespace").Value.String()
+			payloadTemplate = cmd.Flag("payload-template").Value.String()
+			payloadTemplateContent := ""
+			if payloadTemplate != "" {
+				b, err := os.ReadFile(payloadTemplate)
+				ui.ExitOnError("reading job template", err)
+				payloadTemplateContent = string(b)
+			}
+
 			var client apiv1.Client
 			if !crdOnly {
 				client, namespace, err = common.GetClient(cmd)
@@ -54,6 +66,8 @@ func NewCreateWebhookCmd() *cobra.Command {
 				Selector:           selector,
 				Labels:             labels,
 				PayloadObjectField: payloadObjectField,
+				PayloadTemplate:    payloadTemplateContent,
+				Headers:            headers,
 			}
 
 			if !crdOnly {
@@ -62,6 +76,10 @@ func NewCreateWebhookCmd() *cobra.Command {
 
 				ui.Success("Webhook created", name)
 			} else {
+				if options.PayloadTemplate != "" {
+					options.PayloadTemplate = fmt.Sprintf("%q", options.PayloadTemplate)
+				}
+
 				data, err := crd.ExecuteTemplate(crd.TemplateWebhook, options)
 				ui.ExitOnError("executing crd template", err)
 
@@ -76,6 +94,8 @@ func NewCreateWebhookCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&selector, "selector", "", "", "expression to select tests and test suites for webhook events: --selector app=backend")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringVarP(&payloadObjectField, "payload-field", "", "", "field to use for notification object payload")
+	cmd.Flags().StringVarP(&payloadTemplate, "payload-template", "", "", "if webhook needs to send a custom notification, then a path to template file should be provided")
+	cmd.Flags().StringToStringVarP(&headers, "header", "", nil, "webhook header value pair: --header Content-Type=application/xml")
 
 	return cmd
 }

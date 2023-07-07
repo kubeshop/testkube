@@ -20,12 +20,12 @@ type TestSuiteUpsertRequest struct {
 	// object name
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
-	// Run this step before whole suite
-	Before []TestSuiteStep `json:"before,omitempty"`
-	// Steps to run
-	Steps []TestSuiteStep `json:"steps"`
-	// Run this step after whole suite
-	After []TestSuiteStep `json:"after,omitempty"`
+	// Run these batch steps before whole suite
+	Before []TestSuiteBatchStep `json:"before,omitempty"`
+	// Batch steps to run
+	Steps []TestSuiteBatchStep `json:"steps,omitempty"`
+	// Run these batch steps after whole suite
+	After []TestSuiteBatchStep `json:"after,omitempty"`
 	// test suite labels
 	Labels map[string]string `json:"labels,omitempty"`
 	// schedule to run test suite

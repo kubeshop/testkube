@@ -11,6 +11,8 @@ package testkube
 
 // test execution request body
 type ExecutionRequest struct {
+	// execution id
+	Id string `json:"id,omitempty"`
 	// test execution custom name
 	Name string `json:"name,omitempty"`
 	// unique test suite name (CRD Test suite name), if it's run as a part of test suite
@@ -68,8 +70,10 @@ type ExecutionRequest struct {
 	// cron job template extensions
 	CronJobTemplate string              `json:"cronJobTemplate,omitempty"`
 	ContentRequest  *TestContentRequest `json:"contentRequest,omitempty"`
-	// script to run before test execution
+	// script to run before test execution (not supported for container executors)
 	PreRunScript string `json:"preRunScript,omitempty"`
+	// script to run after test execution (not supported for container executors)
+	PostRunScript string `json:"postRunScript,omitempty"`
 	// scraper template extensions
 	ScraperTemplate string `json:"scraperTemplate,omitempty"`
 	// config map references

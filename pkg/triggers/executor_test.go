@@ -4,13 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/repository/config"
-
-	"github.com/kubeshop/testkube/pkg/repository/result"
-	"github.com/kubeshop/testkube/pkg/repository/testresult"
-
-	testsourcesv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,7 +13,8 @@ import (
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
-	testsuitesv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
+	testsourcesv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
+	testsuitesv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/configmap"
@@ -28,6 +22,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/repository/config"
+	"github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
 )
@@ -46,7 +43,7 @@ func TestExecute(t *testing.T) {
 
 	mockExecutorsClient := executorsclientv1.NewMockInterface(mockCtrl)
 	mockTestsClient := testsclientv3.NewMockInterface(mockCtrl)
-	mockTestSuitesClient := testsuitesv2.NewMockInterface(mockCtrl)
+	mockTestSuitesClient := testsuitesv3.NewMockInterface(mockCtrl)
 	mockTestSourcesClient := testsourcesv1.NewMockInterface(mockCtrl)
 	mockSecretClient := secret.NewMockInterface(mockCtrl)
 	configMapConfig := config.NewMockRepository(mockCtrl)
@@ -54,7 +51,7 @@ func TestExecute(t *testing.T) {
 
 	mockExecutor := client.NewMockExecutor(mockCtrl)
 
-	mockEventEmitter := event.NewEmitter(bus.NewEventBusMock())
+	mockEventEmitter := event.NewEmitter(bus.NewEventBusMock(), "")
 
 	mockTest := testsv3.Test{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "some-test"},

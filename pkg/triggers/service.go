@@ -7,28 +7,24 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/repository/config"
-
-	"github.com/kubeshop/testkube/pkg/version"
-
-	"github.com/kubeshop/testkube/pkg/repository/result"
-	"github.com/kubeshop/testkube/pkg/repository/testresult"
-
-	"github.com/kubeshop/testkube/pkg/scheduler"
-	"github.com/kubeshop/testkube/pkg/telemetry"
-	"github.com/kubeshop/testkube/pkg/utils"
+	"go.uber.org/zap"
+	"k8s.io/client-go/kubernetes"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	testsuitev2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
+	testsuitev3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
-	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
+	testsuitesclientv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
 	testkubeclientsetv1 "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
-
-	"go.uber.org/zap"
-	"k8s.io/client-go/kubernetes"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/repository/config"
+	"github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/testresult"
+	"github.com/kubeshop/testkube/pkg/scheduler"
+	"github.com/kubeshop/testkube/pkg/telemetry"
+	"github.com/kubeshop/testkube/pkg/utils"
+	"github.com/kubeshop/testkube/pkg/version"
 )
 
 const (
@@ -57,7 +53,7 @@ type Service struct {
 	scheduler                     *scheduler.Scheduler
 	clientset                     kubernetes.Interface
 	testKubeClientset             testkubeclientsetv1.Interface
-	testSuitesClient              testsuitesclientv2.Interface
+	testSuitesClient              testsuitesclientv3.Interface
 	testsClient                   testsclientv3.Interface
 	resultRepository              result.Repository
 	testResultRepository          testresult.Repository
@@ -74,7 +70,7 @@ func NewService(
 	scheduler *scheduler.Scheduler,
 	clientset kubernetes.Interface,
 	testKubeClientset testkubeclientsetv1.Interface,
-	testSuitesClient testsuitesclientv2.Interface,
+	testSuitesClient testsuitesclientv3.Interface,
 	testsClient testsclientv3.Interface,
 	resultRepository result.Repository,
 	testResultRepository testresult.Repository,
@@ -297,7 +293,7 @@ func (s *Service) updateTest(test *testsv3.Test) {
 	}
 }
 
-func (s *Service) addTestSuite(testSuite *testsuitev2.TestSuite) {
+func (s *Service) addTestSuite(testSuite *testsuitev3.TestSuite) {
 	ctx := context.Background()
 	telemetryEnabled, err := s.configMap.GetTelemetryEnabled(ctx)
 	if err != nil {

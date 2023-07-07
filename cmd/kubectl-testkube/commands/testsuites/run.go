@@ -57,6 +57,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 					Type_:   string(testkube.RunningContextTypeUserCLI),
 					Context: runningContext,
 				},
+				ConcurrencyLevel: int32(concurrencyLevel),
 			}
 
 			if gitBranch != "" || gitCommit != "" || gitPath != "" || gitWorkingDir != "" {

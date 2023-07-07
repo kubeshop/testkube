@@ -162,6 +162,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 		JobTemplate:             executionRequest.JobTemplate,
 		CronJobTemplate:         executionRequest.CronJobTemplate,
 		PreRunScript:            executionRequest.PreRunScript,
+		PostRunScript:           executionRequest.PostRunScript,
 		ScraperTemplate:         executionRequest.ScraperTemplate,
 		NegativeTest:            executionRequest.NegativeTest,
 		EnvConfigMaps:           mapEnvReferences(executionRequest.EnvConfigMaps),
@@ -461,6 +462,10 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 			&request.PreRunScript,
 		},
 		{
+			executionRequest.PostRunScript,
+			&request.PostRunScript,
+		},
+		{
 			executionRequest.CronJobTemplate,
 			&request.CronJobTemplate,
 		},
@@ -635,4 +640,26 @@ func MapExecutionToTestStatus(execution *testkube.Execution) (specStatus testsv3
 	specStatus.LatestExecution.EndTime.Time = execution.EndTime
 
 	return specStatus
+}
+
+// MapTestSuiteExecutionStatusToExecutionStatus maps test suite execution status to execution status
+func MapTestSuiteExecutionStatusToExecutionStatus(testSuiteStatus *testkube.TestSuiteExecutionStatus) (
+	testStatus *testkube.ExecutionStatus) {
+	switch testSuiteStatus {
+	case testkube.TestSuiteExecutionStatusAborted:
+		testStatus = testkube.ExecutionStatusAborted
+	case testkube.TestSuiteExecutionStatusTimeout:
+		testStatus = testkube.ExecutionStatusTimeout
+	case testkube.TestSuiteExecutionStatusRunning:
+		testStatus = testkube.ExecutionStatusRunning
+	case testkube.TestSuiteExecutionStatusQueued:
+		testStatus = testkube.ExecutionStatusQueued
+	case testkube.TestSuiteExecutionStatusFailed:
+		testStatus = testkube.ExecutionStatusFailed
+	case testkube.TestSuiteExecutionStatusPassed:
+		testStatus = testkube.ExecutionStatusPassed
+
+	}
+
+	return testStatus
 }

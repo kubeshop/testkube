@@ -109,6 +109,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/TestTriggerUpsertRequest"
+          text/yaml:
+            schema:
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -161,9 +164,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/TestTrigger"
-            text/yaml:
-              schema:
-                type: string
         400:
           description: "problem with test trigger definition - probably some bad input occurs (invalid JSON body or similar)"
           content:
@@ -274,6 +274,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/TestTriggerUpsertRequest"
+          text/yaml:
+            schema:
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -281,9 +284,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TestTrigger"
-            text/yaml:
-              schema:
-                type: string
         400:
           description: "problem with test trigger definition - probably some bad input occurs (invalid JSON body or similar)"
           content:
@@ -354,6 +354,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/TestSuiteUpsertRequest"
+          text/yaml:
+            schema:
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -512,6 +515,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/TestSuiteUpdateRequest"
+          text/yaml:
+            schema:
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -592,9 +598,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExecutionsMetrics"
-            text/yaml:
-              schema:
-                type: string
         500:
           description: "problem with read information from storage"
           content:
@@ -649,7 +652,7 @@ paths:
         - test-suites
         - api
       parameters:
-        - $ref: "#/components/parameters/Name"
+        - $ref: "#/components/parameters/ID"
       summary: "Abort all executions of a test suite"
       description: "Abort all test executions of a test suite"
       operationId: abortTestSuiteExecutions
@@ -1460,6 +1463,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/TestUpsertRequest"
+          text/yaml:
+            schema:
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -1543,6 +1549,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/TestUpdateRequest"
+          text/yaml:
+            schema:
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -1712,9 +1721,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExecutionsMetrics"
-            text/yaml:
-              schema:
-                type: string
         500:
           description: "problem with getting metrics"
           content:
@@ -2051,6 +2057,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/ExecutorUpsertRequest"
+          text/yaml:
+            schema:
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -2183,6 +2192,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/ExecutorUpdateRequest"
+          text/yaml:
+            schema:
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -2301,6 +2313,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/WebhookCreateRequest"
+          text/yaml:
+            schema:
+              type: string              
       responses:
         200:
           description: "successful operation"
@@ -2590,6 +2605,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/TestSourceUpsertRequest"
+          text/yaml:
+            schema:
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -2694,6 +2712,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/TestSourceUpdateRequest"
+          text/yaml:
+            schema:
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -3038,7 +3059,6 @@ components:
       required:
         - name
         - status
-        - steps
       properties:
         name:
           type: string
@@ -3052,7 +3072,73 @@ components:
         before:
           type: array
           items:
-            $ref: "#/components/schemas/TestSuiteStep"
+            $ref: "#/components/schemas/TestSuiteBatchStep"
+          description: Run these batch steps before whole suite
+          example:
+            - stopOnFailure: true
+              execute:
+                - test: "example-test"
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSuiteBatchStep"
+          description: Batch steps to run
+          example:
+            - stopOnFailure: true
+              execute:
+                - test: "example-test"
+        after:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSuiteBatchStep"
+          description: Run these batch steps after whole suite
+          example:
+            - stopOnFailure: true
+              execute:
+                - test: "example-test"
+        labels:
+          type: object
+          description: "test suite labels"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"
+        schedule:
+          type: string
+          description: schedule to run test suite
+          example: "* * * * *"
+        repeats:
+          type: integer
+          default: 1
+          example: 1
+        created:
+          type: string
+          format: date-time
+        executionRequest:
+          $ref: "#/components/schemas/TestSuiteExecutionRequest"
+        status:
+          $ref: "#/components/schemas/TestSuiteStatus"
+
+    TestSuiteV2:
+      type: object
+      required:
+        - name
+        - status
+      properties:
+        name:
+          type: string
+          example: "test-suite1"
+        namespace:
+          type: string
+          example: "testkube"
+        description:
+          type: string
+          example: "collection of tests"
+        before:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSuiteStepV2"
           description: Run this step before whole suite
           example:
             - stopTestOnFailure: true
@@ -3062,7 +3148,7 @@ components:
         steps:
           type: array
           items:
-            $ref: "#/components/schemas/TestSuiteStep"
+            $ref: "#/components/schemas/TestSuiteStepV2"
           description: Steps to run
           example:
             - stopTestOnFailure: true
@@ -3072,7 +3158,7 @@ components:
         after:
           type: array
           items:
-            $ref: "#/components/schemas/TestSuiteStep"
+            $ref: "#/components/schemas/TestSuiteStepV2"
           description: Run this step after whole suite
           example:
             - stopTestOnFailure: true
@@ -3109,7 +3195,34 @@ components:
         - executeTest
         - delay
 
+    TestSuiteBatchStep:
+      description: set of steps run in parallel
+      type: object
+      required:
+        - stopOnFailure
+      properties:
+        stopOnFailure:
+          type: boolean
+          default: true
+        execute:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSuiteStep"
+
     TestSuiteStep:
+      type: object
+      properties:
+        test:
+          type: string
+          description: object name
+          example: "name"
+        delay:
+          type: string
+          format: duration
+          example: 1s
+          description: delay duration in time units
+
+    TestSuiteStepV2:
       type: object
       required:
         - name
@@ -3120,19 +3233,18 @@ components:
           type: boolean
           default: true
         execute:
-          $ref: "#/components/schemas/TestSuiteStepExecuteTest"
+          $ref: "#/components/schemas/TestSuiteStepExecuteTestV2"
         delay:
-          $ref: "#/components/schemas/TestSuiteStepDelay"
+          $ref: "#/components/schemas/TestSuiteStepDelayV2"
 
-    TestSuiteStepExecuteTest:
+    TestSuiteStepExecuteTestV2:
       allOf:
         - $ref: "#/components/schemas/ObjectRef"
 
-    TestSuiteStepDelay:
+    TestSuiteStepDelayV2:
       type: object
       required:
         - duration
-        - name
       properties:
         duration:
           type: integer
@@ -3145,7 +3257,7 @@ components:
       required:
         - id
         - name
-        - test
+        - testSuite
       properties:
         id:
           type: string
@@ -3197,7 +3309,13 @@ components:
           type: array
           description: "steps execution results"
           items:
-            $ref: "#/components/schemas/TestSuiteStepExecutionResult"
+            $ref: "#/components/schemas/TestSuiteStepExecutionResultV2"
+            description: test execution results
+        executeStepResults:
+          type: array
+          description: "batch steps execution results"
+          items:
+            $ref: "#/components/schemas/TestSuiteBatchStepExecutionResult"
             description: test execution results
         labels:
           type: object
@@ -3225,8 +3343,6 @@ components:
     TestSuiteStepExecutionResult:
       description: execution result returned from executor
       type: object
-      required:
-        - status
       properties:
         step:
           $ref: "#/components/schemas/TestSuiteStep"
@@ -3236,6 +3352,30 @@ components:
         execution:
           $ref: "#/components/schemas/Execution"
           description: test step execution
+
+    TestSuiteStepExecutionResultV2:
+      description: execution result returned from executor
+      type: object
+      properties:
+        step:
+          $ref: "#/components/schemas/TestSuiteStepV2"
+        test:
+          $ref: "#/components/schemas/ObjectRef"
+          description: object name and namespace
+        execution:
+          $ref: "#/components/schemas/Execution"
+          description: test step execution          
+
+    TestSuiteBatchStepExecutionResult:
+      description: execution result returned from executor
+      type: object
+      properties:
+        step:
+          $ref: "#/components/schemas/TestSuiteBatchStep"          
+        execute:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSuiteStepExecutionResult"
 
     TestSuiteExecutionsResult:
       description: the result for a page of executions
@@ -3296,7 +3436,7 @@ components:
         execution:
           type: array
           items:
-            $ref: "#/components/schemas/TestSuiteStepExecutionSummary"
+            $ref: "#/components/schemas/TestSuiteBatchStepExecutionSummary"
         labels:
           type: object
           description: "test suite and execution labels"
@@ -3329,6 +3469,15 @@ components:
           $ref: "#/components/schemas/ExecutionStatus"
         type:
           $ref: "#/components/schemas/TestSuiteStepType"
+
+    TestSuiteBatchStepExecutionSummary:
+      description: "Test suite batch execution summary"
+      type: object
+      properties:
+        execute:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestSuiteStepExecutionSummary"
 
     TestSuiteStatus:
       type: object
@@ -3412,7 +3561,14 @@ components:
       properties:
         type:
           type: string
-          description: test type
+          description: | 
+            type of sources a runner can get data from.
+              string: String content (e.g. Postman JSON file).
+              file-uri: content stored on the webserver.
+              git-file: the file stored in the Git repo in the given repository.path field (Deprecated: use git instead).
+              git-dir: the entire git repo or git subdirectory depending on the  repository.path field (Testkube does a shadow clone and sparse checkout to limit IOs in the case of monorepos). (Deprecated: use git instead).
+              git: automatically provisions either a file, directory or whole git repository depending on the repository.path field.
+
           enum:
             - string
             - file-uri
@@ -3689,8 +3845,12 @@ components:
           description: configuration parameters for storing test artifacts
         preRunScript:
           type: string
-          description: script to run before test execution
+          description: script to run before test execution (not supported for container executors)
           example: "echo -n '$SECRET_ENV' > ./secret_file"
+        postRunScript:
+          type: string
+          description: script to run after test execution (not supported for container executors)
+          example: "sleep 30"          
         runningContext:
           $ref: "#/components/schemas/RunningContext"
           description: running context for the test execution
@@ -4043,6 +4203,11 @@ components:
       description: test execution request body
       type: object
       properties:
+        id:
+          type: string
+          description: execution id
+          format: bson objectId
+          example: "62f395e004109209b50edfc1"
         name:
           type: string
           description: test execution custom name
@@ -4183,8 +4348,12 @@ components:
           description: adjusting parameters for test content
         preRunScript:
           type: string
-          description: script to run before test execution
+          description: script to run before test execution (not supported for container executors)
           example: "echo -n '$SECRET_ENV' > ./secret_file"
+        postRunScript:
+          type: string
+          description: script to run after test execution (not supported for container executors)
+          example: "sleep 30"
         scraperTemplate:
           type: string
           description: scraper template extensions
@@ -4273,6 +4442,11 @@ components:
         cronJobTemplate:
           type: string
           description: cron job template extensions
+        concurrencyLevel:
+          type: integer
+          format: int32
+          description: number of tests run in parallel
+          example: 10
 
     TestSuiteExecutionUpdateRequest:
       description: test suite execution update request body
@@ -4304,12 +4478,30 @@ components:
         - $ref: "#/components/schemas/TestSuite"
         - $ref: "#/components/schemas/ObjectRef"
 
+    TestSuiteUpsertRequestV2:
+      description: test suite create request body
+      type: object
+      required:
+        - name
+        - namespace
+      allOf:
+        - $ref: "#/components/schemas/TestSuiteV2"
+        - $ref: "#/components/schemas/ObjectRef"
+
     TestSuiteUpdateRequest:
       description: test suite update body
       type: object
       nullable: true
       allOf:
         - $ref: "#/components/schemas/TestSuite"
+        - $ref: "#/components/schemas/ObjectRef"
+
+    TestSuiteUpdateRequestV2:
+      description: test suite update body
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/TestSuiteV2"
         - $ref: "#/components/schemas/ObjectRef"
 
     TestTriggerUpsertRequest:
@@ -4533,6 +4725,17 @@ components:
         payloadObjectField:
           type: string
           description: will load the generated payload for notification inside the object
+        payloadTemplate:
+          type: string
+          description: golang based template for notification payload
+        headers:
+          type: object
+          description: "webhook headers"
+          additionalProperties:
+            type: string
+          example:
+            env: "Content-Type"
+            app: "application/xml"
         labels:
           type: object
           description: "webhook labels"
@@ -4543,7 +4746,7 @@ components:
             app: "backend"
 
     Event:
-      description: CRD based executor data
+      description: Event data
       type: object
       required:
         - type
@@ -4565,6 +4768,9 @@ components:
           $ref: "#/components/schemas/Execution"
         testSuiteExecution:
           $ref: "#/components/schemas/TestSuiteExecution"
+        clusterName:
+          type: string
+          description: cluster name of event      
 
     EventResource:
       type: string
@@ -4905,6 +5111,12 @@ components:
               "pod": ["created", "modified", "deleted"],
               "deployment": ["created", "modified", "deleted"],
             }
+        conditions:
+          type: array
+          items:
+            type: string
+          description: list of supported values for conditions
+          example: ["Available", "Progressing"]
 
     TestSourceBatchRequest:
       description: Test source batch request

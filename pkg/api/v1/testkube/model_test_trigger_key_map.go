@@ -18,4 +18,6 @@ type TestTriggerKeyMap struct {
 	Executions []string `json:"executions"`
 	// mapping between resources and supported events
 	Events map[string][]string `json:"events"`
+	// list of supported values for conditions
+	Conditions []string `json:"conditions,omitempty"`
 }

@@ -9,7 +9,7 @@
  */
 package testkube
 
-// CRD based executor data
+// Event data
 type Event struct {
 	// UUID of event
 	Id       string         `json:"id"`
@@ -19,4 +19,6 @@ type Event struct {
 	Type_              *EventType          `json:"type"`
 	TestExecution      *Execution          `json:"testExecution,omitempty"`
 	TestSuiteExecution *TestSuiteExecution `json:"testSuiteExecution,omitempty"`
+	// cluster name of event
+	ClusterName string `json:"clusterName,omitempty"`
 }

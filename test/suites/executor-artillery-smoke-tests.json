@@ -2,7 +2,7 @@
 	"name": "executor-artillery-smoke-tests",
 	"description": "artillery executor smoke tests",
 	"steps": [
-		{"execute": {"name": "artillery-executor-smoke"}},
-		{"execute": {"name": "artillery-executor-smoke-negative"}}
+		{"execute": [{"test": "artillery-executor-smoke"}]},
+		{"execute": [{"test": "artillery-executor-smoke-negative"}]}
 	]
 }

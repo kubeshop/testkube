@@ -2,6 +2,6 @@
 	"name": "executor-k6-other-tests",
 	"description": "k6 executor - other tests and edge-cases",
 	"steps": [
-		{"execute": {"name": "k6-executor-smoke-directory"}}
+		{"execute": [{"test": "k6-executor-smoke-directory"}]}
 	]
 }

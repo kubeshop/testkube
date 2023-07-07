@@ -2,10 +2,10 @@
 	"name": "executor-common-smoke-tests",
 	"description": "Reduced common test suite for executors",
 	"steps": [
-        {"execute": {"name": "cypress-default-executor-smoke-electron"}},
-		{"execute": {"name": "cypress-default-executor-smoke-electron-testsource-git-dir"}},
-        {"execute": {"name": "postman-executor-smoke"}},
-		{"execute": {"name": "postman-executor-smoke-testsource-git-file"}},
-        {"execute": {"name": "k6-executor-smoke"}}
+        {"execute": [{"test": "cypress-default-executor-smoke-electron"}]},
+		{"execute": [{"test": "cypress-default-executor-smoke-electron-testsource-git-dir"}]},
+		{"execute": [{"test": "postman-executor-smoke"}]},
+		{"execute": [{"test": "postman-executor-smoke-testsource-git-file"}]},
+		{"execute": [{"test": "k6-executor-smoke"}]}
 	]
 }

@@ -11,5 +11,6 @@ func MapTestTriggerKeyMapToAPI(km *triggers.KeyMap) *testkube.TestTriggerKeyMap 
 		Actions:    km.Actions,
 		Executions: km.Executions,
 		Events:     km.Events,
+		Conditions: km.Conditions,
 	}
 }

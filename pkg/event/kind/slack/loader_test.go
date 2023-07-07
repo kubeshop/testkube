@@ -14,7 +14,7 @@ func TestSlackLoader_Load(t *testing.T) {
 		t.Parallel()
 		// given
 		// default slack notifier is not ready by default
-		l := NewSlackLoader("", "", testkube.AllEventTypes)
+		l := NewSlackLoader("", "", "", testkube.AllEventTypes)
 
 		// when
 		listeners, err := l.Load()

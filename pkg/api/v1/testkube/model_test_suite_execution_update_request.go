@@ -36,4 +36,6 @@ type TestSuiteExecutionUpdateRequest struct {
 	RunningContext *RunningContext            `json:"runningContext,omitempty"`
 	// cron job template extensions
 	CronJobTemplate *string `json:"cronJobTemplate,omitempty"`
+	// number of tests run in parallel
+	ConcurrencyLevel *int32 `json:"concurrencyLevel,omitempty"`
 }

@@ -13,12 +13,12 @@ import (
 
 var _ common.ListenerLoader = (*SlackLoader)(nil)
 
-func NewSlackLoader(messageTemplate, configString string, events []testkube.EventType) *SlackLoader {
+func NewSlackLoader(messageTemplate, configString, clusterName string, events []testkube.EventType) *SlackLoader {
 	var config []slack.NotificationsConfig
 	if err := json.Unmarshal([]byte(configString), &config); err != nil {
 		log.DefaultLogger.Errorw("error unmarshalling slack config", "error", err)
 	}
-	slackNotifier := slack.NewNotifier(messageTemplate, config)
+	slackNotifier := slack.NewNotifier(messageTemplate, clusterName, config)
 	return &SlackLoader{
 		Log:           log.DefaultLogger,
 		events:        events,

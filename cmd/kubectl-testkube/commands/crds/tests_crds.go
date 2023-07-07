@@ -97,7 +97,7 @@ func processPostmanFiles(cmd *cobra.Command, args []string) error {
 	testEnvs := make(map[string]map[string]string, 0)
 	testSecretEnvs := make(map[string]map[string]string, 0)
 
-	var script []byte
+	var preRunScript, postRunScript []byte
 
 	err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
@@ -143,9 +143,14 @@ func processPostmanFiles(cmd *cobra.Command, args []string) error {
 			testName = test.Name
 		}
 
-		scriptBody := string(script)
-		if scriptBody != "" {
-			scriptBody = fmt.Sprintf("%q", strings.TrimSpace(scriptBody))
+		preRunScriptBody := string(preRunScript)
+		if preRunScriptBody != "" {
+			preRunScriptBody = fmt.Sprintf("%q", strings.TrimSpace(preRunScriptBody))
+		}
+
+		postRunScriptBody := string(postRunScript)
+		if postRunScriptBody != "" {
+			postRunScriptBody = fmt.Sprintf("%q", strings.TrimSpace(postRunScriptBody))
 		}
 
 		for key, value := range flags.Envs {
@@ -167,12 +172,13 @@ func processPostmanFiles(cmd *cobra.Command, args []string) error {
 		}
 
 		test.ExecutionRequest = &testkube.ExecutionRequest{
-			Command:      flags.Command,
-			Args:         flags.ExecutorArgs,
-			ArgsMode:     flags.ArgsMode,
-			Envs:         flags.Envs,
-			Variables:    vars,
-			PreRunScript: scriptBody,
+			Command:       flags.Command,
+			Args:          flags.ExecutorArgs,
+			ArgsMode:      flags.ArgsMode,
+			Envs:          flags.Envs,
+			Variables:     vars,
+			PreRunScript:  preRunScriptBody,
+			PostRunScript: postRunScriptBody,
 		}
 		detectedTests[testName] = test
 		return nil
