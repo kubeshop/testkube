@@ -219,7 +219,7 @@ func main() {
 			bucket := cfg.LogsBucket
 			if bucket == "" {
 				log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
-			} else if err := storageClient.IsConnectionPossible(ctx); err == nil {
+			} else if ok, err := storageClient.IsConnectionPossible(ctx); ok && (err == nil) {
 				log.DefaultLogger.Info("setting minio as logs storage")
 				mongoResultsRepository.OutputRepository = result.NewMinioOutputRepository(storageClient, mongoResultsRepository.ResultsColl, bucket)
 			} else {
