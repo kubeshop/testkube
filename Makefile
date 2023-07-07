@@ -222,6 +222,14 @@ video:
 
 	ffmpeg -y -r 30 -f image2pipe -vcodec ppm -i stream.out -b 65536K movie.mp4
 
+nats-tunnel:
+	kubectl run nats-tunnel-$$USER \
+		-it --image=alpine/socat \
+		--tty --rm --expose=true --port=4222 \
+		tcp-listen:4222,fork,reuseaddr tcp-connect:testkube-nats:4222
+
+port-forward-nats:
+	kubectl port-forward svc/nats-tunnel-$$USER 4222:4222 -ntestkube
 
 port-forward-minio:
 	kubectl port-forward svc/testkube-minio-service-testkube 9090:9090 -ntestkube
