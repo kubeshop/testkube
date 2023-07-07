@@ -2,12 +2,13 @@ package triggers
 
 import (
 	"context"
+	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	appsinformerv1 "k8s.io/client-go/informers/apps/v1"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	coreinformerv1 "k8s.io/client-go/informers/core/v1"
@@ -33,6 +34,11 @@ import (
 	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
 )
 
+type InformersData struct {
+	informer *informers.GenericInformer
+	cancel   context.CancelFunc
+}
+
 type k8sInformers struct {
 	customResourceInformers []informers.GenericInformer
 	podInformers            []coreinformerv1.PodInformer
@@ -47,6 +53,8 @@ type k8sInformers struct {
 	testTriggerInformers []testkubeinformerv1.TestTriggerInformer
 	testSuiteInformers   []testkubeinformerv3.TestSuiteInformer
 	testInformers        []testkubeinformerv3.TestInformer
+	triggerCRInformers   map[string]*InformersData
+	crInformers          map[string]*InformersData
 }
 
 func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned.Interface, testkubeNamespace string, watchK8sResourceNamespaces []string, watchTestkubeAll bool, watchTestkubeCrNamespaces []string) *k8sInformers {
@@ -85,7 +93,8 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 		k8sInformers.testSuiteInformers = append(k8sInformers.testSuiteInformers, testkubeInformerFactory.Tests().V3().TestSuites())
 		k8sInformers.testInformers = append(k8sInformers.testInformers, testkubeInformerFactory.Tests().V3().Tests())
 	}
-
+	k8sInformers.triggerCRInformers = make(map[string]*InformersData)
+	k8sInformers.crInformers = make(map[string]*InformersData)
 	return &k8sInformers
 }
 
@@ -665,7 +674,17 @@ func (s *Service) testTriggerEventHandler(ctx context.Context, stop <-chan struc
 				customResourceInformer := df.ForResource(gvr)
 				customResourceInformer.Informer().AddEventHandler(s.customResourceEventHandler(ctx, gvr))
 				s.logger.Debugf("trigger service: starting custom resource informers")
-				go customResourceInformer.Informer().Run(stop)
+
+				stopCtx, cancel := context.WithCancel(context.Background())
+				go worker(cancel, stop, stopCtx.Done())
+
+				ifd := &InformersData{
+					informer: &customResourceInformer,
+					cancel:   cancel,
+				}
+				s.informers.triggerCRInformers[t.Name+t.Namespace] = ifd
+				s.informers.crInformers[gvr.String()+serializeSelector(t.Spec.ResourceSelector)] = ifd
+				go customResourceInformer.Informer().Run(stopCtx.Done())
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
@@ -694,7 +713,40 @@ func (s *Service) testTriggerEventHandler(ctx context.Context, stop <-chan struc
 				t.Namespace, t.Name, t.Spec.Resource, t.Spec.Event,
 			)
 			s.removeTrigger(t)
+			if ifd, found := s.informers.triggerCRInformers[t.Name+t.Namespace]; found {
+				if ifd.informer != nil && ifd.cancel != nil {
+					ifd.cancel()
+					ifd.informer = nil
+					delete(s.informers.triggerCRInformers, t.Name+t.Namespace)
+				}
+
+			}
 		},
+	}
+}
+
+// TODO: fix the formation
+func serializeSelector(selector testtriggersv1.TestTriggerSelector) string {
+	return selector.Name + selector.Namespace
+}
+
+func worker(cancel context.CancelFunc, stop <-chan struct{}, done <-chan struct{}) {
+	for {
+		select {
+		case <-stop:
+			// Context is done, so we should stop the worker
+			fmt.Println("Work is stopped")
+			cancel()
+			return
+		case <-done:
+			// Context is done, so we should stop the worker
+			fmt.Println("Work is done")
+			return
+		default:
+			// Do some work
+			fmt.Println("Working...")
+			time.Sleep(1 * time.Second)
+		}
 	}
 }
 
