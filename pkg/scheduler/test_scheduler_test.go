@@ -133,6 +133,7 @@ func TestGetExecuteOptions(t *testing.T) {
 		JobTemplate:           "",
 		CronJobTemplate:       "",
 		PreRunScript:          "",
+		PostRunScript:         "",
 		ScraperTemplate:       "",
 		EnvConfigMaps: []testkube.EnvReference{
 			{

@@ -33,14 +33,16 @@ func (t TestSuite) GetObjectRef() *ObjectRef {
 // GetTestNames return test names for TestSuite
 func (t TestSuite) GetTestNames() []string {
 	var names []string
-	var steps []TestSuiteStep
+	var batches []TestSuiteBatchStep
 
-	steps = append(steps, t.Before...)
-	steps = append(steps, t.Steps...)
-	steps = append(steps, t.After...)
-	for _, step := range steps {
-		if step.Execute != nil {
-			names = append(names, step.Execute.Name)
+	batches = append(batches, t.Before...)
+	batches = append(batches, t.Steps...)
+	batches = append(batches, t.After...)
+	for _, batch := range batches {
+		for _, step := range batch.Execute {
+			if step.Test != "" {
+				names = append(names, step.Test)
+			}
 		}
 	}
 

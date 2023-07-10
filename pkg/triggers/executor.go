@@ -2,18 +2,16 @@ package triggers
 
 import (
 	"context"
-	"strconv"
 	"time"
 
+	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/pkg/errors"
-
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
+	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
-	v1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
@@ -29,10 +27,7 @@ type ExecutorF func(context.Context, *testtriggersv1.TestTrigger) error
 func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) error {
 	status := s.getStatusForTrigger(t)
 
-	concurrencyLevel, err := strconv.Atoi(v1.DefaultConcurrencyLevel)
-	if err != nil {
-		return errors.Wrap(err, "error parsing default concurrency level")
-	}
+	concurrencyLevel := scheduler.DefaultConcurrencyLevel
 
 	switch t.Spec.Execution {
 	case ExecutionTest:
@@ -139,10 +134,10 @@ func (s *Service) getTests(t *testtriggersv1.TestTrigger) ([]testsv3.Test, error
 	return tests, nil
 }
 
-func (s *Service) getTestSuites(t *testtriggersv1.TestTrigger) ([]testsuitesv2.TestSuite, error) {
-	var testSuites []testsuitesv2.TestSuite
+func (s *Service) getTestSuites(t *testtriggersv1.TestTrigger) ([]testsuitesv3.TestSuite, error) {
+	var testSuites []testsuitesv3.TestSuite
 	if t.Spec.TestSelector.Name != "" {
-		s.logger.Debugf("trigger service: executor component: fetching testsuitesv2.TestSuite with name %s", t.Spec.TestSelector.Name)
+		s.logger.Debugf("trigger service: executor component: fetching testsuitesv3.TestSuite with name %s", t.Spec.TestSelector.Name)
 		testSuite, err := s.testSuitesClient.Get(t.Spec.TestSelector.Name)
 		if err != nil {
 			return nil, err
@@ -155,7 +150,7 @@ func (s *Service) getTestSuites(t *testtriggersv1.TestTrigger) ([]testsuitesv2.T
 			return nil, errors.WithMessagef(err, "error creating selector from test resource label selector")
 		}
 		stringifiedSelector := selector.String()
-		s.logger.Debugf("trigger service: executor component: fetching testsuitesv2.TestSuite with label %s", stringifiedSelector)
+		s.logger.Debugf("trigger service: executor component: fetching testsuitesv3.TestSuite with label %s", stringifiedSelector)
 		testSuitesList, err := s.testSuitesClient.List(stringifiedSelector)
 		if err != nil {
 			return nil, err

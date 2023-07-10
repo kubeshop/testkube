@@ -1,0 +1,62 @@
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+# Webhooks
+
+Webhooks allow you to build or set up integrations and send HTTP POST payloads (your Testkube Execution and its current state) whenever an event is triggered. In this case, when your Tests start or finish.
+
+To set them up when using Testkube, you'll need to create your _Webhook_ as shown in the following format example (you can use https://webhook.site to create a webhook to test with):
+
+<Tabs>
+
+<TabItem value="cli" label="CLI">
+
+Create a webhook template payload file:
+
+```json title="template.json"
+{
+  "text": "event id {{ .Id }}"
+}
+```
+
+```sh
+testkube create webhook --name example-webhook --events start-test --events end-test-failed --payload-template template.json --uri https://webhook.site/34d499d1-2e09-4e2d-a89c-618a15e1d3df
+```
+
+```sh title="Expected output:"
+Webhook created example-webhook 🥇
+```
+
+</TabItem>
+
+<TabItem value="crd" label="Custom Resource">
+
+```yaml title="webhook.yaml"
+apiVersion: executor.testkube.io/v1
+kind: Webhook
+metadata:
+  name: example-webhook
+  namespace: testkube
+spec:
+  uri: http://localhost:8080/events
+  events:
+    - start-test
+    - end-test-success
+    - end-test-failed
+  selector: ""
+  payloadObjectField: ""
+  payloadTemplate: |
+    {"text": "event id {{ .Id }}"}
+  headers:
+    X-Token: "12345"
+```
+
+And then apply with:
+
+```sh
+kubectl apply -f webhook.yaml
+```
+
+</TabItem>
+
+</Tabs>

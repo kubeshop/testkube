@@ -20,10 +20,9 @@ jobs:
         uses: actions/checkout@v3
 
       - name: OpenAPI Lint Checks
-        uses: nwestfall/openapi-action@v1.0.1
+        uses: char0n/swagger-editor-validate@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          file: api/v1/testkube.yaml
+          definition-file: api/v1/testkube.yaml
 
   lint-go:
     name: Lint Go

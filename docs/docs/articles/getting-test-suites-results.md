@@ -1,51 +1,65 @@
 # Getting Results
 
-To get recent results, call the `tests executions` subcommand:
+To get recent results, call the `testsuites executions` subcommand:
 
 ```sh
 testkube get tse
 ```
 
 ```sh title="Expected output:"
-             ID            |  TEST NAME   |           EXECUTION NAME            | STATUS  | STEPS
-+--------------------------+--------------+-------------------------------------+---------+-------+
-  61e1142465e59a318346512b | test-example | test-example.equally-enabled-heron  | success |     3
-  61e1136165e59a3183465125 | test-example | test-example.fairly-humble-tick     | success |     3
-  61dff61867326ad521b2a0d6 | test-example | test-example.verbally-merry-hagfish | success |     3
-  61dfe0de69b7bfcb9058dad0 | test-example | test-example.overly-exciting-krill  | success |     3
+
+  ID                       | TEST SUITE NAME                | EXECUTION NAME                        | STATUS  | STEPS | LABELS        
+---------------------------+--------------------------------+---------------------------------------+---------+-------+---------------
+  63d401e5fed6933f342ccc67 | executor-maven-smoke-tests     | ts-executor-maven-smoke-tests-680     | failed  |     3 | app=testkube  
+  63d401a9fed6933f342ccc61 | executor-artillery-smoke-tests | ts-executor-artillery-smoke-tests-682 | passed  |     2 | app=testkube  
+  63d3fed9fed6933f342ccc5b | executor-jmeter-smoke-tests    | ts-executor-jmeter-smoke-tests-500    | passed  |     2 | app=testkube  
+  63d3fd35fed6933f342ccc51 | executor-postman-smoke-tests   | ts-executor-postman-smoke-tests-671   | passed  |     4 | app=testkube  
+  63d3fb91fed6933f342ccc4b | executor-container-smoke-tests | ts-executor-container-smoke-tests-683 | failed  |     2 | app=testkube
 
 ```
 
-## Getting a Single Test Execution
+## **Getting a Single Test Suite Execution**
 
-With the test execution ID, you can get single test results:
+With the test suite execution ID, you can get single test suite results:
 
 ```sh
 testkube get tse 61e1136165e59a3183465125
 ```
 
 ```sh title="Expected output:"
-Name: test-example.fairly-humble-tick
-Status: success
+Id:       63d3cd05c6768fc8b574e2e8
+Name:     ts-testsuite-parallel-19
+Status:   passed
+Duration: 22.138s
 
-             STEP            | STATUS  |            ID            | ERROR
-+----------------------------+---------+--------------------------+-------+
-  run test: testkube/test1 | success | 61e1136165e59a3183465127 |
-  delay 2000ms               | success |                          |
-  run test: testkube/test1 | success | 61e1136765e59a3183465129 |
+Labels:   
+  STATUSES               | STEP                           | IDS                            | ERRORS      
+-------------------------+--------------------------------+--------------------------------+-------------
+  passed, passed, passed | run:testkube/cli-test,         | 63d3cd05c6768fc8b574e2e9,      | "", "", ""  
+                         | run:testkube/demo-test, delay  | 63d3cd05c6768fc8b574e2ea, ""   |             
+                         | 1000ms                         |                                |             
+  passed                 | delay 5000ms                   | ""                             | ""          
 
 
-
-Use the following command to get test execution details:
-$ testkube get tse 61e1136165e59a3183465125
+Use the following command to get test suite execution details:
+$ kubectl testkube get tse 61e1136165e59a3183465125
 ```
 
 Test Suite steps that are running workflows based on `Test` Custom Resources have a Test Execution ID. You can get the details of each in a separate command:
 
-```sh
-kubectl testkube get execution 61e1136165e59a3183465127Name: test-example-test1, Status: success, Duration: 4.677s
+```sh 
+kubectl testkube get execution 63d3cd05c6768fc8b574e2e9
 
-newman
+ID:         63d3cd05c6768fc8b574e2e9
+Name:       testsuite-parallel-cli-test-46
+Number:            46
+Test name:         cli-test
+Type:              cli/test
+Status:            passed
+Start time:        2023-01-27 13:09:25.54 +0000 UTC
+End time:          2023-01-27 13:09:42.432 +0000 UTC
+Duration:          00:00:16
+
 
 TODO
 
@@ -101,18 +115,22 @@ To get the Test Suite CRD status of a particular test suite, pass the test suite
 kubectl testkube get testsuites test-suite-example --crd-only
 ```
 
+Output:
+
 ```yaml title="Expected output:"
-apiVersion: tests.testkube.io/v2
+apiVersion: tests.testkube.io/v3
 kind: TestSuite
 metadata:
   name: test-suite-example
   namespace: testkube
 spec:
   steps:
+  - stopOnFailure: false
     execute:
-      stopOnFailure: false
-      namespace: testkube
-      name: test-case
+    - test: testkube-dashboard
+    - delay: 1s
+    - test: testkube-homepage
+
 status:
   latestExecution:
     id: 63b7551cb2a16c73e8cfa1bf

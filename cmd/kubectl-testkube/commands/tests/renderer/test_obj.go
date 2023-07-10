@@ -93,6 +93,10 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		}
 		ui.Warn("  Args mode:              ", test.ExecutionRequest.ArgsMode)
 
+		if test.ExecutionRequest.ArgsMode != "" {
+			ui.Warn("  Args mode:              ", test.ExecutionRequest.ArgsMode)
+		}
+
 		if len(test.ExecutionRequest.Envs) > 0 {
 			ui.NL()
 			ui.Warn("(deprecated) Envs:        ", testkube.MapToString(test.ExecutionRequest.Envs))
@@ -133,6 +137,10 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 
 		if test.ExecutionRequest.PreRunScript != "" {
 			ui.Warn("  Pre run script:         ", "\n", test.ExecutionRequest.PreRunScript)
+		}
+
+		if test.ExecutionRequest.PostRunScript != "" {
+			ui.Warn("  Post run script:         ", "\n", test.ExecutionRequest.PostRunScript)
 		}
 
 		if test.ExecutionRequest.ScraperTemplate != "" {

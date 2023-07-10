@@ -59,14 +59,14 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 
 	secretUUID, err := s.testsClient.GetCurrentSecretUUID(test.Name)
 	if err != nil {
-		return execution.Errw("can't get current secret uuid: %w", err), nil
+		return execution.Errw(request.Id, "can't get current secret uuid: %w", err), nil
 	}
 
 	request.TestSecretUUID = secretUUID
 	// merge available data into execution options test spec, executor spec, request, test id
 	options, err := s.getExecuteOptions(test.Namespace, test.Name, request)
 	if err != nil {
-		return execution.Errw("can't create valid execution options: %w", err), nil
+		return execution.Errw(request.Id, "can't create valid execution options: %w", err), nil
 	}
 
 	// store execution in storage, can be fetched from API now
@@ -74,12 +74,12 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	options.ID = execution.Id
 
 	if err := s.createSecretsReferences(&execution); err != nil {
-		return execution.Errw("can't create secret variables `Secret` references: %w", err), nil
+		return execution.Errw(execution.Id, "can't create secret variables `Secret` references: %w", err), nil
 	}
 
 	err = s.executionResults.Insert(ctx, execution)
 	if err != nil {
-		return execution.Errw("can't create new test execution, can't insert into storage: %w", err), nil
+		return execution.Errw(execution.Id, "can't create new test execution, can't insert into storage: %w", err), nil
 	}
 
 	s.logger.Infow("calling executor with options", "options", options.Request)
@@ -92,7 +92,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	err = s.executionResults.StartExecution(ctx, execution.Id, execution.StartTime)
 	if err != nil {
 		s.events.Notify(testkube.NewEventEndTestFailed(&execution))
-		return execution.Errw("can't execute test, can't insert into storage error: %w", err), nil
+		return execution.Errw(execution.Id, "can't execute test, can't insert into storage error: %w", err), nil
 	}
 
 	// sync/async test execution
@@ -104,12 +104,12 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	// update storage with current execution status
 	if uerr := s.executionResults.UpdateResult(ctx, execution.Id, execution); uerr != nil {
 		s.events.Notify(testkube.NewEventEndTestFailed(&execution))
-		return execution.Errw("update execution error: %w", uerr), nil
+		return execution.Errw(execution.Id, "update execution error: %w", uerr), nil
 	}
 
 	if err != nil {
 		s.events.Notify(testkube.NewEventEndTestFailed(&execution))
-		return execution.Errw("test execution failed: %w", err), nil
+		return execution.Errw(execution.Id, "test execution failed: %w", err), nil
 	}
 
 	s.logger.Infow("test started", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
@@ -203,6 +203,7 @@ func (s *Scheduler) createSecretsReferences(execution *testkube.Execution) (err 
 
 func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Execution {
 	execution := testkube.NewExecution(
+		options.Request.Id,
 		options.Namespace,
 		options.TestName,
 		options.Request.TestSuiteName,
@@ -226,6 +227,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution.BucketName = options.Request.BucketName
 	execution.ArtifactRequest = options.Request.ArtifactRequest
 	execution.PreRunScript = options.Request.PreRunScript
+	execution.PostRunScript = options.Request.PostRunScript
 	execution.RunningContext = options.Request.RunningContext
 
 	return execution
@@ -290,6 +292,10 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 			{
 				test.ExecutionRequest.PreRunScript,
 				&request.PreRunScript,
+			},
+			{
+				test.ExecutionRequest.PostRunScript,
+				&request.PostRunScript,
 			},
 			{
 				test.ExecutionRequest.ScraperTemplate,

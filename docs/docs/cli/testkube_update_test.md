@@ -45,6 +45,7 @@ testkube update test [flags]
       --mount-secret stringToString                secret value pair for mounting it to executor pod: --mount-secret secret_name=secret_mountpath (default [])
   -n, --name string                                unique test name - mandatory
       --negative-test                              negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa
+      --postrun-script string                      path to script to be run after test execution
       --prerun-script string                       path to script to be run before test execution
       --schedule string                            test schedule in a cron job form: * * * * *
       --scraper-template string                    scraper template file path for extensions to scraper template

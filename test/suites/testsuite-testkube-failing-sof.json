@@ -2,12 +2,12 @@
 	"name": "testkube",
 	"description": "Failing Testkube testsuite",
 	"steps": [
-		{"execute": {"name": "testkube-api-failing"}, "stopTestOnFailure": true},
-		{"delay": {"duration": 1000}},
-		{"execute": {"name": "testkube-dashboard"}},
-		{"delay": {"duration": 1000}},
-		{"execute": {"name": "testkube-api-performance"}},
-		{"delay": {"duration": 1000}},
-		{"execute": {"name": "testkube-homepage-performance"}}
+		{"execute": [{"test": "testkube-api-failing"}], "stopOnFailure": true},
+		{"execute": [{"delay": "1s"}]},
+		{"execute": [{"test": "testkube-dashboard"}]},
+		{"execute": [{"delay": "1s"}]},
+		{"execute": [{"test": "testkube-api-performance"}]},
+		{"execute": [{"delay": "1s"}]},
+		{"execute": [{"test": "testkube-homepage-performance"}]}
 	]
 }

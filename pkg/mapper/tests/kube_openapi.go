@@ -150,6 +150,7 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 		JobTemplate:             specExecutionRequest.JobTemplate,
 		CronJobTemplate:         specExecutionRequest.CronJobTemplate,
 		PreRunScript:            specExecutionRequest.PreRunScript,
+		PostRunScript:           specExecutionRequest.PostRunScript,
 		ScraperTemplate:         specExecutionRequest.ScraperTemplate,
 		NegativeTest:            specExecutionRequest.NegativeTest,
 		EnvConfigMaps:           MapEnvReferences(specExecutionRequest.EnvConfigMaps),
@@ -205,4 +206,267 @@ func MapEnvReferences(envs []testsv3.EnvReference) []testkube.EnvReference {
 	}
 
 	return res
+}
+
+// MapSpecToUpdate maps Test CRD spec to TestUpdateRequest
+func MapSpecToUpdate(test *testsv3.Test) (request testkube.TestUpdateRequest) {
+	var fields = []struct {
+		source      *string
+		destination **string
+	}{
+		{
+			&test.Name,
+			&request.Name,
+		},
+		{
+			&test.Namespace,
+			&request.Namespace,
+		},
+		{
+			&test.Spec.Type_,
+			&request.Type_,
+		},
+		{
+			&test.Spec.Source,
+			&request.Source,
+		},
+		{
+			&test.Spec.Schedule,
+			&request.Schedule,
+		},
+	}
+
+	for _, field := range fields {
+		*field.destination = field.source
+	}
+
+	if test.Spec.Content != nil {
+		content := MapSpecContentToUpdateContent(test.Spec.Content)
+		request.Content = &content
+	}
+
+	if test.Spec.ExecutionRequest != nil {
+		executionRequest := MapSpecExecutionRequestToExecutionUpdateRequest(test.Spec.ExecutionRequest)
+		request.ExecutionRequest = &executionRequest
+	}
+
+	request.Labels = &test.Labels
+
+	request.Uploads = &test.Spec.Uploads
+
+	return request
+}
+
+// MapSpecContentToUpdateContent maps TestContent CRD spec to TestUpdateContent OpenAPI spec
+func MapSpecContentToUpdateContent(testContent *testsv3.TestContent) (content *testkube.TestContentUpdate) {
+	content = &testkube.TestContentUpdate{}
+
+	var fields = []struct {
+		source      *string
+		destination **string
+	}{
+		{
+			&testContent.Data,
+			&content.Data,
+		},
+		{
+			&testContent.Uri,
+			&content.Uri,
+		},
+	}
+
+	for _, field := range fields {
+		*field.destination = field.source
+	}
+
+	content.Type_ = (*string)(&testContent.Type_)
+
+	if testContent.Repository != nil {
+		repository := &testkube.RepositoryUpdate{}
+		content.Repository = &repository
+
+		var fields = []struct {
+			source      *string
+			destination **string
+		}{
+			{
+				&testContent.Repository.Type_,
+				&(*content.Repository).Type_,
+			},
+			{
+				&testContent.Repository.Uri,
+				&(*content.Repository).Uri,
+			},
+			{
+				&testContent.Repository.Branch,
+				&(*content.Repository).Branch,
+			},
+			{
+				&testContent.Repository.Commit,
+				&(*content.Repository).Commit,
+			},
+			{
+				&testContent.Repository.Path,
+				&(*content.Repository).Path,
+			},
+			{
+				&testContent.Repository.WorkingDir,
+				&(*content.Repository).WorkingDir,
+			},
+			{
+				&testContent.Repository.CertificateSecret,
+				&(*content.Repository).CertificateSecret,
+			},
+		}
+
+		for _, field := range fields {
+			*field.destination = field.source
+		}
+
+		(*content.Repository).AuthType = (*string)(&testContent.Repository.AuthType)
+
+		if testContent.Repository.UsernameSecret != nil {
+			secetRef := &testkube.SecretRef{
+				Name: testContent.Repository.UsernameSecret.Name,
+				Key:  testContent.Repository.UsernameSecret.Key,
+			}
+
+			(*content.Repository).TokenSecret = &secetRef
+		}
+
+		if testContent.Repository.TokenSecret != nil {
+			secretRef := &testkube.SecretRef{
+				Name: testContent.Repository.TokenSecret.Name,
+				Key:  testContent.Repository.TokenSecret.Key,
+			}
+
+			(*content.Repository).TokenSecret = &secretRef
+		}
+	}
+
+	return content
+}
+
+// MapSpecExecutionRequestToExecutionUpdateRequest maps ExecutionRequest CRD spec to ExecutionUpdateRequest OpenAPI spec to
+func MapSpecExecutionRequestToExecutionUpdateRequest(
+	request *testsv3.ExecutionRequest) (executionRequest *testkube.ExecutionUpdateRequest) {
+	executionRequest = &testkube.ExecutionUpdateRequest{}
+
+	var fields = []struct {
+		source      *string
+		destination **string
+	}{
+		{
+			&request.Name,
+			&executionRequest.Name,
+		},
+		{
+			&request.TestSuiteName,
+			&executionRequest.TestSuiteName,
+		},
+		{
+			&request.Namespace,
+			&executionRequest.Namespace,
+		},
+		{
+			&request.VariablesFile,
+			&executionRequest.VariablesFile,
+		},
+		{
+			&request.TestSecretUUID,
+			&executionRequest.TestSecretUUID,
+		},
+		{
+			&request.TestSuiteSecretUUID,
+			&executionRequest.TestSuiteSecretUUID,
+		},
+		{
+			&request.HttpProxy,
+			&executionRequest.HttpProxy,
+		},
+		{
+			&request.HttpsProxy,
+			&executionRequest.HttpsProxy,
+		},
+		{
+			&request.Image,
+			&executionRequest.Image,
+		},
+		{
+			&request.JobTemplate,
+			&executionRequest.JobTemplate,
+		},
+		{
+			&request.PreRunScript,
+			&executionRequest.PreRunScript,
+		},
+		{
+			&request.PostRunScript,
+			&executionRequest.PostRunScript,
+		},
+		{
+			&request.CronJobTemplate,
+			&executionRequest.CronJobTemplate,
+		},
+		{
+			&request.ScraperTemplate,
+			&executionRequest.ScraperTemplate,
+		},
+	}
+
+	for _, field := range fields {
+		*field.destination = field.source
+	}
+
+	executionRequest.ArgsMode = (*string)(&request.ArgsMode)
+
+	var slices = []struct {
+		source      *map[string]string
+		destination **map[string]string
+	}{
+		{
+			&request.ExecutionLabels,
+			&executionRequest.ExecutionLabels,
+		},
+		{
+			&request.Envs,
+			&executionRequest.Envs,
+		},
+		{
+			&request.SecretEnvs,
+			&executionRequest.SecretEnvs,
+		},
+	}
+
+	for _, slice := range slices {
+		*slice.destination = slice.source
+	}
+
+	executionRequest.Number = &request.Number
+	executionRequest.Sync = &request.Sync
+	executionRequest.NegativeTest = &request.NegativeTest
+	executionRequest.ActiveDeadlineSeconds = &request.ActiveDeadlineSeconds
+	executionRequest.Args = &request.Args
+	executionRequest.Command = &request.Command
+
+	vars := MergeVariablesAndParams(request.Variables, nil)
+	executionRequest.Variables = &vars
+	imagePullSecrets := MapImagePullSecrets(request.ImagePullSecrets)
+	executionRequest.ImagePullSecrets = &imagePullSecrets
+	envConfigMaps := MapEnvReferences(request.EnvConfigMaps)
+	executionRequest.EnvConfigMaps = &envConfigMaps
+	envSecrets := MapEnvReferences(request.EnvSecrets)
+	executionRequest.EnvSecrets = &envSecrets
+
+	if request.ArtifactRequest != nil {
+		artifactRequest := &testkube.ArtifactUpdateRequest{
+			StorageClassName: &request.ArtifactRequest.StorageClassName,
+			VolumeMountPath:  &request.ArtifactRequest.VolumeMountPath,
+			Dirs:             &request.ArtifactRequest.Dirs,
+		}
+
+		executionRequest.ArtifactRequest = &artifactRequest
+	}
+
+	return executionRequest
 }

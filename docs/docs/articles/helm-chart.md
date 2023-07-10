@@ -114,9 +114,25 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.logs.bucket             | no          | "testkube-logs"                      |
 | testkube-api.cdeventsTarget          | yes         | ""                                   |
 | testkube-api.dashboardUri            | yes         | ""                                   |
+| testkube-api.clusterName             | yes         | ""                                   |
 
 >For more configuration parameters of a `MongoDB` chart please visit: 
 <https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>
 
 >For more configuration parameters of an `NATS` chart please visit: 
 <https://docs.nats.io/running-a-nats-service/nats-kubernetes/helm-charts>
+
+:::note
+
+Please note that we use **global** parameters in our `values.yaml`:
+```
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  labels: {}
+  annotations: {}
+```
+
+They override all sub-chart values for the image parameters if specified. 
+
+:::

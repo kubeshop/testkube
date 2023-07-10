@@ -37,7 +37,7 @@ func NewLoginCmd() *cobra.Command {
 			// open browser with login page and redirect to localhost
 			open.Run(authUrl)
 
-			token, err := uiGetToken(tokenChan)
+			token, refreshToken, err := uiGetToken(tokenChan)
 			ui.ExitOnError("getting token", err)
 
 			orgID := opts.CloudOrgId
@@ -54,20 +54,7 @@ func NewLoginCmd() *cobra.Command {
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config file", err)
 
-			cfg.ContextType = config.ContextTypeCloud
-			cfg.CloudContext.OrganizationId = orgID
-			cfg.CloudContext.EnvironmentId = envID
-
-			uris := opts.CloudUris
-			cfg.CloudContext.ApiUri = uris.Api
-			cfg.CloudContext.UiUri = uris.Ui
-			cfg.CloudContext.AgentUri = uris.Agent
-			cfg.CloudContext.ApiKey = token
-			cfg.CloudContext.TokenType = config.TokenTypeOIDC
-
-			cfg = common.PopulateCloudConfig(cfg, token, orgID, envID, opts.CloudRootDomain)
-
-			err = config.Save(cfg)
+			err = common.PopulateLoginDataToContext(orgID, envID, token, refreshToken, opts, cfg)
 			ui.ExitOnError("saving config file", err)
 
 			ui.Success("Your config was updated with new values")

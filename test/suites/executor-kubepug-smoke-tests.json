@@ -2,7 +2,7 @@
 	"name": "executor-kubepug-smoke-tests",
 	"description": "kubepug executor smoke tests",
 	"steps": [
-		{"execute": {"name": "kubepug-executor-smoke"}},
-		{"execute": {"name": "kubepug-executor-smoke-negative"}}
+		{"execute": [{"test": "kubepug-executor-smoke"}]},
+		{"execute": [{"test": "kubepug-executor-smoke-negative"}]}
 	]
 }

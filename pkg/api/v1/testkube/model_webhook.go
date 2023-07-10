@@ -19,6 +19,10 @@ type Webhook struct {
 	Selector string `json:"selector,omitempty"`
 	// will load the generated payload for notification inside the object
 	PayloadObjectField string `json:"payloadObjectField,omitempty"`
+	// golang based template for notification payload
+	PayloadTemplate string `json:"payloadTemplate,omitempty"`
+	// webhook headers
+	Headers map[string]string `json:"headers,omitempty"`
 	// webhook labels
 	Labels map[string]string `json:"labels,omitempty"`
 }

@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
+	"github.com/kubeshop/testkube/pkg/cloudlogin"
 )
 
 // GetClient returns api client
@@ -69,9 +71,22 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 			}
 		}
 	case config.ContextTypeCloud:
+
+		token := cfg.CloudContext.ApiKey
+
+		if cfg.CloudContext.ApiKey != "" && cfg.CloudContext.RefreshToken != "" {
+			var refreshToken string
+			token, refreshToken, err = cloudlogin.CheckAndRefreshToken(context.Background(), fmt.Sprintf("%s/idp", cfg.CloudContext.ApiUri), cfg.CloudContext.ApiKey, cfg.CloudContext.RefreshToken)
+			if err != nil {
+				return nil, "", fmt.Errorf("error checking token: %w", err)
+			}
+			if err := UpdateTokens(cfg, token, refreshToken); err != nil {
+				return nil, "", fmt.Errorf("error storing new token: %w", err)
+			}
+		}
 		clientType = string(client.ClientCloud)
 		options.CloudApiPathPrefix = fmt.Sprintf("/organizations/%s/environments/%s/agent", cfg.CloudContext.OrganizationId, cfg.CloudContext.EnvironmentId)
-		options.CloudApiKey = cfg.CloudContext.ApiKey
+		options.CloudApiKey = token
 		options.CloudEnvironment = cfg.CloudContext.EnvironmentId
 		options.CloudOrganization = cfg.CloudContext.OrganizationId
 		options.ApiUri = cfg.CloudContext.ApiUri

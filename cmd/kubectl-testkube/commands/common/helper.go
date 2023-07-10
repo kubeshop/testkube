@@ -179,7 +179,7 @@ func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
 	cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
 }
 
-func PopulateLoginDataToContext(orgID, envID, token string, options HelmOptions, cfg config.Data) error {
+func PopulateLoginDataToContext(orgID, envID, token, refreshToken string, options HelmOptions, cfg config.Data) error {
 	if options.CloudAgentToken != "" {
 		cfg.CloudContext.AgentKey = options.CloudAgentToken
 	}
@@ -195,7 +195,13 @@ func PopulateLoginDataToContext(orgID, envID, token string, options HelmOptions,
 	cfg.ContextType = config.ContextTypeCloud
 	cfg.CloudContext.OrganizationId = orgID
 	cfg.CloudContext.EnvironmentId = envID
-	cfg.CloudContext.ApiKey = token
+	cfg.CloudContext.TokenType = config.TokenTypeOIDC
+	if token != "" {
+		cfg.CloudContext.ApiKey = token
+	}
+	if refreshToken != "" {
+		cfg.CloudContext.RefreshToken = refreshToken
+	}
 
 	cfg, err := PopulateOrgAndEnvNames(cfg, orgID, envID, options.CloudRootDomain)
 	if err != nil {
@@ -233,6 +239,37 @@ func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 	}
 	if options.CloudOrgId != "" {
 		cfg.CloudContext.OrganizationId = options.CloudOrgId
+		updated = true
+	}
+
+	if updated {
+		return config.Save(cfg)
+	}
+
+	return nil
+}
+
+func IsUserLoggedIn(cfg config.Data, options HelmOptions) bool {
+	if options.CloudUris.Api != cfg.CloudContext.ApiUri {
+		//different environment
+		return false
+	}
+
+	if cfg.CloudContext.ApiKey != "" && cfg.CloudContext.RefreshToken != "" {
+		// users with refresh token don't need to login again
+		// since on expired token they will be logged in automatically
+		return true
+	}
+	return false
+}
+func UpdateTokens(cfg config.Data, token, refreshToken string) error {
+	var updated bool
+	if token != cfg.CloudContext.ApiKey {
+		cfg.CloudContext.ApiKey = token
+		updated = true
+	}
+	if refreshToken != cfg.CloudContext.RefreshToken {
+		cfg.CloudContext.RefreshToken = refreshToken
 		updated = true
 	}
 

@@ -1,11 +1,13 @@
 package v1
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/yaml"
 
 	testsourcev1 "github.com/kubeshop/testkube-operator/apis/testsource/v1"
 	"github.com/kubeshop/testkube-operator/client/testsources/v1"
@@ -19,26 +21,35 @@ import (
 func (s TestkubeAPI) CreateTestSourceHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to create test source"
-		var request testkube.TestSourceUpsertRequest
-		err := c.BodyParser(&request)
-		if err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %s", errPrefix, err))
-		}
-
-		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			if request.Data != "" {
-				request.Data = fmt.Sprintf("%q", request.Data)
+		var testSource testsourcev1.TestSource
+		var secrets map[string]string
+		if string(c.Request().Header.ContentType()) == mediaTypeYAML {
+			testSourceSpec := string(c.Body())
+			decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(testSourceSpec), len(testSourceSpec))
+			if err := decoder.Decode(&testSource); err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse yaml request: %w", errPrefix, err))
+			}
+		} else {
+			var request testkube.TestSourceUpsertRequest
+			err := c.BodyParser(&request)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse json request: %s", errPrefix, err))
 			}
 
-			data, err := crd.GenerateYAML(crd.TemplateTestSource, []testkube.TestSourceUpsertRequest{request})
-			return s.getCRDs(c, data, err)
-		}
+			if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+				if request.Data != "" {
+					request.Data = fmt.Sprintf("%q", request.Data)
+				}
 
-		testSource := testsourcesmapper.MapAPIToCRD(request)
-		testSource.Namespace = s.Namespace
-		var secrets map[string]string
-		if request.Repository != nil {
-			secrets = createTestSecretsData(request.Repository.Username, request.Repository.Token)
+				data, err := crd.GenerateYAML(crd.TemplateTestSource, []testkube.TestSourceUpsertRequest{request})
+				return s.getCRDs(c, data, err)
+			}
+
+			testSource = testsourcesmapper.MapAPIToCRD(request)
+			testSource.Namespace = s.Namespace
+			if request.Repository != nil {
+				secrets = createTestSecretsData(request.Repository.Username, request.Repository.Token)
+			}
 		}
 
 		created, err := s.TestSourcesClient.Create(&testSource, testsources.Option{Secrets: secrets})
@@ -55,9 +66,20 @@ func (s TestkubeAPI) UpdateTestSourceHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to update test source"
 		var request testkube.TestSourceUpdateRequest
-		err := c.BodyParser(&request)
-		if err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %s", errPrefix, err))
+		if string(c.Request().Header.ContentType()) == mediaTypeYAML {
+			var testSource testsourcev1.TestSource
+			testSourceSpec := string(c.Body())
+			decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(testSourceSpec), len(testSourceSpec))
+			if err := decoder.Decode(&testSource); err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse yaml request: %w", errPrefix, err))
+			}
+
+			request = testsourcesmapper.MapSpecToUpdate(&testSource)
+		} else {
+			err := c.BodyParser(&request)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse json jrequest: %s", errPrefix, err))
+			}
 		}
 
 		var name string

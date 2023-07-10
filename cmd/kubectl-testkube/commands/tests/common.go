@@ -337,7 +337,10 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		return nil, err
 	}
 
-	argsMode := cmd.Flag("args-mode").Value.String()
+	mode := ""
+	if cmd.Flag("args-mode").Changed {
+		mode = cmd.Flag("args-mode").Value.String()
+	}
 	executionName := cmd.Flag("execution-name").Value.String()
 	envs, err := cmd.Flags().GetStringToString("env")
 	if err != nil {
@@ -410,6 +413,17 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		preRunScriptContent = string(b)
 	}
 
+	postRunScriptContent := ""
+	postRunScript := cmd.Flag("postrun-script").Value.String()
+	if postRunScript != "" {
+		b, err := os.ReadFile(postRunScript)
+		if err != nil {
+			return nil, err
+		}
+
+		postRunScriptContent = string(b)
+	}
+
 	scraperTemplateContent := ""
 	scraperTemplate := cmd.Flag("scraper-template").Value.String()
 	if scraperTemplate != "" {
@@ -432,7 +446,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		Image:                 image,
 		Command:               command,
 		Args:                  executorArgs,
-		ArgsMode:              argsMode,
+		ArgsMode:              mode,
 		ImagePullSecrets:      imageSecrets,
 		Envs:                  envs,
 		SecretEnvs:            secretEnvs,
@@ -442,6 +456,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		JobTemplate:           jobTemplateContent,
 		CronJobTemplate:       cronJobTemplateContent,
 		PreRunScript:          preRunScriptContent,
+		PostRunScript:         postRunScriptContent,
 		ScraperTemplate:       scraperTemplateContent,
 		NegativeTest:          negativeTest,
 		EnvConfigMaps:         envConfigMaps,
@@ -934,6 +949,22 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 		}
 
 		request.PreRunScript = &preRunScriptContent
+		nonEmpty = true
+	}
+
+	if cmd.Flag("postrun-script").Changed {
+		postRunScriptContent := ""
+		postRunScript := cmd.Flag("postrun-script").Value.String()
+		if postRunScript != "" {
+			b, err := os.ReadFile(postRunScript)
+			if err != nil {
+				return nil, err
+			}
+
+			postRunScriptContent = string(b)
+		}
+
+		request.PostRunScript = &postRunScriptContent
 		nonEmpty = true
 	}
 

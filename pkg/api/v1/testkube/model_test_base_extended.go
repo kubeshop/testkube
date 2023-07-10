@@ -78,6 +78,7 @@ func (test *Test) QuoteTestTextFields() {
 			&test.ExecutionRequest.JobTemplate,
 			&test.ExecutionRequest.CronJobTemplate,
 			&test.ExecutionRequest.PreRunScript,
+			&test.ExecutionRequest.PostRunScript,
 			&test.ExecutionRequest.ScraperTemplate,
 		}
 

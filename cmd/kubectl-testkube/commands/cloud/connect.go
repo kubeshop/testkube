@@ -79,10 +79,13 @@ func NewConnectCmd() *cobra.Command {
 				{ui.Separator, ""},
 			}
 
-			var token string
+			var (
+				token        string
+				refreshToken string
+			)
 			// if no agent is passed create new environment and get its token
 			if opts.CloudAgentToken == "" && opts.CloudOrgId == "" && opts.CloudEnvId == "" {
-				token, err = LoginUser(opts)
+				token, refreshToken, err = LoginUser(opts)
 				ui.ExitOnError("login", err)
 
 				orgId, orgName, err := uiGetOrganizationId(opts.CloudRootDomain, token)
@@ -165,11 +168,11 @@ func NewConnectCmd() *cobra.Command {
 			ui.H2("Testkube Cloud is connected to your Testkube instance, saving local configuration")
 
 			ui.H2("Saving testkube cli cloud context")
-			if token == "" {
-				token, err = LoginUser(opts)
+			if token == "" && !common.IsUserLoggedIn(cfg, opts) {
+				token, refreshToken, err = LoginUser(opts)
 				ui.ExitOnError("user login", err)
 			}
-			err = common.PopulateLoginDataToContext(opts.CloudOrgId, opts.CloudEnvId, token, opts, cfg)
+			err = common.PopulateLoginDataToContext(opts.CloudOrgId, opts.CloudEnvId, token, refreshToken, opts, cfg)
 
 			ui.ExitOnError("Setting cloud environment context", err)
 
@@ -217,21 +220,21 @@ var contextDescription = map[string]string{
 	"cloud": "Testkube in Cloud mode",
 }
 
-func uiGetToken(tokenChan chan string) (string, error) {
+func uiGetToken(tokenChan chan cloudlogin.Tokens) (string, string, error) {
 	// wait for token received to browser
 	s := ui.NewSpinner("waiting for auth token")
 
-	var token string
+	var token cloudlogin.Tokens
 	select {
 	case token = <-tokenChan:
 		s.Success()
 	case <-time.After(5 * time.Minute):
 		s.Fail("Timeout waiting for auth token")
-		return "", fmt.Errorf("timeout waiting for auth token")
+		return "", "", fmt.Errorf("timeout waiting for auth token")
 	}
 	ui.NL()
 
-	return token, nil
+	return token.IDToken, token.RefreshToken, nil
 }
 
 func uiGetEnvName() (string, error) {
@@ -245,10 +248,10 @@ func uiGetEnvName() (string, error) {
 	return "", fmt.Errorf("environment name cannot be empty")
 }
 
-func LoginUser(opts common.HelmOptions) (string, error) {
+func LoginUser(opts common.HelmOptions) (string, string, error) {
 	authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), opts.CloudUris.Auth)
 	if err != nil {
-		return "", fmt.Errorf("cloud login: %w", err)
+		return "", "", fmt.Errorf("cloud login: %w", err)
 	}
 	ui.H1("Login")
 	ui.Paragraph("Your browser should open automatically. If not, please open this link in your browser:")
@@ -257,15 +260,15 @@ func LoginUser(opts common.HelmOptions) (string, error) {
 	ui.Paragraph("")
 
 	if ok := ui.Confirm("Continue"); !ok {
-		return "", fmt.Errorf("login cancelled")
+		return "", "", fmt.Errorf("login cancelled")
 	}
 
 	// open browser with login page and redirect to localhost
 	open.Run(authUrl)
 
-	token, err := uiGetToken(tokenChan)
+	idToken, refreshToken, err := uiGetToken(tokenChan)
 	if err != nil {
-		return "", fmt.Errorf("getting token")
+		return "", "", fmt.Errorf("getting token")
 	}
-	return token, nil
+	return idToken, refreshToken, nil
 }

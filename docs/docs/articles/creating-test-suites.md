@@ -7,7 +7,9 @@ A QA leader is responsible for release trains and wants to be sure that before t
 
 This is easily done with Testkube. Each team can run their tests against clusters on their own, and the QA manager can create test resources and add tests written by all teams.
 
-`Test Suites` stands for the orchestration of different test steps such as test execution, delay, or other (future) steps.
+`Test Suites` stands for the orchestration of different test steps, which can run sequentially or/and in parallel.
+On each batch step you can define either one or multiple steps such as test execution, delay, or other (future) steps.
+By default the concurrency level for parallel tests is set to 10, you can redefine it using `--concurency` option for CLI command.
 
 ## Test Suite Creation
 
@@ -21,13 +23,13 @@ echo '
 	"name": "testkube-suite",
 	"description": "Testkube test suite, api, dashboard and performance",
 	"steps": [
-		{"execute": {"name": "testkube-api"}},
-		{"delay": {"duration": 1000}},
-		{"execute": {"name": "testkube-dashboard"}},
-		{"delay": {"duration": 1000}},
-		{"execute": {"name": "testkube-api-performance"}},
-		{"delay": {"duration": 1000}},
-		{"execute": {"name": "testkube-homepage-performance"}}
+		{"execute": [{"test": "testkube-api"}, {""test": "testkube-dashboard"}]},
+		{"execute": [{"delay": "1s"}]},
+		{"execute": [{"test": "testkube-dashboard"}, {"delay": "1s"}, {""test": "testkube-homepage"}]},
+		{"execute": [{"delay": "1s"}]},
+		{"execute": [{"test": "testkube-api-performance"}]},
+		{"execute": [{"delay": "1s"}]},
+		{"execute": [{"test": "testkube-homepage-performance"}]}
 	]
 }' | kubectl testkube create testsuite
 ```
@@ -51,32 +53,42 @@ kubectl get testsuites -ntestkube testkube-suite -oyaml
 ```
 
 ```yaml title="Expected output:"
-apiVersion: tests.testkube.io/v1
-kind: Test
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
 metadata:
   creationTimestamp: "2022-01-11T07:46:12Z"
   generation: 4
-  name: test-example
-  namespace: testkube-suite
+  name: testkube-suite
+  namespace: testkube
   resourceVersion: "57695094"
   uid: ea90a79e-bb46-49ee-a3ef-a5d99cee0a2c
 spec:
-  description: Example simple tests orchestration
+  description: "Testkube test suite, api, dashboard and performance"
   steps:
-  - execute:
-      name: testkube-api
-  - delay:
-      duration: 1000
-  - execute:
-      name: testkube-dashboard
-  - delay:
-      duration: 1000
-  - execute:
-      name: testkube-api-performance
-  - delay:
-      duration: 1000
-  - execute:
-      name: testkube-homepage-performance
+  - stopOnFailure: false
+    execute:
+    - test: testkube-api
+    - test: testkube-dashboard
+  - stopOnFailure: false
+    execute:
+    - delay: 1s
+  - stopOnFailure: false
+    execute:
+    - test: testkube-dashboard
+    - delay: 1s
+    - test: testkube-homepage
+  - stopOnFailure: false
+    execute:
+    - delay: 1s
+  - stopOnFailure: false
+    execute:
+    - test: testkube-api-performance
+  - stopOnFailure: false
+    execute:
+    - delay: 1s
+  - stopOnFailure: false
+    execute:
+    - test: testkube-homepage-performance
 ```
 
 Your `Test Suite` is defined and you can start running testing workflows.
