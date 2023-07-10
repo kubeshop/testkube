@@ -55,7 +55,6 @@ type Config struct {
 	TestkubeCloudWorkerCount          int           `envconfig:"TESTKUBE_CLOUD_WORKER_COUNT" default:"50"`
 	TestkubeCloudLogStreamWorkerCount int           `envconfig:"TESTKUBE_CLOUD_LOG_STREAM_WORKER_COUNT" default:"25"`
 	TestkubeWatcherNamespaces         string        `envconfig:"TESTKUBE_WATCHER_NAMESPACES" default:""`
-	TestkubeWatchAll                  bool          `envconfig:"TESTKUBE_WATCH_ALL" default:"false"`
 	GraphqlPort                       string        `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
 	TestkubeRegistry                  string        `envconfig:"TESTKUBE_REGISTRY" default:""`
 	TestkubePodStartTimeout           time.Duration `envconfig:"TESTKUBE_POD_START_TIMEOUT" default:"30m"`

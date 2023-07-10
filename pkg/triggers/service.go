@@ -66,7 +66,6 @@ type Service struct {
 	executorsClient               executorsclientv1.Interface
 	testkubeNamespace             string
 	watcherNamespaces             []string
-	watchTestkubeCrAllNamespaces  bool
 }
 
 type Option func(*Service)
@@ -116,7 +115,7 @@ func NewService(
 		opt(s)
 	}
 
-	s.informers = newK8sInformers(clientset, testKubeClientset, s.testkubeNamespace, s.watcherNamespaces, s.watchTestkubeCrAllNamespaces)
+	s.informers = newK8sInformers(clientset, testKubeClientset, s.testkubeNamespace, s.watcherNamespaces)
 
 	return s
 }
@@ -180,12 +179,6 @@ func WithWatcherNamespaces(namespaces string) Option {
 				s.watcherNamespaces = append(s.watcherNamespaces, value)
 			}
 		}
-	}
-}
-
-func WithWatchAllTestkubeResources(watchAllTestkubeResources bool) Option {
-	return func(s *Service) {
-		s.watchTestkubeCrAllNamespaces = watchAllTestkubeResources
 	}
 }
 

@@ -430,7 +430,6 @@ func main() {
 			triggers.WithHostnameIdentifier(),
 			triggers.WithTestkubeNamespace(cfg.TestkubeNamespace),
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
-			triggers.WithWatchAllTestkubeResources(cfg.TestkubeWatchAll),
 		)
 		log.DefaultLogger.Info("starting trigger service")
 		triggerService.Run(ctx)
