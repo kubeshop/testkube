@@ -183,9 +183,9 @@ func WithWatcherNamespaces(namespaces string) Option {
 	}
 }
 
-func WatchTestkubeCrAllNamespaces(watchTestkubeCrAllNamespaces bool) Option {
+func WithWatchAllTestkubeResources(watchAllTestkubeResources bool) Option {
 	return func(s *Service) {
-		s.watchTestkubeCrAllNamespaces = watchTestkubeCrAllNamespaces
+		s.watchTestkubeCrAllNamespaces = watchAllTestkubeResources
 	}
 }
 
