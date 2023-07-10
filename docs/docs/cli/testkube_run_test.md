@@ -20,6 +20,7 @@ testkube run test <testName> [flags]
       --artifact-volume-mount-path string          artifact volume mount path for container executor
       --command stringArray                        command passed to image in executor
       --concurrency int                            concurrency level for multiple test execution (default 10)
+      --container-entrypoint string                path to container entrypoint script to be run instead of default one
       --context string                             running context description for test execution
       --copy-files stringArray                     file path mappings from host to pod of form source:destination
   -d, --download-artifacts                         downlaod artifacts automatically
