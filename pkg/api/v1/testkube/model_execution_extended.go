@@ -196,3 +196,40 @@ func (e Execution) IsPassed() bool {
 
 	return *e.ExecutionResult.Status == PASSED_ExecutionStatus
 }
+
+func (e *Execution) WithID() *Execution {
+	if e.Id == "" {
+		e.Id = primitive.NewObjectID().Hex()
+	}
+
+	return e
+}
+
+func (e *Execution) convertDots(fn func(string) string) *Execution {
+	labels := make(map[string]string, len(e.Labels))
+	for key, value := range e.Labels {
+		labels[fn(key)] = value
+	}
+	e.Labels = labels
+
+	envs := make(map[string]string, len(e.Envs))
+	for key, value := range e.Envs {
+		envs[fn(key)] = value
+	}
+	e.Envs = envs
+
+	vars := make(map[string]Variable, len(e.Variables))
+	for key, value := range e.Variables {
+		vars[fn(key)] = value
+	}
+	e.Variables = vars
+	return e
+}
+
+func (e *Execution) EscapeDots() *Execution {
+	return e.convertDots(utils.EscapeDots)
+}
+
+func (e *Execution) UnscapeDots() *Execution {
+	return e.convertDots(utils.UnescapeDots)
+}

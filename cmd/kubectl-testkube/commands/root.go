@@ -72,8 +72,6 @@ var RootCmd = &cobra.Command{
 		cfg, err := config.Load()
 		ui.ExitOnError("loading config", err)
 
-		common.UiContextHeader(cmd, cfg)
-
 		if err = validator.ValidateCloudContext(cfg); err != nil {
 			common.UiCloudContextValidationError(err)
 		}
