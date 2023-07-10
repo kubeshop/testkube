@@ -66,6 +66,25 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		return result, errors.Errorf("could not fetch test content: %v", err)
 	}
 
+	if execution.PreRunScript != "" || execution.PostRunScript != "" || execution.ContainerEntrypoint != "" {
+		output.PrintLogf("%s Creating entrypoint script...", ui.IconWorld)
+		file := filepath.Join(r.dir, "entrypoint.sh")
+		scripts := []string{execution.PreRunScript, execution.ContainerEntrypoint, execution.PostRunScript}
+		var data string
+		for _, script := range scripts {
+			data += script
+			if script != "" {
+				data += "\n"
+			}
+		}
+
+		if err = os.WriteFile(file, []byte(data), 0755); err != nil {
+			output.PrintLogf("%s Could not create entrypoint script %s: %s", ui.IconCross, file, err.Error())
+			return result, errors.Errorf("could not create entrypoint script %s: %v", file, err)
+		}
+		output.PrintLogf("%s Entrypoint script created", ui.IconCheckMark)
+	}
+
 	// TODO: write a proper cloud implementation
 	// add copy files in case object storage is set
 	if r.Params.Endpoint != "" && !r.Params.CloudMode {
