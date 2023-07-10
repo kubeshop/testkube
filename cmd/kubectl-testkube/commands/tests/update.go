@@ -51,6 +51,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 		cronJobTemplate          string
 		preRunScript             string
 		postRunScript            string
+		containerEntrypoint      string
 		scraperTemplate          string
 		negativeTest             bool
 		mountConfigMaps          map[string]string
@@ -132,6 +133,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVar(&cronJobTemplate, "cronjob-template", "", "cron job template file path for extensions to cron job template")
 	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	cmd.Flags().StringVarP(&postRunScript, "postrun-script", "", "", "path to script to be run after test execution")
+	cmd.Flags().StringVarP(&containerEntrypoint, "container-entrypoint", "", "", "path to container entrypoint script to be run instead of default one")
 	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
 	cmd.Flags().BoolVar(&negativeTest, "negative-test", false, "negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa")
 	cmd.Flags().StringToStringVarP(&mountConfigMaps, "mount-configmap", "", map[string]string{}, "config map value pair for mounting it to executor pod: --mount-configmap configmap_name=configmap_mountpath")

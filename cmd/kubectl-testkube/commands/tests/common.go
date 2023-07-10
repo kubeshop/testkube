@@ -424,6 +424,17 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		postRunScriptContent = string(b)
 	}
 
+	containerEntrypoiintContent := ""
+	containerEntrypoint := cmd.Flag("container-entrypoint").Value.String()
+	if containerEntrypoint != "" {
+		b, err := os.ReadFile(containerEntrypoint)
+		if err != nil {
+			return nil, err
+		}
+
+		containerEntrypoiintContent = string(b)
+	}
+
 	scraperTemplateContent := ""
 	scraperTemplate := cmd.Flag("scraper-template").Value.String()
 	if scraperTemplate != "" {
@@ -457,6 +468,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		CronJobTemplate:       cronJobTemplateContent,
 		PreRunScript:          preRunScriptContent,
 		PostRunScript:         postRunScriptContent,
+		ContainerEntrypoint:   containerEntrypoiintContent,
 		ScraperTemplate:       scraperTemplateContent,
 		NegativeTest:          negativeTest,
 		EnvConfigMaps:         envConfigMaps,
@@ -965,6 +977,22 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 		}
 
 		request.PostRunScript = &postRunScriptContent
+		nonEmpty = true
+	}
+
+	if cmd.Flag("container-entrypoint").Changed {
+		containerEntrypoiintContent := ""
+		containerEntrypoint := cmd.Flag("container-entrypoint").Value.String()
+		if containerEntrypoint != "" {
+			b, err := os.ReadFile(containerEntrypoint)
+			if err != nil {
+				return nil, err
+			}
+
+			containerEntrypoiintContent = string(b)
+		}
+
+		request.ContainerEntrypoint = &containerEntrypoiintContent
 		nonEmpty = true
 	}
 

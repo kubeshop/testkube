@@ -142,6 +142,10 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 			ui.Warn("  Post run script:         ", "\n", test.ExecutionRequest.PostRunScript)
 		}
 
+		if test.ExecutionRequest.ContainerEntrypoint != "" {
+			ui.Warn("  Container entrypoint:    ", "\n", test.ExecutionRequest.ContainerEntrypoint)
+		}
+
 		if test.ExecutionRequest.ScraperTemplate != "" {
 			ui.Warn("  Scraper template:       ", "\n", test.ExecutionRequest.ScraperTemplate)
 		}

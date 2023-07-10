@@ -48,6 +48,7 @@ func NewRunTestCmd() *cobra.Command {
 		gitWorkingDir            string
 		preRunScript             string
 		postRunScript            string
+		containerEntrypoint      string
 		scraperTemplate          string
 		negativeTest             bool
 		mountConfigMaps          map[string]string
@@ -101,6 +102,13 @@ func NewRunTestCmd() *cobra.Command {
 				postRunScriptContent = string(b)
 			}
 
+			containerEntrypointContent := ""
+			if containerEntrypoint != "" {
+				b, err := os.ReadFile(containerEntrypoint)
+				ui.ExitOnError("reading container entrypoint", err)
+				containerEntrypointContent = string(b)
+			}
+
 			scraperTemplateContent := ""
 			if scraperTemplate != "" {
 				b, err := os.ReadFile(scraperTemplate)
@@ -131,6 +139,7 @@ func NewRunTestCmd() *cobra.Command {
 				JobTemplate:                jobTemplateContent,
 				PreRunScriptContent:        preRunScriptContent,
 				PostRunScriptContent:       postRunScriptContent,
+				ContainerEntrypointContent: containerEntrypointContent,
 				ScraperTemplate:            scraperTemplateContent,
 				IsNegativeTestChangedOnRun: false,
 				EnvConfigMaps:              envConfigMaps,
@@ -286,6 +295,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
 	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	cmd.Flags().StringVarP(&postRunScript, "postrun-script", "", "", "path to script to be run after test execution")
+	cmd.Flags().StringVarP(&containerEntrypoint, "container-entrypoint", "", "", "path to container entrypoint script to be run instead of default one")
 	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
 	cmd.Flags().BoolVar(&negativeTest, "negative-test", false, "negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa")
 	cmd.Flags().StringToStringVarP(&mountConfigMaps, "mount-configmap", "", map[string]string{}, "config map value pair for mounting it to executor pod: --mount-configmap configmap_name=configmap_mountpath")

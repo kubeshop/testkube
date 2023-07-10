@@ -67,6 +67,8 @@ type Execution struct {
 	// script to run before test execution (not supported for container executors)
 	PreRunScript string `json:"preRunScript,omitempty"`
 	// script to run after test execution (not supported for container executors)
-	PostRunScript  string          `json:"postRunScript,omitempty"`
-	RunningContext *RunningContext `json:"runningContext,omitempty"`
+	PostRunScript string `json:"postRunScript,omitempty"`
+	// script to run as an entry point for container executors
+	ContainerEntrypoint string          `json:"containerEntrypoint,omitempty"`
+	RunningContext      *RunningContext `json:"runningContext,omitempty"`
 }

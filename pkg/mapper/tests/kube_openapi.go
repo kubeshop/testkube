@@ -151,6 +151,7 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 		CronJobTemplate:         specExecutionRequest.CronJobTemplate,
 		PreRunScript:            specExecutionRequest.PreRunScript,
 		PostRunScript:           specExecutionRequest.PostRunScript,
+		ContainerEntrypoint:     specExecutionRequest.ContainerEntrypoint,
 		ScraperTemplate:         specExecutionRequest.ScraperTemplate,
 		NegativeTest:            specExecutionRequest.NegativeTest,
 		EnvConfigMaps:           MapEnvReferences(specExecutionRequest.EnvConfigMaps),
@@ -403,6 +404,10 @@ func MapSpecExecutionRequestToExecutionUpdateRequest(
 		{
 			&request.PostRunScript,
 			&executionRequest.PostRunScript,
+		},
+		{
+			&request.ContainerEntrypoint,
+			&executionRequest.ContainerEntrypoint,
 		},
 		{
 			&request.CronJobTemplate,

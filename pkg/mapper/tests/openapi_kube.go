@@ -163,6 +163,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 		CronJobTemplate:         executionRequest.CronJobTemplate,
 		PreRunScript:            executionRequest.PreRunScript,
 		PostRunScript:           executionRequest.PostRunScript,
+		ContainerEntrypoint:     executionRequest.ContainerEntrypoint,
 		ScraperTemplate:         executionRequest.ScraperTemplate,
 		NegativeTest:            executionRequest.NegativeTest,
 		EnvConfigMaps:           mapEnvReferences(executionRequest.EnvConfigMaps),
@@ -464,6 +465,10 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 		{
 			executionRequest.PostRunScript,
 			&request.PostRunScript,
+		},
+		{
+			executionRequest.ContainerEntrypoint,
+			&request.ContainerEntrypoint,
 		},
 		{
 			executionRequest.CronJobTemplate,

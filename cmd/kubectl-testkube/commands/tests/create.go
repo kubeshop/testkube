@@ -42,6 +42,7 @@ type CreateCommonFlags struct {
 	CronJobTemplate          string
 	PreRunScript             string
 	PostRunScript            string
+	ContainerEntrypoint      string
 	ScraperTemplate          string
 	NegativeTest             bool
 	MountConfigMaps          map[string]string
@@ -210,6 +211,7 @@ func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
 	cmd.Flags().StringVar(&flags.CronJobTemplate, "cronjob-template", "", "cron job template file path for extensions to cron job template")
 	cmd.Flags().StringVarP(&flags.PreRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	cmd.Flags().StringVarP(&flags.PostRunScript, "postrun-script", "", "", "path to script to be run after test execution")
+	cmd.Flags().StringVarP(&flags.ContainerEntrypoint, "container-entrypoint", "", "", "path to container entrypoint script to be run instead of default one")
 	cmd.Flags().StringVar(&flags.ScraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
 	cmd.Flags().BoolVar(&flags.NegativeTest, "negative-test", false, "negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa")
 	cmd.Flags().StringToStringVarP(&flags.MountConfigMaps, "mount-configmap", "", map[string]string{}, "config map value pair for mounting it to executor pod: --mount-configmap configmap_name=configmap_mountpath")

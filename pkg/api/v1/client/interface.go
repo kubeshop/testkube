@@ -172,6 +172,7 @@ type ExecuteTestOptions struct {
 	ContentRequest                *testkube.TestContentRequest
 	PreRunScriptContent           string
 	PostRunScriptContent          string
+	ContainerEntrypointContent    string
 	ScraperTemplate               string
 	NegativeTest                  bool
 	IsNegativeTestChangedOnRun    bool

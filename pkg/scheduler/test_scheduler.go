@@ -228,6 +228,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution.ArtifactRequest = options.Request.ArtifactRequest
 	execution.PreRunScript = options.Request.PreRunScript
 	execution.PostRunScript = options.Request.PostRunScript
+	execution.ContainerEntrypoint = options.Request.ContainerEntrypoint
 	execution.RunningContext = options.Request.RunningContext
 
 	return execution
@@ -296,6 +297,10 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 			{
 				test.ExecutionRequest.PostRunScript,
 				&request.PostRunScript,
+			},
+			{
+				test.ExecutionRequest.ContainerEntrypoint,
+				&request.ContainerEntrypoint,
 			},
 			{
 				test.ExecutionRequest.ScraperTemplate,
