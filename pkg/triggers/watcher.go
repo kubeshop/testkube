@@ -2,7 +2,7 @@ package triggers
 
 import (
 	"context"
-	"fmt"
+	"go.uber.org/zap"
 
 	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
@@ -654,7 +654,7 @@ func (s *Service) testTriggerEventHandler(ctx context.Context, stop <-chan struc
 				s.logger.Debugf("trigger service: starting custom resource informers")
 
 				stopCtx, cancel := context.WithCancel(context.Background())
-				go worker(cancel, stop, stopCtx.Done())
+				go worker(cancel, stop, stopCtx.Done(), s.logger)
 
 				ifd := &InformersData{
 					informer: &customResourceInformer,
@@ -708,21 +708,21 @@ func serializeSelector(selector testtriggersv1.TestTriggerSelector) string {
 	return selector.Name + selector.Namespace
 }
 
-func worker(cancel context.CancelFunc, stop <-chan struct{}, done <-chan struct{}) {
+func worker(cancel context.CancelFunc, stop <-chan struct{}, done <-chan struct{}, logger *zap.SugaredLogger) {
 	for {
 		select {
 		case <-stop:
 			// Context is done, so we should stop the worker
-			fmt.Println("Work is stopped")
+			logger.Debug("Work is stopped")
 			cancel()
 			return
 		case <-done:
 			// Context is done, so we should stop the worker
-			fmt.Println("Work is done")
+			logger.Debug("Work is done")
 			return
 		default:
 			// Do some work
-			fmt.Println("Working...")
+			logger.Debug("Working...")
 			time.Sleep(1 * time.Second)
 		}
 	}
