@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -205,6 +206,10 @@ func NewJobOptions(images executor.Images, templates executor.Templates, service
 	}
 
 	jobOptions := NewJobOptionsFromExecutionOptions(options)
+	if execution.PreRunScript != "" || execution.PostRunScript != "" {
+		jobOptions.Command = []string{filepath.Join(executor.VolumeDir, "entrypoint.sh")}
+	}
+
 	jobOptions.Name = execution.Id
 	jobOptions.Namespace = execution.TestNamespace
 	jobOptions.TestName = execution.TestName

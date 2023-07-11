@@ -2,8 +2,10 @@ package runner
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -64,6 +66,30 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	if err != nil {
 		output.PrintLogf("%s Could not fetch test content: %s", ui.IconCross, err.Error())
 		return result, errors.Errorf("could not fetch test content: %v", err)
+	}
+
+	if execution.PreRunScript != "" || execution.PostRunScript != "" {
+		output.PrintLogf("%s Creating entrypoint script...", ui.IconWorld)
+		file := filepath.Join(r.dir, "entrypoint.sh")
+		command := ""
+		if len(execution.Command) != 0 {
+			command = fmt.Sprintf("EXEC %s", strings.Join(execution.Command, " "))
+		}
+
+		scripts := []string{execution.PreRunScript, command, execution.PostRunScript}
+		var data string
+		for _, script := range scripts {
+			data += script
+			if script != "" {
+				data += "\n"
+			}
+		}
+
+		if err = os.WriteFile(file, []byte(data), 0755); err != nil {
+			output.PrintLogf("%s Could not create entrypoint script %s: %s", ui.IconCross, file, err.Error())
+			return result, errors.Errorf("could not create entrypoint script %s: %v", file, err)
+		}
+		output.PrintLogf("%s Entrypoint script created", ui.IconCheckMark)
 	}
 
 	// TODO: write a proper cloud implementation
