@@ -2,8 +2,8 @@
 
 In this section you will:
 
-1. [Install the Testkube CLI](./step1-installing-cli.md).
-2. [Install the Testkube Server components in your cluster](./step2-installing-cluster-components.md). [Alternatively you can use Helm](./helm-chart.md) to do that.
+1. [Install the Testkube CLI](./step1-installing-cli).
+2. [Install the Testkube Agent](./step2-installing-cluster-components.md).
 3. [Creating your first Test](./step3-creating-first-test.md).
 
 You can also see the full installation video from our product experts: [Testkube Installation Video](https://www.youtube.com/watch?v=bjQboi3Etys):

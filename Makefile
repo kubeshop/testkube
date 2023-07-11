@@ -78,6 +78,11 @@ build-testkube-bin-intel:
 docker-build-api:
 	goreleaser release -f goreleaser_files/.goreleaser-docker-build-api.yml --rm-dist --snapshot
 
+#make docker-build-cli SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-cli:latest  ALPINE_IMAGE=alpine:3.18.0
+docker-build-cli:
+	goreleaser release -f .builds-linux.goreleaser.yml --rm-dist --snapshot
+
+
 #make docker-build-executor EXECUTOR=zap GITHUB_TOKEN=*** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-zap-executor:latest
 #add ALPINE_IMAGE=alpine:3.18.0 env var for building of curl and scraper executor
 docker-build-executor:

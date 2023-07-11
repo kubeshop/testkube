@@ -3,9 +3,9 @@ package triggers
 import (
 	"testing"
 
-	v1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
-
 	"github.com/stretchr/testify/assert"
+
+	v1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 )
 
 func TestTriggerStatus(t *testing.T) {

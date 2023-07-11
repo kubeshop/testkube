@@ -25,7 +25,7 @@ func TestEmitter_Register(t *testing.T) {
 		t.Parallel()
 		// given
 		eventBus := bus.NewEventBusMock()
-		emitter := NewEmitter(eventBus)
+		emitter := NewEmitter(eventBus, "")
 		// when
 		emitter.Register(&dummy.DummyListener{Id: "l1"})
 
@@ -43,7 +43,7 @@ func TestEmitter_Listen(t *testing.T) {
 		t.Parallel()
 		// given
 		eventBus := bus.NewEventBusMock()
-		emitter := NewEmitter(eventBus)
+		emitter := NewEmitter(eventBus, "")
 		// given listener with matching selector
 		listener1 := &dummy.DummyListener{Id: "l1", SelectorString: "type=listener1"}
 		// and listener with second matic selector
@@ -97,7 +97,7 @@ func TestEmitter_Notify(t *testing.T) {
 		t.Parallel()
 		// given
 		eventBus := bus.NewEventBusMock()
-		emitter := NewEmitter(eventBus)
+		emitter := NewEmitter(eventBus, "")
 		// and 2 listeners subscribed to the same queue
 		// * first on pod1
 		listener1 := &dummy.DummyListener{Id: "l3"}
@@ -131,7 +131,7 @@ func TestEmitter_Reconcile(t *testing.T) {
 		t.Parallel()
 		// given first reconciler loop was done
 		eventBus := bus.NewEventBusMock()
-		emitter := NewEmitter(eventBus)
+		emitter := NewEmitter(eventBus, "")
 		emitter.Loader.Register(&dummy.DummyLoader{IdPrefix: "dummy1"})
 		emitter.Loader.Register(&dummy.DummyLoader{IdPrefix: "dummy2"})
 
@@ -185,7 +185,7 @@ func TestEmitter_UpdateListeners(t *testing.T) {
 		t.Parallel()
 		// given
 		eventBus := bus.NewEventBusMock()
-		emitter := NewEmitter(eventBus)
+		emitter := NewEmitter(eventBus, "")
 		// given listener with matching selector
 		listener1 := &dummy.DummyListener{Id: "l1", SelectorString: "type=listener1"}
 		// and listener with second matching selector

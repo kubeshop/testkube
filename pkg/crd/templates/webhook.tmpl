@@ -25,3 +25,12 @@ spec:
   {{- if .PayloadObjectField }}
   payloadObjectField: {{ .PayloadObjectField }}
   {{- end }}
+  {{- if .PayloadTemplate }}
+  payloadTemplate: {{ .PayloadTemplate }}
+  {{- end }}
+  {{- if ne (len .Headers) 0 }}
+  headers:
+  {{- range $key, $value := .Headers }}
+    {{ $key }}: {{ $value }}
+  {{- end }}
+  {{- end }}

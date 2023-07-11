@@ -425,21 +425,30 @@ metadata:
 
 When such a test is created you will see additional annotations for its cron job, when the default cron job template doesn't have any annotations.
 
-### Executing a Prerun Script
+### Executing a Prerun/Postrun Script
 
-If you need to provide additional configuration for your executor environment, you can submit a prerun script to be executed before the test is started. For example, we have a simple shell script stored in `script.sh` file:
+If you need to provide additional configuration for your executor environment, you can submit a prerun/postrun script to be executed before the test is started and after test is completed. For example, we have a simple shell script stored in `pre_script.sh` and `post_script.sh` files:
 
 ```sh
-!/bin/sh
+#!/bin/sh
 
 echo "Storing ssl certificate in file from env secret env"
 echo "$SSL_CERT" > /data/ssl.crt
 ```
 
-Provide the script when you create or run the test using `--prerun-script` parameter:
+and
 
 ```sh
-testkube create test --file test/postman/LocalHealth.postman_collection.json --name script-test --type postman/collection --prerun-script script.sh --secret-env SSL_CERT=your-k8s-secret
+#!/bin/sh
+
+echo "Sleeping for 30 seconds"
+sleep 30
+```
+
+Provide the script when you create or run the test using `--prerun-script` and `--postrun-script` parameters:
+
+```sh
+testkube create test --file test/postman/LocalHealth.postman_collection.json --name script-test --type postman/collection --prerun-script pre_script.sh --postrun-script post_script.sh --secret-env SSL_CERT=your-k8s-secret
 ```
 
 ### Changing the Default Scraper Job Template Used for Container Executor Tests

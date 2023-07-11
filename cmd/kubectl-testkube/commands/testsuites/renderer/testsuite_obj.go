@@ -2,6 +2,7 @@ package renderer
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/renderer"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -48,17 +49,21 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 		}
 	}
 
-	steps := append(ts.Before, ts.Steps...)
-	steps = append(steps, ts.After...)
+	batches := append(ts.Before, ts.Steps...)
+	batches = append(batches, ts.After...)
 
 	ui.NL()
-	ui.Warn("Test steps:", fmt.Sprintf("%d", len(steps)))
-	d := [][]string{{"Name", "Stop on failure", "Type"}}
-	for _, step := range steps {
+	ui.Warn("Test batches:", fmt.Sprintf("%d", len(batches)))
+	d := [][]string{{"Names", "Stop on failure"}}
+	for _, batch := range batches {
+		var names []string
+		for _, step := range batch.Execute {
+			names = append(names, step.FullName())
+		}
+
 		d = append(d, []string{
-			step.FullName(),
-			fmt.Sprintf("%v", step.StopTestOnFailure),
-			string(*step.Type()),
+			fmt.Sprintf("[%s]", strings.Join(names, ", ")),
+			fmt.Sprintf("%v", batch.StopOnFailure),
 		})
 	}
 

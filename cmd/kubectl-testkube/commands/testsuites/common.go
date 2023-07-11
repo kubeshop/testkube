@@ -90,9 +90,35 @@ func NewTestSuiteUpsertOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 		return options, fmt.Errorf("empty test suite content")
 	}
 
-	err = json.Unmarshal([]byte(*data), &options)
-	if err != nil {
-		return options, err
+	if err = json.Unmarshal([]byte(*data), &options); err != nil {
+		ui.Debug("json unmarshaling", err.Error())
+	}
+
+	emptyBatch := true
+	for _, step := range options.Steps {
+		if len(step.Execute) != 0 {
+			emptyBatch = false
+			break
+		}
+	}
+
+	if emptyBatch {
+		var testSuite testkube.TestSuiteUpsertRequestV2
+		err = json.Unmarshal([]byte(*data), &testSuite)
+		if err != nil {
+			return options, err
+		}
+
+		options = apiclientv1.UpsertTestSuiteOptions(*testSuite.ToTestSuiteUpsertRequest())
+		if len(options.Steps) == 0 {
+			return options, fmt.Errorf("no test suite batch steps provided")
+		}
+	}
+
+	for _, step := range options.Steps {
+		if len(step.Execute) == 0 {
+			return options, fmt.Errorf("no steps defined for batch step")
+		}
 	}
 
 	name := cmd.Flag("name").Value.String()
@@ -155,9 +181,29 @@ func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 	}
 
 	if data != nil {
-		err = json.Unmarshal([]byte(*data), &options)
-		if err != nil {
-			return options, err
+		if err = json.Unmarshal([]byte(*data), &options); err != nil {
+			ui.Debug("json unmarshaling", err.Error())
+		}
+
+		if options.Steps != nil {
+			emptyBatch := true
+			for _, step := range *options.Steps {
+				if len(step.Execute) != 0 {
+					emptyBatch = false
+					break
+				}
+			}
+
+			if emptyBatch {
+				var testSuite testkube.TestSuiteUpdateRequestV2
+				err = json.Unmarshal([]byte(*data), &testSuite)
+				if err != nil {
+					return options, err
+				}
+
+				options = apiclientv1.UpdateTestSuiteOptions(*testSuite.ToTestSuiteUpdateRequest())
+			}
+
 		}
 	}
 

@@ -5,23 +5,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/repository/config"
-
-	"github.com/kubeshop/testkube/pkg/repository/result"
-	"github.com/kubeshop/testkube/pkg/repository/testresult"
-
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
+	v1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsourcesv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
-	testsuitesv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
+	testsuitesv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
 	faketestkube "github.com/kubeshop/testkube-operator/pkg/clientset/versioned/fake"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -30,12 +27,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/repository/config"
+	"github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
-
-	v1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
-	"github.com/stretchr/testify/assert"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestService_Run(t *testing.T) {
@@ -53,7 +49,7 @@ func TestService_Run(t *testing.T) {
 
 	mockExecutorsClient := executorsclientv1.NewMockInterface(mockCtrl)
 	mockTestsClient := testsclientv3.NewMockInterface(mockCtrl)
-	mockTestSuitesClient := testsuitesv2.NewMockInterface(mockCtrl)
+	mockTestSuitesClient := testsuitesv3.NewMockInterface(mockCtrl)
 	mockTestSourcesClient := testsourcesv1.NewMockInterface(mockCtrl)
 	mockSecretClient := secret.NewMockInterface(mockCtrl)
 	configMapConfig := config.NewMockRepository(mockCtrl)
@@ -61,7 +57,7 @@ func TestService_Run(t *testing.T) {
 
 	mockExecutor := client.NewMockExecutor(mockCtrl)
 
-	mockEventEmitter := event.NewEmitter(bus.NewEventBusMock())
+	mockEventEmitter := event.NewEmitter(bus.NewEventBusMock(), "")
 
 	mockTest := testsv3.Test{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "some-test"},

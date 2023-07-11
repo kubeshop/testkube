@@ -19,6 +19,7 @@ func NewCloudCmd() *cobra.Command {
 	cmd.AddCommand(cloud.NewConnectCmd())
 	cmd.AddCommand(cloud.NewDisconnectCmd())
 	cmd.AddCommand(cloud.NewInitCmd())
+	cmd.AddCommand(cloud.NewLoginCmd())
 
 	return cmd
 }

@@ -77,10 +77,6 @@ const redirects = [
     to: "/articles/telemetry",
   },
   {
-    from: "/installing",
-    to: "/articles/getting-started-overview",
-  },
-  {
     from: "/guides/test-suites/testsuites-getting-results",
     to: "/articles/getting-test-suites-results",
   },
@@ -115,10 +111,6 @@ const redirects = [
     to: "/articles/slack-integration",
   },
   {
-    from: "/integrations",
-    to: "/articles/getting-started-overview",
-  },
-  {
     from: "/overview/supported-tests",
     to: "/articles/supported-tests",
   },
@@ -127,7 +119,13 @@ const redirects = [
     to: "/articles/testkube-benefits",
   },
   {
-    from: ["/getting-started/index", "/getting-started/installation"],
+    from: [
+      "/getting-started/index",
+      "/getting-started/installation",
+      "/getting-started",
+      "/integrations",
+      "/installing",
+    ],
     to: "/articles/getting-started-overview",
   },
   {
@@ -335,8 +333,8 @@ const redirects = [
     to: "/articles/crds",
   },
   {
-    from: "/getting-started",
-    to: "/articles/getting-started-overview",
+    from: "/articles/operator-api-reference",
+    to: "/articles/crds-reference",
   },
 ];
 

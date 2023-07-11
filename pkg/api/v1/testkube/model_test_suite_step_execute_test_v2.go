@@ -9,7 +9,9 @@
  */
 package testkube
 
-type TestSuiteStepDelay struct {
-	// delay duration in milliseconds
-	Duration int32 `json:"duration"`
+type TestSuiteStepExecuteTestV2 struct {
+	// object kubernetes namespace
+	Namespace string `json:"namespace,omitempty"`
+	// object name
+	Name string `json:"name"`
 }

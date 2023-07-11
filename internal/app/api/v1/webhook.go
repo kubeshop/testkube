@@ -1,12 +1,15 @@
 package v1
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/yaml"
 
+	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	webhooksmapper "github.com/kubeshop/testkube/pkg/mapper/webhooks"
@@ -15,20 +18,32 @@ import (
 func (s TestkubeAPI) CreateWebhookHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to create webhook"
+		var webhook executorv1.Webhook
+		if string(c.Request().Header.ContentType()) == mediaTypeYAML {
+			webhookSpec := string(c.Body())
+			decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(webhookSpec), len(webhookSpec))
+			if err := decoder.Decode(&webhook); err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse yaml request: %w", errPrefix, err))
+			}
+		} else {
+			var request testkube.WebhookCreateRequest
+			err := c.BodyParser(&request)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse json request: %w", errPrefix, err))
+			}
 
-		var request testkube.WebhookCreateRequest
-		err := c.BodyParser(&request)
-		if err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse request: %w", errPrefix, err))
+			if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+				if request.PayloadTemplate != "" {
+					request.PayloadTemplate = fmt.Sprintf("%q", request.PayloadTemplate)
+				}
+
+				data, err := crd.GenerateYAML(crd.TemplateWebhook, []testkube.WebhookCreateRequest{request})
+				return s.getCRDs(c, data, err)
+			}
+
+			webhook = webhooksmapper.MapAPIToCRD(request)
+			webhook.Namespace = s.Namespace
 		}
-
-		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			data, err := crd.GenerateYAML(crd.TemplateWebhook, []testkube.WebhookCreateRequest{request})
-			return s.getCRDs(c, data, err)
-		}
-
-		webhook := webhooksmapper.MapAPIToCRD(request)
-		webhook.Namespace = s.Namespace
 
 		created, err := s.WebhooksClient.Create(&webhook)
 		if err != nil {
@@ -56,6 +71,12 @@ func (s TestkubeAPI) ListWebhooksHandler() fiber.Handler {
 		}
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			for i := range results {
+				if results[i].PayloadTemplate != "" {
+					results[i].PayloadTemplate = fmt.Sprintf("%q", results[i].PayloadTemplate)
+				}
+			}
+
 			data, err := crd.GenerateYAML(crd.TemplateWebhook, results)
 			return s.getCRDs(c, data, err)
 		}
@@ -79,6 +100,10 @@ func (s TestkubeAPI) GetWebhookHandler() fiber.Handler {
 
 		result := webhooksmapper.MapCRDToAPI(*item)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			if result.PayloadTemplate != "" {
+				result.PayloadTemplate = fmt.Sprintf("%q", result.PayloadTemplate)
+			}
+
 			data, err := crd.GenerateYAML(crd.TemplateWebhook, []testkube.Webhook{result})
 			return s.getCRDs(c, data, err)
 		}

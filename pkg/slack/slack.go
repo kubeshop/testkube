@@ -26,6 +26,7 @@ type MessageArgs struct {
 	StartTime     string
 	EndTime       string
 	Duration      string
+	ClusterName   string
 }
 
 type Notifier struct {
@@ -33,11 +34,12 @@ type Notifier struct {
 	timestamps      map[string]string
 	Ready           bool
 	messageTemplate string
+	clusterName     string
 	config          *Config
 }
 
-func NewNotifier(template string, config []NotificationsConfig) *Notifier {
-	notifier := Notifier{messageTemplate: template, config: NewConfig(config)}
+func NewNotifier(template, clusterName string, config []NotificationsConfig) *Notifier {
+	notifier := Notifier{messageTemplate: template, clusterName: clusterName, config: NewConfig(config)}
 	notifier.timestamps = make(map[string]string)
 	if token, ok := os.LookupEnv("SLACK_TOKEN"); ok {
 		log.DefaultLogger.Infow("initializing slack client", "SLACK_TOKEN", token)
@@ -180,8 +182,9 @@ func (s *Notifier) composeTestsuiteMessage(execution *testkube.TestSuiteExecutio
 		StartTime:     execution.StartTime.String(),
 		EndTime:       execution.EndTime.String(),
 		Duration:      execution.Duration,
-		TotalSteps:    len(execution.StepResults),
+		TotalSteps:    len(execution.ExecuteStepResults),
 		FailedSteps:   execution.FailedStepsCount(),
+		ClusterName:   s.clusterName,
 	}
 
 	log.DefaultLogger.Infow("Execution changed", "status", execution.Status)
@@ -216,6 +219,7 @@ func (s *Notifier) composeTestMessage(execution *testkube.Execution, eventType t
 		Duration:      execution.Duration,
 		TotalSteps:    len(execution.ExecutionResult.Steps),
 		FailedSteps:   execution.ExecutionResult.FailedStepsCount(),
+		ClusterName:   s.clusterName,
 	}
 
 	log.DefaultLogger.Infow("Execution changed", "status", execution.ExecutionResult.Status)

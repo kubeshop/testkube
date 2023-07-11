@@ -22,6 +22,7 @@ type CloudContext struct {
 	OrganizationId   string `json:"organization,omitempty"`
 	OrganizationName string `json:"organizationName,omitempty"`
 	ApiKey           string `json:"apiKey,omitempty"`
+	RefreshToken     string `json:"refreshToken,omitempty"`
 	ApiUri           string `json:"apiUri,omitempty"`
 	AgentKey         string `json:"agentKey,omitempty"`
 	AgentUri         string `json:"agentUri,omitempty"`

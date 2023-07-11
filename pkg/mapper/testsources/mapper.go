@@ -93,7 +93,7 @@ func MapAPIToCRD(request testkube.TestSourceUpsertRequest) testsourcev1.TestSour
 	}
 }
 
-// MapUpdateToSpec maps TestUpdateRequest to Test CRD spec
+// MapUpdateToSpec maps TestSourceUpdateRequest to TestSource CRD spec
 func MapUpdateToSpec(request testkube.TestSourceUpdateRequest, testSource *testsourcev1.TestSource) *testsourcev1.TestSource {
 	var fields = []struct {
 		source      *string
@@ -234,4 +234,102 @@ func MapUpdateToSpec(request testkube.TestSourceUpdateRequest, testSource *tests
 	}
 
 	return testSource
+}
+
+// MapSpecToUpdate maps TestSource CRD spec TestSourceUpdateRequest to
+func MapSpecToUpdate(testSource *testsourcev1.TestSource) (request testkube.TestSourceUpdateRequest) {
+	var fields = []struct {
+		source      *string
+		destination **string
+	}{
+		{
+			&testSource.Name,
+			&request.Name,
+		},
+		{
+			&testSource.Namespace,
+			&request.Namespace,
+		},
+		{
+			&testSource.Spec.Data,
+			&request.Data,
+		},
+		{
+			&testSource.Spec.Uri,
+			&request.Uri,
+		},
+	}
+
+	for _, field := range fields {
+		*field.destination = field.source
+	}
+
+	request.Type_ = (*string)(&testSource.Spec.Type_)
+
+	request.Labels = &testSource.Labels
+
+	if testSource.Spec.Repository != nil {
+		repository := &testkube.RepositoryUpdate{}
+		request.Repository = &repository
+
+		var fields = []struct {
+			source      *string
+			destination **string
+		}{
+			{
+				&testSource.Spec.Repository.Type_,
+				&(*request.Repository).Type_,
+			},
+			{
+				&testSource.Spec.Repository.Uri,
+				&(*request.Repository).Uri,
+			},
+			{
+				&testSource.Spec.Repository.Branch,
+				&(*request.Repository).Branch,
+			},
+			{
+				&testSource.Spec.Repository.Commit,
+				&(*request.Repository).Commit,
+			},
+			{
+				&testSource.Spec.Repository.Path,
+				&(*request.Repository).Path,
+			},
+			{
+				&testSource.Spec.Repository.WorkingDir,
+				&(*request.Repository).WorkingDir,
+			},
+			{
+				&testSource.Spec.Repository.CertificateSecret,
+				&(*request.Repository).CertificateSecret,
+			},
+		}
+
+		for _, field := range fields {
+			*field.destination = field.source
+		}
+
+		(*request.Repository).AuthType = (*string)(&testSource.Spec.Repository.AuthType)
+
+		if testSource.Spec.Repository.UsernameSecret != nil {
+			secretRef := &testkube.SecretRef{
+				Name: testSource.Spec.Repository.UsernameSecret.Name,
+				Key:  testSource.Spec.Repository.UsernameSecret.Key,
+			}
+
+			(*request.Repository).UsernameSecret = &secretRef
+		}
+
+		if testSource.Spec.Repository.TokenSecret != nil {
+			secretRef := &testkube.SecretRef{
+				Name: testSource.Spec.Repository.TokenSecret.Name,
+				Key:  testSource.Spec.Repository.TokenSecret.Key,
+			}
+
+			(*request.Repository).TokenSecret = &secretRef
+		}
+	}
+
+	return request
 }

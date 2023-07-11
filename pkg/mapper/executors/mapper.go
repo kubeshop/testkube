@@ -249,3 +249,82 @@ func MapUpdateToSpec(request testkube.ExecutorUpdateRequest, executor *executorv
 
 	return executor
 }
+
+// MapSpecToUpdate maps Executor CRD to ExecutorUpdate Request to spec
+func MapSpecToUpdate(executor *executorv1.Executor) (request testkube.ExecutorUpdateRequest) {
+	var fields = []struct {
+		source      *string
+		destination **string
+	}{
+		{
+			&executor.Name,
+			&request.Name,
+		},
+		{
+			&executor.Namespace,
+			&request.Namespace,
+		},
+		{
+			&executor.Spec.Image,
+			&request.Image,
+		},
+		{
+			&executor.Spec.URI,
+			&request.Uri,
+		},
+		{
+			&executor.Spec.JobTemplate,
+			&request.JobTemplate,
+		},
+	}
+
+	for _, field := range fields {
+		*field.destination = field.source
+	}
+
+	request.ExecutorType = (*string)(&executor.Spec.ExecutorType)
+
+	var slices = []struct {
+		source      *[]string
+		destination **[]string
+	}{
+		{
+			&executor.Spec.Command,
+			&request.Command,
+		},
+		{
+			&executor.Spec.Args,
+			&request.Args,
+		},
+		{
+			&executor.Spec.Types,
+			&request.Types,
+		},
+	}
+
+	for _, slice := range slices {
+		*slice.destination = slice.source
+	}
+
+	request.Labels = &executor.Labels
+
+	imagePullSecrets := mapImagePullSecretsToAPI(executor.Spec.ImagePullSecrets)
+	request.ImagePullSecrets = &imagePullSecrets
+
+	features := MapFeaturesToAPI(executor.Spec.Features)
+	request.Features = &features
+
+	contentTypes := MapContentTypesToAPI(executor.Spec.ContentTypes)
+	request.ContentTypes = &contentTypes
+
+	if executor.Spec.Meta != nil {
+		executorMeta := &testkube.ExecutorMetaUpdate{
+			IconURI:  &executor.Spec.Meta.IconURI,
+			DocsURI:  &executor.Spec.Meta.DocsURI,
+			Tooltips: &executor.Spec.Meta.Tooltips,
+		}
+		request.Meta = &(executorMeta)
+	}
+
+	return request
+}

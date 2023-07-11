@@ -1,6 +1,8 @@
 package testkube
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -43,11 +45,19 @@ func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutio
 	}
 
 	// add queued execution steps
-	steps := append(testSuite.Before, testSuite.Steps...)
-	steps = append(steps, testSuite.After...)
+	batches := append(testSuite.Before, testSuite.Steps...)
+	batches = append(batches, testSuite.After...)
 
-	for i := range steps {
-		testExecution.StepResults = append(testExecution.StepResults, NewTestStepQueuedResult(&steps[i]))
+	for i := range batches {
+		var stepResults []TestSuiteStepExecutionResult
+		for j := range batches[i].Execute {
+			stepResults = append(stepResults, NewTestStepQueuedResult(&batches[i].Execute[j]))
+		}
+
+		testExecution.ExecuteStepResults = append(testExecution.ExecuteStepResults, TestSuiteBatchStepExecutionResult{
+			Step:    &batches[i],
+			Execute: stepResults,
+		})
 	}
 
 	return testExecution
@@ -55,14 +65,28 @@ func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutio
 
 func (e TestSuiteExecution) FailedStepsCount() (count int) {
 	for _, stepResult := range e.StepResults {
-		if stepResult.Execution.IsFailed() {
+		if stepResult.Execution != nil && stepResult.Execution.IsFailed() {
 			count++
 		}
 	}
+
+	for _, batchStepResult := range e.ExecuteStepResults {
+		for _, stepResult := range batchStepResult.Execute {
+			if stepResult.Execution != nil && stepResult.Execution.IsFailed() {
+				count++
+				break
+			}
+		}
+	}
+
 	return
 }
 
 func (e TestSuiteExecution) IsCompleted() bool {
+	if e.Status == nil {
+		return false
+	}
+
 	return *e.Status == *TestSuiteExecutionStatusFailed ||
 		*e.Status == *TestSuiteExecutionStatusPassed ||
 		*e.Status == *TestSuiteExecutionStatusAborted ||
@@ -77,7 +101,6 @@ func (e *TestSuiteExecution) Stop() {
 }
 
 func (e *TestSuiteExecution) CalculateDuration() time.Duration {
-
 	end := e.EndTime
 	start := e.StartTime
 
@@ -93,26 +116,73 @@ func (e *TestSuiteExecution) CalculateDuration() time.Duration {
 }
 
 func (e TestSuiteExecution) Table() (header []string, output [][]string) {
-	header = []string{"Status", "Step", "ID", "Error"}
-	output = make([][]string, 0)
+	if len(e.StepResults) != 0 {
+		header = []string{"Status", "Step", "ID", "Error"}
+		output = make([][]string, 0)
 
-	for _, sr := range e.StepResults {
-		status := "no-execution-result"
-		if sr.Execution != nil && sr.Execution.ExecutionResult != nil && sr.Execution.ExecutionResult.Status != nil {
-			status = string(*sr.Execution.ExecutionResult.Status)
-		}
-
-		switch sr.Step.Type() {
-		case TestSuiteStepTypeExecuteTest:
-			var id, errorMessage string
-			if sr.Execution != nil && sr.Execution.ExecutionResult != nil {
-				errorMessage = sr.Execution.ExecutionResult.ErrorMessage
-				id = sr.Execution.Id
+		for _, sr := range e.StepResults {
+			status := "no-execution-result"
+			if sr.Execution != nil && sr.Execution.ExecutionResult != nil && sr.Execution.ExecutionResult.Status != nil {
+				status = string(*sr.Execution.ExecutionResult.Status)
 			}
-			row := []string{status, sr.Step.FullName(), id, errorMessage}
-			output = append(output, row)
-		case TestSuiteStepTypeDelay:
-			row := []string{status, sr.Step.FullName(), "", ""}
+
+			if sr.Step == nil {
+				continue
+			}
+
+			switch sr.Step.Type() {
+			case TestSuiteStepTypeExecuteTest:
+				var id, errorMessage string
+				if sr.Execution != nil && sr.Execution.ExecutionResult != nil {
+					errorMessage = sr.Execution.ExecutionResult.ErrorMessage
+					id = sr.Execution.Id
+				}
+				row := []string{status, sr.Step.FullName(), id, errorMessage}
+				output = append(output, row)
+			case TestSuiteStepTypeDelay:
+				row := []string{status, sr.Step.FullName(), "", ""}
+				output = append(output, row)
+			}
+		}
+	}
+
+	if len(e.ExecuteStepResults) != 0 {
+		header = []string{"Statuses", "Step", "IDs", "Errors"}
+		output = make([][]string, 0)
+
+		for _, bs := range e.ExecuteStepResults {
+			var statuses, names, ids, errorMessages []string
+
+			for _, sr := range bs.Execute {
+				status := "no-execution-result"
+				if sr.Execution != nil && sr.Execution.ExecutionResult != nil && sr.Execution.ExecutionResult.Status != nil {
+					status = string(*sr.Execution.ExecutionResult.Status)
+				}
+
+				statuses = append(statuses, status)
+				if sr.Step == nil {
+					continue
+				}
+
+				switch sr.Step.Type() {
+				case TestSuiteStepTypeExecuteTest:
+					var id, errorMessage string
+					if sr.Execution != nil && sr.Execution.ExecutionResult != nil {
+						errorMessage = sr.Execution.ExecutionResult.ErrorMessage
+						id = sr.Execution.Id
+					}
+
+					names = append(names, sr.Step.FullName())
+					ids = append(ids, id)
+					errorMessages = append(errorMessages, fmt.Sprintf("%q", errorMessage))
+				case TestSuiteStepTypeDelay:
+					names = append(names, sr.Step.FullName())
+					ids = append(ids, "\"\"")
+					errorMessages = append(errorMessages, "\"\"")
+				}
+			}
+
+			row := []string{strings.Join(statuses, ", "), strings.Join(names, ", "), strings.Join(ids, ", "), strings.Join(errorMessages, ", ")}
 			output = append(output, row)
 		}
 	}
@@ -121,19 +191,19 @@ func (e TestSuiteExecution) Table() (header []string, output [][]string) {
 }
 
 func (e *TestSuiteExecution) IsRunning() bool {
-	return *e.Status == RUNNING_TestSuiteExecutionStatus
+	return e.Status != nil && *e.Status == RUNNING_TestSuiteExecutionStatus
 }
 
 func (e *TestSuiteExecution) IsQueued() bool {
-	return *e.Status == QUEUED_TestSuiteExecutionStatus
+	return e.Status != nil && *e.Status == QUEUED_TestSuiteExecutionStatus
 }
 
 func (e *TestSuiteExecution) IsPassed() bool {
-	return *e.Status == PASSED_TestSuiteExecutionStatus
+	return e.Status != nil && *e.Status == PASSED_TestSuiteExecutionStatus
 }
 
 func (e *TestSuiteExecution) IsFailed() bool {
-	return *e.Status == FAILED_TestSuiteExecutionStatus
+	return e.Status != nil && *e.Status == FAILED_TestSuiteExecutionStatus
 }
 
 func (e *TestSuiteExecution) IsAborted() bool {
@@ -142,4 +212,33 @@ func (e *TestSuiteExecution) IsAborted() bool {
 
 func (e *TestSuiteExecution) IsTimeout() bool {
 	return *e.Status == TIMEOUT_TestSuiteExecutionStatus
+}
+
+func (e *TestSuiteExecution) convertDots(fn func(string) string) *TestSuiteExecution {
+	labels := make(map[string]string, len(e.Labels))
+	for key, value := range e.Labels {
+		labels[fn(key)] = value
+	}
+	e.Labels = labels
+
+	envs := make(map[string]string, len(e.Envs))
+	for key, value := range e.Envs {
+		envs[fn(key)] = value
+	}
+	e.Envs = envs
+
+	vars := make(map[string]Variable, len(e.Variables))
+	for key, value := range e.Variables {
+		vars[fn(key)] = value
+	}
+	e.Variables = vars
+	return e
+}
+
+func (e *TestSuiteExecution) EscapeDots() *TestSuiteExecution {
+	return e.convertDots(utils.EscapeDots)
+}
+
+func (e *TestSuiteExecution) UnscapeDots() *TestSuiteExecution {
+	return e.convertDots(utils.UnescapeDots)
 }

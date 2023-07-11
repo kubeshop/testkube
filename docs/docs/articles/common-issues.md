@@ -155,10 +155,13 @@ metadata:
   name: s3-access
   namespace: testkube
 ```
+In the Helm values.yaml file:
+2. Add the ARN annotation from above to `testkube-api.serviceAccount.annotations`.
+3. Link the ServiceAccount to the `testkube-api.minio.serviceAccountName` and to `testkube-api.jobServiceAccountName`.
+4. Leave `minio.minioRootUser`, `minio.minioRootPassword` and `storage.port` empty.
+5. Set `storage.endpoint` to `s3.amazonaws.com`.
 
-2. In the Helm values.yaml file, link the ServiceAccount to the `testkube-api.minio.serviceAccountName` and to `testkube-api.jobServiceAccountName` then leave `minio.minioRootUser`, `minio.minioRootPassword` and `storage.port` empty and set `storage.endpoint` to `s3.amazonaws.com`.
-
-3. Install using Helm and the values file with the above modifications.
+6. Install using Helm and the values file with the above modifications.
 
 ## Observability
 

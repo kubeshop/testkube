@@ -13,7 +13,8 @@ testkube generate tests-crds <manifestDirectory> [flags]
 ### Options
 
 ```
-      --artifact-dir stringArray                   artifact dirs for container executor
+      --args-mode string                           usage mode for arguments. one of append|override (default "append")
+      --artifact-dir stringArray                   artifact dirs for scraping
       --artifact-storage-class-name string         artifact storage class name for container executor
       --artifact-volume-mount-path string          artifact volume mount path for container executor
       --command stringArray                        command passed to image in executor
@@ -32,6 +33,7 @@ testkube generate tests-crds <manifestDirectory> [flags]
       --mount-configmap stringToString             config map value pair for mounting it to executor pod: --mount-configmap configmap_name=configmap_mountpath (default [])
       --mount-secret stringToString                secret value pair for mounting it to executor pod: --mount-secret secret_name=secret_mountpath (default [])
       --negative-test                              negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa
+      --postrun-script string                      path to script to be run after test execution
       --prerun-script string                       path to script to be run before test execution
       --schedule string                            test schedule in a cron job form: * * * * *
       --scraper-template string                    scraper template file path for extensions to scraper template

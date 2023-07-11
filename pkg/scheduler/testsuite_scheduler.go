@@ -7,22 +7,28 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/version"
-
 	"github.com/pkg/errors"
 
-	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
+	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	"github.com/kubeshop/testkube/pkg/telemetry"
+	"github.com/kubeshop/testkube/pkg/version"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
 const (
 	abortionPollingInterval = 100 * time.Millisecond
+	// DefaultConcurrencyLevel is a default concurrency level for worker pool
+	DefaultConcurrencyLevel = 10
 )
 
-func (s *Scheduler) PrepareTestSuiteRequests(work []testsuitesv2.TestSuite, request testkube.TestSuiteExecutionRequest) []workerpool.Request[
+type testTuple struct {
+	test        testkube.Test
+	executionID string
+}
+
+func (s *Scheduler) PrepareTestSuiteRequests(work []testsuitesv3.TestSuite, request testkube.TestSuiteExecutionRequest) []workerpool.Request[
 	testkube.TestSuite,
 	testkube.TestSuiteExecutionRequest,
 	testkube.TestSuiteExecution,
@@ -100,42 +106,64 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 
 	hasFailedSteps := false
 	cancelSteps := false
-	var stepResult *testkube.TestSuiteStepExecutionResult
+	var batchStepResult *testkube.TestSuiteBatchStepExecutionResult
 
 	var abortionStatus *testkube.TestSuiteExecutionStatus
 	abortChan := make(chan *testkube.TestSuiteExecutionStatus)
 
 	go s.abortionCheck(ctx, testsuiteExecution, request.Timeout, abortChan)
 
-	for i := range testsuiteExecution.StepResults {
-		stepResult = &testsuiteExecution.StepResults[i]
+	for i := range testsuiteExecution.ExecuteStepResults {
+		batchStepResult = &testsuiteExecution.ExecuteStepResults[i]
 		select {
 		case abortionStatus = <-abortChan:
 			s.logger.Infow("Aborting test suite execution", "execution", testsuiteExecution.Id, "i", i)
 
 			cancelSteps = true
-			stepResult.Execution.ExecutionResult.Abort()
+			for j := range batchStepResult.Execute {
+				if batchStepResult.Execute[j].Execution != nil && batchStepResult.Execute[j].Execution.ExecutionResult != nil {
+					batchStepResult.Execute[j].Execution.ExecutionResult.Abort()
+				}
+			}
+
 			testsuiteExecution.Status = testkube.TestSuiteExecutionStatusAborting
 		default:
-			s.logger.Debugw("Running step", "step", testsuiteExecution.StepResults[i].Step, "i", i)
+			s.logger.Debugw("Running batch step", "step", batchStepResult.Execute, "i", i)
 
 			if cancelSteps {
-				s.logger.Debugw("Aborting step", "step", testsuiteExecution.StepResults[i].Step, "i", i)
+				s.logger.Debugw("Aborting batch step", "step", batchStepResult.Execute, "i", i)
 
-				stepResult.Execution.ExecutionResult.Abort()
+				for j := range batchStepResult.Execute {
+					if batchStepResult.Execute[j].Execution != nil && batchStepResult.Execute[j].Execution.ExecutionResult != nil {
+						batchStepResult.Execute[j].Execution.ExecutionResult.Abort()
+					}
+				}
+
 				continue
 			}
 
 			// start execution of given step
-			stepResult.Execution.ExecutionResult.InProgress()
+			for j := range batchStepResult.Execute {
+				if batchStepResult.Execute[j].Execution != nil && batchStepResult.Execute[j].Execution.ExecutionResult != nil {
+					batchStepResult.Execute[j].Execution.ExecutionResult.InProgress()
+				}
+			}
+
 			err := s.testExecutionResults.Update(ctx, *testsuiteExecution)
 			if err != nil {
 				s.logger.Infow("Updating test execution", "error", err)
 			}
 
-			s.executeTestStep(ctx, *testsuiteExecution, request, stepResult)
+			s.executeTestStep(ctx, *testsuiteExecution, request, batchStepResult)
 
-			s.logger.Debugw("Step execution result", "step", testsuiteExecution.StepResults[i].Step, "result", stepResult.Execution.ExecutionResult)
+			var results []*testkube.ExecutionResult
+			for j := range batchStepResult.Execute {
+				if batchStepResult.Execute[j].Execution != nil && batchStepResult.Execute[j].Execution.ExecutionResult != nil {
+					results = append(results, batchStepResult.Execute[j].Execution.ExecutionResult)
+				}
+			}
+
+			s.logger.Debugw("Batch step execution result", "step", batchStepResult.Execute, "results", results)
 
 			err = s.testExecutionResults.Update(ctx, *testsuiteExecution)
 			if err != nil {
@@ -145,17 +173,19 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 				continue
 			}
 
-			if stepResult.IsFailed() {
-				hasFailedSteps = true
-				if stepResult.Step.StopTestOnFailure {
-					cancelSteps = true
-					continue
+			for j := range batchStepResult.Execute {
+				if batchStepResult.Execute[j].IsFailed() {
+					hasFailedSteps = true
+					if batchStepResult.Step != nil && batchStepResult.Step.StopOnFailure {
+						cancelSteps = true
+						break
+					}
 				}
 			}
 		}
 	}
 
-	if *testsuiteExecution.Status == testkube.ABORTING_TestSuiteExecutionStatus {
+	if testsuiteExecution.Status != nil && *testsuiteExecution.Status == testkube.ABORTING_TestSuiteExecutionStatus {
 		if abortionStatus != nil && *abortionStatus == testkube.TIMEOUT_TestSuiteExecutionStatus {
 			s.events.Notify(testkube.NewEventEndTestSuiteTimeout(testsuiteExecution))
 			testsuiteExecution.Status = testkube.TestSuiteExecutionStatusTimeout
@@ -286,28 +316,76 @@ func (s *Scheduler) wasTestSuiteAborted(ctx context.Context, id string) bool {
 
 	s.logger.Debugw("Checking if test suite execution was aborted", "id", id, "status", execution.Status)
 
-	return *execution.Status == testkube.ABORTING_TestSuiteExecutionStatus
+	return execution.Status != nil && *execution.Status == testkube.ABORTING_TestSuiteExecutionStatus
 }
 
 func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution testkube.TestSuiteExecution,
-	request testkube.TestSuiteExecutionRequest, result *testkube.TestSuiteStepExecutionResult) {
+	request testkube.TestSuiteExecutionRequest, result *testkube.TestSuiteBatchStepExecutionResult) {
 
 	var testSuiteName string
 	if testsuiteExecution.TestSuite != nil {
 		testSuiteName = testsuiteExecution.TestSuite.Name
 	}
 
-	step := result.Step
+	var testTuples []testTuple
+	var duration time.Duration
+	for i := range result.Execute {
+		step := result.Execute[i].Step
+		if step == nil {
+			continue
+		}
 
-	l := s.logger.With("type", step.Type(), "testSuiteName", testSuiteName, "name", step.FullName())
+		l := s.logger.With("type", step.Type(), "testSuiteName", testSuiteName, "name", step.FullName())
 
-	switch step.Type() {
-	case testkube.TestSuiteStepTypeExecuteTest:
-		executeTestStep := step.Execute
-		request := testkube.ExecutionRequest{
-			Name:                  fmt.Sprintf("%s-%s", testSuiteName, executeTestStep.Name),
+		switch step.Type() {
+		case testkube.TestSuiteStepTypeExecuteTest:
+			executeTestStep := step.Test
+			if executeTestStep == "" {
+				continue
+			}
+
+			execution := result.Execute[i].Execution
+			if execution == nil {
+				continue
+			}
+
+			l.Info("executing test", "variables", testsuiteExecution.Variables, "request", request)
+
+			testTuples = append(testTuples, testTuple{
+				test:        testkube.Test{Name: executeTestStep},
+				executionID: execution.Id,
+			})
+		case testkube.TestSuiteStepTypeDelay:
+			if step.Delay == "" {
+				continue
+			}
+
+			l.Infow("delaying execution", "step", step.FullName(), "delay", step.Delay)
+
+			delay, err := time.ParseDuration(step.Delay)
+			if err != nil {
+				result.Execute[i].Err(err)
+				continue
+			}
+
+			if delay > duration {
+				duration = delay
+			}
+		default:
+			result.Execute[i].Err(errors.Errorf("can't find handler for execution step type: '%v'", step.Type()))
+		}
+	}
+
+	concurrencyLevel := DefaultConcurrencyLevel
+	if request.ConcurrencyLevel != 0 {
+		concurrencyLevel = int(request.ConcurrencyLevel)
+	}
+
+	workerpoolService := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](concurrencyLevel)
+
+	if len(testTuples) != 0 {
+		req := testkube.ExecutionRequest{
 			TestSuiteName:         testSuiteName,
-			Namespace:             executeTestStep.Namespace,
 			Variables:             testsuiteExecution.Variables,
 			TestSuiteSecretUUID:   request.SecretUUID,
 			Sync:                  true,
@@ -322,26 +400,50 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 			},
 		}
 
-		l.Info("executing test", "variables", testsuiteExecution.Variables, "request", request)
-
-		execution, err := s.executeTest(ctx, testkube.Test{Name: executeTestStep.Name}, request)
-		if err != nil {
-			result.Err(err)
-			return
+		requests := make([]workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution], len(testTuples))
+		for i := range testTuples {
+			req.Name = fmt.Sprintf("%s-%s", testSuiteName, testTuples[i].test.Name)
+			req.Id = testTuples[i].executionID
+			requests[i] = workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution]{
+				Object:  testTuples[i].test,
+				Options: req,
+				ExecFn:  s.executeTest,
+			}
 		}
 
-		result.Execution = &execution
-	case testkube.TestSuiteStepTypeDelay:
-		l.Infow("delaying execution", "step", step.FullName(), "delay", step.Delay.Duration)
+		go workerpoolService.SendRequests(requests)
+		go workerpoolService.Run(ctx)
+	}
 
-		duration := time.Millisecond * time.Duration(step.Delay.Duration)
+	if duration != 0 {
 		s.delayWithAbortionCheck(duration, testsuiteExecution.Id, result)
-	default:
-		result.Err(errors.Errorf("can't find handler for execution step type: '%v'", step.Type()))
+	}
+
+	results := make(map[string]testkube.Execution, len(testTuples))
+	if len(testTuples) != 0 {
+		for r := range workerpoolService.GetResponses() {
+			results[r.Result.Id] = r.Result
+			status := ""
+			if r.Result.ExecutionResult != nil && r.Result.ExecutionResult.Status != nil {
+				status = string(*r.Result.ExecutionResult.Status)
+			}
+
+			s.logger.Infow("execution result", "id", r.Result.Id, "status", status)
+		}
+
+		for i := range result.Execute {
+			if result.Execute[i].Execution == nil {
+				continue
+			}
+
+			if value, ok := results[result.Execute[i].Execution.Id]; ok {
+				result.Execute[i].Execution = &value
+			}
+		}
 	}
 }
 
-func (s *Scheduler) delayWithAbortionCheck(duration time.Duration, testSuiteId string, result *testkube.TestSuiteStepExecutionResult) {
+func (s *Scheduler) delayWithAbortionCheck(duration time.Duration, testSuiteId string, result *testkube.TestSuiteBatchStepExecutionResult) {
 	timer := time.NewTimer(duration)
 	ticker := time.NewTicker(abortionPollingInterval)
 
@@ -355,13 +457,36 @@ func (s *Scheduler) delayWithAbortionCheck(duration time.Duration, testSuiteId s
 		case <-timer.C:
 			s.logger.Infow("delay finished", "testSuiteId", testSuiteId, "duration", duration)
 
-			result.Execution.ExecutionResult.Success()
+			for i := range result.Execute {
+				if result.Execute[i].Step != nil && result.Execute[i].Step.Delay != "" &&
+					result.Execute[i].Execution != nil && result.Execute[i].Execution.ExecutionResult != nil {
+					result.Execute[i].Execution.ExecutionResult.Success()
+				}
+			}
+
 			return
 		case <-ticker.C:
 			if s.wasTestSuiteAborted(context.Background(), testSuiteId) {
 				s.logger.Infow("delay aborted", "testSuiteId", testSuiteId, "duration", duration)
 
-				result.Execution.ExecutionResult.Abort()
+				for i := range result.Execute {
+					if result.Execute[i].Step != nil && result.Execute[i].Step.Delay != "" &&
+						result.Execute[i].Execution != nil && result.Execute[i].Execution.ExecutionResult != nil {
+						delay, err := time.ParseDuration(result.Execute[i].Step.Delay)
+						if err != nil {
+							result.Execute[i].Err(err)
+							continue
+						}
+
+						if delay < duration {
+							result.Execute[i].Execution.ExecutionResult.Success()
+							continue
+						}
+
+						result.Execute[i].Execution.ExecutionResult.Abort()
+					}
+				}
+
 				return
 			}
 		}

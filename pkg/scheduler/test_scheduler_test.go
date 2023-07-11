@@ -112,7 +112,7 @@ func TestGetExecuteOptions(t *testing.T) {
 		ExecutionLabels:  map[string]string{"label": "value"},
 		Namespace:        "namespace",
 		VariablesFile:    "",
-		Variables:        map[string]testkube.Variable{"var": testkube.Variable{Name: "one"}},
+		Variables:        map[string]testkube.Variable{"var": {Name: "one"}},
 		Command:          []string{"run"},
 		Args:             []string{},
 		ArgsMode:         "",
@@ -133,6 +133,7 @@ func TestGetExecuteOptions(t *testing.T) {
 		JobTemplate:           "",
 		CronJobTemplate:       "",
 		PreRunScript:          "",
+		PostRunScript:         "",
 		ScraperTemplate:       "",
 		EnvConfigMaps: []testkube.EnvReference{
 			{

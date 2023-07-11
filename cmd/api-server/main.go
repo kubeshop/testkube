@@ -63,11 +63,13 @@ import (
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsourcesclientv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
+	testsuitesclientv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/migrations"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/migrator"
+	"github.com/kubeshop/testkube/pkg/reconciler"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -154,7 +156,8 @@ func main() {
 	testsClientV3 := testsclientv3.NewClient(kubeClient, cfg.TestkubeNamespace)
 	executorsClient := executorsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
-	testsuitesClient := testsuitesclientv2.NewClient(kubeClient, cfg.TestkubeNamespace)
+	testsuitesClientV2 := testsuitesclientv2.NewClient(kubeClient, cfg.TestkubeNamespace)
+	testsuitesClientV3 := testsuitesclientv3.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 
 	clientset, err := k8sclient.ConnectToK8s()
@@ -275,7 +278,7 @@ func main() {
 	log.DefaultLogger.Debugw("Getting unique clusterId", "clusterId", clusterId, "error", err)
 
 	// TODO check if this version exists somewhere in stats (probably could be removed)
-	migrations.Migrator.Add(migrations.NewVersion_0_9_2(scriptsClient, testsClientV1, testsClientV3, testsuitesClient))
+	migrations.Migrator.Add(migrations.NewVersion_0_9_2(scriptsClient, testsClientV1, testsClientV3, testsuitesClientV2))
 	if err := runMigrations(); err != nil {
 		ui.ExitOnError("Running server migrations", err)
 	}
@@ -288,7 +291,7 @@ func main() {
 		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
 	}
 	eventBus := bus.NewNATSBus(nc)
-	eventsEmitter := event.NewEmitter(eventBus)
+	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName)
 
 	metrics := metrics.NewMetrics()
 
@@ -358,7 +361,7 @@ func main() {
 		testResultsRepository,
 		executorsClient,
 		testsClientV3,
-		testsuitesClient,
+		testsuitesClientV3,
 		testsourcesClient,
 		secretClient,
 		eventsEmitter,
@@ -378,7 +381,7 @@ func main() {
 		testResultsRepository,
 		testsClientV3,
 		executorsClient,
-		testsuitesClient,
+		testsuitesClientV3,
 		secretClient,
 		webhooksClient,
 		clientset,
@@ -403,7 +406,17 @@ func main() {
 	if mode == common.ModeAgent {
 		log.DefaultLogger.Info("starting agent service")
 
-		agentHandle, err := agent.NewAgent(log.DefaultLogger, api.Mux.Handler(), cfg.TestkubeCloudAPIKey, grpcClient, cfg.TestkubeCloudWorkerCount, cfg.TestkubeCloudLogStreamWorkerCount, api.GetLogsStream, clusterId)
+		agentHandle, err := agent.NewAgent(
+			log.DefaultLogger,
+			api.Mux.Handler(),
+			cfg.TestkubeCloudAPIKey,
+			grpcClient,
+			cfg.TestkubeCloudWorkerCount,
+			cfg.TestkubeCloudLogStreamWorkerCount,
+			api.GetLogsStream,
+			clusterId,
+			cfg.TestkubeClusterName,
+		)
 		if err != nil {
 			ui.ExitOnError("Starting agent", err)
 		}
@@ -425,7 +438,7 @@ func main() {
 			clientset,
 			dynamicClientSet,
 			testkubeClientset,
-			testsuitesClient,
+			testsuitesClientV3,
 			testsClientV3,
 			resultsRepository,
 			testResultsRepository,
@@ -443,6 +456,19 @@ func main() {
 		triggerService.Run(ctx)
 	} else {
 		log.DefaultLogger.Info("test triggers are disabled")
+	}
+
+	if !cfg.DisableReconciler {
+		reconcilerClient := reconciler.NewClient(clientset,
+			resultsRepository,
+			testResultsRepository,
+			log.DefaultLogger,
+			cfg.TestkubeNamespace)
+		g.Go(func() error {
+			return reconcilerClient.Run(ctx)
+		})
+	} else {
+		log.DefaultLogger.Info("reconclier is disabled")
 	}
 
 	// telemetry based functions
@@ -552,7 +578,7 @@ func newSlackLoader(cfg *config.Config) (*slack.SlackLoader, error) {
 		return nil, err
 	}
 
-	return slack.NewSlackLoader(slackTemplate, slackConfig, testkube.AllEventTypes), nil
+	return slack.NewSlackLoader(slackTemplate, slackConfig, cfg.TestkubeClusterName, testkube.AllEventTypes), nil
 }
 
 func loadFromBase64StringOrFile(base64Val string, configDir, filename, configType string) (raw string, err error) {

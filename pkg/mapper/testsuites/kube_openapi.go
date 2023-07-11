@@ -4,12 +4,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	commonv1 "github.com/kubeshop/testkube-operator/apis/common/v1"
-	testsuitesv2 "github.com/kubeshop/testkube-operator/apis/testsuite/v2"
+	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 // MapTestSuiteListKubeToAPI maps TestSuiteList CRD to list of OpenAPI spec TestSuite
-func MapTestSuiteListKubeToAPI(cr testsuitesv2.TestSuiteList) (tests []testkube.TestSuite) {
+func MapTestSuiteListKubeToAPI(cr testsuitesv3.TestSuiteList) (tests []testkube.TestSuite) {
 	tests = make([]testkube.TestSuite, len(cr.Items))
 	for i, item := range cr.Items {
 		tests[i] = MapCRToAPI(item)
@@ -19,18 +19,39 @@ func MapTestSuiteListKubeToAPI(cr testsuitesv2.TestSuiteList) (tests []testkube.
 }
 
 // MapCRToAPI maps TestSuite CRD to OpenAPI spec TestSuite
-func MapCRToAPI(cr testsuitesv2.TestSuite) (test testkube.TestSuite) {
+func MapCRToAPI(cr testsuitesv3.TestSuite) (test testkube.TestSuite) {
 	test.Name = cr.Name
 	test.Namespace = cr.Namespace
+	var batches = []struct {
+		source *[]testsuitesv3.TestSuiteBatchStep
+		dest   *[]testkube.TestSuiteBatchStep
+	}{
+		{
+			source: &cr.Spec.Before,
+			dest:   &test.Before,
+		},
+		{
+			source: &cr.Spec.Steps,
+			dest:   &test.Steps,
+		},
+		{
+			source: &cr.Spec.After,
+			dest:   &test.After,
+		},
+	}
 
-	for _, s := range cr.Spec.Before {
-		test.Before = append(test.Before, mapCRStepToAPI(s))
-	}
-	for _, s := range cr.Spec.Steps {
-		test.Steps = append(test.Steps, mapCRStepToAPI(s))
-	}
-	for _, s := range cr.Spec.After {
-		test.After = append(test.After, mapCRStepToAPI(s))
+	for i := range batches {
+		for _, b := range *batches[i].source {
+			steps := make([]testkube.TestSuiteStep, len(b.Execute))
+			for j := range b.Execute {
+				steps[j] = mapCRStepToAPI(b.Execute[j])
+			}
+
+			*batches[i].dest = append(*batches[i].dest, testkube.TestSuiteBatchStep{
+				StopOnFailure: b.StopOnFailure,
+				Execute:       steps,
+			})
+		}
 	}
 
 	test.Description = cr.Spec.Description
@@ -44,23 +65,17 @@ func MapCRToAPI(cr testsuitesv2.TestSuite) (test testkube.TestSuite) {
 }
 
 // mapCRStepToAPI maps CRD TestSuiteStepSpec to OpenAPI spec TestSuiteStep
-func mapCRStepToAPI(crstep testsuitesv2.TestSuiteStepSpec) (teststep testkube.TestSuiteStep) {
+func mapCRStepToAPI(crstep testsuitesv3.TestSuiteStepSpec) (teststep testkube.TestSuiteStep) {
 
 	switch true {
-	case crstep.Execute != nil:
+	case crstep.Test != "":
 		teststep = testkube.TestSuiteStep{
-			StopTestOnFailure: crstep.Execute.StopOnFailure,
-			Execute: &testkube.TestSuiteStepExecuteTest{
-				Name:      crstep.Execute.Name,
-				Namespace: crstep.Execute.Namespace,
-			},
+			Test: crstep.Test,
 		}
 
-	case crstep.Delay != nil:
+	case crstep.Delay.Duration != 0:
 		teststep = testkube.TestSuiteStep{
-			Delay: &testkube.TestSuiteStepDelay{
-				Duration: crstep.Delay.Duration,
-			},
+			Delay: crstep.Delay.Duration.String(),
 		}
 	}
 
@@ -79,10 +94,10 @@ func MapDepratcatedParams(in map[string]testkube.Variable) map[string]string {
 
 // MapCRDVariables maps variables between API and operator CRDs
 // TODO if we could merge operator into testkube repository we would get rid of those mappings
-func MapCRDVariables(in map[string]testkube.Variable) map[string]testsuitesv2.Variable {
-	out := map[string]testsuitesv2.Variable{}
+func MapCRDVariables(in map[string]testkube.Variable) map[string]testsuitesv3.Variable {
+	out := map[string]testsuitesv3.Variable{}
 	for k, v := range in {
-		variable := testsuitesv2.Variable{
+		variable := testsuitesv3.Variable{
 			Name:  v.Name,
 			Type_: string(*v.Type_),
 			Value: v.Value,
@@ -115,7 +130,7 @@ func MapCRDVariables(in map[string]testkube.Variable) map[string]testsuitesv2.Va
 	return out
 }
 
-func MergeVariablesAndParams(variables map[string]testsuitesv2.Variable, params map[string]string) map[string]testkube.Variable {
+func MergeVariablesAndParams(variables map[string]testsuitesv3.Variable, params map[string]string) map[string]testkube.Variable {
 	out := map[string]testkube.Variable{}
 	for k, v := range params {
 		out[k] = testkube.NewBasicVariable(k, v)
@@ -142,7 +157,7 @@ func MergeVariablesAndParams(variables map[string]testsuitesv2.Variable, params 
 }
 
 // MapExecutionRequestFromSpec maps CRD to OpenAPI spec ExecutionRequest
-func MapExecutionRequestFromSpec(specExecutionRequest *testsuitesv2.TestSuiteExecutionRequest) *testkube.TestSuiteExecutionRequest {
+func MapExecutionRequestFromSpec(specExecutionRequest *testsuitesv3.TestSuiteExecutionRequest) *testkube.TestSuiteExecutionRequest {
 	if specExecutionRequest == nil {
 		return nil
 	}
@@ -163,7 +178,7 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsuitesv2.TestSuiteExe
 }
 
 // MapStatusFromSpec maps CRD to OpenAPI spec TestSuiteStatus
-func MapStatusFromSpec(specStatus testsuitesv2.TestSuiteStatus) *testkube.TestSuiteStatus {
+func MapStatusFromSpec(specStatus testsuitesv3.TestSuiteStatus) *testkube.TestSuiteStatus {
 	if specStatus.LatestExecution == nil {
 		return nil
 	}
@@ -176,4 +191,122 @@ func MapStatusFromSpec(specStatus testsuitesv2.TestSuiteStatus) *testkube.TestSu
 			EndTime:   specStatus.LatestExecution.EndTime.Time,
 		},
 	}
+}
+
+// MapTestSuiteTestCRDToUpdateRequest maps TestSuite CRD spec to TestSuiteUpdateRequest OpenAPI spec
+func MapTestSuiteTestCRDToUpdateRequest(testSuite *testsuitesv3.TestSuite) (request testkube.TestSuiteUpdateRequest) {
+	var fields = []struct {
+		source      *string
+		destination **string
+	}{
+		{
+			&testSuite.Name,
+			&request.Name,
+		},
+		{
+			&testSuite.Namespace,
+			&request.Namespace,
+		},
+		{
+			&testSuite.Spec.Description,
+			&request.Description,
+		},
+		{
+			&testSuite.Spec.Schedule,
+			&request.Schedule,
+		},
+	}
+
+	for _, field := range fields {
+		*field.destination = field.source
+	}
+
+	before := mapCRDToTestBatchSteps(testSuite.Spec.Before)
+	request.Before = &before
+
+	steps := mapCRDToTestBatchSteps(testSuite.Spec.Steps)
+	request.Steps = &steps
+
+	after := mapCRDToTestBatchSteps(testSuite.Spec.After)
+	request.After = &after
+
+	request.Labels = &testSuite.Labels
+
+	repeats := int32(testSuite.Spec.Repeats)
+	request.Repeats = &repeats
+
+	if testSuite.Spec.ExecutionRequest != nil {
+		value := MapSpecExecutionRequestToExecutionUpdateRequest(testSuite.Spec.ExecutionRequest)
+		request.ExecutionRequest = &value
+	}
+
+	return request
+}
+
+func mapCRDToTestBatchSteps(in []testsuitesv3.TestSuiteBatchStep) (batches []testkube.TestSuiteBatchStep) {
+	for _, batch := range in {
+		steps := make([]testkube.TestSuiteStep, len(batch.Execute))
+		for i := range batch.Execute {
+			steps[i] = mapCRStepToAPI(batch.Execute[i])
+		}
+
+		batches = append(batches, testkube.TestSuiteBatchStep{
+			StopOnFailure: batch.StopOnFailure,
+			Execute:       steps,
+		})
+	}
+
+	return batches
+}
+
+// MapSpecExecutionRequestToExecutionUpdateRequest maps ExecutionRequest CRD spec to ExecutionUpdateRequest OpenAPI spec
+func MapSpecExecutionRequestToExecutionUpdateRequest(request *testsuitesv3.TestSuiteExecutionRequest) (executionRequest *testkube.TestSuiteExecutionUpdateRequest) {
+	executionRequest = &testkube.TestSuiteExecutionUpdateRequest{}
+
+	var fields = []struct {
+		source      *string
+		destination **string
+	}{
+		{
+			&request.Name,
+			&executionRequest.Name,
+		},
+		{
+			&request.Namespace,
+			&executionRequest.Namespace,
+		},
+		{
+			&request.SecretUUID,
+			&executionRequest.SecretUUID,
+		},
+		{
+			&request.HttpProxy,
+			&executionRequest.HttpProxy,
+		},
+		{
+			&request.HttpsProxy,
+			&executionRequest.HttpsProxy,
+		},
+		{
+			&request.CronJobTemplate,
+			&executionRequest.CronJobTemplate,
+		},
+	}
+
+	for _, field := range fields {
+		*field.destination = field.source
+	}
+
+	executionRequest.Labels = &request.Labels
+
+	executionRequest.ExecutionLabels = &request.ExecutionLabels
+
+	executionRequest.Sync = &request.Sync
+
+	executionRequest.Timeout = &request.Timeout
+
+	vars := MergeVariablesAndParams(request.Variables, nil)
+	executionRequest.Variables = &vars
+
+	return executionRequest
 }

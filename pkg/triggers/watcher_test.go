@@ -129,7 +129,6 @@ func TestService_runWatcher_lease(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 		assert.True(t, match, "pod created event should match the test trigger condition")
 	})
-
 }
 
 func TestService_runWatcher_noLease(t *testing.T) {

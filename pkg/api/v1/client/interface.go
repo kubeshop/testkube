@@ -171,6 +171,7 @@ type ExecuteTestOptions struct {
 	JobTemplate                   string
 	ContentRequest                *testkube.TestContentRequest
 	PreRunScriptContent           string
+	PostRunScriptContent          string
 	ScraperTemplate               string
 	NegativeTest                  bool
 	IsNegativeTestChangedOnRun    bool
@@ -187,6 +188,7 @@ type ExecuteTestSuiteOptions struct {
 	ExecutionLabels    map[string]string
 	ContentRequest     *testkube.TestContentRequest
 	RunningContext     *testkube.RunningContext
+	ConcurrencyLevel   int32
 }
 
 // Gettable is an interface of gettable objects
