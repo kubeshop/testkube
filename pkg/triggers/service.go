@@ -115,7 +115,7 @@ func NewService(
 		opt(s)
 	}
 
-	s.informers = newK8sInformers(clientset, testKubeClientset, s.testkubeNamespace, s.watcherNamespaces)
+	s.informers = newK8sInformers(clientset, dynamicClientset, testKubeClientset, s.testkubeNamespace, s.watcherNamespaces, logger)
 
 	return s
 }
