@@ -70,9 +70,9 @@ type ExecutionUpdateRequest struct {
 	// cron job template extensions
 	CronJobTemplate *string                    `json:"cronJobTemplate,omitempty"`
 	ContentRequest  **TestContentUpdateRequest `json:"contentRequest,omitempty"`
-	// script to run before test execution (not supported for container executors)
+	// script to run before test execution
 	PreRunScript *string `json:"preRunScript,omitempty"`
-	// script to run after test execution (not supported for container executors)
+	// script to run after test execution
 	PostRunScript *string `json:"postRunScript,omitempty"`
 	// scraper template extensions
 	ScraperTemplate *string `json:"scraperTemplate,omitempty"`

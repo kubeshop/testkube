@@ -2,7 +2,6 @@ package runner
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -73,7 +72,10 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		file := filepath.Join(r.dir, "entrypoint.sh")
 		command := ""
 		if len(execution.Command) != 0 {
-			command = fmt.Sprintf("EXEC %s", strings.Join(execution.Command, " "))
+			command = strings.Join(execution.Command, " ")
+			if len(execution.Args) != 0 {
+				command += " \"$@\""
+			}
 		}
 
 		scripts := []string{execution.PreRunScript, command, execution.PostRunScript}
