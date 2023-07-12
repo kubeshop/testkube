@@ -74,19 +74,19 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		if execution.ContainerShell != "" {
 			command = "#!" + execution.ContainerShell
 		}
-
 		command += "\n"
+
+		if execution.PreRunScript != "" {
+			command += filepath.Join(r.dir, "prerun.sh") + "\n"
+		}
+
 		if len(execution.Command) != 0 {
 			command += strings.Join(execution.Command, " ")
 			command += " \"$@\"\n"
 		}
 
-		if execution.PreRunScript != "" {
-			command = "./prerun.sh\n" + command
-		}
-
 		if execution.PostRunScript != "" {
-			command += "./postrun.sh\n"
+			command += filepath.Join(r.dir, "postrun.sh") + "\n"
 		}
 
 		var scripts = []struct {
