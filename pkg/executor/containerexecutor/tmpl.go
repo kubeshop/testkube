@@ -21,6 +21,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/env"
+	"github.com/kubeshop/testkube/pkg/skopeo"
 )
 
 //go:embed templates/job.tmpl
@@ -197,17 +198,34 @@ func NewPersistentVolumeClaimSpec(log *zap.SugaredLogger, options *JobOptions) (
 	return &pvc, nil
 }
 
-// NewJobOptions provides job options for templates
-func NewJobOptions(images executor.Images, templates executor.Templates, serviceAccountName, registry, clusterID string,
-	execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
-	jsn, err := json.Marshal(execution)
+func inspectDockerImage(log *zap.SugaredLogger, image string, execution *testkube.Execution) {
+	inspector := skopeo.NewClient()
+	dockerImage, err := inspector.Inspect(image)
 	if err != nil {
-		return nil, err
+		log.Errorw("Skopeo inspector image error", "error", err)
+		return
 	}
 
+	execution.ContainerShell = dockerImage.Shell
+	if len(execution.Command) == 0 {
+		execution.Command = append(dockerImage.Config.Entrypoint, dockerImage.Config.Cmd...)
+	}
+}
+
+// NewJobOptions provides job options for templates
+func NewJobOptions(log *zap.SugaredLogger, images executor.Images, templates executor.Templates,
+	serviceAccountName, registry, clusterID string, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
 	jobOptions := NewJobOptionsFromExecutionOptions(options)
 	if execution.PreRunScript != "" || execution.PostRunScript != "" {
 		jobOptions.Command = []string{filepath.Join(executor.VolumeDir, "entrypoint.sh")}
+		if jobOptions.Image != "" {
+			inspectDockerImage(log, jobOptions.Image, &execution)
+		}
+	}
+
+	jsn, err := json.Marshal(execution)
+	if err != nil {
+		return nil, err
 	}
 
 	jobOptions.Name = execution.Id
