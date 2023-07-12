@@ -18,6 +18,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
+const defaultShell = "/bin/sh"
+
 // NewRunner creates init runner
 func NewRunner(params envs.Params) *InitRunner {
 	dir := os.Getenv("RUNNER_DATADIR")
@@ -68,30 +70,48 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	}
 
 	if execution.PreRunScript != "" || execution.PostRunScript != "" {
-		output.PrintLogf("%s Creating entrypoint script...", ui.IconWorld)
-		file := filepath.Join(r.dir, "entrypoint.sh")
-		command := ""
+		command := "#!" + defaultShell
+		if execution.ContainerShell != "" {
+			command = "#!" + execution.ContainerShell
+		}
+
+		command += "\n"
 		if len(execution.Command) != 0 {
-			command = strings.Join(execution.Command, " ")
-			if len(execution.Args) != 0 {
-				command += " \"$@\""
-			}
+			command += strings.Join(execution.Command, " ")
+			command += " \"$@\"\n"
 		}
 
-		scripts := []string{execution.PreRunScript, command, execution.PostRunScript}
-		var data string
+		if execution.PreRunScript != "" {
+			command = "./prerun.sh\n" + command
+		}
+
+		if execution.PostRunScript != "" {
+			command += "./postrun.sh\n"
+		}
+
+		var scripts = []struct {
+			file    string
+			data    string
+			comment string
+		}{
+			{"prerun.sh", execution.PreRunScript, "prerun"},
+			{"entrypoint.sh", command, "entrypoint"},
+			{"postrun.sh", execution.PostRunScript, "postrun"},
+		}
+
 		for _, script := range scripts {
-			data += script
-			if script != "" {
-				data += "\n"
+			if script.data == "" {
+				continue
 			}
-		}
 
-		if err = os.WriteFile(file, []byte(data), 0755); err != nil {
-			output.PrintLogf("%s Could not create entrypoint script %s: %s", ui.IconCross, file, err.Error())
-			return result, errors.Errorf("could not create entrypoint script %s: %v", file, err)
+			file := filepath.Join(r.dir, script.file)
+			output.PrintLogf("%s Creating %s script...", ui.IconWorld, script.comment)
+			if err = os.WriteFile(file, []byte(script.data), 0755); err != nil {
+				output.PrintLogf("%s Could not create %s script %s: %s", ui.IconCross, script.comment, file, err.Error())
+				return result, errors.Errorf("could not create %s script %s: %v", script.comment, file, err)
+			}
+			output.PrintLogf("%s %s script created", ui.IconCheckMark, script.comment)
 		}
-		output.PrintLogf("%s Entrypoint script created", ui.IconCheckMark)
 	}
 
 	// TODO: write a proper cloud implementation
