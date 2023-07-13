@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	reconciliationInterval = 5 * time.Second
+	reconciliationInterval = 5 * time.Minute
 )
 
 var (
