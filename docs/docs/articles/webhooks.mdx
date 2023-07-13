@@ -3,9 +3,9 @@ import TabItem from "@theme/TabItem";
 
 # Webhooks
 
-Webhooks allow you to build or set up integrations and send HTTP POST payloads (your Testkube Execution and its current state) whenever an event is triggered. In this case, when your Tests start or finish.
+Webhooks allow you to integrate Testkube with external systems by sending HTTP POST payloads containing information about Testkube executions and their current state when specific events occur. To set up webhooks in Testkube, you'll need to have an HTTPS endpoint to receive the events and a payload template to be sent along with the data.
 
-To set them up when using Testkube, you'll need to create your _Webhook_ as shown in the following format example (you can use https://webhook.site to create a webhook to test with):
+Here's an example format for creating a webhook in Testkube using either the CLI or custom response:
 
 <Tabs>
 
@@ -20,7 +20,7 @@ Create a webhook template payload file:
 ```
 
 ```sh
-testkube create webhook --name example-webhook --events start-test --events end-test-failed --payload-template template.json --uri https://webhook.site/34d499d1-2e09-4e2d-a89c-618a15e1d3df
+testkube create webhook --name example-webhook --events start-test --events end-test-failed --payload-template template.json --uri <YOUR_ENDPOINT_URL>
 ```
 
 ```sh title="Expected output:"
@@ -38,7 +38,7 @@ metadata:
   name: example-webhook
   namespace: testkube
 spec:
-  uri: http://localhost:8080/events
+  uri: <YOUR_ENDPOINT_URL>
   events:
     - start-test
     - end-test-success
@@ -60,3 +60,16 @@ kubectl apply -f webhook.yaml
 </TabItem>
 
 </Tabs>
+
+In the example above, replace <YOUR_ENDPOINT_URL> with the HTTPS endpoint URL where you want to receive the webhook events. The payload template can be customized to include additional information. In the above example, only the event `Id` is being sent. The template's variables will be replaced with data when events occur.
+
+You can add additional HTTP headers like `Authorization` or `x-api-key` to have a secret token.
+
+## Testing Webhooks
+
+If you are just getting started and want to test your webhook configuration, you can use public and free services that act as HTTP catch-all apps. Here are a couple of options:
+
+1. [Beeceptor](https://beeceptor.com/): Beeceptor allows you to quickly capture HTTP payloads, review them in real time, and send desired HTTP responses as you test your webhooks. You can use its local-tunnel feature when you want to test payloads against a service running on localhost.
+2. [Webhook.Site](https://webhook.site/): Webhook.Site provides an easy way to capture HTTP payloads, review the headers and body for the incoming requests, and automatically respond with a `200 OK` status code.
+
+By using these services, you can quickly set up an HTTP endpoint to receive webhook payloads during your testing/development process.
