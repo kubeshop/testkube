@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	reconciliationInterval = 5 * time.Minute
+	reconciliationInterval = 5 * time.Second
 )
 
 var (
@@ -31,17 +31,18 @@ type Client struct {
 	k8sclient            kubernetes.Interface
 	resultRepository     result.Repository
 	testResultRepository testresult.Repository
-	logger               *zap.SugaredLogger
 	executorsClient      *executorsclientv1.ExecutorsClient
+	logger               *zap.SugaredLogger
 	namespace            string
 }
 
 func NewClient(k8sclient kubernetes.Interface, resultRepository result.Repository, testResultRepository testresult.Repository,
-	logger *zap.SugaredLogger, namespace string) *Client {
+	executorsClient *executorsclientv1.ExecutorsClient, logger *zap.SugaredLogger, namespace string) *Client {
 	return &Client{
 		k8sclient:            k8sclient,
 		resultRepository:     resultRepository,
 		testResultRepository: testResultRepository,
+		executorsClient:      executorsClient,
 		logger:               logger,
 		namespace:            namespace,
 	}
