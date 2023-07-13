@@ -2,8 +2,13 @@ package skopeo
 
 import (
 	"encoding/json"
+	"math/rand"
 	"regexp"
 	"time"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/kubernetes/pkg/credentialprovider"
+	"k8s.io/kubernetes/pkg/credentialprovider/secrets"
 
 	"github.com/kubeshop/testkube/pkg/process"
 )
@@ -26,12 +31,20 @@ type Inspector interface {
 }
 
 type client struct {
-	username string
-	password string
+	keyring credentialprovider.DockerKeyring
 }
 
 func NewClient() *client {
 	return &client{}
+}
+
+func NewClientFromSecret(imageSecrets []corev1.Secret) (*client, error) {
+	keyring, err := secrets.MakeDockerKeyring(imageSecrets, &credentialprovider.FakeKeyring{})
+	if err != nil {
+		return nil, err
+	}
+
+	return &client{keyring: keyring}, nil
 }
 
 func (c *client) Inspect(image string) (*DockerImage, error) {
@@ -41,6 +54,14 @@ func (c *client) Inspect(image string) (*DockerImage, error) {
 		"inspect",
 		"--config",
 		"docker://" + image,
+	}
+
+	if c.keyring != nil {
+		if authConfigs, ok := c.keyring.Lookup(image); ok && len(authConfigs) != 0 {
+			rand.Seed(time.Now().UnixNano())
+			i := 1 + rand.Intn(len(authConfigs))
+			args = append(args, "--creds", authConfigs[i].Username+":"+authConfigs[i].Password)
+		}
 	}
 
 	result, err := process.Execute("skopeo", args...)
