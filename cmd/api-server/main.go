@@ -454,6 +454,7 @@ func main() {
 		reconcilerClient := reconciler.NewClient(clientset,
 			resultsRepository,
 			testResultsRepository,
+			executorsClient,
 			log.DefaultLogger,
 			cfg.TestkubeNamespace)
 		g.Go(func() error {

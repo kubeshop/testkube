@@ -10,6 +10,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
+	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/mapper/tests"
@@ -29,16 +31,18 @@ type Client struct {
 	k8sclient            kubernetes.Interface
 	resultRepository     result.Repository
 	testResultRepository testresult.Repository
+	executorsClient      *executorsclientv1.ExecutorsClient
 	logger               *zap.SugaredLogger
 	namespace            string
 }
 
 func NewClient(k8sclient kubernetes.Interface, resultRepository result.Repository, testResultRepository testresult.Repository,
-	logger *zap.SugaredLogger, namespace string) *Client {
+	executorsClient *executorsclientv1.ExecutorsClient, logger *zap.SugaredLogger, namespace string) *Client {
 	return &Client{
 		k8sclient:            k8sclient,
 		resultRepository:     resultRepository,
 		testResultRepository: testResultRepository,
+		executorsClient:      executorsClient,
 		logger:               logger,
 		namespace:            namespace,
 	}
@@ -83,18 +87,51 @@ OuterLoop:
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
+			exec, err := client.executorsClient.GetByType(execution.TestType)
+			if err != nil {
+				client.logger.Errorw("error getting executor by test type %w", err)
+			}
+
 			errMessage := errTestkubeAPICrahsed.Error()
-			pods, err := executor.GetJobPods(ctx, client.k8sclient.CoreV1().Pods(client.namespace), execution.Id, 1, 1)
+			id := execution.Id
+			pods, err := executor.GetJobPods(ctx, client.k8sclient.CoreV1().Pods(client.namespace), id, 1, 1)
 			if err == nil {
-			InnerLoop:
+			ExecutorLoop:
 				for _, pod := range pods.Items {
-					if pod.Labels["job-name"] == execution.Id {
+					if pod.Labels["job-name"] == id {
 						switch pod.Status.Phase {
 						case corev1.PodFailed:
 							errMessage = pod.Status.Message
-							break InnerLoop
+							break ExecutorLoop
 						default:
 							continue OuterLoop
+						}
+					}
+				}
+			} else if exec != nil && exec.Spec.ExecutorType == executorv1.ExecutorTypeContainer {
+				supportArtifacts := false
+				for _, feature := range exec.Spec.Features {
+					if feature == executorv1.FeatureArtifacts {
+						supportArtifacts = true
+						break
+					}
+				}
+
+				if supportArtifacts && execution.ArtifactRequest != nil && execution.ArtifactRequest.StorageClassName != "" {
+					id = execution.Id + "-scraper"
+					pods, err = executor.GetJobPods(ctx, client.k8sclient.CoreV1().Pods(client.namespace), id, 1, 1)
+					if err == nil {
+					ScraperLoop:
+						for _, pod := range pods.Items {
+							if pod.Labels["job-name"] == id {
+								switch pod.Status.Phase {
+								case corev1.PodFailed:
+									errMessage = pod.Status.Message
+									break ScraperLoop
+								default:
+									continue OuterLoop
+								}
+							}
 						}
 					}
 				}
