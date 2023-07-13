@@ -113,10 +113,10 @@ jobs:
       - name: Install Artillery@2.0
         run: npm install -g artillery@2.0.0-31
 
-      - name: Install kubepug@1.4
+      - name: Install kubepug@1.5
         uses: cpanato/kubepug-installer@main
         with:
-          kubepug-release: '1.4.0'
+          kubepug-release: '1.5.0'
 
       - name: Install k6
         run: |
