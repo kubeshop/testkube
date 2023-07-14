@@ -218,7 +218,7 @@ func InspectDockerImage(namespace, registry, image string, imageSecrets []string
 			secrets = append(secrets, *object)
 		}
 
-		inspector, err = skopeo.NewClientFromSecrets(secrets, "")
+		inspector, err = skopeo.NewClientFromSecrets(secrets, registry)
 		if err != nil {
 			return nil, "", err
 		}
