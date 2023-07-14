@@ -298,18 +298,18 @@ jobs:
           VERSION: ${{steps.tag.outputs.tag}}
         run: |
           ### Upload files
-          curl -u ${USERNAME}:${PASSWORD} -X POST -F file=@dist/testkube_${VERSION}_linux_386.deb http://${APTLY_URL}/api/files/testkube
-          curl -u ${USERNAME}:${PASSWORD} -X POST -F file=@dist/testkube_${VERSION}_linux_arm64.deb http://${APTLY_URL}/api/files/testkube
-          curl -u ${USERNAME}:${PASSWORD} -X POST -F file=@dist/testkube_${VERSION}_linux_amd64.deb http://${APTLY_URL}/api/files/testkube
+          curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X POST -F file=@dist/testkube_${VERSION}_linux_386.deb http://${APTLY_URL}/api/files/testkube
+          curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X POST -F file=@dist/testkube_${VERSION}_linux_arm64.deb http://${APTLY_URL}/api/files/testkube
+          curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X POST -F file=@dist/testkube_${VERSION}_linux_amd64.deb http://${APTLY_URL}/api/files/testkube
 
           ### Add file to repo
-          curl -u ${USERNAME}:${PASSWORD} -X POST http://${APTLY_URL}/api/repos/testkube/file/testkube?forceReplace=1
+          curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X POST http://${APTLY_URL}/api/repos/testkube/file/testkube?forceReplace=1
 
           ### Create snapshot
-          curl -u ${USERNAME}:${PASSWORD} -X POST -H 'Content-Type: application/json' --data '{"Name":"testkube-'${VERSION}'"}' http://${APTLY_URL}/api/repos/testkube/snapshots
+          curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X POST -H 'Content-Type: application/json' --data '{"Name":"testkube-'${VERSION}'"}' http://${APTLY_URL}/api/repos/testkube/snapshots
 
           ### Publish repo
-          curl -u ${USERNAME}:${PASSWORD} -X PUT -H 'Content-Type: application/json' --data '{"Snapshots": [{"Component": "main", "Name": "testkube-'${VERSION}'"}]}'}], http://repo.testkube.io:8080/api/publish/:linux/linux
+          curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X PUT -H 'Content-Type: application/json' --data '{"Snapshots": [{"Component": "main", "Name": "testkube-'${VERSION}'"}]}'}], http://repo.testkube.io:8080/api/publish/:linux/linux
 
   trigger-argocd-image-build:
     needs: release
