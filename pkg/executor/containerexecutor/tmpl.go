@@ -200,7 +200,7 @@ func NewPersistentVolumeClaimSpec(log *zap.SugaredLogger, options *JobOptions) (
 }
 
 // InspectDockerImage inspects docker image
-func InspectDockerImage(namespace, image string, imageSecrets []string) ([]string, string, error) {
+func InspectDockerImage(namespace, registry, image string, imageSecrets []string) ([]string, string, error) {
 	inspector := skopeo.NewClient()
 	if len(imageSecrets) != 0 {
 		secretClient, err := secret.NewClient(namespace)
@@ -218,6 +218,10 @@ func InspectDockerImage(namespace, image string, imageSecrets []string) ([]strin
 			secrets = append(secrets, *object)
 		}
 
+		inspector, err = skopeo.NewClientFromSecrets(secrets, "")
+		if err != nil {
+			return nil, "", err
+		}
 	}
 
 	dockerImage, err := inspector.Inspect(image)
@@ -235,7 +239,7 @@ func NewJobOptions(log *zap.SugaredLogger, images executor.Images, templates exe
 	if execution.PreRunScript != "" || execution.PostRunScript != "" {
 		jobOptions.Command = []string{filepath.Join(executor.VolumeDir, "entrypoint.sh")}
 		if jobOptions.Image != "" {
-			cmd, shell, err := InspectDockerImage(jobOptions.Namespace, jobOptions.Image, jobOptions.ImagePullSecrets)
+			cmd, shell, err := InspectDockerImage(jobOptions.Namespace, registry, jobOptions.Image, jobOptions.ImagePullSecrets)
 			if err == nil {
 				if len(execution.Command) == 0 {
 					execution.Command = cmd
