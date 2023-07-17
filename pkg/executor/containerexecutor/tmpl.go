@@ -25,6 +25,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/skopeo"
 )
 
+const (
+	// EntrypointScriptName is entrypoint script name
+	EntrypointScriptName = "entrypoint.sh"
+)
+
 //go:embed templates/job.tmpl
 var defaultJobTemplate string
 
@@ -237,7 +242,7 @@ func NewJobOptions(log *zap.SugaredLogger, images executor.Images, templates exe
 	serviceAccountName, registry, clusterID string, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
 	jobOptions := NewJobOptionsFromExecutionOptions(options)
 	if execution.PreRunScript != "" || execution.PostRunScript != "" {
-		jobOptions.Command = []string{filepath.Join(executor.VolumeDir, "entrypoint.sh")}
+		jobOptions.Command = []string{filepath.Join(executor.VolumeDir, EntrypointScriptName)}
 		if jobOptions.Image != "" {
 			cmd, shell, err := InspectDockerImage(jobOptions.Namespace, registry, jobOptions.Image, jobOptions.ImagePullSecrets)
 			if err == nil {
