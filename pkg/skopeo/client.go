@@ -66,7 +66,7 @@ func NewClient() *client {
 
 // NewClientFromSecrets creats new client from secrets
 func NewClientFromSecrets(imageSecrets []corev1.Secret, registry string) (*client, error) {
-	auths, err := parseSecretData(imageSecrets, registry)
+	auths, err := ParseSecretData(imageSecrets, registry)
 	if err != nil {
 		return nil, err
 	}
@@ -80,8 +80,6 @@ func (c *client) Inspect(image string) (*DockerImage, error) {
 		"--override-os",
 		"linux",
 		"inspect",
-		"--config",
-		"docker://" + image,
 	}
 
 	if len(c.dockerAuthConfigs) != 0 {
@@ -90,6 +88,7 @@ func (c *client) Inspect(image string) (*DockerImage, error) {
 		args = append(args, "--creds", c.dockerAuthConfigs[i].Username+":"+c.dockerAuthConfigs[i].Password)
 	}
 
+	args = append(args, "--config", "docker://"+image)
 	result, err := process.Execute("skopeo", args...)
 	if err != nil {
 		return nil, err
@@ -118,7 +117,8 @@ func (c *client) Inspect(image string) (*DockerImage, error) {
 	return &dockerImage, nil
 }
 
-func parseSecretData(imageSecrets []corev1.Secret, registry string) ([]DockerAuthConfig, error) {
+// ParseSecretData parses secret data for docker auth config
+func ParseSecretData(imageSecrets []corev1.Secret, registry string) ([]DockerAuthConfig, error) {
 	var results []DockerAuthConfig
 	for _, imageSecret := range imageSecrets {
 		auths := DockerAuths{}
@@ -127,12 +127,9 @@ func parseSecretData(imageSecrets []corev1.Secret, registry string) ([]DockerAut
 				return nil, err
 			}
 		} else if configData, ok := imageSecret.Data[".dockercfg"]; ok {
-			configs := DockerAuthConfigs{}
-			if err := json.Unmarshal(configData, &configs); err != nil {
+			if err := json.Unmarshal(configData, &auths.Auths); err != nil {
 				return nil, err
 			}
-
-			auths.Auths = configs
 		} else {
 			return nil, fmt.Errorf("imagePullSecret %s contains neither .dockercfg nor .dockerconfigjson", imageSecret.Name)
 		}
