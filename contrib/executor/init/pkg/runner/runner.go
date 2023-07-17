@@ -11,6 +11,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/containerexecutor"
 	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
@@ -18,7 +19,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-const defaultShell = "/bin/sh"
+const (
+	defaultShell      = "/bin/sh"
+	preRunScriptName  = "prerun.sh"
+	postRunScriptName = "postrun.sh"
+)
 
 // NewRunner creates init runner
 func NewRunner(params envs.Params) *InitRunner {
@@ -77,7 +82,7 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		command += "\n"
 
 		if execution.PreRunScript != "" {
-			command += filepath.Join(r.dir, "prerun.sh") + "\n"
+			command += filepath.Join(r.dir, preRunScriptName) + "\n"
 		}
 
 		if len(execution.Command) != 0 {
@@ -86,7 +91,7 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		}
 
 		if execution.PostRunScript != "" {
-			command += filepath.Join(r.dir, "postrun.sh") + "\n"
+			command += filepath.Join(r.dir, postRunScriptName) + "\n"
 		}
 
 		var scripts = []struct {
@@ -94,9 +99,9 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 			data    string
 			comment string
 		}{
-			{"prerun.sh", execution.PreRunScript, "prerun"},
-			{"entrypoint.sh", command, "entrypoint"},
-			{"postrun.sh", execution.PostRunScript, "postrun"},
+			{preRunScriptName, execution.PreRunScript, "prerun"},
+			{containerexecutor.EntrypointScriptName, command, "entrypoint"},
+			{postRunScriptName, execution.PostRunScript, "postrun"},
 		}
 
 		for _, script := range scripts {
