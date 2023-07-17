@@ -279,7 +279,7 @@ func (c *ContainerExecutor) ExecuteSync(ctx context.Context, execution *testkube
 func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
 	jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
 
-	jobOptions, err := NewJobOptions(c.images, c.templates, c.serviceAccountName, c.registry, c.clusterID, execution, options)
+	jobOptions, err := NewJobOptions(c.log, c.images, c.templates, c.serviceAccountName, c.registry, c.clusterID, execution, options)
 	if err != nil {
 		return nil, err
 	}

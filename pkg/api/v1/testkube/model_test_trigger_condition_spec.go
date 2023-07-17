@@ -14,6 +14,6 @@ type TestTriggerConditionSpec struct {
 	Conditions []TestTriggerCondition `json:"conditions,omitempty"`
 	// duration in seconds the test trigger waits for conditions, until its stopped
 	Timeout int32 `json:"timeout,omitempty"`
-	// duration in seconds the test trigger waits between condition check
+	// duration in seconds the test trigger waits between condition checks
 	Delay int32 `json:"delay,omitempty"`
 }

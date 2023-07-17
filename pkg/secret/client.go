@@ -19,6 +19,7 @@ const testkubeTestSecretLabel = "tests-secrets"
 //go:generate mockgen -destination=./mock_client.go -package=secret "github.com/kubeshop/testkube/pkg/secret" Interface
 type Interface interface {
 	Get(id string) (map[string]string, error)
+	GetObject(id string) (*v1.Secret, error)
 	List() (map[string]map[string]string, error)
 	Create(id string, labels, stringData map[string]string) error
 	Apply(id string, labels, stringData map[string]string) error
@@ -64,6 +65,19 @@ func (c *Client) Get(id string) (map[string]string, error) {
 	}
 
 	return stringData, nil
+}
+
+// GetObject is a method to retrieve an existing secret object
+func (c *Client) GetObject(id string) (*v1.Secret, error) {
+	secretsClient := c.ClientSet.CoreV1().Secrets(c.Namespace)
+	ctx := context.Background()
+
+	secretSpec, err := secretsClient.Get(ctx, id, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return secretSpec, nil
 }
 
 // List is a method to retrieve all existing secrets

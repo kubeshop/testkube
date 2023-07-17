@@ -155,6 +155,7 @@ func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 	t.Parallel()
 
 	jobOptions, _ := NewJobOptions(
+		logger(),
 		executor.Images{},
 		executor.Templates{},
 		"",
@@ -189,6 +190,7 @@ func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 	t.Parallel()
 
 	jobOptions, _ := NewJobOptions(
+		logger(),
 		executor.Images{},
 		executor.Templates{},
 		"",
@@ -223,6 +225,7 @@ func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
 	t.Parallel()
 
 	jobOptions, _ := NewJobOptions(
+		logger(),
 		executor.Images{},
 		executor.Templates{},
 		"",

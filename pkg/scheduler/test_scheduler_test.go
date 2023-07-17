@@ -20,8 +20,10 @@ import (
 )
 
 func TestParamsNilAssign(t *testing.T) {
+	t.Parallel()
 
 	t.Run("merge two maps", func(t *testing.T) {
+		t.Parallel()
 
 		p1 := map[string]testkube.Variable{"p1": testkube.NewBasicVariable("p1", "1")}
 		p2 := map[string]testkube.Variable{"p2": testkube.NewBasicVariable("p2", "2")}
@@ -33,6 +35,7 @@ func TestParamsNilAssign(t *testing.T) {
 	})
 
 	t.Run("merge two maps with override", func(t *testing.T) {
+		t.Parallel()
 
 		p1 := map[string]testkube.Variable{"p1": testkube.NewBasicVariable("p1", "1")}
 		p2 := map[string]testkube.Variable{"p1": testkube.NewBasicVariable("p1", "2")}
@@ -44,6 +47,7 @@ func TestParamsNilAssign(t *testing.T) {
 	})
 
 	t.Run("merge with nil map", func(t *testing.T) {
+		t.Parallel()
 
 		p2 := map[string]testkube.Variable{"p2": testkube.NewBasicVariable("p2", "2")}
 
@@ -56,6 +60,8 @@ func TestParamsNilAssign(t *testing.T) {
 }
 
 func TestGetExecuteOptions(t *testing.T) {
+	t.Parallel()
+
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 

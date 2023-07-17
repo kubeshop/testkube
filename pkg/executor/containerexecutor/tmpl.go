@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -20,6 +21,13 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/env"
+	"github.com/kubeshop/testkube/pkg/secret"
+	"github.com/kubeshop/testkube/pkg/skopeo"
+)
+
+const (
+	// EntrypointScriptName is entrypoint script name
+	EntrypointScriptName = "entrypoint.sh"
 )
 
 //go:embed templates/job.tmpl
@@ -196,15 +204,64 @@ func NewPersistentVolumeClaimSpec(log *zap.SugaredLogger, options *JobOptions) (
 	return &pvc, nil
 }
 
+// InspectDockerImage inspects docker image
+func InspectDockerImage(namespace, registry, image string, imageSecrets []string) ([]string, string, error) {
+	inspector := skopeo.NewClient()
+	if len(imageSecrets) != 0 {
+		secretClient, err := secret.NewClient(namespace)
+		if err != nil {
+			return nil, "", err
+		}
+
+		var secrets []corev1.Secret
+		for _, imageSecret := range imageSecrets {
+			object, err := secretClient.GetObject(imageSecret)
+			if err != nil {
+				return nil, "", err
+			}
+
+			secrets = append(secrets, *object)
+		}
+
+		inspector, err = skopeo.NewClientFromSecrets(secrets, registry)
+		if err != nil {
+			return nil, "", err
+		}
+	}
+
+	dockerImage, err := inspector.Inspect(image)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return append(dockerImage.Config.Entrypoint, dockerImage.Config.Cmd...), dockerImage.Shell, nil
+}
+
 // NewJobOptions provides job options for templates
-func NewJobOptions(images executor.Images, templates executor.Templates, serviceAccountName, registry, clusterID string,
-	execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
+func NewJobOptions(log *zap.SugaredLogger, images executor.Images, templates executor.Templates,
+	serviceAccountName, registry, clusterID string, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
+	jobOptions := NewJobOptionsFromExecutionOptions(options)
+	if execution.PreRunScript != "" || execution.PostRunScript != "" {
+		jobOptions.Command = []string{filepath.Join(executor.VolumeDir, EntrypointScriptName)}
+		if jobOptions.Image != "" {
+			cmd, shell, err := InspectDockerImage(jobOptions.Namespace, registry, jobOptions.Image, jobOptions.ImagePullSecrets)
+			if err == nil {
+				if len(execution.Command) == 0 {
+					execution.Command = cmd
+				}
+
+				execution.ContainerShell = shell
+			} else {
+				log.Errorw("Docker image inspection error", "error", err)
+			}
+		}
+	}
+
 	jsn, err := json.Marshal(execution)
 	if err != nil {
 		return nil, err
 	}
 
-	jobOptions := NewJobOptionsFromExecutionOptions(options)
 	jobOptions.Name = execution.Id
 	jobOptions.Namespace = execution.TestNamespace
 	jobOptions.TestName = execution.TestName
