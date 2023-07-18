@@ -191,22 +191,28 @@ type oauthParams struct {
 }
 
 // SendTelemetryStartEvent sends anonymous start event to telemetry trackers
-func (s TestkubeAPI) SendTelemetryStartEvent(ctx context.Context) {
-	telemetryEnabled, err := s.ConfigMap.GetTelemetryEnabled(ctx)
-	if err != nil {
-		s.Log.Errorw("error getting config map", "error", err)
-	}
+func (s TestkubeAPI) SendTelemetryStartEvent(ctx context.Context, ch chan struct{}) {
+	go func() {
+		defer func() {
+			ch <- struct{}{}
+		}()
 
-	if !telemetryEnabled {
-		return
-	}
+		telemetryEnabled, err := s.ConfigMap.GetTelemetryEnabled(ctx)
+		if err != nil {
+			s.Log.Errorw("error getting config map", "error", err)
+		}
 
-	out, err := telemetry.SendServerStartEvent(s.Config.ClusterID, version.Version)
-	if err != nil {
-		s.Log.Debug("telemetry send error", "error", err.Error())
-	} else {
-		s.Log.Debugw("sending telemetry server start event", "output", out)
-	}
+		if !telemetryEnabled {
+			return
+		}
+
+		out, err := telemetry.SendServerStartEvent(s.Config.ClusterID, version.Version)
+		if err != nil {
+			s.Log.Debug("telemetry send error", "error", err.Error())
+		} else {
+			s.Log.Debugw("sending telemetry server start event", "output", out)
+		}
+	}()
 }
 
 // InitEnvs initializes api server settings
@@ -436,9 +442,10 @@ func (s *TestkubeAPI) InitRoutes() {
 	})
 }
 
-func (s TestkubeAPI) StartTelemetryHeartbeats(ctx context.Context) {
-
+func (s TestkubeAPI) StartTelemetryHeartbeats(ctx context.Context, ch chan struct{}) {
 	go func() {
+		<-ch
+
 		ticker := time.NewTicker(HeartbeatInterval)
 		for {
 			telemetryEnabled, err := s.ConfigMap.GetTelemetryEnabled(ctx)
