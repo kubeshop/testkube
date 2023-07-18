@@ -465,8 +465,11 @@ func main() {
 	}
 
 	// telemetry based functions
-	api.SendTelemetryStartEvent(ctx)
-	api.StartTelemetryHeartbeats(ctx)
+	telemetryCh := make(chan struct{})
+	defer close(telemetryCh)
+
+	api.SendTelemetryStartEvent(ctx, telemetryCh)
+	api.StartTelemetryHeartbeats(ctx, telemetryCh)
 
 	log.DefaultLogger.Infow(
 		"starting Testkube API server",
