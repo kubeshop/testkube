@@ -2,6 +2,7 @@ package containerexecutor
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"time"
@@ -191,8 +192,13 @@ func (c *ContainerExecutor) Logs(ctx context.Context, id string) (out chan outpu
 			}
 
 			for l := range logs {
-				entry := output.NewOutputLine(l)
-				out <- entry
+				var line output.Output
+				if err = json.Unmarshal(l, &line); err == nil {
+					out <- line
+				} else {
+					entry := output.NewOutputLine(l)
+					out <- entry
+				}
 			}
 		}
 	}()
