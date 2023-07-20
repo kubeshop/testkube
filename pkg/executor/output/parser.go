@@ -74,6 +74,40 @@ func ParseRunnerOutput(b []byte) (*testkube.ExecutionResult, error) {
 	return result, nil
 }
 
+// ParseContainerOutput goes over the raw logs in b and parses possible container output
+// The input is a mixed stream of the json form and plain text
+// runner execution started  ------------
+// {"type": "result", "result": {"id": "2323", "output": "-----"}, "time": "..."}
+func ParseContainerOutput(b []byte) (*testkube.ExecutionResult, string, error) {
+	result := &testkube.ExecutionResult{}
+	if len(b) == 0 {
+		return nil, "", nil
+	}
+
+	logs, err := parseContainerLogs(b)
+	if err != nil {
+		err = fmt.Errorf("could not parse logs \"%s\": %v", b, err.Error())
+		return nil, err.Error(), err
+	}
+
+	output := sanitizeLogs(logs)
+	log := getDecidingContainerLogLine(logs)
+	if log == nil {
+		return nil, output, nil
+	}
+
+	switch log.Type_ {
+	case TypeResult:
+		if log.Result != nil {
+			result = log.Result
+		}
+	case TypeError:
+		err = fmt.Errorf(log.Content)
+	}
+
+	return result, output, err
+}
+
 // sanitizeLogs creates a human-readable string from a list of Outputs
 func sanitizeLogs(logs []Output) string {
 	var sb strings.Builder
@@ -138,6 +172,51 @@ func parseLogs(b []byte) ([]Output, error) {
 	return logs, nil
 }
 
+// parseContainerLogs gets a list of Outputs from raw logs
+func parseContainerLogs(b []byte) ([]Output, error) {
+	logs := []Output{}
+	reader := bufio.NewReader(bytes.NewReader(b))
+
+	for {
+		b, err := utils.ReadLongLine(reader)
+		if err != nil {
+			if err == io.EOF {
+				err = nil
+				break
+			}
+
+			return logs, fmt.Errorf("could not read line: %w", err)
+		}
+
+		log, err := GetLogEntry(b)
+		if err != nil {
+			// try to read in case of some lines which we couldn't parse
+			// sometimes we're not able to control all stdout messages from libs
+			logs = append(logs, Output{
+				Type_:   TypeLogLine,
+				Content: string(b),
+			})
+
+			continue
+		}
+
+		if log.Type_ == TypeResult && log.Result != nil {
+			message := getResultMessage(*log.Result)
+			logs = append(logs, Output{
+				Type_:   TypeResult,
+				Content: message,
+				Result:  log.Result,
+			})
+
+			continue
+		}
+
+		logs = append(logs, log)
+	}
+
+	return logs, nil
+}
+
 // getDecidingLogLine returns the log line of type result
 // if there is no log line of type result it will return the last log based on time
 // if there are no timestamps, it will return the last error log from the list,
@@ -148,6 +227,44 @@ func getDecidingLogLine(logs []Output) *Output {
 	if len(logs) == 0 {
 		return nil
 	}
+	resultLog := Output{
+		Type_: TypeLogLine,
+		Time:  time.Time{},
+	}
+
+	for _, log := range logs {
+		if log.Type_ == TypeResult && (log.Result == nil || log.Result.IsRunning()) {
+			// this is the result of the init-container or scraper pod on success, let's ignore it
+			continue
+		}
+
+		if moreSevere(log.Type_, resultLog.Type_) {
+			resultLog = log
+			continue
+		}
+
+		if sameSeverity(log.Type_, resultLog.Type_) {
+			if log.Time.Before(resultLog.Time) {
+				continue
+			}
+			resultLog = log
+		}
+	}
+	if resultLog.Content == "" {
+		resultLog = logs[len(logs)-1]
+	}
+
+	return &resultLog
+}
+
+// getDecidingContainerLogLine returns the log line of type result
+// if there are no timestamps, it will return the last error log from the list,
+// if there are no errors, nothing is returned
+func getDecidingContainerLogLine(logs []Output) *Output {
+	if len(logs) == 0 {
+		return nil
+	}
+
 	resultLog := Output{
 		Type_: TypeLogLine,
 		Time:  time.Time{},
@@ -168,11 +285,13 @@ func getDecidingLogLine(logs []Output) *Output {
 			if log.Time.Before(resultLog.Time) {
 				continue
 			}
+
 			resultLog = log
 		}
 	}
-	if resultLog.Content == "" {
-		resultLog = logs[len(logs)-1]
+
+	if resultLog.Type_ != TypeResult && resultLog.Type_ != TypeError {
+		return nil
 	}
 
 	return &resultLog
@@ -210,5 +329,5 @@ func moreSevere(a string, b string) bool {
 	}
 
 	// a is either log or event
-	return !(b == TypeResult || b == TypeError)
+	return b != TypeResult && b != TypeError
 }
