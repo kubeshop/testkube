@@ -2,7 +2,6 @@ package containerexecutor
 
 import (
 	"context"
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"time"
