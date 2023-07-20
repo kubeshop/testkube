@@ -233,8 +233,8 @@ func getDecidingLogLine(logs []Output) *Output {
 	}
 
 	for _, log := range logs {
-		if log.Type_ == TypeResult && (log.Result == nil || log.Result.IsRunning()) {
-			// this is the result of the init-container or scraper pod on success, let's ignore it
+		if log.Type_ == TypeResult && log.Result.IsRunning() {
+			// this is the result of the init-container on success, let's ignore it
 			continue
 		}
 
@@ -271,8 +271,8 @@ func getDecidingContainerLogLine(logs []Output) *Output {
 	}
 
 	for _, log := range logs {
-		if log.Type_ == TypeResult && log.Result.IsRunning() {
-			// this is the result of the init-container on success, let's ignore it
+		if log.Type_ == TypeResult && (log.Result == nil || log.Result.IsRunning()) {
+			// this is the result of the init-container or scraper pod on success, let's ignore it
 			continue
 		}
 
