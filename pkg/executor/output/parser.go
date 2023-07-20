@@ -189,7 +189,7 @@ func parseContainerLogs(b []byte) ([]Output, error) {
 		}
 
 		log, err := GetLogEntry(b)
-		if err != nil {
+		if log.Type_ == TypeParsingError || log.Type_ == TypeUnknown || err != nil {
 			// try to read in case of some lines which we couldn't parse
 			// sometimes we're not able to control all stdout messages from libs
 			logs = append(logs, Output{
@@ -200,7 +200,8 @@ func parseContainerLogs(b []byte) ([]Output, error) {
 			continue
 		}
 
-		if log.Type_ == TypeResult && log.Result != nil {
+		if log.Type_ == TypeResult &&
+			log.Result != nil && log.Result.Status != nil {
 			message := getResultMessage(*log.Result)
 			logs = append(logs, Output{
 				Type_:   TypeResult,
@@ -271,7 +272,8 @@ func getDecidingContainerLogLine(logs []Output) *Output {
 	}
 
 	for _, log := range logs {
-		if log.Type_ == TypeResult && (log.Result == nil || log.Result.IsRunning()) {
+		if log.Type_ == TypeResult &&
+			(log.Result == nil || log.Result.Status == nil || log.Result.IsRunning()) {
 			// this is the result of the init-container or scraper pod on success, let's ignore it
 			continue
 		}
