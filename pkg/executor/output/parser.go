@@ -102,10 +102,10 @@ func ParseContainerOutput(b []byte) (*testkube.ExecutionResult, string, error) {
 			result = log.Result
 		}
 	case TypeError:
-		err = fmt.Errorf(log.Content)
+		result.Err(fmt.Errorf(log.Content))
 	}
 
-	return result, output, err
+	return result, output, nil
 }
 
 // sanitizeLogs creates a human-readable string from a list of Outputs
@@ -308,7 +308,7 @@ func getResultMessage(result testkube.ExecutionResult) string {
 		return result.Output
 	}
 
-	return fmt.Sprintf("%v", result.Status)
+	return fmt.Sprintf("%s", *result.Status)
 }
 
 // sameSeverity decides if a and b are of the same severity type

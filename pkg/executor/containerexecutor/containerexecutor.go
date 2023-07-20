@@ -192,13 +192,8 @@ func (c *ContainerExecutor) Logs(ctx context.Context, id string) (out chan outpu
 			}
 
 			for l := range logs {
-				var line output.Output
-				if err = json.Unmarshal(l, &line); err == nil {
-					out <- line
-				} else {
-					entry := output.NewOutputLine(l)
-					out <- entry
-				}
+				entry := output.NewOutputLine(l)
+				out <- entry
 			}
 		}
 	}()
