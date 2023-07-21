@@ -177,7 +177,7 @@ OuterLoop:
 							continue OuterLoop
 						}
 
-						if exec.ExecutionResult.IsRunning() || exec.IsQueued() {
+						if exec.ExecutionResult.IsRunning() || exec.ExecutionResult.IsQueued() {
 							continue OuterLoop
 						}
 
