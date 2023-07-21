@@ -22,6 +22,7 @@ type Params struct {
 	DataDir                   string // RUNNER_DATADIR
 	GitUsername               string // RUNNER_GITUSERNAME
 	GitToken                  string // RUNNER_GITTOKEN
+	CompressArtifacts         bool   // RUNNER_COMPRESSARTIFACTS
 	ClusterID                 string `envconfig:"RUNNER_CLUSTERID"`                             // RUNNER_CLUSTERID
 	CDEventsTarget            string `envconfig:"RUNNER_CDEVENTS_TARGET"`                       // RUNNER_CDEVENTS_TARGET
 	DashboardURI              string `envconfig:"RUNNER_DASHBOARD_URI"`                         // RUNNER_DASHBOARD_URI
@@ -60,6 +61,7 @@ func printParams(params Params) {
 	output.PrintLogf("RUNNER_GITUSERNAME=\"%s\"", params.GitUsername)
 	printSensitiveParam("RUNNER_GITTOKEN", params.GitToken)
 	output.PrintLogf("RUNNER_DATADIR=\"%s\"", params.DataDir)
+	output.PrintLogf("RUNNER_COMPRESSARTIFACTS=\"%t\"", params.CompressArtifacts)
 	output.PrintLogf("RUNNER_CLUSTERID=\"%s\"", params.ClusterID)
 	output.PrintLogf("RUNNER_CDEVENTS_TARGET=\"%s\"", params.CDEventsTarget)
 	output.PrintLogf("RUNNER_DASHBOARD_URI=\"%s\"", params.DashboardURI)

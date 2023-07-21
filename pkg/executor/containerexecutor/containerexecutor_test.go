@@ -122,6 +122,7 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "RUNNER_DATADIR", Value: "/data"},
 		{Name: "RUNNER_CDEVENTS_TARGET", Value: ""},
 		{Name: "RUNNER_DASHBOARD_URI", Value: ""},
+		{Name: "RUNNER_COMPRESSARTIFACTS", Value: "false"},
 		{Name: "RUNNER_CLOUD_MODE", Value: "false"},
 		{Name: "RUNNER_CLOUD_API_KEY", Value: ""},
 		{Name: "RUNNER_CLOUD_API_URL", Value: ""},
