@@ -425,7 +425,24 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	}
 
 	executorLogs = append(executorLogs, scraperLogs...)
-	execution.ExecutionResult.Output = string(executorLogs)
+
+	// parse container output log (mixed JSON and plain text stream)
+	executionResult, output, err := output.ParseContainerOutput(executorLogs)
+	if err != nil {
+		l.Errorw("parse output error", "error", err)
+		execution.ExecutionResult.Output = output
+		execution.ExecutionResult.Err(err)
+		err = c.repository.UpdateResult(ctx, execution.Id, *execution)
+		if err != nil {
+			l.Infow("Update result", "error", err)
+		}
+		return execution.ExecutionResult, err
+	}
+
+	if executionResult != nil {
+		execution.ExecutionResult = executionResult
+	}
+	execution.ExecutionResult.Output = output
 
 	if execution.ExecutionResult.IsFailed() && execution.ExecutionResult.ErrorMessage == "" {
 		execution.ExecutionResult.ErrorMessage = executor.GetPodErrorMessage(latestExecutorPod)
