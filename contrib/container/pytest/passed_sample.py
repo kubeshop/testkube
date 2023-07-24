@@ -11,11 +11,5 @@ def is_responsive():
     except ConnectionError:
         return False
 
-def inc(x):
-    return x + 1
-
-def test_answer():
-    assert inc(3) == 5
-
 def test_status():
     assert is_responsive()

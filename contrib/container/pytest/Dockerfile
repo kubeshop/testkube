@@ -5,4 +5,5 @@ RUN set -ex \
     && python3 -m pip install \
         --no-cache-dir \
         --upgrade pipenv \
+        --upgrade requests \
         --upgrade pytest
