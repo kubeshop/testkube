@@ -10,7 +10,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: vsukhin/featue/pytest-executor
+      branch: main
       path: contrib/container/pytest/passed_sample.py
   executionRequest:
     command: ["pytest", "/data/repo/contrib/container/pytest/passed_sample.py"]
@@ -27,7 +27,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: vsukhin/featue/pytest-executor
+      branch: main
       path: contrib/container/pytest/failed_sample.py
   executionRequest:
     command: ["pytest", "/data/repo/contrib/container/pytest/failed_sample.py"]
