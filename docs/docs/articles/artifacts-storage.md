@@ -6,15 +6,16 @@ The executor will scrape the files and store them in [Minio](https://min.io/). T
 
 The available configuration parameters in Helm charts are:
 
-| Parameter                            | Is optional | Default                              | Default                                              |
-| ------------------------------------ | ----------- | ------------------------------------ | ---------------------------------------------------- |
-| testkube-api.storage.endpoint        | yes         | testkube-minio-service-testkube:9000 | URL of the S3 bucket                                 |
-| testkube-api.storage.accessKeyId     | yes         | minio                                | Access Key ID                                        |
-| testkube-api.storage.accessKey       | yes         | minio123                             | Access Key                                           |
-| testkube-api.storage.location        | yes         |                                      | Region                                               |
-| testkube-api.storage.token           | yes         |                                      | S3 Token                                             |
-| testkube-api.storage.SSL             | yes         | false                                | Indicates whether SSL communication is to be enabled. |
-| testkube-api.storage.scrapperEnabled | yes         | true                                 | Indicates whether executors should scrape artifacts.  |
+| Parameter                              | Is optional | Default                              | Default                                               |
+| -------------------------------------- | ----------- | ------------------------------------ | ----------------------------------------------------- |
+| testkube-api.storage.endpoint          | yes         | testkube-minio-service-testkube:9000 | URL of the S3 bucket                                  |
+| testkube-api.storage.accessKeyId       | yes         | minio                                | Access Key ID                                         |
+| testkube-api.storage.accessKey         | yes         | minio123                             | Access Key                                            |
+| testkube-api.storage.location          | yes         |                                      | Region                                                |
+| testkube-api.storage.token             | yes         |                                      | S3 Token                                              |
+| testkube-api.storage.SSL               | yes         | false                                | Indicates whether SSL communication is to be enabled. |
+| testkube-api.storage.scrapperEnabled   | yes         | true                                 | Indicates whether executors should scrape artifacts.  |
+| testkube-api.storage.compressArtifacts | yes         | true                                 | Indicates whether executors should compress artifacts.|
 
 The API Server accepts the following environment variables:
 
@@ -28,6 +29,7 @@ STORAGE_REGION
 STORAGE_TOKEN 
 STORAGE_SSL
 SCRAPPERENABLED
+COMPRESSARTIFACTS
 ```
 
 Which can be set while installing with Helm:

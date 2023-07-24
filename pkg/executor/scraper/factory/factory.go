@@ -36,7 +36,12 @@ func TryGetScrapper(ctx context.Context, params envs.Params) (scraper.Scraper, e
 		if params.CloudMode {
 			uploader = CloudUploader
 		}
-		s, err := GetScraper(ctx, params, ArchiveFilesystemExtractor, uploader)
+		extractor := RecursiveFilesystemExtractor
+		if params.CompressArtifacts {
+			extractor = ArchiveFilesystemExtractor
+		}
+
+		s, err := GetScraper(ctx, params, extractor, uploader)
 		if err != nil {
 			return nil, errors.Wrap(err, "error creating scraper")
 		}
