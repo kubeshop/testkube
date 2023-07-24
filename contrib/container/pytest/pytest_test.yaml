@@ -1,0 +1,16 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: container-executor-pytest-sample
+  namespace: testkube
+spec:
+  type: container-executor-pytest/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: vsukhin/featue/pytest-executor
+      path: contrib/container/pytest/test_sample.py
+  executionRequest:
+    command: ["pytest", "/data/repo/contrib/container/pytest/test_sample.py"]
