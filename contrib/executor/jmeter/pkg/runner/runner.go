@@ -178,9 +178,7 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	f.Close()
 
 	var executionResult testkube.ExecutionResult
-	if err == nil {
-		executionResult = MapResultsToExecutionResults(out, results)
-	} else {
+	if err != nil {
 		data, err := os.ReadFile(jtlPath)
 		if err != nil {
 			return *result.WithErrors(errors.Errorf("getting jtl report error: %v", err)), nil
@@ -192,7 +190,10 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		}
 
 		executionResult = MapTestResultsToExecutionResults(out, testResults)
+	} else {
+		executionResult = MapResultsToExecutionResults(out, results)
 	}
+
 	output.PrintLogf("%s Mapped JMeter results to Execution Results...", ui.IconCheckMark)
 
 	// scrape artifacts first even if there are errors above
