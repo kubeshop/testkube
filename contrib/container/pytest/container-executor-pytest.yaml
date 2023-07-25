@@ -1,0 +1,10 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: container-executor-pytest
+  namespace: testkube
+spec:
+  image: pytest-executor:latest
+  executor_type: container
+  types:
+  - container-executor-pytest/test
