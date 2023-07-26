@@ -15,14 +15,14 @@ func TestMapStatus(t *testing.T) {
 	t.Run("should map valid status", func(t *testing.T) {
 		t.Parallel()
 
-		out := MapStatus(parser.Result{Success: false})
+		out := MapResultStatus(parser.Result{Success: false})
 		assert.Equal(t, out, string(testkube.FAILED_ExecutionStatus))
 	})
 
 	t.Run("should map invalid status", func(t *testing.T) {
 		t.Parallel()
 
-		out := MapStatus(parser.Result{Success: true})
+		out := MapResultStatus(parser.Result{Success: true})
 		assert.Equal(t, out, string(testkube.PASSED_ExecutionStatus))
 	})
 

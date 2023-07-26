@@ -174,8 +174,26 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		return *result.WithErrors(errors.Errorf("getting jtl report error: %v", err)), nil
 	}
 
-	results := parser.Parse(f)
-	executionResult := MapResultsToExecutionResults(out, results)
+	results, err := parser.ParseCSV(f)
+	f.Close()
+
+	var executionResult testkube.ExecutionResult
+	if err != nil {
+		data, err := os.ReadFile(jtlPath)
+		if err != nil {
+			return *result.WithErrors(errors.Errorf("getting jtl report error: %v", err)), nil
+		}
+
+		testResults, err := parser.ParseXML(data)
+		if err != nil {
+			return *result.WithErrors(errors.Errorf("parsing jtl report error: %v", err)), nil
+		}
+
+		executionResult = MapTestResultsToExecutionResults(out, testResults)
+	} else {
+		executionResult = MapResultsToExecutionResults(out, results)
+	}
+
 	output.PrintLogf("%s Mapped JMeter results to Execution Results...", ui.IconCheckMark)
 
 	// scrape artifacts first even if there are errors above
@@ -223,10 +241,10 @@ func MapResultsToExecutionResults(out []byte, results parser.Results) (result te
 			testkube.ExecutionStepResult{
 				Name:     r.Label,
 				Duration: r.Duration.String(),
-				Status:   MapStatus(r),
+				Status:   MapResultStatus(r),
 				AssertionResults: []testkube.AssertionResult{{
 					Name:   r.Label,
-					Status: MapStatus(r),
+					Status: MapResultStatus(r),
 				}},
 			})
 	}
@@ -234,8 +252,46 @@ func MapResultsToExecutionResults(out []byte, results parser.Results) (result te
 	return result
 }
 
-func MapStatus(result parser.Result) string {
+func MapTestResultsToExecutionResults(out []byte, results parser.TestResults) (result testkube.ExecutionResult) {
+	result.Status = testkube.ExecutionStatusPassed
+
+	result.Output = string(out)
+	result.OutputType = "text/plain"
+
+	for _, r := range results.HTTPSamples {
+		if !r.Success {
+			result.Status = testkube.ExecutionStatusFailed
+			if r.AssertionResult != nil {
+				result.ErrorMessage = r.AssertionResult.FailureMessage
+			}
+		}
+
+		result.Steps = append(
+			result.Steps,
+			testkube.ExecutionStepResult{
+				Name:     r.Label,
+				Duration: fmt.Sprintf("%dms", r.Time),
+				Status:   MapTestResultStatus(r.Success),
+				AssertionResults: []testkube.AssertionResult{{
+					Name:   r.Label,
+					Status: MapTestResultStatus(r.Success),
+				}},
+			})
+	}
+
+	return result
+}
+
+func MapResultStatus(result parser.Result) string {
 	if result.Success {
+		return string(testkube.PASSED_ExecutionStatus)
+	}
+
+	return string(testkube.FAILED_ExecutionStatus)
+}
+
+func MapTestResultStatus(success bool) string {
+	if success {
 		return string(testkube.PASSED_ExecutionStatus)
 	}
 
