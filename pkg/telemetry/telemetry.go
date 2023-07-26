@@ -20,7 +20,6 @@ var (
 	client  = httpclient.NewClient()
 	senders = map[string]Sender{
 		"google":    GoogleAnalyticsSender,
-		"testkube":  TestkubeAnalyticsSender,
 		"segmentio": SegmentioSender,
 	}
 )
