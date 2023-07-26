@@ -7,6 +7,21 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
+// Executable is an interface for execution result (testkube.Execution implements it)
+type Executable interface {
+	Start()
+	Stop()
+
+	GetId() string
+	GetTestName() string
+	GetTestSuiteName() string
+	GetResult() *testkube.ExecutionResult
+	SetResult(result *testkube.ExecutionResult) *testkube.Execution
+
+	EscapeDots() *testkube.Execution
+	UnscapeDots() *testkube.Execution
+}
+
 const PageDefaultLimit int = 100
 
 type Filter interface {
@@ -30,30 +45,30 @@ type Filter interface {
 }
 
 //go:generate mockgen -destination=./mock_repository.go -package=result "github.com/kubeshop/testkube/pkg/repository/result" Repository
-type Repository interface {
+type Repository[T Executable] interface {
 	Sequences
 	// Get gets execution result by id or name
-	Get(ctx context.Context, id string) (testkube.Execution, error)
+	Get(ctx context.Context, id string) (T, error)
 	// GetByNameAndTest gets execution result by name and test name
-	GetByNameAndTest(ctx context.Context, name, testName string) (testkube.Execution, error)
+	GetByNameAndTest(ctx context.Context, name, testName string) (T, error)
 	// GetLatestByTest gets latest execution result by test
-	GetLatestByTest(ctx context.Context, testName, sortField string) (testkube.Execution, error)
+	GetLatestByTest(ctx context.Context, testName, sortField string) (T, error)
 	// GetLatestByTests gets latest execution results by test names
-	GetLatestByTests(ctx context.Context, testNames []string, sortField string) (executions []testkube.Execution, err error)
+	GetLatestByTests(ctx context.Context, testNames []string, sortField string) (executions []T, err error)
 	// GetExecutions gets executions using a filter, use filter with no data for all
-	GetExecutions(ctx context.Context, filter Filter) ([]testkube.Execution, error)
+	GetExecutions(ctx context.Context, filter Filter) ([]T, error)
 	// GetExecutionTotals gets the statistics on number of executions using a filter, but without paging
 	GetExecutionTotals(ctx context.Context, paging bool, filter ...Filter) (result testkube.ExecutionsTotals, err error)
 	// Insert inserts new execution result
-	Insert(ctx context.Context, result testkube.Execution) error
+	Insert(ctx context.Context, result T) error
 	// Update updates execution result
-	Update(ctx context.Context, result testkube.Execution) error
+	Update(ctx context.Context, result T) error
 	// UpdateResult updates result in execution
-	UpdateResult(ctx context.Context, id string, execution testkube.Execution) error
+	UpdateResult(ctx context.Context, id string, execution T) error
 	// StartExecution updates execution start time
 	StartExecution(ctx context.Context, id string, startTime time.Time) error
 	// EndExecution updates execution end time
-	EndExecution(ctx context.Context, execution testkube.Execution) error
+	EndExecution(ctx context.Context, execution T) error
 	// GetLabels get all available labels
 	GetLabels(ctx context.Context) (labels map[string][]string, err error)
 	// DeleteByTest deletes execution results by test

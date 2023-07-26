@@ -214,7 +214,7 @@ func (e *TestSuiteExecution) IsTimeout() bool {
 	return *e.Status == TIMEOUT_TestSuiteExecutionStatus
 }
 
-func (e *TestSuiteExecution) convertDots(fn func(string) string) *TestSuiteExecution {
+func (e *TestSuiteExecution) filterProperties(fn func(string) string) *TestSuiteExecution {
 	labels := make(map[string]string, len(e.Labels))
 	for key, value := range e.Labels {
 		labels[fn(key)] = value
@@ -236,9 +236,9 @@ func (e *TestSuiteExecution) convertDots(fn func(string) string) *TestSuiteExecu
 }
 
 func (e *TestSuiteExecution) EscapeDots() *TestSuiteExecution {
-	return e.convertDots(utils.EscapeDots)
+	return e.filterProperties(utils.EscapeDots)
 }
 
 func (e *TestSuiteExecution) UnscapeDots() *TestSuiteExecution {
-	return e.convertDots(utils.UnescapeDots)
+	return e.filterProperties(utils.UnescapeDots)
 }

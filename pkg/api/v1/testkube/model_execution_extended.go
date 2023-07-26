@@ -89,6 +89,27 @@ func (executions Executions) Table() (header []string, output [][]string) {
 	return
 }
 
+func (e *Execution) GetId() string {
+	return e.Id
+}
+
+func (e *Execution) GetTestName() string {
+	return e.TestName
+}
+
+func (e *Execution) GetTestSuiteName() string {
+	return e.TestSuiteName
+}
+
+func (e *Execution) GetResult() *ExecutionResult {
+	return e.ExecutionResult
+}
+
+func (e *Execution) SetResult(result *ExecutionResult) *Execution {
+	e.ExecutionResult = result
+	return e
+}
+
 func (e *Execution) WithContent(content *TestContent) *Execution {
 	e.Content = content
 	return e
@@ -210,7 +231,7 @@ func (e *Execution) WithID() *Execution {
 	return e
 }
 
-func (e *Execution) convertDots(fn func(string) string) *Execution {
+func (e *Execution) filterProperties(fn func(string) string) {
 	labels := make(map[string]string, len(e.Labels))
 	for key, value := range e.Labels {
 		labels[fn(key)] = value
@@ -228,13 +249,12 @@ func (e *Execution) convertDots(fn func(string) string) *Execution {
 		vars[fn(key)] = value
 	}
 	e.Variables = vars
-	return e
 }
 
-func (e *Execution) EscapeDots() *Execution {
-	return e.convertDots(utils.EscapeDots)
+func (e *Execution) EscapeDots() {
+	e.filterProperties(utils.EscapeDots)
 }
 
-func (e *Execution) UnscapeDots() *Execution {
-	return e.convertDots(utils.UnescapeDots)
+func (e *Execution) UnscapeDots() {
+	e.filterProperties(utils.UnescapeDots)
 }

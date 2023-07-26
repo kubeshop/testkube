@@ -17,7 +17,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/storage"
 )
 
-var _ Repository = (*MongoRepository)(nil)
+var _ Repository[Executable] = MongoRepository[*testkube.Execution]{}
 
 const (
 	CollectionResults   = "results"
@@ -32,8 +32,8 @@ const (
 	StepMaxCount = 100
 )
 
-func NewMongoRepository(db *mongo.Database, allowDiskUse bool, opts ...MongoRepositoryOpt) *MongoRepository {
-	r := &MongoRepository{
+func NewMongoRepository[T Executable](db *mongo.Database, allowDiskUse bool, opts ...MongoRepositoryOpt[T]) *MongoRepository[T] {
+	r := &MongoRepository[T]{
 		ResultsColl:      db.Collection(CollectionResults),
 		SequencesColl:    db.Collection(CollectionSequences),
 		OutputRepository: NewMongoOutputRepository(db),
@@ -47,13 +47,13 @@ func NewMongoRepository(db *mongo.Database, allowDiskUse bool, opts ...MongoRepo
 	return r
 }
 
-func NewMongoRepositoryWithOutputRepository(
+func NewMongoRepositoryWithOutputRepository[T Executable](
 	db *mongo.Database,
 	allowDiskUse bool,
 	outputRepository OutputRepository,
-	opts ...MongoRepositoryOpt,
-) *MongoRepository {
-	r := &MongoRepository{
+	opts ...MongoRepositoryOpt[T],
+) *MongoRepository[T] {
+	r := &MongoRepository[T]{
 		ResultsColl:      db.Collection(CollectionResults),
 		SequencesColl:    db.Collection(CollectionSequences),
 		OutputRepository: outputRepository,
@@ -67,8 +67,8 @@ func NewMongoRepositoryWithOutputRepository(
 	return r
 }
 
-func NewMongoRepositoryWithMinioOutputStorage(db *mongo.Database, allowDiskUse bool, storageClient storage.Client, bucket string) *MongoRepository {
-	repo := MongoRepository{
+func NewMongoRepositoryWithMinioOutputStorage[T Executable](db *mongo.Database, allowDiskUse bool, storageClient storage.Client, bucket string) *MongoRepository[T] {
+	repo := MongoRepository[T]{
 		ResultsColl:   db.Collection(CollectionResults),
 		SequencesColl: db.Collection(CollectionSequences),
 		allowDiskUse:  allowDiskUse,
@@ -77,72 +77,80 @@ func NewMongoRepositoryWithMinioOutputStorage(db *mongo.Database, allowDiskUse b
 	return &repo
 }
 
-type MongoRepository struct {
+type MongoRepository[T Executable] struct {
 	ResultsColl      *mongo.Collection
 	SequencesColl    *mongo.Collection
 	OutputRepository OutputRepository
 	allowDiskUse     bool
 }
 
-type MongoRepositoryOpt func(*MongoRepository)
+type MongoRepositoryOpt[T Executable] func(*MongoRepository[T])
 
-func WithMongoRepositoryResultCollection(collection *mongo.Collection) MongoRepositoryOpt {
-	return func(r *MongoRepository) {
+func WithMongoRepositoryResultCollection[T Executable](collection *mongo.Collection) MongoRepositoryOpt[T] {
+	return func(r *MongoRepository[T]) {
 		r.ResultsColl = collection
 	}
 }
 
-func WithMongoRepositorySequenceCollection(collection *mongo.Collection) MongoRepositoryOpt {
-	return func(r *MongoRepository) {
+func WithMongoRepositorySequenceCollection[T Executable](collection *mongo.Collection) MongoRepositoryOpt[T] {
+	return func(r *MongoRepository[T]) {
 		r.SequencesColl = collection
 	}
 }
 
-func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.Execution, err error) {
-	err = r.ResultsColl.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&result)
+func (r *MongoRepository[T]) Get(ctx context.Context, id string) (execution T, err error) {
+	err = r.ResultsColl.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&execution)
 	if err != nil {
 		return
 	}
-	if len(result.ExecutionResult.Output) == 0 {
-		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
-		if err == mongo.ErrNoDocuments {
-			err = nil
-		}
+
+	ex, err := r.updateOutput(ctx, execution)
+	if err != nil {
+		return execution, err
 	}
-	return *result.UnscapeDots(), err
+	execution = ex
+
+	return execution.UnscapeDots(), err
 }
 
-func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName string) (result testkube.Execution, err error) {
-	err = r.ResultsColl.FindOne(ctx, bson.M{"name": name, "testname": testName}).Decode(&result)
+func (r *MongoRepository[T]) updateOutput(ctx context.Context, execution T) (T, error) {
+	result := execution.GetResult()
+	if len(result.Output) == 0 {
+		out, err := r.OutputRepository.GetOutput(ctx, execution.GetId(), execution.GetTestName(), execution.GetTestSuiteName())
+		if err == mongo.ErrNoDocuments {
+			err = nil
+		} else if err != nil {
+			return execution, err
+		}
+
+		result.Output = out
+		execution.SetResult(result)
+	}
+
+	execution.UnscapeDots()
+
+	return execution, nil
+}
+
+func (r *MongoRepository[T]) GetByNameAndTest(ctx context.Context, name, testName string) (execution T, err error) {
+	err = r.ResultsColl.FindOne(ctx, bson.M{"name": name, "testname": testName}).Decode(&execution)
 	if err != nil {
 		return
 	}
-	if len(result.ExecutionResult.Output) == 0 {
-		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
-		if err == mongo.ErrNoDocuments {
-			err = nil
-		}
-	}
-	return *result.UnscapeDots(), err
+	return r.updateOutput(ctx, execution)
 }
 
-func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName, sortField string) (result testkube.Execution, err error) {
+func (r *MongoRepository[T]) GetLatestByTest(ctx context.Context, testName, sortField string) (execution T, err error) {
 	findOptions := options.FindOne()
 	findOptions.SetSort(bson.D{{Key: sortField, Value: -1}})
-	err = r.ResultsColl.FindOne(ctx, bson.M{"testname": testName}, findOptions).Decode(&result)
+	err = r.ResultsColl.FindOne(ctx, bson.M{"testname": testName}, findOptions).Decode(&execution)
 	if err != nil {
 		return
 	}
-	if len(result.ExecutionResult.Output) == 0 {
-		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, "")
-		if err == mongo.ErrNoDocuments {
-			err = nil
-		}
-	}
-	return *result.UnscapeDots(), err
+	return r.updateOutput(ctx, execution)
 }
 
-func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []string, sortField string) (executions []testkube.Execution, err error) {
+func (r *MongoRepository[T]) GetLatestByTests(ctx context.Context, testNames []string, sortField string) (executions []testkube.Execution, err error) {
 	var results []struct {
 		LatestID string `bson:"latest_id"`
 	}
@@ -205,8 +213,8 @@ func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []stri
 	return executions, nil
 }
 
-func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (result []testkube.Execution, err error) {
-	result = make([]testkube.Execution, 0)
+func (r *MongoRepository[T]) GetNewestExecutions(ctx context.Context, limit int) (result []T, err error) {
+	result = make([]T, 0)
 	resultLimit := int64(limit)
 	opts := &options.FindOptions{Limit: &resultLimit}
 	opts.SetSort(bson.D{{Key: "_id", Value: -1}})
@@ -227,8 +235,8 @@ func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (r
 	return
 }
 
-func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (result []testkube.Execution, err error) {
-	result = make([]testkube.Execution, 0)
+func (r *MongoRepository[T]) GetExecutions(ctx context.Context, filter Filter) (result []T, err error) {
+	result = make([]T, 0)
 	query, opts := composeQueryAndOpts(filter)
 	if r.allowDiskUse {
 		opts.SetAllowDiskUse(r.allowDiskUse)
@@ -246,7 +254,7 @@ func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (res
 	return
 }
 
-func (r *MongoRepository) GetExecutionTotals(ctx context.Context, paging bool, filter ...Filter) (totals testkube.ExecutionsTotals, err error) {
+func (r *MongoRepository[T]) GetExecutionTotals(ctx context.Context, paging bool, filter ...Filter) (totals testkube.ExecutionsTotals, err error) {
 	var result []struct {
 		Status string `bson:"_id"`
 		Count  int    `bson:"count"`
@@ -303,7 +311,7 @@ func (r *MongoRepository) GetExecutionTotals(ctx context.Context, paging bool, f
 	return
 }
 
-func (r *MongoRepository) GetLabels(ctx context.Context) (labels map[string][]string, err error) {
+func (r *MongoRepository[T]) GetLabels(ctx context.Context) (labels map[string][]string, err error) {
 	var result []struct {
 		Labels bson.M `bson:"labels"`
 	}
@@ -341,53 +349,65 @@ func (r *MongoRepository) GetLabels(ctx context.Context) (labels map[string][]st
 	return labels, nil
 }
 
-func (r *MongoRepository) Insert(ctx context.Context, result testkube.Execution) (err error) {
-	output := result.ExecutionResult.Output
-	result.ExecutionResult.Output = ""
-	result.EscapeDots()
-	_, err = r.ResultsColl.InsertOne(ctx, result)
+// Insert cleans output and store it only in S3 like storage to limit mongo document size
+func (r *MongoRepository[T]) Insert(ctx context.Context, execution T) (err error) {
+	result := execution.GetResult()
+	output := result.Output
+	result.Output = ""
+	execution.SetResult(result)
+	execution.EscapeDots()
+
+	_, err = r.ResultsColl.InsertOne(ctx, execution)
 	if err != nil {
 		return
 	}
-	err = r.OutputRepository.InsertOutput(ctx, result.Id, result.TestName, result.TestSuiteName, output)
+
+	return r.OutputRepository.InsertOutput(ctx, execution.GetId(), execution.GetTestName(), execution.GetTestSuiteName(), output)
+}
+
+func (r *MongoRepository[T]) Update(ctx context.Context, execution T) (err error) {
+	execution, output := r.cleanOutput(execution)
+	_, err = r.ResultsColl.ReplaceOne(ctx, bson.M{"id": execution.GetId()}, output)
+	if err != nil {
+		return
+	}
+	err = r.OutputRepository.UpdateOutput(ctx, execution.GetId(), execution.GetTestName(), execution.GetTestSuiteName(), output)
 	return
 }
 
-func (r *MongoRepository) Update(ctx context.Context, result testkube.Execution) (err error) {
-	output := result.ExecutionResult.Output
-	result.ExecutionResult.Output = ""
-	result.EscapeDots()
-	_, err = r.ResultsColl.ReplaceOne(ctx, bson.M{"id": result.Id}, result)
-	if err != nil {
-		return
-	}
-	err = r.OutputRepository.UpdateOutput(ctx, result.Id, result.TestName, result.TestSuiteName, output)
-	return
+func (r *MongoRepository[T]) cleanOutput(execution T) (T, string) {
+	result := execution.GetResult().GetDeepCopy()
+	output := result.Output
+	result.Output = ""
+	result.Steps = cleanSteps(result.Steps)
+	execution.SetResult(result)
+	execution.EscapeDots()
+
+	return execution, output
+
 }
 
-func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result testkube.Execution) (err error) {
-	output := result.ExecutionResult.Output
-	result.ExecutionResult = result.ExecutionResult.GetDeepCopy()
-	result.ExecutionResult.Output = ""
-	result.ExecutionResult.Steps = cleanSteps(result.ExecutionResult.Steps)
-	_, err = r.ResultsColl.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"executionresult": result.ExecutionResult}})
+func (r *MongoRepository[T]) UpdateResult(ctx context.Context, id string, execution T) (err error) {
+	execution, output := r.cleanOutput(execution)
+
+	_, err = r.ResultsColl.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"executionresult": execution.GetResult()}})
 	if err != nil {
 		return
 	}
 
-	err = r.OutputRepository.UpdateOutput(ctx, id, result.TestName, result.TestSuiteName, cleanOutput(output))
+	err = r.OutputRepository.UpdateOutput(ctx, id, execution.GetTestName(), execution.GetTestSuiteName(), trimOutput(output))
 	return
 }
 
 // StartExecution updates execution start time
-func (r *MongoRepository) StartExecution(ctx context.Context, id string, startTime time.Time) (err error) {
+func (r *MongoRepository[T]) StartExecution(ctx context.Context, id string, startTime time.Time) (err error) {
 	_, err = r.ResultsColl.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"starttime": startTime}})
 	return
 }
 
 // EndExecution updates execution end time
-func (r *MongoRepository) EndExecution(ctx context.Context, e testkube.Execution) (err error) {
-	_, err = r.ResultsColl.UpdateOne(ctx, bson.M{"id": e.Id}, bson.M{"$set": bson.M{"endtime": e.EndTime, "duration": e.Duration, "durationms": e.DurationMs}})
+func (r *MongoRepository[T]) EndExecution(ctx context.Context, e T) (err error) {
+	_, err = r.ResultsColl.UpdateOne(ctx, bson.M{"id": e.GetId()}, bson.M{"$set": bson.M{"endtime": e.EndTime, "duration": e.Duration, "durationms": e.DurationMs}})
 	return
 }
 
@@ -471,7 +491,7 @@ func addSelectorConditions(selector string, tag string, conditions primitive.A) 
 }
 
 // DeleteByTest deletes execution results by test
-func (r *MongoRepository) DeleteByTest(ctx context.Context, testName string) (err error) {
+func (r *MongoRepository[T]) DeleteByTest(ctx context.Context, testName string) (err error) {
 	err = r.OutputRepository.DeleteOutputByTest(ctx, testName)
 	if err != nil {
 		return
@@ -485,7 +505,7 @@ func (r *MongoRepository) DeleteByTest(ctx context.Context, testName string) (er
 }
 
 // DeleteByTestSuite deletes execution results by test suite
-func (r *MongoRepository) DeleteByTestSuite(ctx context.Context, testSuiteName string) (err error) {
+func (r *MongoRepository[T]) DeleteByTestSuite(ctx context.Context, testSuiteName string) (err error) {
 	err = r.OutputRepository.DeleteOutputByTestSuite(ctx, testSuiteName)
 	if err != nil {
 		return
@@ -499,7 +519,7 @@ func (r *MongoRepository) DeleteByTestSuite(ctx context.Context, testSuiteName s
 }
 
 // DeleteAll deletes all execution results
-func (r *MongoRepository) DeleteAll(ctx context.Context) (err error) {
+func (r *MongoRepository[T]) DeleteAll(ctx context.Context) (err error) {
 	err = r.OutputRepository.DeleteAllOutput(ctx)
 	if err != nil {
 		return
@@ -513,7 +533,7 @@ func (r *MongoRepository) DeleteAll(ctx context.Context) (err error) {
 }
 
 // DeleteByTests deletes execution results by tests
-func (r *MongoRepository) DeleteByTests(ctx context.Context, testNames []string) (err error) {
+func (r *MongoRepository[T]) DeleteByTests(ctx context.Context, testNames []string) (err error) {
 	if len(testNames) == 0 {
 		return nil
 	}
@@ -544,7 +564,7 @@ func (r *MongoRepository) DeleteByTests(ctx context.Context, testNames []string)
 }
 
 // DeleteByTestSuites deletes execution results by test suites
-func (r *MongoRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames []string) (err error) {
+func (r *MongoRepository[T]) DeleteByTestSuites(ctx context.Context, testSuiteNames []string) (err error) {
 	if len(testSuiteNames) == 0 {
 		return nil
 	}
@@ -576,7 +596,7 @@ func (r *MongoRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames
 }
 
 // DeleteForAllTestSuites deletes execution results for all test suites
-func (r *MongoRepository) DeleteForAllTestSuites(ctx context.Context) (err error) {
+func (r *MongoRepository[T]) DeleteForAllTestSuites(ctx context.Context) (err error) {
 	err = r.OutputRepository.DeleteOutputForAllTestSuite(ctx)
 	if err != nil {
 		return
@@ -592,7 +612,7 @@ func (r *MongoRepository) DeleteForAllTestSuites(ctx context.Context) (err error
 }
 
 // GetTestMetrics returns test executions metrics limited to number of executions or last N days
-func (r *MongoRepository) GetTestMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error) {
+func (r *MongoRepository[T]) GetTestMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error) {
 	query := bson.M{"testname": name}
 
 	pipeline := []bson.D{}
@@ -637,12 +657,12 @@ func (r *MongoRepository) GetTestMetrics(ctx context.Context, name string, limit
 	return metrics, nil
 }
 
-// cleanOutput makes sure the output fits into the limits imposed by Mongo;
+// trimOutput makes sure the output fits into the limits imposed by Mongo;
 // if needed it trims the string
 // it keeps the first OutputPrefixSize of strings in case there were errors on init
 // it adds a warning that the logs were trimmed
 // it adds the last OutputMaxSize-OutputPrefixSize-OverflownOutputWarnSize bytes to the end
-func cleanOutput(output string) string {
+func trimOutput(output string) string {
 	if len(output) >= OutputMaxSize {
 		prefix := output[:OutputPrefixSize]
 		suffix := output[len(output)-OutputMaxSize+OutputPrefixSize+len(OverflownOutputWarn):]
