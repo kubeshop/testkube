@@ -3556,6 +3556,21 @@ components:
         status:
           $ref: "#/components/schemas/TestStatus"
 
+    TestExecution:
+      type: object
+      required:
+        - test
+      properties:
+        test:
+          $ref: "#/components/schemas/ObjectRef"
+          description: test name and namespace
+        executionRequest:
+          $ref: "#/components/schemas/ExecutionRequest"
+          description: test execution request parameters
+        status:
+          $ref: "#/components/schemas/Execution"
+          description: test execution status
+
     TestContent:
       type: object
       properties:
