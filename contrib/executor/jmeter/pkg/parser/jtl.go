@@ -4,7 +4,6 @@ import (
 	"encoding/csv"
 	"errors"
 	"io"
-	"log"
 	"strconv"
 	"time"
 )
@@ -23,8 +22,12 @@ type Result struct {
 	Duration     time.Duration
 }
 
-func Parse(reader io.Reader) (results Results) {
-	res := CSVToMap(reader)
+func ParseCSV(reader io.Reader) (results Results, err error) {
+	res, err := CSVToMap(reader)
+	if err != nil {
+		return
+	}
+
 	for _, r := range res {
 		result := MapElementToResult(r)
 		results.Results = append(results.Results, result)
@@ -51,7 +54,7 @@ func MapElementToResult(in map[string]string) Result {
 }
 
 // CSVToMap takes a reader and returns an array of dictionaries, using the header row as the keys
-func CSVToMap(reader io.Reader) []map[string]string {
+func CSVToMap(reader io.Reader) ([]map[string]string, error) {
 	r := csv.NewReader(reader)
 	rows := []map[string]string{}
 	var header []string
@@ -61,7 +64,7 @@ func CSVToMap(reader io.Reader) []map[string]string {
 			break
 		}
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 		if header == nil {
 			header = record
@@ -73,5 +76,5 @@ func CSVToMap(reader io.Reader) []map[string]string {
 			rows = append(rows, dict)
 		}
 	}
-	return rows
+	return rows, nil
 }
