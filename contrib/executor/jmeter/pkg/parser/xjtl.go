@@ -16,7 +16,7 @@ type HTTPSample struct {
 	Time            int              `xml:"t,attr"`
 	Success         bool             `xml:"s,attr"`
 	Label           string           `xml:"lb,attr"`
-	ResponseCode    int              `xml:"rc,attr"`
+	ResponseCode    string           `xml:"rc,attr"`
 	AssertionResult *AssertionResult `xml:"assertionResult"`
 }
 
