@@ -4091,6 +4091,10 @@ components:
           type: string
           description: cloud env id
           example: "tkcenv_xxxx"
+        helmchartVersion:
+          type: string
+          description: helm chart version
+          example: "1.4.14"
 
     Repository:
       description: repository representation for tests in git repositories

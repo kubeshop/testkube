@@ -396,6 +396,7 @@ func main() {
 		artifactStorage,
 		cfg.CDEventsTarget,
 		cfg.TestkubeDashboardURI,
+		cfg.TestkubeHelmchartVersion,
 	)
 
 	if mode == common.ModeAgent {
