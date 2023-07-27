@@ -23,7 +23,7 @@ _detect_os(){
     case $(uname) in 
     Linux) echo "Linux" 
     ;; 
-    Darwin) echo "macOS" 
+    Darwin) echo "Darwin"
     ;; 
     Windows) echo "Windows" 
     ;; 
