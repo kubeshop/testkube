@@ -39,7 +39,7 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 	secretEnvVars := append(envManager.PrepareSecrets(options.SecretEnvs, options.Variables),
 		envManager.PrepareGitCredentials(options.UsernameSecret, options.TokenSecret)...)
 
-	tmpl, err := template.New("job").Parse(options.JobTemplate)
+	tmpl, err := template.New("job").Funcs(template.FuncMap{"tostring": fmt.Sprint}).Parse(options.JobTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("creating job spec from executor template error: %w", err)
 	}

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -674,7 +675,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	secretEnvVars := append(envManager.PrepareSecrets(options.SecretEnvs, options.Variables),
 		envManager.PrepareGitCredentials(options.UsernameSecret, options.TokenSecret)...)
 
-	tmpl, err := template.New("job").Parse(options.JobTemplate)
+	tmpl, err := template.New("job").Funcs(template.FuncMap{"tostring": fmt.Sprint}).Parse(options.JobTemplate)
 	if err != nil {
 		return nil, errors.Errorf("creating job spec from options.JobTemplate error: %v", err)
 	}
