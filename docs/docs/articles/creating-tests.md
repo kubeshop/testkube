@@ -410,7 +410,7 @@ Usage example:
 {{- range $key, $value := .Variables }}
   {{ if eq ($value.Type_ | vartypeptrtostring) "basic" }}
   - name: TEST
-  value: "TEST"
+    value: "TEST"
   {{- end }}
 {{- end }}
 ```
