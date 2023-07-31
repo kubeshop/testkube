@@ -258,7 +258,8 @@ func MapTestResultsToExecutionResults(out []byte, results parser.TestResults) (r
 	result.Output = string(out)
 	result.OutputType = "text/plain"
 
-	for _, r := range results.HTTPSamples {
+	samples := append(results.HTTPSamples, results.Samples...)
+	for _, r := range samples {
 		if !r.Success {
 			result.Status = testkube.ExecutionStatusFailed
 			if r.AssertionResult != nil {
