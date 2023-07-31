@@ -1132,6 +1132,7 @@ paths:
         - $ref: "#/components/parameters/Selector"
         - $ref: "#/components/parameters/ExecutionSelector"
         - $ref: "#/components/parameters/ConcurrencyLevel"
+        - $ref: "#/components/parameters/TestExecutionName"        
       tags:
         - api
         - tests
@@ -3872,7 +3873,10 @@ components:
         containerShell:
           type: string
           description: shell used in container executor
-          example: "/bin/sh"         
+          example: "/bin/sh"
+        testExecutionName:
+          type: string
+          description: test execution name started the test execution    
 
     Artifact:
       type: object
@@ -4393,6 +4397,9 @@ components:
         runningContext:
           $ref: "#/components/schemas/RunningContext"
           description: running context for the test execution
+        testExecutionName:
+          type: string
+          description: test execution name started the test execution
 
     ExecutionUpdateRequest:
       description: test execution request update body
@@ -5388,6 +5395,12 @@ components:
       schema:
         type: integer
         default: 10
+    TestExecutionName:
+      in: query
+      name: testExecutionName
+      schema:
+        type: string
+        description: test execution name stated the test execution
     Namespace:
       in: query
       name: namespace

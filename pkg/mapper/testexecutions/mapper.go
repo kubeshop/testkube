@@ -98,9 +98,37 @@ func MapExecutionResultToCRD(result *testkube.ExecutionResult) *testexecutionv1.
 		status = &value
 	}
 
+	var steps []testexecutionv1.ExecutionStepResult
+	for _, step := range result.Steps {
+		var asserstions []testexecutionv1.AssertionResult
+		for _, asserstion := range step.AssertionResults {
+			asserstions = append(asserstions, testexecutionv1.AssertionResult{
+				Name:         asserstion.Name,
+				Status:       asserstion.Status,
+				ErrorMessage: asserstion.ErrorMessage,
+			})
+		}
+
+		steps = append(steps, testexecutionv1.ExecutionStepResult{
+			Name:             step.Name,
+			Duration:         step.Duration,
+			Status:           step.Status,
+			AssertionResults: asserstions,
+		})
+	}
+
+	var reports *testexecutionv1.ExecutionResultReports
+	if result.Reports != nil {
+		reports = &testexecutionv1.ExecutionResultReports{
+			Junit: result.Reports.Junit,
+		}
+	}
+
 	return &testexecutionv1.ExecutionResult{
 		Status:       status,
 		ErrorMessage: result.ErrorMessage,
+		Steps:        steps,
+		Reports:      reports,
 	}
 }
 

@@ -81,4 +81,6 @@ type ExecutionUpdateRequest struct {
 	// secret references
 	EnvSecrets     *[]EnvReference `json:"envSecrets,omitempty"`
 	RunningContext *RunningContext `json:"runningContext,omitempty"`
+	// test execution name started the test execution
+	TestExecutionName *string `json:"testExecutionName,omitempty"`
 }
