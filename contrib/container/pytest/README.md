@@ -13,7 +13,7 @@ of the Docker image in executor CRD, use command
 `kubectl apply -f container-executor-pytest.yaml`
 `kubectl apply -f pytest_test.yaml`
 
-## Run resulted tests
+## Run created tests
 Use 
 `kubectl testkube run test container-executor-pytest-failed-sample`
 `kubectl testkube run test container-executor-pytest-passed-sample`

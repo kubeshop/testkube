@@ -402,6 +402,19 @@ spec:
 
 ```
 
+We also provide special helper methods to use in the job template:
+`vartypeptrtostring` - method to convert a pointer to a variable type to a string type
+
+Usage example:
+```yaml
+{{- range $key, $value := .Variables }}
+  {{ if eq ($value.Type_ | vartypeptrtostring) "basic" }}
+  - name: TEST
+    value: "TEST"
+  {{- end }}
+{{- end }}
+```
+
 Add `imagePullSecrets` option if you use your own Image Registry. This will add the secret for both `init` and `executor` containers.
 
 
