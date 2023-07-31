@@ -402,8 +402,8 @@ spec:
 
 ```
 
-We also provide special helper methods to use in job template:
-`vartypeptrtostring` - method to convert pointer to varibale type to string type
+We also provide special helper methods to use in the job template:
+`vartypeptrtostring` - method to convert a pointer to a variable type to a string type
 
 Usage example:
 ```yaml
