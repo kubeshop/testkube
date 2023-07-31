@@ -81,6 +81,7 @@ func NewTestkubeAPI(
 	artifactsStorage storage.ArtifactsStorage,
 	cdeventsTarget string,
 	dashboardURI string,
+	helmchartVersion string,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -120,6 +121,7 @@ func NewTestkubeAPI(
 		Storage:              storage,
 		graphqlPort:          graphqlPort,
 		artifactsStorage:     artifactsStorage,
+		helmchartVersion:     helmchartVersion,
 	}
 
 	// will be reused in websockets handler
@@ -171,6 +173,7 @@ type TestkubeAPI struct {
 	slackLoader          *slack.SlackLoader
 	graphqlPort          string
 	artifactsStorage     storage.ArtifactsStorage
+	helmchartVersion     string
 }
 
 type storageParams struct {

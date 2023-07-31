@@ -6,13 +6,13 @@ import (
 
 // TestResults is a root element of junit xml report
 type TestResults struct {
-	XMLName     xml.Name     `xml:"testResults"`
-	HTTPSamples []HTTPSample `xml:"httpSample,omitempty"`
+	XMLName     xml.Name  `xml:"testResults"`
+	HTTPSamples []Example `xml:"httpSample,omitempty"`
+	Samples     []Example `xml:"sample,omitempty"`
 }
 
-// HTTPSample is http sample details
-type HTTPSample struct {
-	XMLName         xml.Name         `xml:"httpSample"`
+// Example is example details
+type Example struct {
 	Time            int              `xml:"t,attr"`
 	Success         bool             `xml:"s,attr"`
 	Label           string           `xml:"lb,attr"`
