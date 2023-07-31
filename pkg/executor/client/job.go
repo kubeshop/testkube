@@ -669,7 +669,8 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	secretEnvVars := append(envManager.PrepareSecrets(options.SecretEnvs, options.Variables),
 		envManager.PrepareGitCredentials(options.UsernameSecret, options.TokenSecret)...)
 
-	tmpl, err := template.New("job").Parse(options.JobTemplate)
+	tmpl, err := template.New("job").Funcs(template.FuncMap{"vartypeptrtostring": testkube.VariableTypeString}).
+		Parse(options.JobTemplate)
 	if err != nil {
 		return nil, errors.Errorf("creating job spec from options.JobTemplate error: %v", err)
 	}
@@ -683,7 +684,8 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	var job batchv1.Job
 	jobSpec := buffer.String()
 	if options.JobTemplateExtensions != "" {
-		tmplExt, err := template.New("jobExt").Parse(options.JobTemplateExtensions)
+		tmplExt, err := template.New("jobExt").Funcs(template.FuncMap{"vartypeptrtostring": testkube.VariableTypeString}).
+			Parse(options.JobTemplateExtensions)
 		if err != nil {
 			return nil, errors.Errorf("creating job extensions spec from template error: %v", err)
 		}
