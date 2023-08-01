@@ -33,30 +33,32 @@ _detect_os(){
 _download_url() {
   local arch
   local os
+  local tag
   local version
 
   arch="$(_detect_arch)"
   os="$(_detect_os)"
   if [ -z "$TESTKUBE_VERSION" ]; then
     if [ "$1" = "beta" ]; then
-      version="$(
+      tag="$(
         curl -s "https://api.github.com/repos/kubeshop/testkube/releases" \
         2>/dev/null \
         | jq -r '.[].tag_name | select(test("beta"))' \
         | head -n 1 \
       )"
     else
-      version="$(
+      tag="$(
         curl -s "https://api.github.com/repos/kubeshop/testkube/releases/latest" \
         2>/dev/null \
         | jq -r '.tag_name' \
       )"
     fi
   else
-    version="$TESTKUBE_VERSION"
+    tag="$TESTKUBE_VERSION"
   fi
+  version="${tag/#v/}" # remove leading v if present
 
-  echo "https://github.com/kubeshop/testkube/releases/download/${version}/testkube_${version:-1}_${os}_$arch.tar.gz"
+  echo "https://github.com/kubeshop/testkube/releases/download/${tag}/testkube_${version:-1}_${os}_$arch.tar.gz"
 }
 
 if [ "$1" = "beta" ]; then
