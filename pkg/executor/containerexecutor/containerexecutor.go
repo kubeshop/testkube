@@ -21,6 +21,7 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	testexecutionsv1 "github.com/kubeshop/testkube-operator/client/testexecutions/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
@@ -28,6 +29,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
+	testexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testexecutions"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 )
@@ -58,6 +60,7 @@ func NewContainerExecutor(
 	configMap config.Repository,
 	executorsClient executorsclientv1.Interface,
 	testsClient testsv3.Interface,
+	testExecutionsClient testexecutionsv1.Interface,
 	registry string,
 	podStartTimeout time.Duration,
 	clusterID string,
@@ -68,21 +71,22 @@ func NewContainerExecutor(
 	}
 
 	return &ContainerExecutor{
-		clientSet:          clientSet,
-		repository:         repo,
-		log:                log.DefaultLogger,
-		namespace:          namespace,
-		images:             images,
-		templates:          templates,
-		configMap:          configMap,
-		serviceAccountName: serviceAccountName,
-		metrics:            metrics,
-		emitter:            emiter,
-		testsClient:        testsClient,
-		executorsClient:    executorsClient,
-		registry:           registry,
-		podStartTimeout:    podStartTimeout,
-		clusterID:          clusterID,
+		clientSet:            clientSet,
+		repository:           repo,
+		log:                  log.DefaultLogger,
+		namespace:            namespace,
+		images:               images,
+		templates:            templates,
+		configMap:            configMap,
+		serviceAccountName:   serviceAccountName,
+		metrics:              metrics,
+		emitter:              emiter,
+		testsClient:          testsClient,
+		executorsClient:      executorsClient,
+		testExecutionsClient: testExecutionsClient,
+		registry:             registry,
+		podStartTimeout:      podStartTimeout,
+		clusterID:            clusterID,
 	}, nil
 }
 
@@ -92,21 +96,22 @@ type ExecutionCounter interface {
 
 // ContainerExecutor is container for managing job executor dependencies
 type ContainerExecutor struct {
-	repository         result.Repository
-	log                *zap.SugaredLogger
-	clientSet          kubernetes.Interface
-	namespace          string
-	images             executor.Images
-	templates          executor.Templates
-	metrics            ExecutionCounter
-	emitter            EventEmitter
-	configMap          config.Repository
-	serviceAccountName string
-	testsClient        testsv3.Interface
-	executorsClient    executorsclientv1.Interface
-	registry           string
-	podStartTimeout    time.Duration
-	clusterID          string
+	repository           result.Repository
+	log                  *zap.SugaredLogger
+	clientSet            kubernetes.Interface
+	namespace            string
+	images               executor.Images
+	templates            executor.Templates
+	metrics              ExecutionCounter
+	emitter              EventEmitter
+	configMap            config.Repository
+	serviceAccountName   string
+	testsClient          testsv3.Interface
+	executorsClient      executorsclientv1.Interface
+	testExecutionsClient testexecutionsv1.Interface
+	registry             string
+	podStartTimeout      time.Duration
+	clusterID            string
 }
 
 type JobOptions struct {
@@ -477,6 +482,20 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testku
 		test.Status = testsmapper.MapExecutionToTestStatus(execution)
 		if err = c.testsClient.UpdateStatus(test); err != nil {
 			c.log.Errorw("updating test error", "error", err)
+		}
+	}
+
+	if execution.TestExecutionName != "" {
+		testExecution, err := c.testExecutionsClient.Get(execution.TestExecutionName)
+		if err != nil {
+			c.log.Errorw("getting test execution error", "error", err)
+		}
+
+		if testExecution != nil {
+			testExecution.Status = testexecutionsmapper.MapAPIToCRD(execution)
+			if err = c.testExecutionsClient.UpdateStatus(testExecution); err != nil {
+				c.log.Errorw("updating test execution error", "error", err)
+			}
 		}
 	}
 

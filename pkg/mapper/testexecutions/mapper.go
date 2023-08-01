@@ -133,7 +133,7 @@ func MapExecutionResultToCRD(result *testkube.ExecutionResult) *testexecutionv1.
 }
 
 // MapAPIToCRD maps OpenAPI spec Execution to CRD TestExecutionStatus
-func MapAPIToCRD(request testkube.Execution) testexecutionv1.TestExecutionStatus {
+func MapAPIToCRD(request *testkube.Execution) testexecutionv1.TestExecutionStatus {
 	var artifactRequest *testexecutionv1.ArtifactRequest
 	if request.ArtifactRequest != nil {
 		artifactRequest = &testexecutionv1.ArtifactRequest{
