@@ -1131,8 +1131,7 @@ paths:
         - $ref: "#/components/parameters/Namespace"
         - $ref: "#/components/parameters/Selector"
         - $ref: "#/components/parameters/ExecutionSelector"
-        - $ref: "#/components/parameters/ConcurrencyLevel"
-        - $ref: "#/components/parameters/TestExecutionName"        
+        - $ref: "#/components/parameters/ConcurrencyLevel"    
       tags:
         - api
         - tests
@@ -1848,6 +1847,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/Namespace"
+        - $ref: "#/components/parameters/TestExecutionName"
       tags:
         - api
         - tests
