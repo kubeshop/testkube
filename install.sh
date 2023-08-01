@@ -1,5 +1,5 @@
+#!/bin/bash 
 echo "Getting kubectl-testkube plugin"
-#!/bin/sh 
 
 if [ ! -z "${DEBUG}" ]; 
 then set -x 
