@@ -63,10 +63,10 @@ _download_url() {
 
 if [ "$1" = "beta" ]; then
   echo "Downloading testkube from URL: $(_download_url "beta")"
-  curl -sSLf $(_download_url "beta") > testkube.tar.gz
+  curl -sSLf "$(_download_url "beta")" > testkube.tar.gz
 else
   echo "Downloading testkube from URL: $(_download_url)"
-  curl -sSLf $(_download_url) > testkube.tar.gz
+  curl -sSLf "$(_download_url)" > testkube.tar.gz
 fi
 
 tar -xzf testkube.tar.gz kubectl-testkube 
