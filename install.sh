@@ -39,9 +39,18 @@ _download_url() {
   os="$(_detect_os)"
   if [ -z "$TESTKUBE_VERSION" ]; then
     if [ "$1" = "beta" ]; then
-      version=$(curl -s "https://api.github.com/repos/kubeshop/testkube/releases" 2>/dev/null | jq -r '.[].tag_name | select(test("beta"))' | head -n 1)
+      version="$(
+        curl -s "https://api.github.com/repos/kubeshop/testkube/releases" \
+        2>/dev/null \
+        | jq -r '.[].tag_name | select(test("beta"))' \
+        | head -n 1 \
+      )"
     else
-      version=$(curl -s "https://api.github.com/repos/kubeshop/testkube/releases/latest" 2>/dev/null | jq -r '.tag_name')
+      version="$(
+        curl -s "https://api.github.com/repos/kubeshop/testkube/releases/latest" \
+        2>/dev/null \
+        | jq -r '.tag_name' \
+      )"
     fi
   else
     version="$TESTKUBE_VERSION"
