@@ -56,7 +56,7 @@ _download_url() {
     version="$TESTKUBE_VERSION"
   fi
 
-  echo "https://github.com/kubeshop/testkube/releases/download/${version}/testkube_${version:1}_${os}_$arch.tar.gz"
+  echo "https://github.com/kubeshop/testkube/releases/download/${version}/testkube_${version:-1}_${os}_$arch.tar.gz"
 }
 
 if [ "$1" = "beta" ]; then
