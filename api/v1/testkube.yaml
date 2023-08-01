@@ -3983,6 +3983,7 @@ components:
         - failed
         - aborted
         - timeout
+        - skipped
 
     ExecutionResult:
       description: execution result returned from executor

@@ -19,4 +19,5 @@ const (
 	FAILED_ExecutionStatus  ExecutionStatus = "failed"
 	ABORTED_ExecutionStatus ExecutionStatus = "aborted"
 	TIMEOUT_ExecutionStatus ExecutionStatus = "timeout"
+	SKIPPED_ExecutionStatus ExecutionStatus = "skipped"
 )
