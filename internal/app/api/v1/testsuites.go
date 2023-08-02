@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -25,6 +26,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/types"
+	"github.com/kubeshop/testkube/pkg/utils"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
@@ -663,23 +665,30 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 
 func (s TestkubeAPI) ListTestSuiteExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+
+		now := time.Now()
+		var l = s.Log.With("handler", "ListTestSuiteExecutionsHandler", "id", utils.RandAlphanum(10))
+
 		errPrefix := "failed to list test suite execution"
 		filter := getExecutionsFilterFromRequest(c)
 
 		ctx := c.Context()
 		executionsTotals, err := s.TestExecutionResults.GetExecutionsTotals(ctx, filter)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not get total executions: %w", errPrefix, err))
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not get executions totals: %w", errPrefix, err))
 		}
+		l.Debugw("got executions totals", "totals", executionsTotals, "time", time.Since(now))
 		allExecutionsTotals, err := s.TestExecutionResults.GetExecutionsTotals(ctx)
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not get all total executions: %w", errPrefix, err))
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not get all executions totals: %w", errPrefix, err))
 		}
+		l.Debugw("got all executions totals", "totals", executionsTotals, "time", time.Since(now))
 
 		executions, err := s.TestExecutionResults.GetExecutions(ctx, filter)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not get executions: %w", errPrefix, err))
 		}
+		l.Debugw("got executions", "time", time.Since(now))
 
 		return c.JSON(testkube.TestSuiteExecutionsResult{
 			Totals:   &allExecutionsTotals,
