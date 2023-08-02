@@ -1,57 +1,72 @@
+#!/bin/bash
 echo "Getting kubectl-testkube plugin"
-#!/bin/sh 
 
-if [ ! -z "${DEBUG}" ]; 
-then set -x 
-fi 
+if [ ! -z "${DEBUG}" ];
+then set -x
+fi
 
-_detect_arch() { 
-    case $(uname -m) in 
-    amd64|x86_64) echo "x86_64" 
-    ;; 
-    arm64|aarch64) echo "arm64" 
-    ;; 
-    i386) echo "i386" 
-    ;; 
-    *) echo "Unsupported processor architecture"; 
-    return 1 
+_detect_arch() {
+    case $(uname -m) in
+    amd64|x86_64) echo "x86_64"
     ;;
-     esac 
+    arm64|aarch64) echo "arm64"
+    ;;
+    i386) echo "i386"
+    ;;
+    *) echo "Unsupported processor architecture";
+    return 1
+    ;;
+     esac
 }
 
 _detect_os(){
-    case $(uname) in 
-    Linux) echo "Linux" 
-    ;; 
+    case $(uname) in
+    Linux) echo "Linux"
+    ;;
     Darwin) echo "Darwin"
-    ;; 
-    Windows) echo "Windows" 
-    ;; 
-     esac    
+    ;;
+    Windows) echo "Windows"
+    ;;
+     esac
 }
 
 _download_url() {
-  local arch="$(_detect_arch)"
-  local os="$(_detect_os)"
+  local arch
+  local os
+  local tag
+  local version
+
+  arch="$(_detect_arch)"
+  os="$(_detect_os)"
   if [ -z "$TESTKUBE_VERSION" ]; then
     if [ "$1" = "beta" ]; then
-      local version=$(curl -s "https://api.github.com/repos/kubeshop/testkube/releases" 2>/dev/null | jq -r '.[].tag_name | select(test("beta"))' | head -n 1)
+      tag="$(
+        curl -s "https://api.github.com/repos/kubeshop/testkube/releases" \
+        2>/dev/null \
+        | jq -r '.[].tag_name | select(test("beta"))' \
+        | head -n 1 \
+      )"
     else
-      local version=$(curl -s "https://api.github.com/repos/kubeshop/testkube/releases/latest" 2>/dev/null | jq -r '.tag_name')
+      tag="$(
+        curl -s "https://api.github.com/repos/kubeshop/testkube/releases/latest" \
+        2>/dev/null \
+        | jq -r '.tag_name' \
+      )"
     fi
   else
-    local version="$TESTKUBE_VERSION"
+    tag="$TESTKUBE_VERSION"
   fi
+  version="${tag/#v/}" # remove leading v if present
 
-  echo "https://github.com/kubeshop/testkube/releases/download/${version}/testkube_${version:1}_${os}_$arch.tar.gz"
+  echo "https://github.com/kubeshop/testkube/releases/download/${tag}/testkube_${version:-1}_${os}_$arch.tar.gz"
 }
 
 if [ "$1" = "beta" ]; then
   echo "Downloading testkube from URL: $(_download_url "beta")"
-  curl -sSLf $(_download_url "beta") > testkube.tar.gz
+  curl -sSLf "$(_download_url "beta")" > testkube.tar.gz
 else
   echo "Downloading testkube from URL: $(_download_url)"
-  curl -sSLf $(_download_url) > testkube.tar.gz
+  curl -sSLf "$(_download_url)" > testkube.tar.gz
 fi
 
 tar -xzf testkube.tar.gz kubectl-testkube 
