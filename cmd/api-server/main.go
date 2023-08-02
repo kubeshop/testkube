@@ -63,6 +63,7 @@ import (
 	testsclientv1 "github.com/kubeshop/testkube-operator/client/tests"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsourcesclientv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
+	testsuiteexecutionsclientv1 "github.com/kubeshop/testkube-operator/client/testsuiteexecutions/v1"
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/client/testsuites/v2"
 	testsuitesclientv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
@@ -160,7 +161,8 @@ func main() {
 	testsuitesClientV2 := testsuitesclientv2.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testsuitesClientV3 := testsuitesclientv3.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
-	testexecutionsClient := testexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+	testExecutionsClient := testexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+	testsuiteExecutionsClient := testsuiteexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 
 	clientset, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -318,7 +320,7 @@ func main() {
 		configMapConfig,
 		testsClientV3,
 		clientset,
-		testexecutionsClient,
+		testExecutionsClient,
 		cfg.TestkubeRegistry,
 		cfg.TestkubePodStartTimeout,
 		clusterId,
@@ -343,7 +345,7 @@ func main() {
 		configMapConfig,
 		executorsClient,
 		testsClientV3,
-		testexecutionsClient,
+		testExecutionsClient,
 		cfg.TestkubeRegistry,
 		cfg.TestkubePodStartTimeout,
 		clusterId,
@@ -367,6 +369,7 @@ func main() {
 		log.DefaultLogger,
 		configMapConfig,
 		configMapClient,
+		testsuiteExecutionsClient,
 	)
 
 	slackLoader, err := newSlackLoader(cfg)

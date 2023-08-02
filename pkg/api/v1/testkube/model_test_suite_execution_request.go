@@ -38,4 +38,6 @@ type TestSuiteExecutionRequest struct {
 	CronJobTemplate string `json:"cronJobTemplate,omitempty"`
 	// number of tests run in parallel
 	ConcurrencyLevel int32 `json:"concurrencyLevel,omitempty"`
+	// test suite execution name started the test suite execution
+	TestSuiteExecutionName string `json:"testSuiteExecutionName,omitempty"`
 }

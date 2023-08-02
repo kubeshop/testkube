@@ -16,6 +16,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/secret"
+	testsuiteexecutionsclientv1 "github.com/kubeshop/testkube-operator/client/testsuiteexecutions/v1"
 )
 
 type Scheduler struct {
@@ -33,6 +34,7 @@ type Scheduler struct {
 	logger               *zap.SugaredLogger
 	configMap            config.Repository
 	configMapClient      configmap.Interface
+	testSuiteExecutionsClient testsuiteexecutionsclientv1.Interface
 }
 
 func NewScheduler(
@@ -50,6 +52,7 @@ func NewScheduler(
 	logger *zap.SugaredLogger,
 	configMap config.Repository,
 	configMapClient configmap.Interface,
+	testSuiteExecutionsClient testsuiteexecutionsclientv1.Interfacem
 ) *Scheduler {
 	return &Scheduler{
 		metrics:              metrics,
@@ -66,5 +69,6 @@ func NewScheduler(
 		logger:               logger,
 		configMap:            configMap,
 		configMapClient:      configMapClient,
+		testSuiteExecutionsClient: testSuiteExecutionsClient,
 	}
 }

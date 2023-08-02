@@ -9,8 +9,8 @@
  */
 package testkube
 
-type TestExecution struct {
-	Test             *ObjectRef        `json:"test"`
-	ExecutionRequest *ExecutionRequest `json:"executionRequest,omitempty"`
-	Status           *Execution        `json:"status,omitempty"`
+type TestSuiteExecutionCr struct {
+	TestSuite        *ObjectRef                 `json:"testSuite"`
+	ExecutionRequest *TestSuiteExecutionRequest `json:"executionRequest,omitempty"`
+	Status           *TestSuiteExecution        `json:"status,omitempty"`
 }

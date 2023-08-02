@@ -209,25 +209,39 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 	}
 }
 
-func (s *Scheduler) runAfterEachStep(ctx context.Context, testsuiteExecution *testkube.TestSuiteExecution, wg *sync.WaitGroup) {
-	testsuiteExecution.Stop()
-	err := s.testExecutionResults.EndExecution(ctx, *testsuiteExecution)
+func (s *Scheduler) runAfterEachStep(ctx context.Context, execution *testkube.TestSuiteExecution, wg *sync.WaitGroup) {
+	execution.Stop()
+	err := s.testExecutionResults.EndExecution(ctx, *execution)
 	if err != nil {
 		s.logger.Errorw("error setting end time", "error", err.Error())
 	}
 
 	wg.Done()
 
-	if testsuiteExecution.TestSuite != nil {
-		testSuite, err := s.testSuitesClient.Get(testsuiteExecution.TestSuite.Name)
+	if execution.TestSuite != nil {
+		testSuite, err := s.testSuitesClient.Get(execution.TestSuite.Name)
 		if err != nil {
 			s.logger.Errorw("getting test suite error", "error", err)
 		}
 
 		if testSuite != nil {
-			testSuite.Status = testsuitesmapper.MapExecutionToTestSuiteStatus(testsuiteExecution)
+			testSuite.Status = testsuitesmapper.MapExecutionToTestSuiteStatus(execution)
 			if err = s.testSuitesClient.UpdateStatus(testSuite); err != nil {
 				s.logger.Errorw("updating test suite error", "error", err)
+			}
+
+			if execution.TestSuiteExecutionName != "" {
+				testSuiteExecution, err := s.testSuiteExecutionsClient.Get(execution.TestSuiteExecutionName)
+				if err != nil {
+					s.logger.Errorw("getting test suite execution error", "error", err)
+				}
+
+				if testSuiteExecution != nil {
+					testSuiteExecution.Status = testexecutionsmapper.MapAPIToCRD(execution)
+					if err = s.testSuiteExecutionsClient.UpdateStatus(testSuiteExecution); err != nil {
+						s.logger.Errorw("updating test suite execution error", "error", err)
+					}
+				}
 			}
 		}
 	}
@@ -252,15 +266,15 @@ func (s *Scheduler) runAfterEachStep(ctx context.Context, testsuiteExecution *te
 	}
 
 	status := ""
-	if testsuiteExecution.Status != nil {
-		status = string(*testsuiteExecution.Status)
+	if execution.Status != nil {
+		status = string(*execution.Status)
 	}
 
 	out, err := telemetry.SendRunEvent("testkube_api_run_test_suite", telemetry.RunParams{
 		AppVersion: version.Version,
 		Host:       host,
 		ClusterID:  clusterID,
-		DurationMs: testsuiteExecution.DurationMs,
+		DurationMs: execution.DurationMs,
 		Status:     status,
 	})
 

@@ -770,6 +770,7 @@ paths:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/Namespace"
         - $ref: "#/components/parameters/LastNDays"
+        - $ref: "#/components/parameters/TestSuiteExecutionName"
       tags:
         - api
         - test-suites
@@ -3329,6 +3330,24 @@ components:
         runningContext:
           $ref: "#/components/schemas/RunningContext"
           description: running context for the test suite execution
+        testSuiteExecutionName:
+          type: string
+          description: test suite execution name started the test suite execution
+
+    TestSuiteExecutionCR:
+      type: object
+      required:
+        - testSuite
+      properties:
+        testSuite:
+          $ref: "#/components/schemas/ObjectRef"
+          description: test suite name and namespace
+        executionRequest:
+          $ref: "#/components/schemas/TestSuiteExecutionRequest"
+          description: test suite execution request parameters
+        status:
+          $ref: "#/components/schemas/TestSuiteExecution"
+          description: test suite execution status
 
     TestSuiteExecutionStatus:
       type: string
@@ -3557,7 +3576,7 @@ components:
         status:
           $ref: "#/components/schemas/TestStatus"
 
-    TestExecution:
+    TestExecutionCR:
       type: object
       required:
         - test
@@ -4478,6 +4497,9 @@ components:
           format: int32
           description: number of tests run in parallel
           example: 10
+        testSuiteExecutionName:
+          type: string
+          description: test suite execution name started the test suite execution
 
     TestSuiteExecutionUpdateRequest:
       description: test suite execution update request body
@@ -5402,6 +5424,12 @@ components:
       schema:
         type: string
         description: test execution name stated the test execution
+    TestSuiteExecutionName:
+      in: query
+      name: testSuiteExecutionName
+      schema:
+        type: string
+        description: test suite execution name stated the test suite execution    
     Namespace:
       in: query
       name: namespace
