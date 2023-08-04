@@ -11,6 +11,7 @@ import (
 
 	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	testsuiteexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testsuiteexecutions"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/version"
@@ -237,7 +238,7 @@ func (s *Scheduler) runAfterEachStep(ctx context.Context, execution *testkube.Te
 				}
 
 				if testSuiteExecution != nil {
-					//					testSuiteExecution.Status = testexecutionsmapper.MapAPIToCRD(execution)
+					testSuiteExecution.Status = testsuiteexecutionsmapper.MapAPIToCRD(execution)
 					if err = s.testSuiteExecutionsClient.UpdateStatus(testSuiteExecution); err != nil {
 						s.logger.Errorw("updating test suite execution error", "error", err)
 					}
