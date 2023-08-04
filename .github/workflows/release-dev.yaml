@@ -291,3 +291,15 @@ jobs:
 
           ### Publish repo
           curl --fail-with-body -u ${USERNAME}:${PASSWORD} -X PUT -H 'Content-Type: application/json' --data '{"Snapshots": [{"Component": "main", "Name": "testkube-'${VERSION}'"}]}'}], http://repo.testkube.io:8080/api/publish/:linux/linux
+
+  trigger-deploy-to-dev-env:
+    needs: release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          repository: kubeshop/helm-charts
+          event-type: trigger-helm-chart-deployment-to-develop-cluster
