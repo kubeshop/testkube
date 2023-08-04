@@ -59,20 +59,20 @@ func NewCRDTestsCmd() *cobra.Command {
 					cmd.Flags().Set("name", utils.SanitizeName(filepath.Base(path)))
 					options, err := tests.NewUpsertTestOptionsFromFlags(cmd)
 					if err != nil {
-						ui.Info("# getting test options for file", path, err.Error())
-						ui.Info("---")
+						fmt.Println("# getting test options for file", path, err.Error())
+						fmt.Println("---")
 						return nil
 					}
 					(*testkube.TestUpsertRequest)(&options).QuoteTestTextFields()
 					data, err := crd.ExecuteTemplate(crd.TemplateTest, options)
 					if err != nil {
-						ui.Info("# executing crd template for file", err.Error())
-						ui.Info("---")
+						fmt.Println("# executing crd template for file", err.Error())
+						fmt.Println("---")
 						return nil
 					}
 
-					ui.Info(data)
-					ui.Info("---")
+					fmt.Println(data)
+					fmt.Println("---")
 					return nil
 				})
 
