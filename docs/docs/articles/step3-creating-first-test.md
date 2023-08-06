@@ -1,161 +1,73 @@
 # Step 3 - Creating Your First Test
 
-## Using the CLI or the Dashboard
-
-You can create your first test using the CLI or the Testkube Dashboard, both are great options!
-
-To explore the Testkube dashboard, run the command:
-
-```sh
-testkube dashboard
-```
-
 ## Kubernetes-native Tests
 
-Tests in Testkube are created as a Custom Resource in Kubernetes and live inside your cluster.
+Tests in Testkube are stored as a Custom Resource in Kubernetes and live inside your cluster.
 
-You can create your tests directly as a Custom Resource, or use the CLI or the Testkube Dashboard to create them.
+You can create your tests directly on the UI, using the CLI or deploy them as a Custom Resource.
+You can upload your test files to Testkube or you can provide your git credentials so that testkube can fetch them automatically from your Git Repo every time there's a new test execution.
 
-This section provides an example of creating a _Postman_ test. Nevertheless, Testkube supports a long [list of testing tools](../category/test-types).
+This section provides an example of creating a _K6_ test. Nevertheless, Testkube supports a long [list of testing tools](../category/test-types).
 
-## Creating a Postman Test
+## Creating a K6 Test
+Now that you have your Testkube Environment up an running, the quickest way to add a new test is by clicking "Add New Test" on the Dashboard and select your test type:
+<img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/683eae92-ef74-49c8-9db9-90da76fc17fc">
 
-First, let's create a `postman-collection.json` file containing a Postman test (the file content should look similar to the one below):
+We created the following Test example which verifies the status code of an https endpoint.
+```js
+// This k6 test was made to fail randomly 50% of the times.
+import http from 'k6/http';
+import { check, fail, sleep } from 'k6';
 
-```json title="postman-collection.json"
-{
-  "info": {
-    "_postman_id": "8af42c21-3e31-49c1-8b27-d6e60623a180",
-    "name": "Kubeshop",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
-  "item": [
-    {
-      "name": "Home",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test(\"Body matches string\", function () {",
-              "    pm.expect(pm.response.text()).to.include(\"Accelerator\");",
-              "});"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "https://kubeshop.io/",
-          "protocol": "https",
-          "host": ["kubeshop", "io"],
-          "path": [""]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "Team",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test(\"Status code is 200\", function () {",
-              "    pm.response.to.have.status(200);",
-              "});"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "https://kubeshop.io/our-team",
-          "protocol": "https",
-          "host": ["kubeshop", "io"],
-          "path": ["our-team"]
-        }
-      },
-      "response": []
-    }
-  ]
+
+export const options = {
+ stages: [
+   { duration: '1s', target: 1 },
+ ],
+};
+
+let statusCode = Math.random() > 0.5 ? 200 : 502;
+export default function () {
+ const res = http.get('https://httpbin.test.k6.io/');
+ check(res, { 'Check if status code is 200': (r) => { 
+    console.log(statusCode, "Passing? ", 200 == statusCode);
+    return r.status == statusCode }
+});
 }
 ```
 
-And create the test by running the command:
-
-```sh
-testkube create test --file postman-collection.json --type postman/collection --name my-first-test
-```
-
-:::note
-This example is testing that the website https://kubeshop.io is returning a `200` status code. It demostrates a way of creating a simple Postman test. In practice, you would test an internal Kubernetes service.
-:::
-
-## Starting a New Test Execution
-
-After our test is defined as a Custom Resource, we can run it:
-
-```sh
-testkube run test my-first-test
-```
-
-```sh title="Expected output:"
-Type:              postman/collection
-Name:              my-first-test
-Execution ID:      63f4d0910ca9ed26798741ca
-Execution name:    my-frst-test-1
-Execution number:  1
-Status:            running
-Start time:        2023-02-21 14:09:21.163713965 +0000 UTC
-End time:          0001-01-01 00:00:00 +0000 UTC
-Duration:
-
-Test execution started
-Watch test execution until complete:
-$ testkube watch execution my-frst-test-1
+Testkube can import any test files from git, from your computer or by copy & pasting a string.
+While in an automated setup, our advice is to keep everything in Git (including your Test CRDs).
+For this example we will just copy and paste the test file to quickly create and run it.
+<img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/cfb5d188-aaf6-4051-a44c-3859a23dd2a7">
 
 
-Use following command to get test execution details:
-$ testkube get execution my-frst-test-1
-```
 
-## Getting the Result of a Test Execution
+And Voila! You can now run the test!
+<img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/e2d46e4f-641b-49b9-8a1f-f3b3100c4ad0">
 
-To see the result of a Test Execution, first, you need to get the Test Execution list:
 
-```sh
-testkube get executions
-```
+## There's Different Mechanisms to Run the Tests
+#### Dashboard
+You can trigger their execution manually on the Dashboard
+<img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/97fe3119-60a8-4b40-ac54-3f1fc625111f">
 
-```sh title=Expected output:"
-  ID                       | NAME              | TEST NAME       | TYPE               | STATUS | LABELS
----------------------------+-------------------+-----------------+--------------------+--------+---------
-  63f4d0910ca9ed26798741ca | my-first-test-1   | my-first-test   | postman/collection | passed |
-                           |                   |                 |                    |        |
-```
 
-Copy the ID of the test and see the full details of the execution by running:
+#### CLI
+You can run it manualy from your machine using the CLI as well, or from your CI/CD. Look [here](https://docs.testkube.io/articles/cicd-overview) for examples on how to setup our CI/CD system to trigger your tests.
+<img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/6b5098d7-9b57-485d-8c5e-5f915f49d515">
 
-```sh
-testkube get execution 63f4d0910ca9ed26798741ca
-```
-
-```sh title="Expected output:"
-# ... test details
-Test execution completed with success in 14.342s 🥇
-```
-
-## Changing the Output Format
-
+**Changing the Output Format**
 For lists and details, you can use different output formats via the `--output` flag. The following formats are currently supported:
 
 - `RAW` - Raw output from the given executor (e.g., for Postman collection, it's terminal text with colors and tables).
 - `JSON` - Test run data are encoded in JSON.
 - `GO` - For go-template formatting (like in Docker and Kubernetes), you'll need to add the `--go-template` flag with a custom format. The default is `{{ . | printf("%+v") }}`. This will help you check available fields.
+
+#### Other means of triggering tests
+- Your Test can run on a [Schedulle](https://docs.testkube.io/articles/scheduling-tests)
+  <img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/aa3a1d87-e687-4364-9a8f-8bc8ffc73395">
+- Testkube can trigger the tests based on [Kubernetes events](https://docs.testkube.io/articles/test-triggers) (such as the deployment of an application).
+
+
+
