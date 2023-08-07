@@ -13,7 +13,7 @@ This section provides an example of creating a _K6_ test. Testkube supports a lo
 Now that you have your Testkube Environment up and running, the quickest way to add a new test is by clicking "Add New Test" on the Dashboard and select your test type:
 <img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/683eae92-ef74-49c8-9db9-90da76fc17fc">
 
-We created the following Test example which verifies the status code of an https endpoint.
+We created the following Test example which verifies the status code of an HTTPS endpoint.
 ```js
 // This k6 test was made to fail randomly 50% of the times.
 import http from 'k6/http';
