@@ -64,7 +64,7 @@ For lists and details, you can use different output formats via the `--output` f
 - `JSON` - Test run data are encoded in JSON.
 - `GO` - For go-template formatting (like in Docker and Kubernetes), you'll need to add the `--go-template` flag with a custom format. The default is `{{ . | printf("%+v") }}`. This will help you check available fields.
 
-#### Other means of triggering tests
+#### Other Means of Triggering Tests
 - Your Test can run on a [Schedule](https://docs.testkube.io/articles/scheduling-tests)
   <img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/aa3a1d87-e687-4364-9a8f-8bc8ffc73395">
 - Testkube can trigger the tests based on [Kubernetes events](https://docs.testkube.io/articles/test-triggers) (such as the deployment of an application).
