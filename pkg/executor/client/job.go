@@ -325,11 +325,9 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	// wait for pod
 	l.Debug("poll immediate waiting for pod")
 	if err = wait.PollImmediate(pollInterval, c.podStartTimeout, executor.IsPodLoggable(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
-		l.Errorw("waiting for pod started error", "error", err)
-	} else if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
-		// continue on poll err and try to get logs later
-		l.Errorw("waiting for pod complete error", "error", err)
+		l.Errorw("waiting for pod logs to be available", "error", err)
 	}
+
 	if err != nil {
 		execution.ExecutionResult.Err(err)
 	}
