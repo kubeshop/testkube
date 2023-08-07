@@ -7,7 +7,7 @@ Tests in Testkube are stored as a Custom Resource in Kubernetes and live inside 
 You can create your tests directly in the UI, using the CLI or deploy them as a Custom Resource.
 Upload your test files to Testkube or provide your Git credentials so that Testkube can fetch them automatically from your Git Repo every time there's a new test execution.
 
-This section provides an example of creating a _K6_ test. Nevertheless, Testkube supports a long [list of testing tools](../category/test-types).
+This section provides an example of creating a _K6_ test. Testkube supports a long [list of testing tools](../category/test-types).
 
 ## Creating a K6 Test
 Now that you have your Testkube Environment up an running, the quickest way to add a new test is by clicking "Add New Test" on the Dashboard and select your test type:
