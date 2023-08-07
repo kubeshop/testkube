@@ -134,6 +134,10 @@ func MapExecutionResultToCRD(result *testkube.ExecutionResult) *testsuiteexecuti
 
 // MapExecutionCRD maps OpenAPI spec Execution to CRD
 func MapExecutionCRD(request *testkube.Execution) *testsuiteexecutionv1.Execution {
+	if request == nil {
+		return nil
+	}
+
 	var artifactRequest *testsuiteexecutionv1.ArtifactRequest
 	if request.ArtifactRequest != nil {
 		artifactRequest = &testsuiteexecutionv1.ArtifactRequest{
@@ -186,14 +190,63 @@ func MapExecutionCRD(request *testkube.Execution) *testsuiteexecutionv1.Executio
 	return result
 }
 
-func TestSuiteBatchStepToCRD(request *testkube.TestSuiteBatchStep) *testsuiteexecutionv1.TestSuiteBatchStep {
+func MapTestSuiteStepV2ToCRD(request *testkube.TestSuiteStepV2) *testsuiteexecutionv1.TestSuiteStepV2 {
+	if request == nil {
+		return nil
+	}
+
+	var execute *testsuiteexecutionv1.TestSuiteStepExecuteTestV2
+	var delay *testsuiteexecutionv1.TestSuiteStepDelayV2
+
+	if request.Execute != nil {
+		execute = &testsuiteexecutionv1.TestSuiteStepExecuteTestV2{
+			Name:      request.Execute.Name,
+			Namespace: request.Execute.Namespace,
+		}
+	}
+
+	if request.Delay != nil {
+		delay = &testsuiteexecutionv1.TestSuiteStepDelayV2{
+			Duration: request.Delay.Duration,
+		}
+	}
+
+	return &testsuiteexecutionv1.TestSuiteStepV2{
+		StopTestOnFailure: request.StopTestOnFailure,
+		Execute:           execute,
+		Delay:             delay,
+	}
+}
+
+func MapTestSuiteBatchStepToCRD(request *testkube.TestSuiteBatchStep) *testsuiteexecutionv1.TestSuiteBatchStep {
+	if request == nil {
+		return nil
+	}
+
+	var steps []testsuiteexecutionv1.TestSuiteStep
+	for _, step := range request.Execute {
+		steps = append(steps, testsuiteexecutionv1.TestSuiteStep{
+			Test:  step.Test,
+			Delay: step.Delay,
+		})
+	}
+
 	return &testsuiteexecutionv1.TestSuiteBatchStep{
 		StopOnFailure: request.StopOnFailure,
+		Execute:       steps,
 	}
 }
 
 // MapAPIToCRD maps OpenAPI spec Execution to CRD TestSuiteExecutionStatus
 func MapAPIToCRD(request *testkube.TestSuiteExecution) testsuiteexecutionv1.TestSuiteExecutionStatus {
+	var testSuite *testsuiteexecutionv1.ObjectRef
+	if request.TestSuite != nil {
+		testSuite = &testsuiteexecutionv1.ObjectRef{
+			Name:      request.TestSuite.Name,
+			Namespace: request.TestSuite.Namespace,
+		}
+	}
+
 	var status *testsuiteexecutionv1.SuiteExecutionStatus
 	if request.Status != nil {
 		value := testsuiteexecutionv1.SuiteExecutionStatus(*request.Status)
@@ -219,6 +272,7 @@ func MapAPIToCRD(request *testkube.TestSuiteExecution) testsuiteexecutionv1.Test
 		}
 
 		stepResults = append(stepResults, testsuiteexecutionv1.TestSuiteStepExecutionResultV2{
+			Step:      MapTestSuiteStepV2ToCRD(stepResult.Step),
 			Test:      test,
 			Execution: MapExecutionCRD(stepResult.Execution),
 		})
@@ -226,8 +280,34 @@ func MapAPIToCRD(request *testkube.TestSuiteExecution) testsuiteexecutionv1.Test
 
 	var executeStepResults []testsuiteexecutionv1.TestSuiteBatchStepExecutionResult
 	for _, stepResult := range request.ExecuteStepResults {
+		var steps []testsuiteexecutionv1.TestSuiteStepExecutionResult
+		for _, step := range stepResult.Execute {
+			var testSuiteStep *testsuiteexecutionv1.TestSuiteStep
+			if step.Step != nil {
+				testSuiteStep = &testsuiteexecutionv1.TestSuiteStep{
+					Test:  step.Step.Test,
+					Delay: step.Step.Delay,
+				}
+			}
+
+			var test *testsuiteexecutionv1.ObjectRef
+			if step.Test != nil {
+				testSuite = &testsuiteexecutionv1.ObjectRef{
+					Name:      step.Test.Name,
+					Namespace: step.Test.Namespace,
+				}
+			}
+
+			steps = append(steps, testsuiteexecutionv1.TestSuiteStepExecutionResult{
+				Step:      testSuiteStep,
+				Test:      test,
+				Execution: MapExecutionCRD(step.Execution),
+			})
+		}
+
 		executeStepResults = append(executeStepResults, testsuiteexecutionv1.TestSuiteBatchStepExecutionResult{
-			Step: TestSuiteBatchStepToCRD(stepResult.Step),
+			Step:    MapTestSuiteBatchStepToCRD(stepResult.Step),
+			Execute: steps,
 		})
 	}
 
@@ -235,6 +315,7 @@ func MapAPIToCRD(request *testkube.TestSuiteExecution) testsuiteexecutionv1.Test
 		LatestExecution: &testsuiteexecutionv1.SuiteExecution{
 			Id:                 request.Id,
 			Name:               request.Name,
+			TestSuite:          testSuite,
 			Status:             status,
 			Envs:               request.Envs,
 			Variables:          MapCRDVariables(request.Variables),
