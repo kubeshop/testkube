@@ -49,7 +49,7 @@ And Voila! You can now run the test!
 
 ## There's Different Mechanisms to Run the Tests
 #### Dashboard
-You can trigger their execution manually on the Dashboard
+Trigger test execution manually on the Dashboard:
 <img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/97fe3119-60a8-4b40-ac54-3f1fc625111f">
 
 
