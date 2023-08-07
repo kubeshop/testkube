@@ -10,7 +10,7 @@ Upload your test files to Testkube or provide your Git credentials so that Testk
 This section provides an example of creating a _K6_ test. Testkube supports a long [list of testing tools](../category/test-types).
 
 ## Creating a K6 Test
-Now that you have your Testkube Environment up an running, the quickest way to add a new test is by clicking "Add New Test" on the Dashboard and select your test type:
+Now that you have your Testkube Environment up and running, the quickest way to add a new test is by clicking "Add New Test" on the Dashboard and select your test type:
 <img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/683eae92-ef74-49c8-9db9-90da76fc17fc">
 
 We created the following Test example which verifies the status code of an https endpoint.
