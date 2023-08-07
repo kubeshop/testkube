@@ -38,7 +38,7 @@ export default function () {
 
 Testkube can import any test files from git, from your computer or by copy & pasting a string.
 While in an automated setup, our advice is to keep everything in Git (including your Test CRDs).
-For this example we will just copy and paste the test file to quickly create and run it.
+For this example, we will copy and paste the test file to quickly create and run it.
 <img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/cfb5d188-aaf6-4051-a44c-3859a23dd2a7">
 
 
