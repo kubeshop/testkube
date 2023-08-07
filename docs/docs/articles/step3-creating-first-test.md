@@ -47,7 +47,7 @@ And Voila! You can now run the test!
 <img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/e2d46e4f-641b-49b9-8a1f-f3b3100c4ad0">
 
 
-## There's Different Mechanisms to Run the Tests
+## Different Mechanisms to Run Tests
 #### Dashboard
 Trigger test execution manually on the Dashboard:
 <img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/97fe3119-60a8-4b40-ac54-3f1fc625111f">
