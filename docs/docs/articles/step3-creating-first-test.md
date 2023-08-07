@@ -43,7 +43,7 @@ For this example we will just copy and paste the test file to quickly create and
 
 
 
-And Voila! You can now run the test!
+Voila! You can now run the test!
 <img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/e2d46e4f-641b-49b9-8a1f-f3b3100c4ad0">
 
 
