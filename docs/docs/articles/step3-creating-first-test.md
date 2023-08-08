@@ -11,7 +11,7 @@ This section provides an example of creating a _K6_ test. Testkube supports a lo
 
 ## Creating a K6 Test
 Now that you have your Testkube Environment up and running, the quickest way to add a new test is by clicking "Add New Test" on the Dashboard and select your test type:
-<img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/683eae92-ef74-49c8-9db9-90da76fc17fc">
+<img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/683eae92-ef74-49c8-9db9-90da76fc17fc" />
 
 We created the following Test example which verifies the status code of an HTTPS endpoint.
 ```js
@@ -39,23 +39,23 @@ export default function () {
 Testkube can import any test files from Git, from your computer or by copy and pasting a string.
 While in an automated setup, our advice is to keep everything in Git (including your Test CRDs).
 For this example, we will copy and paste the test file to quickly create and run it.
-<img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/cfb5d188-aaf6-4051-a44c-3859a23dd2a7">
+<img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/cfb5d188-aaf6-4051-a44c-3859a23dd2a7" />
 
 
 
 Voila! You can now run the test!
-<img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/e2d46e4f-641b-49b9-8a1f-f3b3100c4ad0">
+<img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/e2d46e4f-641b-49b9-8a1f-f3b3100c4ad0" />
 
 
 ## Different Mechanisms to Run Tests
 #### Dashboard
 Trigger test execution manually on the Dashboard:
-<img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/97fe3119-60a8-4b40-ac54-3f1fc625111f">
+<img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/97fe3119-60a8-4b40-ac54-3f1fc625111f" />
 
 
 #### CLI
 You can run tests manually from your machine using the CLI as well, or from your CI/CD. Visit [here](https://docs.testkube.io/articles/cicd-overview) for examples on how to setup our CI/CD system to trigger your tests.
-<img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/6b5098d7-9b57-485d-8c5e-5f915f49d515">
+<img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/6b5098d7-9b57-485d-8c5e-5f915f49d515" />
 
 **Changing the Output Format**
 For lists and details, you can use different output formats via the `--output` flag. The following formats are currently supported:
@@ -66,7 +66,7 @@ For lists and details, you can use different output formats via the `--output` f
 
 #### Other Means of Triggering Tests
 - Your Test can run on a [Schedule](https://docs.testkube.io/articles/scheduling-tests)
-  <img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/aa3a1d87-e687-4364-9a8f-8bc8ffc73395">
+  <img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/aa3a1d87-e687-4364-9a8f-8bc8ffc73395" />
 - Testkube can trigger the tests based on [Kubernetes events](https://docs.testkube.io/articles/test-triggers) (such as the deployment of an application).
 
 
