@@ -292,7 +292,7 @@ func MapAPIToCRD(request *testkube.TestSuiteExecution) testsuiteexecutionv1.Test
 
 			var test *testsuiteexecutionv1.ObjectRef
 			if step.Test != nil {
-				testSuite = &testsuiteexecutionv1.ObjectRef{
+				test = &testsuiteexecutionv1.ObjectRef{
 					Name:      step.Test.Name,
 					Namespace: step.Test.Namespace,
 				}
