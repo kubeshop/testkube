@@ -10,7 +10,7 @@
 package testkube
 
 type TestExecutionCr struct {
-	Test             *ObjectRef        `json:"test"`
-	ExecutionRequest *ExecutionRequest `json:"executionRequest,omitempty"`
-	Status           *Execution        `json:"status,omitempty"`
+	Test             *ObjectRef             `json:"test"`
+	ExecutionRequest *ExecutionRequest      `json:"executionRequest,omitempty"`
+	Status           *TestExecutionStatusCr `json:"status,omitempty"`
 }

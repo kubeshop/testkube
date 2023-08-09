@@ -3346,8 +3346,19 @@ components:
           $ref: "#/components/schemas/TestSuiteExecutionRequest"
           description: test suite execution request parameters
         status:
-          $ref: "#/components/schemas/TestSuiteExecution"
+          $ref: "#/components/schemas/TestSuiteExecutionStatusCR"
           description: test suite execution status
+
+    TestSuiteExecutionStatusCR:
+      type: object
+      description: test suite execution status
+      properties:
+        latestExecution:
+          $ref: "#/components/schemas/TestSuiteExecution"
+        generation:
+          type: integer
+          format: int64
+          description: test suite execution generation
 
     TestSuiteExecutionStatus:
       type: string
@@ -3588,8 +3599,19 @@ components:
           $ref: "#/components/schemas/ExecutionRequest"
           description: test execution request parameters
         status:
-          $ref: "#/components/schemas/Execution"
+          $ref: "#/components/schemas/TestExecutionStatusCR"
           description: test execution status
+
+    TestExecutionStatusCR:
+      type: object
+      description: test execution status
+      properties:
+        latestExecution:
+          $ref: "#/components/schemas/Execution"
+        generation:
+          type: integer
+          format: int64
+          description: test execution generation
 
     TestContent:
       type: object
@@ -3895,7 +3917,7 @@ components:
           example: "/bin/sh"
         testExecutionName:
           type: string
-          description: test execution name started the test execution    
+          description: test execution name started the test execution
 
     Artifact:
       type: object

@@ -9,8 +9,9 @@
  */
 package testkube
 
-type TestSuiteExecutionCr struct {
-	TestSuite        *ObjectRef                  `json:"testSuite"`
-	ExecutionRequest *TestSuiteExecutionRequest  `json:"executionRequest,omitempty"`
-	Status           *TestSuiteExecutionStatusCr `json:"status,omitempty"`
+// test suite execution status
+type TestSuiteExecutionStatusCr struct {
+	LatestExecution *TestSuiteExecution `json:"latestExecution,omitempty"`
+	// test suite execution generation
+	Generation int64 `json:"generation,omitempty"`
 }
