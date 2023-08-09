@@ -492,7 +492,7 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testku
 		}
 
 		if testExecution != nil {
-			testExecution.Status = testexecutionsmapper.MapAPIToCRD(execution)
+			testExecution.Status = testexecutionsmapper.MapAPIToCRD(execution, testExecution.Generation)
 			if err = c.testExecutionsClient.UpdateStatus(testExecution); err != nil {
 				c.log.Errorw("updating test execution error", "error", err)
 			}

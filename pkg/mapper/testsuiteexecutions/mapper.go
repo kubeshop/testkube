@@ -238,7 +238,7 @@ func MapTestSuiteBatchStepToCRD(request *testkube.TestSuiteBatchStep) *testsuite
 }
 
 // MapAPIToCRD maps OpenAPI spec Execution to CRD TestSuiteExecutionStatus
-func MapAPIToCRD(request *testkube.TestSuiteExecution) testsuiteexecutionv1.TestSuiteExecutionStatus {
+func MapAPIToCRD(request *testkube.TestSuiteExecution, generation int64) testsuiteexecutionv1.TestSuiteExecutionStatus {
 	var testSuite *testsuiteexecutionv1.ObjectRef
 	if request.TestSuite != nil {
 		testSuite = &testsuiteexecutionv1.ObjectRef{
@@ -312,6 +312,7 @@ func MapAPIToCRD(request *testkube.TestSuiteExecution) testsuiteexecutionv1.Test
 	}
 
 	result := testsuiteexecutionv1.TestSuiteExecutionStatus{
+		Generation: generation,
 		LatestExecution: &testsuiteexecutionv1.SuiteExecution{
 			Id:                 request.Id,
 			Name:               request.Name,

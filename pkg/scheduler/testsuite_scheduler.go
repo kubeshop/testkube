@@ -238,7 +238,7 @@ func (s *Scheduler) runAfterEachStep(ctx context.Context, execution *testkube.Te
 				}
 
 				if testSuiteExecution != nil {
-					testSuiteExecution.Status = testsuiteexecutionsmapper.MapAPIToCRD(execution)
+					testSuiteExecution.Status = testsuiteexecutionsmapper.MapAPIToCRD(execution, testSuiteExecution.Generation)
 					if err = s.testSuiteExecutionsClient.UpdateStatus(testSuiteExecution); err != nil {
 						s.logger.Errorw("updating test suite execution error", "error", err)
 					}
