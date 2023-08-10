@@ -166,7 +166,7 @@ func MapExecutionCRD(request *testkube.Execution) *testsuiteexecutionv1.Executio
 		Envs:                    request.Envs,
 		Command:                 request.Command,
 		Args:                    request.Args,
-		ArgsMode:                request.ArgsMode,
+		ArgsMode:                testsuiteexecutionv1.ArgsModeType(request.ArgsMode),
 		Variables:               MapCRDVariables(request.Variables),
 		IsVariablesFileUploaded: request.IsVariablesFileUploaded,
 		VariablesFile:           request.VariablesFile,

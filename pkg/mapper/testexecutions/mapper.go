@@ -164,7 +164,7 @@ func MapAPIToCRD(request *testkube.Execution, generation int64) testexecutionv1.
 			Envs:                    request.Envs,
 			Command:                 request.Command,
 			Args:                    request.Args,
-			ArgsMode:                request.ArgsMode,
+			ArgsMode:                testexecutionv1.ArgsModeType(request.ArgsMode),
 			Variables:               MapCRDVariables(request.Variables),
 			IsVariablesFileUploaded: request.IsVariablesFileUploaded,
 			VariablesFile:           request.VariablesFile,
