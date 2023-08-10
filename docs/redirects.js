@@ -205,6 +205,10 @@ const redirects = [
     to: "/articles/test-sources",
   },
   {
+    from: "/concepts/test-executions",
+    to: "/articles/test-executions",
+  },  
+  {
     from: [
       "/guides/going-to-production/exposing-testkube/overview",
       "/guides/exposing-testkube/overview",
