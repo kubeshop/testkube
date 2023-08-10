@@ -273,6 +273,15 @@ soapui-smoke() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
 }
 
+edge-cases-failures() {
+  name="Edge Cases - Failures"
+  test_crd_file="test/edge-cases/failures.yaml"
+  testsuite_name="expected-fail"
+  testsuite_file="test/suites/edge-cases-expected-failures.yaml"
+
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
+}
+
 main() {
   case $executor_type in
     all)
@@ -293,6 +302,7 @@ main() {
       postman-smoke
       playwright-smoke
       soapui-smoke
+      edge-cases-failures
       ;;
     smoke)
       artillery-smoke
