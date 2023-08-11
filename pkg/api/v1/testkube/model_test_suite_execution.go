@@ -42,4 +42,6 @@ type TestSuiteExecution struct {
 	// test suite labels
 	Labels         map[string]string `json:"labels,omitempty"`
 	RunningContext *RunningContext   `json:"runningContext,omitempty"`
+	// test suite execution name started the test suite execution
+	TestSuiteExecutionName string `json:"testSuiteExecutionName,omitempty"`
 }

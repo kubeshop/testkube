@@ -79,6 +79,7 @@ const sidebars = {
         "articles/test-triggers",
         "articles/webhooks",
         "articles/test-sources",
+        "articles/test-executions",
       ],
     },
     {

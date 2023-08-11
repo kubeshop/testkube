@@ -770,6 +770,7 @@ paths:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/Namespace"
         - $ref: "#/components/parameters/LastNDays"
+        - $ref: "#/components/parameters/TestSuiteExecutionName"
       tags:
         - api
         - test-suites
@@ -1131,7 +1132,7 @@ paths:
         - $ref: "#/components/parameters/Namespace"
         - $ref: "#/components/parameters/Selector"
         - $ref: "#/components/parameters/ExecutionSelector"
-        - $ref: "#/components/parameters/ConcurrencyLevel"
+        - $ref: "#/components/parameters/ConcurrencyLevel"    
       tags:
         - api
         - tests
@@ -1847,6 +1848,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/Namespace"
+        - $ref: "#/components/parameters/TestExecutionName"
       tags:
         - api
         - tests
@@ -3328,6 +3330,35 @@ components:
         runningContext:
           $ref: "#/components/schemas/RunningContext"
           description: running context for the test suite execution
+        testSuiteExecutionName:
+          type: string
+          description: test suite execution name started the test suite execution
+
+    TestSuiteExecutionCR:
+      type: object
+      required:
+        - testSuite
+      properties:
+        testSuite:
+          $ref: "#/components/schemas/ObjectRef"
+          description: test suite name and namespace
+        executionRequest:
+          $ref: "#/components/schemas/TestSuiteExecutionRequest"
+          description: test suite execution request parameters
+        status:
+          $ref: "#/components/schemas/TestSuiteExecutionStatusCR"
+          description: test suite execution status
+
+    TestSuiteExecutionStatusCR:
+      type: object
+      description: test suite execution status
+      properties:
+        latestExecution:
+          $ref: "#/components/schemas/TestSuiteExecution"
+        generation:
+          type: integer
+          format: int64
+          description: test suite execution generation
 
     TestSuiteExecutionStatus:
       type: string
@@ -3555,6 +3586,32 @@ components:
           $ref: "#/components/schemas/ExecutionRequest"
         status:
           $ref: "#/components/schemas/TestStatus"
+
+    TestExecutionCR:
+      type: object
+      required:
+        - test
+      properties:
+        test:
+          $ref: "#/components/schemas/ObjectRef"
+          description: test name and namespace
+        executionRequest:
+          $ref: "#/components/schemas/ExecutionRequest"
+          description: test execution request parameters
+        status:
+          $ref: "#/components/schemas/TestExecutionStatusCR"
+          description: test execution status
+
+    TestExecutionStatusCR:
+      type: object
+      description: test execution status
+      properties:
+        latestExecution:
+          $ref: "#/components/schemas/Execution"
+        generation:
+          type: integer
+          format: int64
+          description: test execution generation
 
     TestContent:
       type: object
@@ -3857,7 +3914,10 @@ components:
         containerShell:
           type: string
           description: shell used in container executor
-          example: "/bin/sh"         
+          example: "/bin/sh"
+        testExecutionName:
+          type: string
+          description: test execution name started the test execution
 
     Artifact:
       type: object
@@ -4379,6 +4439,9 @@ components:
         runningContext:
           $ref: "#/components/schemas/RunningContext"
           description: running context for the test execution
+        testExecutionName:
+          type: string
+          description: test execution name started the test execution
 
     ExecutionUpdateRequest:
       description: test execution request update body
@@ -4456,6 +4519,9 @@ components:
           format: int32
           description: number of tests run in parallel
           example: 10
+        testSuiteExecutionName:
+          type: string
+          description: test suite execution name started the test suite execution
 
     TestSuiteExecutionUpdateRequest:
       description: test suite execution update request body
@@ -5374,6 +5440,18 @@ components:
       schema:
         type: integer
         default: 10
+    TestExecutionName:
+      in: query
+      name: testExecutionName
+      schema:
+        type: string
+        description: test execution name stated the test execution
+    TestSuiteExecutionName:
+      in: query
+      name: testSuiteExecutionName
+      schema:
+        type: string
+        description: test suite execution name stated the test suite execution    
     Namespace:
       in: query
       name: namespace

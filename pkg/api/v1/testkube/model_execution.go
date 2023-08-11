@@ -71,4 +71,6 @@ type Execution struct {
 	RunningContext *RunningContext `json:"runningContext,omitempty"`
 	// shell used in container executor
 	ContainerShell string `json:"containerShell,omitempty"`
+	// test execution name started the test execution
+	TestExecutionName string `json:"testExecutionName,omitempty"`
 }

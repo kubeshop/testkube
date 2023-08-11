@@ -18,6 +18,7 @@ import (
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsourcesv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
+	testsuiteexecutionsv1 "github.com/kubeshop/testkube-operator/client/testsuiteexecutions/v1"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
 	faketestkube "github.com/kubeshop/testkube-operator/pkg/clientset/versioned/fake"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
@@ -54,6 +55,7 @@ func TestService_Run(t *testing.T) {
 	mockSecretClient := secret.NewMockInterface(mockCtrl)
 	configMapConfig := config.NewMockRepository(mockCtrl)
 	mockConfigMapClient := configmap.NewMockInterface(mockCtrl)
+	mockTestSuiteExecutionsClient := testsuiteexecutionsv1.NewMockInterface(mockCtrl)
 
 	mockExecutor := client.NewMockExecutor(mockCtrl)
 
@@ -126,6 +128,7 @@ func TestService_Run(t *testing.T) {
 		testLogger,
 		configMapConfig,
 		mockConfigMapClient,
+		mockTestSuiteExecutionsClient,
 	)
 
 	mockLeaseBackend := NewMockLeaseBackend(mockCtrl)

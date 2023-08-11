@@ -81,6 +81,7 @@ func (s *TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 		}
 		var results []testkube.Execution
 		if len(tests) != 0 {
+			request.TestExecutionName = c.Query("testExecutionName")
 			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", strconv.Itoa(scheduler.DefaultConcurrencyLevel)))
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: can't detect concurrency level: %w", errPrefix, err))
