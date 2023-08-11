@@ -66,4 +66,4 @@ spec:
 
 ## Architecture
 
-Testkube uses Kubernets Operator to reconcile Test and Test Suite Execution CRDs state and run corresponding test and test suite when resource generation is changed.
+Testkube uses a Kubernetes Operator to reconcile Test and Test Suite Execution CRDs state and run the corresponding test and test suite when resource generation is changed.
