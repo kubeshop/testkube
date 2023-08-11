@@ -2,7 +2,7 @@
 
 Testkube allows you to automatically run tests and test suites by creating or updating Test or Test Suite Execution CRDs.
 
-## What is a Testkube Execution CRDs?
+## What are Testkube Execution CRDs?
 
 In generic terms, an _Execution_ defines a _test_ or _testsuite_ which will be executed when CRD is created or updated. For example, we could define a _TestExecution_ which _runs_ a _Test_ when a _TestExecution_ gets _modified_.
 
