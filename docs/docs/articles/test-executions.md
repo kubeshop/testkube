@@ -24,7 +24,7 @@ testSuite:
 
 ### Execution Request
 
-Execution Request allows to define execution parameters for each specific resource.
+An Execution Request defines execution parameters for each specific resource.
 
 ## Example
 
