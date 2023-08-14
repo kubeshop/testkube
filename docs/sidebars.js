@@ -164,6 +164,7 @@ const sidebars = {
         "test-types/executor-zap",
         "test-types/prebuilt-executor",
         "test-types/container-executor",
+        "test-types/executor-pytest",        
       ],
     },
     {
