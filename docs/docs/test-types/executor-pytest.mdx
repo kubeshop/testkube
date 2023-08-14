@@ -4,7 +4,7 @@ This is a simple python based executor for pytest framework https://docs.pytest.
 You can run pytest with Testkube to use it in your automated tests for your Kubernetes clusters.
 
 ## Usage
-Before staring switch your curent folder to /contrib/executor/pytest
+Before staring, please switch your curent folder to /contrib/executor/pytest
 
 ### Step 1 - Add the executor to Testkube
 
@@ -12,7 +12,7 @@ Before staring switch your curent folder to /contrib/executor/pytest
 `kubectl apply -f container-executor-pytest.yaml`
 ```
 
-### Step 2 - Build executor Docker image
+### Step 2 - Build the executor Docker image
 
 Current Docker image is based on python 3.8.17 and a few basic modules, like pipenv, pytest and requests.
 Feel free to change the python version, install missing dependencies, etc. Docker image should be placed in your 
