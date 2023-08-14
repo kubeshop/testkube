@@ -5,6 +5,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -26,6 +27,7 @@ func NewInitCmd() *cobra.Command {
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config file", err)
 			ui.NL()
+			sendAttemptTelemetry(cmd, cfg)
 
 			// create new cloud uris
 			options.CloudUris = common.NewCloudUris(options.CloudRootDomain)
@@ -35,6 +37,7 @@ func NewInitCmd() *cobra.Command {
 				ui.NL()
 
 				currentContext, err := common.GetCurrentKubernetesContext()
+				sendErrTelemetry(cmd, cfg, "k8s_context")
 				ui.ExitOnError("getting current context", err)
 				ui.Alert("Current kubectl context:", currentContext)
 				ui.NL()
@@ -42,12 +45,14 @@ func NewInitCmd() *cobra.Command {
 				ok := ui.Confirm("Do you want to continue?")
 				if !ok {
 					ui.Errf("Testkube installation cancelled")
+					sendErrTelemetry(cmd, cfg, "user_cancel")
 					return
 				}
 			}
 
 			spinner := ui.NewSpinner("Installing Testkube")
 			err = common.HelmUpgradeOrInstallTestkubeCloud(options, cfg, false)
+			sendErrTelemetry(cmd, cfg, "helm_install")
 			ui.ExitOnError("Installing Testkube", err)
 			spinner.Success()
 
@@ -57,14 +62,15 @@ func NewInitCmd() *cobra.Command {
 			var token, refreshToken string
 			if !common.IsUserLoggedIn(cfg, options) {
 				token, refreshToken, err = common.LoginUser(options.CloudUris.Auth)
+				sendErrTelemetry(cmd, cfg, "login")
 				ui.ExitOnError("user login", err)
 			}
 			err = common.PopulateLoginDataToContext(options.CloudOrgId, options.CloudEnvId, token, refreshToken, options, cfg)
+			sendErrTelemetry(cmd, cfg, "setting_context")
 			ui.ExitOnError("Setting cloud environment context", err)
 
 			ui.Info(" Happy Testing! 🚀")
 			ui.NL()
-
 		},
 	}
 
@@ -83,4 +89,26 @@ func NewInitCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
 
 	return cmd
+}
+
+func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType string) {
+	if clientCfg.TelemetryEnabled {
+		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
+		out, err := telemetry.SendCmdErrorEvent(cmd, common.Version, errType)
+		if ui.Verbose && err != nil {
+			ui.Err(err)
+		}
+		ui.Debug("telemetry send event response", out)
+	}
+}
+
+func sendAttemptTelemetry(cmd *cobra.Command, clientCfg config.Data) {
+	if clientCfg.TelemetryEnabled {
+		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
+		out, err := telemetry.SendCmdAttemptEvent(cmd, common.Version)
+		if ui.Verbose && err != nil {
+			ui.Err(err)
+		}
+		ui.Debug("telemetry send event response", out)
+	}
 }

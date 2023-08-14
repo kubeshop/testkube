@@ -29,6 +29,8 @@ type Params struct {
 	TestSuiteSteps   int32      `json:"test_suite_steps,omitempty"`
 	Context          RunContext `json:"context,omitempty"`
 	ClusterType      string     `json:"cluster_type,omitempty"`
+	Error            string     `json:"error,omitempty"`
+	ErrorType        string     `json:"error_type,omitempty"`
 }
 
 type Event struct {
