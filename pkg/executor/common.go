@@ -106,6 +106,10 @@ var RunnerEnvVars = []corev1.EnvVar{
 		Name:  "RUNNER_DASHBOARD_URI",
 		Value: os.Getenv("TESTKUBE_DASHBOARD_URI"),
 	},
+	{
+		Name:  "CI",
+		Value: "1",
+	},
 }
 
 func getOr(key, defaultVal string) string {
