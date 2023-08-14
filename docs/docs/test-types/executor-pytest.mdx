@@ -28,7 +28,7 @@ docker build -t pytest-executor -f Dockerfile
 kubectl apply -f pytest_test.yaml
 ```
 
-And now run the test to see if you're using failed and passed results.
+And now run the tests to see failed and passed results.
 
 ```sh
 `kubectl testkube run test container-executor-pytest-failed-sample`
