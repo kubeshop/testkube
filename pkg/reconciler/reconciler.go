@@ -174,7 +174,7 @@ OuterLoop:
 						}
 
 						if exec.ExecutionResult == nil {
-							continue OuterLoop
+							continue
 						}
 
 						if exec.ExecutionResult.IsRunning() || exec.ExecutionResult.IsQueued() {
