@@ -2309,7 +2309,7 @@ paths:
       description: "Create new webhook based on variables passed in request"
       operationId: createWebhook
       requestBody:
-        description: executor request body data
+        description: webhook request body data
         required: true
         content:
           application/json:
@@ -2332,7 +2332,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Webhook"
         400:
-          description: "problem with executor definition - probably some bad input occurs (invalid JSON body or similar)"
+          description: "problem with webhook definition - probably some bad input occurs (invalid JSON body or similar)"
           content:
             application/problem+json:
               schema:
@@ -2435,6 +2435,56 @@ paths:
                   $ref: "#/components/schemas/Problem"
         500:
           description: "problem with getting webhook data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    patch:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      tags:
+        - webhook
+        - api
+      summary: "Update new webhook"
+      description: "Update new webhook based on variables passed in request"
+      operationId: updateWebhook
+      requestBody:
+        description: webhook request body data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookUpdateRequest"
+          text/yaml:
+            schema:
+              type: string              
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Webhook"
+        400:
+          description: "problem with webhook definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "webhook not found"
           content:
             application/problem+json:
               schema:
@@ -4615,6 +4665,13 @@ components:
     WebhookCreateRequest:
       description: webhook create request body
       type: object
+      allOf:
+        - $ref: "#/components/schemas/Webhook"
+
+    WebhookUpdateRequest:
+      description: webhook update request body
+      type: object
+      nullable: true
       allOf:
         - $ref: "#/components/schemas/Webhook"
 

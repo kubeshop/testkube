@@ -102,7 +102,7 @@ func (s TestkubeAPI) UpdateExecutorHandler() fiber.Handler {
 		}
 
 		s.Events.Notify(testkube.NewEvent(
-			testkube.EventCreated,
+			testkube.EventUpdated,
 			testkube.EventResourceExecutor,
 			updatedExecutor.Name,
 		))
