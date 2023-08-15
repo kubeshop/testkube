@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/cobra"
+
 	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	webhooksmapper "github.com/kubeshop/testkube/pkg/mapper/webhooks"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 // NewCreateWebhookOptionsFromFlags creates create webhook options from command flags
