@@ -3902,7 +3902,7 @@ components:
           description: configuration parameters for storing test artifacts
         preRunScript:
           type: string
-          description: script to run before test execution
+          description: script to run before test execution (not supported for container executors)
           example: "echo -n '$SECRET_ENV' > ./secret_file"
         postRunScript:
           type: string
@@ -4417,7 +4417,7 @@ components:
           description: adjusting parameters for test content
         preRunScript:
           type: string
-          description: script to run before test execution
+          description: script to run before test execution (not supported for container executors)
           example: "echo -n '$SECRET_ENV' > ./secret_file"
         postRunScript:
           type: string
