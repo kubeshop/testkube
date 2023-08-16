@@ -55,6 +55,53 @@ func (s TestkubeAPI) CreateWebhookHandler() fiber.Handler {
 	}
 }
 
+func (s TestkubeAPI) UpdateWebhookHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to update webhook"
+		var request testkube.WebhookUpdateRequest
+		if string(c.Request().Header.ContentType()) == mediaTypeYAML {
+			var webhook executorv1.Webhook
+			webhookSpec := string(c.Body())
+			decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(webhookSpec), len(webhookSpec))
+			if err := decoder.Decode(&webhook); err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse yaml request: %w", errPrefix, err))
+			}
+
+			request = webhooksmapper.MapSpecToUpdate(&webhook)
+		} else {
+			err := c.BodyParser(&request)
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse json request: %w", errPrefix, err))
+			}
+		}
+
+		var name string
+		if request.Name != nil {
+			name = *request.Name
+		}
+		errPrefix = errPrefix + " " + name
+		// we need to get resource first and load its metadata.ResourceVersion
+		webhook, err := s.WebhooksClient.Get(name)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: client found no webhook: %w", errPrefix, err))
+			}
+
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get webhook: %w", errPrefix, err))
+		}
+
+		// map update webhook but load spec only to not override metadata.ResourceVersion
+		webhookSpec := webhooksmapper.MapUpdateToSpec(request, webhook)
+
+		updatedWebhook, err := s.WebhooksClient.Update(webhookSpec)
+		if err != nil {
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not update webhook: %w", errPrefix, err))
+		}
+
+		return c.JSON(updatedWebhook)
+	}
+}
+
 func (s TestkubeAPI) ListWebhooksHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to list webhooks"

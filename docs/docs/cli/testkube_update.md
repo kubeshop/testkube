@@ -29,4 +29,5 @@ testkube update <resourceName> [flags]
 * [testkube update test](testkube_update_test.md)	 - Update test
 * [testkube update testsource](testkube_update_testsource.md)	 - Update TestSource
 * [testkube update testsuite](testkube_update_testsuite.md)	 - Update Test Suite
+* [testkube update webhook](testkube_update_webhook.md)	 - Update Webhook
 
