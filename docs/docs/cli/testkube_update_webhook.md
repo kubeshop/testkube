@@ -1,13 +1,13 @@
-## testkube create webhook
+## testkube update webhook
 
-Create new Webhook
+Update Webhook
 
 ### Synopsis
 
-Create new Webhook Custom Resource
+Update Webhook Custom Resource
 
 ```
-testkube create webhook [flags]
+testkube update webhook [flags]
 ```
 
 ### Options
@@ -29,7 +29,6 @@ testkube create webhook [flags]
 ```
   -a, --api-uri string     api uri, default value read from config if set (default "https://demo.testkube.io/results/v1")
   -c, --client string      client used for connecting to Testkube API one of proxy|direct (default "proxy")
-      --crd-only           generate only crd
       --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")
       --oauth-enabled      enable oauth
       --verbose            show additional debug messages
@@ -37,5 +36,5 @@ testkube create webhook [flags]
 
 ### SEE ALSO
 
-* [testkube create](testkube_create.md)	 - Create resource
+* [testkube update](testkube_update.md)	 - Update resource
 

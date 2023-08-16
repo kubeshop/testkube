@@ -1,18 +1,13 @@
 package webhooks
 
 import (
-	"fmt"
-	"strconv"
-
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
-	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func NewCreateWebhookCmd() *cobra.Command {
+func UpdateWebhookCmd() *cobra.Command {
 	var (
 		events             []string
 		name, uri          string
@@ -25,47 +20,29 @@ func NewCreateWebhookCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "webhook",
-		Aliases: []string{"wh"},
-		Short:   "Create new Webhook",
-		Long:    `Create new Webhook Custom Resource`,
+		Aliases: []string{"webhooks", "wh"},
+		Short:   "Update Webhook",
+		Long:    `Update Webhook Custom Resource`,
 		Run: func(cmd *cobra.Command, args []string) {
-			crdOnly, err := strconv.ParseBool(cmd.Flag("crd-only").Value.String())
-			ui.ExitOnError("parsing flag value", err)
-
 			if name == "" {
 				ui.Failf("pass valid name (in '--name' flag)")
 			}
 
-			namespace := cmd.Flag("namespace").Value.String()
-			var client apiv1.Client
-			if !crdOnly {
-				client, namespace, err = common.GetClient(cmd)
-				ui.ExitOnError("getting client", err)
+			client, namespace, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
 
-				webhook, _ := client.GetWebhook(name)
-				if name == webhook.Name {
-					ui.Failf("Webhook with name '%s' already exists in namespace %s", name, namespace)
-				}
+			webhook, _ := client.GetWebhook(name)
+			if name != webhook.Name {
+				ui.Failf("Webhook with name '%s' not exists in namespace %s", name, namespace)
 			}
 
-			options, err := NewCreateWebhookOptionsFromFlags(cmd)
+			options, err := NewUpdateWebhookOptionsFromFlags(cmd)
 			ui.ExitOnError("getting webhook options", err)
 
-			if !crdOnly {
-				_, err := client.CreateWebhook(options)
-				ui.ExitOnError("creating webhook "+name+" in namespace "+namespace, err)
+			_, err = client.UpdateWebhook(options)
+			ui.ExitOnError("updating webhook "+name+" in namespace "+namespace, err)
 
-				ui.Success("Webhook created", name)
-			} else {
-				if options.PayloadTemplate != "" {
-					options.PayloadTemplate = fmt.Sprintf("%q", options.PayloadTemplate)
-				}
-
-				data, err := crd.ExecuteTemplate(crd.TemplateWebhook, options)
-				ui.ExitOnError("executing crd template", err)
-
-				ui.Info(data)
-			}
+			ui.Success("Webhook updated", name)
 		},
 	}
 

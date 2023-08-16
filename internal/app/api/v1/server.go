@@ -250,6 +250,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	webhooks := s.Routes.Group("/webhooks")
 
 	webhooks.Post("/", s.CreateWebhookHandler())
+	webhooks.Patch("/:name", s.UpdateWebhookHandler())
 	webhooks.Get("/", s.ListWebhooksHandler())
 	webhooks.Get("/:name", s.GetWebhookHandler())
 	webhooks.Delete("/:name", s.DeleteWebhookHandler())
