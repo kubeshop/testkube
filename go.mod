@@ -1,6 +1,6 @@
 module github.com/kubeshop/testkube
 
-go 1.18
+go 1.21
 
 require (
 	github.com/99designs/gqlgen v0.17.27
@@ -78,7 +78,6 @@ require (
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
-	github.com/go-logr/zapr v1.2.3 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
 	github.com/go-openapi/jsonreference v0.20.1 // indirect
 	github.com/go-openapi/swag v0.22.3 // indirect
