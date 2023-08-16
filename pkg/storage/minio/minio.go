@@ -222,7 +222,10 @@ func (c *Client) saveFile(ctx context.Context, bucket, bucketFolder, filePath st
 		}
 	}
 
-	fileName := strings.Trim(bucketFolder, "/") + "/" + objectStat.Name()
+	fileName := objectStat.Name()
+	if bucketFolder != "" {
+		fileName = strings.Trim(bucketFolder, "/") + "/" + fileName
+	}
 
 	c.Log.Debugw("saving object in minio", "filePath", filePath, "fileName", fileName, "bucket", bucket, "size", objectStat.Size())
 	_, err = c.minioclient.PutObject(ctx, bucket, fileName, object, objectStat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
@@ -244,7 +247,10 @@ func (c *Client) SaveFileDirect(ctx context.Context, folder, file string, data i
 		}
 	}
 
-	filename := fmt.Sprintf("%s/%s", folder, file)
+	filename := file
+	if folder != "" {
+		filename = fmt.Sprintf("%s/%s", folder, file)
+	}
 
 	if opts.ContentType == "" {
 		opts.ContentType = "application/octet-stream"
@@ -542,7 +548,11 @@ func (c *Client) PlaceFiles(ctx context.Context, bucketFolders []string, prefix 
 		for _, f := range files {
 			output.PrintEvent(fmt.Sprintf("%s Downloading file %s", ui.IconFile, f.Name))
 			c.Log.Infof("Getting file %s", f)
-			objectName := fmt.Sprintf("%s/%s", folder, f.Name)
+			objectName := f.Name
+			if folder != "" {
+				objectName = fmt.Sprintf("%s/%s", folder, objectName)
+			}
+
 			path := filepath.Join(prefix, f.Name)
 			err = c.minioclient.FGetObject(ctx, c.bucket, objectName, path, minio.GetObjectOptions{})
 			if err != nil {
