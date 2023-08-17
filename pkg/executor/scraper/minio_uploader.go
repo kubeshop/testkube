@@ -43,6 +43,9 @@ func NewMinIOUploader(endpoint, accessKeyID, secretAccessKey, region, token, buc
 
 func (l *MinIOUploader) Upload(ctx context.Context, object *Object, execution testkube.Execution) error {
 	folder := execution.Id
+	if execution.ArtifactRequest != nil && execution.ArtifactRequest.OmitFolderPerExecution {
+		folder = ""
+	}
 
 	log.DefaultLogger.Infow("MinIO loader is uploading file", "file", object.Name, "folder", folder, "size", object.Size)
 	opts := coreminio.PutObjectOptions{}
