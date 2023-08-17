@@ -399,6 +399,8 @@ github.com/kubeshop/testkube-operator v1.10.8-0.20230811095859-071c677e571a h1:3
 github.com/kubeshop/testkube-operator v1.10.8-0.20230811095859-071c677e571a/go.mod h1:ELhxGeqtRRihizW+4yd4wT+3QFCdg2JvDANqXkpAWdk=
 github.com/kubeshop/testkube-operator v1.10.8-0.20230816174340-4de659f43b98 h1:vvtoc/vnLKbBNBDDzgCD3nBqFFvRcqIHvOCKXu7YjSA=
 github.com/kubeshop/testkube-operator v1.10.8-0.20230816174340-4de659f43b98/go.mod h1:UmigDOKMVJa6Y/imKafWmhcvfLisOzr5X04kuOsH/B0=
+github.com/kubeshop/testkube-operator v1.10.8-0.20230817130040-464f8a9d685b h1:tApOqZPUFaSLq8V33aGIhf4b3jsba+bPAoQOGXwCTsk=
+github.com/kubeshop/testkube-operator v1.10.8-0.20230817130040-464f8a9d685b/go.mod h1:UmigDOKMVJa6Y/imKafWmhcvfLisOzr5X04kuOsH/B0=
 github.com/leodido/go-urn v1.2.1 h1:BqpAaACuzVSgi/VLzGZIobT2z4v53pjosyNd9Yv6n/w=
 github.com/leodido/go-urn v1.2.1/go.mod h1:zt4jvISO2HfUBqxjfIshjdMTYS56ZS/qv49ictyFfxY=
 github.com/lithammer/fuzzysearch v1.1.8 h1:/HIuJnjHuXS8bKaiTMeeDlW2/AyIWk2brx1V8LFgLN4=

@@ -566,6 +566,14 @@ func mergeArtifacts(artifactBase *testkube.ArtifactRequest, artifactAdjust *test
 		}
 
 		artifactBase.Dirs = append(artifactBase.Dirs, artifactAdjust.Dirs...)
+
+		if artifactBase.StorageBucket == "" && artifactAdjust.StorageBucket != "" {
+			artifactBase.StorageBucket = artifactAdjust.StorageBucket
+		}
+
+		if !artifactBase.OmitFolderPerExecution && artifactAdjust.OmitFolderPerExecution {
+			artifactBase.OmitFolderPerExecution = artifactAdjust.OmitFolderPerExecution
+		}
 	}
 
 	return artifactBase

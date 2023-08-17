@@ -4314,9 +4314,9 @@ components:
           type: string
           description: artifact bucket storage
           example: test1-artifacts
-        folderPerExecution:
+        omitFolderPerExecution:
           type: boolean
-          description: use a separate folder for execution artifacts
+          description: don't use a separate folder for execution artifacts
 
     ArtifactUpdateRequest:
       description: artifact request update body
