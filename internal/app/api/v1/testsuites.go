@@ -743,7 +743,24 @@ func (s TestkubeAPI) ListTestSuiteArtifactsHandler() fiber.Handler {
 			if stepResult.Execution.Id == "" {
 				continue
 			}
-			stepArtifacts, err := s.artifactsStorage.ListFiles(c.Context(), stepResult.Execution.Id, stepResult.Execution.TestName, stepResult.Execution.TestSuiteName)
+
+			var stepArtifacts []testkube.Artifact
+			var bucket string
+			folder := stepResult.Execution.Id
+			if stepResult.Execution.ArtifactRequest != nil {
+				bucket = stepResult.Execution.ArtifactRequest.StorageBucket
+				if stepResult.Execution.ArtifactRequest.OmitFolderPerExecution {
+					folder = ""
+				}
+			}
+
+			if bucket != "" {
+				stepArtifacts, err = s.getArtifactStorage(bucket).ListFiles(c.Context(), folder, stepResult.Execution.TestName, stepResult.Execution.TestSuiteName)
+			} else {
+
+				stepArtifacts, err = s.artifactsStorage.ListFiles(c.Context(), folder, stepResult.Execution.TestName, stepResult.Execution.TestSuiteName)
+			}
+
 			if err != nil {
 				s.Log.Warnw("can't list artifacts", "executionID", stepResult.Execution.Id, "error", err)
 				continue

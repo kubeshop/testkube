@@ -82,6 +82,7 @@ func NewTestkubeAPI(
 	cdeventsTarget string,
 	dashboardURI string,
 	helmchartVersion string,
+	mode string,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -122,6 +123,7 @@ func NewTestkubeAPI(
 		graphqlPort:          graphqlPort,
 		artifactsStorage:     artifactsStorage,
 		helmchartVersion:     helmchartVersion,
+		mode:                 mode,
 	}
 
 	// will be reused in websockets handler
@@ -174,6 +176,7 @@ type TestkubeAPI struct {
 	graphqlPort          string
 	artifactsStorage     storage.ArtifactsStorage
 	helmchartVersion     string
+	mode                 string
 }
 
 type storageParams struct {

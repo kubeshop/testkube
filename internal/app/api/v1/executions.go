@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -19,10 +20,13 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/scheduler"
+	"github.com/kubeshop/testkube/pkg/storage"
+	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/types"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
@@ -354,7 +358,22 @@ func (s *TestkubeAPI) GetArtifactHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: db could not get execution result: %w", errPrefix, err))
 		}
 
-		file, err := s.artifactsStorage.DownloadFile(c.Context(), fileName, execution.Id, execution.TestName, execution.TestSuiteName)
+		var file io.Reader
+		var bucket string
+		folder := execution.Id
+		if execution.ArtifactRequest != nil {
+			bucket = execution.ArtifactRequest.StorageBucket
+			if execution.ArtifactRequest.OmitFolderPerExecution {
+				folder = ""
+			}
+		}
+
+		if bucket != "" {
+			file, err = s.getArtifactStorage(bucket).DownloadFile(c.Context(), fileName, folder, execution.TestName, execution.TestSuiteName)
+		} else {
+			file, err = s.artifactsStorage.DownloadFile(c.Context(), fileName, folder, execution.TestName, execution.TestSuiteName)
+		}
+
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not download file: %w", errPrefix, err))
 		}
@@ -384,7 +403,22 @@ func (s *TestkubeAPI) GetArtifactArchiveHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: db could not get execution result: %w", errPrefix, err))
 		}
 
-		archive, err := s.artifactsStorage.DownloadArchive(c.Context(), execution.Id, values["mask"])
+		var archive io.Reader
+		var bucket string
+		folder := execution.Id
+		if execution.ArtifactRequest != nil {
+			bucket = execution.ArtifactRequest.StorageBucket
+			if execution.ArtifactRequest.OmitFolderPerExecution {
+				folder = ""
+			}
+		}
+
+		if bucket != "" {
+			archive, err = s.getArtifactStorage(bucket).DownloadArchive(c.Context(), folder, values["mask"])
+		} else {
+			archive, err = s.artifactsStorage.DownloadArchive(c.Context(), folder, values["mask"])
+		}
+
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not download artifact archive: %w", errPrefix, err))
 		}
@@ -408,7 +442,23 @@ func (s *TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: db could not get test with execution: %s", errPrefix, err))
 		}
-		files, err := s.artifactsStorage.ListFiles(c.Context(), execution.Id, execution.TestName, execution.TestSuiteName)
+
+		var files []testkube.Artifact
+		var bucket string
+		folder := execution.Id
+		if execution.ArtifactRequest != nil {
+			bucket = execution.ArtifactRequest.StorageBucket
+			if execution.ArtifactRequest.OmitFolderPerExecution {
+				folder = ""
+			}
+		}
+
+		if bucket != "" {
+			files, err = s.getArtifactStorage(bucket).ListFiles(c.Context(), folder, execution.TestName, execution.TestSuiteName)
+		} else {
+			files, err = s.artifactsStorage.ListFiles(c.Context(), folder, execution.TestName, execution.TestSuiteName)
+		}
+
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: storage client could not list files %w", errPrefix, err))
 		}
@@ -561,4 +611,21 @@ func (s *TestkubeAPI) getExecutorByTestType(testType string) (client.Executor, e
 	default:
 		return s.Executor, nil
 	}
+}
+
+func (s *TestkubeAPI) getArtifactStorage(bucket string) storage.ArtifactsStorage {
+	if s.mode == common.ModeAgent {
+		return s.artifactsStorage
+	}
+
+	minioClient := minio.NewClient(
+		s.storageParams.Endpoint,
+		s.storageParams.AccessKeyId,
+		s.storageParams.SecretAccessKey,
+		s.storageParams.Region,
+		s.storageParams.Token,
+		bucket,
+		s.storageParams.SSL,
+	)
+	return minio.NewMinIOArtifactClient(minioClient)
 }

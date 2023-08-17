@@ -404,6 +404,7 @@ func main() {
 		cfg.CDEventsTarget,
 		cfg.TestkubeDashboardURI,
 		cfg.TestkubeHelmchartVersion,
+		mode,
 	)
 
 	if mode == common.ModeAgent {
