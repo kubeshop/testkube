@@ -94,6 +94,16 @@ func (e *ExecutionResult) FailedStepsCount() int {
 	return count
 }
 
+func (e *ExecutionResult) FailedSteps() (steps []ExecutionStepResult) {
+	for _, s := range e.Steps {
+		if s.Status != string(PASSED_ExecutionStatus) {
+			steps = append(steps, s)
+		}
+	}
+
+	return
+}
+
 // GetDeepCopy gives a copy of ExecutionResult with new pointers
 func (e *ExecutionResult) GetDeepCopy() *ExecutionResult {
 	if e == nil {
