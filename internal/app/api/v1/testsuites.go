@@ -757,7 +757,6 @@ func (s TestkubeAPI) ListTestSuiteArtifactsHandler() fiber.Handler {
 			if bucket != "" {
 				stepArtifacts, err = s.getArtifactStorage(bucket).ListFiles(c.Context(), folder, stepResult.Execution.TestName, stepResult.Execution.TestSuiteName)
 			} else {
-
 				stepArtifacts, err = s.artifactsStorage.ListFiles(c.Context(), folder, stepResult.Execution.TestName, stepResult.Execution.TestSuiteName)
 			}
 
