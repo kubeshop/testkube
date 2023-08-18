@@ -249,7 +249,7 @@ func (c *Client) SaveFileDirect(ctx context.Context, folder, file string, data i
 
 	filename := file
 	if folder != "" {
-		filename = fmt.Sprintf("%s/%s", folder, file)
+		filename = fmt.Sprintf("%s/%s", folder, filename)
 	}
 
 	if opts.ContentType == "" {
