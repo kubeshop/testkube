@@ -331,8 +331,10 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	l.Debug("poll immediate waiting for executor pod")
 	if err = wait.PollImmediate(pollInterval, c.podStartTimeout, executor.IsPodLoggable(ctx, c.clientSet, executorPod.Name, c.namespace)); err != nil {
 		l.Errorw("waiting for executor pod started error", "error", err)
+	} else if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.clientSet, executorPod.Name, c.namespace)); err != nil {
+		// continue on poll err and try to get logs later
+		l.Errorw("waiting for executor pod complete error", "error", err)
 	}
-
 	if err != nil {
 		execution.ExecutionResult.Err(err)
 	}
@@ -372,8 +374,10 @@ func (c *ContainerExecutor) updateResultsFromPod(
 				l.Debug("poll immediate waiting for scraper pod to succeed")
 				if err = wait.PollImmediate(pollInterval, c.podStartTimeout, executor.IsPodLoggable(ctx, c.clientSet, scraperPod.Name, c.namespace)); err != nil {
 					l.Errorw("waiting for scraper pod started error", "error", err)
+				} else if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.clientSet, scraperPod.Name, c.namespace)); err != nil {
+					// continue on poll err and try to get logs later
+					l.Errorw("waiting for scraper pod complete error", "error", err)
 				}
-
 				l.Debug("poll scraper immediate end")
 
 				latestScraperPod, err := podsClient.Get(context.Background(), scraperPod.Name, metav1.GetOptions{})
