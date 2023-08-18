@@ -136,7 +136,7 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		output.PrintLogf("%s Could not chmod for data dir: %s", ui.IconCross, err.Error())
 	}
 
-	if execution.ArtifactRequest != nil {
+	if execution.ArtifactRequest != nil && execution.ArtifactRequest.StorageClassName != "" {
 		mountPath := filepath.Join(r.Params.DataDir, "artifacts")
 		if execution.ArtifactRequest.VolumeMountPath != "" {
 			mountPath = execution.ArtifactRequest.VolumeMountPath
