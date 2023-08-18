@@ -146,9 +146,21 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 	result = MapJunitToExecutionResults(out, suites)
 	output.PrintLogf("%s Mapped Junit to Execution Results...", ui.IconCheckMark)
 
+	if steps := result.FailedSteps(); len(steps) > 0 {
+		output.PrintLogf("Test Failed steps")
+		for _, s := range steps {
+			errorMessage := ""
+			for _, a := range s.AssertionResults {
+				errorMessage += a.ErrorMessage
+			}
+			output.PrintLog("step: " + s.Name + " error: " + errorMessage)
+		}
+	}
+
 	// scrape artifacts first even if there are errors above
 	if r.Params.ScrapperEnabled {
 		directories := []string{
+			junitReportPath,
 			filepath.Join(projectPath, "cypress/videos"),
 			filepath.Join(projectPath, "cypress/screenshots"),
 		}

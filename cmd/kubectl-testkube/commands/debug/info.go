@@ -25,7 +25,7 @@ func NewShowDebugInfoCmd() *cobra.Command {
 			debug, err := GetDebugInfo(client)
 			ui.ExitOnError("get debug info", err)
 
-			printDebugInfo(debug)
+			PrintDebugInfo(debug)
 		},
 	}
 }
@@ -48,8 +48,8 @@ func GetDebugInfo(apiClient client.Client) (testkube.DebugInfo, error) {
 	return debug, nil
 }
 
-// printDebugInfo prints the debugging data to the CLI
-func printDebugInfo(info testkube.DebugInfo) {
+// PrintDebugInfo prints the debugging data to the CLI
+func PrintDebugInfo(info testkube.DebugInfo) {
 	ui.Table(info, os.Stdout)
 	ui.NL()
 
