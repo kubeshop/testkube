@@ -58,7 +58,7 @@ func (l *MinIOUploader) Upload(ctx context.Context, object *Object, execution te
 		opts.ContentType = "application/gzip"
 		opts.UserMetadata = map[string]string{
 			"X-Amz-Meta-Snowball-Auto-Extract": "true",
-			"X-Amz-Meta-Minio-Snowball-Prefix": execution.Id,
+			"X-Amz-Meta-Minio-Snowball-Prefix": folder,
 		}
 	}
 

@@ -360,6 +360,7 @@ func (s *TestkubeAPI) GetArtifactHandler() fiber.Handler {
 
 		var file io.Reader
 		var bucket string
+		artifactsStorage := s.artifactsStorage
 		folder := execution.Id
 		if execution.ArtifactRequest != nil {
 			bucket = execution.ArtifactRequest.StorageBucket
@@ -369,11 +370,13 @@ func (s *TestkubeAPI) GetArtifactHandler() fiber.Handler {
 		}
 
 		if bucket != "" {
-			file, err = s.getArtifactStorage(bucket).DownloadFile(c.Context(), fileName, folder, execution.TestName, execution.TestSuiteName)
-		} else {
-			file, err = s.artifactsStorage.DownloadFile(c.Context(), fileName, folder, execution.TestName, execution.TestSuiteName)
+			artifactsStorage, err = s.getArtifactStorage(bucket)
+			if err != nil {
+				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not get artifact storage: %w", errPrefix, err))
+			}
 		}
 
+		file, err = artifactsStorage.DownloadFile(c.Context(), fileName, folder, execution.TestName, execution.TestSuiteName)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not download file: %w", errPrefix, err))
 		}
@@ -405,6 +408,7 @@ func (s *TestkubeAPI) GetArtifactArchiveHandler() fiber.Handler {
 
 		var archive io.Reader
 		var bucket string
+		artifactsStorage := s.artifactsStorage
 		folder := execution.Id
 		if execution.ArtifactRequest != nil {
 			bucket = execution.ArtifactRequest.StorageBucket
@@ -414,11 +418,13 @@ func (s *TestkubeAPI) GetArtifactArchiveHandler() fiber.Handler {
 		}
 
 		if bucket != "" {
-			archive, err = s.getArtifactStorage(bucket).DownloadArchive(c.Context(), folder, values["mask"])
-		} else {
-			archive, err = s.artifactsStorage.DownloadArchive(c.Context(), folder, values["mask"])
+			artifactsStorage, err = s.getArtifactStorage(bucket)
+			if err != nil {
+				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not get artifact storage: %w", errPrefix, err))
+			}
 		}
 
+		archive, err = artifactsStorage.DownloadArchive(c.Context(), folder, values["mask"])
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not download artifact archive: %w", errPrefix, err))
 		}
@@ -445,6 +451,7 @@ func (s *TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 
 		var files []testkube.Artifact
 		var bucket string
+		artifactsStorage := s.artifactsStorage
 		folder := execution.Id
 		if execution.ArtifactRequest != nil {
 			bucket = execution.ArtifactRequest.StorageBucket
@@ -454,11 +461,13 @@ func (s *TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 		}
 
 		if bucket != "" {
-			files, err = s.getArtifactStorage(bucket).ListFiles(c.Context(), folder, execution.TestName, execution.TestSuiteName)
-		} else {
-			files, err = s.artifactsStorage.ListFiles(c.Context(), folder, execution.TestName, execution.TestSuiteName)
+			artifactsStorage, err = s.getArtifactStorage(bucket)
+			if err != nil {
+				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not get artifact storage: %w", errPrefix, err))
+			}
 		}
 
+		files, err = artifactsStorage.ListFiles(c.Context(), folder, execution.TestName, execution.TestSuiteName)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: storage client could not list files %w", errPrefix, err))
 		}
@@ -613,9 +622,9 @@ func (s *TestkubeAPI) getExecutorByTestType(testType string) (client.Executor, e
 	}
 }
 
-func (s *TestkubeAPI) getArtifactStorage(bucket string) storage.ArtifactsStorage {
+func (s *TestkubeAPI) getArtifactStorage(bucket string) (storage.ArtifactsStorage, error) {
 	if s.mode == common.ModeAgent {
-		return s.artifactsStorage
+		return s.artifactsStorage, nil
 	}
 
 	minioClient := minio.NewClient(
@@ -627,5 +636,9 @@ func (s *TestkubeAPI) getArtifactStorage(bucket string) storage.ArtifactsStorage
 		bucket,
 		s.storageParams.SSL,
 	)
-	return minio.NewMinIOArtifactClient(minioClient)
+	if err := minioClient.Connect(); err != nil {
+		return nil, err
+	}
+
+	return minio.NewMinIOArtifactClient(minioClient), nil
 }
