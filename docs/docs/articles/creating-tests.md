@@ -466,7 +466,7 @@ testkube create test --file test/postman/LocalHealth.postman_collection.json --n
 
 ### Adjusting scraping parameters
 
-For any test type you can specify additional scraping parameters using cli or CRD definition. For example, below we request to scrape report directories, use a custom bucket to store test atifacts and ask to avoid using separate artifact folders for each test execution
+For any executor type you can specify additional scraping parameters using cli or CRD definition. For example, below we request to scrape report directories, use a custom bucket to store test atifacts and ask to avoid using separate artifact folders for each test execution
 
 ```yaml
 apiVersion: tests.testkube.io/v3
