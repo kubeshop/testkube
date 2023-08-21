@@ -464,6 +464,33 @@ Provide the script when you create or run the test using `--prerun-script` and `
 testkube create test --file test/postman/LocalHealth.postman_collection.json --name script-test --type postman/collection --prerun-script pre_script.sh --postrun-script post_script.sh --secret-env SSL_CERT=your-k8s-secret
 ```
 
+### Adjusting scraping parameters
+
+For any test type you can specify additional scraping parameters using cli or CRD definition. For example, below we request to scrape report directories, use a custom bucket to store test atifacts and ask to avoid using separate artifact folders for each test execution
+
+```yaml
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeter-smoke-test
+  namespace: testkube
+spec:
+  type: jmeter/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+  executionRequest:
+    artifactRequest:
+      dirs:
+        - test/reports 
+      storageBucket: jmeter-artifacts
+      omitFolderPerExecution: true
+```
+
 ### Changing the Default Scraper Job Template Used for Container Executor Tests
 
 When you use container executor tests generating artifacts for scraping, we launch 2 sequential Kubernetes jobs, one is for test execution and other one is for scraping test results. Sometimes you need to adjust an existing scraper job template of a standard Testkube scraper with a few parameters. In this case you can use the additional parameter `--scraper-template` when you create or run the test:
