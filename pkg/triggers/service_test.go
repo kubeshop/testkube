@@ -138,6 +138,7 @@ func TestService_Run(t *testing.T) {
 	s := NewService(
 		sched,
 		fakeClientset,
+		nil,
 		fakeTestkubeClientset,
 		mockTestSuitesClient,
 		mockTestsClient,

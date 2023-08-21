@@ -2,6 +2,9 @@ package triggers
 
 import (
 	"context"
+	"fmt"
+	"go.uber.org/zap"
+	"k8s.io/client-go/dynamic"
 
 	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
@@ -9,40 +12,54 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/informers"
 	appsinformerv1 "k8s.io/client-go/informers/apps/v1"
+	"time"
+
 	coreinformerv1 "k8s.io/client-go/informers/core/v1"
 	networkinginformerv1 "k8s.io/client-go/informers/networking/v1"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
+	testkubeinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"
+	testkubeinformerv3 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v3"
+
 	"k8s.io/client-go/tools/cache"
 
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	testsuitev3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
-	"github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube-operator/pkg/informers/externalversions"
-	testkubeinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"
-	testkubeinformerv3 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v3"
 	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
 )
 
+type DynamicInformersEntry struct {
+	informer *informers.GenericInformer
+	cancel   context.CancelFunc
+}
+
 type k8sInformers struct {
-	podInformers          []coreinformerv1.PodInformer
-	deploymentInformers   []appsinformerv1.DeploymentInformer
-	daemonsetInformers    []appsinformerv1.DaemonSetInformer
-	statefulsetInformers  []appsinformerv1.StatefulSetInformer
-	serviceInformers      []coreinformerv1.ServiceInformer
-	ingressInformers      []networkinginformerv1.IngressInformer
-	clusterEventInformers []coreinformerv1.EventInformer
-	configMapInformers    []coreinformerv1.ConfigMapInformer
+	customResourceInformers []informers.GenericInformer
+	podInformers            []coreinformerv1.PodInformer
+	deploymentInformers     []appsinformerv1.DeploymentInformer
+	daemonsetInformers      []appsinformerv1.DaemonSetInformer
+	statefulsetInformers    []appsinformerv1.StatefulSetInformer
+	serviceInformers        []coreinformerv1.ServiceInformer
+	ingressInformers        []networkinginformerv1.IngressInformer
+	clusterEventInformers   []coreinformerv1.EventInformer
+	configMapInformers      []coreinformerv1.ConfigMapInformer
 
 	testTriggerInformer testkubeinformerv1.TestTriggerInformer
 	testSuiteInformer   testkubeinformerv3.TestSuiteInformer
 	testInformer        testkubeinformerv3.TestInformer
+	dynamicInformer     *DynamicInformerManager
 }
 
-func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned.Interface,
-	testkubeNamespace string, watcherNamespaces []string) *k8sInformers {
+func newK8sInformers(clientset kubernetes.Interface, dynamicClientset dynamic.Interface, testKubeClientset versioned.Interface, testkubeNamespace string, watcherNamespaces []string, logger *zap.SugaredLogger) *k8sInformers {
+
 	var k8sInformers k8sInformers
 	if len(watcherNamespaces) == 0 {
 		watcherNamespaces = append(watcherNamespaces, v1.NamespaceAll)
@@ -58,14 +75,16 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 		k8sInformers.ingressInformers = append(k8sInformers.ingressInformers, f.Networking().V1().Ingresses())
 		k8sInformers.clusterEventInformers = append(k8sInformers.clusterEventInformers, f.Core().V1().Events())
 		k8sInformers.configMapInformers = append(k8sInformers.configMapInformers, f.Core().V1().ConfigMaps())
+
 	}
 
-	testkubeInformerFactory := externalversions.NewSharedInformerFactoryWithOptions(
+	var testkubeInformerFactory externalversions.SharedInformerFactory
+	testkubeInformerFactory = externalversions.NewSharedInformerFactoryWithOptions(
 		testKubeClientset, 0, externalversions.WithNamespace(testkubeNamespace))
 	k8sInformers.testTriggerInformer = testkubeInformerFactory.Tests().V1().TestTriggers()
 	k8sInformers.testSuiteInformer = testkubeInformerFactory.Tests().V3().TestSuites()
 	k8sInformers.testInformer = testkubeInformerFactory.Tests().V3().Tests()
-
+	k8sInformers.dynamicInformer = NewDynamicInformerManager(dynamicClientset, logger)
 	return &k8sInformers
 }
 
@@ -92,8 +111,10 @@ func (s *Service) runWatcher(ctx context.Context, leaseChan chan bool) {
 			} else {
 				if !running {
 					s.logger.Infof("trigger service: instance %s in cluster %s acquired lease", s.identifier, s.clusterID)
-					s.informers = newK8sInformers(s.clientset, s.testKubeClientset, s.testkubeNamespace, s.watcherNamespaces)
+					s.informers = newK8sInformers(s.clientset, s.dynamicClientset, s.testKubeClientset, s.testkubeNamespace, s.watcherNamespaces, s.logger)
 					stopChan = make(chan struct{})
+					//TODO: clear the initialization
+					s.informers.dynamicInformer.setStopCh(stopChan)
 					s.runInformers(ctx, stopChan)
 					running = true
 				}
@@ -140,7 +161,7 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 		s.informers.configMapInformers[i].Informer().AddEventHandler(s.configMapEventHandler(ctx))
 	}
 
-	s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler())
+	s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler(ctx, stop))
 	s.informers.testSuiteInformer.Informer().AddEventHandler(s.testSuiteEventHandler())
 	s.informers.testInformer.Informer().AddEventHandler(s.testEventHandler())
 
@@ -608,7 +629,78 @@ func (s *Service) clusterEventEventHandler(ctx context.Context) cache.ResourceEv
 	}
 }
 
-func (s *Service) testTriggerEventHandler() cache.ResourceEventHandlerFuncs {
+type DynamicInformerManager struct {
+	dynamicClient      dynamic.Interface
+	logger             *zap.SugaredLogger
+	stop               <-chan struct{}
+	triggerCRInformers map[string]*DynamicInformersEntry
+	crInformers        map[string]*DynamicInformersEntry
+}
+
+func NewDynamicInformerManager(client dynamic.Interface, logger *zap.SugaredLogger) *DynamicInformerManager {
+	return &DynamicInformerManager{
+		dynamicClient:      client,
+		logger:             logger,
+		triggerCRInformers: make(map[string]*DynamicInformersEntry),
+		crInformers:        make(map[string]*DynamicInformersEntry),
+	}
+}
+
+func (m *DynamicInformerManager) NewInformer(t *testtriggersv1.TestTrigger, addHandler cache.ResourceEventHandlerFuncs, modifyHandler cache.ResourceEventHandlerFuncs, deleteHandler cache.ResourceEventHandlerFuncs) {
+	if _, found := m.triggerCRInformers[t.Name+t.Namespace]; found {
+		m.logger.Debugf("trigger service: informer already exist for %s resource in namespace %s", t.Name, t.Namespace)
+		return
+	}
+
+	gvr := schema.GroupVersionResource{
+		Group:    t.Spec.CustomResource.Group,
+		Version:  t.Spec.CustomResource.Version,
+		Resource: t.Spec.CustomResource.Resource,
+	}
+
+	df := dynamicinformer.NewFilteredDynamicSharedInformerFactory(m.dynamicClient, 0, t.Spec.ResourceSelector.Namespace, nil)
+	customResourceInformer := df.ForResource(gvr)
+	if string(t.Spec.Event) == string(testtrigger.EventCreated) {
+		customResourceInformer.Informer().AddEventHandler(addHandler)
+	}
+	if string(t.Spec.Event) == string(testtrigger.EventModified) {
+		customResourceInformer.Informer().AddEventHandler(modifyHandler)
+	}
+	if string(t.Spec.Event) == string(testtrigger.EventDeleted) {
+		customResourceInformer.Informer().AddEventHandler(deleteHandler)
+	}
+
+	stopCtx, cancel := context.WithCancel(context.Background())
+	go m.WaitForTermination(cancel, stopCtx.Done())
+
+	ifd := &DynamicInformersEntry{
+		informer: &customResourceInformer,
+		cancel:   cancel,
+	}
+	m.triggerCRInformers[t.Name+t.Namespace] = ifd
+	m.crInformers[gvr.String()+serializeSelector(t.Spec.ResourceSelector)] = ifd
+	go customResourceInformer.Informer().Run(stopCtx.Done())
+	m.logger.Debugf("trigger service: started a new custom resource informers for %s resource and %s test trigger", gvr.String(), t.Name)
+}
+
+func (m *DynamicInformerManager) setStopCh(stopChan chan struct{}) {
+	m.stop = stopChan
+}
+
+func (m *DynamicInformerManager) TearDownInformer(t *testtriggersv1.TestTrigger) {
+	if ifd, found := m.triggerCRInformers[t.Name+t.Namespace]; found {
+		if ifd.informer != nil && ifd.cancel != nil {
+			ifd.cancel()
+			ifd.informer = nil
+			delete(m.triggerCRInformers, t.Name+t.Namespace)
+			m.logger.Debugf("trigger service: tearing down for %v resource and %s test trigger", t.Spec.CustomResource, t.Name)
+		}
+		m.logger.Debugf("trigger service: ignoring tear down for %v resource and %s test trigger", t.Spec.CustomResource, t.Name)
+	}
+	m.logger.Debugf("trigger service: could not found infomer for %v resource and %s test trigger to teardown", t.Spec.CustomResource, t.Name)
+}
+
+func (s *Service) testTriggerEventHandler(ctx context.Context, stop <-chan struct{}) cache.ResourceEventHandlerFuncs {
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			t, ok := obj.(*testtriggersv1.TestTrigger)
@@ -621,6 +713,19 @@ func (s *Service) testTriggerEventHandler() cache.ResourceEventHandlerFuncs {
 				t.Namespace, t.Name, t.Spec.Resource, t.Spec.Event,
 			)
 			s.addTrigger(t)
+
+			if t.Spec.Resource == testtrigger.ResourceCustomResource {
+				gvr := schema.GroupVersionResource{
+					Group:    t.Spec.CustomResource.Group,
+					Version:  t.Spec.CustomResource.Version,
+					Resource: t.Spec.CustomResource.Resource,
+				}
+				s.informers.dynamicInformer.NewInformer(t,
+					s.customResourceAddEventHandler(ctx, gvr),
+					s.customResourceModifyEventHandler(ctx, gvr),
+					s.customResourceDeleteEventHandler(ctx, gvr),
+				)
+			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			t, ok := newObj.(*testtriggersv1.TestTrigger)
@@ -648,6 +753,153 @@ func (s *Service) testTriggerEventHandler() cache.ResourceEventHandlerFuncs {
 				t.Namespace, t.Name, t.Spec.Resource, t.Spec.Event,
 			)
 			s.removeTrigger(t)
+			s.informers.dynamicInformer.TearDownInformer(t)
+		},
+	}
+}
+
+// TODO: fix the formation
+func serializeSelector(selector testtriggersv1.TestTriggerSelector) string {
+	return selector.Name + selector.Namespace
+}
+
+func (m *DynamicInformerManager) WaitForTermination(cancel context.CancelFunc, done <-chan struct{}) {
+	for {
+		select {
+		case <-m.stop:
+			// Context is done, so we should stop the worker
+			m.logger.Debug("Work is stopped")
+			cancel()
+			return
+		case <-done:
+			// Context is done, so we should stop the worker
+			m.logger.Debug("Work is done")
+			return
+		default:
+			// Do some work
+			//m.logger.Debug("Working...")
+			time.Sleep(1 * time.Second)
+		}
+	}
+}
+
+func (s *Service) customResourceAddEventHandler(ctx context.Context, gvr schema.GroupVersionResource) cache.ResourceEventHandlerFuncs {
+	getConditions := func(object metav1.Object) func() ([]testtriggersv1.TestTriggerCondition, error) {
+		return func() ([]testtriggersv1.TestTriggerCondition, error) {
+			return getCustomResourceConditions(ctx, s.dynamicClientset, object, gvr)
+		}
+	}
+	return cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj any) {
+			customResource, ok := obj.(*unstructured.Unstructured)
+			if !ok {
+				s.logger.Errorf("failed to process create customResource event due to it being an unexpected type, received type %+v", obj)
+				return
+			}
+			obsGeneration, _, err := unstructured.NestedInt64(customResource.Object, "status", "observedGeneration")
+			if err != nil {
+				s.logger.Debugf("trigger service: watcher component: error when unstructuring custom resource: %s/%s ", customResource.GetKind(), customResource.GetName())
+				return
+			}
+			generation := customResource.GetGeneration()
+			if generation == obsGeneration {
+				s.logger.Debugf("trigger service: watcher component: no-op update trigger: %s/%s new and old specs are equal", customResource.GetKind(), customResource.GetName())
+				return
+			}
+			s.logger.Debugf("trigger customResource: watcher component: emiting event: customResource %s/%s created", customResource.GetNamespace(), customResource.GetName())
+			event := newWatcherEvent(testtrigger.EventCreated, customResource, testtrigger.ResourceCustomResource, withConditionsGetter(getConditions(customResource)))
+			if err := s.match(ctx, event); err != nil {
+				s.logger.Errorf("event matcher returned an error while matching create customResource event: %v", err)
+			}
+		},
+	}
+}
+
+func (s *Service) customResourceModifyEventHandler(ctx context.Context, gvr schema.GroupVersionResource) cache.ResourceEventHandlerFuncs {
+	getConditions := func(object metav1.Object) func() ([]testtriggersv1.TestTriggerCondition, error) {
+		return func() ([]testtriggersv1.TestTriggerCondition, error) {
+			return getCustomResourceConditions(ctx, s.dynamicClientset, object, gvr)
+		}
+	}
+	return cache.ResourceEventHandlerFuncs{
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			oldCustomResource, ok := oldObj.(*unstructured.Unstructured)
+			if !ok {
+				s.logger.Errorf(
+					"failed to process update service event for old object due to it being an unexpected type, received type %+v",
+					oldCustomResource,
+				)
+				return
+			}
+			newCustomResource, ok := newObj.(*unstructured.Unstructured)
+			if !ok {
+				s.logger.Errorf(
+					"failed to process update service event for new object due to it being an unexpected type, received type %+v",
+					newCustomResource,
+				)
+				return
+			}
+
+			newObsGeneration, _, err := unstructured.NestedInt64(newCustomResource.Object, "status", "observedGeneration")
+			if err != nil {
+				s.logger.Debugf("trigger service: watcher component: error when unstructuring custom resource: %s/%s ", oldCustomResource.GetKind(), oldCustomResource.GetName())
+				return
+			}
+
+			oldObsGeneration, _, err := unstructured.NestedInt64(oldCustomResource.Object, "status", "observedGeneration")
+			if err != nil {
+				s.logger.Debugf("trigger service: watcher component: error when unstructuring custom resource: %s/%s ", oldCustomResource.GetKind(), oldCustomResource.GetName())
+				return
+			}
+
+			oldGeneration := oldCustomResource.GetGeneration()
+			newGeneration := newCustomResource.GetGeneration()
+			fmt.Printf("old gen: %v, old obs gen: %v, new gen: %v, new obs gen: %v\n", oldGeneration, oldObsGeneration, newGeneration, newObsGeneration)
+
+			if newGeneration == newObsGeneration {
+				s.logger.Debugf("trigger service: watcher component: no-op update trigger: %s/%s new and old specs are equal", oldCustomResource.GetKind(), oldCustomResource.GetName())
+				return
+			}
+			s.logger.Debugf(
+				"trigger service: watcher component: emiting event: service %s/%s updated",
+				newCustomResource.GetNamespace(), newCustomResource.GetName(),
+			)
+			event := newWatcherEvent(testtrigger.EventModified, newCustomResource, testtrigger.ResourceCustomResource, withConditionsGetter(getConditions(newCustomResource)))
+			if err := s.match(ctx, event); err != nil {
+				s.logger.Errorf("event matcher returned an error while matching update service event: %v", err)
+			}
+		},
+	}
+}
+
+func (s *Service) customResourceDeleteEventHandler(ctx context.Context, gvr schema.GroupVersionResource) cache.ResourceEventHandlerFuncs {
+	getConditions := func(object metav1.Object) func() ([]testtriggersv1.TestTriggerCondition, error) {
+		return func() ([]testtriggersv1.TestTriggerCondition, error) {
+			return getCustomResourceConditions(ctx, s.dynamicClientset, object, gvr)
+		}
+	}
+	return cache.ResourceEventHandlerFuncs{
+		DeleteFunc: func(obj interface{}) {
+			customResource, ok := obj.(*unstructured.Unstructured)
+			if !ok {
+				s.logger.Errorf("failed to process delete customResource event due to it being an unexpected type, received type %+v", obj)
+				return
+			}
+			obsGeneration, _, err := unstructured.NestedInt64(customResource.Object, "status", "observedGeneration")
+			if err != nil {
+				s.logger.Debugf("trigger service: watcher component: error when unstructuring custom resource: %s/%s ", customResource.GetKind(), customResource.GetName())
+				return
+			}
+			generation := customResource.GetGeneration()
+			if generation == obsGeneration {
+				s.logger.Debugf("trigger service: watcher component: no-op update trigger: %s/%s new and old specs are equal", customResource.GetKind(), customResource.GetName())
+				return
+			}
+			s.logger.Debugf("trigger service: watcher component: emiting event: customResource %s/%s deleted", customResource.GetNamespace(), customResource.GetName())
+			event := newWatcherEvent(testtrigger.EventDeleted, customResource, testtrigger.ResourceCustomResource, withConditionsGetter(getConditions(customResource)))
+			if err := s.match(ctx, event); err != nil {
+				s.logger.Errorf("event matcher returned an error while matching delete customResource event: %v", err)
+			}
 		},
 	}
 }

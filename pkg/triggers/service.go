@@ -3,6 +3,7 @@ package triggers
 import (
 	"context"
 	"fmt"
+	"k8s.io/client-go/dynamic"
 	"os"
 	"strings"
 	"time"
@@ -52,6 +53,7 @@ type Service struct {
 	triggerStatus                 map[statusKey]*triggerStatus
 	scheduler                     *scheduler.Scheduler
 	clientset                     kubernetes.Interface
+	dynamicClientset              dynamic.Interface
 	testKubeClientset             testkubeclientsetv1.Interface
 	testSuitesClient              testsuitesclientv3.Interface
 	testsClient                   testsclientv3.Interface
@@ -69,6 +71,7 @@ type Option func(*Service)
 func NewService(
 	scheduler *scheduler.Scheduler,
 	clientset kubernetes.Interface,
+	dynamicClientset dynamic.Interface,
 	testKubeClientset testkubeclientsetv1.Interface,
 	testSuitesClient testsuitesclientv3.Interface,
 	testsClient testsclientv3.Interface,
@@ -91,6 +94,7 @@ func NewService(
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		scheduler:                     scheduler,
 		clientset:                     clientset,
+		dynamicClientset:              dynamicClientset,
 		testKubeClientset:             testKubeClientset,
 		testSuitesClient:              testSuitesClient,
 		testsClient:                   testsClient,
@@ -111,7 +115,7 @@ func NewService(
 		opt(s)
 	}
 
-	s.informers = newK8sInformers(clientset, testKubeClientset, s.testkubeNamespace, s.watcherNamespaces)
+	s.informers = newK8sInformers(clientset, dynamicClientset, testKubeClientset, s.testkubeNamespace, s.watcherNamespaces, logger)
 
 	return s
 }

@@ -32,7 +32,7 @@ func TestService_runWatcher_lease(t *testing.T) {
 			clientset:         clientset,
 			testKubeClientset: testKubeClientset,
 			logger:            log.DefaultLogger,
-			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}),
+			informers:         newK8sInformers(clientset, nil, testKubeClientset, "", []string{}, nil),
 		}
 
 		leaseChan := make(chan bool)
@@ -90,7 +90,7 @@ func TestService_runWatcher_lease(t *testing.T) {
 			clientset:         clientset,
 			testKubeClientset: testKubeClientset,
 			logger:            log.DefaultLogger,
-			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}),
+			informers:         newK8sInformers(clientset, nil, testKubeClientset, "", []string{}, nil),
 		}
 
 		leaseChan := make(chan bool)
@@ -150,7 +150,7 @@ func TestService_runWatcher_noLease(t *testing.T) {
 			clientset:         clientset,
 			testKubeClientset: testKubeClientset,
 			logger:            log.DefaultLogger,
-			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}),
+			informers:         newK8sInformers(clientset, nil, testKubeClientset, "", []string{}, nil),
 		}
 
 		leaseChan := make(chan bool)
@@ -190,7 +190,7 @@ func TestService_runWatcher_noLease(t *testing.T) {
 			clientset:         clientset,
 			testKubeClientset: testKubeClientset,
 			logger:            log.DefaultLogger,
-			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}),
+			informers:         newK8sInformers(clientset, nil, testKubeClientset, "", []string{}, nil),
 		}
 
 		leaseChan := make(chan bool)
@@ -232,7 +232,7 @@ func TestService_runWatcher_noLease(t *testing.T) {
 			clientset:         clientset,
 			testKubeClientset: testKubeClientset,
 			logger:            log.DefaultLogger,
-			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}),
+			informers:         newK8sInformers(clientset, nil, testKubeClientset, "", []string{}, nil),
 		}
 
 		leaseChan := make(chan bool)

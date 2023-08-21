@@ -165,6 +165,11 @@ func main() {
 		ui.ExitOnError("Creating k8s clientset", err)
 	}
 
+	dynamicClientSet, err := k8sclient.ConnectToK8sDynamic()
+	if err != nil {
+		ui.ExitOnError("Creating k8s clientset", err)
+	}
+
 	k8sCfg, err := k8sclient.GetK8sClientConfig()
 	if err != nil {
 		ui.ExitOnError("Getting k8s client config", err)
@@ -431,6 +436,7 @@ func main() {
 		triggerService := triggers.NewService(
 			sched,
 			clientset,
+			dynamicClientSet,
 			testkubeClientset,
 			testsuitesClientV3,
 			testsClientV3,

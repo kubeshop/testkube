@@ -2,6 +2,10 @@ package triggers
 
 import (
 	"context"
+	"github.com/kubeshop/testkube/pkg/mapper/customresources"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -124,4 +128,22 @@ func getServiceConditions(
 	}
 
 	return services.MapCRDConditionsToAPI(service.Status.Conditions, time.Now()), nil
+}
+
+func getCustomResourceConditions(
+	ctx context.Context,
+	dynamicClientset dynamic.Interface,
+	object metav1.Object,
+	gvr schema.GroupVersionResource,
+) ([]testtriggersv1.TestTriggerCondition, error) {
+	customresource, err := dynamicClientset.Resource(gvr).Namespace(object.GetNamespace()).Get(ctx, object.GetName(), metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	objWithConditions, _, err := unstructured.NestedSlice(customresource.Object, "status", "conditions")
+	if err != nil {
+		return nil, err
+	}
+	return customresources.MapCRDConditionsToAPI(objWithConditions, time.Now()), nil
 }
