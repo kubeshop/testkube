@@ -13,3 +13,5 @@ spec:
       uri: https://github.com/kubeshop/testkube
       branch: main
       path: test/playwright/executor-tests/playwright-project
+          # TODO: choose and set resource request after cluster nodes will be scaled up
+    # jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            limits:\n              memory: 2Gi\n              cpu: 2\n"

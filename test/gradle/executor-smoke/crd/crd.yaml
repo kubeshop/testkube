@@ -1,3 +1,4 @@
+# TODO: choose and set resource request after cluster nodes will be scaled up
 # https://github.com/kubeshop/testkube-executor-gradle/tree/main/examples
 
 apiVersion: tests.testkube.io/v3

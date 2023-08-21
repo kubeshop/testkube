@@ -30,6 +30,8 @@ spec:
       volumeMountPath: /data/artifacts
       dirs:
         - ./
+    # TODO: choose and set resource request after cluster nodes will be scaled up
+    # jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            limits:\n              memory: 2Gi\n              cpu: 2\n"
 
 ---
 apiVersion: tests.testkube.io/v3
@@ -64,3 +66,5 @@ spec:
       volumeMountPath: /data/artifacts
       dirs:
         - ./
+    # TODO: choose and set resource request after cluster nodes will be scaled up
+    # jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            limits:\n              memory: 2Gi\n              cpu: 2\n"

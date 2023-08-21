@@ -1,3 +1,4 @@
+# TODO: choose and set resource request after cluster nodes will be scaled up
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
