@@ -59,7 +59,7 @@ func TestService_Run(t *testing.T) {
 
 	mockExecutor := client.NewMockExecutor(mockCtrl)
 
-	mockEventEmitter := event.NewEmitter(bus.NewEventBusMock(), "")
+	mockEventEmitter := event.NewEmitter(bus.NewEventBusMock(), "", nil)
 
 	mockTest := testsv3.Test{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "some-test"},
