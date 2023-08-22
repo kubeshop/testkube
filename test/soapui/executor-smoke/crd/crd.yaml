@@ -13,6 +13,8 @@ spec:
       uri: https://github.com/kubeshop/testkube.git
       branch: main
       path: test/soapui/executor-smoke/soapui-smoke-test.xml
+  executionRequest:
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 256Mi\n              cpu: 512m\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -31,3 +33,4 @@ spec:
       path: test/soapui/executor-smoke/soapui-smoke-test-negative.xml
   executionRequest:
     negativeTest: true
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 256Mi\n              cpu: 512m\n"

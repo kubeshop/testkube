@@ -17,6 +17,7 @@ spec:
     args:
       - --env-var
       - TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -37,6 +38,7 @@ spec:
     args:
       - --env-var
       - TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
 ---
 # postman-executor-smoke-testsource - TestSource
 apiVersion: tests.testkube.io/v1
@@ -63,6 +65,7 @@ spec:
     args:
       - --env-var
       - TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
 ---
 # postman-executor-smoke-testsource-git-file - TestSource
 apiVersion: tests.testkube.io/v1
@@ -89,6 +92,7 @@ spec:
     args:
       - --env-var
       - TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
 ---
 # postman-executor-smoke-testsource-overwrite - TestSource
 apiVersion: tests.testkube.io/v1
@@ -119,6 +123,7 @@ spec:
     args:
       - --env-var
       - TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -137,3 +142,4 @@ spec:
       path: test/postman/executor-tests/postman-executor-smoke-negative.postman_collection.json
   executionRequest:
     negativeTest: true
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"

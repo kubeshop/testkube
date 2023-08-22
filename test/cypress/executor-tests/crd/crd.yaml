@@ -24,6 +24,7 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -53,6 +54,7 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -82,6 +84,7 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -109,6 +112,7 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -138,6 +142,7 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -167,6 +172,7 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -194,6 +200,7 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -221,6 +228,7 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=true
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -252,6 +260,7 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -279,6 +288,7 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 # cypress-default-executor-smoke-electron-testsource TestSource
 apiVersion: tests.testkube.io/v1
@@ -315,6 +325,7 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 # cypress-default-executor-smoke-electron-testsource-git-dir - TestSource
 apiVersion: tests.testkube.io/v1
@@ -351,6 +362,7 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -378,6 +390,7 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -407,6 +420,7 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -436,6 +450,7 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -452,6 +467,8 @@ spec:
       uri: https://github.com/kubeshop/testkube
       branch: main
       path: test/cypress/executor-tests/cypress-9
+  executionRequest:
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -474,6 +491,7 @@ spec:
       - chrome
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -496,6 +514,7 @@ spec:
       - firefox
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -516,6 +535,7 @@ spec:
     args:
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -538,6 +558,7 @@ spec:
       - chrome
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -560,6 +581,7 @@ spec:
       - firefox
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -580,3 +602,4 @@ spec:
     args:
       - --some-incorrect-argument
     negativeTest: true
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 1Gi\n              cpu: 1\n"

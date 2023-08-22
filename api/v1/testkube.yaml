@@ -4901,7 +4901,14 @@ components:
           $ref: "#/components/schemas/TestSuiteExecution"
         clusterName:
           type: string
-          description: cluster name of event      
+          description: cluster name of event   
+        envs:
+          type: object
+          description: "environment variables"
+          additionalProperties:
+            type: string
+          example:
+            WEBHOOK_PARAMETER: "any value"           
 
     EventResource:
       type: string
