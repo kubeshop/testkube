@@ -65,6 +65,12 @@ In the example above, replace <YOUR_ENDPOINT_URL> with the HTTPS endpoint URL wh
 
 You can add additional HTTP headers like `Authorization` or `x-api-key` to have a secret token.
 
+It's possible to get access to env variables of testkube-api-server pod in webhook template:
+
+```sh title="template.txt"
+TESTKUBE_CLOUD_URL: {{ index .Envs "TESTKUBE_CLOUD_URL" }}
+```
+
 ## Testing Webhooks
 
 If you are just getting started and want to test your webhook configuration, you can use public and free services that act as HTTP catch-all apps. Here are a couple of options:

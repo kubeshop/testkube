@@ -21,4 +21,6 @@ type Event struct {
 	TestSuiteExecution *TestSuiteExecution `json:"testSuiteExecution,omitempty"`
 	// cluster name of event
 	ClusterName string `json:"clusterName,omitempty"`
+	// environment variables
+	Envs map[string]string `json:"envs,omitempty"`
 }

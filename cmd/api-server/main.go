@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"google.golang.org/grpc"
@@ -284,13 +285,23 @@ func main() {
 
 	apiVersion := version.Version
 
+	envs := make(map[string]string)
+	for _, env := range os.Environ() {
+		pair := strings.SplitN(env, "=", 2)
+		if len(pair) != 2 {
+			continue
+		}
+
+		envs[pair[0]] += pair[1]
+	}
+
 	// configure NATS event bus
 	nc, err := bus.NewNATSConnection(cfg.NatsURI)
 	if err != nil {
 		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
 	}
 	eventBus := bus.NewNATSBus(nc)
-	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName)
+	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName, envs)
 
 	metrics := metrics.NewMetrics()
 
@@ -372,7 +383,7 @@ func main() {
 		testsuiteExecutionsClient,
 	)
 
-	slackLoader, err := newSlackLoader(cfg)
+	slackLoader, err := newSlackLoader(cfg, envs)
 	if err != nil {
 		ui.ExitOnError("Creating slack loader", err)
 	}
@@ -419,6 +430,7 @@ func main() {
 			api.GetLogsStream,
 			clusterId,
 			cfg.TestkubeClusterName,
+			envs,
 		)
 		if err != nil {
 			ui.ExitOnError("Starting agent", err)
@@ -566,7 +578,7 @@ func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDet
 	return executors, nil
 }
 
-func newSlackLoader(cfg *config.Config) (*slack.SlackLoader, error) {
+func newSlackLoader(cfg *config.Config, envs map[string]string) (*slack.SlackLoader, error) {
 	slackTemplate, err := loadConfigFromStringOrFile(
 		cfg.SlackTemplate,
 		cfg.TestkubeConfigDir,
@@ -582,7 +594,7 @@ func newSlackLoader(cfg *config.Config) (*slack.SlackLoader, error) {
 		return nil, err
 	}
 
-	return slack.NewSlackLoader(slackTemplate, slackConfig, cfg.TestkubeClusterName, testkube.AllEventTypes), nil
+	return slack.NewSlackLoader(slackTemplate, slackConfig, cfg.TestkubeClusterName, testkube.AllEventTypes, envs), nil
 }
 
 func loadConfigFromStringOrFile(inputString, configDir, filename, configType string) (raw string, err error) {
