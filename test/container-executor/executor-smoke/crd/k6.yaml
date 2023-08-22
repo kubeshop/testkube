@@ -16,6 +16,7 @@ spec:
       workingDir: test/k6/executor-tests
   executionRequest:
     args: ["run", "k6-smoke-test-without-envs.js"]
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 64Mi\n              cpu: 128m\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -35,3 +36,4 @@ spec:
       workingDir: test/k6/executor-tests
   executionRequest:
     args: ["run", "k6-smoke-test-without-envs.js"]
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 64Mi\n              cpu: 128m\n"

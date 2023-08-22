@@ -22,6 +22,7 @@ spec:
     args:
       - -e
       - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 128m\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -47,6 +48,7 @@ spec:
     args:
       - -e
       - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 128m\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -65,3 +67,4 @@ spec:
       path: test/k6/executor-tests/k6-smoke-test-negative.js
   executionRequest:
     negativeTest: true
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 128m\n"
