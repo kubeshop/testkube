@@ -14,8 +14,7 @@ spec:
       branch: main
       path: test/ginkgo/executor-tests/smoke
   executionRequest:
-    # TODO: enable resource request after cluster nodes will be scaled up
-    # jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
     
 ---
 apiVersion: tests.testkube.io/v3
@@ -35,5 +34,4 @@ spec:
       path: test/ginkgo/executor-tests/smoke-negative
   executionRequest:
     negativeTest: true
-    # TODO: enable resource request after cluster nodes will be scaled up
-    # jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
