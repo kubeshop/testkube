@@ -6,8 +6,7 @@ Testkube allows you to automate running tests and test suites by defining trigge
 
 In generic terms, a _Trigger_ defines an _action_ which will be executed for a given _execution_ when a certain _event_ on a specific _resource_ occurs. For example, we could define a _TestTrigger_ which _runs_ a _Test_ when a _ConfigMap_ gets _modified_.
 
-Watch our [video guide](#video-tutorial) on using Testkube Test Triggers to perform **Asynchronous Testing in Kubernetes**:
-
+Watch our [video guide](#video-tutorial) on using Testkube Test Triggers to perform **Asynchronous Testing in Kubernetes**.
 
 ## Custom Resource Definition Model
 ### Selectors
@@ -143,6 +142,24 @@ Kubernetes API and gets notified by Kubernetes on each event on the watched reso
 ## API
 
 Testkube exposes CRUD operations on test triggers in the REST API. Check out the [Open API](../openapi.md) docs for more info.
+
+## Creating Test Triggers in the Testkube Dashboard
+
+Click on the lightening bolt icon on the left of the Testkube IDE to open the dialog to create test triggers. Any current test triggers will be listed and the `Create a new trigger` button is at the top right of the screen.
+
+![Trigger Screen](../img/trigger-screen.png)
+
+The `Create new trigger` dialog opens:
+
+![Create Trigger](../img/create-trigger.png)
+
+Input the condition that will cause the trigger and click `Next`.
+
+Input the action that will be the result of the trigger condition happening and click `Create`.
+
+![Create Trigger Action](../img/create-trigger-action.png)
+
+Get all the details in the video below!
 
 ## Video Tutorial 
 
