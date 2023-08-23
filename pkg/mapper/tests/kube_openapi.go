@@ -22,6 +22,7 @@ func MapTestListKubeToAPI(crTests testsv3.TestList) (tests []testkube.Test) {
 func MapTestCRToAPI(crTest testsv3.Test) (test testkube.Test) {
 	test.Name = crTest.Name
 	test.Namespace = crTest.Namespace
+	test.Description = crTest.Spec.Description
 	test.Content = MapTestContentFromSpec(crTest.Spec.Content)
 	test.Created = crTest.CreationTimestamp.Time
 	test.Source = crTest.Spec.Source
@@ -221,6 +222,10 @@ func MapSpecToUpdate(test *testsv3.Test) (request testkube.TestUpdateRequest) {
 		{
 			&test.Namespace,
 			&request.Namespace,
+		},
+		{
+			&test.Spec.Description,
+			&request.Description,
 		},
 		{
 			&test.Spec.Type_,

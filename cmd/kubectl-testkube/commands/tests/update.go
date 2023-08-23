@@ -57,6 +57,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 		variableConfigMaps       []string
 		mountSecrets             map[string]string
 		variableSecrets          []string
+		description              string
 	)
 
 	cmd := &cobra.Command{
@@ -138,6 +139,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 	cmd.Flags().StringArrayVar(&variableConfigMaps, "variable-configmap", []string{}, "config map name used to map all keys to basis variables")
 	cmd.Flags().StringToStringVarP(&mountSecrets, "mount-secret", "", map[string]string{}, "secret value pair for mounting it to executor pod: --mount-secret secret_name=secret_mountpath")
 	cmd.Flags().StringArrayVar(&variableSecrets, "variable-secret", []string{}, "secret name used to map all keys to secret variables")
+	cmd.Flags().StringVarP(&description, "description", "", "", "test description")
 	cmd.Flags().MarkDeprecated("env", "env is deprecated use variable instead")
 	cmd.Flags().MarkDeprecated("secret-env", "secret-env is deprecated use secret-variable instead")
 

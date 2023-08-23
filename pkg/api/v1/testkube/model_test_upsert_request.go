@@ -19,6 +19,8 @@ type TestUpsertRequest struct {
 	Name string `json:"name,omitempty"`
 	// test namespace
 	Namespace string `json:"namespace,omitempty"`
+	// test description
+	Description string `json:"description,omitempty"`
 	// test type
 	Type_   string       `json:"type,omitempty"`
 	Content *TestContent `json:"content,omitempty"`

@@ -49,6 +49,7 @@ type CreateCommonFlags struct {
 	MountSecrets             map[string]string
 	VariableSecrets          []string
 	UploadTimeout            string
+	Description              string
 }
 
 // NewCreateTestsCmd is a command tp create new Test Custom Resource
@@ -217,6 +218,7 @@ func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
 	cmd.Flags().StringToStringVarP(&flags.MountSecrets, "mount-secret", "", map[string]string{}, "secret value pair for mounting it to executor pod: --mount-secret secret_name=secret_mountpath")
 	cmd.Flags().StringArrayVar(&flags.VariableSecrets, "variable-secret", []string{}, "secret name used to map all keys to secret variables")
 	cmd.Flags().StringVar(&flags.UploadTimeout, "upload-timeout", "", "timeout to use when uploading files, example: 30s")
+	cmd.Flags().StringVarP(&flags.Description, "description", "", "", "test description")
 }
 
 func validateExecutorTypeAndContent(executorType, contentType string, executors testkube.ExecutorsDetails) error {

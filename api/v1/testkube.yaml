@@ -3598,6 +3598,10 @@ components:
           type: string
           description: test namespace
           example: "testkube"
+        description:
+          type: string
+          description: test description
+          example: "this test is used for that purpose"      
         type:
           type: string
           description: test type
