@@ -137,9 +137,11 @@ func MapAPIToCRD(request *testkube.Execution, generation int64) testexecutionv1.
 	var artifactRequest *testexecutionv1.ArtifactRequest
 	if request.ArtifactRequest != nil {
 		artifactRequest = &testexecutionv1.ArtifactRequest{
-			StorageClassName: request.ArtifactRequest.StorageClassName,
-			VolumeMountPath:  request.ArtifactRequest.VolumeMountPath,
-			Dirs:             request.ArtifactRequest.Dirs,
+			StorageClassName:       request.ArtifactRequest.StorageClassName,
+			VolumeMountPath:        request.ArtifactRequest.VolumeMountPath,
+			Dirs:                   request.ArtifactRequest.Dirs,
+			StorageBucket:          request.ArtifactRequest.StorageBucket,
+			OmitFolderPerExecution: request.ArtifactRequest.OmitFolderPerExecution,
 		}
 	}
 

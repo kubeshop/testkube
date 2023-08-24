@@ -19,6 +19,7 @@ func MapUpsertToSpec(request testkube.TestUpsertRequest) *testsv3.Test {
 			Labels:    request.Labels,
 		},
 		Spec: testsv3.TestSpec{
+			Description:      request.Description,
 			Type_:            request.Type_,
 			Content:          MapContentToSpecContent(request.Content),
 			Source:           request.Source,
@@ -130,9 +131,11 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 	var artifactRequest *testsv3.ArtifactRequest
 	if executionRequest.ArtifactRequest != nil {
 		artifactRequest = &testsv3.ArtifactRequest{
-			StorageClassName: executionRequest.ArtifactRequest.StorageClassName,
-			VolumeMountPath:  executionRequest.ArtifactRequest.VolumeMountPath,
-			Dirs:             executionRequest.ArtifactRequest.Dirs,
+			StorageClassName:       executionRequest.ArtifactRequest.StorageClassName,
+			VolumeMountPath:        executionRequest.ArtifactRequest.VolumeMountPath,
+			Dirs:                   executionRequest.ArtifactRequest.Dirs,
+			StorageBucket:          executionRequest.ArtifactRequest.StorageBucket,
+			OmitFolderPerExecution: executionRequest.ArtifactRequest.OmitFolderPerExecution,
 		}
 	}
 
@@ -213,6 +216,10 @@ func MapUpdateToSpec(request testkube.TestUpdateRequest, test *testsv3.Test) *te
 		{
 			request.Namespace,
 			&test.Namespace,
+		},
+		{
+			request.Description,
+			&test.Spec.Description,
 		},
 		{
 			request.Type_,
@@ -590,6 +597,16 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 
 		if (*executionRequest.ArtifactRequest).Dirs != nil {
 			request.ArtifactRequest.Dirs = *(*executionRequest.ArtifactRequest).Dirs
+			emptyArtifact = false
+		}
+
+		if (*executionRequest.ArtifactRequest).StorageBucket != nil {
+			request.ArtifactRequest.StorageBucket = *(*executionRequest.ArtifactRequest).StorageBucket
+			emptyArtifact = false
+		}
+
+		if (*executionRequest.ArtifactRequest).OmitFolderPerExecution != nil {
+			request.ArtifactRequest.OmitFolderPerExecution = *(*executionRequest.ArtifactRequest).OmitFolderPerExecution
 			emptyArtifact = false
 		}
 

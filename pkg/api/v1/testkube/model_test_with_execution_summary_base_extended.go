@@ -3,7 +3,7 @@ package testkube
 type TestWithExecutionSummaries []TestWithExecutionSummary
 
 func (t TestWithExecutionSummaries) Table() (header []string, output [][]string) {
-	header = []string{"Name", "Type", "Created", "Labels", "Schedule", "Status", "Execution id"}
+	header = []string{"Name", "Description", "Type", "Created", "Labels", "Schedule", "Status", "Execution id"}
 	for _, e := range t {
 		if e.Test == nil {
 			continue
@@ -19,6 +19,7 @@ func (t TestWithExecutionSummaries) Table() (header []string, output [][]string)
 		}
 		output = append(output, []string{
 			e.Test.Name,
+			e.Test.Description,
 			e.Test.Type_,
 			e.Test.Created.String(),
 			MapToString(e.Test.Labels),
