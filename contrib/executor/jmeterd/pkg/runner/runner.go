@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/contrib/executor/jmeterd/pkg/jmeter_env"
-	"github.com/kubeshop/testkube/contrib/executor/jmeterd/pkg/parser"
+	"github.com/kubeshop/testkube/contrib/executor/jmeter/pkg/parser"
 	"github.com/kubeshop/testkube/contrib/executor/jmeterd/pkg/slaves"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"

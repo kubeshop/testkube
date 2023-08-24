@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kubeshop/testkube/contrib/executor/jmeterd/pkg/parser"
+	"github.com/kubeshop/testkube/contrib/executor/jmeter/pkg/parser"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
