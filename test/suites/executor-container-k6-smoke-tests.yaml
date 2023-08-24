@@ -1,0 +1,15 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: executor-container-k6-smoke-tests
+  labels:
+    app: testkube
+spec:
+  description: "container executor k6 smoke tests"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: container-executor-k6-smoke
+  - stopOnFailure: false
+    execute:
+    - test: container-executor-k6-smoke-git-file

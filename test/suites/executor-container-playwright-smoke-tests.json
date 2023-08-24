@@ -1,7 +1,0 @@
-{
-	"name": "executor-container-playwright-smoke-tests",
-	"description": "container executor playwright smoke tests",
-	"steps": [
-		{"execute": {"name": "container-executor-playwright-smoke"}}
-	]
-}

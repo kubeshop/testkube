@@ -64,3 +64,101 @@ func MapEventTypesToStringArray(eventTypes []testkube.EventType) (arr []executor
 	}
 	return
 }
+
+// MapUpdateToSpec maps WebhookUpdateRequest to Wehook CRD spec
+func MapUpdateToSpec(request testkube.WebhookUpdateRequest, webhook *executorv1.Webhook) *executorv1.Webhook {
+	var fields = []struct {
+		source      *string
+		destination *string
+	}{
+		{
+			request.Name,
+			&webhook.Name,
+		},
+		{
+			request.Namespace,
+			&webhook.Namespace,
+		},
+		{
+			request.Uri,
+			&webhook.Spec.Uri,
+		},
+		{
+			request.Selector,
+			&webhook.Spec.Selector,
+		},
+		{
+			request.PayloadObjectField,
+			&webhook.Spec.PayloadObjectField,
+		},
+		{
+			request.PayloadTemplate,
+			&webhook.Spec.PayloadTemplate,
+		},
+	}
+
+	for _, field := range fields {
+		if field.source != nil {
+			*field.destination = *field.source
+		}
+	}
+
+	if request.Events != nil {
+		webhook.Spec.Events = MapEventTypesToStringArray(*request.Events)
+	}
+
+	if request.Labels != nil {
+		webhook.Labels = *request.Labels
+	}
+
+	if request.Headers != nil {
+		webhook.Spec.Headers = *request.Headers
+	}
+
+	return webhook
+}
+
+// MapSpecToUpdate maps Webhook CRD to WebhookUpdate Request to spec
+func MapSpecToUpdate(webhook *executorv1.Webhook) (request testkube.WebhookUpdateRequest) {
+	var fields = []struct {
+		source      *string
+		destination **string
+	}{
+		{
+			&webhook.Name,
+			&request.Name,
+		},
+		{
+			&webhook.Namespace,
+			&request.Namespace,
+		},
+		{
+			&webhook.Spec.Uri,
+			&request.Uri,
+		},
+		{
+			&webhook.Spec.Selector,
+			&request.Selector,
+		},
+		{
+			&webhook.Spec.PayloadObjectField,
+			&request.PayloadObjectField,
+		},
+		{
+			&webhook.Spec.PayloadTemplate,
+			&request.PayloadTemplate,
+		},
+	}
+
+	for _, field := range fields {
+		*field.destination = field.source
+	}
+
+	events := MapEventArrayToCRDEvents(webhook.Spec.Events)
+	request.Events = &events
+
+	request.Labels = &webhook.Labels
+	request.Headers = &webhook.Spec.Headers
+
+	return request
+}

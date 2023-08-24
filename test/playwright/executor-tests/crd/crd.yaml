@@ -2,7 +2,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: playwright-executor-smoke
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -14,3 +13,5 @@ spec:
       uri: https://github.com/kubeshop/testkube
       branch: main
       path: test/playwright/executor-tests/playwright-project
+  executionRequest:
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"

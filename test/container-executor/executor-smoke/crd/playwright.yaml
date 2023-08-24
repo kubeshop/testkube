@@ -2,7 +2,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: container-executor-playwright-smoke
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -21,3 +20,4 @@ spec:
       volumeMountPath: /data/artifacts
       dirs:
         - ./
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"

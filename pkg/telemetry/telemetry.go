@@ -3,6 +3,7 @@ package telemetry
 import (
 	"context"
 	"net/http"
+	"runtime"
 	"sync"
 
 	"strings"
@@ -14,13 +15,13 @@ import (
 	httpclient "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
 var (
 	client  = httpclient.NewClient()
 	senders = map[string]Sender{
 		"google":    GoogleAnalyticsSender,
-		"testkube":  TestkubeAnalyticsSender,
 		"segmentio": SegmentioSender,
 	}
 )
@@ -41,6 +42,52 @@ func SendCmdEvent(cmd *cobra.Command, version string) (string, error) {
 		command = "root"
 	}
 
+	payload := NewCLIPayload(getCurrentContext(), GetMachineID(), command, version, "cli_command_execution", GetClusterType())
+	return sendData(senders, payload)
+}
+
+func SendCmdErrorEvent(cmd *cobra.Command, version, errType string) (string, error) {
+	// get all sub-commands passed to cli
+	command := strings.TrimPrefix(cmd.CommandPath(), "kubectl-testkube ")
+	if command == "" {
+		command = "root"
+	}
+
+	command += "_error"
+	machineID := GetMachineID()
+	payload := Payload{
+		ClientID: machineID,
+		UserID:   machineID,
+		Events: []Event{
+			{
+				Name: text.GAEventName(command),
+				Params: Params{
+					EventCount:      1,
+					EventCategory:   "cli_command_execution",
+					AppVersion:      version,
+					AppName:         "kubectl-testkube",
+					MachineID:       machineID,
+					OperatingSystem: runtime.GOOS,
+					Architecture:    runtime.GOARCH,
+					Context:         getCurrentContext(),
+					ClusterType:     GetClusterType(),
+					ErrorType:       errType,
+				},
+			}},
+	}
+
+	return sendData(senders, payload)
+}
+
+func SendCmdAttemptEvent(cmd *cobra.Command, version string) (string, error) {
+	// get all sub-commands passed to cli
+	command := strings.TrimPrefix(cmd.CommandPath(), "kubectl-testkube ")
+	if command == "" {
+		command = "root"
+	}
+
+	command += "_attempt"
+	// TODO pass error
 	payload := NewCLIPayload(getCurrentContext(), GetMachineID(), command, version, "cli_command_execution", GetClusterType())
 	return sendData(senders, payload)
 }

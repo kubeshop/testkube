@@ -21,6 +21,7 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	testexecutionsv1 "github.com/kubeshop/testkube-operator/client/testexecutions/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
@@ -28,6 +29,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
+	testexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testexecutions"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 )
@@ -58,6 +60,7 @@ func NewContainerExecutor(
 	configMap config.Repository,
 	executorsClient executorsclientv1.Interface,
 	testsClient testsv3.Interface,
+	testExecutionsClient testexecutionsv1.Interface,
 	registry string,
 	podStartTimeout time.Duration,
 	clusterID string,
@@ -68,21 +71,22 @@ func NewContainerExecutor(
 	}
 
 	return &ContainerExecutor{
-		clientSet:          clientSet,
-		repository:         repo,
-		log:                log.DefaultLogger,
-		namespace:          namespace,
-		images:             images,
-		templates:          templates,
-		configMap:          configMap,
-		serviceAccountName: serviceAccountName,
-		metrics:            metrics,
-		emitter:            emiter,
-		testsClient:        testsClient,
-		executorsClient:    executorsClient,
-		registry:           registry,
-		podStartTimeout:    podStartTimeout,
-		clusterID:          clusterID,
+		clientSet:            clientSet,
+		repository:           repo,
+		log:                  log.DefaultLogger,
+		namespace:            namespace,
+		images:               images,
+		templates:            templates,
+		configMap:            configMap,
+		serviceAccountName:   serviceAccountName,
+		metrics:              metrics,
+		emitter:              emiter,
+		testsClient:          testsClient,
+		executorsClient:      executorsClient,
+		testExecutionsClient: testExecutionsClient,
+		registry:             registry,
+		podStartTimeout:      podStartTimeout,
+		clusterID:            clusterID,
 	}, nil
 }
 
@@ -92,21 +96,22 @@ type ExecutionCounter interface {
 
 // ContainerExecutor is container for managing job executor dependencies
 type ContainerExecutor struct {
-	repository         result.Repository
-	log                *zap.SugaredLogger
-	clientSet          kubernetes.Interface
-	namespace          string
-	images             executor.Images
-	templates          executor.Templates
-	metrics            ExecutionCounter
-	emitter            EventEmitter
-	configMap          config.Repository
-	serviceAccountName string
-	testsClient        testsv3.Interface
-	executorsClient    executorsclientv1.Interface
-	registry           string
-	podStartTimeout    time.Duration
-	clusterID          string
+	repository           result.Repository
+	log                  *zap.SugaredLogger
+	clientSet            kubernetes.Interface
+	namespace            string
+	images               executor.Images
+	templates            executor.Templates
+	metrics              ExecutionCounter
+	emitter              EventEmitter
+	configMap            config.Repository
+	serviceAccountName   string
+	testsClient          testsv3.Interface
+	executorsClient      executorsclientv1.Interface
+	testExecutionsClient testexecutionsv1.Interface
+	registry             string
+	podStartTimeout      time.Duration
+	clusterID            string
 }
 
 type JobOptions struct {
@@ -279,7 +284,7 @@ func (c *ContainerExecutor) ExecuteSync(ctx context.Context, execution *testkube
 func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
 	jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
 
-	jobOptions, err := NewJobOptions(c.images, c.templates, c.serviceAccountName, c.registry, c.clusterID, execution, options)
+	jobOptions, err := NewJobOptions(c.log, c.images, c.templates, c.serviceAccountName, c.registry, c.clusterID, execution, options)
 	if err != nil {
 		return nil, err
 	}
@@ -425,7 +430,24 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	}
 
 	executorLogs = append(executorLogs, scraperLogs...)
-	execution.ExecutionResult.Output = string(executorLogs)
+
+	// parse container output log (mixed JSON and plain text stream)
+	executionResult, output, err := output.ParseContainerOutput(executorLogs)
+	if err != nil {
+		l.Errorw("parse output error", "error", err)
+		execution.ExecutionResult.Output = output
+		execution.ExecutionResult.Err(err)
+		err = c.repository.UpdateResult(ctx, execution.Id, *execution)
+		if err != nil {
+			l.Infow("Update result", "error", err)
+		}
+		return execution.ExecutionResult, err
+	}
+
+	if executionResult != nil {
+		execution.ExecutionResult = executionResult
+	}
+	execution.ExecutionResult.Output = output
 
 	if execution.ExecutionResult.IsFailed() && execution.ExecutionResult.ErrorMessage == "" {
 		execution.ExecutionResult.ErrorMessage = executor.GetPodErrorMessage(latestExecutorPod)
@@ -460,6 +482,20 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testku
 		test.Status = testsmapper.MapExecutionToTestStatus(execution)
 		if err = c.testsClient.UpdateStatus(test); err != nil {
 			c.log.Errorw("updating test error", "error", err)
+		}
+	}
+
+	if execution.TestExecutionName != "" {
+		testExecution, err := c.testExecutionsClient.Get(execution.TestExecutionName)
+		if err != nil {
+			c.log.Errorw("getting test execution error", "error", err)
+		}
+
+		if testExecution != nil {
+			testExecution.Status = testexecutionsmapper.MapAPIToCRD(execution, testExecution.Generation)
+			if err = c.testExecutionsClient.UpdateStatus(testExecution); err != nil {
+				c.log.Errorw("updating test execution error", "error", err)
+			}
 		}
 	}
 
@@ -595,6 +631,15 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		jobDelaySeconds = jobArtifactDelaySeconds
 	}
 
+	labels := map[string]string{
+		testkube.TestLabelTestType: utils.SanitizeName(options.TestSpec.Type_),
+		testkube.TestLabelExecutor: options.ExecutorName,
+		testkube.TestLabelTestName: options.TestName,
+	}
+	for key, value := range options.Labels {
+		labels[key] = value
+	}
+
 	return &JobOptions{
 		Image:                     image,
 		ImagePullSecrets:          options.ImagePullSecretNames,
@@ -618,11 +663,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		ScraperTemplateExtensions: options.Request.ScraperTemplate,
 		EnvConfigMaps:             options.Request.EnvConfigMaps,
 		EnvSecrets:                options.Request.EnvSecrets,
-		Labels: map[string]string{
-			testkube.TestLabelTestType: utils.SanitizeName(options.TestSpec.Type_),
-			testkube.TestLabelExecutor: options.ExecutorName,
-			testkube.TestLabelTestName: options.TestName,
-		},
+		Labels:                    labels,
 	}
 }
 

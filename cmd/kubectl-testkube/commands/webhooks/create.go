@@ -2,7 +2,6 @@ package webhooks
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 
 	"github.com/spf13/cobra"
@@ -10,7 +9,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/crd"
-	webhooksmapper "github.com/kubeshop/testkube/pkg/mapper/webhooks"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -39,14 +37,6 @@ func NewCreateWebhookCmd() *cobra.Command {
 			}
 
 			namespace := cmd.Flag("namespace").Value.String()
-			payloadTemplate = cmd.Flag("payload-template").Value.String()
-			payloadTemplateContent := ""
-			if payloadTemplate != "" {
-				b, err := os.ReadFile(payloadTemplate)
-				ui.ExitOnError("reading job template", err)
-				payloadTemplateContent = string(b)
-			}
-
 			var client apiv1.Client
 			if !crdOnly {
 				client, namespace, err = common.GetClient(cmd)
@@ -58,17 +48,8 @@ func NewCreateWebhookCmd() *cobra.Command {
 				}
 			}
 
-			options := apiv1.CreateWebhookOptions{
-				Name:               name,
-				Namespace:          namespace,
-				Events:             webhooksmapper.MapStringArrayToCRDEvents(events),
-				Uri:                uri,
-				Selector:           selector,
-				Labels:             labels,
-				PayloadObjectField: payloadObjectField,
-				PayloadTemplate:    payloadTemplateContent,
-				Headers:            headers,
-			}
+			options, err := NewCreateWebhookOptionsFromFlags(cmd)
+			ui.ExitOnError("getting webhook options", err)
 
 			if !crdOnly {
 				_, err := client.CreateWebhook(options)
@@ -89,7 +70,7 @@ func NewCreateWebhookCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique webhook name - mandatory")
-	cmd.Flags().StringArrayVarP(&events, "events", "e", []string{}, "event types handled by executor e.g. start-test|end-test")
+	cmd.Flags().StringArrayVarP(&events, "events", "e", []string{}, "event types handled by webhook e.g. start-test|end-test")
 	cmd.Flags().StringVarP(&uri, "uri", "u", "", "URI which should be called when given event occurs")
 	cmd.Flags().StringVarP(&selector, "selector", "", "", "expression to select tests and test suites for webhook events: --selector app=backend")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")

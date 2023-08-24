@@ -17,6 +17,7 @@ type Client interface {
 
 // ClientImplicitBucket is storage client abstraction where bucket name is provided from config
 type ClientImplicitBucket interface {
+	IsConnectionPossible(ctx context.Context) (bool, error)
 	ListFiles(ctx context.Context, bucketFolder string) ([]testkube.Artifact, error)
 	SaveFile(ctx context.Context, bucketFolder, filePath string) error
 	DownloadFile(ctx context.Context, bucketFolder, file string) (*minio.Object, error)

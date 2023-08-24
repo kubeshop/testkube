@@ -4,7 +4,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: gradle-executor-smoke-jdk18
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -22,12 +21,12 @@ spec:
         name: TESTKUBE_GRADLE
         value: "true"
         type: basic
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: gradle-executor-smoke-jdk17
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -45,12 +44,12 @@ spec:
         name: TESTKUBE_GRADLE
         value: "true"
         type: basic
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: gradle-executor-smoke-jdk11
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -68,12 +67,12 @@ spec:
         name: TESTKUBE_GRADLE
         value: "true"
         type: basic
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: gradle-executor-smoke-jdk8
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -91,12 +90,12 @@ spec:
         name: TESTKUBE_GRADLE
         value: "true"
         type: basic
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: gradle-executor-smoke-jdk18-negative # expected failure - ENVs not set
-  namespace: testkube
   labels:
     core-tests: executors-negative
 spec:
@@ -110,3 +109,4 @@ spec:
       path: examples/hello-gradle-jdk18
   executionRequest:
     negativeTest: true
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"

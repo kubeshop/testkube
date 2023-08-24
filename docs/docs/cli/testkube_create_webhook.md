@@ -13,7 +13,7 @@ testkube create webhook [flags]
 ### Options
 
 ```
-  -e, --events stringArray        event types handled by executor e.g. start-test|end-test
+  -e, --events stringArray        event types handled by webhook e.g. start-test|end-test
       --header stringToString     webhook header value pair: --header Content-Type=application/xml (default [])
   -h, --help                      help for webhook
   -l, --label stringToString      label key value pair: --label key1=value1 (default [])

@@ -11,7 +11,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-// NewUpsertExecutorOptionsFromFlags creates upsert executor options fom command flags
+// NewUpsertExecutorOptionsFromFlags creates upsert executor options from command flags
 func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.UpsertExecutorOptions, err error) {
 	name := cmd.Flag("name").Value.String()
 	types, err := cmd.Flags().GetStringArray("types")

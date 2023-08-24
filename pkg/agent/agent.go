@@ -68,6 +68,7 @@ type Agent struct {
 
 	clusterID   string
 	clusterName string
+	envs        map[string]string
 }
 
 func NewAgent(logger *zap.SugaredLogger,
@@ -79,6 +80,7 @@ func NewAgent(logger *zap.SugaredLogger,
 	logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error),
 	clusterID string,
 	clusterName string,
+	envs map[string]string,
 ) (*Agent, error) {
 	return &Agent{
 		handler:                 handler,
@@ -97,6 +99,8 @@ func NewAgent(logger *zap.SugaredLogger,
 		logStreamResponseBuffer: make(chan *cloud.LogsStreamResponse, bufferSizePerWorker*logStreamWorkerCount),
 		logStreamFunc:           logStreamFunc,
 		clusterID:               clusterID,
+		clusterName:             clusterName,
+		envs:                    envs,
 	}, nil
 }
 

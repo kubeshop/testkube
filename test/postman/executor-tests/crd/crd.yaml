@@ -2,7 +2,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: postman-executor-smoke
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -18,12 +17,12 @@ spec:
     args:
       - --env-var
       - TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: postman-executor-smoke-git-file # backwards compatibility check
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -39,13 +38,13 @@ spec:
     args:
       - --env-var
       - TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
 ---
 # postman-executor-smoke-testsource - TestSource
 apiVersion: tests.testkube.io/v1
 kind: TestSource
 metadata:
   name: testsource-postman-executor-smoke-testsource
-  namespace: testkube
 spec:
   type: git
   repository:
@@ -59,7 +58,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: postman-executor-smoke-testsource
-  namespace: testkube
 spec:
   type: postman/collection
   source: testsource-postman-executor-smoke-testsource
@@ -67,13 +65,13 @@ spec:
     args:
       - --env-var
       - TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
 ---
 # postman-executor-smoke-testsource-git-file - TestSource
 apiVersion: tests.testkube.io/v1
 kind: TestSource
 metadata:
   name: testsource-postman-executor-smoke-testsource-git-file
-  namespace: testkube
 spec:
   type: git-file # backwards compatibility check
   repository:
@@ -87,7 +85,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: postman-executor-smoke-testsource-git-file
-  namespace: testkube
 spec:
   type: postman/collection
   source: testsource-postman-executor-smoke-testsource-git-file
@@ -95,13 +92,13 @@ spec:
     args:
       - --env-var
       - TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
 ---
 # postman-executor-smoke-testsource-overwrite - TestSource
 apiVersion: tests.testkube.io/v1
 kind: TestSource
 metadata:
   name: testsource-postman-executor-smoke-testsource-overwrite
-  namespace: testkube
 spec:
   type: git
   repository:
@@ -115,7 +112,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: postman-executor-smoke-testsource-overwrite
-  namespace: testkube
 spec:
   type: postman/collection
   source: testsource-postman-executor-smoke-testsource-overwrite
@@ -127,12 +123,12 @@ spec:
     args:
       - --env-var
       - TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: postman-executor-smoke-negative
-  namespace: testkube
   labels:
     core-tests: executors-negative
 spec:
@@ -146,3 +142,4 @@ spec:
       path: test/postman/executor-tests/postman-executor-smoke-negative.postman_collection.json
   executionRequest:
     negativeTest: true
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"

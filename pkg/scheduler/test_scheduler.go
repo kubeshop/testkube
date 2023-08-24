@@ -229,6 +229,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution.PreRunScript = options.Request.PreRunScript
 	execution.PostRunScript = options.Request.PostRunScript
 	execution.RunningContext = options.Request.RunningContext
+	execution.TestExecutionName = options.Request.TestExecutionName
 
 	return execution
 }

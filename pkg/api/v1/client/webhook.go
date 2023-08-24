@@ -48,6 +48,19 @@ func (c WebhookClient) CreateWebhook(options CreateWebhookOptions) (webhook test
 	return c.webhookTransport.Execute(http.MethodPost, uri, body, nil)
 }
 
+// UpdateWebhook updates Webhook Custom Resource
+func (c WebhookClient) UpdateWebhook(options UpdateWebhookOptions) (webhook testkube.Webhook, err error) {
+	uri := c.webhookTransport.GetURI("/webhooks/%s", options.Name)
+	request := testkube.WebhookUpdateRequest(options)
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return webhook, err
+	}
+
+	return c.webhookTransport.Execute(http.MethodPatch, uri, body, nil)
+}
+
 // DeleteWebhooks deletes all webhooks
 func (c WebhookClient) DeleteWebhooks(selector string) (err error) {
 	uri := c.webhookTransport.GetURI("/webhooks")

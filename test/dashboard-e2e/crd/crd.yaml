@@ -2,7 +2,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: dashboard-e2e-tests
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -31,4 +30,5 @@ spec:
         type: basic
     artifactRequest:
       storageClassName: standard
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 4Gi\n              cpu: 3\n"
   schedule: "15 */4 * * *"

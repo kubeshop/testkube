@@ -2,7 +2,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-12-executor-smoke-electron
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -25,12 +24,12 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-12-executor-smoke-chrome
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -55,12 +54,12 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-12-executor-smoke-firefox
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -85,12 +84,12 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-11-executor-smoke-electron
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -113,12 +112,12 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-11-executor-smoke-chrome
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -143,12 +142,12 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-11-executor-smoke-firefox
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -173,12 +172,12 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-default-executor-smoke-electron
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -201,12 +200,12 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-default-executor-smoke-video-recording-enabled
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -229,12 +228,12 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=true
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-default-executor-smoke-yarn
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -261,12 +260,12 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-default-executor-smoke-electron-git-dir
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -289,13 +288,13 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 # cypress-default-executor-smoke-electron-testsource TestSource
 apiVersion: tests.testkube.io/v1
 kind: TestSource
 metadata:
   name: testsource-cypress-default-executor-smoke-electron-testsource
-  namespace: testkube
 spec:
   type: git
   repository:
@@ -309,7 +308,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-default-executor-smoke-electron-testsource
-  namespace: testkube
 spec:
   type: cypress/project
   content:
@@ -327,13 +325,13 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 # cypress-default-executor-smoke-electron-testsource-git-dir - TestSource
 apiVersion: tests.testkube.io/v1
 kind: TestSource
 metadata:
   name: testsource-cypress-default-executor-smoke-electron-testsource-git-dir
-  namespace: testkube
 spec:
   type: git-dir # backwards compatibility check
   repository:
@@ -347,7 +345,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-default-executor-smoke-electron-testsource-git-dir
-  namespace: testkube
 spec:
   type: cypress/project
   content:
@@ -365,12 +362,12 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-10-executor-smoke-electron
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -393,12 +390,12 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-10-executor-smoke-chrome
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -423,12 +420,12 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-10-executor-smoke-firefox
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -453,12 +450,12 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-9-executor-smoke-electron
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -470,12 +467,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       branch: main
       path: test/cypress/executor-tests/cypress-9
+  executionRequest:
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-9-executor-smoke-chrome
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -493,12 +491,12 @@ spec:
       - chrome
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-9-executor-smoke-firefox
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -516,12 +514,12 @@ spec:
       - firefox
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-8-executor-smoke-electron
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -537,12 +535,12 @@ spec:
     args:
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-8-executor-smoke-chrome
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -560,12 +558,12 @@ spec:
       - chrome
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-8-executor-smoke-firefox
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -583,12 +581,12 @@ spec:
       - firefox
       - --config
       - video=false
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: cypress-default-executor-smoke-electron-negative
-  namespace: testkube
   labels:
     core-tests: executors-negative
 spec:
@@ -604,3 +602,4 @@ spec:
     args:
       - --some-incorrect-argument
     negativeTest: true
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 1Gi\n              cpu: 1\n"

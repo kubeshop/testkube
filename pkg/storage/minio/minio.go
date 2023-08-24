@@ -617,3 +617,12 @@ func (c *Client) DeleteFile(ctx context.Context, bucketFolder, file string) erro
 func (c *Client) DeleteFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) error {
 	return c.deleteFile(ctx, bucket, bucketFolder, file)
 }
+
+// IsConnectionPossible checks if the connection to minio is possible
+func (c *Client) IsConnectionPossible(ctx context.Context) (bool, error) {
+	if err := c.Connect(); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}

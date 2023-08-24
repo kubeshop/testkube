@@ -4,7 +4,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: maven-executor-smoke-jdk18
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -22,12 +21,12 @@ spec:
         name: TESTKUBE_MAVEN
         value: "true"
         type: basic
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 256Mi\n              cpu: 256m\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: maven-executor-smoke-jdk11
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -45,12 +44,12 @@ spec:
         name: TESTKUBE_MAVEN
         value: "true"
         type: basic
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 256Mi\n              cpu: 256m\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: maven-executor-smoke-jdk18-negative # expected failure - ENVs not set
-  namespace: testkube
   labels:
     core-tests: executors-negative
 spec:
@@ -64,3 +63,4 @@ spec:
       path: examples/hello-maven-jdk18
   executionRequest:
     negativeTest: true
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 256Mi\n              cpu: 256m\n"

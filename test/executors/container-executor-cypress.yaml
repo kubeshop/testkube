@@ -2,7 +2,6 @@ apiVersion: executor.testkube.io/v1
 kind: Executor
 metadata:
   name: container-executor-cypress-v12.7.0
-  namespace: testkube
 spec:
   image: cypress/included:12.7.0
   executor_type: container

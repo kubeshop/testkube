@@ -63,12 +63,13 @@ func (s *TestkubeAPI) InfoHandler() fiber.Handler {
 	}
 	return func(c *fiber.Ctx) error {
 		return c.JSON(testkube.ServerInfo{
-			Commit:    version.Commit,
-			Version:   version.Version,
-			Namespace: s.Namespace,
-			Context:   apiContext,
-			EnvId:     os.Getenv(cloudEnvIdEnvName),
-			OrgId:     os.Getenv(cloudOrgIdEnvName),
+			Commit:           version.Commit,
+			Version:          version.Version,
+			Namespace:        s.Namespace,
+			Context:          apiContext,
+			EnvId:            os.Getenv(cloudEnvIdEnvName),
+			OrgId:            os.Getenv(cloudOrgIdEnvName),
+			HelmchartVersion: s.helmchartVersion,
 		})
 	}
 }

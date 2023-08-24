@@ -70,9 +70,9 @@ type ExecutionRequest struct {
 	// cron job template extensions
 	CronJobTemplate string              `json:"cronJobTemplate,omitempty"`
 	ContentRequest  *TestContentRequest `json:"contentRequest,omitempty"`
-	// script to run before test execution (not supported for container executors)
+	// script to run before test execution
 	PreRunScript string `json:"preRunScript,omitempty"`
-	// script to run after test execution (not supported for container executors)
+	// script to run after test execution
 	PostRunScript string `json:"postRunScript,omitempty"`
 	// scraper template extensions
 	ScraperTemplate string `json:"scraperTemplate,omitempty"`
@@ -81,4 +81,6 @@ type ExecutionRequest struct {
 	// secret references
 	EnvSecrets     []EnvReference  `json:"envSecrets,omitempty"`
 	RunningContext *RunningContext `json:"runningContext,omitempty"`
+	// test execution name started the test execution
+	TestExecutionName string `json:"testExecutionName,omitempty"`
 }

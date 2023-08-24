@@ -122,11 +122,13 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "RUNNER_DATADIR", Value: "/data"},
 		{Name: "RUNNER_CDEVENTS_TARGET", Value: ""},
 		{Name: "RUNNER_DASHBOARD_URI", Value: ""},
+		{Name: "RUNNER_COMPRESSARTIFACTS", Value: "false"},
 		{Name: "RUNNER_CLOUD_MODE", Value: "false"},
 		{Name: "RUNNER_CLOUD_API_KEY", Value: ""},
 		{Name: "RUNNER_CLOUD_API_URL", Value: ""},
 		{Name: "RUNNER_CLOUD_API_TLS_INSECURE", Value: "false"},
 		{Name: "RUNNER_CLUSTERID", Value: ""},
+		{Name: "CI", Value: "1"},
 		{Name: "key", Value: "value"},
 		{Name: "aa", Value: "bb"},
 	}
@@ -155,6 +157,7 @@ func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 	t.Parallel()
 
 	jobOptions, _ := NewJobOptions(
+		logger(),
 		executor.Images{},
 		executor.Templates{},
 		"",
@@ -189,6 +192,7 @@ func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 	t.Parallel()
 
 	jobOptions, _ := NewJobOptions(
+		logger(),
 		executor.Images{},
 		executor.Templates{},
 		"",
@@ -223,6 +227,7 @@ func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
 	t.Parallel()
 
 	jobOptions, _ := NewJobOptions(
+		logger(),
 		executor.Images{},
 		executor.Templates{},
 		"",

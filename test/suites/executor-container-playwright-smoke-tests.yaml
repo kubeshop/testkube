@@ -1,0 +1,12 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: executor-container-playwright-smoke-tests
+  labels:
+    app: testkube
+spec:
+  description: "container executor playwright smoke tests"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: container-executor-playwright-smoke

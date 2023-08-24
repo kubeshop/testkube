@@ -1,0 +1,224 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: expected-fail-git-checkout-path
+  labels:
+    core-tests: expected-fail
+spec:
+  type: artillery/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: ASDF/test/artillery/executor-smoke/artillery-smoke-test.yaml
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: expected-fail-git-checkout-branch
+  labels:
+    core-tests: expected-fail
+spec:
+  type: artillery/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: branch-name-ASDF-1024
+      path: test/artillery/executor-smoke/artillery-smoke-test.yaml
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: expected-fail-git-checkout-uri
+  labels:
+    core-tests: expected-fail
+spec:
+  type: artillery/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube-repo-ASDF.git
+      branch: main
+      path: test/artillery/executor-smoke/artillery-smoke-test.yaml
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: expected-fail-artillery-executor-incorrect-uri
+  labels:
+    core-tests: expected-fail
+spec:
+  type: artillery/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/artillery/executor-smoke/artillery-smoke-test-negative.yaml
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: expected-fail-container-executor-curl-incorrect-uri
+  labels:
+    core-tests: expected-fail
+spec:
+  type: container-executor-curl/test
+  executionRequest:
+    args:
+    - $(URL)
+    variables:
+      URL:
+        name: expected-fail-URL
+        type: basic
+        value: https://testkube.non.existing.url.example
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: expected-fail-curl-executor-incorrect-uri
+  labels:
+    core-tests: expected-fail
+spec:
+  type: curl/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/curl/executor-tests/curl-smoke-test-negative.json
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: expected-fail-ginkgo-executor
+  labels:
+    core-tests: expected-fail
+spec:
+  type: ginkgo/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/ginkgo/executor-tests/smoke-negative
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: expected-fail-gradle-executor-wrong-jdk-version
+  labels:
+    core-tests: expected-fail
+spec:
+  type: gradle:jdk8/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube-executor-gradle.git
+      branch: main
+      path: examples/hello-gradle-jdk18
+  executionRequest:
+    variables:
+      TESTKUBE_GRADLE:
+        name: expected-fail-TESTKUBE_GRADLE
+        value: "true"
+        type: basic
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: expected-fail-gradle-executor-envs-not-set
+  labels:
+    core-tests: expected-fail
+spec:
+  type: gradle:jdk18/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube-executor-gradle.git
+      branch: main
+      path: examples/hello-gradle-jdk18
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: expected-fail-jmeter-executor-jsr223
+  labels:
+    core-tests: expected-fail
+spec:
+  type: jmeter/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/jmeter/executor-tests/jmeter-executor-smoke-env-and-property.jmx
+  executionRequest:
+    variables:
+      URL_ENV:
+        name: expected-fail-URL_ENV
+        value: "testkube.io"
+        type: basic
+    args:
+      - "-JURL_PROPERTY=testkube.kubeshop.io"
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: expected-fail-kubepug-executor
+  labels:
+    core-tests: expected-fail
+spec:
+  type: kubepug/yaml
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/kubepug/executor-smoke/kubepug-smoke-test-negative.yaml
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: expected-fail-container-executor-k6-wrong-dir
+  labels:
+    core-tests: expected-fail
+spec:
+  type: container-executor-k6-0.43.1/test
+  content:
+    type: git-file
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: test/k6/executor-tests/k6-smoke-test-without-envs.js
+  executionRequest:
+    args: ["run", "k6-smoke-test-without-envs.js"]
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: expected-fail-maven-executor-jdk18-incorrect-image
+  labels:
+    core-tests: expected-fail
+spec:
+  type: gradle:jdk17/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube-executor-maven.git
+      branch: main
+      path: examples/hello-maven-jdk18

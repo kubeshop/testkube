@@ -1,0 +1,10 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: kubent
+  namespace: testkube
+spec:
+  types:
+    - kubent
+  executor_type: container
+  image: ghcr.io/doitintl/kube-no-trouble:latest

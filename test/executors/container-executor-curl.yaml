@@ -2,7 +2,6 @@ apiVersion: executor.testkube.io/v1
 kind: Executor
 metadata:
   name: container-executor-curl
-  namespace: testkube
 spec:
   image: curlimages/curl:latest
   command: ["curl"]

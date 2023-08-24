@@ -14,6 +14,7 @@ import (
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsourcesv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
+	testsuiteexecutionsv1 "github.com/kubeshop/testkube-operator/client/testsuiteexecutions/v1"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -48,10 +49,11 @@ func TestExecute(t *testing.T) {
 	mockSecretClient := secret.NewMockInterface(mockCtrl)
 	configMapConfig := config.NewMockRepository(mockCtrl)
 	mockConfigMapClient := configmap.NewMockInterface(mockCtrl)
+	mockTestSuiteExecutionsClient := testsuiteexecutionsv1.NewMockInterface(mockCtrl)
 
 	mockExecutor := client.NewMockExecutor(mockCtrl)
 
-	mockEventEmitter := event.NewEmitter(bus.NewEventBusMock(), "")
+	mockEventEmitter := event.NewEmitter(bus.NewEventBusMock(), "", nil)
 
 	mockTest := testsv3.Test{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "some-test"},
@@ -112,6 +114,7 @@ func TestExecute(t *testing.T) {
 		log.DefaultLogger,
 		configMapConfig,
 		mockConfigMapClient,
+		mockTestSuiteExecutionsClient,
 	)
 	s := &Service{
 		triggerStatus:    make(map[statusKey]*triggerStatus),
@@ -134,6 +137,14 @@ func TestExecute(t *testing.T) {
 					Status: &status,
 					Reason: "NewReplicaSetAvailable",
 					Ttl:    60,
+				}},
+			},
+			ProbeSpec: &testtriggersv1.TestTriggerProbeSpec{
+				Probes: []testtriggersv1.TestTriggerProbe{{
+					Host:    "testkube-api-server",
+					Path:    "/health",
+					Port:    8088,
+					Headers: map[string]string{"X-Token": "12345"},
 				}},
 			},
 			Action:       "run",

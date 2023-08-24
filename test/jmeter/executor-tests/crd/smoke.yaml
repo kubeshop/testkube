@@ -2,7 +2,6 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: jmeter-executor-smoke
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -14,12 +13,13 @@ spec:
       uri: https://github.com/kubeshop/testkube.git
       branch: main
       path: test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+  executionRequest:
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: jmeter-executor-smoke-directory
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -34,12 +34,12 @@ spec:
   executionRequest:
     args:
       - "jmeter-executor-smoke.jmx"
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: jmeter-executor-smoke-env-and-property-values
-  namespace: testkube
   labels:
     core-tests: executors
 spec:
@@ -59,12 +59,12 @@ spec:
         type: basic
     args:
       - "-JURL_PROPERTY=testkube.io"
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: jmeter-executor-smoke-negative
-  namespace: testkube
   labels:
     core-tests: executors-negative
 spec:
@@ -78,3 +78,4 @@ spec:
       path: test/jmeter/executor-tests/jmeter-executor-smoke-negative.jmx
   executionRequest:
     negativeTest: true
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"

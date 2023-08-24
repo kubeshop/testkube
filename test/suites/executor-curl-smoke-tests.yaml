@@ -1,0 +1,15 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: executor-curl-smoke-tests
+  labels:
+    app: testkube
+spec:
+  description: "curl executor smoke tests"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: curl-executor-smoke
+  - stopOnFailure: false
+    execute:
+    - test: curl-executor-smoke-negative

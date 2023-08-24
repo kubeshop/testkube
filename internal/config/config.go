@@ -62,6 +62,8 @@ type Config struct {
 	TestkubeDashboardURI              string        `envconfig:"TESTKUBE_DASHBOARD_URI" default:""`
 	DisableReconciler                 bool          `envconfig:"DISABLE_RECONCILER" default:"false"`
 	TestkubeClusterName               string        `envconfig:"TESTKUBE_CLUSTER_NAME" default:""`
+	CompressArtifacts                 bool          `envconfig:"COMPRESSARTIFACTS" default:"false"`
+	TestkubeHelmchartVersion          string        `envconfig:"TESTKUBE_HELMCHART_VERSION" default:""`
 }
 
 func Get() (*Config, error) {

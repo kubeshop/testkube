@@ -83,6 +83,10 @@ var RunnerEnvVars = []corev1.EnvVar{
 		Value: os.Getenv("CDEVENTS_TARGET"),
 	},
 	{
+		Name:  "RUNNER_COMPRESSARTIFACTS",
+		Value: getOr("COMPRESSARTIFACTS", "false"),
+	},
+	{
 		Name:  "RUNNER_CLOUD_MODE",
 		Value: getRunnerCloudMode(),
 	},
@@ -101,6 +105,10 @@ var RunnerEnvVars = []corev1.EnvVar{
 	{
 		Name:  "RUNNER_DASHBOARD_URI",
 		Value: os.Getenv("TESTKUBE_DASHBOARD_URI"),
+	},
+	{
+		Name:  "CI",
+		Value: "1",
 	},
 }
 

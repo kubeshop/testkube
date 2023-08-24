@@ -4,17 +4,25 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/containerexecutor"
 	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/ui"
+)
+
+const (
+	defaultShell      = "/bin/sh"
+	preRunScriptName  = "prerun.sh"
+	postRunScriptName = "postrun.sh"
 )
 
 // NewRunner creates init runner
@@ -64,6 +72,51 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	if err != nil {
 		output.PrintLogf("%s Could not fetch test content: %s", ui.IconCross, err.Error())
 		return result, errors.Errorf("could not fetch test content: %v", err)
+	}
+
+	if execution.PreRunScript != "" || execution.PostRunScript != "" {
+		command := "#!" + defaultShell
+		if execution.ContainerShell != "" {
+			command = "#!" + execution.ContainerShell
+		}
+		command += "\n"
+
+		if execution.PreRunScript != "" {
+			command += filepath.Join(r.dir, preRunScriptName) + "\n"
+		}
+
+		if len(execution.Command) != 0 {
+			command += strings.Join(execution.Command, " ")
+			command += " \"$@\"\n"
+		}
+
+		if execution.PostRunScript != "" {
+			command += filepath.Join(r.dir, postRunScriptName) + "\n"
+		}
+
+		var scripts = []struct {
+			file    string
+			data    string
+			comment string
+		}{
+			{preRunScriptName, execution.PreRunScript, "prerun"},
+			{containerexecutor.EntrypointScriptName, command, "entrypoint"},
+			{postRunScriptName, execution.PostRunScript, "postrun"},
+		}
+
+		for _, script := range scripts {
+			if script.data == "" {
+				continue
+			}
+
+			file := filepath.Join(r.dir, script.file)
+			output.PrintLogf("%s Creating %s script...", ui.IconWorld, script.comment)
+			if err = os.WriteFile(file, []byte(script.data), 0755); err != nil {
+				output.PrintLogf("%s Could not create %s script %s: %s", ui.IconCross, script.comment, file, err.Error())
+				return result, errors.Errorf("could not create %s script %s: %v", script.comment, file, err)
+			}
+			output.PrintLogf("%s %s script created", ui.IconCheckMark, script.comment)
+		}
 	}
 
 	// TODO: write a proper cloud implementation

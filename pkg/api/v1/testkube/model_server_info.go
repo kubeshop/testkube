@@ -23,4 +23,6 @@ type ServerInfo struct {
 	OrgId string `json:"orgId,omitempty"`
 	// cloud env id
 	EnvId string `json:"envId,omitempty"`
+	// helm chart version
+	HelmchartVersion string `json:"helmchartVersion,omitempty"`
 }

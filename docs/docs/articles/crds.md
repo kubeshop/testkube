@@ -10,13 +10,15 @@ kubectl get crds -n testkube
 
 ```sh title="Expected output:"
 NAME                                  CREATED AT
-executors.executor.testkube.io   2023-06-15T14:49:11Z
-scripts.tests.testkube.io        2023-06-15T14:49:11Z
-tests.tests.testkube.io          2023-06-15T14:49:11Z
-testsources.tests.testkube.io    2023-06-15T14:49:11Z
-testsuites.tests.testkube.io     2023-06-15T14:49:11Z
-testtriggers.tests.testkube.io   2023-06-15T14:49:11Z
-webhooks.executor.testkube.io    2023-06-15T14:49:11Z
+executors.executor.testkube.io        2023-06-15T14:49:11Z
+scripts.tests.testkube.io             2023-06-15T14:49:11Z
+testexecutions.tests.testkube.io      2023-06-15T14:49:11Z
+tests.tests.testkube.io               2023-06-15T14:49:11Z
+testsources.tests.testkube.io         2023-06-15T14:49:11Z
+testsuiteexecutions.tests.testkube.io 2023-06-15T14:49:11Z
+testsuites.tests.testkube.io          2023-06-15T14:49:11Z
+testtriggers.tests.testkube.io        2023-06-15T14:49:11Z
+webhooks.executor.testkube.io         2023-06-15T14:49:11Z
 ```
 
 To check details on one of the CRDs, use `describe`:

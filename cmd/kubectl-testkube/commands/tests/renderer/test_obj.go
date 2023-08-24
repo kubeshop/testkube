@@ -97,6 +97,10 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 			ui.Warn("  Args mode:              ", test.ExecutionRequest.ArgsMode)
 		}
 
+		if test.ExecutionRequest.ArgsMode != "" {
+			ui.Warn("  Args mode:              ", test.ExecutionRequest.ArgsMode)
+		}
+
 		if len(test.ExecutionRequest.Envs) > 0 {
 			ui.NL()
 			ui.Warn("(deprecated) Envs:        ", testkube.MapToString(test.ExecutionRequest.Envs))

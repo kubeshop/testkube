@@ -2,6 +2,10 @@ package triggers
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"net/url"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -10,9 +14,18 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
+	thttp "github.com/kubeshop/testkube/pkg/http"
 )
 
-var ErrConditionTimeout = errors.New("timed-out waiting for trigger conditions")
+const (
+	defaultScheme = "http"
+	defaultPath   = "/"
+)
+
+var (
+	ErrConditionTimeout = errors.New("timed-out waiting for trigger conditions")
+	ErrProbeTimeout     = errors.New("timed-out waiting for trigger probes")
+)
 
 func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 	for _, status := range s.triggerStatus {
@@ -29,6 +42,18 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		hasConditions := t.Spec.ConditionSpec != nil && len(t.Spec.ConditionSpec.Conditions) != 0
 		if hasConditions && e.conditionsGetter != nil {
 			matched, err := s.matchConditions(ctx, e, t, s.logger)
+			if err != nil {
+				return err
+			}
+
+			if !matched {
+				continue
+			}
+		}
+
+		hasProbes := t.Spec.ProbeSpec != nil && len(t.Spec.ProbeSpec.Probes) != 0
+		if hasProbes {
+			matched, err := s.matchProbes(ctx, e, t, s.logger)
 			if err != nil {
 				return err
 			}
@@ -145,7 +170,142 @@ outer:
 				break outer
 			}
 
-			time.Sleep(s.defaultConditionsCheckBackoff)
+			delay := s.defaultConditionsCheckBackoff
+			if t.Spec.ConditionSpec.Delay > 0 {
+				delay = time.Duration(t.Spec.ConditionSpec.Delay) * time.Second
+			}
+			time.Sleep(delay)
+		}
+	}
+
+	return true, nil
+}
+
+func checkProbes(ctx context.Context, httpClient thttp.HttpClient, probes []testtriggersv1.TestTriggerProbe, logger *zap.SugaredLogger) bool {
+	var wg sync.WaitGroup
+	ch := make(chan bool, len(probes))
+	defer close(ch)
+
+	wg.Add(len(probes))
+	for i := range probes {
+		go func(probe testtriggersv1.TestTriggerProbe) {
+			defer wg.Done()
+
+			host := probe.Host
+			if probe.Port != 0 {
+				host = fmt.Sprintf("%s:%d", host, probe.Port)
+			}
+
+			if host == "" {
+				ch <- false
+				return
+			}
+
+			uri := url.URL{
+				Scheme: probe.Scheme,
+				Host:   host,
+				Path:   probe.Path,
+			}
+			request, err := http.NewRequestWithContext(ctx, http.MethodGet, uri.String(), nil)
+			if err != nil {
+				logger.Debugw("probe request creating error", "error", err)
+				ch <- false
+				return
+			}
+
+			for key, value := range probe.Headers {
+				request.Header.Set(key, value)
+			}
+
+			resp, err := httpClient.Do(request)
+			if err != nil {
+				logger.Debugw("probe send error", "error", err)
+				ch <- false
+				return
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode >= 400 {
+				logger.Debugw("probe response with bad status code", "status", resp.StatusCode)
+				ch <- false
+				return
+			}
+
+			ch <- true
+		}(probes[i])
+	}
+
+	wg.Wait()
+
+	for i := 0; i < len(probes); i++ {
+		result := <-ch
+		if !result {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (s *Service) matchProbes(ctx context.Context, e *watcherEvent, t *testtriggersv1.TestTrigger, logger *zap.SugaredLogger) (bool, error) {
+	timeout := s.defaultProbesCheckTimeout
+	if t.Spec.ProbeSpec.Timeout > 0 {
+		timeout = time.Duration(t.Spec.ProbeSpec.Timeout) * time.Second
+	}
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	host := ""
+	if e.addressGetter != nil {
+		var err error
+		host, err = e.addressGetter(timeoutCtx, s.defaultProbesCheckBackoff)
+		if err != nil {
+			logger.Errorf(
+				"trigger service: matcher component: error getting addess for %s %s/%s because of %v",
+				e.resource, e.namespace, e.name, err,
+			)
+			return false, err
+		}
+	}
+
+	for i := range t.Spec.ProbeSpec.Probes {
+		if t.Spec.ProbeSpec.Probes[i].Scheme == "" {
+			t.Spec.ProbeSpec.Probes[i].Scheme = defaultScheme
+		}
+		if t.Spec.ProbeSpec.Probes[i].Host == "" {
+			t.Spec.ProbeSpec.Probes[i].Host = host
+		}
+		if t.Spec.ProbeSpec.Probes[i].Path == "" {
+			t.Spec.ProbeSpec.Probes[i].Path = defaultPath
+		}
+	}
+
+outer:
+	for {
+		select {
+		case <-timeoutCtx.Done():
+			logger.Errorf(
+				"trigger service: matcher component: error waiting for probes to match for trigger %s/%s by event %s on resource %s %s/%s"+
+					" because context got canceled by timeout or exit signal",
+				t.Namespace, t.Name, e.eventType, e.resource, e.namespace, e.name,
+			)
+			return false, errors.WithStack(ErrProbeTimeout)
+		default:
+			logger.Debugf(
+				"trigger service: matcher component: running probes check iteration for %s %s/%s",
+				e.resource, e.namespace, e.name,
+			)
+
+			matched := checkProbes(timeoutCtx, s.httpClient, t.Spec.ProbeSpec.Probes, logger)
+			if matched {
+				break outer
+			}
+
+			delay := s.defaultProbesCheckBackoff
+			if t.Spec.ProbeSpec.Delay > 0 {
+				delay = time.Duration(t.Spec.ProbeSpec.Delay) * time.Second
+			}
+			time.Sleep(delay)
 		}
 	}
 

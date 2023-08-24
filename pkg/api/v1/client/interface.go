@@ -84,6 +84,7 @@ type ExecutorAPI interface {
 // WebhookAPI describes webhook api methods
 type WebhookAPI interface {
 	CreateWebhook(options CreateWebhookOptions) (webhook testkube.Webhook, err error)
+	UpdateWebhook(options UpdateWebhookOptions) (webhook testkube.Webhook, err error)
 	GetWebhook(name string) (webhook testkube.Webhook, err error)
 	ListWebhooks(selector string) (webhooks testkube.Webhooks, err error)
 	DeleteWebhook(name string) (err error)
@@ -141,6 +142,9 @@ type UpdateExecutorOptions testkube.ExecutorUpdateRequest
 
 // CreateWebhookOptions - is mapping for now to OpenAPI schema for creating/changing webhook
 type CreateWebhookOptions testkube.WebhookCreateRequest
+
+// UpdateWebhookOptions - is mapping for now to OpenAPI schema for changing webhook request
+type UpdateWebhookOptions testkube.WebhookUpdateRequest
 
 // UpsertTestSourceOptions - is mapping for now to OpenAPI schema for creating test source
 // if needed can be extended to custom struct

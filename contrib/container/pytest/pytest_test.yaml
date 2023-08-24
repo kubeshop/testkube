@@ -1,0 +1,33 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: container-executor-pytest-passed-sample
+  namespace: testkube
+spec:
+  type: container-executor-pytest/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: contrib/container/pytest/passed_sample.py
+  executionRequest:
+    command: ["pytest", "/data/repo/contrib/container/pytest/passed_sample.py"]
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: container-executor-pytest-failed-sample
+  namespace: testkube
+spec:
+  type: container-executor-pytest/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: contrib/container/pytest/failed_sample.py
+  executionRequest:
+    command: ["pytest", "/data/repo/contrib/container/pytest/failed_sample.py"]
