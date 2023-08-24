@@ -5356,6 +5356,36 @@ components:
           description: deleted test sources
           example: ["name7", "name8", "name9"]
 
+    Template:
+      description: Golang based template
+      type: object
+      required:
+        - name
+        - type
+        - body
+      properties:
+        name:
+          type: string
+          description: template name for reference
+          example: "webhook-template"
+        type:
+          $ref: "#/components/schemas/TemplateType"
+        body:
+          type: string
+          description: template body to use
+          example: "{\"id\": \"{{ .Id }}\"}"
+
+    TemplateType:
+      description: template type by purpose
+      type: string
+      enum:
+        - job
+        - container
+        - cronjob
+        - scraper
+        - pvc
+        - webhook
+
     #
     # Errors
     #
