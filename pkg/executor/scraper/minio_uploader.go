@@ -43,6 +43,9 @@ func NewMinIOUploader(endpoint, accessKeyID, secretAccessKey, region, token, buc
 
 func (l *MinIOUploader) Upload(ctx context.Context, object *Object, execution testkube.Execution) error {
 	folder := execution.Id
+	if execution.ArtifactRequest != nil && execution.ArtifactRequest.OmitFolderPerExecution {
+		folder = ""
+	}
 
 	log.DefaultLogger.Infow("MinIO loader is uploading file", "file", object.Name, "folder", folder, "size", object.Size)
 	opts := coreminio.PutObjectOptions{}
@@ -55,7 +58,7 @@ func (l *MinIOUploader) Upload(ctx context.Context, object *Object, execution te
 		opts.ContentType = "application/gzip"
 		opts.UserMetadata = map[string]string{
 			"X-Amz-Meta-Snowball-Auto-Extract": "true",
-			"X-Amz-Meta-Minio-Snowball-Prefix": execution.Id,
+			"X-Amz-Meta-Minio-Snowball-Prefix": folder,
 		}
 	}
 

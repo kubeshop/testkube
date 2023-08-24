@@ -185,6 +185,12 @@ spec:
       - {{ . }}
       {{- end }}
       {{- end }}
+      {{- if .ExecutionRequest.ArtifactRequest.StorageBucket }}
+      storageBucket: {{ .ExecutionRequest.ArtifactRequest.StorageBucket }}
+      {{- end }}
+      {{- if .ExecutionRequest.ArtifactRequest.OmitFolderPerExecution }}
+      omitFolderPerExecution: {{ .ExecutionRequest.ArtifactRequest.OmitFolderPerExecution }}
+      {{- end }}
     {{- end }}
     {{- if .ExecutionRequest.JobTemplate }}
     jobTemplate: {{ .ExecutionRequest.JobTemplate }}

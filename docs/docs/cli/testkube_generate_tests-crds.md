@@ -15,6 +15,8 @@ testkube generate tests-crds <manifestDirectory> [flags]
 ```
       --args-mode string                           usage mode for arguments. one of append|override (default "append")
       --artifact-dir stringArray                   artifact dirs for scraping
+      --artifact-omit-folder-per-execution         don't store artifacts in execution folder
+      --artifact-storage-bucket string             artifact storage class name for container executor
       --artifact-storage-class-name string         artifact storage class name for container executor
       --artifact-volume-mount-path string          artifact volume mount path for container executor
       --command stringArray                        command passed to image in executor

@@ -228,11 +228,20 @@ func newArtifactRequestFromFlags(cmd *cobra.Command) (request *testkube.Artifact
 		return nil, err
 	}
 
-	if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(dirs) != 0 {
+	artifactStorageBucket := cmd.Flag("artifact-storage-bucket").Value.String()
+	artifactOmitFolderPerExecution, err := cmd.Flags().GetBool("artifact-omit-folder-per-execution")
+	if err != nil {
+		return nil, err
+	}
+
+	if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(dirs) != 0 ||
+		artifactStorageBucket != "" || artifactOmitFolderPerExecution {
 		request = &testkube.ArtifactRequest{
-			StorageClassName: artifactStorageClassName,
-			VolumeMountPath:  artifactVolumeMountPath,
-			Dirs:             dirs,
+			StorageClassName:       artifactStorageClassName,
+			VolumeMountPath:        artifactVolumeMountPath,
+			Dirs:                   dirs,
+			StorageBucket:          artifactStorageBucket,
+			OmitFolderPerExecution: artifactOmitFolderPerExecution,
 		}
 	}
 
