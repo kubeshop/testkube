@@ -23,6 +23,10 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 	ui.Warn("Name:     ", test.Name)
 	ui.Warn("Namespace:", test.Namespace)
 	ui.Warn("Created:  ", test.Created.String())
+	if test.Description != "" {
+		ui.NL()
+		ui.Warn("Description: ", test.Description)
+	}
 	if len(test.Labels) > 0 {
 		ui.NL()
 		ui.Warn("Labels:   ", testkube.MapToString(test.Labels))

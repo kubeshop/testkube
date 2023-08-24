@@ -10,6 +10,9 @@ metadata:
   {{- end }}
   {{- end }}
 spec:
+  {{- if .Description }}
+  description: {{ .Description }}
+  {{- end }}
   {{- if .Type_ }}
   type: {{ .Type_ }}
   {{- end }}

@@ -59,6 +59,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 		variableSecrets                []string
 		artifactStorageBucket          string
 		artifactOmitFolderPerExecution bool
+		description                    string
 	)
 
 	cmd := &cobra.Command{
@@ -142,6 +143,7 @@ func NewUpdateTestsCmd() *cobra.Command {
 	cmd.Flags().StringArrayVar(&variableSecrets, "variable-secret", []string{}, "secret name used to map all keys to secret variables")
 	cmd.Flags().StringVar(&artifactStorageBucket, "artifact-storage-bucket", "", "artifact storage class name for container executor")
 	cmd.Flags().BoolVarP(&artifactOmitFolderPerExecution, "artifact-omit-folder-per-execution", "", false, "don't store artifacts in execution folder")
+	cmd.Flags().StringVarP(&description, "description", "", "", "test description")
 	cmd.Flags().MarkDeprecated("env", "env is deprecated use variable instead")
 	cmd.Flags().MarkDeprecated("secret-env", "secret-env is deprecated use secret-variable instead")
 

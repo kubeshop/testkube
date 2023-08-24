@@ -87,6 +87,7 @@ kubectl get tests -n testkube test-example -oyaml
 
 name: test
 type_: postman/collection
+description: some test description
 content: |-
     {
         "info": {
@@ -302,6 +303,7 @@ metadata:
   resourceVersion: "225162"
   uid: f0d856aa-04fc-4238-bb4c-156ff82b4741
 spec:
+  description: some test description
   repository:
     branch: main
     path: examples

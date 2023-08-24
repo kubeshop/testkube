@@ -51,6 +51,7 @@ type CreateCommonFlags struct {
 	UploadTimeout                  string
 	ArtifactStorageBucket          string
 	ArtifactOmitFolderPerExecution bool
+	Description                    string
 }
 
 // NewCreateTestsCmd is a command tp create new Test Custom Resource
@@ -221,6 +222,7 @@ func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
 	cmd.Flags().StringVar(&flags.UploadTimeout, "upload-timeout", "", "timeout to use when uploading files, example: 30s")
 	cmd.Flags().StringVar(&flags.ArtifactStorageBucket, "artifact-storage-bucket", "", "artifact storage class name for container executor")
 	cmd.Flags().BoolVarP(&flags.ArtifactOmitFolderPerExecution, "artifact-omit-folder-per-execution", "", false, "don't store artifacts in execution folder")
+	cmd.Flags().StringVarP(&flags.Description, "description", "", "", "test description")
 }
 
 func validateExecutorTypeAndContent(executorType, contentType string, executors testkube.ExecutorsDetails) error {

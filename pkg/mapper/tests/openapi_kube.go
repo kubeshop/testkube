@@ -19,6 +19,7 @@ func MapUpsertToSpec(request testkube.TestUpsertRequest) *testsv3.Test {
 			Labels:    request.Labels,
 		},
 		Spec: testsv3.TestSpec{
+			Description:      request.Description,
 			Type_:            request.Type_,
 			Content:          MapContentToSpecContent(request.Content),
 			Source:           request.Source,
@@ -215,6 +216,10 @@ func MapUpdateToSpec(request testkube.TestUpdateRequest, test *testsv3.Test) *te
 		{
 			request.Namespace,
 			&test.Namespace,
+		},
+		{
+			request.Description,
+			&test.Spec.Description,
 		},
 		{
 			request.Type_,
