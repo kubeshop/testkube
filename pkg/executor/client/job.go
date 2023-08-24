@@ -560,9 +560,6 @@ func (c *JobExecutor) TailJobLogs(ctx context.Context, id string, logs chan []by
 				if err = wait.PollImmediate(pollInterval, c.podStartTimeout, executor.IsPodLoggable(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
 					l.Errorw("poll immediate error when tailing logs", "error", err)
 					return err
-				} else if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
-					l.Errorw("poll immediate error when tailing logs", "error", err)
-					return c.GetLastLogLineError(ctx, pod)
 				}
 
 				l.Debug("tailing pod logs")
