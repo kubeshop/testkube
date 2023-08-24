@@ -1,5 +1,6 @@
 REPOSITORY ?= kubeshop
 NAME ?= testkube-jmeterd-executor
+SLAVES_NAME ?= testkube-jmeterd-slaves
 LOCAL_TAG ?= 999.0.0
 BIN_DIR ?= $(HOME)/bin
 
@@ -22,6 +23,9 @@ docker-build:
 .PHONY: docker-build-local
 docker-build-local: build-local-linux
 	docker build -t $(REPOSITORY)/$(NAME):$(LOCAL_TAG) -f build/agent/local.Dockerfile .
+
+docker-build-slaves:
+	docker build -t $(REPOSITORY)/$(SLAVES_NAME):$(LOCAL_TAG) -f build/slaves/Dockerfile .
 
 .PHONY: kind-load-local
 kind-load-local: build-local-linux
