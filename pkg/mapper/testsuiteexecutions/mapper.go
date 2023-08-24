@@ -141,9 +141,11 @@ func MapExecutionCRD(request *testkube.Execution) *testsuiteexecutionv1.Executio
 	var artifactRequest *testsuiteexecutionv1.ArtifactRequest
 	if request.ArtifactRequest != nil {
 		artifactRequest = &testsuiteexecutionv1.ArtifactRequest{
-			StorageClassName: request.ArtifactRequest.StorageClassName,
-			VolumeMountPath:  request.ArtifactRequest.VolumeMountPath,
-			Dirs:             request.ArtifactRequest.Dirs,
+			StorageClassName:       request.ArtifactRequest.StorageClassName,
+			VolumeMountPath:        request.ArtifactRequest.VolumeMountPath,
+			Dirs:                   request.ArtifactRequest.Dirs,
+			StorageBucket:          request.ArtifactRequest.StorageBucket,
+			OmitFolderPerExecution: request.ArtifactRequest.OmitFolderPerExecution,
 		}
 	}
 

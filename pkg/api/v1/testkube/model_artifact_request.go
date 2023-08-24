@@ -17,4 +17,8 @@ type ArtifactRequest struct {
 	VolumeMountPath string `json:"volumeMountPath,omitempty"`
 	// artifact directories for scraping
 	Dirs []string `json:"dirs,omitempty"`
+	// artifact bucket storage
+	StorageBucket string `json:"storageBucket,omitempty"`
+	// don't use a separate folder for execution artifacts
+	OmitFolderPerExecution bool `json:"omitFolderPerExecution,omitempty"`
 }

@@ -4314,6 +4314,13 @@ components:
           items:
             type: string
           description: artifact directories for scraping
+        storageBucket:
+          type: string
+          description: artifact bucket storage
+          example: test1-artifacts
+        omitFolderPerExecution:
+          type: boolean
+          description: don't use a separate folder for execution artifacts
 
     ArtifactUpdateRequest:
       description: artifact request update body

@@ -131,9 +131,11 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 	var artifactRequest *testsv3.ArtifactRequest
 	if executionRequest.ArtifactRequest != nil {
 		artifactRequest = &testsv3.ArtifactRequest{
-			StorageClassName: executionRequest.ArtifactRequest.StorageClassName,
-			VolumeMountPath:  executionRequest.ArtifactRequest.VolumeMountPath,
-			Dirs:             executionRequest.ArtifactRequest.Dirs,
+			StorageClassName:       executionRequest.ArtifactRequest.StorageClassName,
+			VolumeMountPath:        executionRequest.ArtifactRequest.VolumeMountPath,
+			Dirs:                   executionRequest.ArtifactRequest.Dirs,
+			StorageBucket:          executionRequest.ArtifactRequest.StorageBucket,
+			OmitFolderPerExecution: executionRequest.ArtifactRequest.OmitFolderPerExecution,
 		}
 	}
 
@@ -595,6 +597,16 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 
 		if (*executionRequest.ArtifactRequest).Dirs != nil {
 			request.ArtifactRequest.Dirs = *(*executionRequest.ArtifactRequest).Dirs
+			emptyArtifact = false
+		}
+
+		if (*executionRequest.ArtifactRequest).StorageBucket != nil {
+			request.ArtifactRequest.StorageBucket = *(*executionRequest.ArtifactRequest).StorageBucket
+			emptyArtifact = false
+		}
+
+		if (*executionRequest.ArtifactRequest).OmitFolderPerExecution != nil {
+			request.ArtifactRequest.OmitFolderPerExecution = *(*executionRequest.ArtifactRequest).OmitFolderPerExecution
 			emptyArtifact = false
 		}
 

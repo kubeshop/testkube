@@ -124,10 +124,12 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		}
 
 		if test.ExecutionRequest.ArtifactRequest != nil {
-			ui.Warn("  Artifact request:       ")
-			ui.Warn("    Storage class name:   ", test.ExecutionRequest.ArtifactRequest.StorageClassName)
-			ui.Warn("    Volume mount path:    ", test.ExecutionRequest.ArtifactRequest.VolumeMountPath)
-			ui.Warn("    Dirs:                 ", strings.Join(test.ExecutionRequest.ArtifactRequest.Dirs, ","))
+			ui.Warn("  Artifact request:            ")
+			ui.Warn("    Storage class name:        ", test.ExecutionRequest.ArtifactRequest.StorageClassName)
+			ui.Warn("    Volume mount path:         ", test.ExecutionRequest.ArtifactRequest.VolumeMountPath)
+			ui.Warn("    Dirs:                      ", strings.Join(test.ExecutionRequest.ArtifactRequest.Dirs, ","))
+			ui.Warn("    Storage bucket:            ", test.ExecutionRequest.ArtifactRequest.StorageBucket)
+			ui.Warn("    Omit folder per execution: ", fmt.Sprint(test.ExecutionRequest.ArtifactRequest.OmitFolderPerExecution))
 		}
 
 		if test.ExecutionRequest.JobTemplate != "" {

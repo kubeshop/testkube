@@ -152,6 +152,7 @@ type JobOptions struct {
 	Labels                map[string]string
 	Registry              string
 	ClusterID             string
+	ArtifactRequest       *testkube.ArtifactRequest
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -743,6 +744,12 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	}
 
 	envs := append(executor.RunnerEnvVars, corev1.EnvVar{Name: "RUNNER_CLUSTERID", Value: options.ClusterID})
+	if options.ArtifactRequest != nil && options.ArtifactRequest.StorageBucket != "" {
+		envs = append(envs, corev1.EnvVar{Name: "RUNNER_BUCKET", Value: options.ArtifactRequest.StorageBucket})
+	} else {
+		envs = append(envs, corev1.EnvVar{Name: "RUNNER_BUCKET", Value: os.Getenv("STORAGE_BUCKET")})
+	}
+
 	envs = append(envs, secretEnvVars...)
 	if options.HTTPProxy != "" {
 		envs = append(envs, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
@@ -789,6 +796,7 @@ func NewJobOptions(initImage, jobTemplate string, serviceAccountName, registry, 
 	jobOptions.ServiceAccountName = serviceAccountName
 	jobOptions.Registry = registry
 	jobOptions.ClusterID = clusterID
+	jobOptions.ArtifactRequest = execution.ArtifactRequest
 
 	return
 }
