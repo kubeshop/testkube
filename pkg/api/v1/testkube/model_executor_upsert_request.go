@@ -33,6 +33,8 @@ type ExecutorUpsertRequest struct {
 	ContentTypes []string `json:"contentTypes,omitempty"`
 	// Job template to launch executor
 	JobTemplate string `json:"jobTemplate,omitempty"`
+	// name of the template resource
+	JobTemplateReference string `json:"jobTemplateReference,omitempty"`
 	// executor labels
 	Labels map[string]string `json:"labels,omitempty"`
 	// Available executor features
