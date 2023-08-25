@@ -679,7 +679,7 @@ func (s TestkubeAPI) ListTestSuiteExecutionsHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not get executions totals: %w", errPrefix, err))
 		}
 		l.Debugw("got executions totals", "totals", executionsTotals, "time", time.Since(now))
-		allExecutionsTotals, err := s.TestExecutionResults.GetExecutionsTotals(ctx)
+		allExecutionsTotals, err := s.TestExecutionResults.GetExecutionsTotals(ctx, getTestSuiteNameFilter(c))
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not get all executions totals: %w", errPrefix, err))
 		}
@@ -853,6 +853,16 @@ func (s TestkubeAPI) ListTestSuiteTestsHandler() fiber.Handler {
 
 		return c.JSON(testsmapper.MapTestArrayKubeToAPI(crTests))
 	}
+}
+
+func getTestSuiteNameFilter(c *fiber.Ctx) testresult.Filter {
+	filter := testresult.NewExecutionsFilter()
+	name := c.Query("id", "")
+	if name != "" {
+		filter = filter.WithName(name)
+	}
+
+	return filter
 }
 
 func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
