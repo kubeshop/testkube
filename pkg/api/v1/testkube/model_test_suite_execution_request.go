@@ -34,8 +34,22 @@ type TestSuiteExecutionRequest struct {
 	Timeout        int32               `json:"timeout,omitempty"`
 	ContentRequest *TestContentRequest `json:"contentRequest,omitempty"`
 	RunningContext *RunningContext     `json:"runningContext,omitempty"`
+	// job template extensions
+	JobTemplate string `json:"jobTemplate,omitempty"`
+	// name of the template resource
+	JobTemplateReference string `json:"jobTemplateReference,omitempty"`
 	// cron job template extensions
 	CronJobTemplate string `json:"cronJobTemplate,omitempty"`
+	// name of the template resource
+	CronJobTemplateReference string `json:"cronJobTemplateReference,omitempty"`
+	// scraper template extensions
+	ScraperTemplate string `json:"scraperTemplate,omitempty"`
+	// name of the template resource
+	ScraperTemplateReference string `json:"scraperTemplateReference,omitempty"`
+	// pvc template extensions
+	PvcTemplate string `json:"pvcTemplate,omitempty"`
+	// name of the template resource
+	PvcTemplateReference string `json:"pvcTemplateReference,omitempty"`
 	// number of tests run in parallel
 	ConcurrencyLevel int32 `json:"concurrencyLevel,omitempty"`
 	// test suite execution name started the test suite execution
