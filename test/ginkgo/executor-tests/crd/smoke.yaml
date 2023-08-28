@@ -15,6 +15,7 @@ spec:
       path: test/ginkgo/executor-tests/smoke
   executionRequest:
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 60
     
 ---
 apiVersion: tests.testkube.io/v3
@@ -35,3 +36,4 @@ spec:
   executionRequest:
     negativeTest: true
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 60
