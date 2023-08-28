@@ -2,7 +2,6 @@ package slaves
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -86,13 +85,12 @@ func (client *Client) CreateSlaves() (map[string]string, error) {
 
 // created slaves pod and send its ipaddress on the podIPAddressChan channel when pod is in the ready state
 func (client *Client) createSlavePod(currentSlavesCount int, podIPAddressChan chan<- map[string]string, errorChan chan<- error) {
-	runnerExecution, err := json.Marshal(client.execution)
+
+	slavePod, err := getSlavePodConfiguration(client.execution.Name, client.execution, client.envVariables, client.envParams)
 	if err != nil {
 		errorChan <- err
 		return
 	}
-
-	slavePod := getSlavePodConfiguration(client.execution.Name, string(runnerExecution), client.envVariables, client.envParams)
 	slavePod.Name = fmt.Sprintf("%s-%v-%v", slavePod.Name, currentSlavesCount, client.execution.Id)
 
 	p, err := client.clientSet.CoreV1().Pods(client.namespace).Create(context.Background(), slavePod, metav1.CreateOptions{})

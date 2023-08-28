@@ -2,6 +2,7 @@ package slaves
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -21,8 +22,36 @@ const (
 	localPort          = 60001
 )
 
-func getSlaveRunnerEnv(envParams envs.Params) []v1.EnvVar {
-	return []v1.EnvVar{
+func getSlaveRunnerEnv(envParams envs.Params, runnerExecution testkube.Execution) []v1.EnvVar {
+
+	gitEnvs := []v1.EnvVar{}
+	if runnerExecution.Content.Type_ == "git" && runnerExecution.Content.Repository.UsernameSecret != nil && runnerExecution.Content.Repository.TokenSecret != nil {
+		gitEnvs = append(gitEnvs, v1.EnvVar{
+
+			Name: "RUNNER_GITUSERNAME",
+			ValueFrom: &v1.EnvVarSource{
+				SecretKeyRef: &v1.SecretKeySelector{
+					LocalObjectReference: v1.LocalObjectReference{
+						Name: runnerExecution.Content.Repository.UsernameSecret.Name,
+					},
+					Key: runnerExecution.Content.Repository.UsernameSecret.Key,
+				},
+			},
+		}, v1.EnvVar{
+			Name: "RUNNER_GITTOKEN",
+			ValueFrom: &v1.EnvVarSource{
+				SecretKeyRef: &v1.SecretKeySelector{
+					LocalObjectReference: v1.LocalObjectReference{
+						Name: runnerExecution.Content.Repository.TokenSecret.Name,
+					},
+					Key: runnerExecution.Content.Repository.TokenSecret.Key,
+				},
+			},
+		},
+		)
+	}
+
+	return append([]v1.EnvVar{
 		{
 			Name:  "RUNNER_ENDPOINT",
 			Value: envParams.Endpoint,
@@ -48,12 +77,6 @@ func getSlaveRunnerEnv(envParams envs.Params) []v1.EnvVar {
 			Name:  "RUNNER_DATADIR",
 			Value: envParams.DataDir,
 		}, {
-			Name:  "RUNNER_GITUSERNAME",
-			Value: envParams.GitUsername,
-		}, {
-			Name:  "RUNNER_GITTOKEN",
-			Value: envParams.GitToken,
-		}, {
 			Name:  "RUNNER_CLOUD_MODE",
 			Value: fmt.Sprintf("%v", envParams.CloudMode),
 		}, {
@@ -66,7 +89,7 @@ func getSlaveRunnerEnv(envParams envs.Params) []v1.EnvVar {
 			Name:  "RUNNER_CLOUD_API_URL",
 			Value: envParams.CloudAPIURL,
 		},
-	}
+	}, gitEnvs...)
 }
 
 func getSlaveConfigurationEnv(slaveEnv map[string]testkube.Variable) []v1.EnvVar {
@@ -77,7 +100,12 @@ func getSlaveConfigurationEnv(slaveEnv map[string]testkube.Variable) []v1.EnvVar
 	return envVars
 }
 
-func getSlavePodConfiguration(testName string, runnerExecution string, envVariables map[string]testkube.Variable, envParams envs.Params) *v1.Pod {
+func getSlavePodConfiguration(testName string, runnerExecution testkube.Execution, envVariables map[string]testkube.Variable, envParams envs.Params) (*v1.Pod, error) {
+	runnerExecutionStr, err := json.Marshal(runnerExecution)
+	if err != nil {
+		return nil, err
+	}
+
 	return &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("%s-jmeter-slave", testName),
@@ -88,8 +116,8 @@ func getSlavePodConfiguration(testName string, runnerExecution string, envVariab
 				{
 					Name:            fmt.Sprintf("%s-init-container", testName),
 					Image:           "kubeshop/testkube-init-executor:1.13.12",
-					Command:         []string{"/bin/runner", string(runnerExecution)},
-					Env:             getSlaveRunnerEnv(envParams),
+					Command:         []string{"/bin/runner", string(runnerExecutionStr)},
+					Env:             getSlaveRunnerEnv(envParams, runnerExecution),
 					ImagePullPolicy: v1.PullIfNotPresent,
 					VolumeMounts: []v1.VolumeMount{
 						{
@@ -102,7 +130,7 @@ func getSlavePodConfiguration(testName string, runnerExecution string, envVariab
 			Containers: []v1.Container{
 				{
 					Name:            fmt.Sprintf("%s-slave", testName),
-					Image:           "hiteshwani29/jmeter-slave:5.5",
+					Image:           "kubeshop/testkube-jmeterd-slaves:999.0.0",
 					Env:             getSlaveConfigurationEnv(envVariables),
 					ImagePullPolicy: v1.PullIfNotPresent,
 					Ports: []v1.ContainerPort{
@@ -151,7 +179,7 @@ func getSlavePodConfiguration(testName string, runnerExecution string, envVariab
 				},
 			},
 		},
-	}
+	}, nil
 }
 
 func isPodReady(ctx context.Context, c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
