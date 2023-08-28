@@ -36,24 +36,6 @@ spec:
     - test: cypress-10-executor-smoke-firefox
   - stopOnFailure: false
     execute:
-    - test: cypress-9-executor-smoke-electron
-  - stopOnFailure: false
-    execute:
-    - test: cypress-9-executor-smoke-chrome
-  - stopOnFailure: false
-    execute:
-    - test: cypress-9-executor-smoke-firefox
-  - stopOnFailure: false
-    execute:
-    - test: cypress-8-executor-smoke-electron
-  - stopOnFailure: false
-    execute:
-    - test: cypress-8-executor-smoke-chrome
-  - stopOnFailure: false
-    execute:
-    - test: cypress-8-executor-smoke-firefox
-  - stopOnFailure: false
-    execute:
     - test: cypress-default-executor-smoke-electron
   - stopOnFailure: false
     execute:
