@@ -27,6 +27,7 @@ func (test *TestUpsertRequest) QuoteTestTextFields() {
 			&test.ExecutionRequest.CronJobTemplate,
 			&test.ExecutionRequest.PreRunScript,
 			&test.ExecutionRequest.PostRunScript,
+			&test.ExecutionRequest.PvcTemplate,
 			&test.ExecutionRequest.ScraperTemplate,
 		}
 
