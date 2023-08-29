@@ -21,6 +21,7 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	templatesv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
 	testexecutionsv1 "github.com/kubeshop/testkube-operator/client/testexecutions/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -61,6 +62,7 @@ func NewContainerExecutor(
 	executorsClient executorsclientv1.Interface,
 	testsClient testsv3.Interface,
 	testExecutionsClient testexecutionsv1.Interface,
+	templatesClient templatesv1.Interface,
 	registry string,
 	podStartTimeout time.Duration,
 	clusterID string,
@@ -84,6 +86,7 @@ func NewContainerExecutor(
 		testsClient:          testsClient,
 		executorsClient:      executorsClient,
 		testExecutionsClient: testExecutionsClient,
+		templatesClient:      templatesClient,
 		registry:             registry,
 		podStartTimeout:      podStartTimeout,
 		clusterID:            clusterID,
@@ -109,6 +112,7 @@ type ContainerExecutor struct {
 	testsClient          testsv3.Interface
 	executorsClient      executorsclientv1.Interface
 	testExecutionsClient testexecutionsv1.Interface
+	templatesClient      templatesv1.Interface
 	registry             string
 	podStartTimeout      time.Duration
 	clusterID            string

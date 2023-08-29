@@ -60,6 +60,7 @@ import (
 	kubeclient "github.com/kubeshop/testkube-operator/client"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	scriptsclient "github.com/kubeshop/testkube-operator/client/scripts/v2"
+	templatesclientv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
 	testexecutionsclientv1 "github.com/kubeshop/testkube-operator/client/testexecutions/v1"
 	testsclientv1 "github.com/kubeshop/testkube-operator/client/tests"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
@@ -164,6 +165,7 @@ func main() {
 	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testExecutionsClient := testexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testsuiteExecutionsClient := testsuiteexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+	templatesClient := templatesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 
 	clientset, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -332,6 +334,7 @@ func main() {
 		testsClientV3,
 		clientset,
 		testExecutionsClient,
+		templatesClient,
 		cfg.TestkubeRegistry,
 		cfg.TestkubePodStartTimeout,
 		clusterId,
@@ -357,6 +360,7 @@ func main() {
 		executorsClient,
 		testsClientV3,
 		testExecutionsClient,
+		templatesClient,
 		cfg.TestkubeRegistry,
 		cfg.TestkubePodStartTimeout,
 		clusterId,
@@ -412,6 +416,7 @@ func main() {
 		storageClient,
 		cfg.GraphqlPort,
 		artifactStorage,
+		templatesClient,
 		cfg.CDEventsTarget,
 		cfg.TestkubeDashboardURI,
 		cfg.TestkubeHelmchartVersion,

@@ -9,15 +9,15 @@
  */
 package testkube
 
-// Golang based template
-type Template struct {
+// template update request body
+type TemplateUpdateRequest struct {
 	// template name for reference
-	Name string `json:"name"`
+	Name *string `json:"name"`
 	// template namespace
-	Namespace string        `json:"namespace,omitempty"`
+	Namespace *string       `json:"namespace,omitempty"`
 	Type_     *TemplateType `json:"type"`
 	// template body to use
-	Body string `json:"body"`
+	Body *string `json:"body"`
 	// template labels
-	Labels map[string]string `json:"labels,omitempty"`
+	Labels *map[string]string `json:"labels,omitempty"`
 }
