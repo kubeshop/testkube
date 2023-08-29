@@ -21,8 +21,20 @@ func (testSuite *TestSuiteUpsertRequest) QuoteTestSuiteTextFields() {
 			}
 		}
 
+		if testSuite.ExecutionRequest.JobTemplate != "" {
+			testSuite.ExecutionRequest.JobTemplate = fmt.Sprintf("%q", testSuite.ExecutionRequest.JobTemplate)
+		}
+
 		if testSuite.ExecutionRequest.CronJobTemplate != "" {
 			testSuite.ExecutionRequest.CronJobTemplate = fmt.Sprintf("%q", testSuite.ExecutionRequest.CronJobTemplate)
+		}
+
+		if testSuite.ExecutionRequest.PvcTemplate != "" {
+			testSuite.ExecutionRequest.PvcTemplate = fmt.Sprintf("%q", testSuite.ExecutionRequest.PvcTemplate)
+		}
+
+		if testSuite.ExecutionRequest.ScraperTemplate != "" {
+			testSuite.ExecutionRequest.ScraperTemplate = fmt.Sprintf("%q", testSuite.ExecutionRequest.ScraperTemplate)
 		}
 	}
 }
