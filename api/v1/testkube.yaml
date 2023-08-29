@@ -5410,12 +5410,24 @@ components:
           type: string
           description: template name for reference
           example: "webhook-template"
+        namespace:
+          type: string
+          description: template namespace
+          example: "testkube"
         type:
           $ref: "#/components/schemas/TemplateType"
         body:
           type: string
           description: template body to use
           example: "{\"id\": \"{{ .Id }}\"}"
+        labels:
+          type: object
+          description: "template labels"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"
 
     TemplateType:
       description: template type by purpose
@@ -5427,6 +5439,19 @@ components:
         - scraper
         - pvc
         - webhook
+
+    TemplateCreateRequest:
+      description: template create request body
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/Template"
+
+    TemplateUpdateRequest:
+      description: template update request body
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/Template"
 
     #
     # Errors

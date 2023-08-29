@@ -28,6 +28,8 @@ const (
 	TemplateTestTrigger Template = "testtrigger"
 	// TemplateTestSource is test source crd template
 	TemplateTestSource Template = "testsource"
+	// TemplateTemplate is template crd template
+	TemplateTemplate Template = "template"
 )
 
 // Gettable is an interface of gettable objects
@@ -42,7 +44,9 @@ type Gettable interface {
 		testkube.TestTrigger |
 		testkube.TestTriggerUpsertRequest |
 		testkube.TestSource |
-		testkube.TestSourceUpsertRequest
+		testkube.TestSourceUpsertRequest |
+		testkube.Template |
+		testkube.TemplateCreateRequest
 }
 
 // ExecuteTemplate executes crd template

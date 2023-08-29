@@ -12,6 +12,7 @@ kubectl get crds -n testkube
 NAME                                  CREATED AT
 executors.executor.testkube.io        2023-06-15T14:49:11Z
 scripts.tests.testkube.io             2023-06-15T14:49:11Z
+templates.tests.testkube.io           2023-06-15T14:49:11Z
 testexecutions.tests.testkube.io      2023-06-15T14:49:11Z
 tests.tests.testkube.io               2023-06-15T14:49:11Z
 testsources.tests.testkube.io         2023-06-15T14:49:11Z

@@ -9,8 +9,8 @@
  */
 package testkube
 
-// Golang based template
-type Template struct {
+// template create request body
+type TemplateCreateRequest struct {
 	// template name for reference
 	Name string `json:"name"`
 	// template namespace

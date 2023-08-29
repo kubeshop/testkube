@@ -30,6 +30,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	templatesclientv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsourcesclientv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 	testsuitesclientv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
@@ -79,6 +80,7 @@ func NewTestkubeAPI(
 	storage storage.Client,
 	graphqlPort string,
 	artifactsStorage storage.ArtifactsStorage,
+	templatesClient *templatesclientv1.TemplatesClient,
 	cdeventsTarget string,
 	dashboardURI string,
 	helmchartVersion string,
@@ -122,6 +124,7 @@ func NewTestkubeAPI(
 		Storage:              storage,
 		graphqlPort:          graphqlPort,
 		artifactsStorage:     artifactsStorage,
+		TemplatesClient:      templatesClient,
 		helmchartVersion:     helmchartVersion,
 		mode:                 mode,
 	}
@@ -175,6 +178,7 @@ type TestkubeAPI struct {
 	slackLoader          *slack.SlackLoader
 	graphqlPort          string
 	artifactsStorage     storage.ArtifactsStorage
+	TemplatesClient      *templatesclientv1.TemplatesClient
 	helmchartVersion     string
 	mode                 string
 }

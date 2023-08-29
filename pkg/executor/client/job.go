@@ -30,6 +30,7 @@ import (
 
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 
+	templatesv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
 	testexecutionsv1 "github.com/kubeshop/testkube-operator/client/testexecutions/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -79,6 +80,7 @@ func NewJobExecutor(
 	testsClient testsv3.Interface,
 	clientset kubernetes.Interface,
 	testExecutionsClient testexecutionsv1.Interface,
+	templatesClient templatesv1.Interface,
 	registry string,
 	podStartTimeout time.Duration,
 	clusterID string,
@@ -96,6 +98,7 @@ func NewJobExecutor(
 		configMap:            configMap,
 		testsClient:          testsClient,
 		testExecutionsClient: testExecutionsClient,
+		templatesClient:      templatesClient,
 		registry:             registry,
 		podStartTimeout:      podStartTimeout,
 		clusterID:            clusterID,
@@ -121,6 +124,7 @@ type JobExecutor struct {
 	configMap            config.Repository
 	testsClient          testsv3.Interface
 	testExecutionsClient testexecutionsv1.Interface
+	templatesClient      templatesv1.Interface
 	registry             string
 	podStartTimeout      time.Duration
 	clusterID            string
