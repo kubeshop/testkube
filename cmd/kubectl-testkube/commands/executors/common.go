@@ -32,6 +32,7 @@ func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.Up
 		return options, err
 	}
 
+	jobTemplateReference := cmd.Flag("job-template-reference").Value.String()
 	jobTemplate := cmd.Flag("job-template").Value.String()
 	jobTemplateContent := ""
 	if jobTemplate != "" {
@@ -83,19 +84,20 @@ func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.Up
 	}
 
 	options = apiClient.UpsertExecutorOptions{
-		Name:             name,
-		Types:            types,
-		ExecutorType:     executorType,
-		Image:            image,
-		ImagePullSecrets: imageSecrets,
-		Command:          command,
-		Args:             executorArgs,
-		Uri:              uri,
-		ContentTypes:     contentTypes,
-		JobTemplate:      jobTemplateContent,
-		Features:         features,
-		Labels:           labels,
-		Meta:             meta,
+		Name:                 name,
+		Types:                types,
+		ExecutorType:         executorType,
+		Image:                image,
+		ImagePullSecrets:     imageSecrets,
+		Command:              command,
+		Args:                 executorArgs,
+		Uri:                  uri,
+		ContentTypes:         contentTypes,
+		JobTemplate:          jobTemplateContent,
+		JobTemplateReference: jobTemplateReference,
+		Features:             features,
+		Labels:               labels,
+		Meta:                 meta,
 	}
 
 	return options, nil
@@ -122,6 +124,10 @@ func NewUpdateExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.Up
 		{
 			"image",
 			&options.Image,
+		},
+		{
+			"job-template-reference",
+			&options.JobTemplateReference,
 		},
 	}
 

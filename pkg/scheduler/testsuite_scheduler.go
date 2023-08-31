@@ -71,6 +71,30 @@ func (s *Scheduler) executeTestSuite(ctx context.Context, testSuite testkube.Tes
 		if request.Timeout == 0 && testSuite.ExecutionRequest.Timeout != 0 {
 			request.Timeout = testSuite.ExecutionRequest.Timeout
 		}
+
+		if request.JobTemplate == "" && testSuite.ExecutionRequest.JobTemplate != "" {
+			request.JobTemplate = testSuite.ExecutionRequest.JobTemplate
+		}
+
+		if request.JobTemplateReference == "" && testSuite.ExecutionRequest.JobTemplateReference != "" {
+			request.JobTemplateReference = testSuite.ExecutionRequest.JobTemplateReference
+		}
+
+		if request.ScraperTemplate == "" && testSuite.ExecutionRequest.ScraperTemplate != "" {
+			request.ScraperTemplate = testSuite.ExecutionRequest.ScraperTemplate
+		}
+
+		if request.ScraperTemplateReference == "" && testSuite.ExecutionRequest.ScraperTemplateReference != "" {
+			request.ScraperTemplateReference = testSuite.ExecutionRequest.ScraperTemplateReference
+		}
+
+		if request.PvcTemplate == "" && testSuite.ExecutionRequest.PvcTemplate != "" {
+			request.PvcTemplate = testSuite.ExecutionRequest.PvcTemplate
+		}
+
+		if request.PvcTemplateReference == "" && testSuite.ExecutionRequest.PvcTemplateReference != "" {
+			request.PvcTemplateReference = testSuite.ExecutionRequest.PvcTemplateReference
+		}
 	}
 
 	s.logger.Infow("Executing testsuite", "test", testSuite.Name, "request", request, "ExecutionRequest", testSuite.ExecutionRequest)
@@ -413,6 +437,12 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 				Type_:   string(testkube.RunningContextTypeTestSuite),
 				Context: testsuiteExecution.Name,
 			},
+			JobTemplate:              request.JobTemplate,
+			JobTemplateReference:     request.JobTemplateReference,
+			ScraperTemplate:          request.ScraperTemplate,
+			ScraperTemplateReference: request.ScraperTemplateReference,
+			PvcTemplate:              request.PvcTemplate,
+			PvcTemplateReference:     request.PvcTemplateReference,
 		}
 
 		requests := make([]workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution], len(testTuples))

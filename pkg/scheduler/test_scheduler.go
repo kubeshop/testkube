@@ -291,6 +291,10 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 				&request.JobTemplate,
 			},
 			{
+				test.ExecutionRequest.JobTemplateReference,
+				&request.JobTemplateReference,
+			},
+			{
 				test.ExecutionRequest.PreRunScript,
 				&request.PreRunScript,
 			},
@@ -301,6 +305,18 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 			{
 				test.ExecutionRequest.ScraperTemplate,
 				&request.ScraperTemplate,
+			},
+			{
+				test.ExecutionRequest.ScraperTemplateReference,
+				&request.ScraperTemplateReference,
+			},
+			{
+				test.ExecutionRequest.PvcTemplate,
+				&request.PvcTemplate,
+			},
+			{
+				test.ExecutionRequest.PvcTemplateReference,
+				&request.PvcTemplateReference,
 			},
 			{
 				test.ExecutionRequest.ArgsMode,

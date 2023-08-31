@@ -18,6 +18,7 @@ import (
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 	"sigs.k8s.io/kustomize/kyaml/yaml/merge2"
 
+	templatesv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -197,7 +198,7 @@ func NewScraperJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.Jo
 
 // NewPersistentVolumeClaimSpec is a method to create new persistent volume claim spec
 func NewPersistentVolumeClaimSpec(log *zap.SugaredLogger, options *JobOptions) (*corev1.PersistentVolumeClaim, error) {
-	tmpl, err := template.New("volume-claim").Parse(options.PVCTemplate)
+	tmpl, err := template.New("volume-claim").Parse(options.PvcTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("creating volume claim spec from pvc template error: %w", err)
 	}
@@ -209,6 +210,21 @@ func NewPersistentVolumeClaimSpec(log *zap.SugaredLogger, options *JobOptions) (
 
 	var pvc corev1.PersistentVolumeClaim
 	pvcSpec := buffer.String()
+	if options.PvcTemplateExtensions != "" {
+		tmplExt, err := template.New("jobExt").Parse(options.PvcTemplateExtensions)
+		if err != nil {
+			return nil, fmt.Errorf("creating pvc extensions spec from executor template error: %w", err)
+		}
+
+		var bufferExt bytes.Buffer
+		if err = tmplExt.ExecuteTemplate(&bufferExt, "jobExt", options); err != nil {
+			return nil, fmt.Errorf("executing pvc extensions spec executor template: %w", err)
+		}
+
+		if pvcSpec, err = merge2.MergeStrings(bufferExt.String(), pvcSpec, false, kyaml.MergeOptions{}); err != nil {
+			return nil, fmt.Errorf("merging spvc spec executor templates: %w", err)
+		}
+	}
 
 	log.Debug("Volume claim specification", pvcSpec)
 	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(pvcSpec), len(pvcSpec))
@@ -253,7 +269,7 @@ func InspectDockerImage(namespace, registry, image string, imageSecrets []string
 }
 
 // NewJobOptions provides job options for templates
-func NewJobOptions(log *zap.SugaredLogger, images executor.Images, templates executor.Templates,
+func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, images executor.Images, templates executor.Templates,
 	serviceAccountName, registry, clusterID string, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
 	jobOptions := NewJobOptionsFromExecutionOptions(options)
 	if execution.PreRunScript != "" || execution.PostRunScript != "" {
@@ -290,8 +306,41 @@ func NewJobOptions(log *zap.SugaredLogger, images executor.Images, templates exe
 		}
 	}
 
+	if options.Request.JobTemplateReference != "" {
+		template, err := templatesClient.Get(options.Request.JobTemplateReference)
+		if err != nil {
+			return nil, err
+		}
+
+		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.JOB_TemplateType {
+			jobOptions.JobTemplate = template.Spec.Body
+		}
+	}
+
 	jobOptions.ScraperTemplate = templates.Scraper
-	jobOptions.PVCTemplate = templates.PVC
+	if options.Request.ScraperTemplateReference != "" {
+		template, err := templatesClient.Get(options.Request.ScraperTemplateReference)
+		if err != nil {
+			return nil, err
+		}
+
+		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.SCRAPER_TemplateType {
+			jobOptions.ScraperTemplate = template.Spec.Body
+		}
+	}
+
+	jobOptions.PvcTemplate = templates.PVC
+	if options.Request.PvcTemplateReference != "" {
+		template, err := templatesClient.Get(options.Request.PvcTemplateReference)
+		if err != nil {
+			return nil, err
+		}
+
+		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.PVC_TemplateType {
+			jobOptions.PvcTemplate = template.Spec.Body
+		}
+	}
+
 	jobOptions.Variables = execution.Variables
 	jobOptions.ServiceAccountName = serviceAccountName
 	jobOptions.Registry = registry

@@ -133,23 +133,43 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		}
 
 		if test.ExecutionRequest.JobTemplate != "" {
-			ui.Warn("  Job template:           ", "\n", test.ExecutionRequest.JobTemplate)
+			ui.Warn("  Job template:                ", "\n", test.ExecutionRequest.JobTemplate)
+		}
+
+		if test.ExecutionRequest.JobTemplateReference != "" {
+			ui.Warn("  Job template reference:      ", "\n", test.ExecutionRequest.JobTemplateReference)
 		}
 
 		if test.ExecutionRequest.CronJobTemplate != "" {
-			ui.Warn("  Cron job template:      ", "\n", test.ExecutionRequest.CronJobTemplate)
+			ui.Warn("  Cron job template:           ", "\n", test.ExecutionRequest.CronJobTemplate)
+		}
+
+		if test.ExecutionRequest.CronJobTemplateReference != "" {
+			ui.Warn("  Cron job template reference: ", "\n", test.ExecutionRequest.CronJobTemplateReference)
 		}
 
 		if test.ExecutionRequest.PreRunScript != "" {
-			ui.Warn("  Pre run script:         ", "\n", test.ExecutionRequest.PreRunScript)
+			ui.Warn("  Pre run script:              ", "\n", test.ExecutionRequest.PreRunScript)
 		}
 
 		if test.ExecutionRequest.PostRunScript != "" {
-			ui.Warn("  Post run script:         ", "\n", test.ExecutionRequest.PostRunScript)
+			ui.Warn("  Post run script:             ", "\n", test.ExecutionRequest.PostRunScript)
 		}
 
 		if test.ExecutionRequest.ScraperTemplate != "" {
-			ui.Warn("  Scraper template:       ", "\n", test.ExecutionRequest.ScraperTemplate)
+			ui.Warn("  Scraper template:            ", "\n", test.ExecutionRequest.ScraperTemplate)
+		}
+
+		if test.ExecutionRequest.ScraperTemplateReference != "" {
+			ui.Warn("  Scraper template reference:  ", "\n", test.ExecutionRequest.ScraperTemplateReference)
+		}
+
+		if test.ExecutionRequest.PvcTemplate != "" {
+			ui.Warn("  PVC template:                ", "\n", test.ExecutionRequest.PvcTemplate)
+		}
+
+		if test.ExecutionRequest.PvcTemplateReference != "" {
+			ui.Warn("  PVC template reference:      ", "\n", test.ExecutionRequest.PvcTemplateReference)
 		}
 
 		var mountConfigMaps, mountSecrets []mountParams

@@ -389,6 +389,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		imageSecrets = append(imageSecrets, testkube.LocalObjectReference{Name: secretName})
 	}
 
+	jobTemplateReference := cmd.Flag("job-template-reference").Value.String()
 	jobTemplateContent := ""
 	jobTemplate := cmd.Flag("job-template").Value.String()
 	if jobTemplate != "" {
@@ -400,6 +401,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		jobTemplateContent = string(b)
 	}
 
+	cronJobTemplateReference := cmd.Flag("cronjob-template-reference").Value.String()
 	cronJobTemplateContent := ""
 	cronJobTemplate := cmd.Flag("cronjob-template").Value.String()
 	if cronJobTemplate != "" {
@@ -433,9 +435,22 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		postRunScriptContent = string(b)
 	}
 
+	scraperTemplateReference := cmd.Flag("scraper-template-reference").Value.String()
 	scraperTemplateContent := ""
 	scraperTemplate := cmd.Flag("scraper-template").Value.String()
 	if scraperTemplate != "" {
+		b, err := os.ReadFile(scraperTemplate)
+		if err != nil {
+			return nil, err
+		}
+
+		scraperTemplateContent = string(b)
+	}
+
+	pvcTemplateReference := cmd.Flag("pvc-template-reference").Value.String()
+	pvcTemplateContent := ""
+	pvcTemplate := cmd.Flag("pvc-template").Value.String()
+	if pvcTemplate != "" {
 		b, err := os.ReadFile(scraperTemplate)
 		if err != nil {
 			return nil, err
@@ -450,26 +465,31 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 	}
 
 	request = &testkube.ExecutionRequest{
-		Name:                  executionName,
-		Variables:             variables,
-		Image:                 image,
-		Command:               command,
-		Args:                  executorArgs,
-		ArgsMode:              mode,
-		ImagePullSecrets:      imageSecrets,
-		Envs:                  envs,
-		SecretEnvs:            secretEnvs,
-		HttpProxy:             httpProxy,
-		HttpsProxy:            httpsProxy,
-		ActiveDeadlineSeconds: timeout,
-		JobTemplate:           jobTemplateContent,
-		CronJobTemplate:       cronJobTemplateContent,
-		PreRunScript:          preRunScriptContent,
-		PostRunScript:         postRunScriptContent,
-		ScraperTemplate:       scraperTemplateContent,
-		NegativeTest:          negativeTest,
-		EnvConfigMaps:         envConfigMaps,
-		EnvSecrets:            envSecrets,
+		Name:                     executionName,
+		Variables:                variables,
+		Image:                    image,
+		Command:                  command,
+		Args:                     executorArgs,
+		ArgsMode:                 mode,
+		ImagePullSecrets:         imageSecrets,
+		Envs:                     envs,
+		SecretEnvs:               secretEnvs,
+		HttpProxy:                httpProxy,
+		HttpsProxy:               httpsProxy,
+		ActiveDeadlineSeconds:    timeout,
+		JobTemplate:              jobTemplateContent,
+		JobTemplateReference:     jobTemplateReference,
+		CronJobTemplate:          cronJobTemplateContent,
+		CronJobTemplateReference: cronJobTemplateReference,
+		PreRunScript:             preRunScriptContent,
+		PostRunScript:            postRunScriptContent,
+		ScraperTemplate:          scraperTemplateContent,
+		ScraperTemplateReference: scraperTemplateReference,
+		PvcTemplate:              pvcTemplateContent,
+		PvcTemplateReference:     pvcTemplateReference,
+		NegativeTest:             negativeTest,
+		EnvConfigMaps:            envConfigMaps,
+		EnvSecrets:               envSecrets,
 	}
 
 	request.ArtifactRequest, err = newArtifactRequestFromFlags(cmd)
@@ -798,6 +818,22 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 			"args-mode",
 			&request.ArgsMode,
 		},
+		{
+			"job-template-reference",
+			&request.JobTemplateReference,
+		},
+		{
+			"cronjob-template-reference",
+			&request.CronJobTemplateReference,
+		},
+		{
+			"scraper-template-reference",
+			&request.ScraperTemplateReference,
+		},
+		{
+			"pvc-template-reference",
+			&request.PvcTemplateReference,
+		},
 	}
 
 	var nonEmpty bool
@@ -996,6 +1032,22 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 		}
 
 		request.ScraperTemplate = &scraperTemplateContent
+		nonEmpty = true
+	}
+
+	if cmd.Flag("pvc-template").Changed {
+		pvcTemplateContent := ""
+		pvcTemplate := cmd.Flag("pvc-template").Value.String()
+		if pvcTemplate != "" {
+			b, err := os.ReadFile(pvcTemplate)
+			if err != nil {
+				return nil, err
+			}
+
+			pvcTemplateContent = string(b)
+		}
+
+		request.PvcTemplate = &pvcTemplateContent
 		nonEmpty = true
 	}
 
