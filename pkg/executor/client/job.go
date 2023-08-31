@@ -801,7 +801,9 @@ func NewJobOptions(templatesClient templatesv1.Interface, initImage, jobTemplate
 			return jobOptions, err
 		}
 
-		jobOptions.JobTemplate = template.Spec.Body
+		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.JOB_TemplateType {
+			jobOptions.JobTemplate = template.Spec.Body
+		}
 	}
 
 	jobOptions.Variables = execution.Variables

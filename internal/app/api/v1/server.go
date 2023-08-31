@@ -349,6 +349,15 @@ func (s *TestkubeAPI) InitRoutes() {
 	testsources.Delete("/:name", s.DeleteTestSourceHandler())
 	testsources.Delete("/", s.DeleteTestSourcesHandler())
 
+	templates := s.Routes.Group("/templates")
+
+	templates.Post("/", s.CreateTemplateHandler())
+	templates.Patch("/:name", s.UpdateTemplateHandler())
+	templates.Get("/", s.ListTemplatesHandler())
+	templates.Get("/:name", s.GetTemplateHandler())
+	templates.Delete("/:name", s.DeleteTemplateHandler())
+	templates.Delete("/", s.DeleteTemplatesHandler())
+
 	labels := s.Routes.Group("/labels")
 	labels.Get("/", s.ListLabelsHandler())
 
