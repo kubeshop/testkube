@@ -795,6 +795,17 @@ func NewJobOptions(templatesClient templatesv1.Interface, initImage, jobTemplate
 		jobOptions.JobTemplate = jobTemplate
 	}
 
+	if options.ExecutorSpec.JobTemplateReference != "" {
+		template, err := templatesClient.Get(options.ExecutorSpec.JobTemplateReference)
+		if err != nil {
+			return jobOptions, err
+		}
+
+		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.JOB_TemplateType {
+			jobOptions.JobTemplate = template.Spec.Body
+		}
+	}
+
 	if options.Request.JobTemplateReference != "" {
 		template, err := templatesClient.Get(options.Request.JobTemplateReference)
 		if err != nil {
