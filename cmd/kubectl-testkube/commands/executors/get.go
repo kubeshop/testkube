@@ -86,6 +86,7 @@ func mapExecutorDetailsToCreateExecutorOptions(namespace string, executor *testk
 		options.Args = executor.Executor.Args
 		options.Uri = executor.Executor.Uri
 		options.Labels = executor.Executor.Labels
+		options.JobTemplateReference = executor.Executor.JobTemplateReference
 		if executor.Executor.JobTemplate != "" {
 			options.JobTemplate = fmt.Sprintf("%q", executor.Executor.JobTemplate)
 		}

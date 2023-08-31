@@ -2500,6 +2500,243 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /templates:
+    get:
+      tags:
+        - templates
+        - api
+      summary: "List templates"
+      description: "List templates available in cluster"
+      operationId: listTemplates
+      parameters:
+        - $ref: "#/components/parameters/Selector"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Template"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    post:
+      tags:
+        - template
+        - api
+      summary: "Create new template"
+      description: "Create new template based on variables passed in request"
+      operationId: createTemplate
+      requestBody:
+        description: template request body data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TemplateCreateRequest"
+          text/yaml:
+            schema:
+              type: string              
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            text/yaml:
+              schema:
+                type: string
+        201:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+        400:
+          description: "problem with template definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    delete:
+      tags:
+        - template
+        - api
+      summary: "Delete templates"
+      description: "Deletes labeled templates"
+      operationId: deleteTemplates
+      parameters:
+        - $ref: "#/components/parameters/Selector"
+      responses:
+        204:
+          description: "no content"
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /templates/{id}:
+    delete:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      tags:
+        - api
+        - template
+      summary: "Delete template"
+      description: "Deletes template by its name"
+      operationId: deleteTemplate
+      responses:
+        204:
+          description: template deleted successfuly
+        404:
+          description: "template not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+    get:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      tags:
+        - api
+        - template
+      summary: "Get template details"
+      description: "Returns template"
+      operationId: getTemplate
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "template not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with getting template data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    patch:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      tags:
+        - template
+        - api
+      summary: "Update new template"
+      description: "Update new template based on variables passed in request"
+      operationId: updateTemplate
+      requestBody:
+        description: template request body data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TemplateUpdateRequest"
+          text/yaml:
+            schema:
+              type: string              
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+        400:
+          description: "problem with template definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "template not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /config:
     patch:
       tags:

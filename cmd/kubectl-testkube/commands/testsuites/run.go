@@ -2,6 +2,7 @@ package testsuites
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -31,6 +32,12 @@ func NewRunTestSuiteCmd() *cobra.Command {
 		gitPath                  string
 		gitWorkingDir            string
 		runningContext           string
+		jobTemplate              string
+		scraperTemplate          string
+		pvcTemplate              string
+		jobTemplateReference     string
+		scraperTemplateReference string
+		pvcTemplateReference     string
 	)
 
 	cmd := &cobra.Command{
@@ -46,6 +53,27 @@ func NewRunTestSuiteCmd() *cobra.Command {
 
 			var executions []testkube.TestSuiteExecution
 
+			jobTemplateContent := ""
+			if jobTemplate != "" {
+				b, err := os.ReadFile(jobTemplate)
+				ui.ExitOnError("reading job template", err)
+				jobTemplateContent = string(b)
+			}
+
+			scraperTemplateContent := ""
+			if scraperTemplate != "" {
+				b, err := os.ReadFile(scraperTemplate)
+				ui.ExitOnError("reading scraper template", err)
+				scraperTemplateContent = string(b)
+			}
+
+			pvcTemplateContent := ""
+			if pvcTemplate != "" {
+				b, err := os.ReadFile(pvcTemplate)
+				ui.ExitOnError("reading pvc template", err)
+				pvcTemplateContent = string(b)
+			}
+
 			variables, err := common.CreateVariables(cmd, false)
 			ui.WarnOnError("getting variables", err)
 			options := apiv1.ExecuteTestSuiteOptions{
@@ -57,7 +85,13 @@ func NewRunTestSuiteCmd() *cobra.Command {
 					Type_:   string(testkube.RunningContextTypeUserCLI),
 					Context: runningContext,
 				},
-				ConcurrencyLevel: int32(concurrencyLevel),
+				ConcurrencyLevel:         int32(concurrencyLevel),
+				JobTemplate:              jobTemplateContent,
+				JobTemplateReference:     jobTemplateReference,
+				ScraperTemplate:          scraperTemplateContent,
+				ScraperTemplateReference: scraperTemplateReference,
+				PvcTemplate:              pvcTemplateContent,
+				PvcTemplateReference:     pvcTemplateReference,
 			}
 
 			if gitBranch != "" || gitCommit != "" || gitPath != "" || gitWorkingDir != "" {
@@ -139,6 +173,12 @@ func NewRunTestSuiteCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
 	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
 	cmd.Flags().StringVar(&runningContext, "context", "", "running context description for test suite execution")
+	cmd.Flags().StringVar(&jobTemplate, "job-template", "", "job template file path for extensions to job template")
+	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
+	cmd.Flags().StringVar(&pvcTemplate, "pvc-template", "", "pvc template file path for extensions to pvc template")
+	cmd.Flags().StringVar(&jobTemplateReference, "job-template-reference", "", "reference to job template to use for the test")
+	cmd.Flags().StringVar(&scraperTemplateReference, "scraper-template-reference", "", "reference to scraper template to use for the test")
+	cmd.Flags().StringVar(&pvcTemplateReference, "pvc-template-reference", "", "reference to pvc template to use for the test")
 
 	return cmd
 }

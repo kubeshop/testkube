@@ -71,7 +71,7 @@ spec:
   repeats: {{ .Repeats }}
   {{- end }}
   {{- if .ExecutionRequest }}
-  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne .ExecutionRequest.Timeout 0) (.ExecutionRequest.CronJobTemplate)}}
+  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne .ExecutionRequest.Timeout 0) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.JobTemplateReference) (.ExecutionRequest.CronJobTemplate) (.ExecutionRequest.CronJobTemplateReference) (.ExecutionRequest.ScraperTemplate) (.ExecutionRequest.ScraperTemplateReference) (.ExecutionRequest.PvcTemplate) (.ExecutionRequest.PvcTemplateReference)}}
   executionRequest:
     {{- if .ExecutionRequest.Name }}
     name: {{ .ExecutionRequest.Name }}
@@ -118,9 +118,30 @@ spec:
     {{- if ne .ExecutionRequest.Timeout 0 }}
     timeout: {{ .ExecutionRequest.Timeout }}
     {{- end}}
+    {{- if .ExecutionRequest.JobTemplate }}
+    jobTemplate: {{ .ExecutionRequest.JobTemplate }}
+    {{- end}}
+     {{- if .ExecutionRequest.JobTemplateReference }}
+    jobTemplateReference: {{ .ExecutionRequest.JobTemplateReference }}
+    {{- end}}
     {{- if .ExecutionRequest.CronJobTemplate }}
     cronJobTemplate: {{ .ExecutionRequest.CronJobTemplate }}
     {{- end}}
+     {{- if .ExecutionRequest.CronJobTemplateReference }}
+    cronJobTemplateReference: {{ .ExecutionRequest.CronJobTemplateReference }}
+    {{- end}}
+    {{- if .ExecutionRequest.ScraperTemplate }}
+    scraperTemplate: {{ .ExecutionRequest.ScraperTemplate }}
+    {{- end }}
+    {{- if .ExecutionRequest.ScraperTemplateReference }}
+    scraperTemplateReference: {{ .ExecutionRequest.ScraperTemplateReference }}
+    {{- end }}
+    {{- if .ExecutionRequest.PvcTemplate }}
+    pvcTemplate: {{ .ExecutionRequest.PvcTemplate }}
+    {{- end }}
+    {{- if .ExecutionRequest.PvcTemplateReference }}
+    pvcTemplateReference: {{ .ExecutionRequest.PvcTemplateReference }}
+    {{- end }}
   {{- end }}
   {{- end }}
 {{- if .Status }}

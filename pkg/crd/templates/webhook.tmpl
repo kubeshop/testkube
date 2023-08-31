@@ -28,6 +28,9 @@ spec:
   {{- if .PayloadTemplate }}
   payloadTemplate: {{ .PayloadTemplate }}
   {{- end }}
+  {{- if .PayloadTemplateReference }}
+  payloadTemplateReference: {{ .PayloadTemplateReference }}
+  {{- end }}  
   {{- if ne (len .Headers) 0 }}
   headers:
   {{- range $key, $value := .Headers }}

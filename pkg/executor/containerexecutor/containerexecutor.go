@@ -133,7 +133,7 @@ type JobOptions struct {
 	ScraperImage              string
 	JobTemplate               string
 	ScraperTemplate           string
-	PVCTemplate               string
+	PvcTemplate               string
 	SecretEnvs                map[string]string
 	Envs                      map[string]string
 	HTTPProxy                 string
@@ -148,6 +148,7 @@ type JobOptions struct {
 	DelaySeconds              int
 	JobTemplateExtensions     string
 	ScraperTemplateExtensions string
+	PvcTemplateExtensions     string
 	EnvConfigMaps             []testkube.EnvReference
 	EnvSecrets                []testkube.EnvReference
 	Labels                    map[string]string
@@ -288,7 +289,8 @@ func (c *ContainerExecutor) ExecuteSync(ctx context.Context, execution *testkube
 func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
 	jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
 
-	jobOptions, err := NewJobOptions(c.log, c.images, c.templates, c.serviceAccountName, c.registry, c.clusterID, execution, options)
+	jobOptions, err := NewJobOptions(c.log, c.templatesClient, c.images, c.templates, c.serviceAccountName,
+		c.registry, c.clusterID, execution, options)
 	if err != nil {
 		return nil, err
 	}
@@ -665,6 +667,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		JobTemplate:               options.ExecutorSpec.JobTemplate,
 		JobTemplateExtensions:     options.Request.JobTemplate,
 		ScraperTemplateExtensions: options.Request.ScraperTemplate,
+		PvcTemplateExtensions:     options.Request.PvcTemplate,
 		EnvConfigMaps:             options.Request.EnvConfigMaps,
 		EnvSecrets:                options.Request.EnvSecrets,
 		Labels:                    labels,

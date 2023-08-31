@@ -173,10 +173,14 @@ type ExecuteTestOptions struct {
 	BucketName                    string
 	ArtifactRequest               *testkube.ArtifactRequest
 	JobTemplate                   string
+	JobTemplateReference          string
 	ContentRequest                *testkube.TestContentRequest
 	PreRunScriptContent           string
 	PostRunScriptContent          string
 	ScraperTemplate               string
+	ScraperTemplateReference      string
+	PvcTemplate                   string
+	PvcTemplateReference          string
 	NegativeTest                  bool
 	IsNegativeTestChangedOnRun    bool
 	EnvConfigMaps                 []testkube.EnvReference
@@ -186,13 +190,19 @@ type ExecuteTestOptions struct {
 
 // ExecuteTestSuiteOptions contains test suite run options
 type ExecuteTestSuiteOptions struct {
-	ExecutionVariables map[string]testkube.Variable
-	HTTPProxy          string
-	HTTPSProxy         string
-	ExecutionLabels    map[string]string
-	ContentRequest     *testkube.TestContentRequest
-	RunningContext     *testkube.RunningContext
-	ConcurrencyLevel   int32
+	ExecutionVariables       map[string]testkube.Variable
+	HTTPProxy                string
+	HTTPSProxy               string
+	ExecutionLabels          map[string]string
+	ContentRequest           *testkube.TestContentRequest
+	RunningContext           *testkube.RunningContext
+	ConcurrencyLevel         int32
+	JobTemplate              string
+	JobTemplateReference     string
+	ScraperTemplate          string
+	ScraperTemplateReference string
+	PvcTemplate              string
+	PvcTemplateReference     string
 }
 
 // Gettable is an interface of gettable objects

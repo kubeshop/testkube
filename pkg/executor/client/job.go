@@ -306,7 +306,8 @@ func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) 
 // CreateJob creates new Kubernetes job based on execution and execute options
 func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
-	jobOptions, err := NewJobOptions(c.images.Init, c.jobTemplate, c.serviceAccountName, c.registry, c.clusterID, execution, options)
+	jobOptions, err := NewJobOptions(c.templatesClient, c.images.Init, c.jobTemplate, c.serviceAccountName, c.registry,
+		c.clusterID, execution, options)
 	if err != nil {
 		return err
 	}
@@ -777,7 +778,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	return &job, nil
 }
 
-func NewJobOptions(initImage, jobTemplate string, serviceAccountName, registry, clusterID string,
+func NewJobOptions(templatesClient templatesv1.Interface, initImage, jobTemplate, serviceAccountName, registry, clusterID string,
 	execution testkube.Execution, options ExecuteOptions) (jobOptions JobOptions, err error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
@@ -793,6 +794,16 @@ func NewJobOptions(initImage, jobTemplate string, serviceAccountName, registry, 
 	if jobOptions.JobTemplate == "" {
 		jobOptions.JobTemplate = jobTemplate
 	}
+
+	if options.Request.JobTemplateReference != "" {
+		template, err := templatesClient.Get(options.Request.JobTemplateReference)
+		if err != nil {
+			return jobOptions, err
+		}
+
+		jobOptions.JobTemplate = template.Spec.Body
+	}
+
 	jobOptions.Variables = execution.Variables
 	jobOptions.ServiceAccountName = serviceAccountName
 	jobOptions.Registry = registry

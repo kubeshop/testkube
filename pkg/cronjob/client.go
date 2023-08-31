@@ -35,6 +35,7 @@ type CronJobOptions struct {
 	Resource                  string
 	Data                      string
 	Labels                    map[string]string
+	CronJobTemplate           string
 	CronJobTemplateExtensions string
 }
 
@@ -84,6 +85,11 @@ func (c *Client) Get(name string) (*v1.CronJob, error) {
 
 // Apply is a method to create or update a cron job
 func (c *Client) Apply(id, name string, options CronJobOptions) error {
+	template := c.cronJobTemplate
+	if options.CronJobTemplate != "" {
+		template = options.CronJobTemplate
+	}
+
 	cronJobClient := c.ClientSet.BatchV1().CronJobs(c.Namespace)
 	ctx := context.Background()
 
@@ -95,7 +101,7 @@ func (c *Client) Apply(id, name string, options CronJobOptions) error {
 		ServicePort:               c.servicePort,
 		Schedule:                  options.Schedule,
 		Resource:                  options.Resource,
-		CronJobTemplate:           c.cronJobTemplate,
+		CronJobTemplate:           template,
 		CronJobTemplateExtensions: options.CronJobTemplateExtensions,
 		Data:                      options.Data,
 		Labels:                    options.Labels,
