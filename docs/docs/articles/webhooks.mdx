@@ -5,27 +5,39 @@ import TabItem from "@theme/TabItem";
 
 Webhooks allow you to integrate Testkube with external systems by sending HTTP POST payloads containing information about Testkube executions and their current state when specific events occur. To set up webhooks in Testkube, you'll need to have an HTTPS endpoint to receive the events and a payload template to be sent along with the data.
 
-Here's an example format for creating a webhook in Testkube using either the CLI or custom response:
+## Creating Webhook
+The webhook can be creating using Dashboar, CLI, or Custom Resource.
 
 <Tabs>
+<TabItem value="dash" label="Dashboard">
+If you prefer to use Dashboard, you can view existing webhooks by going to the Webhooks tab.
+
+![Dashboard menu - webhooks icon](../img/dashboard-webhooks-icon.png)
+
+That's also a place, where you can create a new webhook by clicking `Create a new webhook` button.
+
+Then, you need to fill in webhook details
+![Dashboard webhook - create dialog 1](../img/dashboard-create-webhook-1.png)
+- Name - your webhook name (in this case `example-webhook`)
+- Resource identifier - the resource (or resources) selected by `label` for which the webhook can be triggered (in the example: `test-type:postman-collection` - any postman test)
+- Triggered events - events that will trigger webhook (in this case `start-test`, `end-test-success`, and `end-test-failed`). All available trigger events can be found in [Supported Event types](#supported-event-types) section.
+
+![Dashboard webhook - create dialog 2](../img/dashboard-create-webhook-2.png)
+
+Then, you need to set your webhook URI - the HTTPS endpoint where you want to receive the webhook events.
+After the webhook is created, the custom payload, and Headers can be set in Settings->Action
+
+</TabItem>
 
 <TabItem value="cli" label="CLI">
-
-Create a webhook template payload file:
-
-```json title="template.json"
-{
-  "text": "event id {{ .Id }}"
-}
-```
+Webhook can be created with Testkube CLI using create webhook command.
 
 ```sh
-testkube create webhook --name example-webhook --events start-test --events end-test-failed --payload-template template.json --uri <YOUR_ENDPOINT_URL>
+testkube create webhook --name example-webhook --events start-test --events end-test-success --events end-test-failed --uri <YOUR_ENDPOINT_URL>
 ```
-
-```sh title="Expected output:"
-Webhook created example-webhook 🥇
-```
+`--name` is your webhook name (in this case `example-webhook`)
+`--events` - event that will trigger a webhook. Multiple `--events` can be defined (in this case `--events start-test --events end-test-success --events end-test-failed`). All available trigger events can be found in [Supported Event types](#supported-event-types) section.
+`--uri` - the HTTPS endpoint where you want to receive the webhook events
 
 </TabItem>
 
@@ -44,12 +56,8 @@ spec:
     - end-test-success
     - end-test-failed
   selector: ""
-  payloadObjectField: ""
-  payloadTemplate: |
-    {"text": "event id {{ .Id }}"}
-  headers:
-    X-Token: "12345"
 ```
+Where <YOUR_ENDPOINT_URL> should be replaced with the HTTPS endpoint URL where you want to receive the webhook events.
 
 And then apply with:
 
@@ -61,15 +69,204 @@ kubectl apply -f webhook.yaml
 
 </Tabs>
 
-In the example above, replace <YOUR_ENDPOINT_URL> with the HTTPS endpoint URL where you want to receive the webhook events. The payload template can be customized to include additional information. In the above example, only the event `Id` is being sent. The template's variables will be replaced with data when events occur.
+### Resource selector (labels)
+In order to limit webhook triggers to specific resource, or resources, the Resource Selector can be used. It allows to select specific resource by label, or labels.
 
-You can add additional HTTP headers like `Authorization` or `x-api-key` to have a secret token.
+<Tabs>
+<TabItem value="dash" label="Dashboard">
+
+![Dashboard webhook - resource identifier](../img/dashboard-create-webhook-resource-identifier.png)
+
+</TabItem>
+
+<TabItem value="cli" label="CLI">
+
+The Resource Selector can be set with `--selector`.
+For example, `--selector test-type=postman-collection` will limit the resources to the postman tests (label: `test-type=postman-collection`)
+
+</TabItem>
+
+<TabItem value="crd" label="Custom Resource">
+
+```yaml
+spec:
+  selector: test-type=postman-collection
+```
+
+So, the complete definition may look like this:
+
+```yaml title="webhook.yaml"
+apiVersion: executor.testkube.io/v1
+kind: Webhook
+metadata:
+  name: example-webhook
+  namespace: testkube
+spec:
+  uri: <YOUR_ENDPOINT_URL>
+  events:
+    - start-test
+    - end-test-success
+    - end-test-failed
+  selector: test-type=postman-collection
+```
+
+</TabItem>
+</Tabs>
+
+
+### Webhook payload
+
+Webhook payload can be configured - for example event id:
+```
+{"text": "event id {{ .Id }}"}
+```
+
+<Tabs>
+<TabItem value="dash" label="Dashboard">
+Webhook payload can be configured in Webhook Settings->Action
+
+![Dashboard webhook - webhook settings action`](../img/dashboard-webhook-settings-action.png)
+
+![Dashboard webhook - webhook payload](../img/dashboard-webhook-payload.png)
+
+</TabItem>
+
+<TabItem value="cli" label="CLI">
+Create a webhook payload template file:
+
+```json title="template.json"
+{
+  "text": "event id {{ .Id }}"
+}
+```
+
+It can then be set with `--payload-template template.json`.
+
+```sh
+testkube create webhook --name example-webhook --events start-test --events end-test-passed --events end-test-failed --payload-template template.json --uri <YOUR_ENDPOINT_URL>
+```
+Where <YOUR_ENDPOINT_URL> should be replaced with the HTTPS endpoint URL where you want to receive the webhook events.
+
+
+```sh title="Expected output:"
+Webhook created example-webhook 🥇
+```
+
+</TabItem>
+
+<TabItem value="crd" label="Custom Resource">
+
+Payload template can be configured with `spec.payloadTemplate`.
+```
+  payloadTemplate: |
+    {"text": "event id {{ .Id }}"}
+```
+
+Example:
+```
+apiVersion: executor.testkube.io/v1
+kind: Webhook
+metadata:
+  name: example-webhook
+  namespace: testkube
+spec:
+  uri: <YOUR_ENDPOINT_URL>
+  events:
+    - start-test
+    - end-test-success
+    - end-test-failed
+  selector: ""
+  payloadObjectField: ""
+  payloadTemplate: |
+    {"text": "event id {{ .Id }}"}
+```
+
+</TabItem>
+
+</Tabs>
+
+#### Customizing webhook payload
+The payload template can be customized to include additional information. In the above example, only the event `Id` is being sent. The template's variables will be replaced with data when events occur.
 
 It's possible to get access to env variables of testkube-api-server pod in webhook template:
 
 ```sh title="template.txt"
 TESTKUBE_CLOUD_URL: {{ index .Envs "TESTKUBE_CLOUD_URL" }}
 ```
+
+### HTTP Headers
+You can add additional HTTP headers like `Authorization` or `x-api-key` to have a secret token.
+
+<Tabs>
+<TabItem value="dash" label="Dashboard">
+
+Webhook headers can be configured in Webhook Settings->Action
+
+![Dashboard webhook - webhook settings action`](../img/dashboard-webhook-settings-action.png)
+
+![Dashboard webhook - webhook headers](../img/dashboard-webhook-headers.png)
+
+</TabItem>
+
+<TabItem value="cli" label="CLI">
+Custom headers can be set using `--header` - for example:
+
+`--header X-Token="12345"`
+
+</TabItem>
+
+<TabItem value="crd" label="Custom Resource">
+
+```yaml
+spec:
+  headers:
+    X-Token: "12345"
+```
+
+```yaml title="webhook.yaml"
+apiVersion: executor.testkube.io/v1
+kind: Webhook
+metadata:
+  name: example-webhook
+  namespace: testkube
+spec:
+  uri: <YOUR_ENDPOINT_URL>
+  events:
+    - start-test
+    - end-test-success
+    - end-test-failed
+  selector: ""
+  headers:
+    X-Token: "12345"
+```
+
+</TabItem>
+</Tabs>
+
+## Supported Event types
+Webhook can be triggered on any of the following events:
+- start-test
+- end-test-success
+- end-test-failed
+- end-test-aborted
+- end-test-timeout
+- start-testsuite
+- end-testsuite-success
+- end-testsuite-failed
+- end-testsuite-aborted
+- end-testsuite-timeout
+- created
+- updated
+- deleted
+
+They can be triggered by the following resources:
+- test
+- testsuite
+- executor
+- trigger
+- webhook
+- testexecution
+- testsuiteexecution
 
 ## Testing Webhooks
 
