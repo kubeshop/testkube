@@ -92,6 +92,14 @@ func (s *Scheduler) executeTestSuite(ctx context.Context, testSuite testkube.Tes
 				testSuite.ExecutionRequest.ScraperTemplateReference,
 				&request.ScraperTemplateReference,
 			},
+			{
+				testSuite.ExecutionRequest.PvcTemplate,
+				&request.PvcTemplate,
+			},
+			{
+				testSuite.ExecutionRequest.PvcTemplateReference,
+				&request.PvcTemplateReference,
+			},
 		}
 
 		for _, field := range fields {
