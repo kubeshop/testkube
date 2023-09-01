@@ -64,6 +64,8 @@ type Config struct {
 	TestkubeClusterName               string        `envconfig:"TESTKUBE_CLUSTER_NAME" default:""`
 	CompressArtifacts                 bool          `envconfig:"COMPRESSARTIFACTS" default:"false"`
 	TestkubeHelmchartVersion          string        `envconfig:"TESTKUBE_HELMCHART_VERSION" default:""`
+	DebugListenAddr                   string        `envconfig:"DEBUG_LISTEN_ADDR" default:"0.0.0.0:1337"`
+	EnableDebugServer                 bool          `envconfig:"ENABLE_DEBUG_SERVER" default:"false"`
 }
 
 func Get() (*Config, error) {

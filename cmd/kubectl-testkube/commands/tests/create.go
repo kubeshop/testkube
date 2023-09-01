@@ -17,38 +17,41 @@ import (
 
 // CreateCommonFlags are common flags for creating all test types
 type CreateCommonFlags struct {
-	ExecutorType             string
-	Labels                   map[string]string
-	Variables                map[string]string
-	SecretVariables          map[string]string
-	Schedule                 string
-	ExecutorArgs             []string
-	ArgsMode                 string
-	ExecutionName            string
-	VariablesFile            string
-	Envs                     map[string]string
-	SecretEnvs               map[string]string
-	HttpProxy, HttpsProxy    string
-	SecretVariableReferences map[string]string
-	CopyFiles                []string
-	Image                    string
-	Command                  []string
-	ImagePullSecretNames     []string
-	Timeout                  int64
-	ArtifactStorageClassName string
-	ArtifactVolumeMountPath  string
-	ArtifactDirs             []string
-	JobTemplate              string
-	CronJobTemplate          string
-	PreRunScript             string
-	PostRunScript            string
-	ScraperTemplate          string
-	NegativeTest             bool
-	MountConfigMaps          map[string]string
-	VariableConfigMaps       []string
-	MountSecrets             map[string]string
-	VariableSecrets          []string
-	UploadTimeout            string
+	ExecutorType                   string
+	Labels                         map[string]string
+	Variables                      map[string]string
+	SecretVariables                map[string]string
+	Schedule                       string
+	ExecutorArgs                   []string
+	ArgsMode                       string
+	ExecutionName                  string
+	VariablesFile                  string
+	Envs                           map[string]string
+	SecretEnvs                     map[string]string
+	HttpProxy, HttpsProxy          string
+	SecretVariableReferences       map[string]string
+	CopyFiles                      []string
+	Image                          string
+	Command                        []string
+	ImagePullSecretNames           []string
+	Timeout                        int64
+	ArtifactStorageClassName       string
+	ArtifactVolumeMountPath        string
+	ArtifactDirs                   []string
+	JobTemplate                    string
+	CronJobTemplate                string
+	PreRunScript                   string
+	PostRunScript                  string
+	ScraperTemplate                string
+	NegativeTest                   bool
+	MountConfigMaps                map[string]string
+	VariableConfigMaps             []string
+	MountSecrets                   map[string]string
+	VariableSecrets                []string
+	UploadTimeout                  string
+	ArtifactStorageBucket          string
+	ArtifactOmitFolderPerExecution bool
+	Description                    string
 }
 
 // NewCreateTestsCmd is a command tp create new Test Custom Resource
@@ -217,6 +220,9 @@ func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
 	cmd.Flags().StringToStringVarP(&flags.MountSecrets, "mount-secret", "", map[string]string{}, "secret value pair for mounting it to executor pod: --mount-secret secret_name=secret_mountpath")
 	cmd.Flags().StringArrayVar(&flags.VariableSecrets, "variable-secret", []string{}, "secret name used to map all keys to secret variables")
 	cmd.Flags().StringVar(&flags.UploadTimeout, "upload-timeout", "", "timeout to use when uploading files, example: 30s")
+	cmd.Flags().StringVar(&flags.ArtifactStorageBucket, "artifact-storage-bucket", "", "artifact storage class name for container executor")
+	cmd.Flags().BoolVarP(&flags.ArtifactOmitFolderPerExecution, "artifact-omit-folder-per-execution", "", false, "don't store artifacts in execution folder")
+	cmd.Flags().StringVarP(&flags.Description, "description", "", "", "test description")
 }
 
 func validateExecutorTypeAndContent(executorType, contentType string, executors testkube.ExecutorsDetails) error {

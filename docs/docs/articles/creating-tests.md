@@ -87,6 +87,7 @@ kubectl get tests -n testkube test-example -oyaml
 
 name: test
 type_: postman/collection
+description: some test description
 content: |-
     {
         "info": {
@@ -302,6 +303,7 @@ metadata:
   resourceVersion: "225162"
   uid: f0d856aa-04fc-4238-bb4c-156ff82b4741
 spec:
+  description: some test description
   repository:
     branch: main
     path: examples
@@ -462,6 +464,33 @@ Provide the script when you create or run the test using `--prerun-script` and `
 
 ```sh
 testkube create test --file test/postman/LocalHealth.postman_collection.json --name script-test --type postman/collection --prerun-script pre_script.sh --postrun-script post_script.sh --secret-env SSL_CERT=your-k8s-secret
+```
+
+### Adjusting scraping parameters
+
+For any executor type you can specify additional scraping parameters using cli or CRD definition. For example, below we request to scrape report directories, use a custom bucket to store test artifacts and ask to avoid using separate artifact folders for each test execution
+
+```yaml
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeter-smoke-test
+  namespace: testkube
+spec:
+  type: jmeter/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+  executionRequest:
+    artifactRequest:
+      dirs:
+        - test/reports 
+      storageBucket: jmeter-artifacts
+      omitFolderPerExecution: true
 ```
 
 ### Changing the Default Scraper Job Template Used for Container Executor Tests

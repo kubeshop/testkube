@@ -228,11 +228,20 @@ func newArtifactRequestFromFlags(cmd *cobra.Command) (request *testkube.Artifact
 		return nil, err
 	}
 
-	if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(dirs) != 0 {
+	artifactStorageBucket := cmd.Flag("artifact-storage-bucket").Value.String()
+	artifactOmitFolderPerExecution, err := cmd.Flags().GetBool("artifact-omit-folder-per-execution")
+	if err != nil {
+		return nil, err
+	}
+
+	if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(dirs) != 0 ||
+		artifactStorageBucket != "" || artifactOmitFolderPerExecution {
 		request = &testkube.ArtifactRequest{
-			StorageClassName: artifactStorageClassName,
-			VolumeMountPath:  artifactVolumeMountPath,
-			Dirs:             dirs,
+			StorageClassName:       artifactStorageClassName,
+			VolumeMountPath:        artifactVolumeMountPath,
+			Dirs:                   dirs,
+			StorageBucket:          artifactStorageBucket,
+			OmitFolderPerExecution: artifactOmitFolderPerExecution,
 		}
 	}
 
@@ -482,6 +491,7 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.Upse
 	file := cmd.Flag("file").Value.String()
 	executorType := cmd.Flag("type").Value.String()
 	namespace := cmd.Flag("namespace").Value.String()
+	description := cmd.Flag("description").Value.String()
 	labels, err := cmd.Flags().GetStringToString("label")
 	if err != nil {
 		return options, err
@@ -502,14 +512,15 @@ func NewUpsertTestOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.Upse
 		sourceName = cmd.Flag("source").Value.String()
 	}
 	options = apiclientv1.UpsertTestOptions{
-		Name:      name,
-		Type_:     executorType,
-		Content:   content,
-		Source:    sourceName,
-		Namespace: namespace,
-		Schedule:  schedule,
-		Uploads:   copyFiles,
-		Labels:    labels,
+		Name:        name,
+		Description: description,
+		Type_:       executorType,
+		Content:     content,
+		Source:      sourceName,
+		Namespace:   namespace,
+		Schedule:    schedule,
+		Uploads:     copyFiles,
+		Labels:      labels,
 	}
 
 	options.ExecutionRequest, err = newExecutionRequestFromFlags(cmd)
@@ -640,6 +651,10 @@ func NewUpdateTestOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.Upda
 		{
 			"source",
 			&options.Source,
+		},
+		{
+			"description",
+			&options.Description,
 		},
 	}
 

@@ -43,6 +43,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/kubeshop/testkube/internal/app/api/debug"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/agent"
 	kubeexecutor "github.com/kubeshop/testkube/pkg/executor"
@@ -151,6 +152,15 @@ func main() {
 		defer grpcConn.Close()
 
 		grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
+	}
+
+	if cfg.EnableDebugServer {
+		debugSrv := debug.NewDebugServer(cfg.DebugListenAddr)
+
+		g.Go(func() error {
+			log.DefaultLogger.Infof("starting debug pprof server")
+			return debugSrv.ListenAndServe()
+		})
 	}
 
 	// k8s
@@ -415,6 +425,7 @@ func main() {
 		cfg.CDEventsTarget,
 		cfg.TestkubeDashboardURI,
 		cfg.TestkubeHelmchartVersion,
+		mode,
 	)
 
 	if mode == common.ModeAgent {

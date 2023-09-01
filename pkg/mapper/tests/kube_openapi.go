@@ -22,6 +22,7 @@ func MapTestListKubeToAPI(crTests testsv3.TestList) (tests []testkube.Test) {
 func MapTestCRToAPI(crTest testsv3.Test) (test testkube.Test) {
 	test.Name = crTest.Name
 	test.Namespace = crTest.Namespace
+	test.Description = crTest.Spec.Description
 	test.Content = MapTestContentFromSpec(crTest.Spec.Content)
 	test.Created = crTest.CreationTimestamp.Time
 	test.Source = crTest.Spec.Source
@@ -118,9 +119,11 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 	var artifactRequest *testkube.ArtifactRequest
 	if specExecutionRequest.ArtifactRequest != nil {
 		artifactRequest = &testkube.ArtifactRequest{
-			StorageClassName: specExecutionRequest.ArtifactRequest.StorageClassName,
-			VolumeMountPath:  specExecutionRequest.ArtifactRequest.VolumeMountPath,
-			Dirs:             specExecutionRequest.ArtifactRequest.Dirs,
+			StorageClassName:       specExecutionRequest.ArtifactRequest.StorageClassName,
+			VolumeMountPath:        specExecutionRequest.ArtifactRequest.VolumeMountPath,
+			Dirs:                   specExecutionRequest.ArtifactRequest.Dirs,
+			StorageBucket:          specExecutionRequest.ArtifactRequest.StorageBucket,
+			OmitFolderPerExecution: specExecutionRequest.ArtifactRequest.OmitFolderPerExecution,
 		}
 	}
 
@@ -221,6 +224,10 @@ func MapSpecToUpdate(test *testsv3.Test) (request testkube.TestUpdateRequest) {
 		{
 			&test.Namespace,
 			&request.Namespace,
+		},
+		{
+			&test.Spec.Description,
+			&request.Description,
 		},
 		{
 			&test.Spec.Type_,
@@ -460,9 +467,11 @@ func MapSpecExecutionRequestToExecutionUpdateRequest(
 
 	if request.ArtifactRequest != nil {
 		artifactRequest := &testkube.ArtifactUpdateRequest{
-			StorageClassName: &request.ArtifactRequest.StorageClassName,
-			VolumeMountPath:  &request.ArtifactRequest.VolumeMountPath,
-			Dirs:             &request.ArtifactRequest.Dirs,
+			StorageClassName:       &request.ArtifactRequest.StorageClassName,
+			VolumeMountPath:        &request.ArtifactRequest.VolumeMountPath,
+			Dirs:                   &request.ArtifactRequest.Dirs,
+			StorageBucket:          &request.ArtifactRequest.StorageBucket,
+			OmitFolderPerExecution: &request.ArtifactRequest.OmitFolderPerExecution,
 		}
 
 		executionRequest.ArtifactRequest = &artifactRequest

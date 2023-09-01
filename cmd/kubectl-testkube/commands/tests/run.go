@@ -20,46 +20,48 @@ const WatchInterval = 2 * time.Second
 
 func NewRunTestCmd() *cobra.Command {
 	var (
-		name                     string
-		image                    string
-		iterations               int
-		watchEnabled             bool
-		binaryArgs               []string
-		variables                map[string]string
-		secretVariables          map[string]string
-		variablesFile            string
-		downloadArtifactsEnabled bool
-		downloadDir              string
-		envs                     map[string]string
-		secretEnvs               map[string]string
-		selectors                []string
-		concurrencyLevel         int
-		httpProxy, httpsProxy    string
-		executionLabels          map[string]string
-		secretVariableReferences map[string]string
-		copyFiles                []string
-		artifactStorageClassName string
-		artifactVolumeMountPath  string
-		artifactDirs             []string
-		jobTemplate              string
-		gitBranch                string
-		gitCommit                string
-		gitPath                  string
-		gitWorkingDir            string
-		preRunScript             string
-		postRunScript            string
-		scraperTemplate          string
-		negativeTest             bool
-		mountConfigMaps          map[string]string
-		variableConfigMaps       []string
-		mountSecrets             map[string]string
-		variableSecrets          []string
-		uploadTimeout            string
-		format                   string
-		masks                    []string
-		runningContext           string
-		command                  []string
-		argsMode                 string
+		name                           string
+		image                          string
+		iterations                     int
+		watchEnabled                   bool
+		binaryArgs                     []string
+		variables                      map[string]string
+		secretVariables                map[string]string
+		variablesFile                  string
+		downloadArtifactsEnabled       bool
+		downloadDir                    string
+		envs                           map[string]string
+		secretEnvs                     map[string]string
+		selectors                      []string
+		concurrencyLevel               int
+		httpProxy, httpsProxy          string
+		executionLabels                map[string]string
+		secretVariableReferences       map[string]string
+		copyFiles                      []string
+		artifactStorageClassName       string
+		artifactVolumeMountPath        string
+		artifactDirs                   []string
+		jobTemplate                    string
+		gitBranch                      string
+		gitCommit                      string
+		gitPath                        string
+		gitWorkingDir                  string
+		preRunScript                   string
+		postRunScript                  string
+		scraperTemplate                string
+		negativeTest                   bool
+		mountConfigMaps                map[string]string
+		variableConfigMaps             []string
+		mountSecrets                   map[string]string
+		variableSecrets                []string
+		uploadTimeout                  string
+		format                         string
+		masks                          []string
+		runningContext                 string
+		command                        []string
+		argsMode                       string
+		artifactStorageBucket          string
+		artifactOmitFolderPerExecution bool
 	)
 
 	cmd := &cobra.Command{
@@ -141,11 +143,14 @@ func NewRunTestCmd() *cobra.Command {
 				},
 			}
 
-			if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(artifactDirs) != 0 {
+			if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(artifactDirs) != 0 ||
+				artifactStorageBucket != "" || artifactOmitFolderPerExecution {
 				options.ArtifactRequest = &testkube.ArtifactRequest{
-					StorageClassName: artifactStorageClassName,
-					VolumeMountPath:  artifactVolumeMountPath,
-					Dirs:             artifactDirs,
+					StorageClassName:       artifactStorageClassName,
+					VolumeMountPath:        artifactVolumeMountPath,
+					Dirs:                   artifactDirs,
+					StorageBucket:          artifactStorageBucket,
+					OmitFolderPerExecution: artifactOmitFolderPerExecution,
 				}
 			}
 
@@ -298,6 +303,8 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")
 	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
 	cmd.Flags().StringVar(&runningContext, "context", "", "running context description for test execution")
+	cmd.Flags().StringVar(&artifactStorageBucket, "artifact-storage-bucket", "", "artifact storage class name for container executor")
+	cmd.Flags().BoolVarP(&artifactOmitFolderPerExecution, "artifact-omit-folder-per-execution", "", false, "don't store artifacts in execution folder")
 
 	return cmd
 }

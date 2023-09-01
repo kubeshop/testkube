@@ -19,10 +19,11 @@ const (
 type Tests []Test
 
 func (t Tests) Table() (header []string, output [][]string) {
-	header = []string{"Name", "Type", "Created", "Labels", "Schedule"}
+	header = []string{"Name", "Description", "Type", "Created", "Labels", "Schedule"}
 	for _, e := range t {
 		output = append(output, []string{
 			e.Name,
+			e.Description,
 			e.Type_,
 			e.Created.String(),
 			MapToString(e.Labels),
@@ -64,6 +65,10 @@ func PrepareExecutorArgs(binaryArgs []string) ([]string, error) {
 }
 
 func (test *Test) QuoteTestTextFields() {
+	if test.Description != "" {
+		test.Description = fmt.Sprintf("%q", test.Description)
+	}
+
 	if test.Content != nil && test.Content.Data != "" {
 		test.Content.Data = fmt.Sprintf("%q", test.Content.Data)
 	}

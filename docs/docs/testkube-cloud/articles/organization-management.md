@@ -32,7 +32,7 @@ Run this on your cluster where the given agent is installed.
 
 ### Settings
 
-In settings you can remove your organiztion. Keep in mind that this operation can't be rolled-back!
+In settings you can remove your organization. Keep in mind that this operation can't be rolled back!
 
 ![Delete Organization](../../img/delete-org.png)
 

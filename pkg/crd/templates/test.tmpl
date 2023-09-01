@@ -10,6 +10,9 @@ metadata:
   {{- end }}
   {{- end }}
 spec:
+  {{- if .Description }}
+  description: {{ .Description }}
+  {{- end }}
   {{- if .Type_ }}
   type: {{ .Type_ }}
   {{- end }}
@@ -184,6 +187,12 @@ spec:
       {{- range .ExecutionRequest.ArtifactRequest.Dirs }}
       - {{ . }}
       {{- end }}
+      {{- end }}
+      {{- if .ExecutionRequest.ArtifactRequest.StorageBucket }}
+      storageBucket: {{ .ExecutionRequest.ArtifactRequest.StorageBucket }}
+      {{- end }}
+      {{- if .ExecutionRequest.ArtifactRequest.OmitFolderPerExecution }}
+      omitFolderPerExecution: {{ .ExecutionRequest.ArtifactRequest.OmitFolderPerExecution }}
       {{- end }}
     {{- end }}
     {{- if .ExecutionRequest.JobTemplate }}

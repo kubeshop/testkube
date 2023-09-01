@@ -22,6 +22,7 @@ spec:
         value: "true"
         type: basic
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 256Mi\n              cpu: 256m\n"
+    activeDeadlineSeconds: 60
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -45,6 +46,7 @@ spec:
         value: "true"
         type: basic
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 256Mi\n              cpu: 256m\n"
+    activeDeadlineSeconds: 60
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -64,3 +66,4 @@ spec:
   executionRequest:
     negativeTest: true
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 256Mi\n              cpu: 256m\n"
+    activeDeadlineSeconds: 60

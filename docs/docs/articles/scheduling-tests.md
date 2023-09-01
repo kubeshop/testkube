@@ -1,8 +1,8 @@
 # Scheduling Tests
 
 In order to run Tests and Test Suites on a regular basis, we support a scheduling mechanism for these objects.
-CRDs both for tests and test suites contain a **schedule** field used to define rules for launching them in time.
-Testkube's schedule data format is the same that is used to define Kubernetes Cron jobs (check Wikipedia Cron format for details <https://en.wikipedia.org/wiki/Cron>).
+CRDs both for Tests and Test Suites contain a **schedule** field used to define rules for launching them in time.
+Testkube's schedule data format is the same that is used to define Kubernetes Cron jobs (check Wikipedia Cron format for details <https://en.wikipedia.org/wiki/Cron>.
 
 ## Scheduling Architecture
 
@@ -143,7 +143,7 @@ kubectl testkube get testsuites
   scheduled-testsuite | Run test several times |     2 |        | */1 * * * * |        |
 ```
 
-The scheduled test suite was created and successfully scheduled for execution.
+The scheduled Test Suite was created and successfully scheduled for execution.
 We will skip the Cron job details, they are fully similar to test one described above.
 
 ## Getting Scheduled Test Suite Results
@@ -163,3 +163,13 @@ kubectl testkube get tse
 ```
 
 The Test Suite is successfully executed on the stated schedule.
+
+## Create a Scheduled Test or Test Suite from the UI
+
+In the Testkube UI, when you have selected a Test or Test Suite, in the **Settings** tab, click on **Scheduling** to create a schdule for the Test or Test Suite.
+
+![Schedule Tests](../img/schedule-tests.png)
+
+
+
+
