@@ -53,46 +53,52 @@ func NewRunTestSuiteCmd() *cobra.Command {
 
 			var executions []testkube.TestSuiteExecution
 
-			jobTemplateContent := ""
-			if jobTemplate != "" {
-				b, err := os.ReadFile(jobTemplate)
-				ui.ExitOnError("reading job template", err)
-				jobTemplateContent = string(b)
-			}
-
-			scraperTemplateContent := ""
-			if scraperTemplate != "" {
-				b, err := os.ReadFile(scraperTemplate)
-				ui.ExitOnError("reading scraper template", err)
-				scraperTemplateContent = string(b)
-			}
-
-			pvcTemplateContent := ""
-			if pvcTemplate != "" {
-				b, err := os.ReadFile(pvcTemplate)
-				ui.ExitOnError("reading pvc template", err)
-				pvcTemplateContent = string(b)
-			}
-
-			variables, err := common.CreateVariables(cmd, false)
-			ui.WarnOnError("getting variables", err)
 			options := apiv1.ExecuteTestSuiteOptions{
-				ExecutionVariables: variables,
-				HTTPProxy:          httpProxy,
-				HTTPSProxy:         httpsProxy,
-				ExecutionLabels:    executionLabels,
+				HTTPProxy:       httpProxy,
+				HTTPSProxy:      httpsProxy,
+				ExecutionLabels: executionLabels,
 				RunningContext: &testkube.RunningContext{
 					Type_:   string(testkube.RunningContextTypeUserCLI),
 					Context: runningContext,
 				},
 				ConcurrencyLevel:         int32(concurrencyLevel),
-				JobTemplate:              jobTemplateContent,
 				JobTemplateReference:     jobTemplateReference,
-				ScraperTemplate:          scraperTemplateContent,
 				ScraperTemplateReference: scraperTemplateReference,
-				PvcTemplate:              pvcTemplateContent,
 				PvcTemplateReference:     pvcTemplateReference,
 			}
+
+			var fields = []struct {
+				source      string
+				title       string
+				destination *string
+			}{
+				{
+					jobTemplate,
+					"job template",
+					&options.JobTemplate,
+				},
+				{
+					scraperTemplate,
+					"scraper template",
+					&options.ScraperTemplate,
+				},
+				{
+					pvcTemplate,
+					"pvc template",
+					&options.PvcTemplate,
+				},
+			}
+
+			for _, field := range fields {
+				if field.source != "" {
+					b, err := os.ReadFile(field.source)
+					ui.ExitOnError("reading "+field.title, err)
+					*field.destination = string(b)
+				}
+			}
+
+			options.ExecutionVariables, err = common.CreateVariables(cmd, false)
+			ui.WarnOnError("getting variables", err)
 
 			if gitBranch != "" || gitCommit != "" || gitPath != "" || gitWorkingDir != "" {
 				options.ContentRequest = &testkube.TestContentRequest{
