@@ -56,44 +56,48 @@ func (s *Scheduler) executeTestSuite(ctx context.Context, testSuite testkube.Tes
 
 	request.SecretUUID = secretUUID
 	if testSuite.ExecutionRequest != nil {
-		if request.Name == "" && testSuite.ExecutionRequest.Name != "" {
-			request.Name = testSuite.ExecutionRequest.Name
-		}
-
-		if request.HttpProxy == "" && testSuite.ExecutionRequest.HttpProxy != "" {
-			request.HttpProxy = testSuite.ExecutionRequest.HttpProxy
-		}
-
-		if request.HttpsProxy == "" && testSuite.ExecutionRequest.HttpsProxy != "" {
-			request.HttpsProxy = testSuite.ExecutionRequest.HttpsProxy
-		}
-
 		if request.Timeout == 0 && testSuite.ExecutionRequest.Timeout != 0 {
 			request.Timeout = testSuite.ExecutionRequest.Timeout
 		}
 
-		if request.JobTemplate == "" && testSuite.ExecutionRequest.JobTemplate != "" {
-			request.JobTemplate = testSuite.ExecutionRequest.JobTemplate
+		var fields = []struct {
+			source      string
+			destination *string
+		}{
+			{
+				testSuite.ExecutionRequest.Name,
+				&request.Name,
+			},
+			{
+				testSuite.ExecutionRequest.HttpProxy,
+				&request.HttpProxy,
+			},
+			{
+				testSuite.ExecutionRequest.HttpsProxy,
+				&request.HttpsProxy,
+			},
+			{
+				testSuite.ExecutionRequest.JobTemplate,
+				&request.JobTemplate,
+			},
+			{
+				testSuite.ExecutionRequest.JobTemplateReference,
+				&request.JobTemplateReference,
+			},
+			{
+				testSuite.ExecutionRequest.ScraperTemplate,
+				&request.ScraperTemplate,
+			},
+			{
+				testSuite.ExecutionRequest.ScraperTemplateReference,
+				&request.ScraperTemplateReference,
+			},
 		}
 
-		if request.JobTemplateReference == "" && testSuite.ExecutionRequest.JobTemplateReference != "" {
-			request.JobTemplateReference = testSuite.ExecutionRequest.JobTemplateReference
-		}
-
-		if request.ScraperTemplate == "" && testSuite.ExecutionRequest.ScraperTemplate != "" {
-			request.ScraperTemplate = testSuite.ExecutionRequest.ScraperTemplate
-		}
-
-		if request.ScraperTemplateReference == "" && testSuite.ExecutionRequest.ScraperTemplateReference != "" {
-			request.ScraperTemplateReference = testSuite.ExecutionRequest.ScraperTemplateReference
-		}
-
-		if request.PvcTemplate == "" && testSuite.ExecutionRequest.PvcTemplate != "" {
-			request.PvcTemplate = testSuite.ExecutionRequest.PvcTemplate
-		}
-
-		if request.PvcTemplateReference == "" && testSuite.ExecutionRequest.PvcTemplateReference != "" {
-			request.PvcTemplateReference = testSuite.ExecutionRequest.PvcTemplateReference
+		for _, field := range fields {
+			if *field.destination == "" && field.source != "" {
+				*field.destination = field.source
+			}
 		}
 	}
 

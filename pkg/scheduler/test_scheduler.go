@@ -495,26 +495,6 @@ func mergeContents(test testsv3.TestSpec, testSource testsourcev1.TestSourceSpec
 			test.Content.Repository = &testsv3.Repository{}
 		}
 
-		if test.Content.Repository.Type_ == "" {
-			test.Content.Repository.Type_ = testSource.Repository.Type_
-		}
-
-		if test.Content.Repository.Uri == "" {
-			test.Content.Repository.Uri = testSource.Repository.Uri
-		}
-
-		if test.Content.Repository.Branch == "" {
-			test.Content.Repository.Branch = testSource.Repository.Branch
-		}
-
-		if test.Content.Repository.Commit == "" {
-			test.Content.Repository.Commit = testSource.Repository.Commit
-		}
-
-		if test.Content.Repository.Path == "" {
-			test.Content.Repository.Path = testSource.Repository.Path
-		}
-
 		if test.Content.Repository.UsernameSecret == nil && testSource.Repository.UsernameSecret != nil {
 			test.Content.Repository.UsernameSecret = &testsv3.SecretRef{
 				Name: testSource.Repository.UsernameSecret.Name,
@@ -529,16 +509,48 @@ func mergeContents(test testsv3.TestSpec, testSource testsourcev1.TestSourceSpec
 			}
 		}
 
-		if test.Content.Repository.WorkingDir == "" {
-			test.Content.Repository.WorkingDir = testSource.Repository.WorkingDir
-		}
-
-		if test.Content.Repository.CertificateSecret == "" {
-			test.Content.Repository.CertificateSecret = testSource.Repository.CertificateSecret
-		}
-
 		if test.Content.Repository.AuthType == "" {
 			test.Content.Repository.AuthType = testsv3.GitAuthType(testSource.Repository.AuthType)
+		}
+
+		var fields = []struct {
+			source      string
+			destination *string
+		}{
+			{
+				testSource.Repository.Type_,
+				&test.Content.Repository.Type_,
+			},
+			{
+				testSource.Repository.Uri,
+				&test.Content.Repository.Uri,
+			},
+			{
+				testSource.Repository.Branch,
+				&test.Content.Repository.Branch,
+			},
+			{
+				testSource.Repository.Commit,
+				&test.Content.Repository.Commit,
+			},
+			{
+				testSource.Repository.Path,
+				&test.Content.Repository.Path,
+			},
+			{
+				testSource.Repository.WorkingDir,
+				&test.Content.Repository.WorkingDir,
+			},
+			{
+				testSource.Repository.CertificateSecret,
+				&test.Content.Repository.CertificateSecret,
+			},
+		}
+
+		for _, field := range fields {
+			if *field.destination == "" {
+				*field.destination = field.source
+			}
 		}
 	}
 
@@ -573,22 +585,34 @@ func mergeArtifacts(artifactBase *testkube.ArtifactRequest, artifactAdjust *test
 	case artifactBase != nil && artifactAdjust == nil:
 		return artifactBase
 	default:
-		if artifactBase.StorageClassName == "" && artifactAdjust.StorageClassName != "" {
-			artifactBase.StorageClassName = artifactAdjust.StorageClassName
-		}
-
-		if artifactBase.VolumeMountPath == "" && artifactAdjust.VolumeMountPath != "" {
-			artifactBase.VolumeMountPath = artifactAdjust.VolumeMountPath
-		}
-
 		artifactBase.Dirs = append(artifactBase.Dirs, artifactAdjust.Dirs...)
-
-		if artifactBase.StorageBucket == "" && artifactAdjust.StorageBucket != "" {
-			artifactBase.StorageBucket = artifactAdjust.StorageBucket
-		}
 
 		if !artifactBase.OmitFolderPerExecution && artifactAdjust.OmitFolderPerExecution {
 			artifactBase.OmitFolderPerExecution = artifactAdjust.OmitFolderPerExecution
+		}
+
+		var fields = []struct {
+			source      string
+			destination *string
+		}{
+			{
+				artifactAdjust.StorageClassName,
+				&artifactBase.StorageClassName,
+			},
+			{
+				artifactAdjust.VolumeMountPath,
+				&artifactBase.VolumeMountPath,
+			},
+			{
+				artifactAdjust.StorageBucket,
+				&artifactBase.StorageBucket,
+			},
+		}
+
+		for _, field := range fields {
+			if *field.destination == "" && field.source != "" {
+				*field.destination = field.source
+			}
 		}
 	}
 
@@ -607,20 +631,32 @@ func adjustContent(test testsv3.TestSpec, content *testkube.TestContentRequest) 
 		}
 
 		if content.Repository != nil {
-			if content.Repository.Branch != "" {
-				test.Content.Repository.Branch = content.Repository.Branch
+			var fields = []struct {
+				source      string
+				destination *string
+			}{
+				{
+					content.Repository.Branch,
+					&test.Content.Repository.Branch,
+				},
+				{
+					content.Repository.Commit,
+					&test.Content.Repository.Commit,
+				},
+				{
+					content.Repository.Path,
+					&test.Content.Repository.Path,
+				},
+				{
+					content.Repository.WorkingDir,
+					&test.Content.Repository.WorkingDir,
+				},
 			}
 
-			if content.Repository.Commit != "" {
-				test.Content.Repository.Commit = content.Repository.Commit
-			}
-
-			if content.Repository.Path != "" {
-				test.Content.Repository.Path = content.Repository.Path
-			}
-
-			if content.Repository.WorkingDir != "" {
-				test.Content.Repository.WorkingDir = content.Repository.WorkingDir
+			for _, field := range fields {
+				if field.source != "" {
+					*field.destination = field.source
+				}
 			}
 		}
 	}
