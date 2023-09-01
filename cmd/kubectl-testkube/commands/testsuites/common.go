@@ -150,52 +150,9 @@ func NewTestSuiteUpsertOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 	}
 
 	jobTemplateReference := cmd.Flag("job-template-reference").Value.String()
-	jobTemplateContent := ""
-	jobTemplate := cmd.Flag("job-template").Value.String()
-	if jobTemplate != "" {
-		b, err := os.ReadFile(jobTemplate)
-		if err != nil {
-			return options, err
-		}
-
-		jobTemplateContent = string(b)
-	}
-
 	cronJobTemplateReference := cmd.Flag("cronjob-template-refeence").Value.String()
-	cronJobTemplateContent := ""
-	cronJobTemplate := cmd.Flag("cronjob-template").Value.String()
-	if cronJobTemplate != "" {
-		b, err := os.ReadFile(cronJobTemplate)
-		if err != nil {
-			return options, err
-		}
-
-		cronJobTemplateContent = string(b)
-	}
-
 	scraperTemplateReference := cmd.Flag("scraper-template-reference").Value.String()
-	scraperTemplateContent := ""
-	scraperTemplate := cmd.Flag("scraper-template").Value.String()
-	if scraperTemplate != "" {
-		b, err := os.ReadFile(scraperTemplate)
-		if err != nil {
-			return options, err
-		}
-
-		scraperTemplateContent = string(b)
-	}
-
 	pvcTemplateReference := cmd.Flag("pvc-template-reference").Value.String()
-	pvcTemplateContent := ""
-	pvcTemplate := cmd.Flag("pvc-template").Value.String()
-	if pvcTemplate != "" {
-		b, err := os.ReadFile(pvcTemplate)
-		if err != nil {
-			return options, err
-		}
-
-		pvcTemplateContent = string(b)
-	}
 
 	options.Schedule = schedule
 	options.ExecutionRequest = &testkube.TestSuiteExecutionRequest{
@@ -204,14 +161,43 @@ func NewTestSuiteUpsertOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 		HttpProxy:                cmd.Flag("http-proxy").Value.String(),
 		HttpsProxy:               cmd.Flag("https-proxy").Value.String(),
 		Timeout:                  timeout,
-		JobTemplate:              jobTemplateContent,
 		JobTemplateReference:     jobTemplateReference,
-		CronJobTemplate:          cronJobTemplateContent,
 		CronJobTemplateReference: cronJobTemplateReference,
-		ScraperTemplate:          scraperTemplateContent,
 		ScraperTemplateReference: scraperTemplateReference,
-		PvcTemplate:              pvcTemplateContent,
 		PvcTemplateReference:     pvcTemplateReference,
+	}
+
+	var fields = []struct {
+		source      string
+		destination *string
+	}{
+		{
+			cmd.Flag("job-template").Value.String(),
+			&options.ExecutionRequest.JobTemplate,
+		},
+		{
+			cmd.Flag("cronjob-template").Value.String(),
+			&options.ExecutionRequest.CronJobTemplate,
+		},
+		{
+			cmd.Flag("scraper-template").Value.String(),
+			&options.ExecutionRequest.ScraperTemplate,
+		},
+		{
+			cmd.Flag("pvc-template").Value.String(),
+			&options.ExecutionRequest.PvcTemplate,
+		},
+	}
+
+	for _, field := range fields {
+		if field.source != "" {
+			b, err := os.ReadFile(field.source)
+			if err != nil {
+				return options, err
+			}
+
+			*field.destination = string(b)
+		}
 	}
 
 	return options, nil
@@ -312,68 +298,44 @@ func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 		nonEmpty = true
 	}
 
-	if cmd.Flag("job-template").Changed {
-		jobTemplateContent := ""
-		jobTemplate := cmd.Flag("job-template").Value.String()
-		if jobTemplate != "" {
-			b, err := os.ReadFile(jobTemplate)
-			if err != nil {
-				return options, err
-			}
-
-			jobTemplateContent = string(b)
-		}
-
-		executionRequest.JobTemplate = &jobTemplateContent
-		nonEmpty = true
+	var values = []struct {
+		source      string
+		destination **string
+	}{
+		{
+			"job-template",
+			&executionRequest.JobTemplate,
+		},
+		{
+			"cronjob-template",
+			&executionRequest.CronJobTemplate,
+		},
+		{
+			"scraper-template",
+			&executionRequest.ScraperTemplate,
+		},
+		{
+			"pvc-template",
+			&executionRequest.PvcTemplate,
+		},
 	}
 
-	if cmd.Flag("cronjob-template").Changed {
-		cronJobTemplateContent := ""
-		cronJobTemplate := cmd.Flag("cronjob-template").Value.String()
-		if cronJobTemplate != "" {
-			b, err := os.ReadFile(cronJobTemplate)
-			if err != nil {
-				return options, err
+	for _, value := range values {
+		if cmd.Flag(value.source).Changed {
+			data := ""
+			name := cmd.Flag(value.source).Value.String()
+			if data != "" {
+				b, err := os.ReadFile(name)
+				if err != nil {
+					return options, err
+				}
+
+				data = string(b)
 			}
 
-			cronJobTemplateContent = string(b)
+			*value.destination = &data
+			nonEmpty = true
 		}
-
-		executionRequest.CronJobTemplate = &cronJobTemplateContent
-		nonEmpty = true
-	}
-
-	if cmd.Flag("scraper-template").Changed {
-		scraperTemplateContent := ""
-		scraperTemplate := cmd.Flag("scraper-template").Value.String()
-		if scraperTemplate != "" {
-			b, err := os.ReadFile(scraperTemplate)
-			if err != nil {
-				return options, err
-			}
-
-			scraperTemplateContent = string(b)
-		}
-
-		executionRequest.ScraperTemplate = &scraperTemplateContent
-		nonEmpty = true
-	}
-
-	if cmd.Flag("pvc-template").Changed {
-		pvcTemplateContent := ""
-		pvcTemplate := cmd.Flag("pvc-template").Value.String()
-		if pvcTemplate != "" {
-			b, err := os.ReadFile(pvcTemplate)
-			if err != nil {
-				return options, err
-			}
-
-			pvcTemplateContent = string(b)
-		}
-
-		executionRequest.ScraperTemplate = &pvcTemplateContent
-		nonEmpty = true
 	}
 
 	var executionFields = []struct {
