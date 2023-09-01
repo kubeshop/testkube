@@ -86,49 +86,10 @@ func NewRunTestCmd() *cobra.Command {
 			envConfigMaps, envSecrets, err := newEnvReferencesFromFlags(cmd)
 			ui.WarnOnError("getting env config maps and secrets", err)
 
-			jobTemplateContent := ""
-			if jobTemplate != "" {
-				b, err := os.ReadFile(jobTemplate)
-				ui.ExitOnError("reading job template", err)
-				jobTemplateContent = string(b)
-			}
-
-			preRunScriptContent := ""
-			if preRunScript != "" {
-				b, err := os.ReadFile(preRunScript)
-				ui.ExitOnError("reading pre run script", err)
-				preRunScriptContent = string(b)
-			}
-
-			postRunScriptContent := ""
-			if postRunScript != "" {
-				b, err := os.ReadFile(postRunScript)
-				ui.ExitOnError("reading post run script", err)
-				postRunScriptContent = string(b)
-			}
-
-			scraperTemplateContent := ""
-			if scraperTemplate != "" {
-				b, err := os.ReadFile(scraperTemplate)
-				ui.ExitOnError("reading scraper template", err)
-				scraperTemplateContent = string(b)
-			}
-
-			pvcTemplateContent := ""
-			if pvcTemplate != "" {
-				b, err := os.ReadFile(pvcTemplate)
-				ui.ExitOnError("reading pvc template", err)
-				pvcTemplateContent = string(b)
-			}
-
 			mode := ""
 			if cmd.Flag("args-mode").Changed {
 				mode = argsMode
 			}
-
-			var executions []testkube.Execution
-			client, namespace, err := common.GetClient(cmd)
-			ui.ExitOnError("getting client", err)
 
 			options := apiv1.ExecuteTestOptions{
 				ExecutionVariables:         variables,
@@ -141,13 +102,8 @@ func NewRunTestCmd() *cobra.Command {
 				HTTPSProxy:                 httpsProxy,
 				Envs:                       envs,
 				Image:                      image,
-				JobTemplate:                jobTemplateContent,
 				JobTemplateReference:       jobTemplateReference,
-				PreRunScriptContent:        preRunScriptContent,
-				PostRunScriptContent:       postRunScriptContent,
-				ScraperTemplate:            scraperTemplateContent,
 				ScraperTemplateReference:   scraperTemplateReference,
-				PvcTemplate:                pvcTemplateContent,
 				PvcTemplateReference:       pvcTemplateReference,
 				IsNegativeTestChangedOnRun: false,
 				EnvConfigMaps:              envConfigMaps,
@@ -157,6 +113,50 @@ func NewRunTestCmd() *cobra.Command {
 					Context: runningContext,
 				},
 			}
+
+			var fields = []struct {
+				source      string
+				title       string
+				destination *string
+			}{
+				{
+					jobTemplate,
+					"job template",
+					&options.JobTemplate,
+				},
+				{
+					preRunScript,
+					"pre run script",
+					&options.PreRunScriptContent,
+				},
+				{
+					postRunScript,
+					"post run script",
+					&options.PostRunScriptContent,
+				},
+				{
+					scraperTemplate,
+					"scraper template",
+					&options.ScraperTemplate,
+				},
+				{
+					pvcTemplate,
+					"pvc template",
+					&options.PvcTemplate,
+				},
+			}
+
+			for _, field := range fields {
+				if field.source != "" {
+					b, err := os.ReadFile(field.source)
+					ui.ExitOnError("reading "+field.title, err)
+					*field.destination = string(b)
+				}
+			}
+
+			var executions []testkube.Execution
+			client, namespace, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
 
 			if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(artifactDirs) != 0 ||
 				artifactStorageBucket != "" || artifactOmitFolderPerExecution {
