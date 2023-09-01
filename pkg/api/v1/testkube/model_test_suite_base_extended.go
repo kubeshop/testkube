@@ -66,20 +66,17 @@ func (t *TestSuite) QuoteTestSuiteTextFields() {
 			}
 		}
 
-		if t.ExecutionRequest.JobTemplate != "" {
-			t.ExecutionRequest.JobTemplate = fmt.Sprintf("%q", t.ExecutionRequest.JobTemplate)
+		var fields = []*string{
+			&t.ExecutionRequest.JobTemplate,
+			&t.ExecutionRequest.CronJobTemplate,
+			&t.ExecutionRequest.PvcTemplate,
+			&t.ExecutionRequest.ScraperTemplate,
 		}
 
-		if t.ExecutionRequest.CronJobTemplate != "" {
-			t.ExecutionRequest.CronJobTemplate = fmt.Sprintf("%q", t.ExecutionRequest.CronJobTemplate)
-		}
-
-		if t.ExecutionRequest.PvcTemplate != "" {
-			t.ExecutionRequest.PvcTemplate = fmt.Sprintf("%q", t.ExecutionRequest.PvcTemplate)
-		}
-
-		if t.ExecutionRequest.ScraperTemplate != "" {
-			t.ExecutionRequest.ScraperTemplate = fmt.Sprintf("%q", t.ExecutionRequest.ScraperTemplate)
+		for _, field := range fields {
+			if *field != "" {
+				*field = fmt.Sprintf("%q", *field)
+			}
 		}
 	}
 }
