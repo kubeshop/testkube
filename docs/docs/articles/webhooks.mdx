@@ -36,7 +36,7 @@ Webhooks can be created with Testkube CLI using the `create webhook` command.
 testkube create webhook --name example-webhook --events start-test --events end-test-success --events end-test-failed --uri <YOUR_ENDPOINT_URL>
 ```
 `--name` - Your webhook name (in this case `example-webhook`).
-`--events` - event that will trigger a webhook. Multiple `--events` can be defined (in this case `--events start-test --events end-test-success --events end-test-failed`). All available trigger events can be found in the [Supported Event types](#supported-event-types) section.
+`--events` - Event that will trigger a webhook. Multiple `--events` can be defined (in this case `--events start-test --events end-test-success --events end-test-failed`). All available trigger events can be found in the [Supported Event types](#supported-event-types) section.
 `--uri` - The HTTPS endpoint where you want to receive the webhook events.
 
 </TabItem>
