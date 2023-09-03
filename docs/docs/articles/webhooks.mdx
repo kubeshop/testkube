@@ -140,7 +140,7 @@ Create a webhook payload template file:
 }
 ```
 
-It can then be set with `--payload-template template.json`.
+And set it with `--payload-template template.json`.
 
 ```sh
 testkube create webhook --name example-webhook --events start-test --events end-test-passed --events end-test-failed --payload-template template.json --uri <YOUR_ENDPOINT_URL>
