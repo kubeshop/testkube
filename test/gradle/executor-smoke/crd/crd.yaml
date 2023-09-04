@@ -22,7 +22,7 @@ spec:
         value: "true"
         type: basic
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
-    activeDeadlineSeconds: 160
+    activeDeadlineSeconds: 180
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -46,7 +46,7 @@ spec:
         value: "true"
         type: basic
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
-    activeDeadlineSeconds: 160
+    activeDeadlineSeconds: 180
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -70,7 +70,7 @@ spec:
         value: "true"
         type: basic
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
-    activeDeadlineSeconds: 160
+    activeDeadlineSeconds: 180
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -94,7 +94,7 @@ spec:
         value: "true"
         type: basic
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
-    activeDeadlineSeconds: 160
+    activeDeadlineSeconds: 180
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -114,4 +114,4 @@ spec:
   executionRequest:
     negativeTest: true
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
-    activeDeadlineSeconds: 160
+    activeDeadlineSeconds: 180
