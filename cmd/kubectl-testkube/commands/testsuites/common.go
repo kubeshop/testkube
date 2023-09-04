@@ -150,7 +150,7 @@ func NewTestSuiteUpsertOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 	}
 
 	jobTemplateReference := cmd.Flag("job-template-reference").Value.String()
-	cronJobTemplateReference := cmd.Flag("cronjob-template-refeence").Value.String()
+	cronJobTemplateReference := cmd.Flag("cronjob-template-reference").Value.String()
 	scraperTemplateReference := cmd.Flag("scraper-template-reference").Value.String()
 	pvcTemplateReference := cmd.Flag("pvc-template-reference").Value.String()
 
