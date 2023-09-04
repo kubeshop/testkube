@@ -37,6 +37,19 @@ func TestExecutionResult(t *testing.T) {
 		assert.Equal(t, testkube.ExecutionStatusPassed, result.Status)
 		assert.Len(t, result.Steps, 2)
 	})
+
+	t.Run("Get successful checks for k6 execution result", func(t *testing.T) {
+		t.Parallel()
+		// setup
+		summary, err := os.ReadFile("../../examples/k6-test-scenarios.txt")
+		if err != nil {
+			assert.FailNow(t, "Unable to read k6 test summary")
+		}
+
+		result := areChecksSuccessful(string(summary))
+		assert.Equal(t, true, result)
+	})
+
 }
 
 func TestParse(t *testing.T) {
