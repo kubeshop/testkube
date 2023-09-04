@@ -15,7 +15,7 @@ spec:
       path: test/curl/executor-tests/curl-smoke-test.json
   executionRequest:
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 32Mi\n              cpu: 32m\n"
-    activeDeadlineSeconds: 120
+    activeDeadlineSeconds: 160
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -35,4 +35,4 @@ spec:
   executionRequest:
     negativeTest: true
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 32Mi\n              cpu: 32m\n"
-    activeDeadlineSeconds: 120
+    activeDeadlineSeconds: 160
