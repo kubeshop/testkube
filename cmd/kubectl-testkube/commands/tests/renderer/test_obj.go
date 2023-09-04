@@ -137,7 +137,7 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		}
 
 		if test.ExecutionRequest.JobTemplateReference != "" {
-			ui.Warn("  Job template reference:      ", "\n", test.ExecutionRequest.JobTemplateReference)
+			ui.Warn("  Job template reference:      ", test.ExecutionRequest.JobTemplateReference)
 		}
 
 		if test.ExecutionRequest.CronJobTemplate != "" {
@@ -145,7 +145,7 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		}
 
 		if test.ExecutionRequest.CronJobTemplateReference != "" {
-			ui.Warn("  Cron job template reference: ", "\n", test.ExecutionRequest.CronJobTemplateReference)
+			ui.Warn("  Cron job template reference: ", test.ExecutionRequest.CronJobTemplateReference)
 		}
 
 		if test.ExecutionRequest.PreRunScript != "" {
@@ -161,7 +161,7 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		}
 
 		if test.ExecutionRequest.ScraperTemplateReference != "" {
-			ui.Warn("  Scraper template reference:  ", "\n", test.ExecutionRequest.ScraperTemplateReference)
+			ui.Warn("  Scraper template reference:  ", test.ExecutionRequest.ScraperTemplateReference)
 		}
 
 		if test.ExecutionRequest.PvcTemplate != "" {
@@ -169,7 +169,7 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		}
 
 		if test.ExecutionRequest.PvcTemplateReference != "" {
-			ui.Warn("  PVC template reference:      ", "\n", test.ExecutionRequest.PvcTemplateReference)
+			ui.Warn("  PVC template reference:      ", test.ExecutionRequest.PvcTemplateReference)
 		}
 
 		var mountConfigMaps, mountSecrets []mountParams

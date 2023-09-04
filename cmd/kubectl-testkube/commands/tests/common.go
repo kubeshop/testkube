@@ -956,7 +956,7 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 		if cmd.Flag(value.source).Changed {
 			data := ""
 			name := cmd.Flag(value.source).Value.String()
-			if data != "" {
+			if name != "" {
 				b, err := os.ReadFile(name)
 				if err != nil {
 					return nil, err

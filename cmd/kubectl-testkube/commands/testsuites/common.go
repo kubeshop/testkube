@@ -324,7 +324,7 @@ func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 		if cmd.Flag(value.source).Changed {
 			data := ""
 			name := cmd.Flag(value.source).Value.String()
-			if data != "" {
+			if name != "" {
 				b, err := os.ReadFile(name)
 				if err != nil {
 					return options, err

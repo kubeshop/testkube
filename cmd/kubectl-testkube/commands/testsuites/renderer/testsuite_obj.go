@@ -49,7 +49,7 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 		}
 
 		if ts.ExecutionRequest.JobTemplate != "" {
-			ui.Warn("  Job template:                ", ts.ExecutionRequest.JobTemplate)
+			ui.Warn("  Job template:                ", "\n", ts.ExecutionRequest.JobTemplate)
 		}
 
 		if ts.ExecutionRequest.JobTemplateReference != "" {
@@ -57,7 +57,7 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 		}
 
 		if ts.ExecutionRequest.CronJobTemplate != "" {
-			ui.Warn("  Cron job template:           ", ts.ExecutionRequest.CronJobTemplate)
+			ui.Warn("  Cron job template:           ", "\n", ts.ExecutionRequest.CronJobTemplate)
 		}
 
 		if ts.ExecutionRequest.CronJobTemplateReference != "" {
@@ -65,7 +65,7 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 		}
 
 		if ts.ExecutionRequest.ScraperTemplate != "" {
-			ui.Warn("  Scraper template:            ", ts.ExecutionRequest.ScraperTemplate)
+			ui.Warn("  Scraper template:            ", "\n", ts.ExecutionRequest.ScraperTemplate)
 		}
 
 		if ts.ExecutionRequest.ScraperTemplateReference != "" {
@@ -73,7 +73,7 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 		}
 
 		if ts.ExecutionRequest.PvcTemplate != "" {
-			ui.Warn("  PVC template:                ", ts.ExecutionRequest.PvcTemplate)
+			ui.Warn("  PVC template:                ", "\n", ts.ExecutionRequest.PvcTemplate)
 		}
 
 		if ts.ExecutionRequest.PvcTemplateReference != "" {
