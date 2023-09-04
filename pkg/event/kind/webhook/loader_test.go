@@ -5,6 +5,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 
 	executorsv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	templatesclientv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
@@ -28,7 +29,7 @@ func TestWebhookLoader(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	mockTemplatesClient := templatesclientv1.NewMockInterface(mockCtrl)
-	webhooksLoader := NewWebhookLoader(&DummyLoader{}, mockTemplatesClient)
+	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), &DummyLoader{}, mockTemplatesClient)
 	listeners, err := webhooksLoader.Load()
 
 	assert.Equal(t, 1, len(listeners))

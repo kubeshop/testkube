@@ -3,6 +3,8 @@ package webhook
 import (
 	"fmt"
 
+	"go.uber.org/zap"
+
 	executorsv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	templatesclientv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -17,14 +19,16 @@ type WebhooksLister interface {
 	List(selector string) (*executorsv1.WebhookList, error)
 }
 
-func NewWebhookLoader(webhooksClient WebhooksLister, templatesClient templatesclientv1.Interface) *WebhooksLoader {
+func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient WebhooksLister, templatesClient templatesclientv1.Interface) *WebhooksLoader {
 	return &WebhooksLoader{
+		log:             log,
 		WebhooksClient:  webhooksClient,
 		templatesClient: templatesClient,
 	}
 }
 
 type WebhooksLoader struct {
+	log             *zap.SugaredLogger
 	WebhooksClient  WebhooksLister
 	templatesClient templatesclientv1.Interface
 }
@@ -51,6 +55,8 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 
 			if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.WEBHOOK_TemplateType {
 				payloadTemplate = template.Spec.Body
+			} else {
+				r.log.Warnw("not matching template type", "template", webhook.Spec.PayloadTemplateReference)
 			}
 		}
 

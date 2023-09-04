@@ -314,6 +314,8 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 
 		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.JOB_TemplateType {
 			jobOptions.JobTemplate = template.Spec.Body
+		} else {
+			log.Warnw("Not matched template type", "template", options.ExecutorSpec.JobTemplateReference)
 		}
 	}
 
@@ -325,6 +327,8 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 
 		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.JOB_TemplateType {
 			jobOptions.JobTemplate = template.Spec.Body
+		} else {
+			log.Warnw("Not matched template type", "template", options.Request.JobTemplateReference)
 		}
 	}
 
@@ -337,6 +341,8 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 
 		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.SCRAPER_TemplateType {
 			jobOptions.ScraperTemplate = template.Spec.Body
+		} else {
+			log.Warnw("Not matched template type", "template", options.Request.ScraperTemplateReference)
 		}
 	}
 
@@ -349,6 +355,8 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 
 		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.PVC_TemplateType {
 			jobOptions.PvcTemplate = template.Spec.Body
+		} else {
+			log.Warnw("Not matched template type", "template", options.Request.PvcTemplateReference)
 		}
 	}
 
