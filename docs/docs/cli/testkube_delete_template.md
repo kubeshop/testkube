@@ -4,7 +4,7 @@ Delete a template.
 
 ### Synopsis
 
-Delete template, pass template name which should be deleted
+Delete a template and pass the template name to be deleted.
 
 ```
 testkube delete template <templateName> [flags]
