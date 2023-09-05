@@ -312,7 +312,7 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 			return jobOptions, err
 		}
 
-		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.JOB_TemplateType {
+		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.CONTAINER_TemplateType {
 			jobOptions.JobTemplate = template.Spec.Body
 		} else {
 			log.Warnw("Not matched template type", "template", options.ExecutorSpec.JobTemplateReference)
@@ -325,7 +325,7 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 			return nil, err
 		}
 
-		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.JOB_TemplateType {
+		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.CONTAINER_TemplateType {
 			jobOptions.JobTemplate = template.Spec.Body
 		} else {
 			log.Warnw("Not matched template type", "template", options.Request.JobTemplateReference)

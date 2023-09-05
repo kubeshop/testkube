@@ -17,7 +17,7 @@ testkube create template [flags]
   -h, --help                   help for template
   -l, --label stringToString   label key value pair: --label key1=value1 (default [])
   -n, --name string            unique template name - mandatory
-      --template-type string   template type one of job|container|cronnjob|scraper|pvc|webhook
+      --template-type string   template type one of job|container|cronjob|scraper|pvc|webhook
 ```
 
 ### Options inherited from parent commands
