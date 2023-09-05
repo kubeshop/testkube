@@ -4,7 +4,7 @@ Create new Template
 
 ### Synopsis
 
-Create new Template Custom Resource
+Create a new Template Custom Resource.
 
 ```
 testkube create template [flags]
