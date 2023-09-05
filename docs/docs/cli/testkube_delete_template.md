@@ -1,6 +1,6 @@
 ## testkube delete template
 
-Delete template
+Delete a template.
 
 ### Synopsis
 
