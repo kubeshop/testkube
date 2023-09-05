@@ -1,6 +1,6 @@
 ## testkube create template
 
-Create new Template
+Create a new Template.
 
 ### Synopsis
 
