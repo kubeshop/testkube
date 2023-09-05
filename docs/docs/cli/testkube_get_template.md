@@ -1,6 +1,6 @@
 ## testkube get template
 
-Get template details
+Get template details.
 
 ### Synopsis
 
