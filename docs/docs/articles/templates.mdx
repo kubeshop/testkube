@@ -67,7 +67,7 @@ Check templateReference fields in API spec. For example, Test -> executionReques
 
 <TabItem value="cli" label="CLI">
 
-Templates can be created with Testkube CLI using the `create template` command.
+Templates can be created with the Testkube CLI using the `create template` command.
 
 ```sh
 kubectl testkube create test --name template-test --type k6/script --job-template-reference=job-template --test-content-type git --git-uri  "https://github.com/kubeshop/testkube.git" --git-branch main --git-path test/k6/executor-tests/k6-smoke-test.js
