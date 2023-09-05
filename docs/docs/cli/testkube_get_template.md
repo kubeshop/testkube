@@ -4,7 +4,7 @@ Get template details.
 
 ### Synopsis
 
-Get template, you can change output format, to get single details pass name as first arg
+Get template allows you to change the output format. To get single details, pass the template name as the first argument.
 
 ```
 testkube get template <templateName> [flags]
