@@ -4,7 +4,7 @@ Update Template
 
 ### Synopsis
 
-Update Template Custom Resource
+Update Template Custom Resource.
 
 ```
 testkube update template [flags]
