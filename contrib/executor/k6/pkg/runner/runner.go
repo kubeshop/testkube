@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -237,14 +238,17 @@ func isSuccessful(summary string) bool {
 // if any of the checks failed
 func areChecksSuccessful(summary string) bool {
 	lines := splitSummaryBody(summary)
+	re, err := regexp.Compile(`checks\.+: `)
+	if err != nil {
+		outputPkg.PrintLogf("%s Regexp error: %s", ui.IconWarning, err.Error())
+		return true
+	}
+
 	for _, line := range lines {
-		if !strings.Contains(line, "checks") {
+		if !re.MatchString(line) {
 			continue
 		}
-		if strings.Contains(line, "100.00%") {
-			return true
-		}
-		return false
+		return strings.Contains(line, "100.00%")
 	}
 
 	return true
