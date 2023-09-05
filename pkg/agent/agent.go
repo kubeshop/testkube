@@ -28,8 +28,14 @@ import (
 const (
 	apiKeyMeta         = "api-key"
 	clusterIDMeta      = "cluster-id"
-	cloudMigrate       = "migrate"
+	cloudMigrateMeta   = "migrate"
+	orgIdMeta          = "environment-id"
+	envIdMeta          = "organization-id"
 	healthcheckCommand = "healthcheck"
+
+	cloudMigrateEnvName = "TESTKUBE_CLOUD_MIGRATE"
+	cloudEnvIdEnvName   = "TESTKUBE_CLOUD_ENV_ID"
+	cloudOrgIdEnvName   = "TESTKUBE_CLOUD_ORG_ID"
 )
 
 // buffer up to five messages per worker
@@ -208,7 +214,9 @@ func (ag *Agent) runCommandLoop(ctx context.Context) error {
 	ctx = AddAPIKeyMeta(ctx, ag.apiKey)
 
 	ctx = metadata.AppendToOutgoingContext(ctx, clusterIDMeta, ag.clusterID)
-	ctx = metadata.AppendToOutgoingContext(ctx, cloudMigrate, os.Getenv("TESTKUBE_CLOUD_MIGRATE"))
+	ctx = metadata.AppendToOutgoingContext(ctx, cloudMigrateMeta, os.Getenv(cloudMigrateEnvName))
+	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, os.Getenv(cloudEnvIdEnvName))
+	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, os.Getenv(cloudOrgIdEnvName))
 
 	ag.logger.Infow("initiating streaming connection with Cloud API")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
