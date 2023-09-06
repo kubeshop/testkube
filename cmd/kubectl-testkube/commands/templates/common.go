@@ -24,7 +24,7 @@ func NewCreateTemplateOptionsFromFlags(cmd *cobra.Command) (options apiv1.Create
 	if templateType != testkube.JOB_TemplateType && templateType != testkube.CRONJOB_TemplateType &&
 		templateType != testkube.SCRAPER_TemplateType && templateType != testkube.PVC_TemplateType &&
 		templateType != testkube.WEBHOOK_TemplateType {
-		ui.Failf("invalid template type: %s. use one of job|container|cronnjob|scraper|pvc|webhook", templateType)
+		ui.Failf("invalid template type: %s. use one of job|container|cronjob|scraper|pvc|webhook", templateType)
 	}
 
 	body := cmd.Flag("body").Value.String()
@@ -75,7 +75,7 @@ func NewUpdateTemplateOptionsFromFlags(cmd *cobra.Command) (options apiv1.Update
 		if templateType != testkube.JOB_TemplateType && templateType != testkube.CRONJOB_TemplateType &&
 			templateType != testkube.SCRAPER_TemplateType && templateType != testkube.PVC_TemplateType &&
 			templateType != testkube.WEBHOOK_TemplateType {
-			ui.Failf("invalid template type: %s. use one of job|container|cronnjob|scraper|pvc|webhook", templateType)
+			ui.Failf("invalid template type: %s. use one of job|container|cronjob|scraper|pvc|webhook", templateType)
 		}
 		options.Type_ = &templateType
 	}

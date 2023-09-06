@@ -17,8 +17,8 @@ func NewDeleteTemplateCmd() *cobra.Command {
 
 		Use:     "template <templateName>",
 		Aliases: []string{"tp"},
-		Short:   "Delete template",
-		Long:    `Delete template, pass template name which should be deleted`,
+		Short:   "Delete a template.",
+		Long:    `Delete a template and pass the template name to be deleted.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)

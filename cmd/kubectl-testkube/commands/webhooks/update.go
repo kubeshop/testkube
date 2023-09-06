@@ -49,7 +49,7 @@ func UpdateWebhookCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique webhook name - mandatory")
 	cmd.Flags().StringArrayVarP(&events, "events", "e", []string{}, "event types handled by webhook e.g. start-test|end-test")
-	cmd.Flags().StringVarP(&uri, "uri", "u", "", "URI which should be called when given event occurs")
+	cmd.Flags().StringVarP(&uri, "uri", "u", "", "URI which should be called when given event occurs (golang template supported)")
 	cmd.Flags().StringVarP(&selector, "selector", "", "", "expression to select tests and test suites for webhook events: --selector app=backend")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringVarP(&payloadObjectField, "payload-field", "", "", "field to use for notification object payload")

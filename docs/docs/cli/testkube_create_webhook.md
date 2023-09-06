@@ -22,7 +22,7 @@ testkube create webhook [flags]
       --payload-template string             if webhook needs to send a custom notification, then a path to template file should be provided
       --payload-template-reference string   reference to payload template to use for the webhook
       --selector string                     expression to select tests and test suites for webhook events: --selector app=backend
-  -u, --uri string                          URI which should be called when given event occurs
+  -u, --uri string                          URI which should be called when given event occurs (golang template supported)
 ```
 
 ### Options inherited from parent commands

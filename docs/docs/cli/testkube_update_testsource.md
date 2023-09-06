@@ -29,7 +29,7 @@ testkube update testsource [flags]
   -l, --label stringToString                 label key value pair: --label key1=value1 (default [])
   -n, --name string                          unique test source name - mandatory
       --source-type string                   source type of test one of string|file-uri|git
-  -u, --uri string                           URI which should be called when given event occurs
+  -u, --uri string                           URI which should be called to get test content
 ```
 
 ### Options inherited from parent commands

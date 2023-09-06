@@ -21,8 +21,8 @@ func NewGetTemplateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "template <templateName>",
 		Aliases: []string{"templates", "tp"},
-		Short:   "Get template details",
-		Long:    `Get template, you can change output format, to get single details pass name as first arg`,
+		Short:   "Get template details.",
+		Long:    `Get template allows you to change the output format. To get single details, pass the template name as the first argument.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
