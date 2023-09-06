@@ -38,6 +38,7 @@ testkube run test <testName> [flags]
       --image string                               execution variable passed to executor
       --iterations int                             how many times to run the test (default 1)
       --job-template string                        job template file path for extensions to job template
+      --job-template-reference string              reference to job template to use for the test
   -l, --label strings                              label key value pair: --label key1=value1
       --mask stringArray                           regexp to filter downloaded files, single or comma separated, like report/.* or .*\.json,.*\.js$
       --mount-configmap stringToString             config map value pair for mounting it to executor pod: --mount-configmap configmap_name=configmap_mountpath (default [])
@@ -46,7 +47,10 @@ testkube run test <testName> [flags]
       --negative-test                              negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa
       --postrun-script string                      path to script to be run after test execution
       --prerun-script string                       path to script to be run before test execution
+      --pvc-template string                        pvc template file path for extensions to pvc template
+      --pvc-template-reference string              reference to pvc template to use for the test
       --scraper-template string                    scraper template file path for extensions to scraper template
+      --scraper-template-reference string          reference to scraper template to use for the test
   -s, --secret-variable stringToString             execution secret variable passed to executor (default [])
       --secret-variable-reference stringToString   secret variable references in a form name1=secret_name1=secret_key1 (default [])
       --upload-timeout string                      timeout to use when uploading files, example: 30s

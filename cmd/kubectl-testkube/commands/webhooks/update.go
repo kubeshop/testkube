@@ -9,13 +9,14 @@ import (
 
 func UpdateWebhookCmd() *cobra.Command {
 	var (
-		events             []string
-		name, uri          string
-		selector           string
-		labels             map[string]string
-		payloadObjectField string
-		payloadTemplate    string
-		headers            map[string]string
+		events                   []string
+		name, uri                string
+		selector                 string
+		labels                   map[string]string
+		payloadObjectField       string
+		payloadTemplate          string
+		headers                  map[string]string
+		payloadTemplateReference string
 	)
 
 	cmd := &cobra.Command{
@@ -54,6 +55,7 @@ func UpdateWebhookCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&payloadObjectField, "payload-field", "", "", "field to use for notification object payload")
 	cmd.Flags().StringVarP(&payloadTemplate, "payload-template", "", "", "if webhook needs to send a custom notification, then a path to template file should be provided")
 	cmd.Flags().StringToStringVarP(&headers, "header", "", nil, "webhook header value pair: --header Content-Type=application/xml")
+	cmd.Flags().StringVar(&payloadTemplateReference, "payload-template-reference", "", "reference to payload template to use for the webhook")
 
 	return cmd
 }

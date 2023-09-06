@@ -80,6 +80,7 @@ const sidebars = {
         "articles/webhooks",
         "articles/test-sources",
         "articles/test-executions",
+        "articles/templates",        
       ],
     },
     {

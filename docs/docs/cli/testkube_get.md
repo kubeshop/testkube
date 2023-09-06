@@ -35,6 +35,7 @@ testkube get <resourceName> [flags]
 * [testkube get context](testkube_get_context.md)	 - Set context for Testkube Cloud
 * [testkube get execution](testkube_get_execution.md)	 - Lists or gets test executions
 * [testkube get executor](testkube_get_executor.md)	 - Gets executor details
+* [testkube get template](testkube_get_template.md)	 - Get template details
 * [testkube get test](testkube_get_test.md)	 - Get all available tests
 * [testkube get testsource](testkube_get_testsource.md)	 - Get test source details
 * [testkube get testsuite](testkube_get_testsuite.md)	 - Get test suite by name
