@@ -110,13 +110,27 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		}
 	}
 
+	var tmpl *template.Template
+	tmpl, err = template.New("uri").Parse(l.Uri)
+	if err != nil {
+		log.Errorw("creating webhook uri error", "error", err)
+		return testkube.NewFailedEventResult(event.Id, err)
+	}
+
+	var buffer bytes.Buffer
+	if err = tmpl.ExecuteTemplate(&buffer, "uri", event); err != nil {
+		log.Errorw("executing webhook uri error", "error", err)
+		return testkube.NewFailedEventResult(event.Id, err)
+	}
+
+	uri := buffer.Bytes()
 	if err != nil {
 		err = errors.Wrap(err, "webhook send json encode error")
 		log.Errorw("webhook send json encode error", "error", err)
 		return testkube.NewFailedEventResult(event.Id, err)
 	}
 
-	request, err := http.NewRequest(http.MethodPost, l.Uri, body)
+	request, err := http.NewRequest(http.MethodPost, string(uri), body)
 	if err != nil {
 		log.Errorw("webhook request creating error", "error", err)
 		return testkube.NewFailedEventResult(event.Id, err)

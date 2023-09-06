@@ -23,8 +23,8 @@ func NewCreateTemplateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "template",
 		Aliases: []string{"tp"},
-		Short:   "Create new Template",
-		Long:    `Create new Template Custom Resource`,
+		Short:   "Create a new Template.",
+		Long:    `Create a new Template Custom Resource.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			crdOnly, err := strconv.ParseBool(cmd.Flag("crd-only").Value.String())
 			ui.ExitOnError("parsing flag value", err)
@@ -67,7 +67,7 @@ func NewCreateTemplateCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique template name - mandatory")
-	cmd.Flags().StringVarP(&templateType, "template-type", "", "", "template type one of job|container|cronnjob|scraper|pvc|webhook")
+	cmd.Flags().StringVarP(&templateType, "template-type", "", "", "template type one of job|container|cronjob|scraper|pvc|webhook")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringVarP(&body, "body", "", "", "a path to template file to use as template body")
 
