@@ -14,7 +14,7 @@ func (s TestkubeAPI) ListSecretsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to list secrets"
 
-		list, err := s.SecretClient.List()
+		list, err := s.SecretClient.List(true)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not list secrets: %s", errPrefix, err))
 		}
