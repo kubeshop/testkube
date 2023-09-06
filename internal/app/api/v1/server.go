@@ -381,6 +381,9 @@ func (s *TestkubeAPI) InitRoutes() {
 	repositories := s.Routes.Group("/repositories")
 	repositories.Post("/", s.ValidateRepositoryHandler())
 
+	secrets := s.Routes.Group("/secrets")
+	secrets.Get("/", s.ListSecretsHandler())
+
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor
 	s.Mux.Mount("/results", s.Mux)
