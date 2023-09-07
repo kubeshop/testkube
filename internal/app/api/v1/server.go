@@ -84,7 +84,7 @@ func NewTestkubeAPI(
 	dashboardURI string,
 	helmchartVersion string,
 	mode string,
-	eventsBus *bus.NATSBus,
+	eventsBus bus.Bus,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -180,7 +180,7 @@ type TestkubeAPI struct {
 	artifactsStorage     storage.ArtifactsStorage
 	helmchartVersion     string
 	mode                 string
-	eventsBus            *bus.NATSBus
+	eventsBus            bus.Bus
 }
 
 type storageParams struct {

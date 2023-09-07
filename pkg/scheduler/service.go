@@ -36,7 +36,7 @@ type Scheduler struct {
 	configMap                 config.Repository
 	configMapClient           configmap.Interface
 	testSuiteExecutionsClient testsuiteexecutionsclientv1.Interface
-	eventsBus                 *bus.NATSBus
+	eventsBus                 bus.Bus
 }
 
 func NewScheduler(
@@ -55,7 +55,7 @@ func NewScheduler(
 	configMap config.Repository,
 	configMapClient configmap.Interface,
 	testSuiteExecutionsClient testsuiteexecutionsclientv1.Interface,
-	eventsBus *bus.NATSBus,
+	eventsBus bus.Bus,
 ) *Scheduler {
 	return &Scheduler{
 		metrics:                   metrics,

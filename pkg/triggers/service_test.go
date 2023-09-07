@@ -45,6 +45,7 @@ func TestService_Run(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
+	mockBus := bus.NewEventBusMock()
 	mockResultRepository := result.NewMockRepository(mockCtrl)
 	mockTestResultRepository := testresult.NewMockRepository(mockCtrl)
 
@@ -129,6 +130,7 @@ func TestService_Run(t *testing.T) {
 		configMapConfig,
 		mockConfigMapClient,
 		mockTestSuiteExecutionsClient,
+		mockBus,
 	)
 
 	mockLeaseBackend := NewMockLeaseBackend(mockCtrl)
