@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
 
-FROM justb4/jmeter:5.5
+FROM  kubeshop/jmeter:5.5
 
-RUN apk --no-cache add ca-certificates git
+RUN microdnf update -y && microdnf install -y ca-certificates git && microdnf clean all
 
 WORKDIR /root/
 

@@ -1,4 +1,4 @@
-FROM justb4/jmeter:5.5
+FROM  kubeshop/jmeter:5.5
 
 
 EXPOSE 1099 60001
