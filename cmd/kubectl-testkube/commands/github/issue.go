@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"html/template"
 
 	prShared "github.com/cli/cli/v2/pkg/cmd/pr/shared"
 	"github.com/skratchdot/open-golang/open"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 const (
@@ -76,7 +76,7 @@ func buildTicket(d testkube.DebugInfo) (string, string, error) {
 	if d.ClientVersion == "" || d.ClusterVersion == "" {
 		return "", "", errors.New("client version and cluster version must be populated to create debug message")
 	}
-	t, err := template.New("debug").Parse(Template)
+	t, err := utils.NewTemplate("debug").Parse(Template)
 	if err != nil {
 		return "", "", fmt.Errorf("cannot create template: %w", err)
 	}

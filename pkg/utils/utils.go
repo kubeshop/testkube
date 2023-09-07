@@ -7,8 +7,10 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"text/template"
 	"time"
 
+	sprig "github.com/go-task/slim-sprig"
 	"github.com/pkg/errors"
 )
 
@@ -122,4 +124,8 @@ func EscapeDots(source string) string {
 // UnescapeDots unescapes dots from MongoDB fields
 func UnescapeDots(source string) string {
 	return strings.ReplaceAll(source, string([]rune{0xFF0E}), ".")
+}
+
+func NewTemplate(name string) *template.Template {
+	return template.New(name).Funcs(sprig.FuncMap())
 }

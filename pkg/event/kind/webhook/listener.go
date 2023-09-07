@@ -15,6 +15,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	thttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 var _ common.Listener = (*WebhookListener)(nil)
@@ -168,7 +169,7 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 	log := l.Log.With(event.Log()...)
 
 	var tmpl *template.Template
-	tmpl, err := template.New(field).Parse(body)
+	tmpl, err := utils.NewTemplate(field).Parse(body)
 	if err != nil {
 		log.Errorw(fmt.Sprintf("creating webhook %s error", field), "error", err)
 		return nil, err

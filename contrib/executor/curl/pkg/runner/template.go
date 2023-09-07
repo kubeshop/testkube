@@ -2,7 +2,8 @@ package runner
 
 import (
 	"strings"
-	"text/template"
+
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 // ResolveTemplates fills the string array with the values if they are templated
@@ -21,7 +22,7 @@ func ResolveTemplates(stringsToResolve []string, params map[string]string) error
 // ResolveTemplate fills a string with the values if they are templated
 func ResolveTemplate(stringToResolve string, params map[string]string) (string, error) {
 
-	ut, err := template.New("cmd").Parse(stringToResolve)
+	ut, err := utils.NewTemplate("cmd").Parse(stringToResolve)
 
 	if err != nil {
 		return "", err
