@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"time"
@@ -81,7 +80,7 @@ func getDocDBTLSConfig() (*tls.Config, error) {
 	}()
 
 	tlsConfig := new(tls.Config)
-	certs, err := ioutil.ReadFile(caFilePath)
+	certs, err := os.ReadFile(caFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("could not read CA file: %s", err)
 	}
