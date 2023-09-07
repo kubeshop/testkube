@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"text/template"
 
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -86,7 +87,8 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 
 	var err error
 	if l.payloadTemplate != "" {
-		data, err := l.processTemplate("payload", l.payloadTemplate, event)
+		var data []byte
+		data, err = l.processTemplate("payload", l.payloadTemplate, event)
 		if err != nil {
 			return testkube.NewFailedEventResult(event.Id, err)
 		}
@@ -99,6 +101,12 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 			body.Reset()
 			err = json.NewEncoder(body).Encode(data)
 		}
+	}
+
+	if err != nil {
+		err = errors.Wrap(err, "webhook send encode error")
+		log.Errorw("webhook send encode error", "error", err)
+		return testkube.NewFailedEventResult(event.Id, err)
 	}
 
 	data, err := l.processTemplate("uri", l.Uri, event)
