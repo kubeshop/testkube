@@ -11,11 +11,16 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
-var _ Bus = (*NATSBus)(nil)
+var (
+	_        Bus = (*NATSBus)(nil)
+	Internal *NATSBus
+)
 
 const (
-	SubscribeBuffer  = 1
-	SubscriptionName = "events"
+	SubscribeBuffer        = 1
+	SubscriptionName       = "events"
+	InternalPublishTopic   = "internal.all"
+	InternalSubscribeTopic = "internal.>"
 )
 
 func NewNATSConnection(uri string) (*nats.EncodedConn, error) {
@@ -36,9 +41,10 @@ func NewNATSConnection(uri string) (*nats.EncodedConn, error) {
 }
 
 func NewNATSBus(nc *nats.EncodedConn) *NATSBus {
-	return &NATSBus{
+	Internal = &NATSBus{
 		nc: nc,
 	}
+	return Internal
 }
 
 type NATSBus struct {
