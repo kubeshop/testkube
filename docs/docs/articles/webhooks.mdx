@@ -189,7 +189,7 @@ spec:
 Webhook payload can contain **event-specific** variables - they will be replaced with actual data when the events occurs. In the above examples, only the event `Id` is being sent. 
 However, any of these [supported Event Variables](#supported-event-variables) can be used.
 
-For example, following payload:
+For example, the following payload:
 ```
 {"text": "Event {{ .Type_ }} - Test '{{ .TestExecution.TestName }}' execution ({{ .TestExecution.Number }}) finished with '{{ .TestExecution.ExecutionResult.Status }}' status"}
 ```
