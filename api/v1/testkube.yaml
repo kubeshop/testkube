@@ -5178,7 +5178,7 @@ components:
           description: name of the template resource
         headers:
           type: object
-          description: "webhook headers"
+          description: "webhook headers (golang template supported)"
           additionalProperties:
             type: string
           example:

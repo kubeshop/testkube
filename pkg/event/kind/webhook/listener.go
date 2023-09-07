@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"text/template"
 
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -87,20 +86,12 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 
 	var err error
 	if l.payloadTemplate != "" {
-		var tmpl *template.Template
-		tmpl, err = template.New("webhook").Parse(l.payloadTemplate)
+		data, err := l.processTemplate("payload", l.payloadTemplate, event)
 		if err != nil {
-			log.Errorw("creating webhook template error", "error", err)
 			return testkube.NewFailedEventResult(event.Id, err)
 		}
 
-		var buffer bytes.Buffer
-		if err = tmpl.ExecuteTemplate(&buffer, "webhook", event); err != nil {
-			log.Errorw("executing webhook template error", "error", err)
-			return testkube.NewFailedEventResult(event.Id, err)
-		}
-
-		_, err = body.Write(buffer.Bytes())
+		_, err = body.Write(data)
 	} else {
 		err = json.NewEncoder(body).Encode(event)
 		if err == nil && l.payloadObjectField != "" {
@@ -110,27 +101,12 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		}
 	}
 
-	var tmpl *template.Template
-	tmpl, err = template.New("uri").Parse(l.Uri)
+	data, err := l.processTemplate("uri", l.Uri, event)
 	if err != nil {
-		log.Errorw("creating webhook uri error", "error", err)
 		return testkube.NewFailedEventResult(event.Id, err)
 	}
 
-	var buffer bytes.Buffer
-	if err = tmpl.ExecuteTemplate(&buffer, "uri", event); err != nil {
-		log.Errorw("executing webhook uri error", "error", err)
-		return testkube.NewFailedEventResult(event.Id, err)
-	}
-
-	uri := buffer.Bytes()
-	if err != nil {
-		err = errors.Wrap(err, "webhook send json encode error")
-		log.Errorw("webhook send json encode error", "error", err)
-		return testkube.NewFailedEventResult(event.Id, err)
-	}
-
-	request, err := http.NewRequest(http.MethodPost, string(uri), body)
+	request, err := http.NewRequest(http.MethodPost, string(data), body)
 	if err != nil {
 		log.Errorw("webhook request creating error", "error", err)
 		return testkube.NewFailedEventResult(event.Id, err)
@@ -138,6 +114,16 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 
 	request.Header.Set("Content-Type", "application/json")
 	for key, value := range l.headers {
+		values := []*string{&key, &value}
+		for i := range values {
+			data, err = l.processTemplate("header", *values[i], event)
+			if err != nil {
+				return testkube.NewFailedEventResult(event.Id, err)
+			}
+
+			*values[i] = string(data)
+		}
+
 		request.Header.Set(key, value)
 	}
 
@@ -148,7 +134,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	}
 	defer resp.Body.Close()
 
-	data, err := io.ReadAll(resp.Body)
+	data, err = io.ReadAll(resp.Body)
 	if err != nil {
 		log.Errorw("webhook read response error", "error", err)
 		return testkube.NewFailedEventResult(event.Id, err)
@@ -168,4 +154,23 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 
 func (l *WebhookListener) Kind() string {
 	return "webhook"
+}
+
+func (l *WebhookListener) processTemplate(field, body string, event testkube.Event) ([]byte, error) {
+	log := l.Log.With(event.Log()...)
+
+	var tmpl *template.Template
+	tmpl, err := template.New(field).Parse(body)
+	if err != nil {
+		log.Errorw(fmt.Sprintf("creating webhook %s error", field), "error", err)
+		return nil, err
+	}
+
+	var buffer bytes.Buffer
+	if err = tmpl.ExecuteTemplate(&buffer, field, event); err != nil {
+		log.Errorw(fmt.Sprintf("executing webhook %s error", field), "error", err)
+		return nil, err
+	}
+
+	return buffer.Bytes(), nil
 }
