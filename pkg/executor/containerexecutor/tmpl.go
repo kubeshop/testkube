@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"text/template"
 
 	_ "embed"
 
@@ -25,6 +24,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/skopeo"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 const (
@@ -41,8 +41,7 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 	secretEnvVars := append(envManager.PrepareSecrets(options.SecretEnvs, options.Variables),
 		envManager.PrepareGitCredentials(options.UsernameSecret, options.TokenSecret)...)
 
-	tmpl, err := template.New("job").Funcs(template.FuncMap{"vartypeptrtostring": testkube.VariableTypeString}).
-		Parse(options.JobTemplate)
+	tmpl, err := utils.NewTemplate("job").Parse(options.JobTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("creating job spec from executor template error: %w", err)
 	}
@@ -68,8 +67,7 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 	var job batchv1.Job
 	jobSpec := buffer.String()
 	if options.JobTemplateExtensions != "" {
-		tmplExt, err := template.New("jobExt").Funcs(template.FuncMap{"vartypeptrtostring": testkube.VariableTypeString}).
-			Parse(options.JobTemplateExtensions)
+		tmplExt, err := utils.NewTemplate("jobExt").Parse(options.JobTemplateExtensions)
 		if err != nil {
 			return nil, fmt.Errorf("creating job extensions spec from executor template error: %w", err)
 		}
@@ -139,7 +137,7 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 
 // NewScraperJobSpec is a method to create new scraper job spec
 func NewScraperJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.Job, error) {
-	tmpl, err := template.New("job").Parse(options.ScraperTemplate)
+	tmpl, err := utils.NewTemplate("job").Parse(options.ScraperTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("creating job spec from scraper template error: %w", err)
 	}
@@ -153,7 +151,7 @@ func NewScraperJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.Jo
 	var job batchv1.Job
 	jobSpec := buffer.String()
 	if options.ScraperTemplateExtensions != "" {
-		tmplExt, err := template.New("jobExt").Parse(options.ScraperTemplateExtensions)
+		tmplExt, err := utils.NewTemplate("jobExt").Parse(options.ScraperTemplateExtensions)
 		if err != nil {
 			return nil, fmt.Errorf("creating scraper extensions spec from executor template error: %w", err)
 		}
@@ -198,7 +196,7 @@ func NewScraperJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.Jo
 
 // NewPersistentVolumeClaimSpec is a method to create new persistent volume claim spec
 func NewPersistentVolumeClaimSpec(log *zap.SugaredLogger, options *JobOptions) (*corev1.PersistentVolumeClaim, error) {
-	tmpl, err := template.New("volume-claim").Parse(options.PvcTemplate)
+	tmpl, err := utils.NewTemplate("volume-claim").Parse(options.PvcTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("creating volume claim spec from pvc template error: %w", err)
 	}
@@ -211,7 +209,7 @@ func NewPersistentVolumeClaimSpec(log *zap.SugaredLogger, options *JobOptions) (
 	var pvc corev1.PersistentVolumeClaim
 	pvcSpec := buffer.String()
 	if options.PvcTemplateExtensions != "" {
-		tmplExt, err := template.New("jobExt").Parse(options.PvcTemplateExtensions)
+		tmplExt, err := utils.NewTemplate("jobExt").Parse(options.PvcTemplateExtensions)
 		if err != nil {
 			return nil, fmt.Errorf("creating pvc extensions spec from executor template error: %w", err)
 		}

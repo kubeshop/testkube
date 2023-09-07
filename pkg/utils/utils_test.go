@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 	"time"
@@ -71,5 +72,24 @@ func TestSanitizeName(t *testing.T) {
 
 		// then
 		assert.Equal(t, "abc-123", sanized)
+	})
+}
+
+func TestNewTemplate(t *testing.T) {
+	t.Parallel()
+
+	t.Run("sprig functions should be available", func(t *testing.T) {
+		t.Parallel()
+		//given
+		template := `{{ default "foo" .Bar }}`
+
+		// when
+		tpl, err := NewTemplate("test").Parse(template)
+		assert.NoError(t, err)
+		var result bytes.Buffer
+		assert.NoError(t, tpl.Execute(&result, nil))
+
+		// then
+		assert.Equal(t, "foo", result.String())
 	})
 }

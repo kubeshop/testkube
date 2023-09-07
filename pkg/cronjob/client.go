@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"text/template"
 
 	"go.uber.org/zap"
 	v1 "k8s.io/api/batch/v1"
@@ -18,6 +17,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 // Client data struct for managing running cron jobs
@@ -172,7 +172,7 @@ func (c *Client) DeleteAll(resource, selector string) error {
 
 // NewApplySpec is a method to return cron job apply spec
 func NewApplySpec(log *zap.SugaredLogger, parameters templateParameters) (*batchv1.CronJobApplyConfiguration, error) {
-	tmpl, err := template.New("cronJob").Parse(parameters.CronJobTemplate)
+	tmpl, err := utils.NewTemplate("cronJob").Parse(parameters.CronJobTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("creating cron job spec from options.CronJobTemplate error: %w", err)
 	}
@@ -186,7 +186,7 @@ func NewApplySpec(log *zap.SugaredLogger, parameters templateParameters) (*batch
 	var cronJob batchv1.CronJobApplyConfiguration
 	cronJobSpec := buffer.String()
 	if parameters.CronJobTemplateExtensions != "" {
-		tmplExt, err := template.New("cronJobExt").Parse(parameters.CronJobTemplateExtensions)
+		tmplExt, err := utils.NewTemplate("cronJobExt").Parse(parameters.CronJobTemplateExtensions)
 		if err != nil {
 			return nil, fmt.Errorf("creating cron job extensions spec from default template error: %w", err)
 		}
