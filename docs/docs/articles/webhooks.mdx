@@ -194,8 +194,9 @@ It's possible to get access to env variables of testkube-api-server pod in webho
 TESTKUBE_CLOUD_URL: {{ index .Envs "TESTKUBE_CLOUD_URL" }}
 ```
 
-### HTTP Headers
+### URI andHTTP Headers
 You can add additional HTTP headers like `Authorization` or `x-api-key` to have a secret token.
+It's possible to use golang based template string as header or uri value.
 
 <Tabs>
 <TabItem value="dash" label="Dashboard">
