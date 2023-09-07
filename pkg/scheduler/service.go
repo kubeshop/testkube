@@ -3,6 +3,7 @@ package scheduler
 import (
 	"go.uber.org/zap"
 
+	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 
 	executorsv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
@@ -35,6 +36,7 @@ type Scheduler struct {
 	configMap                 config.Repository
 	configMapClient           configmap.Interface
 	testSuiteExecutionsClient testsuiteexecutionsclientv1.Interface
+	eventsBus                 *bus.NATSBus
 }
 
 func NewScheduler(
@@ -53,6 +55,7 @@ func NewScheduler(
 	configMap config.Repository,
 	configMapClient configmap.Interface,
 	testSuiteExecutionsClient testsuiteexecutionsclientv1.Interface,
+	eventsBus *bus.NATSBus,
 ) *Scheduler {
 	return &Scheduler{
 		metrics:                   metrics,
@@ -70,5 +73,6 @@ func NewScheduler(
 		configMap:                 configMap,
 		configMapClient:           configMapClient,
 		testSuiteExecutionsClient: testSuiteExecutionsClient,
+		eventsBus:                 eventsBus,
 	}
 }

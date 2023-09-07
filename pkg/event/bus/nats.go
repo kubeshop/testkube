@@ -12,8 +12,7 @@ import (
 )
 
 var (
-	_        Bus = (*NATSBus)(nil)
-	Internal *NATSBus
+	_ Bus = (*NATSBus)(nil)
 )
 
 const (
@@ -41,10 +40,9 @@ func NewNATSConnection(uri string) (*nats.EncodedConn, error) {
 }
 
 func NewNATSBus(nc *nats.EncodedConn) *NATSBus {
-	Internal = &NATSBus{
+	return &NATSBus{
 		nc: nc,
 	}
-	return Internal
 }
 
 type NATSBus struct {

@@ -116,7 +116,7 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 
 	go s.timeoutCheck(ctx, testsuiteExecution, request.Timeout)
 
-	err := bus.Internal.SubscribeTopic(bus.InternalSubscribeTopic, testsuiteExecution.Name, func(event testkube.Event) error {
+	err := s.eventsBus.SubscribeTopic(bus.InternalSubscribeTopic, testsuiteExecution.Name, func(event testkube.Event) error {
 		s.logger.Infow("test suite abortion event in runSteps", "event", event)
 		if event.TestSuiteExecution != nil &&
 			event.TestSuiteExecution.Id == testsuiteExecution.Id &&
@@ -228,7 +228,7 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 		s.logger.Errorw("saving final test suite execution result error", "error", err)
 	}
 
-	bus.Internal.Unsubscribe(testsuiteExecution.Name)
+	s.eventsBus.Unsubscribe(testsuiteExecution.Name)
 }
 
 func (s *Scheduler) runAfterEachStep(ctx context.Context, execution *testkube.TestSuiteExecution, wg *sync.WaitGroup) {
@@ -325,7 +325,7 @@ func (s *Scheduler) timeoutCheck(ctx context.Context, testsuiteExecution *testku
 			if timeout > 0 {
 				s.logger.Debugw("aborting test suite execution due to timeout", "execution", testsuiteExecution.Id)
 
-				err := bus.Internal.PublishTopic(bus.InternalPublishTopic, testkube.NewEventEndTestSuiteTimeout(testsuiteExecution))
+				err := s.eventsBus.PublishTopic(bus.InternalPublishTopic, testkube.NewEventEndTestSuiteTimeout(testsuiteExecution))
 				if err != nil {
 					s.logger.Errorw("error publishing event", "error", err)
 				}
@@ -470,7 +470,7 @@ func (s *Scheduler) delayWithAbortionCheck(duration time.Duration, testSuiteId s
 	var wasAborted atomic.Bool
 	wasAborted.Store(false)
 
-	err := bus.Internal.SubscribeTopic(bus.InternalSubscribeTopic, testSuiteId, func(event testkube.Event) error {
+	err := s.eventsBus.SubscribeTopic(bus.InternalSubscribeTopic, testSuiteId, func(event testkube.Event) error {
 		s.logger.Infow("test suite abortion event in delay handling", "event", event)
 		if event.TestSuiteExecution != nil &&
 			event.TestSuiteExecution.Id == testSuiteId &&

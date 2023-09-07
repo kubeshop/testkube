@@ -805,7 +805,7 @@ func (s TestkubeAPI) AbortTestSuiteHandler() fiber.Handler {
 		for _, execution := range executions {
 			execution.Status = testkube.TestSuiteExecutionStatusAborting
 			s.Log.Infow("aborting test suite execution", "executionID", execution.Id)
-			err := bus.Internal.PublishTopic(bus.InternalPublishTopic, testkube.NewEventEndTestSuiteAborted(&execution))
+			err := s.eventsBus.PublishTopic(bus.InternalPublishTopic, testkube.NewEventEndTestSuiteAborted(&execution))
 
 			if err != nil {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not sent test suite abortion event: %w", errPrefix, err))
@@ -833,7 +833,7 @@ func (s TestkubeAPI) AbortTestSuiteExecutionHandler() fiber.Handler {
 
 		execution.Status = testkube.TestSuiteExecutionStatusAborting
 
-		err = bus.Internal.PublishTopic(bus.InternalPublishTopic, testkube.NewEventEndTestSuiteAborted(&execution))
+		err = s.eventsBus.PublishTopic(bus.InternalPublishTopic, testkube.NewEventEndTestSuiteAborted(&execution))
 
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not sent test suite abortion event: %w", errPrefix, err))

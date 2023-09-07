@@ -391,6 +391,7 @@ func main() {
 		configMapConfig,
 		configMapClient,
 		testsuiteExecutionsClient,
+		eventBus,
 	)
 
 	slackLoader, err := newSlackLoader(cfg, envs)
@@ -426,6 +427,7 @@ func main() {
 		cfg.TestkubeDashboardURI,
 		cfg.TestkubeHelmchartVersion,
 		mode,
+		eventBus,
 	)
 
 	if mode == common.ModeAgent {
