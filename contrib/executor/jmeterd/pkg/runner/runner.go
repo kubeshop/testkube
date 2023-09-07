@@ -114,15 +114,15 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		runPath = workingDir
 	}
 
-	pluginPath := filepath.Join(filepath.Dir(path), "plugins")
+	parentTestFolder := filepath.Join(filepath.Dir(path))
 	// Set env plugin env variable to set custom plugin directory
 	// with this path custom plugin will be copied to jmeter's plugin directory
-	err = os.Setenv("JMETER_USER_PLUGINS_FOLDER", pluginPath)
+	err = os.Setenv("JMETER_PARENT_TEST_FOLDER", parentTestFolder)
 	if err != nil {
-		output.PrintLogf("%s Failed to set user plugin directory %s", ui.IconWarning, pluginPath)
+		output.PrintLogf("%s Failed to set parent test folder directory %s", ui.IconWarning, parentTestFolder)
 	}
 	// Add user plugins folder in slaves env variables
-	slavesEnvVariables["JMETER_USER_PLUGINS_FOLDER"] = testkube.NewBasicVariable("JMETER_USER_PLUGINS_FOLDER", pluginPath)
+	slavesEnvVariables["JMETER_PARENT_TEST_FOLDER"] = testkube.NewBasicVariable("JMETER_PARENT_TEST_FOLDER", parentTestFolder)
 
 	outputDir := filepath.Join(runPath, "output")
 	// clean output directory it already exists, only useful for local development

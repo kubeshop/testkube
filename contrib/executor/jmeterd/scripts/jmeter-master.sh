@@ -21,15 +21,25 @@ echo
 
 
 
-if [ -d $JMETER_USER_PLUGINS_FOLDER ]
+
+if [ -d ${JMETER_PARENT_TEST_FOLDER}/plugins ]
 then
-  echo "Installing user plugins from ${JMETER_USER_PLUGINS_FOLDER}"
-  for plugin in ${JMETER_USER_PLUGINS_FOLDER}/*.jar; do
+  echo "Installing user plugins from ${JMETER_PARENT_TEST_FOLDER}/plugins"
+  for plugin in ${JMETER_PARENT_TEST_FOLDER}/plugins/*.jar; do
       echo "Copying plugin $plugin to ${JMETER_HOME}/lib/ext/"
       cp $plugin ${JMETER_HOME}/lib/ext
   done;
 else
-  echo "No user plugins found in ${JMETER_USER_PLUGINS_FOLDER}"
+  echo "No user plugins provided as directory ${JMETER_PARENT_TEST_FOLDER}/plugins is not present"
+fi
+echo
+
+if [ -f ${JMETER_PARENT_TEST_FOLDER}/user.properties ]
+then
+  echo "Copying user properties file from ${JMETER_PARENT_TEST_FOLDER}/user.properties"
+  cp ${JMETER_PARENT_TEST_FOLDER}/user.properties ${JMETER_HOME}/bin/
+else
+  echo "File user.properties not present in ${JMETER_PARENT_TEST_FOLDER}"
 fi
 echo
 
