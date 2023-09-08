@@ -33,7 +33,7 @@ kubectl testkube create template --name job-template --template-type job --body 
 
 ```yaml title="template.yaml"
 apiVersion: tests.testkube.io/v1
-kind: Webhook
+kind: Template
 metadata:
   name: example-webhook
   namespace: testkube
