@@ -39,6 +39,7 @@ func TestExecute(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
+	mockBus := bus.NewEventBusMock()
 	mockResultRepository := result.NewMockRepository(mockCtrl)
 	mockTestResultRepository := testresult.NewMockRepository(mockCtrl)
 
@@ -116,6 +117,7 @@ func TestExecute(t *testing.T) {
 		configMapConfig,
 		mockConfigMapClient,
 		mockTestSuiteExecutionsClient,
+		mockBus,
 	)
 	s := &Service{
 		triggerStatus:    make(map[statusKey]*triggerStatus),
