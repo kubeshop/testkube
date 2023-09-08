@@ -75,7 +75,7 @@ func UiContextHeader(cmd *cobra.Command, cfg config.Data) {
 		header += ui.DarkGray("Env: ") + ui.White(envName)
 	} else {
 		header += ui.DarkGray("Context: ") + ui.White(cfg.ContextType) + ui.DarkGray(" ("+Version+")") + separator
-		header += ui.DarkGray("Namespace: ") + ui.White(cfg.Namespace)
+		header += ui.DarkGray("Namespace: ") + ui.White(cmd.Flag("namespace").Value.String())
 	}
 
 	fmt.Println(header)
