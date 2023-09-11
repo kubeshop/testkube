@@ -10,23 +10,23 @@ spec:
   template:
     spec:
       containers:
-        - name: {{ .Name }}-scraper
-          {{- if .Registry }}
-          image: {{ .Registry }}/{{ .ScraperImage }}
-          {{- else }}
-          image: {{ .ScraperImage }}
+      - name: {{ .Name }}-scraper
+        {{- if .Registry }}
+        image: {{ .Registry }}/{{ .ScraperImage }}
+        {{- else }}
+        image: {{ .ScraperImage }}
+        {{- end }}
+        imagePullPolicy: IfNotPresent
+        command:
+          - "/bin/runner"
+          - '{{ .Jsn }}'
+        {{- if .ArtifactRequest }}
+          {{- if .ArtifactRequest.VolumeMountPath }}
+        volumeMounts:
+          - name: artifact-volume
+            mountPath: {{ .ArtifactRequest.VolumeMountPath }}
           {{- end }}
-          imagePullPolicy: IfNotPresent
-          command:
-            - "/bin/runner"
-            - '{{ .Jsn }}'
-          {{- if .ArtifactRequest }}
-            {{- if .ArtifactRequest.VolumeMountPath }}
-          volumeMounts:
-            - name: artifact-volume
-              mountPath: {{ .ArtifactRequest.VolumeMountPath }}
-            {{- end }}
-          {{- end }}
+        {{- end }}
       {{- if .ArtifactRequest }}
         {{- if and .ArtifactRequest.VolumeMountPath .ArtifactRequest.StorageClassName }}
       volumes:
