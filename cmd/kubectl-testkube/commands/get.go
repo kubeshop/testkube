@@ -8,6 +8,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/context"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/executors"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/templates"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsources"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites"
@@ -46,6 +47,7 @@ func NewGetCmd() *cobra.Command {
 	cmd.AddCommand(testsuites.NewTestSuiteExecutionCmd())
 	cmd.AddCommand(testsources.NewGetTestSourceCmd())
 	cmd.AddCommand(context.NewGetContextCmd())
+	cmd.AddCommand(templates.NewGetTemplateCmd())
 
 	cmd.PersistentFlags().StringP("output", "o", "pretty", "output type can be one of json|yaml|pretty|go-template")
 	cmd.PersistentFlags().StringP("go-template", "", "{{.}}", "go template to render")

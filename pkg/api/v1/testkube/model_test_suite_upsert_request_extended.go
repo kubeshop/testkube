@@ -21,8 +21,17 @@ func (testSuite *TestSuiteUpsertRequest) QuoteTestSuiteTextFields() {
 			}
 		}
 
-		if testSuite.ExecutionRequest.CronJobTemplate != "" {
-			testSuite.ExecutionRequest.CronJobTemplate = fmt.Sprintf("%q", testSuite.ExecutionRequest.CronJobTemplate)
+		var fields = []*string{
+			&testSuite.ExecutionRequest.JobTemplate,
+			&testSuite.ExecutionRequest.CronJobTemplate,
+			&testSuite.ExecutionRequest.ScraperTemplate,
+			&testSuite.ExecutionRequest.PvcTemplate,
+		}
+
+		for _, field := range fields {
+			if *field != "" {
+				*field = fmt.Sprintf("%q", *field)
+			}
 		}
 	}
 }

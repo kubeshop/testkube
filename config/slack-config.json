@@ -1,20 +1,20 @@
 [
-  {
-    "ChannelID": "",
-    "selector": {},
-    "testName": [],
-    "testSuiteName": [],
-    "events": [
-      "start-test",
-      "end-test-success",
-      "end-test-failed",
-      "end-test-aborted",
-      "end-test-timeout",
-      "start-testsuite",
-      "end-testsuite-success",
-      "end-testsuite-failed",
-      "end-testsuite-aborted",
-      "end-testsuite-timeout"
-    ]
-  }
-]
+    {
+      "ChannelID": "",
+      "selector": {},
+      "testName": [],
+      "testSuiteName": [],
+      "events": [
+        "start-test",
+        "end-test-success",
+        "end-test-failed",
+        "end-test-aborted",
+        "end-test-timeout",
+        "start-testsuite",
+        "end-testsuite-success",
+        "end-testsuite-failed",
+        "end-testsuite-aborted",
+        "end-testsuite-timeout"
+      ]
+    }
+  ]

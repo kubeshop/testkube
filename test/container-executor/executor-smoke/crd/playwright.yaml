@@ -21,4 +21,4 @@ spec:
       dirs:
         - ./
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
-    activeDeadlineSeconds: 120
+    activeDeadlineSeconds: 600

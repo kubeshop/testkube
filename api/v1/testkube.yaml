@@ -2500,6 +2500,243 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /templates:
+    get:
+      tags:
+        - templates
+        - api
+      summary: "List templates"
+      description: "List templates available in cluster"
+      operationId: listTemplates
+      parameters:
+        - $ref: "#/components/parameters/Selector"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Template"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    post:
+      tags:
+        - template
+        - api
+      summary: "Create new template"
+      description: "Create new template based on variables passed in request"
+      operationId: createTemplate
+      requestBody:
+        description: template request body data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TemplateCreateRequest"
+          text/yaml:
+            schema:
+              type: string              
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            text/yaml:
+              schema:
+                type: string
+        201:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+        400:
+          description: "problem with template definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    delete:
+      tags:
+        - template
+        - api
+      summary: "Delete templates"
+      description: "Deletes labeled templates"
+      operationId: deleteTemplates
+      parameters:
+        - $ref: "#/components/parameters/Selector"
+      responses:
+        204:
+          description: "no content"
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /templates/{id}:
+    delete:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      tags:
+        - api
+        - template
+      summary: "Delete template"
+      description: "Deletes template by its name"
+      operationId: deleteTemplate
+      responses:
+        204:
+          description: template deleted successfuly
+        404:
+          description: "template not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+    get:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      tags:
+        - api
+        - template
+      summary: "Get template details"
+      description: "Returns template"
+      operationId: getTemplate
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "template not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with getting template data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    patch:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      tags:
+        - template
+        - api
+      summary: "Update new template"
+      description: "Update new template based on variables passed in request"
+      operationId: updateTemplate
+      requestBody:
+        description: template request body data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TemplateUpdateRequest"
+          text/yaml:
+            schema:
+              type: string              
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+        400:
+          description: "problem with template definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "template not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /config:
     patch:
       tags:
@@ -2942,6 +3179,32 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster or git server"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /secrets:
+    get:
+      tags:
+        - secrets
+        - api
+      summary: "List secrets"
+      description: "List secrets available in cluster"
+      operationId: listSecrets
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Secret"
         502:
           description: "problem with communicating with kubernetes cluster or git server"
           content:
@@ -4470,9 +4733,15 @@ components:
         jobTemplate:
           type: string
           description: job template extensions
+        jobTemplateReference:
+          type: string
+          description: name of the template resource   
         cronJobTemplate:
           type: string
           description: cron job template extensions
+        cronJobTemplateReference:
+          type: string
+          description: name of the template resource
         contentRequest:
           $ref: "#/components/schemas/TestContentRequest"
           description: adjusting parameters for test content
@@ -4487,6 +4756,15 @@ components:
         scraperTemplate:
           type: string
           description: scraper template extensions
+        scraperTemplateReference:
+          type: string
+          description: name of the template resource
+        pvcTemplate:
+          type: string
+          description: pvc template extensions
+        pvcTemplateReference:
+          type: string
+          description: name of the template resource
         envConfigMaps:
           type: array
           description: "config map references"
@@ -4572,9 +4850,30 @@ components:
         runningContext:
           $ref: "#/components/schemas/RunningContext"
           description: running context for the test suite execution
+        jobTemplate:
+          type: string
+          description: job template extensions
+        jobTemplateReference:
+          type: string
+          description: name of the template resource
         cronJobTemplate:
           type: string
           description: cron job template extensions
+        cronJobTemplateReference:
+          type: string
+          description: name of the template resource
+        scraperTemplate:
+          type: string
+          description: scraper template extensions
+        scraperTemplateReference:
+          type: string
+          description: name of the template resource
+        pvcTemplate:
+          type: string
+          description: pvc template extensions
+        pvcTemplateReference:
+          type: string
+          description: name of the template resource
         concurrencyLevel:
           type: integer
           format: int32
@@ -4739,6 +5038,9 @@ components:
         jobTemplate:
           description: Job template to launch executor
           type: string
+        jobTemplateReference:
+          type: string
+          description: name of the template resource
         labels:
           type: object
           description: "executor labels"
@@ -4871,9 +5173,12 @@ components:
         payloadTemplate:
           type: string
           description: golang based template for notification payload
+        payloadTemplateReference:
+          type: string
+          description: name of the template resource
         headers:
           type: object
-          description: "webhook headers"
+          description: "webhook headers (golang template supported)"
           additionalProperties:
             type: string
           example:
@@ -5355,6 +5660,78 @@ components:
             type: string
           description: deleted test sources
           example: ["name7", "name8", "name9"]
+
+    Template:
+      description: Golang based template
+      type: object
+      required:
+        - name
+        - type
+        - body
+      properties:
+        name:
+          type: string
+          description: template name for reference
+          example: "webhook-template"
+        namespace:
+          type: string
+          description: template namespace
+          example: "testkube"
+        type:
+          $ref: "#/components/schemas/TemplateType"
+        body:
+          type: string
+          description: template body to use
+          example: "{\"id\": \"{{ .Id }}\"}"
+        labels:
+          type: object
+          description: "template labels"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"
+
+    TemplateType:
+      description: template type by purpose
+      type: string
+      enum:
+        - job
+        - container
+        - cronjob
+        - scraper
+        - pvc
+        - webhook
+
+    TemplateCreateRequest:
+      description: template create request body
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/Template"
+
+    TemplateUpdateRequest:
+      description: template update request body
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/Template"
+
+    Secret:
+      description: Secret with keys
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: secret name
+          example: "git-secret"
+        keys:
+          type: array
+          description: secret keys
+          items:
+            type: string
+          example: ["key1", "key2", "key3"]
 
     #
     # Errors
