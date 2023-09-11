@@ -37,6 +37,7 @@ import (
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/event"
+	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
@@ -85,6 +86,7 @@ func NewTestkubeAPI(
 	dashboardURI string,
 	helmchartVersion string,
 	mode string,
+	eventsBus bus.Bus,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -127,6 +129,7 @@ func NewTestkubeAPI(
 		TemplatesClient:      templatesClient,
 		helmchartVersion:     helmchartVersion,
 		mode:                 mode,
+		eventsBus:            eventsBus,
 	}
 
 	// will be reused in websockets handler
@@ -181,6 +184,7 @@ type TestkubeAPI struct {
 	TemplatesClient      *templatesclientv1.TemplatesClient
 	helmchartVersion     string
 	mode                 string
+	eventsBus            bus.Bus
 }
 
 type storageParams struct {
@@ -380,6 +384,9 @@ func (s *TestkubeAPI) InitRoutes() {
 
 	repositories := s.Routes.Group("/repositories")
 	repositories.Post("/", s.ValidateRepositoryHandler())
+
+	secrets := s.Routes.Group("/secrets")
+	secrets.Get("/", s.ListSecretsHandler())
 
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor

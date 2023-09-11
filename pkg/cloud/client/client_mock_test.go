@@ -2,7 +2,7 @@ package client
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 )
 
@@ -18,6 +18,6 @@ func (c ClientMock) Do(req *http.Request) (*http.Response, error) {
 		return nil, err
 	}
 	return &http.Response{
-		Body: ioutil.NopCloser(bytes.NewReader(c.body)),
+		Body: io.NopCloser(bytes.NewReader(c.body)),
 	}, c.err
 }

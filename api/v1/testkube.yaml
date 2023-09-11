@@ -3188,6 +3188,32 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /secrets:
+    get:
+      tags:
+        - secrets
+        - api
+      summary: "List secrets"
+      description: "List secrets available in cluster"
+      operationId: listSecrets
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Secret"
+        502:
+          description: "problem with communicating with kubernetes cluster or git server"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
 components:
   schemas:
     ExecutionsMetrics:
@@ -5152,7 +5178,7 @@ components:
           description: name of the template resource
         headers:
           type: object
-          description: "webhook headers"
+          description: "webhook headers (golang template supported)"
           additionalProperties:
             type: string
           example:
@@ -5689,6 +5715,23 @@ components:
       nullable: true
       allOf:
         - $ref: "#/components/schemas/Template"
+
+    Secret:
+      description: Secret with keys
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: secret name
+          example: "git-secret"
+        keys:
+          type: array
+          description: secret keys
+          items:
+            type: string
+          example: ["key1", "key2", "key3"]
 
     #
     # Errors

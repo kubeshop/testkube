@@ -185,17 +185,29 @@ spec:
 
 </Tabs>
 
-#### Customizing Webhook Payload
-The payload template can be customized to include additional information. In the above example, only the event `Id` is being sent. The template's variables will be replaced with data when events occur.
+### Webhook Payload Variables
+Webhook payload can contain **event-specific** variables - they will be replaced with actual data when the events occurs. In the above examples, only the event `Id` is being sent. 
+However, any of these [supported Event Variables](#supported-event-variables) can be used.
 
-It's possible to get access to env variables of testkube-api-server pod in webhook template:
+For example, the following payload:
+```
+{"text": "Event {{ .Type_ }} - Test '{{ .TestExecution.TestName }}' execution ({{ .TestExecution.Number }}) finished with '{{ .TestExecution.ExecutionResult.Status }}' status"}
+```
+will result in:
+```
+{"text": "Event end-test-success - Test 'postman-executor-smoke' execution (948) finished with 'passed' status"}
+```
+
+#### testkube-api-server ENV variables
+In addition to event-specific variables, it's also possible to pass testkube-api-server ENV variables:
 
 ```sh title="template.txt"
 TESTKUBE_CLOUD_URL: {{ index .Envs "TESTKUBE_CLOUD_URL" }}
 ```
 
-### HTTP Headers
+### URI and HTTP Headers
 You can add additional HTTP headers like `Authorization` or `x-api-key` to have a secret token.
+It's possible to use golang based template string as header or uri value.
 
 <Tabs>
 <TabItem value="dash" label="Dashboard">
@@ -267,6 +279,92 @@ They can be triggered by the following resources:
 - webhook
 - testexecution
 - testsuiteexecution
+
+## Supported Event Variables
+
+### Event-specific variables:
+- `Id` - event ID (for example, `2a20c7da-3b77-4ea9-a33d-403187d3e9e6`)
+- `Resource`
+- `ResourceId`
+- `Type_` - event Type (for example, `start-test`, `end-test,success`, etc. All available trigger events can be found in the [Supported Event types](#supported-event-types) section).
+- `TestExecution` - test execution details (example: [TestExecution (Execution)](#testexecution-execution) section)
+- `TestSuiteExecution` - test suite execution details (example: [TestSuiteExecution](#testsuiteexecution) section)
+- `ClusterName` - cluster name
+- `Envs` (API-server ENV variables) - list of Testkube API-Server ENV variables
+
+The full Event Data Model can be found [here](https://github.com/kubeshop/testkube/blob/main/pkg/api/v1/testkube/model_event.go).
+
+### TestExecution (Execution):
+- `Id` - Execution ID (for example, `64f8cf3c712890925aea51ce`)
+- `TestName` - Test Name (for example, `postman-executor-smoke`)
+- `TestSuiteName` - Test Suite name (if run as a part of a Test Suite)
+- `TestNamespace` - Execution namespace, where testkube is installed (for example, `testkube`)
+- `TestType` - Test type (for example, `postman/collection`)
+- `Name` -  Execution name (for example, `postman-executor-smoke-937)
+- `Number` - Execution number (for example, `937`)
+- `Envs` -  List of ENV variables for specific Test (if defined)
+- `Command` - Command executed inside the Pod (for example, `newman`)
+- `Args` -  Command arguments (for example, `run <runPath> -e <envFile> --reporters cli,json --reporter-json-export <reportFile>`)
+- `Variables` - List of variables
+- `Content` - Test content
+- `StartTime` - Test start time (for example, `2023-09-06 19:23:34.543433547 +0000 UTC`)
+- `EndTime` - Time when the test execution finished (for example, `2023-09-06 19:23:42.221493031 +0000 UTC`)
+- `Duration` - Test duration in seconds (for example, `7.68s`)
+- `DurationMs` - Test duration in miliseconds (for example, `7678`)
+- `ExecutionResult` - Execution result (https://github.com/kubeshop/testkube/blob/main/pkg/api/v1/testkube/model_event.go)
+- `Labels` Test labels (for example, `[core-tests:executors executor:postman-executor test-type:postman-collection],`)
+- `RunningContext` - Running context - how the test has been triggered (for example, `user-ui`)
+
+The full Execution data model can be found [here](https://github.com/kubeshop/testkube/blob/main/pkg/api/v1/testkube/model_execution.go).
+
+### TestSuiteExecution:
+
+- `Id` - TestSuiteExecution ID (for example, `64f8d5b2712890925aea51dc`)
+- `Name` - TestSuite name (for example, `ts-executor-postman-smoke-tests-472`)
+- `Status` - TestSuite execution status (for example, `running` or `passed`)
+- `Envs` - List of ENV variables
+- `Variables` - List of variables
+- `StartTime` - Test start time (for example, `2023-09-06 19:23:34.543433547 +0000 UTC`)
+- `EndTime` - Time when the test execution finished (for example, `2023-09-06 19:23:42.221493031 +0000 UTC`)
+- `Duration` - Test duration in seconds (for example, `7.68s`)
+- `DurationMs` - Test duration in miliseconds (for example, `7678`)
+- `StepResults`
+- `Labels` - TestSuite labels (for example, `[app:testkube testsuite:executor-postman-smoke-tests]`)
+- `RunningContext` - Running context - how the TestSuite has been triggered (for example, `user-ui`)
+
+The full TestSuiteExecution data model can be found [here](https://github.com/kubeshop/testkube/blob/main/pkg/api/v1/testkube/model_test_suite_execution.go).
+
+## Additional Examples
+
+### Microsoft Teams
+Webhooks can also be used to send messages to Microsoft Teams channels.
+First, you need to create an incoming webhook in Teams for a specific channel. You can see how to do it in the Teams Docs [here](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook?tabs=dotnet#create-incoming-webhooks-1). After your Teams incoming webhook is created, you can use it with Testkube webhooks - just use the URL provided (it will probably look like this: `https://xxxxx.webhook.office.com/xxxxxxxxx`).
+
+In order to send the message when test execution finishes, the following Webhook can be used:
+```
+apiVersion: executor.testkube.io/v1
+kind: Webhook
+metadata:
+  name: example-webhook-teams
+  namespace: testkube
+spec:
+  events:
+  - end-test-success
+  - end-test-failed
+  - end-test-aborted
+  - end-test-timeout
+  uri: https://xxxxx.webhook.office.com/xxxxxxxxx
+  payloadTemplate: "{\"text\": \"Test '{{ .TestExecution.TestName }}' execution ({{ .TestExecution.Number }}) finished with '{{ .TestExecution.ExecutionResult.Status }}' status\"}\n"
+```
+
+It will result in:
+
+```
+{"text": "Test 'postman-executor-smoke' execution (949) finished with 'passed' status"}
+```
+
+and the message:
+`Test 'postman-executor-smoke' execution (949) finished with 'passed' status"` being displayed.
 
 ## Testing Webhooks
 

@@ -19,7 +19,7 @@ func UpdateTemplateCmd() *cobra.Command {
 		Use:     "template",
 		Aliases: []string{"templates", "tp"},
 		Short:   "Update Template",
-		Long:    `Update Template Custom Resource`,
+		Long:    `Update Template Custom Resource.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if name == "" {
 				ui.Failf("pass valid name (in '--name' flag)")
@@ -44,7 +44,7 @@ func UpdateTemplateCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique template name - mandatory")
-	cmd.Flags().StringVarP(&templateType, "template-type", "", "", "template type one of job|container|cronnjob|scraper|pvc|webhook")
+	cmd.Flags().StringVarP(&templateType, "template-type", "", "", "template type one of job|container|cronjob|scraper|pvc|webhook")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringVarP(&body, "body", "", "", "a path to template file to use as template body")
 

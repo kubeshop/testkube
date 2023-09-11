@@ -12,7 +12,7 @@ The template can be created using the API, CLI, or a Custom Resource.
 <TabItem value="api" label="API">
 If you prefer to use the API for creating a template, please visit the API spec for templates in the doc below.
 
-![OpenAPI spec](../openapi.md)
+[OpenAPI spec](../openapi.md)
 
 </TabItem>
 
@@ -33,7 +33,7 @@ kubectl testkube create template --name job-template --template-type job --body 
 
 ```yaml title="template.yaml"
 apiVersion: tests.testkube.io/v1
-kind: Webhook
+kind: Template
 metadata:
   name: example-webhook
   namespace: testkube
@@ -61,7 +61,7 @@ You will need to refer to a template in the corresponding reference field of the
 <TabItem value="api" label="API">
 
 Check templateReference fields in API spec. For example, Test -> executionRequest -> jobTemplateReference field.
-![OpenAPI spec](../openapi.md)
+[OpenAPI spec](../openapi.md)
 
 </TabItem>
 
