@@ -2,7 +2,6 @@ package runner
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -19,7 +18,7 @@ func TestRun(t *testing.T) {
 
 	t.Run("Run successful API scan", func(t *testing.T) {
 		// given
-		tempDir, err := ioutil.TempDir(os.TempDir(), "")
+		tempDir, err := os.MkdirTemp(os.TempDir(), "")
 		assert.NoError(t, err)
 		runner, err := NewRunner(context.TODO(), envs.Params{
 			DataDir: tempDir,
@@ -50,7 +49,7 @@ func TestRun(t *testing.T) {
 
 	t.Run("Run API scan with PASS and WARN", func(t *testing.T) {
 		// given
-		tempDir, err := ioutil.TempDir(os.TempDir(), "")
+		tempDir, err := os.MkdirTemp(os.TempDir(), "")
 		assert.NoError(t, err)
 		runner, err := NewRunner(context.TODO(), envs.Params{
 			DataDir: tempDir,
@@ -81,7 +80,7 @@ func TestRun(t *testing.T) {
 
 	t.Run("Run API scan with WARN and FailOnWarn", func(t *testing.T) {
 		// given
-		tempDir, err := ioutil.TempDir(os.TempDir(), "")
+		tempDir, err := os.MkdirTemp(os.TempDir(), "")
 		assert.NoError(t, err)
 		runner, err := NewRunner(context.TODO(), envs.Params{
 			DataDir: tempDir,
@@ -112,7 +111,7 @@ func TestRun(t *testing.T) {
 
 	t.Run("Run API scan with FAIL", func(t *testing.T) {
 		// given
-		tempDir, err := ioutil.TempDir(os.TempDir(), "")
+		tempDir, err := os.MkdirTemp(os.TempDir(), "")
 		assert.NoError(t, err)
 		runner, err := NewRunner(context.TODO(), envs.Params{
 			DataDir: tempDir,
@@ -143,7 +142,7 @@ func TestRun(t *testing.T) {
 
 	t.Run("Run Baseline scan with PASS", func(t *testing.T) {
 		// given
-		tempDir, err := ioutil.TempDir(os.TempDir(), "")
+		tempDir, err := os.MkdirTemp(os.TempDir(), "")
 		assert.NoError(t, err)
 		runner, err := NewRunner(context.TODO(), envs.Params{
 			DataDir: tempDir,
@@ -172,7 +171,7 @@ func TestRun(t *testing.T) {
 
 	t.Run("Run Baseline scan with WARN", func(t *testing.T) {
 		// given
-		tempDir, err := ioutil.TempDir(os.TempDir(), "")
+		tempDir, err := os.MkdirTemp(os.TempDir(), "")
 		assert.NoError(t, err)
 		runner, err := NewRunner(context.TODO(), envs.Params{
 			DataDir: tempDir,
@@ -202,7 +201,7 @@ func TestRun(t *testing.T) {
 
 	t.Run("Run Full scan with FAIL", func(t *testing.T) {
 		// given
-		tempDir, err := ioutil.TempDir(os.TempDir(), "")
+		tempDir, err := os.MkdirTemp(os.TempDir(), "")
 		assert.NoError(t, err)
 		runner, err := NewRunner(context.TODO(), envs.Params{
 			DataDir: tempDir,

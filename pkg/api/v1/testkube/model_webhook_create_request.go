@@ -21,7 +21,9 @@ type WebhookCreateRequest struct {
 	PayloadObjectField string `json:"payloadObjectField,omitempty"`
 	// golang based template for notification payload
 	PayloadTemplate string `json:"payloadTemplate,omitempty"`
-	// webhook headers
+	// name of the template resource
+	PayloadTemplateReference string `json:"payloadTemplateReference,omitempty"`
+	// webhook headers (golang template supported)
 	Headers map[string]string `json:"headers,omitempty"`
 	// webhook labels
 	Labels map[string]string `json:"labels,omitempty"`

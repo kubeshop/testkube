@@ -2,6 +2,7 @@ package testsuites
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -31,6 +32,12 @@ func NewRunTestSuiteCmd() *cobra.Command {
 		gitPath                  string
 		gitWorkingDir            string
 		runningContext           string
+		jobTemplate              string
+		scraperTemplate          string
+		pvcTemplate              string
+		jobTemplateReference     string
+		scraperTemplateReference string
+		pvcTemplateReference     string
 	)
 
 	cmd := &cobra.Command{
@@ -46,19 +53,52 @@ func NewRunTestSuiteCmd() *cobra.Command {
 
 			var executions []testkube.TestSuiteExecution
 
-			variables, err := common.CreateVariables(cmd, false)
-			ui.WarnOnError("getting variables", err)
 			options := apiv1.ExecuteTestSuiteOptions{
-				ExecutionVariables: variables,
-				HTTPProxy:          httpProxy,
-				HTTPSProxy:         httpsProxy,
-				ExecutionLabels:    executionLabels,
+				HTTPProxy:       httpProxy,
+				HTTPSProxy:      httpsProxy,
+				ExecutionLabels: executionLabels,
 				RunningContext: &testkube.RunningContext{
 					Type_:   string(testkube.RunningContextTypeUserCLI),
 					Context: runningContext,
 				},
-				ConcurrencyLevel: int32(concurrencyLevel),
+				ConcurrencyLevel:         int32(concurrencyLevel),
+				JobTemplateReference:     jobTemplateReference,
+				ScraperTemplateReference: scraperTemplateReference,
+				PvcTemplateReference:     pvcTemplateReference,
 			}
+
+			var fields = []struct {
+				source      string
+				title       string
+				destination *string
+			}{
+				{
+					jobTemplate,
+					"job template",
+					&options.JobTemplate,
+				},
+				{
+					scraperTemplate,
+					"scraper template",
+					&options.ScraperTemplate,
+				},
+				{
+					pvcTemplate,
+					"pvc template",
+					&options.PvcTemplate,
+				},
+			}
+
+			for _, field := range fields {
+				if field.source != "" {
+					b, err := os.ReadFile(field.source)
+					ui.ExitOnError("reading "+field.title, err)
+					*field.destination = string(b)
+				}
+			}
+
+			options.ExecutionVariables, err = common.CreateVariables(cmd, false)
+			ui.WarnOnError("getting variables", err)
 
 			if gitBranch != "" || gitCommit != "" || gitPath != "" || gitWorkingDir != "" {
 				options.ContentRequest = &testkube.TestContentRequest{
@@ -139,6 +179,12 @@ func NewRunTestSuiteCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
 	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
 	cmd.Flags().StringVar(&runningContext, "context", "", "running context description for test suite execution")
+	cmd.Flags().StringVar(&jobTemplate, "job-template", "", "job template file path for extensions to job template")
+	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
+	cmd.Flags().StringVar(&pvcTemplate, "pvc-template", "", "pvc template file path for extensions to pvc template")
+	cmd.Flags().StringVar(&jobTemplateReference, "job-template-reference", "", "reference to job template to use for the test")
+	cmd.Flags().StringVar(&scraperTemplateReference, "scraper-template-reference", "", "reference to scraper template to use for the test")
+	cmd.Flags().StringVar(&pvcTemplateReference, "pvc-template-reference", "", "reference to pvc template to use for the test")
 
 	return cmd
 }

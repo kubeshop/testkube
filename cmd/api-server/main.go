@@ -43,6 +43,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/kubeshop/testkube/internal/app/api/debug"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/agent"
 	kubeexecutor "github.com/kubeshop/testkube/pkg/executor"
@@ -60,6 +61,7 @@ import (
 	kubeclient "github.com/kubeshop/testkube-operator/client"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	scriptsclient "github.com/kubeshop/testkube-operator/client/scripts/v2"
+	templatesclientv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
 	testexecutionsclientv1 "github.com/kubeshop/testkube-operator/client/testexecutions/v1"
 	testsclientv1 "github.com/kubeshop/testkube-operator/client/tests"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
@@ -153,6 +155,15 @@ func main() {
 		grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
 	}
 
+	if cfg.EnableDebugServer {
+		debugSrv := debug.NewDebugServer(cfg.DebugListenAddr)
+
+		g.Go(func() error {
+			log.DefaultLogger.Infof("starting debug pprof server")
+			return debugSrv.ListenAndServe()
+		})
+	}
+
 	// k8s
 	scriptsClient := scriptsclient.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testsClientV1 := testsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
@@ -164,6 +175,7 @@ func main() {
 	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testExecutionsClient := testexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testsuiteExecutionsClient := testsuiteexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+	templatesClient := templatesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 
 	clientset, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -332,6 +344,7 @@ func main() {
 		testsClientV3,
 		clientset,
 		testExecutionsClient,
+		templatesClient,
 		cfg.TestkubeRegistry,
 		cfg.TestkubePodStartTimeout,
 		clusterId,
@@ -357,6 +370,7 @@ func main() {
 		executorsClient,
 		testsClientV3,
 		testExecutionsClient,
+		templatesClient,
 		cfg.TestkubeRegistry,
 		cfg.TestkubePodStartTimeout,
 		clusterId,
@@ -381,6 +395,7 @@ func main() {
 		configMapConfig,
 		configMapClient,
 		testsuiteExecutionsClient,
+		eventBus,
 	)
 
 	slackLoader, err := newSlackLoader(cfg, envs)
@@ -412,10 +427,12 @@ func main() {
 		storageClient,
 		cfg.GraphqlPort,
 		artifactStorage,
+		templatesClient,
 		cfg.CDEventsTarget,
 		cfg.TestkubeDashboardURI,
 		cfg.TestkubeHelmchartVersion,
 		mode,
+		eventBus,
 	)
 
 	if mode == common.ModeAgent {

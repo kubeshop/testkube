@@ -21,6 +21,7 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	templatesv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
 	testexecutionsv1 "github.com/kubeshop/testkube-operator/client/testexecutions/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -61,6 +62,7 @@ func NewContainerExecutor(
 	executorsClient executorsclientv1.Interface,
 	testsClient testsv3.Interface,
 	testExecutionsClient testexecutionsv1.Interface,
+	templatesClient templatesv1.Interface,
 	registry string,
 	podStartTimeout time.Duration,
 	clusterID string,
@@ -84,6 +86,7 @@ func NewContainerExecutor(
 		testsClient:          testsClient,
 		executorsClient:      executorsClient,
 		testExecutionsClient: testExecutionsClient,
+		templatesClient:      templatesClient,
 		registry:             registry,
 		podStartTimeout:      podStartTimeout,
 		clusterID:            clusterID,
@@ -109,6 +112,7 @@ type ContainerExecutor struct {
 	testsClient          testsv3.Interface
 	executorsClient      executorsclientv1.Interface
 	testExecutionsClient testexecutionsv1.Interface
+	templatesClient      templatesv1.Interface
 	registry             string
 	podStartTimeout      time.Duration
 	clusterID            string
@@ -129,7 +133,7 @@ type JobOptions struct {
 	ScraperImage              string
 	JobTemplate               string
 	ScraperTemplate           string
-	PVCTemplate               string
+	PvcTemplate               string
 	SecretEnvs                map[string]string
 	Envs                      map[string]string
 	HTTPProxy                 string
@@ -144,6 +148,7 @@ type JobOptions struct {
 	DelaySeconds              int
 	JobTemplateExtensions     string
 	ScraperTemplateExtensions string
+	PvcTemplateExtensions     string
 	EnvConfigMaps             []testkube.EnvReference
 	EnvSecrets                []testkube.EnvReference
 	Labels                    map[string]string
@@ -284,7 +289,8 @@ func (c *ContainerExecutor) ExecuteSync(ctx context.Context, execution *testkube
 func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
 	jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
 
-	jobOptions, err := NewJobOptions(c.log, c.images, c.templates, c.serviceAccountName, c.registry, c.clusterID, execution, options)
+	jobOptions, err := NewJobOptions(c.log, c.templatesClient, c.images, c.templates, c.serviceAccountName,
+		c.registry, c.clusterID, execution, options)
 	if err != nil {
 		return nil, err
 	}
@@ -661,6 +667,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		JobTemplate:               options.ExecutorSpec.JobTemplate,
 		JobTemplateExtensions:     options.Request.JobTemplate,
 		ScraperTemplateExtensions: options.Request.ScraperTemplate,
+		PvcTemplateExtensions:     options.Request.PvcTemplate,
 		EnvConfigMaps:             options.Request.EnvConfigMaps,
 		EnvSecrets:                options.Request.EnvSecrets,
 		Labels:                    labels,

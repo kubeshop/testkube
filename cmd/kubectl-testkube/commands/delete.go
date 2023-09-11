@@ -6,6 +6,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/executors"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/templates"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsources"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites"
@@ -40,6 +41,7 @@ func NewDeleteCmd() *cobra.Command {
 	cmd.AddCommand(webhooks.NewDeleteWebhookCmd())
 	cmd.AddCommand(executors.NewDeleteExecutorCmd())
 	cmd.AddCommand(testsources.NewDeleteTestSourceCmd())
+	cmd.AddCommand(templates.NewDeleteTemplateCmd())
 
 	return cmd
 }

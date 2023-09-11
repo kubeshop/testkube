@@ -20,7 +20,7 @@ const testkubeTestSecretLabel = "tests-secrets"
 type Interface interface {
 	Get(id string) (map[string]string, error)
 	GetObject(id string) (*v1.Secret, error)
-	List() (map[string]map[string]string, error)
+	List(all bool) (map[string]map[string]string, error)
 	Create(id string, labels, stringData map[string]string) error
 	Apply(id string, labels, stringData map[string]string) error
 	Update(id string, labels, stringData map[string]string) error
@@ -81,12 +81,17 @@ func (c *Client) GetObject(id string) (*v1.Secret, error) {
 }
 
 // List is a method to retrieve all existing secrets
-func (c *Client) List() (map[string]map[string]string, error) {
+func (c *Client) List(all bool) (map[string]map[string]string, error) {
 	secretsClient := c.ClientSet.CoreV1().Secrets(c.Namespace)
 	ctx := context.Background()
 
+	selector := ""
+	if !all {
+		selector = fmt.Sprintf("testkube=%s", testkubeTestSecretLabel)
+	}
+
 	secretList, err := secretsClient.List(ctx, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("testkube=%s", testkubeTestSecretLabel)})
+		LabelSelector: selector})
 	if err != nil {
 		return nil, err
 	}
