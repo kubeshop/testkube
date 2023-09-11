@@ -310,6 +310,7 @@ func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Executio
 		c.clusterID, execution, options)
 	if err != nil {
 		return err
+
 	}
 
 	c.Log.Debug("creating job with options", "options", jobOptions)
