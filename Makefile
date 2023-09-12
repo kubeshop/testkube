@@ -29,18 +29,27 @@ endef
 use-env-file:
 	$(call setup_env)
 
-run-api: use-env-file
+.PHONY: refresh-config
+refresh-config:
+	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/executors.json" -O config/executors.json &
+	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/job-container-template.yml" -O config/job-container-template.yml &
+	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/job-scraper-template.yml" -O config/job-scraper-template.yml &
+	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/job-template.yml" -O config/job-template.yml &
+	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/pvc-container-template.yml" -O config/pvc-container-template.yml &
+	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/slack-config.json" -O config/slack-config.json &
+	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/slack-template.json" -O config/slack-template.json
+
+run-api: use-env-file refresh-config
 	TESTKUBE_DASHBOARD_URI=$(DASHBOARD_URI) APISERVER_CONFIG=testkube-api-server-config-testkube TESTKUBE_ANALYTICS_ENABLED=$(TESTKUBE_ANALYTICS_ENABLED) TESTKUBE_NAMESPACE=$(NAMESPACE) SCRAPPERENABLED=true STORAGE_SSL=true DEBUG=$(DEBUG) APISERVER_PORT=8088 go run  -ldflags='$(LD_FLAGS)' cmd/api-server/main.go
 
-run-api-race-detector: use-env-file
+run-api-race-detector: use-env-file refresh-config
 	TESTKUBE_DASHBOARD_URI=$(DASHBOARD_URI) APISERVER_CONFIG=testkube-api-server-config-testkube TESTKUBE_NAMESPACE=$(NAMESPACE) DEBUG=1 APISERVER_PORT=8088 go run -race -ldflags='$(LD_FLAGS)'  cmd/api-server/main.go
 
-run-api-telepresence: use-env-file
+run-api-telepresence: use-env-file refresh-config
 	TESTKUBE_DASHBOARD_URI=$(DASHBOARD_URI) APISERVER_CONFIG=testkube-api-server-config-testkube TESTKUBE_NAMESPACE=$(NAMESPACE) DEBUG=1 API_MONGO_DSN=mongodb://testkube-mongodb:27017 APISERVER_PORT=8088 go run cmd/api-server/main.go
 
 run-mongo-dev:
 	docker run --name mongodb -p 27017:27017 --rm mongo
-
 
 build: build-api-server build-testkube-bin
 
@@ -79,7 +88,6 @@ docker-build-api:
 
 docker-build-cli:
 	env SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-cli:latest ALPINE_IMAGE=alpine:3.18.0 goreleaser release -f .builds-linux.goreleaser.yml --rm-dist --snapshot
-
 
 #make docker-build-executor EXECUTOR=zap GITHUB_TOKEN=*** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-zap-executor:latest
 #add ALPINE_IMAGE=alpine:3.18.0 env var for building of curl and scraper executor
@@ -155,7 +163,6 @@ create-examples:
 execute-testkube-cli-test-suite:
 	test/run.sh
 
-
 test-reload-sanity-test:
 	kubectl delete secrets sanity-secrets -ntestkube
 	kubectl delete test sanity -ntestkube || true
@@ -174,7 +181,6 @@ test-api-port-forwarded:
 # run test by testkube plugin
 test-api-on-cluster:
 	kubectl testkube run test sanity -f -p api_uri=http://testkube-api-server:8088 -p test_api_uri=http://testkube-api-server:8088 -p test_type=postman/collection -p test_name=fill-me -p execution_name=fill-me
-
 
 cover:
 	@go test -failfast -count=1 -v -tags test  -coverprofile=./testCoverage.txt ./... && go tool cover -html=./testCoverage.txt -o testCoverage.html && rm ./testCoverage.txt
@@ -197,6 +203,7 @@ version-bump-dev:
 commands-reference:
 	go run cmd/kubectl-testkube/main.go generate doc
 
+.PHONY: docs
 docs: commands-reference
 
 prerelease:
@@ -224,7 +231,6 @@ video:
 		--output-framerate 30
 
 	ffmpeg -y -r 30 -f image2pipe -vcodec ppm -i stream.out -b 65536K movie.mp4
-
 
 port-forward-minio:
 	kubectl port-forward svc/testkube-minio-service-testkube 9090:9090 -ntestkube
