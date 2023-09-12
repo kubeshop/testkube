@@ -110,7 +110,7 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 	}
 
 	junitReportDir := filepath.Join(projectPath, "results")
-	junitReportPath := filepath.Join(projectPath, junitReportDir, "junit-[hash].xml")
+	junitReportPath := filepath.Join(projectPath, "results/junit-[hash].xml")
 
 	var project string
 	if workingDir != "" {
