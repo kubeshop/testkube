@@ -106,16 +106,20 @@ func getSlavePodConfiguration(testName string, runnerExecution testkube.Executio
 		return nil, err
 	}
 
+	podName := fmt.Sprintf("%s-jmeter-slave", testName)
+	if err != nil {
+		return nil, err
+	}
 	return &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-jmeter-slave", testName),
+			Name: podName,
 		},
 		Spec: v1.PodSpec{
 			RestartPolicy: v1.RestartPolicyAlways,
 			InitContainers: []v1.Container{
 				{
-					Name:            fmt.Sprintf("%s-init-container", testName),
-					Image:           "kubeshop/testkube-init-executor:1.13.12",
+					Name:            "init",
+					Image:           "kubeshop/testkube-init-executor:1.14.3",
 					Command:         []string{"/bin/runner", string(runnerExecutionStr)},
 					Env:             getSlaveRunnerEnv(envParams, runnerExecution),
 					ImagePullPolicy: v1.PullIfNotPresent,
@@ -129,7 +133,7 @@ func getSlavePodConfiguration(testName string, runnerExecution testkube.Executio
 			},
 			Containers: []v1.Container{
 				{
-					Name:            fmt.Sprintf("%s-slave", testName),
+					Name:            "main",
 					Image:           "kubeshop/testkube-jmeterd-slaves:999.0.0",
 					Env:             getSlaveConfigurationEnv(envVariables),
 					ImagePullPolicy: v1.PullIfNotPresent,
@@ -190,7 +194,11 @@ func isPodReady(ctx context.Context, c kubernetes.Interface, podName, namespace 
 		}
 
 		for _, condition := range pod.Status.Conditions {
-			if condition.Type == v1.PodReady && condition.Status == v1.ConditionTrue && pod.Status.Phase == v1.PodRunning && pod.Status.PodIP != "" {
+			isReadyType := condition.Type == v1.PodReady
+			isConditionTrue := condition.Status == v1.ConditionTrue
+			isRunningPhase := pod.Status.Phase == v1.PodRunning
+			ipNotEmpty := pod.Status.PodIP != ""
+			if isReadyType && isConditionTrue && isRunningPhase && ipNotEmpty {
 				return true, nil
 			}
 		}
@@ -200,7 +208,7 @@ func isPodReady(ctx context.Context, c kubernetes.Interface, podName, namespace 
 
 func getSlavesCount(count testkube.Variable) (int, error) {
 	if count.Value == "" {
-		output.PrintLog(fmt.Sprintf("Slaves count not provided in the SLAVES_COUNT env variable. Creating pod with default slaves %v", defaultSlavesCount))
+		output.PrintLogf("Slaves count not provided in the SLAVES_COUNT env variable. Defaulting to %v slaves", defaultSlavesCount)
 		return defaultSlavesCount, nil
 	}
 

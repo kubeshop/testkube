@@ -16,12 +16,12 @@ func main() {
 	ctx := context.Background()
 	params, err := envs.LoadTestkubeVariables()
 	if err != nil {
-		output.PrintError(os.Stderr, errors.Errorf("could not initialize JMeter Executor environment variables: %v", err))
+		output.PrintError(os.Stderr, errors.Errorf("could not initialize Distributed JMeter Executor environment variables: %v", err))
 		os.Exit(1)
 	}
 	r, err := runner.NewRunner(ctx, params)
 	if err != nil {
-		output.PrintError(os.Stderr, errors.Wrap(err, "error instantiating JMeter Executor"))
+		output.PrintError(os.Stderr, errors.Wrap(err, "error instantiating Distributed JMeter Executor"))
 		os.Exit(1)
 	}
 	agent.Run(ctx, r, os.Args)

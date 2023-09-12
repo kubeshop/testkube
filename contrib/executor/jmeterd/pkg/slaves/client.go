@@ -3,9 +3,10 @@ package slaves
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
-	"github.com/kubeshop/testkube/contrib/executor/jmeterd/pkg/jmeter_env"
+	"github.com/kubeshop/testkube/contrib/executor/jmeterd/pkg/jmeterenv"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -21,8 +22,8 @@ const (
 )
 
 type Interface interface {
-	CreateSlaves(replicaCount int) error
-	DeleteSlaves(podName string) error
+	CreateSlaves(ctx context.Context) error
+	DeleteSlaves(ctx context.Context, slaveNameIpMap map[string]string) error
 }
 
 type Client struct {
@@ -51,8 +52,8 @@ func NewClient(execution testkube.Execution, envParams envs.Params, slavesEnvVar
 
 // creating slaves as per count provided in the SLAVES_CLOUNT env variable.
 // Default SLAVES_COUNT would be 1 if not provided in the env variables
-func (client *Client) CreateSlaves() (map[string]string, error) {
-	slavesCount, err := getSlavesCount(client.envVariables[jmeter_env.SlavesCount])
+func (client *Client) CreateSlaves(ctx context.Context) (map[string]string, error) {
+	slavesCount, err := getSlavesCount(client.envVariables[jmeterenv.SlavesCount])
 	if err != nil {
 		return nil, errors.Errorf("Getting error while fetching slaves count from env variable SLAVES_COUNT : %v", err)
 	}
@@ -64,7 +65,7 @@ func (client *Client) CreateSlaves() (map[string]string, error) {
 	podIPAddresses := make(map[string]string)
 
 	for i := 1; i <= slavesCount; i++ {
-		go client.createSlavePod(i, podIPAddressChan, errorChan)
+		go client.createSlavePod(ctx, i, podIPAddressChan, errorChan)
 	}
 
 	for i := 0; i < slavesCount; i++ {
@@ -84,7 +85,7 @@ func (client *Client) CreateSlaves() (map[string]string, error) {
 }
 
 // created slaves pod and send its ipaddress on the podIPAddressChan channel when pod is in the ready state
-func (client *Client) createSlavePod(currentSlavesCount int, podIPAddressChan chan<- map[string]string, errorChan chan<- error) {
+func (client *Client) createSlavePod(ctx context.Context, currentSlavesCount int, podIPAddressChan chan<- map[string]string, errorChan chan<- error) {
 
 	slavePod, err := getSlavePodConfiguration(client.execution.Name, client.execution, client.envVariables, client.envParams)
 	if err != nil {
@@ -93,14 +94,14 @@ func (client *Client) createSlavePod(currentSlavesCount int, podIPAddressChan ch
 	}
 	slavePod.Name = fmt.Sprintf("%s-%v-%v", slavePod.Name, currentSlavesCount, client.execution.Id)
 
-	p, err := client.clientSet.CoreV1().Pods(client.namespace).Create(context.Background(), slavePod, metav1.CreateOptions{})
+	p, err := client.clientSet.CoreV1().Pods(client.namespace).Create(ctx, slavePod, metav1.CreateOptions{})
 	if err != nil {
 		errorChan <- err
 		return
 	}
 
 	// Wait for the pod to become ready
-	conditionFunc := isPodReady(context.Background(), client.clientSet, p.Name, client.namespace)
+	conditionFunc := isPodReady(ctx, client.clientSet, p.Name, client.namespace)
 
 	err = wait.PollImmediate(time.Second, podsTimeout, conditionFunc)
 	if err != nil {
@@ -108,7 +109,7 @@ func (client *Client) createSlavePod(currentSlavesCount int, podIPAddressChan ch
 		return
 	}
 
-	p, err = client.clientSet.CoreV1().Pods(client.namespace).Get(context.Background(), p.Name, metav1.GetOptions{})
+	p, err = client.clientSet.CoreV1().Pods(client.namespace).Get(ctx, p.Name, metav1.GetOptions{})
 	if err != nil {
 		errorChan <- err
 		return
@@ -119,10 +120,10 @@ func (client *Client) createSlavePod(currentSlavesCount int, podIPAddressChan ch
 	podIPAddressChan <- podNameIpMap
 }
 
-func (client *Client) DeleteSlaves(slaveNameIpMap map[string]string) error {
+func (client *Client) DeleteSlaves(ctx context.Context, slaveNameIpMap map[string]string) error {
 	for slaveName := range slaveNameIpMap {
 		output.PrintLog(fmt.Sprintf("Deleting slave %v", slaveName))
-		err := client.clientSet.CoreV1().Pods(client.namespace).Delete(context.Background(), slaveName, metav1.DeleteOptions{})
+		err := client.clientSet.CoreV1().Pods(client.namespace).Delete(ctx, slaveName, metav1.DeleteOptions{})
 		if err != nil {
 			output.PrintLogf("Error deleting slave pods %v", err.Error())
 			return err
@@ -130,4 +131,12 @@ func (client *Client) DeleteSlaves(slaveNameIpMap map[string]string) error {
 
 	}
 	return nil
+}
+
+func (client *Client) GetSlavesIpString(podNameIpMap map[string]string) string {
+	podIps := []string{}
+	for _, ip := range podNameIpMap {
+		podIps = append(podIps, ip)
+	}
+	return strings.Join(podIps, ",")
 }

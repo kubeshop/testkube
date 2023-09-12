@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/contrib/executor/jmeter/pkg/parser"
-	"github.com/kubeshop/testkube/contrib/executor/jmeterd/pkg/jmeter_env"
+	"github.com/kubeshop/testkube/contrib/executor/jmeterd/pkg/jmeterenv"
 	"github.com/kubeshop/testkube/contrib/executor/jmeterd/pkg/slaves"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
@@ -24,11 +24,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func NewRunner(ctx context.Context, params envs.Params) (*JMeterRunner, error) {
+func NewRunner(ctx context.Context, params envs.Params) (*JMeterDRunner, error) {
 	output.PrintLog(fmt.Sprintf("%s Preparing test runner", ui.IconTruck))
 
 	var err error
-	r := &JMeterRunner{
+	r := &JMeterDRunner{
 		Params: params,
 	}
 
@@ -40,15 +40,15 @@ func NewRunner(ctx context.Context, params envs.Params) (*JMeterRunner, error) {
 	return r, nil
 }
 
-// JMeterRunner runner
-type JMeterRunner struct {
+// JMeterDRunner runner
+type JMeterDRunner struct {
 	Params  envs.Params
 	Scraper scraper.Scraper
 }
 
-var _ runner.Runner = &JMeterRunner{}
+var _ runner.Runner = &JMeterDRunner{}
 
-func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
+func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
 	if r.Scraper != nil {
 		defer r.Scraper.Close()
 	}
@@ -84,7 +84,7 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 
 		output.PrintLog(fmt.Sprintf("execution arg before %s", execution.Args))
 		execution.Args = execution.Args[:len(execution.Args)-1]
-		output.PrintLog(fmt.Sprintf("execution arg afrer %s", execution.Args))
+		output.PrintLogf("execution arg afrer %s", execution.Args)
 		output.PrintLogf("%s It is a directory test - trying to find file from the last executor argument %s in directory %s", ui.IconWorld, scriptName, path)
 
 		// sanity checking for test script
@@ -97,11 +97,11 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		path = scriptFile
 	}
 
-	slavesEnvVariables := jmeter_env.ExtractSlaveEnvVariables(envManager.Variables)
+	slavesEnvVariables := jmeterenv.ExtractSlaveEnvVariables(envManager.Variables)
 	// compose parameters passed to JMeter with -J
 	params := make([]string, 0, len(envManager.Variables))
 	for _, value := range envManager.Variables {
-		if value.Name == jmeter_env.MasterOverrideJvmArgs || value.Name == jmeter_env.MasterAdditionalJvmArgs {
+		if value.Name == jmeterenv.MasterOverrideJvmArgs || value.Name == jmeterenv.MasterAdditionalJvmArgs {
 			//Skip JVM ARGS to be appended in the command
 			continue
 		}
@@ -134,7 +134,7 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	}
 	// recreate output directory with wide permissions so JMeter can create report files
 	if err = os.Mkdir(outputDir, 0777); err != nil {
-		return *result.Err(errors.Errorf("could not create directory %s: %v", runPath, err)), nil
+		return *result.Err(errors.Errorf("error creating directory %s: %v", runPath, err)), nil
 	}
 
 	jtlPath := filepath.Join(outputDir, "report.jtl")
@@ -159,19 +159,19 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		}
 	}
 
-	sl, err := slaves.NewClient(execution, r.Params, slavesEnvVariables)
+	slavesClient, err := slaves.NewClient(execution, r.Params, slavesEnvVariables)
 	if err != nil {
 		return *result.WithErrors(errors.Errorf("Getting error while creating slaves client: %v", err)), nil
 	}
 
 	//creating slaves provided in SLAVES_COUNT env variable
-	slavesNameIpMap, err := sl.CreateSlaves()
+	slavesNameIpMap, err := slavesClient.CreateSlaves(ctx)
 	if err != nil {
 		return *result.WithErrors(errors.Errorf("Getting error while creating slaves nodes: %v", err)), nil
 	}
-	defer sl.DeleteSlaves(slavesNameIpMap)
+	defer slavesClient.DeleteSlaves(ctx, slavesNameIpMap)
 
-	args = append(args, fmt.Sprintf("-R %v", GetSlavesIpString(slavesNameIpMap)))
+	args = append(args, fmt.Sprintf("-R %v", slavesClient.GetSlavesIpString(slavesNameIpMap)))
 
 	for i := range args {
 		if args[i] == "<envVars>" {
@@ -223,9 +223,9 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 			return *result.WithErrors(errors.Errorf("parsing jtl report error: %v", err)), nil
 		}
 
-		executionResult = MapTestResultsToExecutionResults(out, testResults)
+		executionResult = mapTestResultsToExecutionResults(out, testResults)
 	} else {
-		executionResult = MapResultsToExecutionResults(out, results)
+		executionResult = mapResultsToExecutionResults(out, results)
 	}
 
 	output.PrintLogf("%s Mapped JMeter results to Execution Results...", ui.IconCheckMark)
@@ -259,89 +259,7 @@ func getEntryPoint() (entrypoint string) {
 	return filepath.Join(wd, "scripts/entrypoint.sh")
 }
 
-func MapResultsToExecutionResults(out []byte, results parser.Results) (result testkube.ExecutionResult) {
-	result.Status = testkube.ExecutionStatusPassed
-	if results.HasError {
-		result.Status = testkube.ExecutionStatusFailed
-		result.ErrorMessage = results.LastErrorMessage
-	}
-
-	result.Output = string(out)
-	result.OutputType = "text/plain"
-
-	for _, r := range results.Results {
-		result.Steps = append(
-			result.Steps,
-			testkube.ExecutionStepResult{
-				Name:     r.Label,
-				Duration: r.Duration.String(),
-				Status:   MapResultStatus(r),
-				AssertionResults: []testkube.AssertionResult{{
-					Name:   r.Label,
-					Status: MapResultStatus(r),
-				}},
-			})
-	}
-
-	return result
-}
-
-func MapTestResultsToExecutionResults(out []byte, results parser.TestResults) (result testkube.ExecutionResult) {
-	result.Status = testkube.ExecutionStatusPassed
-
-	result.Output = string(out)
-	result.OutputType = "text/plain"
-
-	samples := append(results.HTTPSamples, results.Samples...)
-	for _, r := range samples {
-		if !r.Success {
-			result.Status = testkube.ExecutionStatusFailed
-			if r.AssertionResult != nil {
-				result.ErrorMessage = r.AssertionResult.FailureMessage
-			}
-		}
-
-		result.Steps = append(
-			result.Steps,
-			testkube.ExecutionStepResult{
-				Name:     r.Label,
-				Duration: fmt.Sprintf("%dms", r.Time),
-				Status:   MapTestResultStatus(r.Success),
-				AssertionResults: []testkube.AssertionResult{{
-					Name:   r.Label,
-					Status: MapTestResultStatus(r.Success),
-				}},
-			})
-	}
-
-	return result
-}
-
-func MapResultStatus(result parser.Result) string {
-	if result.Success {
-		return string(testkube.PASSED_ExecutionStatus)
-	}
-
-	return string(testkube.FAILED_ExecutionStatus)
-}
-
-func MapTestResultStatus(success bool) string {
-	if success {
-		return string(testkube.PASSED_ExecutionStatus)
-	}
-
-	return string(testkube.FAILED_ExecutionStatus)
-}
-
 // GetType returns runner type
-func (r *JMeterRunner) GetType() runner.Type {
+func (r *JMeterDRunner) GetType() runner.Type {
 	return runner.TypeMain
-}
-
-func GetSlavesIpString(podNameIpMap map[string]string) string {
-	podIps := []string{}
-	for _, ip := range podNameIpMap {
-		podIps = append(podIps, ip)
-	}
-	return strings.Join(podIps, ",")
 }
