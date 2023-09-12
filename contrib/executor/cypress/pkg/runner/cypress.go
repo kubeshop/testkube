@@ -109,7 +109,8 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 		envVars = append(envVars, fmt.Sprintf("%s=%s", value.Name, value.Value))
 	}
 
-	junitReportPath := filepath.Join(projectPath, "results/junit.xml")
+	junitReportDir := filepath.Join(projectPath, "results")
+	junitReportPath := filepath.Join(projectPath, junitReportDir, "junit-[hash].xml")
 
 	var project string
 	if workingDir != "" {
@@ -142,7 +143,7 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
 	out, err = executor.Run(runPath, command, envManager, args...)
 	out = envManager.ObfuscateSecrets(out)
-	suites, serr := junit.IngestFile(junitReportPath)
+	suites, serr := junit.IngestDir(junitReportDir)
 	result = MapJunitToExecutionResults(out, suites)
 	output.PrintLogf("%s Mapped Junit to Execution Results...", ui.IconCheckMark)
 
@@ -160,7 +161,7 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 	// scrape artifacts first even if there are errors above
 	if r.Params.ScrapperEnabled {
 		directories := []string{
-			junitReportPath,
+			junitReportDir,
 			filepath.Join(projectPath, "cypress/videos"),
 			filepath.Join(projectPath, "cypress/screenshots"),
 		}
