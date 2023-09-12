@@ -1,4 +1,4 @@
-package jmeter_env
+package jmeterenv
 
 import (
 	"strings"
@@ -22,15 +22,15 @@ func ExtractSlaveEnvVariables(variables map[string]testkube.Variable) map[string
 	slaveVariables := make(map[string]testkube.Variable)
 
 	// Iterate through the variables to extract slave environment variables.
-	for varName, v := range variables {
+	for k, v := range variables {
 		switch {
-		case strings.HasPrefix(varName, SlavesPrefix):
-			slaveVariables[varName] = v
-			delete(variables, varName) // Remove slave variable from the main variables map.
-		case strings.HasPrefix(varName, MasterPrefix):
+		case strings.HasPrefix(k, SlavesPrefix):
+			slaveVariables[k] = v
+			delete(variables, k) // Remove slave variable from the main variables map.
+		case strings.HasPrefix(k, MasterPrefix):
 			continue
 		default:
-			slaveVariables[varName] = v
+			slaveVariables[k] = v
 		}
 	}
 	return slaveVariables
