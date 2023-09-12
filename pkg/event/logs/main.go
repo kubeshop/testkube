@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -12,6 +13,9 @@ import (
 )
 
 func main() {
+	const (
+		StreamName = "LOGS"
+	)
 	// In the `jetstream` package, almost all API calls rely on `context.Context` for timeout/cancellation handling
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -22,12 +26,25 @@ func main() {
 	js, _ := jetstream.New(nc)
 
 	switch os.Args[1] {
+	case "delete":
+		err := js.DeleteConsumer(ctx, StreamName, "OC")
+		fmt.Printf("%+v\n", err)
+
+		err = js.DeleteStream(ctx, StreamName)
+		fmt.Printf("%+v\n", err)
+
 	case "create":
 		// Create a stream
-		s, _ := js.CreateStream(ctx, jetstream.StreamConfig{
-			Name:     "ORDERS",
+		s, err := js.CreateStream(ctx, jetstream.StreamConfig{
+			Name:     StreamName,
 			Subjects: []string{"ORDERS.*"},
+			MaxAge:   time.Minute,
+			Storage:  jetstream.FileStorage,
 		})
+
+		fmt.Printf("%+v\n", err)
+		printStreamState(ctx, s, StreamName)
+
 		// // Create durable consumer
 		c, err := s.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
 			Name:      "OC",
@@ -41,19 +58,19 @@ func main() {
 	case "publish":
 		// Publish some messages
 		for i := 1; i <= 100; i++ {
-			js.Publish(ctx, "ORDERS.new", []byte("hello message "+strconv.Itoa(i)))
+			js.Publish(ctx, "ORDERS.a1", []byte("hello message "+strconv.Itoa(i)))
 			fmt.Printf("Published hello message %d\n", i)
 		}
 
 		// Publish some messages
 		for i := 1; i <= 100; i++ {
-			js.Publish(ctx, "ORDERS.old", []byte("hello message "+strconv.Itoa(i)))
+			js.Publish(ctx, "ORDERS.b2", []byte("hello message "+strconv.Itoa(i)))
 			fmt.Printf("Published hello message %d\n", i)
 		}
 
 	case "consume":
 
-		c, err := js.Consumer(ctx, "ORDERS", "OC")
+		c, err := js.Consumer(ctx, StreamName, "OC")
 		if err != nil {
 			fmt.Printf("%+v\n", err)
 			return
@@ -81,7 +98,7 @@ func main() {
 			from, _ = strconv.Atoi(os.Args[2])
 		}
 
-		c, err := js.CreateOrUpdateConsumer(ctx, "ORDERS", jetstream.ConsumerConfig{
+		c, err := js.CreateOrUpdateConsumer(ctx, StreamName, jetstream.ConsumerConfig{
 			Name:          "AAA1",
 			Durable:       "AAA1",
 			DeliverPolicy: jetstream.DeliverByStartSequencePolicy,
@@ -92,7 +109,7 @@ func main() {
 			fmt.Printf("%+v\n", err)
 			return
 		}
-		defer js.DeleteConsumer(ctx, "ORDERS", "AAA1")
+		defer js.DeleteConsumer(ctx, StreamName, "AAA1")
 
 		messageCounter := 0
 		// Iterate over messages continuously
@@ -107,4 +124,11 @@ func main() {
 
 	}
 
+}
+
+func printStreamState(ctx context.Context, js jetstream.Stream, name string) {
+	info, _ := js.Info(ctx)
+	b, _ := json.MarshalIndent(info.State, "", " ")
+	fmt.Println("inspecting stream info")
+	fmt.Println(string(b))
 }
