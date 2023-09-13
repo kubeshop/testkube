@@ -40,7 +40,7 @@ func MapTestkubeEventQueuedTestToCDEvent(event testkube.Event, clusterID, defaul
 	}
 
 	if event.TestExecution != nil {
-		ev.SetSubjectId(event.TestExecution.Name)
+		ev.SetSubjectId(event.TestExecution.Id)
 	}
 
 	ev.SetSubjectSource(clusterID)
@@ -49,7 +49,7 @@ func MapTestkubeEventQueuedTestToCDEvent(event testkube.Event, clusterID, defaul
 		ev.SetSubjectTestCase(&cdevents.TestCaseRunQueuedSubjectContentTestCase{
 			Id:   event.TestExecution.TestName,
 			Type: MapTestkubeTestTypeToCDEventTestCaseType(event.TestExecution.TestType),
-			Uri:  fmt.Sprintf("%s/tests/executions/%s", dashboardURI, event.TestExecution.TestName),
+			Uri:  fmt.Sprintf("%s/tests/%s", dashboardURI, event.TestExecution.TestName),
 		})
 
 		namespace := event.TestExecution.TestNamespace
@@ -88,7 +88,7 @@ func MapTestkubeEventStartTestToCDEvent(event testkube.Event, clusterID, default
 	}
 
 	if event.TestExecution != nil {
-		ev.SetSubjectId(event.TestExecution.Name)
+		ev.SetSubjectId(event.TestExecution.Id)
 	}
 
 	ev.SetSubjectSource(clusterID)
@@ -97,7 +97,7 @@ func MapTestkubeEventStartTestToCDEvent(event testkube.Event, clusterID, default
 		ev.SetSubjectTestCase(&cdevents.TestCaseRunStartedSubjectContentTestCase{
 			Id:   event.TestExecution.TestName,
 			Type: MapTestkubeTestTypeToCDEventTestCaseType(event.TestExecution.TestType),
-			Uri:  fmt.Sprintf("%s/tests/executions/%s", dashboardURI, event.TestExecution.TestName),
+			Uri:  fmt.Sprintf("%s/tests/%s", dashboardURI, event.TestExecution.TestName),
 		})
 
 		namespace := event.TestExecution.TestNamespace
@@ -136,7 +136,7 @@ func MapTestkubeEventFinishTestToCDEvent(event testkube.Event, clusterID, defaul
 	}
 
 	if event.TestExecution != nil {
-		ev.SetSubjectId(event.TestExecution.Name)
+		ev.SetSubjectId(event.TestExecution.Id)
 	}
 
 	ev.SetSubjectSource(clusterID)
@@ -145,7 +145,7 @@ func MapTestkubeEventFinishTestToCDEvent(event testkube.Event, clusterID, defaul
 		ev.SetSubjectTestCase(&cdevents.TestCaseRunFinishedSubjectContentTestCase{
 			Id:   event.TestExecution.TestName,
 			Type: MapTestkubeTestTypeToCDEventTestCaseType(event.TestExecution.TestType),
-			Uri:  fmt.Sprintf("%s/tests/executions/%s", dashboardURI, event.TestExecution.TestName),
+			Uri:  fmt.Sprintf("%s/tests/%s", dashboardURI, event.TestExecution.TestName),
 		})
 
 		namespace := event.TestExecution.TestNamespace
@@ -219,7 +219,7 @@ func MapTestkubeEventQueuedTestSuiteToCDEvent(event testkube.Event, clusterID, d
 	}
 
 	if event.TestSuiteExecution != nil {
-		ev.SetSubjectId(event.TestSuiteExecution.Name)
+		ev.SetSubjectId(event.TestSuiteExecution.Id)
 	}
 
 	ev.SetSubjectSource(clusterID)
@@ -256,7 +256,7 @@ func MapTestkubeEventStartTestSuiteToCDEvent(event testkube.Event, clusterID, da
 	}
 
 	if event.TestSuiteExecution != nil {
-		ev.SetSubjectId(event.TestSuiteExecution.Name)
+		ev.SetSubjectId(event.TestSuiteExecution.Id)
 	}
 
 	ev.SetSubjectSource(clusterID)
@@ -265,7 +265,7 @@ func MapTestkubeEventStartTestSuiteToCDEvent(event testkube.Event, clusterID, da
 		if event.TestSuiteExecution.TestSuite != nil {
 			ev.SetSubjectTestSuite(&cdevents.TestSuiteRunStartedSubjectContentTestSuite{
 				Id:  event.TestSuiteExecution.TestSuite.Name,
-				Uri: fmt.Sprintf("%s/test-suites/executions/%s", dashboardURI, event.TestSuiteExecution.TestSuite.Name),
+				Uri: fmt.Sprintf("%s/test-suites/%s", dashboardURI, event.TestSuiteExecution.TestSuite.Name),
 			})
 
 			ev.SetSubjectEnvironment(&cdevents.Reference{
@@ -293,7 +293,7 @@ func MapTestkubeEventFinishTestSuiteToCDEvent(event testkube.Event, clusterID, d
 	}
 
 	if event.TestSuiteExecution != nil {
-		ev.SetSubjectId(event.TestSuiteExecution.Name)
+		ev.SetSubjectId(event.TestSuiteExecution.Id)
 	}
 
 	ev.SetSubjectSource(clusterID)
@@ -302,7 +302,7 @@ func MapTestkubeEventFinishTestSuiteToCDEvent(event testkube.Event, clusterID, d
 		if event.TestSuiteExecution.TestSuite != nil {
 			ev.SetSubjectTestSuite(&cdevents.TestSuiteRunFinishedSubjectContentTestSuite{
 				Id:  event.TestSuiteExecution.TestSuite.Name,
-				Uri: fmt.Sprintf("%s/test-suites/executions/%s", dashboardURI, event.TestSuiteExecution.TestSuite.Name),
+				Uri: fmt.Sprintf("%s/test-suites/%s", dashboardURI, event.TestSuiteExecution.TestSuite.Name),
 			})
 
 			ev.SetSubjectEnvironment(&cdevents.Reference{
