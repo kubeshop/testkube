@@ -464,7 +464,7 @@ func TestMapTestkubeEventFinishTestSuiteToCDEvent(t *testing.T) {
 	}
 
 	suiteURI := cde.Subject.Content.TestSuite.Uri
-	if suiteURI != "/test-suites//Suite 1" {
+	if suiteURI != "/test-suites/Suite 1" {
 		t.Errorf("Unexpected test case uri: %s", suiteURI)
 	}
 
