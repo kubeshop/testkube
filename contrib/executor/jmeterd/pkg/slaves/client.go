@@ -2,19 +2,22 @@ package slaves
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
+
+	"github.com/pkg/errors"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/contrib/executor/jmeterd/pkg/jmeterenv"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
-	"github.com/pkg/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -50,7 +53,7 @@ func NewClient(execution testkube.Execution, envParams envs.Params, slavesEnvVar
 	}, nil
 }
 
-// creating slaves as per count provided in the SLAVES_CLOUNT env variable.
+// CreateSlaves creates slaves as per count provided in the SLAVES_CLOUNT env variable.
 // Default SLAVES_COUNT would be 1 if not provided in the env variables
 func (client *Client) CreateSlaves(ctx context.Context) (map[string]string, error) {
 	slavesCount, err := getSlavesCount(client.envVariables[jmeterenv.SlavesCount])
@@ -58,7 +61,7 @@ func (client *Client) CreateSlaves(ctx context.Context) (map[string]string, erro
 		return nil, errors.Errorf("Getting error while fetching slaves count from env variable SLAVES_COUNT : %v", err)
 	}
 
-	output.PrintLog(fmt.Sprintf("Creating Slaves %v Pods", slavesCount))
+	output.PrintLogf("Creating Slaves %v Pods", slavesCount)
 
 	podIPAddressChan := make(chan map[string]string, slavesCount)
 	errorChan := make(chan error, slavesCount)
@@ -84,15 +87,14 @@ func (client *Client) CreateSlaves(ctx context.Context) (map[string]string, erro
 	return podIPAddresses, nil
 }
 
-// created slaves pod and send its ipaddress on the podIPAddressChan channel when pod is in the ready state
+// createSlavePod creates a slave pod and sends its IP address on the podIPAddressChan
+// channel when the pod is in the ready state.
 func (client *Client) createSlavePod(ctx context.Context, currentSlavesCount int, podIPAddressChan chan<- map[string]string, errorChan chan<- error) {
-
-	slavePod, err := getSlavePodConfiguration(client.execution.Name, client.execution, client.envVariables, client.envParams)
+	slavePod, err := client.getSlavePodConfiguration(currentSlavesCount)
 	if err != nil {
 		errorChan <- err
 		return
 	}
-	slavePod.Name = fmt.Sprintf("%s-%v-%v", slavePod.Name, currentSlavesCount, client.execution.Id)
 
 	p, err := client.clientSet.CoreV1().Pods(client.namespace).Create(ctx, slavePod, metav1.CreateOptions{})
 	if err != nil {
@@ -120,6 +122,93 @@ func (client *Client) createSlavePod(ctx context.Context, currentSlavesCount int
 	podIPAddressChan <- podNameIpMap
 }
 
+func (client *Client) getSlavePodConfiguration(currentSlavesCount int) (*v1.Pod, error) {
+	runnerExecutionStr, err := json.Marshal(client.execution)
+	if err != nil {
+		return nil, err
+	}
+
+	podName := ValidateAndGetSlavePodName(client.execution.TestName, client.execution.Id, currentSlavesCount)
+	if err != nil {
+		return nil, err
+	}
+	return &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: podName,
+		},
+		Spec: v1.PodSpec{
+			RestartPolicy: v1.RestartPolicyAlways,
+			InitContainers: []v1.Container{
+				{
+					Name:            "init",
+					Image:           "kubeshop/testkube-init-executor:1.14.3",
+					Command:         []string{"/bin/runner", string(runnerExecutionStr)},
+					Env:             getSlaveRunnerEnv(client.envParams, client.execution),
+					ImagePullPolicy: v1.PullIfNotPresent,
+					VolumeMounts: []v1.VolumeMount{
+						{
+							MountPath: "/data",
+							Name:      "data-volume",
+						},
+					},
+				},
+			},
+			Containers: []v1.Container{
+				{
+					Name:            "main",
+					Image:           "kubeshop/testkube-jmeterd-slaves:999.0.0",
+					Env:             getSlaveConfigurationEnv(client.envVariables),
+					ImagePullPolicy: v1.PullIfNotPresent,
+					Ports: []v1.ContainerPort{
+						{
+							ContainerPort: serverPort,
+							Name:          "server-port",
+						}, {
+							ContainerPort: localPort,
+							Name:          "local-port",
+						},
+					},
+					VolumeMounts: []v1.VolumeMount{
+						{
+							MountPath: "/data",
+							Name:      "data-volume",
+						},
+					},
+					LivenessProbe: &v1.Probe{
+						ProbeHandler: v1.ProbeHandler{
+							TCPSocket: &v1.TCPSocketAction{
+								Port: intstr.FromInt(serverPort),
+							},
+						},
+						FailureThreshold: 3,
+						PeriodSeconds:    5,
+						SuccessThreshold: 1,
+						TimeoutSeconds:   1,
+					},
+					ReadinessProbe: &v1.Probe{
+						ProbeHandler: v1.ProbeHandler{
+							TCPSocket: &v1.TCPSocketAction{
+								Port: intstr.FromInt(serverPort),
+							},
+						},
+						FailureThreshold:    3,
+						InitialDelaySeconds: 10,
+						PeriodSeconds:       5,
+						TimeoutSeconds:      1,
+					},
+				},
+			},
+			Volumes: []v1.Volume{
+				{
+					Name:         "data-volume",
+					VolumeSource: v1.VolumeSource{EmptyDir: &v1.EmptyDirVolumeSource{}},
+				},
+			},
+		},
+	}, nil
+}
+
+// DeleteSlaves do the cleanup slaves pods after execution of test
 func (client *Client) DeleteSlaves(ctx context.Context, slaveNameIpMap map[string]string) error {
 	for slaveName := range slaveNameIpMap {
 		output.PrintLog(fmt.Sprintf("Deleting slave %v", slaveName))
@@ -131,12 +220,4 @@ func (client *Client) DeleteSlaves(ctx context.Context, slaveNameIpMap map[strin
 
 	}
 	return nil
-}
-
-func (client *Client) GetSlavesIpString(podNameIpMap map[string]string) string {
-	podIps := []string{}
-	for _, ip := range podNameIpMap {
-		podIps = append(podIps, ip)
-	}
-	return strings.Join(podIps, ",")
 }

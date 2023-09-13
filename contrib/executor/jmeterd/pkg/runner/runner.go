@@ -82,7 +82,7 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 			}
 		}
 
-		output.PrintLog(fmt.Sprintf("execution arg before %s", execution.Args))
+		output.PrintLogf("execution arg before %s", execution.Args)
 		execution.Args = execution.Args[:len(execution.Args)-1]
 		output.PrintLogf("execution arg afrer %s", execution.Args)
 		output.PrintLogf("%s It is a directory test - trying to find file from the last executor argument %s in directory %s", ui.IconWorld, scriptName, path)
@@ -134,7 +134,7 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	}
 	// recreate output directory with wide permissions so JMeter can create report files
 	if err = os.Mkdir(outputDir, 0777); err != nil {
-		return *result.Err(errors.Errorf("error creating directory %s: %v", runPath, err)), nil
+		return *result.Err(errors.Wrapf(err, "error creating directory %s", runPath)), nil
 	}
 
 	jtlPath := filepath.Join(outputDir, "report.jtl")
@@ -161,17 +161,17 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 
 	slavesClient, err := slaves.NewClient(execution, r.Params, slavesEnvVariables)
 	if err != nil {
-		return *result.WithErrors(errors.Errorf("Getting error while creating slaves client: %v", err)), nil
+		return *result.WithErrors(errors.Wrap(err, "error creating slaves client")), nil
 	}
 
 	//creating slaves provided in SLAVES_COUNT env variable
 	slavesNameIpMap, err := slavesClient.CreateSlaves(ctx)
 	if err != nil {
-		return *result.WithErrors(errors.Errorf("Getting error while creating slaves nodes: %v", err)), nil
+		return *result.WithErrors(errors.Wrap(err, "error creating slaves")), nil
 	}
 	defer slavesClient.DeleteSlaves(ctx, slavesNameIpMap)
 
-	args = append(args, fmt.Sprintf("-R %v", slavesClient.GetSlavesIpString(slavesNameIpMap)))
+	args = append(args, fmt.Sprintf("-R %v", slaves.GetSlavesIpString(slavesNameIpMap)))
 
 	for i := range args {
 		if args[i] == "<envVars>" {
