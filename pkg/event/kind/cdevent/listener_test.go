@@ -93,6 +93,7 @@ func TestCDEventListener_Notify(t *testing.T) {
 
 func exampleExecution() *testkube.Execution {
 	execution := testkube.NewQueuedExecution()
+	execution.Id = "1"
 	execution.Name = "test-1"
 	execution.TestName = "test"
 	execution.TestNamespace = "testkube"
