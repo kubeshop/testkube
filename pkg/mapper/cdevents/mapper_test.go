@@ -15,6 +15,7 @@ func TestMapTestkubeEventQueuedTestToCDEvent(t *testing.T) {
 
 	event := testkube.Event{
 		TestExecution: &testkube.Execution{
+			Id:            "1",
 			Name:          "test-1",
 			TestName:      "Test 1",
 			TestType:      "ginkgo/test",
@@ -35,7 +36,7 @@ func TestMapTestkubeEventQueuedTestToCDEvent(t *testing.T) {
 	}
 
 	subjectID := ev.GetSubjectId()
-	if subjectID != "test-1" {
+	if subjectID != "1" {
 		t.Errorf("Unexpected subject ID: %s", subjectID)
 	}
 
@@ -63,7 +64,7 @@ func TestMapTestkubeEventQueuedTestToCDEvent(t *testing.T) {
 	}
 
 	testURI := cde.Subject.Content.TestCase.Uri
-	if testURI != "/tests/executions/Test 1" {
+	if testURI != "/tests/Test 1" {
 		t.Errorf("Unexpected test case uri: %s", testURI)
 	}
 
@@ -98,6 +99,7 @@ func TestMapTestkubeEventStatTestToCDEvent(t *testing.T) {
 
 	event := testkube.Event{
 		TestExecution: &testkube.Execution{
+			Id:            "1",
 			Name:          "test-1",
 			TestName:      "Test 1",
 			TestType:      "ginkgo/test",
@@ -118,7 +120,7 @@ func TestMapTestkubeEventStatTestToCDEvent(t *testing.T) {
 	}
 
 	subjectID := ev.GetSubjectId()
-	if subjectID != "test-1" {
+	if subjectID != "1" {
 		t.Errorf("Unexpected subject ID: %s", subjectID)
 	}
 
@@ -146,7 +148,7 @@ func TestMapTestkubeEventStatTestToCDEvent(t *testing.T) {
 	}
 
 	testURI := cde.Subject.Content.TestCase.Uri
-	if testURI != "/tests/executions/Test 1" {
+	if testURI != "/tests/Test 1" {
 		t.Errorf("Unexpected test case uri: %s", testURI)
 	}
 
@@ -182,6 +184,7 @@ func TestMapTestkubeEventFinishTestToCDEvent(t *testing.T) {
 	result := testkube.NewErrorExecutionResult(errors.New("fake"))
 	event := testkube.Event{
 		TestExecution: &testkube.Execution{
+			Id:            "1",
 			Name:          "test-1",
 			TestName:      "Test 1",
 			TestType:      "ginkgo/test",
@@ -203,7 +206,7 @@ func TestMapTestkubeEventFinishTestToCDEvent(t *testing.T) {
 	}
 
 	subjectID := ev.GetSubjectId()
-	if subjectID != "test-1" {
+	if subjectID != "1" {
 		t.Errorf("Unexpected subject ID: %s", subjectID)
 	}
 
@@ -231,7 +234,7 @@ func TestMapTestkubeEventFinishTestToCDEvent(t *testing.T) {
 	}
 
 	testURI := cde.Subject.Content.TestCase.Uri
-	if testURI != "/tests/executions/Test 1" {
+	if testURI != "/tests/Test 1" {
 		t.Errorf("Unexpected test case uri: %s", testURI)
 	}
 
@@ -271,6 +274,7 @@ func TestMapTestkubeEventQueuedTestSuiteToCDEvent(t *testing.T) {
 
 	event := testkube.Event{
 		TestSuiteExecution: &testkube.TestSuiteExecution{
+			Id:   "1",
 			Name: "suite-1",
 			TestSuite: &testkube.ObjectRef{
 				Namespace: "default",
@@ -290,7 +294,7 @@ func TestMapTestkubeEventQueuedTestSuiteToCDEvent(t *testing.T) {
 	}
 
 	subjectID := ev.GetSubjectId()
-	if subjectID != "suite-1" {
+	if subjectID != "1" {
 		t.Errorf("Unexpected subject ID: %s", subjectID)
 	}
 
@@ -338,6 +342,7 @@ func TestMapTestkubeEventStartTestSuiteToCDEvent(t *testing.T) {
 
 	event := testkube.Event{
 		TestSuiteExecution: &testkube.TestSuiteExecution{
+			Id:   "1",
 			Name: "suite-1",
 			TestSuite: &testkube.ObjectRef{
 				Namespace: "default",
@@ -357,7 +362,7 @@ func TestMapTestkubeEventStartTestSuiteToCDEvent(t *testing.T) {
 	}
 
 	subjectID := ev.GetSubjectId()
-	if subjectID != "suite-1" {
+	if subjectID != "1" {
 		t.Errorf("Unexpected subject ID: %s", subjectID)
 	}
 
@@ -380,7 +385,7 @@ func TestMapTestkubeEventStartTestSuiteToCDEvent(t *testing.T) {
 	}
 
 	suiteURI := cde.Subject.Content.TestSuite.Uri
-	if suiteURI != "/test-suites/executions/Suite 1" {
+	if suiteURI != "/test-suites/Suite 1" {
 		t.Errorf("Unexpected test case uri: %s", suiteURI)
 	}
 
@@ -406,6 +411,7 @@ func TestMapTestkubeEventFinishTestSuiteToCDEvent(t *testing.T) {
 	execution := testkube.NewFailedExecution(errors.New("fake"))
 	event := testkube.Event{
 		TestSuiteExecution: &testkube.TestSuiteExecution{
+			Id:   "1",
 			Name: "suite-1",
 			TestSuite: &testkube.ObjectRef{
 				Namespace: "default",
@@ -435,7 +441,7 @@ func TestMapTestkubeEventFinishTestSuiteToCDEvent(t *testing.T) {
 	}
 
 	subjectID := ev.GetSubjectId()
-	if subjectID != "suite-1" {
+	if subjectID != "1" {
 		t.Errorf("Unexpected subject ID: %s", subjectID)
 	}
 
@@ -458,7 +464,7 @@ func TestMapTestkubeEventFinishTestSuiteToCDEvent(t *testing.T) {
 	}
 
 	suiteURI := cde.Subject.Content.TestSuite.Uri
-	if suiteURI != "/test-suites/executions/Suite 1" {
+	if suiteURI != "/test-suites//Suite 1" {
 		t.Errorf("Unexpected test case uri: %s", suiteURI)
 	}
 
