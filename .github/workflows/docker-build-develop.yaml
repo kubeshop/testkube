@@ -242,6 +242,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
+      - name: Get commit sha
+        id: github_sha
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+
       - name: Login to DockerHub
         uses: docker/login-action@v1
         with:
