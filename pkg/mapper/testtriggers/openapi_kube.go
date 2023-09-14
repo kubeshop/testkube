@@ -8,6 +8,11 @@ import (
 )
 
 func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUpsertRequest) testsv1.TestTrigger {
+	var concurrencyPolicy testsv1.TestTriggerConcurrencyPolicy
+	if request.ConcurrencyPolicy != nil {
+		concurrencyPolicy = testsv1.TestTriggerConcurrencyPolicy(*request.ConcurrencyPolicy)
+	}
+
 	return testsv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      request.Name,
@@ -15,14 +20,15 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 			Labels:    request.Labels,
 		},
 		Spec: testsv1.TestTriggerSpec{
-			Resource:         testsv1.TestTriggerResource(*request.Resource),
-			ResourceSelector: mapSelectorToCRD(request.ResourceSelector),
-			Event:            testsv1.TestTriggerEvent(request.Event),
-			ConditionSpec:    mapConditionSpecCRD(request.ConditionSpec),
-			ProbeSpec:        mapProbeSpecCRD(request.ProbeSpec),
-			Action:           testsv1.TestTriggerAction(*request.Action),
-			Execution:        testsv1.TestTriggerExecution(*request.Execution),
-			TestSelector:     mapSelectorToCRD(request.TestSelector),
+			Resource:          testsv1.TestTriggerResource(*request.Resource),
+			ResourceSelector:  mapSelectorToCRD(request.ResourceSelector),
+			Event:             testsv1.TestTriggerEvent(request.Event),
+			ConditionSpec:     mapConditionSpecCRD(request.ConditionSpec),
+			ProbeSpec:         mapProbeSpecCRD(request.ProbeSpec),
+			Action:            testsv1.TestTriggerAction(*request.Action),
+			Execution:         testsv1.TestTriggerExecution(*request.Execution),
+			TestSelector:      mapSelectorToCRD(request.TestSelector),
+			ConcurrencyPolicy: concurrencyPolicy,
 		},
 	}
 }

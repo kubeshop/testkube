@@ -3,20 +3,22 @@ package triggers
 import "github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
 
 type KeyMap struct {
-	Resources  []string            `json:"resources"`
-	Actions    []string            `json:"actions"`
-	Executions []string            `json:"executions"`
-	Events     map[string][]string `json:"events"`
-	Conditions []string            `json:"conditions"`
+	Resources           []string            `json:"resources"`
+	Actions             []string            `json:"actions"`
+	Executions          []string            `json:"executions"`
+	Events              map[string][]string `json:"events"`
+	Conditions          []string            `json:"conditions"`
+	ConcurrencyPolicies []string            `json:"concurrencyPolicies"`
 }
 
 func NewKeyMap() *KeyMap {
 	return &KeyMap{
-		Resources:  testtrigger.GetSupportedResources(),
-		Actions:    testtrigger.GetSupportedActions(),
-		Executions: testtrigger.GetSupportedExecutions(),
-		Events:     getSupportedEvents(),
-		Conditions: testtrigger.GetSupportedConditions(),
+		Resources:           testtrigger.GetSupportedResources(),
+		Actions:             testtrigger.GetSupportedActions(),
+		Executions:          testtrigger.GetSupportedExecutions(),
+		Events:              getSupportedEvents(),
+		Conditions:          testtrigger.GetSupportedConditions(),
+		ConcurrencyPolicies: testtrigger.GetSupportedConcurrencyPolicies(),
 	}
 }
 

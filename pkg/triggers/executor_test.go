@@ -150,9 +150,10 @@ func TestExecute(t *testing.T) {
 					Headers: map[string]string{"X-Token": "12345"},
 				}},
 			},
-			Action:       "run",
-			Execution:    "test",
-			TestSelector: testtriggersv1.TestTriggerSelector{Name: "some-test"},
+			Action:            "run",
+			Execution:         "test",
+			ConcurrencyPolicy: "allow",
+			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
 		},
 	}
 
