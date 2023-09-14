@@ -103,6 +103,9 @@ spec:
   {{- if .Execution }}
   execution: {{ .Execution }}
   {{- end }}
+  {{- if .ConcurrencyPolicy }}
+  concurrencyPolicy: {{ .ConcurrencyPolicy }}
+  {{- end }}
   {{- if .TestSelector }}
   testSelector:
     {{- if .TestSelector.Name }}

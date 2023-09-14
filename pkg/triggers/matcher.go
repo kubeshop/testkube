@@ -64,12 +64,14 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		}
 
 		status := s.getStatusForTrigger(t)
-		if status.hasActiveTests() {
-			s.logger.Infof(
-				"trigger service: matcher component: skipping trigger execution for trigger %s/%s by event %s on resource %s because it is currently running tests",
-				t.Namespace, t.Name, e.eventType, e.resource,
-			)
-			return nil
+		if t.Spec.ConcurrencyPolicy == testtriggersv1.TestTriggerConcurrencyPolicyForbid {
+			if status.hasActiveTests() {
+				s.logger.Infof(
+					"trigger service: matcher component: skipping trigger execution for trigger %s/%s by event %s on resource %s because it is currently running tests",
+					t.Namespace, t.Name, e.eventType, e.resource,
+				)
+				return nil
+			}
 		}
 		s.logger.Infof("trigger service: matcher component: event %s matches trigger %s/%s for resource %s", e.eventType, t.Namespace, t.Name, e.resource)
 		s.logger.Infof("trigger service: matcher component: triggering %s action for %s execution", t.Spec.Action, t.Spec.Execution)
