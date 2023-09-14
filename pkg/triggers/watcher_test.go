@@ -104,12 +104,13 @@ func TestService_runWatcher_lease(t *testing.T) {
 		testTrigger := testtriggersv1.TestTrigger{
 			ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace, Name: "test-trigger-2"},
 			Spec: testtriggersv1.TestTriggerSpec{
-				Resource:         "pod",
-				ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-pod"},
-				Event:            "created",
-				Action:           "run",
-				Execution:        "test",
-				TestSelector:     testtriggersv1.TestTriggerSelector{Name: "some-test"},
+				Resource:          "pod",
+				ResourceSelector:  testtriggersv1.TestTriggerSelector{Name: "test-pod"},
+				Event:             "created",
+				Action:            "run",
+				Execution:         "test",
+				ConcurrencyPolicy: "allow",
+				TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
 			},
 		}
 		createdTestTrigger, err := testKubeClientset.TestsV1().TestTriggers(testNamespace).Create(ctx, &testTrigger, metav1.CreateOptions{})

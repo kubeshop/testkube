@@ -34,7 +34,9 @@ func (s *Service) runExecutionScraper(ctx context.Context) {
 }
 
 func (s *Service) checkForRunningTestExecutions(ctx context.Context, status *triggerStatus) {
-	for _, id := range status.testExecutionIDs {
+	testExecutionIDs := status.getExecutionIDs()
+
+	for _, id := range testExecutionIDs {
 		execution, err := s.resultRepository.Get(ctx, id)
 		if err == mongo.ErrNoDocuments {
 			s.logger.Warnf("trigger service: execution scraper component: no test execution found for id %s", id)
@@ -52,7 +54,9 @@ func (s *Service) checkForRunningTestExecutions(ctx context.Context, status *tri
 }
 
 func (s *Service) checkForRunningTestSuiteExecutions(ctx context.Context, status *triggerStatus) {
-	for _, id := range status.testSuiteExecutionIDs {
+	testSuiteExecutionIDs := status.getTestSuiteExecutionIDs()
+
+	for _, id := range testSuiteExecutionIDs {
 		execution, err := s.testResultRepository.Get(ctx, id)
 		if err == mongo.ErrNoDocuments {
 			s.logger.Warnf("trigger service: execution scraper component: no testsuite execution found for id %s", id)
