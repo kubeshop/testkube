@@ -6,5 +6,4 @@ ENV SSL_DISABLED true
 
 COPY ./scripts/jmeter-slaves.sh /jmeter_slaves_entrypoint.sh
 RUN chmod +x /jmeter_slaves_entrypoint.sh
-ADD lib/ ${JMETER_HOME}/lib
 ENTRYPOINT /jmeter_slaves_entrypoint.sh
