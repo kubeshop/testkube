@@ -46,7 +46,7 @@ Testkube allows you to automate running tests and test suites by defining trigge
 
 ## What is a Testkube Test Trigger?
 
-In generic terms, a _Trigger_ defines an _action_ which will be executed for a given _execution_ when a certain _event_ on a specific _resource_ occurs. For example, we could define a _TestTrigger_ which _runs_ a _Test_ when a _ConfigMap_ gets _modified_.
+In generic terms, a _Trigger_ defines an _action_ which will be executed for a given _execution_ when a certain _event_ on a specific _resource_ occurs having a given _concurrencyPolicy_. For example, we could define a _TestTrigger_ which _runs_ a _Test_ when a _ConfigMap_ gets _modified_.
 
 Watch our [video guide](#video-tutorial) on using Testkube Test Triggers to perform **Asynchronous Testing in Kubernetes**.
 
@@ -119,10 +119,11 @@ probeSpec:
 ```
 
 ### Supported Values
-* **Resource**  - pod, deployment, statefulset, daemonset, service, ingress, event, configmap
-* **Action**    - run
-* **Event**     - created, modified, deleted
-* **Execution** - test, testsuite
+* **Resource**          - pod, deployment, statefulset, daemonset, service, ingress, event, configmap
+* **Action**            - run
+* **Event**             - created, modified, deleted
+* **Execution**         - test, testsuite
+* **ConcurrencyPolicy** - allow, forbid, replace
 
 **NOTE**: All resources support the above-mentioned events, a list of finer-grained events is in the works, stay tuned...
 
@@ -168,6 +169,7 @@ spec:
       port: 8080     
   action: run
   execution: testsuite
+  concurrencyPolicy: allow
   testSelector:
     name: sanity-test
     namespace: frontend
