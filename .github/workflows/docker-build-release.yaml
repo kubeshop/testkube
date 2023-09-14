@@ -199,9 +199,8 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Get commit sha
-        id: github_sha
-        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+      - id: commit
+        uses: prompt/actions-commit-hash@v3
 
       - name: Release
         uses: goreleaser/goreleaser-action@v4
@@ -217,7 +216,7 @@ jobs:
 
       - name: Push Docker images
         run: |
-          docker push kubeshop/testkube-jmeterd-executor:${{ steps.github_sha.outputs.sha_short }}
+          docker push kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}
 
   jmeterd_slave:
     runs-on: ubuntu-latest
