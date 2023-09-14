@@ -18,27 +18,6 @@ where each output line is simply wrapped in this JSON, similar to the structured
 It's basic Distributed JMeter executor which is able to run simple JMeter scenarios in distributed environments.
 Please define your JMeter file as file (string, or git file). 
 
-
-## Plugins
-
-The following plugins are installed by default:
-* [JMeter Plugins Common Classes 0.6](https://javadoc.io/doc/kg.apc/jmeter-plugins-cmn-jmeter/latest/index.html)
-* [JMeter Plugins Manager 1.3](https://jmeter-plugins.org/wiki/PluginsManager/)
-* [Custom JMeter Functions 2.1](https://jmeter-plugins.org/wiki/Functions/)
-
-You can add more JMeter plugins either when creating or executing a JMeter test by leveraging Testkube's [copy files](https://docs.testkube.io/articles/running-tests#mapping-local-files) functionality.
-
-JMeter Plugin JAR files need to be copied to the `uploads` directory in the Executor container.
-
-Example:
-```shell
-kubectl testkube create test \
-          --file test.jmx    \
-          --copy-files "/source/path/to/jmeter-plugins-functions-2.1.jar:plugins/jmeter-plugins-functions-2.1.jar" \
-          --name jmeter-test \
-          --type jmeter/test
-```
-
 ## Local development
 
 ### Prerequisites
