@@ -5405,6 +5405,8 @@ components:
           $ref: "#/components/schemas/TestTriggerExecutions"
         testSelector:
           $ref: "#/components/schemas/TestTriggerSelector"
+        concurrencyPolicy:
+          $ref: "#/components/schemas/TestTriggerConcurrencyPolicies"
 
     LocalObjectReference:
       description: Reference to Kubernetes object
@@ -5572,6 +5574,14 @@ components:
           example:
             Content-Type: "application/xml"
 
+    TestTriggerConcurrencyPolicies:
+      description: supported concurrency policies for test triggers
+      type: string
+      enum:
+        - allow
+        - forbid
+        - replace
+
     TestTriggerKeyMap:
       type: object
       required:
@@ -5579,6 +5589,7 @@ components:
         - actions
         - executions
         - events
+        - concurrencyPolicies
       properties:
         resources:
           type: array
@@ -5600,13 +5611,13 @@ components:
           type: array
           items:
             type: string
-          description: list of supported values for resources
+          description: list of supported values for actions
           example: ["run"]
         executions:
           type: array
           items:
             type: string
-          description: list of supported values for resources
+          description: list of supported values for executions
           example: ["test", "testsuite"]
         events:
           type: object
@@ -5626,6 +5637,12 @@ components:
             type: string
           description: list of supported values for conditions
           example: ["Available", "Progressing"]
+        concurrencyPolicies:
+          type: array
+          items:
+            type: string
+          description: list of supported values for concurrency policies
+          example: ["allow", "forbid", "replace"]
 
     TestSourceBatchRequest:
       description: Test source batch request
