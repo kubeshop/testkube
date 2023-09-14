@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - develop
+      - add-ci-for-jmeterd
     paths-ignore:
       - 'docs/**'
 env:
@@ -68,7 +69,7 @@ jobs:
   single_executor:
     strategy:
       matrix:
-        executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template, tracetest, zap ]
+        executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template, tracetest, zap, jmeterd ]
 
     runs-on: ubuntu-latest
     steps:
