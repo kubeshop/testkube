@@ -76,7 +76,7 @@ jobs:
   single_executor:
     strategy:
       matrix:
-        executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template, tracetest, zap, jmeterd ]
+        executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template, tracetest, zap ]
 
     runs-on: ubuntu-latest
     steps:
@@ -185,6 +185,62 @@ jobs:
           distribution: goreleaser
           version: latest
           args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeter.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+
+  executor_jmeterd:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - uses: sigstore/cosign-installer@v3.0.5
+      - uses: anchore/sbom-action/download-syft@v0.14.2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Go Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push README to Dockerhub
+        uses: christian-korneck/update-container-description-action@v1
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+        with:
+          destination_container_repo: "kubeshop/testkube-jmeterd-executor"
+          provider: dockerhub
+          short_description: 'Testkube jmeterd executor'
+          readme_file: "./contrib/executor/jmeterd/README.md"
+
+      - name: Release
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"

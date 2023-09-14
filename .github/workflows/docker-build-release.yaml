@@ -69,7 +69,7 @@ jobs:
   single_executor:
     strategy:
       matrix:
-        executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template, tracetest, zap, jmeterd ]
+        executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template, tracetest, zap ]
 
     runs-on: ubuntu-latest
     steps:
@@ -169,6 +169,55 @@ jobs:
       - name: Push Docker images
         run: |
           docker push kubeshop/testkube-jmeter-executor:${{ steps.github_sha.outputs.sha_short }}
+
+  executor_jmeterd:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Go Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get commit sha
+        id: github_sha
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+
+      - name: Release
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd-commit-only.yml --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+
+      - name: Push Docker images
+        run: |
+          docker push kubeshop/testkube-jmeterd-executor:${{ steps.github_sha.outputs.sha_short }}
 
   executor_maven:
     runs-on: ubuntu-latest
