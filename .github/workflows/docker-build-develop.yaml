@@ -221,7 +221,7 @@ jobs:
         run: |
           docker push kubeshop/testkube-jmeterd-executor:${{ steps.github_sha.outputs.sha_short }}
 
-  executor_jmeterd_slave:
+  jmeterd_slave:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -242,9 +242,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      - name: Get commit sha
-        id: github_sha
-        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+      - id: commit
+        uses: prompt/actions-commit-hash@v3
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -258,7 +257,7 @@ jobs:
           context: .
           file: ./contrib/executor/jmeterd/build/slaves/Dockerfile
           push: true
-          tags:  kubeshop/testkube-jmeterd-slave-executor:${{ steps.github_sha.outputs.sha_short }}
+          tags:  kubeshop/testkube-jmeterd-slave:${{ steps.commit.outputs.short }}
 
   executor_maven:
     runs-on: ubuntu-latest
@@ -457,7 +456,7 @@ jobs:
           docker push kubeshop/testkube-playwright-executor:${{ steps.github_sha.outputs.sha_short }}
 
   workflow_dispatch:
-    needs: [api, single_executor, executor_jmeter, executor_maven, executor_gradle, executor_cypress, executor_playwright]
+    needs: [api, single_executor, executor_jmeter, executor_jmeterd, jmeterd_slave, executor_maven, executor_gradle, executor_cypress, executor_playwright]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
