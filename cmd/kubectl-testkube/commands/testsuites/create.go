@@ -26,7 +26,14 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 		httpProxy, httpsProxy    string
 		secretVariableReferences map[string]string
 		timeout                  int32
+		jobTemplate              string
 		cronJobTemplate          string
+		scraperTemplate          string
+		pvcTemplate              string
+		jobTemplateReference     string
+		cronJobTemplateReference string
+		scraperTemplateReference string
+		pvcTemplateReference     string
 	)
 
 	cmd := &cobra.Command{
@@ -79,7 +86,14 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 	cmd.Flags().StringVar(&httpsProxy, "https-proxy", "", "https proxy for executor containers")
 	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
 	cmd.Flags().Int32Var(&timeout, "timeout", 0, "duration in seconds for test suite to timeout. 0 disables timeout.")
+	cmd.Flags().StringVar(&jobTemplate, "job-template", "", "job template file path for extensions to job template")
 	cmd.Flags().StringVar(&cronJobTemplate, "cronjob-template", "", "cron job template file path for extensions to cron job template")
+	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
+	cmd.Flags().StringVar(&pvcTemplate, "pvc-template", "", "pvc template file path for extensions to pvc template")
+	cmd.Flags().StringVar(&jobTemplateReference, "job-template-reference", "", "reference to job template to use for the test")
+	cmd.Flags().StringVar(&cronJobTemplateReference, "cronjob-template-reference", "", "reference to cron job template to use for the test")
+	cmd.Flags().StringVar(&scraperTemplateReference, "scraper-template-reference", "", "reference to scraper template to use for the test")
+	cmd.Flags().StringVar(&pvcTemplateReference, "pvc-template-reference", "", "reference to pvc template to use for the test")
 
 	return cmd
 }

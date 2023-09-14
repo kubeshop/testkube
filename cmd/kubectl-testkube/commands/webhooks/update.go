@@ -9,13 +9,14 @@ import (
 
 func UpdateWebhookCmd() *cobra.Command {
 	var (
-		events             []string
-		name, uri          string
-		selector           string
-		labels             map[string]string
-		payloadObjectField string
-		payloadTemplate    string
-		headers            map[string]string
+		events                   []string
+		name, uri                string
+		selector                 string
+		labels                   map[string]string
+		payloadObjectField       string
+		payloadTemplate          string
+		headers                  map[string]string
+		payloadTemplateReference string
 	)
 
 	cmd := &cobra.Command{
@@ -48,12 +49,13 @@ func UpdateWebhookCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique webhook name - mandatory")
 	cmd.Flags().StringArrayVarP(&events, "events", "e", []string{}, "event types handled by webhook e.g. start-test|end-test")
-	cmd.Flags().StringVarP(&uri, "uri", "u", "", "URI which should be called when given event occurs")
+	cmd.Flags().StringVarP(&uri, "uri", "u", "", "URI which should be called when given event occurs (golang template supported)")
 	cmd.Flags().StringVarP(&selector, "selector", "", "", "expression to select tests and test suites for webhook events: --selector app=backend")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringVarP(&payloadObjectField, "payload-field", "", "", "field to use for notification object payload")
 	cmd.Flags().StringVarP(&payloadTemplate, "payload-template", "", "", "if webhook needs to send a custom notification, then a path to template file should be provided")
-	cmd.Flags().StringToStringVarP(&headers, "header", "", nil, "webhook header value pair: --header Content-Type=application/xml")
+	cmd.Flags().StringToStringVarP(&headers, "header", "", nil, "webhook header value pair (golang template supported): --header Content-Type=application/xml")
+	cmd.Flags().StringVar(&payloadTemplateReference, "payload-template-reference", "", "reference to payload template to use for the webhook")
 
 	return cmd
 }

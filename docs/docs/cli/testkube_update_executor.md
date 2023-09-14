@@ -24,6 +24,7 @@ testkube update executor [flags]
       --image string                     image used for executor
       --image-pull-secrets stringArray   secret name used to pull the image in executor
   -j, --job-template string              if executor needs to be launched using custom job specification, then a path to template file should be provided
+      --job-template-reference string    reference to job template for using with executor
   -l, --label stringToString             label key value pair: --label key1=value1 (default [])
   -n, --name string                      unique executor name - mandatory
       --tooltip stringToString           tooltip key value pair: --tooltip key1=value1 (default [])

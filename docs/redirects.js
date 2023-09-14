@@ -278,6 +278,10 @@ const redirects = [
     to: "/articles/uninstall",
   },
   {
+    from: "/guides/templates",
+    to: "/articles/templates",
+  },
+  {
     from: ["/testkube-cloud/intro", "/testkube-cloud"],
     to: "/testkube-cloud/articles/intro",
   },

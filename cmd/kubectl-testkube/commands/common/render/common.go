@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-	"text/template"
 
 	"gopkg.in/yaml.v2"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 type OutputType string
@@ -32,7 +32,7 @@ func RenderYaml(obj interface{}, w io.Writer) error {
 }
 
 func RenderGoTemplate(item interface{}, w io.Writer, tpl string) error {
-	tmpl, err := template.New("result").Parse(tpl)
+	tmpl, err := utils.NewTemplate("result").Parse(tpl)
 	if err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ func RenderGoTemplate(item interface{}, w io.Writer, tpl string) error {
 }
 
 func RenderGoTemplateList(list []interface{}, w io.Writer, tpl string) error {
-	tmpl, err := template.New("result").Parse(tpl)
+	tmpl, err := utils.NewTemplate("result").Parse(tpl)
 	if err != nil {
 		return err
 	}

@@ -245,9 +245,10 @@ func getMockExecutorClient() *executorsclientv1.ExecutorsClient {
 				Namespace: "default",
 			},
 			Spec: executorv1.ExecutorSpec{
-				Types:        []string{"curl/test"},
-				ExecutorType: "",
-				JobTemplate:  "",
+				Types:                []string{"curl/test"},
+				ExecutorType:         "",
+				JobTemplate:          "",
+				JobTemplateReference: "",
 			},
 			Status: executorv1.ExecutorStatus{},
 		},

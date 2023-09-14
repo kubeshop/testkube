@@ -30,6 +30,7 @@ import (
 
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 
+	templatesv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
 	testexecutionsv1 "github.com/kubeshop/testkube-operator/client/testexecutions/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -79,6 +80,7 @@ func NewJobExecutor(
 	testsClient testsv3.Interface,
 	clientset kubernetes.Interface,
 	testExecutionsClient testexecutionsv1.Interface,
+	templatesClient templatesv1.Interface,
 	registry string,
 	podStartTimeout time.Duration,
 	clusterID string,
@@ -96,6 +98,7 @@ func NewJobExecutor(
 		configMap:            configMap,
 		testsClient:          testsClient,
 		testExecutionsClient: testExecutionsClient,
+		templatesClient:      templatesClient,
 		registry:             registry,
 		podStartTimeout:      podStartTimeout,
 		clusterID:            clusterID,
@@ -121,6 +124,7 @@ type JobExecutor struct {
 	configMap            config.Repository
 	testsClient          testsv3.Interface
 	testExecutionsClient testexecutionsv1.Interface
+	templatesClient      templatesv1.Interface
 	registry             string
 	podStartTimeout      time.Duration
 	clusterID            string
@@ -302,7 +306,8 @@ func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) 
 // CreateJob creates new Kubernetes job based on execution and execute options
 func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
-	jobOptions, err := NewJobOptions(c.images.Init, c.jobTemplate, c.serviceAccountName, c.registry, c.clusterID, execution, options)
+	jobOptions, err := NewJobOptions(c.Log, c.templatesClient, c.images.Init, c.jobTemplate, c.serviceAccountName, c.registry,
+		c.clusterID, execution, options)
 	if err != nil {
 		return err
 	}
@@ -689,7 +694,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	secretEnvVars := append(envManager.PrepareSecrets(options.SecretEnvs, options.Variables),
 		envManager.PrepareGitCredentials(options.UsernameSecret, options.TokenSecret)...)
 
-	tmpl, err := template.New("job").Funcs(template.FuncMap{"vartypeptrtostring": testkube.VariableTypeString}).
+	tmpl, err := utils.NewTemplate("job").Funcs(template.FuncMap{"vartypeptrtostring": testkube.VariableTypeString}).
 		Parse(options.JobTemplate)
 	if err != nil {
 		return nil, errors.Errorf("creating job spec from options.JobTemplate error: %v", err)
@@ -704,7 +709,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	var job batchv1.Job
 	jobSpec := buffer.String()
 	if options.JobTemplateExtensions != "" {
-		tmplExt, err := template.New("jobExt").Funcs(template.FuncMap{"vartypeptrtostring": testkube.VariableTypeString}).
+		tmplExt, err := utils.NewTemplate("jobExt").Funcs(template.FuncMap{"vartypeptrtostring": testkube.VariableTypeString}).
 			Parse(options.JobTemplateExtensions)
 		if err != nil {
 			return nil, errors.Errorf("creating job extensions spec from template error: %v", err)
@@ -773,7 +778,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	return &job, nil
 }
 
-func NewJobOptions(initImage, jobTemplate string, serviceAccountName, registry, clusterID string,
+func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, initImage, jobTemplate, serviceAccountName, registry, clusterID string,
 	execution testkube.Execution, options ExecuteOptions) (jobOptions JobOptions, err error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
@@ -789,6 +794,33 @@ func NewJobOptions(initImage, jobTemplate string, serviceAccountName, registry, 
 	if jobOptions.JobTemplate == "" {
 		jobOptions.JobTemplate = jobTemplate
 	}
+
+	if options.ExecutorSpec.JobTemplateReference != "" {
+		template, err := templatesClient.Get(options.ExecutorSpec.JobTemplateReference)
+		if err != nil {
+			return jobOptions, err
+		}
+
+		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.JOB_TemplateType {
+			jobOptions.JobTemplate = template.Spec.Body
+		} else {
+			log.Warnw("Not matched template type", "template", options.ExecutorSpec.JobTemplateReference)
+		}
+	}
+
+	if options.Request.JobTemplateReference != "" {
+		template, err := templatesClient.Get(options.Request.JobTemplateReference)
+		if err != nil {
+			return jobOptions, err
+		}
+
+		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.JOB_TemplateType {
+			jobOptions.JobTemplate = template.Spec.Body
+		} else {
+			log.Warnw("Not matched template type", "template", options.Request.JobTemplateReference)
+		}
+	}
+
 	jobOptions.Variables = execution.Variables
 	jobOptions.ServiceAccountName = serviceAccountName
 	jobOptions.Registry = registry

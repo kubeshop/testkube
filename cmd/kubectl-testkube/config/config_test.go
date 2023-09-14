@@ -1,7 +1,6 @@
 package config
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -10,7 +9,7 @@ import (
 
 func TestSave(t *testing.T) {
 	// override default directory
-	dir, err := ioutil.TempDir("", "test-config-save")
+	dir, err := os.MkdirTemp("", "test-config-save")
 	assert.NoError(t, err)
 	defaultDirectory = dir
 

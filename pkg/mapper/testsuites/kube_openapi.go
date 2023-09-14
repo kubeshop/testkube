@@ -163,17 +163,24 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsuitesv3.TestSuiteExe
 	}
 
 	return &testkube.TestSuiteExecutionRequest{
-		Name:            specExecutionRequest.Name,
-		Labels:          specExecutionRequest.Labels,
-		ExecutionLabels: specExecutionRequest.ExecutionLabels,
-		Namespace:       specExecutionRequest.Namespace,
-		Variables:       MergeVariablesAndParams(specExecutionRequest.Variables, nil),
-		SecretUUID:      specExecutionRequest.SecretUUID,
-		Sync:            specExecutionRequest.Sync,
-		HttpProxy:       specExecutionRequest.HttpProxy,
-		HttpsProxy:      specExecutionRequest.HttpsProxy,
-		Timeout:         specExecutionRequest.Timeout,
-		CronJobTemplate: specExecutionRequest.CronJobTemplate,
+		Name:                     specExecutionRequest.Name,
+		Labels:                   specExecutionRequest.Labels,
+		ExecutionLabels:          specExecutionRequest.ExecutionLabels,
+		Namespace:                specExecutionRequest.Namespace,
+		Variables:                MergeVariablesAndParams(specExecutionRequest.Variables, nil),
+		SecretUUID:               specExecutionRequest.SecretUUID,
+		Sync:                     specExecutionRequest.Sync,
+		HttpProxy:                specExecutionRequest.HttpProxy,
+		HttpsProxy:               specExecutionRequest.HttpsProxy,
+		Timeout:                  specExecutionRequest.Timeout,
+		JobTemplate:              specExecutionRequest.JobTemplate,
+		JobTemplateReference:     specExecutionRequest.JobTemplateReference,
+		CronJobTemplate:          specExecutionRequest.CronJobTemplate,
+		CronJobTemplateReference: specExecutionRequest.CronJobTemplateReference,
+		PvcTemplate:              specExecutionRequest.PvcTemplate,
+		PvcTemplateReference:     specExecutionRequest.PvcTemplateReference,
+		ScraperTemplate:          specExecutionRequest.ScraperTemplate,
+		ScraperTemplateReference: specExecutionRequest.ScraperTemplateReference,
 	}
 }
 
@@ -288,8 +295,36 @@ func MapSpecExecutionRequestToExecutionUpdateRequest(request *testsuitesv3.TestS
 			&executionRequest.HttpsProxy,
 		},
 		{
+			&request.JobTemplate,
+			&executionRequest.JobTemplate,
+		},
+		{
+			&request.JobTemplateReference,
+			&executionRequest.JobTemplateReference,
+		},
+		{
 			&request.CronJobTemplate,
 			&executionRequest.CronJobTemplate,
+		},
+		{
+			&request.CronJobTemplateReference,
+			&executionRequest.CronJobTemplateReference,
+		},
+		{
+			&request.PvcTemplate,
+			&executionRequest.PvcTemplate,
+		},
+		{
+			&request.PvcTemplateReference,
+			&executionRequest.PvcTemplateReference,
+		},
+		{
+			&request.ScraperTemplate,
+			&executionRequest.ScraperTemplate,
+		},
+		{
+			&request.ScraperTemplateReference,
+			&executionRequest.ScraperTemplateReference,
 		},
 	}
 

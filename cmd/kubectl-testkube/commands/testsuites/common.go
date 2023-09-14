@@ -149,25 +149,55 @@ func NewTestSuiteUpsertOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 		return options, fmt.Errorf("validating schedule %w", err)
 	}
 
-	cronJobTemplateContent := ""
-	cronJobTemplate := cmd.Flag("cronjob-template").Value.String()
-	if cronJobTemplate != "" {
-		b, err := os.ReadFile(cronJobTemplate)
-		if err != nil {
-			return options, err
-		}
-
-		cronJobTemplateContent = string(b)
-	}
+	jobTemplateReference := cmd.Flag("job-template-reference").Value.String()
+	cronJobTemplateReference := cmd.Flag("cronjob-template-reference").Value.String()
+	scraperTemplateReference := cmd.Flag("scraper-template-reference").Value.String()
+	pvcTemplateReference := cmd.Flag("pvc-template-reference").Value.String()
 
 	options.Schedule = schedule
 	options.ExecutionRequest = &testkube.TestSuiteExecutionRequest{
-		Variables:       variables,
-		Name:            cmd.Flag("execution-name").Value.String(),
-		HttpProxy:       cmd.Flag("http-proxy").Value.String(),
-		HttpsProxy:      cmd.Flag("https-proxy").Value.String(),
-		Timeout:         timeout,
-		CronJobTemplate: cronJobTemplateContent,
+		Variables:                variables,
+		Name:                     cmd.Flag("execution-name").Value.String(),
+		HttpProxy:                cmd.Flag("http-proxy").Value.String(),
+		HttpsProxy:               cmd.Flag("https-proxy").Value.String(),
+		Timeout:                  timeout,
+		JobTemplateReference:     jobTemplateReference,
+		CronJobTemplateReference: cronJobTemplateReference,
+		ScraperTemplateReference: scraperTemplateReference,
+		PvcTemplateReference:     pvcTemplateReference,
+	}
+
+	var fields = []struct {
+		source      string
+		destination *string
+	}{
+		{
+			cmd.Flag("job-template").Value.String(),
+			&options.ExecutionRequest.JobTemplate,
+		},
+		{
+			cmd.Flag("cronjob-template").Value.String(),
+			&options.ExecutionRequest.CronJobTemplate,
+		},
+		{
+			cmd.Flag("scraper-template").Value.String(),
+			&options.ExecutionRequest.ScraperTemplate,
+		},
+		{
+			cmd.Flag("pvc-template").Value.String(),
+			&options.ExecutionRequest.PvcTemplate,
+		},
+	}
+
+	for _, field := range fields {
+		if field.source != "" {
+			b, err := os.ReadFile(field.source)
+			if err != nil {
+				return options, err
+			}
+
+			*field.destination = string(b)
+		}
 	}
 
 	return options, nil
@@ -268,20 +298,44 @@ func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 		nonEmpty = true
 	}
 
-	if cmd.Flag("cronjob-template").Changed {
-		cronJobTemplateContent := ""
-		cronJobTemplate := cmd.Flag("cronjob-template").Value.String()
-		if cronJobTemplate != "" {
-			b, err := os.ReadFile(cronJobTemplate)
-			if err != nil {
-				return options, err
+	var values = []struct {
+		source      string
+		destination **string
+	}{
+		{
+			"job-template",
+			&executionRequest.JobTemplate,
+		},
+		{
+			"cronjob-template",
+			&executionRequest.CronJobTemplate,
+		},
+		{
+			"scraper-template",
+			&executionRequest.ScraperTemplate,
+		},
+		{
+			"pvc-template",
+			&executionRequest.PvcTemplate,
+		},
+	}
+
+	for _, value := range values {
+		if cmd.Flag(value.source).Changed {
+			data := ""
+			name := cmd.Flag(value.source).Value.String()
+			if name != "" {
+				b, err := os.ReadFile(name)
+				if err != nil {
+					return options, err
+				}
+
+				data = string(b)
 			}
 
-			cronJobTemplateContent = string(b)
+			*value.destination = &data
+			nonEmpty = true
 		}
-
-		executionRequest.CronJobTemplate = &cronJobTemplateContent
-		nonEmpty = true
 	}
 
 	var executionFields = []struct {
@@ -299,6 +353,22 @@ func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 		{
 			"https-proxy",
 			&executionRequest.HttpsProxy,
+		},
+		{
+			"job-template-reference",
+			&executionRequest.JobTemplateReference,
+		},
+		{
+			"cronjob-template-reference",
+			&executionRequest.CronJobTemplateReference,
+		},
+		{
+			"scraper-template-reference",
+			&executionRequest.ScraperTemplateReference,
+		},
+		{
+			"pvc-template-reference",
+			&executionRequest.PvcTemplateReference,
 		},
 	}
 

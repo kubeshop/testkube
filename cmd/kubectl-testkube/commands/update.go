@@ -6,6 +6,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/executors"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/templates"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsources"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites"
@@ -37,6 +38,7 @@ func NewUpdateCmd() *cobra.Command {
 	cmd.AddCommand(testsources.UpdateTestSourceCmd())
 	cmd.AddCommand(executors.UpdateExecutorCmd())
 	cmd.AddCommand(webhooks.UpdateWebhookCmd())
+	cmd.AddCommand(templates.UpdateTemplateCmd())
 
 	return cmd
 }

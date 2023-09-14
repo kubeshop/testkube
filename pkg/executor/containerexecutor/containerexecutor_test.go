@@ -5,8 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/repository/result"
-
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -16,10 +15,12 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	templatesclientv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
 	v3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/repository/result"
 )
 
 var ctx = context.Background()
@@ -76,13 +77,18 @@ func TestNewExecutorJobSpecEmptyArgs(t *testing.T) {
 	t.Parallel()
 
 	jobOptions := &JobOptions{
-		Name:        "name",
-		Namespace:   "namespace",
-		InitImage:   "kubeshop/testkube-init-executor:0.7.10",
-		Image:       "ubuntu",
-		JobTemplate: defaultJobTemplate,
-		Command:     []string{},
-		Args:        []string{},
+		Name:                      "name",
+		Namespace:                 "namespace",
+		InitImage:                 "kubeshop/testkube-init-executor:0.7.10",
+		Image:                     "ubuntu",
+		JobTemplate:               defaultJobTemplate,
+		ScraperTemplate:           "",
+		PvcTemplate:               "",
+		JobTemplateExtensions:     "",
+		ScraperTemplateExtensions: "",
+		PvcTemplateExtensions:     "",
+		Command:                   []string{},
+		Args:                      []string{},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
@@ -93,17 +99,22 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 	t.Parallel()
 
 	jobOptions := &JobOptions{
-		Name:                  "name",
-		Namespace:             "namespace",
-		InitImage:             "kubeshop/testkube-init-executor:0.7.10",
-		Image:                 "curl",
-		JobTemplate:           defaultJobTemplate,
-		ImagePullSecrets:      []string{"secret-name"},
-		Command:               []string{"/bin/curl"},
-		Args:                  []string{"-v", "https://testkube.kubeshop.io"},
-		ActiveDeadlineSeconds: 100,
-		Envs:                  map[string]string{"key": "value"},
-		Variables:             map[string]testkube.Variable{"aa": {Name: "aa", Value: "bb", Type_: testkube.VariableTypeBasic}},
+		Name:                      "name",
+		Namespace:                 "namespace",
+		InitImage:                 "kubeshop/testkube-init-executor:0.7.10",
+		Image:                     "curl",
+		JobTemplate:               defaultJobTemplate,
+		ScraperTemplate:           "",
+		PvcTemplate:               "",
+		JobTemplateExtensions:     "",
+		ScraperTemplateExtensions: "",
+		PvcTemplateExtensions:     "",
+		ImagePullSecrets:          []string{"secret-name"},
+		Command:                   []string{"/bin/curl"},
+		Args:                      []string{"-v", "https://testkube.kubeshop.io"},
+		ActiveDeadlineSeconds:     100,
+		Envs:                      map[string]string{"key": "value"},
+		Variables:                 map[string]testkube.Variable{"aa": {Name: "aa", Value: "bb", Type_: testkube.VariableTypeBasic}},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
@@ -140,13 +151,18 @@ func TestNewExecutorJobSpecWithoutInitImage(t *testing.T) {
 	t.Parallel()
 
 	jobOptions := &JobOptions{
-		Name:        "name",
-		Namespace:   "namespace",
-		InitImage:   "",
-		Image:       "ubuntu",
-		JobTemplate: defaultJobTemplate,
-		Command:     []string{},
-		Args:        []string{},
+		Name:                      "name",
+		Namespace:                 "namespace",
+		InitImage:                 "",
+		Image:                     "ubuntu",
+		JobTemplate:               defaultJobTemplate,
+		ScraperTemplate:           "",
+		PvcTemplate:               "",
+		JobTemplateExtensions:     "",
+		ScraperTemplateExtensions: "",
+		PvcTemplateExtensions:     "",
+		Command:                   []string{},
+		Args:                      []string{},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
@@ -156,8 +172,14 @@ func TestNewExecutorJobSpecWithoutInitImage(t *testing.T) {
 func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 	t.Parallel()
 
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockTemplatesClient := templatesclientv1.NewMockInterface(mockCtrl)
+
 	jobOptions, _ := NewJobOptions(
 		logger(),
+		mockTemplatesClient,
 		executor.Images{},
 		executor.Templates{},
 		"",
@@ -191,8 +213,14 @@ func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 	t.Parallel()
 
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockTemplatesClient := templatesclientv1.NewMockInterface(mockCtrl)
+
 	jobOptions, _ := NewJobOptions(
 		logger(),
+		mockTemplatesClient,
 		executor.Images{},
 		executor.Templates{},
 		"",
@@ -226,8 +254,14 @@ func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
 	t.Parallel()
 
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockTemplatesClient := templatesclientv1.NewMockInterface(mockCtrl)
+
 	jobOptions, _ := NewJobOptions(
 		logger(),
+		mockTemplatesClient,
 		executor.Images{},
 		executor.Templates{},
 		"",

@@ -26,6 +26,7 @@ testkube delete <resourceName> [flags]
 
 * [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
 * [testkube delete executor](testkube_delete_executor.md)	 - Delete Executor
+* [testkube delete template](testkube_delete_template.md)	 - Delete a template.
 * [testkube delete test](testkube_delete_test.md)	 - Delete Test
 * [testkube delete testsource](testkube_delete_testsource.md)	 - Delete test source
 * [testkube delete testsuite](testkube_delete_testsuite.md)	 - Delete test suite

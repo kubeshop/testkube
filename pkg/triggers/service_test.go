@@ -45,6 +45,7 @@ func TestService_Run(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
+	mockBus := bus.NewEventBusMock()
 	mockResultRepository := result.NewMockRepository(mockCtrl)
 	mockTestResultRepository := testresult.NewMockRepository(mockCtrl)
 
@@ -86,17 +87,18 @@ func TestService_Run(t *testing.T) {
 		TypeMeta:   metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "cypress"},
 		Spec: executorv1.ExecutorSpec{
-			Types:            []string{mockExecutorTypes},
-			ExecutorType:     "job",
-			URI:              "",
-			Image:            "cypress",
-			Args:             nil,
-			Command:          []string{"run"},
-			ImagePullSecrets: nil,
-			Features:         nil,
-			ContentTypes:     nil,
-			JobTemplate:      "",
-			Meta:             nil,
+			Types:                []string{mockExecutorTypes},
+			ExecutorType:         "job",
+			URI:                  "",
+			Image:                "cypress",
+			Args:                 nil,
+			Command:              []string{"run"},
+			ImagePullSecrets:     nil,
+			Features:             nil,
+			ContentTypes:         nil,
+			JobTemplate:          "",
+			JobTemplateReference: "",
+			Meta:                 nil,
 		},
 	}
 	mockExecutorsClient.EXPECT().GetByType(mockExecutorTypes).Return(&mockExecutorV1, nil).AnyTimes()
@@ -129,6 +131,7 @@ func TestService_Run(t *testing.T) {
 		configMapConfig,
 		mockConfigMapClient,
 		mockTestSuiteExecutionsClient,
+		mockBus,
 	)
 
 	mockLeaseBackend := NewMockLeaseBackend(mockCtrl)

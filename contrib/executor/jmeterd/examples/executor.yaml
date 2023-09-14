@@ -1,0 +1,11 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: jmeterd-executor
+  namespace: testkube
+spec:
+  features:
+    - artifacts
+  image: kubeshop/testkube-jmeterd-executor:dev-008
+  types:
+    - jmeterd/test

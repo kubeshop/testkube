@@ -39,10 +39,15 @@ type CreateCommonFlags struct {
 	ArtifactVolumeMountPath        string
 	ArtifactDirs                   []string
 	JobTemplate                    string
+	JobTemplateReference           string
 	CronJobTemplate                string
+	CronJobTemplateReference       string
 	PreRunScript                   string
 	PostRunScript                  string
 	ScraperTemplate                string
+	ScraperTemplateReference       string
+	PvcTemplate                    string
+	PvcTemplateReference           string
 	NegativeTest                   bool
 	MountConfigMaps                map[string]string
 	VariableConfigMaps             []string
@@ -210,10 +215,15 @@ func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
 	cmd.Flags().StringVar(&flags.ArtifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
 	cmd.Flags().StringArrayVarP(&flags.ArtifactDirs, "artifact-dir", "", []string{}, "artifact dirs for scraping")
 	cmd.Flags().StringVar(&flags.JobTemplate, "job-template", "", "job template file path for extensions to job template")
+	cmd.Flags().StringVar(&flags.JobTemplateReference, "job-template-reference", "", "reference to job template to use for the test")
 	cmd.Flags().StringVar(&flags.CronJobTemplate, "cronjob-template", "", "cron job template file path for extensions to cron job template")
+	cmd.Flags().StringVar(&flags.CronJobTemplateReference, "cronjob-template-reference", "", "reference to cron job template to use for the test")
 	cmd.Flags().StringVarP(&flags.PreRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	cmd.Flags().StringVarP(&flags.PostRunScript, "postrun-script", "", "", "path to script to be run after test execution")
 	cmd.Flags().StringVar(&flags.ScraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
+	cmd.Flags().StringVar(&flags.ScraperTemplateReference, "scraper-template-reference", "", "reference to scraper template to use for the test")
+	cmd.Flags().StringVar(&flags.PvcTemplate, "pvc-template", "", "pvc template file path for extensions to pvc template")
+	cmd.Flags().StringVar(&flags.PvcTemplateReference, "pvc-template-reference", "", "reference to pvc template to use for the test")
 	cmd.Flags().BoolVar(&flags.NegativeTest, "negative-test", false, "negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa")
 	cmd.Flags().StringToStringVarP(&flags.MountConfigMaps, "mount-configmap", "", map[string]string{}, "config map value pair for mounting it to executor pod: --mount-configmap configmap_name=configmap_mountpath")
 	cmd.Flags().StringArrayVar(&flags.VariableConfigMaps, "variable-configmap", []string{}, "config map name used to map all keys to basis variables")

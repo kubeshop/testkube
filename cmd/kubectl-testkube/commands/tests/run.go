@@ -42,6 +42,7 @@ func NewRunTestCmd() *cobra.Command {
 		artifactVolumeMountPath        string
 		artifactDirs                   []string
 		jobTemplate                    string
+		jobTemplateReference           string
 		gitBranch                      string
 		gitCommit                      string
 		gitPath                        string
@@ -49,6 +50,9 @@ func NewRunTestCmd() *cobra.Command {
 		preRunScript                   string
 		postRunScript                  string
 		scraperTemplate                string
+		scraperTemplateReference       string
+		pvcTemplate                    string
+		pvcTemplateReference           string
 		negativeTest                   bool
 		mountConfigMaps                map[string]string
 		variableConfigMaps             []string
@@ -82,42 +86,10 @@ func NewRunTestCmd() *cobra.Command {
 			envConfigMaps, envSecrets, err := newEnvReferencesFromFlags(cmd)
 			ui.WarnOnError("getting env config maps and secrets", err)
 
-			jobTemplateContent := ""
-			if jobTemplate != "" {
-				b, err := os.ReadFile(jobTemplate)
-				ui.ExitOnError("reading job template", err)
-				jobTemplateContent = string(b)
-			}
-
-			preRunScriptContent := ""
-			if preRunScript != "" {
-				b, err := os.ReadFile(preRunScript)
-				ui.ExitOnError("reading pre run script", err)
-				preRunScriptContent = string(b)
-			}
-
-			postRunScriptContent := ""
-			if postRunScript != "" {
-				b, err := os.ReadFile(postRunScript)
-				ui.ExitOnError("reading post run script", err)
-				postRunScriptContent = string(b)
-			}
-
-			scraperTemplateContent := ""
-			if scraperTemplate != "" {
-				b, err := os.ReadFile(scraperTemplate)
-				ui.ExitOnError("reading scraper template", err)
-				scraperTemplateContent = string(b)
-			}
-
 			mode := ""
 			if cmd.Flag("args-mode").Changed {
 				mode = argsMode
 			}
-
-			var executions []testkube.Execution
-			client, namespace, err := common.GetClient(cmd)
-			ui.ExitOnError("getting client", err)
 
 			options := apiv1.ExecuteTestOptions{
 				ExecutionVariables:         variables,
@@ -130,10 +102,9 @@ func NewRunTestCmd() *cobra.Command {
 				HTTPSProxy:                 httpsProxy,
 				Envs:                       envs,
 				Image:                      image,
-				JobTemplate:                jobTemplateContent,
-				PreRunScriptContent:        preRunScriptContent,
-				PostRunScriptContent:       postRunScriptContent,
-				ScraperTemplate:            scraperTemplateContent,
+				JobTemplateReference:       jobTemplateReference,
+				ScraperTemplateReference:   scraperTemplateReference,
+				PvcTemplateReference:       pvcTemplateReference,
 				IsNegativeTestChangedOnRun: false,
 				EnvConfigMaps:              envConfigMaps,
 				EnvSecrets:                 envSecrets,
@@ -142,6 +113,50 @@ func NewRunTestCmd() *cobra.Command {
 					Context: runningContext,
 				},
 			}
+
+			var fields = []struct {
+				source      string
+				title       string
+				destination *string
+			}{
+				{
+					jobTemplate,
+					"job template",
+					&options.JobTemplate,
+				},
+				{
+					preRunScript,
+					"pre run script",
+					&options.PreRunScriptContent,
+				},
+				{
+					postRunScript,
+					"post run script",
+					&options.PostRunScriptContent,
+				},
+				{
+					scraperTemplate,
+					"scraper template",
+					&options.ScraperTemplate,
+				},
+				{
+					pvcTemplate,
+					"pvc template",
+					&options.PvcTemplate,
+				},
+			}
+
+			for _, field := range fields {
+				if field.source != "" {
+					b, err := os.ReadFile(field.source)
+					ui.ExitOnError("reading "+field.title, err)
+					*field.destination = string(b)
+				}
+			}
+
+			var executions []testkube.Execution
+			client, namespace, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
 
 			if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(artifactDirs) != 0 ||
 				artifactStorageBucket != "" || artifactOmitFolderPerExecution {
@@ -285,6 +300,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&artifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
 	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for scraping")
 	cmd.Flags().StringVar(&jobTemplate, "job-template", "", "job template file path for extensions to job template")
+	cmd.Flags().StringVar(&jobTemplateReference, "job-template-reference", "", "reference to job template to use for the test")
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
 	cmd.Flags().StringVarP(&gitCommit, "git-commit", "", "", "if uri is git repository we can use commit id (sha) parameter")
 	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
@@ -292,6 +308,9 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	cmd.Flags().StringVarP(&postRunScript, "postrun-script", "", "", "path to script to be run after test execution")
 	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
+	cmd.Flags().StringVar(&scraperTemplateReference, "scraper-template-reference", "", "reference to scraper template to use for the test")
+	cmd.Flags().StringVar(&pvcTemplate, "pvc-template", "", "pvc template file path for extensions to pvc template")
+	cmd.Flags().StringVar(&pvcTemplateReference, "pvc-template-reference", "", "reference to pvc template to use for the test")
 	cmd.Flags().BoolVar(&negativeTest, "negative-test", false, "negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa")
 	cmd.Flags().StringToStringVarP(&mountConfigMaps, "mount-configmap", "", map[string]string{}, "config map value pair for mounting it to executor pod: --mount-configmap configmap_name=configmap_mountpath")
 	cmd.Flags().StringArrayVar(&variableConfigMaps, "variable-configmap", []string{}, "config map name used to map all keys to basis variables")

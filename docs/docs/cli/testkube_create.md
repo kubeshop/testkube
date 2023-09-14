@@ -27,6 +27,7 @@ testkube create <resourceName> [flags]
 
 * [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
 * [testkube create executor](testkube_create_executor.md)	 - Create new Executor
+* [testkube create template](testkube_create_template.md)	 - Create a new Template.
 * [testkube create test](testkube_create_test.md)	 - Create new Test
 * [testkube create testsource](testkube_create_testsource.md)	 - Create new TestSource
 * [testkube create testsuite](testkube_create_testsuite.md)	 - Create new TestSuite

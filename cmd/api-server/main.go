@@ -2,15 +2,12 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -31,6 +28,7 @@ import (
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
+	parser "github.com/kubeshop/testkube/internal/template"
 	"github.com/kubeshop/testkube/pkg/version"
 
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -43,6 +41,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/kubeshop/testkube/internal/app/api/debug"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/agent"
 	kubeexecutor "github.com/kubeshop/testkube/pkg/executor"
@@ -60,6 +59,7 @@ import (
 	kubeclient "github.com/kubeshop/testkube-operator/client"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	scriptsclient "github.com/kubeshop/testkube-operator/client/scripts/v2"
+	templatesclientv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
 	testexecutionsclientv1 "github.com/kubeshop/testkube-operator/client/testexecutions/v1"
 	testsclientv1 "github.com/kubeshop/testkube-operator/client/tests"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
@@ -153,6 +153,15 @@ func main() {
 		grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
 	}
 
+	if cfg.EnableDebugServer {
+		debugSrv := debug.NewDebugServer(cfg.DebugListenAddr)
+
+		g.Go(func() error {
+			log.DefaultLogger.Infof("starting debug pprof server")
+			return debugSrv.ListenAndServe()
+		})
+	}
+
 	// k8s
 	scriptsClient := scriptsclient.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testsClientV1 := testsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
@@ -164,6 +173,7 @@ func main() {
 	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testExecutionsClient := testexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testsuiteExecutionsClient := testsuiteexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+	templatesClient := templatesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 
 	clientset, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -315,7 +325,7 @@ func main() {
 		ui.ExitOnError("Sync default executors", err)
 	}
 
-	jobTemplate, err := parseJobTemplate(cfg)
+	jobTemplate, err := parser.ParseJobTemplate(cfg)
 	if err != nil {
 		ui.ExitOnError("Creating job templates", err)
 	}
@@ -332,6 +342,7 @@ func main() {
 		testsClientV3,
 		clientset,
 		testExecutionsClient,
+		templatesClient,
 		cfg.TestkubeRegistry,
 		cfg.TestkubePodStartTimeout,
 		clusterId,
@@ -357,6 +368,7 @@ func main() {
 		executorsClient,
 		testsClientV3,
 		testExecutionsClient,
+		templatesClient,
 		cfg.TestkubeRegistry,
 		cfg.TestkubePodStartTimeout,
 		clusterId,
@@ -381,6 +393,7 @@ func main() {
 		configMapConfig,
 		configMapClient,
 		testsuiteExecutionsClient,
+		eventBus,
 	)
 
 	slackLoader, err := newSlackLoader(cfg, envs)
@@ -412,10 +425,12 @@ func main() {
 		storageClient,
 		cfg.GraphqlPort,
 		artifactStorage,
+		templatesClient,
 		cfg.CDEventsTarget,
 		cfg.TestkubeDashboardURI,
 		cfg.TestkubeHelmchartVersion,
 		mode,
+		eventBus,
 	)
 
 	if mode == common.ModeAgent {
@@ -513,22 +528,8 @@ func main() {
 	}
 }
 
-func parseJobTemplate(cfg *config.Config) (template string, err error) {
-	template, err = loadConfigFromStringOrFile(
-		cfg.TestkubeTemplateJob,
-		cfg.TestkubeConfigDir,
-		"job-template.yml",
-		"job template",
-	)
-	if err != nil {
-		return "", err
-	}
-
-	return template, nil
-}
-
 func parseContainerTemplates(cfg *config.Config) (t kubeexecutor.Templates, err error) {
-	t.Job, err = loadConfigFromStringOrFile(
+	t.Job, err = parser.LoadConfigFromStringOrFile(
 		cfg.TestkubeContainerTemplateJob,
 		cfg.TestkubeConfigDir,
 		"job-container-template.yml",
@@ -538,7 +539,7 @@ func parseContainerTemplates(cfg *config.Config) (t kubeexecutor.Templates, err 
 		return t, err
 	}
 
-	t.Scraper, err = loadConfigFromStringOrFile(
+	t.Scraper, err = parser.LoadConfigFromStringOrFile(
 		cfg.TestkubeContainerTemplateScraper,
 		cfg.TestkubeConfigDir,
 		"job-scraper-template.yml",
@@ -548,7 +549,7 @@ func parseContainerTemplates(cfg *config.Config) (t kubeexecutor.Templates, err 
 		return t, err
 	}
 
-	t.PVC, err = loadConfigFromStringOrFile(
+	t.PVC, err = parser.LoadConfigFromStringOrFile(
 		cfg.TestkubeContainerTemplatePVC,
 		cfg.TestkubeConfigDir,
 		"pvc-container-template.yml",
@@ -562,7 +563,7 @@ func parseContainerTemplates(cfg *config.Config) (t kubeexecutor.Templates, err 
 }
 
 func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDetails, err error) {
-	rawExecutors, err := loadConfigFromStringOrFile(
+	rawExecutors, err := parser.LoadConfigFromStringOrFile(
 		cfg.TestkubeDefaultExecutors,
 		cfg.TestkubeConfigDir,
 		"executors.json",
@@ -580,7 +581,7 @@ func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDet
 }
 
 func newSlackLoader(cfg *config.Config, envs map[string]string) (*slack.SlackLoader, error) {
-	slackTemplate, err := loadConfigFromStringOrFile(
+	slackTemplate, err := parser.LoadConfigFromStringOrFile(
 		cfg.SlackTemplate,
 		cfg.TestkubeConfigDir,
 		"slack-template.json",
@@ -590,51 +591,12 @@ func newSlackLoader(cfg *config.Config, envs map[string]string) (*slack.SlackLoa
 		return nil, err
 	}
 
-	slackConfig, err := loadConfigFromStringOrFile(cfg.SlackConfig, cfg.TestkubeConfigDir, "slack-config.json", "slack config")
+	slackConfig, err := parser.LoadConfigFromStringOrFile(cfg.SlackConfig, cfg.TestkubeConfigDir, "slack-config.json", "slack config")
 	if err != nil {
 		return nil, err
 	}
 
 	return slack.NewSlackLoader(slackTemplate, slackConfig, cfg.TestkubeClusterName, testkube.AllEventTypes, envs), nil
-}
-
-func loadConfigFromStringOrFile(inputString, configDir, filename, configType string) (raw string, err error) {
-	var data []byte
-
-	if inputString != "" {
-		if isBase64Encoded(inputString) {
-			data, err = base64.StdEncoding.DecodeString(inputString)
-			if err != nil {
-				return "", errors.Wrapf(err, "error decoding %s from base64", configType)
-			}
-			raw = string(data)
-			log.DefaultLogger.Infof("parsed %s from base64 env var", configType)
-		} else {
-			raw = inputString
-			log.DefaultLogger.Infof("parsed %s from plain env var", configType)
-		}
-	} else if f, err := os.Open(filepath.Join(configDir, filename)); err == nil {
-		data, err = io.ReadAll(f)
-		if err != nil {
-			return "", errors.Wrapf(err, "error reading file %s from config dir %s", filename, configDir)
-		}
-		raw = string(data)
-		log.DefaultLogger.Infof("loaded %s from file %s", configType, filepath.Join(configDir, filename))
-	} else {
-		log.DefaultLogger.Infof("no %s config found", configType)
-	}
-
-	return raw, nil
-}
-
-func isBase64Encoded(base64Val string) bool {
-	decoded, err := base64.StdEncoding.DecodeString(base64Val)
-	if err != nil {
-		return false
-	}
-
-	encoded := base64.StdEncoding.EncodeToString(decoded)
-	return base64Val == encoded
 }
 
 // getMongoSSLConfig builds the necessary SSL connection info from the settings in the environment variables

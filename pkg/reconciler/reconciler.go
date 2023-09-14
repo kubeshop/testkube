@@ -61,11 +61,11 @@ func (client *Client) Run(ctx context.Context) error {
 		select {
 		case <-timer.C:
 			if err := client.ProcessTests(ctx); err != nil {
-				client.logger.Errorw("error processing tests statuses %w", err)
+				client.logger.Errorw("error processing tests statuses", "error", err)
 			}
 
 			if err := client.ProcessTestSuites(ctx); err != nil {
-				client.logger.Errorw("error processing test suites statuses %w", err)
+				client.logger.Errorw("error processing test suites statuses", "error", err)
 			}
 		case <-ctx.Done():
 			client.logger.Debugw("reconciliation finished")
@@ -89,7 +89,7 @@ OuterLoop:
 		default:
 			exec, err := client.executorsClient.GetByType(execution.TestType)
 			if err != nil {
-				client.logger.Errorw("error getting executor by test type %w", err)
+				client.logger.Errorw("error getting executor by test type", "error", err)
 			}
 
 			errMessage := errTestkubeAPICrahsed.Error()

@@ -25,6 +25,7 @@ spec:
       - --config
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 600
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -55,6 +56,7 @@ spec:
       - --config
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 600
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -85,6 +87,7 @@ spec:
       - --config
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 600
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -113,6 +116,7 @@ spec:
       - --config
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 180
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -143,6 +147,7 @@ spec:
       - --config
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 180
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -173,6 +178,7 @@ spec:
       - --config
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 180
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -201,6 +207,7 @@ spec:
       - --config
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 600
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -229,6 +236,7 @@ spec:
       - --config
       - video=true
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 600
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -261,6 +269,7 @@ spec:
       - --config
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 600
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -289,6 +298,7 @@ spec:
       - --config
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 600
 ---
 # cypress-default-executor-smoke-electron-testsource TestSource
 apiVersion: tests.testkube.io/v1
@@ -326,6 +336,7 @@ spec:
       - --config
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 600
 ---
 # cypress-default-executor-smoke-electron-testsource-git-dir - TestSource
 apiVersion: tests.testkube.io/v1
@@ -363,6 +374,7 @@ spec:
       - --config
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 600
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -391,6 +403,7 @@ spec:
       - --config
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 180
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -421,6 +434,7 @@ spec:
       - --config
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 180
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -451,6 +465,7 @@ spec:
       - --config
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 180
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -469,6 +484,7 @@ spec:
       path: test/cypress/executor-tests/cypress-9
   executionRequest:
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 180
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -492,6 +508,7 @@ spec:
       - --config
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 180
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -515,6 +532,7 @@ spec:
       - --config
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 180
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -536,6 +554,7 @@ spec:
       - --config
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 180
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -559,6 +578,7 @@ spec:
       - --config
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 180
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -582,6 +602,7 @@ spec:
       - --config
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 180
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -603,3 +624,4 @@ spec:
       - --some-incorrect-argument
     negativeTest: true
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 1Gi\n              cpu: 1\n"
+    activeDeadlineSeconds: 180

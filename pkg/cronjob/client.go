@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"text/template"
 
 	"go.uber.org/zap"
 	v1 "k8s.io/api/batch/v1"
@@ -18,6 +17,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 // Client data struct for managing running cron jobs
@@ -35,6 +35,7 @@ type CronJobOptions struct {
 	Resource                  string
 	Data                      string
 	Labels                    map[string]string
+	CronJobTemplate           string
 	CronJobTemplateExtensions string
 }
 
@@ -84,6 +85,11 @@ func (c *Client) Get(name string) (*v1.CronJob, error) {
 
 // Apply is a method to create or update a cron job
 func (c *Client) Apply(id, name string, options CronJobOptions) error {
+	template := c.cronJobTemplate
+	if options.CronJobTemplate != "" {
+		template = options.CronJobTemplate
+	}
+
 	cronJobClient := c.ClientSet.BatchV1().CronJobs(c.Namespace)
 	ctx := context.Background()
 
@@ -95,7 +101,7 @@ func (c *Client) Apply(id, name string, options CronJobOptions) error {
 		ServicePort:               c.servicePort,
 		Schedule:                  options.Schedule,
 		Resource:                  options.Resource,
-		CronJobTemplate:           c.cronJobTemplate,
+		CronJobTemplate:           template,
 		CronJobTemplateExtensions: options.CronJobTemplateExtensions,
 		Data:                      options.Data,
 		Labels:                    options.Labels,
@@ -166,7 +172,7 @@ func (c *Client) DeleteAll(resource, selector string) error {
 
 // NewApplySpec is a method to return cron job apply spec
 func NewApplySpec(log *zap.SugaredLogger, parameters templateParameters) (*batchv1.CronJobApplyConfiguration, error) {
-	tmpl, err := template.New("cronJob").Parse(parameters.CronJobTemplate)
+	tmpl, err := utils.NewTemplate("cronJob").Parse(parameters.CronJobTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("creating cron job spec from options.CronJobTemplate error: %w", err)
 	}
@@ -180,7 +186,7 @@ func NewApplySpec(log *zap.SugaredLogger, parameters templateParameters) (*batch
 	var cronJob batchv1.CronJobApplyConfiguration
 	cronJobSpec := buffer.String()
 	if parameters.CronJobTemplateExtensions != "" {
-		tmplExt, err := template.New("cronJobExt").Parse(parameters.CronJobTemplateExtensions)
+		tmplExt, err := utils.NewTemplate("cronJobExt").Parse(parameters.CronJobTemplateExtensions)
 		if err != nil {
 			return nil, fmt.Errorf("creating cron job extensions spec from default template error: %w", err)
 		}

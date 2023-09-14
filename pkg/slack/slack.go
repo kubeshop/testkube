@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
-	"text/template"
 
 	"github.com/slack-go/slack"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 type MessageArgs struct {
@@ -166,7 +166,7 @@ func (s *Notifier) composeMessage(event *testkube.Event) (view *slack.Message, n
 }
 
 func (s *Notifier) composeTestsuiteMessage(execution *testkube.TestSuiteExecution, eventType testkube.EventType) ([]byte, error) {
-	t, err := template.New("message").Parse(s.messageTemplate)
+	t, err := utils.NewTemplate("message").Parse(s.messageTemplate)
 	if err != nil {
 		log.DefaultLogger.Warnw("error while parsing slack template", "error", err.Error())
 		return nil, err
@@ -202,7 +202,7 @@ func (s *Notifier) composeTestsuiteMessage(execution *testkube.TestSuiteExecutio
 }
 
 func (s *Notifier) composeTestMessage(execution *testkube.Execution, eventType testkube.EventType) ([]byte, error) {
-	t, err := template.New("message").Parse(s.messageTemplate)
+	t, err := utils.NewTemplate("message").Parse(s.messageTemplate)
 	if err != nil {
 		log.DefaultLogger.Warnw("error while parsing slack template", "error", err.Error(), "template", s.messageTemplate)
 		return nil, err

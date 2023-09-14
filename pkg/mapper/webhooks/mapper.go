@@ -10,15 +10,16 @@ import (
 // MapCRDToAPI maps Webhook CRD to OpenAPI spec Webhook
 func MapCRDToAPI(item executorv1.Webhook) testkube.Webhook {
 	return testkube.Webhook{
-		Name:               item.Name,
-		Namespace:          item.Namespace,
-		Uri:                item.Spec.Uri,
-		Events:             MapEventArrayToCRDEvents(item.Spec.Events),
-		Selector:           item.Spec.Selector,
-		Labels:             item.Labels,
-		PayloadObjectField: item.Spec.PayloadObjectField,
-		PayloadTemplate:    item.Spec.PayloadTemplate,
-		Headers:            item.Spec.Headers,
+		Name:                     item.Name,
+		Namespace:                item.Namespace,
+		Uri:                      item.Spec.Uri,
+		Events:                   MapEventArrayToCRDEvents(item.Spec.Events),
+		Selector:                 item.Spec.Selector,
+		Labels:                   item.Labels,
+		PayloadObjectField:       item.Spec.PayloadObjectField,
+		PayloadTemplate:          item.Spec.PayloadTemplate,
+		PayloadTemplateReference: item.Spec.PayloadTemplateReference,
+		Headers:                  item.Spec.Headers,
 	}
 }
 
@@ -47,12 +48,13 @@ func MapAPIToCRD(request testkube.WebhookCreateRequest) executorv1.Webhook {
 			Labels:    request.Labels,
 		},
 		Spec: executorv1.WebhookSpec{
-			Uri:                request.Uri,
-			Events:             MapEventTypesToStringArray(request.Events),
-			Selector:           request.Selector,
-			PayloadObjectField: request.PayloadObjectField,
-			PayloadTemplate:    request.PayloadTemplate,
-			Headers:            request.Headers,
+			Uri:                      request.Uri,
+			Events:                   MapEventTypesToStringArray(request.Events),
+			Selector:                 request.Selector,
+			PayloadObjectField:       request.PayloadObjectField,
+			PayloadTemplate:          request.PayloadTemplate,
+			PayloadTemplateReference: request.PayloadTemplateReference,
+			Headers:                  request.Headers,
 		},
 	}
 }
@@ -94,6 +96,10 @@ func MapUpdateToSpec(request testkube.WebhookUpdateRequest, webhook *executorv1.
 		{
 			request.PayloadTemplate,
 			&webhook.Spec.PayloadTemplate,
+		},
+		{
+			request.PayloadTemplateReference,
+			&webhook.Spec.PayloadTemplateReference,
 		},
 	}
 
@@ -147,6 +153,10 @@ func MapSpecToUpdate(webhook *executorv1.Webhook) (request testkube.WebhookUpdat
 		{
 			&webhook.Spec.PayloadTemplate,
 			&request.PayloadTemplate,
+		},
+		{
+			&webhook.Spec.PayloadTemplateReference,
+			&request.PayloadTemplateReference,
 		},
 	}
 

@@ -1,0 +1,112 @@
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+# Templates
+
+Templates allow you to store templates for other resources used in Testkube. We support a list of templates job | container | cronjob | scraper | pvc | webhook. To define templates in Testkube, you'll need to provide a template body (in Golang template format) and a type of the template.
+
+TestKube provides access to the [Sprig](http://masterminds.github.io/sprig/) functions library in templates.
+
+## Creating a Template
+The template can be created using the API, CLI, or a Custom Resource.
+
+<Tabs>
+<TabItem value="api" label="API">
+If you prefer to use the API for creating a template, please visit the API spec for templates in the doc below.
+
+[OpenAPI spec](../openapi.md)
+
+</TabItem>
+
+<TabItem value="cli" label="CLI">
+Templates can be created with the Testkube CLI using the `create template` command.
+
+```sh
+kubectl testkube create template --name job-template --template-type job --body job-template.yaml
+```
+
+`--name` - Your template name (in this case `job-template`).
+`--template-type` - Your template type (in this case `job` for prebuilt executors).
+`--body` - A path to the file with job template content
+
+</TabItem>
+
+<TabItem value="crd" label="Custom Resource">
+
+```yaml title="template.yaml"
+apiVersion: tests.testkube.io/v1
+kind: Template
+metadata:
+  name: example-webhook
+  namespace: testkube
+spec:
+  type: job
+  body: <YOUR_TEMPLATE_BODY>
+```
+
+Where <YOUR_TEMPLATE_BODY> should be replaced with the Kubernetes job definition in Golang template format.
+
+And then apply with:
+
+```sh
+kubectl apply -f template.yaml
+```
+
+</TabItem>
+
+</Tabs>
+
+### Using Templates
+You will need to refer to a template in the corresponding reference field of the resource.
+
+<Tabs>
+<TabItem value="api" label="API">
+
+Check templateReference fields in API spec. For example, Test -> executionRequest -> jobTemplateReference field.
+[OpenAPI spec](../openapi.md)
+
+</TabItem>
+
+<TabItem value="cli" label="CLI">
+
+Templates can be created with the Testkube CLI using the `create template` command.
+
+```sh
+kubectl testkube create test --name template-test --type k6/script --job-template-reference=job-template --test-content-type git --git-uri  "https://github.com/kubeshop/testkube.git" --git-branch main --git-path test/k6/executor-tests/k6-smoke-test.js
+```
+
+`--name` - Your test name (in this case `template-test`).
+`--type` - Your test type (in this case `k6/script`).
+`--job-template-reference` - Job template reference (in this case `job-template`).
+`--test-content-type` - Test content type (in this case `git`).
+`--git-uri` - Git uri to repository (in this case `https://github.com/kubeshop/testkube.git`).
+`--git-branch` - Git branch to use (in this case `main`).
+`--git-path` - Git path to the test (in this case `test/k6/executor-tests/k6-smoke-test.js`).
+
+</TabItem>
+
+<TabItem value="crd" label="Custom Resource">
+
+```yaml title="test.yaml"
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: template-test
+  namespace: testkube
+spec:
+  type: k6/script
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/k6/executor-tests/k6-smoke-test.js
+      authType: basic
+  executionRequest:
+    jobTemplateReference: job-template
+```
+
+</TabItem>
+</Tabs>
+
