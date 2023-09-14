@@ -1,0 +1,10 @@
+.git
+.gitignore
+.golangci.yml
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+LICENSE
+Makefile
+README.md
+temp
+data
