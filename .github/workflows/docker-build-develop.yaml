@@ -228,7 +228,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         id: buildx
@@ -258,6 +258,7 @@ jobs:
           file: ./contrib/executor/jmeterd/build/slaves/Dockerfile
           push: true
           tags:  kubeshop/testkube-jmeterd-slave:${{ steps.commit.outputs.short }}
+          platforms: linux/amd64,linux/arm64
 
   executor_maven:
     runs-on: ubuntu-latest
