@@ -21,6 +21,7 @@ func TestTriggerStatus(t *testing.T) {
 	assert.Nil(t, status.lastExecutionFinished)
 
 	status.done()
+	status.removeTestSuiteExecutionID("test-suite-execution-1")
 
 	assert.False(t, status.hasActiveTests())
 	assert.NotNil(t, status.lastExecutionStarted)
