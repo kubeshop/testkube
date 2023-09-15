@@ -73,9 +73,20 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 				return nil
 			}
 		}
+
+		if t.Spec.ConcurrencyPolicy == testtriggersv1.TestTriggerConcurrencyPolicyReplace {
+			if status.hasActiveTests() {
+				s.logger.Infof(
+					"trigger service: matcher component: aborting trigger execution for trigger %s/%s by event %s on resource %s because it is currently running tests",
+					t.Namespace, t.Name, e.eventType, e.resource,
+				)
+				s.abortExecutions(ctx, t.Name, status)
+			}
+		}
+
 		s.logger.Infof("trigger service: matcher component: event %s matches trigger %s/%s for resource %s", e.eventType, t.Namespace, t.Name, e.resource)
 		s.logger.Infof("trigger service: matcher component: triggering %s action for %s execution", t.Spec.Action, t.Spec.Execution)
-		if err := s.executor(ctx, t); err != nil {
+		if err := s.triggerExecutor(ctx, t); err != nil {
 			return err
 		}
 	}
