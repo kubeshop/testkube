@@ -1,0 +1,4 @@
+timeStamp,elapsed,label,responseCode,responseMessage,threadName,dataType,success,failureMessage,bytes,sentBytes,grpThreads,allThreads,URL,Latency,IdleTime,Connect
+1667463814102,382,HTTP Request,200,OK,Thread Group 1-1,text,true,,66428,109,1,1,https://testkube.io,326,0,235
+1667463836936,365,HTTP Request,200,OK,Thread Group 1-1,text,true,,66428,109,1,1,https://testkube.io,309,0,222
+1667463838447,362,HTTP Request,200,OK,Thread Group 1-1,text,true,,66428,109,1,1,https://testkube.io,309,0,219

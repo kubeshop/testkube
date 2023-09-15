@@ -183,6 +183,8 @@ const sidebars = {
         "testkube-cloud/articles/environment-management",
         "testkube-cloud/articles/managing-cli-context",
         "testkube-cloud/articles/architecture",
+        "testkube-cloud/articles/running-parallel-tests-with-test-suite",
+        "testkube-cloud/articles/AI-test-insights",
       ],
     },
     {
