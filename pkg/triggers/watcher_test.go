@@ -83,7 +83,7 @@ func TestService_runWatcher_lease(t *testing.T) {
 			return nil
 		}
 		s := &Service{
-			executor:          testExecutorF,
+			triggerExecutor:   testExecutorF,
 			identifier:        "testkube-api",
 			clusterID:         "testkube",
 			triggerStatus:     make(map[statusKey]*triggerStatus),

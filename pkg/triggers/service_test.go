@@ -141,6 +141,8 @@ func TestService_Run(t *testing.T) {
 
 	fakeTestkubeClientset := faketestkube.NewSimpleClientset()
 	fakeClientset := fake.NewSimpleClientset()
+	eventBus := bus.NewEventBusMock()
+	metrics := metrics.NewMetrics()
 	s := NewService(
 		sched,
 		fakeClientset,
@@ -153,6 +155,9 @@ func TestService_Run(t *testing.T) {
 		testLogger,
 		configMapConfig,
 		mockExecutorsClient,
+		mockExecutor,
+		eventBus,
+		metrics,
 		WithClusterID(testClusterID),
 		WithIdentifier(testIdentifier),
 		WithScraperInterval(50*time.Millisecond),
