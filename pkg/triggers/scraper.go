@@ -23,7 +23,6 @@ func (s *Service) runExecutionScraper(ctx context.Context) {
 			s.logger.Debugf("trigger service: execution scraper component: starting new ticker iteration")
 			for triggerName, status := range s.triggerStatus {
 				if status.hasActiveTests() {
-					s.logger.Debugf("triggerStatus: %+v", *status)
 					s.checkForRunningTestExecutions(ctx, status)
 					s.checkForRunningTestSuiteExecutions(ctx, status)
 					if !status.hasActiveTests() {
@@ -78,7 +77,6 @@ func (s *Service) checkForRunningTestSuiteExecutions(ctx context.Context, status
 
 func (s *Service) abortExecutions(ctx context.Context, testTriggerName string, status *triggerStatus) {
 	s.logger.Debugf("trigger service: abort executions")
-	s.logger.Debugf("triggerStatus: %+v", *status)
 	s.abortRunningTestExecutions(ctx, status)
 	s.abortRunningTestSuiteExecutions(ctx, status)
 	if !status.hasActiveTests() {
