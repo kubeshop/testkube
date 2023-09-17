@@ -141,7 +141,7 @@ func (client *Client) getSlavePodConfiguration(currentSlavesCount int) (*v1.Pod,
 			InitContainers: []v1.Container{
 				{
 					Name:            "init",
-					Image:           "kubeshop/testkube-init-executor:1.14.3",
+					Image:           "kubeshop/testkube-init-executor:1.14.3", // TODO: make it configurable
 					Command:         []string{"/bin/runner", string(runnerExecutionStr)},
 					Env:             getSlaveRunnerEnv(client.envParams, client.execution),
 					ImagePullPolicy: v1.PullIfNotPresent,
@@ -156,7 +156,7 @@ func (client *Client) getSlavePodConfiguration(currentSlavesCount int) (*v1.Pod,
 			Containers: []v1.Container{
 				{
 					Name:            "main",
-					Image:           "kubeshop/testkube-jmeterd-slaves:999.0.0",
+					Image:           "kubeshop/testkube-jmeterd-slaves:be3eb0c", // TODO: make it configurable
 					Env:             getSlaveConfigurationEnv(client.envVariables),
 					ImagePullPolicy: v1.PullIfNotPresent,
 					Ports: []v1.ContainerPort{
