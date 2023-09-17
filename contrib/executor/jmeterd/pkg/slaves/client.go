@@ -156,7 +156,7 @@ func (client *Client) getSlavePodConfiguration(currentSlavesCount int) (*v1.Pod,
 			Containers: []v1.Container{
 				{
 					Name:            "main",
-					Image:           "kubeshop/testkube-jmeterd-slaves:be3eb0c", // TODO: make it configurable
+					Image:           "kubeshop/testkube-jmeterd-slave:be3eb0c", // TODO: make it configurable
 					Env:             getSlaveConfigurationEnv(client.envVariables),
 					ImagePullPolicy: v1.PullIfNotPresent,
 					Ports: []v1.ContainerPort{
