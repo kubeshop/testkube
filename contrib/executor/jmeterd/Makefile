@@ -1,6 +1,6 @@
 REPOSITORY ?= kubeshop
 NAME ?= testkube-jmeterd-executor
-SLAVES_NAME ?= testkube-jmeterd-slaves
+SLAVES_NAME ?= testkube-jmeterd-slave
 LOCAL_TAG ?= 999.0.0
 BIN_DIR ?= $(HOME)/bin
 
