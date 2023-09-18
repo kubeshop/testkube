@@ -60,7 +60,7 @@ They will be shown at the bottom, similar to a news feed.
 
 ## Collaboration and Access Control
 
-Status Pages can be either private or public. Public status pages are available to Testkube Cloud PRO customers. Private pages can be shared with anyone in the same organization having read access to the environment.
+Status Pages can be either private or public. Public status pages are published to the internet. Private pages can be shared with anyone in the same organization having read access to the environment.
 
 ## Best Practices
 
