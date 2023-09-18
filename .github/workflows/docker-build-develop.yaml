@@ -209,16 +209,12 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd-commit-only.yml --snapshot
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd-commit-only.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-
-      - name: Push Docker images
-        run: |
-          docker push kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}
 
   jmeterd_slave:
     runs-on: ubuntu-latest
