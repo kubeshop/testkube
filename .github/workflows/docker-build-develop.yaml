@@ -256,6 +256,7 @@ jobs:
           file: ./contrib/executor/jmeterd/build/slaves/Dockerfile
           push: true
           tags:  kubeshop/testkube-jmeterd-slave:${{ steps.commit.outputs.short }}
+          platforms: linux/amd64,linux/arm64
 
   executor_maven:
     runs-on: ubuntu-latest
