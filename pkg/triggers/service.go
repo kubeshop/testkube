@@ -13,7 +13,7 @@ import (
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	testsuitev3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	executorsclientv2 "github.com/kubeshop/testkube-operator/client/executors/v2"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsuitesclientv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
 	testkubeclientsetv1 "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
@@ -64,7 +64,7 @@ type Service struct {
 	testResultRepository          testresult.Repository
 	logger                        *zap.SugaredLogger
 	configMap                     config.Repository
-	executorsClient               executorsclientv1.Interface
+	executorsClient               executorsclientv2.Interface
 	httpClient                    http.HttpClient
 	testkubeNamespace             string
 	watcherNamespaces             []string
@@ -83,7 +83,7 @@ func NewService(
 	leaseBackend LeaseBackend,
 	logger *zap.SugaredLogger,
 	configMap config.Repository,
-	executorsClient executorsclientv1.Interface,
+	executorsClient executorsclientv2.Interface,
 	opts ...Option,
 ) *Service {
 	identifier := fmt.Sprintf(defaultIdentifierFormat, utils.RandAlphanum(10))

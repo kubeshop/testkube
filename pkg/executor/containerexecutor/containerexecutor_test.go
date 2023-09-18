@@ -13,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
+	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v2"
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	templatesclientv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
 	v3 "github.com/kubeshop/testkube-operator/client/tests/v3"

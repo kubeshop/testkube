@@ -5000,6 +5000,8 @@ components:
         image:
           description: Image for kube-job
           type: string
+        slaves:
+          $ref: '#/components/schemas/SlavesMeta'
         imagePullSecrets:
           type: array
           description: "container image pull secrets"
@@ -5124,6 +5126,17 @@ components:
       nullable: true
       allOf:
         - $ref: "#/components/schemas/ExecutorMeta"
+    
+    SlavesMeta:
+      description: Slave data for executing tests in distributed environment
+      type: object
+      properties:
+        image: 
+          description: slave image
+          type: string
+          example: kubeshop/ex-slaves-image:latest
+      required:
+      - image
 
     RunningContext:
       description: running context for test or test suite execution

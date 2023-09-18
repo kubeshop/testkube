@@ -9,7 +9,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/gorilla/websocket"
 
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	executorsclientv2 "github.com/kubeshop/testkube-operator/client/executors/v2"
 	"github.com/kubeshop/testkube/internal/graphql/gen"
 	"github.com/kubeshop/testkube/internal/graphql/resolvers"
 	"github.com/kubeshop/testkube/internal/graphql/services"
@@ -17,7 +17,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
-func GetServer(eventBus bus.Bus, executorsClient *executorsclientv1.ExecutorsClient) *handler.Server {
+func GetServer(eventBus bus.Bus, executorsClient *executorsclientv2.ExecutorsClient) *handler.Server {
 	service := services.NewService(eventBus, log.DefaultLogger)
 	resolver := &resolvers.Resolver{
 		ExecutorsService: services.NewExecutorsService(service, executorsClient),

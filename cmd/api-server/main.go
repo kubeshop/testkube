@@ -58,6 +58,7 @@ import (
 
 	kubeclient "github.com/kubeshop/testkube-operator/client"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	executorsclientv2 "github.com/kubeshop/testkube-operator/client/executors/v2"
 	scriptsclient "github.com/kubeshop/testkube-operator/client/scripts/v2"
 	templatesclientv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
 	testexecutionsclientv1 "github.com/kubeshop/testkube-operator/client/testexecutions/v1"
@@ -166,7 +167,7 @@ func main() {
 	scriptsClient := scriptsclient.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testsClientV1 := testsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testsClientV3 := testsclientv3.NewClient(kubeClient, cfg.TestkubeNamespace)
-	executorsClient := executorsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+	executorsClientV2 := executorsclientv2.NewClient(kubeClient, cfg.TestkubeNamespace)
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
 	testsuitesClientV2 := testsuitesclientv2.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testsuitesClientV3 := testsuitesclientv3.NewClient(kubeClient, cfg.TestkubeNamespace)
@@ -320,7 +321,7 @@ func main() {
 		ui.ExitOnError("Parsing default executors", err)
 	}
 
-	images, err := kubeexecutor.SyncDefaultExecutors(executorsClient, cfg.TestkubeNamespace, defaultExecutors, cfg.TestkubeReadonlyExecutors)
+	images, err := kubeexecutor.SyncDefaultExecutors(executorsClientV2, cfg.TestkubeNamespace, defaultExecutors, cfg.TestkubeReadonlyExecutors)
 	if err != nil {
 		ui.ExitOnError("Sync default executors", err)
 	}
@@ -365,7 +366,7 @@ func main() {
 		metrics,
 		eventsEmitter,
 		configMapConfig,
-		executorsClient,
+		executorsClientV2,
 		testsClientV3,
 		testExecutionsClient,
 		templatesClient,
@@ -383,7 +384,7 @@ func main() {
 		containerExecutor,
 		resultsRepository,
 		testResultsRepository,
-		executorsClient,
+		executorsClientV2,
 		testsClientV3,
 		testsuitesClientV3,
 		testsourcesClient,
@@ -406,7 +407,7 @@ func main() {
 		resultsRepository,
 		testResultsRepository,
 		testsClientV3,
-		executorsClient,
+		executorsClientV2,
 		testsuitesClientV3,
 		secretClient,
 		webhooksClient,
@@ -475,7 +476,7 @@ func main() {
 			triggerLeaseBackend,
 			log.DefaultLogger,
 			configMapConfig,
-			executorsClient,
+			executorsClientV2,
 			triggers.WithHostnameIdentifier(),
 			triggers.WithTestkubeNamespace(cfg.TestkubeNamespace),
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
@@ -490,7 +491,7 @@ func main() {
 		reconcilerClient := reconciler.NewClient(clientset,
 			resultsRepository,
 			testResultsRepository,
-			executorsClient,
+			executorsClientV2,
 			log.DefaultLogger,
 			cfg.TestkubeNamespace)
 		g.Go(func() error {

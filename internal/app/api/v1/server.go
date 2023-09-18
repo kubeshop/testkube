@@ -29,6 +29,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/proxy"
 	"github.com/kelseyhightower/envconfig"
 
+	executorsclientv2 "github.com/kubeshop/testkube-operator/client/executors/v2"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
 	templatesclientv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
@@ -62,7 +63,7 @@ func NewTestkubeAPI(
 	testExecutionResults result.Repository,
 	testsuiteExecutionsResults testresult.Repository,
 	testsClient *testsclientv3.TestsClient,
-	executorsClient *executorsclientv1.ExecutorsClient,
+	executorsClient *executorsclientv2.ExecutorsClient,
 	testsuitesClient *testsuitesclientv3.TestSuitesClient,
 	secretClient *secret.Client,
 	webhookClient *executorsclientv1.WebhooksClient,
@@ -162,7 +163,7 @@ type TestkubeAPI struct {
 	ContainerExecutor    client.Executor
 	TestsSuitesClient    *testsuitesclientv3.TestSuitesClient
 	TestsClient          *testsclientv3.TestsClient
-	ExecutorsClient      *executorsclientv1.ExecutorsClient
+	ExecutorsClient      *executorsclientv2.ExecutorsClient
 	SecretClient         *secret.Client
 	WebhooksClient       *executorsclientv1.WebhooksClient
 	TestKubeClientset    testkubeclientset.Interface

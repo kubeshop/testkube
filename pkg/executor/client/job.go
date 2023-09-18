@@ -61,7 +61,7 @@ const (
 
 	pollTimeout  = 24 * time.Hour
 	pollInterval = 200 * time.Millisecond
-	// pollJobStatus is interval for checking if job timeout occurred
+	// pollJobStatus is interval for checking if job timeout occurredv2
 	pollJobStatus = 1 * time.Second
 	// timeoutIndicator is string that is added to job logs when timeout occurs
 	timeoutIndicator = "DeadlineExceeded"
@@ -822,6 +822,15 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	}
 
 	jobOptions.Variables = execution.Variables
+
+	if options.ExecutorSpec.Slaves != nil {
+		slvesConfigs, err := json.Marshal(executor.GetSlavesConfigs(initImage, *options.ExecutorSpec.Slaves))
+		if err != nil {
+			return jobOptions, err
+		}
+		jobOptions.Variables[executor.SlavesConfigsEnv] = testkube.NewBasicVariable(executor.SlavesConfigsEnv, string(slvesConfigs))
+	}
+
 	jobOptions.ServiceAccountName = serviceAccountName
 	jobOptions.Registry = registry
 	jobOptions.ClusterID = clusterID

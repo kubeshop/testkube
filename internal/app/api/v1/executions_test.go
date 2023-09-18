@@ -16,8 +16,8 @@ import (
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	executorv2 "github.com/kubeshop/testkube-operator/apis/executor/v2"
+	executorsclientv2 "github.com/kubeshop/testkube-operator/client/executors/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -230,27 +230,27 @@ func (e MockExecutor) Logs(ctx context.Context, id string) (chan output.Output, 
 	return e.LogsFn(id)
 }
 
-func getMockExecutorClient() *executorsclientv1.ExecutorsClient {
+func getMockExecutorClient() *executorsclientv2.ExecutorsClient {
 	scheme := runtime.NewScheme()
-	executorv1.AddToScheme(scheme)
+	executorv2.AddToScheme(scheme)
 
 	initObjects := []k8sclient.Object{
-		&executorv1.Executor{
+		&executorv2.Executor{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Executor",
-				APIVersion: "executor.testkube.io/v1",
+				APIVersion: "executor.testkube.io/v2",
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "sample",
 				Namespace: "default",
 			},
-			Spec: executorv1.ExecutorSpec{
+			Spec: executorv2.ExecutorSpec{
 				Types:                []string{"curl/test"},
 				ExecutorType:         "",
 				JobTemplate:          "",
 				JobTemplateReference: "",
 			},
-			Status: executorv1.ExecutorStatus{},
+			Status: executorv2.ExecutorStatus{},
 		},
 	}
 
@@ -258,5 +258,5 @@ func getMockExecutorClient() *executorsclientv1.ExecutorsClient {
 		WithScheme(scheme).
 		WithObjects(initObjects...).
 		Build()
-	return executorsclientv1.NewClient(fakeClient, "")
+	return executorsclientv2.NewClient(fakeClient, "")
 }

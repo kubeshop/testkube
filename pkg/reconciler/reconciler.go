@@ -10,8 +10,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	executorv2 "github.com/kubeshop/testkube-operator/apis/executor/v2"
+	executorsclientv2 "github.com/kubeshop/testkube-operator/client/executors/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/mapper/tests"
@@ -31,13 +31,13 @@ type Client struct {
 	k8sclient            kubernetes.Interface
 	resultRepository     result.Repository
 	testResultRepository testresult.Repository
-	executorsClient      *executorsclientv1.ExecutorsClient
+	executorsClient      *executorsclientv2.ExecutorsClient
 	logger               *zap.SugaredLogger
 	namespace            string
 }
 
 func NewClient(k8sclient kubernetes.Interface, resultRepository result.Repository, testResultRepository testresult.Repository,
-	executorsClient *executorsclientv1.ExecutorsClient, logger *zap.SugaredLogger, namespace string) *Client {
+	executorsClient *executorsclientv2.ExecutorsClient, logger *zap.SugaredLogger, namespace string) *Client {
 	return &Client{
 		k8sclient:            k8sclient,
 		resultRepository:     resultRepository,
@@ -108,10 +108,10 @@ OuterLoop:
 						}
 					}
 				}
-			} else if exec != nil && exec.Spec.ExecutorType == executorv1.ExecutorTypeContainer {
+			} else if exec != nil && exec.Spec.ExecutorType == executorv2.ExecutorTypeContainer {
 				supportArtifacts := false
 				for _, feature := range exec.Spec.Features {
-					if feature == executorv1.FeatureArtifacts {
+					if feature == executorv2.FeatureArtifacts {
 						supportArtifacts = true
 						break
 					}

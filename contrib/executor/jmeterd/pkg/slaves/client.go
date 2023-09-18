@@ -16,6 +16,7 @@ import (
 	"github.com/kubeshop/testkube/contrib/executor/jmeterd/pkg/jmeterenv"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
+	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 )
@@ -30,26 +31,28 @@ type Interface interface {
 }
 
 type Client struct {
-	clientSet    *kubernetes.Clientset
-	namespace    string
-	execution    testkube.Execution
-	envParams    envs.Params
-	envVariables map[string]testkube.Variable
+	clientSet     *kubernetes.Clientset
+	slavesConfigs executor.SlavesConfigs
+	namespace     string
+	execution     testkube.Execution
+	envParams     envs.Params
+	envVariables  map[string]testkube.Variable
 }
 
 // NewClient is a method to create new slave client
-func NewClient(execution testkube.Execution, envParams envs.Params, slavesEnvVariables map[string]testkube.Variable) (*Client, error) {
+func NewClient(execution testkube.Execution, slavesConfigs executor.SlavesConfigs, envParams envs.Params, slavesEnvVariables map[string]testkube.Variable) (*Client, error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		return nil, err
 	}
 
 	return &Client{
-		clientSet:    clientSet,
-		namespace:    execution.TestNamespace,
-		execution:    execution,
-		envParams:    envParams,
-		envVariables: slavesEnvVariables,
+		clientSet:     clientSet,
+		slavesConfigs: slavesConfigs,
+		namespace:     execution.TestNamespace,
+		execution:     execution,
+		envParams:     envParams,
+		envVariables:  slavesEnvVariables,
 	}, nil
 }
 
@@ -141,7 +144,7 @@ func (client *Client) getSlavePodConfiguration(currentSlavesCount int) (*v1.Pod,
 			InitContainers: []v1.Container{
 				{
 					Name:            "init",
-					Image:           "kubeshop/testkube-init-executor:1.14.3", // TODO: make it configurable
+					Image:           client.slavesConfigs.Images.Init,
 					Command:         []string{"/bin/runner", string(runnerExecutionStr)},
 					Env:             getSlaveRunnerEnv(client.envParams, client.execution),
 					ImagePullPolicy: v1.PullIfNotPresent,
@@ -156,7 +159,7 @@ func (client *Client) getSlavePodConfiguration(currentSlavesCount int) (*v1.Pod,
 			Containers: []v1.Container{
 				{
 					Name:            "main",
-					Image:           "kubeshop/testkube-jmeterd-slave:be3eb0c", // TODO: make it configurable
+					Image:           client.slavesConfigs.Images.Slave,
 					Env:             getSlaveConfigurationEnv(client.envVariables),
 					ImagePullPolicy: v1.PullIfNotPresent,
 					Ports: []v1.ContainerPort{

@@ -4,12 +4,12 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
+	executorv2 "github.com/kubeshop/testkube-operator/apis/executor/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 // MapCRDToAPI maps Executor CRD to OpenAPI spec Executor
-func MapCRDToAPI(item executorv1.Executor) testkube.ExecutorUpsertRequest {
+func MapCRDToAPI(item executorv2.Executor) testkube.ExecutorUpsertRequest {
 	return testkube.ExecutorUpsertRequest{
 		Name:                 item.Name,
 		Namespace:            item.Namespace,
@@ -30,15 +30,15 @@ func MapCRDToAPI(item executorv1.Executor) testkube.ExecutorUpsertRequest {
 }
 
 // MapAPIToCRD maps OpenAPI spec ExecutorUpsertRequest to CRD Executor
-func MapAPIToCRD(request testkube.ExecutorUpsertRequest) executorv1.Executor {
-	return executorv1.Executor{
+func MapAPIToCRD(request testkube.ExecutorUpsertRequest) executorv2.Executor {
+	return executorv2.Executor{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      request.Name,
 			Namespace: request.Namespace,
 			Labels:    request.Labels,
 		},
-		Spec: executorv1.ExecutorSpec{
-			ExecutorType:         executorv1.ExecutorType(request.ExecutorType),
+		Spec: executorv2.ExecutorSpec{
+			ExecutorType:         executorv2.ExecutorType(request.ExecutorType),
 			Types:                request.Types,
 			URI:                  request.Uri,
 			Image:                request.Image,
@@ -55,7 +55,7 @@ func MapAPIToCRD(request testkube.ExecutorUpsertRequest) executorv1.Executor {
 }
 
 // MapExecutorCRDToExecutorDetails maps CRD Executor to OpemAPI spec ExecutorDetails
-func MapExecutorCRDToExecutorDetails(item executorv1.Executor) testkube.ExecutorDetails {
+func MapExecutorCRDToExecutorDetails(item executorv2.Executor) testkube.ExecutorDetails {
 	return testkube.ExecutorDetails{
 		Name: item.Name,
 		Executor: &testkube.Executor{
@@ -92,47 +92,47 @@ func mapImagePullSecretsToAPI(secrets []v1.LocalObjectReference) []testkube.Loca
 	return res
 }
 
-func MapFeaturesToCRD(features []string) (out []executorv1.Feature) {
+func MapFeaturesToCRD(features []string) (out []executorv2.Feature) {
 	for _, feature := range features {
-		out = append(out, executorv1.Feature(feature))
+		out = append(out, executorv2.Feature(feature))
 	}
 	return out
 }
 
-func MapFeaturesToAPI(features []executorv1.Feature) (out []string) {
+func MapFeaturesToAPI(features []executorv2.Feature) (out []string) {
 	for _, feature := range features {
 		out = append(out, string(feature))
 	}
 	return out
 }
 
-func MapContentTypesToCRD(contentTypes []string) (out []executorv1.ScriptContentType) {
+func MapContentTypesToCRD(contentTypes []string) (out []executorv2.ScriptContentType) {
 	for _, contentType := range contentTypes {
-		out = append(out, executorv1.ScriptContentType(contentType))
+		out = append(out, executorv2.ScriptContentType(contentType))
 	}
 	return out
 }
 
-func MapMetaToCRD(meta *testkube.ExecutorMeta) *executorv1.ExecutorMeta {
+func MapMetaToCRD(meta *testkube.ExecutorMeta) *executorv2.ExecutorMeta {
 	if meta == nil {
 		return nil
 	}
 
-	return &executorv1.ExecutorMeta{
+	return &executorv2.ExecutorMeta{
 		IconURI:  meta.IconURI,
 		DocsURI:  meta.DocsURI,
 		Tooltips: meta.Tooltips,
 	}
 }
 
-func MapContentTypesToAPI(contentTypes []executorv1.ScriptContentType) (out []string) {
+func MapContentTypesToAPI(contentTypes []executorv2.ScriptContentType) (out []string) {
 	for _, contentType := range contentTypes {
 		out = append(out, string(contentType))
 	}
 	return out
 }
 
-func MapMetaToAPI(meta *executorv1.ExecutorMeta) *testkube.ExecutorMeta {
+func MapMetaToAPI(meta *executorv2.ExecutorMeta) *testkube.ExecutorMeta {
 	if meta == nil {
 		return nil
 	}
@@ -145,7 +145,7 @@ func MapMetaToAPI(meta *executorv1.ExecutorMeta) *testkube.ExecutorMeta {
 }
 
 // MapUpdateToSpec maps ExecutorUpdateRequest to Executor CRD spec
-func MapUpdateToSpec(request testkube.ExecutorUpdateRequest, executor *executorv1.Executor) *executorv1.Executor {
+func MapUpdateToSpec(request testkube.ExecutorUpdateRequest, executor *executorv2.Executor) *executorv2.Executor {
 	var fields = []struct {
 		source      *string
 		destination *string
@@ -183,7 +183,7 @@ func MapUpdateToSpec(request testkube.ExecutorUpdateRequest, executor *executorv
 	}
 
 	if request.ExecutorType != nil {
-		executor.Spec.ExecutorType = executorv1.ExecutorType(*request.ExecutorType)
+		executor.Spec.ExecutorType = executorv2.ExecutorType(*request.ExecutorType)
 	}
 
 	var slices = []struct {
@@ -238,7 +238,7 @@ func MapUpdateToSpec(request testkube.ExecutorUpdateRequest, executor *executorv
 		}
 
 		if executor.Spec.Meta == nil {
-			executor.Spec.Meta = &executorv1.ExecutorMeta{}
+			executor.Spec.Meta = &executorv2.ExecutorMeta{}
 		}
 
 		if (*request.Meta).IconURI != nil {
@@ -258,7 +258,7 @@ func MapUpdateToSpec(request testkube.ExecutorUpdateRequest, executor *executorv
 }
 
 // MapSpecToUpdate maps Executor CRD to ExecutorUpdate Request to spec
-func MapSpecToUpdate(executor *executorv1.Executor) (request testkube.ExecutorUpdateRequest) {
+func MapSpecToUpdate(executor *executorv2.Executor) (request testkube.ExecutorUpdateRequest) {
 	var fields = []struct {
 		source      *string
 		destination **string
@@ -338,4 +338,14 @@ func MapSpecToUpdate(executor *executorv1.Executor) (request testkube.ExecutorUp
 	}
 
 	return request
+}
+
+
+func MapSlavesConfigsToCRD(slavesConfigs *testkube.SlavesMeta) *executorv2.SlavesMeta {
+	if slavesConfigs == nil {
+		return nil
+	}
+	return &executorv2.SlavesMeta{
+		Image: slavesConfigs.Image,
+	}
 }

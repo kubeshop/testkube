@@ -6,7 +6,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 
-	executorsv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	executorsv2 "github.com/kubeshop/testkube-operator/client/executors/v2"
 	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsourcesv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 	testsuiteexecutionsclientv1 "github.com/kubeshop/testkube-operator/client/testsuiteexecutions/v1"
@@ -26,7 +26,7 @@ type Scheduler struct {
 	containerExecutor         client.Executor
 	executionResults          result.Repository
 	testExecutionResults      testresult.Repository
-	executorsClient           executorsv1.Interface
+	executorsClient           executorsv2.Interface
 	testsClient               testsv3.Interface
 	testSuitesClient          testsuitesv3.Interface
 	testSourcesClient         testsourcesv1.Interface
@@ -45,7 +45,7 @@ func NewScheduler(
 	containerExecutor client.Executor,
 	executionResults result.Repository,
 	testExecutionResults testresult.Repository,
-	executorsClient executorsv1.Interface,
+	executorsClient executorsv2.Interface,
 	testsClient testsv3.Interface,
 	testSuitesClient testsuitesv3.Interface,
 	testSourcesClient testsourcesv1.Interface,

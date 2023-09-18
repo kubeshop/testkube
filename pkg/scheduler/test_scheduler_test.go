@@ -8,9 +8,9 @@ import (
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
+	v2 "github.com/kubeshop/testkube-operator/apis/executor/v2"
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	executorsclientv2 "github.com/kubeshop/testkube-operator/client/executors/v2"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/configmap"
@@ -66,7 +66,7 @@ func TestGetExecuteOptions(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	mockTestsClient := testsclientv3.NewMockInterface(mockCtrl)
-	mockExecutorsClient := executorsclientv1.NewMockInterface(mockCtrl)
+	mockExecutorsClient := executorsclientv2.NewMockInterface(mockCtrl)
 	mockSecretClient := secret.NewMockInterface(mockCtrl)
 	mockConfigMapClient := configmap.NewMockInterface(mockCtrl)
 
@@ -90,10 +90,10 @@ func TestGetExecuteOptions(t *testing.T) {
 		},
 	}
 	mockExecutorTypes := "cypress"
-	mockExecutor := v1.Executor{
+	mockExecutor := v2.Executor{
 		TypeMeta:   metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "cypress"},
-		Spec: v1.ExecutorSpec{
+		Spec: v2.ExecutorSpec{
 			Types:                []string{mockExecutorTypes},
 			ExecutorType:         "job",
 			URI:                  "",

@@ -10,15 +10,15 @@ import (
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	executorv2 "github.com/kubeshop/testkube-operator/apis/executor/v2"
+	executorsclientv2 "github.com/kubeshop/testkube-operator/client/executors/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 var (
 	srvMock    = NewMockService()
 	k8sObjects = []k8sclient.Object{
-		&executorv1.Executor{
+		&executorv2.Executor{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Executor",
 				APIVersion: "executor.testkube.io/v1",
@@ -30,13 +30,13 @@ var (
 					"label-name": "label-value",
 				},
 			},
-			Spec: executorv1.ExecutorSpec{
+			Spec: executorv2.ExecutorSpec{
 				Types:                []string{"curl/test"},
 				ExecutorType:         "job",
 				JobTemplate:          "",
 				JobTemplateReference: "",
 			},
-			Status: executorv1.ExecutorStatus{},
+			Status: executorv2.ExecutorStatus{},
 		},
 	}
 	sample = testkube.ExecutorDetails{
@@ -58,7 +58,7 @@ var (
 		},
 	}
 	k8sObjects2 = []k8sclient.Object{
-		&executorv1.Executor{
+		&executorv2.Executor{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Executor",
 				APIVersion: "executor.testkube.io/v1",
@@ -70,13 +70,13 @@ var (
 					"label-name": "label-value",
 				},
 			},
-			Spec: executorv1.ExecutorSpec{
+			Spec: executorv2.ExecutorSpec{
 				Types:                []string{"other/test"},
 				ExecutorType:         "job",
 				JobTemplate:          "",
 				JobTemplateReference: "",
 			},
-			Status: executorv1.ExecutorStatus{},
+			Status: executorv2.ExecutorStatus{},
 		},
 	}
 	sample2 = testkube.ExecutorDetails{
@@ -100,7 +100,7 @@ var (
 )
 
 var (
-	client *executorsclientv1.ExecutorsClient
+	client *executorsclientv2.ExecutorsClient
 	srv    ExecutorsService
 )
 
@@ -177,13 +177,13 @@ func TestExecutorsService_SubscribeList(t *testing.T) {
 	})
 }
 
-func getMockExecutorClient(initObjects []k8sclient.Object) *executorsclientv1.ExecutorsClient {
+func getMockExecutorClient(initObjects []k8sclient.Object) *executorsclientv2.ExecutorsClient {
 	scheme := runtime.NewScheme()
-	executorv1.AddToScheme(scheme)
+	executorv2.AddToScheme(scheme)
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(initObjects...).
 		Build()
-	return executorsclientv1.NewClient(fakeClient, "")
+	return executorsclientv2.NewClient(fakeClient, "")
 }

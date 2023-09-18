@@ -11,11 +11,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
+	executorv2 "github.com/kubeshop/testkube-operator/apis/executor/v2"
 	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
 	v1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	executorsclientv2 "github.com/kubeshop/testkube-operator/client/executors/v2"
 	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
 	testsourcesv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
 	testsuiteexecutionsv1 "github.com/kubeshop/testkube-operator/client/testsuiteexecutions/v1"
@@ -49,7 +49,7 @@ func TestService_Run(t *testing.T) {
 	mockResultRepository := result.NewMockRepository(mockCtrl)
 	mockTestResultRepository := testresult.NewMockRepository(mockCtrl)
 
-	mockExecutorsClient := executorsclientv1.NewMockInterface(mockCtrl)
+	mockExecutorsClient := executorsclientv2.NewMockInterface(mockCtrl)
 	mockTestsClient := testsclientv3.NewMockInterface(mockCtrl)
 	mockTestSuitesClient := testsuitesv3.NewMockInterface(mockCtrl)
 	mockTestSourcesClient := testsourcesv1.NewMockInterface(mockCtrl)
@@ -83,10 +83,10 @@ func TestService_Run(t *testing.T) {
 	mockSecretUUID := "b524c2f6-6bcf-4178-87c1-1aa2b2abb5dc"
 	mockTestsClient.EXPECT().GetCurrentSecretUUID("some-test").Return(mockSecretUUID, nil)
 	mockExecutorTypes := "cypress"
-	mockExecutorV1 := executorv1.Executor{
+	mockExecutorV1 := executorv2.Executor{
 		TypeMeta:   metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "cypress"},
-		Spec: executorv1.ExecutorSpec{
+		Spec: executorv2.ExecutorSpec{
 			Types:                []string{mockExecutorTypes},
 			ExecutorType:         "job",
 			URI:                  "",

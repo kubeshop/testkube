@@ -19,8 +19,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	executorv2 "github.com/kubeshop/testkube-operator/apis/executor/v2"
+	executorsclientv2 "github.com/kubeshop/testkube-operator/client/executors/v2"
 	templatesv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
 	testexecutionsv1 "github.com/kubeshop/testkube-operator/client/testexecutions/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
@@ -59,7 +59,7 @@ func NewContainerExecutor(
 	metrics ExecutionCounter,
 	emiter EventEmitter,
 	configMap config.Repository,
-	executorsClient executorsclientv1.Interface,
+	executorsClient executorsclientv2.Interface,
 	testsClient testsv3.Interface,
 	testExecutionsClient testexecutionsv1.Interface,
 	templatesClient templatesv1.Interface,
@@ -110,7 +110,7 @@ type ContainerExecutor struct {
 	configMap            config.Repository
 	serviceAccountName   string
 	testsClient          testsv3.Interface
-	executorsClient      executorsclientv1.Interface
+	executorsClient      executorsclientv2.Interface
 	testExecutionsClient testexecutionsv1.Interface
 	templatesClient      templatesv1.Interface
 	registry             string
@@ -180,7 +180,7 @@ func (c *ContainerExecutor) Logs(ctx context.Context, id string) (out chan outpu
 
 		supportArtifacts := false
 		for _, feature := range exec.Spec.Features {
-			if feature == executorv1.FeatureArtifacts {
+			if feature == executorv2.FeatureArtifacts {
 				supportArtifacts = true
 				break
 			}
@@ -624,7 +624,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 
 	supportArtifacts := false
 	for _, feature := range options.ExecutorSpec.Features {
-		if feature == executorv1.FeatureArtifacts {
+		if feature == executorv2.FeatureArtifacts {
 			supportArtifacts = true
 			break
 		}

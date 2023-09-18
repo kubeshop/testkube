@@ -3,7 +3,7 @@ package services
 import (
 	"context"
 
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	executorsclientv2 "github.com/kubeshop/testkube-operator/client/executors/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"
 )
@@ -16,10 +16,10 @@ type ExecutorsService interface {
 
 type executorsService struct {
 	ServiceBase
-	client *executorsclientv1.ExecutorsClient
+	client *executorsclientv2.ExecutorsClient
 }
 
-func NewExecutorsService(service Service, client *executorsclientv1.ExecutorsClient) ExecutorsService {
+func NewExecutorsService(service Service, client *executorsclientv2.ExecutorsClient) ExecutorsService {
 	return &executorsService{ServiceBase: ServiceBase{Service: service}, client: client}
 }
 

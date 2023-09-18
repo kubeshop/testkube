@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
+	executorv2 "github.com/kubeshop/testkube-operator/apis/executor/v2"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"
@@ -18,7 +18,7 @@ import (
 func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to create executor"
-		var executor executorv1.Executor
+		var executor executorv2.Executor
 		if string(c.Request().Header.ContentType()) == mediaTypeYAML {
 			executorSpec := string(c.Body())
 			decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(executorSpec), len(executorSpec))
@@ -63,7 +63,7 @@ func (s TestkubeAPI) UpdateExecutorHandler() fiber.Handler {
 		errPrefix := "failed to update executor"
 		var request testkube.ExecutorUpdateRequest
 		if string(c.Request().Header.ContentType()) == mediaTypeYAML {
-			var executor executorv1.Executor
+			var executor executorv2.Executor
 			executorSpec := string(c.Body())
 			decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(executorSpec), len(executorSpec))
 			if err := decoder.Decode(&executor); err != nil {
