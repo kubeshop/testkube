@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - develop
+      - add-arm-jmeterd
     paths-ignore:
       - 'docs/**'
 env:
