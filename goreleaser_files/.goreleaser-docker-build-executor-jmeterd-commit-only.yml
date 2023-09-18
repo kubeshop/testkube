@@ -39,8 +39,8 @@ dockers:
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
     extra_files:
-    - ./contrib/executor/jmeterd/scripts/entrypoint.sh
-    - ./contrib/executor/jmeterd/scripts/jmeter-master.sh
+      - ./contrib/executor/jmeterd/scripts/entrypoint.sh
+      - ./contrib/executor/jmeterd/scripts/jmeter-master.sh
 
   - dockerfile: "./contrib/executor/jmeterd/build/agent/Dockerfile"
     use: buildx
@@ -61,11 +61,11 @@ dockers:
       - ./contrib/executor/jmeterd/scripts/entrypoint.sh
       - ./contrib/executor/jmeterd/scripts/jmeter-master.sh
 
-  docker_manifests:
-    - name_template: kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}
-      image_templates:
-        - kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-amd64
-        - kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-arm64v8
+docker_manifests:
+  - name_template: kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}
+    image_templates:
+      - kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-amd64
+      - kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-arm64v8
 
 release:
   disable: true
