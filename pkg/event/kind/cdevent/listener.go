@@ -67,15 +67,18 @@ func (l *CDEventListener) Notify(event testkube.Event) (result testkube.EventRes
 		return testkube.NewFailedEventResult(event.Id, err)
 	}
 
-	ce, err := cdevents.AsCloudEvent(ev)
+	if err := l.sendCDEvent(ev); err != nil {
+		return testkube.NewFailedEventResult(event.Id, err)
+	}
+
+	// Create the output event
+	ev, err = cde.MapTestkubeLogToCDEvent(event, l.clusterID, l.dashboardURI)
 	if err != nil {
 		return testkube.NewFailedEventResult(event.Id, err)
 	}
 
-	if result := l.client.Send(context.Background(), *ce); cloudevents.IsUndelivered(result) {
-		return testkube.NewFailedEventResult(event.Id, fmt.Errorf("failed to deliver, %v", result))
-	} else if msg := result.Error(); msg != "" && !strings.Contains(msg, "200") {
-		return testkube.NewFailedEventResult(event.Id, fmt.Errorf("failed to send, %s", msg))
+	if err := l.sendCDEvent(ev); err != nil {
+		return testkube.NewFailedEventResult(event.Id, err)
 	}
 
 	return testkube.NewSuccessEventResult(event.Id, "event sent to cd event")
@@ -83,4 +86,19 @@ func (l *CDEventListener) Notify(event testkube.Event) (result testkube.EventRes
 
 func (l *CDEventListener) Kind() string {
 	return "cdevent"
+}
+
+func (l *CDEventListener) sendCDEvent(ev cdevents.CDEventReader) error {
+	ce, err := cdevents.AsCloudEvent(ev)
+	if err != nil {
+		return err
+	}
+
+	if result := l.client.Send(context.Background(), *ce); cloudevents.IsUndelivered(result) {
+		return fmt.Errorf("failed to deliver, %v", result)
+	} else if msg := result.Error(); msg != "" && !strings.Contains(msg, "200") {
+		return fmt.Errorf("failed to send, %s", msg)
+	}
+
+	return nil
 }
