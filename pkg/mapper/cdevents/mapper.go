@@ -199,13 +199,45 @@ func MapTestkubeArtifactToCDEvent(execution *testkube.Execution, clusterID, path
 	ev.SetSubjectSource(clusterID)
 	ev.SetSource(clusterID)
 	ev.SetSubjectTestCaseRun(&cdevents.Reference{
-		Id:     execution.TestName,
+		Id:     execution.Id,
 		Source: clusterID,
 	})
 
 	ev.SetSubjectFormat(format)
 	ev.SetSubjectOutputType(MapMimeTypeToCDEventOutputType(format))
 	ev.SetSubjectUri(fmt.Sprintf("%s/tests/executions/%s/execution/%s", dashboardURI, execution.TestName, execution.Id))
+
+	return ev, nil
+}
+
+// MapTestkubeLogToCDEvent maps OpenAPI spec log to CDEvent CDEventReader
+func MapTestkubeLogToCDEvent(event testkube.Event, clusterID, dashboardURI string) (cdevents.CDEventReader, error) {
+	// Create the base event
+	ev, err := cdevents.NewTestOutputPublishedEvent()
+	if err != nil {
+		return nil, err
+	}
+
+	if event.TestExecution != nil {
+		ev.SetSubjectId(event.TestExecution.Id + "-log")
+	}
+
+	ev.SetSubjectSource(clusterID)
+	ev.SetSource(clusterID)
+
+	if event.TestExecution != nil {
+		ev.SetSubjectTestCaseRun(&cdevents.Reference{
+			Id:     event.TestExecution.Id,
+			Source: clusterID,
+		})
+	}
+
+	ev.SetSubjectFormat("text/x-uri")
+	ev.SetSubjectOutputType("log")
+	if event.TestExecution != nil {
+		ev.SetSubjectUri(fmt.Sprintf("%s/tests/%ss/executions/%s/log-output", dashboardURI,
+			event.TestExecution.TestName, event.TestExecution.Id))
+	}
 
 	return ev, nil
 }
