@@ -5,18 +5,73 @@
 [![License](https://img.shields.io/github/license/kubeshop/testkube-executor-jmeter)]()
 
 # Distributed JMeter Executor
-An extension of Jmeter Executor which can run the Jmeter Tests in distributed environment.
+An extension of JMeter Executor which can run the JMeter Tests in distributed mode by creating slave pods and distributing the test among them.
 
 ## What is an Executor?
 
 Executor is nothing more than a program wrapped into Docker container which gets JSON (testube.Execution) OpenAPI based document as an input and returns a stream of JSON output lines (testkube.ExecutorOutput),
 where each output line is simply wrapped in this JSON, similar to the structured logging idea.
 
+## Features
+This executor is an extension of JMeter executor and has all the features of JMeter executor. In addition to that, it has the following features:
+* Can run JMeter tests in distributed mode by creating slave pods and distributing the test among them.
+* Supports defining plugins for a test in a git repo by placing plugins in a directory named `plugins` in the test folder.
+* Supports overriding JMeter `user.properties` file by placing a custom `user.properties` file in the test folder.
 
-## Intro
+## Usage
 
-It's basic Distributed JMeter executor which is able to run simple JMeter scenarios in distributed environments.
-Please define your JMeter file as file (string, or git file). 
+### Supported Environment Variables
+
+1. **MASTER_OVERRIDE_JVM_ARGS / SLAVES_OVERRIDE_JVM_ARGS**: Used to override default memory options for JMeter master/slaves. Example: `MASTER_OVERRIDE_JVM_ARGS=-Xmn256m -Xms512m -Xmx512m`.
+
+2. **SLAVES_COUNT**: Specifies the number of slave pods required for Distributed JMeter tests. Example: `SLAVES_COUNT=3`. Default value of `SLAVES_COUNT` is 1.
+
+3. **MASTER_ADDITIONAL_JVM_ARGS / SLAVES_ADDITIONAL_JMETER_ARGS**: Allows exporting additional JVM arguments for slaves/master. Example: `MASTER_ADDITIONAL_JVM_ARGS=-Xmx1024m -Xms512m -XX:MaxMetaspaceSize=256m`.
+
+4. **SLAVES_ADDITIONAL_JMETER_ARGS**: Provides additional JVM arguments for JMeter server / slaves. Example: `SLAVES_ADDITIONAL_JMETER_ARGS=jmeter-server -Jserver.rmi.ssl.disable=true -Dserver_port=60000`.
+
+### Guide
+
+Below guide will provide you the details about how to run a Jmeter test in distributed environment.
+
+1. File option:
+
+   When you provide a test (.jmx) file to `Distributed JMeter ( JMeter in distributed mode )`,
+   the executor of `Distributed JMeter` will spawn number of slaves pods specified by user through `SLAVES_COUNT` environment variable as described above and run the test on all the slave pods.
+
+2. Git Option:
+   Using Git flow of the executor we can have use advanced features of `Distributed JMeter` executor which is not possible with JMeter executor:
+
+    - Additional files required by a particular test like a CSV or JSON file can be provided through git repo.
+      There is an example of using a CSV file by test (.jmx) file in the `example` folder of `Distributed JMeter`.
+    - Dynamic plugins required for a test by keeping the plugins inside the test folder in a directory named `plugins` in the git repo.
+    - Overriding the JMeter `user.properties` can be provided by using custom `user.properties` file in the git repo.
+
+
+For using the Git option and to avail all the above features, user should have the following directory structure in the git repo:
+
+   ```
+      github.com/`<username>/<reponame>`/---
+
+                                          |-test1/---
+                                                   |- testfile1.jmx
+                                                   |- userdata.csv ( or any other additional file )
+                                                   |- user.properties
+                                                   |- plugins/---
+                                                               |- plugin-manager.jar
+                                                               |- <jar file of any other required plugins to run test1>
+
+                                          |-test2/---
+                                                   |- testfile2.jmx
+                                                   |- userdata.json ( or any other additional file )
+                                                   |- user.properties
+                                                   |- plugins/---
+                                                               |- plugin-manager.jar
+                                                               |- <jar file of any other required plugins to run test2>
+
+   ```
+
+For additional info, see the [GitFlow Example test for Distributed JMeter](./examples/gitflow/README.md).
 
 ## Local development
 
@@ -31,7 +86,7 @@ Make sure the following tools are installed on your machine and available in you
 3. Create an execution JSON file and save it as a file named `execution.json` based on the template below (best practice is to save it in the `temp/` folder in the project root because it is git-ignored)
     ```json
     {
-      "id": "jmeter-test",
+      "id": "jmeterd-test",
       "args": [],
       "variables": {},
       "content": {
@@ -104,53 +159,3 @@ The following steps need to be executed in order for Testkube to use the new Exe
 5. Restart the API Server by running `kubectl rollout restart deployment testkube-api-server --namespace testkube`
 
 Testkube should now use the new image for the Executor and you can schedule a Test with your preferred method.
-
-### Supported Environment Variables
-
-1. **MASTER_OVERRIDE_JVM_ARGS / SLAVES_OVERRIDE_JVM_ARGS**: Used to override default memory options for JMeter master/slaves. Example: `MASTER_OVERRIDE_JVM_ARGS=-Xmn256m -Xms512m -Xmx512m`.
-
-2. **SLAVES_COUNT**: Specifies the number of slave pods required for Distributed JMeter tests. Example: `SLAVES_COUNT=3`. Default value of `SLAVES_COUNT` is 1.
-
-3. **MASTER_ADDITIONAL_JVM_ARGS / SLAVES_ADDITIONAL_JMETER_ARGS**: Allows exporting additional JVM arguments for slaves/master. Example: `MASTER_ADDITIONAL_JVM_ARGS=-Xmx1024m -Xms512m -XX:MaxMetaspaceSize=256m`.
-
-4. **SLAVES_ADDITIONAL_JMETER_ARGS**: Provides additional JVM arguments for JMeter server / slaves. Example: `SLAVES_ADDITIONAL_JMETER_ARGS=jmeter-server -Jserver.rmi.ssl.disable=true -Dserver_port=60000`.
-
-
-Below guide will provide you the details about how to run a Jmeter test in distributed environment.
-
-1. File option:
-
-   When you provide a test (.jmx) file to `Distributed JMeter ( Jmeter in distributed environment )`, the executor of `Distributed JMeter` will spawn number of slaves pods specified by user through `SLAVES_COUNT` environment variable as desribed above and run the test on all the slave pods.
-
-2. Git Option:
-   Using Git flow of the executor we can have following benifits of `Distributed JMeter` executor which is not possible with JMeter executor:
-
-   - Additional file required by a particular test like a CSV or JSON file can be provided through git repo.
-      There is an example of using a CSV file by test (.jmx) file in the `example` folder of `Distributed JMeter`.
-   - Dynamic plugins required for a test by keeping the plugins inside the test folder in a directory named as `plugins` in the git repo.
-   - Custom values of the paramters present in `user.properties` can be provided by using custom `user.properties` file in the git repo.
-
-
-   For using the Git option and to avail all the above features, user should have the following directory structure in the git repo:
-
-   ```
-      github.com/`<username>/<reponame>`/---
-
-                                          |-test1/---
-                                                   |- testfile1.jmx
-                                                   |- userdata.csv ( or any other additional file )
-                                                   |- user.properties
-                                                   |- plugins/---
-                                                               |- plugin-manager.jar
-                                                               |- <jar file of any other required plugins to run test1>
-
-                                          |-test2/---
-                                                   |- testfile2.jmx
-                                                   |- userdata.json ( or any other additional file )
-                                                   |- user.properties
-                                                   |- plugins/---
-                                                               |- plugin-manager.jar
-                                                               |- <jar file of any other required plugins to run test2>
-
-   ```
-
