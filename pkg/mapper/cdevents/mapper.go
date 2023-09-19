@@ -235,7 +235,7 @@ func MapTestkubeLogToCDEvent(event testkube.Event, clusterID, dashboardURI strin
 	ev.SetSubjectFormat("text/x-uri")
 	ev.SetSubjectOutputType("log")
 	if event.TestExecution != nil {
-		ev.SetSubjectUri(fmt.Sprintf("%s/tests/%ss/executions/%s/log-output", dashboardURI,
+		ev.SetSubjectUri(fmt.Sprintf("%s/tests/%s/executions/%s/log-output", dashboardURI,
 			event.TestExecution.TestName, event.TestExecution.Id))
 	}
 
