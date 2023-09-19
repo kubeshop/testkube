@@ -74,7 +74,7 @@ Use Visuals: Utilize the visual element test status indicators to make it easier
 
 Test Grouping: Group related tests logically, making it easier for users to navigate and understand the status of different parts of your software services.
 
-Real-Time Updates: Ensure that incident update are added in real-time to reflect the most current information.
+Real-Time Updates: Ensure that incident updates are added in real-time to reflect the most current information.
 
 Incident History: Maintain a visible incident history or log so users can review past incidents and resolutions.
 
@@ -82,7 +82,7 @@ Incident History: Maintain a visible incident history or log so users can review
 
 Defined Roles and Responsibilities: Clearly define the roles and responsibilities of team members involved in incident response. This includes incident commanders, communicators, and technical responders.
 
-Incident Severity Levels: Establish a clear and consistent system for categorizing incident severity levels. This helps prioritize response efforts. The levels provided by Testkube are: critical, major, minor, low, info.
+Incident Severity Levels: Establish a clear and consistent system for categorizing incident severity levels. This helps prioritize response efforts. The levels provided by Testkube are: critical, major, minor, low, and info.
 
 Communication Plan: Develop a communication plan that outlines how and when to communicate with stakeholders during incidents. Ensure that communication is timely, transparent, and accurate.
 
