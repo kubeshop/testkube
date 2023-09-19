@@ -141,6 +141,8 @@ func TestService_Run(t *testing.T) {
 
 	fakeTestkubeClientset := faketestkube.NewSimpleClientset()
 	fakeClientset := fake.NewSimpleClientset()
+	eventBus := bus.NewEventBusMock()
+	metrics := metrics.NewMetrics()
 	s := NewService(
 		sched,
 		fakeClientset,
@@ -153,6 +155,9 @@ func TestService_Run(t *testing.T) {
 		testLogger,
 		configMapConfig,
 		mockExecutorsClient,
+		mockExecutor,
+		eventBus,
+		metrics,
 		WithClusterID(testClusterID),
 		WithIdentifier(testIdentifier),
 		WithScraperInterval(50*time.Millisecond),
@@ -167,12 +172,13 @@ func TestService_Run(t *testing.T) {
 	testTrigger := testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace, Name: "test-trigger-1"},
 		Spec: testtriggersv1.TestTriggerSpec{
-			Resource:         "pod",
-			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-pod"},
-			Event:            "created",
-			Action:           "run",
-			Execution:        "test",
-			TestSelector:     testtriggersv1.TestTriggerSelector{Name: "some-test"},
+			Resource:          "pod",
+			ResourceSelector:  testtriggersv1.TestTriggerSelector{Name: "test-pod"},
+			Event:             "created",
+			Action:            "run",
+			Execution:         "test",
+			ConcurrencyPolicy: "allow",
+			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
 		},
 	}
 	createdTestTrigger, err := fakeTestkubeClientset.TestsV1().TestTriggers(testNamespace).Create(ctx, &testTrigger, metav1.CreateOptions{})

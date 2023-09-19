@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
@@ -19,6 +20,7 @@ type triggerStatus struct {
 	lastExecutionFinished *time.Time
 	testExecutionIDs      []string
 	testSuiteExecutionIDs []string
+	sync.RWMutex
 }
 
 func newTriggerStatus(testTrigger *testtriggersv1.TestTrigger) *triggerStatus {
@@ -26,20 +28,52 @@ func newTriggerStatus(testTrigger *testtriggersv1.TestTrigger) *triggerStatus {
 }
 
 func (s *triggerStatus) hasActiveTests() bool {
+	defer s.RUnlock()
+
+	s.RLock()
 	return len(s.testExecutionIDs) > 0 || len(s.testSuiteExecutionIDs) > 0
 }
 
+func (s *triggerStatus) getExecutionIDs() []string {
+	defer s.RUnlock()
+
+	s.RLock()
+	executionIDs := make([]string, len(s.testExecutionIDs))
+	copy(executionIDs, s.testExecutionIDs)
+
+	return executionIDs
+}
+
+func (s *triggerStatus) getTestSuiteExecutionIDs() []string {
+	defer s.RUnlock()
+
+	s.RLock()
+	testSuiteExecutionIDs := make([]string, len(s.testSuiteExecutionIDs))
+	copy(testSuiteExecutionIDs, s.testSuiteExecutionIDs)
+
+	return testSuiteExecutionIDs
+}
+
 func (s *triggerStatus) start() {
+	defer s.Unlock()
+
+	s.Lock()
 	now := time.Now()
 	s.lastExecutionStarted = &now
 	s.lastExecutionFinished = nil
 }
 
 func (s *triggerStatus) addExecutionID(id string) {
+	defer s.Unlock()
+
+	s.Lock()
 	s.testExecutionIDs = append(s.testExecutionIDs, id)
 }
 
 func (s *triggerStatus) removeExecutionID(targetID string) {
+	defer s.Unlock()
+
+	s.Lock()
 	for i, id := range s.testExecutionIDs {
 		if id == targetID {
 			s.testExecutionIDs = append(s.testExecutionIDs[:i], s.testExecutionIDs[i+1:]...)
@@ -48,10 +82,16 @@ func (s *triggerStatus) removeExecutionID(targetID string) {
 }
 
 func (s *triggerStatus) addTestSuiteExecutionID(id string) {
+	defer s.Unlock()
+
+	s.Lock()
 	s.testSuiteExecutionIDs = append(s.testSuiteExecutionIDs, id)
 }
 
 func (s *triggerStatus) removeTestSuiteExecutionID(targetID string) {
+	defer s.Unlock()
+
+	s.Lock()
 	for i, id := range s.testSuiteExecutionIDs {
 		if id == targetID {
 			s.testSuiteExecutionIDs = append(s.testSuiteExecutionIDs[:i], s.testSuiteExecutionIDs[i+1:]...)
@@ -60,10 +100,11 @@ func (s *triggerStatus) removeTestSuiteExecutionID(targetID string) {
 }
 
 func (s *triggerStatus) done() {
+	defer s.Unlock()
+
+	s.Lock()
 	now := time.Now()
 	s.lastExecutionFinished = &now
-	s.testExecutionIDs = nil
-	s.testSuiteExecutionIDs = nil
 }
 
 func (s *Service) getStatusForTrigger(t *testtriggersv1.TestTrigger) *triggerStatus {

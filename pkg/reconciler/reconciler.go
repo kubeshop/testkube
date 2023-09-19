@@ -94,7 +94,7 @@ OuterLoop:
 
 			errMessage := errTestkubeAPICrahsed.Error()
 			id := execution.Id
-			pods, err := executor.GetJobPods(ctx, client.k8sclient.CoreV1().Pods(client.namespace), id, 1, 1)
+			pods, err := executor.GetJobPods(ctx, client.k8sclient.CoreV1().Pods(client.namespace), id, 1, 10)
 			if err == nil {
 			ExecutorLoop:
 				for _, pod := range pods.Items {
@@ -119,7 +119,7 @@ OuterLoop:
 
 				if supportArtifacts && execution.ArtifactRequest != nil && execution.ArtifactRequest.StorageClassName != "" {
 					id = execution.Id + "-scraper"
-					pods, err = executor.GetJobPods(ctx, client.k8sclient.CoreV1().Pods(client.namespace), id, 1, 1)
+					pods, err = executor.GetJobPods(ctx, client.k8sclient.CoreV1().Pods(client.namespace), id, 1, 10)
 					if err == nil {
 					ScraperLoop:
 						for _, pod := range pods.Items {
