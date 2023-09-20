@@ -135,6 +135,12 @@ func (client *Client) getSlavePodConfiguration(currentSlavesCount int) (*v1.Pod,
 	return &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: podName,
+			Labels: map[string]string{
+				// Execution Id is the only unique field in case of multiple runs of the same test
+				// So this is the only field which can tag the slave pods to actual job of jmeterd executor
+				"testkube.io/managed-by": client.execution.Id,
+				"testkube.io/test-name":  client.execution.TestName,
+			},
 		},
 		Spec: v1.PodSpec{
 			RestartPolicy: v1.RestartPolicyAlways,
