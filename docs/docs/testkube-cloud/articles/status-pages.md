@@ -156,7 +156,7 @@ Training: Ensure that team members involved in incident response are adequately 
 
 Stakeholder Awareness: Promote awareness of the status page among your stakeholders, including both internal teams and external users.
 
-Feedback Loop: Encourage users to provide feedback on the status page's usefulness and clarity. Use this feedback to make improvements.
+Feedback Loop: Encourage your users to provide feedback on the status page's usefulness and clarity. Use this feedback to make improvements.
 
 ### Custom Slugs Configuration
 
