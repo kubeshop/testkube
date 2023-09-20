@@ -28,8 +28,11 @@ Creating Your First Status Page
 <!-- TODO: add screenshot of status page editing>
 <!-->
 
-1. Provide a unique name for your status page.
-2. Fill out all the required fields - add services, configure the timeline, etc.
+1. Provide a unique name and description for your status page.
+2. Choose a time scale for the status page. This will define the aggregation period of the test execution results.
+3. Add services with tests.
+4. Configure visibility. Public status pages will be available without any kind of authentication.
+5. Save changes by clicking the "Save" button on top.
 
 ## Managing Services
 
@@ -40,15 +43,50 @@ Services represent the different parts of your software project that you want to
 
 To add and configure a service:
 
-1. In your status page, click "Add Service."
-2. Name the service.
-3. Add relevant tests.
+1. In the services section of the status page, type the chosen name of your service into the "Add a service" field.
+2. Choose the relevant tests from the dropdown.
+3. Drag and drop to order them.
+
+## Visualising Service Statuses
+
+<!-- TODO: add screenshot of top part of a status page>
+<!-->
+
+The Status Page rendered is unique for each Testkube environment. You can only have one Status Page per environment, so make sure the tests added offer an accurate representation of the status of the services. On the very top of the screen you will see the name of your Status Page and the given description. No details of your Testkube environment or organization will be published on this page, so this is where they need to be pointed out for efficient communication with your users.
+
+<!-- TODO: add screenshot of a service box>
+<!-->
+
+Below that you will see a list of the services with multiple ways to represent their state. On the top left is the name of the service. Top right is current status - this is calculated based on the last bar of the chart below. The possible values are:
+
+* Operational (green): all tests passed in last instance of the configured time scale.
+* Partial Outage (orange): at least one test failed and one test succeeded in last instance of the configured time scale.
+* Major Outage (red): all tests failed in last instance of the configured time scale.
+* Unknown (grey): no data at all, or some tests were not executed in last instance of the configured time scale.
+
+Another number is Operability. This is the percentage of successful test executions compared to all test executions in the timeline covered. Tests aborted or still running are not considered succesful tests.
+
+Below this, there is a color-coded visualization of the test execution results. The time covered by each bar is defined by the configured time scale. On hover you will see each bar and the test execution results in that time frame. The end date for this chart is the current date. The start date is either three months or three days before the current date, depending on the time scale. The time scale is not configurable in this view, only in the management view. The colors are similar to the service status colors:
+
+* Red: all tests failed in the time range of the bar.
+* Orange: at least one test failed and one test passed in the time range of the bar.
+* Green: all tests succeeded in the time range of the bar.
+* Grey: at least one of the tests configured in the service didn't run in the time range of the bar.
+
+On hover, you will see exactly which test failed, passed and did not run, with the same colors:
+
+* Red: all executions failed
+* Orange: at least one execution failed and one execution succeeded
+* Green: all executions succeeded
+* Grey: no executions
+
+Make sure the names of the tests are easily understood by your users, as they will be public once you publish this page. So that the status of your service will be always reflected, set up scheduled runs of your tests.
 
 ## Incidents
 
 Testkube Status Pages streamlines the incident management processes by providing a central platform for incident tracking, communication, and documentation. It is a critical aspect of Testkube Status Pages, and it involves the communication processes and procedures for detecting, reporting, and resolving issues or incidents that affect the availability or performance of your software or services. This helps teams respond to incidents more efficiently, maintain transparency with stakeholders, and continuously improve their incident response procedures to ensure the reliability of their software or services.
 
-In the first released phase, Incidents are simple objects responsible for communication between the service providers and their users. Managing them is as easy as creating them via the Status Pages management page. 
+Incidents are simple objects responsible for communication between the service providers and their users. Managing them is as easy as creating them via the Status Pages management page.
 
 <!-- TODO: add screenshot of Incident management page>
 <!-->
@@ -57,6 +95,20 @@ They will be shown at the bottom, similar to a news feed.
 
 <!-- TODO: add screenshot of published Incident>
 <!-->
+
+On the top of each individual incident there is the start date. The incidents are ordered by this, with the latest incident on top. The other relevant dates, for example when it was created, updated and resolved are shown at the very bottom. The end date can be left intentionally empty, signifying that this incident has not been resolved.
+
+The title of the incident will be colored based on the configured severity:
+
+* critical: red
+* major: red
+* minor: orange
+* low: yellow
+* info: white
+
+The interpretation of the severity is up to the decision of the team, just make sure everyone is well-informed and has agreed to it.
+
+Incidents can have three different states depending on the visibility: draft, published and archived. Only published incidents are visible in this view.
 
 ## Collaboration and Access Control
 
