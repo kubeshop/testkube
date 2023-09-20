@@ -14,7 +14,8 @@ type Executor struct {
 	// ExecutorType one of \"rest\" for rest openapi based executors or \"job\" which will be default runners for testkube soon
 	ExecutorType string `json:"executorType,omitempty"`
 	// Image for kube-job
-	Image string `json:"image,omitempty"`
+	Image  string      `json:"image,omitempty"`
+	Slaves *SlavesMeta `json:"slaves,omitempty"`
 	// container image pull secrets
 	ImagePullSecrets []LocalObjectReference `json:"imagePullSecrets,omitempty"`
 	// executor image command

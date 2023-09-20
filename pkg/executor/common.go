@@ -35,6 +35,8 @@ const (
 	GitUsernameSecretName = "git-username"
 	// GitTokenSecretName is git token secret name
 	GitTokenSecretName = "git-token"
+	// SlavesConfigsEnv is slave configs for creating slaves in executor
+	SlavesConfigsEnv = "RUNNER_SLAVES_CONFIGS"
 )
 
 var RunnerEnvVars = []corev1.EnvVar{
@@ -107,6 +109,24 @@ var RunnerEnvVars = []corev1.EnvVar{
 		Name:  "CI",
 		Value: "1",
 	},
+}
+
+type SlavesConfigs struct {
+	Images SlaveImages `json:"images"`
+}
+
+type SlaveImages struct {
+	Init  string `json:"init"`
+	Slave string `json:"slave"`
+}
+
+func GetSlavesConfigs(initImage string, slavesMeta executorv1.SlavesMeta) SlavesConfigs {
+	return SlavesConfigs{
+		Images: SlaveImages{
+			Init:  initImage,
+			Slave: slavesMeta.Image,
+		},
+	}
 }
 
 func getOr(key, defaultVal string) string {
@@ -354,6 +374,7 @@ func SyncDefaultExecutors(
 				Types:        executor.Executor.Types,
 				ExecutorType: executorv1.ExecutorType(executor.Executor.ExecutorType),
 				Image:        executor.Executor.Image,
+				Slaves:       executorsmapper.MapSlavesConfigsToCRD(executor.Executor.Slaves),
 				Command:      executor.Executor.Command,
 				Args:         executor.Executor.Args,
 				Features:     executorsmapper.MapFeaturesToCRD(executor.Executor.Features),
