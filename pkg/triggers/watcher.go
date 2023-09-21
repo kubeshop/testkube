@@ -300,7 +300,7 @@ func (s *Service) checkExecutionPodStatus(ctx context.Context, executionID strin
 		}
 
 		if errorMessage != "" {
-			s.logger.Infow("execution pod failed with error message", "executionId", execution.Id, "message", execution.ExecutionResult.ErrorMessage)
+			s.logger.Infow("execution pod failed with error message", "executionId", executionID, "message", execution.ExecutionResult.ErrorMessage)
 			execution.ExecutionResult.Error()
 			execution.ExecutionResult.ErrorMessage = errorMessage
 			err = s.resultRepository.UpdateResult(ctx, executionID, execution)
