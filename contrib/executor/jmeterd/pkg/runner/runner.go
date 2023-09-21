@@ -177,7 +177,6 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	if err != nil {
 		return *result.WithErrors(errors.Wrap(err, "error creating slaves")), nil
 	}
-	defer slavesClient.DeleteSlaves(ctx, slavesNameIpMap)
 
 	args = append(args, fmt.Sprintf("-R %v", slaves.GetSlavesIpString(slavesNameIpMap)))
 

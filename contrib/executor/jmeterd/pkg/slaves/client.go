@@ -3,7 +3,6 @@ package slaves
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -23,6 +22,8 @@ import (
 
 const (
 	podsTimeout = 5 * time.Minute
+	job         = "Job"
+	batchV1     = "batch/v1"
 )
 
 type Interface interface {
@@ -131,13 +132,27 @@ func (client *Client) getSlavePodConfiguration(ctx context.Context, currentSlave
 		return nil, err
 	}
 
-	podName := ValidateAndGetSlavePodName(client.execution.TestName, client.execution.Id, currentSlavesCount)
+	podName := ValidateAndGetSlavePodName(client.execution.Name, client.execution.Id, currentSlavesCount)
 	if err != nil {
 		return nil, err
 	}
+
+	executorJob, err := client.clientSet.BatchV1().Jobs(client.namespace).Get(ctx, client.execution.Id, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
 	return &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: podName,
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					Kind:       job,
+					APIVersion: batchV1,
+					Name:       executorJob.Name,
+					UID:        executorJob.UID,
+				},
+			},
 		},
 		Spec: v1.PodSpec{
 			RestartPolicy: v1.RestartPolicyAlways,
@@ -209,18 +224,4 @@ func (client *Client) getSlavePodConfiguration(ctx context.Context, currentSlave
 			},
 		},
 	}, nil
-}
-
-// DeleteSlaves do the cleanup slaves pods after execution of test
-func (client *Client) DeleteSlaves(ctx context.Context, slaveNameIpMap map[string]string) error {
-	for slaveName := range slaveNameIpMap {
-		output.PrintLog(fmt.Sprintf("Deleting slave %v", slaveName))
-		err := client.clientSet.CoreV1().Pods(client.namespace).Delete(ctx, slaveName, metav1.DeleteOptions{})
-		if err != nil {
-			output.PrintLogf("Error deleting slave pods %v", err.Error())
-			return err
-		}
-
-	}
-	return nil
 }
