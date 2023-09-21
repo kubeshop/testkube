@@ -231,12 +231,12 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 		UpdateFunc: func(oldObj, newObj any) {
 			oldPod, ok := oldObj.(*corev1.Pod)
 			if !ok {
-				s.logger.Errorf("failed to process create pod event due to it being an unexpected type, received type %+v", oldObj)
+				s.logger.Errorf("failed to process update pod event due to it being an unexpected type, received type %+v", oldObj)
 				return
 			}
 			if inPast(oldPod.CreationTimestamp.Time, s.watchFromDate) {
 				s.logger.Debugf(
-					"trigger service: watcher component: no-op create trigger: pod %s/%s was created in the past",
+					"trigger service: watcher component: no-op update trigger: pod %s/%s was updated in the past",
 					oldPod.Namespace, oldPod.Name,
 				)
 				return
@@ -244,12 +244,12 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 
 			newPod, ok := newObj.(*corev1.Pod)
 			if !ok {
-				s.logger.Errorf("failed to process create pod event due to it being an unexpected type, received type %+v", newObj)
+				s.logger.Errorf("failed to process update pod event due to it being an unexpected type, received type %+v", newObj)
 				return
 			}
 			if inPast(newPod.CreationTimestamp.Time, s.watchFromDate) {
 				s.logger.Debugf(
-					"trigger service: watcher component: no-op create trigger: pod %s/%s was created in the past",
+					"trigger service: watcher component: no-op update trigger: pod %s/%s was updated in the past",
 					newPod.Namespace, newPod.Name,
 				)
 				return
