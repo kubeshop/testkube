@@ -389,7 +389,7 @@ func GetPodErrorMessage(pod *corev1.Pod) string {
 	}
 
 	for _, initContainerStatus := range pod.Status.InitContainerStatuses {
-		if initContainerStatus.State.Terminated != nil &&
+		if initContainerStatus.State.Terminated != nil && initContainerStatus.State.Terminated.ExitCode != 0 &&
 			(initContainerStatus.State.Terminated.Message != "" || initContainerStatus.State.Terminated.Reason != "") {
 			if message != "" {
 				message += "\n"
@@ -402,7 +402,7 @@ func GetPodErrorMessage(pod *corev1.Pod) string {
 	}
 
 	for _, containerStatus := range pod.Status.ContainerStatuses {
-		if containerStatus.State.Terminated != nil &&
+		if containerStatus.State.Terminated != nil && containerStatus.State.Terminated.ExitCode != 0 &&
 			(containerStatus.State.Terminated.Message != "" || containerStatus.State.Terminated.Reason != "") {
 			if message != "" {
 				message += "\n"
