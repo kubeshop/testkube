@@ -51,15 +51,15 @@ func NewClient(k8sclient kubernetes.Interface, resultRepository result.Repositor
 func (client *Client) Run(ctx context.Context) error {
 	client.logger.Debugw("reconciliation started")
 
-	timer := time.NewTimer(reconciliationInterval)
+	ticker := time.NewTicker(reconciliationInterval)
 
 	defer func() {
-		timer.Stop()
+		ticker.Stop()
 	}()
 
 	for {
 		select {
-		case <-timer.C:
+		case <-ticker.C:
 			if err := client.ProcessTests(ctx); err != nil {
 				client.logger.Errorw("error processing tests statuses", "error", err)
 			}
