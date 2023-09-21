@@ -59,32 +59,32 @@ The Status Page rendered is unique for each Testkube environment. You can only h
 
 Below that you will see a list of the services with multiple ways to represent their state. On the top left is the name of the service. Top right is current status - this is calculated based on the last bar of the chart below. The possible values are:
 
-* Operational (green): all tests passed in last instance of the configured time scale.
-* Partial Outage (orange): at least one test failed and one test succeeded in last instance of the configured time scale.
-* Major Outage (red): all tests failed in last instance of the configured time scale.
-* Unknown (grey): no data at all, or some tests were not executed in last instance of the configured time scale.
+* Operational (green): All tests passed in the last instance of the configured time scale.
+* Partial Outage (orange): At least one test failed and one test succeeded in the last instance of the configured time scale.
+* Major Outage (red): All tests failed in the last instance of the configured time scale.
+* Unknown (grey): No data at all or some tests were not executed in the last instance of the configured time scale.
 
-Another number is Operability. This is the percentage of successful test executions compared to all test executions in the timeline covered. Tests aborted or still running are not considered succesful tests.
+Another value is Operability. This is the percentage of successful test executions compared to all test executions in the timeline covered. Tests aborted or still running are not considered successful tests.
 
 Below this, there is a color-coded visualization of the test execution results. The time covered by each bar is defined by the configured time scale. On hover you will see each bar and the test execution results in that time frame. The end date for this chart is the current date. The start date is either three months or three days before the current date, depending on the time scale. The time scale is not configurable in this view, only in the management view. The colors are similar to the service status colors:
 
-* Red: all tests failed in the time range of the bar.
-* Orange: at least one test failed and one test passed in the time range of the bar.
-* Green: all tests succeeded in the time range of the bar.
-* Grey: at least one of the tests configured in the service didn't run in the time range of the bar.
+* Red: All tests failed in the time range of the bar.
+* Orange: At least one test failed and one test passed in the time range of the bar.
+* Green: All tests succeeded in the time range of the bar.
+* Grey: At least one of the tests configured in the service didn't run in the time range of the bar.
 
-On hover, you will see exactly which test failed, passed and did not run, with the same colors:
+On hover, you will see exactly which tests failed, passed or did not run, with the same colors:
 
-* Red: all executions failed
-* Orange: at least one execution failed and one execution succeeded
-* Green: all executions succeeded
-* Grey: no executions
+* Red: All executions failed.
+* Orange: At least one execution failed and one execution succeeded.
+* Green: All executions succeeded.
+* Grey: No executions.
 
-Make sure the names of the tests are easily understood by your users, as they will be public once you publish this page. So that the status of your service will be always reflected, set up scheduled runs of your tests.
+Make sure the names of the tests are easily understood by your users, as they will be public once you publish this page. To ensure that the status of your service will be always reflected, set up scheduled runs of your tests.
 
 ## Incidents
 
-Testkube Status Pages streamlines the incident management processes by providing a central platform for incident tracking, communication, and documentation. It is a critical aspect of Testkube Status Pages, and it involves the communication processes and procedures for detecting, reporting, and resolving issues or incidents that affect the availability or performance of your software or services. This helps teams respond to incidents more efficiently, maintain transparency with stakeholders, and continuously improve their incident response procedures to ensure the reliability of their software or services.
+Testkube Status Pages streamlines the incident management processes by providing a central platform for incident tracking, communication, and documentation. This is a critical aspect of Testkube Status Pages and involves the communication processes and procedures for detecting, reporting, and resolving issues or incidents that affect the availability or performance of your software or services. This helps teams respond to incidents more efficiently, maintain transparency with stakeholders, and continuously improve their incident response procedures to ensure the reliability of their software or services.
 
 Incidents are simple objects responsible for communication between the service providers and their users. Managing them is as easy as creating them via the Status Pages management page.
 
