@@ -381,23 +381,55 @@ func SyncDefaultExecutors(
 	return images, nil
 }
 
-// GetPodErrorMessage return pod error message
+// GetPodErrorMessage returns pod error message
 func GetPodErrorMessage(pod *corev1.Pod) string {
-	if pod.Status.Message != "" {
-		return pod.Status.Message
+	message := ""
+	if pod.Status.Message != "" || pod.Status.Reason != "" {
+		message = fmt.Sprintf("pod message: %s reason: %s", pod.Status.Message, pod.Status.Reason)
 	}
 
 	for _, initContainerStatus := range pod.Status.InitContainerStatuses {
-		if initContainerStatus.State.Terminated != nil && initContainerStatus.State.Terminated.Message != "" {
-			return initContainerStatus.State.Terminated.Message
+		if initContainerStatus.State.Terminated != nil &&
+			(initContainerStatus.State.Terminated.Message != "" || initContainerStatus.State.Terminated.Reason != "") {
+			if message != "" {
+				message += "\n"
+			}
+
+			message += fmt.Sprintf("init container message: %s reason: %s", initContainerStatus.State.Terminated.Message,
+				initContainerStatus.State.Terminated.Reason)
+			return message
 		}
 	}
 
 	for _, containerStatus := range pod.Status.ContainerStatuses {
-		if containerStatus.State.Terminated != nil && containerStatus.State.Terminated.Message != "" {
-			return containerStatus.State.Terminated.Message
+		if containerStatus.State.Terminated != nil &&
+			(containerStatus.State.Terminated.Message != "" || containerStatus.State.Terminated.Reason != "") {
+			if message != "" {
+				message += "\n"
+			}
+
+			message += fmt.Sprintf("test container message: %s reason: %s", containerStatus.State.Terminated.Message,
+				containerStatus.State.Terminated.Reason)
+			return message
 		}
 	}
 
-	return ""
+	return message
+}
+
+// GetPodExitCode returns pod exit code
+func GetPodExitCode(pod *corev1.Pod) int32 {
+	for _, initContainerStatus := range pod.Status.InitContainerStatuses {
+		if initContainerStatus.State.Terminated != nil && initContainerStatus.State.Terminated.ExitCode != 0 {
+			return initContainerStatus.State.Terminated.ExitCode
+		}
+	}
+
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if containerStatus.State.Terminated != nil && containerStatus.State.Terminated.ExitCode != 0 {
+			return containerStatus.State.Terminated.ExitCode
+		}
+	}
+
+	return 0
 }
