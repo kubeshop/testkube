@@ -42,7 +42,8 @@ func (c RESTClient[T]) List() ([]T, error) {
 }
 
 func (c RESTClient[T]) Get(id string) (e T, err error) {
-	req, err := nethttp.NewRequest("GET", c.BaseUrl+c.Path+"/"+id, nil)
+	path := c.BaseUrl + c.Path + "/" + id
+	req, err := nethttp.NewRequest("GET", path, nil)
 	req.Header.Add("Authorization", "Bearer "+c.Token)
 	if err != nil {
 		return e, err
@@ -57,7 +58,7 @@ func (c RESTClient[T]) Get(id string) (e T, err error) {
 		if err != nil {
 			return e, fmt.Errorf("error creating %s: can't read response: %s", c.Path, err)
 		}
-		return e, fmt.Errorf("error creating %s: %s", c.Path, d)
+		return e, fmt.Errorf("error getting %s: %s", path, d)
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(&e)
