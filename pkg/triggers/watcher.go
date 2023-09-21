@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -25,6 +26,7 @@ import (
 	testkubeinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"
 	testkubeinformerv3 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v3"
 	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
+	"github.com/kubeshop/testkube/pkg/executor"
 )
 
 type k8sInformers struct {
@@ -224,6 +226,39 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching create pod event: %v", err)
 			}
+
+		},
+		UpdateFunc: func(oldObj, newObj any) {
+			oldPod, ok := oldObj.(*corev1.Pod)
+			if !ok {
+				s.logger.Errorf("failed to process create pod event due to it being an unexpected type, received type %+v", oldObj)
+				return
+			}
+			if inPast(oldPod.CreationTimestamp.Time, s.watchFromDate) {
+				s.logger.Debugf(
+					"trigger service: watcher component: no-op create trigger: pod %s/%s was created in the past",
+					oldPod.Namespace, oldPod.Name,
+				)
+				return
+			}
+
+			newPod, ok := newObj.(*corev1.Pod)
+			if !ok {
+				s.logger.Errorf("failed to process create pod event due to it being an unexpected type, received type %+v", newObj)
+				return
+			}
+			if inPast(newPod.CreationTimestamp.Time, s.watchFromDate) {
+				s.logger.Debugf(
+					"trigger service: watcher component: no-op create trigger: pod %s/%s was created in the past",
+					newPod.Namespace, newPod.Name,
+				)
+				return
+			}
+			if oldPod.Namespace == s.testkubeNamespace && oldPod.Labels["job-name"] != "" &&
+				newPod.Namespace == s.testkubeNamespace && newPod.Labels["job-name"] != "" &&
+				oldPod.Labels["job-name"] == newPod.Labels["job-name"] {
+				s.checkExecutionPodStatus(ctx, oldPod.Labels["job-name"], []*corev1.Pod{oldPod, newPod})
+			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			pod, ok := obj.(*corev1.Pod)
@@ -232,6 +267,9 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 				return
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: pod %s/%s deleted", pod.Namespace, pod.Name)
+			if pod.Namespace == s.testkubeNamespace && pod.Labels["job-name"] != "" {
+				s.checkExecutionPodStatus(ctx, pod.Labels["job-name"], []*corev1.Pod{pod})
+			}
 			event := newWatcherEvent(testtrigger.EventDeleted, pod, testtrigger.ResourcePod,
 				withConditionsGetter(getConditions(pod)), withAddressGetter(getAddrress(pod)))
 			if err := s.match(ctx, event); err != nil {
@@ -239,6 +277,41 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 			}
 		},
 	}
+}
+
+func (s *Service) checkExecutionPodStatus(ctx context.Context, executionID string, pods []*corev1.Pod) error {
+	execution, err := s.resultRepository.Get(ctx, executionID)
+	if err != nil {
+		s.logger.Errorf("get execution returned an error %v while looking for execution id: %s", err, executionID)
+		return err
+	}
+
+	if execution.ExecutionResult.IsRunning() || execution.ExecutionResult.IsQueued() {
+		errorMessage := ""
+		for _, pod := range pods {
+			if exitCode := executor.GetPodExitCode(pod); pod.Status.Phase == corev1.PodFailed || exitCode != 0 {
+				errorMessage = executor.GetPodErrorMessage(pod)
+				if errorMessage == "" {
+					errorMessage = fmt.Sprintf("execution pod %s failed with exit code %d", executionID, exitCode)
+				}
+
+				break
+			}
+		}
+
+		if errorMessage != "" {
+			s.logger.Infow("execution pod failed with error message", "executionId", execution.Id, "message", execution.ExecutionResult.ErrorMessage)
+			execution.ExecutionResult.Error()
+			execution.ExecutionResult.ErrorMessage = errorMessage
+			err = s.resultRepository.UpdateResult(ctx, executionID, execution)
+			if err != nil {
+				s.logger.Errorf("update execution result returned an error %v while storing for execution id: %s", err, executionID)
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (s *Service) deploymentEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {
