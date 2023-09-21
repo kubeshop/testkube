@@ -18,7 +18,7 @@ func NewInitCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "init",
-		Short:   "Install Helm chart registry in current kubectl context and update dependencies",
+		Short:   "Install Testkube Cloud Agent and connect to Testkube Cloud environment",
 		Aliases: []string{"install"},
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Info("WELCOME TO")
@@ -76,8 +76,11 @@ func NewInitCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&options.Chart, "chart", "kubeshop/testkube", "chart name (usually you don't need to change it)")
 	cmd.Flags().StringVar(&options.Name, "name", "testkube", "installation name (usually you don't need to change it)")
-	cmd.Flags().StringVar(&options.Namespace, "namespace", "testkube", "namespace where to install")
 	cmd.Flags().StringVar(&options.Values, "values", "", "path to Helm values file")
+
+	cmd.Flags().BoolVar(&options.MultiNamespace, "multi-namespace", false, "multi namespace mode")
+	cmd.Flags().BoolVar(&options.NoOperator, "no-operator", false, "should operator be installed (for more instances in multi namespace mode it should be set to true)")
+	cmd.Flags().StringVar(&options.Namespace, "namespace", "testkube", "namespace where to install")
 
 	cmd.Flags().StringVar(&options.CloudAgentToken, "agent-token", "", "Testkube Cloud agent key")
 	cmd.Flags().StringVar(&options.CloudOrgId, "org-id", "", "Testkube Cloud organization id")
