@@ -32,4 +32,6 @@ type Test struct {
 	Uploads          []string          `json:"uploads,omitempty"`
 	ExecutionRequest *ExecutionRequest `json:"executionRequest,omitempty"`
 	Status           *TestStatus       `json:"status,omitempty"`
+	// true means that test is offline and cannot be executed
+	ReadOnly bool `json:"readOnly,omitempty"`
 }
