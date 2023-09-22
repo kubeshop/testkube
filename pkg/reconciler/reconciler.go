@@ -24,7 +24,7 @@ const (
 )
 
 var (
-	errTestkubeAPICrahsed = errors.New("testkube api server crashed")
+	errTestAbnoramallyTerminated = errors.New("test execution was abnormally terminated")
 )
 
 type Client struct {
@@ -92,7 +92,7 @@ OuterLoop:
 				client.logger.Errorw("error getting executor by test type", "error", err)
 			}
 
-			errMessage := errTestkubeAPICrahsed.Error()
+			errMessage := errTestAbnoramallyTerminated.Error()
 			id := execution.Id
 			pods, err := executor.GetJobPods(ctx, client.k8sclient.CoreV1().Pods(client.namespace), id, 1, 10)
 			if err == nil {
@@ -205,7 +205,7 @@ OuterLoop:
 						execution.ExecuteStepResults[i].Execute[j].Execution.IsRunning() {
 						execution.ExecuteStepResults[i].Execute[j].Execution.ExecutionResult = &testkube.ExecutionResult{
 							Status:       tests.MapTestSuiteExecutionStatusToExecutionStatus(status),
-							ErrorMessage: errTestkubeAPICrahsed.Error(),
+							ErrorMessage: errTestAbnoramallyTerminated.Error(),
 						}
 					}
 				}
