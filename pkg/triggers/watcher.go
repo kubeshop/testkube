@@ -2,7 +2,6 @@ package triggers
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -291,10 +290,6 @@ func (s *Service) checkExecutionPodStatus(ctx context.Context, executionID strin
 		for _, pod := range pods {
 			if exitCode := executor.GetPodExitCode(pod); pod.Status.Phase == corev1.PodFailed || exitCode != 0 {
 				errorMessage = executor.GetPodErrorMessage(ctx, s.clientset, pod)
-				if errorMessage == "" {
-					errorMessage = fmt.Sprintf("execution pod %s failed with exit code %d", executionID, exitCode)
-				}
-
 				break
 			}
 		}
