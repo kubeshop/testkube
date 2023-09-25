@@ -215,10 +215,6 @@ func (e MockExecutor) Execute(ctx context.Context, execution *testkube.Execution
 	panic("not implemented")
 }
 
-func (e MockExecutor) ExecuteSync(ctx context.Context, execution *testkube.Execution, options client.ExecuteOptions) (*testkube.ExecutionResult, error) {
-	panic("not implemented")
-}
-
 func (e MockExecutor) Abort(ctx context.Context, execution *testkube.Execution) (*testkube.ExecutionResult, error) {
 	panic("not implemented")
 }

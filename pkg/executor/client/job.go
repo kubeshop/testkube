@@ -197,7 +197,9 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 	if err != nil {
 		return result.Err(err), err
 	}
-	go c.MonitorJobForTimeout(ctx, execution.Id)
+	if !options.Sync {
+		go c.MonitorJobForTimeout(ctx, execution.Id)
+	}
 
 	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
 	pods, err := executor.GetJobPods(ctx, podsClient, execution.Id, 1, 10)
@@ -209,7 +211,12 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
-			// async wait for complete status or error
+			// for sync block and complete
+			if options.Sync {
+				return c.updateResultsFromPod(ctx, pod, l, execution, options.Request.NegativeTest)
+			}
+
+			// for async start goroutine and return in progress job
 			go func(pod corev1.Pod) {
 				_, err := c.updateResultsFromPod(ctx, pod, l, execution, options.Request.NegativeTest)
 				if err != nil {
@@ -224,38 +231,6 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 	l.Debugw("no pods was found", "totalPodsCount", len(pods.Items))
 
 	return testkube.NewRunningExecutionResult(), nil
-}
-
-// ExecuteSync starts new external test execution, reads data and returns ID
-// Execution is started synchronously client will be blocked
-func (c *JobExecutor) ExecuteSync(ctx context.Context, execution *testkube.Execution, options ExecuteOptions) (result *testkube.ExecutionResult, err error) {
-	result = testkube.NewRunningExecutionResult()
-	execution.ExecutionResult = result
-
-	err = c.CreateJob(ctx, *execution, options)
-	if err != nil {
-		return result.Err(err), err
-	}
-
-	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
-	pods, err := executor.GetJobPods(ctx, podsClient, execution.Id, 1, 10)
-	if err != nil {
-		return result.Err(err), err
-	}
-
-	l := c.Log.With("executionID", execution.Id, "type", "sync")
-
-	// get job pod and
-	for _, pod := range pods.Items {
-		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
-			return c.updateResultsFromPod(ctx, pod, l, execution, options.Request.NegativeTest)
-		}
-	}
-
-	l.Debugw("no pods was found", "totalPodsCount", len(pods.Items))
-
-	return
-
 }
 
 func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) {
@@ -333,11 +308,14 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 		}
 	}()
 
-	// wait for pod
-	l.Debug("poll immediate waiting for pod")
+	// wait for pod to be loggable
 	if err = wait.PollImmediate(pollInterval, c.podStartTimeout, executor.IsPodLoggable(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
 		l.Errorw("waiting for pod started error", "error", err)
-	} else if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
+	}
+
+	l.Debug("poll immediate waiting for pod")
+	// wait for pod
+	if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
 		// continue on poll err and try to get logs later
 		l.Errorw("waiting for pod complete error", "error", err)
 	}

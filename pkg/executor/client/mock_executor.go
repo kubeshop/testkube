@@ -9,7 +9,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-
 	testkube "github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	output "github.com/kubeshop/testkube/pkg/executor/output"
 )
@@ -65,21 +64,6 @@ func (m *MockExecutor) Execute(arg0 context.Context, arg1 *testkube.Execution, a
 func (mr *MockExecutorMockRecorder) Execute(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockExecutor)(nil).Execute), arg0, arg1, arg2)
-}
-
-// ExecuteSync mocks base method.
-func (m *MockExecutor) ExecuteSync(arg0 context.Context, arg1 *testkube.Execution, arg2 ExecuteOptions) (*testkube.ExecutionResult, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ExecuteSync", arg0, arg1, arg2)
-	ret0, _ := ret[0].(*testkube.ExecutionResult)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ExecuteSync indicates an expected call of ExecuteSync.
-func (mr *MockExecutorMockRecorder) ExecuteSync(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteSync", reflect.TypeOf((*MockExecutor)(nil).ExecuteSync), arg0, arg1, arg2)
 }
 
 // Logs mocks base method.
