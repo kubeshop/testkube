@@ -290,7 +290,7 @@ func (s *Service) checkExecutionPodStatus(ctx context.Context, executionID strin
 		errorMessage := ""
 		for _, pod := range pods {
 			if exitCode := executor.GetPodExitCode(pod); pod.Status.Phase == corev1.PodFailed || exitCode != 0 {
-				errorMessage = executor.GetPodErrorMessage(pod)
+				errorMessage = executor.GetPodErrorMessage(ctx, s.clientset, pod)
 				if errorMessage == "" {
 					errorMessage = fmt.Sprintf("execution pod %s failed with exit code %d", executionID, exitCode)
 				}

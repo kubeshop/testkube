@@ -339,7 +339,7 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	}
 
 	if execution.ExecutionResult.IsFailed() && execution.ExecutionResult.ErrorMessage == "" {
-		execution.ExecutionResult.ErrorMessage = executor.GetPodErrorMessage(&pod)
+		execution.ExecutionResult.ErrorMessage = executor.GetPodErrorMessage(ctx, c.ClientSet, &pod)
 	}
 
 	// saving result in the defer function
