@@ -454,18 +454,22 @@ func GetPodExitCode(pod *corev1.Pod) int32 {
 // GetPodEventsSummary returns pod events summary
 func GetPodEventsSummary(ctx context.Context, client kubernetes.Interface, pod *corev1.Pod) (string, error) {
 	message := ""
-	list, err := client.CoreV1().Events(pod.Namespace).List(ctx, metav1.ListOptions{LabelSelector: "job-name=" + pod.Name})
+	list, err := client.CoreV1().Events(pod.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return "", err
 	}
 
 	for _, item := range list.Items {
+		if item.InvolvedObject.Name != pod.Name {
+			continue
+		}
+
 		if message != "" {
 			message += "\n"
 		}
 
-		message += fmt.Sprintf("event type: %s, reason: %s, source: %v, message: %s",
-			item.Type, item.Reason, item.Source, item.Message)
+		message += fmt.Sprintf("event type: %s, reason: %s, message: %s",
+			item.Type, item.Reason, item.Message)
 	}
 
 	return message, nil
