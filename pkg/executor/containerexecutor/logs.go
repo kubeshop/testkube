@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"time"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -18,10 +17,8 @@ import (
 
 // TailJobLogs - locates logs for job pod(s)
 // These methods here are similar to Job executor, but they don't require the json structure.
-func TailJobLogs(ctx context.Context, log *zap.SugaredLogger, c kubernetes.Interface, namespace string, id string,
-	podStartTimeout time.Duration, logs chan []byte) (err error) {
-	podsClient := c.CoreV1().Pods(namespace)
-
+func (c *ContainerExecutor) TailJobLogs(ctx context.Context, id string, logs chan []byte) (err error) {
+	podsClient := c.clientSet.CoreV1().Pods(c.namespace)
 	pods, err := executor.GetJobPods(ctx, podsClient, id, 1, 10)
 	if err != nil {
 		close(logs)
@@ -31,13 +28,13 @@ func TailJobLogs(ctx context.Context, log *zap.SugaredLogger, c kubernetes.Inter
 	for _, pod := range pods.Items {
 		if pod.Labels["job-name"] == id {
 
-			l := log.With("podNamespace", pod.Namespace, "podName", pod.Name, "podStatus", pod.Status)
+			l := c.log.With("podNamespace", pod.Namespace, "podName", pod.Name, "podStatus", pod.Status)
 
 			switch pod.Status.Phase {
 
 			case corev1.PodRunning:
 				l.Debug("tailing pod logs: immediately")
-				return tailPodLogs(log, c, namespace, pod, logs)
+				return tailPodLogs(c.log, c.clientSet, c.namespace, pod, logs)
 
 			case corev1.PodFailed:
 				err := fmt.Errorf("can't get pod logs, pod failed: %s/%s", pod.Namespace, pod.Name)
@@ -46,13 +43,13 @@ func TailJobLogs(ctx context.Context, log *zap.SugaredLogger, c kubernetes.Inter
 
 			default:
 				l.Debugw("tailing job logs: waiting for pod to be ready")
-				if err = wait.PollImmediate(pollInterval, podStartTimeout, executor.IsPodLoggable(ctx, c, pod.Name, namespace)); err != nil {
+				if err = wait.PollImmediate(pollInterval, c.podStartTimeout, executor.IsPodLoggable(ctx, c.clientSet, pod.Name, c.namespace)); err != nil {
 					l.Errorw("poll immediate error when tailing logs", "error", err)
 					return err
 				}
 
 				l.Debug("tailing pod logs")
-				return tailPodLogs(log, c, namespace, pod, logs)
+				return tailPodLogs(c.log, c.clientSet, c.namespace, pod, logs)
 			}
 		}
 	}

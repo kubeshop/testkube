@@ -195,7 +195,7 @@ func (c *ContainerExecutor) Logs(ctx context.Context, id string) (out chan outpu
 		for _, podName := range ids {
 			logs := make(chan []byte)
 
-			if err := TailJobLogs(ctx, c.log, c.clientSet, c.namespace, podName, c.podStartTimeout, logs); err != nil {
+			if err := c.TailJobLogs(ctx, podName, logs); err != nil {
 				out <- output.NewOutputError(err)
 				return
 			}
@@ -229,10 +229,14 @@ func (c *ContainerExecutor) Execute(ctx context.Context, execution *testkube.Exe
 		return executionResult, err
 	}
 
-	l := c.log.With("executionID", execution.Id, "type", "async")
+	l := c.log.With("executionID", execution.Id, "sync", options.Sync)
 
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
+			if options.Sync {
+				return c.updateResultsFromPod(ctx, pod, l, execution, jobOptions)
+			}
+
 			// async wait for complete status or error
 			go func(pod corev1.Pod) {
 				_, err := c.updateResultsFromPod(ctx, pod, l, execution, jobOptions)
@@ -242,41 +246,6 @@ func (c *ContainerExecutor) Execute(ctx context.Context, execution *testkube.Exe
 			}(pod)
 
 			return executionResult, nil
-		}
-	}
-
-	l.Debugw("no pods was found", "totalPodsCount", len(pods.Items))
-
-	return execution.ExecutionResult, nil
-}
-
-// ExecuteSync starts new external test execution, reads data and returns ID
-// Execution is started synchronously client will be blocked
-func (c *ContainerExecutor) ExecuteSync(ctx context.Context, execution *testkube.Execution, options client.ExecuteOptions) (*testkube.ExecutionResult, error) {
-	executionResult := testkube.NewRunningExecutionResult()
-	execution.ExecutionResult = executionResult
-
-	jobOptions, err := c.createJob(ctx, *execution, options)
-	if err != nil {
-		execution.ExecutionResult.Err(err)
-		return execution.ExecutionResult, err
-	}
-
-	podsClient := c.clientSet.CoreV1().Pods(c.namespace)
-	pods, err := executor.GetJobPods(ctx, podsClient, execution.Id, 1, 10)
-	if err != nil {
-		execution.ExecutionResult.Err(err)
-		return execution.ExecutionResult, err
-	}
-
-	l := c.log.With("executionID", execution.Id, "type", "sync")
-
-	// get job pod and
-	for _, pod := range pods.Items {
-		podNotRunning := pod.Status.Phase != corev1.PodRunning
-		IsCorrectJob := pod.Labels["job-name"] == execution.Id
-		if podNotRunning && IsCorrectJob {
-			return c.updateResultsFromPod(ctx, pod, l, execution, jobOptions)
 		}
 	}
 

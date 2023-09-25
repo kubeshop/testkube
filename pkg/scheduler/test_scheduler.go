@@ -119,13 +119,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 
 func (s *Scheduler) startTestExecution(ctx context.Context, options client.ExecuteOptions, execution *testkube.Execution) (result *testkube.ExecutionResult, err error) {
 	executor := s.getExecutor(options.TestName)
-	if options.Sync {
-		result, err = executor.ExecuteSync(ctx, execution, options)
-	} else {
-		result, err = executor.Execute(ctx, execution, options)
-	}
-
-	return result, err
+	return executor.Execute(ctx, execution, options)
 }
 
 func (s *Scheduler) getExecutor(testName string) client.Executor {
