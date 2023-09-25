@@ -382,10 +382,15 @@ func SyncDefaultExecutors(
 }
 
 // GetPodErrorMessage returns pod error message
-func GetPodErrorMessage(pod *corev1.Pod) string {
+func GetPodErrorMessage(ctx context.Context, client kubernetes.Interface, pod *corev1.Pod) string {
 	message := ""
 	if pod.Status.Message != "" || pod.Status.Reason != "" {
 		message = fmt.Sprintf("pod message: %s reason: %s", pod.Status.Message, pod.Status.Reason)
+	}
+
+	events, err := GetPodEventsSummary(ctx, client, pod)
+	if err != nil {
+		log.DefaultLogger.Errorf("Error while getting pod events %s: %s", pod.Name, err.Error())
 	}
 
 	for _, initContainerStatus := range pod.Status.InitContainerStatuses {
@@ -397,6 +402,10 @@ func GetPodErrorMessage(pod *corev1.Pod) string {
 
 			message += fmt.Sprintf("init container message: %s reason: %s", initContainerStatus.State.Terminated.Message,
 				initContainerStatus.State.Terminated.Reason)
+			if events != "" {
+				message += "\n" + events
+			}
+
 			return message
 		}
 	}
@@ -410,8 +419,16 @@ func GetPodErrorMessage(pod *corev1.Pod) string {
 
 			message += fmt.Sprintf("test container message: %s reason: %s", containerStatus.State.Terminated.Message,
 				containerStatus.State.Terminated.Reason)
+			if events != "" {
+				message += "\n" + events
+			}
+
 			return message
 		}
+	}
+
+	if events != "" {
+		message += "\n" + events
 	}
 
 	return message
@@ -432,4 +449,24 @@ func GetPodExitCode(pod *corev1.Pod) int32 {
 	}
 
 	return 0
+}
+
+// GetPodEventsSummary returns pod events summary
+func GetPodEventsSummary(ctx context.Context, client kubernetes.Interface, pod *corev1.Pod) (string, error) {
+	message := ""
+	list, err := client.CoreV1().Events(pod.Namespace).List(ctx, metav1.ListOptions{LabelSelector: "job-name=" + pod.Name})
+	if err != nil {
+		return "", err
+	}
+
+	for _, item := range list.Items {
+		if message != "" {
+			message += "\n"
+		}
+
+		message += fmt.Sprintf("event type: %s, reason: %s, source: %v, message: %s",
+			item.Type, item.Reason, item.Source, item.Message)
+	}
+
+	return message, nil
 }

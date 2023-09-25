@@ -456,7 +456,7 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	execution.ExecutionResult.Output = output
 
 	if execution.ExecutionResult.IsFailed() && execution.ExecutionResult.ErrorMessage == "" {
-		execution.ExecutionResult.ErrorMessage = executor.GetPodErrorMessage(latestExecutorPod)
+		execution.ExecutionResult.ErrorMessage = executor.GetPodErrorMessage(ctx, c.clientSet, latestExecutorPod)
 	}
 
 	l.Infow("container execution completed saving result", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
