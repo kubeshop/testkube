@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -188,7 +189,6 @@ func (c *JobExecutor) Logs(ctx context.Context, id string) (out chan output.Outp
 }
 
 // Execute starts new external test execution, reads data and returns ID
-// Execution is started asynchronously client can check later for results
 func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution, options ExecuteOptions) (result *testkube.ExecutionResult, err error) {
 	result = testkube.NewRunningExecutionResult()
 	execution.ExecutionResult = result
@@ -312,6 +312,19 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	if err = wait.PollImmediate(pollInterval, c.podStartTimeout, executor.IsPodLoggable(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
 		l.Errorw("waiting for pod started error", "error", err)
 	}
+
+	go func() {
+		logs, err := c.Logs(ctx, execution.Id)
+		if err != nil {
+			l.Errorw("get logs error", "error", err)
+			return
+		}
+
+		for log := range logs {
+			// TODO send data to logs stream channel
+			fmt.Printf("%+v\n", log)
+		}
+	}()
 
 	l.Debug("poll immediate waiting for pod")
 	// wait for pod

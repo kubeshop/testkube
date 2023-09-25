@@ -2,6 +2,7 @@ package containerexecutor
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -211,7 +212,6 @@ func (c *ContainerExecutor) Logs(ctx context.Context, id string) (out chan outpu
 }
 
 // Execute starts new external test execution, reads data and returns ID
-// Execution is started asynchronously client can check later for results
 func (c *ContainerExecutor) Execute(ctx context.Context, execution *testkube.Execution, options client.ExecuteOptions) (*testkube.ExecutionResult, error) {
 	executionResult := testkube.NewRunningExecutionResult()
 	execution.ExecutionResult = executionResult
@@ -302,11 +302,27 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	// save stop time and final state
 	defer c.stopExecution(ctx, execution, execution.ExecutionResult)
 
-	// wait for pod
-	l.Debug("poll immediate waiting for executor pod")
+	// wait for pod to be loggable
 	if err = wait.PollImmediate(pollInterval, c.podStartTimeout, executor.IsPodLoggable(ctx, c.clientSet, executorPod.Name, c.namespace)); err != nil {
 		l.Errorw("waiting for executor pod started error", "error", err)
-	} else if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.clientSet, executorPod.Name, c.namespace)); err != nil {
+	}
+
+	go func() {
+		logs, err := c.Logs(ctx, execution.Id)
+		if err != nil {
+			l.Errorw("get logs error", "error", err)
+			return
+		}
+
+		for log := range logs {
+			// TODO send data to logs stream channel
+			fmt.Printf("%+v\n", log)
+		}
+	}()
+
+	l.Debug("poll immediate waiting for executor pod")
+	// wait for pod
+	if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.clientSet, executorPod.Name, c.namespace)); err != nil {
 		// continue on poll err and try to get logs later
 		l.Errorw("waiting for executor pod complete error", "error", err)
 	}
