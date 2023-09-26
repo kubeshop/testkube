@@ -1,6 +1,6 @@
 ## testkube cloud init
 
-Install Helm chart registry in current kubectl context and update dependencies
+Install Testkube Cloud Agent and connect to Testkube Cloud environment
 
 ```
 testkube cloud init [flags]
@@ -15,9 +15,11 @@ testkube cloud init [flags]
       --dry-run                    dry run mode - only print commands that would be executed
       --env-id string              Testkube Cloud environment id
   -h, --help                       help for init
+      --multi-namespace            multi namespace mode
       --name string                installation name (usually you don't need to change it) (default "testkube")
       --namespace string           namespace where to install (default "testkube")
       --no-confirm                 don't ask for confirmation - unatended installation mode
+      --no-operator                should operator be installed (for more instances in multi namespace mode it should be set to true)
       --org-id string              Testkube Cloud organization id
       --values string              path to Helm values file
 ```
