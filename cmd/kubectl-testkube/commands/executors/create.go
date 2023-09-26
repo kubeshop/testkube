@@ -1,6 +1,7 @@
 package executors
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/spf13/cobra"
@@ -17,6 +18,7 @@ func NewCreateExecutorCmd() *cobra.Command {
 		types, command, executorArgs, imagePullSecretNames, features, contentTypes          []string
 		name, executorType, image, uri, jobTemplate, iconURI, docsURI, jobTemplateReference string
 		labels, tooltips                                                                    map[string]string
+		update                                                                              bool
 	)
 
 	cmd := &cobra.Command{
@@ -40,7 +42,21 @@ func NewCreateExecutorCmd() *cobra.Command {
 
 				executor, _ := client.GetExecutor(name)
 				if name == executor.Name {
-					ui.Failf("Executor with name '%s' already exists in namespace %s", name, namespace)
+					if !update {
+						ok := ui.Confirm(fmt.Sprintf("Executor with name '%s' already exists in namespace %s, ", executor.Name, namespace) +
+							"do you want to overwrite it?")
+						if !ok {
+							ui.Failf("Executor creation was aborted")
+						}
+					}
+
+					options, err := NewUpdateExecutorOptionsFromFlags(cmd)
+					ui.ExitOnError("getting executor options", err)
+
+					_, err = client.UpdateExecutor(options)
+					ui.ExitOnError("updating executor "+name+" in namespace "+namespace, err)
+
+					ui.SuccessAndExit("Executor updated", name)
 				}
 			}
 
@@ -79,6 +95,7 @@ func NewCreateExecutorCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&docsURI, "docs-uri", "", "", "URI to executor docs")
 	cmd.Flags().StringArrayVar(&contentTypes, "content-type", []string{}, "list of supported content types for executor")
 	cmd.Flags().StringToStringVarP(&tooltips, "tooltip", "", nil, "tooltip key value pair: --tooltip key1=value1")
+	cmd.Flags().BoolVar(&update, "update", false, "update, if executor already exists")
 
 	return cmd
 }
