@@ -105,7 +105,11 @@ func NewCreateTestsCmd() *cobra.Command {
 				test, _ := client.GetTest(testName)
 
 				if testName == test.Name {
-					if !update {
+					if cmd.Flag("update").Changed {
+						if !update {
+							ui.Failf("Test with name '%s' already exists in namespace %s, ", testName, namespace)
+						}
+					} else {
 						ok := ui.Confirm(fmt.Sprintf("Test with name '%s' already exists in namespace %s, ", testName, namespace) +
 							"do you want to overwrite it?")
 						if !ok {

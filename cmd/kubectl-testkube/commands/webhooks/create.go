@@ -46,7 +46,11 @@ func NewCreateWebhookCmd() *cobra.Command {
 
 				webhook, _ := client.GetWebhook(name)
 				if name == webhook.Name {
-					if !update {
+					if cmd.Flag("update").Changed {
+						if !update {
+							ui.Failf("Webhook with name '%s' already exists in namespace %s, ", webhook.Name, namespace)
+						}
+					} else {
 						ok := ui.Confirm(fmt.Sprintf("Webhook with name '%s' already exists in namespace %s, ", webhook.Name, namespace) +
 							"do you want to overwrite it?")
 						if !ok {

@@ -53,7 +53,11 @@ func NewCreateTestSourceCmd() *cobra.Command {
 
 				testsource, _ := client.GetTestSource(name)
 				if name == testsource.Name {
-					if !update {
+					if cmd.Flag("update").Changed {
+						if !update {
+							ui.Failf("TestSource with name '%s' already exists in namespace %s, ", testsource.Name, namespace)
+						}
+					} else {
 						ok := ui.Confirm(fmt.Sprintf("TestSource with name '%s' already exists in namespace %s, ", testsource.Name, namespace) +
 							"do you want to overwrite it?")
 						if !ok {

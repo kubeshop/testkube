@@ -61,7 +61,11 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 				testSuite, _ := client.GetTestSuite(options.Name)
 
 				if options.Name == testSuite.Name {
-					if !update {
+					if cmd.Flag("update").Changed {
+						if !update {
+							ui.Failf("TestSuite with name '%s' already exists in namespace %s, ", testSuite.Name, namespace)
+						}
+					} else {
 						ok := ui.Confirm(fmt.Sprintf("TestSuite with name '%s' already exists in namespace %s, ", testSuite.Name, namespace) +
 							"do you want to overwrite it?")
 						if !ok {

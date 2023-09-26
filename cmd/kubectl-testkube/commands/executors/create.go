@@ -42,7 +42,11 @@ func NewCreateExecutorCmd() *cobra.Command {
 
 				executor, _ := client.GetExecutor(name)
 				if name == executor.Name {
-					if !update {
+					if cmd.Flag("update").Changed {
+						if !update {
+							ui.Failf("Executor with name '%s' already exists in namespace %s, ", executor.Name, namespace)
+						}
+					} else {
 						ok := ui.Confirm(fmt.Sprintf("Executor with name '%s' already exists in namespace %s, ", executor.Name, namespace) +
 							"do you want to overwrite it?")
 						if !ok {
