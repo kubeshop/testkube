@@ -42,7 +42,11 @@ func NewCreateTemplateCmd() *cobra.Command {
 
 				template, _ := client.GetTemplate(name)
 				if name == template.Name {
-					if !update {
+					if cmd.Flag("update").Changed {
+						if !update {
+							ui.Failf("Template with name '%s' already exists in namespace %s, ", template.Name, namespace)
+						}
+					} else {
 						ok := ui.Confirm(fmt.Sprintf("Template with name '%s' already exists in namespace %s, ", template.Name, namespace) +
 							"do you want to overwrite it?")
 						if !ok {
