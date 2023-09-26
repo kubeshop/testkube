@@ -14,7 +14,7 @@ testkube update webhook [flags]
 
 ```
   -e, --events stringArray                  event types handled by webhook e.g. start-test|end-test
-      --header stringToString               webhook header value pair: --header Content-Type=application/xml (default [])
+      --header stringToString               webhook header value pair (golang template supported): --header Content-Type=application/xml (default [])
   -h, --help                                help for webhook
   -l, --label stringToString                label key value pair: --label key1=value1 (default [])
   -n, --name string                         unique webhook name - mandatory
