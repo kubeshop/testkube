@@ -80,6 +80,7 @@ func NewCreateTestsCmd() *cobra.Command {
 		gitAuthType          string
 		sourceName           string
 		flags                CreateCommonFlags
+		update               bool
 	)
 
 	cmd := &cobra.Command{
@@ -104,7 +105,21 @@ func NewCreateTestsCmd() *cobra.Command {
 				test, _ := client.GetTest(testName)
 
 				if testName == test.Name {
-					ui.Failf("Test with name '%s' already exists in namespace %s", testName, namespace)
+					if !update {
+						ok := ui.Confirm(fmt.Sprintf("Test with name '%s' already exists in namespace %s, ", testName, namespace) +
+							"do you want to overwrite it?")
+						if !ok {
+							ui.Failf("Test creation was aborted")
+						}
+					}
+
+					options, err := NewUpdateTestOptionsFromFlags(cmd)
+					ui.ExitOnError("getting test options", err)
+
+					test, err = client.UpdateTest(options)
+					ui.ExitOnError("updating test "+testName+" in namespace "+namespace, err)
+
+					ui.SuccessAndExit("Test updated", namespace, "/", testName)
 				}
 			}
 
@@ -180,6 +195,7 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitCertificateSecret, "git-certificate-secret", "", "", "if git repository is private we can use certificate as an auth parameter stored in a kubernetes secret name")
 	cmd.Flags().StringVarP(&gitAuthType, "git-auth-type", "", "basic", "auth type for git requests one of basic|header")
 	cmd.Flags().StringVarP(&sourceName, "source", "", "", "source name - will be used together with content parameters")
+	cmd.Flags().BoolVar(&update, "update", false, "update, if test already exists")
 	cmd.Flags().MarkDeprecated("env", "env is deprecated use variable instead")
 	cmd.Flags().MarkDeprecated("secret-env", "secret-env is deprecated use secret-variable instead")
 
