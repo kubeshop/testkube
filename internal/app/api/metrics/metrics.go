@@ -12,12 +12,12 @@ import (
 var testExecutionCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_test_executions_count",
 	Help: "The total number of test executions",
-}, []string{"type", "name", "result"})
+}, []string{"type", "name", "result", "labels"})
 
 var testSuiteExecutionCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_testsuite_executions_count",
 	Help: "The total number of test suite executions",
-}, []string{"name", "result"})
+}, []string{"name", "result", "labels"})
 
 var testCreationCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_test_creations_count",
