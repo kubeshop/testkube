@@ -9,8 +9,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
-	testsourcev1 "github.com/kubeshop/testkube-operator/apis/testsource/v1"
-	"github.com/kubeshop/testkube-operator/client/testsources/v1"
+	testsourcev1 "github.com/kubeshop/testkube-operator/api/testsource/v1"
+	"github.com/kubeshop/testkube-operator/pkg/client/testsources/v1"
 	"github.com/kubeshop/testkube-operator/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"

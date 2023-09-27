@@ -17,9 +17,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
-	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	testsuitev3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
-	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
+	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
+	testsuitev3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
+	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
 	"github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube-operator/pkg/informers/externalversions"
 	testkubeinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"

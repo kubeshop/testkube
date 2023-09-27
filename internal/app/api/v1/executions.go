@@ -19,7 +19,7 @@ import (
 	"github.com/gofiber/websocket/v2"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"

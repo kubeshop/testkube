@@ -5,8 +5,8 @@ import (
 
 	"go.uber.org/zap"
 
-	executorsv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	templatesclientv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
+	executorsv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	templatesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/mapper/webhooks"

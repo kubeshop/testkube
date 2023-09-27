@@ -3,7 +3,7 @@ package testexecutions
 import (
 	corev1 "k8s.io/api/core/v1"
 
-	testexecutionv1 "github.com/kubeshop/testkube-operator/apis/testexecution/v1"
+	testexecutionv1 "github.com/kubeshop/testkube-operator/api/testexecution/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 

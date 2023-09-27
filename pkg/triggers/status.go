@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
+	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
 )
 
 type statusKey string

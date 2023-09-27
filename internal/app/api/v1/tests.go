@@ -14,9 +14,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
-	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	"github.com/kubeshop/testkube-operator/client/tests/v3"
-	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
+	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
+	"github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	"github.com/kubeshop/testkube-operator/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"

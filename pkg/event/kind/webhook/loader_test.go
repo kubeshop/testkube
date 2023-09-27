@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
-	executorsv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	templatesclientv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
+	executorsv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	templatesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
 )
 
 type DummyLoader struct {

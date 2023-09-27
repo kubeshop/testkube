@@ -3,8 +3,8 @@ package testsuites
 import (
 	corev1 "k8s.io/api/core/v1"
 
-	commonv1 "github.com/kubeshop/testkube-operator/apis/common/v1"
-	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
+	commonv1 "github.com/kubeshop/testkube-operator/api/common/v1"
+	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 

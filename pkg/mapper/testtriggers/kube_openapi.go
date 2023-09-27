@@ -3,7 +3,7 @@ package testtriggers
 import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
+	testsv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
