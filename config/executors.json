@@ -142,6 +142,9 @@
             "command": [
                 "<entryPoint>"
             ],
+            "slaves": {
+              "image": "kubeshop/testkube-jmeterd-slave:611808a"
+            },
             "args": [
                 "-n",
                 "-j",
