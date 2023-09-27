@@ -2,7 +2,6 @@ package containerexecutor
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -29,6 +28,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
+	"github.com/kubeshop/testkube/pkg/executor/stream"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 	testexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testexecutions"
@@ -67,6 +67,7 @@ func NewContainerExecutor(
 	registry string,
 	podStartTimeout time.Duration,
 	clusterID string,
+	logsStream stream.LogsStream,
 ) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -91,6 +92,7 @@ func NewContainerExecutor(
 		registry:             registry,
 		podStartTimeout:      podStartTimeout,
 		clusterID:            clusterID,
+		logsStream:           logsStream,
 	}, nil
 }
 
@@ -117,6 +119,7 @@ type ContainerExecutor struct {
 	registry             string
 	podStartTimeout      time.Duration
 	clusterID            string
+	logsStream           stream.LogsStream
 }
 
 type JobOptions struct {
@@ -307,18 +310,9 @@ func (c *ContainerExecutor) updateResultsFromPod(
 		l.Errorw("waiting for executor pod started error", "error", err)
 	}
 
-	go func() {
-		logs, err := c.Logs(ctx, execution.Id)
-		if err != nil {
-			l.Errorw("get logs error", "error", err)
-			return
-		}
-
-		for log := range logs {
-			// TODO send data to logs stream channel
-			fmt.Printf("%+v\n", log)
-		}
-	}()
+	// push logs to stream
+	l.Debug("starting pod logs stream proxy")
+	stream.PodLogsProxy(c.log, c.clientSet, c.namespace, executorPod, c.logsStream, execution.Id)
 
 	l.Debug("poll immediate waiting for executor pod")
 	// wait for pod

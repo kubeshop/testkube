@@ -1,7 +1,8 @@
-package logs
+package stream
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/log"
@@ -10,67 +11,76 @@ import (
 )
 
 const (
-	StreamName          = "LOGS"
-	ConsumerName        = "LOGSCONSUMER"
+	StreamEndMessage = "<< Logs stream ended >>"
+
+	streamName          = "logs"
+	consumerName        = "logsconsumer"
 	defaultTTL          = 2 * 24 * time.Hour
 	allConsumerPrefix   = "lca"
 	rangeConsumerPrefix = "lcr"
 )
 
-type LogsCache interface {
+//go:generate mockgen -destination=./mock_stream.go -package=stream "github.com/kubeshop/testkube/pkg/executor/stream" LogsStream
+type LogsStream interface {
 	Init(ctx context.Context) error
 	Publish(ctx context.Context, executionId string, line []byte) error
+	End(ctx context.Context, executionId string) error
 	GetRange(ctx context.Context, executionId string, from, count int) (chan []byte, error)
 	Listen(ctx context.Context, executionId string) (chan []byte, error)
 }
 
-func NewJetstreamLogsCache(js jetstream.JetStream) JetstreamLogsCache {
-	return JetstreamLogsCache{
+func NewJetstreamLogsStream(js jetstream.JetStream) JetstreamLogsStream {
+	return JetstreamLogsStream{
 		js: js,
 		l:  log.DefaultLogger.With("service", "LogsCache"),
 	}
 }
 
-type JetstreamLogsCache struct {
+type JetstreamLogsStream struct {
 	js jetstream.JetStream
 	l  *zap.SugaredLogger
 }
 
-func (c JetstreamLogsCache) Init(ctx context.Context) error {
+func (c JetstreamLogsStream) Init(ctx context.Context) error {
 	// Create a stream
 	s, err := c.js.CreateStream(ctx, jetstream.StreamConfig{
-		Name:     StreamName,
-		Subjects: []string{StreamName + ".*"},
+		Name:     streamName,
+		Subjects: []string{streamName + ".*"},
 		MaxAge:   defaultTTL,
 		Storage:  jetstream.FileStorage, // durable stream
 	})
 
 	if err == jetstream.ErrStreamNameAlreadyInUse {
-		c.l.Warnw("stream already exists", "stream", StreamName)
+		c.l.Debugw("stream already exists will use existing one", "stream", streamName)
 	} else if err != nil {
 		return err
-	} else {
-		info, _ := s.Info(ctx)
-		c.l.Debugw("created stream", "stream", info)
 	}
+
+	info, _ := s.Info(ctx)
+	c.l.Debugw("using stream", "stream", info)
 
 	return nil
 }
 
-func (c JetstreamLogsCache) Publish(ctx context.Context, executionId string, line []byte) error {
+func (c JetstreamLogsStream) Publish(ctx context.Context, executionId string, line []byte) error {
 	// INFO: first result var is publisher ACK can be used for only-once delivery (double ACK pattern)
-	_, err := c.js.Publish(ctx, StreamName+"."+executionId, line)
+	_, err := c.js.Publish(ctx, streamName+"."+executionId, line)
 	return err
 }
 
-func (c JetstreamLogsCache) GetRange(ctx context.Context, executionId string, from, count int) (chan []byte, error) {
+func (c JetstreamLogsStream) End(ctx context.Context, executionId string) error {
+	_, err := c.js.Publish(ctx, streamName+"."+executionId, []byte(StreamEndMessage))
+	return err
+}
+
+func (c JetstreamLogsStream) GetRange(ctx context.Context, executionId string, from, count int) (chan []byte, error) {
 	ch := make(chan []byte)
 	consumerName := rangeConsumerPrefix + executionId
 
-	consumer, err := c.js.CreateOrUpdateConsumer(ctx, StreamName, jetstream.ConsumerConfig{
+	consumer, err := c.js.CreateOrUpdateConsumer(ctx, streamName, jetstream.ConsumerConfig{
 		Name:          consumerName,
 		Durable:       consumerName,
-		FilterSubject: StreamName + "." + executionId,
+		FilterSubject: streamName + "." + executionId,
 		DeliverPolicy: jetstream.DeliverByStartSequencePolicy,
 		OptStartSeq:   uint64(from),
 	})
@@ -86,7 +96,7 @@ func (c JetstreamLogsCache) GetRange(ctx context.Context, executionId string, fr
 	go func() {
 		defer close(ch)
 		defer it.Stop()
-		defer c.js.DeleteConsumer(ctx, StreamName, consumerName)
+		defer c.js.DeleteConsumer(ctx, streamName, consumerName)
 
 		for i := 0; i < count; i++ {
 			msg, err := it.Next()
@@ -103,29 +113,45 @@ func (c JetstreamLogsCache) GetRange(ctx context.Context, executionId string, fr
 	return ch, nil
 }
 
-func (c JetstreamLogsCache) Listen(ctx context.Context, executionId string) (chan []byte, error) {
+func (c JetstreamLogsStream) Listen(ctx context.Context, executionId string) (chan []byte, error) {
 	ch := make(chan []byte)
 	consumerName := allConsumerPrefix + executionId
 
-	consumer, err := c.js.CreateOrUpdateConsumer(ctx, StreamName, jetstream.ConsumerConfig{
+	consumer, err := c.js.CreateOrUpdateConsumer(ctx, streamName, jetstream.ConsumerConfig{
 		Name:          consumerName,
 		Durable:       consumerName,
-		FilterSubject: StreamName + "." + executionId,
+		FilterSubject: streamName + "." + executionId,
 		DeliverPolicy: jetstream.DeliverAllPolicy,
 	})
 	if err != nil {
 		return ch, err
 	}
 
+	stopConsumer := make(chan struct{})
+
 	cons, err := consumer.Consume(func(msg jetstream.Msg) {
 		err := msg.Ack()
 		if err != nil {
+			c.l.Errorw("error acking message", "error", err, "msg", msg.Headers())
 			return
 		}
+		d := msg.Data()
+
+		fmt.Printf("GOT: '%+v'\n", string(d))
+
+		if string(d) == StreamEndMessage {
+			stopConsumer <- struct{}{}
+			return
+		}
+
 		ch <- msg.Data()
 	})
 
-	defer cons.Stop()
+	go func() {
+		<-stopConsumer
+		cons.Stop()
+		close(ch)
+	}()
 
 	if err != nil {
 		return ch, err

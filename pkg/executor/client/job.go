@@ -39,6 +39,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
+	"github.com/kubeshop/testkube/pkg/executor/stream"
 	"github.com/kubeshop/testkube/pkg/log"
 	testexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testexecutions"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
@@ -85,6 +86,7 @@ func NewJobExecutor(
 	registry string,
 	podStartTimeout time.Duration,
 	clusterID string,
+	logsStream stream.LogsStream,
 ) (client *JobExecutor, err error) {
 	return &JobExecutor{
 		ClientSet:            clientset,
@@ -103,6 +105,7 @@ func NewJobExecutor(
 		registry:             registry,
 		podStartTimeout:      podStartTimeout,
 		clusterID:            clusterID,
+		logsStream:           logsStream,
 	}, nil
 }
 
@@ -129,6 +132,7 @@ type JobExecutor struct {
 	registry             string
 	podStartTimeout      time.Duration
 	clusterID            string
+	logsStream           stream.LogsStream
 }
 
 type JobOptions struct {
@@ -160,10 +164,9 @@ type JobOptions struct {
 	ArtifactRequest       *testkube.ArtifactRequest
 }
 
-// Logs returns job logs stream channel using kubernetes api
+// Logs returns job logs stream channel from intermediate cache stream
 func (c *JobExecutor) Logs(ctx context.Context, id string) (out chan output.Output, err error) {
 	out = make(chan output.Output)
-	logs := make(chan []byte)
 
 	go func() {
 		defer func() {
@@ -171,7 +174,8 @@ func (c *JobExecutor) Logs(ctx context.Context, id string) (out chan output.Outp
 			close(out)
 		}()
 
-		if err := c.TailJobLogs(ctx, id, logs); err != nil {
+		logs, err := c.logsStream.Listen(ctx, id)
+		if err != nil {
 			out <- output.NewOutputError(err)
 			return
 		}
@@ -314,17 +318,12 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 		l.Errorw("waiting for pod started error", "error", err)
 	}
 
-	go func() {
-		logs, err := c.Logs(ctx, execution.Id)
-		if err != nil {
-			l.Errorw("get logs error", "error", err)
-			return
-		}
+	fmt.Printf("LOGS STREAM: %+v\n", c.logsStream)
 
-		for log := range logs {
-			// TODO send data to logs stream channel
-			fmt.Printf("%+v\n", log)
-		}
+	go func() {
+		// push logs to stream
+		l.Debug("starting pod logs stream proxy")
+		stream.PodLogsProxy(l, c.ClientSet, c.Namespace, pod, c.logsStream, execution.Id)
 	}()
 
 	l.Debug("poll immediate waiting for pod")

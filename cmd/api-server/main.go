@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 
 	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
+	"github.com/nats-io/nats.go/jetstream"
 
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
@@ -47,6 +48,7 @@ import (
 	kubeexecutor "github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/containerexecutor"
+	"github.com/kubeshop/testkube/pkg/executor/stream"
 
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
@@ -313,12 +315,22 @@ func main() {
 	eventBus := bus.NewNATSBus(nc)
 	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName, envs)
 
+	// Create a JetStream management interface
+	js, err := jetstream.New(nc.Conn)
+	if err != nil {
+		log.DefaultLogger.Errorw("error creating NATS Jetstream connection", "error", err)
+	}
+
+	logsStream := stream.NewJetstreamLogsStream(js)
+	err = logsStream.Init(ctx)
+	if err != nil {
+		ui.ExitOnError("Initializing logs stream", err)
+	}
+
 	metrics := metrics.NewMetrics()
 
 	defaultExecutors, err := parseDefaultExecutors(cfg)
-	if err != nil {
-		ui.ExitOnError("Parsing default executors", err)
-	}
+	ui.ExitOnError("Parsing default executors", err)
 
 	images, err := kubeexecutor.SyncDefaultExecutors(executorsClient, cfg.TestkubeNamespace, defaultExecutors, cfg.TestkubeReadonlyExecutors)
 	if err != nil {
@@ -346,6 +358,7 @@ func main() {
 		cfg.TestkubeRegistry,
 		cfg.TestkubePodStartTimeout,
 		clusterId,
+		logsStream,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating executor client", err)
@@ -372,6 +385,7 @@ func main() {
 		cfg.TestkubeRegistry,
 		cfg.TestkubePodStartTimeout,
 		clusterId,
+		logsStream,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating container executor", err)
@@ -516,6 +530,7 @@ func main() {
 		"clusterId", clusterId,
 		"namespace", cfg.TestkubeNamespace,
 		"version", apiVersion,
+		"port", api.Config.Addr(),
 	)
 
 	g.Go(func() error {
