@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -37,13 +38,20 @@ func NewRunner(ctx context.Context, params envs.Params) (*JMeterDRunner, error) 
 		return nil, err
 	}
 
+	slavesConfigs := executor.SlavesConfigs{}
+	if err := json.Unmarshal([]byte(params.SlavesConfigs), &slavesConfigs); err != nil {
+		return nil, err
+	}
+	r.SlavesConfigs = slavesConfigs
+
 	return r, nil
 }
 
 // JMeterDRunner runner
 type JMeterDRunner struct {
-	Params  envs.Params
-	Scraper scraper.Scraper
+	Params        envs.Params
+	Scraper       scraper.Scraper
+	SlavesConfigs executor.SlavesConfigs
 }
 
 var _ runner.Runner = &JMeterDRunner{}
@@ -159,7 +167,7 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 		}
 	}
 
-	slavesClient, err := slaves.NewClient(execution, r.Params, slavesEnvVariables)
+	slavesClient, err := slaves.NewClient(execution, r.SlavesConfigs, r.Params, slavesEnvVariables)
 	if err != nil {
 		return *result.WithErrors(errors.Wrap(err, "error creating slaves client")), nil
 	}
@@ -169,7 +177,6 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	if err != nil {
 		return *result.WithErrors(errors.Wrap(err, "error creating slaves")), nil
 	}
-	defer slavesClient.DeleteSlaves(ctx, slavesNameIpMap)
 
 	args = append(args, fmt.Sprintf("-R %v", slaves.GetSlavesIpString(slavesNameIpMap)))
 

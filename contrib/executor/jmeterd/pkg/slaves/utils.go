@@ -13,6 +13,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
+	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 )
 
@@ -51,45 +52,7 @@ func getSlaveRunnerEnv(envParams envs.Params, runnerExecution testkube.Execution
 		)
 	}
 
-	return append([]v1.EnvVar{
-		{
-			Name:  "RUNNER_ENDPOINT",
-			Value: envParams.Endpoint,
-		}, {
-			Name:  "RUNNER_ACCESSKEYID",
-			Value: envParams.AccessKeyID,
-		}, {
-			Name:  "RUNNER_SECRETACCESSKEY",
-			Value: envParams.SecretAccessKey,
-		}, {
-			Name:  "RUNNER_TOKEN",
-			Value: envParams.Token,
-		}, {
-			Name:  "RUNNER_BUCKET",
-			Value: envParams.Bucket,
-		}, {
-			Name:  "RUNNER_SSL",
-			Value: fmt.Sprintf("%v", envParams.Ssl),
-		}, {
-			Name:  "RUNNER_SCRAPPERENABLED",
-			Value: fmt.Sprintf("%v", envParams.ScrapperEnabled),
-		}, {
-			Name:  "RUNNER_DATADIR",
-			Value: envParams.DataDir,
-		}, {
-			Name:  "RUNNER_CLOUD_MODE",
-			Value: fmt.Sprintf("%v", envParams.CloudMode),
-		}, {
-			Name:  "RUNNER_CLOUD_API_KEY",
-			Value: envParams.CloudAPIKey,
-		}, {
-			Name:  "RUNNER_CLOUD_API_TLS_INSECURE",
-			Value: fmt.Sprintf("%v", envParams.CloudAPITLSInsecure),
-		}, {
-			Name:  "RUNNER_CLOUD_API_URL",
-			Value: envParams.CloudAPIURL,
-		},
-	}, gitEnvs...)
+	return append(executor.RunnerEnvVars, gitEnvs...)
 }
 
 func getSlaveConfigurationEnv(slaveEnv map[string]testkube.Variable) []v1.EnvVar {

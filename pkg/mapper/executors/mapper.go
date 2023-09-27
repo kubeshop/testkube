@@ -339,3 +339,12 @@ func MapSpecToUpdate(executor *executorv1.Executor) (request testkube.ExecutorUp
 
 	return request
 }
+
+func MapSlavesConfigsToCRD(slavesConfigs *testkube.SlavesMeta) *executorv1.SlavesMeta {
+	if slavesConfigs == nil {
+		return nil
+	}
+	return &executorv1.SlavesMeta{
+		Image: slavesConfigs.Image,
+	}
+}
