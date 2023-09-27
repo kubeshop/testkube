@@ -1,6 +1,8 @@
 package metrics
 
 import (
+	"strings"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
@@ -105,10 +107,16 @@ func (m Metrics) IncExecuteTest(execution testkube.Execution) {
 		status = string(*execution.ExecutionResult.Status)
 	}
 
+	var labels []string
+	for label := range execution.Labels {
+		labels = append(labels, label)
+	}
+
 	m.TestExecutions.With(map[string]string{
 		"type":   execution.TestType,
 		"name":   execution.TestName,
 		"result": status,
+		"labels": strings.Join(labels, ","),
 	}).Inc()
 }
 
@@ -123,9 +131,15 @@ func (m Metrics) IncExecuteTestSuite(execution testkube.TestSuiteExecution) {
 		status = string(*execution.Status)
 	}
 
+	var labels []string
+	for label := range execution.Labels {
+		labels = append(labels, label)
+	}
+
 	m.TestSuiteExecutions.With(map[string]string{
 		"name":   name,
 		"result": status,
+		"labels": strings.Join(labels, ","),
 	}).Inc()
 }
 
