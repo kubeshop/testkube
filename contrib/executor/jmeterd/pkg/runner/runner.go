@@ -167,7 +167,7 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 		}
 	}
 
-	slavesClient, err := slaves.NewClient(execution,r.SlavesConfigs, r.Params, slavesEnvVariables)
+	slavesClient, err := slaves.NewClient(execution, r.SlavesConfigs, r.Params, slavesEnvVariables)
 	if err != nil {
 		return *result.WithErrors(errors.Wrap(err, "error creating slaves client")), nil
 	}
