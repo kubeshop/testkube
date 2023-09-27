@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
+	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	webhooksmapper "github.com/kubeshop/testkube/pkg/mapper/webhooks"

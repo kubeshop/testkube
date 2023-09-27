@@ -8,8 +8,8 @@ import (
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 
-	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	testsourcev1 "github.com/kubeshop/testkube-operator/apis/testsource/v1"
+	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
+	testsourcev1 "github.com/kubeshop/testkube-operator/api/testsource/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"

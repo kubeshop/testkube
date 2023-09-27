@@ -9,7 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
+	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	testsuiteexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testsuiteexecutions"

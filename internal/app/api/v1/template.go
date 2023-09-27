@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
-	templatev1 "github.com/kubeshop/testkube-operator/apis/template/v1"
+	templatev1 "github.com/kubeshop/testkube-operator/api/template/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	templatesmapper "github.com/kubeshop/testkube/pkg/mapper/templates"

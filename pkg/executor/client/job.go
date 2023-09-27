@@ -30,9 +30,9 @@ import (
 
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 
-	templatesv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
-	testexecutionsv1 "github.com/kubeshop/testkube-operator/client/testexecutions/v1"
-	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
+	templatesv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
+	testexecutionsv1 "github.com/kubeshop/testkube-operator/pkg/client/testexecutions/v1"
+	testsv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/executor"

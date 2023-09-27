@@ -10,8 +10,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/mapper/tests"
