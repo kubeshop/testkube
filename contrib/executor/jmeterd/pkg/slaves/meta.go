@@ -1,6 +1,10 @@
 package slaves
 
-import "strings"
+import (
+	"strings"
+
+	"golang.org/x/exp/slices"
+)
 
 type SlaveMeta map[string]string
 
@@ -21,5 +25,7 @@ func (m *SlaveMeta) IPs() []string {
 }
 
 func (m *SlaveMeta) ToIPString() string {
+	ips := m.IPs()
+	slices.Sort(ips)
 	return strings.Join(m.IPs(), ",")
 }
