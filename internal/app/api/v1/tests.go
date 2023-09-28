@@ -540,9 +540,12 @@ func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not delete test: %w", errPrefix, err))
 		}
 
-		// delete executions for test
-		if err = s.ExecutionResults.DeleteByTest(c.Context(), name); err != nil {
-			return s.Warn(c, http.StatusInternalServerError, fmt.Errorf("test %s was deleted but deleting test executions returned error: %w", name, err))
+		skipExecutions := c.Query("skipDeleteExecutions", "")
+		if skipExecutions != "true" {
+			// delete executions for test
+			if err = s.ExecutionResults.DeleteByTest(c.Context(), name); err != nil {
+				return s.Warn(c, http.StatusInternalServerError, fmt.Errorf("test %s was deleted but deleting test executions returned error: %w", name, err))
+			}
 		}
 
 		return c.SendStatus(http.StatusNoContent)
