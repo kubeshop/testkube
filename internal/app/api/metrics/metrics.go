@@ -111,7 +111,7 @@ func (m Metrics) IncExecuteTest(execution testkube.Execution, dashboardURI strin
 
 	var labels []string
 	for key, value := range execution.Labels {
-		labels = append(labels, fmt.Sprintf("%s:%s", key, value))
+		labels = append(labels, fmt.Sprintf("%s=%s", key, value))
 	}
 
 	slices.Sort(labels)
@@ -139,7 +139,7 @@ func (m Metrics) IncExecuteTestSuite(execution testkube.TestSuiteExecution, dash
 
 	var labels []string
 	for key, value := range execution.Labels {
-		labels = append(labels, fmt.Sprintf("%s:%s", key, value))
+		labels = append(labels, fmt.Sprintf("%s=%s", key, value))
 	}
 
 	slices.Sort(labels)
