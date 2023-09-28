@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"strings"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,11 +23,9 @@ const (
 )
 
 func getSlaveRunnerEnv(envParams envs.Params, runnerExecution testkube.Execution) []v1.EnvVar {
-
-	gitEnvs := []v1.EnvVar{}
+	var gitEnvs []v1.EnvVar
 	if runnerExecution.Content.Type_ == "git" && runnerExecution.Content.Repository.UsernameSecret != nil && runnerExecution.Content.Repository.TokenSecret != nil {
 		gitEnvs = append(gitEnvs, v1.EnvVar{
-
 			Name: "RUNNER_GITUSERNAME",
 			ValueFrom: &v1.EnvVarSource{
 				SecretKeyRef: &v1.SecretKeySelector{
@@ -56,15 +53,15 @@ func getSlaveRunnerEnv(envParams envs.Params, runnerExecution testkube.Execution
 }
 
 func getSlaveConfigurationEnv(slaveEnv map[string]testkube.Variable) []v1.EnvVar {
-	envVars := []v1.EnvVar{}
+	var envVars []v1.EnvVar
 	for envKey, t := range slaveEnv {
 		envVars = append(envVars, v1.EnvVar{Name: envKey, Value: t.Value})
 	}
 	return envVars
 }
 
-func isPodReady(ctx context.Context, c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
-	return func() (bool, error) {
+func isPodReady(c kubernetes.Interface, podName, namespace string) wait.ConditionWithContextFunc {
+	return func(ctx context.Context) (bool, error) {
 		pod, err := c.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
@@ -89,19 +86,11 @@ func getSlavesCount(count testkube.Variable) (int, error) {
 		return defaultSlavesCount, nil
 	}
 
-	rplicaCount, err := strconv.Atoi(count.Value)
+	replicaCount, err := strconv.Atoi(count.Value)
 	if err != nil {
 		return 0, err
 	}
-	return rplicaCount, err
-}
-
-func GetSlavesIpString(podNameIpMap map[string]string) string {
-	podIps := []string{}
-	for _, ip := range podNameIpMap {
-		podIps = append(podIps, ip)
-	}
-	return strings.Join(podIps, ",")
+	return replicaCount, err
 }
 
 func ValidateAndGetSlavePodName(testName string, executionId string, currentSlaveCount int) string {
@@ -112,5 +101,4 @@ func ValidateAndGetSlavePodName(testName string, executionId string, currentSlav
 		slavePodName = fmt.Sprintf("%s-slave-%v-%s", shortExecutionName, currentSlaveCount, executionId)
 	}
 	return slavePodName
-
 }

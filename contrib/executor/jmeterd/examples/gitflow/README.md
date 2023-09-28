@@ -21,10 +21,54 @@ All the plugins required by the test are kept in the `plugins` directory of the 
 
 ## Steps to execute this Test
 
-1. Push the test folder to your git repo.
-2. Set the following environment variable `DATA_CONFIG = /data/repo/<your_test_folder_on_git>`
-3. Pass the following arguments when creating test in the Testkube Dashboard `-GJMETER_UC1_NBUSERS=5 jmeter-properties-external.jmx`
-4. Create the test as `jmeterd/test` type with `Git` option as per above configuration.
-5. Fill the required details like `github repo link`, `username` and `GITHUB_TOKEN`
-6. Set the `SLAVES_COUNT` environment variable to the number of slaves you want to spawn for the test.
-7. Run the test.
+### Testkube Dashboard
+1. Open the Testkube Dashboard and create a new test.
+2. Type a test name (i.e. `jmeterd-example`) and select `jmeterd/test` as test type.
+3. Select `Git` as the source type and fill the following details:
+   * Git Repository URI: https://github.com/kubeshop/testkube
+   * Branch: develop
+   * Path: contrib/executor/jmeterd/examples/gitflow
+4. Click **Create** to create the test.
+5. Select **Settings** tab and then open the **Variables & Secrets** tab from the left menu.
+6. Add a new variable called **SLAVES_COUNT** and set it to the number of slave pods you want to spawn for the test.
+7. Add another variable called **DATA_CONFIG** and set it to `/data/repo/contrib/executor/jmeterd/examples/gitflow`
+8. Click on **Save** underneath **the Variables & Secrets** section.
+9. In the Arguments section, set the following arguments: `-GJMETER_UC1_NBUSERS=5 jmeter-properties-external.jmx`
+10. Click on **Save** underneath the **Arguments** section.
+11. Run the test
+
+### CRD
+
+You can also apply the following Test CRD to create the example test:
+```yaml
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-example
+  namespace: testkube
+  labels:
+    executor: jmeterd-executor
+    test-type: jmeterd-test
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: develop
+      path: contrib/executor/jmeterd/examples/gitflow
+  executionRequest:
+    variables:
+      DATA_CONFIG:
+        name: DATA_CONFIG
+        value: "/data/repo/contrib/executor/jmeterd/examples/gitflow"
+        type: basic
+      SLAVES_COUNT:
+        name: SLAVES_COUNT
+        value: "2"
+        type: basic
+    args:
+      - "-GJMETER_UC1_NBUSERS=5"
+      - "jmeter-properties-external.jmx"
+```
