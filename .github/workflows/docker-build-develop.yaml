@@ -215,9 +215,14 @@ jobs:
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
-      - name: Push Docker images
+      - name: Push multi-arch image to the Registry
         run: |
-          docker push kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}
+          docker push kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}-amd64
+          docker push kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}-arm64v8
+
+          docker manifest create kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }} --amend kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}-amd64 --amend kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}-arm64v8
+          docker manifest push -p kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}
+
 
   jmeterd_slave:
     runs-on: ubuntu-latest
@@ -256,6 +261,7 @@ jobs:
           file: ./contrib/executor/jmeterd/build/slaves/Dockerfile
           push: true
           tags:  kubeshop/testkube-jmeterd-slave:${{ steps.commit.outputs.short }}
+          platforms: linux/amd64,linux/arm64
 
   executor_maven:
     runs-on: ubuntu-latest

@@ -28,7 +28,7 @@ dockers:
     goos: linux
     goarch: amd64
     image_templates:
-      - "kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}"
+      - "kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -39,9 +39,33 @@ dockers:
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
     extra_files:
-    - ./contrib/executor/jmeterd/scripts/entrypoint.sh
-    - ./contrib/executor/jmeterd/scripts/jmeter-master.sh
+      - ./contrib/executor/jmeterd/scripts/entrypoint.sh
+      - ./contrib/executor/jmeterd/scripts/jmeter-master.sh
 
+  - dockerfile: "./contrib/executor/jmeterd/build/agent/Dockerfile"
+    use: buildx
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-arm64v8"
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
+      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
+      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+    extra_files:
+      - ./contrib/executor/jmeterd/scripts/entrypoint.sh
+      - ./contrib/executor/jmeterd/scripts/jmeter-master.sh
+
+docker_manifests:
+  - name_template: kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}
+    image_templates:
+      - kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-amd64
+      - kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-arm64v8
 
 release:
   disable: true
