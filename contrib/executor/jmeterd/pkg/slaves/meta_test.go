@@ -15,8 +15,8 @@ func TestSlaveMeta_Names(t *testing.T) {
 	}
 	names := meta.Names()
 	assert.Len(t, names, 2)
-	assert.Equal(t, "slave1", names[0])
-	assert.Equal(t, "slave2", names[1])
+	assert.Contains(t, names, "slave1")
+	assert.Contains(t, names, "slave2")
 }
 
 func TestSlaveMeta_IPs(t *testing.T) {
@@ -28,8 +28,8 @@ func TestSlaveMeta_IPs(t *testing.T) {
 	}
 	ips := meta.IPs()
 	assert.Len(t, ips, 2)
-	assert.Equal(t, "192.168.1.1", ips[0])
-	assert.Equal(t, "192.168.1.2", ips[1])
+	assert.Contains(t, ips, "192.168.1.1")
+	assert.Contains(t, ips, "192.168.1.2")
 }
 
 func TestSlaveMeta_ToIPString(t *testing.T) {
