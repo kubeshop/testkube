@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -318,10 +317,8 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 		l.Errorw("waiting for pod started error", "error", err)
 	}
 
-	fmt.Printf("LOGS STREAM: %+v\n", c.logsStream)
-
 	go func() {
-		// push logs to stream
+		// push logs to the NATS stream
 		l.Debug("starting pod logs stream proxy")
 		stream.PodLogsProxy(l, c.ClientSet, c.Namespace, pod, c.logsStream, execution.Id)
 	}()

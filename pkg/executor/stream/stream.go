@@ -2,7 +2,6 @@ package stream
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/log"
@@ -32,7 +31,7 @@ type LogsStream interface {
 func NewJetstreamLogsStream(js jetstream.JetStream) JetstreamLogsStream {
 	return JetstreamLogsStream{
 		js: js,
-		l:  log.DefaultLogger.With("service", "LogsCache"),
+		l:  log.DefaultLogger.With("service", "LogsStream"),
 	}
 }
 
@@ -136,8 +135,6 @@ func (c JetstreamLogsStream) Listen(ctx context.Context, executionId string) (ch
 			return
 		}
 		d := msg.Data()
-
-		fmt.Printf("GOT: '%+v'\n", string(d))
 
 		if string(d) == StreamEndMessage {
 			stopConsumer <- struct{}{}
