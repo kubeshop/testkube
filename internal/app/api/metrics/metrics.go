@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -109,10 +110,11 @@ func (m Metrics) IncExecuteTest(execution testkube.Execution, dashboardURI strin
 	}
 
 	var labels []string
-	for label := range execution.Labels {
-		labels = append(labels, label)
+	for key, value := range execution.Labels {
+		labels = append(labels, fmt.Sprintf("%s:%s", key, value))
 	}
 
+	slices.Sort(labels)
 	m.TestExecutions.With(map[string]string{
 		"type":     execution.TestType,
 		"name":     execution.TestName,
@@ -136,10 +138,11 @@ func (m Metrics) IncExecuteTestSuite(execution testkube.TestSuiteExecution, dash
 	}
 
 	var labels []string
-	for label := range execution.Labels {
-		labels = append(labels, label)
+	for key, value := range execution.Labels {
+		labels = append(labels, fmt.Sprintf("%s:%s", key, value))
 	}
 
+	slices.Sort(labels)
 	testSuiteName := ""
 	if execution.TestSuite != nil {
 		testSuiteName = execution.TestSuite.Name
