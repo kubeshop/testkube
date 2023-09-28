@@ -347,6 +347,7 @@ func main() {
 		cfg.TestkubeRegistry,
 		cfg.TestkubePodStartTimeout,
 		clusterId,
+		cfg.TestkubeDashboardURI,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating executor client", err)
@@ -373,6 +374,7 @@ func main() {
 		cfg.TestkubeRegistry,
 		cfg.TestkubePodStartTimeout,
 		clusterId,
+		cfg.TestkubeDashboardURI,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating container executor", err)
@@ -395,6 +397,7 @@ func main() {
 		configMapClient,
 		testsuiteExecutionsClient,
 		eventBus,
+		cfg.TestkubeDashboardURI,
 	)
 
 	slackLoader, err := newSlackLoader(cfg, envs)

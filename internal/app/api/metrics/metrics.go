@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -12,12 +13,12 @@ import (
 var testExecutionCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_test_executions_count",
 	Help: "The total number of test executions",
-}, []string{"type", "name", "result", "labels"})
+}, []string{"type", "name", "result", "labels", "uri"})
 
 var testSuiteExecutionCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_testsuite_executions_count",
 	Help: "The total number of test suite executions",
-}, []string{"name", "result", "labels"})
+}, []string{"name", "result", "labels", "uri"})
 
 var testCreationCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_test_creations_count",
@@ -101,7 +102,7 @@ type Metrics struct {
 	TestAbort              *prometheus.CounterVec
 }
 
-func (m Metrics) IncExecuteTest(execution testkube.Execution) {
+func (m Metrics) IncExecuteTest(execution testkube.Execution, dashboardURI string) {
 	status := ""
 	if execution.ExecutionResult != nil && execution.ExecutionResult.Status != nil {
 		status = string(*execution.ExecutionResult.Status)
@@ -117,10 +118,12 @@ func (m Metrics) IncExecuteTest(execution testkube.Execution) {
 		"name":   execution.TestName,
 		"result": status,
 		"labels": strings.Join(labels, ","),
+		"uri": fmt.Sprintf("%s/tests/%s/executions/%s", dashboardURI,
+			execution.TestName, execution.Id),
 	}).Inc()
 }
 
-func (m Metrics) IncExecuteTestSuite(execution testkube.TestSuiteExecution) {
+func (m Metrics) IncExecuteTestSuite(execution testkube.TestSuiteExecution, dashboardURI string) {
 	name := ""
 	status := ""
 	if execution.TestSuite != nil {
@@ -136,10 +139,17 @@ func (m Metrics) IncExecuteTestSuite(execution testkube.TestSuiteExecution) {
 		labels = append(labels, label)
 	}
 
+	testSuiteName := ""
+	if execution.TestSuite != nil {
+		testSuiteName = execution.TestSuite.Name
+	}
+
 	m.TestSuiteExecutions.With(map[string]string{
 		"name":   name,
 		"result": status,
 		"labels": strings.Join(labels, ","),
+		"uri": fmt.Sprintf("%s/test-suites/%s/executions/%s", dashboardURI,
+			testSuiteName, execution.Id),
 	}).Inc()
 }
 

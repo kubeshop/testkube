@@ -66,6 +66,7 @@ func NewContainerExecutor(
 	registry string,
 	podStartTimeout time.Duration,
 	clusterID string,
+	dashboardURI string,
 ) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -90,11 +91,12 @@ func NewContainerExecutor(
 		registry:             registry,
 		podStartTimeout:      podStartTimeout,
 		clusterID:            clusterID,
+		dashboardURI:         dashboardURI,
 	}, nil
 }
 
 type ExecutionCounter interface {
-	IncExecuteTest(execution testkube.Execution)
+	IncExecuteTest(execution testkube.Execution, dashboardURI string)
 }
 
 // ContainerExecutor is container for managing job executor dependencies
@@ -116,6 +118,7 @@ type ContainerExecutor struct {
 	registry             string
 	podStartTimeout      time.Duration
 	clusterID            string
+	dashboardURI         string
 }
 
 type JobOptions struct {
@@ -446,7 +449,7 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testku
 
 	// metrics increase
 	execution.ExecutionResult = result
-	c.metrics.IncExecuteTest(*execution)
+	c.metrics.IncExecuteTest(*execution, c.dashboardURI)
 
 	test, err := c.testsClient.Get(execution.TestName)
 	if err != nil {

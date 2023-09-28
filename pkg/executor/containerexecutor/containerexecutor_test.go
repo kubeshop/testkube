@@ -330,7 +330,7 @@ func getFakeClient(executionID string) *fake.Clientset {
 type FakeMetricCounter struct {
 }
 
-func (FakeMetricCounter) IncExecuteTest(execution testkube.Execution) {
+func (FakeMetricCounter) IncExecuteTest(execution testkube.Execution, dashboardURI string) {
 	return
 }
 
