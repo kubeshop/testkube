@@ -13,12 +13,12 @@ import (
 var testExecutionCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_test_executions_count",
 	Help: "The total number of test executions",
-}, []string{"type", "name", "result", "labels", "uri"})
+}, []string{"type", "name", "result", "labels", "test_uri", "execution_uri"})
 
 var testSuiteExecutionCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_testsuite_executions_count",
 	Help: "The total number of test suite executions",
-}, []string{"name", "result", "labels", "uri"})
+}, []string{"name", "result", "labels", "testsuite_uri", "execution_uri"})
 
 var testCreationCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_test_creations_count",
@@ -114,11 +114,12 @@ func (m Metrics) IncExecuteTest(execution testkube.Execution, dashboardURI strin
 	}
 
 	m.TestExecutions.With(map[string]string{
-		"type":   execution.TestType,
-		"name":   execution.TestName,
-		"result": status,
-		"labels": strings.Join(labels, ","),
-		"uri": fmt.Sprintf("%s/tests/%s/executions/%s", dashboardURI,
+		"type":     execution.TestType,
+		"name":     execution.TestName,
+		"result":   status,
+		"labels":   strings.Join(labels, ","),
+		"test_uri": fmt.Sprintf("%s/tests/%s", dashboardURI, execution.TestName),
+		"execution_uri": fmt.Sprintf("%s/tests/%s/executions/%s", dashboardURI,
 			execution.TestName, execution.Id),
 	}).Inc()
 }
@@ -145,10 +146,11 @@ func (m Metrics) IncExecuteTestSuite(execution testkube.TestSuiteExecution, dash
 	}
 
 	m.TestSuiteExecutions.With(map[string]string{
-		"name":   name,
-		"result": status,
-		"labels": strings.Join(labels, ","),
-		"uri": fmt.Sprintf("%s/test-suites/%s/executions/%s", dashboardURI,
+		"name":          name,
+		"result":        status,
+		"labels":        strings.Join(labels, ","),
+		"testsuite_uri": fmt.Sprintf("%s/test-suites/%s", dashboardURI, testSuiteName),
+		"execution_uri": fmt.Sprintf("%s/test-suites/%s/executions/%s", dashboardURI,
 			testSuiteName, execution.Id),
 	}).Inc()
 }
