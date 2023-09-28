@@ -26,7 +26,7 @@ func GetLogEntry(b []byte) (out Output, err error) {
 		}, nil
 	}
 	if out.Type_ == "" {
-		out.Type_ = TypeUnknown
+		out.Type_ = TypeLogLine
 	}
 	return out, err
 }
