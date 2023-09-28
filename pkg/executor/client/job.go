@@ -84,6 +84,7 @@ func NewJobExecutor(
 	registry string,
 	podStartTimeout time.Duration,
 	clusterID string,
+	dashboardURI string,
 ) (client *JobExecutor, err error) {
 	return &JobExecutor{
 		ClientSet:            clientset,
@@ -102,11 +103,12 @@ func NewJobExecutor(
 		registry:             registry,
 		podStartTimeout:      podStartTimeout,
 		clusterID:            clusterID,
+		dashboardURI:         dashboardURI,
 	}, nil
 }
 
 type ExecutionCounter interface {
-	IncExecuteTest(execution testkube.Execution)
+	IncExecuteTest(execution testkube.Execution, dashboardURI string)
 }
 
 // JobExecutor is container for managing job executor dependencies
@@ -128,6 +130,7 @@ type JobExecutor struct {
 	registry             string
 	podStartTimeout      time.Duration
 	clusterID            string
+	dashboardURI         string
 }
 
 type JobOptions struct {
@@ -428,7 +431,7 @@ func (c *JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, e
 		}
 	}
 
-	c.metrics.IncExecuteTest(*execution)
+	c.metrics.IncExecuteTest(*execution, c.dashboardURI)
 	c.Emitter.Notify(eventToSend)
 
 	telemetryEnabled, err := c.configMap.GetTelemetryEnabled(ctx)

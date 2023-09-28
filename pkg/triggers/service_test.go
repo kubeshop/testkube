@@ -132,6 +132,7 @@ func TestService_Run(t *testing.T) {
 		mockConfigMapClient,
 		mockTestSuiteExecutionsClient,
 		mockBus,
+		"",
 	)
 
 	mockLeaseBackend := NewMockLeaseBackend(mockCtrl)

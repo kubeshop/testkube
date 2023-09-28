@@ -261,7 +261,7 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 		s.events.Notify(testkube.NewEventEndTestSuiteSuccess(testsuiteExecution))
 	}
 
-	s.metrics.IncExecuteTestSuite(*testsuiteExecution)
+	s.metrics.IncExecuteTestSuite(*testsuiteExecution, s.dashboardURI)
 
 	err = s.testExecutionResults.Update(ctx, *testsuiteExecution)
 	if err != nil {

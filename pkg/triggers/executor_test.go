@@ -118,6 +118,7 @@ func TestExecute(t *testing.T) {
 		mockConfigMapClient,
 		mockTestSuiteExecutionsClient,
 		mockBus,
+		"",
 	)
 	s := &Service{
 		triggerStatus:    make(map[statusKey]*triggerStatus),
