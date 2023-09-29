@@ -22,7 +22,7 @@ To access Testkube Status Pages:
 2. Go to the dashboard.
 3. Click on "Status Pages" in the left navigation panel.
 
-Creating Your First Status Page
+### Creating Your First Status Page
 
 ![status-page-edit](../../img/status-page-edit.png)
 
