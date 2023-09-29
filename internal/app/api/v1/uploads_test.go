@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock/gomock"
 
 	"github.com/kubeshop/testkube/pkg/storage"
 

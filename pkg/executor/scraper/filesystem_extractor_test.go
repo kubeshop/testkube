@@ -13,8 +13,8 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/filesystem"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock/gomock"
 
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
 )

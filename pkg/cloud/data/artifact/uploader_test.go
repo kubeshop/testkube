@@ -15,8 +15,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
 
-	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
+	"go.uber.org/mock/gomock/gomock"
 )
 
 func TestCloudLoader_Load(t *testing.T) {

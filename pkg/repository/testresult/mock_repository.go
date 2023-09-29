@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 	time "time"
 
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock/gomock"
 
 	testkube "github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
