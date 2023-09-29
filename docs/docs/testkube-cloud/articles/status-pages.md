@@ -4,8 +4,7 @@ The Testkube status pages are designed to help both technical and non-technical 
 
 ## Overview
 
-<!-- TODO: add screenshot of example status page>
-<!-->
+![status-page-main](../../img/status-page-main.png)
 
 Testkube Status Pages is a feature within the Testkube software that allows you to create and manage dedicated status pages for your software projects. These pages provide real-time information about the health and availability of your project components, making it easier for both internal teams and external stakeholders to stay informed.
 
@@ -25,8 +24,7 @@ To access Testkube Status Pages:
 
 Creating Your First Status Page
 
-<!-- TODO: add screenshot of status page editing>
-<!-->
+![status-page-edit](../../img/status-page-edit.png)
 
 1. Provide a unique name and description for your status page.
 2. Choose a time scale for the status page. This will define the aggregation period of the test execution results.
@@ -38,8 +36,7 @@ Creating Your First Status Page
 
 Services represent the different parts of your software project that you want to monitor, such as servers or databases. In Testkube, you can define them by adding the appropriate tests to one Service in your Status Page.
 
-<!-- TODO: add screenshot of services part of management>
-<!-->
+![status-page-edit-services](../../img/status-page-edit-services.png)
 
 To add and configure a service:
 
@@ -49,13 +46,9 @@ To add and configure a service:
 
 ## Visualising Service Statuses
 
-<!-- TODO: add screenshot of top part of a status page>
-<!-->
-
 The Status Page rendered is unique for each Testkube environment. You can only have one Status Page per environment, so make sure the tests added offer an accurate representation of the status of the services. On the very top of the screen you will see the name of your Status Page and the given description. No details of your Testkube environment or organization will be published on this page, so this is where they need to be pointed out for efficient communication with your users.
 
-<!-- TODO: add screenshot of a service box>
-<!-->
+![status-page-service](../../img/status-page-service.png)
 
 Below that you will see a list of the services with multiple ways to represent their state. On the top left is the name of the service. Top right is current status - this is calculated based on the last bar of the chart below. The possible values are:
 
@@ -88,13 +81,11 @@ Testkube Status Pages streamlines the incident management processes by providing
 
 Incidents are simple objects responsible for communication between the service providers and their users. Managing them is as easy as creating them via the Status Pages management page.
 
-<!-- TODO: add screenshot of Incident management page>
-<!-->
+![incidents-edit](../../img/incidents-edit.png)
 
 They will be shown at the bottom, similar to a news feed.
 
-<!-- TODO: add screenshot of published Incident>
-<!-->
+![incidents-main](../../img/incidents-main.png)
 
 On the top of each individual incident there is the start date. The incidents are ordered by this, with the latest incident on top. The other relevant dates, for example when it was created, updated and resolved are shown at the very bottom. The end date can be left intentionally empty, signifying that this incident has not been resolved.
 
