@@ -118,6 +118,86 @@ Status Pages can be either private or public. Public status pages are published 
 
 Best practices are essential for effectively using Testkube Status Pages to communicate the status of your software projects. These practices help ensure that your status pages are informative, reliable, and serve their intended purpose. Here are some best practices for Testkube Status Pages:
 
+### Relevant Tests
+
+The very first thing you have to consider, even before thinking about your status page, is the type of tests you are creating. You have to make sure that there are tests that are monitoring the not just the behavior of a service, but also the availability. For this, Kubernetes is using liveness probes, which check periodically if your service is still responsive on a user-configured endpoint. In case your application is already running in Kubernetes, consider reusing this endpoint in Testkube.
+
+In order to do this, you should define a cURL command. This can be both a string, a file or stored on Git. For the sake of simplicity, we will be checking on the Testkube website `https://testkube.io`.
+
+```bash
+{
+    "command": [
+      "curl",
+      "https://testkube.io"
+    ],
+    "expected_status": "200"
+}
+```
+
+Create a test that is scheduled to run every minute:
+
+```bash
+testkube create test --type curl/test --name testkube-heartbeat --schedule="* * * * *" --file testkube-check.yaml
+```
+
+To check your test executions, run the following command:
+
+```bash
+testkube get executions --test testkube-heartbeat
+```
+
+The result should look similar, depending on the availability of your service:
+
+```bash
+Context:  (1.14.5)   Namespace: testkube
+----------------------------------------
+
+  ID                       | NAME                 | TEST NAME          | TYPE      | STATUS | LABELS
+---------------------------+----------------------+--------------------+-----------+--------+---------------------------------
+  6516a2f0d1127956d21dc5dc | testkube-heartbeat-7 | testkube-heartbeat | curl/test | passed | executor=curl-executor,
+                           |                      |                    |           |        | test-type=curl-test
+  6516a2b4d1127956d21dc5da | testkube-heartbeat-6 | testkube-heartbeat | curl/test | passed | test-type=curl-test,
+                           |                      |                    |           |        | executor=curl-executor
+  6516a278d1127956d21dc5d8 | testkube-heartbeat-5 | testkube-heartbeat | curl/test | passed | executor=curl-executor,
+                           |                      |                    |           |        | test-type=curl-test
+  6516a23cd1127956d21dc5d6 | testkube-heartbeat-4 | testkube-heartbeat | curl/test | passed | executor=curl-executor,
+                           |                      |                    |           |        | test-type=curl-test
+  6516a200d1127956d21dc5d4 | testkube-heartbeat-3 | testkube-heartbeat | curl/test | passed | test-type=curl-test,
+                           |                      |                    |           |        | executor=curl-executor
+  6516a1c4d1127956d21dc5d2 | testkube-heartbeat-2 | testkube-heartbeat | curl/test | passed | executor=curl-executor,
+                           |                      |                    |           |        | test-type=curl-test
+  6516a188d1127956d21dc5d0 | testkube-heartbeat-1 | testkube-heartbeat | curl/test | passed |
+```
+
+You can also use `kubectl apply -f testcrd.yaml` to port your test from one machine to the other. An example test definition would look like:
+
+```bash
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  labels:
+    executor: curl-executor
+    test-type: curl-test
+  name: testkube-heartbeat
+  namespace: testkube
+spec:
+  content:
+    data: |
+      {
+          "command": [
+            "curl",
+            "https://testkube.io"
+          ],
+          "expected_status": "200"
+      }
+    type: string
+  executionRequest: {}
+  schedule: '* * * * *'
+  type: curl/test
+```
+
+Now, you are properly equipped to start creating a status page that always has relevant data.
+
 ### Designing Effective Status Pages
 
 Clear and Concise Information: Keep the information on your status page clear, concise, and relevant. Avoid technical jargon that might confuse non-technical stakeholders.
