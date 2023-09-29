@@ -144,7 +144,7 @@ They will be shown at the bottom, similar to a news feed.
 
 ![incidents-main](../../img/incidents-main.png)
 
-On the top of each individual incident there is the start date. The incidents are ordered by this, with the latest incident on top. The other relevant dates, for example when it was created, updated and resolved are shown at the very bottom. The end date can be left intentionally empty, signifying that this incident has not been resolved.
+On the top of each individual incident there is the start date. The incidents are ordered by this, with the latest incident on top. The other relevant dates, for example, when it was created, updated and resolved are shown at the very bottom. The end date can be left intentionally empty, signifying that this incident has not been resolved.
 
 The title of the incident will be colored based on the configured severity:
 
