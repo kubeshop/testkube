@@ -1634,6 +1634,7 @@ paths:
         - api
       parameters:
         - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/SkipDeleteExecutions"
       summary: "Delete test"
       description: "Deletes a test"
       operationId: deleteTest
@@ -3892,6 +3893,10 @@ components:
           type: string
           description: schedule to run test
           example: "* * * * *"
+        readOnly:
+          type: boolean
+          description: if test is offline and cannot be executed
+
         uploads:
           type: array
           items:
@@ -5953,6 +5958,14 @@ components:
       schema:
         type: string
         description: mask to filter files
+      required: false
+    SkipDeleteExecutions:
+      in: query
+      name: skipDeleteExecutions
+      schema:
+        type: boolean
+        default: false
+      description: dont delete executions
       required: false
   requestBodies:
     UploadsBody:
