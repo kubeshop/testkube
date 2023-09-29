@@ -5,7 +5,7 @@ import (
 
 	"github.com/99designs/gqlgen/client"
 	"github.com/99designs/gqlgen/graphql/handler"
-	"go.uber.org/mock/gomock/gomock"
+	"go.uber.org/mock/gomock"
 
 	"github.com/kubeshop/testkube/internal/graphql/gen"
 	"github.com/kubeshop/testkube/internal/graphql/services"

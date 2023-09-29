@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock/gomock"
+	"go.uber.org/mock/gomock"
 
 	"github.com/kubeshop/testkube/pkg/log"
 )

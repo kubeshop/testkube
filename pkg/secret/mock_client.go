@@ -7,7 +7,7 @@ package secret
 import (
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	v1 "k8s.io/api/core/v1"
 )
 

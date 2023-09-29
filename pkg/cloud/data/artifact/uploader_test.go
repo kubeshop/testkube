@@ -16,7 +16,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
 
 	"github.com/pkg/errors"
-	"go.uber.org/mock/gomock/gomock"
+	"go.uber.org/mock/gomock"
 )
 
 func TestCloudLoader_Load(t *testing.T) {

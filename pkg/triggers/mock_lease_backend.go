@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockLeaseBackend is a mock of LeaseBackend interface.

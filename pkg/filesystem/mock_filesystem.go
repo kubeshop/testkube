@@ -11,7 +11,7 @@ import (
 	filepath "path/filepath"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockFileSystem is a mock of FileSystem interface.

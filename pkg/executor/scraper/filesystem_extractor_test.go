@@ -14,7 +14,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/filesystem"
 
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock/gomock"
+	"go.uber.org/mock/gomock"
 
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
 )

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock/gomock"
+	"go.uber.org/mock/gomock"
 	"go.uber.org/zap"
 
 	executorsv1 "github.com/kubeshop/testkube-operator/api/executor/v1"

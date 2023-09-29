@@ -9,7 +9,7 @@ import (
 	io "io"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock/gomock"
+	gomock "go.uber.org/mock/gomock"
 
 	testkube "github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
