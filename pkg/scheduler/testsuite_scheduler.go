@@ -9,7 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
+	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	testsuiteexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testsuiteexecutions"
@@ -261,7 +261,7 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 		s.events.Notify(testkube.NewEventEndTestSuiteSuccess(testsuiteExecution))
 	}
 
-	s.metrics.IncExecuteTestSuite(*testsuiteExecution)
+	s.metrics.IncExecuteTestSuite(*testsuiteExecution, s.dashboardURI)
 
 	err = s.testExecutionResults.Update(ctx, *testsuiteExecution)
 	if err != nil {

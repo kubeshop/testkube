@@ -14,9 +14,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
-	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	"github.com/kubeshop/testkube-operator/client/tests/v3"
-	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
+	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
+	"github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	"github.com/kubeshop/testkube-operator/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
@@ -540,9 +540,12 @@ func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not delete test: %w", errPrefix, err))
 		}
 
-		// delete executions for test
-		if err = s.ExecutionResults.DeleteByTest(c.Context(), name); err != nil {
-			return s.Warn(c, http.StatusInternalServerError, fmt.Errorf("test %s was deleted but deleting test executions returned error: %w", name, err))
+		skipExecutions := c.Query("skipDeleteExecutions", "")
+		if skipExecutions != "true" {
+			// delete executions for test
+			if err = s.ExecutionResults.DeleteByTest(c.Context(), name); err != nil {
+				return s.Warn(c, http.StatusInternalServerError, fmt.Errorf("test %s was deleted but deleting test executions returned error: %w", name, err))
+			}
 		}
 
 		return c.SendStatus(http.StatusNoContent)

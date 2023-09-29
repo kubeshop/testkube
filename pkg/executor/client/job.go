@@ -30,9 +30,9 @@ import (
 
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 
-	templatesv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
-	testexecutionsv1 "github.com/kubeshop/testkube-operator/client/testexecutions/v1"
-	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
+	templatesv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
+	testexecutionsv1 "github.com/kubeshop/testkube-operator/pkg/client/testexecutions/v1"
+	testsv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/executor"
@@ -86,6 +86,7 @@ func NewJobExecutor(
 	podStartTimeout time.Duration,
 	clusterID string,
 	logsStream stream.LogsStream,
+	dashboardURI string,
 ) (client *JobExecutor, err error) {
 	return &JobExecutor{
 		ClientSet:            clientset,
@@ -105,11 +106,12 @@ func NewJobExecutor(
 		podStartTimeout:      podStartTimeout,
 		clusterID:            clusterID,
 		logsStream:           logsStream,
+		dashboardURI:         dashboardURI,
 	}, nil
 }
 
 type ExecutionCounter interface {
-	IncExecuteTest(execution testkube.Execution)
+	IncExecuteTest(execution testkube.Execution, dashboardURI string)
 }
 
 // JobExecutor is container for managing job executor dependencies
@@ -132,6 +134,7 @@ type JobExecutor struct {
 	podStartTimeout      time.Duration
 	clusterID            string
 	logsStream           stream.LogsStream
+	dashboardURI         string
 }
 
 type JobOptions struct {
@@ -349,7 +352,7 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	}
 
 	if execution.ExecutionResult.IsFailed() && execution.ExecutionResult.ErrorMessage == "" {
-		execution.ExecutionResult.ErrorMessage = executor.GetPodErrorMessage(&pod)
+		execution.ExecutionResult.ErrorMessage = executor.GetPodErrorMessage(ctx, c.ClientSet, &pod)
 	}
 
 	// saving result in the defer function
@@ -438,7 +441,7 @@ func (c *JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, e
 		}
 	}
 
-	c.metrics.IncExecuteTest(*execution)
+	c.metrics.IncExecuteTest(*execution, c.dashboardURI)
 	c.Emitter.Notify(eventToSend)
 
 	telemetryEnabled, err := c.configMap.GetTelemetryEnabled(ctx)
@@ -810,6 +813,13 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	}
 
 	jobOptions.Variables = execution.Variables
+	if options.ExecutorSpec.Slaves != nil {
+		slvesConfigs, err := json.Marshal(executor.GetSlavesConfigs(initImage, *options.ExecutorSpec.Slaves))
+		if err != nil {
+			return jobOptions, err
+		}
+		jobOptions.Variables[executor.SlavesConfigsEnv] = testkube.NewBasicVariable(executor.SlavesConfigsEnv, string(slvesConfigs))
+	}
 	jobOptions.ServiceAccountName = serviceAccountName
 	jobOptions.Registry = registry
 	jobOptions.ClusterID = clusterID

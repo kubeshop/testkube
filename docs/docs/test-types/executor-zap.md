@@ -4,7 +4,7 @@ import Admonition from "@theme/Admonition";
 
 Starting from version 1.12, Testkube has a dedicated executor for running ZAP tests. All you need to do is populate a file with the necessary parameters and create a Testkube test.
 
-Default command for this executor is &lt;pythonScriptPath&gt;, which will be calculated based on the test type.
+Default command for this executor is `<pythonScriptPath>`, which will be calculated based on the test type.
 
 * "zap/baseline": "./zap-baseline.py"
 * "zap/full": "./zap-full-scan.py"

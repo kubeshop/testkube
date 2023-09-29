@@ -19,11 +19,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
-	templatesv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
-	testexecutionsv1 "github.com/kubeshop/testkube-operator/client/testexecutions/v1"
-	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
+	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
+	templatesv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
+	testexecutionsv1 "github.com/kubeshop/testkube-operator/pkg/client/testexecutions/v1"
+	testsv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -68,6 +68,7 @@ func NewContainerExecutor(
 	podStartTimeout time.Duration,
 	clusterID string,
 	logsStream stream.LogsStream,
+	dashboardURI string,
 ) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -93,11 +94,12 @@ func NewContainerExecutor(
 		podStartTimeout:      podStartTimeout,
 		clusterID:            clusterID,
 		logsStream:           logsStream,
+		dashboardURI:         dashboardURI,
 	}, nil
 }
 
 type ExecutionCounter interface {
-	IncExecuteTest(execution testkube.Execution)
+	IncExecuteTest(execution testkube.Execution, dashboardURI string)
 }
 
 // ContainerExecutor is container for managing job executor dependencies
@@ -120,6 +122,7 @@ type ContainerExecutor struct {
 	podStartTimeout      time.Duration
 	clusterID            string
 	logsStream           stream.LogsStream
+	dashboardURI         string
 }
 
 type JobOptions struct {
@@ -435,7 +438,7 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	execution.ExecutionResult.Output = output
 
 	if execution.ExecutionResult.IsFailed() && execution.ExecutionResult.ErrorMessage == "" {
-		execution.ExecutionResult.ErrorMessage = executor.GetPodErrorMessage(latestExecutorPod)
+		execution.ExecutionResult.ErrorMessage = executor.GetPodErrorMessage(ctx, c.clientSet, latestExecutorPod)
 	}
 
 	l.Infow("container execution completed saving result", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
@@ -456,7 +459,7 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testku
 
 	// metrics increase
 	execution.ExecutionResult = result
-	c.metrics.IncExecuteTest(*execution)
+	c.metrics.IncExecuteTest(*execution, c.dashboardURI)
 
 	test, err := c.testsClient.Get(execution.TestName)
 	if err != nil {

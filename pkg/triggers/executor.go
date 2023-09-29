@@ -7,9 +7,9 @@ import (
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
-	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
+	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
+	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
+	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/workerpool"

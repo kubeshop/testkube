@@ -1,6 +1,7 @@
 package testsuites
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/robfig/cron"
@@ -34,6 +35,7 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 		cronJobTemplateReference string
 		scraperTemplateReference string
 		pvcTemplateReference     string
+		update                   bool
 	)
 
 	cmd := &cobra.Command{
@@ -56,9 +58,28 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 				client, namespace, err := common.GetClient(cmd)
 				ui.ExitOnError("getting client", err)
 
-				test, _ := client.GetTestSuite(options.Name)
-				if options.Name == test.Name {
-					ui.Failf("TestSuite with name '%s' already exists in namespace %s", options.Name, namespace)
+				testSuite, _ := client.GetTestSuite(options.Name)
+
+				if options.Name == testSuite.Name {
+					if cmd.Flag("update").Changed {
+						if !update {
+							ui.Failf("TestSuite with name '%s' already exists in namespace %s, ", testSuite.Name, namespace)
+						}
+					} else {
+						ok := ui.Confirm(fmt.Sprintf("TestSuite with name '%s' already exists in namespace %s, ", testSuite.Name, namespace) +
+							"do you want to overwrite it?")
+						if !ok {
+							ui.Failf("TestSuite creation was aborted")
+						}
+					}
+
+					options, err := NewTestSuiteUpdateOptionsFromFlags(cmd)
+					ui.ExitOnError("getting test suite options", err)
+
+					testSuite, err = client.UpdateTestSuite(options)
+					ui.ExitOnError("updating TestSuite "+testSuite.Name+" in namespace "+namespace, err)
+
+					ui.SuccessAndExit("TestSuite updated", testSuite.Name)
 				}
 
 				_, err = client.CreateTestSuite(apiClient.UpsertTestSuiteOptions(options))
@@ -94,6 +115,7 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 	cmd.Flags().StringVar(&cronJobTemplateReference, "cronjob-template-reference", "", "reference to cron job template to use for the test")
 	cmd.Flags().StringVar(&scraperTemplateReference, "scraper-template-reference", "", "reference to scraper template to use for the test")
 	cmd.Flags().StringVar(&pvcTemplateReference, "pvc-template-reference", "", "reference to pvc template to use for the test")
+	cmd.Flags().BoolVar(&update, "update", false, "update, if test suite already exists")
 
 	return cmd
 }

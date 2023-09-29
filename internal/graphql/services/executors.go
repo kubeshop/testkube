@@ -3,7 +3,7 @@ package services
 import (
 	"context"
 
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"
 )

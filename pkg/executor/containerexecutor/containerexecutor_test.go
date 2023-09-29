@@ -13,10 +13,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	templatesclientv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
-	v3 "github.com/kubeshop/testkube-operator/client/tests/v3"
+	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
+	templatesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
+	v3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -330,7 +330,7 @@ func getFakeClient(executionID string) *fake.Clientset {
 type FakeMetricCounter struct {
 }
 
-func (FakeMetricCounter) IncExecuteTest(execution testkube.Execution) {
+func (FakeMetricCounter) IncExecuteTest(execution testkube.Execution, dashboardURI string) {
 	return
 }
 

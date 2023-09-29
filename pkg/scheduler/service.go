@@ -6,11 +6,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 
-	executorsv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
-	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
-	testsourcesv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
-	testsuiteexecutionsclientv1 "github.com/kubeshop/testkube-operator/client/testsuiteexecutions/v1"
-	testsuitesv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
+	executorsv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
+	testsv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	testsourcesv1 "github.com/kubeshop/testkube-operator/pkg/client/testsources/v1"
+	testsuiteexecutionsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testsuiteexecutions/v1"
+	testsuitesv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/event"
@@ -37,6 +37,7 @@ type Scheduler struct {
 	configMapClient           configmap.Interface
 	testSuiteExecutionsClient testsuiteexecutionsclientv1.Interface
 	eventsBus                 bus.Bus
+	dashboardURI              string
 }
 
 func NewScheduler(
@@ -56,6 +57,7 @@ func NewScheduler(
 	configMapClient configmap.Interface,
 	testSuiteExecutionsClient testsuiteexecutionsclientv1.Interface,
 	eventsBus bus.Bus,
+	dashboardURI string,
 ) *Scheduler {
 	return &Scheduler{
 		metrics:                   metrics,
@@ -74,5 +76,6 @@ func NewScheduler(
 		configMapClient:           configMapClient,
 		testSuiteExecutionsClient: testSuiteExecutionsClient,
 		eventsBus:                 eventsBus,
+		dashboardURI:              dashboardURI,
 	}
 }

@@ -21,8 +21,8 @@ type Config struct {
 	SlackToken                        string        `envconfig:"SLACK_TOKEN" default:""`
 	SlackConfig                       string        `envconfig:"SLACK_CONFIG" default:""`
 	SlackTemplate                     string        `envconfig:"SLACK_TEMPLATE" default:""`
-	StorageEndpoint                   string        `envconfig:"STORAGE_ENDPOINT" default:""`
-	StorageBucket                     string        `envconfig:"STORAGE_BUCKET" default:""`
+	StorageEndpoint                   string        `envconfig:"STORAGE_ENDPOINT" default:"localhost:9000"`
+	StorageBucket                     string        `envconfig:"STORAGE_BUCKET" default:"testkube-logs"`
 	StorageExpiration                 int           `envconfig:"STORAGE_EXPIRATION"`
 	StorageAccessKeyID                string        `envconfig:"STORAGE_ACCESSKEYID" default:""`
 	StorageSecretAccessKey            string        `envconfig:"STORAGE_SECRETACCESSKEY" default:""`

@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -25,7 +26,7 @@ import (
 )
 
 func NewRunner(ctx context.Context, params envs.Params) (*JMeterDRunner, error) {
-	output.PrintLog(fmt.Sprintf("%s Preparing test runner", ui.IconTruck))
+	output.PrintLogf("%s Preparing test runner", ui.IconTruck)
 
 	var err error
 	r := &JMeterDRunner{
@@ -37,13 +38,20 @@ func NewRunner(ctx context.Context, params envs.Params) (*JMeterDRunner, error) 
 		return nil, err
 	}
 
+	slavesConfigs := executor.SlavesConfigs{}
+	if err := json.Unmarshal([]byte(params.SlavesConfigs), &slavesConfigs); err != nil {
+		return nil, errors.Wrap(err, "error unmarshalling slaves configs")
+	}
+	r.SlavesConfigs = slavesConfigs
+
 	return r, nil
 }
 
 // JMeterDRunner runner
 type JMeterDRunner struct {
-	Params  envs.Params
-	Scraper scraper.Scraper
+	Params        envs.Params
+	Scraper       scraper.Scraper
+	SlavesConfigs executor.SlavesConfigs
 }
 
 var _ runner.Runner = &JMeterDRunner{}
@@ -82,9 +90,7 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 			}
 		}
 
-		output.PrintLogf("execution arg before %s", execution.Args)
 		execution.Args = execution.Args[:len(execution.Args)-1]
-		output.PrintLogf("execution arg afrer %s", execution.Args)
 		output.PrintLogf("%s It is a directory test - trying to find file from the last executor argument %s in directory %s", ui.IconWorld, scriptName, path)
 
 		// sanity checking for test script
@@ -159,19 +165,19 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 		}
 	}
 
-	slavesClient, err := slaves.NewClient(execution, r.Params, slavesEnvVariables)
+	slaveClient, err := slaves.NewClient(execution, r.SlavesConfigs, r.Params, slavesEnvVariables)
 	if err != nil {
 		return *result.WithErrors(errors.Wrap(err, "error creating slaves client")), nil
 	}
 
 	//creating slaves provided in SLAVES_COUNT env variable
-	slavesNameIpMap, err := slavesClient.CreateSlaves(ctx)
+	slaveMeta, err := slaveClient.CreateSlaves(ctx)
 	if err != nil {
 		return *result.WithErrors(errors.Wrap(err, "error creating slaves")), nil
 	}
-	defer slavesClient.DeleteSlaves(ctx, slavesNameIpMap)
+	defer slaveClient.DeleteSlaves(ctx, slaveMeta)
 
-	args = append(args, fmt.Sprintf("-R %v", slaves.GetSlavesIpString(slavesNameIpMap)))
+	args = append(args, fmt.Sprintf("-R %v", slaveMeta.ToIPString()))
 
 	for i := range args {
 		if args[i] == "<envVars>" {

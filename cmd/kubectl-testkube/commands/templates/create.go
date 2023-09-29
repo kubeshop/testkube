@@ -18,6 +18,7 @@ func NewCreateTemplateCmd() *cobra.Command {
 		templateType string
 		labels       map[string]string
 		body         string
+		update       bool
 	)
 
 	cmd := &cobra.Command{
@@ -41,7 +42,25 @@ func NewCreateTemplateCmd() *cobra.Command {
 
 				template, _ := client.GetTemplate(name)
 				if name == template.Name {
-					ui.Failf("Template with name '%s' already exists in namespace %s", name, namespace)
+					if cmd.Flag("update").Changed {
+						if !update {
+							ui.Failf("Template with name '%s' already exists in namespace %s, ", template.Name, namespace)
+						}
+					} else {
+						ok := ui.Confirm(fmt.Sprintf("Template with name '%s' already exists in namespace %s, ", template.Name, namespace) +
+							"do you want to overwrite it?")
+						if !ok {
+							ui.Failf("Template creation was aborted")
+						}
+					}
+
+					options, err := NewUpdateTemplateOptionsFromFlags(cmd)
+					ui.ExitOnError("getting template options", err)
+
+					_, err = client.UpdateTemplate(options)
+					ui.ExitOnError("updating template "+name+" in namespace "+namespace, err)
+
+					ui.SuccessAndExit("Template updated", name)
 				}
 			}
 
@@ -70,6 +89,7 @@ func NewCreateTemplateCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&templateType, "template-type", "", "", "template type one of job|container|cronjob|scraper|pvc|webhook")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringVarP(&body, "body", "", "", "a path to template file to use as template body")
+	cmd.Flags().BoolVar(&update, "update", false, "update, if template already exists")
 
 	return cmd
 }

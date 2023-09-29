@@ -17,7 +17,7 @@ import (
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 	"sigs.k8s.io/kustomize/kyaml/yaml/merge2"
 
-	templatesv1 "github.com/kubeshop/testkube-operator/client/templates/v1"
+	templatesv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"

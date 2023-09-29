@@ -8,14 +8,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
-	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
-	testsourcesv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
-	testsuiteexecutionsv1 "github.com/kubeshop/testkube-operator/client/testsuiteexecutions/v1"
-	testsuitesv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
+	v1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
+	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
+	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	testsourcesv1 "github.com/kubeshop/testkube-operator/pkg/client/testsources/v1"
+	testsuiteexecutionsv1 "github.com/kubeshop/testkube-operator/pkg/client/testsuiteexecutions/v1"
+	testsuitesv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/configmap"
@@ -118,6 +118,7 @@ func TestExecute(t *testing.T) {
 		mockConfigMapClient,
 		mockTestSuiteExecutionsClient,
 		mockBus,
+		"",
 	)
 	s := &Service{
 		triggerStatus:    make(map[statusKey]*triggerStatus),

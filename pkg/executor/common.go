@@ -18,8 +18,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	tcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"
@@ -35,6 +35,8 @@ const (
 	GitUsernameSecretName = "git-username"
 	// GitTokenSecretName is git token secret name
 	GitTokenSecretName = "git-token"
+	// SlavesConfigsEnv is slave configs for creating slaves in executor
+	SlavesConfigsEnv = "RUNNER_SLAVES_CONFIGS"
 )
 
 var RunnerEnvVars = []corev1.EnvVar{
@@ -107,6 +109,24 @@ var RunnerEnvVars = []corev1.EnvVar{
 		Name:  "CI",
 		Value: "1",
 	},
+}
+
+type SlavesConfigs struct {
+	Images SlaveImages `json:"images"`
+}
+
+type SlaveImages struct {
+	Init  string `json:"init"`
+	Slave string `json:"slave"`
+}
+
+func GetSlavesConfigs(initImage string, slavesMeta executorv1.SlavesMeta) SlavesConfigs {
+	return SlavesConfigs{
+		Images: SlaveImages{
+			Init:  initImage,
+			Slave: slavesMeta.Image,
+		},
+	}
 }
 
 func getOr(key, defaultVal string) string {
@@ -354,6 +374,7 @@ func SyncDefaultExecutors(
 				Types:        executor.Executor.Types,
 				ExecutorType: executorv1.ExecutorType(executor.Executor.ExecutorType),
 				Image:        executor.Executor.Image,
+				Slaves:       executorsmapper.MapSlavesConfigsToCRD(executor.Executor.Slaves),
 				Command:      executor.Executor.Command,
 				Args:         executor.Executor.Args,
 				Features:     executorsmapper.MapFeaturesToCRD(executor.Executor.Features),
@@ -381,23 +402,100 @@ func SyncDefaultExecutors(
 	return images, nil
 }
 
-// GetPodErrorMessage return pod error message
-func GetPodErrorMessage(pod *corev1.Pod) string {
-	if pod.Status.Message != "" {
-		return pod.Status.Message
+// GetPodErrorMessage returns pod error message
+func GetPodErrorMessage(ctx context.Context, client kubernetes.Interface, pod *corev1.Pod) string {
+	message := ""
+	if pod.Status.Message != "" || pod.Status.Reason != "" {
+		message = fmt.Sprintf("pod message: %s reason: %s", pod.Status.Message, pod.Status.Reason)
+	}
+
+	events, err := GetPodEventsSummary(ctx, client, pod)
+	if err != nil {
+		log.DefaultLogger.Errorf("Error while getting pod events %s: %s", pod.Name, err.Error())
 	}
 
 	for _, initContainerStatus := range pod.Status.InitContainerStatuses {
-		if initContainerStatus.State.Terminated != nil && initContainerStatus.State.Terminated.Message != "" {
-			return initContainerStatus.State.Terminated.Message
+		if initContainerStatus.State.Terminated != nil && initContainerStatus.State.Terminated.ExitCode != 0 &&
+			(initContainerStatus.State.Terminated.Message != "" || initContainerStatus.State.Terminated.Reason != "") {
+			if message != "" {
+				message += "\n"
+			}
+
+			message += fmt.Sprintf("init container message: %s reason: %s", initContainerStatus.State.Terminated.Message,
+				initContainerStatus.State.Terminated.Reason)
+			if events != "" {
+				message += "\n" + events
+			}
+
+			return message
 		}
 	}
 
 	for _, containerStatus := range pod.Status.ContainerStatuses {
-		if containerStatus.State.Terminated != nil && containerStatus.State.Terminated.Message != "" {
-			return containerStatus.State.Terminated.Message
+		if containerStatus.State.Terminated != nil && containerStatus.State.Terminated.ExitCode != 0 &&
+			(containerStatus.State.Terminated.Message != "" || containerStatus.State.Terminated.Reason != "") {
+			if message != "" {
+				message += "\n"
+			}
+
+			message += fmt.Sprintf("test container message: %s reason: %s", containerStatus.State.Terminated.Message,
+				containerStatus.State.Terminated.Reason)
+			if events != "" {
+				message += "\n" + events
+			}
+
+			return message
 		}
 	}
 
-	return ""
+	if message == "" {
+		message = fmt.Sprintf("execution pod %s failed", pod.Name)
+	}
+
+	if events != "" {
+		message += "\n" + events
+	}
+
+	return message
+}
+
+// GetPodExitCode returns pod exit code
+func GetPodExitCode(pod *corev1.Pod) int32 {
+	for _, initContainerStatus := range pod.Status.InitContainerStatuses {
+		if initContainerStatus.State.Terminated != nil && initContainerStatus.State.Terminated.ExitCode != 0 {
+			return initContainerStatus.State.Terminated.ExitCode
+		}
+	}
+
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if containerStatus.State.Terminated != nil && containerStatus.State.Terminated.ExitCode != 0 {
+			return containerStatus.State.Terminated.ExitCode
+		}
+	}
+
+	return 0
+}
+
+// GetPodEventsSummary returns pod events summary
+func GetPodEventsSummary(ctx context.Context, client kubernetes.Interface, pod *corev1.Pod) (string, error) {
+	message := ""
+	list, err := client.CoreV1().Events(pod.Namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	for _, item := range list.Items {
+		if item.InvolvedObject.Name != pod.Name {
+			continue
+		}
+
+		if message != "" {
+			message += "\n"
+		}
+
+		message += fmt.Sprintf("event type: %s, reason: %s, message: %s",
+			item.Type, item.Reason, item.Message)
+	}
+
+	return message, nil
 }

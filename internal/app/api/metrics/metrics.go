@@ -1,6 +1,10 @@
 package metrics
 
 import (
+	"fmt"
+	"slices"
+	"strings"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
@@ -10,12 +14,12 @@ import (
 var testExecutionCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_test_executions_count",
 	Help: "The total number of test executions",
-}, []string{"type", "name", "result"})
+}, []string{"type", "name", "result", "labels", "test_uri", "execution_uri"})
 
 var testSuiteExecutionCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_testsuite_executions_count",
 	Help: "The total number of test suite executions",
-}, []string{"name", "result"})
+}, []string{"name", "result", "labels", "testsuite_uri", "execution_uri"})
 
 var testCreationCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_test_creations_count",
@@ -99,20 +103,30 @@ type Metrics struct {
 	TestAbort              *prometheus.CounterVec
 }
 
-func (m Metrics) IncExecuteTest(execution testkube.Execution) {
+func (m Metrics) IncExecuteTest(execution testkube.Execution, dashboardURI string) {
 	status := ""
 	if execution.ExecutionResult != nil && execution.ExecutionResult.Status != nil {
 		status = string(*execution.ExecutionResult.Status)
 	}
 
+	var labels []string
+	for key, value := range execution.Labels {
+		labels = append(labels, fmt.Sprintf("%s=%s", key, value))
+	}
+
+	slices.Sort(labels)
 	m.TestExecutions.With(map[string]string{
-		"type":   execution.TestType,
-		"name":   execution.TestName,
-		"result": status,
+		"type":     execution.TestType,
+		"name":     execution.TestName,
+		"result":   status,
+		"labels":   strings.Join(labels, ","),
+		"test_uri": fmt.Sprintf("%s/tests/%s", dashboardURI, execution.TestName),
+		"execution_uri": fmt.Sprintf("%s/tests/%s/executions/%s", dashboardURI,
+			execution.TestName, execution.Id),
 	}).Inc()
 }
 
-func (m Metrics) IncExecuteTestSuite(execution testkube.TestSuiteExecution) {
+func (m Metrics) IncExecuteTestSuite(execution testkube.TestSuiteExecution, dashboardURI string) {
 	name := ""
 	status := ""
 	if execution.TestSuite != nil {
@@ -123,9 +137,24 @@ func (m Metrics) IncExecuteTestSuite(execution testkube.TestSuiteExecution) {
 		status = string(*execution.Status)
 	}
 
+	var labels []string
+	for key, value := range execution.Labels {
+		labels = append(labels, fmt.Sprintf("%s=%s", key, value))
+	}
+
+	slices.Sort(labels)
+	testSuiteName := ""
+	if execution.TestSuite != nil {
+		testSuiteName = execution.TestSuite.Name
+	}
+
 	m.TestSuiteExecutions.With(map[string]string{
-		"name":   name,
-		"result": status,
+		"name":          name,
+		"result":        status,
+		"labels":        strings.Join(labels, ","),
+		"testsuite_uri": fmt.Sprintf("%s/test-suites/%s", dashboardURI, testSuiteName),
+		"execution_uri": fmt.Sprintf("%s/test-suites/%s/executions/%s", dashboardURI,
+			testSuiteName, execution.Id),
 	}).Inc()
 }
 

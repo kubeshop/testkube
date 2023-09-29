@@ -29,6 +29,7 @@ testkube create executor [flags]
   -n, --name string                      unique executor name - mandatory
       --tooltip stringToString           tooltip key value pair: --tooltip key1=value1 (default [])
   -t, --types stringArray                test types handled by executor
+      --update                           update, if executor already exists
   -u, --uri string                       if resource need to be loaded from URI
 ```
 
