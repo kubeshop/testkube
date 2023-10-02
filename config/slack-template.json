@@ -135,7 +135,7 @@
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "*Test Execution Results*"
+				"text": "*Test Execution CLI*"
 			}
 		},
 		{
