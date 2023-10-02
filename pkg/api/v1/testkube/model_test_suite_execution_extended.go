@@ -249,7 +249,9 @@ func (e *TestSuiteExecution) CleanStepsOutput() *TestSuiteExecution {
 		if e.StepResults[i].Execution != nil && e.StepResults[i].Execution.ExecutionResult != nil {
 			e.StepResults[i].Execution.ExecutionResult.Output = ""
 			for j := range e.ExecuteStepResults[i].Execute {
-				e.ExecuteStepResults[i].Execute[j].Execution.ExecutionResult.Output = ""
+				if e.ExecuteStepResults[i].Execute[j].Execution != nil && e.ExecuteStepResults[i].Execute[j].Execution.ExecutionResult != nil {
+					e.ExecuteStepResults[i].Execute[j].Execution.ExecutionResult.Output = ""
+				}
 			}
 		}
 	}
