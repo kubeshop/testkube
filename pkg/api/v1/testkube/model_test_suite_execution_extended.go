@@ -243,3 +243,20 @@ func (e *TestSuiteExecution) EscapeDots() *TestSuiteExecution {
 func (e *TestSuiteExecution) UnscapeDots() *TestSuiteExecution {
 	return e.convertDots(utils.UnescapeDots)
 }
+
+func (e *TestSuiteExecution) CleanStepsOutput() *TestSuiteExecution {
+	for i := range e.StepResults {
+		if e.StepResults[i].Execution != nil && e.StepResults[i].Execution.ExecutionResult != nil {
+			e.StepResults[i].Execution.ExecutionResult.Output = ""
+		}
+	}
+
+	for i := range e.ExecuteStepResults {
+		for j := range e.ExecuteStepResults[i].Execute {
+			if e.ExecuteStepResults[i].Execute[j].Execution != nil && e.ExecuteStepResults[i].Execute[j].Execution.ExecutionResult != nil {
+				e.ExecuteStepResults[i].Execute[j].Execution.ExecutionResult.Output = ""
+			}
+		}
+	}
+	return e
+}
