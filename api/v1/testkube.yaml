@@ -3696,7 +3696,7 @@ components:
           description: object name and namespace
         execution:
           $ref: "#/components/schemas/Execution"
-          description: test step execution
+          description: "test step execution, NOTE: the execution output will be empty, retrieve it directly form the test execution"
 
     TestSuiteStepExecutionResultV2:
       description: execution result returned from executor

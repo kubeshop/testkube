@@ -222,12 +222,14 @@ func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (res
 
 func (r *MongoRepository) Insert(ctx context.Context, result testkube.TestSuiteExecution) (err error) {
 	result.EscapeDots()
+	result.CleanStepsOutput()
 	_, err = r.Coll.InsertOne(ctx, result)
 	return
 }
 
 func (r *MongoRepository) Update(ctx context.Context, result testkube.TestSuiteExecution) (err error) {
 	result.EscapeDots()
+	result.CleanStepsOutput()
 	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": result.Id}, result)
 	return
 }
