@@ -27,6 +27,7 @@ type MessageArgs struct {
 	EndTime       string
 	Duration      string
 	ClusterName   string
+	DashboardURI  string
 	Envs          map[string]string
 }
 
@@ -36,12 +37,14 @@ type Notifier struct {
 	Ready           bool
 	messageTemplate string
 	clusterName     string
+	dashboardURI    string
 	config          *Config
 	envs            map[string]string
 }
 
-func NewNotifier(template, clusterName string, config []NotificationsConfig, envs map[string]string) *Notifier {
-	notifier := Notifier{messageTemplate: template, clusterName: clusterName, config: NewConfig(config), envs: envs}
+func NewNotifier(template, clusterName, dashboardURI string, config []NotificationsConfig, envs map[string]string) *Notifier {
+	notifier := Notifier{messageTemplate: template, clusterName: clusterName, dashboardURI: dashboardURI,
+		config: NewConfig(config), envs: envs}
 	notifier.timestamps = make(map[string]string)
 	if token, ok := os.LookupEnv("SLACK_TOKEN"); ok {
 		log.DefaultLogger.Infow("initializing slack client", "SLACK_TOKEN", token)
@@ -187,6 +190,7 @@ func (s *Notifier) composeTestsuiteMessage(execution *testkube.TestSuiteExecutio
 		TotalSteps:    len(execution.ExecuteStepResults),
 		FailedSteps:   execution.FailedStepsCount(),
 		ClusterName:   s.clusterName,
+		DashboardURI:  s.dashboardURI,
 		Envs:          s.envs,
 	}
 
@@ -223,6 +227,7 @@ func (s *Notifier) composeTestMessage(execution *testkube.Execution, eventType t
 		TotalSteps:    len(execution.ExecutionResult.Steps),
 		FailedSteps:   execution.ExecutionResult.FailedStepsCount(),
 		ClusterName:   s.clusterName,
+		DashboardURI:  s.dashboardURI,
 		Envs:          s.envs,
 	}
 

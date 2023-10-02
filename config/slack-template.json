@@ -145,6 +145,41 @@
 				"text": "`kubectl testkube get execution {{ .ExecutionName }} `\n"
 			}
 		},
+		{{ if eq .TestType "Test Suite" }}
+		{
+			"type": "button",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Test Suite URI"
+			},
+			"url": "{{ .DashboardURI }}/test-suites/{{ .TestName }}"
+		},
+		{
+			"type": "button",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Test Suite Execution URI"
+			},
+			"url": "{{ .DashboardURI }}/test-suites/{{ .TestName }}/executions/{{ .ExecutionID }}"
+		},
+		{{ else }}
+		{
+			"type": "button",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Test URI"
+			},
+			"url": "{{ .DashboardURI }}/tests/{{ .TestName }}"
+		},
+		{
+			"type": "button",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Test Execution URI"
+			},
+			"url": "{{ .DashboardURI }}/tests/{{ .TestName }}/executions/{{ .ExecutionID }}"
+		},
+		{{ end }}
 		{
 			"type": "divider"
 		}
