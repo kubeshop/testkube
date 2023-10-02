@@ -11,9 +11,9 @@ As Testkube was designed with flexibility in mind, you can add your own executor
 Tests can be currently created from multiple sources:
 
 1. A simple `file` with the test content. For example, with Postman collections, we're exporting the collection as a JSON file. For cURL executors, we're passing a JSON file with the configured cURL command.
-2. String - we can also define the content of the test as a string
-3. A Git directory - we can pass `repository`, `path` and `branch` where our tests are stored. This is used in the Cypress executor as Cypress tests are more like npm-based projects which can have a lot of files. We are handling sparse checkouts which are fast even in the case of huge mono-repos.
-4. A Git file - similarly to Git directories, we can use files located on Git by specifying `git-uri` and `branch`.
+2. String - We can also define the content of the test as a string.
+3. A Git directory - We can pass `repository`, `path` and `branch` where our tests are stored. This is used in the Cypress executor as Cypress tests are more like npm-based projects which can have a lot of files. We are handling sparse checkouts which are fast even in the case of huge mono-repos.
+4. A Git file - Similarly to Git directories, we can use files located on Git by specifying `git-uri` and `branch`.
 
 :::note
 Not all executors support all input types. Please refer to the individual executors' documentation to see which options are available.
@@ -351,9 +351,9 @@ By default, there is a 10 second timeout limit on all requests on the client sid
 Some of the executors offer the option to set a special file using the flag `--variables-file` on both test creation and test run. For the Postman executor, this expects an environment file, for Maven it is `settings.xml`.
 There are many differences between `--variables-file` and `--copy-files`. The former one sets this file directly as the configuration file. With the latter, there is an additional need to set the path explicitly on the arguments level. Another difference is that for variables files smaller than 128KB, this will be set on the CRD level and not uploaded to the object storage. This limitation comes from linux-based systems where this is the default maximum length of arguments.
 
-### Redefining the Prebuilt Executor command and arguments
+### Redefining the Prebuilt Executor Command and Arguments
 
-Each of Testkube Prebuilt executors has a default command and arguments it uses to execute the test. They are provided as a part of Executor CRD and can be either ovveriden or appended during test creation or execution, for example:
+Each of Testkube Prebuilt executors has a default command and arguments it uses to execute the test. They are provided as a part of Executor CRD and can be either overidden or appended during test creation or execution, for example:
 
 ```sh
 testkube create test --name maven-example-test --git-uri https://github.com/kubeshop/testkube-executor-maven.git --git-path examples/hello-maven --type maven/test --git-branch main --command "mvn" --args-mode "override" --executor-args="--settings <settingsFile> <goalName> -Duser.home <mavenHome>"
@@ -365,7 +365,7 @@ Test created maven-example-test 🥇
 
 ### Changing the Default Job Template Used for Test Execution
 
-You can always create your own custom executor with its own job template definition used for test execution. But sometimes you just need to adjust an existing job template of a standard Testkube executor with a few parameters. In this case you can use additional parameter `--job-template` when you create or run the test:
+You can always create your own custom executor with its own job template definition used for test execution. But sometimes you just need to adjust an existing job template of a standard Testkube executor with a few parameters. In this case you can use the additional parameter `--job-template` when you create or run the test:
 
 ```sh
 testkube create test --git-branch main --git-uri https://github.com/kubeshop/testkube-example-cypress-project.git --git-path "cypress" --name template-test --type cypress/project --job-template job.yaml
@@ -405,7 +405,7 @@ spec:
 ```
 
 We also provide special helper methods to use in the job template:
-`vartypeptrtostring` - method to convert a pointer to a variable type to a string type
+`vartypeptrtostring` is the method to convert a pointer to a variable type to a string type.
 
 Usage example:
 ```yaml
@@ -417,7 +417,7 @@ Usage example:
 {{- end }}
 ```
 
-Add `imagePullSecrets` option if you use your own Image Registry. This will add the secret for both `init` and `executor` containers.
+Add the `imagePullSecrets` option if you use your own Image Registry. This will add the secret for both `init` and `executor` containers.
 
 
 ### Changing the Default CronJob Template Used for Scheduled Test Execution
@@ -438,7 +438,7 @@ metadata:
     test: kube
 ```
 
-When such a test is created you will see additional annotations for its cron job, when the default cron job template doesn't have any annotations.
+When such a test is created you will see additional annotations for its cron job, if the default cron job template doesn't have any annotations.
 
 ### Executing a Prerun/Postrun Script
 
@@ -466,9 +466,9 @@ Provide the script when you create or run the test using `--prerun-script` and `
 testkube create test --file test/postman/LocalHealth.postman_collection.json --name script-test --type postman/collection --prerun-script pre_script.sh --postrun-script post_script.sh --secret-env SSL_CERT=your-k8s-secret
 ```
 
-### Adjusting scraping parameters
+### Adjusting Scraping Parameters
 
-For any executor type you can specify additional scraping parameters using cli or CRD definition. For example, below we request to scrape report directories, use a custom bucket to store test artifacts and ask to avoid using separate artifact folders for each test execution
+For any executor type you can specify additional scraping parameters using CLI or CRD definition. For example, below we request to scrape report directories, use a custom bucket to store test artifacts and ask to avoid using separate artifact folders for each test execution
 
 ```yaml
 apiVersion: tests.testkube.io/v3
@@ -495,7 +495,7 @@ spec:
 
 ### Changing the Default Scraper Job Template Used for Container Executor Tests
 
-When you use container executor tests generating artifacts for scraping, we launch 2 sequential Kubernetes jobs, one is for test execution and other one is for scraping test results. Sometimes you need to adjust an existing scraper job template of a standard Testkube scraper with a few parameters. In this case you can use the additional parameter `--scraper-template` when you create or run the test:
+When you use container executor tests generating artifacts for scraping, we launch 2 sequential Kubernetes jobs. One is for test execution and other is for scraping test results. Sometimes you need to adjust an existing scraper job template of a standard Testkube scraper with a few parameters. In this case you can use the additional parameter `--scraper-template` when you create or run the test:
 
 ```sh
 testkube create test --name scraper-test --type scraper/test --artifact-storage-class-name standard --artifact-volume-mount-path /share --artifact-dir test/files --scraper-template scraper.yaml
@@ -528,11 +528,11 @@ spec:
             memory: 512Mi
 ```
 
-When you run such a test, you will face a memory limit for the scraper pod, when the default scraper job template doesn't have any resource constraints.
+When you run such a test, you will face a memory limit for the scraper pod, if the default scraper job template doesn't have any resource constraints.
 
 ### Mounting ConfigMap and Secret to Executor Pod
 
-If you need to mount your ConfigMap and Secret to your executor environment, then you can provide them as additional  
+If you need to mount your ConfigMap and Secret to your executor environment, you can provide them as additional  
 parameters when you create or run the test using the `--mount-configmap` and `--mount-secret` options:
 
 ```sh
