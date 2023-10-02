@@ -248,6 +248,9 @@ func (e *TestSuiteExecution) CleanStepsOutput() *TestSuiteExecution {
 	for i := range e.StepResults {
 		if e.StepResults[i].Execution != nil && e.StepResults[i].Execution.ExecutionResult != nil {
 			e.StepResults[i].Execution.ExecutionResult.Output = ""
+			for j := range e.ExecuteStepResults[i].Execute {
+				e.ExecuteStepResults[i].Execute[j].Execution.ExecutionResult.Output = ""
+			}
 		}
 	}
 	return e
