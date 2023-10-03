@@ -31,12 +31,12 @@
           </elementProp>
           <elementProp name="URI" elementType="Argument">
             <stringProp name="Argument.name">URI</stringProp>
-            <stringProp name="Argument.value">${__property(JMETER_URI,,argon.ceti.etat-ge.ch)}</stringProp>
+            <stringProp name="Argument.value">${__property(JMETER_URI,,testkube.io)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="URI_PATH" elementType="Argument">
             <stringProp name="Argument.name">URI_PATH</stringProp>
-            <stringProp name="Argument.value">${__property(JMETER_URI_PATH,,/gitlab/tests)}</stringProp>
+            <stringProp name="Argument.value">${__property(JMETER_URI_PATH,,/pricing)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="PROJECT_HOME" elementType="Argument">
@@ -65,7 +65,7 @@
       <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="CSV Data Set Config" enabled="true">
         <stringProp name="delimiter">,</stringProp>
         <stringProp name="fileEncoding"></stringProp>
-        <stringProp name="filename">${__env(DATA_CONFIG,,${__eval(${PROJECT_HOME})})}/data/Credentials.csv</stringProp>
+        <stringProp name="filename">${__env(DATA_CONFIG,,${__eval(${PROJECT_HOME})})}/csvdata/Credentials.csv</stringProp>
         <boolProp name="ignoreFirstLine">false</boolProp>
         <boolProp name="quotedData">false</boolProp>
         <boolProp name="recycle">true</boolProp>
