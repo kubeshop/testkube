@@ -256,7 +256,7 @@ func NewRunTestCmd() *cobra.Command {
 					ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 				}
 
-				render.RenderExecutionResult(&execution, false)
+				render.RenderExecutionResult(client, &execution, false)
 
 				if execution.Id != "" {
 					if downloadArtifactsEnabled {

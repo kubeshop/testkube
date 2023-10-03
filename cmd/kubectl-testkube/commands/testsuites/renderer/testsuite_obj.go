@@ -5,11 +5,12 @@ import (
 	"strings"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/renderer"
+	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
+func TestSuiteRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 	ts, ok := obj.(testkube.TestSuite)
 	if !ok {
 		return fmt.Errorf("can't use '%T' as testkube.TestSuite in RenderObj for test suite", obj)

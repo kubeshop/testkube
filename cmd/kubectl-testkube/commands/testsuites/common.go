@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -37,7 +38,7 @@ func printExecution(execution testkube.TestSuiteExecution, startTime time.Time) 
 	ui.NL()
 }
 
-func uiPrintExecutionStatus(execution testkube.TestSuiteExecution) {
+func uiPrintExecutionStatus(client apiclientv1.Client, execution testkube.TestSuiteExecution) {
 	if execution.Status == nil {
 		return
 	}
@@ -52,9 +53,19 @@ func uiPrintExecutionStatus(execution testkube.TestSuiteExecution) {
 	case execution.IsPassed():
 		ui.Success("Test Suite execution completed with sucess in " + execution.Duration)
 
+		info, err := client.GetServerInfo()
+		ui.ExitOnError("getting server info", err)
+
+		render.PrintTestSuiteExecutionURIs(&execution, info.DashboardUri)
+
 	case execution.IsFailed():
 		ui.UseStderr()
 		ui.Errf("Test Suite execution failed")
+
+		info, err := client.GetServerInfo()
+		ui.ExitOnError("getting server info", err)
+
+		render.PrintTestSuiteExecutionURIs(&execution, info.DashboardUri)
 		os.Exit(1)
 	}
 
