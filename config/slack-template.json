@@ -147,37 +147,33 @@
 		},
 		{{ if eq .TestType "Test Suite" }}
 		{
-			"type": "button",
+			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "Test Suite URI"
-			},
-			"url": "{{ .DashboardURI }}/test-suites/{{ .TestName }}"
+				"text": "Test Suite URI: {{ .DashboardURI }}/test-suites/{{ .TestName }}"
+			}
 		},
 		{
-			"type": "button",
+			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "Test Suite Execution URI"
-			},
-			"url": "{{ .DashboardURI }}/test-suites/{{ .TestName }}/executions/{{ .ExecutionID }}"
+				"text": "Test Suite Execution URI: {{ .DashboardURI }}/test-suites/{{ .TestName }}/executions/{{ .ExecutionID }}"
+			}
 		},
 		{{ else }}
 		{
-			"type": "button",
+			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "Test URI"
-			},
-			"url": "{{ .DashboardURI }}/tests/{{ .TestName }}"
+				"text": "Test URI: {{ .DashboardURI }}/tests/{{ .TestName }}"
+			}
 		},
 		{
-			"type": "button",
+			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "Test Execution URI"
-			},
-			"url": "{{ .DashboardURI }}/tests/{{ .TestName }}/executions/{{ .ExecutionID }}"
+				"text": "Test Execution URI: {{ .DashboardURI }}/tests/{{ .TestName }}/executions/{{ .ExecutionID }}"
+			}
 		},
 		{{ end }}
 		{
