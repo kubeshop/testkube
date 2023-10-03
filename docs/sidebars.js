@@ -186,6 +186,7 @@ const sidebars = {
         "testkube-cloud/articles/architecture",
         "testkube-cloud/articles/running-parallel-tests-with-test-suite",
         "testkube-cloud/articles/AI-test-insights",
+        "testkube-cloud/articles/status-pages",
       ],
     },
     {
