@@ -4478,6 +4478,10 @@ components:
           type: string
           description: helm chart version
           example: "1.4.14"
+        dashboardUri:
+          type: string
+          description: dashboard uri
+          example: "http://localhost:8080"          
 
     Repository:
       description: repository representation for tests in git repositories
