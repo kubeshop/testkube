@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -14,6 +15,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
+
+var _ OutputRepository = (*MinioRepository)(nil)
 
 type MinioRepository struct {
 	storage             storage.Client
@@ -174,4 +177,16 @@ func (m *MinioRepository) DeleteAllOutput(ctx context.Context) error {
 		return err
 	}
 	return m.storage.CreateBucket(ctx, m.bucket)
+}
+
+func (m *MinioRepository) StreamOutput(ctx context.Context, executionID, testName, testSuiteName string) (reader io.Reader, err error) {
+	file, err := m.storage.DownloadFileFromBucket(ctx, m.bucket, "", executionID)
+	if err != nil {
+		return nil, err
+	}
+	return file, nil
+}
+
+func (m *MinioRepository) GetOutputSize(ctx context.Context, executionID, testName, testSuiteName string) (size int, err error) {
+	return 0, fmt.Errorf("not implemented")
 }
