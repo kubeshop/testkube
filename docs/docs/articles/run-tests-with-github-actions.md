@@ -101,7 +101,7 @@ with:
     OTHER_ENV="${{ secrets.ExternalToken }}"
 ```
 
-#### Real-life examples
+#### Real-life Examples
 `testkube-run-action` is also used for running Testkube internal tests with Testkube. Workflow for Testkube Dashboard E2E tests can be found [here](https://github.com/kubeshop/testkube-dashboard/blob/develop/.github/workflows/pr_checks.yml#L28)
 
 ## Inputs
