@@ -31,7 +31,7 @@
           </elementProp>
           <elementProp name="URI" elementType="Argument">
             <stringProp name="Argument.name">URI</stringProp>
-            <stringProp name="Argument.value">${__property(JMETER_URI,,testkube.io)}</stringProp>
+            <stringProp name="Argument.value">${__property(JMETER_URI,,enzxo4me3sid.x.pipedream.net)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="URI_PATH" elementType="Argument">
