@@ -222,6 +222,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution.ArtifactRequest = options.Request.ArtifactRequest
 	execution.PreRunScript = options.Request.PreRunScript
 	execution.PostRunScript = options.Request.PostRunScript
+	execution.ExecutePostRunScriptBeforeScraping = options.Request.ExecutePostRunScriptBeforeScraping
 	execution.RunningContext = options.Request.RunningContext
 	execution.TestExecutionName = options.Request.TestExecutionName
 
@@ -335,6 +336,10 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 
 		if request.ActiveDeadlineSeconds == 0 && test.ExecutionRequest.ActiveDeadlineSeconds != 0 {
 			request.ActiveDeadlineSeconds = test.ExecutionRequest.ActiveDeadlineSeconds
+		}
+
+		if !request.ExecutePostRunScriptBeforeScraping && test.ExecutionRequest.ExecutePostRunScriptBeforeScraping {
+			request.ExecutePostRunScriptBeforeScraping = test.ExecutionRequest.ExecutePostRunScriptBeforeScraping
 		}
 
 		request.ArtifactRequest = mergeArtifacts(request.ArtifactRequest, test.ExecutionRequest.ArtifactRequest)
