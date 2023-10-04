@@ -4229,7 +4229,10 @@ components:
         postRunScript:
           type: string
           description: script to run after test execution
-          example: "sleep 30"          
+          example: "sleep 30"
+        executePostRunScriptBeforeScraping:
+          type: boolean
+          description: execute post run script before scraping (prebuilt executor only) 
         runningContext:
           $ref: "#/components/schemas/RunningContext"
           description: running context for the test execution
@@ -4762,6 +4765,9 @@ components:
           type: string
           description: script to run after test execution
           example: "sleep 30"
+        executePostRunScriptBeforeScraping:
+          type: boolean
+          description: execute post run script before scraping (prebuilt executor only)
         scraperTemplate:
           type: string
           description: scraper template extensions

@@ -2,10 +2,12 @@ package runner
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/kubeshop/testkube/pkg/executor/agent"
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
 	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 
@@ -93,6 +95,14 @@ func (r *SoapUIRunner) Run(ctx context.Context, execution testkube.Execution) (r
 
 	output.PrintLogf("%s Running SoapUI tests", ui.IconMicroscope)
 	result = r.runSoapUI(&execution, workingDir)
+
+	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
+		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
+
+		if err = agent.RunScript(execution.PostRunScript); err != nil {
+			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
+		}
+	}
 
 	if r.Params.ScrapperEnabled {
 		directories := []string{r.SoapUILogsPath}

@@ -393,24 +393,30 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 	cronJobTemplateReference := cmd.Flag("cronjob-template-reference").Value.String()
 	scraperTemplateReference := cmd.Flag("scraper-template-reference").Value.String()
 	pvcTemplateReference := cmd.Flag("pvc-template-reference").Value.String()
+	executePostRunScriptBeforeScraping, err := cmd.Flags().GetBool("execute-postrun-script-before-scraping")
+	if err != nil {
+		return nil, err
+	}
+
 	request = &testkube.ExecutionRequest{
-		Name:                     executionName,
-		Variables:                variables,
-		Image:                    image,
-		Command:                  command,
-		Args:                     executorArgs,
-		ArgsMode:                 mode,
-		ImagePullSecrets:         imageSecrets,
-		Envs:                     envs,
-		SecretEnvs:               secretEnvs,
-		HttpProxy:                httpProxy,
-		HttpsProxy:               httpsProxy,
-		ActiveDeadlineSeconds:    timeout,
-		JobTemplateReference:     jobTemplateReference,
-		CronJobTemplateReference: cronJobTemplateReference,
-		ScraperTemplateReference: scraperTemplateReference,
-		PvcTemplateReference:     pvcTemplateReference,
-		NegativeTest:             negativeTest,
+		Name:                               executionName,
+		Variables:                          variables,
+		Image:                              image,
+		Command:                            command,
+		Args:                               executorArgs,
+		ArgsMode:                           mode,
+		ImagePullSecrets:                   imageSecrets,
+		Envs:                               envs,
+		SecretEnvs:                         secretEnvs,
+		HttpProxy:                          httpProxy,
+		HttpsProxy:                         httpsProxy,
+		ActiveDeadlineSeconds:              timeout,
+		JobTemplateReference:               jobTemplateReference,
+		CronJobTemplateReference:           cronJobTemplateReference,
+		ScraperTemplateReference:           scraperTemplateReference,
+		PvcTemplateReference:               pvcTemplateReference,
+		NegativeTest:                       negativeTest,
+		ExecutePostRunScriptBeforeScraping: executePostRunScriptBeforeScraping,
 	}
 
 	var fields = []struct {
@@ -985,6 +991,15 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 			return nil, err
 		}
 		request.EnvSecrets = &envSecrets
+		nonEmpty = true
+	}
+
+	if cmd.Flag("execute-postrun-script-before-scraping").Changed {
+		executePostRunScriptBeforeScraping, err := cmd.Flags().GetBool("execute-postrun-script-before-scraping")
+		if err != nil {
+			return nil, err
+		}
+		request.ExecutePostRunScriptBeforeScraping = &executePostRunScriptBeforeScraping
 		nonEmpty = true
 	}
 

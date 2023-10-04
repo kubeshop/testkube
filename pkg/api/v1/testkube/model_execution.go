@@ -67,8 +67,10 @@ type Execution struct {
 	// script to run before test execution
 	PreRunScript string `json:"preRunScript,omitempty"`
 	// script to run after test execution
-	PostRunScript  string          `json:"postRunScript,omitempty"`
-	RunningContext *RunningContext `json:"runningContext,omitempty"`
+	PostRunScript string `json:"postRunScript,omitempty"`
+	// execute post run script before scraping (prebuilt executor only)
+	ExecutePostRunScriptBeforeScraping bool            `json:"executePostRunScriptBeforeScraping,omitempty"`
+	RunningContext                     *RunningContext `json:"runningContext,omitempty"`
 	// shell used in container executor
 	ContainerShell string `json:"containerShell,omitempty"`
 	// test execution name started the test execution

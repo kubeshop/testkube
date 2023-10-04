@@ -12,6 +12,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/agent"
 	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -88,6 +89,14 @@ func (r *KubepugRunner) Run(ctx context.Context, execution testkube.Execution) (
 	if err != nil {
 		output.PrintLogf("%s Could not execute kubepug: %s", ui.IconCross, err.Error())
 		return testkube.ExecutionResult{}, fmt.Errorf("could not execute kubepug: %w", err)
+	}
+
+	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
+		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
+
+		if err = agent.RunScript(execution.PostRunScript); err != nil {
+			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
+		}
 	}
 
 	// scrape artifacts first even if there are errors above

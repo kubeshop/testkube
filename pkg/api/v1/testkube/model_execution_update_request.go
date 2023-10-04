@@ -78,6 +78,8 @@ type ExecutionUpdateRequest struct {
 	PreRunScript *string `json:"preRunScript,omitempty"`
 	// script to run after test execution
 	PostRunScript *string `json:"postRunScript,omitempty"`
+	// execute post run script before scraping (prebuilt executor only)
+	ExecutePostRunScriptBeforeScraping *bool `json:"executePostRunScriptBeforeScraping,omitempty"`
 	// scraper template extensions
 	ScraperTemplate *string `json:"scraperTemplate,omitempty"`
 	// name of the template resource

@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -15,6 +16,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/agent"
 	contentPkg "github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -142,6 +144,14 @@ func (r *CurlRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	if err != nil {
 		r.Log.Errorf("Error occured when running a command %s", err)
 		return *result.Err(err), nil
+	}
+
+	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
+		outputPkg.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
+
+		if err = agent.RunScript(execution.PostRunScript); err != nil {
+			outputPkg.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
+		}
 	}
 
 	// scrape artifacts first even if there are errors above

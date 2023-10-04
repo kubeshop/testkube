@@ -174,35 +174,36 @@ type UpdateTemplateOptions testkube.TemplateUpdateRequest
 // TODO consider replacing it with testkube.ExecutionRequest - looks almost the samea and redundant
 // ExecuteTestOptions contains test run options
 type ExecuteTestOptions struct {
-	ExecutionVariables            map[string]testkube.Variable
-	ExecutionVariablesFileContent string
-	IsVariablesFileUploaded       bool
-	ExecutionLabels               map[string]string
-	Command                       []string
-	Args                          []string
-	ArgsMode                      string
-	Envs                          map[string]string
-	SecretEnvs                    map[string]string
-	HTTPProxy                     string
-	HTTPSProxy                    string
-	Image                         string
-	Uploads                       []string
-	BucketName                    string
-	ArtifactRequest               *testkube.ArtifactRequest
-	JobTemplate                   string
-	JobTemplateReference          string
-	ContentRequest                *testkube.TestContentRequest
-	PreRunScriptContent           string
-	PostRunScriptContent          string
-	ScraperTemplate               string
-	ScraperTemplateReference      string
-	PvcTemplate                   string
-	PvcTemplateReference          string
-	NegativeTest                  bool
-	IsNegativeTestChangedOnRun    bool
-	EnvConfigMaps                 []testkube.EnvReference
-	EnvSecrets                    []testkube.EnvReference
-	RunningContext                *testkube.RunningContext
+	ExecutionVariables                 map[string]testkube.Variable
+	ExecutionVariablesFileContent      string
+	IsVariablesFileUploaded            bool
+	ExecutionLabels                    map[string]string
+	Command                            []string
+	Args                               []string
+	ArgsMode                           string
+	Envs                               map[string]string
+	SecretEnvs                         map[string]string
+	HTTPProxy                          string
+	HTTPSProxy                         string
+	Image                              string
+	Uploads                            []string
+	BucketName                         string
+	ArtifactRequest                    *testkube.ArtifactRequest
+	JobTemplate                        string
+	JobTemplateReference               string
+	ContentRequest                     *testkube.TestContentRequest
+	PreRunScriptContent                string
+	PostRunScriptContent               string
+	ExecutePostRunScriptBeforeScraping bool
+	ScraperTemplate                    string
+	ScraperTemplateReference           string
+	PvcTemplate                        string
+	PvcTemplateReference               string
+	NegativeTest                       bool
+	IsNegativeTestChangedOnRun         bool
+	EnvConfigMaps                      []testkube.EnvReference
+	EnvSecrets                         []testkube.EnvReference
+	RunningContext                     *testkube.RunningContext
 }
 
 // ExecuteTestSuiteOptions contains test suite run options
