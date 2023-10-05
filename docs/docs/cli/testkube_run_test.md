@@ -26,6 +26,7 @@ testkube run test <testName> [flags]
       --copy-files stringArray                     file path mappings from host to pod of form source:destination
   -d, --download-artifacts                         downlaod artifacts automatically
       --download-dir string                        download dir (default "artifacts")
+      --execute-postrun-script-before-scraping     whether to execute postrun scipt before scraping or not (prebuilt executor only)
       --execution-label stringToString             execution-label key value pair: --execution-label key1=value1 (default [])
       --format string                              data format for storing files, one of folder|archive (default "folder")
       --git-branch string                          if uri is git repository we can set additional branch parameter
