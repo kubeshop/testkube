@@ -1,22 +1,22 @@
 #!/bin/bash 
 echo "Getting kubectl-testkube plugin"
 
-if [ ! -z "${DEBUG}" ]; 
-then set -x 
-fi 
+if [ ! -z "${DEBUG}" ];
+then set -x
+fi
 
-_detect_arch() { 
-    case $(uname -m) in 
-    amd64|x86_64) echo "x86_64" 
-    ;; 
-    arm64|aarch64) echo "arm64" 
-    ;; 
-    i386) echo "i386" 
-    ;; 
-    *) echo "Unsupported processor architecture"; 
-    return 1 
+_detect_arch() {
+    case $(uname -m) in
+    amd64|x86_64) echo "x86_64"
     ;;
-     esac 
+    arm64|aarch64) echo "arm64"
+    ;;
+    i386) echo "i386"
+    ;;
+    *) echo "Unsupported processor architecture";
+    return 1
+    ;;
+     esac
 }
 
 _detect_os(){

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -605,6 +606,16 @@ func newSlackLoader(cfg *config.Config, envs map[string]string) (*slack.SlackLoa
 
 	return slack.NewSlackLoader(slackTemplate, slackConfig, cfg.TestkubeClusterName, cfg.TestkubeDashboardURI,
 		testkube.AllEventTypes, envs), nil
+}
+
+func isBase64Encoded(base64Val string) bool {
+	decoded, err := base64.StdEncoding.DecodeString(base64Val)
+	if err != nil {
+		return false
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(decoded)
+	return base64Val == encoded
 }
 
 // getMongoSSLConfig builds the necessary SSL connection info from the settings in the environment variables
