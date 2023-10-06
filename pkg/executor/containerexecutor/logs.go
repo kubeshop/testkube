@@ -43,7 +43,7 @@ func (c *ContainerExecutor) TailJobLogs(ctx context.Context, id string, logs cha
 
 			default:
 				l.Debugw("tailing job logs: waiting for pod to be ready")
-				if err = wait.PollImmediate(pollInterval, c.podStartTimeout, executor.IsPodLoggable(ctx, c.clientSet, pod.Name, c.namespace)); err != nil {
+				if err = wait.PollUntilContextTimeout(ctx, pollInterval, c.podStartTimeout, true, executor.IsPodLoggable(c.clientSet, pod.Name, c.namespace)); err != nil {
 					l.Errorw("poll immediate error when tailing logs", "error", err)
 					return err
 				}
