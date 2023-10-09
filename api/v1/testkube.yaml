@@ -3435,6 +3435,9 @@ components:
           $ref: "#/components/schemas/TestSuiteExecutionRequest"
         status:
           $ref: "#/components/schemas/TestSuiteStatus"
+        readOnly:
+          type: boolean
+          description: if test suite is offline and cannot be executed
 
     TestSuiteV2:
       type: object

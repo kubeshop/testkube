@@ -34,4 +34,6 @@ type TestSuiteUpdateRequest struct {
 	Created          time.Time                         `json:"created,omitempty"`
 	ExecutionRequest **TestSuiteExecutionUpdateRequest `json:"executionRequest,omitempty"`
 	Status           *TestSuiteStatus                  `json:"status"`
+	// if test suite is offline and cannot be executed
+	ReadOnly *bool `json:"readOnly,omitempty"`
 }
