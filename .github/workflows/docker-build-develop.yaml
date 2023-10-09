@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - develop
-      - fix-cache
     paths-ignore:
       - 'docs/**'
 env:
