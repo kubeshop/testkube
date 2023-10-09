@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - release/**
+      - fix-cache
     paths-ignore:
       - 'docs/**'
 env:
@@ -23,15 +24,10 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v1
 
-      - name: Go Cache
-        uses: actions/cache@v2
+      - name: Setup Golang with Cache
+        uses: magnetikonline/action-golang-cache@v4
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          go-version: "1.21"
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -216,7 +212,11 @@ jobs:
 
       - name: Push Docker images
         run: |
-          docker push kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}
+          docker push kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}-amd64
+          docker push kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}-arm64v8
+
+          docker manifest create kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }} --amend kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}-amd64 --amend kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}-arm64v8
+          docker manifest push -p kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}
 
   jmeterd_slave:
     runs-on: ubuntu-latest
