@@ -12,8 +12,8 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube-dashboard
       branch: main
-      path: test/dashboard-e2e
-      workingDir: test/dashboard-e2e
+      path: packages/e2e-tests
+      workingDir: packages/e2e-tests
   executionRequest:
     variables:
       BASE_URL:
