@@ -260,3 +260,32 @@ spec:
   executionRequest:
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n"
     activeDeadlineSeconds: 1
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: expected-fail-cypress-oomkilled
+  labels:
+    core-tests: executors
+spec:
+  type: cypress:v12/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: test/cypress/executor-tests/cypress-12
+  executionRequest:
+    variables:
+      CYPRESS_CUSTOM_ENV:
+        name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+        type: basic
+    args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - video=true
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            limits:\n              memory: 30Mi\n              cpu: 1\n"
+    activeDeadlineSeconds: 600
