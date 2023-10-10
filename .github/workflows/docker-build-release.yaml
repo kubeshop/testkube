@@ -216,7 +216,11 @@ jobs:
 
       - name: Push Docker images
         run: |
-          docker push kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}
+          docker push kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}-amd64
+          docker push kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}-arm64v8
+
+          docker manifest create kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }} --amend kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}-amd64 --amend kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}-arm64v8
+          docker manifest push -p kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}
 
   jmeterd_slave:
     runs-on: ubuntu-latest
