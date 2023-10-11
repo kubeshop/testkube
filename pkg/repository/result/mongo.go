@@ -12,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/storage"
@@ -54,6 +55,7 @@ func NewMongoRepositoryWithOutputRepository(
 	opts ...MongoRepositoryOpt,
 ) *MongoRepository {
 	r := &MongoRepository{
+		db:               db,
 		ResultsColl:      db.Collection(CollectionResults),
 		SequencesColl:    db.Collection(CollectionSequences),
 		OutputRepository: outputRepository,
@@ -78,6 +80,7 @@ func NewMongoRepositoryWithMinioOutputStorage(db *mongo.Database, allowDiskUse b
 }
 
 type MongoRepository struct {
+	db               *mongo.Database
 	ResultsColl      *mongo.Collection
 	SequencesColl    *mongo.Collection
 	OutputRepository OutputRepository
@@ -366,14 +369,45 @@ func (r *MongoRepository) Update(ctx context.Context, result testkube.Execution)
 }
 
 func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result testkube.Execution) (err error) {
+	wc := writeconcern.New(writeconcern.WMajority())
+	txnOptions := options.Transaction().SetWriteConcern(wc)
+
+	session, err := r.db.Client().StartSession()
+	if err != nil {
+		return err
+	}
+
+	defer session.EndSession(ctx)
+
 	output := result.ExecutionResult.Output
 	result.ExecutionResult = result.ExecutionResult.GetDeepCopy()
 	result.ExecutionResult.Output = ""
 	result.ExecutionResult.Steps = cleanSteps(result.ExecutionResult.Steps)
-	_, err = r.ResultsColl.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"executionresult": result.ExecutionResult}})
-	if err != nil {
-		return
-	}
+
+	_, err = session.WithTransaction(ctx, func(ctx mongo.SessionContext) (interface{}, error) {
+		var execution testkube.Execution
+		err = r.ResultsColl.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&execution)
+		if err != nil {
+			return nil, err
+		}
+
+		errorMessage := ""
+		if execution.ExecutionResult != nil {
+			errorMessage = execution.ExecutionResult.ErrorMessage
+		}
+
+		if errorMessage != "" && result.ExecutionResult.ErrorMessage != "" {
+			errorMessage += "\n"
+		}
+
+		result.ExecutionResult.ErrorMessage = errorMessage + result.ExecutionResult.ErrorMessage
+		result, err := r.ResultsColl.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"executionresult": result.ExecutionResult}})
+		if err != nil {
+			return nil, err
+		}
+
+		return result, nil
+	}, txnOptions)
 
 	err = r.OutputRepository.UpdateOutput(ctx, id, result.TestName, result.TestSuiteName, cleanOutput(output))
 	return
