@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -23,6 +24,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"
+	"github.com/kubeshop/testkube/pkg/repository/result"
 )
 
 var ErrPodInitializing = errors.New("PodInitializing")
@@ -498,4 +500,19 @@ func GetPodEventsSummary(ctx context.Context, client kubernetes.Interface, pod *
 	}
 
 	return message, nil
+}
+
+// GetExecutionErrorMessage return execution error message
+func GetExecutionErrorMessage(ctx context.Context, repository result.Repository, l *zap.SugaredLogger, executionID string) string {
+	current, err := repository.Get(ctx, executionID)
+	if err != nil {
+		l.Errorf("get execution returned an error %v while looking for execution id: %s", err, executionID)
+	}
+
+	errorMessage := ""
+	if current.ExecutionResult != nil {
+		errorMessage = current.ExecutionResult.ErrorMessage
+	}
+
+	return errorMessage
 }

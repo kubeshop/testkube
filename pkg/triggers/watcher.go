@@ -297,7 +297,11 @@ func (s *Service) checkExecutionPodStatus(ctx context.Context, executionID strin
 		if errorMessage != "" {
 			s.logger.Infow("execution pod failed with error message", "executionId", executionID, "message", execution.ExecutionResult.ErrorMessage)
 			execution.ExecutionResult.Error()
-			execution.ExecutionResult.ErrorMessage = errorMessage
+			if execution.ExecutionResult.ErrorMessage != "" {
+				execution.ExecutionResult.ErrorMessage += "\n"
+			}
+
+			execution.ExecutionResult.ErrorMessage += errorMessage
 			err = s.resultRepository.UpdateResult(ctx, executionID, execution)
 			if err != nil {
 				s.logger.Errorf("update execution result returned an error %v while storing for execution id: %s", err, executionID)
