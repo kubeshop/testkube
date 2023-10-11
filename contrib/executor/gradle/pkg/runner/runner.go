@@ -131,9 +131,9 @@ func (r *GradleRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		if args[i] == "<projectDir>" {
 			args[i] = project
 		}
+		args[i] = os.ExpandEnv(args[i])
 	}
 
-	output.PrintEvent("Running task: "+task, directory, gradleCommand, args)
 	out, err := executor.Run(runPath, gradleCommand, envManager, args...)
 	out = envManager.ObfuscateSecrets(out)
 

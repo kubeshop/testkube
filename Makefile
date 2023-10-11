@@ -92,7 +92,7 @@ docker-build-cli:
 #make docker-build-executor EXECUTOR=zap GITHUB_TOKEN=*** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-zap-executor:latest
 #add ALPINE_IMAGE=alpine:3.18.0 env var for building of curl and scraper executor
 docker-build-executor:
-	goreleaser release -f goreleaser_files/.goreleaser-docker-build-executor.yml --rm-dist --snapshot
+	goreleaser release -f goreleaser_files/.goreleaser-docker-build-executor.yml --clean --snapshot
 
 dev-install-local-executors:
 	kubectl apply --namespace testkube -f https://raw.githubusercontent.com/kubeshop/testkube-operator/main/config/samples/executor_v1_executor.yaml

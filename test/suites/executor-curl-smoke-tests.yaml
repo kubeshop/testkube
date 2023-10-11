@@ -12,4 +12,7 @@ spec:
     - test: curl-executor-smoke
   - stopOnFailure: false
     execute:
+    - test: curl-executor-smoke-directory
+  - stopOnFailure: false
+    execute:
     - test: curl-executor-smoke-negative
