@@ -510,7 +510,7 @@ func GetExecutionErrorMessage(ctx context.Context, repository result.Repository,
 	}
 
 	errorMessage := ""
-	if current.ExecutionResult != nil && current.ExecutionResult.ErrorMessage != "" {
+	if current.ExecutionResult != nil {
 		errorMessage = current.ExecutionResult.ErrorMessage
 	}
 
