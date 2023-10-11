@@ -399,12 +399,7 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	executorLogs, err := executor.GetPodLogs(ctx, c.clientSet, c.namespace, *latestExecutorPod)
 	if err != nil {
 		l.Errorw("get executor pod logs error", "error", err)
-		errorMessage := executor.GetExecutionErrorMessage(ctx, c.repository, l, execution.Id)
 		execution.ExecutionResult.Err(err)
-		if errorMessage != "" {
-			execution.ExecutionResult.ErrorMessage = errorMessage
-		}
-
 		err = c.repository.UpdateResult(ctx, execution.Id, *execution)
 		if err != nil {
 			l.Infow("Update result", "error", err)
@@ -419,11 +414,7 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	if err != nil {
 		l.Errorw("parse output error", "error", err)
 		execution.ExecutionResult.Output = output
-		errorMessage := executor.GetExecutionErrorMessage(ctx, c.repository, l, execution.Id)
 		execution.ExecutionResult.Err(err)
-		if errorMessage != "" {
-			execution.ExecutionResult.ErrorMessage = errorMessage
-		}
 		err = c.repository.UpdateResult(ctx, execution.Id, *execution)
 		if err != nil {
 			l.Infow("Update result", "error", err)
@@ -437,12 +428,7 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	execution.ExecutionResult.Output = output
 
 	if execution.ExecutionResult.IsFailed() {
-		errorMessage := executor.GetExecutionErrorMessage(ctx, c.repository, l, execution.Id)
-		if errorMessage != "" && execution.ExecutionResult.ErrorMessage != "" {
-			errorMessage += "\n"
-		}
-
-		errorMessage += execution.ExecutionResult.ErrorMessage
+		errorMessage := execution.ExecutionResult.ErrorMessage
 		if errorMessage == "" {
 			errorMessage = executor.GetPodErrorMessage(ctx, c.clientSet, latestExecutorPod)
 		}
