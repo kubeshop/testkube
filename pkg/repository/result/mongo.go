@@ -35,6 +35,7 @@ const (
 
 func NewMongoRepository(db *mongo.Database, allowDiskUse bool, opts ...MongoRepositoryOpt) *MongoRepository {
 	r := &MongoRepository{
+		db:               db,
 		ResultsColl:      db.Collection(CollectionResults),
 		SequencesColl:    db.Collection(CollectionSequences),
 		OutputRepository: NewMongoOutputRepository(db),
