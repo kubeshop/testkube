@@ -331,12 +331,6 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	logs, err = executor.GetPodLogs(ctx, c.ClientSet, c.Namespace, pod)
 	if err != nil {
 		l.Errorw("get pod logs error", "error", err)
-
-		errorMessage := executor.GetExecutionErrorMessage(ctx, c.Repository, l, execution.Id)
-		if errorMessage != "" {
-			err = errors.New(errorMessage)
-		}
-
 		return execution.ExecutionResult, err
 	}
 
@@ -344,22 +338,11 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	execution.ExecutionResult, err = output.ParseRunnerOutput(logs)
 	if err != nil {
 		l.Errorw("parse output error", "error", err)
-
-		errorMessage := executor.GetExecutionErrorMessage(ctx, c.Repository, l, execution.Id)
-		if errorMessage != "" {
-			err = errors.New(errorMessage)
-		}
-
 		return execution.ExecutionResult, err
 	}
 
 	if execution.ExecutionResult.IsFailed() {
-		errorMessage := executor.GetExecutionErrorMessage(ctx, c.Repository, l, execution.Id)
-		if errorMessage != "" && execution.ExecutionResult.ErrorMessage != "" {
-			errorMessage += "\n"
-		}
-
-		errorMessage += execution.ExecutionResult.ErrorMessage
+		errorMessage := execution.ExecutionResult.ErrorMessage
 		if errorMessage == "" {
 			errorMessage = executor.GetPodErrorMessage(ctx, c.ClientSet, &pod)
 		}
