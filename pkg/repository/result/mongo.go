@@ -386,30 +386,26 @@ func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result te
 	result.ExecutionResult.Output = ""
 	result.ExecutionResult.Steps = cleanSteps(result.ExecutionResult.Steps)
 
-	_, err = session.WithTransaction(ctx, func(ctx mongo.SessionContext) (interface{}, error) {
-		var execution testkube.Execution
-		err = r.ResultsColl.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&execution)
-		if err != nil {
-			return nil, err
-		}
+	var execution testkube.Execution
+	err = r.ResultsColl.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&execution)
+	if err != nil {
+		return err
+	}
 
-		errorMessage := ""
-		if execution.ExecutionResult != nil {
-			errorMessage = execution.ExecutionResult.ErrorMessage
-		}
+	errorMessage := ""
+	if execution.ExecutionResult != nil {
+		errorMessage = execution.ExecutionResult.ErrorMessage
+	}
 
-		if errorMessage != "" && result.ExecutionResult.ErrorMessage != "" {
-			errorMessage += "\n"
-		}
+	if errorMessage != "" && result.ExecutionResult.ErrorMessage != "" {
+		errorMessage += "\n"
+	}
 
-		result.ExecutionResult.ErrorMessage = errorMessage + result.ExecutionResult.ErrorMessage
-		result, err := r.ResultsColl.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"executionresult": result.ExecutionResult}})
-		if err != nil {
-			return nil, err
-		}
-
-		return result, nil
-	}, txnOptions)
+	result.ExecutionResult.ErrorMessage = errorMessage + result.ExecutionResult.ErrorMessage
+	_, err = r.ResultsColl.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"executionresult": result.ExecutionResult}})
+	if err != nil {
+		return err
+	}
 
 	err = r.OutputRepository.UpdateOutput(ctx, id, result.TestName, result.TestSuiteName, cleanOutput(output))
 	return
