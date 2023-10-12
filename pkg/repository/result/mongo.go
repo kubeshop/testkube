@@ -12,7 +12,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/storage"
@@ -371,16 +370,6 @@ func (r *MongoRepository) Update(ctx context.Context, result testkube.Execution)
 }
 
 func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result testkube.Execution) (err error) {
-	wc := writeconcern.New(writeconcern.WMajority())
-	txnOptions := options.Transaction().SetWriteConcern(wc)
-
-	session, err := r.db.Client().StartSession()
-	if err != nil {
-		return err
-	}
-
-	defer session.EndSession(ctx)
-
 	output := result.ExecutionResult.Output
 	result.ExecutionResult = result.ExecutionResult.GetDeepCopy()
 	result.ExecutionResult.Output = ""
