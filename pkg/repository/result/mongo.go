@@ -71,6 +71,7 @@ func NewMongoRepositoryWithOutputRepository(
 
 func NewMongoRepositoryWithMinioOutputStorage(db *mongo.Database, allowDiskUse bool, storageClient storage.Client, bucket string) *MongoRepository {
 	repo := MongoRepository{
+		db:            db,
 		ResultsColl:   db.Collection(CollectionResults),
 		SequencesColl: db.Collection(CollectionSequences),
 		allowDiskUse:  allowDiskUse,
