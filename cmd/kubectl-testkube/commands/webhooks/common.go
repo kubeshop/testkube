@@ -42,16 +42,18 @@ func NewCreateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.CreateW
 		return options, err
 	}
 
+	payloadTemplateReference := cmd.Flag("payload-template-reference").Value.String()
 	options = apiv1.CreateWebhookOptions{
-		Name:               name,
-		Namespace:          namespace,
-		Events:             webhooksmapper.MapStringArrayToCRDEvents(events),
-		Uri:                uri,
-		Selector:           selector,
-		Labels:             labels,
-		PayloadObjectField: payloadObjectField,
-		PayloadTemplate:    payloadTemplateContent,
-		Headers:            headers,
+		Name:                     name,
+		Namespace:                namespace,
+		Events:                   webhooksmapper.MapStringArrayToCRDEvents(events),
+		Uri:                      uri,
+		Selector:                 selector,
+		Labels:                   labels,
+		PayloadObjectField:       payloadObjectField,
+		PayloadTemplate:          payloadTemplateContent,
+		Headers:                  headers,
+		PayloadTemplateReference: payloadTemplateReference,
 	}
 
 	return options, nil
@@ -78,6 +80,10 @@ func NewUpdateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.UpdateW
 		{
 			"payload-field",
 			&options.PayloadObjectField,
+		},
+		{
+			"payload-template-reference",
+			&options.PayloadTemplateReference,
 		},
 	}
 

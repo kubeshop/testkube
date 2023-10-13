@@ -19,6 +19,7 @@ type Client interface {
 	ConfigAPI
 	TestSourceAPI
 	CopyFileAPI
+	TemplateAPI
 }
 
 // TestAPI describes test api methods
@@ -91,6 +92,16 @@ type WebhookAPI interface {
 	DeleteWebhooks(selector string) (err error)
 }
 
+// TemplateAPI describes template api methods
+type TemplateAPI interface {
+	CreateTemplate(options CreateTemplateOptions) (template testkube.Template, err error)
+	UpdateTemplate(options UpdateTemplateOptions) (template testkube.Template, err error)
+	GetTemplate(name string) (template testkube.Template, err error)
+	ListTemplates(selector string) (templates testkube.Templates, err error)
+	DeleteTemplate(name string) (err error)
+	DeleteTemplates(selector string) (err error)
+}
+
 // ConfigAPI describes config api methods
 type ConfigAPI interface {
 	UpdateConfig(config testkube.Config) (outputConfig testkube.Config, err error)
@@ -154,45 +165,62 @@ type UpsertTestSourceOptions testkube.TestSourceUpsertRequest
 // if needed can be extended to custom struct
 type UpdateTestSourceOptions testkube.TestSourceUpdateRequest
 
+// CreateTemplateOptions - is mapping for now to OpenAPI schema for creating/changing template
+type CreateTemplateOptions testkube.TemplateCreateRequest
+
+// UpdateTemplateOptions - is mapping for now to OpenAPI schema for changing template request
+type UpdateTemplateOptions testkube.TemplateUpdateRequest
+
 // TODO consider replacing it with testkube.ExecutionRequest - looks almost the samea and redundant
 // ExecuteTestOptions contains test run options
 type ExecuteTestOptions struct {
-	ExecutionVariables            map[string]testkube.Variable
-	ExecutionVariablesFileContent string
-	IsVariablesFileUploaded       bool
-	ExecutionLabels               map[string]string
-	Command                       []string
-	Args                          []string
-	ArgsMode                      string
-	Envs                          map[string]string
-	SecretEnvs                    map[string]string
-	HTTPProxy                     string
-	HTTPSProxy                    string
-	Image                         string
-	Uploads                       []string
-	BucketName                    string
-	ArtifactRequest               *testkube.ArtifactRequest
-	JobTemplate                   string
-	ContentRequest                *testkube.TestContentRequest
-	PreRunScriptContent           string
-	PostRunScriptContent          string
-	ScraperTemplate               string
-	NegativeTest                  bool
-	IsNegativeTestChangedOnRun    bool
-	EnvConfigMaps                 []testkube.EnvReference
-	EnvSecrets                    []testkube.EnvReference
-	RunningContext                *testkube.RunningContext
+	ExecutionVariables                 map[string]testkube.Variable
+	ExecutionVariablesFileContent      string
+	IsVariablesFileUploaded            bool
+	ExecutionLabels                    map[string]string
+	Command                            []string
+	Args                               []string
+	ArgsMode                           string
+	Envs                               map[string]string
+	SecretEnvs                         map[string]string
+	HTTPProxy                          string
+	HTTPSProxy                         string
+	Image                              string
+	Uploads                            []string
+	BucketName                         string
+	ArtifactRequest                    *testkube.ArtifactRequest
+	JobTemplate                        string
+	JobTemplateReference               string
+	ContentRequest                     *testkube.TestContentRequest
+	PreRunScriptContent                string
+	PostRunScriptContent               string
+	ExecutePostRunScriptBeforeScraping bool
+	ScraperTemplate                    string
+	ScraperTemplateReference           string
+	PvcTemplate                        string
+	PvcTemplateReference               string
+	NegativeTest                       bool
+	IsNegativeTestChangedOnRun         bool
+	EnvConfigMaps                      []testkube.EnvReference
+	EnvSecrets                         []testkube.EnvReference
+	RunningContext                     *testkube.RunningContext
 }
 
 // ExecuteTestSuiteOptions contains test suite run options
 type ExecuteTestSuiteOptions struct {
-	ExecutionVariables map[string]testkube.Variable
-	HTTPProxy          string
-	HTTPSProxy         string
-	ExecutionLabels    map[string]string
-	ContentRequest     *testkube.TestContentRequest
-	RunningContext     *testkube.RunningContext
-	ConcurrencyLevel   int32
+	ExecutionVariables       map[string]testkube.Variable
+	HTTPProxy                string
+	HTTPSProxy               string
+	ExecutionLabels          map[string]string
+	ContentRequest           *testkube.TestContentRequest
+	RunningContext           *testkube.RunningContext
+	ConcurrencyLevel         int32
+	JobTemplate              string
+	JobTemplateReference     string
+	ScraperTemplate          string
+	ScraperTemplateReference string
+	PvcTemplate              string
+	PvcTemplateReference     string
 }
 
 // Gettable is an interface of gettable objects
@@ -200,7 +228,7 @@ type Gettable interface {
 	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails |
 		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution | testkube.TestWithExecutionSummary |
 		testkube.TestSuiteWithExecutionSummary | testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo |
-		testkube.TestSource
+		testkube.TestSource | testkube.Template
 }
 
 // Executable is an interface of executable objects

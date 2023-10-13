@@ -10,8 +10,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/mapper/tests"
@@ -24,7 +24,7 @@ const (
 )
 
 var (
-	errTestkubeAPICrahsed = errors.New("testkube api server crashed")
+	errTestAbnoramallyTerminated = errors.New("test execution was abnormally terminated")
 )
 
 type Client struct {
@@ -51,21 +51,21 @@ func NewClient(k8sclient kubernetes.Interface, resultRepository result.Repositor
 func (client *Client) Run(ctx context.Context) error {
 	client.logger.Debugw("reconciliation started")
 
-	timer := time.NewTimer(reconciliationInterval)
+	ticker := time.NewTicker(reconciliationInterval)
 
 	defer func() {
-		timer.Stop()
+		ticker.Stop()
 	}()
 
 	for {
 		select {
-		case <-timer.C:
+		case <-ticker.C:
 			if err := client.ProcessTests(ctx); err != nil {
-				client.logger.Errorw("error processing tests statuses %w", err)
+				client.logger.Errorw("error processing tests statuses", "error", err)
 			}
 
 			if err := client.ProcessTestSuites(ctx); err != nil {
-				client.logger.Errorw("error processing test suites statuses %w", err)
+				client.logger.Errorw("error processing test suites statuses", "error", err)
 			}
 		case <-ctx.Done():
 			client.logger.Debugw("reconciliation finished")
@@ -89,12 +89,12 @@ OuterLoop:
 		default:
 			exec, err := client.executorsClient.GetByType(execution.TestType)
 			if err != nil {
-				client.logger.Errorw("error getting executor by test type %w", err)
+				client.logger.Errorw("error getting executor by test type", "error", err)
 			}
 
-			errMessage := errTestkubeAPICrahsed.Error()
+			errMessage := errTestAbnoramallyTerminated.Error()
 			id := execution.Id
-			pods, err := executor.GetJobPods(ctx, client.k8sclient.CoreV1().Pods(client.namespace), id, 1, 1)
+			pods, err := executor.GetJobPods(ctx, client.k8sclient.CoreV1().Pods(client.namespace), id, 1, 10)
 			if err == nil {
 			ExecutorLoop:
 				for _, pod := range pods.Items {
@@ -119,7 +119,7 @@ OuterLoop:
 
 				if supportArtifacts && execution.ArtifactRequest != nil && execution.ArtifactRequest.StorageClassName != "" {
 					id = execution.Id + "-scraper"
-					pods, err = executor.GetJobPods(ctx, client.k8sclient.CoreV1().Pods(client.namespace), id, 1, 1)
+					pods, err = executor.GetJobPods(ctx, client.k8sclient.CoreV1().Pods(client.namespace), id, 1, 10)
 					if err == nil {
 					ScraperLoop:
 						for _, pod := range pods.Items {
@@ -205,7 +205,7 @@ OuterLoop:
 						execution.ExecuteStepResults[i].Execute[j].Execution.IsRunning() {
 						execution.ExecuteStepResults[i].Execute[j].Execution.ExecutionResult = &testkube.ExecutionResult{
 							Status:       tests.MapTestSuiteExecutionStatusToExecutionStatus(status),
-							ErrorMessage: errTestkubeAPICrahsed.Error(),
+							ErrorMessage: errTestAbnoramallyTerminated.Error(),
 						}
 					}
 				}

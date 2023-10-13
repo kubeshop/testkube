@@ -10,6 +10,9 @@ metadata:
   {{- end }}
   {{- end }}
 spec:
+  {{- if .Description }}
+  description: {{ .Description }}
+  {{- end }}
   {{- if .Type_ }}
   type: {{ .Type_ }}
   {{- end }}
@@ -79,7 +82,7 @@ spec:
   schedule: {{ .Schedule }}
   {{- end }}
   {{- if .ExecutionRequest }}
-  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.NegativeTest) (.ExecutionRequest.VariablesFile) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (ne (len .ExecutionRequest.Envs) 0) (ne (len .ExecutionRequest.SecretEnvs) 0) (.ExecutionRequest.Image) (ne (len .ExecutionRequest.Command) 0) (.ExecutionRequest.ArgsMode) (ne (len .ExecutionRequest.ImagePullSecrets) 0) (ne .ExecutionRequest.ActiveDeadlineSeconds 0) (.ExecutionRequest.ArtifactRequest) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.CronJobTemplate) (.ExecutionRequest.PreRunScript) (.ExecutionRequest.PostRunScript) (.ExecutionRequest.ScraperTemplate) (ne (len .ExecutionRequest.EnvConfigMaps) 0) (ne (len .ExecutionRequest.EnvSecrets) 0) }}
+  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.NegativeTest) (.ExecutionRequest.VariablesFile) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (ne (len .ExecutionRequest.Envs) 0) (ne (len .ExecutionRequest.SecretEnvs) 0) (.ExecutionRequest.Image) (ne (len .ExecutionRequest.Command) 0) (.ExecutionRequest.ArgsMode) (ne (len .ExecutionRequest.ImagePullSecrets) 0) (ne .ExecutionRequest.ActiveDeadlineSeconds 0) (.ExecutionRequest.ArtifactRequest) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.JobTemplateReference) (.ExecutionRequest.CronJobTemplate) (.ExecutionRequest.CronJobTemplateReference) (.ExecutionRequest.PreRunScript) (.ExecutionRequest.PostRunScript) (.ExecutionRequest.ExecutePostRunScriptBeforeScraping) (.ExecutionRequest.ScraperTemplate) (.ExecutionRequest.ScraperTemplateReference) (.ExecutionRequest.PvcTemplate) (.ExecutionRequest.PvcTemplateReference) (ne (len .ExecutionRequest.EnvConfigMaps) 0) (ne (len .ExecutionRequest.EnvSecrets) 0) }}
   executionRequest:
     {{- if .ExecutionRequest.Name }}
     name: {{ .ExecutionRequest.Name }}
@@ -185,12 +188,24 @@ spec:
       - {{ . }}
       {{- end }}
       {{- end }}
+      {{- if .ExecutionRequest.ArtifactRequest.StorageBucket }}
+      storageBucket: {{ .ExecutionRequest.ArtifactRequest.StorageBucket }}
+      {{- end }}
+      {{- if .ExecutionRequest.ArtifactRequest.OmitFolderPerExecution }}
+      omitFolderPerExecution: {{ .ExecutionRequest.ArtifactRequest.OmitFolderPerExecution }}
+      {{- end }}
     {{- end }}
     {{- if .ExecutionRequest.JobTemplate }}
     jobTemplate: {{ .ExecutionRequest.JobTemplate }}
     {{- end }}
+    {{- if .ExecutionRequest.JobTemplateReference }}
+    jobTemplateReference: {{ .ExecutionRequest.JobTemplateReference }}
+    {{- end }}
     {{- if .ExecutionRequest.CronJobTemplate }}
     cronJobTemplate: {{ .ExecutionRequest.CronJobTemplate }}
+    {{- end }}
+    {{- if .ExecutionRequest.CronJobTemplateReference }}
+    cronJobTemplateReference: {{ .ExecutionRequest.CronJobTemplateReference }}
     {{- end }}
     {{- if .ExecutionRequest.PreRunScript }}
     preRunScript: {{ .ExecutionRequest.PreRunScript }}
@@ -198,8 +213,18 @@ spec:
     {{- if .ExecutionRequest.PostRunScript }}
     postRunScript: {{ .ExecutionRequest.PostRunScript }}
     {{- end }}
+    executePostRunScriptBeforeScraping: {{ .ExecutionRequest.ExecutePostRunScriptBeforeScraping }}
     {{- if .ExecutionRequest.ScraperTemplate }}
     scraperTemplate: {{ .ExecutionRequest.ScraperTemplate }}
+    {{- end }}
+    {{- if .ExecutionRequest.ScraperTemplateReference }}
+    scraperTemplateReference: {{ .ExecutionRequest.ScraperTemplateReference }}
+    {{- end }}
+    {{- if .ExecutionRequest.PvcTemplate }}
+    pvcTemplate: {{ .ExecutionRequest.PvcTemplate }}
+    {{- end }}
+    {{- if .ExecutionRequest.PvcTemplateReference }}
+    pvcTemplateReference: {{ .ExecutionRequest.PvcTemplateReference }}
     {{- end }}
     {{- if ne (len .ExecutionRequest.EnvConfigMaps) 0 }}
     envConfigMaps:

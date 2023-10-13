@@ -13,6 +13,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/agent"
 	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -109,7 +110,8 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 		envVars = append(envVars, fmt.Sprintf("%s=%s", value.Name, value.Value))
 	}
 
-	junitReportPath := filepath.Join(projectPath, "results/junit.xml")
+	junitReportDir := filepath.Join(projectPath, "results")
+	junitReportPath := filepath.Join(projectPath, "results/junit-[hash].xml")
 
 	var project string
 	if workingDir != "" {
@@ -142,7 +144,7 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
 	out, err = executor.Run(runPath, command, envManager, args...)
 	out = envManager.ObfuscateSecrets(out)
-	suites, serr := junit.IngestFile(junitReportPath)
+	suites, serr := junit.IngestDir(junitReportDir)
 	result = MapJunitToExecutionResults(out, suites)
 	output.PrintLogf("%s Mapped Junit to Execution Results...", ui.IconCheckMark)
 
@@ -157,10 +159,18 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 		}
 	}
 
+	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
+		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
+
+		if err = agent.RunScript(execution.PostRunScript); err != nil {
+			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
+		}
+	}
+
 	// scrape artifacts first even if there are errors above
 	if r.Params.ScrapperEnabled {
 		directories := []string{
-			junitReportPath,
+			junitReportDir,
 			filepath.Join(projectPath, "cypress/videos"),
 			filepath.Join(projectPath, "cypress/screenshots"),
 		}

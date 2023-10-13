@@ -67,15 +67,27 @@ type ExecutionUpdateRequest struct {
 	ArtifactRequest **ArtifactUpdateRequest `json:"artifactRequest,omitempty"`
 	// job template extensions
 	JobTemplate *string `json:"jobTemplate,omitempty"`
+	// name of the template resource
+	JobTemplateReference *string `json:"jobTemplateReference,omitempty"`
 	// cron job template extensions
-	CronJobTemplate *string                    `json:"cronJobTemplate,omitempty"`
-	ContentRequest  **TestContentUpdateRequest `json:"contentRequest,omitempty"`
+	CronJobTemplate *string `json:"cronJobTemplate,omitempty"`
+	// name of the template resource
+	CronJobTemplateReference *string                    `json:"cronJobTemplateReference,omitempty"`
+	ContentRequest           **TestContentUpdateRequest `json:"contentRequest,omitempty"`
 	// script to run before test execution
 	PreRunScript *string `json:"preRunScript,omitempty"`
 	// script to run after test execution
 	PostRunScript *string `json:"postRunScript,omitempty"`
+	// execute post run script before scraping (prebuilt executor only)
+	ExecutePostRunScriptBeforeScraping *bool `json:"executePostRunScriptBeforeScraping,omitempty"`
 	// scraper template extensions
 	ScraperTemplate *string `json:"scraperTemplate,omitempty"`
+	// name of the template resource
+	ScraperTemplateReference *string `json:"scraperTemplateReference,omitempty"`
+	// pvc template extensions
+	PvcTemplate *string `json:"pvcTemplate,omitempty"`
+	// name of the template resource
+	PvcTemplateReference *string `json:"pvcTemplateReference,omitempty"`
 	// config *map references
 	EnvConfigMaps *[]EnvReference `json:"envConfigMaps,omitempty"`
 	// secret references

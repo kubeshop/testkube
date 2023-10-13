@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/renderer"
+	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -14,7 +15,7 @@ type mountParams struct {
 	path string
 }
 
-func TestRenderer(ui *ui.UI, obj interface{}) error {
+func TestRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 	test, ok := obj.(testkube.Test)
 	if !ok {
 		return fmt.Errorf("can't use '%T' as testkube.Test in RenderObj for test", obj)
@@ -23,6 +24,10 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 	ui.Warn("Name:     ", test.Name)
 	ui.Warn("Namespace:", test.Namespace)
 	ui.Warn("Created:  ", test.Created.String())
+	if test.Description != "" {
+		ui.NL()
+		ui.Warn("Description: ", test.Description)
+	}
 	if len(test.Labels) > 0 {
 		ui.NL()
 		ui.Warn("Labels:   ", testkube.MapToString(test.Labels))
@@ -101,6 +106,10 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 			ui.Warn("  Args mode:              ", test.ExecutionRequest.ArgsMode)
 		}
 
+		if test.ExecutionRequest.ArgsMode != "" {
+			ui.Warn("  Args mode:              ", test.ExecutionRequest.ArgsMode)
+		}
+
 		if len(test.ExecutionRequest.Envs) > 0 {
 			ui.NL()
 			ui.Warn("(deprecated) Envs:        ", testkube.MapToString(test.ExecutionRequest.Envs))
@@ -125,14 +134,28 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		}
 
 		if test.ExecutionRequest.ArtifactRequest != nil {
-			ui.Warn("  Artifact request:       ")
-			ui.Warn("    Storage class name:   ", test.ExecutionRequest.ArtifactRequest.StorageClassName)
-			ui.Warn("    Volume mount path:    ", test.ExecutionRequest.ArtifactRequest.VolumeMountPath)
-			ui.Warn("    Dirs:                 ", strings.Join(test.ExecutionRequest.ArtifactRequest.Dirs, ","))
+			ui.Warn("  Artifact request:            ")
+			ui.Warn("    Storage class name:        ", test.ExecutionRequest.ArtifactRequest.StorageClassName)
+			ui.Warn("    Volume mount path:         ", test.ExecutionRequest.ArtifactRequest.VolumeMountPath)
+			ui.Warn("    Dirs:                      ", strings.Join(test.ExecutionRequest.ArtifactRequest.Dirs, ","))
+			ui.Warn("    Storage bucket:            ", test.ExecutionRequest.ArtifactRequest.StorageBucket)
+			ui.Warn("    Omit folder per execution: ", fmt.Sprint(test.ExecutionRequest.ArtifactRequest.OmitFolderPerExecution))
 		}
 
 		if test.ExecutionRequest.JobTemplate != "" {
-			ui.Warn("  Job template:           ", "\n", test.ExecutionRequest.JobTemplate)
+			ui.Warn("  Job template:                ", "\n", test.ExecutionRequest.JobTemplate)
+		}
+
+		if test.ExecutionRequest.JobTemplateReference != "" {
+			ui.Warn("  Job template reference:      ", test.ExecutionRequest.JobTemplateReference)
+		}
+
+		if test.ExecutionRequest.CronJobTemplate != "" {
+			ui.Warn("  Cron job template:           ", "\n", test.ExecutionRequest.CronJobTemplate)
+		}
+
+		if test.ExecutionRequest.CronJobTemplateReference != "" {
+			ui.Warn("  Cron job template reference: ", test.ExecutionRequest.CronJobTemplateReference)
 		}
 
 		if test.ExecutionRequest.CronJobTemplate != "" {
@@ -140,15 +163,28 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 		}
 
 		if test.ExecutionRequest.PreRunScript != "" {
-			ui.Warn("  Pre run script:         ", "\n", test.ExecutionRequest.PreRunScript)
+			ui.Warn("  Pre run script:              ", "\n", test.ExecutionRequest.PreRunScript)
 		}
 
 		if test.ExecutionRequest.PostRunScript != "" {
-			ui.Warn("  Post run script:         ", "\n", test.ExecutionRequest.PostRunScript)
+			ui.Warn("  Post run script:             ", "\n", test.ExecutionRequest.PostRunScript)
 		}
 
+		ui.Warn("  Execute postrun script before scraping: ", fmt.Sprint(test.ExecutionRequest.ExecutePostRunScriptBeforeScraping))
 		if test.ExecutionRequest.ScraperTemplate != "" {
-			ui.Warn("  Scraper template:       ", "\n", test.ExecutionRequest.ScraperTemplate)
+			ui.Warn("  Scraper template:            ", "\n", test.ExecutionRequest.ScraperTemplate)
+		}
+
+		if test.ExecutionRequest.ScraperTemplateReference != "" {
+			ui.Warn("  Scraper template reference:  ", test.ExecutionRequest.ScraperTemplateReference)
+		}
+
+		if test.ExecutionRequest.PvcTemplate != "" {
+			ui.Warn("  PVC template:                ", "\n", test.ExecutionRequest.PvcTemplate)
+		}
+
+		if test.ExecutionRequest.PvcTemplateReference != "" {
+			ui.Warn("  PVC template reference:      ", test.ExecutionRequest.PvcTemplateReference)
 		}
 
 		var mountConfigMaps, mountSecrets []mountParams

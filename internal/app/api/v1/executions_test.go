@@ -16,8 +16,8 @@ import (
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -215,10 +215,6 @@ func (e MockExecutor) Execute(ctx context.Context, execution *testkube.Execution
 	panic("not implemented")
 }
 
-func (e MockExecutor) ExecuteSync(ctx context.Context, execution *testkube.Execution, options client.ExecuteOptions) (*testkube.ExecutionResult, error) {
-	panic("not implemented")
-}
-
 func (e MockExecutor) Abort(ctx context.Context, execution *testkube.Execution) (*testkube.ExecutionResult, error) {
 	panic("not implemented")
 }
@@ -245,9 +241,10 @@ func getMockExecutorClient() *executorsclientv1.ExecutorsClient {
 				Namespace: "default",
 			},
 			Spec: executorv1.ExecutorSpec{
-				Types:        []string{"curl/test"},
-				ExecutorType: "",
-				JobTemplate:  "",
+				Types:                []string{"curl/test"},
+				ExecutorType:         "",
+				JobTemplate:          "",
+				JobTemplateReference: "",
 			},
 			Status: executorv1.ExecutorStatus{},
 		},

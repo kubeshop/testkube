@@ -7,10 +7,11 @@ import (
 
 func MapTestTriggerKeyMapToAPI(km *triggers.KeyMap) *testkube.TestTriggerKeyMap {
 	return &testkube.TestTriggerKeyMap{
-		Resources:  km.Resources,
-		Actions:    km.Actions,
-		Executions: km.Executions,
-		Events:     km.Events,
-		Conditions: km.Conditions,
+		Resources:           km.Resources,
+		Actions:             km.Actions,
+		Executions:          km.Executions,
+		Events:              km.Events,
+		Conditions:          km.Conditions,
+		ConcurrencyPolicies: km.ConcurrencyPolicies,
 	}
 }

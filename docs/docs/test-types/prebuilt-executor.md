@@ -149,6 +149,9 @@ spec:
   # 'job' is currently the only type for custom executors
   image: YOUR_USER/testkube-executor-example:1.0.0 
   # pass your repository and tag
+  imagePullSecrets:
+    - name: secret_name
+  # add k8s secret name to pull images from private repositories
   types:
   - example/test      
   # your custom type registered (used when creating and running your testkube tests)

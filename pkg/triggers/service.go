@@ -10,14 +10,17 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 
-	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	testsuitev3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
-	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
-	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
-	testsuitesclientv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
+	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
+	testsuitev3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
+	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
+	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	testkubeclientsetv1 "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
+	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/event/bus"
+	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/result"
@@ -45,7 +48,7 @@ type Service struct {
 	leaseBackend                  LeaseBackend
 	identifier                    string
 	clusterID                     string
-	executor                      ExecutorF
+	triggerExecutor               ExecutorF
 	scraperInterval               time.Duration
 	leaseCheckInterval            time.Duration
 	maxLeaseDuration              time.Duration
@@ -66,6 +69,9 @@ type Service struct {
 	configMap                     config.Repository
 	executorsClient               executorsclientv1.Interface
 	httpClient                    http.HttpClient
+	testExecutor                  client.Executor
+	eventsBus                     bus.Bus
+	metrics                       metrics.Metrics
 	testkubeNamespace             string
 	watcherNamespaces             []string
 }
@@ -84,6 +90,9 @@ func NewService(
 	logger *zap.SugaredLogger,
 	configMap config.Repository,
 	executorsClient executorsclientv1.Interface,
+	testExecutor client.Executor,
+	eventsBus bus.Bus,
+	metrics metrics.Metrics,
 	opts ...Option,
 ) *Service {
 	identifier := fmt.Sprintf(defaultIdentifierFormat, utils.RandAlphanum(10))
@@ -108,12 +117,15 @@ func NewService(
 		logger:                        logger,
 		configMap:                     configMap,
 		executorsClient:               executorsClient,
+		testExecutor:                  testExecutor,
+		eventsBus:                     eventsBus,
+		metrics:                       metrics,
 		httpClient:                    http.NewClient(),
 		watchFromDate:                 time.Now(),
 		triggerStatus:                 make(map[statusKey]*triggerStatus),
 	}
-	if s.executor == nil {
-		s.executor = s.execute
+	if s.triggerExecutor == nil {
+		s.triggerExecutor = s.execute
 	}
 
 	for _, opt := range opts {
@@ -164,9 +176,9 @@ func WithScraperInterval(interval time.Duration) Option {
 	}
 }
 
-func WithExecutor(executor ExecutorF) Option {
+func WithExecutor(triggerExecutor ExecutorF) Option {
 	return func(s *Service) {
-		s.executor = executor
+		s.triggerExecutor = triggerExecutor
 	}
 }
 

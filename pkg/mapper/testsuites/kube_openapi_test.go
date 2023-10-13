@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
+	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 )
 
 func TestMapTestSuiteListKubeToAPI(t *testing.T) {

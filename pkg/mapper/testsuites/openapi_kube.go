@@ -5,7 +5,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
+	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/types"
 )
@@ -200,17 +200,24 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.TestSu
 	}
 
 	return &testsuitesv3.TestSuiteExecutionRequest{
-		Name:            executionRequest.Name,
-		Labels:          executionRequest.Labels,
-		ExecutionLabels: executionRequest.ExecutionLabels,
-		Namespace:       executionRequest.Namespace,
-		Variables:       MapCRDVariables(executionRequest.Variables),
-		SecretUUID:      executionRequest.SecretUUID,
-		Sync:            executionRequest.Sync,
-		HttpProxy:       executionRequest.HttpProxy,
-		HttpsProxy:      executionRequest.HttpsProxy,
-		Timeout:         executionRequest.Timeout,
-		CronJobTemplate: executionRequest.CronJobTemplate,
+		Name:                     executionRequest.Name,
+		Labels:                   executionRequest.Labels,
+		ExecutionLabels:          executionRequest.ExecutionLabels,
+		Namespace:                executionRequest.Namespace,
+		Variables:                MapCRDVariables(executionRequest.Variables),
+		SecretUUID:               executionRequest.SecretUUID,
+		Sync:                     executionRequest.Sync,
+		HttpProxy:                executionRequest.HttpProxy,
+		HttpsProxy:               executionRequest.HttpsProxy,
+		Timeout:                  executionRequest.Timeout,
+		JobTemplate:              executionRequest.JobTemplate,
+		JobTemplateReference:     executionRequest.JobTemplateReference,
+		CronJobTemplate:          executionRequest.CronJobTemplate,
+		CronJobTemplateReference: executionRequest.CronJobTemplateReference,
+		ScraperTemplate:          executionRequest.ScraperTemplate,
+		ScraperTemplateReference: executionRequest.ScraperTemplateReference,
+		PvcTemplate:              executionRequest.PvcTemplate,
+		PvcTemplateReference:     executionRequest.PvcTemplateReference,
 	}
 }
 
@@ -319,8 +326,36 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 			&request.HttpsProxy,
 		},
 		{
+			executionRequest.JobTemplate,
+			&request.JobTemplate,
+		},
+		{
+			executionRequest.JobTemplateReference,
+			&request.JobTemplateReference,
+		},
+		{
 			executionRequest.CronJobTemplate,
 			&request.CronJobTemplate,
+		},
+		{
+			executionRequest.CronJobTemplateReference,
+			&request.CronJobTemplateReference,
+		},
+		{
+			executionRequest.ScraperTemplate,
+			&request.ScraperTemplate,
+		},
+		{
+			executionRequest.ScraperTemplateReference,
+			&request.ScraperTemplateReference,
+		},
+		{
+			executionRequest.PvcTemplate,
+			&request.PvcTemplate,
+		},
+		{
+			executionRequest.PvcTemplateReference,
+			&request.PvcTemplateReference,
 		},
 	}
 

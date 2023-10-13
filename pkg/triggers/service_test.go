@@ -11,15 +11,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
-	v1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
-	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
-	testsourcesv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
-	testsuiteexecutionsv1 "github.com/kubeshop/testkube-operator/client/testsuiteexecutions/v1"
-	testsuitesv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
+	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
+	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
+	v1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
+	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	testsourcesv1 "github.com/kubeshop/testkube-operator/pkg/client/testsources/v1"
+	testsuiteexecutionsv1 "github.com/kubeshop/testkube-operator/pkg/client/testsuiteexecutions/v1"
+	testsuitesv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	faketestkube "github.com/kubeshop/testkube-operator/pkg/clientset/versioned/fake"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -45,6 +45,7 @@ func TestService_Run(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
+	mockBus := bus.NewEventBusMock()
 	mockResultRepository := result.NewMockRepository(mockCtrl)
 	mockTestResultRepository := testresult.NewMockRepository(mockCtrl)
 
@@ -86,17 +87,18 @@ func TestService_Run(t *testing.T) {
 		TypeMeta:   metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "cypress"},
 		Spec: executorv1.ExecutorSpec{
-			Types:            []string{mockExecutorTypes},
-			ExecutorType:     "job",
-			URI:              "",
-			Image:            "cypress",
-			Args:             nil,
-			Command:          []string{"run"},
-			ImagePullSecrets: nil,
-			Features:         nil,
-			ContentTypes:     nil,
-			JobTemplate:      "",
-			Meta:             nil,
+			Types:                []string{mockExecutorTypes},
+			ExecutorType:         "job",
+			URI:                  "",
+			Image:                "cypress",
+			Args:                 nil,
+			Command:              []string{"run"},
+			ImagePullSecrets:     nil,
+			Features:             nil,
+			ContentTypes:         nil,
+			JobTemplate:          "",
+			JobTemplateReference: "",
+			Meta:                 nil,
 		},
 	}
 	mockExecutorsClient.EXPECT().GetByType(mockExecutorTypes).Return(&mockExecutorV1, nil).AnyTimes()
@@ -129,6 +131,8 @@ func TestService_Run(t *testing.T) {
 		configMapConfig,
 		mockConfigMapClient,
 		mockTestSuiteExecutionsClient,
+		mockBus,
+		"",
 	)
 
 	mockLeaseBackend := NewMockLeaseBackend(mockCtrl)
@@ -138,6 +142,8 @@ func TestService_Run(t *testing.T) {
 
 	fakeTestkubeClientset := faketestkube.NewSimpleClientset()
 	fakeClientset := fake.NewSimpleClientset()
+	eventBus := bus.NewEventBusMock()
+	metrics := metrics.NewMetrics()
 	s := NewService(
 		sched,
 		fakeClientset,
@@ -150,6 +156,9 @@ func TestService_Run(t *testing.T) {
 		testLogger,
 		configMapConfig,
 		mockExecutorsClient,
+		mockExecutor,
+		eventBus,
+		metrics,
 		WithClusterID(testClusterID),
 		WithIdentifier(testIdentifier),
 		WithScraperInterval(50*time.Millisecond),
@@ -164,12 +173,13 @@ func TestService_Run(t *testing.T) {
 	testTrigger := testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace, Name: "test-trigger-1"},
 		Spec: testtriggersv1.TestTriggerSpec{
-			Resource:         "pod",
-			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-pod"},
-			Event:            "created",
-			Action:           "run",
-			Execution:        "test",
-			TestSelector:     testtriggersv1.TestTriggerSelector{Name: "some-test"},
+			Resource:          "pod",
+			ResourceSelector:  testtriggersv1.TestTriggerSelector{Name: "test-pod"},
+			Event:             "created",
+			Action:            "run",
+			Execution:         "test",
+			ConcurrencyPolicy: "allow",
+			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
 		},
 	}
 	createdTestTrigger, err := fakeTestkubeClientset.TestsV1().TestTriggers(testNamespace).Create(ctx, &testTrigger, metav1.CreateOptions{})

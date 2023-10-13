@@ -8,14 +8,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
-	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
-	testsourcesv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
-	testsuiteexecutionsv1 "github.com/kubeshop/testkube-operator/client/testsuiteexecutions/v1"
-	testsuitesv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
+	v1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
+	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
+	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	testsourcesv1 "github.com/kubeshop/testkube-operator/pkg/client/testsources/v1"
+	testsuiteexecutionsv1 "github.com/kubeshop/testkube-operator/pkg/client/testsuiteexecutions/v1"
+	testsuitesv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/configmap"
@@ -39,6 +39,7 @@ func TestExecute(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
+	mockBus := bus.NewEventBusMock()
 	mockResultRepository := result.NewMockRepository(mockCtrl)
 	mockTestResultRepository := testresult.NewMockRepository(mockCtrl)
 
@@ -80,17 +81,18 @@ func TestExecute(t *testing.T) {
 		TypeMeta:   metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "cypress"},
 		Spec: v1.ExecutorSpec{
-			Types:            []string{mockExecutorTypes},
-			ExecutorType:     "job",
-			URI:              "",
-			Image:            "cypress",
-			Args:             nil,
-			Command:          []string{"run"},
-			ImagePullSecrets: nil,
-			Features:         nil,
-			ContentTypes:     nil,
-			JobTemplate:      "",
-			Meta:             nil,
+			Types:                []string{mockExecutorTypes},
+			ExecutorType:         "job",
+			URI:                  "",
+			Image:                "cypress",
+			Args:                 nil,
+			Command:              []string{"run"},
+			ImagePullSecrets:     nil,
+			Features:             nil,
+			ContentTypes:         nil,
+			JobTemplate:          "",
+			JobTemplateReference: "",
+			Meta:                 nil,
 		},
 	}
 	mockExecutorsClient.EXPECT().GetByType(mockExecutorTypes).Return(&mockExecutorV1, nil).AnyTimes()
@@ -115,6 +117,8 @@ func TestExecute(t *testing.T) {
 		configMapConfig,
 		mockConfigMapClient,
 		mockTestSuiteExecutionsClient,
+		mockBus,
+		"",
 	)
 	s := &Service{
 		triggerStatus:    make(map[statusKey]*triggerStatus),
@@ -147,9 +151,10 @@ func TestExecute(t *testing.T) {
 					Headers: map[string]string{"X-Token": "12345"},
 				}},
 			},
-			Action:       "run",
-			Execution:    "test",
-			TestSelector: testtriggersv1.TestTriggerSelector{Name: "some-test"},
+			Action:            "run",
+			Execution:         "test",
+			ConcurrencyPolicy: "allow",
+			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
 		},
 	}
 

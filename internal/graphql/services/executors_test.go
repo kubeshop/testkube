@@ -10,8 +10,8 @@ import (
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
+	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -31,9 +31,10 @@ var (
 				},
 			},
 			Spec: executorv1.ExecutorSpec{
-				Types:        []string{"curl/test"},
-				ExecutorType: "job",
-				JobTemplate:  "",
+				Types:                []string{"curl/test"},
+				ExecutorType:         "job",
+				JobTemplate:          "",
+				JobTemplateReference: "",
 			},
 			Status: executorv1.ExecutorStatus{},
 		},
@@ -41,18 +42,19 @@ var (
 	sample = testkube.ExecutorDetails{
 		Name: "sample",
 		Executor: &testkube.Executor{
-			ExecutorType:     "job",
-			Image:            "",
-			ImagePullSecrets: nil,
-			Command:          nil,
-			Args:             nil,
-			Types:            []string{"curl/test"},
-			Uri:              "",
-			ContentTypes:     nil,
-			JobTemplate:      "",
-			Labels:           map[string]string{"label-name": "label-value"},
-			Features:         nil,
-			Meta:             nil,
+			ExecutorType:         "job",
+			Image:                "",
+			ImagePullSecrets:     nil,
+			Command:              nil,
+			Args:                 nil,
+			Types:                []string{"curl/test"},
+			Uri:                  "",
+			ContentTypes:         nil,
+			JobTemplate:          "",
+			JobTemplateReference: "",
+			Labels:               map[string]string{"label-name": "label-value"},
+			Features:             nil,
+			Meta:                 nil,
 		},
 	}
 	k8sObjects2 = []k8sclient.Object{
@@ -69,9 +71,10 @@ var (
 				},
 			},
 			Spec: executorv1.ExecutorSpec{
-				Types:        []string{"other/test"},
-				ExecutorType: "job",
-				JobTemplate:  "",
+				Types:                []string{"other/test"},
+				ExecutorType:         "job",
+				JobTemplate:          "",
+				JobTemplateReference: "",
 			},
 			Status: executorv1.ExecutorStatus{},
 		},
@@ -79,18 +82,19 @@ var (
 	sample2 = testkube.ExecutorDetails{
 		Name: "sample",
 		Executor: &testkube.Executor{
-			ExecutorType:     "job",
-			Image:            "",
-			ImagePullSecrets: nil,
-			Command:          nil,
-			Args:             nil,
-			Types:            []string{"other/test"},
-			Uri:              "",
-			ContentTypes:     nil,
-			JobTemplate:      "",
-			Labels:           map[string]string{"label-name": "label-value"},
-			Features:         nil,
-			Meta:             nil,
+			ExecutorType:         "job",
+			Image:                "",
+			ImagePullSecrets:     nil,
+			Command:              nil,
+			Args:                 nil,
+			Types:                []string{"other/test"},
+			Uri:                  "",
+			ContentTypes:         nil,
+			JobTemplate:          "",
+			JobTemplateReference: "",
+			Labels:               map[string]string{"label-name": "label-value"},
+			Features:             nil,
+			Meta:                 nil,
 		},
 	}
 )

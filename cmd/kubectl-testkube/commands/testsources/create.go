@@ -29,6 +29,7 @@ func NewCreateTestSourceCmd() *cobra.Command {
 		gitTokenSecret       map[string]string
 		gitCertificateSecret string
 		gitAuthType          string
+		update               bool
 	)
 
 	cmd := &cobra.Command{
@@ -52,7 +53,25 @@ func NewCreateTestSourceCmd() *cobra.Command {
 
 				testsource, _ := client.GetTestSource(name)
 				if name == testsource.Name {
-					ui.Failf("TestSource with name '%s' already exists in namespace %s", name, namespace)
+					if cmd.Flag("update").Changed {
+						if !update {
+							ui.Failf("TestSource with name '%s' already exists in namespace %s, ", testsource.Name, namespace)
+						}
+					} else {
+						ok := ui.Confirm(fmt.Sprintf("TestSource with name '%s' already exists in namespace %s, ", testsource.Name, namespace) +
+							"do you want to overwrite it?")
+						if !ok {
+							ui.Failf("TestSource creation was aborted")
+						}
+					}
+
+					options, err := NewUpdateTestSourceOptionsFromFlags(cmd)
+					ui.ExitOnError("getting test source options", err)
+
+					_, err = client.UpdateTestSource(options)
+					ui.ExitOnError("updating test source "+name+" in namespace "+namespace, err)
+
+					ui.SuccessAndExit("TestSource updated", name)
 				}
 			}
 
@@ -84,7 +103,7 @@ func NewCreateTestSourceCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringVarP(&sourceType, "source-type", "", "", "source type of test one of string|file-uri|git")
 	cmd.Flags().StringVarP(&file, "file", "f", "", "source file - will be read from stdin if not specified")
-	cmd.Flags().StringVarP(&uri, "uri", "u", "", "URI which should be called when given event occurs")
+	cmd.Flags().StringVarP(&uri, "uri", "u", "", "URI which should be called to get test content")
 	cmd.Flags().StringVarP(&gitUri, "git-uri", "", "", "Git repository uri")
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
 	cmd.Flags().StringVarP(&gitCommit, "git-commit", "", "", "if uri is git repository we can use commit id (sha) parameter")
@@ -96,6 +115,7 @@ func NewCreateTestSourceCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitCertificateSecret, "git-certificate-secret", "", "", "if git repository is private we can use certificate as an auth parameter stored in a kubernetes secret name")
 	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
 	cmd.Flags().StringVarP(&gitAuthType, "git-auth-type", "", "basic", "auth type for git requests one of basic|header")
+	cmd.Flags().BoolVar(&update, "update", false, "update, if test source already exists")
 
 	return cmd
 }

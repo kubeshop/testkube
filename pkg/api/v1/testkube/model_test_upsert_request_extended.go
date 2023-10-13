@@ -8,6 +8,10 @@ import (
 )
 
 func (test *TestUpsertRequest) QuoteTestTextFields() {
+	if test.Description != "" {
+		test.Description = fmt.Sprintf("%q", test.Description)
+	}
+
 	if test.Content != nil && test.Content.Data != "" {
 		test.Content.Data = fmt.Sprintf("%q", test.Content.Data)
 	}
@@ -23,6 +27,7 @@ func (test *TestUpsertRequest) QuoteTestTextFields() {
 			&test.ExecutionRequest.CronJobTemplate,
 			&test.ExecutionRequest.PreRunScript,
 			&test.ExecutionRequest.PostRunScript,
+			&test.ExecutionRequest.PvcTemplate,
 			&test.ExecutionRequest.ScraperTemplate,
 		}
 

@@ -47,3 +47,12 @@ spec:
   - stopOnFailure: false
     execute:
     - test: expected-fail-maven-executor-jdk18-incorrect-image
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-jmeter-oomkilled
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-jmeter-timeout
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-cypress-oomkilled

@@ -121,18 +121,18 @@ func (mr *MockInterfaceMockRecorder) GetObject(arg0 interface{}) *gomock.Call {
 }
 
 // List mocks base method.
-func (m *MockInterface) List() (map[string]map[string]string, error) {
+func (m *MockInterface) List(arg0 bool) (map[string]map[string]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List")
+	ret := m.ctrl.Call(m, "List", arg0)
 	ret0, _ := ret[0].(map[string]map[string]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockInterfaceMockRecorder) List() *gomock.Call {
+func (mr *MockInterfaceMockRecorder) List(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockInterface)(nil).List))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockInterface)(nil).List), arg0)
 }
 
 // Update mocks base method.

@@ -1,6 +1,7 @@
 package testsuites
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/robfig/cron"
@@ -26,7 +27,15 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 		httpProxy, httpsProxy    string
 		secretVariableReferences map[string]string
 		timeout                  int32
+		jobTemplate              string
 		cronJobTemplate          string
+		scraperTemplate          string
+		pvcTemplate              string
+		jobTemplateReference     string
+		cronJobTemplateReference string
+		scraperTemplateReference string
+		pvcTemplateReference     string
+		update                   bool
 	)
 
 	cmd := &cobra.Command{
@@ -49,9 +58,28 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 				client, namespace, err := common.GetClient(cmd)
 				ui.ExitOnError("getting client", err)
 
-				test, _ := client.GetTestSuite(options.Name)
-				if options.Name == test.Name {
-					ui.Failf("TestSuite with name '%s' already exists in namespace %s", options.Name, namespace)
+				testSuite, _ := client.GetTestSuite(options.Name)
+
+				if options.Name == testSuite.Name {
+					if cmd.Flag("update").Changed {
+						if !update {
+							ui.Failf("TestSuite with name '%s' already exists in namespace %s, ", testSuite.Name, namespace)
+						}
+					} else {
+						ok := ui.Confirm(fmt.Sprintf("TestSuite with name '%s' already exists in namespace %s, ", testSuite.Name, namespace) +
+							"do you want to overwrite it?")
+						if !ok {
+							ui.Failf("TestSuite creation was aborted")
+						}
+					}
+
+					options, err := NewTestSuiteUpdateOptionsFromFlags(cmd)
+					ui.ExitOnError("getting test suite options", err)
+
+					testSuite, err = client.UpdateTestSuite(options)
+					ui.ExitOnError("updating TestSuite "+testSuite.Name+" in namespace "+namespace, err)
+
+					ui.SuccessAndExit("TestSuite updated", testSuite.Name)
 				}
 
 				_, err = client.CreateTestSuite(apiClient.UpsertTestSuiteOptions(options))
@@ -79,7 +107,15 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 	cmd.Flags().StringVar(&httpsProxy, "https-proxy", "", "https proxy for executor containers")
 	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
 	cmd.Flags().Int32Var(&timeout, "timeout", 0, "duration in seconds for test suite to timeout. 0 disables timeout.")
+	cmd.Flags().StringVar(&jobTemplate, "job-template", "", "job template file path for extensions to job template")
 	cmd.Flags().StringVar(&cronJobTemplate, "cronjob-template", "", "cron job template file path for extensions to cron job template")
+	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
+	cmd.Flags().StringVar(&pvcTemplate, "pvc-template", "", "pvc template file path for extensions to pvc template")
+	cmd.Flags().StringVar(&jobTemplateReference, "job-template-reference", "", "reference to job template to use for the test")
+	cmd.Flags().StringVar(&cronJobTemplateReference, "cronjob-template-reference", "", "reference to cron job template to use for the test")
+	cmd.Flags().StringVar(&scraperTemplateReference, "scraper-template-reference", "", "reference to scraper template to use for the test")
+	cmd.Flags().StringVar(&pvcTemplateReference, "pvc-template-reference", "", "reference to pvc template to use for the test")
+	cmd.Flags().BoolVar(&update, "update", false, "update, if test suite already exists")
 
 	return cmd
 }

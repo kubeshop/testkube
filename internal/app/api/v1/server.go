@@ -29,13 +29,15 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/proxy"
 	"github.com/kelseyhightower/envconfig"
 
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
-	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
-	testsourcesclientv1 "github.com/kubeshop/testkube-operator/client/testsources/v1"
-	testsuitesclientv3 "github.com/kubeshop/testkube-operator/client/testsuites/v3"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
+	templatesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
+	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	testsourcesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testsources/v1"
+	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/event"
+	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
@@ -79,9 +81,12 @@ func NewTestkubeAPI(
 	storage storage.Client,
 	graphqlPort string,
 	artifactsStorage storage.ArtifactsStorage,
+	templatesClient *templatesclientv1.TemplatesClient,
 	cdeventsTarget string,
 	dashboardURI string,
 	helmchartVersion string,
+	mode string,
+	eventsBus bus.Bus,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -121,13 +126,17 @@ func NewTestkubeAPI(
 		Storage:              storage,
 		graphqlPort:          graphqlPort,
 		artifactsStorage:     artifactsStorage,
+		TemplatesClient:      templatesClient,
+		dashboardURI:         dashboardURI,
 		helmchartVersion:     helmchartVersion,
+		mode:                 mode,
+		eventsBus:            eventsBus,
 	}
 
 	// will be reused in websockets handler
 	s.WebsocketLoader = ws.NewWebsocketLoader()
 
-	s.Events.Loader.Register(webhook.NewWebhookLoader(webhookClient))
+	s.Events.Loader.Register(webhook.NewWebhookLoader(s.Log, webhookClient, templatesClient))
 	s.Events.Loader.Register(s.WebsocketLoader)
 	s.Events.Loader.Register(s.slackLoader)
 
@@ -173,7 +182,11 @@ type TestkubeAPI struct {
 	slackLoader          *slack.SlackLoader
 	graphqlPort          string
 	artifactsStorage     storage.ArtifactsStorage
+	TemplatesClient      *templatesclientv1.TemplatesClient
+	dashboardURI         string
 	helmchartVersion     string
+	mode                 string
+	eventsBus            bus.Bus
 }
 
 type storageParams struct {
@@ -341,6 +354,15 @@ func (s *TestkubeAPI) InitRoutes() {
 	testsources.Patch("/:name", s.UpdateTestSourceHandler())
 	testsources.Delete("/:name", s.DeleteTestSourceHandler())
 	testsources.Delete("/", s.DeleteTestSourcesHandler())
+
+	templates := s.Routes.Group("/templates")
+
+	templates.Post("/", s.CreateTemplateHandler())
+	templates.Patch("/:name", s.UpdateTemplateHandler())
+	templates.Get("/", s.ListTemplatesHandler())
+	templates.Get("/:name", s.GetTemplateHandler())
+	templates.Delete("/:name", s.DeleteTemplateHandler())
+	templates.Delete("/", s.DeleteTemplatesHandler())
 
 	labels := s.Routes.Group("/labels")
 	labels.Get("/", s.ListLabelsHandler())

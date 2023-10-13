@@ -14,13 +14,15 @@ import (
 
 func NewCreateWebhookCmd() *cobra.Command {
 	var (
-		events             []string
-		name, uri          string
-		selector           string
-		labels             map[string]string
-		payloadObjectField string
-		payloadTemplate    string
-		headers            map[string]string
+		events                   []string
+		name, uri                string
+		selector                 string
+		labels                   map[string]string
+		payloadObjectField       string
+		payloadTemplate          string
+		headers                  map[string]string
+		payloadTemplateReference string
+		update                   bool
 	)
 
 	cmd := &cobra.Command{
@@ -44,7 +46,25 @@ func NewCreateWebhookCmd() *cobra.Command {
 
 				webhook, _ := client.GetWebhook(name)
 				if name == webhook.Name {
-					ui.Failf("Webhook with name '%s' already exists in namespace %s", name, namespace)
+					if cmd.Flag("update").Changed {
+						if !update {
+							ui.Failf("Webhook with name '%s' already exists in namespace %s, ", webhook.Name, namespace)
+						}
+					} else {
+						ok := ui.Confirm(fmt.Sprintf("Webhook with name '%s' already exists in namespace %s, ", webhook.Name, namespace) +
+							"do you want to overwrite it?")
+						if !ok {
+							ui.Failf("Webhook creation was aborted")
+						}
+					}
+
+					options, err := NewUpdateWebhookOptionsFromFlags(cmd)
+					ui.ExitOnError("getting webhook options", err)
+
+					_, err = client.UpdateWebhook(options)
+					ui.ExitOnError("updating webhook "+name+" in namespace "+namespace, err)
+
+					ui.SuccessAndExit("Webhook updated", name)
 				}
 			}
 
@@ -71,12 +91,14 @@ func NewCreateWebhookCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique webhook name - mandatory")
 	cmd.Flags().StringArrayVarP(&events, "events", "e", []string{}, "event types handled by webhook e.g. start-test|end-test")
-	cmd.Flags().StringVarP(&uri, "uri", "u", "", "URI which should be called when given event occurs")
+	cmd.Flags().StringVarP(&uri, "uri", "u", "", "URI which should be called when given event occurs (golang template supported)")
 	cmd.Flags().StringVarP(&selector, "selector", "", "", "expression to select tests and test suites for webhook events: --selector app=backend")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringVarP(&payloadObjectField, "payload-field", "", "", "field to use for notification object payload")
 	cmd.Flags().StringVarP(&payloadTemplate, "payload-template", "", "", "if webhook needs to send a custom notification, then a path to template file should be provided")
-	cmd.Flags().StringToStringVarP(&headers, "header", "", nil, "webhook header value pair: --header Content-Type=application/xml")
+	cmd.Flags().StringToStringVarP(&headers, "header", "", nil, "webhook header value pair (golang template supported): --header Content-Type=application/xml")
+	cmd.Flags().StringVar(&payloadTemplateReference, "payload-template-reference", "", "reference to payload template to use for the webhook")
+	cmd.Flags().BoolVar(&update, "update", false, "update, if webhook already exists")
 
 	return cmd
 }

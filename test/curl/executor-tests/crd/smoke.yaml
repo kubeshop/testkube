@@ -15,6 +15,28 @@ spec:
       path: test/curl/executor-tests/curl-smoke-test.json
   executionRequest:
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 32Mi\n              cpu: 32m\n"
+    activeDeadlineSeconds: 180
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: curl-executor-smoke-directory
+  labels:
+    core-tests: executors
+spec:
+  type: curl/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/curl/executor-tests/
+  executionRequest:
+    args:
+      - "curl-smoke-test.json"
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 32Mi\n              cpu: 32m\n"
+    activeDeadlineSeconds: 180
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -34,3 +56,4 @@ spec:
   executionRequest:
     negativeTest: true
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 32Mi\n              cpu: 32m\n"
+    activeDeadlineSeconds: 180

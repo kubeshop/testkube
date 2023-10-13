@@ -1,6 +1,7 @@
 package executors
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/spf13/cobra"
@@ -14,9 +15,10 @@ import (
 
 func NewCreateExecutorCmd() *cobra.Command {
 	var (
-		types, command, executorArgs, imagePullSecretNames, features, contentTypes []string
-		name, executorType, image, uri, jobTemplate, iconURI, docsURI              string
-		labels, tooltips                                                           map[string]string
+		types, command, executorArgs, imagePullSecretNames, features, contentTypes          []string
+		name, executorType, image, uri, jobTemplate, iconURI, docsURI, jobTemplateReference string
+		labels, tooltips                                                                    map[string]string
+		update                                                                              bool
 	)
 
 	cmd := &cobra.Command{
@@ -40,7 +42,25 @@ func NewCreateExecutorCmd() *cobra.Command {
 
 				executor, _ := client.GetExecutor(name)
 				if name == executor.Name {
-					ui.Failf("Executor with name '%s' already exists in namespace %s", name, namespace)
+					if cmd.Flag("update").Changed {
+						if !update {
+							ui.Failf("Executor with name '%s' already exists in namespace %s, ", executor.Name, namespace)
+						}
+					} else {
+						ok := ui.Confirm(fmt.Sprintf("Executor with name '%s' already exists in namespace %s, ", executor.Name, namespace) +
+							"do you want to overwrite it?")
+						if !ok {
+							ui.Failf("Executor creation was aborted")
+						}
+					}
+
+					options, err := NewUpdateExecutorOptionsFromFlags(cmd)
+					ui.ExitOnError("getting executor options", err)
+
+					_, err = client.UpdateExecutor(options)
+					ui.ExitOnError("updating executor "+name+" in namespace "+namespace, err)
+
+					ui.SuccessAndExit("Executor updated", name)
 				}
 			}
 
@@ -72,12 +92,14 @@ func NewCreateExecutorCmd() *cobra.Command {
 	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in executor")
 	cmd.Flags().StringArrayVar(&executorArgs, "args", []string{}, "args passed to image in executor")
 	cmd.Flags().StringVarP(&jobTemplate, "job-template", "j", "", "if executor needs to be launched using custom job specification, then a path to template file should be provided")
+	cmd.Flags().StringVarP(&jobTemplateReference, "job-template-reference", "", "", "reference to job template for using with executor")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringArrayVar(&features, "feature", []string{}, "feature provided by executor")
 	cmd.Flags().StringVarP(&iconURI, "icon-uri", "", "", "URI to executor icon")
 	cmd.Flags().StringVarP(&docsURI, "docs-uri", "", "", "URI to executor docs")
 	cmd.Flags().StringArrayVar(&contentTypes, "content-type", []string{}, "list of supported content types for executor")
 	cmd.Flags().StringToStringVarP(&tooltips, "tooltip", "", nil, "tooltip key value pair: --tooltip key1=value1")
+	cmd.Flags().BoolVar(&update, "update", false, "update, if executor already exists")
 
 	return cmd
 }

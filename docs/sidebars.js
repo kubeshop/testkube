@@ -80,6 +80,7 @@ const sidebars = {
         "articles/webhooks",
         "articles/test-sources",
         "articles/test-executions",
+        "articles/templates",        
       ],
     },
     {
@@ -164,7 +165,8 @@ const sidebars = {
         "test-types/executor-tracetest",
         "test-types/executor-zap",
         "test-types/prebuilt-executor",
-        "test-types/container-executor",     
+        "test-types/container-executor", 
+        "test-types/executor-distributed-jmeter",
       ],
     },
     {
@@ -182,6 +184,10 @@ const sidebars = {
         "testkube-cloud/articles/environment-management",
         "testkube-cloud/articles/managing-cli-context",
         "testkube-cloud/articles/architecture",
+        "testkube-cloud/articles/running-parallel-tests-with-test-suite",
+        "testkube-cloud/articles/AI-test-insights",
+        "testkube-cloud/articles/status-pages",
+        "testkube-cloud/articles/cached-results",
       ],
     },
     {

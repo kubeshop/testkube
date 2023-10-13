@@ -3,11 +3,12 @@ package renderer
 import (
 	"fmt"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func TestSourceRenderer(ui *ui.UI, obj interface{}) error {
+func TestSourceRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 	testSource, ok := obj.(testkube.TestSource)
 	if !ok {
 		return fmt.Errorf("can't use '%T' as testkube.TestSource in RenderObj for test source", obj)

@@ -53,8 +53,13 @@ create_update_testsuite_json() { # testsuite_name testsuite_path
   fi
 }
 
-create_update_testsuite() { # testsuite_path
-    kubectl --namespace $namespace apply -f $1
+create_update_testsuite() { # testsuite_name testsuite_path
+    kubectl --namespace $namespace apply -f $2
+
+    if [ "$schedule" = true ] ; then # workaround for appending schedule
+      random_minute="$(($RANDOM % 59))"
+      kubectl testkube --namespace $namespace update testsuite --name $1 --label app=testkube --schedule "$random_minute */4 * * *" 
+    fi
 }
 
 run_follow_testsuite() { # testsuite_name

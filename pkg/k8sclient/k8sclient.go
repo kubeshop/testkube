@@ -126,8 +126,8 @@ func GetIngressAddress(clientSet kubernetes.Interface, ingressName string, names
 }
 
 // IsPersistentVolumeClaimBound TODO: add description.
-func IsPersistentVolumeClaimBound(c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
-	return func() (bool, error) {
+func IsPersistentVolumeClaimBound(c kubernetes.Interface, podName, namespace string) wait.ConditionWithContextFunc {
+	return func(ctx context.Context) (bool, error) {
 		pv, err := c.CoreV1().PersistentVolumeClaims(namespace).Get(context.Background(), podName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
@@ -144,8 +144,8 @@ func IsPersistentVolumeClaimBound(c kubernetes.Interface, podName, namespace str
 }
 
 // IsPodRunning check if the pod in question is running state
-func IsPodRunning(c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
-	return func() (bool, error) {
+func IsPodRunning(c kubernetes.Interface, podName, namespace string) wait.ConditionWithContextFunc {
+	return func(ctx context.Context) (bool, error) {
 		pod, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
@@ -162,8 +162,8 @@ func IsPodRunning(c kubernetes.Interface, podName, namespace string) wait.Condit
 }
 
 // HasPodSucceeded custom method for checing if Pod is succeded (handles PodFailed state too)
-func HasPodSucceeded(c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
-	return func() (bool, error) {
+func HasPodSucceeded(c kubernetes.Interface, podName, namespace string) wait.ConditionWithContextFunc {
+	return func(ctx context.Context) (bool, error) {
 		pod, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
@@ -180,8 +180,8 @@ func HasPodSucceeded(c kubernetes.Interface, podName, namespace string) wait.Con
 }
 
 // IsPodReady check if the pod in question is running state
-func IsPodReady(c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
-	return func() (bool, error) {
+func IsPodReady(c kubernetes.Interface, podName, namespace string) wait.ConditionWithContextFunc {
+	return func(ctx context.Context) (bool, error) {
 		pod, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
 		if err != nil {
 			return false, nil
@@ -201,17 +201,17 @@ func IsPodReady(c kubernetes.Interface, podName, namespace string) wait.Conditio
 
 // WaitForPodsReady wait for pods to be running with a timeout, return error
 func WaitForPodsReady(k8sClient kubernetes.Interface, namespace string, instance string, timeout time.Duration) error {
-
-	pods, err := k8sClient.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app.kubernetes.io/instance=" + instance})
+	ctx := context.TODO()
+	pods, err := k8sClient.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: "app.kubernetes.io/instance=" + instance})
 	if err != nil {
 		return err
 	}
 
 	for _, pod := range pods.Items {
-		if err := wait.PollImmediate(time.Second, timeout, IsPodRunning(k8sClient, pod.Name, namespace)); err != nil {
+		if err := wait.PollUntilContextTimeout(ctx, time.Second, timeout, true, IsPodRunning(k8sClient, pod.Name, namespace)); err != nil {
 			return err
 		}
-		if err := wait.PollImmediate(time.Second, timeout, IsPodReady(k8sClient, pod.Name, namespace)); err != nil {
+		if err := wait.PollUntilContextTimeout(ctx, time.Second, timeout, true, IsPodReady(k8sClient, pod.Name, namespace)); err != nil {
 			return err
 		}
 	}

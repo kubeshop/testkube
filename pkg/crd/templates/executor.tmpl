@@ -28,6 +28,9 @@ spec:
   {{- if .JobTemplate }}
   job_template: {{ .JobTemplate }}
   {{- end }}
+  {{- if .JobTemplateReference }}
+  jobTemplateReference: {{ .JobTemplateReference }}
+  {{- end }} 
   {{- if gt (len .Args) 0 }}
   args:
   {{- range $arg := .Args}}

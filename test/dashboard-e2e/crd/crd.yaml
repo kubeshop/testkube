@@ -12,8 +12,8 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube-dashboard
       branch: main
-      path: test/dashboard-e2e
-      workingDir: test/dashboard-e2e
+      path: packages/e2e-tests
+      workingDir: packages/e2e-tests
   executionRequest:
     variables:
       BASE_URL:
@@ -31,4 +31,5 @@ spec:
     artifactRequest:
       storageClassName: standard
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 4Gi\n              cpu: 3\n"
+    activeDeadlineSeconds: 600
   schedule: "15 */4 * * *"

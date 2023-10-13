@@ -3,8 +3,8 @@ package tests
 import (
 	v1 "k8s.io/api/core/v1"
 
-	commonv1 "github.com/kubeshop/testkube-operator/apis/common/v1"
-	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	commonv1 "github.com/kubeshop/testkube-operator/api/common/v1"
+	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -22,6 +22,7 @@ func MapTestListKubeToAPI(crTests testsv3.TestList) (tests []testkube.Test) {
 func MapTestCRToAPI(crTest testsv3.Test) (test testkube.Test) {
 	test.Name = crTest.Name
 	test.Namespace = crTest.Namespace
+	test.Description = crTest.Spec.Description
 	test.Content = MapTestContentFromSpec(crTest.Spec.Content)
 	test.Created = crTest.CreationTimestamp.Time
 	test.Source = crTest.Spec.Source
@@ -118,43 +119,51 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 	var artifactRequest *testkube.ArtifactRequest
 	if specExecutionRequest.ArtifactRequest != nil {
 		artifactRequest = &testkube.ArtifactRequest{
-			StorageClassName: specExecutionRequest.ArtifactRequest.StorageClassName,
-			VolumeMountPath:  specExecutionRequest.ArtifactRequest.VolumeMountPath,
-			Dirs:             specExecutionRequest.ArtifactRequest.Dirs,
+			StorageClassName:       specExecutionRequest.ArtifactRequest.StorageClassName,
+			VolumeMountPath:        specExecutionRequest.ArtifactRequest.VolumeMountPath,
+			Dirs:                   specExecutionRequest.ArtifactRequest.Dirs,
+			StorageBucket:          specExecutionRequest.ArtifactRequest.StorageBucket,
+			OmitFolderPerExecution: specExecutionRequest.ArtifactRequest.OmitFolderPerExecution,
 		}
 	}
 
 	return &testkube.ExecutionRequest{
-		Name:                    specExecutionRequest.Name,
-		TestSuiteName:           specExecutionRequest.TestSuiteName,
-		Number:                  specExecutionRequest.Number,
-		ExecutionLabels:         specExecutionRequest.ExecutionLabels,
-		Namespace:               specExecutionRequest.Namespace,
-		IsVariablesFileUploaded: specExecutionRequest.IsVariablesFileUploaded,
-		VariablesFile:           specExecutionRequest.VariablesFile,
-		Variables:               MergeVariablesAndParams(specExecutionRequest.Variables, nil),
-		TestSecretUUID:          specExecutionRequest.TestSecretUUID,
-		TestSuiteSecretUUID:     specExecutionRequest.TestSuiteSecretUUID,
-		Command:                 specExecutionRequest.Command,
-		Args:                    specExecutionRequest.Args,
-		ArgsMode:                string(specExecutionRequest.ArgsMode),
-		Image:                   specExecutionRequest.Image,
-		ImagePullSecrets:        MapImagePullSecrets(specExecutionRequest.ImagePullSecrets),
-		Envs:                    specExecutionRequest.Envs,
-		SecretEnvs:              specExecutionRequest.SecretEnvs,
-		Sync:                    specExecutionRequest.Sync,
-		HttpProxy:               specExecutionRequest.HttpProxy,
-		HttpsProxy:              specExecutionRequest.HttpsProxy,
-		ActiveDeadlineSeconds:   specExecutionRequest.ActiveDeadlineSeconds,
-		ArtifactRequest:         artifactRequest,
-		JobTemplate:             specExecutionRequest.JobTemplate,
-		CronJobTemplate:         specExecutionRequest.CronJobTemplate,
-		PreRunScript:            specExecutionRequest.PreRunScript,
-		PostRunScript:           specExecutionRequest.PostRunScript,
-		ScraperTemplate:         specExecutionRequest.ScraperTemplate,
-		NegativeTest:            specExecutionRequest.NegativeTest,
-		EnvConfigMaps:           MapEnvReferences(specExecutionRequest.EnvConfigMaps),
-		EnvSecrets:              MapEnvReferences(specExecutionRequest.EnvSecrets),
+		Name:                               specExecutionRequest.Name,
+		TestSuiteName:                      specExecutionRequest.TestSuiteName,
+		Number:                             specExecutionRequest.Number,
+		ExecutionLabels:                    specExecutionRequest.ExecutionLabels,
+		Namespace:                          specExecutionRequest.Namespace,
+		IsVariablesFileUploaded:            specExecutionRequest.IsVariablesFileUploaded,
+		VariablesFile:                      specExecutionRequest.VariablesFile,
+		Variables:                          MergeVariablesAndParams(specExecutionRequest.Variables, nil),
+		TestSecretUUID:                     specExecutionRequest.TestSecretUUID,
+		TestSuiteSecretUUID:                specExecutionRequest.TestSuiteSecretUUID,
+		Command:                            specExecutionRequest.Command,
+		Args:                               specExecutionRequest.Args,
+		ArgsMode:                           string(specExecutionRequest.ArgsMode),
+		Image:                              specExecutionRequest.Image,
+		ImagePullSecrets:                   MapImagePullSecrets(specExecutionRequest.ImagePullSecrets),
+		Envs:                               specExecutionRequest.Envs,
+		SecretEnvs:                         specExecutionRequest.SecretEnvs,
+		Sync:                               specExecutionRequest.Sync,
+		HttpProxy:                          specExecutionRequest.HttpProxy,
+		HttpsProxy:                         specExecutionRequest.HttpsProxy,
+		ActiveDeadlineSeconds:              specExecutionRequest.ActiveDeadlineSeconds,
+		ArtifactRequest:                    artifactRequest,
+		JobTemplate:                        specExecutionRequest.JobTemplate,
+		JobTemplateReference:               specExecutionRequest.JobTemplateReference,
+		CronJobTemplate:                    specExecutionRequest.CronJobTemplate,
+		CronJobTemplateReference:           specExecutionRequest.CronJobTemplateReference,
+		PreRunScript:                       specExecutionRequest.PreRunScript,
+		PostRunScript:                      specExecutionRequest.PostRunScript,
+		ExecutePostRunScriptBeforeScraping: specExecutionRequest.ExecutePostRunScriptBeforeScraping,
+		PvcTemplate:                        specExecutionRequest.PvcTemplate,
+		PvcTemplateReference:               specExecutionRequest.PvcTemplateReference,
+		ScraperTemplate:                    specExecutionRequest.ScraperTemplate,
+		ScraperTemplateReference:           specExecutionRequest.ScraperTemplateReference,
+		NegativeTest:                       specExecutionRequest.NegativeTest,
+		EnvConfigMaps:                      MapEnvReferences(specExecutionRequest.EnvConfigMaps),
+		EnvSecrets:                         MapEnvReferences(specExecutionRequest.EnvSecrets),
 	}
 }
 
@@ -221,6 +230,10 @@ func MapSpecToUpdate(test *testsv3.Test) (request testkube.TestUpdateRequest) {
 		{
 			&test.Namespace,
 			&request.Namespace,
+		},
+		{
+			&test.Spec.Description,
+			&request.Description,
 		},
 		{
 			&test.Spec.Type_,
@@ -397,6 +410,10 @@ func MapSpecExecutionRequestToExecutionUpdateRequest(
 			&executionRequest.JobTemplate,
 		},
 		{
+			&request.JobTemplateReference,
+			&executionRequest.JobTemplateReference,
+		},
+		{
 			&request.PreRunScript,
 			&executionRequest.PreRunScript,
 		},
@@ -409,8 +426,24 @@ func MapSpecExecutionRequestToExecutionUpdateRequest(
 			&executionRequest.CronJobTemplate,
 		},
 		{
+			&request.CronJobTemplateReference,
+			&executionRequest.CronJobTemplateReference,
+		},
+		{
+			&request.PvcTemplate,
+			&executionRequest.PvcTemplate,
+		},
+		{
+			&request.PvcTemplateReference,
+			&executionRequest.PvcTemplateReference,
+		},
+		{
 			&request.ScraperTemplate,
 			&executionRequest.ScraperTemplate,
+		},
+		{
+			&request.ScraperTemplateReference,
+			&executionRequest.ScraperTemplateReference,
 		},
 	}
 
@@ -457,12 +490,15 @@ func MapSpecExecutionRequestToExecutionUpdateRequest(
 	executionRequest.EnvConfigMaps = &envConfigMaps
 	envSecrets := MapEnvReferences(request.EnvSecrets)
 	executionRequest.EnvSecrets = &envSecrets
+	executionRequest.ExecutePostRunScriptBeforeScraping = &request.ExecutePostRunScriptBeforeScraping
 
 	if request.ArtifactRequest != nil {
 		artifactRequest := &testkube.ArtifactUpdateRequest{
-			StorageClassName: &request.ArtifactRequest.StorageClassName,
-			VolumeMountPath:  &request.ArtifactRequest.VolumeMountPath,
-			Dirs:             &request.ArtifactRequest.Dirs,
+			StorageClassName:       &request.ArtifactRequest.StorageClassName,
+			VolumeMountPath:        &request.ArtifactRequest.VolumeMountPath,
+			Dirs:                   &request.ArtifactRequest.Dirs,
+			StorageBucket:          &request.ArtifactRequest.StorageBucket,
+			OmitFolderPerExecution: &request.ArtifactRequest.OmitFolderPerExecution,
 		}
 
 		executionRequest.ArtifactRequest = &artifactRequest

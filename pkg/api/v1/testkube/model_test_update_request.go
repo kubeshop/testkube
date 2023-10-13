@@ -19,6 +19,8 @@ type TestUpdateRequest struct {
 	Name *string `json:"name,omitempty"`
 	// test namespace
 	Namespace *string `json:"namespace,omitempty"`
+	// test description
+	Description *string `json:"description,omitempty"`
 	// test type
 	Type_   *string             `json:"type,omitempty"`
 	Content **TestContentUpdate `json:"content,omitempty"`
@@ -29,6 +31,8 @@ type TestUpdateRequest struct {
 	Labels *map[string]string `json:"labels,omitempty"`
 	// schedule to run test
 	Schedule *string `json:"schedule,omitempty"`
+	// if test is offline and cannot be executed
+	ReadOnly *bool `json:"readOnly,omitempty"`
 	// list of file paths that will be needed from uploads
 	Uploads          *[]string                `json:"uploads,omitempty"`
 	ExecutionRequest **ExecutionUpdateRequest `json:"executionRequest,omitempty"`

@@ -3,7 +3,7 @@ package testsuiteexecutions
 import (
 	corev1 "k8s.io/api/core/v1"
 
-	testsuiteexecutionv1 "github.com/kubeshop/testkube-operator/apis/testsuiteexecution/v1"
+	testsuiteexecutionv1 "github.com/kubeshop/testkube-operator/api/testsuiteexecution/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -141,9 +141,11 @@ func MapExecutionCRD(request *testkube.Execution) *testsuiteexecutionv1.Executio
 	var artifactRequest *testsuiteexecutionv1.ArtifactRequest
 	if request.ArtifactRequest != nil {
 		artifactRequest = &testsuiteexecutionv1.ArtifactRequest{
-			StorageClassName: request.ArtifactRequest.StorageClassName,
-			VolumeMountPath:  request.ArtifactRequest.VolumeMountPath,
-			Dirs:             request.ArtifactRequest.Dirs,
+			StorageClassName:       request.ArtifactRequest.StorageClassName,
+			VolumeMountPath:        request.ArtifactRequest.VolumeMountPath,
+			Dirs:                   request.ArtifactRequest.Dirs,
+			StorageBucket:          request.ArtifactRequest.StorageBucket,
+			OmitFolderPerExecution: request.ArtifactRequest.OmitFolderPerExecution,
 		}
 	}
 
@@ -156,33 +158,34 @@ func MapExecutionCRD(request *testkube.Execution) *testsuiteexecutionv1.Executio
 	}
 
 	result := &testsuiteexecutionv1.Execution{
-		Id:                      request.Id,
-		TestName:                request.TestName,
-		TestSuiteName:           request.TestSuiteName,
-		TestNamespace:           request.TestNamespace,
-		TestType:                request.TestType,
-		Name:                    request.Name,
-		Number:                  request.Number,
-		Envs:                    request.Envs,
-		Command:                 request.Command,
-		Args:                    request.Args,
-		ArgsMode:                testsuiteexecutionv1.ArgsModeType(request.ArgsMode),
-		Variables:               MapCRDVariables(request.Variables),
-		IsVariablesFileUploaded: request.IsVariablesFileUploaded,
-		VariablesFile:           request.VariablesFile,
-		TestSecretUUID:          request.TestSecretUUID,
-		Content:                 MapContentToSpecContent(request.Content),
-		Duration:                request.Duration,
-		DurationMs:              request.DurationMs,
-		ExecutionResult:         MapExecutionResultToCRD(request.ExecutionResult),
-		Labels:                  request.Labels,
-		Uploads:                 request.Uploads,
-		BucketName:              request.BucketName,
-		ArtifactRequest:         artifactRequest,
-		PreRunScript:            request.PreRunScript,
-		PostRunScript:           request.PostRunScript,
-		RunningContext:          runningContext,
-		ContainerShell:          request.ContainerShell,
+		Id:                                 request.Id,
+		TestName:                           request.TestName,
+		TestSuiteName:                      request.TestSuiteName,
+		TestNamespace:                      request.TestNamespace,
+		TestType:                           request.TestType,
+		Name:                               request.Name,
+		Number:                             request.Number,
+		Envs:                               request.Envs,
+		Command:                            request.Command,
+		Args:                               request.Args,
+		ArgsMode:                           testsuiteexecutionv1.ArgsModeType(request.ArgsMode),
+		Variables:                          MapCRDVariables(request.Variables),
+		IsVariablesFileUploaded:            request.IsVariablesFileUploaded,
+		VariablesFile:                      request.VariablesFile,
+		TestSecretUUID:                     request.TestSecretUUID,
+		Content:                            MapContentToSpecContent(request.Content),
+		Duration:                           request.Duration,
+		DurationMs:                         request.DurationMs,
+		ExecutionResult:                    MapExecutionResultToCRD(request.ExecutionResult),
+		Labels:                             request.Labels,
+		Uploads:                            request.Uploads,
+		BucketName:                         request.BucketName,
+		ArtifactRequest:                    artifactRequest,
+		PreRunScript:                       request.PreRunScript,
+		PostRunScript:                      request.PostRunScript,
+		ExecutePostRunScriptBeforeScraping: request.ExecutePostRunScriptBeforeScraping,
+		RunningContext:                     runningContext,
+		ContainerShell:                     request.ContainerShell,
 	}
 
 	result.StartTime.Time = request.StartTime

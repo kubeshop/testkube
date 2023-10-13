@@ -8,9 +8,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/agent"
 	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -64,7 +67,25 @@ func (r *NewmanRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	}
 
 	if fileInfo.IsDir() {
-		return result, testkube.ErrTestContentTypeNotFile
+		scriptName := execution.Args[len(execution.Args)-1]
+		if workingDir != "" {
+			path = filepath.Join(r.Params.DataDir, "repo")
+			if execution.Content != nil && execution.Content.Repository != nil {
+				scriptName = filepath.Join(execution.Content.Repository.Path, scriptName)
+			}
+		}
+
+		execution.Args = execution.Args[:len(execution.Args)-1]
+		output.PrintLogf("%s It is a directory test - trying to find file from the last executor argument %s in directory %s", ui.IconWorld, scriptName, path)
+
+		// sanity checking for test script
+		scriptFile := filepath.Join(path, workingDir, scriptName)
+		fileInfo, errFile := os.Stat(scriptFile)
+		if errors.Is(errFile, os.ErrNotExist) || fileInfo.IsDir() {
+			output.PrintLogf("%s Could not find file %s in the directory, error: %s", ui.IconCross, scriptName, errFile)
+			return *result.Err(errors.Errorf("could not find file %s in the directory: %v", scriptName, errFile)), nil
+		}
+		path = scriptFile
 	}
 
 	envManager := env.NewManagerWithVars(execution.Variables)
@@ -127,6 +148,14 @@ func (r *NewmanRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	// convert newman result to OpenAPI struct
 	result = MapMetadataToResult(newmanResult)
 	output.PrintLog(fmt.Sprintf("%s Mapped Newman result successfully", ui.IconCheckMark))
+
+	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
+		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
+
+		if err = agent.RunScript(execution.PostRunScript); err != nil {
+			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
+		}
+	}
 
 	// scrape artifacts first even if there are errors above
 	if r.Params.ScrapperEnabled && execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {

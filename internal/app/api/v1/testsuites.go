@@ -16,10 +16,11 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
-	testsuitesv3 "github.com/kubeshop/testkube-operator/apis/testsuite/v3"
+	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/datefilter"
+	"github.com/kubeshop/testkube/pkg/event/bus"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	testsuiteexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testsuiteexecutions"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
@@ -752,7 +753,27 @@ func (s TestkubeAPI) ListTestSuiteArtifactsHandler() fiber.Handler {
 			if stepResult.Execution.Id == "" {
 				continue
 			}
-			stepArtifacts, err := s.artifactsStorage.ListFiles(c.Context(), stepResult.Execution.Id, stepResult.Execution.TestName, stepResult.Execution.TestSuiteName)
+
+			var stepArtifacts []testkube.Artifact
+			var bucket string
+			artifactsStorage := s.artifactsStorage
+			folder := stepResult.Execution.Id
+			if stepResult.Execution.ArtifactRequest != nil {
+				bucket = stepResult.Execution.ArtifactRequest.StorageBucket
+				if stepResult.Execution.ArtifactRequest.OmitFolderPerExecution {
+					folder = ""
+				}
+			}
+
+			if bucket != "" {
+				artifactsStorage, err = s.getArtifactStorage(bucket)
+				if err != nil {
+					s.Log.Warnw("can't get artifact storage", "executionID", stepResult.Execution.Id, "error", err)
+					continue
+				}
+			}
+
+			stepArtifacts, err = artifactsStorage.ListFiles(c.Context(), folder, stepResult.Execution.TestName, stepResult.Execution.TestSuiteName)
 			if err != nil {
 				s.Log.Warnw("can't list artifacts", "executionID", stepResult.Execution.Id, "error", err)
 				continue
@@ -792,11 +813,14 @@ func (s TestkubeAPI) AbortTestSuiteHandler() fiber.Handler {
 
 		for _, execution := range executions {
 			execution.Status = testkube.TestSuiteExecutionStatusAborting
-			err = s.TestExecutionResults.Update(c.Context(), execution)
+			s.Log.Infow("aborting test suite execution", "executionID", execution.Id)
+			err := s.eventsBus.PublishTopic(bus.InternalPublishTopic, testkube.NewEventEndTestSuiteAborted(&execution))
 
 			if err != nil {
-				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not update test suite execution: %w", errPrefix, err))
+				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not sent test suite abortion event: %w", errPrefix, err))
 			}
+
+			s.Log.Infow("test suite execution aborted, event sent", "executionID", c.Params("executionID"))
 		}
 
 		return c.Status(http.StatusNoContent).SendString("")
@@ -817,11 +841,13 @@ func (s TestkubeAPI) AbortTestSuiteExecutionHandler() fiber.Handler {
 		}
 
 		execution.Status = testkube.TestSuiteExecutionStatusAborting
-		err = s.TestExecutionResults.Update(c.Context(), execution)
+
+		err = s.eventsBus.PublishTopic(bus.InternalPublishTopic, testkube.NewEventEndTestSuiteAborted(&execution))
 
 		if err != nil {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not update test suite execution: %w", errPrefix, err))
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not sent test suite abortion event: %w", errPrefix, err))
 		}
+		s.Log.Infow("test suite execution aborted, event sent", "executionID", c.Params("executionID"))
 
 		return c.Status(http.StatusNoContent).SendString("")
 	}

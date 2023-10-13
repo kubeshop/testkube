@@ -9,6 +9,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/agent"
 	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -86,12 +87,20 @@ func (r *TracetestRunner) Run(ctx context.Context, execution testkube.Execution)
 	output, err := executor.Run("", command, envManager, args...)
 	runResult := model.Result{Output: string(output), ServerEndpoint: te, OutputEndpoint: toe}
 
+	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
+		outputPkg.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
+
+		if err = agent.RunScript(execution.PostRunScript); err != nil {
+			outputPkg.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
+		}
+	}
+
 	// scrape artifacts first even if there are errors above
 	if r.Params.ScrapperEnabled && execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
 		outputPkg.PrintLogf("Scraping directories: %v", execution.ArtifactRequest.Dirs)
 
 		if err := r.Scraper.Scrape(ctx, execution.ArtifactRequest.Dirs, execution); err != nil {
-			return testkube.ExecutionResult{}, fmt.Errorf("could not scrape kubepug directories: %w", err)
+			return testkube.ExecutionResult{}, fmt.Errorf("could not scrape tracetest directories: %w", err)
 		}
 	}
 

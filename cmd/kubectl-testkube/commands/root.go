@@ -87,7 +87,9 @@ var RootCmd = &cobra.Command{
 		}
 
 		serverCfg, err := client.GetConfig()
-		ui.WarnOnError("getting config", err)
+		if ui.Verbose && err != nil {
+			ui.Err(err)
+		}
 
 		if clientCfg.TelemetryEnabled != serverCfg.EnableTelemetry && err == nil {
 			if serverCfg.EnableTelemetry {

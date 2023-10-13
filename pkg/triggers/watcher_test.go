@@ -10,7 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
+	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
 	faketestkube "github.com/kubeshop/testkube-operator/pkg/clientset/versioned/fake"
 	"github.com/kubeshop/testkube/pkg/log"
 )
@@ -83,7 +83,7 @@ func TestService_runWatcher_lease(t *testing.T) {
 			return nil
 		}
 		s := &Service{
-			executor:          testExecutorF,
+			triggerExecutor:   testExecutorF,
 			identifier:        "testkube-api",
 			clusterID:         "testkube",
 			triggerStatus:     make(map[statusKey]*triggerStatus),
@@ -104,12 +104,13 @@ func TestService_runWatcher_lease(t *testing.T) {
 		testTrigger := testtriggersv1.TestTrigger{
 			ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace, Name: "test-trigger-2"},
 			Spec: testtriggersv1.TestTriggerSpec{
-				Resource:         "pod",
-				ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-pod"},
-				Event:            "created",
-				Action:           "run",
-				Execution:        "test",
-				TestSelector:     testtriggersv1.TestTriggerSelector{Name: "some-test"},
+				Resource:          "pod",
+				ResourceSelector:  testtriggersv1.TestTriggerSelector{Name: "test-pod"},
+				Event:             "created",
+				Action:            "run",
+				Execution:         "test",
+				ConcurrencyPolicy: "allow",
+				TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
 			},
 		}
 		createdTestTrigger, err := testKubeClientset.TestsV1().TestTriggers(testNamespace).Create(ctx, &testTrigger, metav1.CreateOptions{})

@@ -37,6 +37,7 @@ func NewProxyAPIClient(client kubernetes.Interface, config APIConfig) APIClient 
 		ConfigClient:     NewConfigClient(NewProxyClient[testkube.Config](client, config)),
 		TestSourceClient: NewTestSourceClient(NewProxyClient[testkube.TestSource](client, config)),
 		CopyFileClient:   NewCopyFileProxyClient(client, config),
+		TemplateClient:   NewTemplateClient(NewProxyClient[testkube.Template](client, config)),
 	}
 }
 
@@ -66,6 +67,7 @@ func NewDirectAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI,
 		ConfigClient:     NewConfigClient(NewDirectClient[testkube.Config](httpClient, apiURI, apiPathPrefix)),
 		TestSourceClient: NewTestSourceClient(NewDirectClient[testkube.TestSource](httpClient, apiURI, apiPathPrefix)),
 		CopyFileClient:   NewCopyFileDirectClient(httpClient, apiURI, apiPathPrefix),
+		TemplateClient:   NewTemplateClient(NewDirectClient[testkube.Template](httpClient, apiURI, apiPathPrefix)),
 	}
 }
 
@@ -78,4 +80,5 @@ type APIClient struct {
 	ConfigClient
 	TestSourceClient
 	CopyFileClient
+	TemplateClient
 }

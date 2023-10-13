@@ -2,9 +2,12 @@ package runner
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/kubeshop/testkube/pkg/executor/agent"
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
 	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 
@@ -61,19 +64,45 @@ func (r *SoapUIRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		output.PrintLogf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.Params.DataDir)
 	}
 
-	setUpEnvironment(execution.Args, testFile)
-
 	fileInfo, err := os.Stat(testFile)
 	if err != nil {
 		return result, err
 	}
 
 	if fileInfo.IsDir() {
-		return testkube.ExecutionResult{}, errors.New("SoapUI executor only tests one project per execution, a directory of projects was given")
+		scriptName := execution.Args[len(execution.Args)-1]
+		if workingDir != "" {
+			testFile = filepath.Join(r.Params.DataDir, "repo")
+			if execution.Content != nil && execution.Content.Repository != nil {
+				scriptName = filepath.Join(execution.Content.Repository.Path, scriptName)
+			}
+		}
+
+		execution.Args = execution.Args[:len(execution.Args)-1]
+		output.PrintLogf("%s It is a directory test - trying to find file from the last executor argument %s in directory %s", ui.IconWorld, scriptName, testFile)
+
+		// sanity checking for test script
+		scriptFile := filepath.Join(testFile, workingDir, scriptName)
+		fileInfo, errFile := os.Stat(scriptFile)
+		if errors.Is(errFile, os.ErrNotExist) || fileInfo.IsDir() {
+			output.PrintLogf("%s Could not find file %s in the directory, error: %s", ui.IconCross, scriptName, errFile)
+			return *result.Err(errors.Errorf("could not find file %s in the directory: %v", scriptName, errFile)), nil
+		}
+		testFile = scriptFile
 	}
+
+	setUpEnvironment(execution.Args, testFile)
 
 	output.PrintLogf("%s Running SoapUI tests", ui.IconMicroscope)
 	result = r.runSoapUI(&execution, workingDir)
+
+	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
+		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
+
+		if err = agent.RunScript(execution.PostRunScript); err != nil {
+			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
+		}
+	}
 
 	if r.Params.ScrapperEnabled {
 		directories := []string{r.SoapUILogsPath}

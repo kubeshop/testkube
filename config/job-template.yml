@@ -10,68 +10,68 @@ spec:
   template:
     spec:
       initContainers:
-        - name: {{ .Name }}-init
-          {{- if .Registry }}
-          image: {{ .Registry }}/{{ .InitImage }}
-          {{- else }}
-          image: {{ .InitImage }}
-          {{- end }}
-          imagePullPolicy: IfNotPresent
-          command:
-            - "/bin/runner"
-            - '{{ .Jsn }}'
-          volumeMounts:
-            - name: data-volume
-              mountPath: /data
-          {{- if .CertificateSecret }}
-          - name: {{ .CertificateSecret }}
-            mountPath: /etc/certs
-          {{- end }}
-          {{- range $configmap := .EnvConfigMaps }}
-          {{- if and $configmap.Mount $configmap.Reference }}
-          - name: {{ $configmap.Reference.Name }}
-            mountPath: {{ $configmap.MountPath }}
-          {{- end }}
-          {{- end }}
-          {{- range $secret := .EnvSecrets }}
-          {{- if and $secret.Mount $secret.Reference }}
-          - name: {{ $secret.Reference.Name }}
-            mountPath: {{ $secret.MountPath }}
-          {{- end }}
-          {{- end }}
-      containers:
-        - name: "{{ .Name }}"
-          {{- if .Registry }}
-          image: {{ .Registry }}/{{ .Image }}
-          {{- else }}
-          image: {{ .Image }}
-          {{- end }}
-          imagePullPolicy: IfNotPresent
-          command:
-            - "/bin/runner"
-            - '{{ .Jsn }}'
-          volumeMounts:
-            - name: data-volume
-              mountPath: /data
-          {{- if .CertificateSecret }}
-          - name: {{ .CertificateSecret }}
-            mountPath: /etc/certs
-          {{- end }}
-          {{- range $configmap := .EnvConfigMaps }}
-          {{- if and $configmap.Mount $configmap.Reference }}
-          - name: {{ $configmap.Reference.Name }}
-            mountPath: {{ $configmap.MountPath }}
-          {{- end }}
-          {{- end }}
-          {{- range $secret := .EnvSecrets }}
-          {{- if and $secret.Mount $secret.Reference }}
-          - name: {{ $secret.Reference.Name }}
-            mountPath: {{ $secret.MountPath }}
-          {{- end }}
-          {{- end }}
-      volumes:
+      - name: {{ .Name }}-init
+        {{- if .Registry }}
+        image: {{ .Registry }}/{{ .InitImage }}
+        {{- else }}
+        image: {{ .InitImage }}
+        {{- end }}
+        imagePullPolicy: IfNotPresent
+        command: 
+          - "/bin/runner"
+          - '{{ .Jsn }}'
+        volumeMounts:
         - name: data-volume
-          emptyDir: {}
+          mountPath: /data
+        {{- if .CertificateSecret }}
+        - name: {{ .CertificateSecret }}
+          mountPath: /etc/certs
+        {{- end }}
+        {{- range $configmap := .EnvConfigMaps }}
+        {{- if and $configmap.Mount $configmap.Reference }}
+        - name: {{ $configmap.Reference.Name }}
+          mountPath: {{ $configmap.MountPath }}
+        {{- end }}
+        {{- end }}
+        {{- range $secret := .EnvSecrets }}
+        {{- if and $secret.Mount $secret.Reference }}
+        - name: {{ $secret.Reference.Name }}
+          mountPath: {{ $secret.MountPath }}
+        {{- end }}
+        {{- end }}
+      containers:
+      - name: "{{ .Name }}"
+        {{- if .Registry }}
+        image: {{ .Registry }}/{{ .Image }}
+        {{- else }}
+        image: {{ .Image }}
+        {{- end }}
+        imagePullPolicy: IfNotPresent
+        command: 
+          - "/bin/runner"
+          - '{{ .Jsn }}'
+        volumeMounts:
+        - name: data-volume
+          mountPath: /data
+        {{- if .CertificateSecret }}
+        - name: {{ .CertificateSecret }}
+          mountPath: /etc/certs
+        {{- end }}
+        {{- range $configmap := .EnvConfigMaps }}
+        {{- if and $configmap.Mount $configmap.Reference }}
+        - name: {{ $configmap.Reference.Name }}
+          mountPath: {{ $configmap.MountPath }}
+        {{- end }}
+        {{- end }}
+        {{- range $secret := .EnvSecrets }}
+        {{- if and $secret.Mount $secret.Reference }}
+        - name: {{ $secret.Reference.Name }}
+          mountPath: {{ $secret.MountPath }}
+        {{- end }}
+        {{- end }}
+      volumes:
+      - name: data-volume
+        emptyDir: {}
       {{- if .CertificateSecret }}
       - name: {{ .CertificateSecret }}
         secret:

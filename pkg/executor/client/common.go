@@ -3,8 +3,8 @@ package client
 import (
 	"time"
 
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 

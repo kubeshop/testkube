@@ -17,38 +17,47 @@ import (
 
 // CreateCommonFlags are common flags for creating all test types
 type CreateCommonFlags struct {
-	ExecutorType             string
-	Labels                   map[string]string
-	Variables                map[string]string
-	SecretVariables          map[string]string
-	Schedule                 string
-	ExecutorArgs             []string
-	ArgsMode                 string
-	ExecutionName            string
-	VariablesFile            string
-	Envs                     map[string]string
-	SecretEnvs               map[string]string
-	HttpProxy, HttpsProxy    string
-	SecretVariableReferences map[string]string
-	CopyFiles                []string
-	Image                    string
-	Command                  []string
-	ImagePullSecretNames     []string
-	Timeout                  int64
-	ArtifactStorageClassName string
-	ArtifactVolumeMountPath  string
-	ArtifactDirs             []string
-	JobTemplate              string
-	CronJobTemplate          string
-	PreRunScript             string
-	PostRunScript            string
-	ScraperTemplate          string
-	NegativeTest             bool
-	MountConfigMaps          map[string]string
-	VariableConfigMaps       []string
-	MountSecrets             map[string]string
-	VariableSecrets          []string
-	UploadTimeout            string
+	ExecutorType                       string
+	Labels                             map[string]string
+	Variables                          map[string]string
+	SecretVariables                    map[string]string
+	Schedule                           string
+	ExecutorArgs                       []string
+	ArgsMode                           string
+	ExecutionName                      string
+	VariablesFile                      string
+	Envs                               map[string]string
+	SecretEnvs                         map[string]string
+	HttpProxy, HttpsProxy              string
+	SecretVariableReferences           map[string]string
+	CopyFiles                          []string
+	Image                              string
+	Command                            []string
+	ImagePullSecretNames               []string
+	Timeout                            int64
+	ArtifactStorageClassName           string
+	ArtifactVolumeMountPath            string
+	ArtifactDirs                       []string
+	JobTemplate                        string
+	JobTemplateReference               string
+	CronJobTemplate                    string
+	CronJobTemplateReference           string
+	PreRunScript                       string
+	PostRunScript                      string
+	ExecutePostRunScriptBeforeScraping bool
+	ScraperTemplate                    string
+	ScraperTemplateReference           string
+	PvcTemplate                        string
+	PvcTemplateReference               string
+	NegativeTest                       bool
+	MountConfigMaps                    map[string]string
+	VariableConfigMaps                 []string
+	MountSecrets                       map[string]string
+	VariableSecrets                    []string
+	UploadTimeout                      string
+	ArtifactStorageBucket              string
+	ArtifactOmitFolderPerExecution     bool
+	Description                        string
 }
 
 // NewCreateTestsCmd is a command tp create new Test Custom Resource
@@ -72,6 +81,7 @@ func NewCreateTestsCmd() *cobra.Command {
 		gitAuthType          string
 		sourceName           string
 		flags                CreateCommonFlags
+		update               bool
 	)
 
 	cmd := &cobra.Command{
@@ -96,7 +106,25 @@ func NewCreateTestsCmd() *cobra.Command {
 				test, _ := client.GetTest(testName)
 
 				if testName == test.Name {
-					ui.Failf("Test with name '%s' already exists in namespace %s", testName, namespace)
+					if cmd.Flag("update").Changed {
+						if !update {
+							ui.Failf("Test with name '%s' already exists in namespace %s, ", testName, namespace)
+						}
+					} else {
+						ok := ui.Confirm(fmt.Sprintf("Test with name '%s' already exists in namespace %s, ", testName, namespace) +
+							"do you want to overwrite it?")
+						if !ok {
+							ui.Failf("Test creation was aborted")
+						}
+					}
+
+					options, err := NewUpdateTestOptionsFromFlags(cmd)
+					ui.ExitOnError("getting test options", err)
+
+					test, err = client.UpdateTest(options)
+					ui.ExitOnError("updating test "+testName+" in namespace "+namespace, err)
+
+					ui.SuccessAndExit("Test updated", namespace, "/", testName)
 				}
 			}
 
@@ -172,6 +200,7 @@ func NewCreateTestsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitCertificateSecret, "git-certificate-secret", "", "", "if git repository is private we can use certificate as an auth parameter stored in a kubernetes secret name")
 	cmd.Flags().StringVarP(&gitAuthType, "git-auth-type", "", "basic", "auth type for git requests one of basic|header")
 	cmd.Flags().StringVarP(&sourceName, "source", "", "", "source name - will be used together with content parameters")
+	cmd.Flags().BoolVar(&update, "update", false, "update, if test already exists")
 	cmd.Flags().MarkDeprecated("env", "env is deprecated use variable instead")
 	cmd.Flags().MarkDeprecated("secret-env", "secret-env is deprecated use secret-variable instead")
 
@@ -207,16 +236,25 @@ func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
 	cmd.Flags().StringVar(&flags.ArtifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
 	cmd.Flags().StringArrayVarP(&flags.ArtifactDirs, "artifact-dir", "", []string{}, "artifact dirs for scraping")
 	cmd.Flags().StringVar(&flags.JobTemplate, "job-template", "", "job template file path for extensions to job template")
+	cmd.Flags().StringVar(&flags.JobTemplateReference, "job-template-reference", "", "reference to job template to use for the test")
 	cmd.Flags().StringVar(&flags.CronJobTemplate, "cronjob-template", "", "cron job template file path for extensions to cron job template")
+	cmd.Flags().StringVar(&flags.CronJobTemplateReference, "cronjob-template-reference", "", "reference to cron job template to use for the test")
 	cmd.Flags().StringVarP(&flags.PreRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	cmd.Flags().StringVarP(&flags.PostRunScript, "postrun-script", "", "", "path to script to be run after test execution")
+	cmd.Flags().BoolVarP(&flags.ExecutePostRunScriptBeforeScraping, "execute-postrun-script-before-scraping", "", false, "whether to execute postrun scipt before scraping or not (prebuilt executor only)")
 	cmd.Flags().StringVar(&flags.ScraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
+	cmd.Flags().StringVar(&flags.ScraperTemplateReference, "scraper-template-reference", "", "reference to scraper template to use for the test")
+	cmd.Flags().StringVar(&flags.PvcTemplate, "pvc-template", "", "pvc template file path for extensions to pvc template")
+	cmd.Flags().StringVar(&flags.PvcTemplateReference, "pvc-template-reference", "", "reference to pvc template to use for the test")
 	cmd.Flags().BoolVar(&flags.NegativeTest, "negative-test", false, "negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa")
 	cmd.Flags().StringToStringVarP(&flags.MountConfigMaps, "mount-configmap", "", map[string]string{}, "config map value pair for mounting it to executor pod: --mount-configmap configmap_name=configmap_mountpath")
 	cmd.Flags().StringArrayVar(&flags.VariableConfigMaps, "variable-configmap", []string{}, "config map name used to map all keys to basis variables")
 	cmd.Flags().StringToStringVarP(&flags.MountSecrets, "mount-secret", "", map[string]string{}, "secret value pair for mounting it to executor pod: --mount-secret secret_name=secret_mountpath")
 	cmd.Flags().StringArrayVar(&flags.VariableSecrets, "variable-secret", []string{}, "secret name used to map all keys to secret variables")
 	cmd.Flags().StringVar(&flags.UploadTimeout, "upload-timeout", "", "timeout to use when uploading files, example: 30s")
+	cmd.Flags().StringVar(&flags.ArtifactStorageBucket, "artifact-storage-bucket", "", "artifact storage class name for container executor")
+	cmd.Flags().BoolVarP(&flags.ArtifactOmitFolderPerExecution, "artifact-omit-folder-per-execution", "", false, "don't store artifacts in execution folder")
+	cmd.Flags().StringVarP(&flags.Description, "description", "", "", "test description")
 }
 
 func validateExecutorTypeAndContent(executorType, contentType string, executors testkube.ExecutorsDetails) error {

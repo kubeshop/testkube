@@ -4,27 +4,28 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
+	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 // MapCRDToAPI maps Executor CRD to OpenAPI spec Executor
 func MapCRDToAPI(item executorv1.Executor) testkube.ExecutorUpsertRequest {
 	return testkube.ExecutorUpsertRequest{
-		Name:             item.Name,
-		Namespace:        item.Namespace,
-		Labels:           item.Labels,
-		ExecutorType:     string(item.Spec.ExecutorType),
-		Types:            item.Spec.Types,
-		Uri:              item.Spec.URI,
-		Image:            item.Spec.Image,
-		ImagePullSecrets: mapImagePullSecretsToAPI(item.Spec.ImagePullSecrets),
-		Command:          item.Spec.Command,
-		Args:             item.Spec.Args,
-		JobTemplate:      item.Spec.JobTemplate,
-		Features:         MapFeaturesToAPI(item.Spec.Features),
-		ContentTypes:     MapContentTypesToAPI(item.Spec.ContentTypes),
-		Meta:             MapMetaToAPI(item.Spec.Meta),
+		Name:                 item.Name,
+		Namespace:            item.Namespace,
+		Labels:               item.Labels,
+		ExecutorType:         string(item.Spec.ExecutorType),
+		Types:                item.Spec.Types,
+		Uri:                  item.Spec.URI,
+		Image:                item.Spec.Image,
+		ImagePullSecrets:     mapImagePullSecretsToAPI(item.Spec.ImagePullSecrets),
+		Command:              item.Spec.Command,
+		Args:                 item.Spec.Args,
+		JobTemplate:          item.Spec.JobTemplate,
+		JobTemplateReference: item.Spec.JobTemplateReference,
+		Features:             MapFeaturesToAPI(item.Spec.Features),
+		ContentTypes:         MapContentTypesToAPI(item.Spec.ContentTypes),
+		Meta:                 MapMetaToAPI(item.Spec.Meta),
 	}
 }
 
@@ -37,17 +38,18 @@ func MapAPIToCRD(request testkube.ExecutorUpsertRequest) executorv1.Executor {
 			Labels:    request.Labels,
 		},
 		Spec: executorv1.ExecutorSpec{
-			ExecutorType:     executorv1.ExecutorType(request.ExecutorType),
-			Types:            request.Types,
-			URI:              request.Uri,
-			Image:            request.Image,
-			ImagePullSecrets: mapImagePullSecretsToCRD(request.ImagePullSecrets),
-			Command:          request.Command,
-			Args:             request.Args,
-			JobTemplate:      request.JobTemplate,
-			Features:         MapFeaturesToCRD(request.Features),
-			ContentTypes:     MapContentTypesToCRD(request.ContentTypes),
-			Meta:             MapMetaToCRD(request.Meta),
+			ExecutorType:         executorv1.ExecutorType(request.ExecutorType),
+			Types:                request.Types,
+			URI:                  request.Uri,
+			Image:                request.Image,
+			ImagePullSecrets:     mapImagePullSecretsToCRD(request.ImagePullSecrets),
+			Command:              request.Command,
+			Args:                 request.Args,
+			JobTemplate:          request.JobTemplate,
+			JobTemplateReference: request.JobTemplateReference,
+			Features:             MapFeaturesToCRD(request.Features),
+			ContentTypes:         MapContentTypesToCRD(request.ContentTypes),
+			Meta:                 MapMetaToCRD(request.Meta),
 		},
 	}
 }
@@ -57,18 +59,19 @@ func MapExecutorCRDToExecutorDetails(item executorv1.Executor) testkube.Executor
 	return testkube.ExecutorDetails{
 		Name: item.Name,
 		Executor: &testkube.Executor{
-			ExecutorType:     string(item.Spec.ExecutorType),
-			Image:            item.Spec.Image,
-			ImagePullSecrets: mapImagePullSecretsToAPI(item.Spec.ImagePullSecrets),
-			Command:          item.Spec.Command,
-			Args:             item.Spec.Args,
-			Types:            item.Spec.Types,
-			Uri:              item.Spec.URI,
-			JobTemplate:      item.Spec.JobTemplate,
-			Labels:           item.Labels,
-			Features:         MapFeaturesToAPI(item.Spec.Features),
-			ContentTypes:     MapContentTypesToAPI(item.Spec.ContentTypes),
-			Meta:             MapMetaToAPI(item.Spec.Meta),
+			ExecutorType:         string(item.Spec.ExecutorType),
+			Image:                item.Spec.Image,
+			ImagePullSecrets:     mapImagePullSecretsToAPI(item.Spec.ImagePullSecrets),
+			Command:              item.Spec.Command,
+			Args:                 item.Spec.Args,
+			Types:                item.Spec.Types,
+			Uri:                  item.Spec.URI,
+			JobTemplate:          item.Spec.JobTemplate,
+			JobTemplateReference: item.Spec.JobTemplateReference,
+			Labels:               item.Labels,
+			Features:             MapFeaturesToAPI(item.Spec.Features),
+			ContentTypes:         MapContentTypesToAPI(item.Spec.ContentTypes),
+			Meta:                 MapMetaToAPI(item.Spec.Meta),
 		},
 	}
 }
@@ -166,6 +169,10 @@ func MapUpdateToSpec(request testkube.ExecutorUpdateRequest, executor *executorv
 		{
 			request.JobTemplate,
 			&executor.Spec.JobTemplate,
+		},
+		{
+			request.JobTemplateReference,
+			&executor.Spec.JobTemplateReference,
 		},
 	}
 
@@ -276,6 +283,10 @@ func MapSpecToUpdate(executor *executorv1.Executor) (request testkube.ExecutorUp
 			&executor.Spec.JobTemplate,
 			&request.JobTemplate,
 		},
+		{
+			&executor.Spec.JobTemplateReference,
+			&request.JobTemplateReference,
+		},
 	}
 
 	for _, field := range fields {
@@ -327,4 +338,13 @@ func MapSpecToUpdate(executor *executorv1.Executor) (request testkube.ExecutorUp
 	}
 
 	return request
+}
+
+func MapSlavesConfigsToCRD(slavesConfigs *testkube.SlavesMeta) *executorv1.SlavesMeta {
+	if slavesConfigs == nil {
+		return nil
+	}
+	return &executorv1.SlavesMeta{
+		Image: slavesConfigs.Image,
+	}
 }

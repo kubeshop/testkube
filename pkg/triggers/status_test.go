@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	v1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
+	v1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
 )
 
 func TestTriggerStatus(t *testing.T) {
@@ -21,6 +21,7 @@ func TestTriggerStatus(t *testing.T) {
 	assert.Nil(t, status.lastExecutionFinished)
 
 	status.done()
+	status.removeTestSuiteExecutionID("test-suite-execution-1")
 
 	assert.False(t, status.hasActiveTests())
 	assert.NotNil(t, status.lastExecutionStarted)

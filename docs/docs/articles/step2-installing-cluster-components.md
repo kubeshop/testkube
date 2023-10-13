@@ -8,7 +8,7 @@ To get started, sign into [Testkube](https://cloud.testkube.io) and create an ac
 
 ## Installation Steps
 
-1. After signing in, create your first environment
+1. After signing in, create your first environment:
 
 ![Create Environment](../img/create-first-environment.png)
 
@@ -28,7 +28,7 @@ You will need *Helm* installed and `kubectl` configured with access to your Kube
 
 ![Install Steps 1](../img/install-steps.png)
 
-5. After some time, you should see the Helm installation notice: 
+5. When the install is complete, you will see the Helm installation notice: 
 
 ![Install Steps 2](../img/install-steps-2.png)
 
@@ -42,7 +42,7 @@ Testkube Cloud will notify if the installation is successful.
 
 ![Validate Install](../img/validate-install.png)
 
-In case of a RED status you can try to debug the issues with the command below:
+In the case of a RED status you can try to debug the issues with the command below:
 
 ```sh 
 testkube agent debug

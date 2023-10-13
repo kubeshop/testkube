@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testtriggersv1 "github.com/kubeshop/testkube-operator/apis/testtriggers/v1"
+	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
@@ -71,9 +71,10 @@ func TestService_matchConditionsRetry(t *testing.T) {
 					},
 				},
 			},
-			Action:       "run",
-			Execution:    "test",
-			TestSelector: testtriggersv1.TestTriggerSelector{Name: "some-test"},
+			Action:            "run",
+			Execution:         "test",
+			ConcurrencyPolicy: "allow",
+			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
 		},
 	}
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
@@ -81,7 +82,7 @@ func TestService_matchConditionsRetry(t *testing.T) {
 	s := &Service{
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
-		executor: func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -146,9 +147,10 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 					},
 				},
 			},
-			Action:       "run",
-			Execution:    "test",
-			TestSelector: testtriggersv1.TestTriggerSelector{Name: "some-test"},
+			Action:            "run",
+			Execution:         "test",
+			ConcurrencyPolicy: "allow",
+			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
 		},
 	}
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
@@ -156,7 +158,7 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 	s := &Service{
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
-		executor: func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -199,12 +201,13 @@ func TestService_matchProbesMultiple(t *testing.T) {
 	testTrigger1 := &testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
 		Spec: testtriggersv1.TestTriggerSpec{
-			Resource:         "deployment",
-			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
-			Event:            "modified",
-			Action:           "run",
-			Execution:        "test",
-			TestSelector:     testtriggersv1.TestTriggerSelector{Name: "some-test"},
+			Resource:          "deployment",
+			ResourceSelector:  testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
+			Event:             "modified",
+			Action:            "run",
+			Execution:         "test",
+			ConcurrencyPolicy: "allow",
+			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
 			ProbeSpec: &testtriggersv1.TestTriggerProbeSpec{
 				Probes: []testtriggersv1.TestTriggerProbe{
 					{
@@ -227,7 +230,7 @@ func TestService_matchProbesMultiple(t *testing.T) {
 	s := &Service{
 		defaultProbesCheckBackoff: defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout: defaultProbesCheckTimeout,
-		executor: func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -264,12 +267,13 @@ func TestService_matchProbesTimeout(t *testing.T) {
 	testTrigger1 := &testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
 		Spec: testtriggersv1.TestTriggerSpec{
-			Resource:         "deployment",
-			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
-			Event:            "modified",
-			Action:           "run",
-			Execution:        "test",
-			TestSelector:     testtriggersv1.TestTriggerSelector{Name: "some-test"},
+			Resource:          "deployment",
+			ResourceSelector:  testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
+			Event:             "modified",
+			Action:            "run",
+			Execution:         "test",
+			ConcurrencyPolicy: "allow",
+			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
 			ProbeSpec: &testtriggersv1.TestTriggerProbeSpec{
 				Timeout: 2,
 				Delay:   1,
@@ -292,7 +296,7 @@ func TestService_matchProbesTimeout(t *testing.T) {
 	s := &Service{
 		defaultProbesCheckBackoff: defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout: defaultProbesCheckTimeout,
-		executor: func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -384,9 +388,10 @@ func TestService_match(t *testing.T) {
 					},
 				},
 			},
-			Action:       "run",
-			Execution:    "test",
-			TestSelector: testtriggersv1.TestTriggerSelector{Name: "some-test"},
+			Action:            "run",
+			Execution:         "test",
+			ConcurrencyPolicy: "allow",
+			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
 		},
 	}
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
@@ -396,7 +401,7 @@ func TestService_match(t *testing.T) {
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout:     defaultProbesCheckTimeout,
-		executor: func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -426,12 +431,13 @@ func TestService_noMatch(t *testing.T) {
 	testTrigger1 := &testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
 		Spec: testtriggersv1.TestTriggerSpec{
-			Resource:         "pod",
-			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-pod"},
-			Event:            "modified",
-			Action:           "run",
-			Execution:        "test",
-			TestSelector:     testtriggersv1.TestTriggerSelector{Name: "some-test"},
+			Resource:          "pod",
+			ResourceSelector:  testtriggersv1.TestTriggerSelector{Name: "test-pod"},
+			Event:             "modified",
+			Action:            "run",
+			Execution:         "test",
+			ConcurrencyPolicy: "allow",
+			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
 		},
 	}
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
@@ -441,9 +447,9 @@ func TestService_noMatch(t *testing.T) {
 		return nil
 	}
 	s := &Service{
-		executor:      testExecutorF,
-		triggerStatus: map[statusKey]*triggerStatus{statusKey1: triggerStatus1},
-		logger:        log.DefaultLogger,
+		triggerExecutor: testExecutorF,
+		triggerStatus:   map[statusKey]*triggerStatus{statusKey1: triggerStatus1},
+		logger:          log.DefaultLogger,
 	}
 
 	err := s.match(context.Background(), e)

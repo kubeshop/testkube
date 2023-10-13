@@ -20,46 +20,53 @@ const WatchInterval = 2 * time.Second
 
 func NewRunTestCmd() *cobra.Command {
 	var (
-		name                     string
-		image                    string
-		iterations               int
-		watchEnabled             bool
-		binaryArgs               []string
-		variables                map[string]string
-		secretVariables          map[string]string
-		variablesFile            string
-		downloadArtifactsEnabled bool
-		downloadDir              string
-		envs                     map[string]string
-		secretEnvs               map[string]string
-		selectors                []string
-		concurrencyLevel         int
-		httpProxy, httpsProxy    string
-		executionLabels          map[string]string
-		secretVariableReferences map[string]string
-		copyFiles                []string
-		artifactStorageClassName string
-		artifactVolumeMountPath  string
-		artifactDirs             []string
-		jobTemplate              string
-		gitBranch                string
-		gitCommit                string
-		gitPath                  string
-		gitWorkingDir            string
-		preRunScript             string
-		postRunScript            string
-		scraperTemplate          string
-		negativeTest             bool
-		mountConfigMaps          map[string]string
-		variableConfigMaps       []string
-		mountSecrets             map[string]string
-		variableSecrets          []string
-		uploadTimeout            string
-		format                   string
-		masks                    []string
-		runningContext           string
-		command                  []string
-		argsMode                 string
+		name                               string
+		image                              string
+		iterations                         int
+		watchEnabled                       bool
+		binaryArgs                         []string
+		variables                          map[string]string
+		secretVariables                    map[string]string
+		variablesFile                      string
+		downloadArtifactsEnabled           bool
+		downloadDir                        string
+		envs                               map[string]string
+		secretEnvs                         map[string]string
+		selectors                          []string
+		concurrencyLevel                   int
+		httpProxy, httpsProxy              string
+		executionLabels                    map[string]string
+		secretVariableReferences           map[string]string
+		copyFiles                          []string
+		artifactStorageClassName           string
+		artifactVolumeMountPath            string
+		artifactDirs                       []string
+		jobTemplate                        string
+		jobTemplateReference               string
+		gitBranch                          string
+		gitCommit                          string
+		gitPath                            string
+		gitWorkingDir                      string
+		preRunScript                       string
+		postRunScript                      string
+		executePostRunScriptBeforeScraping bool
+		scraperTemplate                    string
+		scraperTemplateReference           string
+		pvcTemplate                        string
+		pvcTemplateReference               string
+		negativeTest                       bool
+		mountConfigMaps                    map[string]string
+		variableConfigMaps                 []string
+		mountSecrets                       map[string]string
+		variableSecrets                    []string
+		uploadTimeout                      string
+		format                             string
+		masks                              []string
+		runningContext                     string
+		command                            []string
+		argsMode                           string
+		artifactStorageBucket              string
+		artifactOmitFolderPerExecution     bool
 	)
 
 	cmd := &cobra.Command{
@@ -80,42 +87,10 @@ func NewRunTestCmd() *cobra.Command {
 			envConfigMaps, envSecrets, err := newEnvReferencesFromFlags(cmd)
 			ui.WarnOnError("getting env config maps and secrets", err)
 
-			jobTemplateContent := ""
-			if jobTemplate != "" {
-				b, err := os.ReadFile(jobTemplate)
-				ui.ExitOnError("reading job template", err)
-				jobTemplateContent = string(b)
-			}
-
-			preRunScriptContent := ""
-			if preRunScript != "" {
-				b, err := os.ReadFile(preRunScript)
-				ui.ExitOnError("reading pre run script", err)
-				preRunScriptContent = string(b)
-			}
-
-			postRunScriptContent := ""
-			if postRunScript != "" {
-				b, err := os.ReadFile(postRunScript)
-				ui.ExitOnError("reading post run script", err)
-				postRunScriptContent = string(b)
-			}
-
-			scraperTemplateContent := ""
-			if scraperTemplate != "" {
-				b, err := os.ReadFile(scraperTemplate)
-				ui.ExitOnError("reading scraper template", err)
-				scraperTemplateContent = string(b)
-			}
-
 			mode := ""
 			if cmd.Flag("args-mode").Changed {
 				mode = argsMode
 			}
-
-			var executions []testkube.Execution
-			client, namespace, err := common.GetClient(cmd)
-			ui.ExitOnError("getting client", err)
 
 			options := apiv1.ExecuteTestOptions{
 				ExecutionVariables:         variables,
@@ -128,10 +103,9 @@ func NewRunTestCmd() *cobra.Command {
 				HTTPSProxy:                 httpsProxy,
 				Envs:                       envs,
 				Image:                      image,
-				JobTemplate:                jobTemplateContent,
-				PreRunScriptContent:        preRunScriptContent,
-				PostRunScriptContent:       postRunScriptContent,
-				ScraperTemplate:            scraperTemplateContent,
+				JobTemplateReference:       jobTemplateReference,
+				ScraperTemplateReference:   scraperTemplateReference,
+				PvcTemplateReference:       pvcTemplateReference,
 				IsNegativeTestChangedOnRun: false,
 				EnvConfigMaps:              envConfigMaps,
 				EnvSecrets:                 envSecrets,
@@ -139,13 +113,61 @@ func NewRunTestCmd() *cobra.Command {
 					Type_:   string(testkube.RunningContextTypeUserCLI),
 					Context: runningContext,
 				},
+				ExecutePostRunScriptBeforeScraping: executePostRunScriptBeforeScraping,
 			}
 
-			if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(artifactDirs) != 0 {
+			var fields = []struct {
+				source      string
+				title       string
+				destination *string
+			}{
+				{
+					jobTemplate,
+					"job template",
+					&options.JobTemplate,
+				},
+				{
+					preRunScript,
+					"pre run script",
+					&options.PreRunScriptContent,
+				},
+				{
+					postRunScript,
+					"post run script",
+					&options.PostRunScriptContent,
+				},
+				{
+					scraperTemplate,
+					"scraper template",
+					&options.ScraperTemplate,
+				},
+				{
+					pvcTemplate,
+					"pvc template",
+					&options.PvcTemplate,
+				},
+			}
+
+			for _, field := range fields {
+				if field.source != "" {
+					b, err := os.ReadFile(field.source)
+					ui.ExitOnError("reading "+field.title, err)
+					*field.destination = string(b)
+				}
+			}
+
+			var executions []testkube.Execution
+			client, namespace, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
+			if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(artifactDirs) != 0 ||
+				artifactStorageBucket != "" || artifactOmitFolderPerExecution {
 				options.ArtifactRequest = &testkube.ArtifactRequest{
-					StorageClassName: artifactStorageClassName,
-					VolumeMountPath:  artifactVolumeMountPath,
-					Dirs:             artifactDirs,
+					StorageClassName:       artifactStorageClassName,
+					VolumeMountPath:        artifactVolumeMountPath,
+					Dirs:                   artifactDirs,
+					StorageBucket:          artifactStorageBucket,
+					OmitFolderPerExecution: artifactOmitFolderPerExecution,
 				}
 			}
 
@@ -236,7 +258,7 @@ func NewRunTestCmd() *cobra.Command {
 					ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 				}
 
-				render.RenderExecutionResult(&execution, false)
+				render.RenderExecutionResult(client, &execution, false)
 
 				if execution.Id != "" {
 					if downloadArtifactsEnabled {
@@ -280,13 +302,18 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&artifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
 	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for scraping")
 	cmd.Flags().StringVar(&jobTemplate, "job-template", "", "job template file path for extensions to job template")
+	cmd.Flags().StringVar(&jobTemplateReference, "job-template-reference", "", "reference to job template to use for the test")
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
 	cmd.Flags().StringVarP(&gitCommit, "git-commit", "", "", "if uri is git repository we can use commit id (sha) parameter")
 	cmd.Flags().StringVarP(&gitPath, "git-path", "", "", "if repository is big we need to define additional path to directory/file to checkout partially")
 	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
 	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	cmd.Flags().StringVarP(&postRunScript, "postrun-script", "", "", "path to script to be run after test execution")
+	cmd.Flags().BoolVarP(&executePostRunScriptBeforeScraping, "execute-postrun-script-before-scraping", "", false, "whether to execute postrun scipt before scraping or not (prebuilt executor only)")
 	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
+	cmd.Flags().StringVar(&scraperTemplateReference, "scraper-template-reference", "", "reference to scraper template to use for the test")
+	cmd.Flags().StringVar(&pvcTemplate, "pvc-template", "", "pvc template file path for extensions to pvc template")
+	cmd.Flags().StringVar(&pvcTemplateReference, "pvc-template-reference", "", "reference to pvc template to use for the test")
 	cmd.Flags().BoolVar(&negativeTest, "negative-test", false, "negative test, if enabled, makes failure an expected and correct test result. If the test fails the result will be set to success, and vice versa")
 	cmd.Flags().StringToStringVarP(&mountConfigMaps, "mount-configmap", "", map[string]string{}, "config map value pair for mounting it to executor pod: --mount-configmap configmap_name=configmap_mountpath")
 	cmd.Flags().StringArrayVar(&variableConfigMaps, "variable-configmap", []string{}, "config map name used to map all keys to basis variables")
@@ -298,6 +325,8 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")
 	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
 	cmd.Flags().StringVar(&runningContext, "context", "", "running context description for test execution")
+	cmd.Flags().StringVar(&artifactStorageBucket, "artifact-storage-bucket", "", "artifact storage class name for container executor")
+	cmd.Flags().BoolVarP(&artifactOmitFolderPerExecution, "artifact-omit-folder-per-execution", "", false, "don't store artifacts in execution folder")
 
 	return cmd
 }

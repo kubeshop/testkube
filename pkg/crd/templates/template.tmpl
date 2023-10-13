@@ -1,0 +1,19 @@
+apiVersion: tests.testkube.io/v1
+kind: Template
+metadata:
+  name: {{ .Name }}
+  namespace: {{ .Namespace }}
+  {{- if ne (len .Labels) 0 }}
+  labels:
+  {{- range $key, $value := .Labels }}
+    {{ $key }}: {{ $value }}
+  {{- end }}
+  {{- end }}
+spec:
+  {{- if .Type_ }}
+  type: {{ .Type_ }}
+  {{- end }}
+  {{- if .Body }}
+  body: {{ .Body }}
+  {{- end }}
+

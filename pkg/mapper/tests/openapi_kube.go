@@ -5,7 +5,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
+	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -19,6 +19,7 @@ func MapUpsertToSpec(request testkube.TestUpsertRequest) *testsv3.Test {
 			Labels:    request.Labels,
 		},
 		Spec: testsv3.TestSpec{
+			Description:      request.Description,
 			Type_:            request.Type_,
 			Content:          MapContentToSpecContent(request.Content),
 			Source:           request.Source,
@@ -130,43 +131,51 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 	var artifactRequest *testsv3.ArtifactRequest
 	if executionRequest.ArtifactRequest != nil {
 		artifactRequest = &testsv3.ArtifactRequest{
-			StorageClassName: executionRequest.ArtifactRequest.StorageClassName,
-			VolumeMountPath:  executionRequest.ArtifactRequest.VolumeMountPath,
-			Dirs:             executionRequest.ArtifactRequest.Dirs,
+			StorageClassName:       executionRequest.ArtifactRequest.StorageClassName,
+			VolumeMountPath:        executionRequest.ArtifactRequest.VolumeMountPath,
+			Dirs:                   executionRequest.ArtifactRequest.Dirs,
+			StorageBucket:          executionRequest.ArtifactRequest.StorageBucket,
+			OmitFolderPerExecution: executionRequest.ArtifactRequest.OmitFolderPerExecution,
 		}
 	}
 
 	return &testsv3.ExecutionRequest{
-		Name:                    executionRequest.Name,
-		TestSuiteName:           executionRequest.TestSuiteName,
-		Number:                  executionRequest.Number,
-		ExecutionLabels:         executionRequest.ExecutionLabels,
-		Namespace:               executionRequest.Namespace,
-		IsVariablesFileUploaded: executionRequest.IsVariablesFileUploaded,
-		VariablesFile:           executionRequest.VariablesFile,
-		Variables:               MapCRDVariables(executionRequest.Variables),
-		TestSecretUUID:          executionRequest.TestSecretUUID,
-		TestSuiteSecretUUID:     executionRequest.TestSuiteSecretUUID,
-		Args:                    executionRequest.Args,
-		ArgsMode:                testsv3.ArgsModeType(executionRequest.ArgsMode),
-		Envs:                    executionRequest.Envs,
-		SecretEnvs:              executionRequest.SecretEnvs,
-		Sync:                    executionRequest.Sync,
-		HttpProxy:               executionRequest.HttpProxy,
-		HttpsProxy:              executionRequest.HttpsProxy,
-		Image:                   executionRequest.Image,
-		ImagePullSecrets:        mapImagePullSecrets(executionRequest.ImagePullSecrets),
-		ActiveDeadlineSeconds:   executionRequest.ActiveDeadlineSeconds,
-		Command:                 executionRequest.Command,
-		ArtifactRequest:         artifactRequest,
-		JobTemplate:             executionRequest.JobTemplate,
-		CronJobTemplate:         executionRequest.CronJobTemplate,
-		PreRunScript:            executionRequest.PreRunScript,
-		PostRunScript:           executionRequest.PostRunScript,
-		ScraperTemplate:         executionRequest.ScraperTemplate,
-		NegativeTest:            executionRequest.NegativeTest,
-		EnvConfigMaps:           mapEnvReferences(executionRequest.EnvConfigMaps),
-		EnvSecrets:              mapEnvReferences(executionRequest.EnvSecrets),
+		Name:                               executionRequest.Name,
+		TestSuiteName:                      executionRequest.TestSuiteName,
+		Number:                             executionRequest.Number,
+		ExecutionLabels:                    executionRequest.ExecutionLabels,
+		Namespace:                          executionRequest.Namespace,
+		IsVariablesFileUploaded:            executionRequest.IsVariablesFileUploaded,
+		VariablesFile:                      executionRequest.VariablesFile,
+		Variables:                          MapCRDVariables(executionRequest.Variables),
+		TestSecretUUID:                     executionRequest.TestSecretUUID,
+		TestSuiteSecretUUID:                executionRequest.TestSuiteSecretUUID,
+		Args:                               executionRequest.Args,
+		ArgsMode:                           testsv3.ArgsModeType(executionRequest.ArgsMode),
+		Envs:                               executionRequest.Envs,
+		SecretEnvs:                         executionRequest.SecretEnvs,
+		Sync:                               executionRequest.Sync,
+		HttpProxy:                          executionRequest.HttpProxy,
+		HttpsProxy:                         executionRequest.HttpsProxy,
+		Image:                              executionRequest.Image,
+		ImagePullSecrets:                   mapImagePullSecrets(executionRequest.ImagePullSecrets),
+		ActiveDeadlineSeconds:              executionRequest.ActiveDeadlineSeconds,
+		Command:                            executionRequest.Command,
+		ArtifactRequest:                    artifactRequest,
+		JobTemplate:                        executionRequest.JobTemplate,
+		JobTemplateReference:               executionRequest.JobTemplateReference,
+		CronJobTemplate:                    executionRequest.CronJobTemplate,
+		CronJobTemplateReference:           executionRequest.CronJobTemplateReference,
+		PreRunScript:                       executionRequest.PreRunScript,
+		PostRunScript:                      executionRequest.PostRunScript,
+		ExecutePostRunScriptBeforeScraping: executionRequest.ExecutePostRunScriptBeforeScraping,
+		PvcTemplate:                        executionRequest.PvcTemplate,
+		PvcTemplateReference:               executionRequest.PvcTemplateReference,
+		ScraperTemplate:                    executionRequest.ScraperTemplate,
+		ScraperTemplateReference:           executionRequest.ScraperTemplateReference,
+		NegativeTest:                       executionRequest.NegativeTest,
+		EnvConfigMaps:                      mapEnvReferences(executionRequest.EnvConfigMaps),
+		EnvSecrets:                         mapEnvReferences(executionRequest.EnvSecrets),
 	}
 }
 
@@ -213,6 +222,10 @@ func MapUpdateToSpec(request testkube.TestUpdateRequest, test *testsv3.Test) *te
 		{
 			request.Namespace,
 			&test.Namespace,
+		},
+		{
+			request.Description,
+			&test.Spec.Description,
 		},
 		{
 			request.Type_,
@@ -458,6 +471,10 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 			&request.JobTemplate,
 		},
 		{
+			executionRequest.JobTemplateReference,
+			&request.JobTemplateReference,
+		},
+		{
 			executionRequest.PreRunScript,
 			&request.PreRunScript,
 		},
@@ -470,8 +487,24 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 			&request.CronJobTemplate,
 		},
 		{
+			executionRequest.CronJobTemplateReference,
+			&request.CronJobTemplateReference,
+		},
+		{
+			executionRequest.PvcTemplate,
+			&request.PvcTemplate,
+		},
+		{
+			executionRequest.PvcTemplateReference,
+			&request.PvcTemplateReference,
+		},
+		{
 			executionRequest.ScraperTemplate,
 			&request.ScraperTemplate,
+		},
+		{
+			executionRequest.ScraperTemplateReference,
+			&request.ScraperTemplateReference,
 		},
 	}
 
@@ -562,6 +595,11 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 		emptyExecution = false
 	}
 
+	if executionRequest.ExecutePostRunScriptBeforeScraping != nil {
+		request.ExecutePostRunScriptBeforeScraping = *executionRequest.ExecutePostRunScriptBeforeScraping
+		emptyExecution = false
+	}
+
 	if executionRequest.ArtifactRequest != nil {
 		if *executionRequest.ArtifactRequest == nil {
 			request.ArtifactRequest = nil
@@ -590,6 +628,16 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 
 		if (*executionRequest.ArtifactRequest).Dirs != nil {
 			request.ArtifactRequest.Dirs = *(*executionRequest.ArtifactRequest).Dirs
+			emptyArtifact = false
+		}
+
+		if (*executionRequest.ArtifactRequest).StorageBucket != nil {
+			request.ArtifactRequest.StorageBucket = *(*executionRequest.ArtifactRequest).StorageBucket
+			emptyArtifact = false
+		}
+
+		if (*executionRequest.ArtifactRequest).OmitFolderPerExecution != nil {
+			request.ArtifactRequest.OmitFolderPerExecution = *(*executionRequest.ArtifactRequest).OmitFolderPerExecution
 			emptyArtifact = false
 		}
 

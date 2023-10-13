@@ -8,10 +8,10 @@ import (
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	testsv3 "github.com/kubeshop/testkube-operator/apis/tests/v3"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
-	testsclientv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
+	v1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
+	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -94,17 +94,18 @@ func TestGetExecuteOptions(t *testing.T) {
 		TypeMeta:   metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "cypress"},
 		Spec: v1.ExecutorSpec{
-			Types:            []string{mockExecutorTypes},
-			ExecutorType:     "job",
-			URI:              "",
-			Image:            "cypress",
-			Args:             []string{},
-			Command:          []string{"run"},
-			ImagePullSecrets: []k8sv1.LocalObjectReference{{Name: "secret-name1"}, {Name: "secret-name2"}},
-			Features:         nil,
-			ContentTypes:     nil,
-			JobTemplate:      "",
-			Meta:             nil,
+			Types:                []string{mockExecutorTypes},
+			ExecutorType:         "job",
+			URI:                  "",
+			Image:                "cypress",
+			Args:                 []string{},
+			Command:              []string{"run"},
+			ImagePullSecrets:     []k8sv1.LocalObjectReference{{Name: "secret-name1"}, {Name: "secret-name2"}},
+			Features:             nil,
+			ContentTypes:         nil,
+			JobTemplate:          "",
+			JobTemplateReference: "",
+			Meta:                 nil,
 		},
 	}
 
@@ -130,17 +131,23 @@ func TestGetExecuteOptions(t *testing.T) {
 		SecretEnvs: map[string]string{
 			"secretEnv": "secretVar",
 		},
-		Sync:                  false,
-		HttpProxy:             "",
-		HttpsProxy:            "",
-		Uploads:               []string{},
-		ActiveDeadlineSeconds: 10,
-		ArtifactRequest:       &testkube.ArtifactRequest{},
-		JobTemplate:           "",
-		CronJobTemplate:       "",
-		PreRunScript:          "",
-		PostRunScript:         "",
-		ScraperTemplate:       "",
+		Sync:                               false,
+		HttpProxy:                          "",
+		HttpsProxy:                         "",
+		Uploads:                            []string{},
+		ActiveDeadlineSeconds:              10,
+		ArtifactRequest:                    &testkube.ArtifactRequest{},
+		JobTemplate:                        "",
+		JobTemplateReference:               "",
+		CronJobTemplate:                    "",
+		CronJobTemplateReference:           "",
+		PreRunScript:                       "",
+		PostRunScript:                      "",
+		ExecutePostRunScriptBeforeScraping: true,
+		ScraperTemplate:                    "",
+		ScraperTemplateReference:           "",
+		PvcTemplate:                        "",
+		PvcTemplateReference:               "",
 		EnvConfigMaps: []testkube.EnvReference{
 			{
 				Reference: &testkube.LocalObjectReference{

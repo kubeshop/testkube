@@ -30,8 +30,9 @@ import (
 
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 
-	testexecutionsv1 "github.com/kubeshop/testkube-operator/client/testexecutions/v1"
-	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
+	templatesv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
+	testexecutionsv1 "github.com/kubeshop/testkube-operator/pkg/client/testexecutions/v1"
+	testsv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/executor"
@@ -79,9 +80,11 @@ func NewJobExecutor(
 	testsClient testsv3.Interface,
 	clientset kubernetes.Interface,
 	testExecutionsClient testexecutionsv1.Interface,
+	templatesClient templatesv1.Interface,
 	registry string,
 	podStartTimeout time.Duration,
 	clusterID string,
+	dashboardURI string,
 ) (client *JobExecutor, err error) {
 	return &JobExecutor{
 		ClientSet:            clientset,
@@ -96,14 +99,16 @@ func NewJobExecutor(
 		configMap:            configMap,
 		testsClient:          testsClient,
 		testExecutionsClient: testExecutionsClient,
+		templatesClient:      templatesClient,
 		registry:             registry,
 		podStartTimeout:      podStartTimeout,
 		clusterID:            clusterID,
+		dashboardURI:         dashboardURI,
 	}, nil
 }
 
 type ExecutionCounter interface {
-	IncExecuteTest(execution testkube.Execution)
+	IncExecuteTest(execution testkube.Execution, dashboardURI string)
 }
 
 // JobExecutor is container for managing job executor dependencies
@@ -121,9 +126,11 @@ type JobExecutor struct {
 	configMap            config.Repository
 	testsClient          testsv3.Interface
 	testExecutionsClient testexecutionsv1.Interface
+	templatesClient      templatesv1.Interface
 	registry             string
 	podStartTimeout      time.Duration
 	clusterID            string
+	dashboardURI         string
 }
 
 type JobOptions struct {
@@ -152,6 +159,7 @@ type JobOptions struct {
 	Labels                map[string]string
 	Registry              string
 	ClusterID             string
+	ArtifactRequest       *testkube.ArtifactRequest
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -192,7 +200,9 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 	if err != nil {
 		return result.Err(err), err
 	}
-	go c.MonitorJobForTimeout(ctx, execution.Id)
+	if !options.Sync {
+		go c.MonitorJobForTimeout(ctx, execution.Id)
+	}
 
 	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
 	pods, err := executor.GetJobPods(ctx, podsClient, execution.Id, 1, 10)
@@ -204,7 +214,12 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
-			// async wait for complete status or error
+			// for sync block and complete
+			if options.Sync {
+				return c.updateResultsFromPod(ctx, pod, l, execution, options.Request.NegativeTest)
+			}
+
+			// for async start goroutine and return in progress job
 			go func(pod corev1.Pod) {
 				_, err := c.updateResultsFromPod(ctx, pod, l, execution, options.Request.NegativeTest)
 				if err != nil {
@@ -219,38 +234,6 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 	l.Debugw("no pods was found", "totalPodsCount", len(pods.Items))
 
 	return testkube.NewRunningExecutionResult(), nil
-}
-
-// ExecuteSync starts new external test execution, reads data and returns ID
-// Execution is started synchronously client will be blocked
-func (c *JobExecutor) ExecuteSync(ctx context.Context, execution *testkube.Execution, options ExecuteOptions) (result *testkube.ExecutionResult, err error) {
-	result = testkube.NewRunningExecutionResult()
-	execution.ExecutionResult = result
-
-	err = c.CreateJob(ctx, *execution, options)
-	if err != nil {
-		return result.Err(err), err
-	}
-
-	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
-	pods, err := executor.GetJobPods(ctx, podsClient, execution.Id, 1, 10)
-	if err != nil {
-		return result.Err(err), err
-	}
-
-	l := c.Log.With("executionID", execution.Id, "type", "sync")
-
-	// get job pod and
-	for _, pod := range pods.Items {
-		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
-			return c.updateResultsFromPod(ctx, pod, l, execution, options.Request.NegativeTest)
-		}
-	}
-
-	l.Debugw("no pods was found", "totalPodsCount", len(pods.Items))
-
-	return
-
 }
 
 func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) {
@@ -301,7 +284,8 @@ func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) 
 // CreateJob creates new Kubernetes job based on execution and execute options
 func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
-	jobOptions, err := NewJobOptions(c.images.Init, c.jobTemplate, c.serviceAccountName, c.registry, c.clusterID, execution, options)
+	jobOptions, err := NewJobOptions(c.Log, c.templatesClient, c.images.Init, c.jobTemplate, c.serviceAccountName, c.registry,
+		c.clusterID, execution, options)
 	if err != nil {
 		return err
 	}
@@ -327,11 +311,14 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 		}
 	}()
 
-	// wait for pod
-	l.Debug("poll immediate waiting for pod")
-	if err = wait.PollImmediate(pollInterval, c.podStartTimeout, executor.IsPodLoggable(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
+	// wait for pod to be loggable
+	if err = wait.PollUntilContextTimeout(ctx, pollInterval, c.podStartTimeout, true, executor.IsPodLoggable(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 		l.Errorw("waiting for pod started error", "error", err)
-	} else if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
+	}
+
+	l.Debug("poll immediate waiting for pod")
+	// wait for pod
+	if err = wait.PollUntilContextTimeout(ctx, pollInterval, pollTimeout, true, executor.IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 		// continue on poll err and try to get logs later
 		l.Errorw("waiting for pod complete error", "error", err)
 	}
@@ -354,8 +341,13 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 		return execution.ExecutionResult, err
 	}
 
-	if execution.ExecutionResult.IsFailed() && execution.ExecutionResult.ErrorMessage == "" {
-		execution.ExecutionResult.ErrorMessage = executor.GetPodErrorMessage(&pod)
+	if execution.ExecutionResult.IsFailed() {
+		errorMessage := execution.ExecutionResult.ErrorMessage
+		if errorMessage == "" {
+			errorMessage = executor.GetPodErrorMessage(ctx, c.ClientSet, &pod)
+		}
+
+		execution.ExecutionResult.ErrorMessage = errorMessage
 	}
 
 	// saving result in the defer function
@@ -444,7 +436,7 @@ func (c *JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, e
 		}
 	}
 
-	c.metrics.IncExecuteTest(*execution)
+	c.metrics.IncExecuteTest(*execution, c.dashboardURI)
 	c.Emitter.Notify(eventToSend)
 
 	telemetryEnabled, err := c.configMap.GetTelemetryEnabled(ctx)
@@ -556,7 +548,7 @@ func (c *JobExecutor) TailJobLogs(ctx context.Context, id string, logs chan []by
 
 			default:
 				l.Debugw("tailing job logs: waiting for pod to be ready")
-				if err = wait.PollImmediate(pollInterval, c.podStartTimeout, executor.IsPodLoggable(ctx, c.ClientSet, pod.Name, c.Namespace)); err != nil {
+				if err = wait.PollUntilContextTimeout(ctx, pollInterval, c.podStartTimeout, true, executor.IsPodLoggable(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 					l.Errorw("poll immediate error when tailing logs", "error", err)
 					return err
 				}
@@ -688,7 +680,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	secretEnvVars := append(envManager.PrepareSecrets(options.SecretEnvs, options.Variables),
 		envManager.PrepareGitCredentials(options.UsernameSecret, options.TokenSecret)...)
 
-	tmpl, err := template.New("job").Funcs(template.FuncMap{"vartypeptrtostring": testkube.VariableTypeString}).
+	tmpl, err := utils.NewTemplate("job").Funcs(template.FuncMap{"vartypeptrtostring": testkube.VariableTypeString}).
 		Parse(options.JobTemplate)
 	if err != nil {
 		return nil, errors.Errorf("creating job spec from options.JobTemplate error: %v", err)
@@ -703,7 +695,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	var job batchv1.Job
 	jobSpec := buffer.String()
 	if options.JobTemplateExtensions != "" {
-		tmplExt, err := template.New("jobExt").Funcs(template.FuncMap{"vartypeptrtostring": testkube.VariableTypeString}).
+		tmplExt, err := utils.NewTemplate("jobExt").Funcs(template.FuncMap{"vartypeptrtostring": testkube.VariableTypeString}).
 			Parse(options.JobTemplateExtensions)
 		if err != nil {
 			return nil, errors.Errorf("creating job extensions spec from template error: %v", err)
@@ -740,6 +732,12 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	}
 
 	envs := append(executor.RunnerEnvVars, corev1.EnvVar{Name: "RUNNER_CLUSTERID", Value: options.ClusterID})
+	if options.ArtifactRequest != nil && options.ArtifactRequest.StorageBucket != "" {
+		envs = append(envs, corev1.EnvVar{Name: "RUNNER_BUCKET", Value: options.ArtifactRequest.StorageBucket})
+	} else {
+		envs = append(envs, corev1.EnvVar{Name: "RUNNER_BUCKET", Value: os.Getenv("STORAGE_BUCKET")})
+	}
+
 	envs = append(envs, secretEnvVars...)
 	if options.HTTPProxy != "" {
 		envs = append(envs, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
@@ -766,7 +764,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	return &job, nil
 }
 
-func NewJobOptions(initImage, jobTemplate string, serviceAccountName, registry, clusterID string,
+func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, initImage, jobTemplate, serviceAccountName, registry, clusterID string,
 	execution testkube.Execution, options ExecuteOptions) (jobOptions JobOptions, err error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
@@ -782,10 +780,45 @@ func NewJobOptions(initImage, jobTemplate string, serviceAccountName, registry, 
 	if jobOptions.JobTemplate == "" {
 		jobOptions.JobTemplate = jobTemplate
 	}
+
+	if options.ExecutorSpec.JobTemplateReference != "" {
+		template, err := templatesClient.Get(options.ExecutorSpec.JobTemplateReference)
+		if err != nil {
+			return jobOptions, err
+		}
+
+		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.JOB_TemplateType {
+			jobOptions.JobTemplate = template.Spec.Body
+		} else {
+			log.Warnw("Not matched template type", "template", options.ExecutorSpec.JobTemplateReference)
+		}
+	}
+
+	if options.Request.JobTemplateReference != "" {
+		template, err := templatesClient.Get(options.Request.JobTemplateReference)
+		if err != nil {
+			return jobOptions, err
+		}
+
+		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.JOB_TemplateType {
+			jobOptions.JobTemplate = template.Spec.Body
+		} else {
+			log.Warnw("Not matched template type", "template", options.Request.JobTemplateReference)
+		}
+	}
+
 	jobOptions.Variables = execution.Variables
+	if options.ExecutorSpec.Slaves != nil {
+		slvesConfigs, err := json.Marshal(executor.GetSlavesConfigs(initImage, *options.ExecutorSpec.Slaves))
+		if err != nil {
+			return jobOptions, err
+		}
+		jobOptions.Variables[executor.SlavesConfigsEnv] = testkube.NewBasicVariable(executor.SlavesConfigsEnv, string(slvesConfigs))
+	}
 	jobOptions.ServiceAccountName = serviceAccountName
 	jobOptions.Registry = registry
 	jobOptions.ClusterID = clusterID
+	jobOptions.ArtifactRequest = execution.ArtifactRequest
 
 	return
 }

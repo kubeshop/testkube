@@ -1,143 +1,183 @@
 {
-  "blocks": [
-    {
-      "type": "section",
-      "text": {
-        "type": "plain_text",
-        "emoji": true,
-        "text": "Execution {{ .ExecutionName }} of {{ .TestName }} status {{ .Status }}"
-      }
-    },
-    {
-      "type": "context",
-      "elements": [
-        {
-          "type": "image",
-          "image_url": "{{ if eq .Status "failed" }}https://raw.githubusercontent.com/kubeshop/testkube/d3380bc4bf4534ef1fb88cdce5d346dca8898986/assets/imageFailed.png{{ else if eq .Status "passed" }}https://raw.githubusercontent.com/kubeshop/testkube/d3380bc4bf4534ef1fb88cdce5d346dca8898986/assets/imagePassed.png{{ else }}https://raw.githubusercontent.com/kubeshop/testkube/d3380bc4bf4534ef1fb88cdce5d346dca8898986/assets/imagePending.png{{ end }}",
-          "alt_text": "notifications warning icon"
-        }
-        {{ if (gt .TotalSteps 0 )}}
-      ,
-        {
-          "type": "mrkdwn",
-          "text": "*   {{ .FailedSteps }}/{{ .TotalSteps }} STEPS FAILED*"
-        }
-        {{ end }}
-      ]
-    },
-    {
-      "type": "divider"
-    },
-    {
-      "type": "section",
-      "fields": [
-        {
-          "type": "mrkdwn",
-          "text": "*Test Name*"
-        },
-        {
-          "type": "mrkdwn",
-          "text": "*Type*"
-        },
-        {
-          "type": "plain_text",
-          "text": "{{ .TestName }}",
-          "emoji": true
-        },
-        {
-          "type": "plain_text",
-          "text": "{{ .TestType }}",
-          "emoji": true
-        }
-      ]
-    },
-    {{ if .Namespace}}
-    {
-      "type": "section",
-      "fields": [
-        {
-          "type": "mrkdwn",
-          "text": "*Namespace*"
-        },
-        {
-          "type": "mrkdwn",
-          "text": "*Labels*"
-        },
-        {
-          "type": "plain_text",
-          "text": "{{ .Namespace }} ",
-          "emoji": true
-        },
-        {
-          "type": "plain_text",
-          "text": "{{ .Labels }} ",
-          "emoji": true
-        }
-      ]
-    },
-    {{ end }}
-    {
-      "type": "section",
-      "fields": [
-        {
-          "type": "mrkdwn",
-          "text": "*Start Time*"
-        },
-        {
-          "type": "mrkdwn",
-          "text": "*End Time*"
-        },
-        {
-          "type": "plain_text",
-          "text": "{{ .StartTime }}",
-          "emoji": true
-        },
-        {
-          "type": "plain_text",
-          "text": "{{ .EndTime }}",
-          "emoji": true
-        }
-      ]
-    },
-    {{ if .Duration }}
-    {
-      "type": "section",
-      "fields": [
-        {
-          "type": "mrkdwn",
-          "text": "*Duration*"
-        },
-        {
-          "type": "mrkdwn",
-          "text": " "
-        },
-        {
-          "type": "plain_text",
-          "text": "{{ .Duration }}",
-          "emoji": true
-        }
-      ]
-    },
-    {{ end }}
-    {
-      "type": "divider"
-    },
-    {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": "*Test Execution Results*"
-      }
-    },
-    {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": "`kubectl testkube get execution {{ .ExecutionName }} `\n"
-      }
-    },
-    {
-      "type": "divider"
-    }
-  ]
+	"blocks": [
+		{
+			"type": "section",
+			"text": {
+				"type": "plain_text",
+				"emoji": true,
+				"text": "Execution {{ .ExecutionName }} of {{ .TestName }} status {{ .Status }}"
+			}
+		},
+		{
+			"type": "context",
+			"elements": [
+				{
+					"type": "image",
+					"image_url": "{{ if eq .Status "failed" }}https://raw.githubusercontent.com/kubeshop/testkube/d3380bc4bf4534ef1fb88cdce5d346dca8898986/assets/imageFailed.png{{ else if eq .Status "passed" }}https://raw.githubusercontent.com/kubeshop/testkube/d3380bc4bf4534ef1fb88cdce5d346dca8898986/assets/imagePassed.png{{ else }}https://raw.githubusercontent.com/kubeshop/testkube/d3380bc4bf4534ef1fb88cdce5d346dca8898986/assets/imagePending.png{{ end }}",
+					"alt_text": "notifications warning icon"
+				}
+				{{ if (gt .TotalSteps 0 )}}
+				,
+				{
+					"type": "mrkdwn",
+					"text": "*   {{ .FailedSteps }}/{{ .TotalSteps }} STEPS FAILED*"
+				}
+				{{ end }}
+			]
+		},
+		{
+			"type": "divider"
+		},
+		{
+			"type": "section",
+			"fields": [
+				{
+					"type": "mrkdwn",
+					"text": "*Test Name*"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "*Type*"
+				},
+				{
+					"type": "plain_text",
+					"text": "{{ .TestName }}",
+					"emoji": true
+				},
+				{
+					"type": "plain_text",
+					"text": "{{ .TestType }}",
+					"emoji": true
+				}
+			]
+		},
+		{{ if .Namespace}}
+		{
+			"type": "section",
+			"fields": [
+				{
+					"type": "mrkdwn",
+					"text": "*Namespace*"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "*Labels*"
+				},
+				{
+					"type": "plain_text",
+					"text": "{{ .Namespace }} ",
+					"emoji": true
+				},
+				{
+					"type": "plain_text",
+					"text": "{{ .Labels }} ",
+					"emoji": true
+				}
+			]
+		},
+		{{ end }}
+		{
+			"type": "section",
+			"fields": [
+				{
+					"type": "mrkdwn",
+					"text": "*Start Time*"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "*End Time*"
+				},
+				{
+					"type": "plain_text",
+					"text": "{{ .StartTime }}",
+					"emoji": true
+				},
+				{
+					"type": "plain_text",
+					"text": "{{ .EndTime }}",
+					"emoji": true
+				}
+			]
+		},
+		{{ if .Duration }}
+		{
+			"type": "section",
+			"fields": [
+				{
+					"type": "mrkdwn",
+					"text": "*Duration*"
+				},
+				{
+					"type": "mrkdwn",
+					"text": " "
+				},
+				{
+					"type": "plain_text",
+					"text": "{{ .Duration }}",
+					"emoji": true
+				}
+			]
+		},
+		{{ end }}
+		{
+			"type": "divider"
+		},
+		{{ if .ClusterName }}
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Cluster Name: {{ .ClusterName }}"
+			}
+		},
+		{{ end }}
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "*Test Execution CLI*"
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "`kubectl testkube get execution {{ .ExecutionName }} `\n"
+			}
+		},
+		{{ if eq .TestType "Test Suite" }}
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Test Suite URI: {{ .DashboardURI }}/test-suites/{{ .TestName }}"
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Test Suite Execution URI: {{ .DashboardURI }}/test-suites/{{ .TestName }}/executions/{{ .ExecutionID }}"
+			}
+		},
+		{{ else }}
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Test URI: {{ .DashboardURI }}/tests/{{ .TestName }}"
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Test Execution URI: {{ .DashboardURI }}/tests/{{ .TestName }}/executions/{{ .ExecutionID }}"
+			}
+		},
+		{{ end }}
+		{
+			"type": "divider"
+		}
+	]
 }

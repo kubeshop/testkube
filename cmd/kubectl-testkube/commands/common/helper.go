@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 
@@ -30,7 +31,9 @@ type HelmOptions struct {
 	CloudOrgId, CloudEnvId string
 	CloudUris              CloudUris
 	// For debug
-	DryRun bool
+	DryRun         bool
+	MultiNamespace bool
+	NoOperator     bool
 }
 
 const (
@@ -99,6 +102,8 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data, isM
 		args = append(args, "--set", fmt.Sprintf("testkube-api.cloud.orgId=%s", options.CloudOrgId))
 	}
 
+	args = append(args, "--set", fmt.Sprintf("testkube-api.multinamespace.enabled=%t", options.MultiNamespace))
+	args = append(args, "--set", fmt.Sprintf("testkube-operator.enabled=%t", !options.NoOperator))
 	args = append(args, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !options.NoDashboard))
 	args = append(args, "--set", fmt.Sprintf("mongodb.enabled=%t", !options.NoMongo))
 	args = append(args, "--set", fmt.Sprintf("testkube-api.minio.enabled=%t", !options.NoMinio))
@@ -143,6 +148,8 @@ func HelmUpgradeOrInstalTestkube(options HelmOptions) error {
 	ui.ExitOnError("updating helm repositories", err)
 
 	args = []string{"upgrade", "--install", "--create-namespace", "--namespace", options.Namespace}
+	args = append(args, "--set", fmt.Sprintf("testkube-api.multinamespace.enabled=%t", options.MultiNamespace))
+	args = append(args, "--set", fmt.Sprintf("testkube-operator.enabled=%t", !options.NoOperator))
 	args = append(args, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !options.NoDashboard))
 	args = append(args, "--set", fmt.Sprintf("mongodb.enabled=%t", !options.NoMongo))
 	args = append(args, "--set", fmt.Sprintf("testkube-api.minio.enabled=%t", !options.NoMinio))
@@ -214,7 +221,7 @@ func PopulateLoginDataToContext(orgID, envID, token, refreshToken string, option
 
 	cfg, err := PopulateOrgAndEnvNames(cfg, orgID, envID, options.CloudRootDomain)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "error populating org and env names")
 	}
 
 	return config.Save(cfg)
@@ -344,13 +351,13 @@ func PopulateOrgAndEnvNames(cfg config.Data, orgId, envId, rootDomain string) (c
 	orgClient := cloudclient.NewOrganizationsClient(rootDomain, cfg.CloudContext.ApiKey)
 	org, err := orgClient.Get(cfg.CloudContext.OrganizationId)
 	if err != nil {
-		return cfg, err
+		return cfg, errors.Wrap(err, "error getting organization")
 	}
 
 	envsClient := cloudclient.NewEnvironmentsClient(rootDomain, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId)
 	env, err := envsClient.Get(cfg.CloudContext.EnvironmentId)
 	if err != nil {
-		return cfg, err
+		return cfg, errors.Wrap(err, "error getting environment")
 	}
 
 	cfg.CloudContext.OrganizationName = org.Name

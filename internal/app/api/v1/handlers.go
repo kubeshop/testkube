@@ -70,6 +70,7 @@ func (s *TestkubeAPI) InfoHandler() fiber.Handler {
 			EnvId:            os.Getenv(cloudEnvIdEnvName),
 			OrgId:            os.Getenv(cloudOrgIdEnvName),
 			HelmchartVersion: s.helmchartVersion,
+			DashboardUri:     s.dashboardURI,
 		})
 	}
 }

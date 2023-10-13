@@ -83,7 +83,8 @@ const config = {
       navbar: {
         logo: {
           alt: "Testkube",
-          src: "img/logo.large.svg",
+          src: "img/logo.large.bright.svg",
+          srcDark: "img/logo.large.svg",
           href: "/",
         },
         items: [

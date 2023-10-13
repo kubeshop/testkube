@@ -109,7 +109,7 @@ Let's assume that our example Cypress test needs the `testparam` parameter with 
 
 This is done by using the `-p` parameter. If you need to pass more parameters, simply pass multiple `-p` flags.
 
-It's possible to pass parameters securely to the executed test. It's necessary to use `--secret` flag,
+It's possible to pass parameters securely to the executed test. It's necessary to use the `--secret` flag,
 which contains a key value pair - a name of the Kubernetes secret and a secret key.
 It can be passed multiple times if needed.
 
@@ -206,8 +206,8 @@ Local files can be set on the execution of a Testkube Test. Pass the file in the
 testkube run test maven-example-file-test --copy-files "/Users/local_user/local_maven_settings.xml:/tmp/settings.xml" --args "--settings" --args "/tmp/settings.xml" -v "TESTKUBE_MAVEN=true"
 ```
 
-By default, there is a 10 second timeout limit on all requests on the client side, and a 1 GB body size limit on the server side. To update the timeout, use `--upload-timeout` with [Go-compatible duration formats](https://pkg.go.dev/time#ParseDuration).
+By default, there is a 10 second timeout limit on all requests on the client side and a 1 GB body size limit on the server side. To update the timeout, use `--upload-timeout` with [Go-compatible duration formats](https://pkg.go.dev/time#ParseDuration).
 
 ## Summary
 
-As we can see, running tests in Kubernetes cluster is really easy with use of the Testkube kubectl plugin!
+As we can see, running tests in a Kubernetes cluster is really easy with use of the Testkube kubectl plugin!

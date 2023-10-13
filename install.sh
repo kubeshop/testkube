@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 echo "Getting kubectl-testkube plugin"
 
 if [ ! -z "${DEBUG}" ];
@@ -20,14 +20,14 @@ _detect_arch() {
 }
 
 _detect_os(){
-    case $(uname) in
-    Linux) echo "Linux"
-    ;;
+    case $(uname) in 
+    Linux) echo "Linux" 
+    ;; 
     Darwin) echo "Darwin"
-    ;;
-    Windows) echo "Windows"
-    ;;
-     esac
+    ;; 
+    Windows) echo "Windows" 
+    ;; 
+     esac    
 }
 
 _download_url() {

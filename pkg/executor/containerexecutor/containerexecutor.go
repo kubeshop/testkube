@@ -19,10 +19,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 
-	executorv1 "github.com/kubeshop/testkube-operator/apis/executor/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/client/executors/v1"
-	testexecutionsv1 "github.com/kubeshop/testkube-operator/client/testexecutions/v1"
-	testsv3 "github.com/kubeshop/testkube-operator/client/tests/v3"
+	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
+	templatesv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
+	testexecutionsv1 "github.com/kubeshop/testkube-operator/pkg/client/testexecutions/v1"
+	testsv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -61,9 +62,11 @@ func NewContainerExecutor(
 	executorsClient executorsclientv1.Interface,
 	testsClient testsv3.Interface,
 	testExecutionsClient testexecutionsv1.Interface,
+	templatesClient templatesv1.Interface,
 	registry string,
 	podStartTimeout time.Duration,
 	clusterID string,
+	dashboardURI string,
 ) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -84,14 +87,16 @@ func NewContainerExecutor(
 		testsClient:          testsClient,
 		executorsClient:      executorsClient,
 		testExecutionsClient: testExecutionsClient,
+		templatesClient:      templatesClient,
 		registry:             registry,
 		podStartTimeout:      podStartTimeout,
 		clusterID:            clusterID,
+		dashboardURI:         dashboardURI,
 	}, nil
 }
 
 type ExecutionCounter interface {
-	IncExecuteTest(execution testkube.Execution)
+	IncExecuteTest(execution testkube.Execution, dashboardURI string)
 }
 
 // ContainerExecutor is container for managing job executor dependencies
@@ -109,9 +114,11 @@ type ContainerExecutor struct {
 	testsClient          testsv3.Interface
 	executorsClient      executorsclientv1.Interface
 	testExecutionsClient testexecutionsv1.Interface
+	templatesClient      templatesv1.Interface
 	registry             string
 	podStartTimeout      time.Duration
 	clusterID            string
+	dashboardURI         string
 }
 
 type JobOptions struct {
@@ -129,7 +136,7 @@ type JobOptions struct {
 	ScraperImage              string
 	JobTemplate               string
 	ScraperTemplate           string
-	PVCTemplate               string
+	PvcTemplate               string
 	SecretEnvs                map[string]string
 	Envs                      map[string]string
 	HTTPProxy                 string
@@ -144,6 +151,7 @@ type JobOptions struct {
 	DelaySeconds              int
 	JobTemplateExtensions     string
 	ScraperTemplateExtensions string
+	PvcTemplateExtensions     string
 	EnvConfigMaps             []testkube.EnvReference
 	EnvSecrets                []testkube.EnvReference
 	Labels                    map[string]string
@@ -190,7 +198,7 @@ func (c *ContainerExecutor) Logs(ctx context.Context, id string) (out chan outpu
 		for _, podName := range ids {
 			logs := make(chan []byte)
 
-			if err := TailJobLogs(ctx, c.log, c.clientSet, c.namespace, podName, c.podStartTimeout, logs); err != nil {
+			if err := c.TailJobLogs(ctx, podName, logs); err != nil {
 				out <- output.NewOutputError(err)
 				return
 			}
@@ -224,10 +232,14 @@ func (c *ContainerExecutor) Execute(ctx context.Context, execution *testkube.Exe
 		return executionResult, err
 	}
 
-	l := c.log.With("executionID", execution.Id, "type", "async")
+	l := c.log.With("executionID", execution.Id, "sync", options.Sync)
 
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
+			if options.Sync {
+				return c.updateResultsFromPod(ctx, pod, l, execution, jobOptions)
+			}
+
 			// async wait for complete status or error
 			go func(pod corev1.Pod) {
 				_, err := c.updateResultsFromPod(ctx, pod, l, execution, jobOptions)
@@ -245,46 +257,12 @@ func (c *ContainerExecutor) Execute(ctx context.Context, execution *testkube.Exe
 	return execution.ExecutionResult, nil
 }
 
-// ExecuteSync starts new external test execution, reads data and returns ID
-// Execution is started synchronously client will be blocked
-func (c *ContainerExecutor) ExecuteSync(ctx context.Context, execution *testkube.Execution, options client.ExecuteOptions) (*testkube.ExecutionResult, error) {
-	executionResult := testkube.NewRunningExecutionResult()
-	execution.ExecutionResult = executionResult
-
-	jobOptions, err := c.createJob(ctx, *execution, options)
-	if err != nil {
-		execution.ExecutionResult.Err(err)
-		return execution.ExecutionResult, err
-	}
-
-	podsClient := c.clientSet.CoreV1().Pods(c.namespace)
-	pods, err := executor.GetJobPods(ctx, podsClient, execution.Id, 1, 10)
-	if err != nil {
-		execution.ExecutionResult.Err(err)
-		return execution.ExecutionResult, err
-	}
-
-	l := c.log.With("executionID", execution.Id, "type", "sync")
-
-	// get job pod and
-	for _, pod := range pods.Items {
-		podNotRunning := pod.Status.Phase != corev1.PodRunning
-		IsCorrectJob := pod.Labels["job-name"] == execution.Id
-		if podNotRunning && IsCorrectJob {
-			return c.updateResultsFromPod(ctx, pod, l, execution, jobOptions)
-		}
-	}
-
-	l.Debugw("no pods was found", "totalPodsCount", len(pods.Items))
-
-	return execution.ExecutionResult, nil
-}
-
 // createJob creates new Kubernetes job based on execution and execute options
 func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
 	jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
 
-	jobOptions, err := NewJobOptions(c.log, c.images, c.templates, c.serviceAccountName, c.registry, c.clusterID, execution, options)
+	jobOptions, err := NewJobOptions(c.log, c.templatesClient, c.images, c.templates, c.serviceAccountName,
+		c.registry, c.clusterID, execution, options)
 	if err != nil {
 		return nil, err
 	}
@@ -329,9 +307,9 @@ func (c *ContainerExecutor) updateResultsFromPod(
 
 	// wait for pod
 	l.Debug("poll immediate waiting for executor pod")
-	if err = wait.PollImmediate(pollInterval, c.podStartTimeout, executor.IsPodLoggable(ctx, c.clientSet, executorPod.Name, c.namespace)); err != nil {
+	if err = wait.PollUntilContextTimeout(ctx, pollInterval, c.podStartTimeout, true, executor.IsPodLoggable(c.clientSet, executorPod.Name, c.namespace)); err != nil {
 		l.Errorw("waiting for executor pod started error", "error", err)
-	} else if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.clientSet, executorPod.Name, c.namespace)); err != nil {
+	} else if err = wait.PollUntilContextTimeout(ctx, pollInterval, pollTimeout, true, executor.IsPodReady(c.clientSet, executorPod.Name, c.namespace)); err != nil {
 		// continue on poll err and try to get logs later
 		l.Errorw("waiting for executor pod complete error", "error", err)
 	}
@@ -372,9 +350,9 @@ func (c *ContainerExecutor) updateResultsFromPod(
 		for _, scraperPod := range scraperPods.Items {
 			if scraperPod.Status.Phase != corev1.PodRunning && scraperPod.Labels["job-name"] == scraperPodName {
 				l.Debug("poll immediate waiting for scraper pod to succeed")
-				if err = wait.PollImmediate(pollInterval, c.podStartTimeout, executor.IsPodLoggable(ctx, c.clientSet, scraperPod.Name, c.namespace)); err != nil {
+				if err = wait.PollUntilContextTimeout(ctx, pollInterval, c.podStartTimeout, true, executor.IsPodLoggable(c.clientSet, scraperPod.Name, c.namespace)); err != nil {
 					l.Errorw("waiting for scraper pod started error", "error", err)
-				} else if err = wait.PollImmediate(pollInterval, pollTimeout, executor.IsPodReady(ctx, c.clientSet, scraperPod.Name, c.namespace)); err != nil {
+				} else if err = wait.PollUntilContextTimeout(ctx, pollInterval, pollTimeout, true, executor.IsPodReady(c.clientSet, scraperPod.Name, c.namespace)); err != nil {
 					// continue on poll err and try to get logs later
 					l.Errorw("waiting for scraper pod complete error", "error", err)
 				}
@@ -449,8 +427,13 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	}
 	execution.ExecutionResult.Output = output
 
-	if execution.ExecutionResult.IsFailed() && execution.ExecutionResult.ErrorMessage == "" {
-		execution.ExecutionResult.ErrorMessage = executor.GetPodErrorMessage(latestExecutorPod)
+	if execution.ExecutionResult.IsFailed() {
+		errorMessage := execution.ExecutionResult.ErrorMessage
+		if errorMessage == "" {
+			errorMessage = executor.GetPodErrorMessage(ctx, c.clientSet, latestExecutorPod)
+		}
+
+		execution.ExecutionResult.ErrorMessage = errorMessage
 	}
 
 	l.Infow("container execution completed saving result", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
@@ -471,7 +454,7 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testku
 
 	// metrics increase
 	execution.ExecutionResult = result
-	c.metrics.IncExecuteTest(*execution)
+	c.metrics.IncExecuteTest(*execution, c.dashboardURI)
 
 	test, err := c.testsClient.Get(execution.TestName)
 	if err != nil {
@@ -661,6 +644,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		JobTemplate:               options.ExecutorSpec.JobTemplate,
 		JobTemplateExtensions:     options.Request.JobTemplate,
 		ScraperTemplateExtensions: options.Request.ScraperTemplate,
+		PvcTemplateExtensions:     options.Request.PvcTemplate,
 		EnvConfigMaps:             options.Request.EnvConfigMaps,
 		EnvSecrets:                options.Request.EnvSecrets,
 		Labels:                    labels,

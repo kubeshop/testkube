@@ -5,11 +5,12 @@ import (
 	"strings"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/renderer"
+	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
+func TestSuiteRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 	ts, ok := obj.(testkube.TestSuite)
 	if !ok {
 		return fmt.Errorf("can't use '%T' as testkube.TestSuite in RenderObj for test suite", obj)
@@ -17,6 +18,10 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 
 	ui.Warn("Name:     ", ts.Name)
 	ui.Warn("Namespace:", ts.Namespace)
+	if ts.Description != "" {
+		ui.NL()
+		ui.Warn("Description: ", ts.Description)
+	}
 	if len(ts.Labels) > 0 {
 		ui.NL()
 		ui.Warn("Labels:   ", testkube.MapToString(ts.Labels))
@@ -29,7 +34,7 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 	if ts.ExecutionRequest != nil {
 		ui.Warn("Execution request: ")
 		if ts.ExecutionRequest.Name != "" {
-			ui.Warn("  Name:              ", ts.ExecutionRequest.Name)
+			ui.Warn("  Name:                        ", ts.ExecutionRequest.Name)
 		}
 
 		if len(ts.ExecutionRequest.Variables) > 0 {
@@ -37,15 +42,43 @@ func TestSuiteRenderer(ui *ui.UI, obj interface{}) error {
 		}
 
 		if ts.ExecutionRequest.HttpProxy != "" {
-			ui.Warn("  Http proxy:        ", ts.ExecutionRequest.HttpProxy)
+			ui.Warn("  Http proxy:                  ", ts.ExecutionRequest.HttpProxy)
 		}
 
 		if ts.ExecutionRequest.HttpsProxy != "" {
-			ui.Warn("  Https proxy:       ", ts.ExecutionRequest.HttpsProxy)
+			ui.Warn("  Https proxy:                 ", ts.ExecutionRequest.HttpsProxy)
+		}
+
+		if ts.ExecutionRequest.JobTemplate != "" {
+			ui.Warn("  Job template:                ", "\n", ts.ExecutionRequest.JobTemplate)
+		}
+
+		if ts.ExecutionRequest.JobTemplateReference != "" {
+			ui.Warn("  Job template reference:      ", ts.ExecutionRequest.JobTemplateReference)
 		}
 
 		if ts.ExecutionRequest.CronJobTemplate != "" {
-			ui.Warn("  Cron job template: ", ts.ExecutionRequest.CronJobTemplate)
+			ui.Warn("  Cron job template:           ", "\n", ts.ExecutionRequest.CronJobTemplate)
+		}
+
+		if ts.ExecutionRequest.CronJobTemplateReference != "" {
+			ui.Warn("  Cron job template reference: ", ts.ExecutionRequest.CronJobTemplateReference)
+		}
+
+		if ts.ExecutionRequest.ScraperTemplate != "" {
+			ui.Warn("  Scraper template:            ", "\n", ts.ExecutionRequest.ScraperTemplate)
+		}
+
+		if ts.ExecutionRequest.ScraperTemplateReference != "" {
+			ui.Warn("  Scraper template reference:  ", ts.ExecutionRequest.ScraperTemplateReference)
+		}
+
+		if ts.ExecutionRequest.PvcTemplate != "" {
+			ui.Warn("  PVC template:                ", "\n", ts.ExecutionRequest.PvcTemplate)
+		}
+
+		if ts.ExecutionRequest.PvcTemplateReference != "" {
+			ui.Warn("  PVC template reference:      ", ts.ExecutionRequest.PvcTemplateReference)
 		}
 	}
 

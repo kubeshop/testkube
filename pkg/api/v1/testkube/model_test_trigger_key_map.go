@@ -12,12 +12,14 @@ package testkube
 type TestTriggerKeyMap struct {
 	// list of supported values for resources
 	Resources []string `json:"resources"`
-	// list of supported values for resources
+	// list of supported values for actions
 	Actions []string `json:"actions"`
-	// list of supported values for resources
+	// list of supported values for executions
 	Executions []string `json:"executions"`
 	// mapping between resources and supported events
 	Events map[string][]string `json:"events"`
 	// list of supported values for conditions
 	Conditions []string `json:"conditions,omitempty"`
+	// list of supported values for concurrency policies
+	ConcurrencyPolicies []string `json:"concurrencyPolicies"`
 }

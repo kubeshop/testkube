@@ -6,7 +6,7 @@
         {"execute": [{"test": "postman-executor-smoke-testsource"}]},
         {"execute": [{"test": "k6-executor-smoke"}]},
         {"execute": [{"test": "container-executor-curl-smoke"}]},
-        {"execute": [{"test": "cypress-11-executor-smoke-chrome"}]},
+        {"execute": [{"test": "cypress-12-executor-smoke-chrome"}]},
         {"execute": [{"test": "cypress-default-executor-smoke-electron-testsource"}]}
     ]
 }

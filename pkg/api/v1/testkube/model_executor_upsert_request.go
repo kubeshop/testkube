@@ -18,7 +18,8 @@ type ExecutorUpsertRequest struct {
 	// ExecutorType one of \"rest\" for rest openapi based executors or \"job\" which will be default runners for testkube soon
 	ExecutorType string `json:"executorType,omitempty"`
 	// Image for kube-job
-	Image string `json:"image,omitempty"`
+	Image  string      `json:"image,omitempty"`
+	Slaves *SlavesMeta `json:"slaves,omitempty"`
 	// container image pull secrets
 	ImagePullSecrets []LocalObjectReference `json:"imagePullSecrets,omitempty"`
 	// executor image command
@@ -33,6 +34,8 @@ type ExecutorUpsertRequest struct {
 	ContentTypes []string `json:"contentTypes,omitempty"`
 	// Job template to launch executor
 	JobTemplate string `json:"jobTemplate,omitempty"`
+	// name of the template resource
+	JobTemplateReference string `json:"jobTemplateReference,omitempty"`
 	// executor labels
 	Labels map[string]string `json:"labels,omitempty"`
 	// Available executor features

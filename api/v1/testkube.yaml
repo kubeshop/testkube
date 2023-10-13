@@ -1634,6 +1634,7 @@ paths:
         - api
       parameters:
         - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/SkipDeleteExecutions"
       summary: "Delete test"
       description: "Deletes a test"
       operationId: deleteTest
@@ -2500,6 +2501,243 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /templates:
+    get:
+      tags:
+        - templates
+        - api
+      summary: "List templates"
+      description: "List templates available in cluster"
+      operationId: listTemplates
+      parameters:
+        - $ref: "#/components/parameters/Selector"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Template"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    post:
+      tags:
+        - template
+        - api
+      summary: "Create new template"
+      description: "Create new template based on variables passed in request"
+      operationId: createTemplate
+      requestBody:
+        description: template request body data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TemplateCreateRequest"
+          text/yaml:
+            schema:
+              type: string              
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            text/yaml:
+              schema:
+                type: string
+        201:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+        400:
+          description: "problem with template definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    delete:
+      tags:
+        - template
+        - api
+      summary: "Delete templates"
+      description: "Deletes labeled templates"
+      operationId: deleteTemplates
+      parameters:
+        - $ref: "#/components/parameters/Selector"
+      responses:
+        204:
+          description: "no content"
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /templates/{id}:
+    delete:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      tags:
+        - api
+        - template
+      summary: "Delete template"
+      description: "Deletes template by its name"
+      operationId: deleteTemplate
+      responses:
+        204:
+          description: template deleted successfuly
+        404:
+          description: "template not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+    get:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      tags:
+        - api
+        - template
+      summary: "Get template details"
+      description: "Returns template"
+      operationId: getTemplate
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "template not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with getting template data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    patch:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      tags:
+        - template
+        - api
+      summary: "Update new template"
+      description: "Update new template based on variables passed in request"
+      operationId: updateTemplate
+      requestBody:
+        description: template request body data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TemplateUpdateRequest"
+          text/yaml:
+            schema:
+              type: string              
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+        400:
+          description: "problem with template definition - probably some bad input occurs (invalid JSON body or similar)"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "template not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /config:
     patch:
       tags:
@@ -2951,6 +3189,32 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /secrets:
+    get:
+      tags:
+        - secrets
+        - api
+      summary: "List secrets"
+      description: "List secrets available in cluster"
+      operationId: listSecrets
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Secret"
+        502:
+          description: "problem with communicating with kubernetes cluster or git server"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
 components:
   schemas:
     ExecutionsMetrics:
@@ -3171,6 +3435,9 @@ components:
           $ref: "#/components/schemas/TestSuiteExecutionRequest"
         status:
           $ref: "#/components/schemas/TestSuiteStatus"
+        readOnly:
+          type: boolean
+          description: if test suite is offline and cannot be executed
 
     TestSuiteV2:
       type: object
@@ -3598,6 +3865,10 @@ components:
           type: string
           description: test namespace
           example: "testkube"
+        description:
+          type: string
+          description: test description
+          example: "this test is used for that purpose"      
         type:
           type: string
           description: test type
@@ -3625,6 +3896,10 @@ components:
           type: string
           description: schedule to run test
           example: "* * * * *"
+        readOnly:
+          type: boolean
+          description: if test is offline and cannot be executed
+
         uploads:
           type: array
           items:
@@ -3957,7 +4232,10 @@ components:
         postRunScript:
           type: string
           description: script to run after test execution
-          example: "sleep 30"          
+          example: "sleep 30"
+        executePostRunScriptBeforeScraping:
+          type: boolean
+          description: execute post run script before scraping (prebuilt executor only) 
         runningContext:
           $ref: "#/components/schemas/RunningContext"
           description: running context for the test execution
@@ -4206,6 +4484,10 @@ components:
           type: string
           description: helm chart version
           example: "1.4.14"
+        dashboardUri:
+          type: string
+          description: dashboard uri
+          example: "http://localhost:8080"          
 
     Repository:
       description: repository representation for tests in git repositories
@@ -4310,6 +4592,13 @@ components:
           items:
             type: string
           description: artifact directories for scraping
+        storageBucket:
+          type: string
+          description: artifact bucket storage
+          example: test1-artifacts
+        omitFolderPerExecution:
+          type: boolean
+          description: don't use a separate folder for execution artifacts
 
     ArtifactUpdateRequest:
       description: artifact request update body
@@ -4459,9 +4748,15 @@ components:
         jobTemplate:
           type: string
           description: job template extensions
+        jobTemplateReference:
+          type: string
+          description: name of the template resource   
         cronJobTemplate:
           type: string
           description: cron job template extensions
+        cronJobTemplateReference:
+          type: string
+          description: name of the template resource
         contentRequest:
           $ref: "#/components/schemas/TestContentRequest"
           description: adjusting parameters for test content
@@ -4473,9 +4768,21 @@ components:
           type: string
           description: script to run after test execution
           example: "sleep 30"
+        executePostRunScriptBeforeScraping:
+          type: boolean
+          description: execute post run script before scraping (prebuilt executor only)
         scraperTemplate:
           type: string
           description: scraper template extensions
+        scraperTemplateReference:
+          type: string
+          description: name of the template resource
+        pvcTemplate:
+          type: string
+          description: pvc template extensions
+        pvcTemplateReference:
+          type: string
+          description: name of the template resource
         envConfigMaps:
           type: array
           description: "config map references"
@@ -4561,9 +4868,30 @@ components:
         runningContext:
           $ref: "#/components/schemas/RunningContext"
           description: running context for the test suite execution
+        jobTemplate:
+          type: string
+          description: job template extensions
+        jobTemplateReference:
+          type: string
+          description: name of the template resource
         cronJobTemplate:
           type: string
           description: cron job template extensions
+        cronJobTemplateReference:
+          type: string
+          description: name of the template resource
+        scraperTemplate:
+          type: string
+          description: scraper template extensions
+        scraperTemplateReference:
+          type: string
+          description: name of the template resource
+        pvcTemplate:
+          type: string
+          description: pvc template extensions
+        pvcTemplateReference:
+          type: string
+          description: name of the template resource
         concurrencyLevel:
           type: integer
           format: int32
@@ -4690,6 +5018,8 @@ components:
         image:
           description: Image for kube-job
           type: string
+        slaves:
+          $ref: "#/components/schemas/SlavesMeta"
         imagePullSecrets:
           type: array
           description: "container image pull secrets"
@@ -4728,6 +5058,9 @@ components:
         jobTemplate:
           description: Job template to launch executor
           type: string
+        jobTemplateReference:
+          type: string
+          description: name of the template resource
         labels:
           type: object
           description: "executor labels"
@@ -4812,6 +5145,17 @@ components:
       allOf:
         - $ref: "#/components/schemas/ExecutorMeta"
 
+    SlavesMeta:
+      description: Slave data for executing tests in distributed environment
+      type: object
+      properties:
+        image: 
+          description: slave image
+          type: string
+          example: kubeshop/ex-slaves-image:latest
+      required:
+      - image
+
     RunningContext:
       description: running context for test or test suite execution
       type: object
@@ -4860,9 +5204,12 @@ components:
         payloadTemplate:
           type: string
           description: golang based template for notification payload
+        payloadTemplateReference:
+          type: string
+          description: name of the template resource
         headers:
           type: object
-          description: "webhook headers"
+          description: "webhook headers (golang template supported)"
           additionalProperties:
             type: string
           example:
@@ -5089,6 +5436,8 @@ components:
           $ref: "#/components/schemas/TestTriggerExecutions"
         testSelector:
           $ref: "#/components/schemas/TestTriggerSelector"
+        concurrencyPolicy:
+          $ref: "#/components/schemas/TestTriggerConcurrencyPolicies"
 
     LocalObjectReference:
       description: Reference to Kubernetes object
@@ -5256,6 +5605,14 @@ components:
           example:
             Content-Type: "application/xml"
 
+    TestTriggerConcurrencyPolicies:
+      description: supported concurrency policies for test triggers
+      type: string
+      enum:
+        - allow
+        - forbid
+        - replace
+
     TestTriggerKeyMap:
       type: object
       required:
@@ -5263,6 +5620,7 @@ components:
         - actions
         - executions
         - events
+        - concurrencyPolicies
       properties:
         resources:
           type: array
@@ -5284,13 +5642,13 @@ components:
           type: array
           items:
             type: string
-          description: list of supported values for resources
+          description: list of supported values for actions
           example: ["run"]
         executions:
           type: array
           items:
             type: string
-          description: list of supported values for resources
+          description: list of supported values for executions
           example: ["test", "testsuite"]
         events:
           type: object
@@ -5310,6 +5668,12 @@ components:
             type: string
           description: list of supported values for conditions
           example: ["Available", "Progressing"]
+        concurrencyPolicies:
+          type: array
+          items:
+            type: string
+          description: list of supported values for concurrency policies
+          example: ["allow", "forbid", "replace"]
 
     TestSourceBatchRequest:
       description: Test source batch request
@@ -5344,6 +5708,78 @@ components:
             type: string
           description: deleted test sources
           example: ["name7", "name8", "name9"]
+
+    Template:
+      description: Golang based template
+      type: object
+      required:
+        - name
+        - type
+        - body
+      properties:
+        name:
+          type: string
+          description: template name for reference
+          example: "webhook-template"
+        namespace:
+          type: string
+          description: template namespace
+          example: "testkube"
+        type:
+          $ref: "#/components/schemas/TemplateType"
+        body:
+          type: string
+          description: template body to use
+          example: "{\"id\": \"{{ .Id }}\"}"
+        labels:
+          type: object
+          description: "template labels"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"
+
+    TemplateType:
+      description: template type by purpose
+      type: string
+      enum:
+        - job
+        - container
+        - cronjob
+        - scraper
+        - pvc
+        - webhook
+
+    TemplateCreateRequest:
+      description: template create request body
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/Template"
+
+    TemplateUpdateRequest:
+      description: template update request body
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/Template"
+
+    Secret:
+      description: Secret with keys
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: secret name
+          example: "git-secret"
+        keys:
+          type: array
+          description: secret keys
+          items:
+            type: string
+          example: ["key1", "key2", "key3"]
 
     #
     # Errors
@@ -5535,6 +5971,14 @@ components:
       schema:
         type: string
         description: mask to filter files
+      required: false
+    SkipDeleteExecutions:
+      in: query
+      name: skipDeleteExecutions
+      schema:
+        type: boolean
+        default: false
+      description: dont delete executions
       required: false
   requestBodies:
     UploadsBody:
