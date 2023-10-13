@@ -15,8 +15,9 @@ import (
 
 	"google.golang.org/grpc"
 
-	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	"github.com/nats-io/nats.go/jetstream"
+
+	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"

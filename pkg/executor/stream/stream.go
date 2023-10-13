@@ -4,9 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/nats-io/nats.go/jetstream"
 	"go.uber.org/zap"
+
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
 const (

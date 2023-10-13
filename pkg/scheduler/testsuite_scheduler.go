@@ -20,7 +20,6 @@ import (
 )
 
 const (
-	abortionPollingInterval = 100 * time.Millisecond
 	// DefaultConcurrencyLevel is a default concurrency level for worker pool
 	DefaultConcurrencyLevel = 10
 )
