@@ -409,13 +409,9 @@ func GetPodErrorMessage(ctx context.Context, client kubernetes.Interface, pod *c
 		message = fmt.Sprintf("pod message: %s reason: %s", pod.Status.Message, pod.Status.Reason)
 	}
 
-	events, err := GetPodEventsSummary(ctx, client, pod)
-	if err != nil {
-		log.DefaultLogger.Errorf("Error while getting pod events %s: %s", pod.Name, err.Error())
-	}
-
 	for _, initContainerStatus := range pod.Status.InitContainerStatuses {
-		if initContainerStatus.State.Terminated != nil && initContainerStatus.State.Terminated.ExitCode != 0 &&
+		if initContainerStatus.State.Terminated != nil &&
+			(initContainerStatus.State.Terminated.ExitCode > 1 || initContainerStatus.State.Terminated.ExitCode < -1) &&
 			(initContainerStatus.State.Terminated.Message != "" || initContainerStatus.State.Terminated.Reason != "") {
 			if message != "" {
 				message += "\n"
@@ -423,17 +419,14 @@ func GetPodErrorMessage(ctx context.Context, client kubernetes.Interface, pod *c
 
 			message += fmt.Sprintf("init container message: %s reason: %s", initContainerStatus.State.Terminated.Message,
 				initContainerStatus.State.Terminated.Reason)
-			if events != "" {
-				message += "\n" + events
-			}
-
 			message += fmt.Sprintf("\nexit code: %d", initContainerStatus.State.Terminated.ExitCode)
 			return message
 		}
 	}
 
 	for _, containerStatus := range pod.Status.ContainerStatuses {
-		if containerStatus.State.Terminated != nil && containerStatus.State.Terminated.ExitCode != 0 &&
+		if containerStatus.State.Terminated != nil &&
+			(containerStatus.State.Terminated.ExitCode > 1 || containerStatus.State.Terminated.ExitCode < -1) &&
 			(containerStatus.State.Terminated.Message != "" || containerStatus.State.Terminated.Reason != "") {
 			if message != "" {
 				message += "\n"
@@ -441,10 +434,6 @@ func GetPodErrorMessage(ctx context.Context, client kubernetes.Interface, pod *c
 
 			message += fmt.Sprintf("test container message: %s reason: %s", containerStatus.State.Terminated.Message,
 				containerStatus.State.Terminated.Reason)
-			if events != "" {
-				message += "\n" + events
-			}
-
 			message += fmt.Sprintf("\nexit code: %d", containerStatus.State.Terminated.ExitCode)
 			return message
 		}
@@ -452,10 +441,6 @@ func GetPodErrorMessage(ctx context.Context, client kubernetes.Interface, pod *c
 
 	if message == "" {
 		message = fmt.Sprintf("execution pod %s failed", pod.Name)
-	}
-
-	if events != "" {
-		message += "\n" + events
 	}
 
 	return message
