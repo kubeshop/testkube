@@ -158,8 +158,8 @@ type Images struct {
 }
 
 // IsPodReady defines if pod is ready or failed for logs scrapping
-func IsPodReady(ctx context.Context, c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
-	return func() (bool, error) {
+func IsPodReady(c kubernetes.Interface, podName, namespace string) wait.ConditionWithContextFunc {
+	return func(ctx context.Context) (bool, error) {
 		pod, err := c.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
@@ -178,8 +178,8 @@ func IsPodReady(ctx context.Context, c kubernetes.Interface, podName, namespace 
 }
 
 // IsPodLoggable defines if pod is ready to get logs from it
-func IsPodLoggable(ctx context.Context, c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
-	return func() (bool, error) {
+func IsPodLoggable(c kubernetes.Interface, podName, namespace string) wait.ConditionWithContextFunc {
+	return func(ctx context.Context) (bool, error) {
 		pod, err := c.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
@@ -427,6 +427,7 @@ func GetPodErrorMessage(ctx context.Context, client kubernetes.Interface, pod *c
 				message += "\n" + events
 			}
 
+			message += fmt.Sprintf("\nexit code: %d", initContainerStatus.State.Terminated.ExitCode)
 			return message
 		}
 	}
@@ -444,6 +445,7 @@ func GetPodErrorMessage(ctx context.Context, client kubernetes.Interface, pod *c
 				message += "\n" + events
 			}
 
+			message += fmt.Sprintf("\nexit code: %d", containerStatus.State.Terminated.ExitCode)
 			return message
 		}
 	}

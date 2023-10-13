@@ -127,6 +127,7 @@ func NewTestkubeAPI(
 		graphqlPort:          graphqlPort,
 		artifactsStorage:     artifactsStorage,
 		TemplatesClient:      templatesClient,
+		dashboardURI:         dashboardURI,
 		helmchartVersion:     helmchartVersion,
 		mode:                 mode,
 		eventsBus:            eventsBus,
@@ -182,6 +183,7 @@ type TestkubeAPI struct {
 	graphqlPort          string
 	artifactsStorage     storage.ArtifactsStorage
 	TemplatesClient      *templatesclientv1.TemplatesClient
+	dashboardURI         string
 	helmchartVersion     string
 	mode                 string
 	eventsBus            bus.Bus
@@ -384,9 +386,6 @@ func (s *TestkubeAPI) InitRoutes() {
 
 	repositories := s.Routes.Group("/repositories")
 	repositories.Post("/", s.ValidateRepositoryHandler())
-
-	secrets := s.Routes.Group("/secrets")
-	secrets.Get("/", s.ListSecretsHandler())
 
 	// mount everything on results
 	// TODO it should be named /api/ + dashboard refactor

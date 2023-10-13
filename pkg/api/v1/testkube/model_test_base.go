@@ -30,10 +30,10 @@ type Test struct {
 	Labels map[string]string `json:"labels,omitempty"`
 	// schedule to run test
 	Schedule string `json:"schedule,omitempty"`
+	// if test is offline and cannot be executed
+	ReadOnly bool `json:"readOnly,omitempty"`
 	// list of file paths that will be needed from uploads
 	Uploads          []string          `json:"uploads,omitempty"`
 	ExecutionRequest *ExecutionRequest `json:"executionRequest,omitempty"`
 	Status           *TestStatus       `json:"status,omitempty"`
-	// true means that test is offline and cannot be executed
-	ReadOnly bool `json:"readOnly,omitempty"`
 }

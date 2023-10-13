@@ -20,52 +20,53 @@ const WatchInterval = 2 * time.Second
 
 func NewRunTestCmd() *cobra.Command {
 	var (
-		name                           string
-		image                          string
-		iterations                     int
-		watchEnabled                   bool
-		binaryArgs                     []string
-		variables                      map[string]string
-		secretVariables                map[string]string
-		variablesFile                  string
-		downloadArtifactsEnabled       bool
-		downloadDir                    string
-		envs                           map[string]string
-		secretEnvs                     map[string]string
-		selectors                      []string
-		concurrencyLevel               int
-		httpProxy, httpsProxy          string
-		executionLabels                map[string]string
-		secretVariableReferences       map[string]string
-		copyFiles                      []string
-		artifactStorageClassName       string
-		artifactVolumeMountPath        string
-		artifactDirs                   []string
-		jobTemplate                    string
-		jobTemplateReference           string
-		gitBranch                      string
-		gitCommit                      string
-		gitPath                        string
-		gitWorkingDir                  string
-		preRunScript                   string
-		postRunScript                  string
-		scraperTemplate                string
-		scraperTemplateReference       string
-		pvcTemplate                    string
-		pvcTemplateReference           string
-		negativeTest                   bool
-		mountConfigMaps                map[string]string
-		variableConfigMaps             []string
-		mountSecrets                   map[string]string
-		variableSecrets                []string
-		uploadTimeout                  string
-		format                         string
-		masks                          []string
-		runningContext                 string
-		command                        []string
-		argsMode                       string
-		artifactStorageBucket          string
-		artifactOmitFolderPerExecution bool
+		name                               string
+		image                              string
+		iterations                         int
+		watchEnabled                       bool
+		binaryArgs                         []string
+		variables                          map[string]string
+		secretVariables                    map[string]string
+		variablesFile                      string
+		downloadArtifactsEnabled           bool
+		downloadDir                        string
+		envs                               map[string]string
+		secretEnvs                         map[string]string
+		selectors                          []string
+		concurrencyLevel                   int
+		httpProxy, httpsProxy              string
+		executionLabels                    map[string]string
+		secretVariableReferences           map[string]string
+		copyFiles                          []string
+		artifactStorageClassName           string
+		artifactVolumeMountPath            string
+		artifactDirs                       []string
+		jobTemplate                        string
+		jobTemplateReference               string
+		gitBranch                          string
+		gitCommit                          string
+		gitPath                            string
+		gitWorkingDir                      string
+		preRunScript                       string
+		postRunScript                      string
+		executePostRunScriptBeforeScraping bool
+		scraperTemplate                    string
+		scraperTemplateReference           string
+		pvcTemplate                        string
+		pvcTemplateReference               string
+		negativeTest                       bool
+		mountConfigMaps                    map[string]string
+		variableConfigMaps                 []string
+		mountSecrets                       map[string]string
+		variableSecrets                    []string
+		uploadTimeout                      string
+		format                             string
+		masks                              []string
+		runningContext                     string
+		command                            []string
+		argsMode                           string
+		artifactStorageBucket              string
+		artifactOmitFolderPerExecution     bool
 	)
 
 	cmd := &cobra.Command{
@@ -112,6 +113,7 @@ func NewRunTestCmd() *cobra.Command {
 					Type_:   string(testkube.RunningContextTypeUserCLI),
 					Context: runningContext,
 				},
+				ExecutePostRunScriptBeforeScraping: executePostRunScriptBeforeScraping,
 			}
 
 			var fields = []struct {
@@ -256,7 +258,7 @@ func NewRunTestCmd() *cobra.Command {
 					ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 				}
 
-				render.RenderExecutionResult(&execution, false)
+				render.RenderExecutionResult(client, &execution, false)
 
 				if execution.Id != "" {
 					if downloadArtifactsEnabled {
@@ -307,6 +309,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&gitWorkingDir, "git-working-dir", "", "", "if repository contains multiple directories with tests (like monorepo) and one starting directory we can set working directory parameter")
 	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	cmd.Flags().StringVarP(&postRunScript, "postrun-script", "", "", "path to script to be run after test execution")
+	cmd.Flags().BoolVarP(&executePostRunScriptBeforeScraping, "execute-postrun-script-before-scraping", "", false, "whether to execute postrun scipt before scraping or not (prebuilt executor only)")
 	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
 	cmd.Flags().StringVar(&scraperTemplateReference, "scraper-template-reference", "", "reference to scraper template to use for the test")
 	cmd.Flags().StringVar(&pvcTemplate, "pvc-template", "", "pvc template file path for extensions to pvc template")

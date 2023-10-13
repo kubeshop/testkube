@@ -618,7 +618,8 @@ func newSlackLoader(cfg *config.Config, envs map[string]string) (*slack.SlackLoa
 		return nil, err
 	}
 
-	return slack.NewSlackLoader(slackTemplate, slackConfig, cfg.TestkubeClusterName, testkube.AllEventTypes, envs), nil
+	return slack.NewSlackLoader(slackTemplate, slackConfig, cfg.TestkubeClusterName, cfg.TestkubeDashboardURI,
+		testkube.AllEventTypes, envs), nil
 }
 
 // getMongoSSLConfig builds the necessary SSL connection info from the settings in the environment variables

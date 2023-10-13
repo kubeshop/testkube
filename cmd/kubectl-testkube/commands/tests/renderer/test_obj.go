@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/renderer"
+	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -14,7 +15,7 @@ type mountParams struct {
 	path string
 }
 
-func TestRenderer(ui *ui.UI, obj interface{}) error {
+func TestRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 	test, ok := obj.(testkube.Test)
 	if !ok {
 		return fmt.Errorf("can't use '%T' as testkube.Test in RenderObj for test", obj)
@@ -156,6 +157,7 @@ func TestRenderer(ui *ui.UI, obj interface{}) error {
 			ui.Warn("  Post run script:             ", "\n", test.ExecutionRequest.PostRunScript)
 		}
 
+		ui.Warn("  Execute postrun script before scraping: ", fmt.Sprint(test.ExecutionRequest.ExecutePostRunScriptBeforeScraping))
 		if test.ExecutionRequest.ScraperTemplate != "" {
 			ui.Warn("  Scraper template:            ", "\n", test.ExecutionRequest.ScraperTemplate)
 		}

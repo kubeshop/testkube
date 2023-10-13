@@ -557,6 +557,13 @@ func (c *Client) PlaceFiles(ctx context.Context, bucketFolders []string, prefix 
 			output.PrintEvent(fmt.Sprintf("%s Downloading file %s", ui.IconFile, f.Name))
 			c.Log.Infof("Getting file %s", f)
 			objectName := f.Name
+
+			isFileDownloadable := strings.TrimSpace(objectName) != "" && !strings.HasSuffix(objectName, "/")
+			if !isFileDownloadable {
+				output.PrintEvent(fmt.Sprintf("%s File %s cannot be downloaded", ui.IconCross, objectName))
+				continue
+			}
+
 			if folder != "" {
 				objectName = fmt.Sprintf("%s/%s", folder, objectName)
 			}

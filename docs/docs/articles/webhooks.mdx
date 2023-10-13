@@ -17,7 +17,9 @@ If you prefer to use the Dashboard, you can view existing webhooks by going to t
 Here you can also create a new webhook by clicking the `Create a new webhook` button.
 
 Then, fill in the webhook details:
+
 ![Dashboard webhook - create dialog 1](../img/dashboard-create-webhook-1.png)
+
 - Name - your webhook name (in this case `example-webhook`)
 - Resource identifier - the resource (or resources) selected by `label` for which the webhook can be triggered (in the example: `test-type:postman-collection` - any postman test)
 - Triggered events - events that will trigger the webhook (in this case `start-test`, `end-test-success`, and `end-test-failed`). All available trigger events can be found in the [Supported Event types](#supported-event-types) section.
@@ -123,7 +125,7 @@ Webhook payload can be configured - in this example, `event id`:
 
 <Tabs>
 <TabItem value="dash" label="Dashboard">
-Webhook payload can be configured in Webhook Settings->Action
+When you have selected an existing Webhook, its payload can be configured in Webhook Settings->Action.
 
 ![Dashboard webhook - webhook settings action`](../img/dashboard-webhook-settings-action.png)
 

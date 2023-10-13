@@ -12,6 +12,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/agent"
 	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -121,6 +122,14 @@ func (r *ArtilleryRunner) Run(ctx context.Context, execution testkube.Execution)
 
 	result = MapTestSummaryToResults(artilleryResult)
 	output.PrintLog(fmt.Sprintf("%s Mapped test summary to Execution Results...", ui.IconCheckMark))
+
+	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
+		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
+
+		if err = agent.RunScript(execution.PostRunScript); err != nil {
+			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
+		}
+	}
 
 	if r.Params.ScrapperEnabled {
 		directories := []string{

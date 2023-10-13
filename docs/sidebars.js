@@ -165,7 +165,8 @@ const sidebars = {
         "test-types/executor-tracetest",
         "test-types/executor-zap",
         "test-types/prebuilt-executor",
-        "test-types/container-executor",     
+        "test-types/container-executor", 
+        "test-types/executor-distributed-jmeter",
       ],
     },
     {
@@ -185,6 +186,8 @@ const sidebars = {
         "testkube-cloud/articles/architecture",
         "testkube-cloud/articles/running-parallel-tests-with-test-suite",
         "testkube-cloud/articles/AI-test-insights",
+        "testkube-cloud/articles/status-pages",
+        "testkube-cloud/articles/cached-results",
       ],
     },
     {

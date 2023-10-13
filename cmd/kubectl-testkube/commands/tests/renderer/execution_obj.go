@@ -5,11 +5,12 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/renderer"
+	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
+func ExecutionRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 	execution, ok := obj.(testkube.Execution)
 	if !ok {
 		return fmt.Errorf("can't render execution, expecrted obj to be testkube.Execution but got '%T'", obj)
@@ -56,7 +57,7 @@ func ExecutionRenderer(ui *ui.UI, obj interface{}) error {
 		ui.Warn("  Auth type:      ", execution.Content.Repository.AuthType)
 	}
 
-	render.RenderExecutionResult(&execution, false)
+	render.RenderExecutionResult(client, &execution, false)
 
 	ui.NL()
 

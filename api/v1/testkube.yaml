@@ -1634,6 +1634,7 @@ paths:
         - api
       parameters:
         - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/SkipDeleteExecutions"
       summary: "Delete test"
       description: "Deletes a test"
       operationId: deleteTest
@@ -3434,6 +3435,9 @@ components:
           $ref: "#/components/schemas/TestSuiteExecutionRequest"
         status:
           $ref: "#/components/schemas/TestSuiteStatus"
+        readOnly:
+          type: boolean
+          description: if test suite is offline and cannot be executed
 
     TestSuiteV2:
       type: object
@@ -3695,7 +3699,7 @@ components:
           description: object name and namespace
         execution:
           $ref: "#/components/schemas/Execution"
-          description: test step execution
+          description: "test step execution, NOTE: the execution output will be empty, retrieve it directly form the test execution"
 
     TestSuiteStepExecutionResultV2:
       description: execution result returned from executor
@@ -3892,6 +3896,10 @@ components:
           type: string
           description: schedule to run test
           example: "* * * * *"
+        readOnly:
+          type: boolean
+          description: if test is offline and cannot be executed
+
         uploads:
           type: array
           items:
@@ -4224,7 +4232,10 @@ components:
         postRunScript:
           type: string
           description: script to run after test execution
-          example: "sleep 30"          
+          example: "sleep 30"
+        executePostRunScriptBeforeScraping:
+          type: boolean
+          description: execute post run script before scraping (prebuilt executor only) 
         runningContext:
           $ref: "#/components/schemas/RunningContext"
           description: running context for the test execution
@@ -4473,6 +4484,10 @@ components:
           type: string
           description: helm chart version
           example: "1.4.14"
+        dashboardUri:
+          type: string
+          description: dashboard uri
+          example: "http://localhost:8080"          
 
     Repository:
       description: repository representation for tests in git repositories
@@ -4753,6 +4768,9 @@ components:
           type: string
           description: script to run after test execution
           example: "sleep 30"
+        executePostRunScriptBeforeScraping:
+          type: boolean
+          description: execute post run script before scraping (prebuilt executor only)
         scraperTemplate:
           type: string
           description: scraper template extensions
@@ -5953,6 +5971,14 @@ components:
       schema:
         type: string
         description: mask to filter files
+      required: false
+    SkipDeleteExecutions:
+      in: query
+      name: skipDeleteExecutions
+      schema:
+        type: boolean
+        default: false
+      description: dont delete executions
       required: false
   requestBodies:
     UploadsBody:

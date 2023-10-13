@@ -16,6 +16,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/agent"
 	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -235,6 +236,14 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	}
 
 	output.PrintLogf("%s Mapped JMeter results to Execution Results...", ui.IconCheckMark)
+
+	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
+		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
+
+		if err = agent.RunScript(execution.PostRunScript); err != nil {
+			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
+		}
+	}
 
 	// scrape artifacts first even if there are errors above
 	if r.Params.ScrapperEnabled {

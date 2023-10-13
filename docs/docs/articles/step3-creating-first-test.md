@@ -55,9 +55,10 @@ Trigger test execution manually on the Dashboard:
 
 #### CLI
 You can run tests manually from your machine using the CLI as well, or from your CI/CD. Visit [here](https://docs.testkube.io/articles/cicd-overview) for examples on how to setup our CI/CD system to trigger your tests.
-<img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/6b5098d7-9b57-485d-8c5e-5f915f49d515" />
+<img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/6b5098d7-9b57-485d-8c5e-5f915f49d515" />  
 
-**Changing the Output Format**
+##### Changing the Output Format
+
 For lists and details, you can use different output formats via the `--output` flag. The following formats are currently supported:
 
 - `RAW` - Raw output from the given executor (e.g., for Postman collection, it's terminal text with colors and tables).

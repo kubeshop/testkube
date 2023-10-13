@@ -14,6 +14,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/agent"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
@@ -130,9 +131,9 @@ func (r *GradleRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		if args[i] == "<projectDir>" {
 			args[i] = project
 		}
+		args[i] = os.ExpandEnv(args[i])
 	}
 
-	output.PrintEvent("Running task: "+task, directory, gradleCommand, args)
 	out, err := executor.Run(runPath, gradleCommand, envManager, args...)
 	out = envManager.ObfuscateSecrets(out)
 
@@ -156,6 +157,14 @@ func (r *GradleRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		} else {
 			// Gradle was unable to run at all
 			return result, nil
+		}
+	}
+
+	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
+		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
+
+		if err = agent.RunScript(execution.PostRunScript); err != nil {
+			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
 		}
 	}
 

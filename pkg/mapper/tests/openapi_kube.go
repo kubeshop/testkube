@@ -140,41 +140,42 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 	}
 
 	return &testsv3.ExecutionRequest{
-		Name:                     executionRequest.Name,
-		TestSuiteName:            executionRequest.TestSuiteName,
-		Number:                   executionRequest.Number,
-		ExecutionLabels:          executionRequest.ExecutionLabels,
-		Namespace:                executionRequest.Namespace,
-		IsVariablesFileUploaded:  executionRequest.IsVariablesFileUploaded,
-		VariablesFile:            executionRequest.VariablesFile,
-		Variables:                MapCRDVariables(executionRequest.Variables),
-		TestSecretUUID:           executionRequest.TestSecretUUID,
-		TestSuiteSecretUUID:      executionRequest.TestSuiteSecretUUID,
-		Args:                     executionRequest.Args,
-		ArgsMode:                 testsv3.ArgsModeType(executionRequest.ArgsMode),
-		Envs:                     executionRequest.Envs,
-		SecretEnvs:               executionRequest.SecretEnvs,
-		Sync:                     executionRequest.Sync,
-		HttpProxy:                executionRequest.HttpProxy,
-		HttpsProxy:               executionRequest.HttpsProxy,
-		Image:                    executionRequest.Image,
-		ImagePullSecrets:         mapImagePullSecrets(executionRequest.ImagePullSecrets),
-		ActiveDeadlineSeconds:    executionRequest.ActiveDeadlineSeconds,
-		Command:                  executionRequest.Command,
-		ArtifactRequest:          artifactRequest,
-		JobTemplate:              executionRequest.JobTemplate,
-		JobTemplateReference:     executionRequest.JobTemplateReference,
-		CronJobTemplate:          executionRequest.CronJobTemplate,
-		CronJobTemplateReference: executionRequest.CronJobTemplateReference,
-		PreRunScript:             executionRequest.PreRunScript,
-		PostRunScript:            executionRequest.PostRunScript,
-		PvcTemplate:              executionRequest.PvcTemplate,
-		PvcTemplateReference:     executionRequest.PvcTemplateReference,
-		ScraperTemplate:          executionRequest.ScraperTemplate,
-		ScraperTemplateReference: executionRequest.ScraperTemplateReference,
-		NegativeTest:             executionRequest.NegativeTest,
-		EnvConfigMaps:            mapEnvReferences(executionRequest.EnvConfigMaps),
-		EnvSecrets:               mapEnvReferences(executionRequest.EnvSecrets),
+		Name:                               executionRequest.Name,
+		TestSuiteName:                      executionRequest.TestSuiteName,
+		Number:                             executionRequest.Number,
+		ExecutionLabels:                    executionRequest.ExecutionLabels,
+		Namespace:                          executionRequest.Namespace,
+		IsVariablesFileUploaded:            executionRequest.IsVariablesFileUploaded,
+		VariablesFile:                      executionRequest.VariablesFile,
+		Variables:                          MapCRDVariables(executionRequest.Variables),
+		TestSecretUUID:                     executionRequest.TestSecretUUID,
+		TestSuiteSecretUUID:                executionRequest.TestSuiteSecretUUID,
+		Args:                               executionRequest.Args,
+		ArgsMode:                           testsv3.ArgsModeType(executionRequest.ArgsMode),
+		Envs:                               executionRequest.Envs,
+		SecretEnvs:                         executionRequest.SecretEnvs,
+		Sync:                               executionRequest.Sync,
+		HttpProxy:                          executionRequest.HttpProxy,
+		HttpsProxy:                         executionRequest.HttpsProxy,
+		Image:                              executionRequest.Image,
+		ImagePullSecrets:                   mapImagePullSecrets(executionRequest.ImagePullSecrets),
+		ActiveDeadlineSeconds:              executionRequest.ActiveDeadlineSeconds,
+		Command:                            executionRequest.Command,
+		ArtifactRequest:                    artifactRequest,
+		JobTemplate:                        executionRequest.JobTemplate,
+		JobTemplateReference:               executionRequest.JobTemplateReference,
+		CronJobTemplate:                    executionRequest.CronJobTemplate,
+		CronJobTemplateReference:           executionRequest.CronJobTemplateReference,
+		PreRunScript:                       executionRequest.PreRunScript,
+		PostRunScript:                      executionRequest.PostRunScript,
+		ExecutePostRunScriptBeforeScraping: executionRequest.ExecutePostRunScriptBeforeScraping,
+		PvcTemplate:                        executionRequest.PvcTemplate,
+		PvcTemplateReference:               executionRequest.PvcTemplateReference,
+		ScraperTemplate:                    executionRequest.ScraperTemplate,
+		ScraperTemplateReference:           executionRequest.ScraperTemplateReference,
+		NegativeTest:                       executionRequest.NegativeTest,
+		EnvConfigMaps:                      mapEnvReferences(executionRequest.EnvConfigMaps),
+		EnvSecrets:                         mapEnvReferences(executionRequest.EnvSecrets),
 	}
 }
 
@@ -591,6 +592,11 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 
 	if executionRequest.EnvSecrets != nil {
 		request.EnvSecrets = mapEnvReferences(*executionRequest.EnvSecrets)
+		emptyExecution = false
+	}
+
+	if executionRequest.ExecutePostRunScriptBeforeScraping != nil {
+		request.ExecutePostRunScriptBeforeScraping = *executionRequest.ExecutePostRunScriptBeforeScraping
 		emptyExecution = false
 	}
 

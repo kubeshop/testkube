@@ -17,46 +17,47 @@ import (
 
 // CreateCommonFlags are common flags for creating all test types
 type CreateCommonFlags struct {
-	ExecutorType                   string
-	Labels                         map[string]string
-	Variables                      map[string]string
-	SecretVariables                map[string]string
-	Schedule                       string
-	ExecutorArgs                   []string
-	ArgsMode                       string
-	ExecutionName                  string
-	VariablesFile                  string
-	Envs                           map[string]string
-	SecretEnvs                     map[string]string
-	HttpProxy, HttpsProxy          string
-	SecretVariableReferences       map[string]string
-	CopyFiles                      []string
-	Image                          string
-	Command                        []string
-	ImagePullSecretNames           []string
-	Timeout                        int64
-	ArtifactStorageClassName       string
-	ArtifactVolumeMountPath        string
-	ArtifactDirs                   []string
-	JobTemplate                    string
-	JobTemplateReference           string
-	CronJobTemplate                string
-	CronJobTemplateReference       string
-	PreRunScript                   string
-	PostRunScript                  string
-	ScraperTemplate                string
-	ScraperTemplateReference       string
-	PvcTemplate                    string
-	PvcTemplateReference           string
-	NegativeTest                   bool
-	MountConfigMaps                map[string]string
-	VariableConfigMaps             []string
-	MountSecrets                   map[string]string
-	VariableSecrets                []string
-	UploadTimeout                  string
-	ArtifactStorageBucket          string
-	ArtifactOmitFolderPerExecution bool
-	Description                    string
+	ExecutorType                       string
+	Labels                             map[string]string
+	Variables                          map[string]string
+	SecretVariables                    map[string]string
+	Schedule                           string
+	ExecutorArgs                       []string
+	ArgsMode                           string
+	ExecutionName                      string
+	VariablesFile                      string
+	Envs                               map[string]string
+	SecretEnvs                         map[string]string
+	HttpProxy, HttpsProxy              string
+	SecretVariableReferences           map[string]string
+	CopyFiles                          []string
+	Image                              string
+	Command                            []string
+	ImagePullSecretNames               []string
+	Timeout                            int64
+	ArtifactStorageClassName           string
+	ArtifactVolumeMountPath            string
+	ArtifactDirs                       []string
+	JobTemplate                        string
+	JobTemplateReference               string
+	CronJobTemplate                    string
+	CronJobTemplateReference           string
+	PreRunScript                       string
+	PostRunScript                      string
+	ExecutePostRunScriptBeforeScraping bool
+	ScraperTemplate                    string
+	ScraperTemplateReference           string
+	PvcTemplate                        string
+	PvcTemplateReference               string
+	NegativeTest                       bool
+	MountConfigMaps                    map[string]string
+	VariableConfigMaps                 []string
+	MountSecrets                       map[string]string
+	VariableSecrets                    []string
+	UploadTimeout                      string
+	ArtifactStorageBucket              string
+	ArtifactOmitFolderPerExecution     bool
+	Description                        string
 }
 
 // NewCreateTestsCmd is a command tp create new Test Custom Resource
@@ -240,6 +241,7 @@ func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
 	cmd.Flags().StringVar(&flags.CronJobTemplateReference, "cronjob-template-reference", "", "reference to cron job template to use for the test")
 	cmd.Flags().StringVarP(&flags.PreRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	cmd.Flags().StringVarP(&flags.PostRunScript, "postrun-script", "", "", "path to script to be run after test execution")
+	cmd.Flags().BoolVarP(&flags.ExecutePostRunScriptBeforeScraping, "execute-postrun-script-before-scraping", "", false, "whether to execute postrun scipt before scraping or not (prebuilt executor only)")
 	cmd.Flags().StringVar(&flags.ScraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
 	cmd.Flags().StringVar(&flags.ScraperTemplateReference, "scraper-template-reference", "", "reference to scraper template to use for the test")
 	cmd.Flags().StringVar(&flags.PvcTemplate, "pvc-template", "", "pvc template file path for extensions to pvc template")

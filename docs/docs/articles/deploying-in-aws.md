@@ -12,6 +12,12 @@ Another important point is [ExternalDNS](https://github.com/kubernetes-sigs/exte
 
 And last, but not least - install the Testkube CLI. You can download a binary file from our [installation](./step1-installing-cli) page. For how to deploy Testkube to your cluster with all the necessary changes, please see the next section.
 
+:::caution
+
+Please mind that is it necessary to install [EBS CSI driver](https://docs.aws.amazon.com/eks/latest/userguide/ebs-csi.html) to mount PV into your k8s cluster.
+
+:::
+
 ## Ingress and Service Resources Configuration
 
 To deploy and expose Testkube to the outside world, you will need to create two ingresses - Testkube's API and Testkube's Dashboard. In this tutorial, we will be updating `values.yaml` that later will be passed to the `helm install` command.

@@ -2,11 +2,13 @@ package render
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 
 	"gopkg.in/yaml.v2"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/kubeshop/testkube/pkg/utils"
@@ -21,7 +23,7 @@ const (
 	OutputPretty     OutputType = "pretty"
 )
 
-type CliObjRenderer func(ui *ui.UI, obj interface{}) error
+type CliObjRenderer func(client client.Client, ui *ui.UI, obj interface{}) error
 
 func RenderJSON(obj interface{}, w io.Writer) error {
 	return json.NewEncoder(w).Encode(obj)
@@ -63,7 +65,7 @@ func RenderPrettyList(obj ui.TableData, w io.Writer) error {
 	return nil
 }
 
-func RenderExecutionResult(execution *testkube.Execution, logsOnly bool) {
+func RenderExecutionResult(client client.Client, execution *testkube.Execution, logsOnly bool) {
 
 	result := execution.ExecutionResult
 	if result == nil {
@@ -84,6 +86,11 @@ func RenderExecutionResult(execution *testkube.Execution, logsOnly bool) {
 		if !logsOnly {
 			duration := execution.EndTime.Sub(execution.StartTime)
 			ui.Success("Test execution completed with success in " + duration.String())
+
+			info, err := client.GetServerInfo()
+			ui.ExitOnError("getting server info", err)
+
+			PrintExecutionURIs(execution, info.DashboardUri)
 		}
 
 	case result.IsAborted():
@@ -99,6 +106,11 @@ func RenderExecutionResult(execution *testkube.Execution, logsOnly bool) {
 			ui.UseStderr()
 			ui.Warn("Test execution failed:\n")
 			ui.Errf(result.ErrorMessage)
+
+			info, err := client.GetServerInfo()
+			ui.ExitOnError("getting server info", err)
+
+			PrintExecutionURIs(execution, info.DashboardUri)
 		}
 
 		ui.Info(result.Output)
@@ -117,4 +129,25 @@ func RenderExecutionResult(execution *testkube.Execution, logsOnly bool) {
 		os.Exit(1)
 	}
 
+}
+
+func PrintExecutionURIs(execution *testkube.Execution, dashboardURI string) {
+	ui.NL()
+	ui.Link("Test URI:", fmt.Sprintf("%s/tests/%s", dashboardURI, execution.TestName))
+	ui.Link("Test Execution URI:", fmt.Sprintf("%s/tests/%s/executions/%s", dashboardURI,
+		execution.TestName, execution.Id))
+	ui.NL()
+}
+
+func PrintTestSuiteExecutionURIs(execution *testkube.TestSuiteExecution, dashboardURI string) {
+	ui.NL()
+	testSuiteName := ""
+	if execution.TestSuite != nil {
+		testSuiteName = execution.TestSuite.Name
+	}
+
+	ui.Link("Test Suite URI:", fmt.Sprintf("%s/test-suites/%s", dashboardURI, testSuiteName))
+	ui.Link("Test Suite Execution URI:", fmt.Sprintf("%s/test-suites/%s/executions/%s", dashboardURI,
+		testSuiteName, execution.Id))
+	ui.NL()
 }
