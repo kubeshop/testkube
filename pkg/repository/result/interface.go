@@ -2,6 +2,7 @@ package result
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -77,6 +78,7 @@ type Sequences interface {
 	GetNextExecutionNumber(ctx context.Context, testName string) (number int32, err error)
 }
 
+//go:generate mockgen -destination=./mock_output_repository.go -package=result "github.com/kubeshop/testkube/pkg/repository/result" OutputRepository
 type OutputRepository interface {
 	// GetOutput gets execution output by id or name
 	GetOutput(ctx context.Context, id, testName, testSuiteName string) (output string, err error)
@@ -98,4 +100,8 @@ type OutputRepository interface {
 	DeleteAllOutput(ctx context.Context) error
 	// DeleteOutputForAllTestSuite deletes all execution output for test suite
 	DeleteOutputForAllTestSuite(ctx context.Context) error
+	// StreamOutput streams execution output by id or name
+	StreamOutput(ctx context.Context, executionID, testName, testSuiteName string) (reader io.Reader, err error)
+	// GetOutputSize gets execution output metadata by id or name
+	GetOutputSize(ctx context.Context, executionID, testName, testSuiteName string) (size int, err error)
 }
