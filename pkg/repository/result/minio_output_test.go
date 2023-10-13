@@ -1,6 +1,7 @@
 package result
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -16,7 +17,7 @@ func TestGetOutputSize(t *testing.T) {
 	outputClient := NewMinioOutputRepository(storageMock, nil, "test-bucket")
 	streamContent := "test line"
 	storageMock.EXPECT().DownloadFileFromBucket(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(strings.NewReader(streamContent), nil)
-	size, err := outputClient.GetOutputSize(nil, "test-id", "test-name", "test-suite-name")
+	size, err := outputClient.GetOutputSize(context.Background(), "test-id", "test-name", "test-suite-name")
 	assert.Nil(t, err)
 	assert.Equal(t, len(streamContent), size)
 
