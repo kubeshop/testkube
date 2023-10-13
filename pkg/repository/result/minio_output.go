@@ -188,5 +188,21 @@ func (m *MinioRepository) StreamOutput(ctx context.Context, executionID, testNam
 }
 
 func (m *MinioRepository) GetOutputSize(ctx context.Context, executionID, testName, testSuiteName string) (size int, err error) {
-	return 0, fmt.Errorf("not implemented")
+	//TODO: improve with minio client
+	stream, err := m.StreamOutput(ctx, executionID, testName, testSuiteName)
+	if err != nil {
+		return 0, err
+	}
+	buf := make([]byte, 1024)
+	for {
+		n, err := stream.Read(buf)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return 0, err
+		}
+		size += n
+	}
+	return size, nil
 }

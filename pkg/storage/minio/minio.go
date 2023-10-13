@@ -426,7 +426,7 @@ func (c *Client) DownloadArchive(ctx context.Context, bucketFolder string, masks
 }
 
 // DownloadFileFromBucket downloads file from given bucket
-func (c *Client) DownloadFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) (*minio.Object, error) {
+func (c *Client) DownloadFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) (io.Reader, error) {
 	c.Log.Debugw("Downloading file", "bucket", bucket, "bucketFolder", bucketFolder, "file", file)
 	return c.downloadFile(ctx, bucket, bucketFolder, file)
 }
