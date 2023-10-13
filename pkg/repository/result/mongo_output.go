@@ -2,6 +2,8 @@ package result
 
 import (
 	"context"
+	"io"
+	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -92,4 +94,16 @@ func (r *MongoOutputRepository) DeleteOutputForAllTestSuite(ctx context.Context)
 func (r *MongoOutputRepository) DeleteAllOutput(ctx context.Context) error {
 	_, err := r.Coll.DeleteMany(ctx, bson.M{})
 	return err
+}
+
+func (r *MongoOutputRepository) StreamOutput(ctx context.Context, executionID, testName, testSuiteName string) (reader io.Reader, err error) {
+	var eOutput ExecutionOutput
+	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": executionID}, bson.M{"name": executionID}}}).Decode(&eOutput)
+	return strings.NewReader(eOutput.Output), err
+}
+
+func (r *MongoOutputRepository) GetOutputSize(ctx context.Context, executionID, testName, testSuiteName string) (size int, err error) {
+	var eOutput ExecutionOutput
+	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": executionID}, bson.M{"name": executionID}}}).Decode(&eOutput)
+	return len(eOutput.Output), err
 }
