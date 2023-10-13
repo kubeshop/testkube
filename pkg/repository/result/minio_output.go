@@ -193,7 +193,8 @@ func (m *MinioRepository) GetOutputSize(ctx context.Context, executionID, testNa
 	if err != nil {
 		return 0, err
 	}
-	buf := make([]byte, 1024)
+	const bufferSize = 1024
+	buf := make([]byte, bufferSize)
 	for {
 		n, err := stream.Read(buf)
 		if err != nil {
