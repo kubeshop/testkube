@@ -14,7 +14,7 @@ global:
   labels: {}
   annotations: {}
 ```
-However, NATS chart that is part of Testkube belongs to a third party and as of now it requires passing image registry parameter differently. The snippet from the `values.yaml` file for NATS chart:
+However, NATS chart that is part of Testkube belongs to a third party and as of now it requires passing image registry and image pull secret parameters separately. The snippet from the `values.yaml` file for NATS chart:
 ```aidl
 nats:
     imagePullSecrets: 
