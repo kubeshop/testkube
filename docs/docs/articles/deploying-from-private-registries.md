@@ -2,9 +2,7 @@
 
 This guide shows how to deploy Testkube using images from private registries. 
 
-To start with, we need to update `values.yaml` file, populating `registry` and `pullSecret` parameter with a value of your private registry and a k8s secret respectively. (Please
-note that the [k8s secret](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/) should be created prior to Testkube installation.)
-
+To start with, we need to update `values.yaml` file, populating `registry` and `pullSecret` parameter with a value of your private registry and a k8s secret respectively. (Please note that the [k8s secret](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/) should be created prior to Testkube installation.) 
 The easiest solution would be to update `global` parameters, which will set a new value for **all** Testkube components and MongoDB images:
 
 ```aidl
