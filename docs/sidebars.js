@@ -98,6 +98,7 @@ const sidebars = {
             },
             "articles/exposing-testkube-with-ingress-nginx",
             "articles/deploying-in-aws",
+            "articles/deploying-from-private-registries"
           ],
         },
         {
