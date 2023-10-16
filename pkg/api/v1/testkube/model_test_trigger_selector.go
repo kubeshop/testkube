@@ -12,6 +12,8 @@ package testkube
 type TestTriggerSelector struct {
 	// kubernetes resource name selector
 	Name string `json:"name,omitempty"`
+	// kubernetes resource name regex
+	NameRegex string `json:"nameRegex,omitempty"`
 	// resource namespace
 	Namespace     string                                       `json:"namespace,omitempty"`
 	LabelSelector *IoK8sApimachineryPkgApisMetaV1LabelSelector `json:"labelSelector,omitempty"`
