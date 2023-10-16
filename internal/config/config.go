@@ -66,7 +66,7 @@ type Config struct {
 	TestkubeHelmchartVersion          string        `envconfig:"TESTKUBE_HELMCHART_VERSION" default:""`
 	DebugListenAddr                   string        `envconfig:"DEBUG_LISTEN_ADDR" default:"0.0.0.0:1337"`
 	EnableDebugServer                 bool          `envconfig:"ENABLE_DEBUG_SERVER" default:"false"`
-	EnableSecretsEndpoint             bool          `envconfig:"ENABLE_SECRETS_ENPOINT" default:"false"`
+	EnableSecretsEndpoint             bool          `envconfig:"ENABLE_SECRETS_ENDPOINT" default:"false"`
 }
 
 func Get() (*Config, error) {
