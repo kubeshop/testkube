@@ -116,7 +116,7 @@ func matchSelector(selector *testtriggersv1.TestTriggerSelector, namespace strin
 	if selector.NameRegex != "" {
 		re, err := regexp.Compile(selector.NameRegex)
 		if err != nil {
-			logger.Errorf("error compiling %v name regex: %v", event.NameRegex, err)
+			logger.Errorf("error compiling %v name regex: %v", selector.NameRegex, err)
 			return false
 		}
 
