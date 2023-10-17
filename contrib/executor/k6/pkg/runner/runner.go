@@ -165,6 +165,10 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 		}
 	}
 
+	for i := range args {
+		args[i] = os.ExpandEnv(args[i])
+	}
+
 	command, args := executor.MergeCommandAndArgs(execution.Command, args)
 	outputPkg.PrintEvent("Running", directory, command, args)
 	runPath := directory

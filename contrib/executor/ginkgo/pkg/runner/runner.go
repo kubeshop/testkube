@@ -296,6 +296,8 @@ func BuildGinkgoArgs(params map[string]string, path, runPath, reportFile string,
 		if args[i] == "<reportFile>" {
 			args[i] = reportFile
 		}
+
+		args[i] = os.ExpandEnv(args[i])
 	}
 
 	output.PrintLogf("%s Ginkgo arguments from params built: %s", ui.IconCheckMark, args)

@@ -159,6 +159,8 @@ func (r *MavenRunner) Run(ctx context.Context, execution testkube.Execution) (re
 		if args[i] == "<mavenHome>" {
 			args[i] = mavenHome
 		}
+
+		args[i] = os.ExpandEnv(args[i])
 	}
 
 	outputPkg.PrintEvent("Running goal: "+goal, mavenHome, mavenCommand, args)
