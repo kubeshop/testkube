@@ -342,6 +342,10 @@ ul:hover {
   margin-right: auto;
 } */
 
+.navbar-sidebar--show {
+  backdrop-filter: none !important;
+}
+
 @media screen and (max-width: 996px) {
   :root {
     --ifm-font-size-base: 18px;
