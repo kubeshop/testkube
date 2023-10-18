@@ -50,7 +50,12 @@ func (c TemplateClient) CreateTemplate(options CreateTemplateOptions) (template 
 
 // UpdateTemplate updates Template Custom Resource
 func (c TemplateClient) UpdateTemplate(options UpdateTemplateOptions) (template testkube.Template, err error) {
-	uri := c.templateTransport.GetURI("/templates/%s", options.Name)
+	name := ""
+	if options.Name != nil {
+		name = *options.Name
+	}
+
+	uri := c.templateTransport.GetURI("/templates/%s", name)
 	request := testkube.TemplateUpdateRequest(options)
 
 	body, err := json.Marshal(request)
