@@ -90,6 +90,10 @@ func (r *TracetestRunner) Run(ctx context.Context, execution testkube.Execution)
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		outputPkg.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
+		if workingDir == "" {
+			workingDir = agent.GetDefaultWorkingDir(r.Params.DataDir, execution)
+		}
+
 		if err = agent.RunScript(execution.PostRunScript, workingDir); err != nil {
 			outputPkg.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
 		}

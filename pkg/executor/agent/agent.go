@@ -57,19 +57,19 @@ func Run(ctx context.Context, r runner.Runner, args []string) {
 		os.Exit(1)
 	}
 
-	workingDir := ""
+	params, err := envs.LoadTestkubeVariables()
+	if err != nil {
+		output.PrintError(os.Stderr, errors.Wrap(err, "error loading env vars"))
+		os.Exit(1)
+	}
+
+	basePath, err := filepath.Abs(params.DataDir)
+	if err != nil {
+		basePath = params.DataDir
+	}
+
+	workingDir := GetDefaultWorkingDir(basePath, e)
 	if e.Content != nil && e.Content.Repository != nil && e.Content.Repository.WorkingDir != "" {
-		params, err := envs.LoadTestkubeVariables()
-		if err != nil {
-			output.PrintError(os.Stderr, errors.Wrap(err, "error loading env vars"))
-			os.Exit(1)
-		}
-
-		basePath, err := filepath.Abs(params.DataDir)
-		if err != nil {
-			basePath = params.DataDir
-		}
-
 		workingDir = filepath.Join(basePath, "repo", e.Content.Repository.WorkingDir)
 	}
 
@@ -127,4 +127,19 @@ func RunScript(body, workingDir string) error {
 	}
 
 	return nil
+}
+
+// GetDefaultWorkingDir gets default working directory
+func GetDefaultWorkingDir(dataDir string, e testkube.Execution) string {
+	workingDir := dataDir
+	if e.Content != nil {
+		isGitFileContentType := e.Content.Type_ == string(testkube.TestContentTypeGitFile)
+		isGitDirContentType := e.Content.Type_ == string(testkube.TestContentTypeGitDir)
+		isGitContentType := e.Content.Type_ == string(testkube.TestContentTypeGit)
+		if isGitFileContentType || isGitDirContentType || isGitContentType {
+			workingDir = filepath.Join(dataDir, "repo")
+		}
+	}
+
+	return workingDir
 }

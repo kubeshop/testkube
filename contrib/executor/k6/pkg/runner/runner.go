@@ -178,6 +178,10 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		outputPkg.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
+		if runPath == "" {
+			runPath = agent.GetDefaultWorkingDir(r.Params.DataDir, execution)
+		}
+
 		if err = agent.RunScript(execution.PostRunScript, runPath); err != nil {
 			outputPkg.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
 		}
