@@ -50,7 +50,7 @@ func (r *TracetestRunner) Run(ctx context.Context, execution testkube.Execution)
 	outputPkg.PrintLog(fmt.Sprintf("%s [TracetestRunner]: Preparing test run", ui.IconTruck))
 
 	// Get execution content file path
-	path, workingDir, err := content.GetPathAndWorkingDir(execution.Content, r.Params.DataDir)
+	path, _, err := content.GetPathAndWorkingDir(execution.Content, r.Params.DataDir)
 	if err != nil {
 		outputPkg.PrintLogf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.Params.DataDir)
 	}
@@ -90,11 +90,7 @@ func (r *TracetestRunner) Run(ctx context.Context, execution testkube.Execution)
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		outputPkg.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if workingDir == "" {
-			workingDir = agent.GetDefaultWorkingDir(r.Params.DataDir, execution)
-		}
-
-		if err = agent.RunScript(execution.PostRunScript, workingDir); err != nil {
+		if err = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); err != nil {
 			outputPkg.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
 		}
 	}
