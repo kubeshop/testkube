@@ -1,8 +1,8 @@
-# Emitting standard CDEvents
+# Emitting Standard CDEvents
 
 [CDEvents](https://cdevents.dev/) is a common specification for Continuous Delivery events. Testkube is a proud supporter of this specification and we have added in the specification support for [Testing Events](https://github.com/cdevents/spec/blob/main/testing-events.md) to be release on v0.3.0 of the spec.
 
-As of Testkube 1.12 release, Testkube can emit standard CDEvents to a webhook endpoint. This can be used to integrate with any CD tool that supports the CDEvents standard.
+As of the 1.12 release, Testkube can emit standard CDEvents to a webhook endpoint. This can be used to integrate with any CD tool that supports the CDEvents standard.
 
 ## Step 1 - Enable CDEvents
 
@@ -21,7 +21,7 @@ helm upgrade \
 
 For testing purposes you can use [webhook.site](https://webhook.site/) to get a webhook URL.
 
-## Step 2 - Test emmiting CDEvents
+## Step 2 - Test Emmiting CDEvents
 
 To test emitting CDEvents, create a sample test with Testkube and run it.
 
@@ -41,7 +41,7 @@ testkube create test --name test-cdevents --type curl/test -f curl-test.json
 testkube run test test-cdevents
 ```
 
-Check the webhook sink to see the CD Event emitted by Testkube. An event like the following should have been emmitted: 
+Check the webhook sink to see the CDEvent emitted by Testkube. An event like the following should have been emmitted: 
 
 ```json 
 {
@@ -76,6 +76,6 @@ Check the webhook sink to see the CD Event emitted by Testkube. An event like th
 
 For more information about CDEvents, please visit the [CDEvents](https://cdevents.dev/) website.
 
-To know more about the Testing Events specification, please visit the [Testing Events](https://github.com/cdevents/spec/blob/main/testing-events.md)
+To know more about the Testing Events specification, please visit the [Testing Events](https://github.com/cdevents/spec/blob/main/testing-events.md) page.
 
 
