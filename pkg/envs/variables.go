@@ -64,7 +64,7 @@ func printParams(params Params) {
 	printSensitiveParam("RUNNER_GITTOKEN", params.GitToken)
 	output.PrintLogf("RUNNER_DATADIR=\"%s\"", params.DataDir)
 	output.PrintLogf("RUNNER_COMPRESSARTIFACTS=\"%t\"", params.CompressArtifacts)
-	output.PrintLogf("RUNNER_WORKINGDIR=\"%t\"", params.WorkingDir)
+	output.PrintLogf("RUNNER_WORKINGDIR=\"%s\"", params.WorkingDir)
 	output.PrintLogf("RUNNER_CLUSTERID=\"%s\"", params.ClusterID)
 	output.PrintLogf("RUNNER_CDEVENTS_TARGET=\"%s\"", params.CDEventsTarget)
 	output.PrintLogf("RUNNER_DASHBOARD_URI=\"%s\"", params.DashboardURI)
