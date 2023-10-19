@@ -102,7 +102,7 @@ const config = {
 
       announcementBar: {
         id: "join-testkube-cloud",
-        content: '<strong>New to Testkube?</strong> Start leveraging Kubernetes to automate any type of test. <a id="docs_sign_cloud" href="https://cloud.testkube.io/?utm_source=docs" target="_blank">Get Started ></a>',
+        content: '<strong>New to Testkube?</strong> Start leveraging Kubernetes to automate any type of test. <a id="sign_cloud_docs" href="https://cloud.testkube.io/?utm_source=docs" target="_blank">Get Started ></a>',
         backgroundColor: "#8951ff",
         textColor: "#fff",
       },
