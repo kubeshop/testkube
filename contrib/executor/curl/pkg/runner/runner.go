@@ -135,6 +135,9 @@ func (r *CurlRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	}
 
 	args = append(args, execution.Args...)
+	for i := range args {
+		args[i] = os.ExpandEnv(args[i])
+	}
 
 	runPath := workingDir
 	outputPkg.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))

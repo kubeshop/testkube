@@ -124,6 +124,8 @@ func (r *NewmanRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		if args[i] == "<runPath>" {
 			args[i] = path
 		}
+
+		args[i] = os.ExpandEnv(args[i])
 	}
 
 	runPath := ""

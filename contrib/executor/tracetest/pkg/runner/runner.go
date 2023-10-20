@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/kubeshop/testkube/contrib/executor/tracetest/pkg/model"
@@ -151,6 +152,8 @@ func buildArgs(args []string, tracetestEndpoint string, inputPath string) ([]str
 		if args[i] == "<filePath>" {
 			args[i] = inputPath
 		}
+
+		args[i] = os.ExpandEnv(args[i])
 	}
 	return args, nil
 }

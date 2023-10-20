@@ -191,6 +191,8 @@ func buildArgs(args []string, inputPath string) ([]string, error) {
 		if args[i] == "<runPath>" {
 			args[i] = inputPath
 		}
+
+		args[i] = os.ExpandEnv(args[i])
 	}
 	return args, nil
 }

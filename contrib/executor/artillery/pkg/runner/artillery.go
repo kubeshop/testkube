@@ -100,6 +100,8 @@ func (r *ArtilleryRunner) Run(ctx context.Context, execution testkube.Execution)
 		if args[i] == "<runPath>" {
 			args[i] = path
 		}
+
+		args[i] = os.ExpandEnv(args[i])
 	}
 
 	runPath := testDir

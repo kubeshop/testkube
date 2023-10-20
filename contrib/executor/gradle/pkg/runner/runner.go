@@ -131,6 +131,7 @@ func (r *GradleRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		if args[i] == "<projectDir>" {
 			args[i] = project
 		}
+
 		args[i] = os.ExpandEnv(args[i])
 	}
 
