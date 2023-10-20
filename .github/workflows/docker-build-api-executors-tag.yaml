@@ -269,13 +269,19 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
+        with:
+          strip_v: true
+
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./contrib/executor/jmeterd/build/slaves/Dockerfile
           push: true
-          tags: kubeshop/testkube-jmeterd-slave:${{ github.event.release.tag_name }},kubeshop/testkube-jmeterd-slave:latest
+          tags: kubeshop/testkube-jmeterd-slave:${{steps.tag.outputs.tag}},kubeshop/testkube-jmeterd-slave:latest
           platforms: linux/amd64,linux/arm64
 
   executor_maven:
