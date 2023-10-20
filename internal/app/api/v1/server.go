@@ -87,6 +87,7 @@ func NewTestkubeAPI(
 	helmchartVersion string,
 	mode string,
 	eventsBus bus.Bus,
+	enableSecretsEndpoint bool,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -103,34 +104,35 @@ func NewTestkubeAPI(
 	}
 
 	s := TestkubeAPI{
-		HTTPServer:           server.NewServer(httpConfig),
-		TestExecutionResults: testsuiteExecutionsResults,
-		ExecutionResults:     testExecutionResults,
-		TestsClient:          testsClient,
-		ExecutorsClient:      executorsClient,
-		SecretClient:         secretClient,
-		Clientset:            clientset,
-		TestsSuitesClient:    testsuitesClient,
-		TestKubeClientset:    testkubeClientset,
-		Metrics:              metrics,
-		Events:               eventsEmitter,
-		WebhooksClient:       webhookClient,
-		TestSourcesClient:    testsourcesClient,
-		Namespace:            namespace,
-		ConfigMap:            configMap,
-		Executor:             executor,
-		ContainerExecutor:    containerExecutor,
-		jobTemplate:          jobTemplate,
-		scheduler:            scheduler,
-		slackLoader:          slackLoader,
-		Storage:              storage,
-		graphqlPort:          graphqlPort,
-		artifactsStorage:     artifactsStorage,
-		TemplatesClient:      templatesClient,
-		dashboardURI:         dashboardURI,
-		helmchartVersion:     helmchartVersion,
-		mode:                 mode,
-		eventsBus:            eventsBus,
+		HTTPServer:            server.NewServer(httpConfig),
+		TestExecutionResults:  testsuiteExecutionsResults,
+		ExecutionResults:      testExecutionResults,
+		TestsClient:           testsClient,
+		ExecutorsClient:       executorsClient,
+		SecretClient:          secretClient,
+		Clientset:             clientset,
+		TestsSuitesClient:     testsuitesClient,
+		TestKubeClientset:     testkubeClientset,
+		Metrics:               metrics,
+		Events:                eventsEmitter,
+		WebhooksClient:        webhookClient,
+		TestSourcesClient:     testsourcesClient,
+		Namespace:             namespace,
+		ConfigMap:             configMap,
+		Executor:              executor,
+		ContainerExecutor:     containerExecutor,
+		jobTemplate:           jobTemplate,
+		scheduler:             scheduler,
+		slackLoader:           slackLoader,
+		Storage:               storage,
+		graphqlPort:           graphqlPort,
+		artifactsStorage:      artifactsStorage,
+		TemplatesClient:       templatesClient,
+		dashboardURI:          dashboardURI,
+		helmchartVersion:      helmchartVersion,
+		mode:                  mode,
+		eventsBus:             eventsBus,
+		enableSecretsEndpoint: enableSecretsEndpoint,
 	}
 
 	// will be reused in websockets handler
@@ -157,36 +159,37 @@ func NewTestkubeAPI(
 
 type TestkubeAPI struct {
 	server.HTTPServer
-	ExecutionResults     result.Repository
-	TestExecutionResults testresult.Repository
-	Executor             client.Executor
-	ContainerExecutor    client.Executor
-	TestsSuitesClient    *testsuitesclientv3.TestSuitesClient
-	TestsClient          *testsclientv3.TestsClient
-	ExecutorsClient      *executorsclientv1.ExecutorsClient
-	SecretClient         *secret.Client
-	WebhooksClient       *executorsclientv1.WebhooksClient
-	TestKubeClientset    testkubeclientset.Interface
-	TestSourcesClient    *testsourcesclientv1.TestSourcesClient
-	Metrics              metrics.Metrics
-	Storage              storage.Client
-	storageParams        storageParams
-	Namespace            string
-	oauthParams          oauthParams
-	WebsocketLoader      *ws.WebsocketLoader
-	Events               *event.Emitter
-	ConfigMap            config.Repository
-	jobTemplate          string
-	scheduler            *scheduler.Scheduler
-	Clientset            kubernetes.Interface
-	slackLoader          *slack.SlackLoader
-	graphqlPort          string
-	artifactsStorage     storage.ArtifactsStorage
-	TemplatesClient      *templatesclientv1.TemplatesClient
-	dashboardURI         string
-	helmchartVersion     string
-	mode                 string
-	eventsBus            bus.Bus
+	ExecutionResults      result.Repository
+	TestExecutionResults  testresult.Repository
+	Executor              client.Executor
+	ContainerExecutor     client.Executor
+	TestsSuitesClient     *testsuitesclientv3.TestSuitesClient
+	TestsClient           *testsclientv3.TestsClient
+	ExecutorsClient       *executorsclientv1.ExecutorsClient
+	SecretClient          *secret.Client
+	WebhooksClient        *executorsclientv1.WebhooksClient
+	TestKubeClientset     testkubeclientset.Interface
+	TestSourcesClient     *testsourcesclientv1.TestSourcesClient
+	Metrics               metrics.Metrics
+	Storage               storage.Client
+	storageParams         storageParams
+	Namespace             string
+	oauthParams           oauthParams
+	WebsocketLoader       *ws.WebsocketLoader
+	Events                *event.Emitter
+	ConfigMap             config.Repository
+	jobTemplate           string
+	scheduler             *scheduler.Scheduler
+	Clientset             kubernetes.Interface
+	slackLoader           *slack.SlackLoader
+	graphqlPort           string
+	artifactsStorage      storage.ArtifactsStorage
+	TemplatesClient       *templatesclientv1.TemplatesClient
+	dashboardURI          string
+	helmchartVersion      string
+	mode                  string
+	eventsBus             bus.Bus
+	enableSecretsEndpoint bool
 }
 
 type storageParams struct {
@@ -383,6 +386,11 @@ func (s *TestkubeAPI) InitRoutes() {
 
 	files := s.Routes.Group("/uploads")
 	files.Post("/", s.UploadFiles())
+
+	if s.enableSecretsEndpoint {
+		files := s.Routes.Group("/secrets")
+		files.Get("/", s.ListSecretsHandler())
+	}
 
 	repositories := s.Routes.Group("/repositories")
 	repositories.Post("/", s.ValidateRepositoryHandler())
