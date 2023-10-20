@@ -415,6 +415,56 @@ func TestService_match(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestService_matchRegex(t *testing.T) {
+	t.Parallel()
+
+	e := &watcherEvent{
+		resource:  "deployment",
+		name:      "test-deployment",
+		namespace: "testkube",
+		labels:    nil,
+		object:    nil,
+		eventType: "modified",
+		causes:    nil,
+	}
+
+	srv1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	}))
+	defer srv1.Close()
+
+	testTrigger1 := &testtriggersv1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
+		Spec: testtriggersv1.TestTriggerSpec{
+			Resource:          "deployment",
+			ResourceSelector:  testtriggersv1.TestTriggerSelector{NameRegex: "test.*"},
+			Event:             "modified",
+			Action:            "run",
+			Execution:         "test",
+			ConcurrencyPolicy: "allow",
+			TestSelector:      testtriggersv1.TestTriggerSelector{NameRegex: "some.*"},
+		},
+	}
+	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
+	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
+	s := &Service{
+		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
+		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
+		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
+		defaultProbesCheckTimeout:     defaultProbesCheckTimeout,
+		triggerExecutor: func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
+			assert.Equal(t, "testkube", trigger.Namespace)
+			assert.Equal(t, "test-trigger-1", trigger.Name)
+			return nil
+		},
+		triggerStatus: map[statusKey]*triggerStatus{statusKey1: triggerStatus1},
+		logger:        log.DefaultLogger,
+		httpClient:    http.DefaultClient,
+	}
+
+	err := s.match(context.Background(), e)
+	assert.NoError(t, err)
+}
+
 func TestService_noMatch(t *testing.T) {
 	t.Parallel()
 

@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"context"
+	"regexp"
 	"time"
 
 	"github.com/pkg/errors"
@@ -118,6 +119,26 @@ func (s *Service) getTests(t *testtriggersv1.TestTrigger) ([]testsv3.Test, error
 		}
 		tests = append(tests, *test)
 	}
+
+	if t.Spec.TestSelector.NameRegex != "" {
+		s.logger.Debugf("trigger service: executor component: fetching testsv3.Test with name regex %s", t.Spec.TestSelector.NameRegex)
+		testList, err := s.testsClient.List("")
+		if err != nil {
+			return nil, err
+		}
+
+		re, err := regexp.Compile(t.Spec.TestSelector.NameRegex)
+		if err != nil {
+			return nil, err
+		}
+
+		for i := range testList.Items {
+			if re.MatchString(testList.Items[i].Name) {
+				tests = append(tests, testList.Items[i])
+			}
+		}
+	}
+
 	if t.Spec.TestSelector.LabelSelector != nil {
 		selector, err := metav1.LabelSelectorAsSelector(t.Spec.TestSelector.LabelSelector)
 		if err != nil {
@@ -144,6 +165,26 @@ func (s *Service) getTestSuites(t *testtriggersv1.TestTrigger) ([]testsuitesv3.T
 		}
 		testSuites = append(testSuites, *testSuite)
 	}
+
+	if t.Spec.TestSelector.NameRegex != "" {
+		s.logger.Debugf("trigger service: executor component: fetching testsuitesv3.TestSuite with name regex %s", t.Spec.TestSelector.NameRegex)
+		testSuitesList, err := s.testSuitesClient.List("")
+		if err != nil {
+			return nil, err
+		}
+
+		re, err := regexp.Compile(t.Spec.TestSelector.NameRegex)
+		if err != nil {
+			return nil, err
+		}
+
+		for i := range testSuitesList.Items {
+			if re.MatchString(testSuitesList.Items[i].Name) {
+				testSuites = append(testSuites, testSuitesList.Items[i])
+			}
+		}
+	}
+
 	if t.Spec.TestSelector.LabelSelector != nil {
 		selector, err := metav1.LabelSelectorAsSelector(t.Spec.TestSelector.LabelSelector)
 		if err != nil {
