@@ -191,6 +191,10 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 		}
 	}
 
+	for i := range args {
+		args[i] = os.ExpandEnv(args[i])
+	}
+
 	output.PrintLogf("%s Using arguments: %v", ui.IconWorld, args)
 
 	entryPoint := getEntryPoint()

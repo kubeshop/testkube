@@ -127,6 +127,8 @@ func setUpEnvironment(args []string, testFilePath string) {
 		if args[i] == "<runPath>" {
 			args[i] = testFilePath
 		}
+
+		args[i] = os.ExpandEnv(args[i])
 	}
 	os.Setenv("COMMAND_LINE", strings.Join(args, " "))
 }

@@ -97,6 +97,8 @@ func (r *PlaywrightRunner) Run(ctx context.Context, execution testkube.Execution
 		if args[i] == "<depCommand>" {
 			args[i] = depCommand
 		}
+
+		args[i] = os.ExpandEnv(args[i])
 	}
 
 	envManager := env.NewManagerWithVars(execution.Variables)

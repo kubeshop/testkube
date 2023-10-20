@@ -137,6 +137,8 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 		if args[i] == "<envVars>" {
 			args[i] = strings.Join(envVars, ",")
 		}
+
+		args[i] = os.ExpandEnv(args[i])
 	}
 
 	// run cypress inside repo directory ignore execution error in case of failed test
