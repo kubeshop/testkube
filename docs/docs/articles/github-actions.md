@@ -8,22 +8,16 @@ In the next few sections, we will go through the process of Testkube and Helm (f
 
 ## Testkube GitHub Action
 
-The testkube GitHub Action is available here <https://github.com/kubeshop/testkube-docker-action> and it enables running the Testkube CLI commands in a GitHub workflow.
+The testkube GitHub Action is available here <https://github.com/marketplace/actions/testkube-action> and it enables running the Testkube CLI commands in a GitHub workflow.
 
-The following example shows how to create a test using the GitHub action; a more complex example can be found [here](https://github.com/kubeshop/helm-charts/blob/59054b87f83f890f4f62cf966ac63fd7e46de336/.github/workflows/testkube-docker-action.yaml).
+The following example shows how to create a test using the GitHub action.
 
 ```yaml
-# Creating test
-- name: Create test
-  id: create_test
-  uses: kubeshop/testkube-docker-action@v1
-  with:
-    command: create
-    resource: test
-    namespace: testkube
-    parameters: "--type k6/script --name testkube-github-action"
-    stdin: "import http from 'k6/http';\nimport { sleep,check } from 'k6';\n\nexport default function () {\n  const baseURI = `${__ENV.TESTKUBE_HOMEPAGE_URI || 'https://testkube.kubeshop.io'}`\n  check(http.get(`${baseURI}/`), {\n    'check testkube homepage home page': (r) =>\n      r.body.includes('Your Friendly Cloud-Native Testing Framework for Kubernetes'),\n  });\n\n\n  sleep(1);\n}\n"
-```
+  - uses: kubeshop/setup-testkube@v1
+  - run: |
+      testkube create test --name some-test-name --file path_to_file.json
+      testkube run test some-test-name 
+ ```
 
 ## Configuring Your GH Actions for Access to GKE
 
@@ -35,26 +29,24 @@ To obtain set up access to a GKE (Google Kubernetes Engine) from GH (GitHub) act
 
 ## Main GH Action Section Configuration
 
-To install on Linux or MacOS, run:
+To deploy Testkube to your k8s cluster with `helm`, run the `Deploy` command below and once the step is completed, you may run a test:
 
 ```yaml
-# Deploy into configured GKE cluster:
 - name: Deploy
   run: |-
     helm upgrade --install --atomic --timeout 180s testkube helm-charts/testkube --namespace testkube --create-namespace
+
+- uses: kubeshop/setup-testkube@v1
+- run: |
+    testkube run test some-test-name -f
 ```
 
-In addition to Helm, you can run any other K8s-native command. In our case: `testkube...`
+## Complete Example of GH Actions Workflow, Testkube Deployment and Test Creation
 
-## Complete Example of Working GH Actions Workflow and Testkube Tests Usage
-
-Testkube tests can be easily re-used with minimal modifications according to your needs.
-
-To run tests on Linux or MacOS:
+This workflow is executed when there is a change to `charts/**` directories in `main` branch. It authenticates to GKE cluster, deploys Testkube helm-chart in `testkube` namespace, creates and runs a test. 
 
 ```yaml
 name: Running Testkube Tests.
-
 on:
   push:
     paths:
@@ -64,18 +56,17 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GKE_PROJECT }}
-  GKE_CLUSTER_NAME_DEV: ${{ secrets.GKE_CLUSTER_NAME_DEV }} # Add your cluster name here.
-  GKE_ZONE_DEV: ${{ secrets.GKE_ZONE_DEV }} # Add your cluster zone here.
-  DEPLOYMENT_NAME: testkube # Add your deployment name here.
+  GKE_CLUSTER_NAME: ${{ secrets.GKE_CLUSTER_NAME }} 
+  GKE_ZONE: ${{ secrets.GKE_ZONE }} 
+  DEPLOYMENT_NAME: testkube 
 
 jobs:
   deploy-to-testkube-dev-gke:
     name: Deploy
     runs-on: ubuntu-latest
-    needs: notify_slack_if_release_succeeds
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -98,38 +89,28 @@ jobs:
       # Get the GKE credentials so we can deploy to the cluster
       - uses: google-github-actions/get-gke-credentials@fb08709ba27618c31c09e014e1d8364b02e5042e
         with:
-          cluster_name: ${{ env.GKE_CLUSTER_NAME_DEV }}
-          location: ${{ env.GKE_ZONE_DEV }}
+          cluster_name: ${{ env.GKE_CLUSTER_NAME }}
+          location: ${{ env.GKE_ZONE }}
           credentials: ${{ secrets.GKE_SA_KEY }}
 
-      # Run Testkube test on a GKE cluster
-      - name: Run test
-        id: run_test
-        uses: kubeshop/testkube-docker-action@v1
+      - name: Install Helm
+        uses: azure/setup-helm@v3
         with:
-          command: run
-          resource: test
-          parameters: TEST_NAME
-```
+          version: v3.10.0
+          
+      - name: Installing repositories
+        run: |
+          helm repo add helm-charts https://kubeshop.github.io/helm-charts
+          helm repo add bitnami bitnami https://charts.bitnami.com/bitnami
 
-Along with the `kubectl` command, you can pass all the standard K8s parameters such as `--namespace`, etc.
-
-If you wish to automate the CI/CD part of Testkube's Helm release, use `Helm` blocks as follow:
-
-```yaml
-# ...
-- name: Install Helm
-  uses: azure/setup-helm@v1
-  with:
-    version: v3.4.0
-
-- name: Installing repositories
-  run: |
-    helm repo add kubeshop https://kubeshop.github.io/helm-charts
-    helm repo add bitnami https://charts.bitnami.com/bitnami
-
-# Run Helm delpoy/upgrade of the Testkube release on a GKE cluster
-- name: Deploy
-  run: |-
-    helm upgrade --install --atomic --timeout 180s testkube kubeshop/testkube --namespace testkube --create-namespace
+      # Deploy Testkube helm chart on a GKE cluster
+      - name: Deploy
+        run: |-
+          helm upgrade --install --atomic --timeout 180s ${{ env.DEPLOYMENT_NAME }} helm-charts/testkube --namespace testkube --create-namespace
+          
+    # Run a test
+      - uses: kubeshop/setup-testkube@v1
+      - run: |
+          testkube create test --name some-test-name --file path_to_file.json
+          testkube run test some-test-name
 ```
