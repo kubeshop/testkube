@@ -4,7 +4,7 @@
 The action provides you with Testkube CLI that enables building pipelines more efficiently. 
 
 ## Usage
-To use the action in your GitHub workflow, please place the ``kubeshop/setup-testkube@v1`` action into your file. The configuration options are described in the Inputs section and may vary depending on the Testkube solution you are using (cloud or self-hosted) and your needs.
+To use the action in your GitHub workflow, please place the ``kubeshop/setup-testkube@v1`` action into your file. The configuration options are described in the `Inputs` section and may vary depending on the Testkube solution you are using (cloud or self-hosted) and your needs.
 
 ### Testkube Cloud
 To use this GitHub Action for the [Testkube Cloud](https://cloud.testkube.io/), you need to [create an API token](https://docs.testkube.io/testkube-cloud/articles/organization-management/#api-tokens).
@@ -95,7 +95,8 @@ steps:
 ## Inputs
 Besides common inputs, there are some different for kubectl and Cloud connection.
 ### Common
-```sh 
+
+```sh
 | Required | Name            | Description
 +----------+-----------------+-----------------------------------------------------------
 |    ✗     | channel             | Distribution channel to install the latest application from - one of stable or beta (default: stable)
