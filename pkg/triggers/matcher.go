@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"sync"
 	"time"
 
@@ -108,6 +109,18 @@ func matchEventOrCause(targetEvent string, event *watcherEvent) bool {
 func matchSelector(selector *testtriggersv1.TestTriggerSelector, namespace string, event *watcherEvent, logger *zap.SugaredLogger) bool {
 	if selector.Name != "" {
 		isSameName := selector.Name == event.name
+		isSameNamespace := selector.Namespace == event.namespace
+		isSameTestTriggerNamespace := selector.Namespace == "" && namespace == event.namespace
+		return isSameName && (isSameNamespace || isSameTestTriggerNamespace)
+	}
+	if selector.NameRegex != "" {
+		re, err := regexp.Compile(selector.NameRegex)
+		if err != nil {
+			logger.Errorf("error compiling %v name regex: %v", selector.NameRegex, err)
+			return false
+		}
+
+		isSameName := re.MatchString(event.name)
 		isSameNamespace := selector.Namespace == event.namespace
 		isSameTestTriggerNamespace := selector.Namespace == "" && namespace == event.namespace
 		return isSameName && (isSameNamespace || isSameTestTriggerNamespace)

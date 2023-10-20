@@ -18,6 +18,9 @@ spec:
     {{- if .ResourceSelector.Name }}
     name: {{ .ResourceSelector.Name }}
     {{- end }}
+    {{- if .ResourceSelector.NameRegex }}
+    nameRegex: {{ .ResourceSelector.NameRegex }}
+    {{- end }}  
     {{- if .ResourceSelector.Namespace }}
     namespace: {{ .ResourceSelector.Namespace }}
     {{- end }}
@@ -110,6 +113,9 @@ spec:
   testSelector:
     {{- if .TestSelector.Name }}
     name: {{ .TestSelector.Name }}
+    {{- end }}
+    {{- if .TestSelector.NameRegex }}
+    nameRegex: {{ .TestSelector.NameRegex }}
     {{- end }}
     {{- if .TestSelector.Namespace }}
     namespace: {{ .TestSelector.Namespace }}
