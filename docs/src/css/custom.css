@@ -366,3 +366,10 @@ ul:hover {
     font-size: 2rem !important;
   }
 }
+
+@media screen and (max-width: 768px) {
+  .DocSearch-Button {
+    width: 36px;
+    min-width: 36px;
+  }
+}
