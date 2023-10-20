@@ -342,6 +342,10 @@ ul:hover {
   margin-right: auto;
 } */
 
+.navbar-sidebar--show {
+  backdrop-filter: none !important;
+}
+
 @media screen and (max-width: 996px) {
   :root {
     --ifm-font-size-base: 18px;
@@ -360,5 +364,12 @@ ul:hover {
   }
   header h1 {
     font-size: 2rem !important;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .DocSearch-Button {
+    width: 36px;
+    min-width: 36px;
   }
 }

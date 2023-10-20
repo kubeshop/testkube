@@ -435,6 +435,7 @@ func main() {
 		cfg.TestkubeHelmchartVersion,
 		mode,
 		eventBus,
+		cfg.EnableSecretsEndpoint,
 	)
 
 	if mode == common.ModeAgent {
