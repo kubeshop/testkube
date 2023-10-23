@@ -61,7 +61,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube.git
-      branch: maven-8-test-restored
+      branch: main
       path: contrib/executor/maven/examples/hello-maven-jdk8
   executionRequest:
     variables:
