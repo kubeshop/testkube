@@ -63,20 +63,10 @@ func Run(ctx context.Context, r runner.Runner, args []string) {
 		os.Exit(1)
 	}
 
-	basePath, err := filepath.Abs(params.DataDir)
-	if err != nil {
-		basePath = params.DataDir
-	}
-
-	workingDir := GetDefaultWorkingDir(basePath, e)
-	if e.Content != nil && e.Content.Repository != nil && e.Content.Repository.WorkingDir != "" {
-		workingDir = filepath.Join(basePath, "repo", e.Content.Repository.WorkingDir)
-	}
-
 	if r.GetType().IsMain() && e.PreRunScript != "" {
 		output.PrintEvent("running prerun script", e.Id)
 
-		if serr := RunScript(e.PreRunScript, workingDir); serr != nil {
+		if serr := RunScript(e.PreRunScript, params.WorkingDir); serr != nil {
 			output.PrintError(os.Stderr, serr)
 			os.Exit(1)
 		}
@@ -88,7 +78,7 @@ func Run(ctx context.Context, r runner.Runner, args []string) {
 	if r.GetType().IsMain() && e.PostRunScript != "" && !e.ExecutePostRunScriptBeforeScraping {
 		output.PrintEvent("running postrun script", e.Id)
 
-		if serr := RunScript(e.PostRunScript, workingDir); serr != nil {
+		if serr := RunScript(e.PostRunScript, params.WorkingDir); serr != nil {
 			output.PrintError(os.Stderr, serr)
 			os.Exit(1)
 		}
