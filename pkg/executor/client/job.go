@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
@@ -36,6 +37,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/agent"
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -160,6 +162,7 @@ type JobOptions struct {
 	Registry              string
 	ClusterID             string
 	ArtifactRequest       *testkube.ArtifactRequest
+	WorkingDir            string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -748,6 +751,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	}
 
 	envs = append(envs, envManager.PrepareEnvs(options.Envs, options.Variables)...)
+	envs = append(envs, corev1.EnvVar{Name: "RUNNER_WORKINGDIR", Value: options.WorkingDir})
 
 	for i := range job.Spec.Template.Spec.InitContainers {
 		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, envs...)
@@ -819,6 +823,12 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	jobOptions.Registry = registry
 	jobOptions.ClusterID = clusterID
 	jobOptions.ArtifactRequest = execution.ArtifactRequest
+	workingDir := agent.GetDefaultWorkingDir(executor.VolumeDir, execution)
+	if execution.Content != nil && execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
+		workingDir = filepath.Join(executor.VolumeDir, "repo", execution.Content.Repository.WorkingDir)
+	}
+
+	jobOptions.WorkingDir = workingDir
 
 	return
 }

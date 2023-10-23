@@ -57,7 +57,7 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 	}
 	output.PrintLogf("%s Preparing for test run", ui.IconTruck)
 
-	testFile, _, err := content.GetPathAndWorkingDir(execution.Content, r.Params.DataDir)
+	testFile, wrk, err := content.GetPathAndWorkingDir(execution.Content, r.Params.DataDir)
 	if err != nil {
 		output.PrintLogf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.Params.DataDir)
 	}
@@ -166,7 +166,11 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if err = agent.RunScript(execution.PostRunScript); err != nil {
+		if wrk == "" {
+			wrk = r.Params.WorkingDir
+		}
+
+		if err = agent.RunScript(execution.PostRunScript, wrk); err != nil {
 			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
 		}
 	}
