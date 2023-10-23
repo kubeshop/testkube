@@ -167,7 +167,7 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
 		if wrk == "" {
-			wrk = agent.GetDefaultWorkingDir(r.Params.DataDir, execution)
+			wrk = r.Params.WorkingDir
 		}
 
 		if err = agent.RunScript(execution.PostRunScript, wrk); err != nil {
