@@ -179,6 +179,7 @@ const sidebars = {
       label: "Testkube Cloud",
       items: [
         "testkube-cloud/articles/intro",
+        "testkube-cloud/articles/testkube-oss",
         "testkube-cloud/articles/installing-agent",
         "testkube-cloud/articles/transition-from-oss",
         "testkube-cloud/articles/organization-management",
