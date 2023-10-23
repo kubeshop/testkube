@@ -1,5 +1,5 @@
 # Run Tests with GitHub Actions
-**If you need more control over your flow or accessing private cluster, use Testkube Action instead.**
+**If you need more control over your flow or to access a private cluster, use Testkube Action instead.**
 
 **Run on Testkube** is a GitHub Action for running tests on the Testkube platform.
 
