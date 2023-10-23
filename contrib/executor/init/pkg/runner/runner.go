@@ -27,11 +27,9 @@ const (
 
 // NewRunner creates init runner
 func NewRunner(params envs.Params) *InitRunner {
-	dir := os.Getenv("RUNNER_DATADIR")
 	return &InitRunner{
-		Fetcher: content.NewFetcher(dir),
+		Fetcher: content.NewFetcher(params.DataDir),
 		Params:  params,
-		dir:     dir,
 	}
 }
 
@@ -39,7 +37,6 @@ func NewRunner(params envs.Params) *InitRunner {
 type InitRunner struct {
 	Fetcher content.ContentFetcher
 	Params  envs.Params
-	dir     string
 }
 
 var _ runner.Runner = &InitRunner{}
@@ -60,7 +57,7 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 
 	if execution.VariablesFile != "" {
 		output.PrintLogf("%s Creating variables file...", ui.IconWorld)
-		file := filepath.Join(r.dir, "params-file")
+		file := filepath.Join(r.Params.DataDir, "params-file")
 		if err = os.WriteFile(file, []byte(execution.VariablesFile), 0666); err != nil {
 			output.PrintLogf("%s Could not create variables file %s: %s", ui.IconCross, file, err.Error())
 			return result, errors.Errorf("could not create variables file %s: %v", file, err)
@@ -82,7 +79,7 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		command += "\n"
 
 		if execution.PreRunScript != "" {
-			command += filepath.Join(r.dir, preRunScriptName) + "\n"
+			command += filepath.Join(r.Params.WorkingDir, preRunScriptName) + "\n"
 		}
 
 		if len(execution.Command) != 0 {
@@ -91,17 +88,18 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		}
 
 		if execution.PostRunScript != "" {
-			command += filepath.Join(r.dir, postRunScriptName) + "\n"
+			command += filepath.Join(r.Params.WorkingDir, postRunScriptName) + "\n"
 		}
 
 		var scripts = []struct {
+			dir     string
 			file    string
 			data    string
 			comment string
 		}{
-			{preRunScriptName, execution.PreRunScript, "prerun"},
-			{containerexecutor.EntrypointScriptName, command, "entrypoint"},
-			{postRunScriptName, execution.PostRunScript, "postrun"},
+			{r.Params.WorkingDir, preRunScriptName, execution.PreRunScript, "prerun"},
+			{r.Params.DataDir, containerexecutor.EntrypointScriptName, command, "entrypoint"},
+			{r.Params.WorkingDir, postRunScriptName, execution.PostRunScript, "postrun"},
 		}
 
 		for _, script := range scripts {
@@ -109,7 +107,7 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 				continue
 			}
 
-			file := filepath.Join(r.dir, script.file)
+			file := filepath.Join(script.dir, script.file)
 			output.PrintLogf("%s Creating %s script...", ui.IconWorld, script.comment)
 			if err = os.WriteFile(file, []byte(script.data), 0755); err != nil {
 				output.PrintLogf("%s Could not create %s script %s: %s", ui.IconCross, script.comment, file, err.Error())
@@ -130,8 +128,8 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		output.PrintLogf("%s Copy files functionality is currently not supported in cloud mode", ui.IconWarning)
 	}
 
-	output.PrintLogf("%s Setting up access to files in %s", ui.IconFile, r.dir)
-	_, err = executor.Run(r.dir, "chmod", nil, []string{"-R", "777", "."}...)
+	output.PrintLogf("%s Setting up access to files in %s", ui.IconFile, r.Params.DataDir)
+	_, err = executor.Run(r.Params.DataDir, "chmod", nil, []string{"-R", "777", "."}...)
 	if err != nil {
 		output.PrintLogf("%s Could not chmod for data dir: %s", ui.IconCross, err.Error())
 	}
