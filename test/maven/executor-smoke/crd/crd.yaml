@@ -12,9 +12,9 @@ spec:
     type: git
     repository:
       type: git
-      uri: https://github.com/kubeshop/testkube-executor-maven.git
+      uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: examples/hello-maven-jdk18
+      path: contrib/executor/maven/examples/hello-maven-jdk18
   executionRequest:
     variables:
       TESTKUBE_MAVEN:
@@ -36,9 +36,9 @@ spec:
     type: git
     repository:
       type: git
-      uri: https://github.com/kubeshop/testkube-executor-maven.git
+      uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: examples/hello-maven
+      path: contrib/executor/maven/examples/hello-maven
   executionRequest:
     variables:
       TESTKUBE_MAVEN:
@@ -60,9 +60,9 @@ spec:
     type: git
     repository:
       type: git
-      uri: https://github.com/kubeshop/testkube-executor-maven.git
+      uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: examples/hello-maven-jdk18
+      path: contrib/executor/maven/examples/hello-maven-jdk18
   executionRequest:
     negativeTest: true
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 256Mi\n              cpu: 256m\n"
