@@ -51,6 +51,30 @@ spec:
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
+  name: maven-executor-smoke-jdk8
+  labels:
+    core-tests: executors
+spec:
+  type: maven:jdk8/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: maven-8-test-restored
+      path: contrib/executor/maven/examples/hello-maven-jdk8
+  executionRequest:
+    variables:
+      TESTKUBE_MAVEN:
+        name: TESTKUBE_MAVEN
+        value: "true"
+        type: basic
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 256Mi\n              cpu: 256m\n"
+    activeDeadlineSeconds: 180
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
   name: maven-executor-smoke-jdk18-negative # expected failure - ENVs not set
   labels:
     core-tests: executors-negative
