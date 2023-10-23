@@ -183,7 +183,7 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 		outputPkg.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
 		if runPath == "" {
-			runPath = agent.GetDefaultWorkingDir(r.Params.DataDir, execution)
+			runPath = r.Params.WorkingDir
 		}
 
 		if err = agent.RunScript(execution.PostRunScript, runPath); err != nil {

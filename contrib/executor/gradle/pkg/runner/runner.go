@@ -165,7 +165,7 @@ func (r *GradleRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
 		if runPath == "" {
-			runPath = agent.GetDefaultWorkingDir(r.params.DataDir, execution)
+			runPath = r.params.WorkingDir
 		}
 
 		if err = agent.RunScript(execution.PostRunScript, runPath); err != nil {
