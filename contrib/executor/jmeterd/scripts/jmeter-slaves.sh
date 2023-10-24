@@ -5,18 +5,6 @@ echo "*              Installing JMeter Plugins               *"
 echo "********************************************************"
 echo
 
-if [ -d $JMETER_CUSTOM_PLUGINS_FOLDER ]
-then
-  echo "Installing custom plugins from ${JMETER_CUSTOM_PLUGINS_FOLDER}"
-  for plugin in ${JMETER_CUSTOM_PLUGINS_FOLDER}/*.jar; do
-      echo "Copying plugin $plugin to ${JMETER_HOME}/lib/ext/${plugin}"
-      cp $plugin ${JMETER_HOME}/lib/ext
-  done;
-else
-  echo "No custom plugins found in ${JMETER_CUSTOM_PLUGINS_FOLDER}"
-fi
-echo
-
 if [ -d ${JMETER_PARENT_TEST_FOLDER}/plugins ]
 then
   echo "Installing user plugins from ${JMETER_PARENT_TEST_FOLDER}/plugins"
@@ -27,8 +15,6 @@ then
 else
   echo "No user plugins provided as directory ${JMETER_PARENT_TEST_FOLDER}/plugins is not present"
 fi
-echo
-
 echo
 
 echo "********************************************************"
@@ -42,7 +28,7 @@ freeMem=`awk '/MemAvailable/ { print int($2/1024) }' /proc/meminfo`
 [[ -z ${JVM_XMS} ]] && JVM_XMS=$(($freeMem/10*8))
 [[ -z ${JVM_XMX} ]] && JVM_XMX=$(($freeMem/10*8))
 
-echo "Setting default JVM_ARGS=-Xmn${JVM_XMN}m -Xms${JVM_XMS}m -Xmx${JVM_XMX}m"
+echo "Setting dynamically heap size based on available resources JVM_ARGS=-Xmn${JVM_XMN}m -Xms${JVM_XMS}m -Xmx${JVM_XMX}m"
 export JVM_ARGS="-Xmn${JVM_XMN}m -Xms${JVM_XMS}m -Xmx${JVM_XMX}m"
 
 if [ -n "$OVERRIDE_JVM_ARGS" ]; then
