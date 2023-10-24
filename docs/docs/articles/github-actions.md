@@ -4,7 +4,7 @@ The Testkube GitHub Action installs Testkube and enables running any [Testkube C
 The action provides a flexible way to work with your pipeline and can be used with Testkube Cloud, Testkube Enterprise, and an open source Testkube platforms.
 
 ### Testkube Cloud CLI Setup
-The following example shows how to create and run a test using the GitHub action on the [Teskube Cloud](https://cloud.testkube.io/) instance. Please note that there are no additional steps needed to connect to the k8s cluster as all the necessary data are provided as inputs. We recommend to use [Github's secrets](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions) for this to enhance the security.
+The following example shows how to create and run a test using the GitHub action on the [Testkube Cloud](https://cloud.testkube.io/) instance. Please note that there are no additional steps needed to connect to the k8s cluster as all the necessary data are provided as inputs. We recommend to use [Github's secrets](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions) for this to enhance the security.
 
 ```yaml
 steps:
