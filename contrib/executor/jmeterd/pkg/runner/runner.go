@@ -112,7 +112,7 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 			//Skip JVM ARGS to be appended in the command
 			continue
 		}
-		params = append(params, fmt.Sprintf("-J%s=%s", value.Name, value.Value))
+		params = append(params, fmt.Sprintf("-G%s=%s", value.Name, value.Value))
 
 	}
 
