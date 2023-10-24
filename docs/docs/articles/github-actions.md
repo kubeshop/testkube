@@ -3,7 +3,7 @@
 The Testkube GitHub Action installs Testkube and enables running any [Testkube CLI](https://docs.testkube.io/cli/testkube) command in a GitHub workflow. It is available on Github Marketplace <https://github.com/marketplace/actions/testkube-action>.
 The action provides a flexible way to work with your pipeline and can be used with Testkube Cloud or self-hosted platform (self-hosted platform means a k8s cluster that uses an open source Testkube solution (OSS), not Cloud).
 
-The following example shows how to create and run a test using the GitHub action on the [Teskube cloud](https://cloud.testkube.io/) instance. Please note that there are no additional steps needed to connect to the k8s cluster as all the necessary data are provided as inputs:
+The following example shows how to create and run a test using the GitHub action on the [Teskube Cloud](https://cloud.testkube.io/) instance. Please note that there are no additional steps needed to connect to the k8s cluster as all the necessary data are provided as inputs:
 
 ```yaml
 steps:
