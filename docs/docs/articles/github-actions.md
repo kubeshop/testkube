@@ -1,9 +1,10 @@
 ## Testkube GitHub Action
 
 The Testkube GitHub Action installs Testkube and enables running any [Testkube CLI](https://docs.testkube.io/cli/testkube) command in a GitHub workflow. It is available on Github Marketplace <https://github.com/marketplace/actions/testkube-action>.
-The action provides a flexible way to work with your pipeline and can be used with Testkube Cloud or self-hosted platform (self-hosted platform means a k8s cluster that uses an open source Testkube solution (OSS), not Cloud).
+The action provides a flexible way to work with your pipeline and can be used with Testkube Cloud, Testkube Enterprise, and an open source Testkube platforms.
 
-The following example shows how to create and run a test using the GitHub action on the [Teskube Cloud](https://cloud.testkube.io/) instance. Please note that there are no additional steps needed to connect to the k8s cluster as all the necessary data are provided as inputs:
+### Testkube Cloud CLI Setup
+The following example shows how to create and run a test using the GitHub action on the [Teskube Cloud](https://cloud.testkube.io/) instance. Please note that there are no additional steps needed to connect to the k8s cluster as all the necessary data are provided as inputs. We recommend to use [Github's secrets](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions) for this to enhance the security.
 
 ```yaml
 steps:
@@ -19,8 +20,8 @@ steps:
       testkube create test --name some-test-name --file path_to_file.json
       testkube run test some-test-name -f
 ```
-
-Create and run tests on self-hosted platform. Please mind that it requires establishing connection with the k8s cluster:
+### Testkube Open Source CLI Setup
+Create and run tests on the open source Testkube for AWS provider. Please mind that it requires additional steps to establish connection with the k8s cluster:
 ```yaml
 steps:
   - uses: aws-actions/configure-aws-credentials@v4
@@ -39,10 +40,15 @@ steps:
       testkube create test --name some-test-name --file path_to_file.json
       testkube run test some-test-name -f 
  ```
+For a different provider (GKE, Azure) the connection steps will differ so please consult with official documentation of every platform in advance. 
+
 :::note
+
 Please note that it is required to have Testkube Helm charts deployed into your k8s cluster prior to creating and executing tests. We advise to do this in a separate workflow.
+
 :::
 
+### Testkube Cloud Helm Chart Installation
 Example of deploying Testkube Helm charts that will be connected to the Cloud instance:
 
 ```yaml
@@ -58,7 +64,7 @@ steps:
       helm upgrade --install --reuse-values --create-namespace testkube kubeshop/testkube --set testkube-api.cloud.key=${{ secrets.CLOUD_KEY }}  --set testkube-api.cloud.orgId=${{ secrets.CLOUD_ORG }} --set testkube-api.cloud.envId=${{ secrets.ENV_ID }} --set testkube-api.minio.enabled=false --set mongodb.enabled=false --set testkube-dashboard.enabled=false --set testkube-api.cloud.url=agent.testkube.io:443 --namespace testkube
 
 ```
-
+### Testkube Open Source Helm Chart Installation
 Example of deploying Testkube Helm charts using the OSS solution:
 
 ```yaml
