@@ -48,12 +48,12 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: _aws-access-key_
-          aws-secret-access-key: _aws-secret-access-key_
-          aws-region: _aws-region_
+          aws-access-key-id: aws-access-key
+          aws-secret-access-key: aws-secret-access-key
+          aws-region: aws-region
 
       - run: |
-          aws eks update-kubeconfig --name _eks-cluster-name_ --region _aws-region_
+          aws eks update-kubeconfig --name eks-cluster-name --region aws-region
 
       - uses: kubeshop/setup-testkube@v1
       - run: |
