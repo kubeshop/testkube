@@ -5,7 +5,7 @@ The action provides a flexible way to work with your pipeline and can be used wi
 
 ### How to run a test on TK Cloud on every PR with this GH Action
 
-The following example shows how to create and run a test using the GitHub action on the [Teskube Cloud](https://cloud.testkube.io/) instance on every opened Pull Request. Please note that there are no additional steps needed to connect to the k8s cluster as all the necessary data are provided as inputs. Do not forget to replace `organization`, `environment` and `token` with your own values.  
+The following example shows how to create and run a test using the GitHub action on the [Teskube Cloud](https://cloud.testkube.io/) instance on every opened Pull Request. Please note that there are no additional steps needed to connect to the k8s cluster as all the necessary data are provided as inputs. Do not forget to replace `organization`, `environment` and `token` with your own values.
 
 ```yaml
 name: Run tests on Pull Request
