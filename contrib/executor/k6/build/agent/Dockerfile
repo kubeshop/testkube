@@ -6,7 +6,7 @@
 # syntax=docker/dockerfile:1
 FROM kubeshop/testkube-k6-executor:base as builder
 
-FROM loadimpact/k6:0.36.0
+FROM grafana/k6:0.47.0
 COPY k6 /bin/runner
 WORKDIR /home/k6
 COPY --from=builder /go/k6 /usr/bin/k6
