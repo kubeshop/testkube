@@ -72,7 +72,11 @@ func Run(ctx context.Context, r runner.Runner, args []string) {
 		}
 	}
 
-	output.PrintEvent("running test", e.Id)
+	// get event only when it's test run in main container
+	if r.GetType().IsMain() {
+		output.PrintEvent("running test", e.Id)
+	}
+
 	result, err := r.Run(ctx, e)
 
 	if r.GetType().IsMain() && e.PostRunScript != "" && !e.ExecutePostRunScriptBeforeScraping {
@@ -87,6 +91,10 @@ func Run(ctx context.Context, r runner.Runner, args []string) {
 	if err != nil {
 		output.PrintError(os.Stderr, err)
 		os.Exit(1)
+	}
+
+	if r.GetType().IsMain() {
+		output.PrintEvent("test execution finished", e.Id)
 	}
 
 	output.PrintResult(result)

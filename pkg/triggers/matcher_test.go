@@ -461,7 +461,7 @@ func TestService_matchRegex(t *testing.T) {
 		httpClient:    http.DefaultClient,
 	}
 
-	err := s.match(context.Background(), e)
+	err = s.match(context.Background(), e)
 	assert.NoError(t, err)
 }
 
