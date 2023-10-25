@@ -3,7 +3,7 @@ FROM postman/newman
 COPY postman /bin/runner
 RUN apk --no-cache add ca-certificates git
 
-# support npm reports
+# support npm report permissions
 RUN mkdir -p /.npm
 RUN chmod 777 /.npm
 RUN chmod 777 /root/
