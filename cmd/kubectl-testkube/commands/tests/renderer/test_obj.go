@@ -110,6 +110,10 @@ func TestRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 			ui.Warn("  Args mode:              ", test.ExecutionRequest.ArgsMode)
 		}
 
+		if test.ExecutionRequest.ArgsMode != "" {
+			ui.Warn("  Args mode:              ", test.ExecutionRequest.ArgsMode)
+		}
+
 		if len(test.ExecutionRequest.Envs) > 0 {
 			ui.NL()
 			ui.Warn("(deprecated) Envs:        ", testkube.MapToString(test.ExecutionRequest.Envs))
@@ -156,10 +160,6 @@ func TestRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 
 		if test.ExecutionRequest.CronJobTemplateReference != "" {
 			ui.Warn("  Cron job template reference: ", test.ExecutionRequest.CronJobTemplateReference)
-		}
-
-		if test.ExecutionRequest.CronJobTemplate != "" {
-			ui.Warn("  Cron job template:      ", "\n", test.ExecutionRequest.CronJobTemplate)
 		}
 
 		if test.ExecutionRequest.PreRunScript != "" {

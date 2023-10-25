@@ -50,7 +50,12 @@ func (c WebhookClient) CreateWebhook(options CreateWebhookOptions) (webhook test
 
 // UpdateWebhook updates Webhook Custom Resource
 func (c WebhookClient) UpdateWebhook(options UpdateWebhookOptions) (webhook testkube.Webhook, err error) {
-	uri := c.webhookTransport.GetURI("/webhooks/%s", options.Name)
+	name := ""
+	if options.Name != nil {
+		name = *options.Name
+	}
+
+	uri := c.webhookTransport.GetURI("/webhooks/%s", name)
 	request := testkube.WebhookUpdateRequest(options)
 
 	body, err := json.Marshal(request)

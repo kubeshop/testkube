@@ -100,6 +100,8 @@ func (r *ArtilleryRunner) Run(ctx context.Context, execution testkube.Execution)
 		if args[i] == "<runPath>" {
 			args[i] = path
 		}
+
+		args[i] = os.ExpandEnv(args[i])
 	}
 
 	runPath := testDir
@@ -126,7 +128,7 @@ func (r *ArtilleryRunner) Run(ctx context.Context, execution testkube.Execution)
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if err = agent.RunScript(execution.PostRunScript); err != nil {
+		if err = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); err != nil {
 			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
 		}
 	}

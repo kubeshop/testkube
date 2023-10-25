@@ -137,6 +137,8 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 		if args[i] == "<envVars>" {
 			args[i] = strings.Join(envVars, ",")
 		}
+
+		args[i] = os.ExpandEnv(args[i])
 	}
 
 	// run cypress inside repo directory ignore execution error in case of failed test
@@ -162,7 +164,7 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if err = agent.RunScript(execution.PostRunScript); err != nil {
+		if err = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); err != nil {
 			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
 		}
 	}

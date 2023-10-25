@@ -94,7 +94,7 @@ func (r *KubepugRunner) Run(ctx context.Context, execution testkube.Execution) (
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if err = agent.RunScript(execution.PostRunScript); err != nil {
+		if err = agent.RunScript(execution.PostRunScript, r.params.WorkingDir); err != nil {
 			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
 		}
 	}
@@ -191,6 +191,8 @@ func buildArgs(args []string, inputPath string) ([]string, error) {
 		if args[i] == "<runPath>" {
 			args[i] = inputPath
 		}
+
+		args[i] = os.ExpandEnv(args[i])
 	}
 	return args, nil
 }

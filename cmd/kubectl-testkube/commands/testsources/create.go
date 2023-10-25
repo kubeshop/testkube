@@ -2,6 +2,7 @@ package testsources
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 
 	"github.com/spf13/cobra"
@@ -58,8 +59,12 @@ func NewCreateTestSourceCmd() *cobra.Command {
 							ui.Failf("TestSource with name '%s' already exists in namespace %s, ", testsource.Name, namespace)
 						}
 					} else {
-						ok := ui.Confirm(fmt.Sprintf("TestSource with name '%s' already exists in namespace %s, ", testsource.Name, namespace) +
-							"do you want to overwrite it?")
+						var ok bool
+						if stat, _ := os.Stdin.Stat(); (stat.Mode() & os.ModeCharDevice) != 0 {
+							ok = ui.Confirm(fmt.Sprintf("TestSource with name '%s' already exists in namespace %s, ", testsource.Name, namespace) +
+								"do you want to overwrite it?")
+						}
+
 						if !ok {
 							ui.Failf("TestSource creation was aborted")
 						}

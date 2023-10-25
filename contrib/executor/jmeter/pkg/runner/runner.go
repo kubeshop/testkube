@@ -115,7 +115,7 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	}
 	// recreate output directory with wide permissions so JMeter can create report files
 	if err = os.Mkdir(outputDir, 0777); err != nil {
-		return *result.Err(errors.Errorf("could not create directory %s: %v", runPath, err)), nil
+		return *result.Err(errors.Errorf("could not create directory %s: %v", outputDir, err)), nil
 	}
 
 	jtlPath := filepath.Join(outputDir, "report.jtl")
@@ -149,6 +149,10 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 			args = newArgs
 			break
 		}
+	}
+
+	for i := range args {
+		args[i] = os.ExpandEnv(args[i])
 	}
 
 	output.PrintLogf("%s Using arguments: %v", ui.IconWorld, args)
@@ -200,7 +204,7 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if err = agent.RunScript(execution.PostRunScript); err != nil {
+		if err = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); err != nil {
 			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
 		}
 	}

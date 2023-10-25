@@ -166,7 +166,7 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if err = agent.RunScript(execution.PostRunScript); err != nil {
+		if err = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); err != nil {
 			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
 		}
 	}
@@ -255,5 +255,10 @@ func MergeArgs(fileArgs []string, reportFile string, execution testkube.Executio
 			break
 		}
 	}
+
+	for i := range args {
+		args[i] = os.ExpandEnv(args[i])
+	}
+
 	return args
 }

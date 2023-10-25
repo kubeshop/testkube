@@ -98,6 +98,7 @@ const sidebars = {
             },
             "articles/exposing-testkube-with-ingress-nginx",
             "articles/deploying-in-aws",
+            "articles/deploying-from-private-registries"
           ],
         },
         {
@@ -178,6 +179,7 @@ const sidebars = {
       label: "Testkube Cloud",
       items: [
         "testkube-cloud/articles/intro",
+        "testkube-cloud/articles/testkube-oss",
         "testkube-cloud/articles/installing-agent",
         "testkube-cloud/articles/transition-from-oss",
         "testkube-cloud/articles/organization-management",

@@ -2,6 +2,7 @@ package testsuites
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 
 	"github.com/robfig/cron"
@@ -66,8 +67,12 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 							ui.Failf("TestSuite with name '%s' already exists in namespace %s, ", testSuite.Name, namespace)
 						}
 					} else {
-						ok := ui.Confirm(fmt.Sprintf("TestSuite with name '%s' already exists in namespace %s, ", testSuite.Name, namespace) +
-							"do you want to overwrite it?")
+						var ok bool
+						if stat, _ := os.Stdin.Stat(); (stat.Mode() & os.ModeCharDevice) != 0 {
+							ok = ui.Confirm(fmt.Sprintf("TestSuite with name '%s' already exists in namespace %s, ", testSuite.Name, namespace) +
+								"do you want to overwrite it?")
+						}
+
 						if !ok {
 							ui.Failf("TestSuite creation was aborted")
 						}

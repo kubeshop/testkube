@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/kubeshop/testkube/contrib/executor/tracetest/pkg/model"
@@ -90,7 +91,7 @@ func (r *TracetestRunner) Run(ctx context.Context, execution testkube.Execution)
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		outputPkg.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if err = agent.RunScript(execution.PostRunScript); err != nil {
+		if err = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); err != nil {
 			outputPkg.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
 		}
 	}
@@ -151,6 +152,8 @@ func buildArgs(args []string, tracetestEndpoint string, inputPath string) ([]str
 		if args[i] == "<filePath>" {
 			args[i] = inputPath
 		}
+
+		args[i] = os.ExpandEnv(args[i])
 	}
 	return args, nil
 }

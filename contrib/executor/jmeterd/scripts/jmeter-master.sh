@@ -5,23 +5,6 @@ echo "*              Installing JMeter Plugins               *"
 echo "********************************************************"
 echo
 
-
-
-if [ -d $JMETER_CUSTOM_PLUGINS_FOLDER ]
-then
-  echo "Installing custom plugins from ${JMETER_CUSTOM_PLUGINS_FOLDER}"
-  for plugin in ${JMETER_CUSTOM_PLUGINS_FOLDER}/*.jar; do
-      echo "Copying plugin $plugin to ${JMETER_HOME}/lib/ext/${plugin}"
-      cp $plugin ${JMETER_HOME}/lib/ext
-  done;
-else
-  echo "No custom plugins found in ${JMETER_CUSTOM_PLUGINS_FOLDER}"
-fi
-echo
-
-
-
-
 if [ -d ${JMETER_PARENT_TEST_FOLDER}/plugins ]
 then
   echo "Installing user plugins from ${JMETER_PARENT_TEST_FOLDER}/plugins"
@@ -34,15 +17,25 @@ else
 fi
 echo
 
-if [ -f ${JMETER_PARENT_TEST_FOLDER}/user.properties ]
+BASE_PROPERTIES_FILE=${JMETER_PARENT_TEST_FOLDER}/user.properties
+if [ -f "${BASE_PROPERTIES_FILE}" ]
 then
-  echo "Copying user properties file from ${JMETER_PARENT_TEST_FOLDER}/user.properties"
-  cp ${JMETER_PARENT_TEST_FOLDER}/user.properties ${JMETER_HOME}/bin/
+  echo "Copying user properties file from ${BASE_PROPERTIES_FILE}"
+  cp ${BASE_PROPERTIES_FILE} ${JMETER_HOME}/bin/
 else
   echo "File user.properties not present in ${JMETER_PARENT_TEST_FOLDER}"
 fi
 echo
 
+NESTED_PROPERTIES_FILE=${JMETER_PARENT_TEST_FOLDER}/properties/user.properties
+if [ -f "${NESTED_PROPERTIES_FILE}" ]
+then
+  echo "Copying user properties file from ${NESTED_PROPERTIES_FILE}"
+  cp ${NESTED_PROPERTIES_FILE} ${JMETER_HOME}/bin/
+else
+  echo "File user.properties not present in ${JMETER_PARENT_TEST_FOLDER}/properties"
+fi
+echo
 
 echo "********************************************************"
 echo "*            Initializing JMeter Master                *"
@@ -55,7 +48,7 @@ freeMem=$(awk '/MemAvailable/ { print int($2/1024) }' /proc/meminfo)
 [[ -z ${JVM_XMS} ]] && JVM_XMS=$(($freeMem*8/10))
 [[ -z ${JVM_XMX} ]] && JVM_XMX=$(($freeMem*8/10))
 
-echo "Setting default JVM_ARGS=-Xmn${JVM_XMN}m -Xms${JVM_XMS}m -Xmx${JVM_XMX}m"
+echo "Setting dynamically heap size based on available resources JVM_ARGS=-Xmn${JVM_XMN}m -Xms${JVM_XMS}m -Xmx${JVM_XMX}m"
 export JVM_ARGS="-Xmn${JVM_XMN}m -Xms${JVM_XMS}m -Xmx${JVM_XMX}m"
 
 if [ -n "$MASTER_OVERRIDE_JVM_ARGS" ]; then
@@ -71,15 +64,6 @@ fi
 echo "Available memory: ${freeMem} MB"
 echo "Configured JVM_ARGS=${JVM_ARGS}"
 echo
-
-echo "********************************************************"
-echo "*           Preparing JMeter Test Execution            *"
-echo "********************************************************"
-echo
-
-# Keep entrypoint simple: we must pass the standard JMeter arguments
-EXTRA_ARGS=-Dlog4j2.formatMsgNoLookups=true
-
 
 echo "********************************************************"
 echo "*                Executing JMeter tests                *"
