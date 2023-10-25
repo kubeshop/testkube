@@ -80,9 +80,9 @@ We are going to use tests created by Postman and exported in a [Postman collecti
 
 We can upload this to the same Git Repository as our application, but in practice the repository could be the same repository hosting the application or it could also be in a separate repository where you manage all your test artifacts.
 
-So let’s create our **postman-collections.json** and push it to the repository.
+So let’s create our **hello-kubernetes.json** in **postman-collections** folder and push it to the repository.
 
-```json title="postman-collections.json"
+```json title="hello-kubernetes.json"
 {
   "info": {
     "_postman_id": "02c90123-318f-4680-8bc2-640adabb45e8",
@@ -128,43 +128,78 @@ You can see an example of how the repository should look [here](https://github.c
 
 ### 6. Configure ArgoCD to use the Testkube plugin.
 
-To get ArgoCD to use Testkube, we need to add Testkube as a [plugin](https://argo-cd.readthedocs.io/en/stable/operator-manual/config-management-plugins/). For that we have built a customized **argocd-repo-server** container image that will include Testkube as a binary.
+To get ArgoCD to use Testkube, we need to write a Config Management [plugin](https://argo-cd.readthedocs.io/en/stable/operator-manual/config-management-plugins/#configmap-plugin). 
+To do so, please nest the plugin config file in a ConfigMap manifest under the `plugin.yaml` key.
 
-Patch the ArgoCD repo-server pod image:
-
-```yaml
-- op: replace
-  path: /spec/template/spec/containers/0/image
-  value: kubeshop/argocd-testkube:v1.0.1
-- op: replace
-  path: /spec/template/spec/initContainers/0/image
-  value: kubeshop/argocd-testkube:v1.0.1
+```yaml title="argocd-plugins.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm-plugin
+  namespace: argocd
+data:
+  plugin.yaml: |
+    apiVersion: argoproj.io/v1alpha1
+    kind: ConfigManagementPlugin
+    metadata:
+      name: testkube
+    spec:
+      version: v1.0
+      generate:
+        command: [bash, -c]
+        args:
+          - |
+            testkube generate tests-crds .
 ```
 
 And apply it with the following command:
 
 ```sh
-kubectl patch deployments.apps -n argocd argocd-repo-server --type json --patch-file patch.yaml
+kubectl apply -f argocd-plugins.yaml
+```
+As you can see here, we’re using the command **testkube generate tests-crds** which creates the Custom Resources (manifests) that ArgoCD will then add to our cluster. 
+
+### 7. Patch ArgoCD's deployment
+
+To install a plugin, patch `argocd-repo-server` deployment to run the plugin container as a sidecar.
+
+```yaml title="deployment.yaml"
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-repo-server
+spec:
+  template:
+    spec:
+      containers:
+      - name: testkube
+        command: [/var/run/argocd/argocd-cmp-server]
+        image: kubeshop/testkube-argocd:latest
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 999
+        volumeMounts:
+          - mountPath: /var/run/argocd
+            name: var-files
+          - mountPath: /home/argocd/cmp-server/plugins
+            name: plugins
+          - mountPath: /home/argocd/cmp-server/config/plugin.yaml
+            subPath: plugin.yaml
+            name: argocd-cm-plugin
+          - mountPath: /tmp
+            name: cmp-tmp
+      volumes:
+        - configMap:
+            name: argocd-cm-plugin
+          name: argocd-cm-plugin
+        - emptyDir: {}
+          name: cmp-tmp
 ```
 
-### 7. Define Testkube as a plugin in ArgoCD’s Configuration Management Plugin.
-
-Create the file **argocd-plugins.yaml**:
+Apply the patch with the command:
 
 ```sh
-data:
- configManagementPlugins: |
-   - name: testkube
-     generate:
-       command: ["bash", "-c"]
-       args: ["testkube generate tests-crds ."]
-     lockRepo: true
-```
-
-As you can see here, we’re using the command **testkube generate tests-crds** which creates the Custom Resources (manifests) that ArgoCD will then add to our cluster. Apply the patch with the command:
-
-```sh
-kubectl patch -n argocd configmaps argocd-cm --patch-file argocd-plugin.yaml
+kubectl patch deployments.apps -n argocd argocd-repo-server --patch-file deployment.yaml
 ```
 
 ‍
@@ -186,7 +221,7 @@ spec:
    targetRevision: HEAD
    path: postman-collections
    plugin:
-     name: testkube
+     name: "testkube-v1.0"
  destination:
    server: https://kubernetes.default.svc
    namespace: testkube
