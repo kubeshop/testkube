@@ -1,0 +1,39 @@
+{
+  "info": {
+    "_postman_id": "02c90123-318f-4680-8bc2-640adabb45e8",
+    "name": "New Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "hello-world test",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Body matches string\", () => {",
+              "    pm.expect(pm.response.text()).to.contain(\"Hello Kubernetes\")",
+              "})",
+              "",
+              "pm.test(\"Body matches string\", () => {",
+              "    pm.expect(pm.response.status).to.equal(\"OK\")",
+              "})"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://hello-kubernetes-service.default",
+          "protocol": "http",
+          "host": ["hello-kubernetes-service", "default"]
+        }
+      },
+      "response": []
+    }
+  ]
+}
