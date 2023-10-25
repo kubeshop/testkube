@@ -1,7 +1,7 @@
 ## Testkube GitHub Action
 
 The Testkube GitHub Action installs Testkube and enables running any [Testkube CLI](https://docs.testkube.io/cli/testkube) command in a GitHub workflow. It is available on Github Marketplace <https://github.com/marketplace/actions/testkube-action>.
-The action provides a flexible way to work with your pipeline and can be used with Testkube Cloud, Testkube Enterprise, and an open source Testkube platforms.
+The action provides a flexible way to work with your pipeline and can be used with Testkube Cloud, Testkube Enterprise, and an open source Testkube platform.
 
 ### How to run a test on TK Cloud on every PR with this GH Action
 
