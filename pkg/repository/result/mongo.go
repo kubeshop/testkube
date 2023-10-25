@@ -160,7 +160,8 @@ func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []stri
 		conditions = append(conditions, bson.M{"testname": testName})
 	}
 
-	pipeline := []bson.D{{{Key: "$match", Value: bson.M{"$or": conditions}}}}
+	pipeline := []bson.D{{{Key: "$project", Value: bson.D{{Key: "_id", Value: 1}, {Key: "id", Value: 1}, {Key: "testname", Value: 1}, {Key: sortField, Value: 1}}}}}
+	pipeline = append(pipeline, bson.D{{Key: "$match", Value: bson.M{"$or": conditions}}})
 	pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: sortField, Value: -1}}}})
 	pipeline = append(pipeline, bson.D{
 		{Key: "$group", Value: bson.D{{Key: "_id", Value: "$testname"}, {Key: "latest_id", Value: bson.D{{Key: "$first", Value: "$id"}}}}}})
