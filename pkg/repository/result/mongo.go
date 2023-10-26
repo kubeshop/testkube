@@ -145,23 +145,21 @@ func (r *MongoRepository) GetLatestTestNumber(ctx context.Context, testName stri
 func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) (result testkube.Execution, err error) {
 	opts := options.Aggregate()
 	pipeline := []bson.M{
+		{"$project": bson.M{"testname": 1, "starttime": 1, "endtime": 1}},
 		{"$match": bson.M{"testname": testName}},
 
-		{"$addFields": bson.M{
-			"updatetime": bson.M{"$max": bson.A{"$starttime", "$endtime"}},
-		}},
 		{"$group": bson.D{
 			{Key: "_id", Value: "$testname"},
 			{Key: "doc", Value: bson.M{"$max": bson.D{
-				{Key: "updatetime", Value: "$updatetime"},
+				{Key: "updatetime", Value: bson.M{"$max": bson.A{"$starttime", "$endtime"}}},
 				{Key: "content", Value: "$$ROOT"},
 			}}},
 		}},
-
 		{"$sort": bson.M{"doc.updatetime": -1}},
+
+		{"$lookup": bson.M{"from": "results", "localField": "doc.content._id", "foreignField": "_id", "as": "execution"}},
+		{"$replaceRoot": bson.M{"newRoot": bson.M{"$arrayElemAt": bson.A{"$execution", 0}}}},
 		{"$limit": 1},
-		{"$replaceRoot": bson.M{"newRoot": "$doc.content"}},
-		{"$unset": "updatetime"},
 	}
 	cursor, err := r.ResultsColl.Aggregate(ctx, pipeline, opts)
 	if err != nil {
@@ -196,22 +194,21 @@ func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []stri
 	}
 
 	pipeline := []bson.M{
+		{"$project": bson.M{"testname": 1, "starttime": 1, "endtime": 1}},
 		{"$match": bson.M{"$or": conditions}},
 
-		{"$addFields": bson.M{
-			"updatetime": bson.M{"$max": bson.A{"$starttime", "$endtime"}},
-		}},
 		{"$group": bson.D{
 			{Key: "_id", Value: "$testname"},
 			{Key: "doc", Value: bson.M{"$max": bson.D{
-				{Key: "updatetime", Value: "$updatetime"},
+				{Key: "updatetime", Value: bson.M{"$max": bson.A{"$starttime", "$endtime"}}},
 				{Key: "content", Value: "$$ROOT"},
 			}}},
 		}},
-
 		{"$sort": bson.M{"doc.updatetime": -1}},
-		{"$replaceRoot": bson.M{"newRoot": "$doc.content"}},
-		{"$unset": "updatetime"},
+
+		{"$lookup": bson.M{"from": "results", "localField": "doc.content._id", "foreignField": "_id", "as": "execution"}},
+		{"$replaceRoot": bson.M{"newRoot": bson.M{"$arrayElemAt": bson.A{"$execution", 0}}}},
+		{"$limit": 1},
 	}
 
 	opts := options.Aggregate()
