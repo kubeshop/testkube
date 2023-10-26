@@ -41,4 +41,6 @@ type ExecutorUpsertRequest struct {
 	// Available executor features
 	Features []string      `json:"features,omitempty"`
 	Meta     *ExecutorMeta `json:"meta,omitempty"`
+	// use data dir as working dir for executor
+	UseDataDirAsWorkingDir bool `json:"useDataDirAsWorkingDir,omitempty"`
 }
