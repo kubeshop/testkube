@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -163,6 +164,9 @@ type JobOptions struct {
 	ClusterID             string
 	ArtifactRequest       *testkube.ArtifactRequest
 	WorkingDir            string
+	ExecutionNumber       int32
+	ContextType           string
+	ContextData           string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -500,6 +504,13 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		labels[key] = value
 	}
 
+	contextType := ""
+	contextData := ""
+	if options.Request.RunningContext != nil {
+		contextType = options.Request.RunningContext.Type_
+		contextData = options.Request.RunningContext.Context
+	}
+
 	return JobOptions{
 		Image:                 options.ExecutorSpec.Image,
 		ImageOverride:         options.ImageOverride,
@@ -519,6 +530,9 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		EnvConfigMaps:         options.Request.EnvConfigMaps,
 		EnvSecrets:            options.Request.EnvSecrets,
 		Labels:                labels,
+		ExecutionNumber:       options.Request.Number,
+		ContextType:           contextType,
+		ContextData:           contextData,
 	}
 }
 
@@ -752,6 +766,11 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 
 	envs = append(envs, envManager.PrepareEnvs(options.Envs, options.Variables)...)
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_WORKINGDIR", Value: options.WorkingDir})
+	envs = append(envs, corev1.EnvVar{Name: "RUNNER_EXECUTIONID", Value: options.Name})
+	envs = append(envs, corev1.EnvVar{Name: "RUNNER_TESTNAME", Value: options.TestName})
+	envs = append(envs, corev1.EnvVar{Name: "RUNNER_EXECUTIONNUMBER", Value: fmt.Sprint(options.ExecutionNumber)})
+	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTTYPE", Value: options.ContextType})
+	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTDATA", Value: options.ContextData})
 
 	for i := range job.Spec.Template.Spec.InitContainers {
 		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, envs...)
