@@ -1,5 +1,15 @@
 # Status Pages
 
+export const ProBadge = () => {
+  return (
+    <span>
+      <p class="pro-badge">PRO FEATURE</p>
+    </span>
+  );
+}
+
+<ProBadge />
+
 The Testkube status pages are designed to help both technical and non-technical users understand and utilize the results of tests run on Testkube effectively. Whether you're a developer, project manager, or simply a stakeholder interested in monitoring software project status via running tests, Testkube has you covered.
 
 ## Overview

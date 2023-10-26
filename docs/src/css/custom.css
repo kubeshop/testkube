@@ -30,6 +30,8 @@
   --ifm-color-gray-300: #e2e8f0;
   --ifm-color-gray-200: #f1f5f9;
   --ifm-color-gray-100: #f8fafc;
+  --ifm-color-badge-border: #454fad;
+  --ifm-color-badge: #c8cdff;
   /* --ifm-menu-link-sublist-icon:  */
   --ifm-code-font-size: 90%; /*95%;*/
   --ifm-line-height-base: 1.45; /* Instead of 1.5 */
@@ -55,6 +57,8 @@
   --ifm-color-primary-light: #29d5b0;
   --ifm-color-primary-lighter: #32d8b4;
   --ifm-color-primary-lightest: #4fddbf;
+    --ifm-color-badge-border: #0EA5E9;
+  --ifm-color-badge: #0C4A6E;
   --docusaurus-highlighted-code-line-bg: var(var(--ifm-color-gray-1000));
 }
 
@@ -344,6 +348,19 @@ ul:hover {
 
 .navbar-sidebar--show {
   backdrop-filter: none !important;
+}
+
+.pro-badge {
+  width: fit-content;
+  background-color: var(--ifm-color-badge);
+  border: 1px var(--ifm-color-badge-border) solid;
+  border-radius: 4px;
+
+  color: var(--ifm-color-badge-border);
+  font-size: 75%;
+
+  padding: 0.3rem;
+  margin-top: -10px;
 }
 
 @media screen and (max-width: 996px) {
