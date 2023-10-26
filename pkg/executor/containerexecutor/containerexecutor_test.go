@@ -138,7 +138,7 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "RUNNER_DASHBOARD_URI", Value: ""},
 		{Name: "RUNNER_COMPRESSARTIFACTS", Value: "false"},
 		{Name: "RUNNER_WORKINGDIR", Value: ""},
-		{Name: "RUNNER_EXECUTIONID", Value: ""},
+		{Name: "RUNNER_EXECUTIONID", Value: "name"},
 		{Name: "RUNNER_TESTNAME", Value: ""},
 		{Name: "RUNNER_EXECUTIONNUMBER", Value: "0"},
 		{Name: "RUNNER_CONTEXTTYPE", Value: ""},
