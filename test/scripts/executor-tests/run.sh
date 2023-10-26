@@ -103,7 +103,7 @@ common_run() { # name, test_crd_file, testsuite_name, testsuite_file, custom_exe
     kubectl --namespace $namespace apply -f $test_crd_file
 
     # TestsSuites
-    create_update_testsuite "$testsuite_file"
+    create_update_testsuite "$testsuite_name" "$testsuite_file"
   fi
 
   if [ "$run" = true ] && [ "$custom_testsuite" = '' ]; then
@@ -336,7 +336,7 @@ main() {
     filename=$(basename $custom_testsuite)
     testsuite_name="${filename%%.*}"
 
-    create_update_testsuite "$custom_testsuite"
+    create_update_testsuite "$testsuite_name" "$custom_testsuite"
     run_follow_testsuite "$testsuite_name"
   fi
 }
