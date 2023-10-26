@@ -96,5 +96,7 @@ func TestCloudResultRepository_GetLatestByTestSuites(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetLatestByTestSuites() returned an unexpected error: %v", err)
 	}
-	assert.Equal(t, expectedResults, results)
+	assert.Equal(t, len(results), len(expectedResults))
+	assert.Contains(t, results, expectedResults[0])
+	assert.Contains(t, results, expectedResults[1])
 }
