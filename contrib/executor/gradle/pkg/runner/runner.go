@@ -168,8 +168,8 @@ func (r *GradleRunner) Run(ctx context.Context, execution testkube.Execution) (r
 			runPath = r.params.WorkingDir
 		}
 
-		if err = agent.RunScript(execution.PostRunScript, runPath); err != nil {
-			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
+		if rerr := agent.RunScript(execution.PostRunScript, runPath); rerr != nil {
+			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, rerr)
 		}
 	}
 
