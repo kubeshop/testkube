@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - develop
+      - update-k6s-executor
     paths-ignore:
       - 'docs/**'
 env:
