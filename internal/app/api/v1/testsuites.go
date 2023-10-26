@@ -680,7 +680,8 @@ func (s TestkubeAPI) ListTestSuiteExecutionsHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not get executions totals: %w", errPrefix, err))
 		}
 		l.Debugw("got executions totals", "totals", executionsTotals, "time", time.Since(now))
-		allExecutionsTotals, err := s.TestExecutionResults.GetExecutionsTotals(ctx)
+		nameFilter := testresult.NewExecutionsFilter().WithName(c.Query("id", ""))
+		allExecutionsTotals, err := s.TestExecutionResults.GetExecutionsTotals(ctx, nameFilter)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not get all executions totals: %w", errPrefix, err))
 		}
