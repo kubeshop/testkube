@@ -130,13 +130,52 @@ func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName s
 	return *result.UnscapeDots(), err
 }
 
-func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName, sortField string) (result testkube.Execution, err error) {
-	findOptions := options.FindOne()
-	findOptions.SetSort(bson.D{{Key: sortField, Value: -1}})
-	err = r.ResultsColl.FindOne(ctx, bson.M{"testname": testName}, findOptions).Decode(&result)
-	if err != nil {
-		return
+func (r *MongoRepository) GetLatestTestNumber(ctx context.Context, testName string) (num int32, err error) {
+	var result struct {
+		Number int32 `bson:"number"`
 	}
+	opts := &options.FindOneOptions{Projection: bson.M{"_id": -1, "number": 1}, Sort: bson.M{"number": -1}}
+	err = r.ResultsColl.FindOne(ctx, bson.M{"testname": testName}, opts).Decode(&result)
+	if err != nil {
+		return 0, err
+	}
+	return result.Number, err
+}
+
+func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) (result testkube.Execution, err error) {
+	opts := options.Aggregate()
+	pipeline := []bson.M{
+		{"$match": bson.M{"testname": testName}},
+
+		{"$addFields": bson.M{
+			"updatetime": bson.M{"$max": bson.A{"$starttime", "$endtime"}},
+		}},
+		{"$group": bson.D{
+			{Key: "_id", Value: "$testname"},
+			{Key: "doc", Value: bson.M{"$max": bson.D{
+				{Key: "updatetime", Value: "$updatetime"},
+				{Key: "content", Value: "$$ROOT"},
+			}}},
+		}},
+
+		{"$sort": bson.M{"doc.updatetime": -1}},
+		{"$limit": 1},
+		{"$replaceRoot": bson.M{"newRoot": "$doc.content"}},
+		{"$unset": "updatetime"},
+	}
+	cursor, err := r.ResultsColl.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return result, err
+	}
+	var items []testkube.Execution
+	err = cursor.All(ctx, &items)
+	if err != nil {
+		return result, err
+	}
+	if len(items) == 0 {
+		return result, mongo.ErrNoDocuments
+	}
+	result = items[0]
 	if len(result.ExecutionResult.Output) == 0 {
 		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, "")
 		if err == mongo.ErrNoDocuments {
@@ -146,11 +185,7 @@ func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName, sortFie
 	return *result.UnscapeDots(), err
 }
 
-func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []string, sortField string) (executions []testkube.Execution, err error) {
-	var results []struct {
-		LatestID string `bson:"latest_id"`
-	}
-
+func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []string) (executions []testkube.Execution, err error) {
 	if len(testNames) == 0 {
 		return executions, nil
 	}
@@ -160,45 +195,34 @@ func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []stri
 		conditions = append(conditions, bson.M{"testname": testName})
 	}
 
-	pipeline := []bson.D{{{Key: "$project", Value: bson.D{{Key: "_id", Value: 1}, {Key: "id", Value: 1}, {Key: "testname", Value: 1}, {Key: sortField, Value: 1}}}}}
-	pipeline = append(pipeline, bson.D{{Key: "$match", Value: bson.M{"$or": conditions}}})
-	pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: sortField, Value: -1}}}})
-	pipeline = append(pipeline, bson.D{
-		{Key: "$group", Value: bson.D{{Key: "_id", Value: "$testname"}, {Key: "latest_id", Value: bson.D{{Key: "$first", Value: "$id"}}}}}})
+	pipeline := []bson.M{
+		{"$match": bson.M{"$or": conditions}},
 
-	optsA := options.Aggregate()
+		{"$addFields": bson.M{
+			"updatetime": bson.M{"$max": bson.A{"$starttime", "$endtime"}},
+		}},
+		{"$group": bson.D{
+			{Key: "_id", Value: "$testname"},
+			{Key: "doc", Value: bson.M{"$max": bson.D{
+				{Key: "updatetime", Value: "$updatetime"},
+				{Key: "content", Value: "$$ROOT"},
+			}}},
+		}},
+
+		{"$sort": bson.M{"doc.updatetime": -1}},
+		{"$replaceRoot": bson.M{"newRoot": "$doc.content"}},
+		{"$unset": "updatetime"},
+	}
+
+	opts := options.Aggregate()
 	if r.allowDiskUse {
-		optsA.SetAllowDiskUse(r.allowDiskUse)
+		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
 
-	cursor, err := r.ResultsColl.Aggregate(ctx, pipeline, optsA)
+	cursor, err := r.ResultsColl.Aggregate(ctx, pipeline, opts)
 	if err != nil {
 		return nil, err
 	}
-	err = cursor.All(ctx, &results)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(results) == 0 {
-		return executions, nil
-	}
-
-	conditions = bson.A{}
-	for _, result := range results {
-		conditions = append(conditions, bson.M{"id": result.LatestID})
-	}
-
-	optsF := options.Find()
-	if r.allowDiskUse {
-		optsF.SetAllowDiskUse(r.allowDiskUse)
-	}
-
-	cursor, err = r.ResultsColl.Find(ctx, bson.M{"$or": conditions}, optsF)
-	if err != nil {
-		return nil, err
-	}
-
 	err = cursor.All(ctx, &executions)
 	if err != nil {
 		return nil, err

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -70,16 +71,28 @@ func TestCloudResultRepository_GetLatestByTestSuites(t *testing.T) {
 	mockExecutor := executor.NewMockExecutor(mockCtrl)
 	repo := &CloudRepository{executor: mockExecutor}
 
+	prevDate := time.Date(2023, 5, 5, 0, 0, 0, 0, time.UTC)
+	midDate := prevDate.Add(time.Hour)
+	nextDate := midDate.Add(time.Hour)
 	testSuiteNames := []string{"test-suite-1", "test-suite-2"}
-	sortField := "sort-field"
-	expectedResults := []testkube.TestSuiteExecution{{Id: "id1"}, {Id: "id2"}}
-	req := GetLatestByTestSuitesRequest{TestSuiteNames: testSuiteNames, SortField: sortField}
-	expectedResponse := GetLatestByTestSuitesResponse{TestSuiteExecutions: expectedResults}
-	expectedResponseBytes, _ := json.Marshal(expectedResponse)
+	testSuite1 := &testkube.ObjectRef{Name: testSuiteNames[0]}
+	testSuite2 := &testkube.ObjectRef{Name: testSuiteNames[1]}
 
-	mockExecutor.EXPECT().Execute(ctx, CmdTestResultGetLatestByTestSuites, req).Return(expectedResponseBytes, nil)
+	startResults := []testkube.TestSuiteExecution{{Id: "id1", TestSuite: testSuite1, StartTime: midDate, EndTime: midDate}, {Id: "id2", TestSuite: testSuite2, StartTime: midDate}}
+	endResults := []testkube.TestSuiteExecution{{Id: "id3", TestSuite: testSuite1, StartTime: prevDate, EndTime: nextDate}, {Id: "id4", TestSuite: testSuite2, StartTime: prevDate, EndTime: prevDate}}
+	expectedResults := []testkube.TestSuiteExecution{endResults[0], startResults[1]}
 
-	results, err := repo.GetLatestByTestSuites(ctx, testSuiteNames, sortField)
+	startReq := GetLatestByTestSuitesRequest{TestSuiteNames: testSuiteNames, SortField: "starttime"}
+	startResponse := GetLatestByTestSuitesResponse{TestSuiteExecutions: startResults}
+	startResponseBytes, _ := json.Marshal(startResponse)
+	endReq := GetLatestByTestSuitesRequest{TestSuiteNames: testSuiteNames, SortField: "endtime"}
+	endResponse := GetLatestByTestSuitesResponse{TestSuiteExecutions: endResults}
+	endResponseBytes, _ := json.Marshal(endResponse)
+
+	mockExecutor.EXPECT().Execute(ctx, CmdTestResultGetLatestByTestSuites, startReq).Return(startResponseBytes, nil)
+	mockExecutor.EXPECT().Execute(ctx, CmdTestResultGetLatestByTestSuites, endReq).Return(endResponseBytes, nil)
+
+	results, err := repo.GetLatestByTestSuites(ctx, testSuiteNames)
 	if err != nil {
 		t.Fatalf("GetLatestByTestSuites() returned an unexpected error: %v", err)
 	}

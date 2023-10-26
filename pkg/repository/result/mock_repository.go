@@ -216,33 +216,33 @@ func (mr *MockRepositoryMockRecorder) GetLabels(arg0 interface{}) *gomock.Call {
 }
 
 // GetLatestByTest mocks base method.
-func (m *MockRepository) GetLatestByTest(arg0 context.Context, arg1, arg2 string) (testkube.Execution, error) {
+func (m *MockRepository) GetLatestByTest(arg0 context.Context, arg1 string) (testkube.Execution, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLatestByTest", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "GetLatestByTest", arg0, arg1)
 	ret0, _ := ret[0].(testkube.Execution)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetLatestByTest indicates an expected call of GetLatestByTest.
-func (mr *MockRepositoryMockRecorder) GetLatestByTest(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) GetLatestByTest(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestByTest", reflect.TypeOf((*MockRepository)(nil).GetLatestByTest), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestByTest", reflect.TypeOf((*MockRepository)(nil).GetLatestByTest), arg0, arg1)
 }
 
 // GetLatestByTests mocks base method.
-func (m *MockRepository) GetLatestByTests(arg0 context.Context, arg1 []string, arg2 string) ([]testkube.Execution, error) {
+func (m *MockRepository) GetLatestByTests(arg0 context.Context, arg1 []string) ([]testkube.Execution, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLatestByTests", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "GetLatestByTests", arg0, arg1)
 	ret0, _ := ret[0].([]testkube.Execution)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetLatestByTests indicates an expected call of GetLatestByTests.
-func (mr *MockRepositoryMockRecorder) GetLatestByTests(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) GetLatestByTests(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestByTests", reflect.TypeOf((*MockRepository)(nil).GetLatestByTests), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestByTests", reflect.TypeOf((*MockRepository)(nil).GetLatestByTests), arg0, arg1)
 }
 
 // GetNextExecutionNumber mocks base method.

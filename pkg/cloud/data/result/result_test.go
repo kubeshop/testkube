@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -99,17 +100,24 @@ func TestCloudResultRepository_GetLatestByTest(t *testing.T) {
 	repo := &CloudRepository{executor: mockExecutor}
 
 	testName := "test_name"
-	sortField := "sort_field"
-	execution := testkube.Execution{Id: "id"}
+	prevDate := time.Date(2023, 5, 5, 0, 0, 0, 0, time.UTC)
+	nextDate := prevDate.Add(time.Hour)
 
-	req := GetLatestByTestRequest{TestName: testName, SortField: sortField}
-	response := GetLatestByTestResponse{Execution: execution}
-	expectedResponseBytes, _ := json.Marshal(response)
-	mockExecutor.EXPECT().Execute(gomock.Any(), CmdResultGetLatestByTest, req).Return(expectedResponseBytes, nil)
+	startExecution := testkube.Execution{Id: "id1", StartTime: prevDate}
+	endExecution := testkube.Execution{Id: "id2", StartTime: prevDate, EndTime: nextDate}
 
-	result, err := repo.GetLatestByTest(ctx, testName, sortField)
+	startReq := GetLatestByTestRequest{TestName: testName, SortField: "starttime"}
+	startResponse := GetLatestByTestResponse{Execution: startExecution}
+	startResponseBytes, _ := json.Marshal(startResponse)
+	endReq := GetLatestByTestRequest{TestName: testName, SortField: "endtime"}
+	endResponse := GetLatestByTestResponse{Execution: endExecution}
+	endResponseBytes, _ := json.Marshal(endResponse)
+	mockExecutor.EXPECT().Execute(gomock.Any(), CmdResultGetLatestByTest, startReq).Return(startResponseBytes, nil)
+	mockExecutor.EXPECT().Execute(gomock.Any(), CmdResultGetLatestByTest, endReq).Return(endResponseBytes, nil)
+
+	result, err := repo.GetLatestByTest(ctx, testName)
 	assert.NoError(t, err)
-	assert.Equal(t, execution, result)
+	assert.Equal(t, endExecution, result)
 }
 
 func TestCloudResultRepository_Insert(t *testing.T) {
