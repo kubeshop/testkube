@@ -57,7 +57,7 @@
   --ifm-color-primary-light: #29d5b0;
   --ifm-color-primary-lighter: #32d8b4;
   --ifm-color-primary-lightest: #4fddbf;
-    --ifm-color-badge-border: #0EA5E9;
+  --ifm-color-badge-border: #0EA5E9;
   --ifm-color-badge: #0C4A6E;
   --docusaurus-highlighted-code-line-bg: var(var(--ifm-color-gray-1000));
 }
