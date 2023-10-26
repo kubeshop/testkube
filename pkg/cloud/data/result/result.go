@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
 
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
@@ -67,7 +68,7 @@ func (r *CloudRepository) GetByNameAndTest(ctx context.Context, name, testName s
 	return commandResponse.Execution, nil
 }
 
-func (r *CloudRepository) GetLatestByTest(ctx context.Context, testName, sortField string) (testkube.Execution, error) {
+func (r *CloudRepository) getLatestByTest(ctx context.Context, testName, sortField string) (testkube.Execution, error) {
 	req := GetLatestByTestRequest{TestName: testName, SortField: sortField}
 	response, err := r.executor.Execute(ctx, CmdResultGetLatestByTest, req)
 	if err != nil {
@@ -80,7 +81,33 @@ func (r *CloudRepository) GetLatestByTest(ctx context.Context, testName, sortFie
 	return commandResponse.Execution, nil
 }
 
-func (r *CloudRepository) GetLatestByTests(ctx context.Context, testNames []string, sortField string) ([]testkube.Execution, error) {
+// TODO: When it will be implemented, replace with a new Cloud command, to avoid 2 calls with 2 sort fields
+func (r *CloudRepository) GetLatestByTest(ctx context.Context, testName string) (testkube.Execution, error) {
+	startExecution, startErr := r.getLatestByTest(ctx, testName, "starttime")
+	if startErr != nil && startErr != mongo.ErrNoDocuments {
+		return testkube.Execution{}, startErr
+	}
+	endExecution, endErr := r.getLatestByTest(ctx, testName, "endtime")
+	if endErr != nil && endErr != mongo.ErrNoDocuments {
+		return testkube.Execution{}, endErr
+	}
+
+	if startErr == nil && endErr == nil {
+		if startExecution.StartTime.After(endExecution.EndTime) {
+			return startExecution, nil
+		} else {
+			return endExecution, nil
+		}
+	} else if startErr == nil {
+		return startExecution, nil
+	} else if endErr == nil {
+		return endExecution, nil
+	}
+	return testkube.Execution{}, startErr
+}
+
+// TODO: When it will be implemented, replace with a new Cloud command, to avoid 2 calls with 2 sort fields
+func (r *CloudRepository) getLatestByTests(ctx context.Context, testNames []string, sortField string) ([]testkube.Execution, error) {
 	req := GetLatestByTestsRequest{TestNames: testNames, SortField: sortField}
 	response, err := r.executor.Execute(ctx, CmdResultGetLatestByTests, req)
 	if err != nil {
@@ -91,6 +118,41 @@ func (r *CloudRepository) GetLatestByTests(ctx context.Context, testNames []stri
 		return nil, err
 	}
 	return commandResponse.Executions, nil
+}
+
+// TODO: When it will be implemented, replace with a new Cloud command, to avoid 2 calls with 2 sort fields
+func (r *CloudRepository) GetLatestByTests(ctx context.Context, testNames []string) ([]testkube.Execution, error) {
+	startExecutions, err := r.getLatestByTests(ctx, testNames, "starttime")
+	if err != nil {
+		return nil, err
+	}
+	endExecutions, err := r.getLatestByTests(ctx, testNames, "endtime")
+	if err != nil {
+		return nil, err
+	}
+	executionsCount := len(startExecutions)
+	if len(endExecutions) > executionsCount {
+		executionsCount = len(endExecutions)
+	}
+	executionsMap := make(map[string]*testkube.Execution, executionsCount)
+	for i := range startExecutions {
+		executionsMap[startExecutions[i].TestName] = &startExecutions[i]
+	}
+	for i := range endExecutions {
+		startExecution, ok := executionsMap[endExecutions[i].TestName]
+		if ok {
+			if endExecutions[i].EndTime.After(startExecution.StartTime) {
+				executionsMap[endExecutions[i].TestName] = &endExecutions[i]
+			}
+		} else {
+			executionsMap[endExecutions[i].TestName] = &endExecutions[i]
+		}
+	}
+	executions := make([]testkube.Execution, 0, executionsCount)
+	for _, value := range executionsMap {
+		executions = append(executions, *value)
+	}
+	return executions, nil
 }
 
 func (r *CloudRepository) GetExecutions(ctx context.Context, filter result.Filter) ([]testkube.Execution, error) {

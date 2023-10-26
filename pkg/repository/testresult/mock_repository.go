@@ -159,33 +159,33 @@ func (mr *MockRepositoryMockRecorder) GetExecutionsTotals(arg0 interface{}, arg1
 }
 
 // GetLatestByTestSuite mocks base method.
-func (m *MockRepository) GetLatestByTestSuite(arg0 context.Context, arg1, arg2 string) (testkube.TestSuiteExecution, error) {
+func (m *MockRepository) GetLatestByTestSuite(arg0 context.Context, arg1 string) (testkube.TestSuiteExecution, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLatestByTestSuite", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "GetLatestByTestSuite", arg0, arg1)
 	ret0, _ := ret[0].(testkube.TestSuiteExecution)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetLatestByTestSuite indicates an expected call of GetLatestByTestSuite.
-func (mr *MockRepositoryMockRecorder) GetLatestByTestSuite(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) GetLatestByTestSuite(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestByTestSuite", reflect.TypeOf((*MockRepository)(nil).GetLatestByTestSuite), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestByTestSuite", reflect.TypeOf((*MockRepository)(nil).GetLatestByTestSuite), arg0, arg1)
 }
 
 // GetLatestByTestSuites mocks base method.
-func (m *MockRepository) GetLatestByTestSuites(arg0 context.Context, arg1 []string, arg2 string) ([]testkube.TestSuiteExecution, error) {
+func (m *MockRepository) GetLatestByTestSuites(arg0 context.Context, arg1 []string) ([]testkube.TestSuiteExecution, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLatestByTestSuites", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "GetLatestByTestSuites", arg0, arg1)
 	ret0, _ := ret[0].([]testkube.TestSuiteExecution)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetLatestByTestSuites indicates an expected call of GetLatestByTestSuites.
-func (mr *MockRepositoryMockRecorder) GetLatestByTestSuites(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) GetLatestByTestSuites(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestByTestSuites", reflect.TypeOf((*MockRepository)(nil).GetLatestByTestSuites), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestByTestSuites", reflect.TypeOf((*MockRepository)(nil).GetLatestByTestSuites), arg0, arg1)
 }
 
 // GetTestSuiteMetrics mocks base method.

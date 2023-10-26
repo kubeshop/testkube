@@ -55,18 +55,43 @@ func (r *MongoRepository) GetByNameAndTestSuite(ctx context.Context, name, testS
 	return *result.UnscapeDots(), err
 }
 
-func (r *MongoRepository) GetLatestByTestSuite(ctx context.Context, testSuiteName, sortField string) (result testkube.TestSuiteExecution, err error) {
-	findOptions := options.FindOne()
-	findOptions.SetSort(bson.D{{Key: sortField, Value: -1}})
-	err = r.Coll.FindOne(ctx, bson.M{"testsuite.name": testSuiteName}, findOptions).Decode(&result)
-	return *result.UnscapeDots(), err
+func (r *MongoRepository) GetLatestByTestSuite(ctx context.Context, testSuiteName string) (result testkube.TestSuiteExecution, err error) {
+	opts := options.Aggregate()
+	pipeline := []bson.M{
+		{"$match": bson.M{"testsuite.name": testSuiteName}},
+
+		{"$addFields": bson.M{
+			"updatetime": bson.M{"$max": bson.A{"$starttime", "$endtime"}},
+		}},
+		{"$group": bson.D{
+			{Key: "_id", Value: "$testsuite.name"},
+			{Key: "doc", Value: bson.M{"$max": bson.D{
+				{Key: "updatetime", Value: "$updatetime"},
+				{Key: "content", Value: "$$ROOT"},
+			}}},
+		}},
+
+		{"$sort": bson.M{"doc.updatetime": -1}},
+		{"$limit": 1},
+		{"$replaceRoot": bson.M{"newRoot": "$doc.content"}},
+		{"$unset": "updatetime"},
+	}
+	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return result, err
+	}
+	var items []testkube.TestSuiteExecution
+	err = cursor.All(ctx, &items)
+	if err != nil {
+		return result, err
+	}
+	if len(items) == 0 {
+		return result, mongo.ErrNoDocuments
+	}
+	return *items[0].UnscapeDots(), err
 }
 
-func (r *MongoRepository) GetLatestByTestSuites(ctx context.Context, testSuiteNames []string, sortField string) (executions []testkube.TestSuiteExecution, err error) {
-	var results []struct {
-		LatestID string `bson:"latest_id"`
-	}
-
+func (r *MongoRepository) GetLatestByTestSuites(ctx context.Context, testSuiteNames []string) (executions []testkube.TestSuiteExecution, err error) {
 	if len(testSuiteNames) == 0 {
 		return executions, nil
 	}
@@ -76,48 +101,41 @@ func (r *MongoRepository) GetLatestByTestSuites(ctx context.Context, testSuiteNa
 		conditions = append(conditions, bson.M{"testsuite.name": testSuiteName})
 	}
 
-	pipeline := []bson.D{{{Key: "$project", Value: bson.D{{Key: "_id", Value: 1}, {Key: "id", Value: 1}, {Key: "testsuite.name", Value: 1}, {Key: sortField, Value: 1}}}}}
-	pipeline = append(pipeline, bson.D{{Key: "$match", Value: bson.M{"$or": conditions}}})
-	pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: sortField, Value: -1}}}})
-	pipeline = append(pipeline, bson.D{
-		{Key: "$group", Value: bson.D{{Key: "_id", Value: "$testsuite.name"}, {Key: "latest_id", Value: bson.D{{Key: "$first", Value: "$id"}}}}}})
+	pipeline := []bson.M{
+		{"$match": bson.M{"$or": conditions}},
 
-	optsA := options.Aggregate()
+		{"$addFields": bson.M{
+			"updatetime": bson.M{"$max": bson.A{"$starttime", "$endtime"}},
+		}},
+		{"$group": bson.D{
+			{Key: "_id", Value: "$testsuite.name"},
+			{Key: "doc", Value: bson.M{"$max": bson.D{
+				{Key: "updatetime", Value: "$updatetime"},
+				{Key: "content", Value: "$$ROOT"},
+			}}},
+		}},
+
+		{"$sort": bson.M{"doc.updatetime": -1}},
+		{"$replaceRoot": bson.M{"newRoot": "$doc.content"}},
+		{"$unset": "updatetime"},
+	}
+
+	opts := options.Aggregate()
 	if r.allowDiskUse {
-		optsA.SetAllowDiskUse(r.allowDiskUse)
+		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
 
-	cursor, err := r.Coll.Aggregate(ctx, pipeline, optsA)
+	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
 	if err != nil {
 		return nil, err
 	}
-	err = cursor.All(ctx, &results)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(results) == 0 {
-		return executions, nil
-	}
-
-	conditions = bson.A{}
-	for _, result := range results {
-		conditions = append(conditions, bson.M{"id": result.LatestID})
-	}
-
-	optsF := options.Find()
-	if r.allowDiskUse {
-		optsF.SetAllowDiskUse(r.allowDiskUse)
-	}
-
-	cursor, err = r.Coll.Find(ctx, bson.M{"$or": conditions}, optsF)
-	if err != nil {
-		return nil, err
-	}
-
 	err = cursor.All(ctx, &executions)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(executions) == 0 {
+		return executions, nil
 	}
 
 	for i := range executions {

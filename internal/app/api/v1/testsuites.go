@@ -230,32 +230,15 @@ func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 		}
 
 		ctx := c.Context()
-		startExecution, startErr := s.TestExecutionResults.GetLatestByTestSuite(ctx, name, "starttime")
-		if startErr != nil && startErr != mongo.ErrNoDocuments {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not get execution by start time :%w", errPrefix, startErr))
+		execution, err := s.TestExecutionResults.GetLatestByTestSuite(ctx, name)
+		if err != nil && err != mongo.ErrNoDocuments {
+			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not get execution: %w", errPrefix, err))
 		}
 
-		endExecution, endErr := s.TestExecutionResults.GetLatestByTestSuite(ctx, name, "endtime")
-		if endErr != nil && endErr != mongo.ErrNoDocuments {
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not get execution by end time :%w", errPrefix, endErr))
-		}
-
-		testSuiteWithExecution := testkube.TestSuiteWithExecution{
-			TestSuite: &testSuite,
-		}
-		if startErr == nil && endErr == nil {
-			if startExecution.StartTime.After(endExecution.EndTime) {
-				testSuiteWithExecution.LatestExecution = &startExecution
-			} else {
-				testSuiteWithExecution.LatestExecution = &endExecution
-			}
-		} else if startErr == nil {
-			testSuiteWithExecution.LatestExecution = &startExecution
-		} else if endErr == nil {
-			testSuiteWithExecution.LatestExecution = &endExecution
-		}
-
-		return c.JSON(testSuiteWithExecution)
+		return c.JSON(testkube.TestSuiteWithExecution{
+			TestSuite:       &testSuite,
+			LatestExecution: &execution,
+		})
 	}
 }
 
@@ -423,59 +406,18 @@ func (s TestkubeAPI) TestSuiteMetricsHandler() fiber.Handler {
 
 // getLatestTestSuiteExecutions return latest test suite executions either by starttime or endtine for tests
 func (s TestkubeAPI) getLatestTestSuiteExecutions(ctx context.Context, testSuiteNames []string) (map[string]testkube.TestSuiteExecution, error) {
-	executions, err := s.TestExecutionResults.GetLatestByTestSuites(ctx, testSuiteNames, "starttime")
+	executions, err := s.TestExecutionResults.GetLatestByTestSuites(ctx, testSuiteNames)
 	if err != nil && err != mongo.ErrNoDocuments {
 		return nil, err
 	}
 
-	startExecutionMap := make(map[string]testkube.TestSuiteExecution, len(executions))
+	executionMap := make(map[string]testkube.TestSuiteExecution, len(executions))
 	for i := range executions {
 		if executions[i].TestSuite == nil {
 			continue
 		}
-
-		startExecutionMap[executions[i].TestSuite.Name] = executions[i]
+		executionMap[executions[i].TestSuite.Name] = executions[i]
 	}
-
-	executions, err = s.TestExecutionResults.GetLatestByTestSuites(ctx, testSuiteNames, "endtime")
-	if err != nil && err != mongo.ErrNoDocuments {
-		return nil, err
-	}
-
-	endExecutionMap := make(map[string]testkube.TestSuiteExecution, len(executions))
-	for i := range executions {
-		if executions[i].TestSuite == nil {
-			continue
-		}
-
-		endExecutionMap[executions[i].TestSuite.Name] = executions[i]
-	}
-
-	executionMap := make(map[string]testkube.TestSuiteExecution)
-	for _, testSuiteName := range testSuiteNames {
-		startExecution, okStart := startExecutionMap[testSuiteName]
-		endExecution, okEnd := endExecutionMap[testSuiteName]
-		if !okStart && !okEnd {
-			continue
-		}
-
-		if okStart && !okEnd {
-			executionMap[testSuiteName] = startExecution
-			continue
-		}
-
-		if !okStart && okEnd {
-			executionMap[testSuiteName] = endExecution
-			continue
-		}
-
-		if startExecution.StartTime.After(endExecution.EndTime) {
-			executionMap[testSuiteName] = startExecution
-		} else {
-			executionMap[testSuiteName] = endExecution
-		}
-	}
-
 	return executionMap, nil
 }
 
