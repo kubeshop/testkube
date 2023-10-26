@@ -157,6 +157,9 @@ type JobOptions struct {
 	Labels                    map[string]string
 	Registry                  string
 	ClusterID                 string
+	ExecutionNumber           int32
+	ContextType               string
+	ContextData               string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -623,6 +626,13 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		labels[key] = value
 	}
 
+	contextType := ""
+	contextData := ""
+	if options.Request.RunningContext != nil {
+		contextType = options.Request.RunningContext.Type_
+		contextData = options.Request.RunningContext.Context
+	}
+
 	return &JobOptions{
 		Image:                     image,
 		ImagePullSecrets:          options.ImagePullSecretNames,
@@ -648,6 +658,9 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		EnvConfigMaps:             options.Request.EnvConfigMaps,
 		EnvSecrets:                options.Request.EnvSecrets,
 		Labels:                    labels,
+		ExecutionNumber:           options.Request.Number,
+		ContextType:               contextType,
+		ContextData:               contextData,
 	}
 }
 
