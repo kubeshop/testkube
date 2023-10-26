@@ -208,7 +208,6 @@ func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []stri
 
 		{"$lookup": bson.M{"from": "results", "localField": "doc.content._id", "foreignField": "_id", "as": "execution"}},
 		{"$replaceRoot": bson.M{"newRoot": bson.M{"$arrayElemAt": bson.A{"$execution", 0}}}},
-		{"$limit": 1},
 	}
 
 	opts := options.Aggregate()
