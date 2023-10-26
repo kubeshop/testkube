@@ -73,6 +73,10 @@ func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.Up
 
 	iconURI := cmd.Flag("icon-uri").Value.String()
 	docsURI := cmd.Flag("docs-uri").Value.String()
+	useDataDirAsWorkingDir, err := cmd.Flags().GetBool("use-data-dir-as-working-dir")
+	if err != nil {
+		return options, err
+	}
 
 	var meta *testkube.ExecutorMeta
 	if iconURI != "" || docsURI != "" || len(tooltips) != 0 {
@@ -84,20 +88,21 @@ func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.Up
 	}
 
 	options = apiClient.UpsertExecutorOptions{
-		Name:                 name,
-		Types:                types,
-		ExecutorType:         executorType,
-		Image:                image,
-		ImagePullSecrets:     imageSecrets,
-		Command:              command,
-		Args:                 executorArgs,
-		Uri:                  uri,
-		ContentTypes:         contentTypes,
-		JobTemplate:          jobTemplateContent,
-		JobTemplateReference: jobTemplateReference,
-		Features:             features,
-		Labels:               labels,
-		Meta:                 meta,
+		Name:                   name,
+		Types:                  types,
+		ExecutorType:           executorType,
+		Image:                  image,
+		ImagePullSecrets:       imageSecrets,
+		Command:                command,
+		Args:                   executorArgs,
+		Uri:                    uri,
+		ContentTypes:           contentTypes,
+		JobTemplate:            jobTemplateContent,
+		JobTemplateReference:   jobTemplateReference,
+		Features:               features,
+		Labels:                 labels,
+		Meta:                   meta,
+		UseDataDirAsWorkingDir: useDataDirAsWorkingDir,
 	}
 
 	return options, nil
@@ -231,6 +236,15 @@ func NewUpdateExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.Up
 		}
 
 		options.Meta = &meta
+	}
+
+	if cmd.Flag("use-data-dir-as-working-dir").Changed {
+		value, err := cmd.Flags().GetBool("use-data-dir-as-working-dir")
+		if err != nil {
+			return options, err
+		}
+
+		options.UseDataDirAsWorkingDir = &value
 	}
 
 	return options, nil

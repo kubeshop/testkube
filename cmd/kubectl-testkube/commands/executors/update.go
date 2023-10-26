@@ -12,6 +12,7 @@ func UpdateExecutorCmd() *cobra.Command {
 		types, command, executorArgs, imagePullSecretNames, features, contentTypes          []string
 		name, executorType, image, uri, jobTemplate, iconURI, docsURI, jobTemplateReference string
 		labels, tooltips                                                                    map[string]string
+		useDataDirAsWorkingDir                                                              bool
 	)
 
 	cmd := &cobra.Command{
@@ -59,6 +60,7 @@ func UpdateExecutorCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&docsURI, "docs-uri", "", "", "URI to executor docs")
 	cmd.Flags().StringArrayVar(&contentTypes, "content-type", []string{}, "list of supported content types for executor")
 	cmd.Flags().StringToStringVarP(&tooltips, "tooltip", "", nil, "tooltip key value pair: --tooltip key1=value1")
+	cmd.Flags().BoolVar(&useDataDirAsWorkingDir, "use-data-dir-as-working-dir", false, "use data dir as working dir for all tests")
 
 	return cmd
 }

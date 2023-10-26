@@ -100,6 +100,7 @@ func TestGenerateYAML(t *testing.T) {
 						"name": "please enter executor name",
 					},
 				},
+				UseDataDirAsWorkingDir: true,
 			},
 		}
 

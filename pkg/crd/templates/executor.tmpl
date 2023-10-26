@@ -76,3 +76,6 @@ spec:
     {{- end }}
     {{- end }}
   {{- end}}
+  {{- if .UseDataDirAsWorkingDir }}
+  useDataDirAsWorkingDir: {{ .UseDataDirAsWorkingDir }}
+  {{- end }}
