@@ -9,6 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+//go:generate mockgen -destination=./mock_database.go -package=dbmigrator "github.com/kubeshop/testkube/pkg/dbmigrator" Database
 type Database interface {
 	RunCommands(ctx context.Context, commands []bson.D) error
 	InsertMigrationState(ctx context.Context, migration *DbMigration) error
