@@ -245,15 +245,18 @@ func main() {
 		}
 
 		// Run DB migrations
-		dbMigrator, err := dbmigrator.NewDbMigrator(db, "__migrations", cfg.TestkubeConfigDir)
-		ui.ExitOnError("Loading MongoDB migrations", err)
-		plan, _ := dbMigrator.Plan(ctx)
-		if plan.Total == 0 {
-			log.DefaultLogger.Info("No MongoDB migrations to apply.")
-		} else {
-			log.DefaultLogger.Info(fmt.Sprintf("Applying MongoDB migrations: %d rollbacks and %d ups.", len(plan.Downs), len(plan.Ups)))
+		if !cfg.DisableMongoMigrations {
+			dbMigrator, err := dbmigrator.NewDbMigrator(db, "__migrations", cfg.TestkubeConfigDir)
+			ui.ExitOnError("Loading MongoDB migrations", err)
+			plan, err := dbMigrator.Plan(ctx)
+			ui.ExitOnError("Planning MongoDB migrations", err)
+			if plan.Total == 0 {
+				log.DefaultLogger.Info("No MongoDB migrations to apply.")
+			} else {
+				log.DefaultLogger.Info(fmt.Sprintf("Applying MongoDB migrations: %d rollbacks and %d ups.", len(plan.Downs), len(plan.Ups)))
+			}
+			ui.ExitOnError("Executing MongoDB migrations", dbMigrator.Apply(ctx))
 		}
-		ui.ExitOnError("Executing MongoDB migrations", dbMigrator.Apply(ctx))
 	}
 
 	configName := fmt.Sprintf("testkube-api-server-config-%s", cfg.TestkubeNamespace)
