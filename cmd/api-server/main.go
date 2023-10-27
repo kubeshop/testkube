@@ -8,11 +8,13 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 
+	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
 
 	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
@@ -100,6 +102,26 @@ func runMigrations() (err error) {
 	log.DefaultLogger.Infow("Available migrations for Testkube", "apiVersion", version.Version, "migrations", migrationInfo)
 
 	return migrations.Migrator.Run(version.Version, migrator.MigrationTypeServer)
+}
+
+func runMongoMigrations(ctx context.Context, db *mongo.Database, migrationsDir string) error {
+	migrationsCollectionName := "__migrations"
+	activeMigrations, err := dbmigrator.GetDbMigrationsFromDir(migrationsDir)
+	if err != nil {
+		return errors.Wrap(err, "failed to obtain MongoDB migrations from disk")
+	}
+	dbMigrator := dbmigrator.NewDbMigrator(dbmigrator.NewDatabase(db, migrationsCollectionName), activeMigrations)
+	plan, err := dbMigrator.Plan(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to plan MongoDB migrations")
+	}
+	if plan.Total == 0 {
+		log.DefaultLogger.Info("No MongoDB migrations to apply.")
+	} else {
+		log.DefaultLogger.Info(fmt.Sprintf("Applying MongoDB migrations: %d rollbacks and %d ups.", len(plan.Downs), len(plan.Ups)))
+	}
+	err = dbMigrator.Apply(ctx)
+	return errors.Wrap(err, "failed to apply MongoDB migrations")
 }
 
 func main() {
@@ -246,19 +268,10 @@ func main() {
 
 		// Run DB migrations
 		if !cfg.DisableMongoMigrations {
-			activeMigrations, err := dbmigrator.GetDbMigrationsFromDir(cfg.TestkubeConfigDir)
-			ui.ExitOnError("Obtaining MongoDB migrations from disk", err)
-			dbMigrator := dbmigrator.NewDbMigrator(dbmigrator.NewDatabase(db, "__migrations"), activeMigrations)
-			ui.ExitOnError("Loading MongoDB migrations", err)
-			plan, err := dbMigrator.Plan(ctx)
-			ui.ExitOnError("Planning MongoDB migrations", err)
-			if plan.Total == 0 {
-				log.DefaultLogger.Info("No MongoDB migrations to apply.")
-			} else {
-				log.DefaultLogger.Info(fmt.Sprintf("Applying MongoDB migrations: %d rollbacks and %d ups.", len(plan.Downs), len(plan.Ups)))
+			err := runMongoMigrations(ctx, db, filepath.Join(cfg.TestkubeConfigDir, "db-migrations"))
+			if err != nil {
+				log.DefaultLogger.Warnf("failed to apply MongoDB migrations: %v", err)
 			}
-			ui.ExitOnError("Executing MongoDB migrations", dbMigrator.Apply(ctx))
-			os.Exit(0)
 		}
 	}
 
