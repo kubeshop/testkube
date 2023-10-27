@@ -2,19 +2,11 @@
 
 Welcome to the Open Source version of Testkube! 
 
-Designed to integrate seamlessly with your Kubernetes clusters, Testkube offers flexibility and power. For those searching for a quicker and streamlined experience, we suggest [signing up for Testkube Cloud](https://cloud.testkube.io/). However, for organizations that prefer the hands-on approach, diving deep into the Open Source version could be the ideal choice.
+Designed to integrate seamlessly with your Kubernetes clusters, Testkube offers flexibility and power. For those searching for a quicker and streamlined experience, we suggest [signing up for Testkube Cloud](https://cloud.testkube.io/). However, for organizations that prefer the hands-on approach, diving deep into the [Open Source](../../articles/getting-started.md) version could be the ideal choice.
 
-## Testkube OSS vs. Testkube Cloud: At a Glance
+Visit [Open Source or Cloud](../../articles/open-source-or-cloud.md) to see a comparison of features to help you with your choice.
 
-|                        | OSS                           | Cloud/Enterprise |
-| :--------------------- | :---------------------------  | :-------------------------------------------------- |
-| Hosted                 | Fully hosted on your cluster. | Hybrid - Cloud Dashboard with the Test Execution Agent on your cluster. |
-| Setup                  | Utilize a Helm chart, you maintain it.   | Simplified setup for a quicker start. [Sign in here](https://cloud.testkube.io/) for free. |
-| Maintainance           | Your team manages S3, MongoDB, and API resources.   | Significant reduction in maintenance costs with Testkube Cloud.|
-| Features               | Core functionality for executing tests.   | Builds upon OSS; enhanced with FREE, PRO and Enterprise features. Check [Pricing](https://testkube.io/pricing). |
-| Support                | Community Support   | Advanced Support |
-
-Take a look at our [Quick Setup Video](https://www.youtube.com/watch?v=ynzEkOUhxKk).
+Also, take a look at our [Quick Setup Video](https://www.youtube.com/watch?v=ynzEkOUhxKk).
 
 ## Getting Started with Testkube Open Source
 

@@ -22,20 +22,12 @@ const sidebars = {
         type: "doc",
         id: "index",
       },
-      items: ["articles/supported-tests", "articles/testkube-benefits"],
+      items: ["articles/supported-tests", "articles/testkube-benefits", "articles/open-source-or-cloud"],
     },
     {
-      type: "category",
+      type: "doc",
       label: "Getting Started",
-      link: {
-        type: "doc",
-        id: "articles/getting-started-overview",
-      },
-      items: [
-        "articles/step1-installing-cli",
-        "articles/step2-installing-cluster-components",
-        "articles/step3-creating-first-test",
-      ],
+      id: "articles/getting-started",
     },
     {
       type: "category",
@@ -98,7 +90,7 @@ const sidebars = {
             },
             "articles/exposing-testkube-with-ingress-nginx",
             "articles/deploying-in-aws",
-            "articles/deploying-from-private-registries"
+            "articles/deploying-from-private-registries",
           ],
         },
         {
@@ -134,11 +126,13 @@ const sidebars = {
             },
           ],
         },
+        "articles/creating-first-test",
         "articles/cd-events",
         "articles/slack-integration",
         "articles/generate-test-crds",
         "articles/logging",
-        "articles/uninstall",
+        "articles/install-cli",
+        "articles/uninstall"
       ],
     },
     {
@@ -179,7 +173,6 @@ const sidebars = {
       label: "Testkube Cloud",
       items: [
         "testkube-cloud/articles/intro",
-        "testkube-cloud/articles/testkube-oss",
         "testkube-cloud/articles/installing-agent",
         "testkube-cloud/articles/transition-from-oss",
         "testkube-cloud/articles/organization-management",
@@ -192,6 +185,7 @@ const sidebars = {
         "testkube-cloud/articles/cached-results",
       ],
     },
+    "testkube-cloud/articles/testkube-oss",
     {
       type: "category",
       label: "Reference",
