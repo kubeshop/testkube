@@ -113,19 +113,20 @@ func (d *DbMigrator) Plan(ctx context.Context) (plan DbPlan, err error) {
 	if err != nil {
 		return plan, err
 	}
-	if len(applied) < len(d.list) {
-		plan.Ups = d.list[len(applied):]
+	matchCount := 0
+	for i, migration := range d.list {
+		if i >= len(applied) || applied[i].Name != migration.Name || !reflect.DeepEqual(applied[i].UpScript, migration.UpScript) {
+			break
+		}
+		matchCount++
 	}
-	for i, migration := range applied {
-		if i >= len(d.list) {
-			plan.Ups = d.list[i:]
-			break
-		}
-		if d.list[i].Name != migration.Name || !reflect.DeepEqual(d.list[i].UpScript, migration.UpScript) {
-			plan.Ups = d.list[i:]
-			plan.Downs = applied[i:]
-			break
-		}
+
+	if matchCount < len(applied) {
+		plan.Downs = applied[matchCount:]
+		slices.Reverse(plan.Downs)
+	}
+	if len(d.list) > matchCount {
+		plan.Ups = d.list[matchCount:]
 	}
 	plan.Total = len(plan.Ups) + len(plan.Downs)
 	return plan, err
