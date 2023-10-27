@@ -8,11 +8,13 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 
+	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
 
 	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
@@ -71,6 +73,7 @@ import (
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/migrations"
 	"github.com/kubeshop/testkube/pkg/configmap"
+	"github.com/kubeshop/testkube/pkg/dbmigrator"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/reconciler"
@@ -99,6 +102,26 @@ func runMigrations() (err error) {
 	log.DefaultLogger.Infow("Available migrations for Testkube", "apiVersion", version.Version, "migrations", migrationInfo)
 
 	return migrations.Migrator.Run(version.Version, migrator.MigrationTypeServer)
+}
+
+func runMongoMigrations(ctx context.Context, db *mongo.Database, migrationsDir string) error {
+	migrationsCollectionName := "__migrations"
+	activeMigrations, err := dbmigrator.GetDbMigrationsFromDir(migrationsDir)
+	if err != nil {
+		return errors.Wrap(err, "failed to obtain MongoDB migrations from disk")
+	}
+	dbMigrator := dbmigrator.NewDbMigrator(dbmigrator.NewDatabase(db, migrationsCollectionName), activeMigrations)
+	plan, err := dbMigrator.Plan(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to plan MongoDB migrations")
+	}
+	if plan.Total == 0 {
+		log.DefaultLogger.Info("No MongoDB migrations to apply.")
+	} else {
+		log.DefaultLogger.Info(fmt.Sprintf("Applying MongoDB migrations: %d rollbacks and %d ups.", len(plan.Downs), len(plan.Ups)))
+	}
+	err = dbMigrator.Apply(ctx)
+	return errors.Wrap(err, "failed to apply MongoDB migrations")
 }
 
 func main() {
@@ -240,6 +263,14 @@ func main() {
 				mongoResultsRepository.OutputRepository = result.NewMinioOutputRepository(storageClient, mongoResultsRepository.ResultsColl, bucket)
 			} else {
 				log.DefaultLogger.Infow("minio is not available, using default logs storage", "error", err)
+			}
+		}
+
+		// Run DB migrations
+		if !cfg.DisableMongoMigrations {
+			err := runMongoMigrations(ctx, db, filepath.Join(cfg.TestkubeConfigDir, "db-migrations"))
+			if err != nil {
+				log.DefaultLogger.Warnf("failed to apply MongoDB migrations: %v", err)
 			}
 		}
 	}
