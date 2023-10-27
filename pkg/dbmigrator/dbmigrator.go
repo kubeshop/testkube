@@ -42,7 +42,8 @@ func GetDbMigrationsFromDir(dirPath string) ([]DbMigration, error) {
 		}
 		name := upRe.ReplaceAllString(filepath.Base(filePath), "")
 		downFilePath := upRe.ReplaceAllString(filePath, ".down.json")
-		downBytes, upBytes := []byte("[]"), []byte("[]")
+		var upBytes []byte
+		downBytes := []byte("[]")
 		if slices.Contains(filePaths, downFilePath) {
 			downBytes, err = os.ReadFile(downFilePath)
 			if err != nil {
