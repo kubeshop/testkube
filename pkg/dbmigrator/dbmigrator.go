@@ -2,17 +2,13 @@ package dbmigrator
 
 import (
 	"context"
-	"go.mongodb.org/mongo-driver/mongo"
+	"github.com/pkg/errors"
+	"go.mongodb.org/mongo-driver/bson"
+	"golang.org/x/exp/slices"
 	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
-	"time"
-
-	"github.com/pkg/errors"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"golang.org/x/exp/slices"
 )
 
 type DbPlan struct {
@@ -28,13 +24,11 @@ type DbMigration struct {
 }
 
 type DbMigrator struct {
-	db             *mongo.Database
-	migrationsColl *mongo.Collection
-	list           []DbMigration
+	db   Database
+	list []DbMigration
 }
 
-// TODO: Consider locks
-func NewDbMigrator(db *mongo.Database, collName, dirPath string) (*DbMigrator, error) {
+func NewDbMigrator(db Database, dirPath string) (*DbMigrator, error) {
 	filePaths, err := filepath.Glob(filepath.Join(dirPath, "*.json"))
 	if err != nil {
 		return nil, err
@@ -75,31 +69,22 @@ func NewDbMigrator(db *mongo.Database, collName, dirPath string) (*DbMigrator, e
 	}
 
 	return &DbMigrator{
-		db:             db,
-		list:           list,
-		migrationsColl: db.Collection(collName),
+		db:   db,
+		list: list,
 	}, nil
 }
 
-// TODO: Consider transactions, but it requires MongoDB with replicaset
 func (d *DbMigrator) up(ctx context.Context, migration *DbMigration) (err error) {
-	for _, cmd := range migration.UpScript {
-		err = d.db.RunCommand(ctx, cmd).Err()
-		if err != nil {
-			downErr := d.down(ctx, migration)
-			if downErr == nil {
-				return errors.Wrapf(err, "migration '%s' failed, rolled back.", migration.Name)
-			} else {
-				return errors.Wrapf(err, "migration '%s' failed, rolled failed to: %v", migration.Name, downErr.Error())
-			}
+	err = d.db.RunCommands(ctx, migration.UpScript)
+	if err != nil {
+		downErr := d.down(ctx, migration)
+		if downErr == nil {
+			return errors.Wrapf(err, "migration '%s' failed, rolled back.", migration.Name)
+		} else {
+			return errors.Wrapf(err, "migration '%s' failed, rolled failed to: %v", migration.Name, downErr.Error())
 		}
 	}
-	_, err = d.migrationsColl.InsertOne(ctx, bson.M{
-		"name":      migration.Name,
-		"up":        migration.UpScript,
-		"down":      migration.DownScript,
-		"timestamp": time.Now(),
-	})
+	err = d.db.InsertMigrationState(ctx, migration)
 	if err != nil {
 		return errors.Wrapf(err, "failed to save '%s' migration state to database", migration.Name)
 	}
@@ -108,13 +93,11 @@ func (d *DbMigrator) up(ctx context.Context, migration *DbMigration) (err error)
 
 // TODO: Consider transactions, but it requires MongoDB with replicaset
 func (d *DbMigrator) down(ctx context.Context, migration *DbMigration) (err error) {
-	for _, cmd := range migration.DownScript {
-		err = d.db.RunCommand(ctx, cmd).Err()
-		if err != nil {
-			return errors.Wrapf(err, "rolling back '%s' failed.", migration.Name)
-		}
+	err = d.db.RunCommands(ctx, migration.DownScript)
+	if err != nil {
+		return errors.Wrapf(err, "rolling back '%s' failed.", migration.Name)
 	}
-	_, err = d.migrationsColl.DeleteOne(ctx, bson.M{"name": migration.Name})
+	err = d.db.DeleteMigrationState(ctx, migration)
 	if err != nil {
 		return errors.Wrapf(err, "failed to save '%s' rollback state to database", migration.Name)
 	}
@@ -122,12 +105,7 @@ func (d *DbMigrator) down(ctx context.Context, migration *DbMigration) (err erro
 }
 
 func (d *DbMigrator) GetApplied(ctx context.Context) (results []DbMigration, err error) {
-	cursor, err := d.migrationsColl.Find(ctx, bson.M{}, &options.FindOptions{Sort: bson.M{"name": 1}})
-	if err != nil {
-		return nil, err
-	}
-	err = cursor.All(ctx, &results)
-	return results, err
+	return d.db.GetAppliedMigrations(ctx)
 }
 
 func (d *DbMigrator) Plan(ctx context.Context) (plan DbPlan, err error) {
@@ -135,9 +113,11 @@ func (d *DbMigrator) Plan(ctx context.Context) (plan DbPlan, err error) {
 	if err != nil {
 		return plan, err
 	}
-	plan.Ups = d.list[len(applied):]
+	if len(applied) < len(d.list) {
+		plan.Ups = d.list[len(applied):]
+	}
 	for i, migration := range applied {
-		if i > len(d.list) {
+		if i >= len(d.list) {
 			plan.Ups = d.list[i:]
 			break
 		}

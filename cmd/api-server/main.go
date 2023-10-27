@@ -246,7 +246,7 @@ func main() {
 
 		// Run DB migrations
 		if !cfg.DisableMongoMigrations {
-			dbMigrator, err := dbmigrator.NewDbMigrator(db, "__migrations", cfg.TestkubeConfigDir)
+			dbMigrator, err := dbmigrator.NewDbMigrator(dbmigrator.NewDatabase(db, "__migrations"), cfg.TestkubeConfigDir)
 			ui.ExitOnError("Loading MongoDB migrations", err)
 			plan, err := dbMigrator.Plan(ctx)
 			ui.ExitOnError("Planning MongoDB migrations", err)
@@ -256,6 +256,7 @@ func main() {
 				log.DefaultLogger.Info(fmt.Sprintf("Applying MongoDB migrations: %d rollbacks and %d ups.", len(plan.Downs), len(plan.Ups)))
 			}
 			ui.ExitOnError("Executing MongoDB migrations", dbMigrator.Apply(ctx))
+			os.Exit(0)
 		}
 	}
 
