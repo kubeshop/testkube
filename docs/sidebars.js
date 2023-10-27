@@ -185,7 +185,7 @@ const sidebars = {
         "testkube-cloud/articles/cached-results",
       ],
     },
-    "testkube-cloud/articles/testkube-oss",
+    "articles/testkube-oss",
     {
       type: "category",
       label: "Reference",
