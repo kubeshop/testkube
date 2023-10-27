@@ -111,7 +111,7 @@ func (d *DbMigrator) down(ctx context.Context, migration *DbMigration) (err erro
 	for _, cmd := range migration.DownScript {
 		err = d.db.RunCommand(ctx, cmd).Err()
 		if err != nil {
-			return errors.Wrapf(err, "rolling back '%s' failed.")
+			return errors.Wrapf(err, "rolling back '%s' failed.", migration.Name)
 		}
 	}
 	_, err = d.migrationsColl.DeleteOne(ctx, bson.M{"name": migration.Name})
