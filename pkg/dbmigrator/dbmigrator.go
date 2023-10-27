@@ -28,7 +28,7 @@ type DbMigrator struct {
 	list []DbMigration
 }
 
-func NewDbMigrator(db Database, dirPath string) (*DbMigrator, error) {
+func GetDbMigrationsFromDir(dirPath string) ([]DbMigration, error) {
 	filePaths, err := filepath.Glob(filepath.Join(dirPath, "*.json"))
 	if err != nil {
 		return nil, err
@@ -67,7 +67,10 @@ func NewDbMigrator(db Database, dirPath string) (*DbMigrator, error) {
 			DownScript: downScript,
 		})
 	}
+	return list, nil
+}
 
+func NewDbMigrator(db Database, list []DbMigration) (*DbMigrator, error) {
 	return &DbMigrator{
 		db:   db,
 		list: list,

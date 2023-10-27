@@ -246,7 +246,9 @@ func main() {
 
 		// Run DB migrations
 		if !cfg.DisableMongoMigrations {
-			dbMigrator, err := dbmigrator.NewDbMigrator(dbmigrator.NewDatabase(db, "__migrations"), cfg.TestkubeConfigDir)
+			activeMigrations, err := dbmigrator.GetDbMigrationsFromDir(cfg.TestkubeConfigDir)
+			ui.ExitOnError("Obtaining MongoDB migrations from disk", err)
+			dbMigrator, err := dbmigrator.NewDbMigrator(dbmigrator.NewDatabase(db, "__migrations"), activeMigrations)
 			ui.ExitOnError("Loading MongoDB migrations", err)
 			plan, err := dbMigrator.Plan(ctx)
 			ui.ExitOnError("Planning MongoDB migrations", err)
