@@ -70,11 +70,8 @@ func GetDbMigrationsFromDir(dirPath string) ([]DbMigration, error) {
 	return list, nil
 }
 
-func NewDbMigrator(db Database, list []DbMigration) (*DbMigrator, error) {
-	return &DbMigrator{
-		db:   db,
-		list: list,
-	}, nil
+func NewDbMigrator(db Database, list []DbMigration) *DbMigrator {
+	return &DbMigrator{db: db, list: list}
 }
 
 func (d *DbMigrator) up(ctx context.Context, migration *DbMigration) (err error) {
