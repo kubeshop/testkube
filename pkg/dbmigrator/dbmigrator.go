@@ -2,13 +2,14 @@ package dbmigrator
 
 import (
 	"context"
-	"github.com/pkg/errors"
-	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/exp/slices"
 	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
+
+	"github.com/pkg/errors"
+	"go.mongodb.org/mongo-driver/bson"
+	"golang.org/x/exp/slices"
 )
 
 type DbPlan struct {
