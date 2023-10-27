@@ -2,9 +2,9 @@
 
 Welcome to the Open Source version of Testkube! 
 
-Designed to integrate seamlessly with your Kubernetes clusters, Testkube offers flexibility and power. For those searching for a quicker and streamlined experience, we suggest [signing up for Testkube Cloud](https://cloud.testkube.io/). However, for organizations that prefer the hands-on approach, diving deep into the [Open Source](../../articles/getting-started.md) version could be the ideal choice.
+Designed to integrate seamlessly with your Kubernetes clusters, Testkube offers flexibility and power. For those searching for a quicker and streamlined experience, we suggest [signing up for Testkube Cloud](https://cloud.testkube.io/). However, for organizations that prefer the hands-on approach, diving deep into the [Open Source](getting-started.md) version could be the ideal choice.
 
-Visit [Open Source or Cloud](../../articles/open-source-or-cloud.md) to see a comparison of features to help you with your choice.
+Visit [Open Source or Cloud](open-source-or-cloud.md) to see a comparison of features to help you with your choice.
 
 Also, take a look at our [Quick Setup Video](https://www.youtube.com/watch?v=ynzEkOUhxKk).
 
