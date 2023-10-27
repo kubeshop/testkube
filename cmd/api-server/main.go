@@ -245,7 +245,7 @@ func main() {
 		}
 
 		// Run DB migrations
-		dbMigrator, err := dbmigrator.NewDbMigrator(db, "__migrations", "internal/db-migrations")
+		dbMigrator, err := dbmigrator.NewDbMigrator(db, "__migrations", cfg.TestkubeConfigDir)
 		ui.ExitOnError("Loading MongoDB migrations", err)
 		plan, _ := dbMigrator.Plan(ctx)
 		if plan.Total == 0 {
