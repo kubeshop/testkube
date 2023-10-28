@@ -106,7 +106,7 @@ func runMigrations() (err error) {
 
 func runMongoMigrations(ctx context.Context, db *mongo.Database, migrationsDir string) error {
 	migrationsCollectionName := "__migrations"
-	activeMigrations, err := dbmigrator.GetDbMigrationsFromDir(migrationsDir)
+	activeMigrations, err := dbmigrator.GetDbMigrationsFromFs(os.DirFS(migrationsDir))
 	if err != nil {
 		return errors.Wrap(err, "failed to obtain MongoDB migrations from disk")
 	}
