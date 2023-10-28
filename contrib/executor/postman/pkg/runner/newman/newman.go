@@ -151,10 +151,11 @@ func (r *NewmanRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	result = MapMetadataToResult(newmanResult)
 	output.PrintLog(fmt.Sprintf("%s Mapped Newman result successfully", ui.IconCheckMark))
 
+	var rerr error
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if rerr := agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); rerr != nil {
+		if rerr = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); rerr != nil {
 			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, rerr)
 		}
 	}
@@ -175,6 +176,10 @@ func (r *NewmanRunner) Run(ctx context.Context, execution testkube.Execution) (r
 
 	if nerr != nil {
 		return *result.Err(nerr), nil
+	}
+
+	if rerr != nil {
+		return *result.Err(rerr), nil
 	}
 
 	return result, nil

@@ -112,23 +112,24 @@ func (r *ArtilleryRunner) Run(ctx context.Context, execution testkube.Execution)
 	// run executor
 	command, args := executor.MergeCommandAndArgs(execution.Command, args)
 	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
-	out, rerr := executor.Run(runPath, command, envManager, args...)
+	out, runerr := executor.Run(runPath, command, envManager, args...)
 
 	out = envManager.ObfuscateSecrets(out)
 
 	var artilleryResult ArtilleryExecutionResult
 	artilleryResult, err = r.GetArtilleryExecutionResult(testReportFile, out)
 	if err != nil {
-		return *result.WithErrors(rerr, errors.Errorf("failed to get test execution results")), err
+		return *result.WithErrors(runerr, errors.Errorf("failed to get test execution results")), err
 	}
 
 	result = MapTestSummaryToResults(artilleryResult)
 	output.PrintLog(fmt.Sprintf("%s Mapped test summary to Execution Results...", ui.IconCheckMark))
 
+	var rerr error
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if rerr := agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); rerr != nil {
+		if rerr = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); rerr != nil {
 			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, rerr)
 		}
 	}
@@ -148,7 +149,7 @@ func (r *ArtilleryRunner) Run(ctx context.Context, execution testkube.Execution)
 	}
 
 	// return ExecutionResult
-	return *result.WithErrors(err), nil
+	return *result.WithErrors(err, rerr), nil
 }
 
 // GetType returns runner type

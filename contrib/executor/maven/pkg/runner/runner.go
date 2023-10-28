@@ -183,6 +183,7 @@ func (r *MavenRunner) Run(ctx context.Context, execution testkube.Execution) (re
 		}
 	}
 
+	var rerr error
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		outputPkg.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
@@ -190,7 +191,7 @@ func (r *MavenRunner) Run(ctx context.Context, execution testkube.Execution) (re
 			runPath = r.params.WorkingDir
 		}
 
-		if rerr := agent.RunScript(execution.PostRunScript, runPath); rerr != nil {
+		if rerr = agent.RunScript(execution.PostRunScript, runPath); rerr != nil {
 			outputPkg.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, rerr)
 		}
 	}
@@ -232,6 +233,10 @@ func (r *MavenRunner) Run(ctx context.Context, execution testkube.Execution) (re
 
 	if err != nil {
 		return *result.Err(err), nil
+	}
+
+	if rerr != nil {
+		return *result.Err(rerr), nil
 	}
 
 	return result, nil
