@@ -241,10 +241,11 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 
 	output.PrintLogf("%s Mapped JMeter results to Execution Results...", ui.IconCheckMark)
 
+	var rerr error
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if rerr := agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); rerr != nil {
+		if rerr = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); rerr != nil {
 			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, rerr)
 		}
 	}
@@ -262,6 +263,10 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 		if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
 			return *executionResult.Err(err), errors.Wrap(err, "error scraping artifacts for JMeter executor")
 		}
+	}
+
+	if rerr != nil {
+		return *result.Err(rerr), nil
 	}
 
 	return executionResult, nil

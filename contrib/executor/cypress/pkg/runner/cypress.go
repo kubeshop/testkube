@@ -120,6 +120,8 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 
 	// append args from execution
 	args = execution.Args
+	hasJunit := false
+	hasReporter := false
 	for i := len(args) - 1; i >= 0; i-- {
 		if project == "" && (args[i] == "--project" || args[i] == "<projectPath>") {
 			args = append(args[:i], args[i+1:]...)
@@ -128,6 +130,14 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 
 		if args[i] == "<projectPath>" {
 			args[i] = project
+		}
+
+		if args[i] == "junit" {
+			hasJunit = true
+		}
+
+		if args[i] == "--reporter" {
+			hasReporter = true
 		}
 
 		if strings.Contains(args[i], "<reportFile>") {
@@ -146,8 +156,19 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
 	out, err = executor.Run(runPath, command, envManager, args...)
 	out = envManager.ObfuscateSecrets(out)
-	suites, serr := junit.IngestDir(junitReportDir)
-	result = MapJunitToExecutionResults(out, suites)
+
+	var suites []junit.Suite
+	var serr error
+	if hasJunit && hasReporter {
+		suites, serr = junit.IngestDir(junitReportDir)
+		result = MapJunitToExecutionResults(out, suites)
+	} else {
+		status := testkube.PASSED_ExecutionStatus
+		result.Status = &status
+		result.Output = string(out)
+		result.OutputType = "text/plain"
+	}
+
 	output.PrintLogf("%s Mapped Junit to Execution Results...", ui.IconCheckMark)
 
 	if steps := result.FailedSteps(); len(steps) > 0 {
@@ -161,10 +182,11 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 		}
 	}
 
+	var rerr error
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if rerr := agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); rerr != nil {
+		if rerr = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); rerr != nil {
 			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, rerr)
 		}
 	}
@@ -188,7 +210,7 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 		}
 	}
 
-	return *result.WithErrors(err, serr), nil
+	return *result.WithErrors(err, serr, rerr), nil
 }
 
 func (r *CypressRunner) installModule(runPath string) (out []byte, err error) {
