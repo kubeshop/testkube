@@ -2,10 +2,11 @@ package dbmigrator
 
 import (
 	"context"
-	"os"
+	"io/fs"
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"sort"
 
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
@@ -29,11 +30,14 @@ type DbMigrator struct {
 	list []DbMigration
 }
 
-func GetDbMigrationsFromDir(dirPath string) ([]DbMigration, error) {
-	filePaths, err := filepath.Glob(filepath.Join(dirPath, "*.json"))
+func GetDbMigrationsFromFs(fsys fs.FS) ([]DbMigration, error) {
+	filePaths, err := fs.Glob(fsys, "*.json")
 	if err != nil {
 		return nil, err
 	}
+	sort.Slice(filePaths, func(i, j int) bool {
+		return filePaths[i] < filePaths[j]
+	})
 	var list []DbMigration
 	upRe := regexp.MustCompile(`\.up\.json$`)
 	for _, filePath := range filePaths {
@@ -45,12 +49,12 @@ func GetDbMigrationsFromDir(dirPath string) ([]DbMigration, error) {
 		var upBytes []byte
 		downBytes := []byte("[]")
 		if slices.Contains(filePaths, downFilePath) {
-			downBytes, err = os.ReadFile(downFilePath)
+			downBytes, err = fs.ReadFile(fsys, downFilePath)
 			if err != nil {
 				return nil, err
 			}
 		}
-		upBytes, err = os.ReadFile(filePath)
+		upBytes, err = fs.ReadFile(fsys, filePath)
 		if err != nil {
 			return nil, err
 		}

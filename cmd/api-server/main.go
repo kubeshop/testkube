@@ -32,6 +32,7 @@ import (
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
+	dbmigrations "github.com/kubeshop/testkube/internal/db-migrations"
 	parser "github.com/kubeshop/testkube/internal/template"
 	"github.com/kubeshop/testkube/pkg/version"
 
@@ -106,7 +107,7 @@ func runMigrations() (err error) {
 
 func runMongoMigrations(ctx context.Context, db *mongo.Database, migrationsDir string) error {
 	migrationsCollectionName := "__migrations"
-	activeMigrations, err := dbmigrator.GetDbMigrationsFromDir(migrationsDir)
+	activeMigrations, err := dbmigrator.GetDbMigrationsFromFs(dbmigrations.MongoMigrationsFs)
 	if err != nil {
 		return errors.Wrap(err, "failed to obtain MongoDB migrations from disk")
 	}
