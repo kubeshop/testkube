@@ -2,11 +2,11 @@ package dbmigrator
 
 import (
 	"context"
-	"github.com/spf13/afero"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"
 )
