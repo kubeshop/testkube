@@ -1,6 +1,7 @@
 package slaves
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -60,7 +61,7 @@ func TestSlaveMeta_ToIPString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ipString := tt.meta.ToIPString()
-			assert.Equal(t, tt.expected, ipString)
+			assert.ElementsMatch(t, strings.Split(tt.expected, ","), strings.Split(ipString, ","))
 		})
 	}
 }
