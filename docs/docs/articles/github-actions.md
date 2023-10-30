@@ -1,63 +1,160 @@
-## Testkube GitHub Action
+# Testkube GitHub Action
 
 The Testkube GitHub Action installs Testkube and enables running any [Testkube CLI](https://docs.testkube.io/cli/testkube) command in a GitHub workflow. It is available on Github Marketplace <https://github.com/marketplace/actions/testkube-action>.
 The action provides a flexible way to work with your pipeline and can be used with Testkube Cloud, Testkube Enterprise, and an open source Testkube platform.
 
-### How to run a test on TK Cloud on every PR with this GH Action
+## Testkube Cloud
 
-The following example shows how to create and run a test using the GitHub action on the [Teskube Cloud](https://cloud.testkube.io/) instance on every opened Pull Request. Please note that there are no additional steps needed to connect to the k8s cluster as all the necessary data are provided as inputs. Do not forget to replace `organization`, `environment` and `token` with your own values.
+### How to configure Testkube CLI action for TK Cloud and run a test
+
+To use this GitHub Action for the [Testkube Cloud](https://cloud.testkube.io/), you need to create [API token](https://docs.testkube.io/testkube-cloud/articles/organization-management/#api-tokens).
+Then, pass the **organization** and **environment** IDs, along with the **token** and other parameters specific for your use case.
+
+If test is already created, you may directly run it using the command `testkube run test test-name -f` . However, if you need to create a test in this workflow, please add a creation command, e.g.: `testkube create test --name test-name --file path_to_file.json`.
 
 ```yaml
-name: Run tests on Pull Request
-on:
-  pull_request_target:
-    types:
-      - opened
-jobs:
-  main:
-    name: Install Testkube CLI and Run Tests   
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        
-      - uses: kubeshop/setup-testkube@v1
-        with:
-          organization: tk-organization
-          environment: tk-environment
-          token: tk-token
+steps:
+  - uses: kubeshop/setup-testkube@v1
+    with:
+      organization: tkcorg_0123456789abcdef
+      environment: tkcenv_fedcba9876543210
+      token: tkcapi_0123456789abcdef0123456789abcd
 
-      - run: |
-          testkube create test --name test-name --file path_to_file.json
-          testkube run test test-name -f
+  - run: |
+      testkube run test test-name -f 
+
 ```
-### How to run a test on your self-hosted Testkube instance on every PR with this GH Action
+It is recommended that sensitive values should never be stored as plaintext in workflow files, but rather as [secrets](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions).  Secrets can be configured at the organization, repository, or environment level, and allow you to store sensitive information in GitHub.
 
-You can use Testkube Github Action with all Cloud Providers. We will use AWS Cloud here as an example. Please do not forget to replace `aws-access-key-id`, `aws-access-key-id`, `aws-region`, `eks-cluster-name` and `aws-region` values with your own.
 ```yaml
-name: Run tests on Pull Request
+steps:
+  - uses: kubeshop/setup-testkube@v1
+    with:
+      organization: ${{ secrets.TkOrganization }}
+      environment: ${{ secrets.TkEnvironment }}
+      token: ${{ secrets.TkToken }}
+
+  - run: |
+      testkube run test test-name -f 
+
+ ```
+## Testkube OSS
+
+### How to configure Testkube CLI action for TK OSS and run a test
+
+To connect to the self-hosted instance, you need to have **kubectl** configured for accessing your Kubernetes cluster, and simply passing optional namespace, if Testkube is not deployed in the default **testkube** namespace. If test is already created, you may directly run it using the command `testkube run test test-name -f` . However, if you need to create a test in this workflow, please add a creation command, e.g.: `testkube create test --name test-name --file path_to_file.json`.
+
+```yaml
+steps: 
+  - uses: kubeshop/setup-testkube@v1
+    with:
+      namespace: custom-testkube
+
+  - run: |
+      testkube run test test-name -f 
+
+```
+
+Steps to connect to your Kubernetes cluster differ for each provider. You should check the docs of your Cloud provider on how to connect to the Kubernetes cluster from GitHub Action, or check examples in this documentation for selected providers.
+
+### How to configure Testkube CLI action for TK OSS and run a test
+
+This workflow establishes a connection to EKS cluster and creates and runs a test using TK CLI. In this example we also use GH secrets not to reveal sensitive data. Please make sure that the following points are satisfied:
+- The **_AwsAccessKeyId_**, **_AwsSecretAccessKeyId_** secrets should contain your AWS IAM keys with proper permissions to connect to EKS cluster.
+- The **_AwsRegion_** secret should contain AWS region where EKS is
+- Tke **EksClusterName** secret points to the name of EKS cluster you want to connect.
+
+```yaml
+steps:   
+  - name: Checkout
+    uses: actions/checkout@v4
+
+  - uses: aws-actions/configure-aws-credentials@v4
+    with:
+      aws-access-key-id: ${{ secrets.aws-access-key }}
+      aws-secret-access-key: ${{ secrets.aws-secret-access-key }} 
+      aws-region:  ${{ secrets.aws-region }}  
+
+  - run: |
+      aws eks update-kubeconfig --name ${{ secrets.eks-cluster-name }} --region ${{ secrets.aws-region }} 
+
+  - uses: kubeshop/setup-testkube@v1
+    - 
+  - run: |
+      testkube run test test-name -f 
+```
+
+### How to connect to GKE (Google Kubernetes Engine) cluster and run a test 
+
+This example connects to a k8s cluster in Google Cloud, creates and runs a test using Testkube GH Action. Please make sure that the following points are satisfied:
+- The **_GKE Sevice Account_** should be created prior in Google Cloud and added to GH Secrets along with **_GKE Project_** value;
+- The **_GKE Cluster Name_** and **_GKE Zone_** can be added as [environmental variables](https://docs.github.com/en/actions/learn-github-actions/variables) in the workflow.
+
+```yaml
+steps:    
+  - name: Checkout
+    uses: actions/checkout@v4
+
+  - uses: google-github-actions/setup-gcloud@1bee7de035d65ec5da40a31f8589e240eba8fde5
+    with:
+      service_account_key: ${{ secrets.GKE_SA_KEY }}
+      project_id: ${{ secrets.GKE_PROJECT }}
+
+  - run: |-
+      gcloud --quiet auth configure-docker
+
+  - uses: google-github-actions/get-gke-credentials@db150f2cc60d1716e61922b832eae71d2a45938f
+    with:
+      cluster_name: ${{ env.GKE_CLUSTER_NAME }}
+      location: ${{ env.GKE_ZONE }}
+      credentials: ${{ secrets.GKE_SA_KEY }}
+
+  - uses: kubeshop/setup-testkube@v1
+  - run: |
+      testkube run test test-name -f 
+```
+Please consult with the official documentation from GH on how to connect to GKE for more information: ttps://docs.github.com/en/actions/deployment/deploying-to-google-kubernetes-engine.
+
+### Complete Example of Working GH Actions Workflow and Testkube Tests Usage
+To integrate TK Github Action into your workflow, please take a look at the example that sets up connection to GKE and creates and runs a test:
+
+```yaml
+name: Running Testkube Tests.
 on:
-  pull_request_target:
-    types:
-      - opened
+  push:
+    branches:
+      - main
+env:
+  PROJECT_ID: ${{ secrets.GKE_PROJECT }}
+  GKE_CLUSTER: cluster-1    # Add your cluster name here.
+  GKE_ZONE: us-central1-c   # Add your cluster zone here.
+
 jobs:
-  main:
-    name: Install Testkube CLI and Run Tests
+  setup-build-publish-deploy:
+    name: Connect to GKE
+    runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: aws-access-key
-          aws-secret-access-key: aws-secret-access-key
-          aws-region: aws-region
+    - uses: google-github-actions/setup-gcloud@1bee7de035d65ec5da40a31f8589e240eba8fde5
+      with:
+        service_account_key: ${{ secrets.GKE_SA_KEY }}
+        project_id: ${{ secrets.GKE_PROJECT }}
 
-      - run: |
-          aws eks update-kubeconfig --name eks-cluster-name --region aws-region
+    - run: |-
+        gcloud --quiet auth configure-docker
+
+    - uses: google-github-actions/get-gke-credentials@db150f2cc60d1716e61922b832eae71d2a45938f
+      with:
+        cluster_name: ${{ env.GKE_CLUSTER }}
+        location: ${{ env.GKE_ZONE }}
+        credentials: ${{ secrets.GKE_SA_KEY }}
+
 
       - uses: kubeshop/setup-testkube@v1
       - run: |
-          testkube create test --name test-name --file path_to_file.json
           testkube run test test-name -f 
- ```
-For a different provider (GKE, Azure) the connection to a k8s cluster will differ so please consult with official documentation of every platform in advance.
+```
+
