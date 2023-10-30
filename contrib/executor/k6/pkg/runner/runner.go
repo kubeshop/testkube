@@ -179,6 +179,7 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 	output, err := executor.Run(runPath, command, envManager, args...)
 	output = envManager.ObfuscateSecrets(output)
 
+	var rerr error
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		outputPkg.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
@@ -186,7 +187,7 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 			runPath = r.Params.WorkingDir
 		}
 
-		if rerr := agent.RunScript(execution.PostRunScript, runPath); rerr != nil {
+		if rerr = agent.RunScript(execution.PostRunScript, runPath); rerr != nil {
 			outputPkg.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, rerr)
 		}
 	}
@@ -198,6 +199,10 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 		if err := r.Scraper.Scrape(ctx, execution.ArtifactRequest.Dirs, execution); err != nil {
 			return *result.WithErrors(err), nil
 		}
+	}
+
+	if rerr != nil {
+		return *result.Err(rerr), nil
 	}
 
 	return finalExecutionResult(string(output), err), nil

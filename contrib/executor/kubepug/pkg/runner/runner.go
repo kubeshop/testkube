@@ -91,10 +91,11 @@ func (r *KubepugRunner) Run(ctx context.Context, execution testkube.Execution) (
 		return testkube.ExecutionResult{}, fmt.Errorf("could not execute kubepug: %w", err)
 	}
 
+	var rerr error
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if rerr := agent.RunScript(execution.PostRunScript, r.params.WorkingDir); rerr != nil {
+		if rerr = agent.RunScript(execution.PostRunScript, r.params.WorkingDir); rerr != nil {
 			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, rerr)
 		}
 	}
@@ -113,6 +114,10 @@ func (r *KubepugRunner) Run(ctx context.Context, execution testkube.Execution) (
 	if err != nil {
 		output.PrintLogf("%s could not unmarshal kubepug execution result: %s", ui.IconCross, err.Error())
 		return testkube.ExecutionResult{}, fmt.Errorf("could not unmarshal kubepug execution result: %w", err)
+	}
+
+	if rerr != nil {
+		return testkube.ExecutionResult{}, rerr
 	}
 
 	deprecatedAPIstep := createDeprecatedAPIsStep(kubepugResult)

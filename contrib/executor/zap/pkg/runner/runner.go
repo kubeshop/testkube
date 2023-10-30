@@ -163,10 +163,11 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 		}
 	}
 
+	var rerr error
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if rerr := agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); rerr != nil {
+		if rerr = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); rerr != nil {
 			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, rerr)
 		}
 	}
@@ -182,6 +183,10 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 		if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
 			return *result.Err(err), errors.Wrap(err, "error scraping artifacts from ZAP executor")
 		}
+	}
+
+	if rerr != nil {
+		return *result.Err(rerr), nil
 	}
 
 	return result, err
