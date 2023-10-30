@@ -148,6 +148,8 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	reportPath := filepath.Join(outputDir, "report")
 	jmeterLogPath := filepath.Join(outputDir, "jmeter.log")
 	args := execution.Args
+	hasJunit := false
+	hasReport := false
 	for i := range args {
 		if args[i] == "<runPath>" {
 			args[i] = path
@@ -159,10 +161,15 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 
 		if args[i] == "<reportFile>" {
 			args[i] = reportPath
+			hasReport = true
 		}
 
 		if args[i] == "<logFile>" {
 			args[i] = jmeterLogPath
+		}
+
+		if args[i] == "-l" {
+			hasJunit = true
 		}
 	}
 
@@ -220,30 +227,34 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	}
 	out = envManager.ObfuscateSecrets(out)
 
-	output.PrintLogf("%s Getting report %s", ui.IconFile, jtlPath)
-	f, err := os.Open(jtlPath)
-	if err != nil {
-		return *result.WithErrors(errors.Errorf("getting jtl report error: %v", err)), nil
-	}
-
-	results, err := parser.ParseCSV(f)
-	f.Close()
-
 	var executionResult testkube.ExecutionResult
-	if err != nil {
-		data, err := os.ReadFile(jtlPath)
+	if hasJunit && hasReport {
+		output.PrintLogf("%s Getting report %s", ui.IconFile, jtlPath)
+		f, err := os.Open(jtlPath)
 		if err != nil {
 			return *result.WithErrors(errors.Errorf("getting jtl report error: %v", err)), nil
 		}
 
-		testResults, err := parser.ParseXML(data)
-		if err != nil {
-			return *result.WithErrors(errors.Errorf("parsing jtl report error: %v", err)), nil
-		}
+		results, err := parser.ParseCSV(f)
+		f.Close()
 
-		executionResult = mapTestResultsToExecutionResults(out, testResults)
+		if err != nil {
+			data, err := os.ReadFile(jtlPath)
+			if err != nil {
+				return *result.WithErrors(errors.Errorf("getting jtl report error: %v", err)), nil
+			}
+
+			testResults, err := parser.ParseXML(data)
+			if err != nil {
+				return *result.WithErrors(errors.Errorf("parsing jtl report error: %v", err)), nil
+			}
+
+			executionResult = mapTestResultsToExecutionResults(out, testResults)
+		} else {
+			executionResult = mapResultsToExecutionResults(out, results)
+		}
 	} else {
-		executionResult = mapResultsToExecutionResults(out, results)
+		executionResult = makeSuccessExecution(out)
 	}
 
 	output.PrintLogf("%s Mapped JMeter results to Execution Results...", ui.IconCheckMark)
