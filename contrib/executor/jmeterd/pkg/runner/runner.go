@@ -166,6 +166,13 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 		}
 	}
 
+	// TODO: This is a quick fix. Should be implemented a bit cleaner.
+	slavesEnvVariables["DATA_CONFIG"] = testkube.NewBasicVariable("DATA_CONFIG", parentTestFolder)
+	jmx, err := findJMXFile(parentTestFolder)
+	if err != nil {
+		output.PrintLogf("%s Could not find default jmx file in %s", ui.IconWarning, parentTestFolder)
+	}
+	slavesEnvVariables["JMETER_SCRIPT"] = testkube.NewBasicVariable("JMETER_SCRIPT", jmx)
 	slaveClient, err := slaves.NewClient(execution, r.SlavesConfigs, r.Params, slavesEnvVariables)
 	if err != nil {
 		return *result.WithErrors(errors.Wrap(err, "error creating slaves client")), nil
@@ -286,4 +293,19 @@ func getEntryPoint() (entrypoint string) {
 // GetType returns runner type
 func (r *JMeterDRunner) GetType() runner.Type {
 	return runner.TypeMain
+}
+
+func findJMXFile(folder string) (string, error) {
+	files, err := os.ReadDir(folder)
+	if err != nil {
+		return "", err
+	}
+
+	for _, file := range files {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".jmx") {
+			return file.Name(), nil
+		}
+	}
+
+	return "", errors.New("no *.jmx file found in the folder")
 }
