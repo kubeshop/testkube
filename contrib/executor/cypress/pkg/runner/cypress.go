@@ -163,10 +163,7 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 		suites, serr = junit.IngestDir(junitReportDir)
 		result = MapJunitToExecutionResults(out, suites)
 	} else {
-		status := testkube.PASSED_ExecutionStatus
-		result.Status = &status
-		result.Output = string(out)
-		result.OutputType = "text/plain"
+		result = makeSuccessExecution(out)
 	}
 
 	output.PrintLogf("%s Mapped Junit to Execution Results...", ui.IconCheckMark)
@@ -282,11 +279,17 @@ func (r *CypressRunner) Validate(execution testkube.Execution) error {
 	return nil
 }
 
-func MapJunitToExecutionResults(out []byte, suites []junit.Suite) (result testkube.ExecutionResult) {
+func makeSuccessExecution(out []byte) (result testkube.ExecutionResult) {
 	status := testkube.PASSED_ExecutionStatus
 	result.Status = &status
 	result.Output = string(out)
 	result.OutputType = "text/plain"
+
+	return result
+}
+
+func MapJunitToExecutionResults(out []byte, suites []junit.Suite) (result testkube.ExecutionResult) {
+	result = makeSuccessExecution(out)
 
 	for _, suite := range suites {
 		for _, test := range suite.Tests {
