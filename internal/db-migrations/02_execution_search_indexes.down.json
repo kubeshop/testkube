@@ -1,0 +1,10 @@
+[
+  {
+    "dropIndexes": "testresults",
+    "index": ["testsuite.name_hashed_starttime-1", "testsuite.name_hashed_endtime-1"]
+  },
+  {
+    "dropIndexes": "results",
+    "index": ["testname_hashed_starttime-1", "testname_hashed_endtime-1"]
+  }
+]
