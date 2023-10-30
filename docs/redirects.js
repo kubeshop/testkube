@@ -127,8 +127,9 @@ const redirects = [
       "/installing",
       "/articles/getting-started-overview",
       "/getting-started/step2-installing-cluster-components",
-      "/getting-started/step1-installing-cli",
+      "/articles/step2-installing-cluster-components",
       "/getting-started/step3-creating-first-test",
+      "/articles/step3-creating-first-test"
     ],
     to: "/articles/getting-started",
   },
@@ -136,6 +137,8 @@ const redirects = [
     from: [
       "/cli/installation",
       "/getting-started/installing-cli",
+      "/articles/step1-installing-cli",
+      "/getting-started/step1-installing-cli",
     ],
     to: "/articles/install-cli",
   },

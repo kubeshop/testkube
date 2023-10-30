@@ -51,7 +51,7 @@ By default, Testkube is installed in the `testkube` namespace.
 
 ## Need Help? 
 
-- Join our community on Discord.
+- Join our community on [Discord](https://discord.com/invite/6zupCZFQbe).
 - [Schedule a call](https://calendly.com/bryan-3pu/support-product-feedback-call?month=2023-10) with one of our experts. 
 - Check out our guides. 
   - [Integrating Testkube with your CI/CD](https://docs.testkube.io/articles/cicd-overview/).
