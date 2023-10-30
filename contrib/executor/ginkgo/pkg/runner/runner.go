@@ -96,7 +96,7 @@ func (r *GinkgoRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	}
 
 	// Set up ginkgo potential args
-	ginkgoArgs, err := BuildGinkgoArgs(ginkgoParams, path, runPath, reportFile, execution)
+	ginkgoArgs, junitReport, err := BuildGinkgoArgs(ginkgoParams, path, runPath, reportFile, execution)
 	if err != nil {
 		return result, err
 	}
@@ -135,11 +135,6 @@ func (r *GinkgoRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		}
 	}
 
-	moveErr := MoveReport(runPath, reportsPath, reportFile)
-	if moveErr != nil {
-		output.PrintLogf("%s could not move Junit report: %s", ui.IconCross, moveErr.Error())
-	}
-
 	if ginkgoParams["GinkgoTeamCityReport"] != "" {
 		moveErr := MoveReport(runPath, reportsPath, strings.Split(ginkgoParams["GinkgoTeamCityReport"], " ")[1])
 		if moveErr != nil {
@@ -148,10 +143,21 @@ func (r *GinkgoRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		}
 	}
 
-	suites, serr := junit.IngestFile(filepath.Join(reportsPath, reportFile))
-	if serr == nil {
-		result = MapJunitToExecutionResults(out, suites)
-		output.PrintLogf("%s Mapped Junit to Execution Results...", ui.IconCheckMark)
+	var serr error
+	if junitReport {
+		moveErr := MoveReport(runPath, reportsPath, reportFile)
+		if moveErr != nil {
+			output.PrintLogf("%s could not move Junit report: %s", ui.IconCross, moveErr.Error())
+		}
+
+		var suites []junit.Suite
+		suites, serr = junit.IngestFile(filepath.Join(reportsPath, reportFile))
+		if serr == nil {
+			result = MapJunitToExecutionResults(out, suites)
+			output.PrintLogf("%s Mapped Junit to Execution Results...", ui.IconCheckMark)
+		}
+	} else {
+		result = makeSuccessExecution(out)
 	}
 
 	var rerr error
@@ -246,7 +252,7 @@ func FindGinkgoParams(execution *testkube.Execution, defaultParams map[string]st
 	return retVal
 }
 
-func BuildGinkgoArgs(params map[string]string, path, runPath, reportFile string, execution testkube.Execution) ([]string, error) {
+func BuildGinkgoArgs(params map[string]string, path, runPath, reportFile string, execution testkube.Execution) ([]string, bool, error) {
 	output.PrintLogf("%s Building Ginkgo arguments from params", ui.IconWorld)
 
 	args := execution.Args
@@ -284,6 +290,8 @@ func BuildGinkgoArgs(params map[string]string, path, runPath, reportFile string,
 		}
 	}
 
+	hasJunit := false
+	hasReport := false
 	for i := len(args) - 1; i >= 0; i-- {
 		if rp == "" && args[i] == "<runPath>" {
 			args = append(args[:i], args[i+1:]...)
@@ -296,13 +304,18 @@ func BuildGinkgoArgs(params map[string]string, path, runPath, reportFile string,
 
 		if args[i] == "<reportFile>" {
 			args[i] = reportFile
+			hasReport = true
+		}
+
+		if args[i] == "--junit-report" {
+			hasJunit = true
 		}
 
 		args[i] = os.ExpandEnv(args[i])
 	}
 
 	output.PrintLogf("%s Ginkgo arguments from params built: %s", ui.IconCheckMark, args)
-	return args, nil
+	return args, hasJunit && hasReport, nil
 }
 
 // Validate checks if Execution has valid data in context of Ginkgo executor
@@ -327,10 +340,8 @@ func (r *GinkgoRunner) Validate(execution testkube.Execution) error {
 }
 
 func MapJunitToExecutionResults(out []byte, suites []junit.Suite) (result testkube.ExecutionResult) {
-	status := testkube.PASSED_ExecutionStatus
-	result.Status = &status
-	result.Output = string(out)
-	result.OutputType = "text/plain"
+	result = makeSuccessExecution(out)
+
 	overallStatusFailed := false
 	for _, suite := range suites {
 		for _, test := range suite.Tests {
@@ -369,4 +380,13 @@ func MapStatus(in junit.Status) (out string) {
 // GetType returns runner type
 func (r *GinkgoRunner) GetType() runner.Type {
 	return runner.TypeMain
+}
+
+func makeSuccessExecution(out []byte) (result testkube.ExecutionResult) {
+	status := testkube.PASSED_ExecutionStatus
+	result.Status = &status
+	result.Output = string(out)
+	result.OutputType = "text/plain"
+
+	return result
 }
