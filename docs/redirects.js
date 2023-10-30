@@ -137,7 +137,7 @@ const redirects = [
       "/cli/installation",
       "/getting-started/installing-cli",
     ],
-    to: "/articles/installing-cli",
+    to: "/articles/install-cli",
   },
   {
     from: "/concepts/tests/tests-running",
