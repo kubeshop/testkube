@@ -1,0 +1,28 @@
+[
+  {
+    "createIndexes": "testresults",
+    "indexes": [
+      {
+        "key": {"testsuite.name": "hashed", "starttime": -1},
+        "name": "testsuite.name_hashed_starttime-1"
+      },
+      {
+        "key": {"testsuite.name": "hashed", "endtime": -1},
+        "name": "testsuite.name_hashed_endtime-1"
+      }
+    ]
+  },
+  {
+    "createIndexes": "results",
+    "indexes": [
+      {
+        "key": {"testname": "hashed", "starttime": -1},
+        "name": "testname_hashed_starttime-1"
+      },
+      {
+        "key": {"testname": "hashed", "endtime": -1},
+        "name": "testname_hashed_endtime-1"
+      }
+    ]
+  }
+]
