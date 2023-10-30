@@ -88,10 +88,11 @@ func (r *TracetestRunner) Run(ctx context.Context, execution testkube.Execution)
 	output, err := executor.Run("", command, envManager, args...)
 	runResult := model.Result{Output: string(output), ServerEndpoint: te, OutputEndpoint: toe}
 
+	var rerr error
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		outputPkg.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if rerr := agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); rerr != nil {
+		if rerr = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); rerr != nil {
 			outputPkg.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, rerr)
 		}
 	}
@@ -110,6 +111,10 @@ func (r *TracetestRunner) Run(ctx context.Context, execution testkube.Execution)
 		result.Output = runResult.GetOutput()
 		result.Status = testkube.ExecutionStatusFailed
 		return result, nil
+	}
+
+	if rerr != nil {
+		return testkube.ExecutionResult{}, rerr
 	}
 
 	result.Output = runResult.GetOutput()
