@@ -96,7 +96,7 @@ func (r *GinkgoRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	}
 
 	// Set up ginkgo potential args
-	ginkgoArgs, junitReport, err := BuildGinkgoArgs(ginkgoParams, path, runPath, reportFile, execution)
+	ginkgoArgs, junitReport, err := BuildGinkgoArgs(envManager, ginkgoParams, path, runPath, reportFile, execution)
 	if err != nil {
 		return result, err
 	}
@@ -122,7 +122,7 @@ func (r *GinkgoRunner) Run(ctx context.Context, execution testkube.Execution) (r
 
 	// run executor here
 	command, args = executor.MergeCommandAndArgs(execution.Command, ginkgoArgs)
-	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(envManager.ObfuscateStringSlice(args), " "))
 	out, err := executor.Run(runPath, command, envManager, args...)
 	out = envManager.ObfuscateSecrets(out)
 
@@ -252,7 +252,7 @@ func FindGinkgoParams(execution *testkube.Execution, defaultParams map[string]st
 	return retVal
 }
 
-func BuildGinkgoArgs(params map[string]string, path, runPath, reportFile string, execution testkube.Execution) ([]string, bool, error) {
+func BuildGinkgoArgs(envManager *env.Manager, params map[string]string, path, runPath, reportFile string, execution testkube.Execution) ([]string, bool, error) {
 	output.PrintLogf("%s Building Ginkgo arguments from params", ui.IconWorld)
 
 	args := execution.Args
@@ -314,7 +314,7 @@ func BuildGinkgoArgs(params map[string]string, path, runPath, reportFile string,
 		args[i] = os.ExpandEnv(args[i])
 	}
 
-	output.PrintLogf("%s Ginkgo arguments from params built: %s", ui.IconCheckMark, args)
+	output.PrintLogf("%s Ginkgo arguments from params built: %s", ui.IconCheckMark, envManager.ObfuscateStringSlice(args))
 	return args, hasJunit && hasReport, nil
 }
 

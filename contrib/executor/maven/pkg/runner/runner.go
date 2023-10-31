@@ -163,7 +163,7 @@ func (r *MavenRunner) Run(ctx context.Context, execution testkube.Execution) (re
 		args[i] = os.ExpandEnv(args[i])
 	}
 
-	outputPkg.PrintEvent("Running goal: "+goal, mavenHome, mavenCommand, args)
+	outputPkg.PrintEvent("Running goal: "+goal, mavenHome, mavenCommand, envManager.ObfuscateStringSlice(args))
 	output, err := executor.Run(runPath, mavenCommand, envManager, args...)
 	output = envManager.ObfuscateSecrets(output)
 

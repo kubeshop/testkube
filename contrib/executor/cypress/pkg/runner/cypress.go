@@ -153,7 +153,7 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 
 	// run cypress inside repo directory ignore execution error in case of failed test
 	command, args = executor.MergeCommandAndArgs(execution.Command, args)
-	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(envManager.ObfuscateStringSlice(args), " "))
 	out, err = executor.Run(runPath, command, envManager, args...)
 	out = envManager.ObfuscateSecrets(out)
 

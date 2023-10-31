@@ -118,7 +118,7 @@ func (r *ArtilleryRunner) Run(ctx context.Context, execution testkube.Execution)
 
 	// run executor
 	command, args := executor.MergeCommandAndArgs(execution.Command, args)
-	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(envManager.ObfuscateStringSlice(args), " "))
 	out, runerr := executor.Run(runPath, command, envManager, args...)
 
 	out = envManager.ObfuscateSecrets(out)

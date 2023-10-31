@@ -142,7 +142,7 @@ func (r *NewmanRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	// we'll get error here in case of failed test too so we treat this as
 	// starter test execution with failed status
 	command, args := executor.MergeCommandAndArgs(execution.Command, args)
-	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(envManager.ObfuscateStringSlice(args), " "))
 	out, err := executor.Run(runPath, command, envManager, args...)
 
 	out = envManager.ObfuscateSecrets(out)
