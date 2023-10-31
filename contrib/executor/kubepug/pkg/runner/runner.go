@@ -77,13 +77,13 @@ func (r *KubepugRunner) Run(ctx context.Context, execution testkube.Execution) (
 		return testkube.ExecutionResult{}, fmt.Errorf("could not build up parameters: %w", err)
 	}
 
-	output.PrintLogf("%s Running kubepug with arguments: %v", ui.IconWorld, args)
 	envManager := env.NewManagerWithVars(execution.Variables)
 	envManager.GetReferenceVars(envManager.Variables)
+	output.PrintLogf("%s Running kubepug with arguments: %v", ui.IconWorld, envManager.ObfuscateStringSlice(args))
 
 	runPath := workingDir
 	command, args := executor.MergeCommandAndArgs(execution.Command, args)
-	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(envManager.ObfuscateStringSlice(args), " "))
 	out, err := executor.Run(runPath, command, envManager, args...)
 	out = envManager.ObfuscateSecrets(out)
 	if err != nil {

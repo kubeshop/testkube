@@ -38,6 +38,8 @@ type Interface interface {
 	GetReferenceVars(variables map[string]testkube.Variable)
 	// ObfuscateSecrets obfuscates secret values
 	ObfuscateSecrets(p []byte) []byte
+	// ObfuscateStringSlice obfuscates string slice values
+	ObfuscateStringSlice(values []string) []string
 }
 
 // NewManager returns an implementation of the Manager
@@ -284,4 +286,26 @@ func (m Manager) ObfuscateSecrets(p []byte) []byte {
 	}
 
 	return p
+}
+
+// ObfuscateStringSlice obfuscates string slice values
+func (m Manager) ObfuscateStringSlice(values []string) []string {
+	if m.Variables == nil {
+		return values
+	}
+
+	var results []string
+	for _, value := range values {
+		for _, variable := range m.Variables {
+			if !variable.IsSecret() {
+				continue
+			}
+
+			value = strings.ReplaceAll(value, variable.Value, strings.Repeat("*", len(variable.Value)))
+		}
+
+		results = append(results, value)
+	}
+
+	return results
 }

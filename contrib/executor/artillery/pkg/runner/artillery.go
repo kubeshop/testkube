@@ -83,6 +83,8 @@ func (r *ArtilleryRunner) Run(ctx context.Context, execution testkube.Execution)
 	testReportFile := filepath.Join(testDir, "test-report.json")
 
 	args := execution.Args
+	hasJunit := false
+	hasReport := false
 	for i := len(args) - 1; i >= 0; i-- {
 		if envFile == "" && (args[i] == "--dotenv" || args[i] == "<envFile>") {
 			args = append(args[:i], args[i+1:]...)
@@ -95,10 +97,15 @@ func (r *ArtilleryRunner) Run(ctx context.Context, execution testkube.Execution)
 
 		if args[i] == "<reportFile>" {
 			args[i] = testReportFile
+			hasReport = true
 		}
 
 		if args[i] == "<runPath>" {
 			args[i] = path
+		}
+
+		if args[i] == "-o" {
+			hasJunit = true
 		}
 
 		args[i] = os.ExpandEnv(args[i])
@@ -111,18 +118,23 @@ func (r *ArtilleryRunner) Run(ctx context.Context, execution testkube.Execution)
 
 	// run executor
 	command, args := executor.MergeCommandAndArgs(execution.Command, args)
-	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(envManager.ObfuscateStringSlice(args), " "))
 	out, runerr := executor.Run(runPath, command, envManager, args...)
 
 	out = envManager.ObfuscateSecrets(out)
 
-	var artilleryResult ArtilleryExecutionResult
-	artilleryResult, err = r.GetArtilleryExecutionResult(testReportFile, out)
-	if err != nil {
-		return *result.WithErrors(runerr, errors.Errorf("failed to get test execution results")), err
+	if hasJunit && hasReport {
+		var artilleryResult ArtilleryExecutionResult
+		artilleryResult, err = r.GetArtilleryExecutionResult(testReportFile, out)
+		if err != nil {
+			return *result.WithErrors(runerr, errors.Errorf("failed to get test execution results")), err
+		}
+
+		result = MapTestSummaryToResults(artilleryResult)
+	} else {
+		result = makeSuccessExecution(out)
 	}
 
-	result = MapTestSummaryToResults(artilleryResult)
 	output.PrintLog(fmt.Sprintf("%s Mapped test summary to Execution Results...", ui.IconCheckMark))
 
 	var rerr error
