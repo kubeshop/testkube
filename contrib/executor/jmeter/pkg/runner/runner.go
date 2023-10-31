@@ -162,7 +162,7 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		args[i] = os.ExpandEnv(args[i])
 	}
 
-	output.PrintLogf("%s Using arguments: %v", ui.IconWorld, args)
+	output.PrintLogf("%s Using arguments: %v", ui.IconWorld, envManager.ObfuscateStringSlice(args))
 
 	entryPoint := getEntryPoint()
 	for i := range execution.Command {
@@ -173,7 +173,7 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 
 	command, args := executor.MergeCommandAndArgs(execution.Command, args)
 	// run JMeter inside repo directory ignore execution error in case of failed test
-	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(envManager.ObfuscateStringSlice(args), " "))
 	out, err := executor.Run(runPath, command, envManager, args...)
 	if err != nil {
 		return *result.WithErrors(errors.Errorf("jmeter run error: %v", err)), nil
