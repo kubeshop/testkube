@@ -202,7 +202,7 @@ kubectl patch deployments.apps -n argocd argocd-repo-server --patch-file deploym
 
 ### 7. Configure an ArgoCD application to manage test collections in your cluster.
 
-Create the file that will contain the ArgoCD application;
+Create the file that will contain the ArgoCD application.
 
 ```yaml title="testkube-application.yaml"
 apiVersion: argoproj.io/v1alpha1
@@ -236,15 +236,15 @@ kubectl apply -f testkube-application.yaml
 
 On ArgoCD’s dashboard, we will now see the newly created application. Let’s click to get into it and sync our tests.
 
-![ArgoCD Testkube Tests](/Users/yuliiapoplavska/Desktop/Screenshot 2023-10-31 at 13.41.55.png)
+<img alt="ArgoCD Testkube Tests" src="/Users/yuliiapoplavska/Desktop/Screenshot 2023-10-31 at 13.41.55.png"/>
 
 And now click on Sync to see your tests created.
 
-![Sync Testing](/Users/yuliiapoplavska/Desktop/Screenshot 2023-10-31 at 13.43.52.png)
+<img alt="Sync Testing" src="/Users/yuliiapoplavska/Desktop/Screenshot 2023-10-31 at 13.43.52.png"/>
 
 Voilà! Our test collection is created and managed by ArgoCD with every new test created and updated in the GitHub repository containing the tests!
 
-![Test Management with ArgoCD](/Users/yuliiapoplavska/Desktop/Screenshot 2023-10-31 at 14.35.35.png)
+<img alt="Test Management with ArgoCD" src="/Users/yuliiapoplavska/Desktop/Screenshot 2023-10-31 at 14.35.35.png"/>
 
 ### 9. Run ad-hoc tests from the CLI.
 
@@ -256,7 +256,7 @@ testkube get tests
 
 You should see your deployed test artifacts:
 
-![Deployed Artifacts](/Users/yuliiapoplavska/Desktop/Screenshot 2023-10-31 at 14.36.25.png)
+<img alt="Deployed Artifacts" src="/Users/yuliiapoplavska/Desktop/Screenshot 2023-10-31 at 14.36.25.png"/>
 
 To run those tests execute the following command:
 
@@ -267,7 +267,7 @@ testkube run test hello-kubernetes
 ‍
 The test execution will start in the background. Copy the command from the image below to check the result of the execution of the test:
 
-![Cluster ID in CLI](/Users/yuliiapoplavska/Desktop/Screenshot 2023-10-31 at 14.37.53.png)
+<img alt="Cluster ID in CLI" src="/Users/yuliiapoplavska/Desktop/Screenshot 2023-10-31 at 14.37.53.png"/>
 
 ```sh
 $ testkube get execution EXECUTION_ID
@@ -275,7 +275,7 @@ $ testkube get execution EXECUTION_ID
 
 ‍You should see that the tests have run successfully, as in the image below.
 
-![Viewing Executed Tests](/Users/yuliiapoplavska/Desktop/Screenshot 2023-10-31 at 14.39.23.png)
+<img alt="Viewing Executed Tests" src="/Users/yuliiapoplavska/Desktop/Screenshot 2023-10-31 at 14.39.23.png"/>
 
 ### 10. See test results in the Testkube dashboard.
 
@@ -287,7 +287,7 @@ testkube dashboard
 
 And you will be able to see the results of the execution in the Executions tab as seen in the image below:
 
-![Test Execution Dashboard](/Users/yuliiapoplavska/Desktop/Screenshot 2023-10-31 at 14.41.52.png)
+<img alt="Test Execution Dashboard" src="/Users/yuliiapoplavska/Desktop/Screenshot 2023-10-31 at 14.41.52.png"/>
 
 We now have an automated test deployment and execution pipeline based on GitOps principles!
 
