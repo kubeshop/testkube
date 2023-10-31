@@ -170,7 +170,7 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 	}
 
 	command, args := executor.MergeCommandAndArgs(execution.Command, args)
-	outputPkg.PrintEvent("Running", directory, command, args)
+	outputPkg.PrintEvent("Running", directory, command, envManager.ObfuscateStringSlice(args))
 	runPath := directory
 	if execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
 		runPath = filepath.Join(directory, execution.Content.Repository.WorkingDir)

@@ -8,14 +8,11 @@ import (
 )
 
 func mapResultsToExecutionResults(out []byte, results parser.Results) (result testkube.ExecutionResult) {
-	result.Status = testkube.ExecutionStatusPassed
+	result = makeSuccessExecution(out)
 	if results.HasError {
 		result.Status = testkube.ExecutionStatusFailed
 		result.ErrorMessage = results.LastErrorMessage
 	}
-
-	result.Output = string(out)
-	result.OutputType = "text/plain"
 
 	for _, r := range results.Results {
 		result.Steps = append(
@@ -35,10 +32,7 @@ func mapResultsToExecutionResults(out []byte, results parser.Results) (result te
 }
 
 func mapTestResultsToExecutionResults(out []byte, results parser.TestResults) (result testkube.ExecutionResult) {
-	result.Status = testkube.ExecutionStatusPassed
-
-	result.Output = string(out)
-	result.OutputType = "text/plain"
+	result = makeSuccessExecution(out)
 
 	samples := append(results.HTTPSamples, results.Samples...)
 	for _, r := range samples {
@@ -79,4 +73,13 @@ func mapTestResultStatus(success bool) string {
 	}
 
 	return string(testkube.FAILED_ExecutionStatus)
+}
+
+func makeSuccessExecution(out []byte) (result testkube.ExecutionResult) {
+	status := testkube.PASSED_ExecutionStatus
+	result.Status = &status
+	result.Output = string(out)
+	result.OutputType = "text/plain"
+
+	return result
 }

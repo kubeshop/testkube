@@ -102,15 +102,16 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 	if err != nil {
 		return *result.WithErrors(err), nil
 	}
-	args := zapArgs(scanType, options, reportFile)
-	output.PrintLogf("%s Reading execution arguments", ui.IconWorld)
-	args = MergeArgs(args, reportFile, execution)
-	output.PrintLogf("%s Arguments are ready: %s", ui.IconCheckMark, args)
 
 	output.PrintLogf("%s Preparing variables", ui.IconWorld)
 	envManager := env.NewManagerWithVars(execution.Variables)
 	envManager.GetReferenceVars(envManager.Variables)
 	output.PrintLogf("%s Variables are prepared", ui.IconCheckMark)
+
+	args := zapArgs(scanType, options, reportFile)
+	output.PrintLogf("%s Reading execution arguments", ui.IconWorld)
+	args = MergeArgs(args, reportFile, execution)
+	output.PrintLogf("%s Arguments are ready: %s", ui.IconCheckMark, envManager.ObfuscateStringSlice(args))
 
 	// when using file based ZAP parameters it expects a /zap/wrk directory
 	// we simply symlink the directory
