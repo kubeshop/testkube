@@ -8,7 +8,7 @@ Let’s start with setting things up for our GitOps-powered testing machine!
 
 ### 1. Make sure you have Testkube installed in your cluster.
 
-If you haven't installed Testkube in your cluster yet, visit the [Getting Started guide](./getting-started-overview) for a walkthrough on installing Testkube.
+If you haven't installed Testkube in your cluster yet, visit the [Getting Started guide](./getting-started) for a walkthrough on installing Testkube.
 
 ### 2. Install ArgoCD.
 
@@ -16,7 +16,15 @@ Follow the [ArgoCD Installation Guide](https://argo-cd.readthedocs.io/en/stable/
 
 Note: For step 3 in the guide, “Access The Argo CD API Server”, choose the “Port Forwarding” method, as that is the easiest way to connect to it with a Minikube cluster.
 
+<<<<<<< HEAD
 ### 3. Install a “Hello Kubernetes!” application in your cluster.
+=======
+### 3. Install Testkube.
+
+Follow the installation guide for Testkube [here](./getting-started). Make sure to install the CLI client and the components in your cluster.
+
+### 4. Install a “Hello Kubernetes!” application in your cluster.
+>>>>>>> df9521bdf3457d27642d2cacbbd3e0ac587e47b5
 
 We will create a YAML file for a simple “Hello Kubernetes” application that we will create our integration tests against.
 
