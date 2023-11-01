@@ -9,7 +9,7 @@ Let’s start with setting things up for our GitOps-powered testing machine!
 ### 1. Make sure you have Testkube installed in your cluster.
 
 If you haven't installed Testkube in your cluster yet, visit the [Getting Started guide](./getting-started) for a walkthrough on installing Testkube.
-
+‍
 ### 2. Install ArgoCD.
 
 Follow the [ArgoCD Installation Guide](https://argo-cd.readthedocs.io/en/stable/getting_started/).
@@ -67,8 +67,6 @@ You can test that your application has been correctly installed by running:
 ```sh
 kubectl get svc -n default hello-kubernetes-service
 ```
-
-‍
 
 ### 4. Set up a Git Repository containing some Postman collections.
 
@@ -197,8 +195,6 @@ Apply the patch with the command:
 ```sh
 kubectl patch deployments.apps -n argocd argocd-repo-server --patch-file deployment.yaml
 ```
-
-‍
 
 ### 7. Configure an ArgoCD application to manage test collections in your cluster.
 
