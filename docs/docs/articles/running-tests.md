@@ -210,7 +210,7 @@ By default, there is a 10 second timeout limit on all requests on the client sid
 
 ### Injected Environment Variables
 
-Below environment variables are automatically injected into each executed test pod:
+The following environment variables are automatically injected into each executed test pod:
 
 DEBUG:                          if debug mode is on                     
 RUNNER_ENDPOINT:                minio endpoint
