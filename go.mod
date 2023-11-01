@@ -25,7 +25,7 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/joshdk/go-junit v1.0.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/kubeshop/testkube-operator v1.10.8-0.20231020154056-62a79514fcf5
+	github.com/kubeshop/testkube-operator v1.10.8-0.20231101134911-7fe6f1d8a10f
 	github.com/minio/minio-go/v7 v7.0.47
 	github.com/montanaflynn/stats v0.6.6
 	github.com/moogar0880/problems v0.1.1
@@ -40,6 +40,7 @@ require (
 	github.com/segmentio/analytics-go/v3 v3.2.1
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/slack-go/slack v0.11.4
+	github.com/spf13/afero v1.10.0
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
 	github.com/valyala/fasthttp v1.44.0
@@ -118,7 +119,6 @@ require (
 	github.com/segmentio/backo-go v1.0.1 // indirect
 	github.com/shurcooL/githubv4 v0.0.0-20220922232305-70b4d362a8cb // indirect
 	github.com/shurcooL/graphql v0.0.0-20220606043923-3cf50f8a0a29 // indirect
-	github.com/spf13/afero v1.10.0 // indirect
 	github.com/thlib/go-timezone-local v0.0.0-20210907160436-ef149e42d28e // indirect
 	github.com/urfave/cli/v2 v2.24.4 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
