@@ -31,6 +31,7 @@ testkube create executor [flags]
   -t, --types stringArray                test types handled by executor
       --update                           update, if executor already exists
   -u, --uri string                       if resource need to be loaded from URI
+      --use-data-dir-as-working-dir      use data dir as working dir for all tests
 ```
 
 ### Options inherited from parent commands
