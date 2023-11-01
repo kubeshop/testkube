@@ -208,6 +208,36 @@ testkube run test maven-example-file-test --copy-files "/Users/local_user/local_
 
 By default, there is a 10 second timeout limit on all requests on the client side and a 1 GB body size limit on the server side. To update the timeout, use `--upload-timeout` with [Go-compatible duration formats](https://pkg.go.dev/time#ParseDuration).
 
+### Injected Environment Variables
+
+Below environment variables are automatically injected into each executed test pod:
+
+DEBUG -                         if debug mode is on                     
+RUNNER_ENDPOINT:                minio endpoint
+RUNNER_ACCESSKEYID:             minio access key id
+RUNNER_SECRETACCESSKEY:         minio secret access key
+RUNNER_REGION:                  minio region
+RUNNER_TOKEN:                   mnio token
+RUNNER_SSL:                     if minio ssl is on
+RUNNER_SCRAPPERENABLED:         if scraping is on
+RUNNER_DATADIR:                 data directory
+RUNNER_CDEVENTS_TARGET:         cd events target endpoint
+RUNNER_COMPRESSARTIFACTS:       if artfifacts should be compressed
+RUNNER_CLOUD_MODE:              cloud mode
+RUNNER_CLOUD_API_KEY:           cloud api key
+RUNNER_CLOUD_API_TLS_INSECURE:  if cloud connection is insecure
+RUNNER_CLOUD_API_URL:           cloud api url
+RUNNER_DASHBOARD_URI:           dashboard uri
+CI:                             ci flag
+RUNNER_CLUSTERID:               cluster id
+RUNNER_BUCKET:                  minio bucket
+RUNNER_WORKINGDIR:              working directory
+RUNNER_EXECUTIONID:             test execution id
+RUNNER_TESTNAME:                test name
+RUNNER_EXECUTIONNUMBER:         test execution number
+RUNNER_CONTEXTTYPE:             running context type
+RUNNER_CONTEXTDATA:             running context data
+
 ## Summary
 
 As we can see, running tests in a Kubernetes cluster is really easy with use of the Testkube kubectl plugin!
