@@ -18,9 +18,9 @@ Note: For step 3 in the guide, “Access The Argo CD API Server”, choose the �
 
 ### 3. Install a “Hello Kubernetes!” application in your cluster.
 
-We will create a YAML file for a simple “Hello Kubernetes” application that we will create our integration tests against.
+We will create a YAML file for a simple `Hello Kubernetes` application that we will create our integration tests against.
 
-Create the following Deployment file:
+Create the following `Deployment` file:
 
 ```yaml title="hello-kubernetes.yaml"
 apiVersion: v1
@@ -56,7 +56,7 @@ spec:
             - containerPort: 8080
 ```
 
-And deploy the **Hello Kubernetes** deployment with:
+And deploy the `Hello Kubernetes` deployment with:
 
 ```sh
 kubectl apply -f hello-kubernetes.yaml
@@ -76,7 +76,7 @@ We are going to use tests created by Postman and exported in a [Postman collecti
 
 We can upload this to the same Git Repository as our application, but in practice the repository could be the same repository hosting the application or it could also be in a separate repository where you manage all your test artifacts.
 
-So let’s create our **hello-kubernetes.json** in **postman-collections** folder and push it to the repository.
+So let’s create our `hello-kubernetes.json` in `postman-collections` folder and push it to the repository.
 
 ```json title="hello-kubernetes.json"
 {
@@ -125,7 +125,7 @@ You can see an example of how the repository should look [here](https://github.c
 ### 5. Configure ArgoCD to use the Testkube plugin.
 
 To get ArgoCD to use Testkube, we need to write a Config Management [plugin](https://argo-cd.readthedocs.io/en/stable/operator-manual/config-management-plugins/#configmap-plugin). 
-To do so, please nest the plugin config file in a ConfigMap manifest under the `plugin.yaml` key.
+To do so, please nest the plugin config file in a `ConfigMap` manifest under the `plugin.yaml` key.
 
 ```yaml title="argocd-plugins.yaml
 apiVersion: v1
@@ -153,7 +153,7 @@ And apply it with the following command:
 ```sh
 kubectl apply -f argocd-plugins.yaml
 ```
-As you can see here, we’re using the command **testkube generate tests-crds** which creates the Custom Resources (manifests) that ArgoCD will then add to our cluster. 
+As you can see here, we’re using the command `testkube generate tests-crds` which creates the Custom Resources (manifests) that ArgoCD will then add to our cluster. 
 
 ### 6. Patch ArgoCD's deployment
 
@@ -238,13 +238,17 @@ On ArgoCD’s dashboard, we will now see the newly created application. Let’s 
 
 ![ArgoCD Testkube Tests](../img/argocd-dashbord.png)
 
-And now click on Sync to see your tests created.
+
+And now click on `Sync` to see your tests created.
+
 
 ![Sync Testing](../img/argocd-sync.png)
+
 
 Voilà! Our test collection is created and managed by ArgoCD with every new test created and updated in the GitHub repository containing the tests!
 
 ![Test Management with ArgoCD](../img/argocd-synced-tests.png)
+
 
 ### 9. Run ad-hoc tests from the CLI.
 
@@ -256,13 +260,16 @@ testkube get tests
 
 You should see your deployed test artifacts:
 
+
 ![Deployed Artifacts](../img/list-tests-cli.png)
+
 
 To run those tests execute the following command:
 
 ```sh
 testkube run test hello-kubernetes
 ```
+
 
 ‍
 The test execution will start in the background. Copy the command from the image below to check the result of the execution of the test:
@@ -275,6 +282,7 @@ $ testkube get execution EXECUTION_ID
 
 ‍You should see that the tests have run successfully, as in the image below.
 
+
 ![Viewing Executed Tests](../img/cli-tests-results.png)
 
 ### 10. See test results in the Testkube dashboard.
@@ -285,9 +293,11 @@ You can also see the results of your tests in a nice dashboard. Open the Testkub
 testkube dashboard
 ```
 
+
 And you will be able to see the results of the execution in the Executions tab as seen in the image below:
 
 ![Test Execution Dashboard](../img/test-executions-ui.png)
+
 
 We now have an automated test deployment and execution pipeline based on GitOps principles!
 
