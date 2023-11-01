@@ -77,13 +77,13 @@ func (r *KubepugRunner) Run(ctx context.Context, execution testkube.Execution) (
 		return testkube.ExecutionResult{}, fmt.Errorf("could not build up parameters: %w", err)
 	}
 
-	output.PrintLogf("%s Running kubepug with arguments: %v", ui.IconWorld, args)
 	envManager := env.NewManagerWithVars(execution.Variables)
 	envManager.GetReferenceVars(envManager.Variables)
+	output.PrintLogf("%s Running kubepug with arguments: %v", ui.IconWorld, envManager.ObfuscateStringSlice(args))
 
 	runPath := workingDir
 	command, args := executor.MergeCommandAndArgs(execution.Command, args)
-	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(envManager.ObfuscateStringSlice(args), " "))
 	out, err := executor.Run(runPath, command, envManager, args...)
 	out = envManager.ObfuscateSecrets(out)
 	if err != nil {
@@ -91,11 +91,12 @@ func (r *KubepugRunner) Run(ctx context.Context, execution testkube.Execution) (
 		return testkube.ExecutionResult{}, fmt.Errorf("could not execute kubepug: %w", err)
 	}
 
+	var rerr error
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if err = agent.RunScript(execution.PostRunScript, r.params.WorkingDir); err != nil {
-			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
+		if rerr = agent.RunScript(execution.PostRunScript, r.params.WorkingDir); rerr != nil {
+			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, rerr)
 		}
 	}
 
@@ -113,6 +114,10 @@ func (r *KubepugRunner) Run(ctx context.Context, execution testkube.Execution) (
 	if err != nil {
 		output.PrintLogf("%s could not unmarshal kubepug execution result: %s", ui.IconCross, err.Error())
 		return testkube.ExecutionResult{}, fmt.Errorf("could not unmarshal kubepug execution result: %w", err)
+	}
+
+	if rerr != nil {
+		return testkube.ExecutionResult{}, rerr
 	}
 
 	deprecatedAPIstep := createDeprecatedAPIsStep(kubepugResult)

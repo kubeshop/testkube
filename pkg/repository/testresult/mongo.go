@@ -21,6 +21,7 @@ const CollectionName = "testresults"
 
 func NewMongoRepository(db *mongo.Database, allowDiskUse bool, opts ...MongoRepositoryOpt) *MongoRepository {
 	r := &MongoRepository{
+		db:           db,
 		Coll:         db.Collection(CollectionName),
 		allowDiskUse: allowDiskUse,
 	}
@@ -33,6 +34,7 @@ func NewMongoRepository(db *mongo.Database, allowDiskUse bool, opts ...MongoRepo
 }
 
 type MongoRepository struct {
+	db           *mongo.Database
 	Coll         *mongo.Collection
 	allowDiskUse bool
 }
@@ -58,23 +60,31 @@ func (r *MongoRepository) GetByNameAndTestSuite(ctx context.Context, name, testS
 func (r *MongoRepository) GetLatestByTestSuite(ctx context.Context, testSuiteName string) (result testkube.TestSuiteExecution, err error) {
 	opts := options.Aggregate()
 	pipeline := []bson.M{
-		{"$match": bson.M{"testsuite.name": testSuiteName}},
+		{"$documents": bson.A{bson.M{"name": testSuiteName}}},
+		{"$lookup": bson.M{"from": r.Coll.Name(), "let": bson.M{"name": "$name"}, "pipeline": []bson.M{
+			{"$match": bson.M{"$expr": bson.M{"$eq": bson.A{"$testsuite.name", "$$name"}}}},
+			{"$sort": bson.M{"starttime": -1}},
+			{"$limit": 1},
+		}, "as": "execution_by_start_time"}},
+		{"$lookup": bson.M{"from": r.Coll.Name(), "let": bson.M{"name": "$name"}, "pipeline": []bson.M{
+			{"$match": bson.M{"$expr": bson.M{"$eq": bson.A{"$testsuite.name", "$$name"}}}},
+			{"$sort": bson.M{"endtime": -1}},
+			{"$limit": 1},
+		}, "as": "execution_by_end_time"}},
+		{"$project": bson.M{"executions": bson.M{"$concatArrays": bson.A{"$execution_by_start_time", "$execution_by_end_time"}}}},
+		{"$unwind": "$executions"},
+		{"$replaceRoot": bson.M{"newRoot": "$executions"}},
 
-		{"$addFields": bson.M{
-			"updatetime": bson.M{"$max": bson.A{"$starttime", "$endtime"}},
-		}},
 		{"$group": bson.D{
 			{Key: "_id", Value: "$testsuite.name"},
 			{Key: "doc", Value: bson.M{"$max": bson.D{
-				{Key: "updatetime", Value: "$updatetime"},
+				{Key: "updatetime", Value: bson.M{"$max": bson.A{"$starttime", "$endtime"}}},
 				{Key: "content", Value: "$$ROOT"},
 			}}},
 		}},
-
 		{"$sort": bson.M{"doc.updatetime": -1}},
-		{"$limit": 1},
 		{"$replaceRoot": bson.M{"newRoot": "$doc.content"}},
-		{"$unset": "updatetime"},
+		{"$limit": 1},
 	}
 	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
 	if err != nil {
@@ -96,28 +106,36 @@ func (r *MongoRepository) GetLatestByTestSuites(ctx context.Context, testSuiteNa
 		return executions, nil
 	}
 
-	conditions := bson.A{}
+	documents := bson.A{}
 	for _, testSuiteName := range testSuiteNames {
-		conditions = append(conditions, bson.M{"testsuite.name": testSuiteName})
+		documents = append(documents, bson.M{"name": testSuiteName})
 	}
 
 	pipeline := []bson.M{
-		{"$match": bson.M{"$or": conditions}},
+		{"$documents": documents},
+		{"$lookup": bson.M{"from": r.Coll.Name(), "let": bson.M{"name": "$name"}, "pipeline": []bson.M{
+			{"$match": bson.M{"$expr": bson.M{"$eq": bson.A{"$testsuite.name", "$$name"}}}},
+			{"$sort": bson.M{"starttime": -1}},
+			{"$limit": 1},
+		}, "as": "execution_by_start_time"}},
+		{"$lookup": bson.M{"from": r.Coll.Name(), "let": bson.M{"name": "$name"}, "pipeline": []bson.M{
+			{"$match": bson.M{"$expr": bson.M{"$eq": bson.A{"$testsuite.name", "$$name"}}}},
+			{"$sort": bson.M{"endtime": -1}},
+			{"$limit": 1},
+		}, "as": "execution_by_end_time"}},
+		{"$project": bson.M{"executions": bson.M{"$concatArrays": bson.A{"$execution_by_start_time", "$execution_by_end_time"}}}},
+		{"$unwind": "$executions"},
+		{"$replaceRoot": bson.M{"newRoot": "$executions"}},
 
-		{"$addFields": bson.M{
-			"updatetime": bson.M{"$max": bson.A{"$starttime", "$endtime"}},
-		}},
 		{"$group": bson.D{
 			{Key: "_id", Value: "$testsuite.name"},
 			{Key: "doc", Value: bson.M{"$max": bson.D{
-				{Key: "updatetime", Value: "$updatetime"},
+				{Key: "updatetime", Value: bson.M{"$max": bson.A{"$starttime", "$endtime"}}},
 				{Key: "content", Value: "$$ROOT"},
 			}}},
 		}},
-
 		{"$sort": bson.M{"doc.updatetime": -1}},
 		{"$replaceRoot": bson.M{"newRoot": "$doc.content"}},
-		{"$unset": "updatetime"},
 	}
 
 	opts := options.Aggregate()
@@ -125,7 +143,7 @@ func (r *MongoRepository) GetLatestByTestSuites(ctx context.Context, testSuiteNa
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
 
-	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
+	cursor, err := r.db.Aggregate(ctx, pipeline, opts)
 	if err != nil {
 		return nil, err
 	}

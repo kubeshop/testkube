@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"sort"
 	"strconv"
@@ -622,8 +623,9 @@ func (s TestkubeAPI) ListTestSuiteExecutionsHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not get executions totals: %w", errPrefix, err))
 		}
 		l.Debugw("got executions totals", "totals", executionsTotals, "time", time.Since(now))
-		nameFilter := testresult.NewExecutionsFilter().WithName(c.Query("id", ""))
-		allExecutionsTotals, err := s.TestExecutionResults.GetExecutionsTotals(ctx, nameFilter)
+		filterAllTotals := *filter.(*testresult.FilterImpl)
+		filterAllTotals.WithPage(0).WithPageSize(math.MaxInt64)
+		allExecutionsTotals, err := s.TestExecutionResults.GetExecutionsTotals(ctx, filterAllTotals)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not get all executions totals: %w", errPrefix, err))
 		}

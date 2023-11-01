@@ -148,6 +148,8 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	reportPath := filepath.Join(outputDir, "report")
 	jmeterLogPath := filepath.Join(outputDir, "jmeter.log")
 	args := execution.Args
+	hasJunit := false
+	hasReport := false
 	for i := range args {
 		if args[i] == "<runPath>" {
 			args[i] = path
@@ -159,13 +161,25 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 
 		if args[i] == "<reportFile>" {
 			args[i] = reportPath
+			hasReport = true
 		}
 
 		if args[i] == "<logFile>" {
 			args[i] = jmeterLogPath
 		}
+
+		if args[i] == "-l" {
+			hasJunit = true
+		}
 	}
 
+	// TODO: This is a quick fix. Should be implemented a bit cleaner.
+	slavesEnvVariables["DATA_CONFIG"] = testkube.NewBasicVariable("DATA_CONFIG", parentTestFolder)
+	jmx, err := findJMXFile(parentTestFolder)
+	if err != nil {
+		output.PrintLogf("%s Could not find default jmx file in %s", ui.IconWarning, parentTestFolder)
+	}
+	slavesEnvVariables["JMETER_SCRIPT"] = testkube.NewBasicVariable("JMETER_SCRIPT", jmx)
 	slaveClient, err := slaves.NewClient(execution, r.SlavesConfigs, r.Params, slavesEnvVariables)
 	if err != nil {
 		return *result.WithErrors(errors.Wrap(err, "error creating slaves client")), nil
@@ -195,7 +209,7 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 		args[i] = os.ExpandEnv(args[i])
 	}
 
-	output.PrintLogf("%s Using arguments: %v", ui.IconWorld, args)
+	output.PrintLogf("%s Using arguments: %v", ui.IconWorld, envManager.ObfuscateStringSlice(args))
 
 	entryPoint := getEntryPoint()
 	for i := range execution.Command {
@@ -206,46 +220,51 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 
 	command, args := executor.MergeCommandAndArgs(execution.Command, args)
 	// run JMeter inside repo directory ignore execution error in case of failed test
-	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(envManager.ObfuscateStringSlice(args), " "))
 	out, err := executor.Run(runPath, command, envManager, args...)
 	if err != nil {
 		return *result.WithErrors(errors.Errorf("jmeter run error: %v", err)), nil
 	}
 	out = envManager.ObfuscateSecrets(out)
 
-	output.PrintLogf("%s Getting report %s", ui.IconFile, jtlPath)
-	f, err := os.Open(jtlPath)
-	if err != nil {
-		return *result.WithErrors(errors.Errorf("getting jtl report error: %v", err)), nil
-	}
-
-	results, err := parser.ParseCSV(f)
-	f.Close()
-
 	var executionResult testkube.ExecutionResult
-	if err != nil {
-		data, err := os.ReadFile(jtlPath)
+	if hasJunit && hasReport {
+		output.PrintLogf("%s Getting report %s", ui.IconFile, jtlPath)
+		f, err := os.Open(jtlPath)
 		if err != nil {
 			return *result.WithErrors(errors.Errorf("getting jtl report error: %v", err)), nil
 		}
 
-		testResults, err := parser.ParseXML(data)
-		if err != nil {
-			return *result.WithErrors(errors.Errorf("parsing jtl report error: %v", err)), nil
-		}
+		results, err := parser.ParseCSV(f)
+		f.Close()
 
-		executionResult = mapTestResultsToExecutionResults(out, testResults)
+		if err != nil {
+			data, err := os.ReadFile(jtlPath)
+			if err != nil {
+				return *result.WithErrors(errors.Errorf("getting jtl report error: %v", err)), nil
+			}
+
+			testResults, err := parser.ParseXML(data)
+			if err != nil {
+				return *result.WithErrors(errors.Errorf("parsing jtl report error: %v", err)), nil
+			}
+
+			executionResult = mapTestResultsToExecutionResults(out, testResults)
+		} else {
+			executionResult = mapResultsToExecutionResults(out, results)
+		}
 	} else {
-		executionResult = mapResultsToExecutionResults(out, results)
+		executionResult = makeSuccessExecution(out)
 	}
 
 	output.PrintLogf("%s Mapped JMeter results to Execution Results...", ui.IconCheckMark)
 
+	var rerr error
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if err = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); err != nil {
-			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
+		if rerr = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); rerr != nil {
+			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, rerr)
 		}
 	}
 
@@ -262,6 +281,10 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 		if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
 			return *executionResult.Err(err), errors.Wrap(err, "error scraping artifacts for JMeter executor")
 		}
+	}
+
+	if rerr != nil {
+		return *result.Err(rerr), nil
 	}
 
 	return executionResult, nil
@@ -281,4 +304,19 @@ func getEntryPoint() (entrypoint string) {
 // GetType returns runner type
 func (r *JMeterDRunner) GetType() runner.Type {
 	return runner.TypeMain
+}
+
+func findJMXFile(folder string) (string, error) {
+	files, err := os.ReadDir(folder)
+	if err != nil {
+		return "", err
+	}
+
+	for _, file := range files {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".jmx") {
+			return file.Name(), nil
+		}
+	}
+
+	return "", errors.New("no *.jmx file found in the folder")
 }

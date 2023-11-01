@@ -1,4 +1,4 @@
-# Step 3 - Creating Your First Test
+# Creating Your First Test
 
 ## Kubernetes-native Tests
 
@@ -48,16 +48,16 @@ Voila! You can now run the test!
 
 
 ## Different Mechanisms to Run Tests
-#### Dashboard
+### Dashboard
 Trigger test execution manually on the Dashboard:
 <img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/97fe3119-60a8-4b40-ac54-3f1fc625111f" />
 
 
-#### CLI
+### CLI
 You can run tests manually from your machine using the CLI as well, or from your CI/CD. Visit [here](https://docs.testkube.io/articles/cicd-overview) for examples on how to setup our CI/CD system to trigger your tests.
 <img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/6b5098d7-9b57-485d-8c5e-5f915f49d515" />  
 
-##### Changing the Output Format
+#### Changing the Output Format
 
 For lists and details, you can use different output formats via the `--output` flag. The following formats are currently supported:
 
@@ -65,10 +65,7 @@ For lists and details, you can use different output formats via the `--output` f
 - `JSON` - Test run data are encoded in JSON.
 - `GO` - For go-template formatting (like in Docker and Kubernetes), you'll need to add the `--go-template` flag with a custom format. The default is `{{ . | printf("%+v") }}`. This will help you check available fields.
 
-#### Other Means of Triggering Tests
+### Other Means of Triggering Tests
 - Your Test can run on a [Schedule](https://docs.testkube.io/articles/scheduling-tests)
   <img width="1896" alt="image" src="https://github.com/kubeshop/testkube/assets/13501228/aa3a1d87-e687-4364-9a8f-8bc8ffc73395" />
 - Testkube can trigger the tests based on [Kubernetes events](https://docs.testkube.io/articles/test-triggers) (such as the deployment of an application).
-
-
-

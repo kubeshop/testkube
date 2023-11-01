@@ -24,6 +24,11 @@ type Params struct {
 	GitToken                  string // RUNNER_GITTOKEN
 	CompressArtifacts         bool   // RUNNER_COMPRESSARTIFACTS
 	WorkingDir                string // RUNNER_WORKINGDIR
+	ExecutionID               string // RUNNER_EXECUTIONID
+	TestName                  string // RUNNER_TESTNAME
+	ExecutionNumber           int32  // RUNNER_EXECUTIONNUMBER
+	ContextType               string // RUNNER_CONTEXTTYPE
+	ContextData               string // RUNNER_CONTEXTDATA
 	ClusterID                 string `envconfig:"RUNNER_CLUSTERID"`                             // RUNNER_CLUSTERID
 	CDEventsTarget            string `envconfig:"RUNNER_CDEVENTS_TARGET"`                       // RUNNER_CDEVENTS_TARGET
 	DashboardURI              string `envconfig:"RUNNER_DASHBOARD_URI"`                         // RUNNER_DASHBOARD_URI
@@ -65,6 +70,11 @@ func printParams(params Params) {
 	output.PrintLogf("RUNNER_DATADIR=\"%s\"", params.DataDir)
 	output.PrintLogf("RUNNER_COMPRESSARTIFACTS=\"%t\"", params.CompressArtifacts)
 	output.PrintLogf("RUNNER_WORKINGDIR=\"%s\"", params.WorkingDir)
+	output.PrintLogf("RUNNER_EXECUTIONID=\"%s\"", params.ExecutionID)
+	output.PrintLogf("RUNNER_TESTNAME=\"%s\"", params.TestName)
+	output.PrintLogf("RUNNER_EXECUTIONNUMBER=\"%d\"", params.ExecutionNumber)
+	output.PrintLogf("RUNNER_CONTEXTTYPE=\"%s\"", params.ContextType)
+	output.PrintLogf("RUNNER_CONTEXTDATA=\"%s\"", params.ContextData)
 	output.PrintLogf("RUNNER_CLUSTERID=\"%s\"", params.ClusterID)
 	output.PrintLogf("RUNNER_CDEVENTS_TARGET=\"%s\"", params.CDEventsTarget)
 	output.PrintLogf("RUNNER_DASHBOARD_URI=\"%s\"", params.DashboardURI)

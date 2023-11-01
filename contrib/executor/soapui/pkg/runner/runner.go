@@ -96,11 +96,12 @@ func (r *SoapUIRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	output.PrintLogf("%s Running SoapUI tests", ui.IconMicroscope)
 	result = r.runSoapUI(&execution, workingDir)
 
+	var rerr error
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if err = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); err != nil {
-			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
+		if rerr = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); rerr != nil {
+			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, rerr)
 		}
 	}
 
@@ -115,6 +116,10 @@ func (r *SoapUIRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
 			return *result.Err(err), errors.Wrap(err, "error scraping artifacts from SoapUI executor")
 		}
+	}
+
+	if rerr != nil {
+		return *result.Err(rerr), nil
 	}
 
 	return result, nil
@@ -141,7 +146,8 @@ func (r *SoapUIRunner) runSoapUI(execution *testkube.Execution, workingDir strin
 
 	runPath := workingDir
 	command, args := executor.MergeCommandAndArgs(execution.Command, nil)
-	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, strings.Join(execution.Command, " "), strings.Join(execution.Args, " "))
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, strings.Join(execution.Command, " "),
+		strings.Join(envManager.ObfuscateStringSlice(execution.Args), " "))
 	output, err := executor.Run(runPath, command, envManager, args...)
 	output = envManager.ObfuscateSecrets(output)
 	if err != nil {

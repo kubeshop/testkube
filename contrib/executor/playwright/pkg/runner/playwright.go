@@ -105,7 +105,7 @@ func (r *PlaywrightRunner) Run(ctx context.Context, execution testkube.Execution
 	envManager.GetReferenceVars(envManager.Variables)
 
 	command, args := executor.MergeCommandAndArgs(execution.Command, args)
-	output.PrintEvent("Running", runPath, command, args)
+	output.PrintEvent("Running", runPath, command, envManager.ObfuscateStringSlice(args))
 	out, runErr := executor.Run(runPath, command, envManager, args...)
 	out = envManager.ObfuscateSecrets(out)
 
@@ -124,6 +124,7 @@ func (r *PlaywrightRunner) Run(ctx context.Context, execution testkube.Execution
 		}
 	}
 
+	var rerr error
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
@@ -131,8 +132,8 @@ func (r *PlaywrightRunner) Run(ctx context.Context, execution testkube.Execution
 			runPath = r.Params.WorkingDir
 		}
 
-		if err = agent.RunScript(execution.PostRunScript, runPath); err != nil {
-			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
+		if rerr = agent.RunScript(execution.PostRunScript, runPath); rerr != nil {
+			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, rerr)
 		}
 	}
 
@@ -141,6 +142,10 @@ func (r *PlaywrightRunner) Run(ctx context.Context, execution testkube.Execution
 		if err = scrapeArtifacts(ctx, r, execution, reportFile); err != nil {
 			return result, err
 		}
+	}
+
+	if rerr != nil {
+		return result, rerr
 	}
 
 	if runErr == nil {

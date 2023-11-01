@@ -140,7 +140,7 @@ func (r *CurlRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	}
 
 	runPath := workingDir
-	outputPkg.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
+	outputPkg.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(envManager.ObfuscateStringSlice(args), " "))
 	output, err := executor.Run(runPath, command, envManager, args...)
 	output = envManager.ObfuscateSecrets(output)
 
@@ -149,11 +149,12 @@ func (r *CurlRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		return *result.Err(err), nil
 	}
 
+	var rerr error
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		outputPkg.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if err = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); err != nil {
-			outputPkg.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
+		if rerr = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); rerr != nil {
+			outputPkg.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, rerr)
 		}
 	}
 
@@ -188,6 +189,10 @@ func (r *CurlRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	if !strings.Contains(outputString, runnerInput.ExpectedBody) {
 		outputPkg.PrintLogf("%s Test run failed: response doesn't contain body: %s", ui.IconCross, runnerInput.ExpectedBody)
 		return *result.Err(errors.Errorf("response doesn't contain body: %s", runnerInput.ExpectedBody)), nil
+	}
+
+	if rerr != nil {
+		return *result.Err(rerr), nil
 	}
 
 	outputPkg.PrintLogf("%s Test run succeeded", ui.IconCheckMark)

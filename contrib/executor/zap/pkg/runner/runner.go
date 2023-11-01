@@ -102,15 +102,16 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 	if err != nil {
 		return *result.WithErrors(err), nil
 	}
-	args := zapArgs(scanType, options, reportFile)
-	output.PrintLogf("%s Reading execution arguments", ui.IconWorld)
-	args = MergeArgs(args, reportFile, execution)
-	output.PrintLogf("%s Arguments are ready: %s", ui.IconCheckMark, args)
 
 	output.PrintLogf("%s Preparing variables", ui.IconWorld)
 	envManager := env.NewManagerWithVars(execution.Variables)
 	envManager.GetReferenceVars(envManager.Variables)
 	output.PrintLogf("%s Variables are prepared", ui.IconCheckMark)
+
+	args := zapArgs(scanType, options, reportFile)
+	output.PrintLogf("%s Reading execution arguments", ui.IconWorld)
+	args = MergeArgs(args, reportFile, execution)
+	output.PrintLogf("%s Arguments are ready: %s", ui.IconCheckMark, envManager.ObfuscateStringSlice(args))
 
 	// when using file based ZAP parameters it expects a /zap/wrk directory
 	// we simply symlink the directory
@@ -163,11 +164,12 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 		}
 	}
 
+	var rerr error
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if err = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); err != nil {
-			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
+		if rerr = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); rerr != nil {
+			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, rerr)
 		}
 	}
 
@@ -182,6 +184,10 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 		if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
 			return *result.Err(err), errors.Wrap(err, "error scraping artifacts from ZAP executor")
 		}
+	}
+
+	if rerr != nil {
+		return *result.Err(rerr), nil
 	}
 
 	return result, err
