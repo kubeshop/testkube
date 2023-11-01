@@ -79,12 +79,12 @@ func (r *TracetestRunner) Run(ctx context.Context, execution testkube.Execution)
 		output.PrintLogf("%s Could not build up parameters: %s", ui.IconCross, err.Error())
 		return testkube.ExecutionResult{}, fmt.Errorf("could not build up parameters: %w", err)
 	}
-	output.PrintLogf("%s Using arguments: %v", ui.IconWorld, args)
+	output.PrintLogf("%s Using arguments: %v", ui.IconWorld, envManager.ObfuscateStringSlice(args))
 
 	command, args := executor.MergeCommandAndArgs(execution.Command, args)
 
 	// Run tracetest test from definition file
-	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(envManager.ObfuscateStringSlice(args), " "))
 	output, err := executor.Run("", command, envManager, args...)
 	runResult := model.Result{Output: string(output), ServerEndpoint: te, OutputEndpoint: toe}
 

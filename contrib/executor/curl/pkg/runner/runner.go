@@ -140,7 +140,7 @@ func (r *CurlRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	}
 
 	runPath := workingDir
-	outputPkg.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
+	outputPkg.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(envManager.ObfuscateStringSlice(args), " "))
 	output, err := executor.Run(runPath, command, envManager, args...)
 	output = envManager.ObfuscateSecrets(output)
 

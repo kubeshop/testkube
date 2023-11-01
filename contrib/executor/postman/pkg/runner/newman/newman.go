@@ -112,6 +112,8 @@ func (r *NewmanRunner) Run(ctx context.Context, execution testkube.Execution) (r
 
 	tmpName := tmp.Name() + ".json"
 	args := execution.Args
+	hasJunit := false
+	hasReport := false
 	for i := range args {
 		if args[i] == "<envFile>" {
 			args[i] = envpath
@@ -119,10 +121,15 @@ func (r *NewmanRunner) Run(ctx context.Context, execution testkube.Execution) (r
 
 		if args[i] == "<reportFile>" {
 			args[i] = tmpName
+			hasReport = true
 		}
 
 		if args[i] == "<runPath>" {
 			args[i] = path
+		}
+
+		if args[i] == "--reporter-json-export" {
+			hasJunit = true
 		}
 
 		args[i] = os.ExpandEnv(args[i])
@@ -135,21 +142,27 @@ func (r *NewmanRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	// we'll get error here in case of failed test too so we treat this as
 	// starter test execution with failed status
 	command, args := executor.MergeCommandAndArgs(execution.Command, args)
-	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(envManager.ObfuscateStringSlice(args), " "))
 	out, err := executor.Run(runPath, command, envManager, args...)
 
 	out = envManager.ObfuscateSecrets(out)
 
-	// try to get json result even if process returned error (could be invalid test)
-	newmanResult, nerr := r.GetNewmanResult(tmpName, out)
-	if nerr != nil {
-		output.PrintLog(fmt.Sprintf("%s Could not get Newman result: %s", ui.IconCross, nerr.Error()))
+	var nerr error
+	if hasJunit && hasReport {
+		var newmanResult NewmanExecutionResult
+		// try to get json result even if process returned error (could be invalid test)
+		newmanResult, nerr = r.GetNewmanResult(tmpName, out)
+		if nerr != nil {
+			output.PrintLog(fmt.Sprintf("%s Could not get Newman result: %s", ui.IconCross, nerr.Error()))
+		} else {
+			output.PrintLog(fmt.Sprintf("%s Got Newman result successfully", ui.IconCheckMark))
+		}
+		// convert newman result to OpenAPI struct
+		result = MapMetadataToResult(newmanResult)
+		output.PrintLog(fmt.Sprintf("%s Mapped Newman result successfully", ui.IconCheckMark))
 	} else {
-		output.PrintLog(fmt.Sprintf("%s Got Newman result successfully", ui.IconCheckMark))
+		result = makeSuccessExecution(out)
 	}
-	// convert newman result to OpenAPI struct
-	result = MapMetadataToResult(newmanResult)
-	output.PrintLog(fmt.Sprintf("%s Mapped Newman result successfully", ui.IconCheckMark))
 
 	var rerr error
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {

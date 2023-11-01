@@ -122,6 +122,8 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	reportPath := filepath.Join(outputDir, "report")
 	jmeterLogPath := filepath.Join(outputDir, "jmeter.log")
 	args := execution.Args
+	hasJunit := false
+	hasReport := false
 	for i := range args {
 		if args[i] == "<runPath>" {
 			args[i] = path
@@ -133,10 +135,15 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 
 		if args[i] == "<reportFile>" {
 			args[i] = reportPath
+			hasReport = true
 		}
 
 		if args[i] == "<logFile>" {
 			args[i] = jmeterLogPath
+		}
+
+		if args[i] == "-l" {
+			hasJunit = true
 		}
 	}
 
@@ -155,7 +162,7 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		args[i] = os.ExpandEnv(args[i])
 	}
 
-	output.PrintLogf("%s Using arguments: %v", ui.IconWorld, args)
+	output.PrintLogf("%s Using arguments: %v", ui.IconWorld, envManager.ObfuscateStringSlice(args))
 
 	entryPoint := getEntryPoint()
 	for i := range execution.Command {
@@ -166,37 +173,41 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 
 	command, args := executor.MergeCommandAndArgs(execution.Command, args)
 	// run JMeter inside repo directory ignore execution error in case of failed test
-	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(args, " "))
+	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(envManager.ObfuscateStringSlice(args), " "))
 	out, err := executor.Run(runPath, command, envManager, args...)
 	if err != nil {
 		return *result.WithErrors(errors.Errorf("jmeter run error: %v", err)), nil
 	}
 	out = envManager.ObfuscateSecrets(out)
 
-	output.PrintLogf("%s Getting report %s", ui.IconFile, jtlPath)
-	f, err := os.Open(jtlPath)
-	if err != nil {
-		return *result.WithErrors(errors.Errorf("getting jtl report error: %v", err)), nil
-	}
-
-	results, err := parser.ParseCSV(f)
-	f.Close()
-
 	var executionResult testkube.ExecutionResult
-	if err != nil {
-		data, err := os.ReadFile(jtlPath)
+	if hasJunit && hasReport {
+		output.PrintLogf("%s Getting report %s", ui.IconFile, jtlPath)
+		f, err := os.Open(jtlPath)
 		if err != nil {
 			return *result.WithErrors(errors.Errorf("getting jtl report error: %v", err)), nil
 		}
 
-		testResults, err := parser.ParseXML(data)
-		if err != nil {
-			return *result.WithErrors(errors.Errorf("parsing jtl report error: %v", err)), nil
-		}
+		results, err := parser.ParseCSV(f)
+		f.Close()
 
-		executionResult = MapTestResultsToExecutionResults(out, testResults)
+		if err != nil {
+			data, err := os.ReadFile(jtlPath)
+			if err != nil {
+				return *result.WithErrors(errors.Errorf("getting jtl report error: %v", err)), nil
+			}
+
+			testResults, err := parser.ParseXML(data)
+			if err != nil {
+				return *result.WithErrors(errors.Errorf("parsing jtl report error: %v", err)), nil
+			}
+
+			executionResult = MapTestResultsToExecutionResults(out, testResults)
+		} else {
+			executionResult = MapResultsToExecutionResults(out, results)
+		}
 	} else {
-		executionResult = MapResultsToExecutionResults(out, results)
+		executionResult = makeSuccessExecution(out)
 	}
 
 	output.PrintLogf("%s Mapped JMeter results to Execution Results...", ui.IconCheckMark)
@@ -244,14 +255,11 @@ func getEntryPoint() (entrypoint string) {
 }
 
 func MapResultsToExecutionResults(out []byte, results parser.Results) (result testkube.ExecutionResult) {
-	result.Status = testkube.ExecutionStatusPassed
+	result = makeSuccessExecution(out)
 	if results.HasError {
 		result.Status = testkube.ExecutionStatusFailed
 		result.ErrorMessage = results.LastErrorMessage
 	}
-
-	result.Output = string(out)
-	result.OutputType = "text/plain"
 
 	for _, r := range results.Results {
 		result.Steps = append(
@@ -271,10 +279,7 @@ func MapResultsToExecutionResults(out []byte, results parser.Results) (result te
 }
 
 func MapTestResultsToExecutionResults(out []byte, results parser.TestResults) (result testkube.ExecutionResult) {
-	result.Status = testkube.ExecutionStatusPassed
-
-	result.Output = string(out)
-	result.OutputType = "text/plain"
+	result = makeSuccessExecution(out)
 
 	samples := append(results.HTTPSamples, results.Samples...)
 	for _, r := range samples {
@@ -320,4 +325,13 @@ func MapTestResultStatus(success bool) string {
 // GetType returns runner type
 func (r *JMeterRunner) GetType() runner.Type {
 	return runner.TypeMain
+}
+
+func makeSuccessExecution(out []byte) (result testkube.ExecutionResult) {
+	status := testkube.PASSED_ExecutionStatus
+	result.Status = &status
+	result.Output = string(out)
+	result.OutputType = "text/plain"
+
+	return result
 }

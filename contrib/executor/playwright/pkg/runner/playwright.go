@@ -105,7 +105,7 @@ func (r *PlaywrightRunner) Run(ctx context.Context, execution testkube.Execution
 	envManager.GetReferenceVars(envManager.Variables)
 
 	command, args := executor.MergeCommandAndArgs(execution.Command, args)
-	output.PrintEvent("Running", runPath, command, args)
+	output.PrintEvent("Running", runPath, command, envManager.ObfuscateStringSlice(args))
 	out, runErr := executor.Run(runPath, command, envManager, args...)
 	out = envManager.ObfuscateSecrets(out)
 
