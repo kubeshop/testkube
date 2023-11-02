@@ -41,7 +41,7 @@ spec:
         {{- end }}
       containers:
       - name: "{{ .Name }}-logs"
-        image: ex00/testkube-logs-sidecar:latest
+        image: ex00/testkube-logs-sidecar:latest # TODO - change it to valid one after CI is ready
         env:
         - name: DEBUG
           value: "true"

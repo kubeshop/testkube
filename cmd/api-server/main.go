@@ -339,7 +339,7 @@ func main() {
 	}
 
 	// configure NATS event bus
-	nc, err := bus.NewNATSConnection(cfg.NatsURI)
+	nc, err := bus.NewNATSEncoddedConnection(cfg.NatsURI)
 	if err != nil {
 		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
 	}
