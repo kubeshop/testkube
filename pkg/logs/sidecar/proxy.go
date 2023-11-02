@@ -34,7 +34,30 @@ const (
 	logsBuffer        = 1000
 )
 
-func Proxy(ctx context.Context, clientset *kubernetes.Clientset, js jetstream.JetStream, log *zap.SugaredLogger, namespace, executionId string) error {
+func NewProxy(clientset *kubernetes.Clientset, podsClient tcorev1.PodInterface, js jetstream.JetStream, log *zap.SugaredLogger, namespace, executionId string) *Proxy {
+	streamName := proxyStreamPrefix + executionId
+	return &Proxy{
+		log:         log.With("namespace", namespace, "executionId", executionId, "stream", streamName),
+		js:          js,
+		clientset:   clientset,
+		namespace:   namespace,
+		executionId: executionId,
+		streamName:  streamName,
+		podsClient:  podsClient,
+	}
+}
+
+type Proxy struct {
+	log         *zap.SugaredLogger
+	js          jetstream.JetStream
+	clientset   *kubernetes.Clientset
+	namespace   string
+	executionId string
+	streamName  string
+	podsClient  tcorev1.PodInterface
+}
+
+func (p *Proxy) Run(ctx context.Context) error {
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -42,63 +65,56 @@ func Proxy(ctx context.Context, clientset *kubernetes.Clientset, js jetstream.Je
 	logs := make(chan events.LogChunk, logsBuffer)
 
 	// create stream for incoming logs
-	streamName := proxyStreamPrefix + executionId
 
-	log = log.With("namespace", namespace, "executionId", executionId, "stream", streamName)
-
-	log.Info("logs proxy started")
-
-	s, err := js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
-		Name:    streamName,
+	s, err := p.js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
+		Name:    p.streamName,
 		Storage: jetstream.FileStorage, // durable stream
 	})
 	if err != nil {
-		log.Errorw("error creating stream", "error", err)
+		p.log.Errorw("error creating stream", "error", err)
 		return err
 	}
-	log.Debugw("logs proxy stream upserted", "info", s.CachedInfo())
+	p.log.Debugw("logs proxy stream upserted", "info", s.CachedInfo())
 
 	go func() {
-		log.Debugw("logs proxy stream started")
-		err := streamLogs(ctx, clientset, log, executionId, namespace, logs)
+		p.log.Debugw("logs proxy stream started")
+		err := p.streamLogs(ctx, logs)
 		if err != nil {
-			log.Errorw("logs stream failed", "error", err)
+			p.log.Errorw("logs stream failed", "error", err)
 		}
 	}()
 
 	for l := range logs {
 		select {
 		case <-sigs:
-			log.Warn("logs proxy received signal, exiting", "signal", sigs)
+			p.log.Warn("logs proxy received signal, exiting", "signal", sigs)
 			return ErrStopSignalReceived
 		case <-ctx.Done():
-			log.Warn("logs proxy context cancelled, exiting")
+			p.log.Warn("logs proxy context cancelled, exiting")
 			return nil
 		default:
-			js.Publish(ctx, streamName, l.Encode())
+			p.js.Publish(ctx, p.streamName, l.Encode())
 		}
 	}
 
-	log.Infow("logs proxy sending completed")
+	p.log.Infow("logs proxy sending completed")
 	return nil
 }
 
-func streamLogs(ctx context.Context, clientset *kubernetes.Clientset, l *zap.SugaredLogger, id, ns string, logs chan events.LogChunk) (err error) {
-	podsClient := clientset.CoreV1().Pods(ns)
-
-	pods, err := executor.GetJobPods(ctx, podsClient, id, 1, 10)
+func (p *Proxy) streamLogs(ctx context.Context, logs chan events.LogChunk) (err error) {
+	pods, err := executor.GetJobPods(ctx, p.podsClient, p.executionId, 1, 10)
 	if err != nil {
 		panic(err)
 	}
 
 	for _, pod := range pods.Items {
-		l = l.With("namespace", pod.Namespace, "podName", pod.Name, "podStatus", pod.Status)
+		l := p.log.With("namespace", pod.Namespace, "podName", pod.Name, "podStatus", pod.Status)
 
 		switch pod.Status.Phase {
 
 		case corev1.PodRunning:
 			l.Debug("streaming pod logs: immediately")
-			return streamLogsFromPod(l, podsClient, ns, pod.Name, id, logs)
+			return p.streamLogsFromPod(pod, logs)
 
 		case corev1.PodFailed:
 			err := fmt.Errorf("can't get pod logs, pod failed: %s/%s", pod.Namespace, pod.Name)
@@ -106,52 +122,65 @@ func streamLogs(ctx context.Context, clientset *kubernetes.Clientset, l *zap.Sug
 
 		default:
 			l.Debugw("streaming pod logs: waiting for pod to be ready")
-			testFunc := isPodLoggable(clientset, pod.Name, ns)
+			testFunc := p.isPodLoggable(pod.Name)
 			if err = wait.PollUntilContextTimeout(ctx, pollInterval, podStartTimeout, true, testFunc); err != nil {
-				status := getPodContainerStatuses(&pod)
+				status := p.getPodContainerStatuses(pod)
 				return errors.Wrap(err, status)
 			}
 
 			l.Debug("streaming pod logs: pod is loggable")
-			return streamLogsFromPod(l, podsClient, ns, pod.Name, id, logs)
+			return p.streamLogsFromPod(pod, logs)
 		}
 	}
 	return
 }
 
-func streamLogsFromPod(log *zap.SugaredLogger, podsClient tcorev1.PodInterface, namespace, podName, container string, logs chan events.LogChunk) (err error) {
+func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan events.LogChunk) (err error) {
 	defer close(logs)
 
-	podLogRequest := podsClient.GetLogs(
-		podName,
-		&corev1.PodLogOptions{
-			Follow:     true,
-			Timestamps: true,
-			Container:  container,
-		})
-
-	stream, err := podLogRequest.Stream(context.Background())
-	if err != nil {
-		log.Errorw("stream error", "error", err)
-		return err
+	var containers []string
+	for _, container := range pod.Spec.InitContainers {
+		containers = append(containers, container.Name)
 	}
 
-	reader := bufio.NewReader(stream)
-	for {
-		b, err := utils.ReadLongLine(reader)
+	for _, container := range pod.Spec.Containers {
+		containers = append(containers, container.Name)
+	}
+
+	for _, container := range containers {
+
+		// TODO add logs stream from ID and ID + "-scraper" / also init containers?
+		podLogRequest := p.podsClient.GetLogs(
+			pod.Name,
+			&corev1.PodLogOptions{
+				Follow:     true,
+				Timestamps: true,
+				Container:  container,
+			})
+
+		stream, err := podLogRequest.Stream(context.Background())
 		if err != nil {
-			if err == io.EOF {
-				err = nil
-			}
-			break
+			p.log.Errorw("stream error", "error", err)
+			return err
 		}
 
-		// parse log line - also handle old and new format
-		logs <- events.NewLogChunkFromBytes(b)
-	}
+		reader := bufio.NewReader(stream)
+		for {
+			b, err := utils.ReadLongLine(reader)
+			if err != nil {
+				if err == io.EOF {
+					err = nil
+				}
+				break
+			}
 
-	if err != nil {
-		return err
+			// parse log line - also handle old and new format
+			logs <- events.NewLogChunkFromBytes(b)
+		}
+
+		if err != nil {
+			return err
+		}
 	}
 
 	return
@@ -159,7 +188,11 @@ func streamLogsFromPod(log *zap.SugaredLogger, podsClient tcorev1.PodInterface, 
 }
 
 // isPodLoggable checks if pod can be logged through kubernetes API
-func isPodLoggable(c kubernetes.Interface, podName, namespace string) wait.ConditionWithContextFunc {
+func (p *Proxy) isPodLoggable(podName string) wait.ConditionWithContextFunc {
+
+	namespace := p.namespace
+	c := p.clientset
+
 	return func(ctx context.Context) (bool, error) {
 		pod, err := c.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 		if err != nil {
@@ -179,7 +212,7 @@ func isPodLoggable(c kubernetes.Interface, podName, namespace string) wait.Condi
 }
 
 // getPodContainerStatuses returns string with container statuses in case of failure or timeouted
-func getPodContainerStatuses(pod *corev1.Pod) (status string) {
+func (p *Proxy) getPodContainerStatuses(pod corev1.Pod) (status string) {
 	for _, s := range pod.Status.ContainerStatuses {
 		if s.State.Terminated != nil {
 			t := s.State.Terminated

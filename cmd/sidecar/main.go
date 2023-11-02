@@ -35,9 +35,11 @@ func main() {
 		ui.ExitOnError("Creating k8s clientset", err)
 	}
 
+	podsClient := clientset.CoreV1().Pods(cfg.Namespace)
+
 	// run Sidecar Logs Proxy - it will proxy logs from pod to nats
-	err = sidecar.Proxy(ctx, clientset, js, log, cfg.Namespace, cfg.ExecutionId)
-	if err != nil {
+	proxy := sidecar.NewProxy(clientset, podsClient, js, log, cfg.Namespace, cfg.ExecutionId)
+	if err := proxy.Run(ctx); err != nil {
 		log.Errorw("error proxying logs", "error", err)
 	}
 }

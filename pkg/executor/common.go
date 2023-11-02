@@ -238,7 +238,7 @@ func IsPodFailed(pod *corev1.Pod) (err error) {
 
 // GetJobPods returns job pods
 func GetJobPods(ctx context.Context, podsClient tcorev1.PodInterface, jobName string, retryNr, retryCount int) (*corev1.PodList, error) {
-	pods, err := podsClient.List(ctx, metav1.ListOptions{LabelSelector: "job-name=" + jobName})
+	pods, err := p.podsClient.List(ctx, metav1.ListOptions{LabelSelector: "job-name=" + jobName})
 	if err != nil {
 		return nil, err
 	}
