@@ -1,4 +1,4 @@
-package events
+package bus
 
 import (
 	"testing"
@@ -13,7 +13,7 @@ func TestServerRestart(t *testing.T) {
 	defer natsserver.Shutdown()
 
 	// and NATS connection
-	nc, err := NewNatsConnection(natsUrl)
+	nc, err := NewNATSConnection(natsUrl)
 	assert.NoError(t, err)
 
 	sub, err := nc.SubscribeSync("aaa")

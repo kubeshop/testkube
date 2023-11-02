@@ -1,4 +1,4 @@
-package events
+package bus
 
 import (
 	"github.com/nats-io/nats-server/v2/server"
@@ -23,7 +23,7 @@ func TestServerWithConnection() (*server.Server, *nats.Conn) {
 	ns, natsUrl := RunServer()
 
 	// and NATS connection
-	nc, err := NewNatsConnection(natsUrl)
+	nc, err := NewNATSConnection(natsUrl)
 	if err != nil {
 		panic(err)
 	}
