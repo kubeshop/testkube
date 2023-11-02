@@ -11,7 +11,7 @@
     #  libxtst6 \
     #  xauth \
     #  xvfb \
-    #  it \
+    #  git \
     #  curl
 # RUN npm install -g cypress browserslist@latest
 # syntax=docker/dockerfile:1
