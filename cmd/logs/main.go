@@ -21,7 +21,7 @@ func main() {
 	cfg := Must(config.Get())
 
 	// Event bus
-	natsConn := Must(bus.NewNATSEncoddedConnection(cfg.NatsURI))
+	natsConn := Must(bus.NewNATSConnection(cfg.NatsURI))
 	defer func() {
 		log.Infof("closing nats connection")
 		natsConn.Close()
