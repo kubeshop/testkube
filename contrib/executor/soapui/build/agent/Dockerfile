@@ -1,7 +1,8 @@
 # Base image consists of:
 
 # FROM smartbear/soapuios-testrunner
-# RUN apt-get update && apt-get install -y git && \
+# RUN apt-get update && apt-get install -y git \
+#                                          curl && \
    #  chmod 777 /usr/local/SmartBear && \
    #  useradd -m -d /home/soapui -s /bin/bash -u 1001 -r -g root soapui
 
