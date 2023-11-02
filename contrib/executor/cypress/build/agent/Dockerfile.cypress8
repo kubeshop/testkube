@@ -3,8 +3,10 @@ FROM cypress/included:8.7.0
 COPY cypress /bin/runner
 # run as a root in order to install to /root/cache and write to shared data volume
 
-RUN apt-get update && apt-get install -y curl
-RUN apt remove apt --autoremove -y --allow-remove-essential
+RUN apt-get update && \
+    apt-get install -y curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN mkdir /home/runner
 
