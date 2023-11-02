@@ -23,12 +23,34 @@ const (
 	ExecutionTestSuite = "testsuite"
 )
 
-type ExecutorF func(context.Context, *testtriggersv1.TestTrigger) error
+type ExecutorF func(context.Context, *watcherEvent, *testtriggersv1.TestTrigger) error
 
-func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) error {
+func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv1.TestTrigger) error {
 	status := s.getStatusForTrigger(t)
 
 	concurrencyLevel := scheduler.DefaultConcurrencyLevel
+	variables := map[string]testkube.Variable{
+		"WATCHER_EVENT_RESOURCE": {
+			Name:  "WATCHER_EVENT_RESOURCE",
+			Value: string(e.resource),
+			Type_: testkube.VariableTypeBasic,
+		},
+		"WATCHER_EVENT_NAME": {
+			Name:  "WATCHER_EVENT_NAME",
+			Value: e.name,
+			Type_: testkube.VariableTypeBasic,
+		},
+		"WATCHER_EVENT_NAMESPACE": {
+			Name:  "WATCHER_EVENT_NAMESPACE",
+			Value: e.namespace,
+			Type_: testkube.VariableTypeBasic,
+		},
+		"WATCHER_EVENT_EVENT_TYPE": {
+			Name:  "WATCHER_EVENT_EVENT_TYPE",
+			Value: string(e.eventType),
+			Type_: testkube.VariableTypeBasic,
+		},
+	}
 
 	switch t.Spec.Execution {
 	case ExecutionTest:
@@ -38,6 +60,7 @@ func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) er
 		}
 
 		request := testkube.ExecutionRequest{
+			Variables: variables,
 			RunningContext: &testkube.RunningContext{
 				Type_:   string(testkube.RunningContextTypeTestTrigger),
 				Context: t.Name,
@@ -72,6 +95,7 @@ func (s *Service) execute(ctx context.Context, t *testtriggersv1.TestTrigger) er
 		}
 
 		request := testkube.TestSuiteExecutionRequest{
+			Variables: variables,
 			RunningContext: &testkube.RunningContext{
 				Type_:   string(testkube.RunningContextTypeTestTrigger),
 				Context: t.Name,
