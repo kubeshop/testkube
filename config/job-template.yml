@@ -40,6 +40,17 @@ spec:
         {{- end }}
         {{- end }}
       containers:
+      - name: "{{ .Name }}-logs"
+        image: ex00/testkube-logs-sidecar:latest
+        env:
+        - name: DEBUG
+          value: "true"
+        - name: NAMESPACE
+          value: {{ .Namespace }}
+        - name: NATS_URI
+          value: "nats://testkube-js-nats:4222"
+        - name: ID
+          value: "{{ .Name }}"
       - name: "{{ .Name }}"
         {{- if .Registry }}
         image: {{ .Registry }}/{{ .Image }}
