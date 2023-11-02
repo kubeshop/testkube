@@ -1,7 +1,8 @@
 # Base image consists of
 #  FROM bitnami/kubectl
 #  USER root
-#  RUN apt-get update && apt-get install -y wget
+#  RUN apt-get update && apt-get install wget -y \
+#                                        curl
 
 # syntax=docker/dockerfile:1
 FROM kubeshop/testkube-kubepug-executor:base

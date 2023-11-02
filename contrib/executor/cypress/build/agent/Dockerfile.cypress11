@@ -2,6 +2,9 @@
 FROM cypress/included:11.2.0
 COPY cypress /bin/runner
 
+RUN apt-get update && apt-get install -y curl
+RUN apt remove apt --autoremove -y --allow-remove-essential
+
 # run as a root in order to install to /root/cache and write to shared data volume
  
 RUN mkdir /home/runner

@@ -11,7 +11,8 @@
     #  libxtst6 \
     #  xauth \
     #  xvfb \
-    #  it
+    #  it \
+    #  curl
 # RUN npm install -g cypress browserslist@latest
 # syntax=docker/dockerfile:1
 FROM kubeshop/testkube-cypress-executor:npm-base

@@ -8,7 +8,7 @@ RUN cp `which ginkgo` /ginkgo
 #  FROM golang:1.21-alpine
 #  RUN apk update;
 #  RUN apk --no-cache add gcc musl-dev gcompat
-#  RUN apk --no-cache add ca-certificates git
+#  RUN apk --no-cache add ca-certificates git curl
 
 FROM kubeshop/testkube-ginkgo-executor:base
 COPY ginkgo /bin/runner
