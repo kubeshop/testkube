@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 FROM postman/newman
 COPY postman /bin/runner
-RUN apk --no-cache add ca-certificates git
+RUN apk --no-cache add ca-certificates git curl
 
 # support npm report permissions
 RUN mkdir -p /.npm
