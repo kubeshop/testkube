@@ -156,10 +156,13 @@ func NewRunTestSuiteCmd() *cobra.Command {
 
 				uiShellTestSuiteGetCommandBlock(execution.Id)
 				if execution.Id != "" {
-					if !watchEnabled || len(args) == 0 {
+					if watchEnabled && len(args) > 0 {
 						if downloadArtifactsEnabled {
 							DownloadArtifacts(execution.Id, downloadDir, format, masks, client)
 						}
+					}
+
+					if !watchEnabled || len(args) == 0 {
 						uiShellTestSuiteWatchCommandBlock(execution.Id)
 					}
 				}
@@ -193,7 +196,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 	cmd.Flags().StringVar(&scraperTemplateReference, "scraper-template-reference", "", "reference to scraper template to use for the test")
 	cmd.Flags().StringVar(&pvcTemplateReference, "pvc-template-reference", "", "reference to pvc template to use for the test")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
-	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "downlaod artifacts automatically")
+	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "download artifacts automatically")
 	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")
 	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
 
