@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - develop
-      - replace-postman-image
     paths-ignore:
       - 'docs/**'
 env:
