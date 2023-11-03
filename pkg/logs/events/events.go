@@ -45,7 +45,7 @@ type LogChunk struct {
 	Type     string            `json:"type,omitempty"`
 	Source   string            `json:"source,omitempty"`
 	Metadata map[string]string `json:"metadata,omitempty"`
-	Error    error             `json:"error,omitempty"`
+	Error    bool              `json:"error,omitempty"`
 	Version  LogVersion        `json:"version,omitempty"`
 
 	// Old output - for backwards compatibility - will be removed
@@ -133,8 +133,8 @@ func NewLogChunkFromBytes(b []byte) LogChunk {
 			// sometimes we're not able to control all stdout messages from libs
 			return LogChunk{
 				Time:    ts,
-				Content: o.Content,
-				Error:   err,
+				Content: err.Error(),
+				Error:   true,
 				Version: LogVersionV1,
 			}
 		}

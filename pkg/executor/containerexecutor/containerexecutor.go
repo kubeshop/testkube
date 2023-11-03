@@ -134,6 +134,7 @@ type JobOptions struct {
 	TestName                  string
 	InitImage                 string
 	ScraperImage              string
+	LogSidecarImage           string
 	JobTemplate               string
 	ScraperTemplate           string
 	PvcTemplate               string
@@ -160,6 +161,7 @@ type JobOptions struct {
 	ExecutionNumber           int32
 	ContextType               string
 	ContextData               string
+	NatsUri                   string
 }
 
 // Logs returns job logs stream channel using kubernetes api

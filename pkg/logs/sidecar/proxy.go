@@ -149,8 +149,7 @@ func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan events.LogChunk) (er
 
 	for _, container := range containers {
 
-		// TODO add logs stream from ID and ID + "-scraper" / also init containers?
-		podLogRequest := p.podsClient.GetLogs(
+		req := p.podsClient.GetLogs(
 			pod.Name,
 			&corev1.PodLogOptions{
 				Follow:     true,
@@ -158,7 +157,7 @@ func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan events.LogChunk) (er
 				Container:  container,
 			})
 
-		stream, err := podLogRequest.Stream(context.Background())
+		stream, err := req.Stream(context.Background())
 		if err != nil {
 			p.log.Errorw("stream error", "error", err)
 			return err
@@ -174,7 +173,7 @@ func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan events.LogChunk) (er
 				break
 			}
 
-			// parse log line - also handle old and new format
+			// parse log line - also handle old (output.Output) and new format (just unstructured []byte)
 			logs <- events.NewLogChunkFromBytes(b)
 		}
 

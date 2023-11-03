@@ -167,6 +167,8 @@ type JobOptions struct {
 	ExecutionNumber       int32
 	ContextType           string
 	ContextData           string
+	NatsUri               string
+	LogsSidecarImage      string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -291,8 +293,10 @@ func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) 
 // CreateJob creates new Kubernetes job based on execution and execute options
 func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
-	jobOptions, err := NewJobOptions(c.Log, c.templatesClient, c.images.Init, c.jobTemplate, c.serviceAccountName, c.registry,
-		c.clusterID, execution, options)
+	jobOptions, err := NewJobOptions(
+		c.Log, c.templatesClient, c.images, c.jobTemplate, c.serviceAccountName,
+		c.registry, c.clusterID, execution, options,
+	)
 	if err != nil {
 		return err
 	}
@@ -787,7 +791,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	return &job, nil
 }
 
-func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, initImage, jobTemplate, serviceAccountName, registry, clusterID string,
+func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, images executor.Images, jobTemplate, serviceAccountName, registry, clusterID string,
 	execution testkube.Execution, options ExecuteOptions) (jobOptions JobOptions, err error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
@@ -798,8 +802,13 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	jobOptions.Name = execution.Id
 	jobOptions.Namespace = execution.TestNamespace
 	jobOptions.Jsn = string(jsn)
-	jobOptions.InitImage = initImage
+	jobOptions.InitImage = images.Init
 	jobOptions.TestName = execution.TestName
+
+	// options needed for Log sidecar
+	jobOptions.NatsUri = os.Getenv("NATS_URI")
+	jobOptions.LogsSidecarImage = images.LogSidecar
+
 	if jobOptions.JobTemplate == "" {
 		jobOptions.JobTemplate = jobTemplate
 	}
