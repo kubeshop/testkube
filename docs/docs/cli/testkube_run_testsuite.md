@@ -15,7 +15,7 @@ testkube run testsuite <testSuiteName> [flags]
 ```
       --concurrency int                            concurrency level for multiple test suite execution (default 10)
       --context string                             running context description for test suite execution
-  -d, --download-artifacts                         downlaod artifacts automatically
+  -d, --download-artifacts                         download artifacts automatically
       --download-dir string                        download dir (default "artifacts")
       --execution-label stringToString             execution-label adds a label to execution in form of key value pair: --execution-label key1=value1 (default [])
       --format string                              data format for storing files, one of folder|archive (default "folder")
