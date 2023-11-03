@@ -86,7 +86,7 @@ func (r *MongoRepository) GetLatestByTestSuite(ctx context.Context, testSuiteNam
 		{"$replaceRoot": bson.M{"newRoot": "$doc.content"}},
 		{"$limit": 1},
 	}
-	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
+	cursor, err := r.db.Aggregate(ctx, pipeline, opts)
 	if err != nil {
 		return result, err
 	}
