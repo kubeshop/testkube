@@ -167,8 +167,9 @@ type JobOptions struct {
 	ExecutionNumber       int32
 	ContextType           string
 	ContextData           string
+	Debug                 bool
 	NatsUri               string
-	LogsSidecarImage      string
+	LogSidecarImage       string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -806,8 +807,9 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	jobOptions.TestName = execution.TestName
 
 	// options needed for Log sidecar
+	jobOptions.Debug = os.Getenv("DEBUG") == "true"
 	jobOptions.NatsUri = os.Getenv("NATS_URI")
-	jobOptions.LogsSidecarImage = images.LogSidecar
+	jobOptions.LogSidecarImage = images.LogSidecar
 
 	if jobOptions.JobTemplate == "" {
 		jobOptions.JobTemplate = jobTemplate

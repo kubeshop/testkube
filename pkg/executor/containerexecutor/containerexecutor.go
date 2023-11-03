@@ -134,7 +134,6 @@ type JobOptions struct {
 	TestName                  string
 	InitImage                 string
 	ScraperImage              string
-	LogSidecarImage           string
 	JobTemplate               string
 	ScraperTemplate           string
 	PvcTemplate               string
@@ -161,6 +160,8 @@ type JobOptions struct {
 	ExecutionNumber           int32
 	ContextType               string
 	ContextData               string
+	Debug                     bool
+	LogSidecarImage           string
 	NatsUri                   string
 }
 

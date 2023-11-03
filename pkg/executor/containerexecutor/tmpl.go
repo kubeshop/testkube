@@ -304,6 +304,9 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	jobOptions.Jsn = string(jsn)
 	jobOptions.InitImage = images.Init
 	jobOptions.ScraperImage = images.Scraper
+
+	// Log sidecar
+	jobOptions.Debug = os.Getenv("DEBUG") == "true"
 	jobOptions.NatsUri = os.Getenv("NATS_URI")
 	jobOptions.LogSidecarImage = images.LogSidecar
 
