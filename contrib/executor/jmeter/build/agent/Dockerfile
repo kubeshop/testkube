@@ -2,7 +2,7 @@
 FROM justb4/jmeter:5.5
 COPY jmeter /bin/runner
 
-RUN apk --no-cache add ca-certificates git
+RUN apk --no-cache add ca-certificates git openssh sshpass
 ENV ENTRYPOINT_CMD="/executor_entrypoint.sh"
 WORKDIR /root/
 
