@@ -95,9 +95,9 @@ func Run(ctx context.Context, r runner.Runner, args []string) {
 
 	if r.GetType().IsMain() {
 		output.PrintEvent("test execution finished", e.Id)
+		output.PrintResult(result)
 	}
 
-	output.PrintResult(result)
 }
 
 // RunScript runs script
