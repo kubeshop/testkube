@@ -48,17 +48,6 @@ spec:
         {{- end }}
       {{- end }}
       containers:
-      - name: "{{ .Name }}-logs"
-        image: ex00/testkube-logs-sidecar:latest # TODO - change it to valid one after CI is ready
-        env:
-        - name: DEBUG
-          value: "true"
-        - name: NAMESPACE
-          value: {{ .Namespace }}
-        - name: NATS_URI
-          value: "nats://testkube-js-nats:4222"
-        - name: ID
-          value: "{{ .Name }}"
       - name: "{{ .Name }}"
         {{- if .Registry }}
         image: {{ .Registry }}/{{ .Image }}
@@ -138,8 +127,6 @@ spec:
       restartPolicy: Never
       {{- if .ServiceAccountName }}
       serviceAccountName: {{.ServiceAccountName }}
-      {{ else }}
-      serviceAccountName: testkube-logs
       {{- end }}
       {{- if gt (len .ImagePullSecrets) 0 }}
       imagePullSecrets:
