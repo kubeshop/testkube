@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -397,4 +399,19 @@ func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 	}
 
 	return options, nil
+}
+
+func DownloadArtifacts(id, dir, format string, masks []string, client apiclientv1.Client) {
+	testSuiteExecution, err := client.GetTestSuiteExecution(id)
+	ui.ExitOnError("getting test suite execution ", err)
+
+	for _, execution := range testSuiteExecution.ExecuteStepResults {
+		for _, step := range execution.Execute {
+			if step.Execution != nil && step.Step != nil && step.Step.Test != "" {
+				if step.Execution.IsPassed() || step.Execution.IsFailed() {
+					tests.DownloadArtifacts(step.Execution.Id, filepath.Join(dir, step.Execution.Id), format, masks, client)
+				}
+			}
+		}
+	}
 }
