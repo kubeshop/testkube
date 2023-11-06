@@ -16,7 +16,6 @@ import (
 )
 
 func TestInitConsumer(t *testing.T) {
-	t.Skip("TODO - fix this test")
 	event := events.Trigger{Id: "2"} ///rand.String(10)}
 
 	streamName := StreamName + event.Id
@@ -25,18 +24,19 @@ func TestInitConsumer(t *testing.T) {
 	ns, nc := n.TestServerWithConnection()
 	defer ns.Shutdown()
 
+	// enbable this to make this test pass :/
+	// nc, err := n.NewNATSConnection("nats://localhost:4222")
+	// assert.NoError(t, err)
+
 	js, err := jetstream.New(nc)
 	assert.NoError(t, err)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	sil := js.ListStreams(ctx)
-	for i := range sil.Info() {
-		err := js.DeleteStream(ctx, i.Config.Name)
-		if err == nil {
-			fmt.Printf("Deleting old %+v\n", i.Config.Name)
-		}
+	err = js.DeleteStream(ctx, "c2")
+	if err == nil {
+		fmt.Printf("Deleting old stream 'c2'")
 	}
 
 	_, err = js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
