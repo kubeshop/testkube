@@ -165,9 +165,18 @@ func mapTestBatchStepsToCRD(batches []testkube.TestSuiteBatchStep) (out []testsu
 			}
 		}
 
+		var downloadArtifacts *testsuitesv3.DownloadArtifactOptions
+		if batch.DownloadArtifacts != nil {
+			downloadArtifacts = &testsuitesv3.DownloadArtifactOptions{
+				AllPreviousSteps:    batch.DownloadArtifacts.AllPreviousSteps,
+				PreviousStepNumbers: batch.DownloadArtifacts.PreviousStepNumbers,
+			}
+		}
+
 		out = append(out, testsuitesv3.TestSuiteBatchStep{
-			StopOnFailure: batch.StopOnFailure,
-			Execute:       steps,
+			StopOnFailure:     batch.StopOnFailure,
+			DownloadArtifacts: downloadArtifacts,
+			Execute:           steps,
 		})
 	}
 

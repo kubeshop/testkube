@@ -3523,10 +3523,25 @@ components:
         stopOnFailure:
           type: boolean
           default: true
+        downloadArtifacts:
+          $ref: "#/components/schemas/DownloadArtifactOptions"
         execute:
           type: array
           items:
             $ref: "#/components/schemas/TestSuiteStep"
+
+    DownloadArtifactOptions:
+      description: options to download artifacts from previous steps
+      type: object
+      properties:
+        allPreviousSteps:
+          type: boolean
+          default: false
+        previousStepNumbers:
+          type: array
+          definition: previous step numbers starting from 1
+          items:
+            type: integer
 
     TestSuiteStep:
       type: object
@@ -4246,6 +4261,11 @@ components:
         testExecutionName:
           type: string
           description: test execution name started the test execution
+        downloadArtifactExecutionIDs:
+          type: array
+          description: "execution ids for artifacts to download"
+          items:
+            type: string  
 
     Artifact:
       type: object
@@ -4799,6 +4819,11 @@ components:
         testExecutionName:
           type: string
           description: test execution name started the test execution
+        downloadArtifactExecutionIDs:
+          type: array
+          description: "execution ids for artifacts to download"
+          items:
+            type: string
 
     ExecutionUpdateRequest:
       description: test execution request update body

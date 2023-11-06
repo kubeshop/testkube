@@ -9,9 +9,8 @@
  */
 package testkube
 
-// set of steps run in parallel
-type TestSuiteBatchStep struct {
-	StopOnFailure     bool                     `json:"stopOnFailure"`
-	DownloadArtifacts *DownloadArtifactOptions `json:"downloadArtifacts,omitempty"`
-	Execute           []TestSuiteStep          `json:"execute,omitempty"`
+// options to download artifacts from previous steps
+type DownloadArtifactOptions struct {
+	AllPreviousSteps    bool    `json:"allPreviousSteps,omitempty"`
+	PreviousStepNumbers []int32 `json:"previousStepNumbers,omitempty"`
 }
