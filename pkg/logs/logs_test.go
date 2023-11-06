@@ -84,7 +84,7 @@ func TestLogs(t *testing.T) {
 	t.Run("should react on new message and pass data to consumer", func(t *testing.T) {
 
 		// given one second context
-		ctx, cancel := context.WithTimeout(context.Background(), 190*time.Second)
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(1*time.Second))
 		defer cancel()
 
 		// and example consumer
@@ -107,24 +107,19 @@ func TestLogs(t *testing.T) {
 		// and ready to get messages
 		<-log.Ready
 
+		// and example trigger event
 		event := events.Trigger{Id: "123"}
 
-		// when we publish start event
+		// and published
 		err = ec.Publish(StartSubject, event)
 		assert.NoError(t, err)
 
 		// and push logs to given logs stream
-
 		str, err := log.CreateStream(ctx, event)
 		assert.NoError(t, err)
+
+		// and example stream name
 		streamName := str.CachedInfo().Config.Name
-
-		cons, err := log.InitConsumer(ctx, c, streamName, event.Id, 1000)
-		assert.NoError(t, err)
-
-		cons.Consume(func(m jetstream.Msg) {
-			t.Log("got message", m)
-		})
 
 		// and line by line we generate 4 log lines
 		_, err = js.Publish(ctx, streamName, []byte(`{"content":"hello 1"}`))
