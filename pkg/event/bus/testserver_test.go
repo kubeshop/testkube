@@ -9,20 +9,19 @@ import (
 
 func TestServerRestart(t *testing.T) {
 	// given NATS server
-	natsserver, natsUrl := RunServer()
-	defer natsserver.Shutdown()
+	s, nc := TestServerWithConnection()
+	defer s.Shutdown()
 
-	// and NATS connection
-	nc, err := NewNATSConnection(natsUrl)
-	assert.NoError(t, err)
-
+	// and NATS Subscription
 	sub, err := nc.SubscribeSync("aaa")
 	assert.NoError(t, err)
 
+	// when data is published to NATS
 	go func() {
 		nc.Publish("aaa", []byte("hello"))
 	}()
 
+	// then we should be able to read it
 	msg, err := sub.NextMsg(100 * time.Millisecond)
 	assert.NoError(t, err)
 	assert.Equal(t, "hello", string(msg.Data))

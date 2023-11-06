@@ -1,30 +1,31 @@
 package bus
 
 import (
+	"os"
+
 	"github.com/nats-io/nats-server/v2/server"
 	natsserver "github.com/nats-io/nats-server/v2/test"
 	nats "github.com/nats-io/nats.go"
 )
 
-func runServerOnPort(port int) *server.Server {
-	opts := natsserver.DefaultTestOptions
-	opts.JetStream = true
-	opts.Port = port
-	opts.Debug = true
-	return natsserver.RunServer(&opts)
-}
-
-func RunServer() (*server.Server, string) {
-	server := runServerOnPort(-1)
-	return server, server.ClientURL()
-}
-
 func TestServerWithConnection() (*server.Server, *nats.Conn) {
-	// given NATS server
-	ns, natsUrl := RunServer()
+	opts := &natsserver.DefaultTestOptions
+	opts.JetStream = true
+	opts.Port = -1
+	opts.Debug = true
 
-	// and NATS connection
-	nc, err := NewNATSConnection(natsUrl)
+	dir, err := os.MkdirTemp("", "nats-*")
+	if err != nil {
+		panic(err)
+	}
+	opts.StoreDir = dir
+
+	ns := natsserver.RunServer(opts)
+	ns.EnableJetStream(&server.JetStreamConfig{
+		StoreDir: dir,
+	})
+
+	nc, err := nats.Connect(ns.ClientURL())
 	if err != nil {
 		panic(err)
 	}

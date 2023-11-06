@@ -10,6 +10,7 @@ import (
 	n "github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/logs/consumer"
 	"github.com/kubeshop/testkube/pkg/logs/events"
+
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/assert"
@@ -31,7 +32,10 @@ func TestInitConsumer(t *testing.T) {
 	js, err := jetstream.New(nc)
 	assert.NoError(t, err)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	fmt.Printf("%+v\n", ns.ClientURL())
+
+	// ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
 	defer cancel()
 
 	err = js.DeleteStream(ctx, "c2")
@@ -52,7 +56,6 @@ func TestInitConsumer(t *testing.T) {
 	cons, err := js.CreateConsumer(ctx, streamName, jetstream.ConsumerConfig{
 		Name:          "c2",
 		Durable:       "c2",
-		FilterSubject: streamName,
 		DeliverPolicy: jetstream.DeliverAllPolicy,
 	})
 	// FIXME context deadline exceeded
@@ -115,13 +118,13 @@ func TestLogs(t *testing.T) {
 		str, err := log.CreateStream(ctx, event)
 		assert.NoError(t, err)
 		streamName := str.CachedInfo().Config.Name
-		fmt.Printf("stream create/update %+v\n", str.CachedInfo())
 
-		go func() {
-			cons, err := log.InitConsumer(ctx, c, streamName, event.Id, 1000)
-			fmt.Printf("TEST CONSUMER %+v\n", cons)
-			fmt.Printf("TEST ERROR %+v\n", err)
-		}()
+		cons, err := log.InitConsumer(ctx, c, streamName, event.Id, 1000)
+		assert.NoError(t, err)
+
+		cons.Consume(func(m jetstream.Msg) {
+			t.Log("got message", m)
+		})
 
 		// and line by line we generate 4 log lines
 		_, err = js.Publish(ctx, streamName, []byte(`{"content":"hello 1"}`))
@@ -133,13 +136,9 @@ func TestLogs(t *testing.T) {
 		_, err = js.Publish(ctx, streamName, []byte(`{"content":"hello 4"}`))
 		assert.NoError(t, err)
 
-		fmt.Printf("%+v\n", "publish mess")
-
 		// and we stop propagating log messages
 		err = ec.Publish(StopSubject, events.Trigger{Id: "123"})
 		assert.NoError(t, err)
-
-		fmt.Printf("%+v\n", "trigger stop")
 
 		// and wait for messages to be propagated
 		time.Sleep(1000 * time.Millisecond)
@@ -167,8 +166,6 @@ type MockConsumer struct {
 func (s *MockConsumer) Notify(id string, e events.LogChunk) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-
-	fmt.Printf("GoT MESS: %+v\n", e)
 
 	e.Metadata = map[string]string{"id": id}
 	s.Messages = append(s.Messages, e)
