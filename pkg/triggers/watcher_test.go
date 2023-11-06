@@ -76,7 +76,7 @@ func TestService_runWatcher_lease(t *testing.T) {
 		testNamespace := "testkube"
 
 		match := false
-		testExecutorF := func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
+		testExecutorF := func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
 			assert.Equal(t, testNamespace, trigger.Namespace)
 			assert.Equal(t, "test-trigger-2", trigger.Name)
 			match = true

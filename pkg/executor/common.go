@@ -396,6 +396,9 @@ func SyncDefaultExecutors(
 				return images, err
 			}
 		} else {
+			obj.Spec.JobTemplate = result.Spec.JobTemplate
+			obj.Spec.JobTemplateReference = result.Spec.JobTemplateReference
+			obj.Spec.UseDataDirAsWorkingDir = result.Spec.UseDataDirAsWorkingDir
 			result.Spec = obj.Spec
 			if _, err = executorsClient.Update(result); err != nil {
 				return images, err

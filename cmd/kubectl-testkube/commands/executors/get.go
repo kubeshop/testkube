@@ -94,6 +94,7 @@ func mapExecutorDetailsToCreateExecutorOptions(namespace string, executor *testk
 		options.Features = executor.Executor.Features
 		options.ContentTypes = executor.Executor.ContentTypes
 		options.Meta = executor.Executor.Meta
+		options.UseDataDirAsWorkingDir = executor.Executor.UseDataDirAsWorkingDir
 	}
 
 	return options

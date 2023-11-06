@@ -34,7 +34,6 @@ func NewTestSuiteExecutionCmd() *cobra.Command {
 				ui.ExitOnError("getting recent test suite execution data id:"+execution.Id, err)
 				err = render.Obj(cmd, execution, os.Stdout, renderer.TestSuiteExecutionRenderer)
 				ui.ExitOnError("rendering obj", err)
-				uiShellTestSuiteGetCommandBlock(execution.Id)
 			} else {
 				client, _, err := common.GetClient(cmd)
 				ui.ExitOnError("getting client", err)
