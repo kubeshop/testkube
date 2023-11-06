@@ -261,8 +261,10 @@ func NewRunTestCmd() *cobra.Command {
 				render.RenderExecutionResult(client, &execution, false)
 
 				if execution.Id != "" {
-					if downloadArtifactsEnabled {
-						DownloadArtifacts(execution.Id, downloadDir, format, masks, client)
+					if watchEnabled && len(args) > 0 {
+						if downloadArtifactsEnabled && (execution.IsPassed() || execution.IsFailed()) {
+							DownloadArtifacts(execution.Id, downloadDir, format, masks, client)
+						}
 					}
 
 					uiShellWatchExecution(execution.Name)
@@ -287,7 +289,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&argsMode, "args-mode", "", "append", "usage mode for argumnets. one of append|override")
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
-	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "downlaod artifacts automatically")
+	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "download artifacts automatically")
 	cmd.Flags().StringToStringVarP(&envs, "env", "", map[string]string{}, "envs in a form of name1=val1 passed to executor")
 	cmd.Flags().StringToStringVarP(&secretEnvs, "secret", "", map[string]string{}, "secret envs in a form of secret_key1=secret_name1 passed to executor")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
