@@ -1,12 +1,11 @@
 # Cached Test & Test Suite Results
 
 export const ProBadge = () => {
-return (
-<span>
-
-<p class="pro-badge">PRO FEATURE</p>
-</span>
-);
+  return (
+    <span>
+      <p class="pro-badge">PRO FEATURE</p>
+    </span>
+  );
 }
 
 <ProBadge />
