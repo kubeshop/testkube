@@ -15,6 +15,76 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestInitConsumer(t *testing.T) {
+	event := events.Trigger{Id: "2222"} ///rand.String(10)}
+	streamName := StreamName + event.Id
+
+	// TODO - this one don't work correctly - create subscriber don't work here
+	// given nats jetstream connections
+	ns, nc := n.TestServerWithConnection()
+	defer ns.Shutdown()
+
+	// nc, err := n.NewNATSConnection("nats://localhost:4222")
+	// assert.NoError(t, err)
+
+	///
+
+	js, err := jetstream.New(nc)
+	assert.NoError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	sil := js.ListStreams(ctx)
+	for i := range sil.Info() {
+		err := js.DeleteStream(ctx, i.Config.Name)
+		if err == nil {
+			fmt.Printf("Deleting old %+v\n", i.Config.Name)
+		}
+	}
+
+	// and example consumer
+	// c := NewMockConsumer()
+
+	// and initialized log service
+
+	str, err := js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
+		Name:    streamName,
+		Storage: jetstream.FileStorage, // durable stream
+	})
+	assert.NoError(t, err)
+
+	// and line by line we generate 4 log lines
+	_, err = js.Publish(ctx, streamName, []byte(`{"content":"hello 1"}`))
+	assert.NoError(t, err)
+	_, err = js.Publish(ctx, streamName, []byte(`{"content":"hello 2"}`))
+	assert.NoError(t, err)
+	_, err = js.Publish(ctx, streamName, []byte(`{"content":"hello 3"}`))
+	assert.NoError(t, err)
+	_, err = js.Publish(ctx, streamName, []byte(`{"content":"hello 4"}`))
+	assert.NoError(t, err)
+
+	fmt.Printf("stream create/update %+v\n", str.CachedInfo())
+
+	cons, err := js.CreateConsumer(ctx, streamName, jetstream.ConsumerConfig{
+		Name:          "c222",
+		Durable:       "c222",
+		FilterSubject: streamName,
+		DeliverPolicy: jetstream.DeliverAllPolicy,
+	})
+
+	// cons, err := log.InitConsumer(ctx, c, streamName, event.Id, 1000)
+	assert.NoError(t, err)
+	fmt.Printf("TEST CONSUMER %+v\n", cons)
+	fmt.Printf("TEST ERROR %+v\n", err)
+
+	cons.Consume(func(m jetstream.Msg) {
+		fmt.Printf("GOT DATA !!! %+v\n", m.Data())
+	})
+
+	time.Sleep(time.Second)
+}
+
 func TestLogs(t *testing.T) {
 
 	ns, nc := n.TestServerWithConnection()
@@ -29,7 +99,7 @@ func TestLogs(t *testing.T) {
 	t.Run("should react on new message and pass data to consumer", func(t *testing.T) {
 
 		// given one second context
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 190*time.Second)
 		defer cancel()
 
 		// and example consumer
@@ -52,17 +122,24 @@ func TestLogs(t *testing.T) {
 		// and ready to get messages
 		<-log.Ready
 
+		event := events.Trigger{Id: "123"}
+
 		// when we publish start event
-		err := ec.Publish(StartTopic, events.Trigger{Id: "123"})
+		err = ec.Publish(StartSubject, event)
 		assert.NoError(t, err)
 
 		// and push logs to given logs stream
-		streamName := StreamName + "123"
-		_, err = js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
-			Name:    streamName,
-			Storage: jetstream.FileStorage, // durable stream
-		})
+
+		str, err := log.CreateStream(ctx, event)
 		assert.NoError(t, err)
+		streamName := str.CachedInfo().Config.Name
+		fmt.Printf("stream create/update %+v\n", str.CachedInfo())
+
+		go func() {
+			cons, err := log.InitConsumer(ctx, c, streamName, event.Id, 1000)
+			fmt.Printf("TEST CONSUMER %+v\n", cons)
+			fmt.Printf("TEST ERROR %+v\n", err)
+		}()
 
 		// and line by line we generate 4 log lines
 		_, err = js.Publish(ctx, streamName, []byte(`{"content":"hello 1"}`))
@@ -74,12 +151,16 @@ func TestLogs(t *testing.T) {
 		_, err = js.Publish(ctx, streamName, []byte(`{"content":"hello 4"}`))
 		assert.NoError(t, err)
 
+		fmt.Printf("%+v\n", "publish mess")
+
 		// and we stop propagating log messages
-		err = ec.Publish(StopTopic, events.Trigger{Id: "123"})
+		err = ec.Publish(StopSubject, events.Trigger{Id: "123"})
 		assert.NoError(t, err)
 
+		fmt.Printf("%+v\n", "trigger stop")
+
 		// and wait for messages to be propagated
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(1000 * time.Millisecond)
 
 		// then we should have 4*4 messages in consumer
 		assert.Equal(t, 16, len(c.Messages))
@@ -104,6 +185,8 @@ type MockConsumer struct {
 func (s *MockConsumer) Notify(id string, e events.LogChunk) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
+
+	fmt.Printf("GoT MESS: %+v\n", e)
 
 	e.Metadata = map[string]string{"id": id}
 	s.Messages = append(s.Messages, e)

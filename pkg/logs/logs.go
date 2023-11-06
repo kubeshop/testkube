@@ -14,9 +14,11 @@ import (
 )
 
 const (
-	StreamName = "lg"
-	StartTopic = "events.logs.start"
-	StopTopic  = "events.logs.stop"
+	StreamName   = "lg"
+	StartSubject = "events.logs.start"
+	StopSubject  = "events.logs.stop"
+	StartQueue   = "logsstart"
+	StopQueue    = "logsstop"
 )
 
 func NewLogsService(nats *nats.EncodedConn, js jetstream.JetStream) *LogsService {
@@ -54,69 +56,35 @@ func (l *LogsService) Run(ctx context.Context) (err error) {
 
 	// TODO refactor abstract NATS logic from here?
 	// TODO consider using durable topics for queue with Ack / Nack
-	l.nats.QueueSubscribe("events.logs.stop", "startevents", func(event events.Trigger) {
+	l.nats.QueueSubscribe(StopSubject, StopQueue, func(event events.Trigger) {
 		// TODO stop all consumers from consuming data for given execution id
 	})
 
 	// 2. For start event we must build stream for given execution id and start consuming it
 	// this one will must a queue group each pod will get it's own
-	l.nats.QueueSubscribe("events.logs.start", "startevents", func(event events.Trigger) {
+	l.nats.QueueSubscribe(StartSubject, StartQueue, func(event events.Trigger) {
+
 		log := l.log.With("id", event.Id)
 
-		// create stream for incoming logs
-		streamName := StreamName + event.Id
-		s, err := l.js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
-			Name:    streamName,
-			Storage: jetstream.FileStorage, // durable stream
-		})
-
+		s, err := l.CreateStream(ctx, event)
 		if err != nil {
-			l.log.Errorw("error creating stream", "error", err, "id", event.Id, "stream", streamName)
+			l.log.Errorw("error creating stream", "error", err, "id", event.Id)
 			return
 		}
 
 		log.Infow("stream created", "stream", s)
 
+		streamName := StreamName + event.Id
+
 		// for each consumer create nats consumer and consume stream from it e.g. cloud s3 or others
 		for i, consumer := range l.consumers {
-			name := fmt.Sprintf("lc_%s_%s_%d", event.Id, consumer.Name(), i)
-
-			c, err := l.js.CreateOrUpdateConsumer(ctx, streamName, jetstream.ConsumerConfig{
-				Name:    name,
-				Durable: name,
-				// FilterSubject: streamName,
-				DeliverPolicy: jetstream.DeliverAllPolicy,
-			})
-
-			log.Infow("consumer created", "consumer", c.CachedInfo(), "stream", streamName)
-
+			c, err := l.InitConsumer(ctx, consumer, streamName, event.Id, i)
 			if err != nil {
 				log.Errorw("error creating consumer", "consumer", consumer.Name(), "error", err)
 				return
 			}
-
-			cons, err := c.Consume(func(msg jetstream.Msg) {
-
-				log.Infow("got message", "consumer", consumer.Name(), "id", event.Id, "data", string(msg.Data()))
-
-				// deliver to subscriber
-				logChunk := events.LogChunk{}
-				json.Unmarshal(msg.Data(), &logChunk)
-				err := consumer.Notify(event.Id, logChunk)
-
-				if err != nil {
-					if err := msg.Nak(); err != nil {
-						log.Errorw("error nacking message", "error", err)
-						return
-					}
-					return
-				}
-
-				if err := msg.Ack(); err != nil {
-					log.Errorw("error acking message", "error", err)
-				}
-			})
-
+			log.Infow("consumer created", "consumer", c.CachedInfo(), "stream", streamName)
+			cons, err := c.Consume(l.HandleMessage(consumer, event))
 			log.Infow("consumer started", "consumer", consumer.Name(), "id", event.Id, "stream", streamName)
 
 			// TODO add `cons` and stop it on stop event
@@ -141,4 +109,48 @@ func (l *LogsService) Run(ctx context.Context) (err error) {
 	// block
 
 	return nil
+}
+
+func (l *LogsService) InitConsumer(ctx context.Context, consumer consumer.Consumer, streamName, id string, i int) (jetstream.Consumer, error) {
+	name := fmt.Sprintf("lc%s%s%d", id, consumer.Name(), i)
+	return l.js.CreateOrUpdateConsumer(ctx, streamName, jetstream.ConsumerConfig{
+		Name:    name,
+		Durable: name,
+		// FilterSubject: streamName,
+		DeliverPolicy: jetstream.DeliverAllPolicy,
+	})
+}
+
+func (l *LogsService) CreateStream(ctx context.Context, event events.Trigger) (jetstream.Stream, error) {
+	// create stream for incoming logs
+	streamName := StreamName + event.Id
+	return l.js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
+		Name:    streamName,
+		Storage: jetstream.FileStorage, // durable stream
+	})
+}
+
+func (l *LogsService) HandleMessage(consumer consumer.Consumer, event events.Trigger) func(msg jetstream.Msg) {
+	log := l.log.With("id", event.Id, "consumer", consumer.Name())
+
+	return func(msg jetstream.Msg) {
+		log.Infow("got message", "data", string(msg.Data()))
+
+		// deliver to subscriber
+		logChunk := events.LogChunk{}
+		json.Unmarshal(msg.Data(), &logChunk)
+		err := consumer.Notify(event.Id, logChunk)
+
+		if err != nil {
+			if err := msg.Nak(); err != nil {
+				log.Errorw("error nacking message", "error", err)
+				return
+			}
+			return
+		}
+
+		if err := msg.Ack(); err != nil {
+			log.Errorw("error acking message", "error", err)
+		}
+	}
 }
