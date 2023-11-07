@@ -11,6 +11,7 @@ package testkube
 
 // options to download artifacts from previous steps
 type DownloadArtifactOptions struct {
-	AllPreviousSteps    bool    `json:"allPreviousSteps,omitempty"`
+	AllPreviousSteps bool `json:"allPreviousSteps,omitempty"`
+	// previous step numbers starting from 1
 	PreviousStepNumbers []int32 `json:"previousStepNumbers,omitempty"`
 }
