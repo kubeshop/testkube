@@ -29,7 +29,6 @@ type Params struct {
 	ExecutionNumber           int32  // RUNNER_EXECUTIONNUMBER
 	ContextType               string // RUNNER_CONTEXTTYPE
 	ContextData               string // RUNNER_CONTEXTDATA
-	Namespace                 string // RUNNER_NAMESPACE
 	APIURI                    string // RUNNER_APIURI
 	ClusterID                 string `envconfig:"RUNNER_CLUSTERID"`                             // RUNNER_CLUSTERID
 	CDEventsTarget            string `envconfig:"RUNNER_CDEVENTS_TARGET"`                       // RUNNER_CDEVENTS_TARGET
@@ -77,7 +76,6 @@ func printParams(params Params) {
 	output.PrintLogf("RUNNER_EXECUTIONNUMBER=\"%d\"", params.ExecutionNumber)
 	output.PrintLogf("RUNNER_CONTEXTTYPE=\"%s\"", params.ContextType)
 	output.PrintLogf("RUNNER_CONTEXTDATA=\"%s\"", params.ContextData)
-	output.PrintLogf("RUNNER_NAMESPACE=\"%s\"", params.Namespace)
 	output.PrintLogf("RUNNER_APIURI=\"%s\"", params.APIURI)
 	output.PrintLogf("RUNNER_CLUSTERID=\"%s\"", params.ClusterID)
 	output.PrintLogf("RUNNER_CDEVENTS_TARGET=\"%s\"", params.CDEventsTarget)

@@ -151,8 +151,7 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	if len(execution.DownloadArtifactExecutionIDs) != 0 {
 		downloadedArtifacts := filepath.Join(r.Params.DataDir, "downloaded-artifacts")
 		options := client.Options{
-			Namespace: r.Params.Namespace,
-			ApiUri:    r.Params.APIURI,
+			ApiUri: r.Params.APIURI,
 		}
 
 		c, err := client.GetClient(client.ClientDirect, options)
