@@ -143,7 +143,7 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "RUNNER_EXECUTIONNUMBER", Value: "0"},
 		{Name: "RUNNER_CONTEXTTYPE", Value: ""},
 		{Name: "RUNNER_CONTEXTDATA", Value: ""},
-		{Name: "RUNNER_NAMESPACE", Value: ""},
+		{Name: "RUNNER_NAMESPACE", Value: "namespace"},
 		{Name: "RUNNER_APIURI", Value: ""},
 		{Name: "RUNNER_CLOUD_MODE", Value: "false"},
 		{Name: "RUNNER_CLOUD_API_KEY", Value: ""},
