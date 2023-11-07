@@ -380,7 +380,7 @@ func main() {
 		cfg.TestkubePodStartTimeout,
 		clusterId,
 		cfg.TestkubeDashboardURI,
-		cfg.APIServerFullname+":"+cfg.APIServerPort,
+		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating executor client", err)
