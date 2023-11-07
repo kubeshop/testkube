@@ -37,7 +37,9 @@ func printExecutionDetails(execution testkube.Execution) {
 		if execution.Number != 0 {
 			ui.Warn("Execution number: ", fmt.Sprintf("%d", execution.Number))
 		}
-		ui.Warn("Status:           ", string(*execution.ExecutionResult.Status))
+		if execution.ExecutionResult != nil && execution.ExecutionResult.Status != nil {
+			ui.Warn("Status:           ", string(*execution.ExecutionResult.Status))
+		}
 		ui.Warn("Start time:       ", execution.StartTime.String())
 		ui.Warn("End time:         ", execution.EndTime.String())
 		ui.Warn("Duration:         ", execution.Duration)

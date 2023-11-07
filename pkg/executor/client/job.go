@@ -88,6 +88,7 @@ func NewJobExecutor(
 	podStartTimeout time.Duration,
 	clusterID string,
 	dashboardURI string,
+	apiURI string,
 ) (client *JobExecutor, err error) {
 	return &JobExecutor{
 		ClientSet:            clientset,
@@ -107,6 +108,7 @@ func NewJobExecutor(
 		podStartTimeout:      podStartTimeout,
 		clusterID:            clusterID,
 		dashboardURI:         dashboardURI,
+		apiURI:               apiURI,
 	}, nil
 }
 
@@ -134,6 +136,7 @@ type JobExecutor struct {
 	podStartTimeout      time.Duration
 	clusterID            string
 	dashboardURI         string
+	apiURI               string
 }
 
 type JobOptions struct {
@@ -167,6 +170,7 @@ type JobOptions struct {
 	ExecutionNumber       int32
 	ContextType           string
 	ContextData           string
+	APIURI                string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -292,7 +296,7 @@ func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) 
 func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
 	jobOptions, err := NewJobOptions(c.Log, c.templatesClient, c.images.Init, c.jobTemplate, c.serviceAccountName, c.registry,
-		c.clusterID, execution, options)
+		c.clusterID, c.apiURI, execution, options)
 	if err != nil {
 		return err
 	}
@@ -771,6 +775,8 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_EXECUTIONNUMBER", Value: fmt.Sprint(options.ExecutionNumber)})
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTTYPE", Value: options.ContextType})
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTDATA", Value: options.ContextData})
+	envs = append(envs, corev1.EnvVar{Name: "RUNNER_NAMESPACE", Value: options.Namespace})
+	envs = append(envs, corev1.EnvVar{Name: "RUNNER_APIURI", Value: options.APIURI})
 
 	for i := range job.Spec.Template.Spec.InitContainers {
 		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, envs...)
@@ -787,8 +793,8 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	return &job, nil
 }
 
-func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, initImage, jobTemplate, serviceAccountName, registry, clusterID string,
-	execution testkube.Execution, options ExecuteOptions) (jobOptions JobOptions, err error) {
+func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, initImage, jobTemplate, serviceAccountName,
+	registry, clusterID, apiURI string, execution testkube.Execution, options ExecuteOptions) (jobOptions JobOptions, err error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
 		return jobOptions, err
@@ -848,6 +854,7 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	}
 
 	jobOptions.WorkingDir = workingDir
+	jobOptions.APIURI = apiURI
 
 	return
 }

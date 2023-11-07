@@ -23,7 +23,9 @@ func ExecutionRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 	}
 	ui.Warn("Test name:        ", execution.TestName)
 	ui.Warn("Type:             ", execution.TestType)
-	ui.Warn("Status:           ", string(*execution.ExecutionResult.Status))
+	if execution.ExecutionResult != nil && execution.ExecutionResult.Status != nil {
+		ui.Warn("Status:           ", string(*execution.ExecutionResult.Status))
+	}
 	ui.Warn("Start time:       ", execution.StartTime.String())
 	ui.Warn("End time:         ", execution.EndTime.String())
 	ui.Warn("Duration:         ", execution.Duration)
