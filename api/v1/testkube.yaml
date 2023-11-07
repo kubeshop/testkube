@@ -3539,7 +3539,7 @@ components:
           default: false
         previousStepNumbers:
           type: array
-          definition: previous step numbers starting from 1
+          description: previous step numbers starting from 1
           items:
             type: integer
 
