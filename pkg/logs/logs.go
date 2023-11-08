@@ -58,6 +58,8 @@ func (l *LogsService) Run(ctx context.Context) (err error) {
 	// TODO consider using durable topics for queue with Ack / Nack
 	l.nats.QueueSubscribe(StopSubject, StopQueue, func(event events.Trigger) {
 		// TODO stop all consumers from consuming data for given execution id
+		// TODO it can be on different pod so we need to check if we have consumer for given execution id
+		// TODO should we use consumer groups here?
 	})
 
 	// 2. For start event we must build stream for given execution id and start consuming it
