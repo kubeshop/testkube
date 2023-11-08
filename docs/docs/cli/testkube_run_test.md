@@ -24,7 +24,7 @@ testkube run test <testName> [flags]
       --concurrency int                            concurrency level for multiple test execution (default 10)
       --context string                             running context description for test execution
       --copy-files stringArray                     file path mappings from host to pod of form source:destination
-  -d, --download-artifacts                         downlaod artifacts automatically
+  -d, --download-artifacts                         download artifacts automatically
       --download-dir string                        download dir (default "artifacts")
       --execute-postrun-script-before-scraping     whether to execute postrun scipt before scraping or not (prebuilt executor only)
       --execution-label stringToString             execution-label key value pair: --execution-label key1=value1 (default [])
@@ -54,6 +54,7 @@ testkube run test <testName> [flags]
       --scraper-template-reference string          reference to scraper template to use for the test
   -s, --secret-variable stringToString             execution secret variable passed to executor (default [])
       --secret-variable-reference stringToString   secret variable references in a form name1=secret_name1=secret_key1 (default [])
+      --silent                                     don't print intermediate test execution
       --upload-timeout string                      timeout to use when uploading files, example: 30s
   -v, --variable stringToString                    execution variable passed to executor (default [])
       --variable-configmap stringArray             config map name used to map all keys to basis variables

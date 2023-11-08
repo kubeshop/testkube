@@ -67,6 +67,7 @@ func NewRunTestCmd() *cobra.Command {
 		argsMode                           string
 		artifactStorageBucket              string
 		artifactOmitFolderPerExecution     bool
+		silentMode                         bool
 	)
 
 	cmd := &cobra.Command{
@@ -251,7 +252,7 @@ func NewRunTestCmd() *cobra.Command {
 
 				if execution.Id != "" {
 					if watchEnabled && len(args) > 0 {
-						watchLogs(execution.Id, client)
+						watchLogs(execution.Id, silentMode, client)
 					}
 
 					execution, err = client.GetExecution(execution.Id)
@@ -329,6 +330,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&runningContext, "context", "", "running context description for test execution")
 	cmd.Flags().StringVar(&artifactStorageBucket, "artifact-storage-bucket", "", "artifact storage class name for container executor")
 	cmd.Flags().BoolVarP(&artifactOmitFolderPerExecution, "artifact-omit-folder-per-execution", "", false, "don't store artifacts in execution folder")
+	cmd.Flags().BoolVarP(&silentMode, "silent", "", false, "don't print intermediate test execution")
 
 	return cmd
 }
