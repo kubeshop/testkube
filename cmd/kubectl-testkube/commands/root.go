@@ -85,25 +85,27 @@ var RootCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-
-		serverCfg, err := client.GetConfig()
-		if ui.Verbose && err != nil {
-			ui.Err(err)
-		}
-
-		if clientCfg.TelemetryEnabled != serverCfg.EnableTelemetry && err == nil {
-			if serverCfg.EnableTelemetry {
-				clientCfg.EnableAnalytics()
-				ui.Debug("Sync telemetry on CLI with API", "enabled")
-			} else {
-				clientCfg.DisableAnalytics()
-				ui.Debug("Sync telemetry on CLI with API", "disabled")
+		// We ignore this check for cloud, since agent can be offline, and config API won't work
+		// but other commands should work.
+		if clientCfg.ContextType != config.ContextTypeCloud {
+			serverCfg, err := client.GetConfig()
+			if ui.Verbose && err != nil {
+				ui.Err(err)
 			}
 
-			err = config.Save(clientCfg)
-			ui.WarnOnError("syncing config", err)
-		}
+			if clientCfg.TelemetryEnabled != serverCfg.EnableTelemetry && err == nil {
+				if serverCfg.EnableTelemetry {
+					clientCfg.EnableAnalytics()
+					ui.Debug("Sync telemetry on CLI with API", "enabled")
+				} else {
+					clientCfg.DisableAnalytics()
+					ui.Debug("Sync telemetry on CLI with API", "disabled")
+				}
 
+				err = config.Save(clientCfg)
+				ui.WarnOnError("syncing config", err)
+			}
+		}
 		if clientCfg.TelemetryEnabled {
 			ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
 			out, err := telemetry.SendCmdEvent(cmd, common.Version)
