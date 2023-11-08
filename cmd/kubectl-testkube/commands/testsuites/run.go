@@ -163,6 +163,9 @@ func NewRunTestSuiteCmd() *cobra.Command {
 					}
 
 					if !watchEnabled || len(args) == 0 {
+						if downloadArtifactsEnabled {
+							DownloadArtifacts(execution.Id, downloadDir, format, masks, client)
+						}
 						uiShellTestSuiteWatchCommandBlock(execution.Id)
 					}
 				}
