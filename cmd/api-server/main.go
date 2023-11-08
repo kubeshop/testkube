@@ -348,6 +348,7 @@ func main() {
 		cfg.TestkubePodStartTimeout,
 		clusterId,
 		cfg.TestkubeDashboardURI,
+		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating executor client", err)
@@ -375,6 +376,7 @@ func main() {
 		cfg.TestkubePodStartTimeout,
 		clusterId,
 		cfg.TestkubeDashboardURI,
+		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating container executor", err)

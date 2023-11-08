@@ -9,6 +9,7 @@ import (
 type Config struct {
 	APIServerPort                     string        `envconfig:"APISERVER_PORT" default:"8088"`
 	APIServerConfig                   string        `envconfig:"APISERVER_CONFIG" default:""`
+	APIServerFullname                 string        `envconfig:"APISERVER_FULLNAME" default:"testkube-api-server"`
 	APIMongoDSN                       string        `envconfig:"API_MONGO_DSN" default:"mongodb://localhost:27017"`
 	APIMongoAllowTLS                  bool          `envconfig:"API_MONGO_ALLOW_TLS" default:"false"`
 	APIMongoSSLCert                   string        `envconfig:"API_MONGO_SSL_CERT" default:""`

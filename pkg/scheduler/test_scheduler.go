@@ -225,6 +225,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution.ExecutePostRunScriptBeforeScraping = options.Request.ExecutePostRunScriptBeforeScraping
 	execution.RunningContext = options.Request.RunningContext
 	execution.TestExecutionName = options.Request.TestExecutionName
+	execution.DownloadArtifactExecutionIDs = options.Request.DownloadArtifactExecutionIDs
 
 	return execution
 }

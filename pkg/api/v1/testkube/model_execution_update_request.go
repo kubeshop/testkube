@@ -95,4 +95,6 @@ type ExecutionUpdateRequest struct {
 	RunningContext *RunningContext `json:"runningContext,omitempty"`
 	// test execution name started the test execution
 	TestExecutionName *string `json:"testExecutionName,omitempty"`
+	// execution ids for artifacts to download
+	DownloadArtifactExecutionIDs *[]string `json:"downloadArtifactExecutionIDs,omitempty"`
 }

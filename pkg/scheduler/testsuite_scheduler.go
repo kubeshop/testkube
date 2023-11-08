@@ -214,7 +214,7 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 			s.logger.Infow("Updating test execution", "error", err)
 		}
 
-		s.executeTestStep(ctx, *testsuiteExecution, request, batchStepResult)
+		s.executeTestStep(ctx, *testsuiteExecution, request, batchStepResult, testsuiteExecution.ExecuteStepResults[:i])
 
 		var results []*testkube.ExecutionResult
 		for j := range batchStepResult.Execute {
@@ -378,11 +378,35 @@ func (s *Scheduler) timeoutCheck(ctx context.Context, testsuiteExecution *testku
 }
 
 func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution testkube.TestSuiteExecution,
-	request testkube.TestSuiteExecutionRequest, result *testkube.TestSuiteBatchStepExecutionResult) {
+	request testkube.TestSuiteExecutionRequest, result *testkube.TestSuiteBatchStepExecutionResult,
+	previousSteps []testkube.TestSuiteBatchStepExecutionResult) {
 
 	var testSuiteName string
 	if testsuiteExecution.TestSuite != nil {
 		testSuiteName = testsuiteExecution.TestSuite.Name
+	}
+
+	var ids []string
+	if result.Step != nil && result.Step.DownloadArtifacts != nil {
+		for i := range previousSteps {
+			for j := range previousSteps[i].Execute {
+				if previousSteps[i].Execute[j].Execution != nil &&
+					previousSteps[i].Execute[j].Step != nil && previousSteps[i].Execute[j].Step.Test != "" {
+					if previousSteps[i].Execute[j].Execution.IsPassed() || previousSteps[i].Execute[j].Execution.IsFailed() {
+						if result.Step.DownloadArtifacts.AllPreviousSteps {
+							ids = append(ids, previousSteps[i].Execute[j].Execution.Id)
+						} else {
+							for _, n := range result.Step.DownloadArtifacts.PreviousStepNumbers {
+								if n == int32(i+1) {
+									ids = append(ids, previousSteps[i].Execute[j].Execution.Id)
+									break
+								}
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 
 	var testTuples []testTuple
@@ -456,12 +480,13 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 				Type_:   string(testkube.RunningContextTypeTestSuite),
 				Context: testsuiteExecution.Name,
 			},
-			JobTemplate:              request.JobTemplate,
-			JobTemplateReference:     request.JobTemplateReference,
-			ScraperTemplate:          request.ScraperTemplate,
-			ScraperTemplateReference: request.ScraperTemplateReference,
-			PvcTemplate:              request.PvcTemplate,
-			PvcTemplateReference:     request.PvcTemplateReference,
+			JobTemplate:                  request.JobTemplate,
+			JobTemplateReference:         request.JobTemplateReference,
+			ScraperTemplate:              request.ScraperTemplate,
+			ScraperTemplateReference:     request.ScraperTemplateReference,
+			PvcTemplate:                  request.PvcTemplate,
+			PvcTemplateReference:         request.PvcTemplateReference,
+			DownloadArtifactExecutionIDs: ids,
 		}
 
 		requests := make([]workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution], len(testTuples))
