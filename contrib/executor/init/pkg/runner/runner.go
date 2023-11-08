@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
@@ -147,8 +148,51 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	}
 	output.PrintLogf("%s Access to files enabled", ui.IconCheckMark)
 
+	if len(execution.DownloadArtifactExecutionIDs) != 0 {
+		downloadedArtifacts := filepath.Join(r.Params.DataDir, "downloaded-artifacts")
+		options := client.Options{
+			ApiUri: r.Params.APIURI,
+		}
+
+		c, err := client.GetClient(client.ClientDirect, options)
+		if err != nil {
+			output.PrintLogf("%s Could not get client: %s", ui.IconCross, err.Error())
+		} else {
+			for _, id := range execution.DownloadArtifactExecutionIDs {
+				if err = downloadArtifacts(id, filepath.Join(downloadedArtifacts, id), c); err != nil {
+					output.PrintLogf("%s Could not download artifact: %s", ui.IconCross, err.Error())
+				}
+			}
+		}
+	}
+
 	output.PrintLogf("%s Initialization successful", ui.IconCheckMark)
 	return testkube.NewPendingExecutionResult(), nil
+}
+
+func downloadArtifacts(id, dir string, c client.Client) error {
+	artifacts, err := c.GetExecutionArtifacts(id)
+	if err != nil {
+		return err
+	}
+
+	if err = os.MkdirAll(dir, os.ModePerm); err != nil {
+		return err
+	}
+
+	if len(artifacts) > 0 {
+		output.PrintLogf("%s Getting %d artifacts...", ui.IconWorld, len(artifacts))
+		for _, artifact := range artifacts {
+			f, err := c.DownloadFile(id, artifact.Name, dir)
+			if err != nil {
+				return err
+			}
+
+			output.PrintLogf("%s Downloading file %s...", ui.IconWorld, f)
+		}
+	}
+
+	return nil
 }
 
 // GetType returns runner type

@@ -17,6 +17,16 @@ spec:
   before:
   {{- range .Before }}
   - stopOnFailure: {{ .StopOnFailure }}
+    {{- if .DownloadArtifacts }}
+    downloadArtifacts:
+      allPreviousSteps: {{ .DownloadArtifacts.AllPreviousSteps }}
+      {{- if ne (len .DownloadArtifacts.PreviousStepNumbers) 0 }}
+      previousStepNumbers:
+      {{- range .DownloadArtifacts.PreviousStepNumbers }}
+      - {{ . }}
+      {{- end }}
+      {{- end }}
+    {{- end }}
     {{- if ne (len .Execute) 0 }}
     execute:
     {{- range .Execute }}
@@ -34,6 +44,16 @@ spec:
   steps:
   {{- range .Steps }}
   - stopOnFailure: {{ .StopOnFailure }}
+    {{- if .DownloadArtifacts }}
+    downloadArtifacts:
+      allPreviousSteps: {{ .DownloadArtifacts.AllPreviousSteps }}
+      {{- if ne (len .DownloadArtifacts.PreviousStepNumbers) 0 }}
+      previousStepNumbers:
+      {{- range .DownloadArtifacts.PreviousStepNumbers }}
+      - {{ . }}
+      {{- end }}
+      {{- end }}
+    {{- end }}
     {{- if ne (len .Execute) 0 }}
     execute:
     {{- range .Execute }}
@@ -51,6 +71,16 @@ spec:
   after:
   {{- range .After }}
   - stopOnFailure: {{ .StopOnFailure }}
+    {{- if .DownloadArtifacts }}
+    downloadArtifacts:
+      allPreviousSteps: {{ .DownloadArtifacts.AllPreviousSteps }}
+      {{- if ne (len .DownloadArtifacts.PreviousStepNumbers) 0 }}
+      previousStepNumbers:
+      {{- range .DownloadArtifacts.PreviousStepNumbers }}
+      - {{ . }}
+      {{- end }}
+      {{- end }}
+    {{- end }}
     {{- if ne (len .Execute) 0 }}
     execute:
     {{- range .Execute }}

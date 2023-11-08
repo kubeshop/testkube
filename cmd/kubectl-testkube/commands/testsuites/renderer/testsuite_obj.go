@@ -87,16 +87,26 @@ func TestSuiteRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 
 	ui.NL()
 	ui.Warn("Test batches:", fmt.Sprintf("%d", len(batches)))
-	d := [][]string{{"Names", "Stop on failure"}}
+	d := [][]string{{"Names", "Stop on failure", "Download artifacts"}}
 	for _, batch := range batches {
 		var names []string
 		for _, step := range batch.Execute {
 			names = append(names, step.FullName())
 		}
 
+		downloadArtifacts := ""
+		if batch.DownloadArtifacts != nil {
+			if batch.DownloadArtifacts.AllPreviousSteps {
+				downloadArtifacts = "all previous steps"
+			} else {
+				downloadArtifacts = fmt.Sprintf("previous step numbers: %v", batch.DownloadArtifacts.PreviousStepNumbers)
+			}
+		}
+
 		d = append(d, []string{
 			fmt.Sprintf("[%s]", strings.Join(names, ", ")),
 			fmt.Sprintf("%v", batch.StopOnFailure),
+			downloadArtifacts,
 		})
 	}
 
