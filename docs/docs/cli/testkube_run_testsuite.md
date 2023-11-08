@@ -37,6 +37,7 @@ testkube run testsuite <testSuiteName> [flags]
       --scraper-template-reference string          reference to scraper template to use for the test
   -s, --secret-variable stringToString             execution variables passed to executor (default [])
       --secret-variable-reference stringToString   secret variable references in a form name1=secret_name1=secret_key1 (default [])
+      --silent                                     don't print intermediate test suite execution
   -v, --variable stringToString                    execution variables passed to executor (default [])
   -f, --watch                                      watch for changes after start
 ```
