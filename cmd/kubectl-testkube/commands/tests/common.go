@@ -132,7 +132,7 @@ func DownloadArtifacts(id, dir, format string, masks []string, client apiclientv
 	ui.NL()
 }
 
-func watchLogs(id string, client apiclientv1.Client) {
+func watchLogs(id string, silentMode bool, client apiclientv1.Client) {
 	ui.Info("Getting logs from test job", id)
 
 	logs, err := client.Logs(id)
@@ -149,11 +149,12 @@ func watchLogs(id string, client apiclientv1.Client) {
 			}
 			uiShellGetExecution(id)
 			os.Exit(1)
-			return
 		case output.TypeResult:
 			ui.Info("Execution completed", l.Result.Output)
 		default:
-			ui.LogLine(l.String())
+			if !silentMode {
+				ui.LogLine(l.String())
+			}
 		}
 	}
 

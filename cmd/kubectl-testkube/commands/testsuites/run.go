@@ -42,6 +42,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 		downloadDir              string
 		format                   string
 		masks                    []string
+		silentMode               bool
 	)
 
 	cmd := &cobra.Command{
@@ -142,7 +143,9 @@ func NewRunTestSuiteCmd() *cobra.Command {
 						executionCh, err := client.WatchTestSuiteExecution(execution.Id)
 						for execution := range executionCh {
 							ui.ExitOnError("watching test execution", err)
-							printExecution(execution, startTime)
+							if !silentMode {
+								printExecution(execution, startTime)
+							}
 						}
 					}
 
@@ -199,6 +202,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "download artifacts automatically")
 	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")
 	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
+	cmd.Flags().BoolVarP(&silentMode, "silent", "", false, "don't print intermediate test suite execution")
 
 	return cmd
 }
