@@ -64,7 +64,7 @@ Replace `Google client ID`, `Google client secret`, and `Testkube Enterprise red
 
 ### Okta
 
-To configure Testkube Enterprise with Okta, add the following configuration to the additionalConfig field:
+To configure Testkube Enterprise with Okta, add the following configuration to the `additionalConfig` field:
 
 ```yaml
 additionalConfig: |
