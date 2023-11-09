@@ -13,7 +13,7 @@ See [Static Users](#static-users).
 
 ### Static Users
 
-To configure Testkube Enterprise with static users, add the following configuration to the additionalConfig field:
+To configure Testkube Enterprise with static users, add the following configuration to the `additionalConfig` field:
 
 ```yaml
 additionalConfig: |
