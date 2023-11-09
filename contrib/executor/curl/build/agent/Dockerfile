@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM alpine:3.18.0
+FROM alpine:3.18.4
 RUN apk --no-cache add ca-certificates && \
     apk --no-cache add curl git
 COPY curl /bin/runner
