@@ -80,7 +80,7 @@ global:
 
 Select the appropriate license type for your environment.
 
-For air-gaped & firewalled environments, we offer an option to use an [Offline License](#offline-license) for enhanced security.
+For air-gapped & firewalled environments, we offer an option to use an [Offline License](#offline-license) for enhanced security.
 An **Offline License** consists of a **License Key** and **License File**.
 
 If your environment has internet access, you can use an [Online License](#online-license), which only requires the **License Key**.
