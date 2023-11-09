@@ -260,7 +260,7 @@ Use `email` to send an invitation for the user to accept, and `auto-accept` to a
 ### Invitations Via Email
 
 If `testkube-cloud-api.api.inviteMode` is set to `email`, Testkube Enterprise will send emails when a user gets invited to
-an Organization or an Environment, and in that case SMTP settings need to be configured in the API Helm chart.
+an Organization or an Environment and when SMTP settings need to be configured in the API Helm chart.
 
 ```helm
 testkube-cloud-api:
