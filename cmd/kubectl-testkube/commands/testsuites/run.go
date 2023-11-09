@@ -155,7 +155,9 @@ func NewRunTestSuiteCmd() *cobra.Command {
 				printExecution(execution, startTime)
 				ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 
-				uiPrintExecutionStatus(client, execution)
+				if err = uiPrintExecutionStatus(client, execution); err != nil {
+					hasErrors = true
+				}
 
 				uiShellTestSuiteGetCommandBlock(execution.Id)
 				if execution.Id != "" {
