@@ -83,7 +83,7 @@ Replace `Okta issuer URL`, `Okta client ID`, `Okta client secret`, and `Testkube
 
 ### OIDC
 
-To configure Testkube Enterprise with an OIDC provider, add the following configuration to the additionalConfig field:
+To configure Testkube Enterprise with an OIDC provider, add the following configuration to the `additionalConfig` field:
 
 ```yaml
 additionalConfig: |
