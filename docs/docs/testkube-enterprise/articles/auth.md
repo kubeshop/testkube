@@ -1,4 +1,4 @@
-## Configure Testkube Enterprise with Identity Providers
+# Configure Identity Providers
 
 You can configure Testkube Enterprise to authenticate users using different identity providers such as Azure AD, Google, Okta, and OIDC. To do this, you need to update the `additionalConfig` field in the Helm chart values with the appropriate configuration for each identity provider.
 
@@ -42,7 +42,7 @@ additionalConfig: |
         redirectURI: <Testkube Enterprise redirect URI>
 ```
 
-Replace <Azure AD client ID>, <Azure AD client secret>, and <Testkube Enterprise redirect URI> with your actual Azure AD configuration values.
+Replace `Azure AD client ID`, `Azure AD client secret`, and `Testkube Enterprise redirect URI` with your actual Azure AD configuration values.
 
 ### Google
 
@@ -60,7 +60,7 @@ additionalConfig: |
         redirectURI: <Testkube Enterprise redirect URI>
 ```
 
-Replace <Google client ID>, <Google client secret>, and <Testkube Enterprise redirect URI> with your actual Google configuration values.
+Replace `Google client ID`, `Google client secret`, and `Testkube Enterprise redirect URI` with your actual Google configuration values.
 
 ### Okta
 
@@ -79,7 +79,7 @@ additionalConfig: |
         redirectURI: <Testkube Enterprise redirect URI>
 ```
 
-Replace <Okta issuer URL>, <Okta client ID>, <Okta client secret>, and <Testkube Enterprise redirect URI> with your actual Okta configuration values.
+Replace `Okta issuer URL`, `Okta client ID`, `Okta client secret`, and `Testkube Enterprise redirect URI` with your actual Okta configuration values.
 
 ### OIDC
 

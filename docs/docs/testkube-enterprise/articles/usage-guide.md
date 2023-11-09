@@ -1,7 +1,7 @@
+# Helm Chart Installation and Usage Guide
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
-
 - [Testkube Enterprise Helm Chart Installation and Usage Guide](#testkube-enterprise-helm-chart-installation-and-usage-guide)
     - [Prerequisites](#prerequisites)
     - [Configuration](#configuration)
@@ -29,7 +29,6 @@
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-# Testkube Enterprise Helm Chart Installation and Usage Guide
 
 Welcome to the Testkube Enterprise Helm chart installation and usage guide.
 This comprehensive guide provides step-by-step instructions for installing and utilizing the Testkube Enterprise Helm chart.
@@ -236,7 +235,7 @@ global:
 ### Auth
 
 Testkube Enterprise utilizes [Dex](https://dexidp.io/) for authentication & authorization.
-For detailed instruction on configuring Dex, please refer to the [auth.md](./auth.md) document.
+For detailed instruction on configuring Dex, please refer to the [Identity Provider](./auth.md) document.
 
 ### Metrics
 
