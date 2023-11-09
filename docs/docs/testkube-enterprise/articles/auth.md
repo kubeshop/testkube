@@ -4,7 +4,7 @@ You can configure Testkube Enterprise to authenticate users using different iden
 
 For a list of all supported identity providers, see [Connectors](https://dexidp.io/docs/connectors/).
 
-Examples below show how to configure Testkube Enterprise with each identity provider by editing the `dex.configTemplate.additionalConfig` field in the Helm chart values.
+The examples below show how to configure Testkube Enterprise with each identity provider by editing the `dex.configTemplate.additionalConfig` field in the Helm chart values.
 
 ### Quickstart
 
