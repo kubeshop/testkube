@@ -378,7 +378,7 @@ This is a minimal setup which will install a development Testkube Enterprise clu
 
 This setup should not be used in production environments. For a more advanced setup please refer to the [Production Setup](#production-setup) section.
 
-Following configuration can be used for a minimal development setup of Testkube Enterprise:
+The following configuration can be used for a minimal development setup of Testkube Enterprise:
 ```helm
 global:
   domain: <your domain>
