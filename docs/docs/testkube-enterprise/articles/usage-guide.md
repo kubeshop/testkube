@@ -355,7 +355,7 @@ testkube-cloud-api:
     ```bash
     helm repo add testkubeenterprise https://kubeshop.github.io/testkube-cloud-charts
     ```
-2. Create a `values.yaml` with preferred configuration
+2. Create a `values.yaml` with preferred configuration.
 3. Run `helm install testkube-enterprise testkubeenterprise/testkube-enterprise -f values.yaml --namespace testkube-enterprise`
 
 **IMPORTANT**
