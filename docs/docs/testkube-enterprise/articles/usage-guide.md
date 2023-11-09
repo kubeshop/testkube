@@ -275,7 +275,7 @@ testkube-cloud-api:
       # passwordSecretRef: <secret name>
 ```
 
-### Auto-accept invitations
+### Auto-accept Invitations
 
 If `testkube-cloud-api.api.inviteMode` is set to `auto-accept`, Testkube Enterprise will automatically add users to
 Organizations and Environments when they get invited.
