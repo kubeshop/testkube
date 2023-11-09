@@ -50,7 +50,7 @@ we strongly recommend using `cert-manager` for easier certificate management.
 
 ## Configuration
 
-### Docker images
+### Docker Images
 
 **NOTE**: As of November 2023, Testkube Enterprise Docker images are publicly accessible.
 You only need to follow the steps in this section if you wish to re-publish the images to your private Docker registry;
