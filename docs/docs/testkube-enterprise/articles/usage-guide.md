@@ -208,7 +208,7 @@ For best the performance, TLS should be terminated at the application level (Tes
 gRPC and Websockets protocols perform significantly better when HTTP2 protocol is used end-to-end.
 Note that NGINX, by default, downgrades the HTTP2 protocol to HTTP1.1 when the backend service is using an insecure port.
 
-If `cert-manager` (check the [Prerequisites](#prerequisites) for installation guide) is installed in your cluster, it should be configured to issue certificates for the configured domain by using `Issuer` or `ClusterIssuer` resource.
+If `cert-manager` (check the [Prerequisites](#prerequisites) for installation guide) is installed in your cluster, it should be configured to issue certificates for the configured domain by using the `Issuer` or `ClusterIssuer` resource.
 Testkube Enterprise Helm chart needs the following config in that case:
 ```helm
 global:
