@@ -2,9 +2,9 @@ package render
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
-	"os"
 
 	"gopkg.in/yaml.v2"
 
@@ -65,12 +65,11 @@ func RenderPrettyList(obj ui.TableData, w io.Writer) error {
 	return nil
 }
 
-func RenderExecutionResult(client client.Client, execution *testkube.Execution, logsOnly bool) {
-
+func RenderExecutionResult(client client.Client, execution *testkube.Execution, logsOnly bool) error {
 	result := execution.ExecutionResult
 	if result == nil {
 		ui.Errf("got execution without `Result`")
-		return
+		return nil
 	}
 
 	ui.NL()
@@ -114,7 +113,7 @@ func RenderExecutionResult(client client.Client, execution *testkube.Execution, 
 		}
 
 		ui.Info(result.Output)
-		os.Exit(1)
+		return errors.New(result.ErrorMessage)
 
 	default:
 		if logsOnly {
@@ -126,9 +125,10 @@ func RenderExecutionResult(client client.Client, execution *testkube.Execution, 
 		}
 
 		ui.Info(result.Output)
-		os.Exit(1)
+		return errors.New(result.ErrorMessage)
 	}
 
+	return nil
 }
 
 func PrintExecutionURIs(execution *testkube.Execution, dashboardURI string) {

@@ -42,7 +42,7 @@ func (e *ExecutionResult) Error() {
 }
 
 func (e *ExecutionResult) IsCompleted() bool {
-	return e.IsPassed() || e.IsFailed()
+	return e.IsPassed() || e.IsFailed() || e.IsAborted() || e.IsTimeout()
 }
 
 func (e *ExecutionResult) IsRunning() bool {

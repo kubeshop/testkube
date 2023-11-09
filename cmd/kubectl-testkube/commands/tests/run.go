@@ -252,14 +252,18 @@ func NewRunTestCmd() *cobra.Command {
 
 				if execution.Id != "" {
 					if watchEnabled && len(args) > 0 {
-						watchLogs(execution.Id, silentMode, client)
+						if err = watchLogs(execution.Id, silentMode, client); err != nil {
+							hasErrors = true
+						}
 					}
 
 					execution, err = client.GetExecution(execution.Id)
 					ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 				}
 
-				render.RenderExecutionResult(client, &execution, false)
+				if err = render.RenderExecutionResult(client, &execution, false); err != nil {
+					hasErrors = true
+				}
 
 				if execution.Id != "" {
 					if watchEnabled && len(args) > 0 {
