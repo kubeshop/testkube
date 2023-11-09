@@ -264,14 +264,15 @@ an Organization or an Environment, and in that case SMTP settings need to be con
 
 ```helm
 testkube-cloud-api:
-  inviteMode: email
-  smtp:
-    host: <smtp host>
-    port: <smtp port>
-    username: <smtp username>
-    password: <smtp password>
-    # password can also be referenced by using the `passwordSecretRef` field which needs to contain the key SMTP_PASSWORD
-    # passwordSecretRef: <secret name>
+  api:
+    inviteMode: email
+    smtp:
+      host: <smtp host>
+      port: <smtp port>
+      username: <smtp username>
+      password: <smtp password>
+      # password can also be referenced by using the `passwordSecretRef` field which needs to contain the key SMTP_PASSWORD
+      # passwordSecretRef: <secret name>
 ```
 
 ### Auto-accept invitations
