@@ -367,7 +367,7 @@ mongodb:
     tag: "6.0.5"
 ```
 
-### Minimal setup
+### Minimal Setup
 
 This is a minimal setup which will install a development Testkube Enterprise cluster with the following components:
 * Testkube Enterprise API
