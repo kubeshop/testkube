@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
-FROM alpine:3.18.4
-RUN apk --no-cache add ca-certificates && \
-    apk --no-cache add curl git
+FROM ubuntu:23.10
+RUN apt update
+RUN apt install -y ca-certificates && \
+    apt install -y curl git
 COPY curl /bin/runner
 
 WORKDIR /root/
