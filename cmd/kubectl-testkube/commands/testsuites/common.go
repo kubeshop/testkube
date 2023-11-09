@@ -2,6 +2,7 @@ package testsuites
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -40,9 +41,9 @@ func printExecution(execution testkube.TestSuiteExecution, startTime time.Time) 
 	ui.NL()
 }
 
-func uiPrintExecutionStatus(client apiclientv1.Client, execution testkube.TestSuiteExecution) {
+func uiPrintExecutionStatus(client apiclientv1.Client, execution testkube.TestSuiteExecution) error {
 	if execution.Status == nil {
-		return
+		return nil
 	}
 
 	switch true {
@@ -68,10 +69,11 @@ func uiPrintExecutionStatus(client apiclientv1.Client, execution testkube.TestSu
 		ui.ExitOnError("getting server info", err)
 
 		render.PrintTestSuiteExecutionURIs(&execution, info.DashboardUri)
-		os.Exit(1)
+		return errors.New("failed test suite")
 	}
 
 	ui.NL()
+	return nil
 }
 
 func uiShellTestSuiteGetCommandBlock(id string) {
