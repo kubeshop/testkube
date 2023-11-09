@@ -46,7 +46,7 @@ Replace `Azure AD client ID`, `Azure AD client secret`, and `Testkube Enterprise
 
 ### Google
 
-To configure Testkube Enterprise with Google, add the following configuration to the additionalConfig field:
+To configure Testkube Enterprise with Google, add the following configuration to the 'additionalConfig' field:
 
 ```yaml
 additionalConfig: |
