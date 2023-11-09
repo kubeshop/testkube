@@ -41,7 +41,7 @@ Before you proceed with the installation, please ensure that you have the follow
 * [Helm](https://helm.sh/docs/intro/quickstart/) (version 3+)
 * [cert-manager](https://cert-manager.io/docs/installation/) (version 1.11+) - Used for TLS certificate management.
 * [NGINX Controller](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/) (version v1.8+) - Used for Ingress configuration.
-* Own a public/private domain for creating Ingress rules
+* Own a public/private domain for creating Ingress rules.
 * License Key and/or License File (if offline access is required)
 
 **NOTE**
