@@ -257,7 +257,7 @@ Testkube Enterprise allows you to invite users to Organizations and Environments
 There are two supported invitation modes: `email` and `auto-accept`.
 Use `email` to send an invitation for the user to accept, and `auto-accept` to automatically add users without requiring acceptance.
 
-### Invitations via email
+### Invitations Via Email
 
 If `testkube-cloud-api.api.inviteMode` is set to `email`, Testkube Enterprise will send emails when a user gets invited to
 an Organization or an Environment, and in that case SMTP settings need to be configured in the API Helm chart.
