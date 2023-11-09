@@ -398,7 +398,7 @@ dex:
           username: <username>
 ```
 
-### Production setup
+### Production Setup
 
 TBD
 
