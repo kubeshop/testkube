@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -132,12 +133,13 @@ func DownloadArtifacts(id, dir, format string, masks []string, client apiclientv
 	ui.NL()
 }
 
-func watchLogs(id string, silentMode bool, client apiclientv1.Client) {
+func watchLogs(id string, silentMode bool, client apiclientv1.Client) error {
 	ui.Info("Getting logs from test job", id)
 
 	logs, err := client.Logs(id)
 	ui.ExitOnError("getting logs from executor", err)
 
+	var result error
 	for l := range logs {
 		switch l.Type_ {
 		case output.TypeError:
@@ -147,8 +149,7 @@ func watchLogs(id string, silentMode bool, client apiclientv1.Client) {
 				ui.Errf("Error: %s", l.Result.ErrorMessage)
 				ui.Debug("Output: %s", l.Result.Output)
 			}
-			uiShellGetExecution(id)
-			os.Exit(1)
+			result = errors.New(l.Content)
 		case output.TypeResult:
 			ui.Info("Execution completed", l.Result.Output)
 		default:
@@ -169,15 +170,11 @@ func watchLogs(id string, silentMode bool, client apiclientv1.Client) {
 		fmt.Print(".")
 
 		if execution.ExecutionResult.IsCompleted() {
-			fmt.Println()
-
-			uiShellGetExecution(id)
-
-			return
+			return result
 		}
 	}
 
-	uiShellGetExecution(id)
+	return result
 }
 
 func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err error) {
