@@ -39,7 +39,7 @@ Testkube Enterprise is a cutting-edge Kubernetes-native testing platform designe
 Before you proceed with the installation, please ensure that you have the following prerequisites in place:
 * Kubernetes cluster (version 1.21+)
 * [Helm](https://helm.sh/docs/intro/quickstart/) (version 3+)
-* [cert-manager](https://cert-manager.io/docs/installation/) (version 1.11+) - used for TLS certificate management
+* [cert-manager](https://cert-manager.io/docs/installation/) (version 1.11+) - Used for TLS certificate management.
 * [NGINX Controller](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/) (version v1.8+) - used for Ingress configuration
 * Own a public/private domain for creating Ingress rules
 * License Key and/or License File (if offline access is required)
