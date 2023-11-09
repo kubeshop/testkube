@@ -234,7 +234,7 @@ global:
 
 ### Auth
 
-Testkube Enterprise utilizes [Dex](https://dexidp.io/) for authentication & authorization.
+Testkube Enterprise utilizes [Dex](https://dexidp.io/) for authentication and authorization.
 For detailed instruction on configuring Dex, please refer to the [Identity Provider](./auth.md) document.
 
 ### Metrics
