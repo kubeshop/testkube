@@ -59,7 +59,9 @@ func ExecutionRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 		ui.Warn("  Auth type:      ", execution.Content.Repository.AuthType)
 	}
 
-	render.RenderExecutionResult(client, &execution, false)
+	if err := render.RenderExecutionResult(client, &execution, false); err != nil {
+		return err
+	}
 
 	ui.NL()
 

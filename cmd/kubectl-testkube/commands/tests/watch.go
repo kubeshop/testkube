@@ -1,6 +1,8 @@
 package tests
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -26,7 +28,13 @@ func NewWatchExecutionCmd() *cobra.Command {
 			if execution.ExecutionResult.IsCompleted() {
 				ui.Completed("execution is already finished")
 			} else {
-				watchLogs(execution.Id, false, client)
+				err = watchLogs(execution.Id, false, client)
+				ui.NL()
+				uiShellGetExecution(execution.Id)
+				if err != nil {
+					os.Exit(1)
+				}
+
 			}
 
 		},
