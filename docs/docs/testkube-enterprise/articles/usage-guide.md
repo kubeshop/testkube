@@ -192,7 +192,7 @@ annotations:
     }
 ```
 
-If you want to use a different Ingress Controller, we kindly ask you to reach out and discuss with our support team.
+If you want to use a different Ingress Controller, please reach out to our support team.
 
 #### Domain
 
