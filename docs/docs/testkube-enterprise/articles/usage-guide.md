@@ -204,7 +204,7 @@ Testkube Enterprise requires a domain (public or internal) under which it will e
 
 #### TLS
 
-For best performance, TLS should be terminated at application level (Testkube Enterprise API) instead of NGINX/Ingress level because
+For best the performance, TLS should be terminated at the application level (Testkube Enterprise API) instead of NGINX/Ingress level because
 gRPC and Websockets protocols perform significantly better when HTTP2 protocol is used end-to-end.
 Note that NGINX, by default, downgrades the HTTP2 protocol to HTTP1.1 when the backend service is using an insecure port.
 
