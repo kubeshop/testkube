@@ -356,7 +356,7 @@ testkube-cloud-api:
     helm repo add testkubeenterprise https://kubeshop.github.io/testkube-cloud-charts
     ```
 2. Create a `values.yaml` with preferred configuration.
-3. Run `helm install testkube-enterprise testkubeenterprise/testkube-enterprise -f values.yaml --namespace testkube-enterprise`
+3. Run `helm install testkube-enterprise testkubeenterprise/testkube-enterprise -f values.yaml --namespace testkube-enterprise`.
 
 **IMPORTANT**
 The Bitnami MongoDB Helm chart does not work reliably on ARM architectures. If you are installing MongoDB using this chart, you need to use an ARM compatible image:
