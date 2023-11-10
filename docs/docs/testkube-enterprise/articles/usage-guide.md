@@ -187,6 +187,7 @@ If you want to use a different Ingress Controller, please reach out to our suppo
 #### Domain
 
 Testkube Enterprise requires a domain (public or internal) under which it will expose the following services:
+
 | Subdomain                       | Service          |
 |---------------------------------|------------------|
 | `dashboard.<your-(sub)domain>`  | Dashboard UI     |
