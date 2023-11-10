@@ -1,29 +1,32 @@
-package runner
+package runner_test
 
 import (
-	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/kubeshop/testkube-executor-tracetest/pkg/runner"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/envs"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRun(t *testing.T) {
 
-	t.Run("runner should return error if Tracetest endpoint is not provided", func(t *testing.T) {
+	t.Run("runner should fail if no env var is provided", func(t *testing.T) {
 		// given
-		runner, _ := NewRunner(context.Background(), envs.Params{})
+		runner, err := runner.NewRunner()
+		require.NoError(t, err)
+
+		runner.Params.DataDir = "/tmp"
+
 		execution := testkube.NewQueuedExecution()
 		execution.Content = testkube.NewStringTestContent("hello I'm test content")
 
 		// when
-		_, err := runner.Run(context.Background(), *execution)
+		_, err = runner.Run(*execution)
 
 		// then
-		assert.Error(t, err)
-		assert.Equal(t, "TRACETEST_ENDPOINT variable was not found", err.Error())
+		require.Error(t, err)
+		require.Equal(t, "could not find variables to run the test with Tracetest or Tracetest Cloud", err.Error())
 	})
 
 }

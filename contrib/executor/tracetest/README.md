@@ -1,8 +1,8 @@
 ![Testkube Logo](https://raw.githubusercontent.com/kubeshop/testkube/main/assets/testkube-color-gray.png)
 
-# Welcome to Testkube Tracetest Executor
+# Welcome to TestKube Tracetest Executor
 
-Testkube Tracetest Executor is a test executor to run [Tracetest](https://tracetest.io/) tests with [Testkube](https://testkube.io).
+TestKube Tracetest Executor is a test executor to run [Tracetest](https://tracetest.io/) tests with [TestKube](https://testkube.io).
 
 # Running Tracetest with Testkube
 
@@ -21,8 +21,8 @@ Here we will show how to use Testkube alongside Tracetest to run your tests in a
 In your Kubernetes cluster you should have:
 
 1. `Testkube`: Use HELM or the Testkube CLI to [install](https://kubeshop.github.io/testkube/installing) Testkube Server components in your cluster.
-2. `Trecetest Server`: You need a running instance of Tracetest which is going to be executing your assertions. To do so you can follow the instructions defined in the Tracetest [documentation](https://docs.tracetest.io/deployment/kubernetes).
-3. `OpenTelemetry Instrumented Service`: In order to generate traces and spans, the service under test must support the basics for [propagation](https://opentelemetry.io/docs/reference/specification/context/api-propagators/) through HTTP requests, and also store traces and spans into a Data Store Backend (Jaeger, Grafana Tempo, OpenSearch, etc) or use the [OpenTelemetry Collector](https://docs.tracetest.io/configuration/overview#using-tracetest-without-a-trace-data-store).
+2. `Tracetest`: You need a running instance of [Tracetest](https://docs.tracetest.io/getting-started/installation/) or [Tracetest Core](https://docs.tracetest.io/core/getting-started/installation/) which is going to be executing your assertions. To do so you can follow the instructions defined in the Tracetest [documentation](https://docs.tracetest.io/getting-started/overview).
+3. `OpenTelemetry Instrumented Service`: In order to generate traces and spans, the service under test must support the basics for [propagation](https://opentelemetry.io/docs/reference/specification/context/api-propagators/) through HTTP requests, and also store traces and spans in a Data Store Backend (Jaeger, Grafana Tempo, OpenSearch, etc) or use the [OpenTelemetry Collector](https://docs.tracetest.io/configuration/overview#using-tracetest-without-a-trace-data-store).
 
 On your machine you should have:
 
@@ -82,53 +82,38 @@ kubectl testkube run test --watch pokeshop-tracetest-test
 
 # Architecture
 
-The following is high level sequence diagram on how Testkube and Tracetest interact with the different pieces of the system:
+The following is a high-level sequence diagram of how Testkube and Tracetest interact with the different pieces of the system:
 
 ```mermaid
 sequenceDiagram
-    testkube client->>+testkube: Trigger Testkube test run
-    testkube->>+executor CRDs: Get executor details
-    executor CRDs-->>-testkube: Send details
-    testkube->>+tracetest executor job: Schedules execution
-    tracetest executor job->>+tracetest executor job: Configure Tracetest CLI
-    tracetest executor job->>+tracetest server: Executes the Tracetest test run
-    tracetest server->>+instrumented service: Trigger request
-    instrumented service-->>-tracetest server: Get response
-    instrumented service->>+data store: Send telemetry data
-    tracetest server->>+data store: Fetch trace
-    data store-->>-tracetest server: Get trace
-    tracetest server->>+tracetest server: Run assertions
-    tracetest server-->>-tracetest executor job: Return test run results
-    tracetest executor job-->>-testkube: Return test run results
-    testkube-->>-testkube client: Send details
+    participant testkubeClient as Testkube Client
+    participant testkube as Testkube
+    participant executorCRDs as Executor CRDs
+    participant tracetestExecutorJob as Tracetest Executor Job
+    participant tracetestServer as Tracetest
+    participant instrumentedService as Instrumented Service
+    participant dataStore as Data Store
+
+    testkubeClient->>+testkube:                   Trigger Testkube test run
+    testkube->>+executorCRDs:                     Get executor details
+    executorCRDs-->>-testkube:                    Send details
+    testkube->>+tracetestExecutorJob:             Schedules execution
+    tracetestExecutorJob->>+tracetestExecutorJob: Configure Tracetest CLI
+    tracetestExecutorJob->>+tracetestServer:      Executes the Tracetest test run
+    tracetestServer->>+instrumentedService:       Trigger request
+    instrumentedService-->>-tracetestServer:      Get response
+    instrumentedService->>+dataStore:             Send telemetry data
+    tracetestServer->>+dataStore:                 Fetch trace
+    dataStore-->>-tracetestServer:                Get trace
+    tracetestServer->>+tracetestServer:           Run assertions
+    tracetestServer-->>-tracetestExecutorJob:     Return test run results
+    tracetestExecutorJob-->>-testkube:            Return test run results
+    testkube-->>-testkubeClient:                  Send details
 ```
 
-# Issues and enchancements
+# Issues and enhancements
 
-Please follow the main [Testkube repository](https://github.com/kubeshop/testkube) for reporting any [issues](https://github.com/kubeshop/testkube/issues) or [discussions](https://github.com/kubeshop/testkube/discussions)
-
-# Known Error
-
-There might be a version mismatch error coming up:
-
-```bash
-✖️ Error: Version Mismatch
-The CLI version and the server version are not compatible. To fix this, you'll need to make sure that both your CLI and server are using compatible versions.
-We recommend upgrading both of them to the latest available version. Check out our documentation https://docs.tracetest.io/configuration/upgrade for simple instructions on how to upgrade.
-Thank you for using Tracetest! We apologize for any inconvenience caused.
-```
-
-The quickest way to fix this, is to use your own executor Docker image. For the Dockerfile, check out the file in `build/agent`. Here you can specify the link to the exact Tracetest executable version you need. To build this, please use the following command in the root of the Testkube repository:
-
-```bash
-make docker-build-executor EXECUTOR=tracetest GITHUB_TOKEN="" DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-tracetest-executor:latest ALPINE_IMAGE=alpine:3.18.0
-```
-
-Don't forget to make this image available to your Testkube environment and update the image used by the executor:
-
-```bash
-kubectl edit executors/tracetest-executor -n testkube
-```
+Please follow the main [TestKube repository](https://github.com/kubeshop/testkube) for reporting any [issues](https://github.com/kubeshop/testkube/issues) or [discussions](https://github.com/kubeshop/testkube/discussions)
 
 # Testkube
 

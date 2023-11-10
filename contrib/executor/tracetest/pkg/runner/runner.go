@@ -3,26 +3,20 @@ package runner
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/kubeshop/testkube/contrib/executor/tracetest/pkg/model"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
-	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/agent"
 	"github.com/kubeshop/testkube/pkg/executor/content"
 	"github.com/kubeshop/testkube/pkg/executor/env"
-	"github.com/kubeshop/testkube/pkg/executor/output"
 	outputPkg "github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
 	"github.com/kubeshop/testkube/pkg/executor/scraper/factory"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
-
-const TRACETEST_ENDPOINT_VAR = "TRACETEST_ENDPOINT"
-const TRACETEST_OUTPUT_ENDPOINT_VAR = "TRACETEST_OUTPUT_ENDPOINT"
 
 func NewRunner(ctx context.Context, params envs.Params) (*TracetestRunner, error) {
 	outputPkg.PrintLog(fmt.Sprintf("%s [TracetestRunner]: Preparing Runner", ui.IconTruck))
@@ -33,14 +27,24 @@ func NewRunner(ctx context.Context, params envs.Params) (*TracetestRunner, error
 	}
 
 	return &TracetestRunner{
-		Params:  params,
-		Scraper: scraper,
+		Params:        params,
+		Scraper:       scraper,
+		coreExecutor:  &tracetestCoreExecutor{},
+		cloudExecutor: &tracetestCloudExecutor{},
 	}, nil
 }
 
 type TracetestRunner struct {
-	Params  envs.Params
-	Scraper scraper.Scraper
+	Params        envs.Params
+	Scraper       scraper.Scraper
+	coreExecutor  TracetestCLIExecutor
+	cloudExecutor TracetestCLIExecutor
+}
+
+type TracetestCLIExecutor interface {
+	RequiredEnvVars() []string
+	HasEnvVarsDefined(*env.Manager) bool
+	Execute(*env.Manager, testkube.Execution, string) (model.Result, error)
 }
 
 func (r *TracetestRunner) Run(ctx context.Context, execution testkube.Execution) (result testkube.ExecutionResult, err error) {
@@ -51,7 +55,7 @@ func (r *TracetestRunner) Run(ctx context.Context, execution testkube.Execution)
 	outputPkg.PrintLog(fmt.Sprintf("%s [TracetestRunner]: Preparing test run", ui.IconTruck))
 
 	// Get execution content file path
-	path, _, err := content.GetPathAndWorkingDir(execution.Content, r.Params.DataDir)
+	testFilePath, _, err := content.GetPathAndWorkingDir(execution.Content, r.Params.DataDir)
 	if err != nil {
 		outputPkg.PrintLogf("%s Failed to resolve absolute directory for %s, using the path directly", ui.IconWarning, r.Params.DataDir)
 	}
@@ -59,34 +63,20 @@ func (r *TracetestRunner) Run(ctx context.Context, execution testkube.Execution)
 	envManager := env.NewManagerWithVars(execution.Variables)
 	envManager.GetReferenceVars(envManager.Variables)
 
-	// Get TRACETEST_ENDPOINT from execution variables
-	te, err := getTracetestEndpointFromVars(envManager)
+	// Get a CLI test executor
+	cliExecutor, err := r.getCLIExecutor(envManager)
 	if err != nil {
-		outputPkg.PrintLog(fmt.Sprintf("%s [TracetestRunner]: TRACETEST_ENDPOINT variable was not found: %v", ui.IconCross, err))
-		return result, err
+		outputPkg.PrintLogf("%s Failed to get a Tracetest CLI executor %s", ui.IconWarning, err)
+		return testkube.ExecutionResult{}, fmt.Errorf("failed to get a Tracetest CLI executor %s", err)
 	}
 
-	// Get TRACETEST_OUTPUT_ENDPOINT from execution variables
-	toe, err := getTracetestOutputEndpointFromVars(envManager)
+	// Run CLI executor
+	cliExecutionResult, err := cliExecutor.Execute(envManager, execution, testFilePath)
 	if err != nil {
-		outputPkg.PrintLog(fmt.Sprintf("%s [TracetestRunner]: error on processing variables: %v", ui.IconCross, err))
-		return result, err
+		result = cliExecutionResult.ToFailedExecutionResult(err)
+	} else {
+		result = cliExecutionResult.ToSuccessfulExecutionResult()
 	}
-
-	// Prepare args for test run command
-	args, err := buildArgs(execution.Args, te, path)
-	if err != nil {
-		output.PrintLogf("%s Could not build up parameters: %s", ui.IconCross, err.Error())
-		return testkube.ExecutionResult{}, fmt.Errorf("could not build up parameters: %w", err)
-	}
-	output.PrintLogf("%s Using arguments: %v", ui.IconWorld, envManager.ObfuscateStringSlice(args))
-
-	command, args := executor.MergeCommandAndArgs(execution.Command, args)
-
-	// Run tracetest test from definition file
-	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(envManager.ObfuscateStringSlice(args), " "))
-	output, err := executor.Run("", command, envManager, args...)
-	runResult := model.Result{Output: string(output), ServerEndpoint: te, OutputEndpoint: toe}
 
 	var rerr error
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
@@ -106,19 +96,9 @@ func (r *TracetestRunner) Run(ctx context.Context, execution testkube.Execution)
 		}
 	}
 
-	if err != nil {
-		result.ErrorMessage = runResult.GetOutput()
-		result.Output = runResult.GetOutput()
-		result.Status = testkube.ExecutionStatusFailed
-		return result, nil
-	}
-
 	if rerr != nil {
 		return testkube.ExecutionResult{}, rerr
 	}
-
-	result.Output = runResult.GetOutput()
-	result.Status = runResult.GetStatus()
 
 	return result, nil
 }
@@ -128,37 +108,42 @@ func (r *TracetestRunner) GetType() runner.Type {
 	return runner.TypeMain
 }
 
-// Get TRACETEST_ENDPOINT from execution variables
-func getTracetestEndpointFromVars(envManager *env.Manager) (string, error) {
-	v, ok := envManager.Variables[TRACETEST_ENDPOINT_VAR]
+func (r *TracetestRunner) getCLIExecutor(envManager *env.Manager) (TracetestCLIExecutor, error) {
+	if r.cloudExecutor.HasEnvVarsDefined(envManager) {
+		return r.cloudExecutor, nil
+	}
+
+	if r.coreExecutor.HasEnvVarsDefined(envManager) {
+		return r.coreExecutor, nil
+	}
+
+	outputPkg.PrintLogf("%s [TracetestRunner]: Could not find variables to run the test with Tracetest or Tracetest Cloud.", ui.IconCross)
+	outputPkg.PrintLogf("[TracetestRunner]: Please define the [%s] variables to run a test with Tracetest", strings.Join(r.cloudExecutor.RequiredEnvVars(), ", "))
+	outputPkg.PrintLogf("[TracetestRunner]: Or define the [%s] variables to run a test with Tracetest Core", strings.Join(r.coreExecutor.RequiredEnvVars(), ", "))
+	return nil, fmt.Errorf("could not find variables to run the test with Tracetest or Tracetest Cloud")
+}
+
+// Get variable from EnvManager
+func getVariable(envManager *env.Manager, variableName string) (string, error) {
+	return getVariableWithWarning(envManager, variableName, true)
+}
+
+func getOptionalVariable(envManager *env.Manager, variableName string) (string, error) {
+	return getVariableWithWarning(envManager, variableName, false)
+}
+
+func getVariableWithWarning(envManager *env.Manager, variableName string, required bool) (string, error) {
+	v, ok := envManager.Variables[variableName]
+
+	warningMessage := fmt.Sprintf("%s [TracetestRunner]: %s variable was not found", ui.IconCross, variableName)
+	if !required {
+		warningMessage = fmt.Sprintf("[TracetestRunner]: %s variable was not found, assuming empty value", variableName)
+	}
+
 	if !ok {
-		return "", fmt.Errorf("TRACETEST_ENDPOINT variable was not found")
+		outputPkg.PrintLog(warningMessage)
+		return "", fmt.Errorf(variableName + " variable was not found")
 	}
 
 	return strings.ReplaceAll(v.Value, "\"", ""), nil
-}
-
-// Get TRACETEST_OUTPUT_ENDPOINT from execution variables
-func getTracetestOutputEndpointFromVars(envManager *env.Manager) (string, error) {
-	v, ok := envManager.Variables[TRACETEST_OUTPUT_ENDPOINT_VAR]
-	if !ok {
-		return "", fmt.Errorf("TRACETEST_OUTPUT_ENDPOINT variable was not found")
-	}
-
-	return strings.ReplaceAll(v.Value, "\"", ""), nil
-}
-
-// buildArgs builds up the arguments for
-func buildArgs(args []string, tracetestEndpoint string, inputPath string) ([]string, error) {
-	for i := range args {
-		if args[i] == "<tracetestServer>" {
-			args[i] = tracetestEndpoint
-		}
-		if args[i] == "<filePath>" {
-			args[i] = inputPath
-		}
-
-		args[i] = os.ExpandEnv(args[i])
-	}
-	return args, nil
 }
