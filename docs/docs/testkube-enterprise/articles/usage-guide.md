@@ -3,29 +3,29 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 - [Testkube Enterprise Helm Chart Installation and Usage Guide](#testkube-enterprise-helm-chart-installation-and-usage-guide)
-    - [Prerequisites](#prerequisites)
-    - [Configuration](#configuration)
-        - [Docker images](#docker-images)
-        - [License](#license)
-            - [Online License](#online-license)
-            - [Offline License](#offline-license)
-        - [Ingress](#ingress)
-            - [Configuration](#configuration-1)
-            - [Domain](#domain)
-            - [TLS](#tls)
-        - [Auth](#auth)
+  - [Prerequisites](#prerequisites)
+  - [Configuration](#configuration)
+    - [Docker images](#docker-images)
+    - [License](#license)
+      - [Online License](#online-license)
+      - [Offline License](#offline-license)
+    - [Ingress](#ingress)
+      - [Configuration](#configuration-1)
+      - [Domain](#domain)
+      - [TLS](#tls)
+    - [Auth](#auth)
+    - [Metrics](#metrics)
     - [Invitations](#invitations)
-        - [Invitations via email](#invitations-via-email)
-        - [Auto-accept invitations](#auto-accept-invitations)
-    - [Bring Your Own Infra](#bring-your-own-infra)
-        - [MongoDB](#mongodb)
-        - [NATS](#nats)
-        - [MinIO](#minio)
-        - [Dex](#dex)
-    - [Installation](#installation)
-        - [Minimal setup](#minimal-setup)
-        - [Production setup](#production-setup)
-    - [FAQ](#faq)
+      - [Invitations via email](#invitations-via-email)
+      - [Auto-accept invitations](#auto-accept-invitations)
+  - [Bring Your Own Infra](#bring-your-own-infra)
+    - [MongoDB](#mongodb)
+    - [NATS](#nats)
+    - [MinIO](#minio)
+    - [Dex](#dex)
+  - [Installation](#installation)
+    - [Production setup](#production-setup)
+  - [FAQ](#faq)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -41,6 +41,7 @@ Before you proceed with the installation, please ensure that you have the follow
 * [Helm](https://helm.sh/docs/intro/quickstart/) (version 3+)
 * [cert-manager](https://cert-manager.io/docs/installation/) (version 1.11+) - Used for TLS certificate management.
 * [NGINX Controller](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/) (version v1.8+) - Used for Ingress configuration.
+* (OPTIONAL) [Prometheus Operator](https://github.com/prometheus-operator/prometheus-operator) (version 0.49+) - used for metrics collection
 * Own a public/private domain for creating Ingress rules.
 * License Key and/or License File, if offline access is required.
 
@@ -52,7 +53,7 @@ we strongly recommend using `cert-manager` for easier certificate management.
 
 ### Docker Images
 
-**NOTE**: As of November 2023, Testkube Enterprise Docker images are publicly accessible.
+**DEPRECATION NOTIC**: As of November 2023, Testkube Enterprise Docker images are publicly accessible.
 You only need to follow the steps in this section if you wish to re-publish the images to your private Docker registry;
 otherwise, you may skip this section.
 
@@ -179,17 +180,6 @@ Websockets Ingress annotations:
 annotations:
   nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
   nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-  nginx.ingress.kubernetes.io/server-snippets: |
-    location / {
-      proxy_set_header Upgrade $http_upgrade;
-      proxy_http_version 1.1;
-      proxy_set_header X-Forwarded-Host $http_host;
-      proxy_set_header X-Forwarded-Proto $scheme;
-      proxy_set_header X-Forwarded-For $remote_addr;
-      proxy_set_header Host $host;
-      proxy_set_header Connection "upgrade";
-      proxy_cache_bypass $http_upgrade;
-    }
 ```
 
 If you want to use a different Ingress Controller, please reach out to our support team.
@@ -197,10 +187,14 @@ If you want to use a different Ingress Controller, please reach out to our suppo
 #### Domain
 
 Testkube Enterprise requires a domain (public or internal) under which it will expose the following services:
-* Dashboard -> `https://dashboard.<your-domain>`
-* REST API -> `https://api.<your-domain>`
-* Websocket API -> `wss://websockets.<your-domain>`
-* gRPC API -> `grpc://agent.<your-domain>`
+| Subdomain                       | Service          |
+|---------------------------------|------------------|
+| `dashboard.<your-(sub)domain>`  | Dashboard UI     |
+| `api.<your-(sub)domain>`        | REST API         |
+| `agent.(sub)<your-domain>`      | gRPC API         |
+| `websockets.(sub)<your-domain>` | WebSockets API   |
+| `storage.(sub)<your-domain>`    | Storage API      |
+| `status(sub).<your-domain>`     | Status Pages API |
 
 #### TLS
 
@@ -224,6 +218,7 @@ If `cert-manager` is not installed in your cluster, valid TLS certificates (for 
     * `api.<your-domain>`
     * `agent.<your-domain>`
     * `websockets.<your-domain>`
+    * `status.<your-domain>`
 * Dashboard (TLS secret name is configured with `testkube-cloud-ui.ingress.tlsSecretName` field)
     * `dashboard.<your-domain>`
       Also, `global.certificateProvider` should be set to blank ("").
@@ -250,14 +245,14 @@ testkube-cloud-api:
     enabled: true
 ```
 
-## Invitations
+### Invitations
 
 Testkube Enterprise allows you to invite users to Organizations and Environments within Testkube, granting them specific roles and permissions.
 
 There are two supported invitation modes: `email` and `auto-accept`.
 Use `email` to send an invitation for the user to accept, and `auto-accept` to automatically add users without requiring acceptance.
 
-### Invitations Via Email
+#### Invitations Via Email
 
 If `testkube-cloud-api.api.inviteMode` is set to `email`, Testkube Enterprise will send emails when a user gets invited to
 an Organization or an Environment and when SMTP settings need to be configured in the API Helm chart.
@@ -275,7 +270,7 @@ testkube-cloud-api:
       # passwordSecretRef: <secret name>
 ```
 
-### Auto-accept Invitations
+#### Auto-accept Invitations
 
 If `testkube-cloud-api.api.inviteMode` is set to `auto-accept`, Testkube Enterprise will automatically add users to
 Organizations and Environments when they get invited.
@@ -367,40 +362,19 @@ mongodb:
     tag: "6.0.5"
 ```
 
-### Minimal Setup
-
-This is a minimal setup which will install a development Testkube Enterprise cluster with the following components:
-* Testkube Enterprise API
-* Testkube Enterprise Dashboard
-* MongoDB
-* NATS
-* Dex
-
-This setup should not be used in production environments. For a more advanced setup please refer to the [Production Setup](#production-setup) section.
-
-The following configuration can be used for a minimal development setup of Testkube Enterprise:
-```helm
-global:
-  domain: <your domain>
-  imagePullSecrets:
-    - name: <docker creds secret>
-  licenseKey: <your license key>
-  ingress:
-    enabled: false
-
-dex:
-  configTemplate:
-    additionalConfig: |
-      enablePasswordDB: true
-      staticPasswords:
-        - email: <user email>
-          hash: <bcrypt hash of user password>
-          username: <username>
-```
 
 ### Production Setup
 
-TBD
+For best performance and reliability, users should follow this official setup guide and make sure each section is properly configured.
+
+1. Configure DNS records as described in the [Domain](#domain) section
+2. Configure TLS certificates as described in the [TLS](#tls) section
+3. Configure Dex as described in the [Auth](#auth) section
+4. Configure Ingress as described in the [Ingress](#ingress) section
+5. Configure Metrics as described in the [Metrics](#metrics) section
+6. Configure Invitations as described in the [Invitations](#invitations) section
+7. Configure BYOI components as described in the [Bring Your Own Infra](#bring-your-own-infra) section
+8. Install Testkube Enterprise as described in the [Installation](#installation) section
 
 ## FAQ
 
