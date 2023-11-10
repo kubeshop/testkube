@@ -67,6 +67,7 @@ func NewRunTestCmd() *cobra.Command {
 		argsMode                           string
 		artifactStorageBucket              string
 		artifactOmitFolderPerExecution     bool
+		silentMode                         bool
 	)
 
 	cmd := &cobra.Command{
@@ -251,18 +252,24 @@ func NewRunTestCmd() *cobra.Command {
 
 				if execution.Id != "" {
 					if watchEnabled && len(args) > 0 {
-						watchLogs(execution.Id, client)
+						if err = watchLogs(execution.Id, silentMode, client); err != nil {
+							hasErrors = true
+						}
 					}
 
 					execution, err = client.GetExecution(execution.Id)
 					ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 				}
 
-				render.RenderExecutionResult(client, &execution, false)
+				if err = render.RenderExecutionResult(client, &execution, false); err != nil {
+					hasErrors = true
+				}
 
 				if execution.Id != "" {
-					if downloadArtifactsEnabled {
-						DownloadArtifacts(execution.Id, downloadDir, format, masks, client)
+					if watchEnabled && len(args) > 0 {
+						if downloadArtifactsEnabled && (execution.IsPassed() || execution.IsFailed()) {
+							DownloadArtifacts(execution.Id, downloadDir, format, masks, client)
+						}
 					}
 
 					uiShellWatchExecution(execution.Name)
@@ -287,7 +294,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&argsMode, "args-mode", "", "append", "usage mode for argumnets. one of append|override")
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
-	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "downlaod artifacts automatically")
+	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "download artifacts automatically")
 	cmd.Flags().StringToStringVarP(&envs, "env", "", map[string]string{}, "envs in a form of name1=val1 passed to executor")
 	cmd.Flags().StringToStringVarP(&secretEnvs, "secret", "", map[string]string{}, "secret envs in a form of secret_key1=secret_name1 passed to executor")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
@@ -327,6 +334,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&runningContext, "context", "", "running context description for test execution")
 	cmd.Flags().StringVar(&artifactStorageBucket, "artifact-storage-bucket", "", "artifact storage class name for container executor")
 	cmd.Flags().BoolVarP(&artifactOmitFolderPerExecution, "artifact-omit-folder-per-execution", "", false, "don't store artifacts in execution folder")
+	cmd.Flags().BoolVarP(&silentMode, "silent", "", false, "don't print intermediate test execution")
 
 	return cmd
 }

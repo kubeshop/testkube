@@ -2,14 +2,17 @@ package testsuites
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -38,9 +41,9 @@ func printExecution(execution testkube.TestSuiteExecution, startTime time.Time) 
 	ui.NL()
 }
 
-func uiPrintExecutionStatus(client apiclientv1.Client, execution testkube.TestSuiteExecution) {
+func uiPrintExecutionStatus(client apiclientv1.Client, execution testkube.TestSuiteExecution) error {
 	if execution.Status == nil {
-		return
+		return nil
 	}
 
 	switch true {
@@ -66,10 +69,11 @@ func uiPrintExecutionStatus(client apiclientv1.Client, execution testkube.TestSu
 		ui.ExitOnError("getting server info", err)
 
 		render.PrintTestSuiteExecutionURIs(&execution, info.DashboardUri)
-		os.Exit(1)
+		return errors.New("failed test suite")
 	}
 
 	ui.NL()
+	return nil
 }
 
 func uiShellTestSuiteGetCommandBlock(id string) {
@@ -397,4 +401,19 @@ func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 	}
 
 	return options, nil
+}
+
+func DownloadArtifacts(id, dir, format string, masks []string, client apiclientv1.Client) {
+	testSuiteExecution, err := client.GetTestSuiteExecution(id)
+	ui.ExitOnError("getting test suite execution ", err)
+
+	for _, execution := range testSuiteExecution.ExecuteStepResults {
+		for _, step := range execution.Execute {
+			if step.Execution != nil && step.Step != nil && step.Step.Test != "" {
+				if step.Execution.IsPassed() || step.Execution.IsFailed() {
+					tests.DownloadArtifacts(step.Execution.Id, filepath.Join(dir, step.Execution.Id), format, masks, client)
+				}
+			}
+		}
+	}
 }

@@ -237,6 +237,7 @@ RUNNER_TESTNAME:                test name
 RUNNER_EXECUTIONNUMBER:         test execution number
 RUNNER_CONTEXTTYPE:             running context type
 RUNNER_CONTEXTDATA:             running context data
+RUNNER_APIURI:                  api uri
 
 ## Summary
 

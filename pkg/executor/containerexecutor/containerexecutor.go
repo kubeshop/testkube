@@ -67,6 +67,7 @@ func NewContainerExecutor(
 	podStartTimeout time.Duration,
 	clusterID string,
 	dashboardURI string,
+	apiURI string,
 ) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -92,6 +93,7 @@ func NewContainerExecutor(
 		podStartTimeout:      podStartTimeout,
 		clusterID:            clusterID,
 		dashboardURI:         dashboardURI,
+		apiURI:               apiURI,
 	}, nil
 }
 
@@ -119,6 +121,7 @@ type ContainerExecutor struct {
 	podStartTimeout      time.Duration
 	clusterID            string
 	dashboardURI         string
+	apiURI               string
 }
 
 type JobOptions struct {
@@ -163,6 +166,7 @@ type JobOptions struct {
 	Debug                     bool
 	LogSidecarImage           string
 	NatsUri                   string
+	APIURI                    string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -268,7 +272,7 @@ func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Ex
 	jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
 
 	jobOptions, err := NewJobOptions(c.log, c.templatesClient, c.images, c.templates, c.serviceAccountName,
-		c.registry, c.clusterID, execution, options)
+		c.registry, c.clusterID, c.apiURI, execution, options)
 	if err != nil {
 		return nil, err
 	}

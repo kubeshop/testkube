@@ -38,6 +38,11 @@ func NewRunTestSuiteCmd() *cobra.Command {
 		jobTemplateReference     string
 		scraperTemplateReference string
 		pvcTemplateReference     string
+		downloadArtifactsEnabled bool
+		downloadDir              string
+		format                   string
+		masks                    []string
+		silentMode               bool
 	)
 
 	cmd := &cobra.Command{
@@ -138,7 +143,9 @@ func NewRunTestSuiteCmd() *cobra.Command {
 						executionCh, err := client.WatchTestSuiteExecution(execution.Id)
 						for execution := range executionCh {
 							ui.ExitOnError("watching test execution", err)
-							printExecution(execution, startTime)
+							if !silentMode {
+								printExecution(execution, startTime)
+							}
 						}
 					}
 
@@ -148,10 +155,18 @@ func NewRunTestSuiteCmd() *cobra.Command {
 				printExecution(execution, startTime)
 				ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 
-				uiPrintExecutionStatus(client, execution)
+				if err = uiPrintExecutionStatus(client, execution); err != nil {
+					hasErrors = true
+				}
 
 				uiShellTestSuiteGetCommandBlock(execution.Id)
 				if execution.Id != "" {
+					if watchEnabled && len(args) > 0 {
+						if downloadArtifactsEnabled {
+							DownloadArtifacts(execution.Id, downloadDir, format, masks, client)
+						}
+					}
+
 					if !watchEnabled || len(args) == 0 {
 						uiShellTestSuiteWatchCommandBlock(execution.Id)
 					}
@@ -185,6 +200,11 @@ func NewRunTestSuiteCmd() *cobra.Command {
 	cmd.Flags().StringVar(&jobTemplateReference, "job-template-reference", "", "reference to job template to use for the test")
 	cmd.Flags().StringVar(&scraperTemplateReference, "scraper-template-reference", "", "reference to scraper template to use for the test")
 	cmd.Flags().StringVar(&pvcTemplateReference, "pvc-template-reference", "", "reference to pvc template to use for the test")
+	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
+	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "download artifacts automatically")
+	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")
+	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
+	cmd.Flags().BoolVarP(&silentMode, "silent", "", false, "don't print intermediate test suite execution")
 
 	return cmd
 }

@@ -1,6 +1,7 @@
 package testsuites
 
 import (
+	"os"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -36,8 +37,11 @@ func NewWatchTestSuiteExecutionCmd() *cobra.Command {
 			printExecution(execution, startTime)
 			ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 
-			uiPrintExecutionStatus(client, execution)
+			err = uiPrintExecutionStatus(client, execution)
 			uiShellTestSuiteGetCommandBlock(execution.Id)
+			if err != nil {
+				os.Exit(1)
+			}
 		},
 	}
 

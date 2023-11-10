@@ -11,6 +11,10 @@ This is easily done with Testkube. Each team can run their tests against cluster
 On each batch step you can define either one or multiple steps such as test execution, delay, or other (future) steps.
 By default the concurrency level for parallel tests is set to 10, you can redefine it using `--concurency` option for CLI command.
 
+## Passing Test Suite Artifacts between Steps
+
+In some scenarios you need to access artifacts generated on previous steps of the test suite. Testkube provides two options to define which artifacts to download in the init container: all previous step artifacts or artifacts for selected steps (step number is started from 1). All downloaded artifacts are stored in /data/downloaded-artifacts/{execution id} folder. See a few examples below.
+
 ## Test Suite Creation
 
 Creating tests is really simple - create the test definition in a JSON file and pass it to the `testkube` `kubectl` plugin.
@@ -27,9 +31,9 @@ echo '
 		{"execute": [{"delay": "1s"}]},
 		{"execute": [{"test": "testkube-dashboard"}, {"delay": "1s"}, {""test": "testkube-homepage"}]},
 		{"execute": [{"delay": "1s"}]},
-		{"execute": [{"test": "testkube-api-performance"}]},
+		{"downloadArtifacts": {"previousStepNumbers": [1, 3]}, "execute": [{"test": "testkube-api-performance"}]},
 		{"execute": [{"delay": "1s"}]},
-		{"execute": [{"test": "testkube-homepage-performance"}]}
+		{"downloadArtifacts": {"allPreviousSteps": true}, "execute": [{"test": "testkube-homepage-performance"}]}
 	]
 }' | kubectl testkube create testsuite
 ```
@@ -81,12 +85,19 @@ spec:
     execute:
     - delay: 1s
   - stopOnFailure: false
+    downloadArtifacts:
+      allPreviousSteps: false
+      previousStepNumbers:
+      - 1
+      - 3
     execute:
     - test: testkube-api-performance
   - stopOnFailure: false
     execute:
     - delay: 1s
   - stopOnFailure: false
+    downloadArtifacts:
+      allPreviousSteps: true
     execute:
     - test: testkube-homepage-performance
 ```

@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM cypress/included:12.17.2
+FROM cypress/included:13.50.0
 COPY cypress /bin/runner
 
 RUN apt-get update && \

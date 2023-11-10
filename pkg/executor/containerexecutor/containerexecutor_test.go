@@ -143,6 +143,7 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "RUNNER_EXECUTIONNUMBER", Value: "0"},
 		{Name: "RUNNER_CONTEXTTYPE", Value: ""},
 		{Name: "RUNNER_CONTEXTDATA", Value: ""},
+		{Name: "RUNNER_APIURI", Value: ""},
 		{Name: "RUNNER_CLOUD_MODE", Value: "false"},
 		{Name: "RUNNER_CLOUD_API_KEY", Value: ""},
 		{Name: "RUNNER_CLOUD_API_URL", Value: ""},
@@ -194,6 +195,7 @@ func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 		"",
 		"",
 		"",
+		"",
 		testkube.Execution{
 			Id:            "name",
 			TestName:      "name-test-1",
@@ -235,6 +237,7 @@ func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 		"",
 		"",
 		"",
+		"",
 		testkube.Execution{
 			Id:            "name",
 			TestName:      "name-test-1",
@@ -273,6 +276,7 @@ func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
 		mockTemplatesClient,
 		executor.Images{},
 		executor.Templates{},
+		"",
 		"",
 		"",
 		"",

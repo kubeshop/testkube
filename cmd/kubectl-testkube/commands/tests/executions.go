@@ -35,7 +35,9 @@ func NewGetExecutionCmd() *cobra.Command {
 				ui.ExitOnError("getting test execution: "+executionID, err)
 
 				if logsOnly {
-					render.RenderExecutionResult(client, &execution, logsOnly)
+					if err = render.RenderExecutionResult(client, &execution, logsOnly); err != nil {
+						os.Exit(1)
+					}
 				} else {
 					err = render.Obj(cmd, execution, os.Stdout, renderer.ExecutionRenderer)
 					ui.ExitOnError("rendering execution", err)

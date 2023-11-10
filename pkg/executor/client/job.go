@@ -88,6 +88,7 @@ func NewJobExecutor(
 	podStartTimeout time.Duration,
 	clusterID string,
 	dashboardURI string,
+	apiURI string,
 ) (client *JobExecutor, err error) {
 	return &JobExecutor{
 		ClientSet:            clientset,
@@ -107,6 +108,7 @@ func NewJobExecutor(
 		podStartTimeout:      podStartTimeout,
 		clusterID:            clusterID,
 		dashboardURI:         dashboardURI,
+		apiURI:               apiURI,
 	}, nil
 }
 
@@ -134,6 +136,7 @@ type JobExecutor struct {
 	podStartTimeout      time.Duration
 	clusterID            string
 	dashboardURI         string
+	apiURI               string
 }
 
 type JobOptions struct {
@@ -170,6 +173,7 @@ type JobOptions struct {
 	Debug                 bool
 	NatsUri               string
 	LogSidecarImage       string
+	APIURI                string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -776,6 +780,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_EXECUTIONNUMBER", Value: fmt.Sprint(options.ExecutionNumber)})
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTTYPE", Value: options.ContextType})
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTDATA", Value: options.ContextData})
+	envs = append(envs, corev1.EnvVar{Name: "RUNNER_APIURI", Value: options.APIURI})
 
 	for i := range job.Spec.Template.Spec.InitContainers {
 		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, envs...)
@@ -859,6 +864,7 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	}
 
 	jobOptions.WorkingDir = workingDir
+	jobOptions.APIURI = apiURI
 
 	return
 }
