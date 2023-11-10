@@ -48,7 +48,7 @@ func UpdateExecutorCmd() *cobra.Command {
 	cmd.Flags().StringVar(&executorType, "executor-type", "job", "executor type, container or job (defaults to job)")
 
 	cmd.Flags().StringVarP(&uri, "uri", "u", "", "if resource need to be loaded from URI")
-	cmd.Flags().StringVar(&image, "image", "", "override executor container image")
+	cmd.Flags().StringVar(&image, "image", "", "image used for executor")
 	cmd.Flags().StringArrayVar(&imagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in executor")
 	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in executor")
 	cmd.Flags().StringArrayVar(&executorArgs, "args", []string{}, "args passed to image in executor")
