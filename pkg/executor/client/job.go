@@ -848,7 +848,7 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 
 	jobOptions.Variables = execution.Variables
 	if options.ExecutorSpec.Slaves != nil {
-		slvesConfigs, err := json.Marshal(executor.GetSlavesConfigs(initImage, *options.ExecutorSpec.Slaves))
+		slvesConfigs, err := json.Marshal(executor.GetSlavesConfigs(jobOptions.InitImage, *options.ExecutorSpec.Slaves))
 		if err != nil {
 			return jobOptions, err
 		}

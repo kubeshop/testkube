@@ -3,6 +3,7 @@ package sidecar
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/logs"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/utils"
 	"github.com/nats-io/nats.go/jetstream"
@@ -35,15 +37,14 @@ const (
 )
 
 func NewProxy(clientset *kubernetes.Clientset, podsClient tcorev1.PodInterface, js jetstream.JetStream, log *zap.SugaredLogger, namespace, executionId string) *Proxy {
-	streamName := proxyStreamPrefix + executionId
 	return &Proxy{
-		log:         log.With("namespace", namespace, "executionId", executionId, "stream", streamName),
+		log:         log.With("namespace", namespace, "executionId", executionId),
 		js:          js,
 		clientset:   clientset,
 		namespace:   namespace,
 		executionId: executionId,
-		streamName:  streamName,
 		podsClient:  podsClient,
+		logsStream:  logs.NewNATSStream(js, executionId),
 	}
 }
 
@@ -53,8 +54,8 @@ type Proxy struct {
 	clientset   *kubernetes.Clientset
 	namespace   string
 	executionId string
-	streamName  string
 	podsClient  tcorev1.PodInterface
+	logsStream  logs.Stream
 }
 
 func (p *Proxy) Run(ctx context.Context) error {
@@ -66,21 +67,16 @@ func (p *Proxy) Run(ctx context.Context) error {
 
 	// create stream for incoming logs
 
-	s, err := p.js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
-		Name:    p.streamName,
-		Storage: jetstream.FileStorage, // durable stream
-	})
+	err := p.logsStream.Init(ctx)
 	if err != nil {
-		p.log.Errorw("error creating stream", "error", err)
 		return err
 	}
-	p.log.Debugw("logs proxy stream upserted", "info", s.CachedInfo())
 
 	go func() {
 		p.log.Debugw("logs proxy stream started")
 		err := p.streamLogs(ctx, logs)
 		if err != nil {
-			p.log.Errorw("logs stream failed", "error", err)
+			p.handleError(err, "proxy stream logs error")
 		}
 	}()
 
@@ -93,7 +89,11 @@ func (p *Proxy) Run(ctx context.Context) error {
 			p.log.Warn("logs proxy context cancelled, exiting")
 			return nil
 		default:
-			p.js.Publish(ctx, p.streamName, l.Encode())
+			err := p.logsStream.Push(ctx, l.Encode())
+			if err != nil {
+				p.handleError(err, "error pushing logs to stream")
+				return err
+			}
 		}
 	}
 
@@ -104,7 +104,8 @@ func (p *Proxy) Run(ctx context.Context) error {
 func (p *Proxy) streamLogs(ctx context.Context, logs chan events.LogChunk) (err error) {
 	pods, err := executor.GetJobPods(ctx, p.podsClient, p.executionId, 1, 10)
 	if err != nil {
-		panic(err)
+		p.handleError(err, "error getting job pods")
+		return err
 	}
 
 	for _, pod := range pods.Items {
@@ -118,6 +119,7 @@ func (p *Proxy) streamLogs(ctx context.Context, logs chan events.LogChunk) (err 
 
 		case corev1.PodFailed:
 			err := fmt.Errorf("can't get pod logs, pod failed: %s/%s", pod.Namespace, pod.Name)
+			p.handleError(err, "streaming pod logs: pod failed")
 			return err
 
 		default:
@@ -125,6 +127,7 @@ func (p *Proxy) streamLogs(ctx context.Context, logs chan events.LogChunk) (err 
 			testFunc := p.isPodLoggable(pod.Name)
 			if err = wait.PollUntilContextTimeout(ctx, pollInterval, podStartTimeout, true, testFunc); err != nil {
 				status := p.getPodContainerStatuses(pod)
+				p.handleError(err, "can't get pod container status after pod failure")
 				return errors.Wrap(err, status)
 			}
 
@@ -159,7 +162,7 @@ func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan events.LogChunk) (er
 
 		stream, err := req.Stream(context.Background())
 		if err != nil {
-			p.log.Errorw("stream error", "error", err)
+			p.handleError(err, "error getting pod logs stream")
 			return err
 		}
 
@@ -178,6 +181,7 @@ func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan events.LogChunk) (er
 		}
 
 		if err != nil {
+			p.handleError(err, "error while reading pod logs stream")
 			return err
 		}
 	}
@@ -225,4 +229,21 @@ func (p *Proxy) getPodContainerStatuses(pod corev1.Pod) (status string) {
 	}
 
 	return status
+}
+
+func (p *Proxy) handleError(err error, title string) {
+	if err != nil {
+		p.log.Errorw(title, "error", err)
+
+		b, err := json.Marshal(events.LogChunk{
+			Error:   true,
+			Content: err.Error(),
+		})
+		if err == nil {
+			p.logsStream.Push(context.Background(), b)
+		} else {
+			p.log.Errorw("error pushing error to stream", "error", err, "log", b)
+		}
+
+	}
 }
