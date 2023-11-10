@@ -53,7 +53,7 @@ we strongly recommend using `cert-manager` for easier certificate management.
 
 ### Docker Images
 
-**DEPRECATION NOTIC**: As of November 2023, Testkube Enterprise Docker images are publicly accessible.
+**DEPRECATION NOTICE**: As of November 2023, Testkube Enterprise Docker images are publicly accessible.
 You only need to follow the steps in this section if you wish to re-publish the images to your private Docker registry;
 otherwise, you may skip this section.
 
@@ -195,7 +195,7 @@ Testkube Enterprise requires a domain (public or internal) under which it will e
 | `agent.(sub)<your-domain>`      | gRPC API         |
 | `websockets.(sub)<your-domain>` | WebSockets API   |
 | `storage.(sub)<your-domain>`    | Storage API      |
-| `status(sub).<your-domain>`     | Status Pages API |
+| `status.(sub)<your-domain>`     | Status Pages API |
 
 #### TLS
 
