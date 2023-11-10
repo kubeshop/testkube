@@ -46,8 +46,8 @@ jobs:
         with:
           destination_container_repo: kubeshop/testkube-api-server
           provider: dockerhub
-          short_description: 'Testkube Kubernetes API Server'
-          readme_file: './README.md'
+          short_description: "Testkube Kubernetes API Server"
+          readme_file: "./README.md"
 
       - name: Release
         uses: goreleaser/goreleaser-action@v4
@@ -71,11 +71,25 @@ jobs:
   single_executor:
     strategy:
       matrix:
-        executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template, tracetest, zap ]
+        executor:
+          [
+            artillery,
+            curl,
+            example,
+            ginkgo,
+            k6,
+            kubepug,
+            postman,
+            soapui,
+            init,
+            scraper,
+            template,
+            tracetest,
+            zap,
+          ]
 
     runs-on: ubuntu-latest
     steps:
-
       - name: Checkout
         uses: actions/checkout@v2
 
@@ -113,7 +127,7 @@ jobs:
         with:
           destination_container_repo: "kubeshop/testkube-${{ matrix.executor }}-executor"
           provider: dockerhub
-          short_description: 'Testkube ${{ matrix.executor }} executor'
+          short_description: "Testkube ${{ matrix.executor }} executor"
           readme_file: "./contrib/executor/${{ matrix.executor }}/README.md"
 
       - name: Release
@@ -133,7 +147,6 @@ jobs:
   executor_jmeter:
     runs-on: ubuntu-latest
     steps:
-
       - name: Checkout
         uses: actions/checkout@v2
 
@@ -171,7 +184,7 @@ jobs:
         with:
           destination_container_repo: "kubeshop/testkube-jmeter-executor"
           provider: dockerhub
-          short_description: 'Testkube jmeter executor'
+          short_description: "Testkube jmeter executor"
           readme_file: "./contrib/executor/jmeter/README.md"
 
       - name: Release
@@ -189,7 +202,6 @@ jobs:
   executor_jmeterd:
     runs-on: ubuntu-latest
     steps:
-
       - name: Checkout
         uses: actions/checkout@v2
 
@@ -227,7 +239,7 @@ jobs:
         with:
           destination_container_repo: "kubeshop/testkube-jmeterd-executor"
           provider: dockerhub
-          short_description: 'Testkube jmeterd executor'
+          short_description: "Testkube jmeterd executor"
           readme_file: "./contrib/executor/jmeterd/README.md"
 
       - name: Release
@@ -324,7 +336,7 @@ jobs:
         with:
           destination_container_repo: "kubeshop/testkube-maven-executor"
           provider: dockerhub
-          short_description: 'Testkube maven executor'
+          short_description: "Testkube maven executor"
           readme_file: "./contrib/executor/maven/README.md"
 
       - name: Release
@@ -342,7 +354,6 @@ jobs:
   executor_gradle:
     runs-on: ubuntu-latest
     steps:
-
       - name: Checkout
         uses: actions/checkout@v2
 
@@ -380,7 +391,7 @@ jobs:
         with:
           destination_container_repo: "kubeshop/testkube-gradle-executor"
           provider: dockerhub
-          short_description: 'Testkube gradle executor'
+          short_description: "Testkube gradle executor"
           readme_file: "./contrib/executor/gradle/README.md"
 
       - name: Release
@@ -398,11 +409,20 @@ jobs:
   executor_cypress:
     strategy:
       matrix:
-        version: [ cypress8, cypress9, cypress10, cypress11, cypress12, yarn, npm ]
+        version:
+          [
+            cypress8,
+            cypress9,
+            cypress10,
+            cypress11,
+            cypress12,
+            cypress13,
+            yarn,
+            npm,
+          ]
 
     runs-on: ubuntu-latest
     steps:
-
       - name: Checkout
         uses: actions/checkout@v2
 
@@ -437,7 +457,7 @@ jobs:
         with:
           destination_container_repo: "kubeshop/testkube-cypress-executor"
           provider: dockerhub
-          short_description: 'Testkube cypress executor'
+          short_description: "Testkube cypress executor"
           readme_file: "./contrib/executor/cypress/README.md"
 
       - name: Get tag
@@ -467,124 +487,141 @@ jobs:
           docker push kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64
           docker push kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8
 
-
   executor_cypress_manifest:
     needs: executor_cypress
     strategy:
       matrix:
-        version: [ cypress8, cypress9, cypress10, cypress11, cypress12, yarn, npm ]
+        version:
+          [
+            cypress8,
+            cypress9,
+            cypress10,
+            cypress11,
+            cypress12,
+            cypress13,
+            yarn,
+            npm,
+          ]
 
     runs-on: ubuntu-latest
     steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
 
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v1
+      - uses: sigstore/cosign-installer@v3.0.5
+      - uses: anchore/sbom-action/download-syft@v0.14.2
 
-    - uses: sigstore/cosign-installer@v3.0.5
-    - uses: anchore/sbom-action/download-syft@v0.14.2
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
 
-    - name: Set up Docker Buildx
-      id: buildx
-      uses: docker/setup-buildx-action@v1
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    -  name: Login to DockerHub
-       uses: docker/login-action@v1
-       with:
-         username: ${{ secrets.DOCKERHUB_USERNAME }}
-         password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
+        with:
+          strip_v: true
 
-    - name: Get tag
-      id: tag
-      uses: dawidd6/action-get-tag@v1
-      with:
-        strip_v: true
+      - name: Use tag
+        run: echo ${{steps.tag.outputs.tag}}
 
-    - name: Use tag
-      run: echo ${{steps.tag.outputs.tag}}
+      - name: Create manifests
+        run: |
+          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8
+          docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}
+          cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64 --yes
+          cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8 --yes
+          cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }} --yes
 
-    - name: Create manifests
-      run: |
-        docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8
-        docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}
-        cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64 --yes
-        cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8 --yes
-        cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }} --yes
+          docker manifest create kubeshop/testkube-cypress-executor:${{ matrix.version }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8
+          docker manifest push -p kubeshop/testkube-cypress-executor:${{ matrix.version }}
+          cosign sign kubeshop/testkube-cypress-executor:${{ matrix.version }} --yes
 
-        docker manifest create kubeshop/testkube-cypress-executor:${{ matrix.version }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8
-        docker manifest push -p kubeshop/testkube-cypress-executor:${{ matrix.version }}
-        cosign sign kubeshop/testkube-cypress-executor:${{ matrix.version }} --yes
-
-        docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-arm64v8
-        docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}
-        cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --yes
+          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-arm64v8
+          docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}
+          cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --yes
 
 
-        docker manifest create kubeshop/testkube-cypress-executor:latest --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-arm64v8
-        docker manifest push -p kubeshop/testkube-cypress-executor:latest
-        cosign sign kubeshop/testkube-cypress-executor:latest --yes
+          docker manifest create kubeshop/testkube-cypress-executor:latest --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-arm64v8
+          docker manifest push -p kubeshop/testkube-cypress-executor:latest
+          cosign sign kubeshop/testkube-cypress-executor:latest --yes
 
-        docker manifest create kubeshop/testkube-cypress-executor:legacy --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-npm-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-npm-arm64v8
-        docker manifest push -p kubeshop/testkube-cypress-executor:legacy
-        cosign sign kubeshop/testkube-cypress-executor:legacy --yes
-
+          docker manifest create kubeshop/testkube-cypress-executor:legacy --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-npm-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-npm-arm64v8
+          docker manifest push -p kubeshop/testkube-cypress-executor:legacy
+          cosign sign kubeshop/testkube-cypress-executor:legacy --yes
 
   executor_playwright:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
 
-    - uses: sigstore/cosign-installer@v3.0.5
-    - uses: anchore/sbom-action/download-syft@v0.14.2
+      - uses: sigstore/cosign-installer@v3.0.5
+      - uses: anchore/sbom-action/download-syft@v0.14.2
 
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v1
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
 
-    - name: Set up Docker Buildx
-      id: buildx
-      uses: docker/setup-buildx-action@v1
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
 
-    - name: Go Cache
-      uses: actions/cache@v2
-      with:
-        path: |
-          ~/go/pkg/mod
-          ~/.cache/go-build
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
+      - name: Go Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
-    - name: Login to DockerHub
-      uses: docker/login-action@v1
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Push README to Dockerhub
-      uses: christian-korneck/update-container-description-action@v1
-      env:
-        DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-        DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
-      with:
-        destination_container_repo: "kubeshop/testkube-playwright-executor"
-        provider: dockerhub
-        short_description: 'Testkube playwright executor'
-        readme_file: "./contrib/executor/playwright/README.md"
+      - name: Push README to Dockerhub
+        uses: christian-korneck/update-container-description-action@v1
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+        with:
+          destination_container_repo: "kubeshop/testkube-playwright-executor"
+          provider: dockerhub
+          short_description: "Testkube playwright executor"
+          readme_file: "./contrib/executor/playwright/README.md"
 
-    - name: Release
-      uses: goreleaser/goreleaser-action@v4
-      with:
-        distribution: goreleaser
-        version: latest
-        args: release -f goreleaser_files/.goreleaser-docker-build-executor-playwright.yml
-      env:
-        GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-        DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-        DOCKER_BUILDX_CACHE_FROM: "type=gha"
-        DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+      - name: Release
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-playwright.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   update_api_helm_charts:
-    needs: [api, single_executor, executor_jmeter, executor_maven, executor_gradle, executor_cypress, executor_cypress_manifest, executor_playwright]
+    needs:
+      [
+        api,
+        single_executor,
+        executor_jmeter,
+        executor_maven,
+        executor_gradle,
+        executor_cypress,
+        executor_cypress_manifest,
+        executor_playwright,
+      ]
     runs-on: ubuntu-latest
     steps:
       - name: Get tag
