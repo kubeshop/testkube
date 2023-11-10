@@ -260,6 +260,9 @@ an Organization or an Environment and when SMTP settings need to be configured i
 ```helm
 testkube-cloud-api:
   api:
+    email:
+      fromEmail: "example@gmail.com"
+      fromName: "Example Invitation"
     inviteMode: email
     smtp:
       host: <smtp host>
