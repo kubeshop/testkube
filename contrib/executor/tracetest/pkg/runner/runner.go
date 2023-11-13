@@ -118,8 +118,8 @@ func (r *TracetestRunner) getCLIExecutor(envManager *env.Manager) (TracetestCLIE
 	}
 
 	outputPkg.PrintLogf("%s [TracetestRunner]: Could not find variables to run the test with Tracetest or Tracetest Cloud.", ui.IconCross)
-	outputPkg.PrintLogf("[TracetestRunner]: Please define the [%s] variables to run a test with Tracetest", strings.Join(r.cloudExecutor.RequiredEnvVars(), ", "))
-	outputPkg.PrintLogf("[TracetestRunner]: Or define the [%s] variables to run a test with Tracetest Core", strings.Join(r.coreExecutor.RequiredEnvVars(), ", "))
+	outputPkg.PrintLogf("%s [TracetestRunner]: Please define the [%s] variables to run a test with Tracetest", ui.IconCross, strings.Join(r.cloudExecutor.RequiredEnvVars(), ", "))
+	outputPkg.PrintLogf("%s [TracetestRunner]: Or define the [%s] variables to run a test with Tracetest Core", ui.IconCross, strings.Join(r.coreExecutor.RequiredEnvVars(), ", "))
 	return nil, fmt.Errorf("could not find variables to run the test with Tracetest or Tracetest Cloud")
 }
 

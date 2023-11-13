@@ -1,0 +1,20 @@
+type: Test
+spec:
+  id: R5NITR14g
+  name: Pokeshop - List
+  description: Get a Pokemon
+  trigger:
+    type: http
+    httpRequest:
+      url: http://demo-api:8081/pokemon?take=20&skip=0
+      method: GET
+      headers:
+        - key: Content-Type
+          value: application/json
+  specs:
+    - selector: span[tracetest.span.type="http"]
+      assertions:
+        - attr:http.method = "GET"
+    - selector: span[tracetest.span.type="database"]
+      assertions:
+        - attr:db.name = "postgres"
