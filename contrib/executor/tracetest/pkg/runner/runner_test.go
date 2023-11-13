@@ -30,8 +30,7 @@ func TestRun(t *testing.T) {
 		_, err = runner.Run(ctx, *execution)
 
 		// then
-		require.Error(t, err)
-		require.Equal(t, "could not find variables to run the test with Tracetest or Tracetest Cloud", err.Error())
+		require.ErrorContains(t, err, "could not find variables to run the test with Tracetest or Tracetest Cloud")
 	})
 
 }
