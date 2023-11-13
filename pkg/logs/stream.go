@@ -2,31 +2,60 @@ package logs
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/logs/events"
+	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"go.uber.org/zap"
 )
 
 type Stream interface {
-	Init(ctx context.Context) error
-	Push(ctx context.Context, chunk []byte) error
+	StreamInitializer
+	StreamPusher
+	StreamTrigger
 }
 
-const proxyStreamPrefix = "lg"
+type StreamInitializer interface {
+	// Init creates or updates stream on demand
+	Init(ctx context.Context) error
+}
 
-func NewNATSStream(js jetstream.JetStream, id string) Stream {
+type StreamPusher interface {
+	// Push sends logs to log stream
+	Push(ctx context.Context, chunk events.LogChunk) error
+	// PushBytes sends RAW bytes to log stream, developer is responsible for marshaling valid data
+	PushBytes(ctx context.Context, chunk []byte) error
+}
+
+type StreamTrigger interface {
+	// Trigger start / stop events
+	Start(ctx context.Context) error
+	Stop(ctx context.Context) error
+}
+
+func NewNATSStream(nc *nats.Conn, id string) (Stream, error) {
+	js, err := jetstream.New(nc)
+	if err != nil {
+		return NATSStream{}, err
+	}
+
 	return NATSStream{
+		nc:         nc,
 		js:         js,
 		log:        log.DefaultLogger,
-		streamName: proxyStreamPrefix + id,
-	}
+		id:         id,
+		streamName: StreamPrefix + id,
+	}, nil
 }
 
 type NATSStream struct {
+	nc         *nats.Conn
 	js         jetstream.JetStream
 	log        *zap.SugaredLogger
 	streamName string
+	id         string
 }
 
 func (c NATSStream) Init(ctx context.Context) error {
@@ -43,7 +72,30 @@ func (c NATSStream) Init(ctx context.Context) error {
 
 // Push log chunk to NATS stream
 // TODO handle message repeat with backoff strategy on error
-func (c NATSStream) Push(ctx context.Context, chunk []byte) error {
+func (c NATSStream) Push(ctx context.Context, chunk events.LogChunk) error {
+	b, err := json.Marshal(chunk)
+	if err != nil {
+		return err
+	}
+	_, err = c.js.Publish(ctx, c.streamName, b)
+	return err
+}
+
+// Push log chunk to NATS stream
+// TODO handle message repeat with backoff strategy on error
+func (c NATSStream) PushBytes(ctx context.Context, chunk []byte) error {
 	_, err := c.js.Publish(ctx, c.streamName, chunk)
 	return err
+}
+
+func (c NATSStream) Start(ctx context.Context) error {
+	event := events.Trigger{Id: c.id}
+	b, _ := json.Marshal(event)
+	return c.nc.Publish(StartSubject, b)
+}
+
+func (c NATSStream) Stop(ctx context.Context) error {
+	event := events.Trigger{Id: c.id}
+	b, _ := json.Marshal(event)
+	return c.nc.Publish(StopSubject, b)
 }

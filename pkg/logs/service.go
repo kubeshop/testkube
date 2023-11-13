@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	StreamName   = "lg"
+	StreamPrefix = "log"
 	StartSubject = "events.logs.start"
 	StopSubject  = "events.logs.stop"
 	StartQueue   = "logsstart"
@@ -76,7 +76,7 @@ func (l *LogsService) Run(ctx context.Context) (err error) {
 
 		log.Infow("stream created", "stream", s)
 
-		streamName := StreamName + event.Id
+		streamName := StreamPrefix + event.Id
 
 		// for each consumer create nats consumer and consume stream from it e.g. cloud s3 or others
 		for i, consumer := range l.consumers {
@@ -125,7 +125,7 @@ func (l *LogsService) InitConsumer(ctx context.Context, consumer consumer.Consum
 
 func (l *LogsService) CreateStream(ctx context.Context, event events.Trigger) (jetstream.Stream, error) {
 	// create stream for incoming logs
-	streamName := StreamName + event.Id
+	streamName := StreamPrefix + event.Id
 	return l.js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
 		Name:    streamName,
 		Storage: jetstream.FileStorage, // durable stream

@@ -19,7 +19,7 @@ import (
 func TestInitConsumer(t *testing.T) {
 	event := events.Trigger{Id: "2"} ///rand.String(10)}
 
-	streamName := StreamName + event.Id
+	streamName := StreamPrefix + event.Id
 
 	// TODO - this one don't work correctly - create subscriber don't work here
 	ns, nc := n.TestServerWithConnection()

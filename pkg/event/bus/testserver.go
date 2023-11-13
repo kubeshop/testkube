@@ -1,6 +1,7 @@
 package bus
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/nats-io/nats-server/v2/server"
@@ -24,6 +25,8 @@ func TestServerWithConnection() (*server.Server, *nats.Conn) {
 	ns.EnableJetStream(&server.JetStreamConfig{
 		StoreDir: dir,
 	})
+
+	fmt.Printf("%+v\n", ns.ClientURL())
 
 	nc, err := nats.Connect(ns.ClientURL())
 	if err != nil {

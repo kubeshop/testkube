@@ -6,6 +6,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/logs"
 	"github.com/kubeshop/testkube/pkg/logs/config"
 	"github.com/kubeshop/testkube/pkg/logs/sidecar"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -33,12 +34,19 @@ func main() {
 	clientset, err := k8sclient.ConnectToK8s()
 	if err != nil {
 		ui.ExitOnError("Creating k8s clientset", err)
+		return
 	}
 
 	podsClient := clientset.CoreV1().Pods(cfg.Namespace)
 
+	logsStream, err := logs.NewNATSStream(natsConn, cfg.ExecutionId)
+	if err != nil {
+		ui.ExitOnError("error creating logs stream", err)
+		return
+	}
+
 	// run Sidecar Logs Proxy - it will proxy logs from pod to nats
-	proxy := sidecar.NewProxy(clientset, podsClient, js, log, cfg.Namespace, cfg.ExecutionId)
+	proxy := sidecar.NewProxy(clientset, podsClient, logsStream, js, log, cfg.Namespace, cfg.ExecutionId)
 	if err := proxy.Run(ctx); err != nil {
 		log.Errorw("error proxying logs", "error", err)
 	}

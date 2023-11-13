@@ -30,13 +30,12 @@ var (
 )
 
 const (
-	proxyStreamPrefix = "lg"
-	pollInterval      = time.Second
-	podStartTimeout   = time.Second * 60
-	logsBuffer        = 1000
+	pollInterval    = time.Second
+	podStartTimeout = time.Second * 60
+	logsBuffer      = 1000
 )
 
-func NewProxy(clientset *kubernetes.Clientset, podsClient tcorev1.PodInterface, js jetstream.JetStream, log *zap.SugaredLogger, namespace, executionId string) *Proxy {
+func NewProxy(clientset *kubernetes.Clientset, podsClient tcorev1.PodInterface, logsStream logs.Stream, js jetstream.JetStream, log *zap.SugaredLogger, namespace, executionId string) *Proxy {
 	return &Proxy{
 		log:         log.With("namespace", namespace, "executionId", executionId),
 		js:          js,
@@ -44,7 +43,7 @@ func NewProxy(clientset *kubernetes.Clientset, podsClient tcorev1.PodInterface, 
 		namespace:   namespace,
 		executionId: executionId,
 		podsClient:  podsClient,
-		logsStream:  logs.NewNATSStream(js, executionId),
+		logsStream:  logsStream,
 	}
 }
 
