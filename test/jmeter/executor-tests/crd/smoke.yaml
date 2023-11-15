@@ -1,6 +1,18 @@
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
+  name: curl-schedule
+  namespace: testkube
+spec:
+  type: curl/test
+  content:
+    type: string
+    data: "{\n\t\"expected_status\": \"200\",\n\t\"expected_body\": \"{\\\"success\\\":\\\"true\\\"}\"\n }\n"
+  schedule: "1 * * * *"
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
   name: jmeter-executor-smoke
   labels:
     core-tests: executors
