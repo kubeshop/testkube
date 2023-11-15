@@ -4627,6 +4627,44 @@ components:
       allOf:
         - $ref: "#/components/schemas/ArtifactRequest"
 
+    PodRequest:
+      description: pod request body
+      type: object
+      properties:
+        resources:
+          $ref: "#/components/schemas/PodResourcesRequest"
+          description: pod resources request parameters       
+        podTemplate:
+          type: string
+          description: pod template extensions
+        podTemplateReference:
+          type: string
+          description: name of the template resource 
+
+    PodResourcesRequest:
+      description: pod resources request specification
+      type: object
+      properties:
+        requests:
+          $ref: "#/components/schemas/ResourceRequest"
+          description: pod resources requests
+        limits:
+          $ref: "#/components/schemas/ResourceRequest"
+          description: pod resources limits          
+
+    ResourceRequest:
+      description: resource request specification
+      type: object
+      properties:
+        cpu:
+          type: string
+          description: requested cpu units
+          example: 250m
+        memory:
+          type: string
+          description: requested memory units
+          example: 64Mi
+
     ExecutionRequest:
       description: test execution request body
       type: object
@@ -4824,6 +4862,9 @@ components:
           description: "execution ids for artifacts to download"
           items:
             type: string
+        slavePodRequest:
+          $ref: "#/components/schemas/PodRequest"
+          description: configuration parameters for executed slave pods          
 
     ExecutionUpdateRequest:
       description: test execution request update body
@@ -5782,6 +5823,7 @@ components:
         - scraper
         - pvc
         - webhook
+        - pod
 
     TemplateCreateRequest:
       description: template create request body
