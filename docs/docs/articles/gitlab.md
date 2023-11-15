@@ -86,7 +86,7 @@ run-testkube-test:
     - testkube run test test-name -f
 ```
 
-Steps to connect to your Kubernetes cluster differ for each provider. You should check the docs of your Cloud provider on how to connect to the Kubernetes cluster from Gitlab CI.
+The steps to connect to your Kubernetes cluster differ for each provider. You should check the docs of your Cloud provider for how to connect to the Kubernetes cluster from Gitlab CI.
 
 ### How to configure Testkube CLI action for TK OSS and run a test
 
