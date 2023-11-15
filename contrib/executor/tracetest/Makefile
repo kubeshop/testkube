@@ -1,36 +1,28 @@
 NAME ?= testkube-executor-tracetest
 BIN_DIR ?= $(HOME)/bin
 
-build:
-	go build -o $(BIN_DIR)/$(NAME) cmd/agent/main.go 
+help: Makefile ## show list of commands
+	@echo "Choose a command run:"
+	@echo ""
+	@awk 'BEGIN {FS = ":.*?## "} /[a-zA-Z_-]+:.*?## / {sub("\\\\n",sprintf("\n%22c"," "), $$2);printf "\033[36m%-40s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST) | sort
+
+build: ## build executable locally
+	go build -o $(BIN_DIR)/$(NAME) cmd/agent/main.go
 
 .PHONY: test cover build
 
-run: 
+run: ## run the executor locally
 	EXECUTOR_PORT=8082 go run cmd/agent/main.go
 
-mongo-dev: 
-	docker run -p 27017:27017 mongo
-
-docker-build: 
+docker-build: ## build docker image
 	docker build -t kubeshop/$(NAME) -f build/agent/Dockerfile .
 
-install-swagger-codegen-mac: 
-	brew install swagger-codegen
-
-test: 
+test: ## run unit tests
 	go test ./... -cover
 
-test-e2e:
-	go test --tags=e2e -v ./test/e2e
-
-test-e2e-namespace:
-	NAMESPACE=$(NAMESPACE) go test --tags=e2e -v  ./test/e2e 
-
-cover: 
-	@go test -failfast -count=1 -v -tags test  -coverprofile=./testCoverage.txt ./... && go tool cover -html=./testCoverage.txt -o testCoverage.html && rm ./testCoverage.txt 
+cover: ## run coverage tests
+	@go test -failfast -count=1 -v -tags test  -coverprofile=./testCoverage.txt ./... && go tool cover -html=./testCoverage.txt -o testCoverage.html && rm ./testCoverage.txt
 	open testCoverage.html
-
 
 version-bump: version-bump-patch
 
