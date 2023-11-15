@@ -4665,6 +4665,13 @@ components:
           description: requested memory units
           example: 64Mi
 
+    PodUpdateRequest:
+      description: pod request update body
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/PodRequest"
+
     ExecutionRequest:
       description: test execution request body
       type: object
