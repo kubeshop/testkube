@@ -297,6 +297,10 @@ And you will be able to see the results of the execution in the Executions tab a
 
 We now have an automated test deployment and execution pipeline based on GitOps principles!
 
+### 11. Allow to add ownerReferences to CronJobs metadata for Tests and Test Suites
+
+You will need to enable helm chart variable `useArgoCDSync = true` in order to make CronJobs created for Tests and Test Suites syncronized in ArgoCD.
+
 ## GitOps Takeaways
 
 Once fully realized - using GitOps for testing of Kubernetes applications as described above provides a powerful alternative to a more traditional approach where orchestration is tied to your current CI/CD tooling and not closely aligned with the lifecycle of Kubernetes applications.
