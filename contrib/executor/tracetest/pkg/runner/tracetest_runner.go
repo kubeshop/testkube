@@ -17,6 +17,7 @@ const (
 	TRACETEST_TOKEN_VAR        = "TRACETEST_TOKEN"
 	TRACETEST_ORGANIZATION_VAR = "TRACETEST_ORGANIZATION"
 	TRACETEST_ENVIRONMENT_VAR  = "TRACETEST_ENVIRONMENT"
+	TRACETEST_CLOUD_URL        = "https://app.tracetest.io"
 )
 
 type tracetestCloudExecutor struct{}
@@ -84,7 +85,7 @@ func (e *tracetestCloudExecutor) Execute(envManager *env.Manager, execution test
 
 	result := model.Result{
 		Output:         string(output),
-		ServerEndpoint: "https://app.tracetest.io",
+		ServerEndpoint: TRACETEST_CLOUD_URL,
 		OutputEndpoint: "",
 	}
 
