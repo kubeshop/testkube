@@ -10,7 +10,7 @@ This Jenkins integration offers a versatile solution for managing your pipeline 
 To use Jenkins CI/CD for [Testkube Cloud](https://cloud.testkube.io/), you need to create an [API token](https://docs.testkube.io/testkube-cloud/articles/organization-management/#api-tokens).
 Then, pass the **organization** and **environment** IDs, along with the **token** and other parameters specific for your use case.
 
-If test is already created, you may directly run it using the command `testkube run test test-name -f` . However, if you need to create a test in this workflow, please add a creation command, e.g.: `testkube create test --name test-name --file path_to_file.json`.
+If a test is already created, you can run it using the command `testkube run test test-name -f` . However, if you need to create a test in this workflow, please add a creation command, e.g.: `testkube create test --name test-name --file path_to_file.json`.
 
 ```groovy
 pipeline {
