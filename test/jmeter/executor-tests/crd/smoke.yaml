@@ -1,7 +1,7 @@
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: curl-schedule
+  name: curl-schedule-1
   namespace: testkube
 spec:
   type: curl/test
@@ -13,83 +13,14 @@ spec:
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: jmeter-executor-smoke
+  name: testkube-website-5m
+  namespace: testkube-status-page
   labels:
-    core-tests: executors
+    executor: curl-executor
+    test-type: curl-test
 spec:
-  type: jmeter/test
+  type: curl/test
   content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke.jmx
-  schedule: "* * * * *"
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: jmeter-executor-smoke-directory
-  labels:
-    core-tests: executors
-spec:
-  type: jmeter/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/jmeter/executor-tests
-  executionRequest:
-    args:
-      - "jmeter-executor-smoke.jmx"
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
-    activeDeadlineSeconds: 180
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: jmeter-executor-smoke-env-and-property-values
-  labels:
-    core-tests: executors
-spec:
-  type: jmeter/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke-env-and-property.jmx
-  executionRequest:
-    variables:
-      URL_ENV:
-        name: URL_ENV
-        value: "testkube.io"
-        type: basic
-    args:
-      - "-JURL_PROPERTY=testkube.io"
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
-    activeDeadlineSeconds: 180
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: jmeter-executor-smoke-negative
-  labels:
-    core-tests: executors-negative
-spec:
-  type: jmeter/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke-negative.jmx
-  executionRequest:
-    negativeTest: true
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
-    activeDeadlineSeconds: 180
+    type: string
+    data: "{\n    \"command\": [\n      \"curl\",\n      \"https://testkube.io/\"\n    ],\n    \"expected_status\": \"200\"\n}"
+  schedule: "*/5 * * * *"
