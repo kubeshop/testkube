@@ -1,0 +1,54 @@
+version: '3'
+services:
+  postgres:
+    image: postgres:15.2
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    healthcheck:
+      test: pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"
+      interval: 1s
+      timeout: 5s
+      retries: 60
+
+  cache:
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      timeout: 3s
+      interval: 1s
+      retries: 60
+    image: redis:6
+    restart: unless-stopped
+
+  demo-api:
+    depends_on:
+      cache:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      COLLECTOR_ENDPOINT: http://tracetest-agent:4317
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/postgres?schema=public
+      NPM_RUN_COMMAND: api
+      POKE_API_BASE_URL: https://pokeapi.co/api/v2
+      REDIS_URL: cache
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --spider
+        - localhost:8081
+      timeout: 3s
+      interval: 1s
+      retries: 60
+    image: kubeshop/demo-pokemon-api:latest
+    pull_policy: always
+    
+  tracetest-agent:
+    environment:
+      TRACETEST_DEV: true
+      TRACETEST_API_KEY: ${TRACETEST_API_KEY}
+    image: kubeshop/tracetest-agent:latest

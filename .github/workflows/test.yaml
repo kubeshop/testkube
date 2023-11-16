@@ -146,6 +146,9 @@ jobs:
       - name: Set up Playwright
         run: pnpx playwright install --with-deps
 
+      - name: Set up Tracetest
+        run: curl -L https://raw.githubusercontent.com/kubeshop/tracetest/main/install-cli.sh | bash
+
       - name: Set up git
         run: sudo apt-get install -y git
 
