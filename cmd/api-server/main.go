@@ -58,6 +58,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/scheduler"
 
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
+
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/triggers"
 
@@ -71,6 +72,9 @@ import (
 	testsuiteexecutionsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testsuiteexecutions/v1"
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v2"
 	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
+	operatorevent "github.com/kubeshop/testkube-operator/pkg/event"
+	operatorbus "github.com/kubeshop/testkube-operator/pkg/event/bus"
+
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/migrations"
 	"github.com/kubeshop/testkube/pkg/configmap"
@@ -188,16 +192,21 @@ func main() {
 	}
 
 	// k8s
+	operatorEmitter, err := getOperatorNats(cfg.TestkubeClusterName, cfg.NatsURI)
+	if err != nil {
+		log.DefaultLogger.Errorw("error creating NATS connection for k8s operations", "error", err)
+	}
+
 	scriptsClient := scriptsclient.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testsClientV1 := testsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
-	testsClientV3 := testsclientv3.NewClient(kubeClient, cfg.TestkubeNamespace)
+	testsClientV3 := testsclientv3.NewClient(kubeClient, cfg.TestkubeNamespace, operatorEmitter)
 	executorsClient := executorsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
 	testsuitesClientV2 := testsuitesclientv2.NewClient(kubeClient, cfg.TestkubeNamespace)
-	testsuitesClientV3 := testsuitesclientv3.NewClient(kubeClient, cfg.TestkubeNamespace)
+	testsuitesClientV3 := testsuitesclientv3.NewClient(kubeClient, cfg.TestkubeNamespace, operatorEmitter)
 	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
-	testExecutionsClient := testexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
-	testsuiteExecutionsClient := testsuiteexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+	testExecutionsClient := testexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace, operatorEmitter)
+	testsuiteExecutionsClient := testsuiteexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace, operatorEmitter)
 	templatesClient := templatesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 
 	clientset, err := k8sclient.ConnectToK8s()
@@ -677,4 +686,13 @@ func getMongoSSLConfig(cfg *config.Config, secretClient *secret.Client) *storage
 		SSLClientCertificateKeyFilePassword: pass,
 		SSLCertificateAuthoritiyFile:        rootCAPath,
 	}
+}
+
+func getOperatorNats(clusterName string, uri string) (*operatorevent.Emitter, error) {
+	nc, err := operatorbus.NewNATSConnection(uri)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not set up nats connection")
+	}
+	eventBus := operatorbus.NewNATSBus(nc)
+	return operatorevent.NewEmitter(eventBus, clusterName), nil
 }
