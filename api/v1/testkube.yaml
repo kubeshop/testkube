@@ -4265,7 +4265,10 @@ components:
           type: array
           description: "execution ids for artifacts to download"
           items:
-            type: string  
+            type: string
+        slavePodRequest:
+          $ref: "#/components/schemas/PodRequest"
+          description: configuration parameters for executed slave pods 
 
     Artifact:
       type: object
