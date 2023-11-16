@@ -4,12 +4,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/gofiber/fiber/v2"
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	operatorevent "github.com/kubeshop/testkube-operator/pkg/event"
+	operatorbus "github.com/kubeshop/testkube-operator/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/server"
-
-	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,5 +63,6 @@ func getMockTestClient() *testsclientv3.TestsClient {
 		WithObjects(initObjects...).
 		Build()
 
-	return testsclientv3.NewClient(fakeClient, "")
+	emitter := operatorevent.NewEmitter(operatorbus.NewEventBusMock(), "test-cluster")
+	return testsclientv3.NewClient(fakeClient, "", emitter)
 }
