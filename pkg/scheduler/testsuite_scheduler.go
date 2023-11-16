@@ -508,25 +508,27 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 		s.delayWithAbortionCheck(duration, testsuiteExecution.Id, result)
 	}
 
-	results := make(map[string]testkube.Execution, len(testTuples))
 	if len(testTuples) != 0 {
 		for r := range workerpoolService.GetResponses() {
-			results[r.Result.Id] = r.Result
 			status := ""
 			if r.Result.ExecutionResult != nil && r.Result.ExecutionResult.Status != nil {
 				status = string(*r.Result.ExecutionResult.Status)
 			}
 
 			s.logger.Infow("execution result", "id", r.Result.Id, "status", status)
-		}
+			value := r.Result
+			for i := range result.Execute {
+				if result.Execute[i].Execution == nil {
+					continue
+				}
 
-		for i := range result.Execute {
-			if result.Execute[i].Execution == nil {
-				continue
-			}
+				if result.Execute[i].Execution.Id == r.Result.Id {
+					result.Execute[i].Execution = &value
 
-			if value, ok := results[result.Execute[i].Execution.Id]; ok {
-				result.Execute[i].Execution = &value
+					if err := s.testExecutionResults.Update(ctx, testsuiteExecution); err != nil {
+						s.logger.Errorw("saving test suite execution results error", "error", err)
+					}
+				}
 			}
 		}
 	}

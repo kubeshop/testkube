@@ -411,7 +411,7 @@ func DownloadArtifacts(id, dir, format string, masks []string, client apiclientv
 		for _, step := range execution.Execute {
 			if step.Execution != nil && step.Step != nil && step.Step.Test != "" {
 				if step.Execution.IsPassed() || step.Execution.IsFailed() {
-					tests.DownloadArtifacts(step.Execution.Id, filepath.Join(dir, step.Execution.Id), format, masks, client)
+					tests.DownloadArtifacts(step.Execution.Id, filepath.Join(dir, step.Execution.TestName+"-"+step.Execution.Id), format, masks, client)
 				}
 			}
 		}
