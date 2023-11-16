@@ -10,7 +10,7 @@
 package testkube
 
 // pod resources update request specification
-type PodResoourcesUpdateRequest struct {
-	Requests *ResourceRequest `json:"requests,omitempty"`
-	Limits   *ResourceRequest `json:"limits,omitempty"`
+type PodResourcesUpdateRequest struct {
+	Requests *ResourceUpdateRequest `json:"requests,omitempty"`
+	Limits   *ResourceUpdateRequest `json:"limits,omitempty"`
 }

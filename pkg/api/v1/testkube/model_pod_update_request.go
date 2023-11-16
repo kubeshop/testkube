@@ -11,7 +11,7 @@ package testkube
 
 // pod request update body
 type PodUpdateRequest struct {
-	Resources *PodResourcesRequest `json:"resources,omitempty"`
+	Resources **PodResourcesUpdateRequest `json:"resources,omitempty"`
 	// pod template extensions
 	PodTemplate *string `json:"podTemplate,omitempty"`
 	// name of the template resource

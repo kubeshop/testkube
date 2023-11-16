@@ -4641,6 +4641,13 @@ components:
           type: string
           description: name of the template resource 
 
+    PodUpdateRequest:
+      description: pod request update body
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/PodRequest"
+
     PodResourcesRequest:
       description: pod resources request specification
       type: object
@@ -4651,6 +4658,13 @@ components:
         limits:
           $ref: "#/components/schemas/ResourceRequest"
           description: pod resources limits          
+
+    PodResourcesUpdateRequest:
+      description: pod resources update request specification
+      type: object
+      nullable: true
+      allOf:
+        - $ref: "#/components/schemas/PodResourcesRequest"
 
     ResourceRequest:
       description: resource request specification
@@ -4665,12 +4679,12 @@ components:
           description: requested memory units
           example: 64Mi
 
-    PodUpdateRequest:
-      description: pod request update body
+    ResourceUpdateRequest:
+      description: resource update request specification
       type: object
       nullable: true
       allOf:
-        - $ref: "#/components/schemas/PodRequest"
+        - $ref: "#/components/schemas/ResourceRequest"
 
     ExecutionRequest:
       description: test execution request body
