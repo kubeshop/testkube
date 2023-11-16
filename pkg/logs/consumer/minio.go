@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"io"
+	"strconv"
 
 	"github.com/minio/minio-go/v7"
 	"go.uber.org/zap"
@@ -14,7 +14,24 @@ import (
 	minioconnecter "github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
+const (
+	defaultBufferSize = 100 * 1024 * 1024 // 100MB
+	defaultWriteSize  = 95 * 1024 * 1024  // 95MB
+)
+
 var _ Consumer = &MinioConsumer{}
+
+type ErrMinioConsumerDisconnected struct {
+}
+
+func (e ErrMinioConsumerDisconnected) Error() string {
+	return "minio consumer disconnected"
+}
+
+type BufferInfo struct {
+	Buffer *bytes.Buffer
+	Part   int
+}
 
 // MinioConsumer creates new MinioSubscriber which will send data to local MinIO bucket
 func NewMinioConsumer(endpoint, accessKeyID, secretAccessKey, region, token, bucket string, ssl bool) *MinioConsumer {
@@ -24,8 +41,28 @@ func NewMinioConsumer(endpoint, accessKeyID, secretAccessKey, region, token, buc
 		bucket:         bucket,
 		region:         region,
 		disconnected:   false,
+		buffInfos:      make(map[string]BufferInfo),
+	}
+	minioClient, err := c.minioConnecter.GetClient()
+	if err != nil {
+		c.Log.Errorw("error connecting to minio", "err", err)
+		return c
 	}
 
+	exists, err := minioClient.BucketExists(context.TODO(), c.bucket)
+	if err != nil {
+		c.Log.Errorw("error checking if bucket exists", "err", err)
+		return c
+	}
+
+	if !exists {
+		err = minioClient.MakeBucket(context.TODO(), s.bucket,
+			minio.MakeBucketOptions{Region: c.region})
+		if err != nil {
+			c.Log.Errorw("error creating bucket", "err", err)
+			return c
+		}
+	}
 	return c
 }
 
@@ -35,38 +72,18 @@ type MinioConsumer struct {
 	region         string
 	Log            *zap.SugaredLogger
 	disconnected   bool
+	buffInfos      map[string]BufferInfo
 }
 
 func (s *MinioConsumer) Notify(id string, e events.LogChunk) error {
 	if s.disconnected {
 		s.Log.Debugw("minio consumer disconnected", "id", id)
-		return nil
-	}
-	minioClient, err := s.minioConnecter.GetClient()
-	if err != nil {
-		return err
+		return ErrMinioConsumerDisconnected{}
 	}
 
-	exists, err := minioClient.BucketExists(context.TODO(), s.bucket)
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		err = minioClient.MakeBucket(context.TODO(), s.bucket,
-			minio.MakeBucketOptions{Region: s.region})
-		if err != nil {
-			return err
-		}
-	}
-	file, err := minioClient.GetObject(context.TODO(), s.bucket, id, minio.GetObjectOptions{})
-	if err != nil {
-		return err
-	}
-
-	fileContent, err := io.ReadAll(file)
-	if err != nil {
-		return err
+	if _, ok := s.buffInfos[id]; !ok {
+		buffInfo := s.buffInfos[id]
+		buffInfo.Buffer = bytes.NewBuffer(make([]byte, 0, defaultBufferSize))
 	}
 
 	chunckToAdd, err := json.Marshal(e)
@@ -74,26 +91,45 @@ func (s *MinioConsumer) Notify(id string, e events.LogChunk) error {
 		return err
 	}
 
-	fileContent = append(fileContent, chunckToAdd...)
-
-	err = minioClient.RemoveObject(context.TODO(), s.bucket, id, minio.RemoveObjectOptions{ForceDelete: true})
+	writer := s.buffInfos[id].Buffer
+	_, err = writer.Write(chunckToAdd)
 	if err != nil {
 		return err
 	}
 
-	reader := bytes.NewReader(fileContent)
-	_, err = minioClient.PutObject(context.TODO(), s.bucket, id, reader, reader.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	if writer.Len() > defaultWriteSize {
 
-	if err != nil {
-		return err
+		buffInfo := s.buffInfos[id]
+		buffInfo.Buffer = bytes.NewBuffer(make([]byte, 0, defaultBufferSize))
+		minioClient, err := s.minioConnecter.GetClient()
+		if err != nil {
+			return err
+		}
+		name := id + "-" + strconv.Itoa(s.buffInfos[id].Part)
+		buffInfo.Part++
+		go s.putData(minioClient, name, writer)
 	}
 
 	return nil
 }
 
+func (s *MinioConsumer) putData(minioClient *minio.Client, name string, writer *bytes.Buffer) {
+	_, err := minioClient.PutObject(context.TODO(), s.bucket, name, writer, int64(writer.Len()), minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	if err != nil {
+		s.Log.Errorw("error putting object", "err", err)
+	}
+
+}
+
 func (s *MinioConsumer) Stop(id string) error {
-	s.disconnected = true
-	s.minioConnecter.Disconnect()
+
+	minioClient, err := s.minioConnecter.GetClient()
+	if err != nil {
+		return err
+	}
+	name := id + "-" + strconv.Itoa(s.buffInfos[id].Part)
+	s.putData(minioClient, name, s.buffInfos[id].Buffer)
+	delete(s.buffInfos, id)
 	return nil
 }
 
