@@ -14,7 +14,7 @@ apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
   name: testkube-website-5m
-  namespace: testkube-status-page
+  namespace: testkube
   labels:
     executor: curl-executor
     test-type: curl-test
