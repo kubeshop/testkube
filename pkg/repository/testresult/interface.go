@@ -34,7 +34,7 @@ type Repository interface {
 	// GetByNameAndTestSuite gets execution result by name
 	GetByNameAndTestSuite(ctx context.Context, name, testSuiteName string) (testkube.TestSuiteExecution, error)
 	// GetLatestByTestSuite gets latest execution result by test suite
-	GetLatestByTestSuite(ctx context.Context, testSuiteName string) (testkube.TestSuiteExecution, error)
+	GetLatestByTestSuite(ctx context.Context, testSuiteName string) (*testkube.TestSuiteExecution, error)
 	// GetLatestByTestSuites gets latest execution results by test suite names
 	GetLatestByTestSuites(ctx context.Context, testSuiteNames []string) (executions []testkube.TestSuiteExecution, err error)
 	// GetExecutionsTotals gets executions total stats using a filter, use filter with no data for all

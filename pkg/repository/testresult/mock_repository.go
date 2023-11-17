@@ -159,10 +159,10 @@ func (mr *MockRepositoryMockRecorder) GetExecutionsTotals(arg0 interface{}, arg1
 }
 
 // GetLatestByTestSuite mocks base method.
-func (m *MockRepository) GetLatestByTestSuite(arg0 context.Context, arg1 string) (testkube.TestSuiteExecution, error) {
+func (m *MockRepository) GetLatestByTestSuite(arg0 context.Context, arg1 string) (*testkube.TestSuiteExecution, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetLatestByTestSuite", arg0, arg1)
-	ret0, _ := ret[0].(testkube.TestSuiteExecution)
+	ret0, _ := ret[0].(*testkube.TestSuiteExecution)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
