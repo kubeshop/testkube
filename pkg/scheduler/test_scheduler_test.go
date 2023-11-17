@@ -173,6 +173,7 @@ func TestGetExecuteOptions(t *testing.T) {
 			Type_: string(testkube.RunningContextTypeUserCLI),
 		},
 		TestExecutionName: "",
+		SlavePodRequest:   &testkube.PodRequest{},
 	}
 
 	got, err := sc.getExecuteOptions("namespace", "id", req)

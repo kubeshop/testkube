@@ -153,6 +153,30 @@ func MapAPIToCRD(request *testkube.Execution, generation int64) testexecutionv1.
 		}
 	}
 
+	var podRequest *testexecutionv1.PodRequest
+	if request.SlavePodRequest != nil {
+		podRequest = &testexecutionv1.PodRequest{}
+		if request.SlavePodRequest.Resources != nil {
+			podRequest.Resources = &testexecutionv1.PodResourcesRequest{}
+			if request.SlavePodRequest.Resources.Requests != nil {
+				podRequest.Resources.Requests = &testexecutionv1.ResourceRequest{
+					Cpu:    request.SlavePodRequest.Resources.Requests.Cpu,
+					Memory: request.SlavePodRequest.Resources.Requests.Memory,
+				}
+			}
+
+			if request.SlavePodRequest.Resources.Limits != nil {
+				podRequest.Resources.Limits = &testexecutionv1.ResourceRequest{
+					Cpu:    request.SlavePodRequest.Resources.Limits.Cpu,
+					Memory: request.SlavePodRequest.Resources.Limits.Memory,
+				}
+			}
+		}
+
+		podRequest.PodTemplate = request.SlavePodRequest.PodTemplate
+		podRequest.PodTemplateReference = request.SlavePodRequest.PodTemplateReference
+	}
+
 	result := testexecutionv1.TestExecutionStatus{
 		Generation: generation,
 		LatestExecution: &testexecutionv1.Execution{
@@ -184,6 +208,7 @@ func MapAPIToCRD(request *testkube.Execution, generation int64) testexecutionv1.
 			ExecutePostRunScriptBeforeScraping: request.ExecutePostRunScriptBeforeScraping,
 			RunningContext:                     runningContext,
 			ContainerShell:                     request.ContainerShell,
+			SlavePodRequest:                    podRequest,
 		},
 	}
 
