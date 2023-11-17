@@ -160,8 +160,9 @@ func (s *MinioConsumer) Stop(id string) error {
 	}
 	name := id + "-" + strconv.Itoa(s.buffInfos[id].Part)
 	s.putData(minioClient, name, s.buffInfos[id].Buffer)
+	parts := s.buffInfos[id].Part
 	delete(s.buffInfos, id)
-	return s.combineData(minioClient, id, s.buffInfos[id].Part)
+	return s.combineData(minioClient, id, parts)
 }
 
 func (s *MinioConsumer) Name() string {
