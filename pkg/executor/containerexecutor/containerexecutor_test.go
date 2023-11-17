@@ -364,7 +364,7 @@ func (r FakeResultRepository) GetByNameAndTest(ctx context.Context, name, testNa
 	panic("implement me")
 }
 
-func (r FakeResultRepository) GetLatestByTest(ctx context.Context, testName string) (testkube.Execution, error) {
+func (r FakeResultRepository) GetLatestByTest(ctx context.Context, testName string) (*testkube.Execution, error) {
 	//TODO implement me
 	panic("implement me")
 }

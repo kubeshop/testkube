@@ -57,7 +57,7 @@ func (r *MongoRepository) GetByNameAndTestSuite(ctx context.Context, name, testS
 	return *result.UnscapeDots(), err
 }
 
-func (r *MongoRepository) GetLatestByTestSuite(ctx context.Context, testSuiteName string) (result testkube.TestSuiteExecution, err error) {
+func (r *MongoRepository) GetLatestByTestSuite(ctx context.Context, testSuiteName string) (*testkube.TestSuiteExecution, error) {
 	opts := options.Aggregate()
 	pipeline := []bson.M{
 		{"$documents": bson.A{bson.M{"name": testSuiteName}}},
@@ -88,17 +88,17 @@ func (r *MongoRepository) GetLatestByTestSuite(ctx context.Context, testSuiteNam
 	}
 	cursor, err := r.db.Aggregate(ctx, pipeline, opts)
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 	var items []testkube.TestSuiteExecution
 	err = cursor.All(ctx, &items)
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 	if len(items) == 0 {
-		return result, mongo.ErrNoDocuments
+		return nil, mongo.ErrNoDocuments
 	}
-	return *items[0].UnscapeDots(), err
+	return items[0].UnscapeDots(), err
 }
 
 func (r *MongoRepository) GetLatestByTestSuites(ctx context.Context, testSuiteNames []string) (executions []testkube.TestSuiteExecution, err error) {
