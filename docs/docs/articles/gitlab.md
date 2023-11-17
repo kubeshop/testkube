@@ -90,7 +90,7 @@ The steps to connect to your Kubernetes cluster differ for each provider. You sh
 
 ### How to configure Testkube CLI action for TK OSS and run a test
 
-This workflow establishes a connection to EKS cluster and creates and runs a test using TK CLI. In this example we also use GH secrets not to reveal sensitive data. Please make sure that the following points are satisfied:
+This workflow establishes a connection to EKS cluster and creates and runs a test using TK CLI. In this example we also use gitlab variables not to reveal sensitive data. Please make sure that the following points are satisfied:
 - The **_AwsAccessKeyId_**, **_AwsSecretAccessKeyId_** secrets should contain your AWS IAM keys with proper permissions to connect to EKS cluster.
 - The **_AwsRegion_** secret should contain AWS region where EKS is
 - Tke **EksClusterName** secret points to the name of EKS cluster you want to connect.
@@ -118,7 +118,7 @@ setup-testkube:
 ```
 ### How to connect to GKE (Google Kubernetes Engine) cluster and run a test 
 
-This example connects to a k8s cluster in Google Cloud, creates and runs a test using Testkube GH Action. Please make sure that the following points are satisfied:
+This example connects to a k8s cluster in Google Cloud, creates and runs a test using Testkube Gitlab CI. Please make sure that the following points are satisfied:
 - The **_GKE Sevice Account_** should be created prior in Google Cloud and added to Gitlab CI variables along with **_GKE Project_** value;
 - The **_GKE Cluster Name_** and **_GKE Zone_** can be added as [environmental variables](https://docs.gitlab.com/ee/ci/variables/) in the workflow.
 
