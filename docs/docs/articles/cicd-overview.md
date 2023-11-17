@@ -6,6 +6,9 @@ We have different tutorials for the options of being CI driven or using GitOps a
 
 - [Github Actions - running Tests or TestSuites with testkube-run-action](./run-tests-with-github-actions.md)
 - [Github Actions - running Testkube CLI commands with testkube-docker-action](./github-actions.md)
+- [Testkube Docker CLI](./testkube-cli-docker.md)
+- [Gitlab CI](./gitlab.md)
+- [Jenkins CI/CD](./jenkins.md)
 - [GitOps Testing](./gitops-overview.md)
   - [Flux](./flux-integration.md)
   - [ArgoCD](./argocd-integration.md)
