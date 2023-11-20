@@ -23,15 +23,15 @@ pipeline {
             steps {
                 script {
                     // Retrieve credentials
-                    def agentToken = credentials('TESTKUBE_AGENT_TOKEN')
-                    def orgId = credentials('TESTKUBE_ORG_ID')
-                    def envId = credentials('TESTKUBE_ENV_ID')
+                    def apiKey = credentials('TESTKUBE_API_KEY')
+                    def orgId  = credentials('TESTKUBE_ORG_ID')
+                    def envId  = credentials('TESTKUBE_ENV_ID')
 
                     // Install Testkube
                     sh 'curl -sSLf https://get.testkube.io | sh'
 
                     // Initialize Testkube
-                    sh "testkube cloud init --agent-token ${agentToken} --org-id ${orgId} --env-id ${envId} 
+                    sh "testkube set context --api-key ${apiKey} --org ${orgId} --env ${envId}"
                 }
             }
         }
@@ -72,7 +72,7 @@ pipeline {
                     sh 'curl -sSLf https://get.testkube.io | sh'
 
                     // Initialize Testkube
-                    sh "testkube cloud init --namespace ${namespace}"
+                    sh "testkube set context --kubeconfig --namespace ${namespace}"
                 }
             }
         }
@@ -125,11 +125,11 @@ pipeline {
 
                     // Initializing Testkube
                     withCredentials([
-                        string(credentialsId: 'TestkubeAgentToken', variable: 'TESTKUBE_AGENT_TOKEN'),
+                        string(credentialsId: 'TestkubeApiKey', variable: 'TESTKUBE_API_KEY'),
                         string(credentialsId: 'TestkubeOrgId', variable: 'TESTKUBE_ORG_ID'),
                         string(credentialsId: 'TestkubeEnvId', variable: 'TESTKUBE_ENV_ID')
                     ]) {
-                        sh 'testkube cloud init --agent-token $TESTKUBE_AGENT_TOKEN --org-id $TESTKUBE_ORG_ID --env-id $TESTKUBE_ENV_ID'
+                        sh 'testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID'
                     }
 
                     // Running Testkube test
@@ -179,12 +179,12 @@ pipeline {
 
                     // Installing and initializing Testkube
                     withCredentials([
-                        string(credentialsId: 'TESTKUBE_AGENT_TOKEN', variable: 'TESTKUBE_AGENT_TOKEN'),
+                        string(credentialsId: 'TESTKUBE_API_KEY', variable: 'TESTKUBE_API_KEY'),
                         string(credentialsId: 'TESTKUBE_ORG_ID', variable: 'TESTKUBE_ORG_ID'),
                         string(credentialsId: 'TESTKUBE_ENV_ID', variable: 'TESTKUBE_ENV_ID')
                     ]) {
                         sh 'curl -sSLf https://get.testkube.io | sh'
-                        sh 'testkube cloud init --agent-token $TESTKUBE_AGENT_TOKEN --org-id $TESTKUBE_ORG_ID --env-id $TESTKUBE_ENV_ID'
+                        sh 'testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID'
                     }
 
                     // Running Testkube test
