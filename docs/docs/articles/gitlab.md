@@ -15,7 +15,6 @@ If a test is already created, you can run it using the command `testkube run tes
 ```yaml
 stages:
   - setup
-  - test
 
 variables:
   TESTKUBE_API_KEY: tkcapi_0123456789abcdef0123456789abcd
@@ -24,15 +23,9 @@ variables:
 
 setup-testkube:
   stage: setup
+  image: kubeshop/testkube-cli
   script:
-    - echo "Installing Testkube..."
-    - curl -sSLf https://get.testkube.io | sh
     - testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
-
-run-testkube-test:
-  stage: test
-  script:
-    - echo "Running Testkube test..."
     - testkube run test test-name -f
 ```
 
@@ -41,19 +34,12 @@ It is recommended that sensitive values should never be stored as plaintext in w
 ```yaml
 stages:
   - setup
-  - test
 
 setup-testkube:
   stage: setup
+  image: kubeshop/testkube-cli
   script:
-    - echo "Installing Testkube..."
-    - curl -sSLf https://get.testkube.io | sh
     - testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
-
-run-testkube-test:
-  stage: test
-  script:
-    - echo "Running Testkube test..."
     - testkube run test test-name -f
  ```
 ## Testkube OSS
@@ -67,22 +53,15 @@ If a test is already created, you can run it using the command `testkube run tes
 ```yaml
 stages:
   - setup
-  - test
 
 variables:
   NAMESPACE: custom-testkube
 
 setup-testkube:
   stage: setup
+  image: kubeshop/testkube-cli
   script:
-    - echo "Installing Testkube..."
-    - curl -sSLf https://get.testkube.io | sh
     - testkube set context --kubeconfig --namespace $NAMESPACE
-
-run-testkube-test:
-  stage: test
-  script:
-    - echo "Running Testkube test..."
     - testkube run test test-name -f
 ```
 
