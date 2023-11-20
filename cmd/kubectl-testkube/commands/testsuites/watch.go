@@ -26,9 +26,12 @@ func NewWatchTestSuiteExecutionCmd() *cobra.Command {
 			startTime := time.Now()
 
 			executionID := args[0]
-			watchResp, err := client.WatchTestSuiteExecution(executionID)
+			watchResp := client.WatchTestSuiteExecution(executionID)
 			for resp := range watchResp {
-				ui.ExitOnError("watching test execution", err)
+				if resp.Error != nil {
+					ui.Err(err)
+					return
+				}
 				printExecution(resp.Execution, startTime)
 			}
 

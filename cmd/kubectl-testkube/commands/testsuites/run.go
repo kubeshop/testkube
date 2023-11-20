@@ -144,8 +144,8 @@ func NewRunTestSuiteCmd() *cobra.Command {
 						ui.ExitOnError("watching test execution", err)
 
 						for resp := range watchResp {
-							if err != nil {
-								ui.Err(err)
+							if resp.Error != nil {
+								ui.Err(resp.Error)
 								return
 							}
 
