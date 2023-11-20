@@ -17,7 +17,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
 
-	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
+	proartifacts "github.com/kubeshop/testkube/pkg/pro/data/artifact"
 
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
@@ -25,10 +25,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 
-	cloudconfig "github.com/kubeshop/testkube/pkg/cloud/data/config"
+	proconfig "github.com/kubeshop/testkube/pkg/pro/data/config"
 
-	cloudresult "github.com/kubeshop/testkube/pkg/cloud/data/result"
-	cloudtestresult "github.com/kubeshop/testkube/pkg/cloud/data/testresult"
+	proresult "github.com/kubeshop/testkube/pkg/pro/data/result"
+	protestresult "github.com/kubeshop/testkube/pkg/pro/data/testresult"
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
@@ -36,7 +36,7 @@ import (
 	parser "github.com/kubeshop/testkube/internal/template"
 	"github.com/kubeshop/testkube/pkg/version"
 
-	"github.com/kubeshop/testkube/pkg/cloud"
+	pro "github.com/kubeshop/testkube/pkg/pro"
 	configrepository "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
@@ -127,6 +127,8 @@ func runMongoMigrations(ctx context.Context, db *mongo.Database, migrationsDir s
 
 func main() {
 	cfg, err := config.Get()
+	cfg.CleanLegacyVars()
+
 	ui.ExitOnError("error getting application config", err)
 	// Run services within an errgroup to propagate errors between services.
 	g, ctx := errgroup.WithContext(context.Background())
@@ -164,18 +166,18 @@ func main() {
 	configMapClient, err := configmap.NewClient(cfg.TestkubeNamespace)
 	ui.ExitOnError("Getting config map client", err)
 	// agent
-	var grpcClient cloud.TestKubeCloudAPIClient
+	var grpcClient pro.TestKubeCloudAPIClient
 	var grpcConn *grpc.ClientConn
 	mode := common.ModeStandalone
-	if cfg.TestkubeCloudAPIKey != "" {
+	if cfg.TestkubeProAPIKey != "" {
 		mode = common.ModeAgent
 	}
 	if mode == common.ModeAgent {
-		grpcConn, err = agent.NewGRPCConnection(ctx, cfg.TestkubeCloudTLSInsecure, cfg.TestkubeCloudURL, log.DefaultLogger)
+		grpcConn, err = agent.NewGRPCConnection(ctx, cfg.TestkubeProTLSInsecure, cfg.TestkubeProURL, log.DefaultLogger)
 		ui.ExitOnError("error creating gRPC connection", err)
 		defer grpcConn.Close()
 
-		grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
+		grpcClient = pro.NewTestKubeCloudAPIClient(grpcConn)
 	}
 
 	if cfg.EnableDebugServer {
@@ -222,11 +224,11 @@ func main() {
 	var artifactStorage domainstorage.ArtifactsStorage
 	var storageClient domainstorage.Client
 	if mode == common.ModeAgent {
-		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
-		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
-		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
+		resultsRepository = proresult.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		testResultsRepository = protestresult.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		configRepository = proconfig.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
-		artifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
+		artifactStorage = proartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 	} else {
 		mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
 		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)
@@ -479,10 +481,10 @@ func main() {
 		agentHandle, err := agent.NewAgent(
 			log.DefaultLogger,
 			api.Mux.Handler(),
-			cfg.TestkubeCloudAPIKey,
+			cfg.TestkubeProAPIKey,
 			grpcClient,
-			cfg.TestkubeCloudWorkerCount,
-			cfg.TestkubeCloudLogStreamWorkerCount,
+			cfg.TestkubeProWorkerCount,
+			cfg.TestkubeProLogStreamWorkerCount,
 			api.GetLogsStream,
 			clusterId,
 			cfg.TestkubeClusterName,
