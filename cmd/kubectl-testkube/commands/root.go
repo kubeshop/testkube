@@ -1,10 +1,15 @@
 package commands
 
 import (
+	"context"
 	"fmt"
-	"os"
-
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/cloud"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -160,13 +165,29 @@ func Execute() {
 		apiURI = os.Getenv("TESTKUBE_API_URI")
 	}
 
+	// Run services within an errgroup to propagate errors between services.
+	g, ctx := errgroup.WithContext(context.Background())
+
+	// Cancel the errgroup context on SIGINT and SIGTERM,
+	// which shuts everything down gracefully.
+	stopSignal := make(chan os.Signal, 1)
+	signal.Notify(stopSignal, syscall.SIGINT, syscall.SIGTERM)
+	g.Go(func() error {
+		select {
+		case <-ctx.Done():
+			return nil
+		case sig := <-stopSignal:
+			return errors.Errorf("received signal: %v", sig)
+		}
+	})
+
 	RootCmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "client used for connecting to Testkube API one of proxy|direct")
 	RootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "", defaultNamespace, "Kubernetes namespace, default value read from config if set")
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "show additional debug messages")
 	RootCmd.PersistentFlags().StringVarP(&apiURI, "api-uri", "a", apiURI, "api uri, default value read from config if set")
 	RootCmd.PersistentFlags().BoolVarP(&oauthEnabled, "oauth-enabled", "", cfg.OAuth2Data.Enabled, "enable oauth")
 
-	if err := RootCmd.Execute(); err != nil {
+	if err := RootCmd.ExecuteContext(ctx); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

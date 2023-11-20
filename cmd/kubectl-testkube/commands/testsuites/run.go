@@ -1,11 +1,13 @@
 package testsuites
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -13,8 +15,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
-
-const WatchInterval = 2 * time.Second
 
 func NewRunTestSuiteCmd() *cobra.Command {
 	var (
@@ -51,7 +51,6 @@ func NewRunTestSuiteCmd() *cobra.Command {
 		Short:   "Starts new test suite",
 		Long:    `Starts new test suite based on TestSuite Custom Resource name, returns results to console`,
 		Run: func(cmd *cobra.Command, args []string) {
-
 			startTime := time.Now()
 			client, namespace, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
@@ -131,6 +130,13 @@ func NewRunTestSuiteCmd() *cobra.Command {
 			default:
 				ui.Failf("Pass Test suite name or labels to run by labels ")
 			}
+
+			go func() {
+				<-cmd.Context().Done()
+				if errors.Is(cmd.Context().Err(), context.Canceled) {
+					os.Exit(0)
+				}
+			}()
 
 			var hasErrors bool
 			for _, execution := range executions {
