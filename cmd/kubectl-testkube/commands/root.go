@@ -3,12 +3,12 @@ package commands
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/cloud"
