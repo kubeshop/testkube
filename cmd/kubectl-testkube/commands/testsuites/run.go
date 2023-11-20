@@ -140,11 +140,17 @@ func NewRunTestSuiteCmd() *cobra.Command {
 
 				if execution.Id != "" {
 					if watchEnabled && len(args) > 0 {
-						executionCh, err := client.WatchTestSuiteExecution(execution.Id)
-						for execution := range executionCh {
-							ui.ExitOnError("watching test execution", err)
+						watchResp := client.WatchTestSuiteExecution(execution.Id)
+						ui.ExitOnError("watching test execution", err)
+
+						for resp := range watchResp {
+							if err != nil {
+								ui.Err(err)
+								return
+							}
+
 							if !silentMode {
-								printExecution(execution, startTime)
+								printExecution(resp.Execution, startTime)
 							}
 						}
 					}
