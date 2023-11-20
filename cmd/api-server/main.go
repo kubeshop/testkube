@@ -358,7 +358,7 @@ func main() {
 		ui.ExitOnError("Sync default executors", err)
 	}
 
-	jobTemplate, err := parser.ParseJobTemplate(cfg)
+	jobTemplate, slavePodTemplate, err := parser.ParseJobTemplates(cfg)
 	if err != nil {
 		ui.ExitOnError("Creating job templates", err)
 	}
@@ -368,6 +368,7 @@ func main() {
 		cfg.TestkubeNamespace,
 		images,
 		jobTemplate,
+		slavePodTemplate,
 		cfg.JobServiceAccountName,
 		metrics,
 		eventsEmitter,
@@ -457,7 +458,6 @@ func main() {
 		executor,
 		containerExecutor,
 		metrics,
-		jobTemplate,
 		sched,
 		slackLoader,
 		storageClient,

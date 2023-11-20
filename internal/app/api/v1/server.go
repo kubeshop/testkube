@@ -75,7 +75,6 @@ func NewTestkubeAPI(
 	executor client.Executor,
 	containerExecutor client.Executor,
 	metrics metrics.Metrics,
-	jobTemplate string,
 	scheduler *scheduler.Scheduler,
 	slackLoader *slack.SlackLoader,
 	storage storage.Client,
@@ -121,7 +120,6 @@ func NewTestkubeAPI(
 		ConfigMap:             configMap,
 		Executor:              executor,
 		ContainerExecutor:     containerExecutor,
-		jobTemplate:           jobTemplate,
 		scheduler:             scheduler,
 		slackLoader:           slackLoader,
 		Storage:               storage,
@@ -178,7 +176,6 @@ type TestkubeAPI struct {
 	WebsocketLoader       *ws.WebsocketLoader
 	Events                *event.Emitter
 	ConfigMap             config.Repository
-	jobTemplate           string
 	scheduler             *scheduler.Scheduler
 	Clientset             kubernetes.Interface
 	slackLoader           *slack.SlackLoader

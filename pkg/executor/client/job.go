@@ -76,6 +76,7 @@ func NewJobExecutor(
 	namespace string,
 	images executor.Images,
 	jobTemplate string,
+	slavePodTemplate string,
 	serviceAccountName string,
 	metrics ExecutionCounter,
 	emiter *event.Emitter,
@@ -97,6 +98,7 @@ func NewJobExecutor(
 		Namespace:            namespace,
 		images:               images,
 		jobTemplate:          jobTemplate,
+		slavePodTemplate:     slavePodTemplate,
 		serviceAccountName:   serviceAccountName,
 		metrics:              metrics,
 		Emitter:              emiter,
@@ -125,6 +127,7 @@ type JobExecutor struct {
 	Cmd                  string
 	images               executor.Images
 	jobTemplate          string
+	slavePodTemplate     string
 	serviceAccountName   string
 	metrics              ExecutionCounter
 	Emitter              *event.Emitter

@@ -12,18 +12,28 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
-func ParseJobTemplate(cfg *config.Config) (template string, err error) {
-	template, err = LoadConfigFromStringOrFile(
+func ParseJobTemplates(cfg *config.Config) (jobTemplate, slavePodTemplate string, err error) {
+	jobTemplate, err = LoadConfigFromStringOrFile(
 		cfg.TestkubeTemplateJob,
 		cfg.TestkubeConfigDir,
 		"job-template.yml",
 		"job template",
 	)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return template, nil
+	slavePodTemplate, err = LoadConfigFromStringOrFile(
+		cfg.TestkubeTemplateSlavePod,
+		cfg.TestkubeConfigDir,
+		"slave-pod-template.yml",
+		"slave pod template",
+	)
+	if err != nil {
+		return "", "", err
+	}
+
+	return jobTemplate, slavePodTemplate, nil
 }
 
 func IsBase64Encoded(base64Val string) bool {
