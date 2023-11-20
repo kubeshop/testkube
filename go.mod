@@ -30,7 +30,7 @@ require (
 	github.com/montanaflynn/stats v0.6.6
 	github.com/moogar0880/problems v0.1.1
 	github.com/nats-io/nats.go v1.22.1
-	github.com/olekukonko/tablewriter v0.0.5
+	github.com/olekukonko/tablewriter v0.0.6-0.20230925090304-df64c4bbad77
 	github.com/onsi/ginkgo/v2 v2.12.0
 	github.com/onsi/gomega v1.27.10
 	github.com/otiai10/copy v1.11.0
