@@ -15,24 +15,17 @@ If a test is already created, you can run it using the command `testkube run tes
 ```yaml
 stages:
   - setup
-  - test
 
 variables:
-  TESTKUBE_AGENT_TOKEN: tkcapi_0123456789abcdef0123456789abcd
+  TESTKUBE_API_KEY: tkcapi_0123456789abcdef0123456789abcd
   TESTKUBE_ORG_ID: tkcorg_0123456789abcdef
   TESTKUBE_ENV_ID: tkcenv_fedcba9876543210
 
 setup-testkube:
   stage: setup
+  image: kubeshop/testkube-cli
   script:
-    - echo "Installing Testkube..."
-    - curl -sSLf https://get.testkube.io | sh
-    - testkube cloud init --agent-token $TESTKUBE_AGENT_TOKEN --org-id $TESTKUBE_ORG_ID --env-id $TESTKUBE_ENV_ID 
-
-run-testkube-test:
-  stage: test
-  script:
-    - echo "Running Testkube test..."
+    - testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
     - testkube run test test-name -f
 ```
 
@@ -41,19 +34,12 @@ It is recommended that sensitive values should never be stored as plaintext in w
 ```yaml
 stages:
   - setup
-  - test
 
 setup-testkube:
   stage: setup
+  image: kubeshop/testkube-cli
   script:
-    - echo "Installing Testkube..."
-    - curl -sSLf https://get.testkube.io | sh
-    - testkube cloud init --agent-token $TESTKUBE_AGENT_TOKEN --org-id $TESTKUBE_ORG_ID --env-id $TESTKUBE_ENV_ID 
-
-run-testkube-test:
-  stage: test
-  script:
-    - echo "Running Testkube test..."
+    - testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
     - testkube run test test-name -f
  ```
 ## Testkube OSS
@@ -67,22 +53,15 @@ If a test is already created, you can run it using the command `testkube run tes
 ```yaml
 stages:
   - setup
-  - test
 
 variables:
   NAMESPACE: custom-testkube
 
 setup-testkube:
   stage: setup
+  image: kubeshop/testkube-cli
   script:
-    - echo "Installing Testkube..."
-    - curl -sSLf https://get.testkube.io | sh
-    - testkube cloud init --namespace $NAMESPACE
-
-run-testkube-test:
-  stage: test
-  script:
-    - echo "Running Testkube test..."
+    - testkube set context --kubeconfig --namespace $NAMESPACE
     - testkube run test test-name -f
 ```
 
@@ -112,7 +91,7 @@ setup-testkube:
     - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
     - echo "Installing Testkube..."
     - curl -sSLf https://get.testkube.io | sh
-    - testkube cloud init --agent-token $TESTKUBE_AGENT_TOKEN --org-id $TESTKUBE_ORG_ID --env-id $TESTKUBE_ENV_ID
+    - testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
     - echo "Running Testkube test..."
     - testkube run test test-name -f
 ```
@@ -138,7 +117,7 @@ deploy_to_gke:
     - gcloud container clusters get-credentials $GKE_CLUSTER_NAME --zone $GKE_ZONE
     - echo "Installing Testkube..."
     - curl -sSLf https://get.testkube.io | sh
-    - testkube cloud init --agent-token $TESTKUBE_AGENT_TOKEN --org-id $TESTKUBE_ORG_ID --env-id $TESTKUBE_ENV_ID
+    - testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
     - echo "Running Testkube test..."
     - testkube run test test-name -f
   after_script:
