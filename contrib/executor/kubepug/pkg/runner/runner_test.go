@@ -343,7 +343,7 @@ func TestRunGitFile_Integration(t *testing.T) {
 		result, err := runner.Run(ctx, *execution)
 
 		assert.NoError(t, err)
-		assert.Equal(t, testkube.ExecutionStatusPassed, result.Status)
+		assert.Equal(t, testkube.ExecutionStatusFailed, result.Status)
 		assert.Equal(t, 2, len(result.Steps))
 		assert.Equal(t, "passed", result.Steps[0].Status)
 		assert.Equal(t, "failed", result.Steps[1].Status)
@@ -398,6 +398,7 @@ func TestRunGitDirectory_Integration(t *testing.T) {
 }
 
 func TestRunWithSpecificK8sVersion_Integration(t *testing.T) {
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()
