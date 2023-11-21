@@ -183,13 +183,13 @@ spec:
 		assert.NoError(t, err)
 		assert.Equal(t, testkube.ExecutionStatusFailed, result.Status)
 		assert.Equal(t, 2, len(result.Steps))
-		assert.Equal(t, "failed", result.Steps[0].Status)
-		assert.Equal(t, "passed", result.Steps[1].Status)
+		assert.Equal(t, "passed", result.Steps[0].Status)
+		assert.Equal(t, "failed", result.Steps[1].Status)
 	})
 }
 
 func TestRunFileURI_Integration(t *testing.T) {
-	test.IntegrationTest(t)
+	// test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()
@@ -248,7 +248,7 @@ func TestRunFileURI_Integration(t *testing.T) {
 			"<runPath>",
 		}
 		uri := "https://gist.githubusercontent.com/vLia/" +
-			"91289de9cc8b6953be5f90b0a52fa8d3/raw/47e91d90374659646b46fd661f359b851b815cdf/example-k8s-pod-yaml-deprecated"
+			"91289de9cc8b6953be5f90b0a52fa8d3/raw/7d49329a16cb2d9d27371553658280a975ca2223/example-k8s-pod-yaml-deprecated"
 		execution.Content = &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeFileURI),
 			Uri:   uri,
@@ -330,7 +330,7 @@ func TestRunGitFile_Integration(t *testing.T) {
 		repo := &testkube.Repository{
 			Uri:    "https://github.com/kubeshop/testkube",
 			Branch: "lilla/fix/kubepug-test-failure",
-			Path:   "contrib/executor/kubepug/pkg/runner/test-files",
+			Path:   "contrib/executor/kubepug/pkg/runner/test-files/manifest-deprecated",
 		}
 		_, err = content.NewFetcher(tempDir).FetchGit(repo)
 		assert.NoError(t, err)
@@ -346,7 +346,7 @@ func TestRunGitFile_Integration(t *testing.T) {
 		assert.Equal(t, testkube.ExecutionStatusPassed, result.Status)
 		assert.Equal(t, 2, len(result.Steps))
 		assert.Equal(t, "passed", result.Steps[0].Status)
-		assert.Equal(t, "passed", result.Steps[1].Status)
+		assert.Equal(t, "failed", result.Steps[1].Status)
 	})
 }
 
@@ -377,7 +377,7 @@ func TestRunGitDirectory_Integration(t *testing.T) {
 		repo := &testkube.Repository{
 			Uri:    "https://github.com/kubeshop/testkube",
 			Branch: "lilla/fix/kubepug-test-failure",
-			Path:   "contrib/executor/kubepug/pkg/runner/test-files",
+			Path:   "contrib/executor/kubepug/pkg/runner/test-files/manifest-valid",
 		}
 		_, err = content.NewFetcher(tempDir).FetchGit(repo)
 		assert.NoError(t, err)
@@ -398,7 +398,6 @@ func TestRunGitDirectory_Integration(t *testing.T) {
 }
 
 func TestRunWithSpecificK8sVersion_Integration(t *testing.T) {
-	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()
@@ -496,15 +495,58 @@ spec:
 		t.Parallel()
 
 		data := `
+---
 apiVersion: v1
-conditions:
-- message: '{"health":"true"}'
-  status: "True"
-  type: Healthy
-kind: ComponentStatus
+kind: Service
 metadata:
-  creationTimestamp: null
-  name: etcd-1
+  name: testkube-dashboard
+  namespace: testkube
+spec:
+  ports:
+    - name: http
+      port: 8001
+      targetPort: 80
+  selector:
+    app: testkube-dashboard
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: testkube-dashboard
+  namespace: testkube
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: testkube-dashboard
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: testkube-dashboard
+    spec:
+      containers:
+        - name: petstore-backend
+          image: docker.io/kubeshop/testkube-dashboard:latest
+          ports:
+            - name: http
+              containerPort: 80
+          livenessProbe:
+            httpGet:
+            path: /index.html
+            port: 80
+            initialDelaySeconds: 15
+            timeoutSeconds: 2
+            periodSeconds: 5
+            failureThreshold: 1
+          readinessProbe:
+            httpGet:
+              path: /index.html
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            failureThreshold: 1
 `
 
 		tempDir, err := os.MkdirTemp("", "*")
@@ -525,7 +567,7 @@ metadata:
 			"--format=json",
 			"--input-file",
 			"<runPath>",
-			"--k8s-version=v1.18.0", // last version v1/ComponentStatus was valid
+			"--k8s-version=v1.7.0", // last version apps/v1beta2/Deployment was valid
 		}
 		execution.Content = testkube.NewStringTestContent("")
 
