@@ -11,7 +11,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: playwright-args # TODO: update before merge
+      branch: develop
       path: test/playwright/executor-tests/playwright-project
       workingDir: test/playwright/executor-tests/playwright-project
   executionRequest:
