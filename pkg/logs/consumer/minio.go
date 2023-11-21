@@ -49,14 +49,15 @@ func NewMinioConsumer(endpoint, accessKeyID, secretAccessKey, region, token, buc
 		return c
 	}
 
-	exists, err := minioClient.BucketExists(context.TODO(), c.bucket)
+	c.minioClient = minioClient
+	exists, err := c.minioClient.BucketExists(context.TODO(), c.bucket)
 	if err != nil {
 		c.Log.Errorw("error checking if bucket exists", "err", err)
 		return c
 	}
 
 	if !exists {
-		err = minioClient.MakeBucket(context.TODO(), s.bucket,
+		err = c.minioClient.MakeBucket(context.TODO(), c.bucket,
 			minio.MakeBucketOptions{Region: c.region})
 		if err != nil {
 			c.Log.Errorw("error creating bucket", "err", err)
@@ -68,6 +69,7 @@ func NewMinioConsumer(endpoint, accessKeyID, secretAccessKey, region, token, buc
 
 type MinioConsumer struct {
 	minioConnecter *minioconnecter.Connecter
+	minioClient    *minio.Client
 	bucket         string
 	region         string
 	Log            *zap.SugaredLogger
@@ -101,20 +103,16 @@ func (s *MinioConsumer) Notify(id string, e events.LogChunk) error {
 
 		buffInfo := s.buffInfos[id]
 		buffInfo.Buffer = bytes.NewBuffer(make([]byte, 0, defaultBufferSize))
-		minioClient, err := s.minioConnecter.GetClient()
-		if err != nil {
-			return err
-		}
 		name := id + "-" + strconv.Itoa(s.buffInfos[id].Part)
 		buffInfo.Part++
-		go s.putData(minioClient, name, writer)
+		go s.putData(name, writer)
 	}
 
 	return nil
 }
 
-func (s *MinioConsumer) putData(minioClient *minio.Client, name string, writer *bytes.Buffer) {
-	_, err := minioClient.PutObject(context.TODO(), s.bucket, name, writer, int64(writer.Len()), minio.PutObjectOptions{ContentType: "application/octet-stream"})
+func (s *MinioConsumer) putData(name string, writer *bytes.Buffer) {
+	_, err := s.minioClient.PutObject(context.TODO(), s.bucket, name, writer, int64(writer.Len()), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
 		s.Log.Errorw("error putting object", "err", err)
 	}
@@ -154,15 +152,11 @@ func (s *MinioConsumer) combineData(minioClient *minio.Client, id string, parts 
 
 func (s *MinioConsumer) Stop(id string) error {
 
-	minioClient, err := s.minioConnecter.GetClient()
-	if err != nil {
-		return err
-	}
 	name := id + "-" + strconv.Itoa(s.buffInfos[id].Part)
-	s.putData(minioClient, name, s.buffInfos[id].Buffer)
+	s.putData(name, s.buffInfos[id].Buffer)
 	parts := s.buffInfos[id].Part
 	delete(s.buffInfos, id)
-	return s.combineData(minioClient, id, parts)
+	return s.combineData(s.minioClient, id, parts)
 }
 
 func (s *MinioConsumer) Name() string {
