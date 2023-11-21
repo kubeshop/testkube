@@ -154,7 +154,7 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "aa", Value: "bb"},
 	}
 
-	assert.ElementsMatch(t, wantEnvs, spec.Spec.Template.Spec.Containers[0].Env)
+	assert.ElementsMatch(t, wantEnvs, spec.Spec.Template.Spec.Containers[1].Env)
 }
 
 func TestNewExecutorJobSpecWithoutInitImage(t *testing.T) {
@@ -214,11 +214,12 @@ func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 			},
 		},
 	)
+
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 
-	assert.Equal(t, repoPath+"/relative/path", spec.Spec.Template.Spec.Containers[0].WorkingDir)
+	assert.Equal(t, repoPath+"/relative/path", spec.Spec.Template.Spec.Containers[1].WorkingDir)
 }
 
 func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
@@ -260,7 +261,7 @@ func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 
-	assert.Equal(t, "/absolute/path", spec.Spec.Template.Spec.Containers[0].WorkingDir)
+	assert.Equal(t, "/absolute/path", spec.Spec.Template.Spec.Containers[1].WorkingDir)
 }
 
 func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
@@ -301,7 +302,7 @@ func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 
-	assert.Empty(t, spec.Spec.Template.Spec.Containers[0].WorkingDir)
+	assert.Empty(t, spec.Spec.Template.Spec.Containers[1].WorkingDir)
 }
 
 func logger() *zap.SugaredLogger {
