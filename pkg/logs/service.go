@@ -15,10 +15,12 @@ import (
 
 const (
 	StreamPrefix = "log"
+
 	StartSubject = "events.logs.start"
 	StopSubject  = "events.logs.stop"
-	StartQueue   = "logsstart"
-	StopQueue    = "logsstop"
+
+	StartQueue = "logsstart"
+	StopQueue  = "logsstop"
 )
 
 func NewLogsService(nats *nats.EncodedConn, js jetstream.JetStream) *LogsService {
