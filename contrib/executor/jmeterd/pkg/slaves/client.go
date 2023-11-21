@@ -41,6 +41,20 @@ type Client struct {
 	envVariables  map[string]testkube.Variable
 }
 
+type PodOptions struct {
+	Name                  string
+	Namespace             string
+	JobName               string
+	JobUID                string
+	ActiveDeadlineSeconds int
+	Registry              string
+	InitImage             string
+	Jsn                   string
+	CertificateSecret     string
+	EnvConfigMaps         []testkube.EnvReference
+	EnvSecrets            []testkube.EnvReference
+}
+
 // NewClient is a method to create new slave client
 func NewClient(execution testkube.Execution, slavesConfigs executor.SlavesConfigs, envParams envs.Params, slavesEnvVariables map[string]testkube.Variable) (*Client, error) {
 	clientSet, err := k8sclient.ConnectToK8s()
