@@ -11,10 +11,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor/content"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
 func TestRunString_Integration(t *testing.T) {
-	// test.IntegrationTest(t)
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()
@@ -188,7 +189,7 @@ spec:
 }
 
 func TestRunFileURI_Integration(t *testing.T) {
-	// test.IntegrationTest(t)
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()
@@ -267,7 +268,7 @@ func TestRunFileURI_Integration(t *testing.T) {
 }
 
 func TestRunGitFile_Integration(t *testing.T) {
-	// test.IntegrationTest(t)
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()
@@ -350,7 +351,7 @@ func TestRunGitFile_Integration(t *testing.T) {
 }
 
 func TestRunGitDirectory_Integration(t *testing.T) {
-	// test.IntegrationTest(t)
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()
@@ -397,7 +398,7 @@ func TestRunGitDirectory_Integration(t *testing.T) {
 }
 
 func TestRunWithSpecificK8sVersion_Integration(t *testing.T) {
-	// test.IntegrationTest(t)
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()
