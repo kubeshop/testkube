@@ -10,6 +10,7 @@ import (
 
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 func ParseJobTemplates(cfg *config.Config) (jobTemplate, slavePodTemplate string, err error) {
@@ -36,21 +37,11 @@ func ParseJobTemplates(cfg *config.Config) (jobTemplate, slavePodTemplate string
 	return jobTemplate, slavePodTemplate, nil
 }
 
-func IsBase64Encoded(base64Val string) bool {
-	decoded, err := base64.StdEncoding.DecodeString(base64Val)
-	if err != nil {
-		return false
-	}
-
-	encoded := base64.StdEncoding.EncodeToString(decoded)
-	return base64Val == encoded
-}
-
 func LoadConfigFromStringOrFile(inputString, configDir, filename, configType string) (raw string, err error) {
 	var data []byte
 
 	if inputString != "" {
-		if IsBase64Encoded(inputString) {
+		if utils.IsBase64Encoded(inputString) {
 			data, err = base64.StdEncoding.DecodeString(inputString)
 			if err != nil {
 				return "", errors.Wrapf(err, "error decoding %s from base64", configType)

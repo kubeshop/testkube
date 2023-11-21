@@ -226,6 +226,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution.RunningContext = options.Request.RunningContext
 	execution.TestExecutionName = options.Request.TestExecutionName
 	execution.DownloadArtifactExecutionIDs = options.Request.DownloadArtifactExecutionIDs
+	execution.SlavePodRequest = options.Request.SlavePodRequest
 
 	return execution
 }
@@ -348,6 +349,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 			request.ArtifactRequest.VolumeMountPath = filepath.Join(executor.VolumeDir, "artifacts")
 		}
 
+		request.SlavePodRequest = mergeSlavePodRequests(request.SlavePodRequest, test.ExecutionRequest.SlavePodRequest)
 		s.logger.Infow("checking for negative test change", "test", test.Name, "negativeTest", request.NegativeTest, "isNegativeTestChangedOnRun", request.IsNegativeTestChangedOnRun)
 		if !request.IsNegativeTestChangedOnRun {
 			s.logger.Infow("setting negative test from test definition", "test", test.Name, "negativeTest", test.ExecutionRequest.NegativeTest)
@@ -714,4 +716,37 @@ func mergeEnvReferences(envs1 []testkube.EnvReference, envs2 []testkube.EnvRefer
 	}
 
 	return res
+}
+
+func mergeSlavePodRequests(podBase *testkube.PodRequest, podAdjust *testkube.PodRequest) *testkube.PodRequest {
+	switch {
+	case podBase == nil && podAdjust == nil:
+		return nil
+	case podBase == nil && podAdjust != nil:
+		return podAdjust
+	case podBase != nil && podAdjust == nil:
+		return podBase
+	default:
+		var fields = []struct {
+			source      string
+			destination *string
+		}{
+			{
+				podAdjust.PodTemplate,
+				&podBase.PodTemplate,
+			},
+			{
+				podAdjust.PodTemplateReference,
+				&podBase.PodTemplateReference,
+			},
+		}
+
+		for _, field := range fields {
+			if *field.destination == "" && field.source != "" {
+				*field.destination = field.source
+			}
+		}
+	}
+
+	return podBase
 }

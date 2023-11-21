@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -174,6 +175,7 @@ type JobOptions struct {
 	ContextType           string
 	ContextData           string
 	APIURI                string
+	SlavePodTemplate      string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -298,8 +300,8 @@ func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) 
 // CreateJob creates new Kubernetes job based on execution and execute options
 func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
-	jobOptions, err := NewJobOptions(c.Log, c.templatesClient, c.images.Init, c.jobTemplate, c.serviceAccountName, c.registry,
-		c.clusterID, c.apiURI, execution, options)
+	jobOptions, err := NewJobOptions(c.Log, c.templatesClient, c.images.Init, c.jobTemplate, c.slavePodTemplate,
+		c.serviceAccountName, c.registry, c.clusterID, c.apiURI, execution, options)
 	if err != nil {
 		return err
 	}
@@ -779,6 +781,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTTYPE", Value: options.ContextType})
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTDATA", Value: options.ContextData})
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_APIURI", Value: options.APIURI})
+	envs = append(envs, corev1.EnvVar{Name: "RUNNER_SLAVEPODTEMPLATE", Value: base64.StdEncoding.EncodeToString([]byte(options.SlavePodTemplate))})
 
 	for i := range job.Spec.Template.Spec.InitContainers {
 		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, envs...)
@@ -795,8 +798,8 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	return &job, nil
 }
 
-func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, initImage, jobTemplate, serviceAccountName,
-	registry, clusterID, apiURI string, execution testkube.Execution, options ExecuteOptions) (jobOptions JobOptions, err error) {
+func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, initImage, jobTemplate, slavePodTemplate,
+	serviceAccountName, registry, clusterID, apiURI string, execution testkube.Execution, options ExecuteOptions) (jobOptions JobOptions, err error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
 		return jobOptions, err
@@ -857,6 +860,20 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 
 	jobOptions.WorkingDir = workingDir
 	jobOptions.APIURI = apiURI
+
+	jobOptions.SlavePodTemplate = slavePodTemplate
+	if options.Request.SlavePodRequest != nil && options.Request.SlavePodRequest.PodTemplateReference != "" {
+		template, err := templatesClient.Get(options.Request.SlavePodRequest.PodTemplateReference)
+		if err != nil {
+			return jobOptions, err
+		}
+
+		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.POD_TemplateType {
+			jobOptions.SlavePodTemplate = template.Spec.Body
+		} else {
+			log.Warnw("Not matched template type", "template", options.Request.SlavePodRequest.PodTemplateReference)
+		}
+	}
 
 	return
 }
