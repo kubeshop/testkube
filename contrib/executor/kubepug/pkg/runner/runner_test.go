@@ -189,7 +189,7 @@ spec:
 }
 
 func TestRunFileURI_Integration(t *testing.T) {
-	// test.IntegrationTest(t)
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	ctx := context.Background()
@@ -262,8 +262,8 @@ func TestRunFileURI_Integration(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, testkube.ExecutionStatusFailed, result.Status)
 		assert.Equal(t, 2, len(result.Steps))
-		assert.Equal(t, "failed", result.Steps[0].Status)
-		assert.Equal(t, "passed", result.Steps[1].Status)
+		assert.Equal(t, "passed", result.Steps[0].Status)
+		assert.Equal(t, "failed", result.Steps[1].Status)
 	})
 }
 
@@ -330,7 +330,7 @@ func TestRunGitFile_Integration(t *testing.T) {
 		repo := &testkube.Repository{
 			Uri:    "https://github.com/kubeshop/testkube",
 			Branch: "lilla/fix/kubepug-test-failure",
-			Path:   "contrib/executor/kubepug/pkg/runner/test-files/manifest-deprecated",
+			Path:   "contrib/executor/kubepug/pkg/runner/test-files/manifest-deprecated.yaml",
 		}
 		_, err = content.NewFetcher(tempDir).FetchGit(repo)
 		assert.NoError(t, err)
