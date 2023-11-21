@@ -746,6 +746,41 @@ func mergeSlavePodRequests(podBase *testkube.PodRequest, podAdjust *testkube.Pod
 				*field.destination = field.source
 			}
 		}
+
+		if podBase.Resources == nil && podAdjust.Resources != nil {
+			podBase.Resources = podAdjust.Resources
+		}
+
+		if podBase.Resources != nil && podAdjust.Resources != nil {
+			if podBase.Resources.Requests == nil && podAdjust.Resources.Requests != nil {
+				podBase.Resources.Requests = podAdjust.Resources.Requests
+			}
+
+			if podBase.Resources.Requests != nil && podAdjust.Resources.Requests != nil {
+				if podBase.Resources.Requests.Cpu == "" && podAdjust.Resources.Requests.Cpu != "" {
+					podBase.Resources.Requests.Cpu = podAdjust.Resources.Requests.Cpu
+				}
+
+				if podBase.Resources.Requests.Memory == "" && podAdjust.Resources.Requests.Memory != "" {
+					podBase.Resources.Requests.Memory = podAdjust.Resources.Requests.Memory
+				}
+			}
+
+			if podBase.Resources.Limits == nil && podAdjust.Resources.Limits != nil {
+				podBase.Resources.Limits = podAdjust.Resources.Limits
+			}
+
+			if podBase.Resources.Limits != nil && podAdjust.Resources.Limits != nil {
+				if podBase.Resources.Limits.Cpu == "" && podAdjust.Resources.Limits.Cpu != "" {
+					podBase.Resources.Limits.Cpu = podAdjust.Resources.Limits.Cpu
+				}
+
+				if podBase.Resources.Limits.Memory == "" && podAdjust.Resources.Limits.Memory != "" {
+					podBase.Resources.Limits.Memory = podAdjust.Resources.Limits.Memory
+				}
+			}
+		}
+
 	}
 
 	return podBase
