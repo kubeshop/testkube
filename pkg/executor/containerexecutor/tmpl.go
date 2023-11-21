@@ -125,8 +125,12 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_EXECUTIONNUMBER", Value: fmt.Sprint(options.ExecutionNumber)})
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTTYPE", Value: options.ContextType})
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTDATA", Value: options.ContextData})
-	envs = append(envs, corev1.EnvVar{Name: "NATS_URI", Value: options.NatsUri})
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_APIURI", Value: options.APIURI})
+
+	// For logs sidecar
+	envs = append(envs, corev1.EnvVar{Name: "ID", Value: options.Name})
+	envs = append(envs, corev1.EnvVar{Name: "NATS_URI", Value: options.NatsUri})
+	envs = append(envs, corev1.EnvVar{Name: "NAMESPACE", Value: options.Namespace})
 
 	for i := range job.Spec.Template.Spec.InitContainers {
 		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, envs...)
