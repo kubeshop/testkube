@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	kubepug "github.com/rikatz/kubepug/pkg/results"
+	kubepug "github.com/kubepug/kubepug/pkg/results"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -97,12 +97,11 @@ func TestResultParser(t *testing.T) {
 		}
 	  ]`
 
-	expectedDeprecatedAPIs := []kubepug.DeprecatedAPI{
+	expectedDeprecatedAPIs := []kubepug.ResultItem{
 		{
 			Description: "ComponentStatus holds the cluster validation info. Deprecated: This API is deprecated in v1.19+",
 			Kind:        "ComponentStatus",
 			Version:     "v1",
-			Deprecated:  true,
 			Items: []kubepug.Item{
 				{
 					Scope:      "GLOBAL",
@@ -124,13 +123,11 @@ func TestResultParser(t *testing.T) {
 		},
 	}
 
-	expectedDeletedAPIs := []kubepug.DeletedAPI{
+	expectedDeletedAPIs := []kubepug.ResultItem{
 		{
 			Group:   "extensions",
 			Kind:    "Ingress",
 			Version: "v1beta1",
-			Name:    "ingresses",
-			Deleted: true,
 			Items: []kubepug.Item{
 				{
 					Scope:      "OBJECT",
@@ -168,8 +165,6 @@ func TestResultParser(t *testing.T) {
 			Group:   "policy",
 			Kind:    "PodSecurityPolicy",
 			Version: "v1beta1",
-			Name:    "podsecuritypolicies",
-			Deleted: true,
 			Items: []kubepug.Item{
 				{
 					Scope:      "GLOBAL",

@@ -10,7 +10,7 @@ COPY kubepug /bin/runner
 USER root
 RUN mkdir -p $HOME/.kubepug  && \
     cd $HOME/.kubepug && \
-    wget https://github.com/rikatz/kubepug/releases/download/v1.1.3/kubepug_linux_amd64.tar.gz && \
+    wget https://github.com/kubepug/kubepug/releases/download/v1.7.1/kubepug_linux_amd64.tar.gz && \
     tar -zxvf kubepug_linux_amd64.tar.gz && \
     rm -f kubepug_linux_amd64.tar.gz
 ENV PATH="$HOME/.kubepug/:${PATH}"
