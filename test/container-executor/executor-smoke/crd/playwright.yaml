@@ -23,10 +23,8 @@ spec:
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
     activeDeadlineSeconds: 600
     preRunScript: "npm ci"
-    # args:
-    #   - "--output"
-    #   - "/data/artifacts"
-    #   - "test"
+    args:
+      - "tests/smoke2.spec.js"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
