@@ -251,7 +251,7 @@ func TestRunGitFile_Integration(t *testing.T) {
 		repo := &testkube.Repository{
 			Uri:    "https://github.com/kubeshop/testkube",
 			Branch: "lilla/fix/kubepug-test-failure",
-			Path:   "contrib/executor/kubepug/pkg/runner/test-files/manifest.yaml",
+			Path:   "contrib/executor/kubepug/pkg/runner/test-files/fake-manifest.yaml",
 		}
 		_, err = content.NewFetcher(tempDir).FetchGit(repo)
 		assert.NoError(t, err)
