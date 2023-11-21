@@ -1,6 +1,36 @@
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
+  name: container-executor-playwright-smoke-args
+  labels:
+    core-tests: executors
+spec:
+  type: container-executor-playwright-v1.32.3-args/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: playwright-args # TODO: update before merge
+      path: test/playwright/executor-tests/playwright-project
+      workingDir: test/playwright/executor-tests/playwright-project
+  executionRequest:
+    artifactRequest:
+      storageClassName: standard
+      volumeMountPath: /data/artifacts
+      dirs:
+        - ./
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 600
+    preRunScript: "npm ci"
+    # args:
+    #   - "--output"
+    #   - "/data/artifacts"
+    #   - "test"
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
   name: container-executor-playwright-smoke
   labels:
     core-tests: executors
