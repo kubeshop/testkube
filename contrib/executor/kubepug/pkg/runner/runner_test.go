@@ -332,9 +332,9 @@ func TestRunGitDirectory_Integration(t *testing.T) {
 		}
 
 		repo := &testkube.Repository{
-			Uri:    "https://github.com/kubeshop/testkube-dashboard",
-			Branch: "main",
-			Path:   "manifests",
+			Uri:    "https://github.com/kubeshop/testkube",
+			Branch: "lilla/fix/kubepug-test-failure",
+			Path:   "contrib/executor/kubepug/pkg/runner/test-files",
 		}
 		_, err = content.NewFetcher(tempDir).FetchGit(repo)
 		assert.NoError(t, err)
