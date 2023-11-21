@@ -11,10 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/executor"
-	"github.com/kubeshop/testkube/pkg/logs"
-	"github.com/kubeshop/testkube/pkg/logs/events"
-	"github.com/kubeshop/testkube/pkg/utils"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -23,6 +19,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	tcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+
+	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/logs"
+	"github.com/kubeshop/testkube/pkg/logs/events"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 var (
@@ -88,7 +89,7 @@ func (p *Proxy) Run(ctx context.Context) error {
 			p.log.Warn("logs proxy context cancelled, exiting")
 			return nil
 		default:
-			err := p.logsStream.Push(ctx, l.Encode())
+			err := p.logsStream.PushBytes(ctx, l.Encode())
 			if err != nil {
 				p.handleError(err, "error pushing logs to stream")
 				return err
@@ -239,7 +240,7 @@ func (p *Proxy) handleError(err error, title string) {
 			Content: err.Error(),
 		})
 		if err == nil {
-			p.logsStream.Push(context.Background(), b)
+			p.logsStream.PushBytes(context.Background(), b)
 		} else {
 			p.log.Errorw("error pushing error to stream", "error", err, "log", b)
 		}

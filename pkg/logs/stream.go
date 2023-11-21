@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"go.uber.org/zap"
+
+	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/logs/events"
 )
 
 type Stream interface {

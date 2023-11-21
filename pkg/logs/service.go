@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/logs/consumer"
-	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"go.uber.org/zap"
+
+	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/logs/consumer"
+	"github.com/kubeshop/testkube/pkg/logs/events"
 )
 
 const (

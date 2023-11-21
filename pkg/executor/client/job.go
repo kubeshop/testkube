@@ -300,7 +300,7 @@ func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Executio
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
 	jobOptions, err := NewJobOptions(
 		c.Log, c.templatesClient, c.images, c.jobTemplate, c.serviceAccountName,
-		c.registry, c.clusterID, execution, options,
+		c.registry, c.clusterID, c.apiURI, execution, options,
 	)
 	if err != nil {
 		return err
@@ -797,7 +797,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	return &job, nil
 }
 
-func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, images executor.Images, jobTemplate, serviceAccountName, registry, clusterID string,
+func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, images executor.Images, jobTemplate, serviceAccountName, registry, clusterID, apiURI string,
 	execution testkube.Execution, options ExecuteOptions) (jobOptions JobOptions, err error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
