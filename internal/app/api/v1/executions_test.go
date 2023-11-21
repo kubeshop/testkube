@@ -135,7 +135,7 @@ func (r MockExecutionResultsRepository) GetByNameAndTest(ctx context.Context, na
 	panic("not implemented")
 }
 
-func (r MockExecutionResultsRepository) GetLatestByTest(ctx context.Context, testName string) (testkube.Execution, error) {
+func (r MockExecutionResultsRepository) GetLatestByTest(ctx context.Context, testName string) (*testkube.Execution, error) {
 	panic("not implemented")
 }
 

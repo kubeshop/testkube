@@ -216,10 +216,10 @@ func (mr *MockRepositoryMockRecorder) GetLabels(arg0 interface{}) *gomock.Call {
 }
 
 // GetLatestByTest mocks base method.
-func (m *MockRepository) GetLatestByTest(arg0 context.Context, arg1 string) (testkube.Execution, error) {
+func (m *MockRepository) GetLatestByTest(arg0 context.Context, arg1 string) (*testkube.Execution, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetLatestByTest", arg0, arg1)
-	ret0, _ := ret[0].(testkube.Execution)
+	ret0, _ := ret[0].(*testkube.Execution)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

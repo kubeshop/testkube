@@ -238,7 +238,7 @@ func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 
 		return c.JSON(testkube.TestSuiteWithExecution{
 			TestSuite:       &testSuite,
-			LatestExecution: &execution,
+			LatestExecution: execution,
 		})
 	}
 }

@@ -7,17 +7,7 @@
             "command": [
                 "tracetest"
             ],
-            "args": [
-                "test",
-                "run",
-                "--server-url",
-                "<tracetestServer>",
-                "--definition",
-                "<filePath>",
-                "--wait-for-result",
-                "--output",
-                "pretty"
-            ],
+            "args": [],
             "types": [
                 "tracetest/test"
             ],

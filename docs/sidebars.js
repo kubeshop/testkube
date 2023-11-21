@@ -102,6 +102,8 @@ const sidebars = {
           },
           items: [
             "articles/github-actions",
+            "articles/gitlab",
+            "articles/jenkins",
             "articles/run-tests-with-github-actions",
             "articles/testkube-cli-docker",
             {
@@ -183,6 +185,14 @@ const sidebars = {
         "testkube-cloud/articles/AI-test-insights",
         "testkube-cloud/articles/status-pages",
         "testkube-cloud/articles/cached-results",
+      ],
+    },
+    {
+      type: "category",
+      label: "Testkube Enterprise",
+      items: [
+        "testkube-enterprise/articles/usage-guide",
+        "testkube-enterprise/articles/auth"
       ],
     },
     "articles/testkube-oss",
