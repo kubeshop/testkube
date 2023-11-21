@@ -265,3 +265,14 @@ func (e *TestSuiteExecution) CleanStepsOutput() *TestSuiteExecution {
 	}
 	return e
 }
+
+func (e *TestSuiteExecution) TruncateErrorMessages(length int) *TestSuiteExecution {
+	for _, bs := range e.ExecuteStepResults {
+		for _, sr := range bs.Execute {
+			if sr.Execution != nil && sr.Execution.ExecutionResult != nil && len(sr.Execution.ExecutionResult.ErrorMessage) > length {
+				sr.Execution.ExecutionResult.ErrorMessage = sr.Execution.ExecutionResult.ErrorMessage[0:length]
+			}
+		}
+	}
+	return e
+}

@@ -16,6 +16,10 @@ import (
 
 const WatchInterval = 2 * time.Second
 
+const (
+	maxErrorMessageLength = 100000
+)
+
 func NewRunTestSuiteCmd() *cobra.Command {
 	var (
 		name                     string
@@ -148,7 +152,8 @@ func NewRunTestSuiteCmd() *cobra.Command {
 							}
 
 							if !silentMode {
-								printExecution(resp.Execution, startTime)
+								execution.TruncateErrorMessages(maxErrorMessageLength)
+								printExecution(execution, startTime)
 							}
 						}
 					}
@@ -156,6 +161,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 					execution, err = client.GetTestSuiteExecution(execution.Id)
 				}
 
+				execution.TruncateErrorMessages(maxErrorMessageLength)
 				printExecution(execution, startTime)
 				ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 
