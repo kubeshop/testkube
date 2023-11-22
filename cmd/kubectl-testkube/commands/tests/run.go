@@ -68,6 +68,12 @@ func NewRunTestCmd() *cobra.Command {
 		artifactStorageBucket              string
 		artifactOmitFolderPerExecution     bool
 		silentMode                         bool
+		slavePodRequestsCpu                string
+		slavePodRequestsMemory             string
+		slavePodLimitsCpu                  string
+		slavePodLimitsMemory               string
+		slavePodTemplate                   string
+		slavePodTemplateReference          string
 	)
 
 	cmd := &cobra.Command{
@@ -186,6 +192,10 @@ func NewRunTestCmd() *cobra.Command {
 						WorkingDir: gitWorkingDir,
 					},
 				}
+			}
+
+			if slavePodRequestsCpu != "" {
+
 			}
 
 			switch {
@@ -342,6 +352,12 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&artifactStorageBucket, "artifact-storage-bucket", "", "artifact storage class name for container executor")
 	cmd.Flags().BoolVarP(&artifactOmitFolderPerExecution, "artifact-omit-folder-per-execution", "", false, "don't store artifacts in execution folder")
 	cmd.Flags().BoolVarP(&silentMode, "silent", "", false, "don't print intermediate test execution")
+	cmd.Flags().StringVar(&slavePodRequestsCpu, "slave-pod-requests-cpu", "", "slave pod resource requests cpu")
+	cmd.Flags().StringVar(&slavePodRequestsMemory, "slave-pod-requests-memory", "", "slave pod resource requests memory")
+	cmd.Flags().StringVar(&slavePodLimitsCpu, "slave-pod-limits-cpu", "", "slave pod resource limits cpu")
+	cmd.Flags().StringVar(&slavePodLimitsMemory, "slave-pod-limits-memory", "", "slave pod resource limits memory")
+	cmd.Flags().StringVar(&slavePodTemplate, "slave-pod-template", "", "slave pod template file path for extensions to slave pod template")
+	cmd.Flags().StringVar(&slavePodTemplateReference, "slave-pod-template-reference", "", "reference to slave pod template to use for the test")
 
 	return cmd
 }
