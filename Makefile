@@ -149,7 +149,7 @@ unit-tests:
 
 .PHONY: integration-tests
 integration-tests:
-	gotestsum --format short-verbose -- -tags=integration -cover ./...
+	INTEGRATION="true" gotestsum --format short-verbose -- -tags=integration -cover ./...
 
 test-e2e:
 	go test --tags=e2e -v ./test/e2e

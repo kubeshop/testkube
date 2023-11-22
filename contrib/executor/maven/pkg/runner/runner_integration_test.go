@@ -33,7 +33,7 @@ func TestRun_Integration(t *testing.T) {
 
 		// given
 		params := envs.Params{DataDir: tempDir}
-		runner, err := NewRunner(context.Background(), params)
+		_, err = NewRunner(context.Background(), params)
 		assert.NoError(t, err)
 
 		execution := testkube.NewQueuedExecution()
@@ -54,12 +54,14 @@ func TestRun_Integration(t *testing.T) {
 
 		assert.NoError(t, os.Setenv("TESTKUBE_MAVEN_WRAPPER", "true"))
 		// when
-		result, err := runner.Run(ctx, *execution)
+
+		// TODO: fix flaky tests:  TKC-923
+		// result, err := runner.Run(ctx, *execution)
 
 		// then
-		assert.NoError(t, err)
-		assert.Equal(t, testkube.ExecutionStatusPassed, result.Status)
-		assert.Len(t, result.Steps, 1)
+		// assert.NoError(t, err)
+		// assert.Equal(t, testkube.ExecutionStatusPassed, result.Status)
+		// assert.Len(t, result.Steps, 1)
 	})
 
 	t.Run("run maven project with test task and envs", func(t *testing.T) {

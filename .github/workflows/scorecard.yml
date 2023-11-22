@@ -12,7 +12,7 @@ on:
   schedule:
     - cron: '35 11 * * 1'
   push:
-    branches: [ "develop", "main" ]
+    branches: [ "develop" ]
 
 # Declare default permissions as read only.
 permissions: read-all
