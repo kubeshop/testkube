@@ -85,12 +85,12 @@ jobs:
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
           DOCKER_IMAGE_TAG: ${{ steps.github_sha.outputs.sha_short }}
       
-#     - name: Push Docker images
-#       if: matrix.name == 'linux'
-#       run: |
-#         docker push kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-arm64v8
-#         docker push kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-amd64
-#         docker push kubeshop/testkube-cli:latest
+      - name: Push Docker images
+        if: matrix.name == 'linux'
+        run: |
+          docker push kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-arm64v8
+          docker push kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-amd64
+          docker push kubeshop/testkube-cli:latest
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@master
