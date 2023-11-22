@@ -2,7 +2,7 @@
 
 # Welcome to Testkube kubepug Executor
 
-Testkube kubepug Executor is a [kubepug](https://github.com/rikatz/kubepug) executor running directly in your Kubernetes cluster via [Testkube](https://testkube.io).
+Testkube kubepug Executor is a [kubepug](https://github.com/kubepug/kubepug) executor running directly in your Kubernetes cluster via [Testkube](https://testkube.io).
 Its main function is to make sure your Kubernetes clusters are up to date, and using the latest APIs.
 
 This Executor is automatically installed together with Testkube, there is no need to build it or register it to your local environment.
