@@ -112,20 +112,43 @@ var RunnerEnvVars = []corev1.EnvVar{
 }
 
 type SlavesConfigs struct {
-	Images SlaveImages `json:"images"`
+	Images                SlaveImages             `json:"images"`
+	ServiceAccountName    string                  `json:"serviceAccountName"`
+	CertificateSecret     string                  `json:"certificateSecret"`
+	ImagePullSecrets      []string                `json:"imagePullSecrets"`
+	EnvConfigMaps         []testkube.EnvReference `json:"envConfigMaps"`
+	EnvSecrets            []testkube.EnvReference `json:"envSecrets"`
+	ActiveDeadlineSeconds int                     `json:"activeDeadlineSeconds"`
 }
 
 type SlaveImages struct {
-	Init  string `json:"init"`
-	Slave string `json:"slave"`
+	Init     string `json:"init"`
+	Slave    string `json:"slave"`
+	Registry string `json:"registry"`
 }
 
-func GetSlavesConfigs(initImage string, slavesMeta executorv1.SlavesMeta) SlavesConfigs {
+func GetSlavesConfigs(initImage string,
+	slavesMeta executorv1.SlavesMeta,
+	registry string,
+	serviceAccountName string,
+	certificateSecret string,
+	imagePullSecrets []string,
+	envConfigMaps []testkube.EnvReference,
+	envSecrets []testkube.EnvReference,
+	activeDeadlineSeconds int,
+) SlavesConfigs {
 	return SlavesConfigs{
 		Images: SlaveImages{
-			Init:  initImage,
-			Slave: slavesMeta.Image,
+			Init:     initImage,
+			Slave:    slavesMeta.Image,
+			Registry: registry,
 		},
+		ServiceAccountName:    serviceAccountName,
+		CertificateSecret:     certificateSecret,
+		ImagePullSecrets:      imagePullSecrets,
+		EnvConfigMaps:         envConfigMaps,
+		EnvSecrets:            envSecrets,
+		ActiveDeadlineSeconds: activeDeadlineSeconds,
 	}
 }
 

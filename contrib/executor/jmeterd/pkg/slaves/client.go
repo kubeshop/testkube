@@ -49,10 +49,15 @@ type PodOptions struct {
 	ActiveDeadlineSeconds int
 	Registry              string
 	InitImage             string
+	Image                 string
 	Jsn                   string
 	CertificateSecret     string
+	ServiceAccountName    string
 	EnvConfigMaps         []testkube.EnvReference
 	EnvSecrets            []testkube.EnvReference
+	Ports                 []v1.ContainerPort
+	Resources             *testkube.PodResourcesRequest
+	ImagePullSecrets      []string
 }
 
 // NewClient is a method to create new slave client
@@ -167,8 +172,9 @@ func (c *Client) createSlavePodObject(runnerExecutionStr []byte, podName string,
 		return nil, errors.Errorf("creating pod spec from options.JobTemplate error: %v", err)
 	}
 
+	podOptions := c.newPodOptions(runnerExecutionStr, podName, executorJob)
 	var buffer bytes.Buffer
-	if err = tmpl.ExecuteTemplate(&buffer, "pod", c.execution); err != nil {
+	if err = tmpl.ExecuteTemplate(&buffer, "pod", podOptions); err != nil {
 		return nil, errors.Errorf("executing pod spec template: %v", err)
 	}
 
@@ -181,7 +187,7 @@ func (c *Client) createSlavePodObject(runnerExecutionStr []byte, podName string,
 		}
 
 		var bufferExt bytes.Buffer
-		if err = tmplExt.ExecuteTemplate(&bufferExt, "jodExt", c.execution); err != nil {
+		if err = tmplExt.ExecuteTemplate(&bufferExt, "jodExt", podOptions); err != nil {
 			return nil, errors.Errorf("executing pod extensions spec template: %v", err)
 		}
 
@@ -209,25 +215,13 @@ func (c *Client) createSlavePodObject(runnerExecutionStr []byte, podName string,
 		pod.Labels[key] = value
 	}
 
-	//			Name:       executorJob.Name,
-	//			UID:        executorJob.UID,
+	for i := range pod.Spec.InitContainers {
+		pod.Spec.InitContainers[i].Env = append(pod.Spec.InitContainers[i].Env, getSlaveRunnerEnv(c.envParams, c.execution)...)
+	}
 
-	//			Image:           c.slavesConfigs.Images.Init,
-	//			Env:             getSlaveRunnerEnv(c.envParams, c.execution),
-
-	/*	mainContainerPorts := []v1.ContainerPort{
-			{
-				ContainerPort: serverPort,
-				Name:          "server-port",
-			}, {
-				ContainerPort: localPort,
-				Name:          "local-port",
-			},
-		}
-	*/
-
-	//			Image:           c.slavesConfigs.Images.Slave,
-	//			Env:             getSlaveConfigurationEnv(c.envVariables),
+	for i := range pod.Spec.Containers {
+		pod.Spec.Containers[i].Env = append(pod.Spec.Containers[i].Env, getSlaveConfigurationEnv(c.envVariables)...)
+	}
 
 	return &pod, nil
 }
@@ -246,3 +240,37 @@ func (c *Client) DeleteSlaves(ctx context.Context, meta SlaveMeta) error {
 }
 
 var _ Interface = (*Client)(nil)
+
+func (c *Client) newPodOptions(runnerExecutionStr []byte, podName string, executorJob *batchv1.Job) *PodOptions {
+	var resources *testkube.PodResourcesRequest
+	if c.execution.SlavePodRequest != nil {
+		resources = c.execution.SlavePodRequest.Resources
+	}
+
+	return &PodOptions{
+		Name:                  podName,
+		Namespace:             c.namespace,
+		JobName:               executorJob.Name,
+		JobUID:                string(executorJob.UID),
+		ActiveDeadlineSeconds: c.slavesConfigs.ActiveDeadlineSeconds,
+		Registry:              c.slavesConfigs.Images.Registry,
+		InitImage:             c.slavesConfigs.Images.Init,
+		Image:                 c.slavesConfigs.Images.Slave,
+		Jsn:                   string(runnerExecutionStr),
+		CertificateSecret:     c.slavesConfigs.CertificateSecret,
+		ServiceAccountName:    c.slavesConfigs.ServiceAccountName,
+		EnvConfigMaps:         c.slavesConfigs.EnvConfigMaps,
+		EnvSecrets:            c.slavesConfigs.EnvSecrets,
+		Ports: []v1.ContainerPort{
+			{
+				ContainerPort: serverPort,
+				Name:          "server-port",
+			}, {
+				ContainerPort: localPort,
+				Name:          "local-port",
+			},
+		},
+		Resources:        resources,
+		ImagePullSecrets: c.slavesConfigs.ImagePullSecrets,
+	}
+}
