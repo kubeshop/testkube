@@ -17,7 +17,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
 
-	proartifacts "github.com/kubeshop/testkube/pkg/pro/data/artifact"
+	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
@@ -25,10 +25,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 
-	proconfig "github.com/kubeshop/testkube/pkg/pro/data/config"
+	cloudconfig "github.com/kubeshop/testkube/pkg/cloud/data/config"
 
-	proresult "github.com/kubeshop/testkube/pkg/pro/data/result"
-	protestresult "github.com/kubeshop/testkube/pkg/pro/data/testresult"
+	cloudresult "github.com/kubeshop/testkube/pkg/cloud/data/result"
+	cloudtestresult "github.com/kubeshop/testkube/pkg/cloud/data/testresult"
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
@@ -36,7 +36,7 @@ import (
 	parser "github.com/kubeshop/testkube/internal/template"
 	"github.com/kubeshop/testkube/pkg/version"
 
-	pro "github.com/kubeshop/testkube/pkg/pro"
+	"github.com/kubeshop/testkube/pkg/cloud"
 	configrepository "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
@@ -166,7 +166,7 @@ func main() {
 	configMapClient, err := configmap.NewClient(cfg.TestkubeNamespace)
 	ui.ExitOnError("Getting config map client", err)
 	// agent
-	var grpcClient pro.TestKubeCloudAPIClient
+	var grpcClient cloud.TestKubeCloudAPIClient
 	var grpcConn *grpc.ClientConn
 	mode := common.ModeStandalone
 	if cfg.TestkubeProAPIKey != "" {
@@ -177,7 +177,7 @@ func main() {
 		ui.ExitOnError("error creating gRPC connection", err)
 		defer grpcConn.Close()
 
-		grpcClient = pro.NewTestKubeCloudAPIClient(grpcConn)
+		grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
 	}
 
 	if cfg.EnableDebugServer {
@@ -224,11 +224,11 @@ func main() {
 	var artifactStorage domainstorage.ArtifactsStorage
 	var storageClient domainstorage.Client
 	if mode == common.ModeAgent {
-		resultsRepository = proresult.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-		testResultsRepository = protestresult.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-		configRepository = proconfig.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
-		artifactStorage = proartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		artifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 	} else {
 		mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
 		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)

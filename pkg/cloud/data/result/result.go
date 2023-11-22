@@ -8,13 +8,13 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
 
-	"github.com/kubeshop/testkube/pkg/pro/data/executor"
+	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/repository/result"
 
-	cloud "github.com/kubeshop/testkube/pkg/pro"
+	"github.com/kubeshop/testkube/pkg/cloud"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
