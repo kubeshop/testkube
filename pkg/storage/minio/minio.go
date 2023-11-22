@@ -3,6 +3,7 @@ package minio
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"hash/fnv"
 	"io"
@@ -80,7 +81,9 @@ func (c *Client) Connect() error {
 		c.Log.Errorw("error creating minio transport", "error", err)
 		return err
 	}
-	transport.TLSClientConfig.InsecureSkipVerify = c.skipVerify
+	tlsConfig := &tls.Config{}
+	tlsConfig.InsecureSkipVerify = c.skipVerify
+	transport.TLSClientConfig = tlsConfig
 	opts := &minio.Options{
 		Creds:     creds,
 		Secure:    c.ssl,
