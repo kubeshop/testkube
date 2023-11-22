@@ -1,0 +1,60 @@
+[
+  {
+    "createIndexes": "testresults",
+    "indexes": [
+      {
+        "key": {"id": "hashed"},
+        "name": "id_hashed"
+      },
+      {
+        "key": {"testsuite.name": "hashed"},
+        "name": "testsuite.name_hashed"
+      },
+      {
+        "key": {"name": "hashed"},
+        "name": "name_hashed"
+      },
+      {
+        "key": {"status": "hashed"},
+        "name": "status_hashed"
+      },
+      {
+        "key": {"starttime": -1},
+        "name": "starttime_-1"
+      },
+      {
+        "key": {"endtime": -1},
+        "name": "endtime_-1"
+      }
+    ]
+  },
+  {
+    "createIndexes": "results",
+    "indexes": [
+      {
+        "key": {"id": "hashed"},
+        "name": "id_hashed"
+      },
+      {
+        "key": {"testname": "hashed"},
+        "name": "testname_hashed"
+      },
+      {
+        "key": {"name": "hashed"},
+        "name": "name_hashed"
+      },
+      {
+        "key": {"executionresult.status": "hashed"},
+        "name": "executionresult.status_hashed"
+      },
+      {
+        "key": {"starttime": -1},
+        "name": "starttime_-1"
+      },
+      {
+        "key": {"endtime": -1},
+        "name": "endtime_-1"
+      }
+    ]
+  }
+]

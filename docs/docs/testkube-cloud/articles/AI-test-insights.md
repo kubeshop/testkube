@@ -1,5 +1,15 @@
 # AI Test Insights
 
+export const ProBadge = () => {
+  return (
+    <span>
+      <p class="pro-badge">PRO FEATURE</p>
+    </span>
+  );
+}
+
+<ProBadge />
+
 :::note
 The AI Insights feature on Testkube utilizes artificial intelligence to help you debug your failed tests faster. It collects relevant bits of the failed logs and sends them to OpenAI which processes them and gives an assessment on why the test failed.
 :::

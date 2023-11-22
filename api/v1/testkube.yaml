@@ -5104,6 +5104,9 @@ components:
               - junit-report
         meta:
           $ref: "#/components/schemas/ExecutorMeta"
+        useDataDirAsWorkingDir: 
+          type: boolean
+          description: use data dir as working dir for executor
 
     ExecutorDetails:
       description: Executor details with Executor data and additional information like list of executions

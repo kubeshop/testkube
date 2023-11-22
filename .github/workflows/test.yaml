@@ -113,10 +113,10 @@ jobs:
       - name: Install Artillery@2.0
         run: npm install -g artillery@2.0.0-31
 
-      - name: Install kubepug@1.5
-        uses: cpanato/kubepug-installer@v1.1.0
+      - name: Install kubepug@1.7.1
+        uses: cpanato/kubepug-installer@v1.2.0
         with:
-          kubepug-release: '1.5.0'
+          kubepug-release: '1.7.1'
 
       - name: Install k6
         run: |
@@ -145,6 +145,9 @@ jobs:
 
       - name: Set up Playwright
         run: pnpx playwright install --with-deps
+
+      - name: Set up Tracetest
+        run: curl -L https://raw.githubusercontent.com/kubeshop/tracetest/main/install-cli.sh | bash
 
       - name: Set up git
         run: sudo apt-get install -y git

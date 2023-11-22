@@ -42,8 +42,8 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name strin
 	err = r.SequencesColl.FindOne(ctx, bson.M{"name": name}).Decode(&execNmbr)
 	if err != nil {
 		var execution testkube.Execution
-		execution, err = r.GetLatestByTest(ctx, name, "number")
-		if err != nil {
+		number, _ = r.GetLatestTestNumber(ctx, name)
+		if number == 0 {
 			execNmbr.Number = 1
 		} else {
 			execNmbr.Number = int(execution.Number) + 1

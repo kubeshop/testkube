@@ -125,24 +125,22 @@ const redirects = [
       "/getting-started",
       "/integrations",
       "/installing",
+      "/articles/getting-started-overview",
+      "/getting-started/step2-installing-cluster-components",
+      "/articles/step2-installing-cluster-components",
+      "/getting-started/step3-creating-first-test",
+      "/articles/step3-creating-first-test"
     ],
-    to: "/articles/getting-started-overview",
+    to: "/articles/getting-started",
   },
   {
     from: [
-      "/getting-started/step1-installing-cli",
       "/cli/installation",
       "/getting-started/installing-cli",
+      "/articles/step1-installing-cli",
+      "/getting-started/step1-installing-cli",
     ],
-    to: "/articles/step1-installing-cli",
-  },
-  {
-    from: "/getting-started/step2-installing-cluster-components",
-    to: "/articles/step2-installing-cluster-components",
-  },
-  {
-    from: "/getting-started/step3-creating-first-test",
-    to: "/articles/step3-creating-first-test",
+    to: "/articles/install-cli",
   },
   {
     from: "/concepts/tests/tests-running",

@@ -508,6 +508,13 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		labels[key] = value
 	}
 
+	contextType := ""
+	contextData := ""
+	if options.Request.RunningContext != nil {
+		contextType = options.Request.RunningContext.Type_
+		contextData = options.Request.RunningContext.Context
+	}
+
 	return JobOptions{
 		Image:                 options.ExecutorSpec.Image,
 		ImageOverride:         options.ImageOverride,
@@ -527,6 +534,9 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		EnvConfigMaps:         options.Request.EnvConfigMaps,
 		EnvSecrets:            options.Request.EnvSecrets,
 		Labels:                labels,
+		ExecutionNumber:       options.Request.Number,
+		ContextType:           contextType,
+		ContextData:           contextData,
 	}
 }
 

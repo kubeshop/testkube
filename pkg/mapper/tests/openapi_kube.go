@@ -99,14 +99,14 @@ func MapContentToSpecContent(content *testkube.TestContent) (specContent *testsv
 			AuthType:          testsv3.GitAuthType(content.Repository.AuthType),
 		}
 
-		if content.Repository.UsernameSecret != nil {
+		if content.Repository.UsernameSecret != nil && !content.Repository.UsernameSecret.IsEmpty() {
 			repository.UsernameSecret = &testsv3.SecretRef{
 				Name: content.Repository.UsernameSecret.Name,
 				Key:  content.Repository.UsernameSecret.Key,
 			}
 		}
 
-		if content.Repository.TokenSecret != nil {
+		if content.Repository.TokenSecret != nil && !content.Repository.TokenSecret.IsEmpty() {
 			repository.TokenSecret = &testsv3.SecretRef{
 				Name: content.Repository.TokenSecret.Name,
 				Key:  content.Repository.TokenSecret.Key,

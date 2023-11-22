@@ -117,6 +117,7 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.clusterName               | yes         | ""                                   |
 | testkube-api.storage.compressArtifacts | yes         | true                                 |
 | testkube-api.enableSecretsEndpoint     | yes         | false                                |
+| testkube-api.disableMongoMigrations    | yes         | false                                |
 
 >For more configuration parameters of a `MongoDB` chart please visit: 
 <https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>

@@ -430,6 +430,16 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		request.Args = append(executorCR.Spec.Args, request.Args...)
 	}
 
+	if executorCR.Spec.UseDataDirAsWorkingDir {
+		if testCR.Spec.Content.Repository != nil && testCR.Spec.Content.Repository.WorkingDir == "" {
+			if executorCR.Spec.ExecutorType == containerType {
+				testCR.Spec.Content.Repository.WorkingDir = filepath.Join(executor.VolumeDir, "repo")
+			} else {
+				testCR.Spec.Content.Repository.WorkingDir = "/"
+			}
+		}
+	}
+
 	return client.ExecuteOptions{
 		TestName:             id,
 		Namespace:            namespace,

@@ -188,6 +188,15 @@ Kubernetes API and gets notified by Kubernetes on each event on the watched reso
 
 Testkube exposes CRUD operations on test triggers in the REST API. Check out the [Open API](../openapi.md) docs for more info.
 
+## Injected Environment Variables
+
+The following environment variables are automatically injected into each triggered test pod:
+
+WATCHER_EVENT_RESOURCE:   resource type
+WATCHER_EVENT_NAME:       resource name
+WATCHER_EVENT_NAMESPACE:  resource namespace
+WATCHER_EVENT_EVENT_TYPE: event type
+
 ## Video Tutorial 
 
 <iframe width="100%" height="350px" src="https://www.youtube.com/embed/t4V6E9rQ5W4" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>

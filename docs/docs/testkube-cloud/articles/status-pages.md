@@ -1,5 +1,15 @@
 # Status Pages
 
+export const ProBadge = () => {
+  return (
+    <span>
+      <p class="pro-badge">PRO FEATURE</p>
+    </span>
+  );
+}
+
+<ProBadge />
+
 The Testkube status pages are designed to help both technical and non-technical users understand and utilize the results of tests run on Testkube effectively. Whether you're a developer, project manager, or simply a stakeholder interested in monitoring software project status via running tests, Testkube has you covered.
 
 ## Overview
@@ -212,4 +222,4 @@ Custom Slugs: If applicable, configure custom slugs for your status pages to mat
 
 These best practices will help you maximize the effectiveness of Testkube Status Pages, ensuring that it serves as a valuable communication tool for both technical and non-technical stakeholders. By following these guidelines, you can maintain transparency, respond efficiently to incidents, and provide a reliable source of information about the status of your software projects.
 
-If you have any questions or need assistance, our team is ready to assist you in our Discord channel.
+If you have any questions or need assistance, our team is ready to assist you in our [Discord channel](https://discord.com/invite/6zupCZFQbe).

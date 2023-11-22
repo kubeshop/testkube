@@ -82,7 +82,7 @@ func TestService_matchConditionsRetry(t *testing.T) {
 	s := &Service{
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
-		triggerExecutor: func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -158,7 +158,7 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 	s := &Service{
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
-		triggerExecutor: func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -230,7 +230,7 @@ func TestService_matchProbesMultiple(t *testing.T) {
 	s := &Service{
 		defaultProbesCheckBackoff: defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout: defaultProbesCheckTimeout,
-		triggerExecutor: func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -296,7 +296,7 @@ func TestService_matchProbesTimeout(t *testing.T) {
 	s := &Service{
 		defaultProbesCheckBackoff: defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout: defaultProbesCheckTimeout,
-		triggerExecutor: func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -401,7 +401,7 @@ func TestService_match(t *testing.T) {
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout:     defaultProbesCheckTimeout,
-		triggerExecutor: func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -451,7 +451,7 @@ func TestService_matchRegex(t *testing.T) {
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
 		defaultProbesCheckTimeout:     defaultProbesCheckTimeout,
-		triggerExecutor: func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
+		triggerExecutor: func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
 			assert.Equal(t, "testkube", trigger.Namespace)
 			assert.Equal(t, "test-trigger-1", trigger.Name)
 			return nil
@@ -492,7 +492,7 @@ func TestService_noMatch(t *testing.T) {
 	}
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
 	triggerStatus1 := &triggerStatus{testTrigger: testTrigger1}
-	testExecutorF := func(ctx context.Context, trigger *testtriggersv1.TestTrigger) error {
+	testExecutorF := func(ctx context.Context, e *watcherEvent, trigger *testtriggersv1.TestTrigger) error {
 		assert.Fail(t, "should not match event")
 		return nil
 	}

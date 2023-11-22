@@ -30,6 +30,7 @@ testkube update executor [flags]
       --tooltip stringToString           tooltip key value pair: --tooltip key1=value1 (default [])
   -t, --types stringArray                test types handled by executor
   -u, --uri string                       if resource need to be loaded from URI
+      --use-data-dir-as-working-dir      use data dir as working dir for all tests
 ```
 
 ### Options inherited from parent commands

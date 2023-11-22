@@ -41,4 +41,6 @@ type ExecutorUpdateRequest struct {
 	// Available executor features
 	Features *[]string            `json:"features,omitempty"`
 	Meta     **ExecutorMetaUpdate `json:"meta,omitempty"`
+	// use data dir as working dir for executor
+	UseDataDirAsWorkingDir *bool `json:"useDataDirAsWorkingDir,omitempty"`
 }

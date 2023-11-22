@@ -68,6 +68,7 @@ type Config struct {
 	DebugListenAddr                   string        `envconfig:"DEBUG_LISTEN_ADDR" default:"0.0.0.0:1337"`
 	EnableDebugServer                 bool          `envconfig:"ENABLE_DEBUG_SERVER" default:"false"`
 	EnableSecretsEndpoint             bool          `envconfig:"ENABLE_SECRETS_ENDPOINT" default:"false"`
+	DisableMongoMigrations            bool          `envconfig:"DISABLE_MONGO_MIGRATIONS" default:"false"`
 }
 
 func Get() (*Config, error) {

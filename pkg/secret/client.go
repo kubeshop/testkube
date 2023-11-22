@@ -85,7 +85,7 @@ func (c *Client) List(all bool) (map[string]map[string]string, error) {
 	secretsClient := c.ClientSet.CoreV1().Secrets(c.Namespace)
 	ctx := context.Background()
 
-	selector := "visibility=testkube"
+	selector := "createdBy=testkube"
 	if !all {
 		selector = fmt.Sprintf("testkube=%s", testkubeTestSecretLabel)
 	}
@@ -185,7 +185,7 @@ func NewSpec(id, namespace string, labels, stringData map[string]string) *v1.Sec
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      id,
 			Namespace: namespace,
-			Labels:    map[string]string{"testkube": testkubeTestSecretLabel, "visibility": "testkube"},
+			Labels:    map[string]string{"testkube": testkubeTestSecretLabel, "createdBy": "testkube"},
 		},
 		Type:       v1.SecretTypeOpaque,
 		StringData: stringData,

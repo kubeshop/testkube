@@ -364,12 +364,12 @@ func (r FakeResultRepository) GetByNameAndTest(ctx context.Context, name, testNa
 	panic("implement me")
 }
 
-func (r FakeResultRepository) GetLatestByTest(ctx context.Context, testName, sortField string) (testkube.Execution, error) {
+func (r FakeResultRepository) GetLatestByTest(ctx context.Context, testName string) (*testkube.Execution, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (r FakeResultRepository) GetLatestByTests(ctx context.Context, testNames []string, sortField string) (executions []testkube.Execution, err error) {
+func (r FakeResultRepository) GetLatestByTests(ctx context.Context, testNames []string) (executions []testkube.Execution, err error) {
 	//TODO implement me
 	panic("implement me")
 }

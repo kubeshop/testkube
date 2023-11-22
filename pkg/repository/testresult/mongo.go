@@ -21,6 +21,7 @@ const CollectionName = "testresults"
 
 func NewMongoRepository(db *mongo.Database, allowDiskUse bool, opts ...MongoRepositoryOpt) *MongoRepository {
 	r := &MongoRepository{
+		db:           db,
 		Coll:         db.Collection(CollectionName),
 		allowDiskUse: allowDiskUse,
 	}
@@ -33,6 +34,7 @@ func NewMongoRepository(db *mongo.Database, allowDiskUse bool, opts ...MongoRepo
 }
 
 type MongoRepository struct {
+	db           *mongo.Database
 	Coll         *mongo.Collection
 	allowDiskUse bool
 }
@@ -55,69 +57,103 @@ func (r *MongoRepository) GetByNameAndTestSuite(ctx context.Context, name, testS
 	return *result.UnscapeDots(), err
 }
 
-func (r *MongoRepository) GetLatestByTestSuite(ctx context.Context, testSuiteName, sortField string) (result testkube.TestSuiteExecution, err error) {
-	findOptions := options.FindOne()
-	findOptions.SetSort(bson.D{{Key: sortField, Value: -1}})
-	err = r.Coll.FindOne(ctx, bson.M{"testsuite.name": testSuiteName}, findOptions).Decode(&result)
-	return *result.UnscapeDots(), err
+func (r *MongoRepository) GetLatestByTestSuite(ctx context.Context, testSuiteName string) (*testkube.TestSuiteExecution, error) {
+	opts := options.Aggregate()
+	pipeline := []bson.M{
+		{"$documents": bson.A{bson.M{"name": testSuiteName}}},
+		{"$lookup": bson.M{"from": r.Coll.Name(), "let": bson.M{"name": "$name"}, "pipeline": []bson.M{
+			{"$match": bson.M{"$expr": bson.M{"$eq": bson.A{"$testsuite.name", "$$name"}}}},
+			{"$sort": bson.M{"starttime": -1}},
+			{"$limit": 1},
+		}, "as": "execution_by_start_time"}},
+		{"$lookup": bson.M{"from": r.Coll.Name(), "let": bson.M{"name": "$name"}, "pipeline": []bson.M{
+			{"$match": bson.M{"$expr": bson.M{"$eq": bson.A{"$testsuite.name", "$$name"}}}},
+			{"$sort": bson.M{"endtime": -1}},
+			{"$limit": 1},
+		}, "as": "execution_by_end_time"}},
+		{"$project": bson.M{"executions": bson.M{"$concatArrays": bson.A{"$execution_by_start_time", "$execution_by_end_time"}}}},
+		{"$unwind": "$executions"},
+		{"$replaceRoot": bson.M{"newRoot": "$executions"}},
+
+		{"$group": bson.D{
+			{Key: "_id", Value: "$testsuite.name"},
+			{Key: "doc", Value: bson.M{"$max": bson.D{
+				{Key: "updatetime", Value: bson.M{"$max": bson.A{"$starttime", "$endtime"}}},
+				{Key: "content", Value: "$$ROOT"},
+			}}},
+		}},
+		{"$sort": bson.M{"doc.updatetime": -1}},
+		{"$replaceRoot": bson.M{"newRoot": "$doc.content"}},
+		{"$limit": 1},
+	}
+	cursor, err := r.db.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return nil, err
+	}
+	var items []testkube.TestSuiteExecution
+	err = cursor.All(ctx, &items)
+	if err != nil {
+		return nil, err
+	}
+	if len(items) == 0 {
+		return nil, mongo.ErrNoDocuments
+	}
+	return items[0].UnscapeDots(), err
 }
 
-func (r *MongoRepository) GetLatestByTestSuites(ctx context.Context, testSuiteNames []string, sortField string) (executions []testkube.TestSuiteExecution, err error) {
-	var results []struct {
-		LatestID string `bson:"latest_id"`
-	}
-
+func (r *MongoRepository) GetLatestByTestSuites(ctx context.Context, testSuiteNames []string) (executions []testkube.TestSuiteExecution, err error) {
 	if len(testSuiteNames) == 0 {
 		return executions, nil
 	}
 
-	conditions := bson.A{}
+	documents := bson.A{}
 	for _, testSuiteName := range testSuiteNames {
-		conditions = append(conditions, bson.M{"testsuite.name": testSuiteName})
+		documents = append(documents, bson.M{"name": testSuiteName})
 	}
 
-	pipeline := []bson.D{{{Key: "$project", Value: bson.D{{Key: "_id", Value: 1}, {Key: "id", Value: 1}, {Key: "testsuite.name", Value: 1}, {Key: sortField, Value: 1}}}}}
-	pipeline = append(pipeline, bson.D{{Key: "$match", Value: bson.M{"$or": conditions}}})
-	pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: sortField, Value: -1}}}})
-	pipeline = append(pipeline, bson.D{
-		{Key: "$group", Value: bson.D{{Key: "_id", Value: "$testsuite.name"}, {Key: "latest_id", Value: bson.D{{Key: "$first", Value: "$id"}}}}}})
+	pipeline := []bson.M{
+		{"$documents": documents},
+		{"$lookup": bson.M{"from": r.Coll.Name(), "let": bson.M{"name": "$name"}, "pipeline": []bson.M{
+			{"$match": bson.M{"$expr": bson.M{"$eq": bson.A{"$testsuite.name", "$$name"}}}},
+			{"$sort": bson.M{"starttime": -1}},
+			{"$limit": 1},
+		}, "as": "execution_by_start_time"}},
+		{"$lookup": bson.M{"from": r.Coll.Name(), "let": bson.M{"name": "$name"}, "pipeline": []bson.M{
+			{"$match": bson.M{"$expr": bson.M{"$eq": bson.A{"$testsuite.name", "$$name"}}}},
+			{"$sort": bson.M{"endtime": -1}},
+			{"$limit": 1},
+		}, "as": "execution_by_end_time"}},
+		{"$project": bson.M{"executions": bson.M{"$concatArrays": bson.A{"$execution_by_start_time", "$execution_by_end_time"}}}},
+		{"$unwind": "$executions"},
+		{"$replaceRoot": bson.M{"newRoot": "$executions"}},
 
-	optsA := options.Aggregate()
+		{"$group": bson.D{
+			{Key: "_id", Value: "$testsuite.name"},
+			{Key: "doc", Value: bson.M{"$max": bson.D{
+				{Key: "updatetime", Value: bson.M{"$max": bson.A{"$starttime", "$endtime"}}},
+				{Key: "content", Value: "$$ROOT"},
+			}}},
+		}},
+		{"$sort": bson.M{"doc.updatetime": -1}},
+		{"$replaceRoot": bson.M{"newRoot": "$doc.content"}},
+	}
+
+	opts := options.Aggregate()
 	if r.allowDiskUse {
-		optsA.SetAllowDiskUse(r.allowDiskUse)
+		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
 
-	cursor, err := r.Coll.Aggregate(ctx, pipeline, optsA)
+	cursor, err := r.db.Aggregate(ctx, pipeline, opts)
 	if err != nil {
 		return nil, err
 	}
-	err = cursor.All(ctx, &results)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(results) == 0 {
-		return executions, nil
-	}
-
-	conditions = bson.A{}
-	for _, result := range results {
-		conditions = append(conditions, bson.M{"id": result.LatestID})
-	}
-
-	optsF := options.Find()
-	if r.allowDiskUse {
-		optsF.SetAllowDiskUse(r.allowDiskUse)
-	}
-
-	cursor, err = r.Coll.Find(ctx, bson.M{"$or": conditions}, optsF)
-	if err != nil {
-		return nil, err
-	}
-
 	err = cursor.All(ctx, &executions)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(executions) == 0 {
+		return executions, nil
 	}
 
 	for i := range executions {
