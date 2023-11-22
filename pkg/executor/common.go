@@ -115,6 +115,7 @@ type SlavesConfigs struct {
 	Images                SlaveImages             `json:"images"`
 	ServiceAccountName    string                  `json:"serviceAccountName"`
 	CertificateSecret     string                  `json:"certificateSecret"`
+	SlavePodTemplate      string                  `json:"slavePodTemplate"`
 	ImagePullSecrets      []string                `json:"imagePullSecrets"`
 	EnvConfigMaps         []testkube.EnvReference `json:"envConfigMaps"`
 	EnvSecrets            []testkube.EnvReference `json:"envSecrets"`
@@ -132,6 +133,7 @@ func GetSlavesConfigs(initImage string,
 	registry string,
 	serviceAccountName string,
 	certificateSecret string,
+	slavePodTemplate string,
 	imagePullSecrets []string,
 	envConfigMaps []testkube.EnvReference,
 	envSecrets []testkube.EnvReference,
@@ -145,6 +147,7 @@ func GetSlavesConfigs(initImage string,
 		},
 		ServiceAccountName:    serviceAccountName,
 		CertificateSecret:     certificateSecret,
+		SlavePodTemplate:      slavePodTemplate,
 		ImagePullSecrets:      imagePullSecrets,
 		EnvConfigMaps:         envConfigMaps,
 		EnvSecrets:            envSecrets,

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -781,7 +780,6 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTTYPE", Value: options.ContextType})
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTDATA", Value: options.ContextData})
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_APIURI", Value: options.APIURI})
-	envs = append(envs, corev1.EnvVar{Name: "RUNNER_SLAVEPODTEMPLATE", Value: base64.StdEncoding.EncodeToString([]byte(options.SlavePodTemplate))})
 
 	for i := range job.Spec.Template.Spec.InitContainers {
 		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, envs...)
@@ -875,6 +873,7 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 			jobOptions.Registry,
 			jobOptions.ServiceAccountName,
 			jobOptions.CertificateSecret,
+			jobOptions.SlavePodTemplate,
 			jobOptions.ImagePullSecrets,
 			jobOptions.EnvConfigMaps,
 			jobOptions.EnvSecrets,

@@ -194,8 +194,39 @@ func NewRunTestCmd() *cobra.Command {
 				}
 			}
 
-			if slavePodRequestsCpu != "" {
+			if slavePodRequestsCpu != "" || slavePodRequestsMemory != "" || slavePodLimitsCpu != "" ||
+				slavePodLimitsMemory != "" || slavePodTemplate != "" || slavePodTemplateReference != "" {
+				options.SlavePodRequest = &testkube.PodRequest{
+					PodTemplateReference: slavePodTemplateReference,
+				}
 
+				if slavePodTemplate != "" {
+					b, err := os.ReadFile(slavePodTemplate)
+					ui.ExitOnError("reading slave pod template", err)
+					options.SlavePodRequest.PodTemplate = string(b)
+				}
+
+				if slavePodRequestsCpu != "" || slavePodRequestsMemory != "" {
+					if options.SlavePodRequest.Resources == nil {
+						options.SlavePodRequest.Resources = &testkube.PodResourcesRequest{}
+					}
+
+					options.SlavePodRequest.Resources.Requests = &testkube.ResourceRequest{
+						Cpu:    slavePodRequestsCpu,
+						Memory: slavePodRequestsMemory,
+					}
+				}
+
+				if slavePodLimitsCpu != "" || slavePodLimitsMemory != "" {
+					if options.SlavePodRequest.Resources == nil {
+						options.SlavePodRequest.Resources = &testkube.PodResourcesRequest{}
+					}
+
+					options.SlavePodRequest.Resources.Limits = &testkube.ResourceRequest{
+						Cpu:    slavePodLimitsCpu,
+						Memory: slavePodLimitsMemory,
+					}
+				}
 			}
 
 			switch {

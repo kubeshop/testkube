@@ -1,14 +1,11 @@
 package envs
 
 import (
-	"encoding/base64"
-
 	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 // Params are the environment variables provided by the Testkube api-server
@@ -32,7 +29,6 @@ type Params struct {
 	ContextType               string // RUNNER_CONTEXTTYPE
 	ContextData               string // RUNNER_CONTEXTDATA
 	APIURI                    string // RUNNER_APIURI
-	SlavePodTemplate          string // RUNNER_SLAVEPODTEMPLATE
 	ClusterID                 string `envconfig:"RUNNER_CLUSTERID"`                             // RUNNER_CLUSTERID
 	CDEventsTarget            string `envconfig:"RUNNER_CDEVENTS_TARGET"`                       // RUNNER_CDEVENTS_TARGET
 	DashboardURI              string `envconfig:"RUNNER_DASHBOARD_URI"`                         // RUNNER_DASHBOARD_URI
@@ -53,16 +49,9 @@ func LoadTestkubeVariables() (Params, error) {
 		output.PrintLogf("%s Failed to read environment variables: %s", ui.IconCross, err.Error())
 		return params, errors.Errorf("failed to read environment variables: %v", err)
 	}
+
 	output.PrintLogf("%s Environment variables read successfully", ui.IconCheckMark)
 	printParams(params)
-
-	if utils.IsBase64Encoded(params.SlavePodTemplate) {
-		data, err := base64.StdEncoding.DecodeString(params.SlavePodTemplate)
-		if err != nil {
-			return params, errors.Errorf("failed to decode slave pod template: %v", err)
-		}
-		params.SlavePodTemplate = string(data)
-	}
 
 	return params, nil
 }
