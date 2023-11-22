@@ -70,6 +70,10 @@ var RunnerEnvVars = []corev1.EnvVar{
 		Value: getOr("STORAGE_SSL", "false"),
 	},
 	{
+		Name:  "RUNNER_SKIP_VERIFY",
+		Value: getOr("STORAGE_SKIP_VERIFY", "false"),
+	},
+	{
 		Name:  "RUNNER_SCRAPPERENABLED",
 		Value: getOr("SCRAPPERENABLED", "false"),
 	},

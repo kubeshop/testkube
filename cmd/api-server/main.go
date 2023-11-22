@@ -244,6 +244,7 @@ func main() {
 			cfg.StorageToken,
 			cfg.StorageBucket,
 			cfg.StorageSSL,
+			cfg.StorageSkipVerify,
 		)
 		if err = minioClient.Connect(); err != nil {
 			ui.ExitOnError("Connecting to minio", err)
