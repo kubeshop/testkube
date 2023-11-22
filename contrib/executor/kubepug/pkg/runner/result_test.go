@@ -4,177 +4,55 @@ import (
 	"fmt"
 	"testing"
 
-	kubepug "github.com/rikatz/kubepug/pkg/results"
+	"github.com/kubepug/kubepug/pkg/apis/v1alpha1"
+	kubepug "github.com/kubepug/kubepug/pkg/results"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestResultParser(t *testing.T) {
-	outputDeprecatedAPIs := `[
+	output := `
+	[
 		{
-		  "Description": "ComponentStatus holds the cluster validation info. Deprecated: This API is deprecated in v1.19+",
-		  "Group": "",
-		  "Kind": "ComponentStatus",
-		  "Version": "v1",
-		  "Name": "",
-		  "Deprecated": true,
-		  "Items": [
-			{
-			  "Scope": "GLOBAL",
-			  "ObjectName": "scheduler",
-			  "Namespace": ""
-			},
-			{
-			  "Scope": "GLOBAL",
-			  "ObjectName": "etcd-0",
-			  "Namespace": ""
-			},
-			{
-			  "Scope": "GLOBAL",
-			  "ObjectName": "etcd-1",
-			  "Namespace": ""
-			},
-			{
-			  "Scope": "GLOBAL",
-			  "ObjectName": "controller-manager",
-			  "Namespace": ""
-			}
-		  ]
+			"group":"apps",
+			"kind":"Deployment",
+			"version":"v1beta2",
+			"replacement":
+				{
+					"group":"apps",
+					"version":"v1",
+					"kind":"Deployment"
+				},
+			"k8sversion":"1.16",
+			"description":"DEPRECATED - This group version of Deployment is deprecated by apps/v1/Deployment. See the release notes for\nmore information.\nDeployment enables declarative updates for Pods and ReplicaSets.",
+			"deleted_items":[
+				{
+					"scope":"OBJECT",
+					"objectname":"testkube-dashboard",
+					"namespace":"testkube",
+					"location":"deployment.yaml"
+				}
+			]
 		}
-	  ]`
-	outputDeletedAPIs := `[
-		{
-		  "Group": "extensions",
-		  "Kind": "Ingress",
-		  "Version": "v1beta1",
-		  "Name": "ingresses",
-		  "Deleted": true,
-		  "Items": [
-			{
-			  "Scope": "OBJECT",
-			  "ObjectName": "cli-testkube-api-server-testkube",
-			  "Namespace": "testkube"
-			},
-			{
-			  "Scope": "OBJECT",
-			  "ObjectName": "oauth2-proxy",
-			  "Namespace": "testkube"
-			},
-			{
-			  "Scope": "OBJECT",
-			  "ObjectName": "testapi",
-			  "Namespace": "testkube"
-			},
-			{
-			  "Scope": "OBJECT",
-			  "ObjectName": "testdash",
-			  "Namespace": "testkube"
-			},
-			{
-			  "Scope": "OBJECT",
-			  "ObjectName": "testkube-dashboard-testkube",
-			  "Namespace": "testkube"
-			},
-			{
-			  "Scope": "OBJECT",
-			  "ObjectName": "ui-testkube-api-server-testkube",
-			  "Namespace": "testkube"
-			}
-		  ]
-		},
-		{
-		  "Group": "policy",
-		  "Kind": "PodSecurityPolicy",
-		  "Version": "v1beta1",
-		  "Name": "podsecuritypolicies",
-		  "Deleted": true,
-		  "Items": [
-			{
-			  "Scope": "GLOBAL",
-			  "ObjectName": "gce.gke-metrics-agent",
-			  "Namespace": ""
-			}
-		  ]
-		}
-	  ]`
+	]`
 
-	expectedDeprecatedAPIs := []kubepug.DeprecatedAPI{
+	result := []kubepug.ResultItem{
 		{
-			Description: "ComponentStatus holds the cluster validation info. Deprecated: This API is deprecated in v1.19+",
-			Kind:        "ComponentStatus",
-			Version:     "v1",
-			Deprecated:  true,
-			Items: []kubepug.Item{
-				{
-					Scope:      "GLOBAL",
-					ObjectName: "scheduler",
-				},
-				{
-					Scope:      "GLOBAL",
-					ObjectName: "etcd-0",
-				},
-				{
-					Scope:      "GLOBAL",
-					ObjectName: "etcd-1",
-				},
-				{
-					Scope:      "GLOBAL",
-					ObjectName: "controller-manager",
-				},
+			Description: "DEPRECATED - This group version of Deployment is deprecated by apps/v1/Deployment. See the release notes for\nmore information.\nDeployment enables declarative updates for Pods and ReplicaSets.",
+			Group:       "apps",
+			Kind:        "Deployment",
+			Version:     "v1beta2",
+			Replacement: &v1alpha1.GroupVersionKind{
+				Group:   "apps",
+				Version: "v1",
+				Kind:    "Deployment",
 			},
-		},
-	}
-
-	expectedDeletedAPIs := []kubepug.DeletedAPI{
-		{
-			Group:   "extensions",
-			Kind:    "Ingress",
-			Version: "v1beta1",
-			Name:    "ingresses",
-			Deleted: true,
+			K8sVersion: "1.16",
 			Items: []kubepug.Item{
 				{
 					Scope:      "OBJECT",
-					ObjectName: "cli-testkube-api-server-testkube",
+					ObjectName: "testkube-dashboard",
 					Namespace:  "testkube",
-				},
-				{
-					Scope:      "OBJECT",
-					ObjectName: "oauth2-proxy",
-					Namespace:  "testkube",
-				},
-				{
-					Scope:      "OBJECT",
-					ObjectName: "testapi",
-					Namespace:  "testkube",
-				},
-				{
-					Scope:      "OBJECT",
-					ObjectName: "testdash",
-					Namespace:  "testkube",
-				},
-				{
-					Scope:      "OBJECT",
-					ObjectName: "testkube-dashboard-testkube",
-					Namespace:  "testkube",
-				},
-				{
-					Scope:      "OBJECT",
-					ObjectName: "ui-testkube-api-server-testkube",
-					Namespace:  "testkube",
-				},
-			},
-		},
-		{
-			Group:   "policy",
-			Kind:    "PodSecurityPolicy",
-			Version: "v1beta1",
-			Name:    "podsecuritypolicies",
-			Deleted: true,
-			Items: []kubepug.Item{
-				{
-					Scope:      "GLOBAL",
-					ObjectName: "gce.gke-metrics-agent",
-					Namespace:  "",
+					Location:   "deployment.yaml",
 				},
 			},
 		},
@@ -204,36 +82,36 @@ func TestResultParser(t *testing.T) {
 		{
 			name: "GetResult should return populated DeprecatedAPIs when there's a DeprecatedAPI finding",
 			kubepugOutput: fmt.Sprintf(`{
-				"DeprecatedAPIs": %s,
-				"DeletedAPIs": null
-				}`, outputDeprecatedAPIs),
+				"deprecated_apis": %s,
+				"deleted_apis": null
+				}`, output),
 			wantErr: false,
 			result: kubepug.Result{
-				DeprecatedAPIs: expectedDeprecatedAPIs,
+				DeprecatedAPIs: result,
 			},
 		},
 		{
 			name: "GetResult should return populated DeletedAPIs when there's a DeletedAPIs finding",
 			kubepugOutput: fmt.Sprintf(`{
-				"DeprecatedAPIs": null,
-				"DeletedAPIs": %s
+				"deprecated_apis": null,
+				"deleted_apis": %s
 			  }
-			`, outputDeletedAPIs),
+			`, output),
 			wantErr: false,
 			result: kubepug.Result{
-				DeletedAPIs: expectedDeletedAPIs,
+				DeletedAPIs: result,
 			},
 		},
 		{
 			name: "GetResult should return populated DeprecatedAPIs and DeletedAPIs when there's both finding",
 			kubepugOutput: fmt.Sprintf(`{
-				"DeprecatedAPIs": %s,
-				"DeletedAPIs": %s
-			  }`, outputDeprecatedAPIs, outputDeletedAPIs),
+				"deprecated_apis": %s,
+				"deleted_apis": %s
+			  }`, output, output),
 			wantErr: false,
 			result: kubepug.Result{
-				DeprecatedAPIs: expectedDeprecatedAPIs,
-				DeletedAPIs:    expectedDeletedAPIs,
+				DeprecatedAPIs: result,
+				DeletedAPIs:    result,
 			},
 		},
 	}

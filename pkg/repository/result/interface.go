@@ -38,7 +38,7 @@ type Repository interface {
 	// GetByNameAndTest gets execution result by name and test name
 	GetByNameAndTest(ctx context.Context, name, testName string) (testkube.Execution, error)
 	// GetLatestByTest gets latest execution result by test
-	GetLatestByTest(ctx context.Context, testName string) (testkube.Execution, error)
+	GetLatestByTest(ctx context.Context, testName string) (*testkube.Execution, error)
 	// GetLatestByTests gets latest execution results by test names
 	GetLatestByTests(ctx context.Context, testNames []string) (executions []testkube.Execution, err error)
 	// GetExecutions gets executions using a filter, use filter with no data for all

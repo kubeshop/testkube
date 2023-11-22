@@ -92,7 +92,7 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 
 		return c.JSON(testkube.TestWithExecution{
 			Test:            &test,
-			LatestExecution: &execution,
+			LatestExecution: execution,
 		})
 	}
 }

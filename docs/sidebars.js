@@ -102,6 +102,8 @@ const sidebars = {
           },
           items: [
             "articles/github-actions",
+            "articles/gitlab",
+            "articles/jenkins",
             "articles/run-tests-with-github-actions",
             "articles/testkube-cli-docker",
             {

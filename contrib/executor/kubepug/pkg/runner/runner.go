@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	kubepug "github.com/rikatz/kubepug/pkg/results"
+	kubepug "github.com/kubepug/kubepug/pkg/results"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
@@ -148,7 +148,7 @@ func createDeprecatedAPIsStep(r kubepug.Result) testkube.ExecutionStepResult {
 	output.PrintLog(fmt.Sprintf("%s Found deprecated APIs: %v", ui.IconCross, r.DeletedAPIs))
 	for _, api := range r.DeprecatedAPIs {
 		step.AssertionResults = append(step.AssertionResults, testkube.AssertionResult{
-			Name:         api.Name,
+			Name:         api.Kind,
 			Status:       "failed",
 			ErrorMessage: fmt.Sprintf("Deprecated API:\n %v", api),
 		})
@@ -173,7 +173,7 @@ func createDeletedAPIsStep(r kubepug.Result) testkube.ExecutionStepResult {
 	output.PrintLogf("%s Found deleted APIs: %v", ui.IconCross, r.DeletedAPIs)
 	for _, api := range r.DeletedAPIs {
 		step.AssertionResults = append(step.AssertionResults, testkube.AssertionResult{
-			Name:         api.Name,
+			Name:         api.Kind,
 			Status:       "failed",
 			ErrorMessage: fmt.Sprintf("Deleted API:\n %v", api),
 		})

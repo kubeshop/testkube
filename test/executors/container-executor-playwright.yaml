@@ -1,6 +1,19 @@
 apiVersion: executor.testkube.io/v1
 kind: Executor
 metadata:
+  name: container-executor-playwright-v1.32.3-args
+spec:
+  image: mcr.microsoft.com/playwright:v1.32.3-focal
+  command: ["npx", "--yes", "playwright@1.32.3", "test", "--output", "/data/artifacts"]
+  executor_type: container
+  types:
+  - container-executor-playwright-v1.32.3-args/test
+  features:
+  - artifacts
+---
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
   name: container-executor-playwright-v1.32.3
 spec:
   image: mcr.microsoft.com/playwright:v1.32.3-focal

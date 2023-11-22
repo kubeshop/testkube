@@ -142,7 +142,7 @@ func (r *MongoRepository) GetLatestTestNumber(ctx context.Context, testName stri
 	return result.Number, err
 }
 
-func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) (result testkube.Execution, err error) {
+func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) (*testkube.Execution, error) {
 	opts := options.Aggregate()
 	pipeline := []bson.M{
 		{"$documents": bson.A{bson.M{"name": testName}}},
@@ -173,24 +173,24 @@ func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) 
 	}
 	cursor, err := r.db.Aggregate(ctx, pipeline, opts)
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 	var items []testkube.Execution
 	err = cursor.All(ctx, &items)
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 	if len(items) == 0 {
-		return result, mongo.ErrNoDocuments
+		return nil, mongo.ErrNoDocuments
 	}
-	result = items[0]
+	result := (&items[0]).UnscapeDots()
 	if len(result.ExecutionResult.Output) == 0 {
 		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, "")
 		if err == mongo.ErrNoDocuments {
 			err = nil
 		}
 	}
-	return *result.UnscapeDots(), err
+	return result, err
 }
 
 func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []string) (executions []testkube.Execution, err error) {

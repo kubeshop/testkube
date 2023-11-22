@@ -117,7 +117,7 @@ func TestCloudResultRepository_GetLatestByTest(t *testing.T) {
 
 	result, err := repo.GetLatestByTest(ctx, testName)
 	assert.NoError(t, err)
-	assert.Equal(t, endExecution, result)
+	assert.Equal(t, &endExecution, result)
 }
 
 func TestCloudResultRepository_Insert(t *testing.T) {
