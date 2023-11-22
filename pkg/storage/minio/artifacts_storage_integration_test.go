@@ -26,7 +26,7 @@ func TestArtifactClient(t *testing.T) {
 		t.Fatalf("unable to create direct minio client: %v", err)
 	}
 	// Prepare MinIO client
-	minioClient := NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-fsdf", false)
+	minioClient := NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-fsdf", false, false)
 	if err := minioClient.Connect(); err != nil {
 		t.Fatalf("unable to connect to minio: %v", err)
 	}

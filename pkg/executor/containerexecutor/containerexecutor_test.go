@@ -132,6 +132,7 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "RUNNER_TOKEN", Value: ""},
 		{Name: "RUNNER_BUCKET", Value: ""},
 		{Name: "RUNNER_SSL", Value: "false"},
+		{Name: "RUNNER_SKIP_VERIFY", Value: "false"},
 		{Name: "RUNNER_SCRAPPERENABLED", Value: "false"},
 		{Name: "RUNNER_DATADIR", Value: "/data"},
 		{Name: "RUNNER_CDEVENTS_TARGET", Value: ""},

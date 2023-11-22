@@ -30,6 +30,7 @@ type Config struct {
 	StorageRegion                     string        `envconfig:"STORAGE_REGION" default:""`
 	StorageToken                      string        `envconfig:"STORAGE_TOKEN" default:""`
 	StorageSSL                        bool          `envconfig:"STORAGE_SSL" default:"false"`
+	StorageSkipVerify                 bool          `envconfig:"STORAGE_SKIP_VERIFY" default:"false"`
 	ScrapperEnabled                   bool          `envconfig:"SCRAPPERENABLED" default:"false"`
 	LogsBucket                        string        `envconfig:"LOGS_BUCKET" default:""`
 	LogsStorage                       string        `envconfig:"LOGS_STORAGE" default:""`

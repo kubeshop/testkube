@@ -37,6 +37,7 @@ type Client struct {
 	accessKeyID     string
 	secretAccessKey string
 	ssl             bool
+	skipVerify      bool
 	region          string
 	token           string
 	bucket          string
@@ -45,13 +46,14 @@ type Client struct {
 }
 
 // NewClient returns new MinIO client
-func NewClient(endpoint, accessKeyID, secretAccessKey, region, token, bucket string, ssl bool) *Client {
+func NewClient(endpoint, accessKeyID, secretAccessKey, region, token, bucket string, ssl, skipVerify bool) *Client {
 	c := &Client{
 		region:          region,
 		accessKeyID:     accessKeyID,
 		secretAccessKey: secretAccessKey,
 		token:           token,
 		ssl:             ssl,
+		skipVerify:      skipVerify,
 		bucket:          bucket,
 		Endpoint:        endpoint,
 		Log:             log.DefaultLogger,
@@ -73,9 +75,16 @@ func (c *Client) Connect() error {
 	if c.accessKeyID != "" && c.secretAccessKey != "" {
 		creds = credentials.NewStaticV4(c.accessKeyID, c.secretAccessKey, c.token)
 	}
+	transport, err := minio.DefaultTransport(c.ssl)
+	if err != nil {
+		c.Log.Errorw("error creating minio transport", "error", err)
+		return err
+	}
+	transport.TLSClientConfig.InsecureSkipVerify = c.skipVerify
 	opts := &minio.Options{
-		Creds:  creds,
-		Secure: c.ssl,
+		Creds:     creds,
+		Secure:    c.ssl,
+		Transport: transport,
 	}
 	if c.region != "" {
 		opts.Region = c.region
