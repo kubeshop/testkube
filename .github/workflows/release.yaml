@@ -89,7 +89,8 @@ jobs:
         if: matrix.name == 'linux'
         run: |
           docker push kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-arm64v8
-          docker push kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-amd64 kubeshop/testkube-cli:latest-amd64
+          docker push kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-amd64
+          docker push kubeshop/testkube-cli:latest
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@master
