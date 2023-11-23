@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"strings"
 	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -174,6 +175,7 @@ func (c *Client) createSlavePodObject(runnerExecutionStr []byte, podName string,
 
 	podOptions := c.newPodOptions(runnerExecutionStr, podName, executorJob)
 	var buffer bytes.Buffer
+	podOptions.Jsn = strings.ReplaceAll(podOptions.Jsn, "'", "''")
 	if err = tmpl.ExecuteTemplate(&buffer, "pod", podOptions); err != nil {
 		return nil, errors.Errorf("executing pod spec template: %v", err)
 	}

@@ -13,7 +13,7 @@ spec:
   activeDeadlineSeconds: {{ .ActiveDeadlineSeconds }}
   {{- end }}
   initContainers:
-  - name: {{ .Name }}-init
+  - name: init
     {{- if .Registry }}
     image: {{ .Registry }}/{{ .InitImage }}
     {{- else }}
@@ -43,7 +43,7 @@ spec:
     {{- end }}
     {{- end }}
   containers:
-  - name: "{{ .Name }}"
+  - name: main
     {{- if .Registry }}
     image: {{ .Registry }}/{{ .Image }}
     {{- else }}
@@ -54,6 +54,8 @@ spec:
     {{- range $port := .Ports }}
     - name: {{ $port.Name }}
       containerPort: {{ $port.ContainerPort }}
+    {{- end}}
+    {{- range $port := .Ports }}
     {{- if eq $port.Name "server-port" }}  
     livenessProbe:
       tcpSocket:
