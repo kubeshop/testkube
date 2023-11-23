@@ -12,9 +12,9 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/cloud"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/pro"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -59,7 +59,8 @@ func init() {
 
 	RootCmd.AddCommand(NewAgentCmd())
 	RootCmd.AddCommand(NewCloudCmd())
-	RootCmd.AddCommand(cloud.NewLoginCmd())
+	RootCmd.AddCommand(NewProCmd())
+	RootCmd.AddCommand(pro.NewLoginCmd())
 
 	RootCmd.SetHelpCommand(NewHelpCmd())
 }
