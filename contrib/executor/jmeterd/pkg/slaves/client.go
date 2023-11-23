@@ -170,7 +170,7 @@ func (c *Client) getSlavePodConfiguration(ctx context.Context, currentSlavesCoun
 func (c *Client) createSlavePodObject(runnerExecutionStr []byte, podName string, executorJob *batchv1.Job) (*v1.Pod, error) {
 	tmpl, err := utils.NewTemplate("pod").Parse(c.slavesConfigs.SlavePodTemplate)
 	if err != nil {
-		return nil, errors.Errorf("creating pod spec from options.JobTemplate error: %v", err)
+		return nil, errors.Errorf("creating pod spec from SlavePodTemplate error: %v", err)
 	}
 
 	podOptions := c.newPodOptions(runnerExecutionStr, podName, executorJob)
