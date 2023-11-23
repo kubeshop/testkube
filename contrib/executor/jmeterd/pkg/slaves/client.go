@@ -189,7 +189,7 @@ func (c *Client) createSlavePodObject(runnerExecutionStr []byte, podName string,
 		}
 
 		var bufferExt bytes.Buffer
-		if err = tmplExt.ExecuteTemplate(&bufferExt, "jodExt", podOptions); err != nil {
+		if err = tmplExt.ExecuteTemplate(&bufferExt, "podExt", podOptions); err != nil {
 			return nil, errors.Errorf("executing pod extensions spec template: %v", err)
 		}
 
