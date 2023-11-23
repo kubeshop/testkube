@@ -82,8 +82,8 @@ spec:
         {{- end }}
         {{- if .Resources.Limits.Memory }}
         memory: {{- .Resources.Limits.Memory }}
-        {{- end }}        
-      {{- end }}      
+        {{- end }}
+      {{- end }}
       {{- if .Resources.Requests }}
       requests:
         {{- if .Resources.Requests.Cpu }}
@@ -91,9 +91,9 @@ spec:
         {{- end }}
         {{- if .Resources.Requests.Memory }}
         memory: {{- .Resources.Requests.Memory }}
-        {{- end }}        
+        {{- end }}
       {{- end }}
-    {{- end }}    
+    {{- end }}
     volumeMounts:
     - name: data-volume
       mountPath: /data
@@ -136,9 +136,9 @@ spec:
   {{- end }}
   {{- end }}
   restartPolicy: Always
-  {{ if .ServiceAccountName }}
+  {{- if .ServiceAccountName }}
   serviceAccountName: {{ .ServiceAccountName }}
-  {{ end }}
+  {{- end }}
   {{- if gt (len .ImagePullSecrets) 0 }}
   imagePullSecrets:
   {{- range $secret := .ImagePullSecrets }}

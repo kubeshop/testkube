@@ -667,7 +667,7 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 
 	if executionRequest.SlavePodRequest != nil {
 		emptyPodRequest := true
-		if *executionRequest.SlavePodRequest == nil || (*executionRequest.SlavePodRequest).IsEmpty() {
+		if !(*executionRequest.SlavePodRequest == nil || (*executionRequest.SlavePodRequest).IsEmpty()) {
 			if request.SlavePodRequest == nil {
 				request.SlavePodRequest = &testsv3.PodRequest{}
 			}

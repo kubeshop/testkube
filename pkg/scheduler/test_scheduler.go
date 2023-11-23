@@ -749,14 +749,13 @@ func mergeSlavePodRequests(podBase *testkube.PodRequest, podAdjust *testkube.Pod
 
 		if podBase.Resources == nil && podAdjust.Resources != nil {
 			podBase.Resources = podAdjust.Resources
+			return podBase
 		}
 
 		if podBase.Resources != nil && podAdjust.Resources != nil {
 			if podBase.Resources.Requests == nil && podAdjust.Resources.Requests != nil {
 				podBase.Resources.Requests = podAdjust.Resources.Requests
-			}
-
-			if podBase.Resources.Requests != nil && podAdjust.Resources.Requests != nil {
+			} else if podBase.Resources.Requests != nil && podAdjust.Resources.Requests != nil {
 				if podBase.Resources.Requests.Cpu == "" && podAdjust.Resources.Requests.Cpu != "" {
 					podBase.Resources.Requests.Cpu = podAdjust.Resources.Requests.Cpu
 				}
@@ -768,9 +767,7 @@ func mergeSlavePodRequests(podBase *testkube.PodRequest, podAdjust *testkube.Pod
 
 			if podBase.Resources.Limits == nil && podAdjust.Resources.Limits != nil {
 				podBase.Resources.Limits = podAdjust.Resources.Limits
-			}
-
-			if podBase.Resources.Limits != nil && podAdjust.Resources.Limits != nil {
+			} else if podBase.Resources.Limits != nil && podAdjust.Resources.Limits != nil {
 				if podBase.Resources.Limits.Cpu == "" && podAdjust.Resources.Limits.Cpu != "" {
 					podBase.Resources.Limits.Cpu = podAdjust.Resources.Limits.Cpu
 				}

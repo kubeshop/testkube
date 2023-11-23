@@ -67,6 +67,10 @@ func (test *TestUpsertRequest) QuoteTestTextFields() {
 				test.ExecutionRequest.Command[i] = fmt.Sprintf("%q", test.ExecutionRequest.Command[i])
 			}
 		}
+
+		if test.ExecutionRequest.SlavePodRequest != nil && test.ExecutionRequest.SlavePodRequest.PodTemplate != "" {
+			test.ExecutionRequest.SlavePodRequest.PodTemplate = fmt.Sprintf("%q", test.ExecutionRequest.SlavePodRequest.PodTemplate)
+		}
 	}
 }
 
