@@ -1,4 +1,4 @@
-package cloud
+package pro
 
 import (
 	"strings"
@@ -19,14 +19,13 @@ func NewDisconnectCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "disconnect",
 		Aliases: []string{"d"},
-		Short:   "[Deprecated] Switch back to Testkube OSS mode, based on active .kube/config file",
+		Short:   "Switch back to Testkube OSS mode, based on active .kube/config file",
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Warn("You are using a deprecated command, please switch to `testkube pro disconnect`.")
 
-			ui.H1("Disconnecting your cloud environment:")
+			ui.H1("Disconnecting your Pro environment:")
 			ui.Paragraph("Rolling back to your clusters testkube OSS installation")
 			ui.Paragraph("If you need more details click into following link: " + docsUrl)
-			ui.H2("You can safely switch between connecting Cloud and disconnecting without losing your data.")
+			ui.H2("You can safely switch between connecting Pro and disconnecting without losing your data.")
 
 			cfg, err := config.Load()
 			if err != nil {
@@ -65,23 +64,23 @@ func NewDisconnectCmd() *cobra.Command {
 				{"Namespace", cfg.Namespace},
 				{ui.Separator, ""},
 
-				{"Testkube is connected to cloud organizations environment"},
+				{"Testkube is connected to Pro organizations environment"},
 				{"Organization Id", info.OrgId},
 				{"Environment Id", info.EnvId},
 			}
 
 			ui.Properties(summary)
 
-			if ok := ui.Confirm("Shall we disconnect your cloud environment now?"); !ok {
+			if ok := ui.Confirm("Shall we disconnect your Pro environment now?"); !ok {
 				return
 			}
 
 			ui.NL(2)
 
-			spinner := ui.NewSpinner("Disonnecting from Testkube Cloud")
+			spinner := ui.NewSpinner("Disonnecting from Testkube Pro")
 
 			err = common.HelmUpgradeOrInstalTestkube(opts)
-			ui.ExitOnError("Installing Testkube Cloud", err)
+			ui.ExitOnError("Installing Testkube Pro", err)
 			spinner.Success()
 
 			// let's scale down deployment of mongo

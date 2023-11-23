@@ -1,4 +1,4 @@
-package cloud
+package pro
 
 import (
 	"fmt"
@@ -26,10 +26,8 @@ func NewConnectCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "connect",
 		Aliases: []string{"c"},
-		Short:   "[Deprecated] Testkube Cloud connect ",
+		Short:   "Testkube Pro connect ",
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Warn("You are using a deprecated command, please switch to `testkube pro connect`.")
-
 			// create new cloud uris
 			opts.CloudUris = common.NewCloudUris(opts.CloudRootDomain)
 
@@ -39,7 +37,7 @@ func NewConnectCmd() *cobra.Command {
 			info, err := client.GetServerInfo()
 			firstInstall := err != nil && strings.Contains(err.Error(), "not found")
 			if err != nil && !firstInstall {
-				ui.Failf("Can't get testkube cluster information: %s", err.Error())
+				ui.Failf("Can't get Testkube cluster information: %s", err.Error())
 			}
 
 			var apiContext string
@@ -47,9 +45,9 @@ func NewConnectCmd() *cobra.Command {
 				apiContext = actx
 			}
 
-			ui.H1("Connect your cloud environment:")
-			ui.Paragraph("You can learn more about connecting your Testkube instance to the Cloud here:\n" + docsUrl)
-			ui.H2("You can safely switch between connecting Cloud and disconnecting without losing your data.")
+			ui.H1("Connect your Pro environment:")
+			ui.Paragraph("You can learn more about connecting your Testkube instance to Testkube Pro here:\n" + docsUrl)
+			ui.H2("You can safely switch between connecting Pro and disconnecting without losing your data.")
 
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config", err)
@@ -102,7 +100,7 @@ func NewConnectCmd() *cobra.Command {
 				newStatus = append(
 					newStatus,
 					[][]string{
-						{"Testkube will be connected to cloud org/env"},
+						{"Testkube will be connected to Pro org/env"},
 						{"Organization Id", opts.CloudOrgId},
 						{"Organization name", orgName},
 						{"Environment Id", opts.CloudEnvId},
@@ -113,10 +111,10 @@ func NewConnectCmd() *cobra.Command {
 
 			// validate if user created env - or was passed from flags
 			if opts.CloudEnvId == "" {
-				ui.Failf("You need pass valid environment id to connect to cloud")
+				ui.Failf("You need pass valid environment id to connect to Pro")
 			}
 			if opts.CloudOrgId == "" {
-				ui.Failf("You need pass valid organization id to connect to cloud")
+				ui.Failf("You need pass valid organization id to connect to Pro")
 			}
 
 			// update summary
@@ -127,20 +125,20 @@ func NewConnectCmd() *cobra.Command {
 
 			ui.NL(2)
 
-			ui.H1("Summary of your setup after connecting to Testkube Cloud")
+			ui.H1("Summary of your setup after connecting to Testkube Pro")
 			ui.Properties(newStatus)
 
 			ui.NL()
-			ui.Warn("Remember: All your historical data and artifacts will be safe in case you want to rollback. OSS and cloud executions will be separated.")
+			ui.Warn("Remember: All your historical data and artifacts will be safe in case you want to rollback. OSS and Pro executions will be separated.")
 			ui.NL()
 
-			if ok := ui.Confirm("Proceed with connecting Testkube Cloud?"); !ok {
+			if ok := ui.Confirm("Proceed with connecting Testkube Pro?"); !ok {
 				return
 			}
 
-			spinner := ui.NewSpinner("Connecting Testkube Cloud")
+			spinner := ui.NewSpinner("Connecting Testkube Pro")
 			err = common.HelmUpgradeOrInstallTestkubeCloud(opts, cfg, true)
-			ui.ExitOnError("Installing Testkube Cloud", err)
+			ui.ExitOnError("Installing Testkube Pro", err)
 			spinner.Success()
 
 			ui.NL()
@@ -162,24 +160,24 @@ func NewConnectCmd() *cobra.Command {
 				spinner.Success()
 			}
 
-			ui.H2("Testkube Cloud is connected to your Testkube instance, saving local configuration")
+			ui.H2("Testkube Pro is connected to your Testkube instance, saving local configuration")
 
-			ui.H2("Saving testkube cli cloud context")
+			ui.H2("Saving Testkube CLI Pro context")
 			if token == "" && !common.IsUserLoggedIn(cfg, opts) {
 				token, refreshToken, err = common.LoginUser(opts.CloudUris.Auth)
 				ui.ExitOnError("user login", err)
 			}
 			err = common.PopulateLoginDataToContext(opts.CloudOrgId, opts.CloudEnvId, token, refreshToken, opts, cfg)
 
-			ui.ExitOnError("Setting cloud environment context", err)
+			ui.ExitOnError("Setting Pro environment context", err)
 
 			ui.NL(2)
 
-			ui.ShellCommand("In case you want to roll back you can simply run the following command in your CLI:", "testkube cloud disconnect")
+			ui.ShellCommand("In case you want to roll back you can simply run the following command in your CLI:", "testkube pro disconnect")
 
-			ui.Success("You can now login to Testkube Cloud and validate your connection:")
+			ui.Success("You can now login to Testkube Pro and validate your connection:")
 			ui.NL()
-			ui.Link("https://cloud." + opts.CloudRootDomain + "/organization/" + opts.CloudOrgId + "/environment/" + opts.CloudEnvId + "/dashboard/tests")
+			ui.Link("https://app." + opts.CloudRootDomain + "/organization/" + opts.CloudOrgId + "/environment/" + opts.CloudEnvId + "/dashboard/tests")
 
 			ui.NL(2)
 		},
@@ -190,10 +188,10 @@ func NewConnectCmd() *cobra.Command {
 	cmd.Flags().StringVar(&opts.Namespace, "namespace", "testkube", "namespace where to install")
 	cmd.Flags().StringVar(&opts.Values, "values", "", "path to Helm values file")
 
-	cmd.Flags().StringVar(&opts.CloudAgentToken, "agent-token", "", "Testkube Cloud agent key [required for cloud mode]")
-	cmd.Flags().StringVar(&opts.CloudOrgId, "org-id", "", "Testkube Cloud organization id [required for cloud mode]")
-	cmd.Flags().StringVar(&opts.CloudEnvId, "env-id", "", "Testkube Cloud environment id [required for cloud mode]")
-	cmd.Flags().StringVar(&opts.CloudRootDomain, "cloud-root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for cloud mode]")
+	cmd.Flags().StringVar(&opts.CloudAgentToken, "agent-token", "", "Testkube Pro agent key [required for pro mode]")
+	cmd.Flags().StringVar(&opts.CloudOrgId, "org-id", "", "Testkube Pro organization id [required for pro mode]")
+	cmd.Flags().StringVar(&opts.CloudEnvId, "env-id", "", "Testkube Pro environment id [required for pro mode]")
+	cmd.Flags().StringVar(&opts.CloudRootDomain, "pro-root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for pro mode]")
 
 	cmd.Flags().BoolVar(&opts.NoMinio, "no-minio", false, "don't install MinIO")
 	cmd.Flags().BoolVar(&opts.NoDashboard, "no-dashboard", false, "don't install dashboard")
@@ -213,7 +211,7 @@ func NewConnectCmd() *cobra.Command {
 var contextDescription = map[string]string{
 	"":      "Unknown context, try updating your testkube cluster installation",
 	"oss":   "Open Source Testkube",
-	"cloud": "Testkube in Cloud mode",
+	"cloud": "Testkube in Pro mode",
 }
 
 func uiGetEnvName() (string, error) {
