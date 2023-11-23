@@ -1,4 +1,4 @@
-package cloud
+package pro
 
 import (
 	"github.com/spf13/cobra"
@@ -18,11 +18,9 @@ func NewInitCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "init",
-		Short:   "[Deprecated] Install Testkube Cloud Agent and connect to Testkube Cloud environment",
+		Short:   "Install Testkube Pro Agent and connect to Testkube Pro environment",
 		Aliases: []string{"install"},
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Warn("You are using a deprecated command, please switch to `testkube pro init`.")
-
 			ui.Info("WELCOME TO")
 			ui.Logo()
 
@@ -31,7 +29,7 @@ func NewInitCmd() *cobra.Command {
 			ui.NL()
 			sendAttemptTelemetry(cmd, cfg)
 
-			// create new cloud uris
+			// create new pro uris
 			options.CloudUris = common.NewCloudUris(options.CloudRootDomain)
 			if !options.NoConfirm {
 				ui.Warn("This will install Testkube to the latest version. This may take a few minutes.")
@@ -60,7 +58,7 @@ func NewInitCmd() *cobra.Command {
 
 			ui.NL()
 
-			ui.H2("Saving testkube cli cloud context")
+			ui.H2("Saving Testkube CLI Pro context")
 			var token, refreshToken string
 			if !common.IsUserLoggedIn(cfg, options) {
 				token, refreshToken, err = common.LoginUser(options.CloudUris.Auth)
@@ -69,7 +67,7 @@ func NewInitCmd() *cobra.Command {
 			}
 			err = common.PopulateLoginDataToContext(options.CloudOrgId, options.CloudEnvId, token, refreshToken, options, cfg)
 			sendErrTelemetry(cmd, cfg, "setting_context")
-			ui.ExitOnError("Setting cloud environment context", err)
+			ui.ExitOnError("Setting Pro environment context", err)
 
 			ui.Info(" Happy Testing! 🚀")
 			ui.NL()
@@ -84,11 +82,11 @@ func NewInitCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&options.NoOperator, "no-operator", false, "should operator be installed (for more instances in multi namespace mode it should be set to true)")
 	cmd.Flags().StringVar(&options.Namespace, "namespace", "testkube", "namespace where to install")
 
-	cmd.Flags().StringVar(&options.CloudAgentToken, "agent-token", "", "Testkube Cloud agent key")
-	cmd.Flags().StringVar(&options.CloudOrgId, "org-id", "", "Testkube Cloud organization id")
-	cmd.Flags().StringVar(&options.CloudEnvId, "env-id", "", "Testkube Cloud environment id")
+	cmd.Flags().StringVar(&options.CloudAgentToken, "agent-token", "", "Testkube Pro agent key")
+	cmd.Flags().StringVar(&options.CloudOrgId, "org-id", "", "Testkube Pro organization id")
+	cmd.Flags().StringVar(&options.CloudEnvId, "env-id", "", "Testkube Pro environment id")
 
-	cmd.Flags().StringVar(&options.CloudRootDomain, "cloud-root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for cloud mode]")
+	cmd.Flags().StringVar(&options.CloudRootDomain, "pro-root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for pro mode]")
 
 	cmd.Flags().BoolVar(&options.NoConfirm, "no-confirm", false, "don't ask for confirmation - unatended installation mode")
 	cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
