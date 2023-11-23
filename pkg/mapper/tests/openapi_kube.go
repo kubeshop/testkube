@@ -673,9 +673,15 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 			}
 
 			if (*executionRequest.SlavePodRequest).Resources != nil {
-				request.SlavePodRequest.Resources = &testsv3.PodResourcesRequest{}
+				if request.SlavePodRequest.Resources == nil {
+					request.SlavePodRequest.Resources = &testsv3.PodResourcesRequest{}
+				}
+
 				if (*(*executionRequest.SlavePodRequest).Resources).Requests != nil {
-					request.SlavePodRequest.Resources.Requests = &testsv3.ResourceRequest{}
+					if request.SlavePodRequest.Resources.Requests == nil {
+						request.SlavePodRequest.Resources.Requests = &testsv3.ResourceRequest{}
+					}
+
 					if (*(*executionRequest.SlavePodRequest).Resources).Requests.Cpu != nil {
 						request.SlavePodRequest.Resources.Requests.Cpu = *(*(*executionRequest.SlavePodRequest).Resources).Requests.Cpu
 						emptyPodRequest = false
@@ -688,7 +694,10 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 				}
 
 				if (*(*executionRequest.SlavePodRequest).Resources).Limits != nil {
-					request.SlavePodRequest.Resources.Limits = &testsv3.ResourceRequest{}
+					if request.SlavePodRequest.Resources.Limits == nil {
+						request.SlavePodRequest.Resources.Limits = &testsv3.ResourceRequest{}
+					}
+
 					if (*(*executionRequest.SlavePodRequest).Resources).Limits.Cpu != nil {
 						request.SlavePodRequest.Resources.Limits.Cpu = *(*(*executionRequest.SlavePodRequest).Resources).Limits.Cpu
 						emptyPodRequest = false
