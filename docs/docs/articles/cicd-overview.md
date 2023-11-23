@@ -4,8 +4,8 @@ You can trigger tests in Testkube from your CI/CD pipeline. This practice decoup
 
 We have different tutorials for the options of being CI driven or using GitOps approaches. Check out the following tutorials: 
 
-- [Github Actions - running Tests or TestSuites with testkube-run-action](./run-tests-with-github-actions.md)
-- [Github Actions - running Testkube CLI commands with testkube-docker-action](./github-actions.md)
+- [Github Actions - running Tests or TestSuites with testkube-run-action](./run-tests-with-github-actions.md).
+- [Github Actions - running Testkube CLI commands with testkube-docker-action](./github-actions.md).
 - [GitOps Testing](./gitops-overview.md)
   - [Flux](./flux-integration.md)
   - [ArgoCD](./argocd-integration.md)

@@ -1,12 +1,12 @@
 # Environment Management
 
 Environment in Testkube is related to the Testkube agent, which is responsible for sending
-test insights to Testkube Cloud and for managing your Kubernetes related cluster resources.
+test insights to Testkube Pro and for managing your Kubernetes related cluster resources.
 
 
 ## Creating a New Environment
 
-You can create a new environment from the "Environments" drop down in the header section of the Testkube Cloud UI. 
+You can create a new environment from the "Environments" drop down in the header section of the Testkube Pro UI. 
 
 ![env-drop-down](../../img/env-drop-down.png)
 

@@ -1,6 +1,6 @@
 ## testkube
 
-Testkube entrypoint for kubectl plugin
+Testkube entrypoint for kubectl plugin.
 
 ```
 testkube [flags]
@@ -20,8 +20,8 @@ testkube [flags]
 ### SEE ALSO
 
 * [testkube abort](testkube_abort.md)	 - Abort tests or test suites
-* [testkube agent](testkube_agent.md)	 - Testkube Cloud Agent related commands
-* [testkube cloud](testkube_cloud.md)	 - Testkube Cloud commands
+* [testkube agent](testkube_agent.md)	 - Testkube Pro Agent related commands
+* [testkube pro](testkube_cloud.md)	 - Testkube Pro commands
 * [testkube completion](testkube_completion.md)	 - Generate the autocompletion script for the specified shell
 * [testkube config](testkube_config.md)	 - Set feature configuration value
 * [testkube create](testkube_create.md)	 - Create resource
@@ -35,7 +35,7 @@ testkube [flags]
 * [testkube generate](testkube_generate.md)	 - Generate resources commands
 * [testkube get](testkube_get.md)	 - Get resources
 * [testkube init](testkube_init.md)	 - Install Helm chart registry in current kubectl context and update dependencies
-* [testkube login](testkube_login.md)	 - Login to Testkube Cloud
+* [testkube login](testkube_login.md)	 - Login to Testkube Pro
 * [testkube migrate](testkube_migrate.md)	 - manual migrate command
 * [testkube purge](testkube_purge.md)	 - Uninstall Helm chart registry from current kubectl context
 * [testkube run](testkube_run.md)	 - Runs tests or test suites

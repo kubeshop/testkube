@@ -1,8 +1,8 @@
 # Migrating from Testkube Open Source
 
-If you have started using Testkube using the Open Source installation, you can migrate this instance to be managed using Testkube Cloud. 
+If you have started using Testkube using the Open Source installation, you can migrate this instance to be managed using Testkube Pro. 
 
-To connect your Testkube Open Source instance, you will need to modify your Testkube installation to be in Cloud Agent mode. Testkube Cloud Agent is the Testkube engine for controlling your Testkube instance using the managed solution. It sends data to Testkube's Cloud Servers.
+To connect your Testkube Open Source instance, you will need to modify your Testkube installation to be in Pro Agent mode. Testkube Pro Agent is the Testkube engine for controlling your Testkube instance using the managed solution. It sends data to Testkube's Pro Servers.
 
 ::: note
 
@@ -18,4 +18,4 @@ Currently, we do not support uploading existing test logs and artifacts from you
 testkube cloud connect
 ```
 
-2. [Set your CLI Context to talk to Testkube Cloud](./managing-cli-context.md).
+2. [Set your CLI Context to talk to Testkube Pro](./managing-cli-context.md).

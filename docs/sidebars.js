@@ -170,7 +170,7 @@ const sidebars = {
     },
     {
       type: "category",
-      label: "Testkube Cloud",
+      label: "Testkube Pro",
       items: [
         "testkube-cloud/articles/intro",
         "testkube-cloud/articles/installing-agent",
