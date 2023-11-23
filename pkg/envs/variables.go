@@ -18,6 +18,7 @@ type Params struct {
 	Token                     string // RUNNER_TOKEN
 	Bucket                    string // RUNNER_BUCKET
 	Ssl                       bool   // RUNNER_SSL
+	SkipVerify                bool   `envconfig:"RUNNER_SKIP_VERIFY" default:"false"` // RUNNER_SKIP_VERIFY
 	ScrapperEnabled           bool   // RUNNER_SCRAPPERENABLED
 	DataDir                   string // RUNNER_DATADIR
 	GitUsername               string // RUNNER_GITUSERNAME

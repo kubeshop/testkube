@@ -51,7 +51,7 @@ func TestMinIOScraper_Archive_Integration(t *testing.T) {
 
 	extractor := scraper.NewArchiveFilesystemExtractor(filesystem.NewOSFileSystem())
 
-	loader, err := scraper.NewMinIOUploader("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-asdf", false)
+	loader, err := scraper.NewMinIOUploader("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-asdf", false, false)
 	if err != nil {
 		t.Fatalf("error creating minio loader: %v", err)
 	}
@@ -77,7 +77,7 @@ func TestMinIOScraper_Archive_Integration(t *testing.T) {
 		t.Fatalf("error scraping: %v", err)
 	}
 
-	c := minio.NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-asdf", false)
+	c := minio.NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-asdf", false, false)
 	assert.NoError(t, c.Connect())
 	artifacts, err := c.ListFiles(context.Background(), "test-bucket-asdf")
 	if err != nil {
@@ -119,7 +119,7 @@ func TestMinIOScraper_Recursive_Integration(t *testing.T) {
 	extractor := scraper.NewRecursiveFilesystemExtractor(filesystem.NewOSFileSystem())
 
 	bucketName := "test-bucket-asdf1"
-	loader, err := scraper.NewMinIOUploader("localhost:9000", "minio99", "minio123", "us-east-1", "", bucketName, false)
+	loader, err := scraper.NewMinIOUploader("localhost:9000", "minio99", "minio123", "us-east-1", "", bucketName, false, false)
 	if err != nil {
 		t.Fatalf("error creating minio loader: %v", err)
 	}
@@ -145,7 +145,7 @@ func TestMinIOScraper_Recursive_Integration(t *testing.T) {
 		t.Fatalf("error scraping: %v", err)
 	}
 
-	c := minio.NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", bucketName, false)
+	c := minio.NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", bucketName, false, false)
 	assert.NoError(t, c.Connect())
 	artifacts, err := c.ListFiles(context.Background(), bucketName)
 	if err != nil {

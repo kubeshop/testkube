@@ -1,12 +1,14 @@
 package tests
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -15,8 +17,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
-
-const WatchInterval = 2 * time.Second
 
 func NewRunTestCmd() *cobra.Command {
 	var (
@@ -241,6 +241,13 @@ func NewRunTestCmd() *cobra.Command {
 			default:
 				ui.Failf("Pass Test name or labels to run by labels ")
 			}
+
+			go func() {
+				<-cmd.Context().Done()
+				if errors.Is(cmd.Context().Err(), context.Canceled) {
+					os.Exit(0)
+				}
+			}()
 
 			var hasErrors bool
 			for _, execution := range executions {

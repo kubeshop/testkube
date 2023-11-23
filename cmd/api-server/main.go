@@ -127,6 +127,8 @@ func runMongoMigrations(ctx context.Context, db *mongo.Database, migrationsDir s
 
 func main() {
 	cfg, err := config.Get()
+	cfg.CleanLegacyVars()
+
 	ui.ExitOnError("error getting application config", err)
 	// Run services within an errgroup to propagate errors between services.
 	g, ctx := errgroup.WithContext(context.Background())
@@ -167,11 +169,11 @@ func main() {
 	var grpcClient cloud.TestKubeCloudAPIClient
 	var grpcConn *grpc.ClientConn
 	mode := common.ModeStandalone
-	if cfg.TestkubeCloudAPIKey != "" {
+	if cfg.TestkubeProAPIKey != "" {
 		mode = common.ModeAgent
 	}
 	if mode == common.ModeAgent {
-		grpcConn, err = agent.NewGRPCConnection(ctx, cfg.TestkubeCloudTLSInsecure, cfg.TestkubeCloudURL, log.DefaultLogger)
+		grpcConn, err = agent.NewGRPCConnection(ctx, cfg.TestkubeProTLSInsecure, cfg.TestkubeProURL, log.DefaultLogger)
 		ui.ExitOnError("error creating gRPC connection", err)
 		defer grpcConn.Close()
 
@@ -222,11 +224,11 @@ func main() {
 	var artifactStorage domainstorage.ArtifactsStorage
 	var storageClient domainstorage.Client
 	if mode == common.ModeAgent {
-		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
-		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
-		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
+		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
-		artifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
+		artifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 	} else {
 		mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
 		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)
@@ -244,6 +246,7 @@ func main() {
 			cfg.StorageToken,
 			cfg.StorageBucket,
 			cfg.StorageSSL,
+			cfg.StorageSkipVerify,
 		)
 		if err = minioClient.Connect(); err != nil {
 			ui.ExitOnError("Connecting to minio", err)
@@ -478,10 +481,10 @@ func main() {
 		agentHandle, err := agent.NewAgent(
 			log.DefaultLogger,
 			api.Mux.Handler(),
-			cfg.TestkubeCloudAPIKey,
+			cfg.TestkubeProAPIKey,
 			grpcClient,
-			cfg.TestkubeCloudWorkerCount,
-			cfg.TestkubeCloudLogStreamWorkerCount,
+			cfg.TestkubeProWorkerCount,
+			cfg.TestkubeProLogStreamWorkerCount,
 			api.GetLogsStream,
 			clusterId,
 			cfg.TestkubeClusterName,

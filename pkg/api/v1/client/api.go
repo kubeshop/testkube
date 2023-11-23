@@ -71,6 +71,36 @@ func NewDirectAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI,
 	}
 }
 
+// NewCloudAPIClient returns cloud api client
+func NewCloudAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI, apiPathPrefix string) APIClient {
+	return APIClient{
+		TestClient: NewTestClient(
+			NewCloudClient[testkube.Test](httpClient, apiURI, apiPathPrefix).WithSSEClient(sseClient),
+			NewCloudClient[testkube.Execution](httpClient, apiURI, apiPathPrefix),
+			NewCloudClient[testkube.TestWithExecution](httpClient, apiURI, apiPathPrefix),
+			NewCloudClient[testkube.TestWithExecutionSummary](httpClient, apiURI, apiPathPrefix),
+			NewCloudClient[testkube.ExecutionsResult](httpClient, apiURI, apiPathPrefix),
+			NewCloudClient[testkube.Artifact](httpClient, apiURI, apiPathPrefix),
+			NewCloudClient[testkube.ServerInfo](httpClient, apiURI, apiPathPrefix),
+			NewCloudClient[testkube.DebugInfo](httpClient, apiURI, apiPathPrefix),
+		),
+		TestSuiteClient: NewTestSuiteClient(
+			NewCloudClient[testkube.TestSuite](httpClient, apiURI, apiPathPrefix),
+			NewCloudClient[testkube.TestSuiteExecution](httpClient, apiURI, apiPathPrefix),
+			NewCloudClient[testkube.TestSuiteWithExecution](httpClient, apiURI, apiPathPrefix),
+			NewCloudClient[testkube.TestSuiteWithExecutionSummary](httpClient, apiURI, apiPathPrefix),
+			NewCloudClient[testkube.TestSuiteExecutionsResult](httpClient, apiURI, apiPathPrefix),
+			NewCloudClient[testkube.Artifact](httpClient, apiURI, apiPathPrefix),
+		),
+		ExecutorClient:   NewExecutorClient(NewCloudClient[testkube.ExecutorDetails](httpClient, apiURI, apiPathPrefix)),
+		WebhookClient:    NewWebhookClient(NewCloudClient[testkube.Webhook](httpClient, apiURI, apiPathPrefix)),
+		ConfigClient:     NewConfigClient(NewCloudClient[testkube.Config](httpClient, apiURI, apiPathPrefix)),
+		TestSourceClient: NewTestSourceClient(NewCloudClient[testkube.TestSource](httpClient, apiURI, apiPathPrefix)),
+		CopyFileClient:   NewCopyFileDirectClient(httpClient, apiURI, apiPathPrefix),
+		TemplateClient:   NewTemplateClient(NewCloudClient[testkube.Template](httpClient, apiURI, apiPathPrefix)),
+	}
+}
+
 // APIClient struct managing proxy API Client dependencies
 type APIClient struct {
 	TestClient

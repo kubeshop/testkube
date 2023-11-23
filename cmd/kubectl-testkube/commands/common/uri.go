@@ -9,7 +9,7 @@ func NewCloudUris(rootDomain string) CloudUris {
 		RootDomain: rootDomain,
 		Api:        fmt.Sprintf("https://api.%s", rootDomain),
 		Agent:      fmt.Sprintf("agent.%s:%d", rootDomain, defaultAgentPort),
-		Ui:         fmt.Sprintf("https://cloud.%s", rootDomain),
+		Ui:         fmt.Sprintf("https://app.%s", rootDomain),
 		Auth:       fmt.Sprintf("https://api.%s/idp", rootDomain),
 	}
 }

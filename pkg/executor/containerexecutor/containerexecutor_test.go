@@ -132,6 +132,7 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "RUNNER_TOKEN", Value: ""},
 		{Name: "RUNNER_BUCKET", Value: ""},
 		{Name: "RUNNER_SSL", Value: "false"},
+		{Name: "RUNNER_SKIP_VERIFY", Value: "false"},
 		{Name: "RUNNER_SCRAPPERENABLED", Value: "false"},
 		{Name: "RUNNER_DATADIR", Value: "/data"},
 		{Name: "RUNNER_CDEVENTS_TARGET", Value: ""},
@@ -364,7 +365,7 @@ func (r FakeResultRepository) GetByNameAndTest(ctx context.Context, name, testNa
 	panic("implement me")
 }
 
-func (r FakeResultRepository) GetLatestByTest(ctx context.Context, testName string) (testkube.Execution, error) {
+func (r FakeResultRepository) GetLatestByTest(ctx context.Context, testName string) (*testkube.Execution, error) {
 	//TODO implement me
 	panic("implement me")
 }

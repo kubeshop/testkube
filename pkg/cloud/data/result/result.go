@@ -82,28 +82,28 @@ func (r *CloudRepository) getLatestByTest(ctx context.Context, testName, sortFie
 }
 
 // TODO: When it will be implemented, replace with a new Cloud command, to avoid 2 calls with 2 sort fields
-func (r *CloudRepository) GetLatestByTest(ctx context.Context, testName string) (testkube.Execution, error) {
+func (r *CloudRepository) GetLatestByTest(ctx context.Context, testName string) (*testkube.Execution, error) {
 	startExecution, startErr := r.getLatestByTest(ctx, testName, "starttime")
 	if startErr != nil && startErr != mongo.ErrNoDocuments {
-		return testkube.Execution{}, startErr
+		return nil, startErr
 	}
 	endExecution, endErr := r.getLatestByTest(ctx, testName, "endtime")
 	if endErr != nil && endErr != mongo.ErrNoDocuments {
-		return testkube.Execution{}, endErr
+		return nil, endErr
 	}
 
 	if startErr == nil && endErr == nil {
 		if startExecution.StartTime.After(endExecution.EndTime) {
-			return startExecution, nil
+			return &startExecution, nil
 		} else {
-			return endExecution, nil
+			return &endExecution, nil
 		}
 	} else if startErr == nil {
-		return startExecution, nil
+		return &startExecution, nil
 	} else if endErr == nil {
-		return endExecution, nil
+		return &endExecution, nil
 	}
-	return testkube.Execution{}, startErr
+	return nil, startErr
 }
 
 // TODO: When it will be implemented, replace with a new Cloud command, to avoid 2 calls with 2 sort fields

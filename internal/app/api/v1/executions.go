@@ -635,6 +635,7 @@ func (s *TestkubeAPI) getArtifactStorage(bucket string) (storage.ArtifactsStorag
 		s.storageParams.Token,
 		bucket,
 		s.storageParams.SSL,
+		s.storageParams.SkipVerify,
 	)
 	if err := minioClient.Connect(); err != nil {
 		return nil, err
