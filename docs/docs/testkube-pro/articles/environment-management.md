@@ -21,7 +21,7 @@ On the "General" tab, you can see environment information:
 * Connection state 
 * Agent name
 * Agent version - If a new Testkube Agent version is available, you'll be prompted to upgrade.
-* Testkube CLI context command - To configure your Testkube CLI with cloud context.
+* Testkube CLI context command - To configure your Testkube CLI with pro context.
 
 You can also delete a given environment (be careful, this action can't be rolled-back!)
 

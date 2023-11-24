@@ -14,4 +14,4 @@ The way Testkube Pro works is by installing and adding an agent to the Testkube 
 
 You can start using Testkube Pro by either: 
 - [**Migrating Testkube Open Source**](./transition-from-oss.md) from your existing Testkube Open Source instance to a Pro instance.
-- Creating a fresh installation, using [app.testkube.io](https://cloud.testkube.io).
+- Creating a fresh installation, using [app.testkube.io](https://app.testkube.io).
