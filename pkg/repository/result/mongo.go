@@ -145,7 +145,9 @@ func (r *MongoRepository) GetLatestTestNumber(ctx context.Context, testName stri
 func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) (*testkube.Execution, error) {
 	opts := options.Aggregate()
 	pipeline := []bson.M{
-		{"$documents": bson.A{bson.M{"name": testName}}},
+		{"$group": bson.M{"_id": "$testname", "doc": bson.M{"$first": bson.M{}}}},
+		{"$project": bson.M{"_id": 0, "name": "$_id"}},
+		{"$match": bson.M{"name": testName}},
 		{"$lookup": bson.M{"from": r.ResultsColl.Name(), "let": bson.M{"name": "$name"}, "pipeline": []bson.M{
 			{"$match": bson.M{"$expr": bson.M{"$eq": bson.A{"$testname", "$$name"}}}},
 			{"$sort": bson.M{"starttime": -1}},
@@ -171,7 +173,7 @@ func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) 
 		{"$replaceRoot": bson.M{"newRoot": "$doc.content"}},
 		{"$limit": 1},
 	}
-	cursor, err := r.db.Aggregate(ctx, pipeline, opts)
+	cursor, err := r.ResultsColl.Aggregate(ctx, pipeline, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +206,10 @@ func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []stri
 	}
 
 	pipeline := []bson.M{
-		{"$documents": documents},
+		{"$group": bson.M{"_id": "$testname", "doc": bson.M{"$first": bson.M{}}}},
+		{"$project": bson.M{"_id": 0, "name": "$_id"}},
+		{"$match": bson.M{"$or": documents}},
+
 		{"$lookup": bson.M{"from": r.ResultsColl.Name(), "let": bson.M{"name": "$name"}, "pipeline": []bson.M{
 			{"$match": bson.M{"$expr": bson.M{"$eq": bson.A{"$testname", "$$name"}}}},
 			{"$sort": bson.M{"starttime": -1}},
@@ -235,7 +240,7 @@ func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []stri
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
 
-	cursor, err := r.db.Aggregate(ctx, pipeline, opts)
+	cursor, err := r.ResultsColl.Aggregate(ctx, pipeline, opts)
 	if err != nil {
 		return nil, err
 	}
