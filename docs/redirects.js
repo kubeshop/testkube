@@ -308,20 +308,20 @@ const redirects = [
     to: "/testkube-pro/articles/architecture",
   },
   {
-    from: "testkube-cloud/articles/running-parallel-tests-with-test-suite",
-    to: "testkube-pro/articles/running-parallel-tests-with-test-suite",
+    from: "/testkube-cloud/articles/running-parallel-tests-with-test-suite",
+    to: "/testkube-pro/articles/running-parallel-tests-with-test-suite",
   },
   {
-    from: "testkube-cloud/articles/AI-test-insights",
-    to: "testkube-pro/articles/AI-test-insights",
+    from: "/testkube-cloud/articles/AI-test-insights",
+    to: "/testkube-pro/articles/AI-test-insights",
   },
   {
-    from: "testkube-cloud/articles/status-pages",
-    to: "testkube-pro/articles/status-pages",
+    from: "/testkube-cloud/articles/status-pages",
+    to: "/testkube-pro/articles/status-pages",
   },
   {
-    from: "testkube-cloud/articles/cached-results",
-    to: "testkube-pro/articles/cached-results",
+    from: "/testkube-cloud/articles/cached-results",
+    to: "/testkube-pro/articles/cached-results",
   },
   {
     from: "/reference/helm-chart",
