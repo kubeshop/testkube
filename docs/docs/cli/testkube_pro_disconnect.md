@@ -1,9 +1,9 @@
-## testkube cloud disconnect
+## testkube pro disconnect
 
 Switch back to Testkube OSS mode, based on active .kube/config file
 
 ```
-testkube cloud disconnect [flags]
+testkube pro disconnect [flags]
 ```
 
 ### Options
@@ -35,5 +35,5 @@ testkube cloud disconnect [flags]
 
 ### SEE ALSO
 
-* [testkube cloud](testkube_cloud.md)	 - Testkube Cloud commands
+* [testkube pro](testkube_pro.md)	 - Testkube Pro commands
 
