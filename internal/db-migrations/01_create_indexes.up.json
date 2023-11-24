@@ -3,20 +3,20 @@
     "createIndexes": "testresults",
     "indexes": [
       {
-        "key": {"id": "hashed"},
-        "name": "id_hashed"
+        "key": {"id": 1},
+        "name": "id_1"
       },
       {
-        "key": {"testsuite.name": "hashed"},
-        "name": "testsuite.name_hashed"
+        "key": {"testsuite.name": 1},
+        "name": "testsuite.name_1"
       },
       {
-        "key": {"name": "hashed"},
-        "name": "name_hashed"
+        "key": {"name": 1},
+        "name": "name_1"
       },
       {
-        "key": {"status": "hashed"},
-        "name": "status_hashed"
+        "key": {"status": 1},
+        "name": "status_1"
       },
       {
         "key": {"starttime": -1},
@@ -32,20 +32,20 @@
     "createIndexes": "results",
     "indexes": [
       {
-        "key": {"id": "hashed"},
-        "name": "id_hashed"
+        "key": {"id": 1},
+        "name": "id_1"
       },
       {
-        "key": {"testname": "hashed"},
-        "name": "testname_hashed"
+        "key": {"testname": 1},
+        "name": "testname_1"
       },
       {
-        "key": {"name": "hashed"},
-        "name": "name_hashed"
+        "key": {"name": 1},
+        "name": "name_1"
       },
       {
-        "key": {"executionresult.status": "hashed"},
-        "name": "executionresult.status_hashed"
+        "key": {"executionresult.status": 1},
+        "name": "executionresult.status_1"
       },
       {
         "key": {"starttime": -1},
