@@ -191,6 +191,7 @@ type TestkubeAPI struct {
 
 type storageParams struct {
 	SSL             bool
+	SkipVerify      bool
 	Endpoint        string
 	AccessKeyId     string
 	SecretAccessKey string

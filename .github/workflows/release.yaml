@@ -90,7 +90,13 @@ jobs:
         run: |
           docker push kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-arm64v8
           docker push kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-amd64
-          docker push kubeshop/testkube-cli:latest
+          # adding the docker manifest for the latest image tag
+          docker manifest create kubeshop/testkube-cli:latest \
+            kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-amd64 \
+            kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-arm64v8
+          docker manifest annotate kubeshop/testkube-cli:latest kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-amd64 --arch amd64
+          docker manifest annotate kubeshop/testkube-cli:latest kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-arm64v8 --arch arm64 --variant v8
+          docker manifest push kubeshop/testkube-cli:latest
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@master

@@ -23,10 +23,12 @@ variables:
 
 setup-testkube:
   stage: setup
-  image: kubeshop/testkube-cli
+  image: 
+    name: kubeshop/testkube-cli
+    entrypoint: ["/bin/sh", "-c"]
   script:
-    - testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
-    - testkube run test test-name -f
+    - kubectl-testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
+    - kubectl-testkube run test test-name -f
 ```
 
 It is recommended that sensitive values should never be stored as plaintext in workflow files, but rather as [variables](https://docs.gitlab.com/ee/ci/variables/).  Secrets can be configured at the organization, repository, or environment level, and allow you to store sensitive information in Gitlab.
@@ -37,10 +39,12 @@ stages:
 
 setup-testkube:
   stage: setup
-  image: kubeshop/testkube-cli
+  image: 
+    name: kubeshop/testkube-cli
+    entrypoint: ["/bin/sh", "-c"]
   script:
-    - testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
-    - testkube run test test-name -f
+    - kubectl-testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
+    - kubectl-testkube run test test-name -f
  ```
 ## Testkube OSS
 
@@ -59,10 +63,12 @@ variables:
 
 setup-testkube:
   stage: setup
-  image: kubeshop/testkube-cli
+  image: 
+    name: kubeshop/testkube-cli
+    entrypoint: ["/bin/sh", "-c"]
   script:
-    - testkube set context --kubeconfig --namespace $NAMESPACE
-    - testkube run test test-name -f
+    - kubectl-testkube set context --kubeconfig --namespace $NAMESPACE
+    - kubectl-testkube run test test-name -f
 ```
 
 The steps to connect to your Kubernetes cluster differ for each provider. You should check the docs of your Cloud provider for how to connect to the Kubernetes cluster from Gitlab CI.
@@ -80,9 +86,11 @@ stages:
 
 setup-testkube:
   stage: setup
-  image: amazon/aws-cli
+  image: 
+    name: amazon/aws-cli
+    entrypoint: ["/bin/sh", "-c"]
   script:
-    - apt-get update && apt-get install -y curl
+    - yum install -y jq tar gzip 
     - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
     - install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
     - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
@@ -94,6 +102,7 @@ setup-testkube:
     - testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
     - echo "Running Testkube test..."
     - testkube run test test-name -f
+
 ```
 ### How to connect to GKE (Google Kubernetes Engine) cluster and run a test 
 
@@ -113,10 +122,11 @@ deploy_to_gke:
     - gcloud auth activate-service-account --key-file=gke-sa-key.json
     - gcloud config set project $GKE_PROJECT
   script:
+    - apt update && apt install -y jq 
     - gcloud --quiet auth configure-docker
     - gcloud container clusters get-credentials $GKE_CLUSTER_NAME --zone $GKE_ZONE
     - echo "Installing Testkube..."
-    - curl -sSLf https://get.testkube.io | sh
+    - curl -sSLf https://get.testkube.io | bash
     - testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
     - echo "Running Testkube test..."
     - testkube run test test-name -f
