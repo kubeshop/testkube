@@ -60,17 +60,17 @@ spec:
     livenessProbe:
       tcpSocket:
         port: {{ $port.ContainerPort }}
-    	failureThreshold: 3
-		  periodSeconds: 5
-		  successThreshold: 1
-		  timeoutSeconds: 1
+      failureThreshold: 3
+      periodSeconds: 5
+      successThreshold: 1
+      timeoutSeconds: 1
     readinessProbe:
       tcpSocket:
         port: {{ $port.ContainerPort }}
-		  failureThreshold: 3
-		  initialDelaySeconds: 10
-		  periodSeconds: 5
-		  timeoutSeconds: 1
+      failureThreshold: 3
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 1
     {{- end }}
     {{- end }}
     {{- if .Resources }}
@@ -78,19 +78,19 @@ spec:
       {{- if .Resources.Limits }}
       limits:
         {{- if .Resources.Limits.Cpu }}
-        cpu: {{- .Resources.Limits.Cpu }}
+        cpu: {{ .Resources.Limits.Cpu }}
         {{- end }}
         {{- if .Resources.Limits.Memory }}
-        memory: {{- .Resources.Limits.Memory }}
+        memory: {{ .Resources.Limits.Memory }}
         {{- end }}
       {{- end }}
       {{- if .Resources.Requests }}
       requests:
         {{- if .Resources.Requests.Cpu }}
-        cpu: {{- .Resources.Requests.Cpu }}
+        cpu: {{ .Resources.Requests.Cpu }}
         {{- end }}
         {{- if .Resources.Requests.Memory }}
-        memory: {{- .Resources.Requests.Memory }}
+        memory: {{ .Resources.Requests.Memory }}
         {{- end }}
       {{- end }}
     {{- end }}
