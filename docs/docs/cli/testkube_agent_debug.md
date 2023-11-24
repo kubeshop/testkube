@@ -24,5 +24,5 @@ testkube agent debug [flags]
 
 ### SEE ALSO
 
-* [testkube agent](testkube_agent.md)	 - Testkube Pro Agent related commands
+* [testkube agent](testkube_agent.md)	 - Testkube Cloud Agent related commands
 

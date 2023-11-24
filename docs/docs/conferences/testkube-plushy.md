@@ -12,7 +12,7 @@ Read on to learn how you can win a Testkube plushy!
 
 ## Instructions
 
-Create a simple test using Testkube Pro to win a Testkube plushy. 
+Create a simple test using Testkube Cloud to win a Testkube plushy. 
 
 You can follow these instructions or get help from our booth staff to create your first test with Testkube!
 
@@ -32,9 +32,9 @@ kubectl create deployment hello-world --image=kubeshop/kusk-hello-world:v1.0.0
 kubectl expose deployment hello-world --name hello-world-svc --port=8080
 ```
 
-### 3. Sign in to Testkube Pro
+### 3. Sign in to Testkube Cloud
 
-Go to https://app.testkube.io/ and create an account on Testkube Pro using your Github credentials.
+Go to https://cloud.testkube.io/ and create an account on Testkube Cloud using your Github credentials.
 
 ### 4. Install Testkube on your cluster
 
@@ -52,7 +52,7 @@ Install Testkube in your K8s cluster:
 
 Let's create a quick `curl` test, but this can be any testing tool you're using like Postman, Cypress, K6, etc. 
 
-![Create test with Testkube Pro](../img/conference-kubecon-create-test.png)
+![Create test with Testkube Cloud](../img/conference-kubecon-create-test.png)
 
 Use the following `curl` test that checks if the hello-world app returns a status `200`: 
 

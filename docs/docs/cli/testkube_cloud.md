@@ -1,18 +1,15 @@
-## testkube login
+## testkube cloud
 
-Login to Testkube Cloud
+Testkube Cloud commands
 
 ```
-testkube login [flags]
+testkube cloud [flags]
 ```
 
 ### Options
 
 ```
-      --cloud-root-domain string   defaults to testkube.io, usually don't need to be changed [required for cloud mode] (default "testkube.io")
-      --env-id string              Testkube Cloud environment id
-  -h, --help                       help for login
-      --org-id string              Testkube Cloud organization id
+  -h, --help   help for cloud
 ```
 
 ### Options inherited from parent commands
@@ -28,4 +25,8 @@ testkube login [flags]
 ### SEE ALSO
 
 * [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube cloud connect](testkube_cloud_connect.md)	 - Testkube Cloud connect 
+* [testkube cloud disconnect](testkube_cloud_disconnect.md)	 - Switch back to Testkube OSS mode, based on active .kube/config file
+* [testkube cloud init](testkube_cloud_init.md)	 - Install Testkube Cloud Agent and connect to Testkube Cloud environment
+* [testkube cloud login](testkube_cloud_login.md)	 - Login to Testkube Cloud
 

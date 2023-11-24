@@ -1,18 +1,18 @@
-## testkube pro login
+## testkube cloud login
 
-Login to Testkube Pro
+Login to Testkube Cloud
 
 ```
-testkube pro login [flags]
+testkube cloud login [flags]
 ```
 
 ### Options
 
 ```
-      --pro-root-domain string   defaults to testkube.io, usually don't need to be changed [required for pro mode] (default "testkube.io")
-      --env-id string              Testkube Pro environment id
+      --cloud-root-domain string   defaults to testkube.io, usually don't need to be changed [required for cloud mode] (default "testkube.io")
+      --env-id string              Testkube Cloud environment id
   -h, --help                       help for login
-      --org-id string              Testkube Pro organization id
+      --org-id string              Testkube Cloud organization id
 ```
 
 ### Options inherited from parent commands
@@ -27,5 +27,5 @@ testkube pro login [flags]
 
 ### SEE ALSO
 
-* [testkube pro](testkube_pro.md)	 - Testkube Pro commands
+* [testkube cloud](testkube_cloud.md)	 - Testkube Cloud commands
 
