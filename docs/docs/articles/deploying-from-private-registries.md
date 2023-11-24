@@ -1,4 +1,4 @@
-# Guide to Deploying Testkube from private registries  
+# Guide to Deploying Testkube from Private Registries  
 
 This guide shows how to deploy Testkube using images from private registries. 
 
