@@ -1,13 +1,13 @@
 # Testkube Jenkins
 
 The Testkube Jenkins integration streamlines the installation of Testkube, enabling the execution of any [Testkube CLI](https://docs.testkube.io/cli/testkube) command within Jenkins pipelines. This integration can be effortlessly integrated into your Jenkins setup, enhancing your continuous integration and delivery processes.
-This Jenkins integration offers a versatile solution for managing your pipeline workflows and is compatible with Testkube Pro, Testkube Enterprise, and the open-source Testkube platform. It allows Jenkins users to effectively utilize Testkube's capabilities within their CI/CD pipelines, providing a robust and flexible framework for test execution and automation.
+This Jenkins integration offers a versatile solution for managing your pipeline workflows and is compatible with Testkube Cloud, Testkube Enterprise, and the open-source Testkube platform. It allows Jenkins users to effectively utilize Testkube's capabilities within their CI/CD pipelines, providing a robust and flexible framework for test execution and automation.
 
-## Testkube Pro
+## Testkube Cloud
 
-### How to configure Testkube CLI action for Testkube Pro and run a test
+### How to configure Testkube CLI action for TK Cloud and run a test
 
-To use Jenkins CI/CD for [Testkube Pro](https://app.testkube.io/), you need to create an [API token](https://docs.testkube.io/testkube-pro/articles/organization-management/#api-tokens).
+To use Jenkins CI/CD for [Testkube Cloud](https://cloud.testkube.io/), you need to create an [API token](https://docs.testkube.io/testkube-cloud/articles/organization-management/#api-tokens).
 Then, pass the **organization** and **environment** IDs, along with the **token** and other parameters specific for your use case.
 
 If a test is already created, you can run it using the command `testkube run test test-name -f` . However, if you need to create a test in this workflow, please add a creation command, e.g.: `testkube create test --name test-name --file path_to_file.json`.

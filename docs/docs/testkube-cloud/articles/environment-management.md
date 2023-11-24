@@ -1,12 +1,12 @@
 # Environment Management
 
 Environment in Testkube is related to the Testkube agent, which is responsible for sending
-test insights to Testkube Pro and for managing your Kubernetes related cluster resources.
+test insights to Testkube Cloud and for managing your Kubernetes related cluster resources.
 
 
 ## Creating a New Environment
 
-You can create a new environment from the "Environments" drop down in the header section of the Testkube Pro UI. 
+You can create a new environment from the "Environments" drop down in the header section of the Testkube Cloud UI. 
 
 ![env-drop-down](../../img/env-drop-down.png)
 
@@ -21,7 +21,7 @@ On the "General" tab, you can see environment information:
 * Connection state 
 * Agent name
 * Agent version - If a new Testkube Agent version is available, you'll be prompted to upgrade.
-* Testkube CLI context command - To configure your Testkube CLI with pro context.
+* Testkube CLI context command - To configure your Testkube CLI with cloud context.
 
 You can also delete a given environment (be careful, this action can't be rolled-back!)
 

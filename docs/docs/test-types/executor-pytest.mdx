@@ -6,15 +6,15 @@ You can run pytest with Testkube to use it in your automated tests for your Kube
 ## Usage
 Before starting, please switch your current folder to /contrib/container/pytest
 
-### Step 1 - Add the executor to Testkube.
+### Step 1 - Add the executor to Testkube
 
 ```sh
 `kubectl apply -f container-executor-pytest.yaml`
 ```
 
-### Step 2 - Build the executor Docker image.
+### Step 2 - Build the executor Docker image
 
-Current Docker image is based on Python 3.8.17 and a few basic modules, like pipenv, pytest and requests.
+Current Docker image is based on python 3.8.17 and a few basic modules, like pipenv, pytest and requests.
 Feel free to change the python version, install missing dependencies, etc. Docker image should be placed in your 
 favourite docker image registry, like local Docker image registry for Minikube, Kind, etc or Cloud provider one.
 
@@ -22,7 +22,7 @@ favourite docker image registry, like local Docker image registry for Minikube, 
 docker build -t pytest-executor -f Dockerfile
 ```
 
-### Step 3 - Create a test.
+### Step 3 - Create a test
 
 ```sh 
 kubectl apply -f pytest_test.yaml

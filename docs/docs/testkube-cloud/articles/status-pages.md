@@ -28,7 +28,7 @@ Testkube Status Pages is a feature within the Testkube software that allows you 
 
 To access Testkube Status Pages:
 
-1. Log in to your Testkube Pro account.
+1. Log in to your Testkube Cloud account.
 2. Go to the dashboard.
 3. Click on "Status Pages" in the left navigation panel.
 

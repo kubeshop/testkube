@@ -1,6 +1,6 @@
 # Connecting from the CLI
 
-To use Testkube CLI to connect to your Testkube Pro install you will need to set the CLI Context. For that you will need a Testkube Pro token.
+To use Testkube CLI to connect to your Testkube Cloud install you will need to set the CLI Context. For that you will need a Testkube Cloud token.
 
 The token you create can have different roles associated with it for fine-grained control:
 
