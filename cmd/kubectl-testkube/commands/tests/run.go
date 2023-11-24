@@ -290,18 +290,18 @@ func NewRunTestCmd() *cobra.Command {
 				}
 			}()
 
-			var hasErrors bool
+			var execErrors []error
 			for _, execution := range executions {
 				printExecutionDetails(execution)
 
 				if execution.ExecutionResult != nil && execution.ExecutionResult.ErrorMessage != "" {
-					hasErrors = true
+					execErrors = append(execErrors, errors.New(execution.ExecutionResult.ErrorMessage))
 				}
 
 				if execution.Id != "" {
 					if watchEnabled && len(args) > 0 {
 						if err = watchLogs(execution.Id, silentMode, client); err != nil {
-							hasErrors = true
+							execErrors = append(execErrors, err)
 						}
 					}
 
@@ -310,7 +310,7 @@ func NewRunTestCmd() *cobra.Command {
 				}
 
 				if err = render.RenderExecutionResult(client, &execution, false); err != nil {
-					hasErrors = true
+					execErrors = append(execErrors, err)
 				}
 
 				if execution.Id != "" {
@@ -326,9 +326,7 @@ func NewRunTestCmd() *cobra.Command {
 				uiShellGetExecution(execution.Name)
 			}
 
-			if hasErrors {
-				ui.ExitOnError("executions contain failed on errors")
-			}
+			ui.ExitOnError("executions contain failed on errors", execErrors...)
 		},
 	}
 
