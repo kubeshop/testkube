@@ -22,7 +22,7 @@ const sidebars = {
         type: "doc",
         id: "index",
       },
-      items: ["articles/supported-tests", "articles/testkube-benefits", "articles/open-source-or-cloud"],
+      items: ["articles/supported-tests", "articles/testkube-benefits", "articles/open-source-or-pro"],
     },
     {
       type: "doc",
