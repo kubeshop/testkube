@@ -1,13 +1,13 @@
 # Testkube Gitlab CI
 
 The Testkube GitLab CI/CD integration facilitates the installation of Testkube and allows the execution of any [Testkube CLI](https://docs.testkube.io/cli/testkube) command within a GitLab CI/CD pipeline. This integration can be seamlessly incorporated into your GitLab repositories to enhance your CI/CD workflows.
-The integration offers a versatile approach to align with your pipeline requirements and is compatible with Testkube Cloud, Testkube Enterprise, and the open-source Testkube platform. It enables GitLab users to leverage the powerful features of Testkube directly within their CI/CD pipelines, ensuring efficient and flexible test execution.
+The integration offers a versatile approach to align with your pipeline requirements and is compatible with Testkube Pro, Testkube Enterprise, and the open-source Testkube platform. It enables GitLab users to leverage the powerful features of Testkube directly within their CI/CD pipelines, ensuring efficient and flexible test execution.
 
-## Testkube Cloud
+## Testkube Pro
 
-### How to configure Testkube CLI action for TK Cloud and run a test
+### How to configure Testkube CLI action for Testkube Pro and run a test
 
-To use this Gitlab CI for [Testkube Cloud](https://cloud.testkube.io/), you need to create an [API token](https://docs.testkube.io/testkube-cloud/articles/organization-management/#api-tokens).
+To use this Gitlab CI for [Testkube Pro](https://app.testkube.io/), you need to create an [API token](https://docs.testkube.io/testkube-pro/articles/organization-management/#api-tokens).
 Then, pass the **organization** and **environment** IDs, along with the **token** and other parameters specific for your use case.
 
 If a test is already created, you can run it using the command `testkube run test test-name -f` . However, if you need to create a test in this workflow, please add a creation command, e.g.: `testkube create test --name test-name --file path_to_file.json`.

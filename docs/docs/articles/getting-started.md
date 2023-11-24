@@ -2,13 +2,13 @@
 
 Testkube is a Kubernetes-native test orchestration and execution framework that allows you to automate the executions of your existing testing tools inside your Kubernetes cluster, removing all the complexity from your CI/CD pipelines.
 
-To get started, you can follow the instructions in Testkube Cloud, or watch this video for a step-by-step walkthrough. 
+To get started, you can follow the instructions in Testkube Pro, or watch this video for a step-by-step walkthrough. 
 
-<iframe width="100%" height="315" src="https://www.youtube.com/embed/YnR5yOO8C4s?si=3xdK77wcQVpJQrwt" title="YouTube Tutorial: Installing Testkube Cloud" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+<iframe width="100%" height="315" src="https://www.youtube.com/embed/YnR5yOO8C4s?si=3xdK77wcQVpJQrwt" title="YouTube Tutorial: Installing Testkube Pro" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
 
-## Step 1: Sign up for Testkube Cloud 
-[Create an account](https://cloud.testkube.io/) using GitHub or GitLab. 
+## Step 1: Sign up for Testkube Pro 
+[Create an account](https://app.testkube.io/) using GitHub or GitLab. 
 
 ![Sign in to Testkube](../img/sign-in.png)
 
@@ -35,10 +35,10 @@ With Testkube you can run any kind of test in Kubernetes. Check out our [native 
 
 ### Validating the Installation 
 
-Testkube Cloud will notify if the installation is successful. 
+Testkube Pro will notify if the installation is successful. 
 
-* A green indicator means that your cluster was able to connect to the Testkube Cloud.
-* A red indicator indicates that the Testkube Agent can't connect to the Testkube Cloud API (Testkube needs some time to establish a connection, max time is 2-3 minutes).
+* A green indicator means that your cluster was able to connect to the Testkube Pro.
+* A red indicator indicates that the Testkube Agent can't connect to the Testkube Pro API (Testkube needs some time to establish a connection, max time is 2-3 minutes).
 
 ![Validate Install](../img/validate-install.png)
 

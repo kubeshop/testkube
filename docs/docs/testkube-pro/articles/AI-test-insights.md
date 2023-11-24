@@ -16,7 +16,7 @@ The AI Insights feature on Testkube utilizes artificial intelligence to help you
 
 ## Example of Creating a cURL Test
 
-Login to your Testkube cloud account and create a test. The test in this example will send an HTTP GET request to an endpoint and validate that the response - an IP address - is received.
+Login to your Testkube pro account and create a test. The test in this example will send an HTTP GET request to an endpoint and validate that the response - an IP address - is received.
 
 Provide the following details: 
 Name: `curl-url-test`
