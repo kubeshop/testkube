@@ -7,7 +7,7 @@ The action provides a flexible way to work with your pipeline and can be used wi
 
 ### How to configure Testkube CLI action for Testkube Pro and Run a Test
 
-To use this GitHub Action for the [Testkube Pro](https://pro.testkube.io/), you need to create an [API token](https://docs.testkube.io/testkube-cloud/articles/organization-management/#api-tokens).
+To use this GitHub Action for the [Testkube Pro](https://app.testkube.io/), you need to create an [API token](https://docs.testkube.io/testkube-pro/articles/organization-management/#api-tokens).
 Then, pass the **organization** and **environment** IDs, along with the **token** and other parameters specific for your use case.
 
 If a test is already created, you may directly run it using the command `testkube run test test-name -f` . However, if you need to create a test in this workflow, please add a creation command, e.g.: `testkube create test --name test-name --file path_to_file.json`.

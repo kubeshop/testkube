@@ -4,11 +4,11 @@ Testkube is a Kubernetes-native test orchestration and execution framework that 
 
 To get started, you can follow the instructions in Testkube Pro, or watch this video for a step-by-step walkthrough. 
 
-<iframe width="100%" height="315" src="https://www.youtube.com/embed/YnR5yOO8C4s?si=3xdK77wcQVpJQrwt" title="YouTube Tutorial: Installing Testkube Cloud" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+<iframe width="100%" height="315" src="https://www.youtube.com/embed/YnR5yOO8C4s?si=3xdK77wcQVpJQrwt" title="YouTube Tutorial: Installing Testkube Pro" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
 
 ## Step 1: Sign up for Testkube Pro 
-[Create an account](https://cloud.testkube.io/) using GitHub or GitLab. 
+[Create an account](https://app.testkube.io/) using GitHub or GitLab. 
 
 ![Sign in to Testkube](../img/sign-in.png)
 

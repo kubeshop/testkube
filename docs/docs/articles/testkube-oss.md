@@ -2,9 +2,9 @@
 
 Welcome to the Open Source version of Testkube! 
 
-Designed to integrate seamlessly with your Kubernetes clusters, Testkube offers flexibility and power. For those searching for a quicker and streamlined experience, we suggest [signing up for Testkube Pro](https://cloud.testkube.io/). However, for organizations that prefer the hands-on approach, diving deep into the [Open Source](testkube-oss.md) version could be the ideal choice.
+Designed to integrate seamlessly with your Kubernetes clusters, Testkube offers flexibility and power. For those searching for a quicker and streamlined experience, we suggest [signing up for Testkube Pro](https://app.testkube.io/). However, for organizations that prefer the hands-on approach, diving deep into the [Open Source](testkube-oss.md) version could be the ideal choice.
 
-Visit [Open Source or Pro](open-source-or-cloud.md) to see a comparison of features to help you with your choice.
+Visit [Open Source or Pro](open-source-or-pro.md) to see a comparison of features to help you with your choice.
 
 Also, take a look at our [Quick Setup Video](https://www.youtube.com/watch?v=ynzEkOUhxKk).
 
@@ -32,5 +32,5 @@ This command will set up the following components in your Kubernetes cluster:
 Verify Your Installation: Ensure that Testkube is up and running with: 
 `kubectl get all -n testkube`.
 
-Once set up, you're ready to unleash the full potential of Testkube in your environment. Whether you opt for the Open Source or Cloud variant, Testkube is committed to powering your development and testing workflows seamlessly.
+Once set up, you're ready to unleash the full potential of Testkube in your environment. Whether you opt for the Open Source or Pro variant, Testkube is committed to powering your development and testing workflows seamlessly.
 
