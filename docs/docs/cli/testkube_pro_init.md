@@ -1,30 +1,26 @@
-## testkube cloud connect
+## testkube pro init
 
-Testkube Cloud connect 
+Install Testkube Pro Agent and connect to Testkube Pro environment
 
 ```
-testkube cloud connect [flags]
+testkube pro init [flags]
 ```
 
 ### Options
 
 ```
-      --agent-token string         Testkube Cloud agent key [required for cloud mode]
+      --agent-token string         Testkube Pro agent key
       --chart string               chart name (usually you don't need to change it) (default "kubeshop/testkube")
-      --cloud-root-domain string   defaults to testkube.io, usually don't need to be changed [required for cloud mode] (default "testkube.io")
-      --dashboard-replicas int     Dashboard replicas
+      --pro-root-domain string   defaults to testkube.io, usually don't need to be changed [required for pro mode] (default "testkube.io")
       --dry-run                    dry run mode - only print commands that would be executed
-      --env-id string              Testkube Cloud environment id [required for cloud mode]
-  -h, --help                       help for connect
-      --minio-replicas int         MinIO replicas
-      --mongo-replicas int         MongoDB replicas
+      --env-id string              Testkube Pro environment id
+  -h, --help                       help for init
+      --multi-namespace            multi namespace mode
       --name string                installation name (usually you don't need to change it) (default "testkube")
       --namespace string           namespace where to install (default "testkube")
       --no-confirm                 don't ask for confirmation - unatended installation mode
-      --no-dashboard               don't install dashboard
-      --no-minio                   don't install MinIO
-      --no-mongo                   don't install MongoDB
-      --org-id string              Testkube Cloud organization id [required for cloud mode]
+      --no-operator                should operator be installed (for more instances in multi namespace mode it should be set to true)
+      --org-id string              Testkube Pro organization id
       --values string              path to Helm values file
 ```
 
@@ -39,5 +35,5 @@ testkube cloud connect [flags]
 
 ### SEE ALSO
 
-* [testkube cloud](testkube_cloud.md)	 - Testkube Cloud commands
+* [testkube pro](testkube_pro.md)	 - Testkube Pro commands
 
