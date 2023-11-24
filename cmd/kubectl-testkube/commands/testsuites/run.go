@@ -142,10 +142,10 @@ func NewRunTestSuiteCmd() *cobra.Command {
 				}
 			}()
 
-			var hasErrors bool
+			var execErrors []error
 			for _, execution := range executions {
 				if execution.IsFailed() {
-					hasErrors = true
+					execErrors = append(execErrors, errors.New("failed execution"))
 				}
 
 				if execution.Id != "" {
@@ -172,7 +172,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 				ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 
 				if err = uiPrintExecutionStatus(client, execution); err != nil {
-					hasErrors = true
+					execErrors = append(execErrors, err)
 				}
 
 				uiShellTestSuiteGetCommandBlock(execution.Id)
@@ -189,9 +189,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 				}
 			}
 
-			if hasErrors {
-				ui.ExitOnError("executions contain failed on errors")
-			}
+			ui.ExitOnError("executions contain failed on errors", execErrors...)
 		},
 	}
 
