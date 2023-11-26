@@ -193,11 +193,11 @@ type TestkubeAPI struct {
 }
 
 type storageParams struct {
-	SSL             bool `envconfig:"SSL" default:"false"`
-	SkipVerify      bool `envconfig:"SKIP_VERIFY" default:"false"`
-	CertFile        string
-	KeyFile         string
-	CAFile          string
+	SSL             bool   `envconfig:"STORAGE_SSL" default:"false"`
+	SkipVerify      bool   `envconfig:"STORAGE_SKIP_VERIFY" default:"false"`
+	CertFile        string `envconfig:"STORAGE_CERT_FILE"`
+	KeyFile         string `envconfig:"STORAGE_KEY_FILE"`
+	CAFile          string `envconfig:"STORAGE_CA_FILE"`
 	Endpoint        string
 	AccessKeyId     string
 	SecretAccessKey string
