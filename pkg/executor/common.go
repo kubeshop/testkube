@@ -64,7 +64,6 @@ var RunnerEnvVars = []corev1.EnvVar{
 		Name:  "RUNNER_TOKEN",
 		Value: os.Getenv("STORAGE_TOKEN"),
 	},
-
 	{
 		Name:  "RUNNER_SSL",
 		Value: getOr("STORAGE_SSL", "false"),
@@ -72,6 +71,18 @@ var RunnerEnvVars = []corev1.EnvVar{
 	{
 		Name:  "RUNNER_SKIP_VERIFY",
 		Value: getOr("STORAGE_SKIP_VERIFY", "false"),
+	},
+	{
+		Name:  "RUNNER_CERT_FILE",
+		Value: os.Getenv("STORAGE_CERT_FILE"),
+	},
+	{
+		Name:  "RUNNER_KEY_FILE",
+		Value: os.Getenv("STORAGE_KEY_FILE"),
+	},
+	{
+		Name:  "RUNNER_CA_FILE",
+		Value: os.Getenv("STORAGE_CA_FILE"),
 	},
 	{
 		Name:  "RUNNER_SCRAPPERENABLED",

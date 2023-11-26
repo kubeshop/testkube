@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"hash/fnv"
 	"io"
@@ -42,21 +43,81 @@ type Client struct {
 	region          string
 	token           string
 	bucket          string
+	opts            []Option
 	minioclient     *minio.Client
+	tlsConfig       *tls.Config
 	Log             *zap.SugaredLogger
 }
 
+type Option func(*Client) error
+
+// Insecure is an Option to enable TLS secure connections that skip server verification.
+func Insecure() Option {
+	return func(o *Client) error {
+		if o.tlsConfig == nil {
+			o.tlsConfig = &tls.Config{MinVersion: tls.VersionTLS12}
+		}
+		o.tlsConfig.InsecureSkipVerify = true
+		o.ssl = true
+		return nil
+	}
+}
+
+// RootCAs is a helper option to provide the RootCAs pool from a list of filenames.
+// If Secure is not already set this will set it as well.
+func RootCAs(file ...string) Option {
+	return func(o *Client) error {
+		pool := x509.NewCertPool()
+		for _, f := range file {
+			rootPEM, err := os.ReadFile(f)
+			if err != nil || rootPEM == nil {
+				return fmt.Errorf("nats: error loading or parsing rootCA file: %v", err)
+			}
+			ok := pool.AppendCertsFromPEM(rootPEM)
+			if !ok {
+				return fmt.Errorf("nats: failed to parse root certificate from %q", f)
+			}
+		}
+		if o.tlsConfig == nil {
+			o.tlsConfig = &tls.Config{MinVersion: tls.VersionTLS12}
+		}
+		o.tlsConfig.RootCAs = pool
+		o.ssl = true
+		return nil
+	}
+}
+
+// ClientCert is a helper option to provide the client certificate from a file.
+// If Secure is not already set this will set it as well.
+func ClientCert(certFile, keyFile string) Option {
+	return func(o *Client) error {
+		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			return fmt.Errorf("nats: error loading client certificate: %v", err)
+		}
+		cert.Leaf, err = x509.ParseCertificate(cert.Certificate[0])
+		if err != nil {
+			return fmt.Errorf("nats: error parsing client certificate: %v", err)
+		}
+		if o.tlsConfig == nil {
+			o.tlsConfig = &tls.Config{MinVersion: tls.VersionTLS12}
+		}
+		o.tlsConfig.Certificates = []tls.Certificate{cert}
+		o.ssl = true
+		return nil
+	}
+}
+
 // NewClient returns new MinIO client
-func NewClient(endpoint, accessKeyID, secretAccessKey, region, token, bucket string, ssl, skipVerify bool) *Client {
+func NewClient(endpoint, accessKeyID, secretAccessKey, region, token, bucket string, opts ...Option) *Client {
 	c := &Client{
 		region:          region,
 		accessKeyID:     accessKeyID,
 		secretAccessKey: secretAccessKey,
 		token:           token,
-		ssl:             ssl,
-		skipVerify:      skipVerify,
 		bucket:          bucket,
 		Endpoint:        endpoint,
+		opts:            opts,
 		Log:             log.DefaultLogger,
 	}
 
@@ -65,8 +126,13 @@ func NewClient(endpoint, accessKeyID, secretAccessKey, region, token, bucket str
 
 // Connect connects to MinIO server
 func (c *Client) Connect() error {
+	for _, opt := range c.opts {
+		if err := opt(c); err != nil {
+			return errors.Wrapf(err, "error connecting to server")
+		}
+	}
 	creds := credentials.NewIAM("")
-	c.Log.Debugw("connecting to minio",
+	c.Log.Debugw("connecting to server",
 		"endpoint", c.Endpoint,
 		"accessKeyID", c.accessKeyID,
 		"region", c.region,
@@ -81,9 +147,7 @@ func (c *Client) Connect() error {
 		c.Log.Errorw("error creating minio transport", "error", err)
 		return err
 	}
-	tlsConfig := &tls.Config{}
-	tlsConfig.InsecureSkipVerify = c.skipVerify
-	transport.TLSClientConfig = tlsConfig
+	transport.TLSClientConfig = c.tlsConfig
 	opts := &minio.Options{
 		Creds:     creds,
 		Secure:    c.ssl,
