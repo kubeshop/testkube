@@ -31,10 +31,18 @@ type Config struct {
 	StorageToken                     string        `envconfig:"STORAGE_TOKEN" default:""`
 	StorageSSL                       bool          `envconfig:"STORAGE_SSL" default:"false"`
 	StorageSkipVerify                bool          `envconfig:"STORAGE_SKIP_VERIFY" default:"false"`
+	StorageCertFile                  string        `envconfig:"STORAGE_CERT_FILE" default:""`
+	StorageKeyFile                   string        `envconfig:"STORAGE_KEY_FILE" default:""`
+	StorageCAFile                    string        `envconfig:"STORAGE_CA_FILE" default:""`
 	ScrapperEnabled                  bool          `envconfig:"SCRAPPERENABLED" default:"false"`
 	LogsBucket                       string        `envconfig:"LOGS_BUCKET" default:""`
 	LogsStorage                      string        `envconfig:"LOGS_STORAGE" default:""`
 	NatsURI                          string        `envconfig:"NATS_URI" default:"nats://localhost:4222"`
+	NatsSecure                       bool          `envconfig:"NATS_SECURE" default:"false"`
+	NatsSkipVerify                   bool          `envconfig:"NATS_SKIP_VERIFY" default:"false"`
+	NatsCertFile                     string        `envconfig:"NATS_CERT_FILE" default:""`
+	NatsKeyFile                      string        `envconfig:"NATS_KEY_FILE" default:""`
+	NatsCAFile                       string        `envconfig:"NATS_CA_FILE" default:""`
 	JobServiceAccountName            string        `envconfig:"JOB_SERVICE_ACCOUNT_NAME" default:""`
 	JobTemplateFile                  string        `envconfig:"JOB_TEMPLATE_FILE" default:""`
 	DisableTestTriggers              bool          `envconfig:"DISABLE_TEST_TRIGGERS" default:"false"`
@@ -71,12 +79,16 @@ type Config struct {
 	EnableSecretsEndpoint            bool          `envconfig:"ENABLE_SECRETS_ENDPOINT" default:"false"`
 	DisableMongoMigrations           bool          `envconfig:"DISABLE_MONGO_MIGRATIONS" default:"false"`
 
-	// Deprecated
-	TestkubeCloudAPIKey               string `envconfig:"TESTKUBE_CLOUD_API_KEY" default:""`
-	TestkubeCloudURL                  string `envconfig:"TESTKUBE_CLOUD_URL" default:""`
-	TestkubeCloudTLSInsecure          bool   `envconfig:"TESTKUBE_CLOUD_TLS_INSECURE" default:"false"`
-	TestkubeCloudWorkerCount          int    `envconfig:"TESTKUBE_CLOUD_WORKER_COUNT" default:"50"`
-	TestkubeCloudLogStreamWorkerCount int    `envconfig:"TESTKUBE_CLOUD_LOG_STREAM_WORKER_COUNT" default:"25"`
+	// DEPRECATED: Use TestkubeProAPIKey instead
+	TestkubeCloudAPIKey string `envconfig:"TESTKUBE_CLOUD_API_KEY" default:""`
+	// DEPRECATED: Use TestkubeProURL instead
+	TestkubeCloudURL string `envconfig:"TESTKUBE_CLOUD_URL" default:""`
+	// DEPRECATED: Use TestkubeProTLSInsecure instead
+	TestkubeCloudTLSInsecure bool `envconfig:"TESTKUBE_CLOUD_TLS_INSECURE" default:"false"`
+	// DEPRECATED: Use TestkubeProWorkerCount instead
+	TestkubeCloudWorkerCount int `envconfig:"TESTKUBE_CLOUD_WORKER_COUNT" default:"50"`
+	// DEPRECATED: Use TestkubeProLogStreamWorkerCount instead
+	TestkubeCloudLogStreamWorkerCount int `envconfig:"TESTKUBE_CLOUD_LOG_STREAM_WORKER_COUNT" default:"25"`
 }
 
 func Get() (*Config, error) {
@@ -87,7 +99,7 @@ func Get() (*Config, error) {
 	return &config, nil
 }
 
-// cleanLegacyVars
+// CleanLegacyVars configures new environment variables from the deprecated ones
 func (c *Config) CleanLegacyVars() {
 	if c.TestkubeProAPIKey == "" && c.TestkubeCloudAPIKey != "" {
 		c.TestkubeProAPIKey = c.TestkubeCloudAPIKey

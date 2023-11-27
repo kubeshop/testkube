@@ -627,6 +627,7 @@ func (s *TestkubeAPI) getArtifactStorage(bucket string) (storage.ArtifactsStorag
 		return s.artifactsStorage, nil
 	}
 
+	opts := minio.GetTLSOptions(s.storageParams.SSL, s.storageParams.SkipVerify, s.storageParams.CertFile, s.storageParams.KeyFile, s.storageParams.CAFile)
 	minioClient := minio.NewClient(
 		s.storageParams.Endpoint,
 		s.storageParams.AccessKeyId,
@@ -634,8 +635,7 @@ func (s *TestkubeAPI) getArtifactStorage(bucket string) (storage.ArtifactsStorag
 		s.storageParams.Region,
 		s.storageParams.Token,
 		bucket,
-		s.storageParams.SSL,
-		s.storageParams.SkipVerify,
+		opts...,
 	)
 	if err := minioClient.Connect(); err != nil {
 		return nil, err

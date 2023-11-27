@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -11,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+
+	"github.com/nats-io/nats.go"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 
@@ -238,16 +241,7 @@ func main() {
 		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
 		configRepository = configrepository.NewMongoRepository(db)
 		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
-		minioClient := minio.NewClient(
-			cfg.StorageEndpoint,
-			cfg.StorageAccessKeyID,
-			cfg.StorageSecretAccessKey,
-			cfg.StorageRegion,
-			cfg.StorageToken,
-			cfg.StorageBucket,
-			cfg.StorageSSL,
-			cfg.StorageSkipVerify,
-		)
+		minioClient := newStorageClient(cfg)
 		if err = minioClient.Connect(); err != nil {
 			ui.ExitOnError("Connecting to minio", err)
 		}
@@ -341,10 +335,9 @@ func main() {
 		envs[pair[0]] += pair[1]
 	}
 
-	// configure NATS event bus
-	nc, err := bus.NewNATSConnection(cfg.NatsURI)
+	nc, err := newNATSConnection(cfg)
 	if err != nil {
-		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
+		ui.ExitOnError("Creating NATS connection", err)
 	}
 	eventBus := bus.NewNATSBus(nc)
 	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName, envs)
@@ -623,6 +616,38 @@ func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDet
 	}
 
 	return executors, nil
+}
+
+func newNATSConnection(cfg *config.Config) (*nats.EncodedConn, error) {
+	var opts []nats.Option
+	if cfg.NatsSecure {
+		if cfg.NatsSkipVerify {
+			opts = append(opts, nats.Secure(&tls.Config{InsecureSkipVerify: true}))
+		} else {
+			opts = append(opts, nats.ClientCert(cfg.NatsCertFile, cfg.NatsKeyFile))
+			if cfg.NatsCAFile != "" {
+				opts = append(opts, nats.RootCAs(cfg.NatsCAFile))
+			}
+		}
+	}
+	nc, err := bus.NewNATSConnection(cfg.NatsURI, opts...)
+	if err != nil {
+		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
+	}
+	return nc, nil
+}
+
+func newStorageClient(cfg *config.Config) *minio.Client {
+	opts := minio.GetTLSOptions(cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
+	return minio.NewClient(
+		cfg.StorageEndpoint,
+		cfg.StorageAccessKeyID,
+		cfg.StorageSecretAccessKey,
+		cfg.StorageRegion,
+		cfg.StorageToken,
+		cfg.StorageBucket,
+		opts...,
+	)
 }
 
 func newSlackLoader(cfg *config.Config, envs map[string]string) (*slack.SlackLoader, error) {
