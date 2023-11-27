@@ -204,6 +204,7 @@ type ExecuteTestOptions struct {
 	EnvConfigMaps                      []testkube.EnvReference
 	EnvSecrets                         []testkube.EnvReference
 	RunningContext                     *testkube.RunningContext
+	SlavePodRequest                    *testkube.PodRequest
 }
 
 // ExecuteTestSuiteOptions contains test suite run options

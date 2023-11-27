@@ -43,7 +43,7 @@ testkube create test [flags]
   -h, --help                                       help for test
       --http-proxy string                          http proxy for executor containers
       --https-proxy string                         https proxy for executor containers
-      --image string                               image for container executor
+      --image string                               override executor container image
       --image-pull-secrets stringArray             secret name used to pull the image in container executor
       --job-template string                        job template file path for extensions to job template
       --job-template-reference string              reference to job template to use for the test
@@ -62,6 +62,12 @@ testkube create test [flags]
       --secret-env stringToString                  secret envs in a form of secret_key1=secret_name1 passed to executor (default [])
   -s, --secret-variable stringToString             secret variable key value pair: --secret-variable key1=value1 (default [])
       --secret-variable-reference stringToString   secret variable references in a form name1=secret_name1=secret_key1 (default [])
+      --slave-pod-limits-cpu string                slave pod resource limits cpu
+      --slave-pod-limits-memory string             slave pod resource limits memory
+      --slave-pod-requests-cpu string              slave pod resource requests cpu
+      --slave-pod-requests-memory string           slave pod resource requests memory
+      --slave-pod-template string                  slave pod template file path for extensions to slave pod template
+      --slave-pod-template-reference string        reference to slave pod template to use for the test
       --source string                              source name - will be used together with content parameters
       --test-content-type string                   content type of test one of string|file-uri|git
       --timeout int                                duration in seconds for test to timeout. 0 disables timeout.

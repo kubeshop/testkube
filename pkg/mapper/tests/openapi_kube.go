@@ -139,6 +139,30 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 		}
 	}
 
+	var podRequest *testsv3.PodRequest
+	if executionRequest.SlavePodRequest != nil {
+		podRequest = &testsv3.PodRequest{}
+		if executionRequest.SlavePodRequest.Resources != nil {
+			podRequest.Resources = &testsv3.PodResourcesRequest{}
+			if executionRequest.SlavePodRequest.Resources.Requests != nil {
+				podRequest.Resources.Requests = &testsv3.ResourceRequest{
+					Cpu:    executionRequest.SlavePodRequest.Resources.Requests.Cpu,
+					Memory: executionRequest.SlavePodRequest.Resources.Requests.Memory,
+				}
+			}
+
+			if executionRequest.SlavePodRequest.Resources.Limits != nil {
+				podRequest.Resources.Limits = &testsv3.ResourceRequest{
+					Cpu:    executionRequest.SlavePodRequest.Resources.Limits.Cpu,
+					Memory: executionRequest.SlavePodRequest.Resources.Limits.Memory,
+				}
+			}
+		}
+
+		podRequest.PodTemplate = executionRequest.SlavePodRequest.PodTemplate
+		podRequest.PodTemplateReference = executionRequest.SlavePodRequest.PodTemplateReference
+	}
+
 	return &testsv3.ExecutionRequest{
 		Name:                               executionRequest.Name,
 		TestSuiteName:                      executionRequest.TestSuiteName,
@@ -176,6 +200,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 		NegativeTest:                       executionRequest.NegativeTest,
 		EnvConfigMaps:                      mapEnvReferences(executionRequest.EnvConfigMaps),
 		EnvSecrets:                         mapEnvReferences(executionRequest.EnvSecrets),
+		SlavePodRequest:                    podRequest,
 	}
 }
 
@@ -601,48 +626,103 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 	}
 
 	if executionRequest.ArtifactRequest != nil {
-		if *executionRequest.ArtifactRequest == nil {
-			request.ArtifactRequest = nil
-			return request
-		}
-
-		if (*executionRequest.ArtifactRequest).IsEmpty() {
-			request.ArtifactRequest = nil
-			return request
-		}
-
 		emptyArtifact := true
-		if request.ArtifactRequest == nil {
-			request.ArtifactRequest = &testsv3.ArtifactRequest{}
-		}
+		if !(*executionRequest.ArtifactRequest == nil || (*executionRequest.ArtifactRequest).IsEmpty()) {
+			if request.ArtifactRequest == nil {
+				request.ArtifactRequest = &testsv3.ArtifactRequest{}
+			}
 
-		if (*executionRequest.ArtifactRequest).StorageClassName != nil {
-			request.ArtifactRequest.StorageClassName = *(*executionRequest.ArtifactRequest).StorageClassName
-			emptyArtifact = false
-		}
+			if (*executionRequest.ArtifactRequest).StorageClassName != nil {
+				request.ArtifactRequest.StorageClassName = *(*executionRequest.ArtifactRequest).StorageClassName
+				emptyArtifact = false
+			}
 
-		if (*executionRequest.ArtifactRequest).VolumeMountPath != nil {
-			request.ArtifactRequest.VolumeMountPath = *(*executionRequest.ArtifactRequest).VolumeMountPath
-			emptyArtifact = false
-		}
+			if (*executionRequest.ArtifactRequest).VolumeMountPath != nil {
+				request.ArtifactRequest.VolumeMountPath = *(*executionRequest.ArtifactRequest).VolumeMountPath
+				emptyArtifact = false
+			}
 
-		if (*executionRequest.ArtifactRequest).Dirs != nil {
-			request.ArtifactRequest.Dirs = *(*executionRequest.ArtifactRequest).Dirs
-			emptyArtifact = false
-		}
+			if (*executionRequest.ArtifactRequest).Dirs != nil {
+				request.ArtifactRequest.Dirs = *(*executionRequest.ArtifactRequest).Dirs
+				emptyArtifact = false
+			}
 
-		if (*executionRequest.ArtifactRequest).StorageBucket != nil {
-			request.ArtifactRequest.StorageBucket = *(*executionRequest.ArtifactRequest).StorageBucket
-			emptyArtifact = false
-		}
+			if (*executionRequest.ArtifactRequest).StorageBucket != nil {
+				request.ArtifactRequest.StorageBucket = *(*executionRequest.ArtifactRequest).StorageBucket
+				emptyArtifact = false
+			}
 
-		if (*executionRequest.ArtifactRequest).OmitFolderPerExecution != nil {
-			request.ArtifactRequest.OmitFolderPerExecution = *(*executionRequest.ArtifactRequest).OmitFolderPerExecution
-			emptyArtifact = false
+			if (*executionRequest.ArtifactRequest).OmitFolderPerExecution != nil {
+				request.ArtifactRequest.OmitFolderPerExecution = *(*executionRequest.ArtifactRequest).OmitFolderPerExecution
+				emptyArtifact = false
+			}
 		}
 
 		if emptyArtifact {
 			request.ArtifactRequest = nil
+		} else {
+			emptyExecution = false
+		}
+	}
+
+	if executionRequest.SlavePodRequest != nil {
+		emptyPodRequest := true
+		if !(*executionRequest.SlavePodRequest == nil || (*executionRequest.SlavePodRequest).IsEmpty()) {
+			if request.SlavePodRequest == nil {
+				request.SlavePodRequest = &testsv3.PodRequest{}
+			}
+
+			if (*executionRequest.SlavePodRequest).Resources != nil {
+				if request.SlavePodRequest.Resources == nil {
+					request.SlavePodRequest.Resources = &testsv3.PodResourcesRequest{}
+				}
+
+				if (*(*executionRequest.SlavePodRequest).Resources).Requests != nil {
+					if request.SlavePodRequest.Resources.Requests == nil {
+						request.SlavePodRequest.Resources.Requests = &testsv3.ResourceRequest{}
+					}
+
+					if (*(*executionRequest.SlavePodRequest).Resources).Requests.Cpu != nil {
+						request.SlavePodRequest.Resources.Requests.Cpu = *(*(*executionRequest.SlavePodRequest).Resources).Requests.Cpu
+						emptyPodRequest = false
+					}
+
+					if (*(*executionRequest.SlavePodRequest).Resources).Requests.Memory != nil {
+						request.SlavePodRequest.Resources.Requests.Memory = *(*(*executionRequest.SlavePodRequest).Resources).Requests.Memory
+						emptyPodRequest = false
+					}
+				}
+
+				if (*(*executionRequest.SlavePodRequest).Resources).Limits != nil {
+					if request.SlavePodRequest.Resources.Limits == nil {
+						request.SlavePodRequest.Resources.Limits = &testsv3.ResourceRequest{}
+					}
+
+					if (*(*executionRequest.SlavePodRequest).Resources).Limits.Cpu != nil {
+						request.SlavePodRequest.Resources.Limits.Cpu = *(*(*executionRequest.SlavePodRequest).Resources).Limits.Cpu
+						emptyPodRequest = false
+					}
+
+					if (*(*executionRequest.SlavePodRequest).Resources).Limits.Memory != nil {
+						request.SlavePodRequest.Resources.Limits.Memory = *(*(*executionRequest.SlavePodRequest).Resources).Limits.Memory
+						emptyPodRequest = false
+					}
+				}
+			}
+
+			if (*executionRequest.SlavePodRequest).PodTemplate != nil {
+				request.SlavePodRequest.PodTemplate = *(*executionRequest.SlavePodRequest).PodTemplate
+				emptyPodRequest = false
+			}
+
+			if (*executionRequest.SlavePodRequest).PodTemplateReference != nil {
+				request.SlavePodRequest.PodTemplateReference = *(*executionRequest.SlavePodRequest).PodTemplateReference
+				emptyPodRequest = false
+			}
+		}
+
+		if emptyPodRequest {
+			request.SlavePodRequest = nil
 		} else {
 			emptyExecution = false
 		}

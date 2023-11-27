@@ -174,6 +174,32 @@ func TestRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 			ui.Warn("  PVC template reference:      ", test.ExecutionRequest.PvcTemplateReference)
 		}
 
+		if test.ExecutionRequest.SlavePodRequest != nil {
+			ui.Warn("  Slave pod request:           ")
+			if test.ExecutionRequest.SlavePodRequest.Resources != nil {
+				ui.Warn("    Resources:                 ")
+				if test.ExecutionRequest.SlavePodRequest.Resources.Requests != nil {
+					ui.Warn("      Requests:                ")
+					ui.Warn("        Cpu:                   ", test.ExecutionRequest.SlavePodRequest.Resources.Requests.Cpu)
+					ui.Warn("        Memory:                ", test.ExecutionRequest.SlavePodRequest.Resources.Requests.Memory)
+				}
+
+				if test.ExecutionRequest.SlavePodRequest.Resources.Limits != nil {
+					ui.Warn("      Limits:                  ")
+					ui.Warn("        Cpu:                   ", test.ExecutionRequest.SlavePodRequest.Resources.Limits.Cpu)
+					ui.Warn("        Memory:                ", test.ExecutionRequest.SlavePodRequest.Resources.Limits.Memory)
+				}
+			}
+
+			if test.ExecutionRequest.SlavePodRequest.PodTemplate != "" {
+				ui.Warn("    Pod template:              ", "\n", test.ExecutionRequest.SlavePodRequest.PodTemplate)
+			}
+
+			if test.ExecutionRequest.SlavePodRequest.PodTemplateReference != "" {
+				ui.Warn("    Pod template reference:      ", test.ExecutionRequest.SlavePodRequest.PodTemplateReference)
+			}
+		}
+
 		var mountConfigMaps, mountSecrets []mountParams
 		var variableConfigMaps, variableSecrets []string
 		for _, configMap := range test.ExecutionRequest.EnvConfigMaps {

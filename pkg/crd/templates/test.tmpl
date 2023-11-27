@@ -82,7 +82,7 @@ spec:
   schedule: {{ .Schedule }}
   {{- end }}
   {{- if .ExecutionRequest }}
-  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.NegativeTest) (.ExecutionRequest.VariablesFile) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (ne (len .ExecutionRequest.Envs) 0) (ne (len .ExecutionRequest.SecretEnvs) 0) (.ExecutionRequest.Image) (ne (len .ExecutionRequest.Command) 0) (.ExecutionRequest.ArgsMode) (ne (len .ExecutionRequest.ImagePullSecrets) 0) (ne .ExecutionRequest.ActiveDeadlineSeconds 0) (.ExecutionRequest.ArtifactRequest) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.JobTemplateReference) (.ExecutionRequest.CronJobTemplate) (.ExecutionRequest.CronJobTemplateReference) (.ExecutionRequest.PreRunScript) (.ExecutionRequest.PostRunScript) (.ExecutionRequest.ExecutePostRunScriptBeforeScraping) (.ExecutionRequest.ScraperTemplate) (.ExecutionRequest.ScraperTemplateReference) (.ExecutionRequest.PvcTemplate) (.ExecutionRequest.PvcTemplateReference) (ne (len .ExecutionRequest.EnvConfigMaps) 0) (ne (len .ExecutionRequest.EnvSecrets) 0) }}
+  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.NegativeTest) (.ExecutionRequest.VariablesFile) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (ne (len .ExecutionRequest.Envs) 0) (ne (len .ExecutionRequest.SecretEnvs) 0) (.ExecutionRequest.Image) (ne (len .ExecutionRequest.Command) 0) (.ExecutionRequest.ArgsMode) (ne (len .ExecutionRequest.ImagePullSecrets) 0) (ne .ExecutionRequest.ActiveDeadlineSeconds 0) (.ExecutionRequest.ArtifactRequest) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.JobTemplateReference) (.ExecutionRequest.CronJobTemplate) (.ExecutionRequest.CronJobTemplateReference) (.ExecutionRequest.PreRunScript) (.ExecutionRequest.PostRunScript) (.ExecutionRequest.ExecutePostRunScriptBeforeScraping) (.ExecutionRequest.ScraperTemplate) (.ExecutionRequest.ScraperTemplateReference) (.ExecutionRequest.PvcTemplate) (.ExecutionRequest.PvcTemplateReference) (ne (len .ExecutionRequest.EnvConfigMaps) 0) (ne (len .ExecutionRequest.EnvSecrets) 0) (.ExecutionRequest.SlavePodRequest)}}
   executionRequest:
     {{- if .ExecutionRequest.Name }}
     name: {{ .ExecutionRequest.Name }}
@@ -225,6 +225,36 @@ spec:
     {{- end }}
     {{- if .ExecutionRequest.PvcTemplateReference }}
     pvcTemplateReference: {{ .ExecutionRequest.PvcTemplateReference }}
+    {{- end }}
+    {{- if .ExecutionRequest.SlavePodRequest }}
+    slavePodRequest:
+      {{- if .ExecutionRequest.SlavePodRequest.Resources }}
+      resources:
+        {{- if .ExecutionRequest.SlavePodRequest.Resources.Requests }}
+        requests:
+          {{- if .ExecutionRequest.SlavePodRequest.Resources.Requests.Cpu }}
+          cpu: {{ .ExecutionRequest.SlavePodRequest.Resources.Requests.Cpu }}
+          {{- end }}
+          {{- if .ExecutionRequest.SlavePodRequest.Resources.Requests.Memory }}
+          memory: {{ .ExecutionRequest.SlavePodRequest.Resources.Requests.Memory }}
+          {{- end }}
+        {{- end }}
+        {{- if .ExecutionRequest.SlavePodRequest.Resources.Limits }}
+        limits:
+          {{- if .ExecutionRequest.SlavePodRequest.Resources.Limits.Cpu }}
+          cpu: {{ .ExecutionRequest.SlavePodRequest.Resources.Limits.Cpu }}
+          {{- end }}
+          {{- if .ExecutionRequest.SlavePodRequest.Resources.Limits.Memory }}
+          memory: {{ .ExecutionRequest.SlavePodRequest.Resources.Limits.Memory }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+      {{- if .ExecutionRequest.SlavePodRequest.PodTemplate }}
+      podTemplate: {{ .ExecutionRequest.SlavePodRequest.PodTemplate }}
+      {{- end }}
+      {{- if .ExecutionRequest.SlavePodRequest.PodTemplateReference }}
+      podTemplateReference: {{ .ExecutionRequest.SlavePodRequest.PodTemplateReference }}   
+      {{- end }}
     {{- end }}
     {{- if ne (len .ExecutionRequest.EnvConfigMaps) 0 }}
     envConfigMaps:

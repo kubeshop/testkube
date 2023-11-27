@@ -3,6 +3,7 @@ package utils
 import (
 	"bufio"
 	"crypto/rand"
+	"encoding/base64"
 	"math/big"
 	"path/filepath"
 	"regexp"
@@ -128,4 +129,15 @@ func UnescapeDots(source string) string {
 
 func NewTemplate(name string) *template.Template {
 	return template.New(name).Funcs(sprig.FuncMap())
+}
+
+// IsBase64Encoded check if string is base84 encoded
+func IsBase64Encoded(base64Val string) bool {
+	decoded, err := base64.StdEncoding.DecodeString(base64Val)
+	if err != nil {
+		return false
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(decoded)
+	return base64Val == encoded
 }

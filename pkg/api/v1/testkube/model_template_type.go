@@ -20,4 +20,5 @@ const (
 	SCRAPER_TemplateType   TemplateType = "scraper"
 	PVC_TemplateType       TemplateType = "pvc"
 	WEBHOOK_TemplateType   TemplateType = "webhook"
+	POD_TemplateType       TemplateType = "pod"
 )

@@ -123,6 +123,9 @@ openapi-generate-model-testkube:
 	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*ArtifactRequest/ \*\*ArtifactUpdateRequest/g" {} \;
 	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*TestSuiteExecutionRequest/ \*\*TestSuiteExecutionUpdateRequest/g" {} \;
 	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*ExecutorMeta/ \*\*ExecutorMetaUpdate/g" {} \;
+	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*PodRequest/ \*\*PodUpdateRequest/g" {} \;
+	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*PodResourcesRequest/ \*\*PodResourcesUpdateRequest/g" {} \;
+	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*ResourceRequest/ \*ResourceUpdateRequest/g" {} \;	
 	find ./pkg/api/v1/testkube -type f -exec sed -i '' -e "s/ Deprecated/ \\n\/\/ Deprecated/g" {} \;
 	go fmt pkg/api/v1/testkube/*.go
 
