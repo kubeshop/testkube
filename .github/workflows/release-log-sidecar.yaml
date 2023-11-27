@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - 'cmd/sidecar/**'
-      - 'pkg/sidecar/**'
+      - 'pkg/logs/sidecar/**'
 
 permissions:
   id-token: write 
