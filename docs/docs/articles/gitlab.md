@@ -117,7 +117,7 @@ run-testkube:
     - export KUBECONFIG=$CI_PROJECT_DIR/tmp/kubeconfig/config
     - kubectl-testkube set context --kubeconfig --namespace $NAMESPACE
     - echo "Running Testkube test..."
-    - testkube run test test-name -f
+    - kubectl-testkube run test test-name -f
   dependencies:
     - setup-aws
 
@@ -161,7 +161,7 @@ run-testkube:
     - export KUBECONFIG=$CI_PROJECT_DIR/tmp/kubeconfig/config
     - kubectl-testkube set context --kubeconfig --namespace $NAMESPACE
     - echo "Running Testkube test..."
-    - testkube run test test-name -f
+    - kubectl-testkube run test test-name -f
   dependencies:
     - setup-gcp
 ```
