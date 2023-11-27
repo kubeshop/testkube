@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"strconv"
+	"sync"
 
 	"github.com/minio/minio-go/v7"
 	"go.uber.org/zap"
@@ -15,8 +17,8 @@ import (
 )
 
 const (
-	defaultBufferSize = 100 * 1024 * 1024 // 100MB
-	defaultWriteSize  = 95 * 1024 * 1024  // 95MB
+	defaultBufferSize = 1024 * 100 // 100KB
+	defaultWriteSize  = 1024 * 80  // 80KB
 )
 
 var _ Consumer = &MinioConsumer{}
@@ -75,6 +77,7 @@ type MinioConsumer struct {
 	Log            *zap.SugaredLogger
 	disconnected   bool
 	buffInfos      map[string]BufferInfo
+	mapLock        sync.RWMutex
 }
 
 func (s *MinioConsumer) Notify(id string, e events.LogChunk) error {
@@ -83,63 +86,55 @@ func (s *MinioConsumer) Notify(id string, e events.LogChunk) error {
 		return ErrMinioConsumerDisconnected{}
 	}
 
-	if _, ok := s.buffInfos[id]; !ok {
-		buffInfo := s.buffInfos[id]
-		buffInfo.Buffer = bytes.NewBuffer(make([]byte, 0, defaultBufferSize))
+	if _, ok := s.GetBuffInfo(id); !ok {
+		s.UpdateBuffInfo(id, BufferInfo{Buffer: bytes.NewBuffer(make([]byte, 0, defaultBufferSize)), Part: 0})
 	}
 
 	chunckToAdd, err := json.Marshal(e)
 	if err != nil {
 		return err
 	}
-
-	writer := s.buffInfos[id].Buffer
+	chunckToAdd = append(chunckToAdd, []byte("\n")...)
+	buffInfo, _ := s.GetBuffInfo(id)
+	writer := buffInfo.Buffer
 	_, err = writer.Write(chunckToAdd)
 	if err != nil {
 		return err
 	}
 
 	if writer.Len() > defaultWriteSize {
-
-		buffInfo := s.buffInfos[id]
 		buffInfo.Buffer = bytes.NewBuffer(make([]byte, 0, defaultBufferSize))
-		name := id + "-" + strconv.Itoa(s.buffInfos[id].Part)
+		name := id + "-" + strconv.Itoa(buffInfo.Part)
 		buffInfo.Part++
+		s.UpdateBuffInfo(id, buffInfo)
 		go s.putData(name, writer)
 	}
 
 	return nil
 }
 
-func (s *MinioConsumer) putData(name string, writer *bytes.Buffer) {
-	_, err := s.minioClient.PutObject(context.TODO(), s.bucket, name, writer, int64(writer.Len()), minio.PutObjectOptions{ContentType: "application/octet-stream"})
-	if err != nil {
-		s.Log.Errorw("error putting object", "err", err)
+func (s *MinioConsumer) putData(name string, buffer *bytes.Buffer) {
+	if buffer != nil && buffer.Len() != 0 {
+		_, err := s.minioClient.PutObject(context.TODO(), s.bucket, name, buffer, int64(buffer.Len()), minio.PutObjectOptions{ContentType: "application/octet-stream"})
+		if err != nil {
+			s.Log.Errorw("error putting object", "err", err)
+		}
+	} else {
+		s.Log.Warn("empty buffer for name: ", name)
 	}
 
 }
 
-func (s *MinioConsumer) combineData(minioClient *minio.Client, id string, parts int) error {
+func (s *MinioConsumer) combineData(minioClient *minio.Client, id string, parts int, deleteIntermediaryData bool) error {
 	buffer := bytes.NewBuffer(make([]byte, 0, parts*defaultBufferSize))
-	for obj := range minioClient.ListObjects(context.TODO(), s.bucket, minio.ListObjectsOptions{Prefix: id + "-"}) {
-		if obj.Err != nil {
-			s.Log.Errorw("error listing objects", "err", obj.Err)
-			return obj.Err
-		}
-		objInfo, err := minioClient.GetObject(context.TODO(), s.bucket, obj.Key, minio.GetObjectOptions{})
+	for i := 0; i < parts; i++ {
+		objInfo, err := minioClient.GetObject(context.TODO(), s.bucket, fmt.Sprintf("%s-%d", id, i), minio.GetObjectOptions{})
 		if err != nil {
 			s.Log.Errorw("error getting object", "err", err)
-			return err
 		}
 		_, err = buffer.ReadFrom(objInfo)
 		if err != nil {
 			s.Log.Errorw("error reading object", "err", err)
-			return err
-		}
-		err = minioClient.RemoveObject(context.TODO(), s.bucket, obj.Key, minio.RemoveObjectOptions{ForceDelete: true})
-		if err != nil {
-			s.Log.Errorw("error removing object", "err", err)
-			return err
 		}
 	}
 	_, err := minioClient.PutObject(context.TODO(), s.bucket, id, buffer, int64(buffer.Len()), minio.PutObjectOptions{ContentType: "application/octet-stream"})
@@ -147,18 +142,47 @@ func (s *MinioConsumer) combineData(minioClient *minio.Client, id string, parts 
 		s.Log.Errorw("error putting object", "err", err)
 		return err
 	}
+
+	if deleteIntermediaryData {
+		for i := 0; i < parts; i++ {
+			err = minioClient.RemoveObject(context.TODO(), s.bucket, fmt.Sprintf("%s-%d", id, i), minio.RemoveObjectOptions{})
+			if err != nil {
+				s.Log.Errorw("error removing object", "err", err)
+			}
+		}
+	}
+	buffer.Reset()
 	return nil
 }
 
 func (s *MinioConsumer) Stop(id string) error {
-
-	name := id + "-" + strconv.Itoa(s.buffInfos[id].Part)
-	s.putData(name, s.buffInfos[id].Buffer)
-	parts := s.buffInfos[id].Part
-	delete(s.buffInfos, id)
-	return s.combineData(s.minioClient, id, parts)
+	buffInfo, _ := s.GetBuffInfo(id)
+	name := id + "-" + strconv.Itoa(buffInfo.Part)
+	s.putData(name, buffInfo.Buffer)
+	parts := buffInfo.Part + 1
+	s.DeleteBuffInfo(id)
+	return s.combineData(s.minioClient, id, parts, true)
 }
 
 func (s *MinioConsumer) Name() string {
 	return "minio"
+}
+
+func (s *MinioConsumer) GetBuffInfo(id string) (BufferInfo, bool) {
+	s.mapLock.RLock()
+	defer s.mapLock.RUnlock()
+	buffInfo, ok := s.buffInfos[id]
+	return buffInfo, ok
+}
+
+func (s *MinioConsumer) UpdateBuffInfo(id string, buffInfo BufferInfo) {
+	s.mapLock.Lock()
+	defer s.mapLock.Unlock()
+	s.buffInfos[id] = buffInfo
+}
+
+func (s *MinioConsumer) DeleteBuffInfo(id string) {
+	s.mapLock.Lock()
+	defer s.mapLock.Unlock()
+	delete(s.buffInfos, id)
 }
