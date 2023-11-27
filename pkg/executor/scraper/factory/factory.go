@@ -121,5 +121,9 @@ func getMinIOLoader(params envs.Params) (*scraper.MinIOUploader, error) {
 		params.Token,
 		params.Bucket,
 		params.Ssl,
+		params.SkipVerify,
+		params.CertFile,
+		params.KeyFile,
+		params.CAFile,
 	)
 }
