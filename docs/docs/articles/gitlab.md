@@ -54,6 +54,8 @@ To connect to the self-hosted instance, you need to have **kubectl** configured 
 
 If a test is already created, you can run it using the command `testkube run test test-name -f` . However, if you need to create a test in this workflow, please add a creation command, e.g.: `testkube create test --name test-name --file path_to_file.json`.
 
+In order to connecting to your own cluster, you can put the your kubeconfig file into gitlab variable named KUBECONFIGFILE
+
 ```yaml
 stages:
   - setup
@@ -67,6 +69,8 @@ setup-testkube:
     name: kubeshop/testkube-cli
     entrypoint: ["/bin/sh", "-c"]
   script:
+    - echo $KUBECONFIGFILE > /tmp/kubeconfig/config
+    - export KUBECONFIG=/tmp/kubeconfig/config
     - kubectl-testkube set context --kubeconfig --namespace $NAMESPACE
     - kubectl-testkube run test test-name -f
 ```
@@ -83,25 +87,39 @@ This workflow establishes a connection to EKS cluster and creates and runs a tes
 ```yaml
 stages:
   - setup
+  - test
 
-setup-testkube:
+variables:
+  NAMESPACE: custom-testkube
+
+setup-aws:
   stage: setup
   image: 
     name: amazon/aws-cli
     entrypoint: ["/bin/sh", "-c"]
   script:
-    - yum install -y jq tar gzip 
-    - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-    - install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+    - mkdir -p $CI_PROJECT_DIR/tmp/kubeconfig
     - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
     - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
     - aws configure set region $AWS_REGION
-    - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
-    - echo "Installing Testkube..."
-    - curl -sSLf https://get.testkube.io | sh
-    - testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
+    - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION --kubeconfig $CI_PROJECT_DIR/tmp/kubeconfig/config
+  artifacts:
+    paths:
+      - $CI_PROJECT_DIR/tmp/kubeconfig
+    expire_in: 1 hour
+
+run-testkube:
+  stage: test
+  image: 
+    name: kubeshop/testkube-cli
+    entrypoint: ["/bin/sh", "-c"]
+  script:
+    - export KUBECONFIG=$CI_PROJECT_DIR/tmp/kubeconfig/config
+    - kubectl-testkube set context --kubeconfig --namespace $NAMESPACE
     - echo "Running Testkube test..."
     - testkube run test test-name -f
+  dependencies:
+    - setup-aws
 
 ```
 ### How to connect to GKE (Google Kubernetes Engine) cluster and run a test 
@@ -112,24 +130,38 @@ This example connects to a k8s cluster in Google Cloud, creates and runs a test 
 
 ```yaml
 stages:
-  - deploy
+  - setup
+  - test
 
-deploy_to_gke:
-  stage: deploy
+variables:
+  NAMESPACE: custom-testkube
+
+setup-gcp:
+  stage: setup
   image: google/cloud-sdk:latest
-  before_script:
+  script:
+    - mkdir -p $CI_PROJECT_DIR/tmp/kubeconfig
+    - export KUBECONFIG=$CI_PROJECT_DIR/tmp/kubeconfig/config
     - echo $GKE_SA_KEY | base64 -d > gke-sa-key.json
     - gcloud auth activate-service-account --key-file=gke-sa-key.json
     - gcloud config set project $GKE_PROJECT
-  script:
-    - apt update && apt install -y jq 
     - gcloud --quiet auth configure-docker
     - gcloud container clusters get-credentials $GKE_CLUSTER_NAME --zone $GKE_ZONE
-    - echo "Installing Testkube..."
-    - curl -sSLf https://get.testkube.io | bash
-    - testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
+  artifacts:
+    paths:
+      - $CI_PROJECT_DIR/tmp/kubeconfig
+    expire_in: 1 hour
+
+run-testkube:
+  stage: test
+  image: 
+    name: kubeshop/testkube-cli
+    entrypoint: ["/bin/sh", "-c"]
+  script:
+    - export KUBECONFIG=$CI_PROJECT_DIR/tmp/kubeconfig/config
+    - kubectl-testkube set context --kubeconfig --namespace $NAMESPACE
     - echo "Running Testkube test..."
     - testkube run test test-name -f
-  after_script:
-    - rm gke-sa-key.json
+  dependencies:
+    - setup-gcp
 ```
