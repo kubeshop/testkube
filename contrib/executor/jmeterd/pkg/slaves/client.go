@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"html/template"
 	"strings"
 	"time"
 
@@ -168,7 +169,8 @@ func (c *Client) getSlavePodConfiguration(ctx context.Context, currentSlavesCoun
 }
 
 func (c *Client) createSlavePodObject(runnerExecutionStr []byte, podName string, executorJob *batchv1.Job) (*v1.Pod, error) {
-	tmpl, err := utils.NewTemplate("pod").Parse(c.slavesConfigs.SlavePodTemplate)
+	tmpl, err := utils.NewTemplate("pod").Funcs(template.FuncMap{"vartypeptrtostring": testkube.VariableTypeString}).
+		Parse(c.slavesConfigs.SlavePodTemplate)
 	if err != nil {
 		return nil, errors.Errorf("creating pod spec from SlavePodTemplate error: %v", err)
 	}
@@ -183,7 +185,8 @@ func (c *Client) createSlavePodObject(runnerExecutionStr []byte, podName string,
 	var pod v1.Pod
 	podSpec := buffer.String()
 	if c.execution.SlavePodRequest != nil && c.execution.SlavePodRequest.PodTemplate != "" {
-		tmplExt, err := utils.NewTemplate("podExt").Parse(c.execution.SlavePodRequest.PodTemplate)
+		tmplExt, err := utils.NewTemplate("podExt").Funcs(template.FuncMap{"vartypeptrtostring": testkube.VariableTypeString}).
+			Parse(c.execution.SlavePodRequest.PodTemplate)
 		if err != nil {
 			return nil, errors.Errorf("creating pod extensions spec from template error: %v", err)
 		}
