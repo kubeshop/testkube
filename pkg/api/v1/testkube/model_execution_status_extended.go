@@ -58,3 +58,7 @@ func ParseExecutionStatusList(source, separator string) (statusList ExecutionSta
 
 	return statusList, nil
 }
+
+func ExecutionStatusString(ptr *ExecutionStatus) string {
+	return string(*ptr)
+}
