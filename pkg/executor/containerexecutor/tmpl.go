@@ -133,10 +133,6 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 
 	for i := range job.Spec.Template.Spec.Containers {
 		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, envs...)
-		// override container image if provided
-		if options.ImageOverride != "" {
-			job.Spec.Template.Spec.Containers[i].Image = options.ImageOverride
-		}
 	}
 
 	return &job, nil

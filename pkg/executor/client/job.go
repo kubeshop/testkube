@@ -147,7 +147,6 @@ type JobOptions struct {
 	Namespace             string
 	Image                 string
 	ImagePullSecrets      []string
-	ImageOverride         string
 	Jsn                   string
 	TestName              string
 	InitImage             string
@@ -519,9 +518,22 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		contextData = options.Request.RunningContext.Context
 	}
 
+	var image string
+	if options.ExecutorSpec.Image != "" {
+		image = options.ExecutorSpec.Image
+	}
+
+	if options.TestSpec.ExecutionRequest != nil &&
+		options.TestSpec.ExecutionRequest.Image != "" {
+		image = options.TestSpec.ExecutionRequest.Image
+	}
+
+	if options.Request.Image != "" {
+		image = options.Request.Image
+	}
+
 	return JobOptions{
-		Image:                 options.ExecutorSpec.Image,
-		ImageOverride:         options.ImageOverride,
+		Image:                 image,
 		ImagePullSecrets:      options.ImagePullSecretNames,
 		JobTemplate:           options.ExecutorSpec.JobTemplate,
 		TestName:              options.TestName,
@@ -787,10 +799,6 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 
 	for i := range job.Spec.Template.Spec.Containers {
 		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, envs...)
-		// override container image if provided
-		if options.ImageOverride != "" {
-			job.Spec.Template.Spec.Containers[i].Image = options.ImageOverride
-		}
 	}
 
 	return &job, nil

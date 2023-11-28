@@ -372,15 +372,17 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 	}
 
 	var imagePullSecrets []string
-	switch {
-	case len(executorCR.Spec.ImagePullSecrets) != 0:
+
+	if len(executorCR.Spec.ImagePullSecrets) != 0 {
 		imagePullSecrets = mapK8sImagePullSecrets(executorCR.Spec.ImagePullSecrets)
+	}
 
-	case testCR.Spec.ExecutionRequest != nil &&
-		len(testCR.Spec.ExecutionRequest.ImagePullSecrets) != 0:
+	if testCR.Spec.ExecutionRequest != nil &&
+		len(testCR.Spec.ExecutionRequest.ImagePullSecrets) != 0 {
 		imagePullSecrets = mapK8sImagePullSecrets(testCR.Spec.ExecutionRequest.ImagePullSecrets)
+	}
 
-	case len(request.ImagePullSecrets) != 0:
+	if len(request.ImagePullSecrets) != 0 {
 		imagePullSecrets = mapImagePullSecrets(request.ImagePullSecrets)
 	}
 
@@ -454,7 +456,6 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		UsernameSecret:       usernameSecret,
 		TokenSecret:          tokenSecret,
 		CertificateSecret:    certificateSecret,
-		ImageOverride:        request.Image,
 		ImagePullSecretNames: imagePullSecrets,
 	}, nil
 }

@@ -189,7 +189,6 @@ func TestGetExecuteOptions(t *testing.T) {
 		Request:              req,
 		Sync:                 false,
 		Labels:               map[string]string(nil),
-		ImageOverride:        "executor-image",
 		ImagePullSecretNames: []string{"secret-name1", "secret-name2"},
 	}
 
