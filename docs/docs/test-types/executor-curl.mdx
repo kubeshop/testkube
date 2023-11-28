@@ -2,12 +2,16 @@ import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
 
 # cURL
+
 Testkube is able to run cURL commands as tests.
 
 Default command for this executor: `curl`
 Default arguments for this executor command: `-is`
 
+[See more at "Redefining the Prebuilt Executor Command and Arguments" on the Creating Test page.](../articles/creating-tests.md#redefining-the-prebuilt-executor-command-and-arguments)
+
 ## Abstraction over cURL
+
 Testkube executor provides an abstraction over cURL that allow you to create JSON-based cURL test files. They allow you to combine a cURL command with expected results:
 
 - `expected_status` allows you to assert that a specific status code is returned.
@@ -30,15 +34,13 @@ Below is an example of how to format the test:
 You can also find this test in the Testkube repository: https://github.com/kubeshop/testkube/blob/main/test/curl/curl.json.
 
 ## Example Test
+
 In this example we will use the following cURL test: https://github.com/kubeshop/testkube/blob/main/test/curl/executor-tests/curl-smoke-test.json.
 
 ```json
 {
-	"command": [
-	  "curl",
-	  "https://jsonplaceholder.typicode.com/todos/1"
-	],
-	"expected_status": "200"
+  "command": ["curl", "https://jsonplaceholder.typicode.com/todos/1"],
+  "expected_status": "200"
 }
 ```
 
@@ -50,11 +52,13 @@ In this example we will use the following cURL test: https://github.com/kubeshop
 If you prefer to use the Dashboard, just go to Tests, and click the `Add a new test` button. Fill in the Test Name, choose the Test Type (`curl/test`), and then choose Test Source.
 
 ### File
+
 For a File source, the test file is uploaded directly.
 
 ![curl test - creation dialog - file](../img/dashboard-curl-create-test-file.png)
 
 ### Git File
+
 For a Git file, you need to fill in the repository details - Git repository URI (in this case `https://github.com/kubeshop/testkube.git`), branch (`main`), and the path to the cURL test in your repository (`test/curl/executor-tests/curl-smoke-test.json`). In this example, the repository is public, but in the case of private ones, you would need to additionally fill in the Git credentials.
 
 ![curl test - creation dialog - git file](../img/dashboard-curl-create-test-git-file.png)
@@ -115,7 +119,7 @@ Execution number:  1
 Status:            running
 Start time:        2023-03-02 11:22:53.0107448 +0000 UTC
 End time:          0001-01-01 00:00:00 +0000 UTC
-Duration:          
+Duration:
 
 
 
@@ -142,10 +146,10 @@ End time:          2023-03-02 11:23:02.472 +0000 UTC
 Duration:          00:00:09
 Repository parameters:
   Branch:          main
-  Commit:          
+  Commit:
   Path:            test/curl/executor-tests/curl-smoke-test.json
-  Working dir:     
-  Certificate:     
+  Working dir:
+  Certificate:
 
 running test [6400870d237c189271627cfa]
 🚚 Initializing...
@@ -169,8 +173,8 @@ RUNNER_DATADIR="/data"
 📂 Getting the contents of bucket folders [test-curl-test]
 
 📂 Setting up access to files in /data
-🔬 Executing in directory /data: 
- $ chmod 
+🔬 Executing in directory /data:
+ $ chmod
 ✅ Execution succeeded
 ✅ Access to files enabled
 ✅ Initialization successful
@@ -195,9 +199,9 @@ running test [6400870d237c189271627cfa]
 ✅ Test content fetched to path /tmp/git-checkout2214379061/repo/test/curl/executor-tests/curl-smoke-test.json
 🔑 Filling in the input templates
 ✅ Successfully filled the input templates
-🔬 Executing in directory : 
+🔬 Executing in directory :
  $ curl -is https://testkube.io/
-HTTP/2 200 
+HTTP/2 200
 date: Thu, 02 Mar 2023 11:22:59 GMT
 content-type: text/html
 // ... output skipped
@@ -208,7 +212,7 @@ Test execution completed with success in 9.462s 🥇
 </TabItem>
 <TabItem value="crd" label="Custom Resource">
 
-The third option to create the Test is to use a Test CRD. If you already have the test created, you can check the definition in Dashboard (`Definition` tab in Test Settings). 
+The third option to create the Test is to use a Test CRD. If you already have the test created, you can check the definition in Dashboard (`Definition` tab in Test Settings).
 
 You can also get a definition while using the `testkube create test` command by adding `--crd-only`.
 In that case, the test won't be created but the definition will be displayed.

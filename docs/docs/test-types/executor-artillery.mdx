@@ -3,24 +3,34 @@ import TabItem from "@theme/TabItem";
 import Admonition from "@theme/Admonition";
 
 # Artillery.io
+
 The Artillery executor allows you to run Artillery tests with Testkube.
 
-* Default command for this executor: `artillery`
-* Default arguments for this executor command: `run` `<runPath>` `--dotenv` `<envFile>` `-o` `<reportFile>`
-(parameters in `<>` are calculated at test execution)
+- Default command for this executor: `artillery`
+- Default arguments for this executor command: `run` `<runPath>` `--dotenv` `<envFile>` `-o` `<reportFile>`
+  (parameters in `<>` are calculated at test execution)
+
+[See more at "Redefining the Prebuilt Executor Command and Arguments" on the Creating Test page.](../articles/creating-tests.md#redefining-the-prebuilt-executor-command-and-arguments)
 
 export const ExecutorInfo = () => {
-   return (
+  return (
     <div>
       <Admonition type="info" icon="🎓" title="What is Artillery?">
         <ul>
-          <li><a href="https://www.artillery.io/">Artillery.io</a> is an open-source performance testing toolkit used primarily to perform cloud-scale load testing.</li>
-          <li>Artillery is designed to be both straightforward in configuration (YAML files), and powerful.</li>
+          <li>
+            <a href="https://www.artillery.io/">Artillery.io</a> is an
+            open-source performance testing toolkit used primarily to perform
+            cloud-scale load testing.
+          </li>
+          <li>
+            Artillery is designed to be both straightforward in configuration
+            (YAML files), and powerful.
+          </li>
         </ul>
       </Admonition>
     </div>
   );
-}
+};
 
 <ExecutorInfo />
 
@@ -47,7 +57,7 @@ Output:
 The Artillery tests are defined in declarative manner, as YAML files.  
 The test should warm up our service a little bit first, then we can hit a little harder.
 
-Let's save our test into `test.yaml` file with the content below:   
+Let's save our test into `test.yaml` file with the content below:
 
 ```yaml
 config:
@@ -70,11 +80,12 @@ scenarios:
           url: "/health"
 ```
 
-Our test is ready, but how do we run it in a Kubernetes cluster? Testkube will help you with that! 
+Our test is ready, but how do we run it in a Kubernetes cluster? Testkube will help you with that!
 
 Let's create a new Testkube test based on the saved Artillery test definition.
 
 ## Create a New Testkube Test
+
 If you want to upload a test file directly (like in this example) you can use Dashboard, or CLI - depending on your preferences.
 
 <Tabs groupId="dashboard-cli">
@@ -89,10 +100,10 @@ If you prefer to use the Dashboard, just go to Tests, and click the `Add a new t
 
 If you prefer using the CLI instead, you can create the test with `testkube create test`.
 You need to set the test:
+
 - `--name` (for example, `artillery-api-test`)
 - `--type` (in this case `artillery/test`)
 - `--file` which is a path to your test file (in this case `test.yaml`)
-
 
 ```bash
 testkube create test --name artillery-api-test --type artillery/test --file test.yaml
@@ -110,7 +121,7 @@ Test created  🥇
 ## Running a Test
 
 ```bash
-$ testkube run test artillery-api-test                                                                                                                       
+$ testkube run test artillery-api-test
 Type:              artillery/test
 Name:              artillery-api-test
 Execution ID:      63ee9ca6872e05f0ea790d73
@@ -119,7 +130,7 @@ Execution number:  1
 Status:            running
 Start time:        2023-02-16 21:14:14.451905194 +0000 UTC
 End time:          0001-01-01 00:00:00 +0000 UTC
-Duration:          
+Duration:
 
 
 
@@ -132,17 +143,16 @@ Use following command to get test execution details:
 $ kubectl testkube get execution artillery-api-test-1
 ```
 
-You can also watch your test results in real-time with `-f` flag (like "follow"). 
+You can also watch your test results in real-time with `-f` flag (like "follow").
 
 Test runs can be named. If no name is passed, Testkube will autogenerate a name.
 
 ## Getting Test Results
 
-
 Let's get back our finished test results. The test report and output will be stored in Testkube storage to revisit when necessary.
 
 ```bash
-testkube get execution artillery-api-test-1                                               
+testkube get execution artillery-api-test-1
 ID:         63ee9cd8872e05f0ea790d76
 Name:       artillery-api-test-1
 Number:            1
@@ -191,4 +201,5 @@ Test execution completed with success in 3m14.484s 🥇
 ```
 
 ## Additional examples
+
 Additional Artillery examples can be found in the Testkube repository [here](https://github.com/kubeshop/testkube/blob/main/test/artillery/executor-smoke/).

@@ -9,6 +9,8 @@ Starting from the Testkube Helm chart version 1.9.5, it is possible to use Testk
 * Default arguments for this executor command: `<depCommand>` `playwright` `test`
 (parameters in `<>` are calculated at test execution)
 
+[See more at "Redefining the Prebuilt Executor Command and Arguments" on the Creating Test page.](../articles/creating-tests.md#redefining-the-prebuilt-executor-command-and-arguments)
+
 export const ExecutorInfo = () => {
    return (
     <div>

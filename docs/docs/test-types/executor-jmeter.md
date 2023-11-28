@@ -8,6 +8,8 @@ import Admonition from "@theme/Admonition";
 * Default arguments for this executor command: `-n` `-j` `<logFile>` `-t` `<runPath>` `-l` `<jtlFile>` `-e` `-o` `<reportFile>` `<envVars>`
 (parameters in `<>` are calculated at test execution)
 
+[See more at "Redefining the Prebuilt Executor Command and Arguments" on the Creating Test page.](../articles/creating-tests.md#redefining-the-prebuilt-executor-command-and-arguments)
+
 <iframe width="100%" height="315" src="https://www.youtube.com/embed/iF7BcVqTeO0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
 

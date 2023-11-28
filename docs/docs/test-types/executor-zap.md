@@ -13,6 +13,9 @@ Default command for this executor is `<pythonScriptPath>`, which will be calcula
 Default arguments for this executor command:  &lt;fileArgs&gt;
 
 (parameters in &lt;&gt; are calculated at test execution)
+
+[See more at "Redefining the Prebuilt Executor Command and Arguments" on the Creating Test page.](../articles/creating-tests.md#redefining-the-prebuilt-executor-command-and-arguments)
+
 For more information on how the underlying Docker image behaves, please consult the documentation on the [official ZAP website](https://www.zaproxy.org/docs/docker/).
 
 export const ExecutorInfo = () => {

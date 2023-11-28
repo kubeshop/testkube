@@ -2,11 +2,18 @@ import Admonition from "@theme/Admonition";
 
 # Maven
 
-Testkube allows you to run Maven-based tasks which could be also tests. For example, we can easily run JUnit tests in Testkube now. 
+Testkube allows you to run Maven-based tasks which could be also tests. For example, we can easily run JUnit tests in Testkube now.
 
 * Default command for this executor: `mvn`
 * Default arguments for this executor command: `--settings` `<settingsFile>` `<goalName>` `-Duser.home` `<mavenHome>`
-(parameters in `<>` are calculated at test execution)
+
+Parameters in `<>` are calculated at test execution:
+
+* `<settingsFile>` - will be calculated based on the contents of the `--variables-file` argument; when missing, this will be skipped
+* `<goalName>` - will be set to `test` in case the test type is `maven/test`, it will be skipped on test type `maven/project` and `maven/integration-test`
+* `<mavenHome>` - will be set to `/home/maven`, unless the user of the image has been changed
+
+[See more at "Redefining the Prebuilt Executor Command and Arguments" on the Creating Test page.](../articles/creating-tests.md#redefining-the-prebuilt-executor-command-and-arguments)
 
 export const ExecutorInfo = () => {
    return (

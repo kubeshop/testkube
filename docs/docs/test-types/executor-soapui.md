@@ -8,6 +8,8 @@ import Admonition from "@theme/Admonition";
 * Default arguments for this executor command: `<runPath>`
 (parameters in `<>` are calculated at test execution)
 
+[See more at "Redefining the Prebuilt Executor Command and Arguments" on the Creating Test page.](../articles/creating-tests.md#redefining-the-prebuilt-executor-command-and-arguments)
+
 **Check out our [blog post](https://kubeshop.io/blog/run-kubernetes-tests-with-soapui-and-testkube) to follow tutorial steps to Learn how to run functional tests in Kubernetes with SoapUI and Testkube.**
 
 Testkube supports the [SoapUI](https://www.soapui.org) executor implementation.

@@ -10,28 +10,38 @@ Default command for this executor: newman
 Default arguments for this executor command: run &lt;runPath&gt; -e &lt;envFile&gt; --reporters cli,json --reporter-json-export &lt;reportFile&gt;
 (parameters in &lt;&gt; are calculated at test execution)
 
+[See more at "Redefining the Prebuilt Executor Command and Arguments" on the Creating Test page.](../articles/creating-tests.md#redefining-the-prebuilt-executor-command-and-arguments)
+
 export const ExecutorInfo = () => {
   return (
     <div>
       <Admonition type="info" icon="🎓" title="What is Postman?">
         <ul>
-          <li>Postman is a platform for designing, building, testing, and iterating APIs.</li>
+          <li>
+            Postman is a platform for designing, building, testing, and
+            iterating APIs.
+          </li>
         </ul>
         <b>What can I do with Postman?</b>
         <ul>
-          <li>Postman simplifies every step of the API lifecycle, making it easy for you to iterate and test your APIs by sending and inspecting responses,
-          writing assertions to validate endpoints, or setting up logic to mirror your workflows.</li>
+          <li>
+            Postman simplifies every step of the API lifecycle, making it easy
+            for you to iterate and test your APIs by sending and inspecting
+            responses, writing assertions to validate endpoints, or setting up
+            logic to mirror your workflows.
+          </li>
         </ul>
       </Admonition>
     </div>
   );
-}
+};
 
 <ExecutorInfo />
 
 **Check out our [blog post](https://testkube.io/blog/api-testing-in-kubernetes-with-postman) to follow tutorial steps for end-to-end testing of your Kubernetes applications with Postman.**
 
 ## Prerequisite: Example Postman test
+
 ### Service Under Test
 
 Let's assume that our SUT (Service Under Test) is an internal Kubernetes service which has
@@ -59,11 +69,13 @@ In the following examples, we will use a simple Postman test that makes a GET re
 You can find it in the Testkube repository: https://github.com/kubeshop/testkube/blob/main/test/postman/testkube-api-server-health.postman_collection.json
 
 #### Exporting Postman collection
+
 If you'd like to use another collection you can create it in Postman, and export it to the `.postman_collection.json` file by right clicking it and selecting Export.
 
+## Creating and running Test
 
-##  Creating and running Test
 A Postman collection consists of the single file, so the following test sources can be used to create a test:
+
 - File
 - Git file
 - String
@@ -74,21 +86,25 @@ A Postman collection consists of the single file, so the following test sources 
 If you prefer to use the Dashboard, go to Tests and click the `Add a new test` button. Then you need to fill in the test Name, choose the test Type (`postman/collection`), and choose Test Source of your choice.
 
 ### a) Creating a Test from File
+
 If you have the collection you want to run saved locally, you can use `File` as the test source. You can then select and upload it directly.
 
 ![dashboard create postman test from file](../img/dashboard-postman-create-test-file.png)
 
 ### b) Creating a Test with Git file
-If you have a collection in the Git repository, you can use the `Git file` source. Then, you need to fill in repository details:
- - git repository URI (in this case `https://github.com/kubeshop/testkube.git`)
- - branch (`main`)
- - path to Postman collection in your repository (in this case `test/postman/testkube-api-server-health.postman_collection.json`). 
 
- ![dashboard create postman test from git-file](../img/dashboard-postman-create-test-git-file.png)
- 
- In this example, the repository is public, but in the case of private ones you would need to additionally fill in Git credentials.
+If you have a collection in the Git repository, you can use the `Git file` source. Then, you need to fill in repository details:
+
+- git repository URI (in this case `https://github.com/kubeshop/testkube.git`)
+- branch (`main`)
+- path to Postman collection in your repository (in this case `test/postman/testkube-api-server-health.postman_collection.json`).
+
+![dashboard create postman test from git-file](../img/dashboard-postman-create-test-git-file.png)
+
+In this example, the repository is public, but in the case of private ones you would need to additionally fill in Git credentials.
 
 ### Running a Test
+
 If you created a Test using any of the previous methods, you will be redirected to Test details. In order to run it, all you need to do is to click the Run button.
 
 </TabItem>
@@ -109,19 +125,19 @@ Test created testkube / postman-test 🥇
 
 ### b) Creating a Test with Git file
 
-```sh
+````sh
 testkube create test --name postman-test --type postman/collection --test-content-type git-file --git-uri https://github.com/kubeshop/testkube.git --git-branch main --git-path test/postman/testkube-api-server-health.postman_collection.json```
 
 ```sh
 Test created testkube / postman-test 🥇
-```
+````
 
 ### Running a Test
 
 The test can be run using the `testkube run test` command.
 
 ```sh
-$ testkube run test postman-test                                                                                                                 
+$ testkube run test postman-test
 Type:              postman/collection
 Name:              postman-test
 Execution ID:      63fde0b3a862384f8f959239
@@ -130,7 +146,7 @@ Execution number:  6
 Status:            running
 Start time:        2023-02-28 11:08:35.081273721 +0000 UTC
 End time:          0001-01-01 00:00:00 +0000 UTC
-Duration:          
+Duration:
 
 
 
@@ -158,10 +174,10 @@ End time:          2023-02-28 11:35:57.203 +0000 UTC
 Duration:          00:00:08
 Repository parameters:
   Branch:          docs-postman
-  Commit:          
+  Commit:
   Path:            test/postman/testkube-api-server-health.postman_collection.json
-  Working dir:     
-  Certificate:     
+  Working dir:
+  Certificate:
 
 running test [63fde715a862384f8f95923d]
 🚚 Initializing...
@@ -185,8 +201,8 @@ RUNNER_DATADIR="/data"
 📂 Getting the contents of bucket folders [test-postman-test]
 
 📂 Setting up access to files in /data
-🔬 Executing in directory /data: 
- $ chmod 
+🔬 Executing in directory /data:
+ $ chmod
 ✅ Execution succeeded
 ✅ Access to files enabled
 ✅ Initialization successful
@@ -209,7 +225,7 @@ running test [63fde715a862384f8f95923d]
 🚚 Preparing for test run
 📦 Fetching test content from git-file...
 ✅ Test content fetched to path /tmp/git-checkout4073207673/repo/test/postman/testkube-api-server-health.postman_collection.json
-🔬 Executing in directory : 
+🔬 Executing in directory :
  $ newman run /tmp/git-checkout4073207673/repo/test/postman/testkube-api-server-health.postman_collection.json -e /tmp/testkube-tmp3625780620 --reporters cli,json --reporter-json-export /tmp/testkube-tmp1329378482.json
 newman
 
@@ -219,7 +235,7 @@ testkube-api-server
 
 → testkube-api-server
 
-  GET http://testkube-api-server:8088/health 
+  GET http://testkube-api-server:8088/health
 [200 OK, 124B, 50ms]
 
   ✓  Status code is 200
@@ -284,7 +300,7 @@ Test execution completed with success in 8.026s 🥇
 
 <TabItem value="crd" label="Custom Resource">
 
-The third option to create the Test is to use a Test CRD. If you already have the test created, you can check the definition in Dashboard (`Definition` tab in Test Settings). 
+The third option to create the Test is to use a Test CRD. If you already have the test created, you can check the definition in Dashboard (`Definition` tab in Test Settings).
 
 You can also get a definition while using `testkube create test` command by adding `--crd-only`.
 In that case, the test won't be created, but the definition will be displayed.
