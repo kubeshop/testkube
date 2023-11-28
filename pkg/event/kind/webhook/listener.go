@@ -169,7 +169,10 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 	log := l.Log.With(event.Log()...)
 
 	var tmpl *template.Template
-	tmpl, err := utils.NewTemplate(field).Parse(body)
+	tmpl, err := utils.NewTemplate(field).Funcs(template.FuncMap{
+		"executionstatustostring":          testkube.ExecutionStatusString,
+		"testsuiteexecutionstatustostring": testkube.TestSuiteExecutionStatusString,
+	}).Parse(body)
 	if err != nil {
 		log.Errorw(fmt.Sprintf("creating webhook %s error", field), "error", err)
 		return nil, err
