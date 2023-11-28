@@ -26,7 +26,7 @@ Similar to tests, Testkube Cloud supports also cached test suites, using the dat
 
 ## CLI
 
-You can use testkube CLI to retrieve read-only tests and test suites, their executions, and download artifacts. Make sure to use version v1.16.7 or greater. You can use the `testkube version` command to check your client version.
+You can use Testkube CLI to retrieve read-only tests and test suites, their executions, and download artifacts. Make sure to use version v1.16.7 or greater. You can use the `testkube version` command to check your client version.
 
 For example, listing tests:
 
@@ -41,7 +41,7 @@ testkube get tests
          |             |           |                               | test-type=k6-script            |          |        |                    
 ```
 
-You can also list and get executions, download artifacts:
+You can also list and get executions as well as download artifacts:
 
 ```sh
 testkube get executions
