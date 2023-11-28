@@ -1,6 +1,6 @@
 # Installing the Testkube Agent
 
-Following steps, are under the assumption that you already have a TestKube Cloud account, if that's not the case, you can find a detailed description about how to get started with TestKube [here](../../articles/getting-started.md).
+Following steps, are under the assumption that you already have a TestKube Pro account, if that's not the case, you can find a detailed description about how to get started with TestKube [here](../../articles/getting-started.md).
 
 ## Installation Steps
 
@@ -34,10 +34,10 @@ You will need *Helm* installed and `kubectl` configured with access to your Kube
 
 ## Validating the Installation 
 
-Testkube Cloud will notify if the installation is successful. 
+Testkube Pro will notify if the installation is successful. 
 
-* A green indicator means that your cluster was able to connect to the Testkube Cloud.
-* A red indicator indicates that the Testkube Agent can't connect to the Testkube Cloud API (Testkube needs some time to establish a connection, max time is 2-3 minutes).
+* A green indicator means that your cluster was able to connect to the Testkube Pro.
+* A red indicator indicates that the Testkube Agent can't connect to the Testkube Pro API (Testkube needs some time to establish a connection, max time is 2-3 minutes).
 
 ![Validate Install](../../img/validate-install.png)
 
