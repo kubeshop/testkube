@@ -363,7 +363,7 @@ testkube create test --name maven-example-test --git-uri https://github.com/kube
 Test created maven-example-test 🥇
 ```
 
-#### Overriding the command
+#### Overriding the Command
 
 As the above example showed, it is possible to override the original command of the Executor, as long as the executable is available in the Executor image. Use the `--command` parameter on test creation with the name of the executable:
 
@@ -374,7 +374,7 @@ $ testkube create test --help
 ...
 ```
 
-#### Overriding the arguments
+#### Overriding the Arguments
 
 There are two modes to pass arguments to the executor:
 
