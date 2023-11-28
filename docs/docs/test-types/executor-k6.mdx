@@ -8,7 +8,12 @@ Testkube's k6 executor provides a convenient way of running k6 tests.
 
 - Default command for this executor: `k6`
 - Default arguments for this executor command: `<k6Command>` `<envVars>` `<runPath>`
-  (parameters in `<>` are calculated at test execution)
+
+Parameters in `<>` are calculated at test execution:
+
+- `<k6Command>` - `cloud` or `run` depending on the test type
+- `<envVars>` - list of environment variables
+- `<runPath>` - path to the test files
 
 [See more at "Redefining the Prebuilt Executor Command and Arguments" on the Creating Test page.](../articles/creating-tests.md#redefining-the-prebuilt-executor-command-and-arguments)
 

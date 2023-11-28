@@ -6,7 +6,10 @@ import Admonition from "@theme/Admonition";
 
 * Default command for this executor: `/bin/sh` `/usr/local/SmartBear/EntryPoint.sh`
 * Default arguments for this executor command: `<runPath>`
-(parameters in `<>` are calculated at test execution)
+
+Parameters in `<>` are calculated at test execution:
+
+* `<runPath>` - path to the test files
 
 [See more at "Redefining the Prebuilt Executor Command and Arguments" on the Creating Test page.](../articles/creating-tests.md#redefining-the-prebuilt-executor-command-and-arguments)
 

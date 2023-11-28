@@ -6,7 +6,15 @@ import Admonition from "@theme/Admonition";
 
 * Default command for this executor: `<entryPoint>`
 * Default arguments for this executor command: `-n` `-j` `<logFile>` `-t` `<runPath>` `-l` `<jtlFile>` `-e` `-o` `<reportFile>` `<envVars>`
-(parameters in `<>` are calculated at test execution)
+
+Parameters in `<>` are calculated at test execution:
+
+* `<entryPoint>` - the entrypoint for the JMeter runner set by the environment variable `ENTRYPOINT_CMD`, defaults to the file in `contrib/executor/jmeter/scripts/entrypoint.sh`
+* `<logFile>` - JMeter log path
+* `<runPath>` - path to the test files
+* `<jtlFile>` - path to the jrl report file
+* `<reportFile>` - path to the report
+* `<envVars>` - list of environment variables
 
 [See more at "Redefining the Prebuilt Executor Command and Arguments" on the Creating Test page.](../articles/creating-tests.md#redefining-the-prebuilt-executor-command-and-arguments)
 

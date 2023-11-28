@@ -8,7 +8,12 @@ Our dedicated Cypress executor allows running Cypress tests with Testkube - dire
 
 - Default command for this executor: `./node_modules/cypress/bin/cypress`
 - Default arguments for this executor command: `run` `--reporter` `junit` `--reporter-options` `mochaFile=<reportFile>,toConsole=false` `--project` `<projectPath>` `--env` `<envVars>`
-  (parameters in `<>` are calculated at test execution)
+
+Parameters in &lt;&gt; are calculated at test execution:
+
+- `<reportFile>` - path to the generated JUnit report xml file
+- `<projectPath>` - path to where the project was placed
+- `<envVars>` - list of environment variable keys and values, separated by comma
 
 [See more at "Redefining the Prebuilt Executor Command and Arguments" on the Creating Test page.](../articles/creating-tests.md#redefining-the-prebuilt-executor-command-and-arguments)
 

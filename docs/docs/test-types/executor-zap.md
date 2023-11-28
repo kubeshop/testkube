@@ -12,7 +12,10 @@ Default command for this executor is `<pythonScriptPath>`, which will be calcula
 
 Default arguments for this executor command:  &lt;fileArgs&gt;
 
-(parameters in &lt;&gt; are calculated at test execution)
+Parameters in &lt;&gt; are calculated at test execution:
+
+* `<pythonScriptPath>` - calculated based on test type
+* `<fileArgs>` - merged list of arguments from file input and `--args` input
 
 [See more at "Redefining the Prebuilt Executor Command and Arguments" on the Creating Test page.](../articles/creating-tests.md#redefining-the-prebuilt-executor-command-and-arguments)
 

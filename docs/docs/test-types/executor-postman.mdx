@@ -6,9 +6,14 @@ import Admonition from "@theme/Admonition";
 
 Testkube is able to run Postman collections inside your Kubernetes cluster so it can be used to test internal or external services.
 
-Default command for this executor: newman
-Default arguments for this executor command: run &lt;runPath&gt; -e &lt;envFile&gt; --reporters cli,json --reporter-json-export &lt;reportFile&gt;
-(parameters in &lt;&gt; are calculated at test execution)
+- Default command for this executor: newman
+- Default arguments for this executor command: run &lt;runPath&gt; -e &lt;envFile&gt; --reporters cli,json --reporter-json-export &lt;reportFile&gt;
+
+Parameters in &lt;&gt; are calculated at test execution:
+
+- <runPath> - path to the test files
+- <envFile> - path to the environment file set by `--variables-file`
+- <reportFile> - path to the generated report json file
 
 [See more at "Redefining the Prebuilt Executor Command and Arguments" on the Creating Test page.](../articles/creating-tests.md#redefining-the-prebuilt-executor-command-and-arguments)
 
