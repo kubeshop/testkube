@@ -893,7 +893,7 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 
 	if options.ExecutorSpec.Slaves != nil {
 		slvesConfigs, err := json.Marshal(executor.GetSlavesConfigs(
-			initImage,
+			images.Init,
 			*options.ExecutorSpec.Slaves,
 			jobOptions.Registry,
 			jobOptions.ServiceAccountName,

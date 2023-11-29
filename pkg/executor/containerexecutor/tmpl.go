@@ -82,9 +82,17 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 		}
 	}
 
-	log.Debug("Executor job specification", jobSpec)
+	// log.Debugw("Executor job specification", "spec", jobSpec)
+
 	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(jobSpec), len(jobSpec))
 	if err := decoder.Decode(&job); err != nil {
+
+		fmt.Printf("%+v\n", job)
+		fmt.Printf("%+v\n", jobSpec)
+		fmt.Printf("%+v\n", err)
+
+		panic("err")
+
 		return nil, fmt.Errorf("decoding executor job spec error: %w", err)
 	}
 
@@ -127,10 +135,12 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTDATA", Value: options.ContextData})
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_APIURI", Value: options.APIURI})
 
-	// For logs sidecar
-	envs = append(envs, corev1.EnvVar{Name: "ID", Value: options.Name})
-	envs = append(envs, corev1.EnvVar{Name: "NATS_URI", Value: options.NatsUri})
-	envs = append(envs, corev1.EnvVar{Name: "NAMESPACE", Value: options.Namespace})
+	// envs needed for logs sidecar
+	if options.Features.LogsV2 {
+		envs = append(envs, corev1.EnvVar{Name: "ID", Value: options.Name})
+		envs = append(envs, corev1.EnvVar{Name: "NATS_URI", Value: options.NatsUri})
+		envs = append(envs, corev1.EnvVar{Name: "NAMESPACE", Value: options.Namespace})
+	}
 
 	for i := range job.Spec.Template.Spec.InitContainers {
 		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, envs...)

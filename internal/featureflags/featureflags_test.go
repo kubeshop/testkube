@@ -15,5 +15,5 @@ func TestGet(t *testing.T) {
 	}
 
 	assertion.NoError(err)
-	assertion.IsType(&FeatureFlags{}, cfg)
+	assertion.IsType(FeatureFlags{}, cfg)
 }

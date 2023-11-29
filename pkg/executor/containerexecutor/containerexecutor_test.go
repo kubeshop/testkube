@@ -17,6 +17,7 @@ import (
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	templatesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
 	v3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -92,6 +93,7 @@ func TestNewExecutorJobSpecEmptyArgs(t *testing.T) {
 		PvcTemplateExtensions:     "",
 		Command:                   []string{},
 		Args:                      []string{},
+		Features:                  featureflags.FeatureFlags{},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
@@ -118,8 +120,13 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		ActiveDeadlineSeconds:     100,
 		Envs:                      map[string]string{"key": "value"},
 		Variables:                 map[string]testkube.Variable{"aa": {Name: "aa", Value: "bb", Type_: testkube.VariableTypeBasic}},
+		Features:                  featureflags.FeatureFlags{},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
+
+	t.Log("DEF JOB TPL: ", defaultJobTemplate)
+
+	assert.NotEmpty(t, defaultJobTemplate)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 
@@ -158,7 +165,7 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "aa", Value: "bb"},
 	}
 
-	assert.ElementsMatch(t, wantEnvs, spec.Spec.Template.Spec.Containers[1].Env)
+	assert.ElementsMatch(t, wantEnvs, spec.Spec.Template.Spec.Containers[0].Env)
 }
 
 func TestNewExecutorJobSpecWithoutInitImage(t *testing.T) {
@@ -177,6 +184,7 @@ func TestNewExecutorJobSpecWithoutInitImage(t *testing.T) {
 		PvcTemplateExtensions:     "",
 		Command:                   []string{},
 		Args:                      []string{},
+		Features:                  featureflags.FeatureFlags{},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
@@ -223,7 +231,7 @@ func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 
-	assert.Equal(t, repoPath+"/relative/path", spec.Spec.Template.Spec.Containers[1].WorkingDir)
+	assert.Equal(t, repoPath+"/relative/path", spec.Spec.Template.Spec.Containers[0].WorkingDir)
 }
 
 func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
@@ -265,7 +273,7 @@ func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 
-	assert.Equal(t, "/absolute/path", spec.Spec.Template.Spec.Containers[1].WorkingDir)
+	assert.Equal(t, "/absolute/path", spec.Spec.Template.Spec.Containers[0].WorkingDir)
 }
 
 func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
@@ -306,7 +314,7 @@ func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 
-	assert.Empty(t, spec.Spec.Template.Spec.Containers[1].WorkingDir)
+	assert.Empty(t, spec.Spec.Template.Spec.Containers[0].WorkingDir)
 }
 
 func logger() *zap.SugaredLogger {

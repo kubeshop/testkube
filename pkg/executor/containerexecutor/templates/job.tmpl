@@ -9,6 +9,7 @@ spec:
   {{- end }}
   template:
     spec:
+
 	    {{- if ne .InitImage "" }}
       initContainers:
       - name: {{ .Name }}-init
@@ -48,7 +49,7 @@ spec:
         {{- end }}
       {{- end }}
       containers:
-      {{ if .Featues.LogsV2 }} 
+      {{ if .Features.LogsV2 -}} 
       - name: "{{ .Name }}-logs"
         image: {{ .LogSidecarImage }}
         env:
@@ -60,7 +61,7 @@ spec:
           value: "{{ .NatsUri }}"
         - name: ID
           value: "{{ .Name }}"
-      {{ end }}
+      {{- end }}
       - name: "{{ .Name }}"
         {{- if .Registry }}
         image: {{ .Registry }}/{{ .Image }}
