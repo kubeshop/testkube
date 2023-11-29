@@ -22,8 +22,8 @@ const (
 	InternalSubscribeTopic = "internal.>"
 )
 
-func NewNATSConnection(uri string) (*nats.EncodedConn, error) {
-	nc, err := nats.Connect(uri)
+func NewNATSConnection(uri string, opts ...nats.Option) (*nats.EncodedConn, error) {
+	nc, err := nats.Connect(uri, opts...)
 	if err != nil {
 		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
 		return nil, err
