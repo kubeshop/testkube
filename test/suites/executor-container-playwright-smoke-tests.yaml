@@ -10,3 +10,6 @@ spec:
   - stopOnFailure: false
     execute:
     - test: container-executor-playwright-smoke
+  - stopOnFailure: false
+    execute:
+    - test: container-executor-playwright-smoke-args

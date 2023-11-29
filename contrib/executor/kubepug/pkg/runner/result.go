@@ -3,8 +3,8 @@ package runner
 import (
 	"encoding/json"
 
+	kubepug "github.com/kubepug/kubepug/pkg/results"
 	"github.com/pkg/errors"
-	kubepug "github.com/rikatz/kubepug/pkg/results"
 )
 
 // GetResult parses the output of a kubepug execution into a Result

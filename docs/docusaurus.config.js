@@ -46,7 +46,7 @@ const config = {
           sidebarPath: require.resolve("./sidebars.js"),
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
-          editUrl: "https://github.com/kubeshop/testkube/docs",
+          editUrl: "https://github.com/kubeshop/testkube/tree/develop/docs",
         },
         blog: false,
         theme: {
@@ -101,8 +101,8 @@ const config = {
       },
 
       announcementBar: {
-        id: "join-testkube-cloud",
-        content: '<strong>New to Testkube?</strong> Unleash the power of cloud native testing in Kubernetes with Testkube. <a id="sign_cloud_docs" href="https://cloud.testkube.io/?utm_source=docs" target="_blank">Get Started ></a>',
+        id: "join-testkube-pro",
+        content: '<strong>New to Testkube?</strong> Unleash the power of cloud native testing in Kubernetes with Testkube. <a id="sign_cloud_docs" href="https://app.testkube.io/?utm_source=docs" target="_blank">Get Started ></a>',
         backgroundColor: "#8951ff",
         textColor: "#fff",
       },

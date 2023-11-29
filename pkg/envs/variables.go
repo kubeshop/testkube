@@ -1,9 +1,8 @@
 package envs
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/kelseyhightower/envconfig"
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -18,6 +17,10 @@ type Params struct {
 	Token                     string // RUNNER_TOKEN
 	Bucket                    string // RUNNER_BUCKET
 	Ssl                       bool   // RUNNER_SSL
+	SkipVerify                bool   `envconfig:"RUNNER_SKIP_VERIFY" default:"false"` // RUNNER_SKIP_VERIFY
+	CertFile                  string `envconfig:"RUNNER_CERT_FILE"`                   // RUNNER_CERT_FILE
+	KeyFile                   string `envconfig:"RUNNER_KEY_FILE"`                    // RUNNER_KEY_FILE
+	CAFile                    string `envconfig:"RUNNER_CA_FILE"`
 	ScrapperEnabled           bool   // RUNNER_SCRAPPERENABLED
 	DataDir                   string // RUNNER_DATADIR
 	GitUsername               string // RUNNER_GITUSERNAME
@@ -50,6 +53,7 @@ func LoadTestkubeVariables() (Params, error) {
 		output.PrintLogf("%s Failed to read environment variables: %s", ui.IconCross, err.Error())
 		return params, errors.Errorf("failed to read environment variables: %v", err)
 	}
+
 	output.PrintLogf("%s Environment variables read successfully", ui.IconCheckMark)
 	printParams(params)
 

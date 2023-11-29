@@ -1,10 +1,10 @@
 [
   {
     "dropIndexes": "testresults",
-    "index": ["id_hashed", "testsuite.name_hashed", "name_hashed", "status_hashed", "starttime_-1", "endtime_-1"]
+    "index": ["id_1", "testsuite.name_1", "name_1", "status_1", "starttime_-1", "endtime_-1"]
   },
   {
     "dropIndexes": "results",
-    "index": ["id_hashed", "testname_hashed", "name_hashed", "executionresult.status_hashed", "starttime_-1", "endtime_-1"]
+    "index": ["id_1", "testname_1", "name_1", "executionresult.status_1", "starttime_-1", "endtime_-1"]
   }
 ]

@@ -14,7 +14,7 @@ func NewLoginCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "login",
 		Aliases: []string{"d"},
-		Short:   "Login to Testkube Cloud",
+		Short:   "[Deprecated] Login to Testkube Pro",
 		Run: func(cmd *cobra.Command, args []string) {
 			opts.CloudUris = common.NewCloudUris(opts.CloudRootDomain)
 			token, refreshToken, err := common.LoginUser(opts.CloudUris.Auth)
@@ -42,8 +42,7 @@ func NewLoginCmd() *cobra.Command {
 			common.UiPrintContext(cfg)
 		},
 	}
-
-	cmd.Flags().StringVar(&opts.CloudRootDomain, "cloud-root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for cloud mode]")
+	cmd.Flags().StringVar(&opts.CloudRootDomain, "cloud-root-domain", "testkube.io", "[Deprecated] defaults to testkube.io, usually don't need to be changed [required for cloud mode]")
 
 	cmd.Flags().StringVar(&opts.CloudOrgId, "org-id", "", "Testkube Cloud organization id")
 	cmd.Flags().StringVar(&opts.CloudEnvId, "env-id", "", "Testkube Cloud environment id")

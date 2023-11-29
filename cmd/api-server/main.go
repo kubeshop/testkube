@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -11,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+
+	"github.com/nats-io/nats.go"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 
@@ -127,6 +130,8 @@ func runMongoMigrations(ctx context.Context, db *mongo.Database, migrationsDir s
 
 func main() {
 	cfg, err := config.Get()
+	cfg.CleanLegacyVars()
+
 	ui.ExitOnError("error getting application config", err)
 	// Run services within an errgroup to propagate errors between services.
 	g, ctx := errgroup.WithContext(context.Background())
@@ -167,11 +172,11 @@ func main() {
 	var grpcClient cloud.TestKubeCloudAPIClient
 	var grpcConn *grpc.ClientConn
 	mode := common.ModeStandalone
-	if cfg.TestkubeCloudAPIKey != "" {
+	if cfg.TestkubeProAPIKey != "" {
 		mode = common.ModeAgent
 	}
 	if mode == common.ModeAgent {
-		grpcConn, err = agent.NewGRPCConnection(ctx, cfg.TestkubeCloudTLSInsecure, cfg.TestkubeCloudURL, log.DefaultLogger)
+		grpcConn, err = agent.NewGRPCConnection(ctx, cfg.TestkubeProTLSInsecure, cfg.TestkubeProURL, log.DefaultLogger)
 		ui.ExitOnError("error creating gRPC connection", err)
 		defer grpcConn.Close()
 
@@ -222,11 +227,11 @@ func main() {
 	var artifactStorage domainstorage.ArtifactsStorage
 	var storageClient domainstorage.Client
 	if mode == common.ModeAgent {
-		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
-		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
-		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
+		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
-		artifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeCloudAPIKey)
+		artifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 	} else {
 		mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
 		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)
@@ -236,15 +241,7 @@ func main() {
 		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
 		configRepository = configrepository.NewMongoRepository(db)
 		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
-		minioClient := minio.NewClient(
-			cfg.StorageEndpoint,
-			cfg.StorageAccessKeyID,
-			cfg.StorageSecretAccessKey,
-			cfg.StorageRegion,
-			cfg.StorageToken,
-			cfg.StorageBucket,
-			cfg.StorageSSL,
-		)
+		minioClient := newStorageClient(cfg)
 		if err = minioClient.Connect(); err != nil {
 			ui.ExitOnError("Connecting to minio", err)
 		}
@@ -338,10 +335,9 @@ func main() {
 		envs[pair[0]] += pair[1]
 	}
 
-	// configure NATS event bus
-	nc, err := bus.NewNATSEncoddedConnection(cfg.NatsURI)
+	nc, err := newNATSConnection(cfg)
 	if err != nil {
-		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
+		ui.ExitOnError("Creating NATS connection", err)
 	}
 	eventBus := bus.NewNATSBus(nc)
 	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName, envs)
@@ -358,7 +354,7 @@ func main() {
 		ui.ExitOnError("Sync default executors", err)
 	}
 
-	jobTemplate, err := parser.ParseJobTemplate(cfg)
+	jobTemplate, slavePodTemplate, err := parser.ParseJobTemplates(cfg)
 	if err != nil {
 		ui.ExitOnError("Creating job templates", err)
 	}
@@ -368,6 +364,7 @@ func main() {
 		cfg.TestkubeNamespace,
 		images,
 		jobTemplate,
+		slavePodTemplate,
 		cfg.JobServiceAccountName,
 		metrics,
 		eventsEmitter,
@@ -457,7 +454,6 @@ func main() {
 		executor,
 		containerExecutor,
 		metrics,
-		jobTemplate,
 		sched,
 		slackLoader,
 		storageClient,
@@ -478,10 +474,10 @@ func main() {
 		agentHandle, err := agent.NewAgent(
 			log.DefaultLogger,
 			api.Mux.Handler(),
-			cfg.TestkubeCloudAPIKey,
+			cfg.TestkubeProAPIKey,
 			grpcClient,
-			cfg.TestkubeCloudWorkerCount,
-			cfg.TestkubeCloudLogStreamWorkerCount,
+			cfg.TestkubeProWorkerCount,
+			cfg.TestkubeProLogStreamWorkerCount,
 			api.GetLogsStream,
 			clusterId,
 			cfg.TestkubeClusterName,
@@ -620,6 +616,38 @@ func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDet
 	}
 
 	return executors, nil
+}
+
+func newNATSConnection(cfg *config.Config) (*nats.EncodedConn, error) {
+	var opts []nats.Option
+	if cfg.NatsSecure {
+		if cfg.NatsSkipVerify {
+			opts = append(opts, nats.Secure(&tls.Config{InsecureSkipVerify: true}))
+		} else {
+			opts = append(opts, nats.ClientCert(cfg.NatsCertFile, cfg.NatsKeyFile))
+			if cfg.NatsCAFile != "" {
+				opts = append(opts, nats.RootCAs(cfg.NatsCAFile))
+			}
+		}
+	}
+	nc, err := bus.NewNATSEncoddedConnection(cfg.NatsURI, opts...)
+	if err != nil {
+		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
+	}
+	return nc, nil
+}
+
+func newStorageClient(cfg *config.Config) *minio.Client {
+	opts := minio.GetTLSOptions(cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
+	return minio.NewClient(
+		cfg.StorageEndpoint,
+		cfg.StorageAccessKeyID,
+		cfg.StorageSecretAccessKey,
+		cfg.StorageRegion,
+		cfg.StorageToken,
+		cfg.StorageBucket,
+		opts...,
+	)
 }
 
 func newSlackLoader(cfg *config.Config, envs map[string]string) (*slack.SlackLoader, error) {

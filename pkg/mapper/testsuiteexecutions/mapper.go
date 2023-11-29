@@ -157,6 +157,30 @@ func MapExecutionCRD(request *testkube.Execution) *testsuiteexecutionv1.Executio
 		}
 	}
 
+	var podRequest *testsuiteexecutionv1.PodRequest
+	if request.SlavePodRequest != nil {
+		podRequest = &testsuiteexecutionv1.PodRequest{}
+		if request.SlavePodRequest.Resources != nil {
+			podRequest.Resources = &testsuiteexecutionv1.PodResourcesRequest{}
+			if request.SlavePodRequest.Resources.Requests != nil {
+				podRequest.Resources.Requests = &testsuiteexecutionv1.ResourceRequest{
+					Cpu:    request.SlavePodRequest.Resources.Requests.Cpu,
+					Memory: request.SlavePodRequest.Resources.Requests.Memory,
+				}
+			}
+
+			if request.SlavePodRequest.Resources.Limits != nil {
+				podRequest.Resources.Limits = &testsuiteexecutionv1.ResourceRequest{
+					Cpu:    request.SlavePodRequest.Resources.Limits.Cpu,
+					Memory: request.SlavePodRequest.Resources.Limits.Memory,
+				}
+			}
+		}
+
+		podRequest.PodTemplate = request.SlavePodRequest.PodTemplate
+		podRequest.PodTemplateReference = request.SlavePodRequest.PodTemplateReference
+	}
+
 	result := &testsuiteexecutionv1.Execution{
 		Id:                                 request.Id,
 		TestName:                           request.TestName,
@@ -186,6 +210,7 @@ func MapExecutionCRD(request *testkube.Execution) *testsuiteexecutionv1.Executio
 		ExecutePostRunScriptBeforeScraping: request.ExecutePostRunScriptBeforeScraping,
 		RunningContext:                     runningContext,
 		ContainerShell:                     request.ContainerShell,
+		SlavePodRequest:                    podRequest,
 	}
 
 	result.StartTime.Time = request.StartTime

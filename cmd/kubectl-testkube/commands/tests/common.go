@@ -248,6 +248,52 @@ func newArtifactRequestFromFlags(cmd *cobra.Command) (request *testkube.Artifact
 	return request, nil
 }
 
+func newSlavePodRequestFromFlags(cmd *cobra.Command) (request *testkube.PodRequest, err error) {
+	slavePodTemplate := cmd.Flag("slave-pod-template").Value.String()
+	slavePodTemplateReference := cmd.Flag("slave-pod-template-reference").Value.String()
+	slavePodRequestsCpu := cmd.Flag("slave-pod-requests-cpu").Value.String()
+	slavePodRequestsMemory := cmd.Flag("slave-pod-requests-memory").Value.String()
+	slavePodLimitsCpu := cmd.Flag("slave-pod-limits-cpu").Value.String()
+	slavePodLimitsMemory := cmd.Flag("slave-pod-limits-memory").Value.String()
+
+	if slavePodRequestsCpu != "" || slavePodRequestsMemory != "" || slavePodLimitsCpu != "" ||
+		slavePodLimitsMemory != "" || slavePodTemplate != "" || slavePodTemplateReference != "" {
+		request = &testkube.PodRequest{
+			PodTemplateReference: slavePodTemplateReference,
+		}
+
+		if slavePodTemplate != "" {
+			b, err := os.ReadFile(slavePodTemplate)
+			ui.ExitOnError("reading slave pod template", err)
+			request.PodTemplate = string(b)
+		}
+
+		if slavePodRequestsCpu != "" || slavePodRequestsMemory != "" {
+			if request.Resources == nil {
+				request.Resources = &testkube.PodResourcesRequest{}
+			}
+
+			request.Resources.Requests = &testkube.ResourceRequest{
+				Cpu:    slavePodRequestsCpu,
+				Memory: slavePodRequestsMemory,
+			}
+		}
+
+		if slavePodLimitsCpu != "" || slavePodLimitsMemory != "" {
+			if request.Resources == nil {
+				request.Resources = &testkube.PodResourcesRequest{}
+			}
+
+			request.Resources.Limits = &testkube.ResourceRequest{
+				Cpu:    slavePodLimitsCpu,
+				Memory: slavePodLimitsMemory,
+			}
+		}
+	}
+
+	return request, nil
+}
+
 func newEnvReferencesFromFlags(cmd *cobra.Command) (envConfigMaps, envSecrets []testkube.EnvReference, err error) {
 	mountConfigMaps, err := cmd.Flags().GetStringToString("mount-configmap")
 	if err != nil {
@@ -466,6 +512,11 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 	}
 
 	request.ArtifactRequest, err = newArtifactRequestFromFlags(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	request.SlavePodRequest, err = newSlavePodRequestFromFlags(cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -1008,12 +1059,25 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 		return nil, err
 	}
 
-	var emptyRequest = &testkube.ArtifactUpdateRequest{}
+	var emptyArtifactRequest = &testkube.ArtifactUpdateRequest{}
 	if artifactRequest != nil {
 		request.ArtifactRequest = &artifactRequest
 		nonEmpty = true
 	} else {
-		request.ArtifactRequest = &emptyRequest
+		request.ArtifactRequest = &emptyArtifactRequest
+	}
+
+	slavePodRequest, err := newSlavePodUpdateRequestFromFlags(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	var emptyPodRequest = &testkube.PodUpdateRequest{}
+	if slavePodRequest != nil {
+		request.SlavePodRequest = &slavePodRequest
+		nonEmpty = true
+	} else {
+		request.SlavePodRequest = &emptyPodRequest
 	}
 
 	if nonEmpty {
@@ -1070,6 +1134,94 @@ func newArtifactUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.Ar
 		}
 
 		request.OmitFolderPerExecution = &value
+		nonEmpty = true
+	}
+
+	if nonEmpty {
+		return request, nil
+	}
+
+	return nil, nil
+}
+
+func newSlavePodUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.PodUpdateRequest, err error) {
+	var nonEmpty bool
+	request = &testkube.PodUpdateRequest{}
+	if cmd.Flag("slave-pod-template-reference").Changed {
+		value := cmd.Flag("slave-pod-template-reference").Value.String()
+		request.PodTemplateReference = &value
+		nonEmpty = true
+	}
+
+	if cmd.Flag("slave-pod-template").Changed {
+		value := cmd.Flag("slave-pod-template").Value.String()
+		b, err := os.ReadFile(value)
+		if err != nil {
+			return nil, err
+		}
+
+		data := string(b)
+		request.PodTemplate = &data
+		nonEmpty = true
+	}
+
+	if cmd.Flag("slave-pod-requests-cpu").Changed {
+		value := cmd.Flag("slave-pod-requests-cpu").Value.String()
+		if request.Resources == nil {
+			data := &testkube.PodResourcesUpdateRequest{}
+			request.Resources = &data
+		}
+
+		if (*request.Resources).Requests == nil {
+			(*request.Resources).Requests = &testkube.ResourceUpdateRequest{}
+		}
+
+		(*(*request.Resources).Requests).Cpu = &value
+		nonEmpty = true
+	}
+
+	if cmd.Flag("slave-pod-requests-memory").Changed {
+		value := cmd.Flag("slave-pod-requests-memory").Value.String()
+		if request.Resources == nil {
+			data := &testkube.PodResourcesUpdateRequest{}
+			request.Resources = &data
+		}
+
+		if (*request.Resources).Requests == nil {
+			(*request.Resources).Requests = &testkube.ResourceUpdateRequest{}
+		}
+
+		(*(*request.Resources).Requests).Memory = &value
+		nonEmpty = true
+	}
+
+	if cmd.Flag("slave-pod-limits-cpu").Changed {
+		value := cmd.Flag("slave-pod-limits-cpu").Value.String()
+		if request.Resources == nil {
+			data := &testkube.PodResourcesUpdateRequest{}
+			request.Resources = &data
+		}
+
+		if (*request.Resources).Limits == nil {
+			(*request.Resources).Limits = &testkube.ResourceUpdateRequest{}
+		}
+
+		(*(*request.Resources).Limits).Cpu = &value
+		nonEmpty = true
+	}
+
+	if cmd.Flag("slave-pod-limits-memory").Changed {
+		value := cmd.Flag("slave-pod-limits-memory").Value.String()
+		if request.Resources == nil {
+			data := &testkube.PodResourcesUpdateRequest{}
+			request.Resources = &data
+		}
+
+		if (*request.Resources).Limits == nil {
+			(*request.Resources).Limits = &testkube.ResourceUpdateRequest{}
+		}
+
+		(*(*request.Resources).Limits).Memory = &value
 		nonEmpty = true
 	}
 

@@ -280,32 +280,48 @@ const redirects = [
     to: "/articles/templates",
   },
   {
-    from: ["/testkube-cloud/intro", "/testkube-cloud"],
-    to: "/testkube-cloud/articles/intro",
+    from: ["/testkube-cloud/intro", "/testkube-cloud", "/testkube-cloud/articles/intro", "/testkube-pro/intro"],
+    to: "/testkube-pro/articles/intro",
   },
   {
-    from: "/testkube-cloud/installing-agent",
-    to: "/testkube-cloud/articles/installing-agent",
+    from: ["/testkube-cloud/installing-agent", "/testkube-cloud/articles/installing-agent", "/testkube-pro/installing-agent"],
+    to: "/testkube-pro/articles/installing-agent",
   },
   {
-    from: "/testkube-cloud/transition-from-oss",
-    to: "/testkube-cloud/articles/transition-from-oss",
+    from: ["/testkube-cloud/transition-from-oss", "/testkube-cloud/articles/transition-from-oss", "/testkube-pro/transition-from-oss"],
+    to: "/testkube-pro/articles/transition-from-oss",
   },
   {
-    from: "/testkube-cloud/organization-management",
-    to: "/testkube-cloud/articles/organization-management",
+    from: ["/testkube-cloud/organization-management", "/testkube-cloud/articles/organization-management", "/testkube-pro/organization-management"],
+    to: "/testkube-pro/articles/organization-management",
   },
   {
-    from: "/testkube-cloud/environment-management",
-    to: "/testkube-cloud/articles/environment-management",
+    from: ["/testkube-cloud/environment-management", "/testkube-cloud/articles/environment-management", "/testkube-pro/environment-management"],
+    to: "/testkube-pro/articles/environment-management",
   },
   {
-    from: "/testkube-cloud/managing-cli-context",
-    to: "/testkube-cloud/articles/managing-cli-context",
+    from: ["/testkube-cloud/managing-cli-context", "/testkube-cloud/articles/managing-cli-context", "/testkube-pro/managing-cli-context"],
+    to: "/testkube-pro/articles/managing-cli-context",
   },
   {
-    from: "/testkube-cloud/architecture",
-    to: "/testkube-cloud/articles/architecture",
+    from: ["/testkube-cloud/architecture", "/testkube-cloud/articles/architecture", "/testkube-pro/architecture"],
+    to: "/testkube-pro/articles/architecture",
+  },
+  {
+    from: ["/testkube-cloud/articles/running-parallel-tests-with-test-suite","/testkube-pro/running-parallel-tests-with-test-suite"],
+    to: "/testkube-pro/articles/running-parallel-tests-with-test-suite",
+  },
+  {
+    from: ["/testkube-cloud/articles/AI-test-insights", "/testkube-pro/AI-test-insights"],
+    to: "/testkube-pro/articles/AI-test-insights",
+  },
+  {
+    from: ["/testkube-cloud/articles/status-pages", "/testkube-pro/status-pages"],
+    to: "/testkube-pro/articles/status-pages",
+  },
+  {
+    from: ["/testkube-cloud/articles/cached-results", "/testkube-pro/cached-results"],
+    to: "/testkube-pro/articles/cached-results",
   },
   {
     from: "/reference/helm-chart",

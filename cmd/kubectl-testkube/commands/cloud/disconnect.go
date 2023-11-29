@@ -19,8 +19,9 @@ func NewDisconnectCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "disconnect",
 		Aliases: []string{"d"},
-		Short:   "Switch back to Testkube OSS mode, based on active .kube/config file",
+		Short:   "[Deprecated] Switch back to Testkube OSS mode, based on active .kube/config file",
 		Run: func(cmd *cobra.Command, args []string) {
+			ui.Warn("You are using a deprecated command, please switch to `testkube pro disconnect`.")
 
 			ui.H1("Disconnecting your cloud environment:")
 			ui.Paragraph("Rolling back to your clusters testkube OSS installation")

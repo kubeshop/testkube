@@ -36,7 +36,7 @@ testkube run test <testName> [flags]
   -h, --help                                       help for test
       --http-proxy string                          http proxy for executor containers
       --https-proxy string                         https proxy for executor containers
-      --image string                               execution variable passed to executor
+      --image string                               override executor container image
       --iterations int                             how many times to run the test (default 1)
       --job-template string                        job template file path for extensions to job template
       --job-template-reference string              reference to job template to use for the test
@@ -55,6 +55,12 @@ testkube run test <testName> [flags]
   -s, --secret-variable stringToString             execution secret variable passed to executor (default [])
       --secret-variable-reference stringToString   secret variable references in a form name1=secret_name1=secret_key1 (default [])
       --silent                                     don't print intermediate test execution
+      --slave-pod-limits-cpu string                slave pod resource limits cpu
+      --slave-pod-limits-memory string             slave pod resource limits memory
+      --slave-pod-requests-cpu string              slave pod resource requests cpu
+      --slave-pod-requests-memory string           slave pod resource requests memory
+      --slave-pod-template string                  slave pod template file path for extensions to slave pod template
+      --slave-pod-template-reference string        reference to slave pod template to use for the test
       --upload-timeout string                      timeout to use when uploading files, example: 30s
   -v, --variable stringToString                    execution variable passed to executor (default [])
       --variable-configmap stringArray             config map name used to map all keys to basis variables

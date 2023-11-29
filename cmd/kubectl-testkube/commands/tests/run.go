@@ -68,6 +68,12 @@ func NewRunTestCmd() *cobra.Command {
 		artifactStorageBucket              string
 		artifactOmitFolderPerExecution     bool
 		silentMode                         bool
+		slavePodRequestsCpu                string
+		slavePodRequestsMemory             string
+		slavePodLimitsCpu                  string
+		slavePodLimitsMemory               string
+		slavePodTemplate                   string
+		slavePodTemplateReference          string
 	)
 
 	cmd := &cobra.Command{
@@ -188,6 +194,41 @@ func NewRunTestCmd() *cobra.Command {
 				}
 			}
 
+			if slavePodRequestsCpu != "" || slavePodRequestsMemory != "" || slavePodLimitsCpu != "" ||
+				slavePodLimitsMemory != "" || slavePodTemplate != "" || slavePodTemplateReference != "" {
+				options.SlavePodRequest = &testkube.PodRequest{
+					PodTemplateReference: slavePodTemplateReference,
+				}
+
+				if slavePodTemplate != "" {
+					b, err := os.ReadFile(slavePodTemplate)
+					ui.ExitOnError("reading slave pod template", err)
+					options.SlavePodRequest.PodTemplate = string(b)
+				}
+
+				if slavePodRequestsCpu != "" || slavePodRequestsMemory != "" {
+					if options.SlavePodRequest.Resources == nil {
+						options.SlavePodRequest.Resources = &testkube.PodResourcesRequest{}
+					}
+
+					options.SlavePodRequest.Resources.Requests = &testkube.ResourceRequest{
+						Cpu:    slavePodRequestsCpu,
+						Memory: slavePodRequestsMemory,
+					}
+				}
+
+				if slavePodLimitsCpu != "" || slavePodLimitsMemory != "" {
+					if options.SlavePodRequest.Resources == nil {
+						options.SlavePodRequest.Resources = &testkube.PodResourcesRequest{}
+					}
+
+					options.SlavePodRequest.Resources.Limits = &testkube.ResourceRequest{
+						Cpu:    slavePodLimitsCpu,
+						Memory: slavePodLimitsMemory,
+					}
+				}
+			}
+
 			switch {
 			case len(args) > 0:
 				testName := args[0]
@@ -249,18 +290,18 @@ func NewRunTestCmd() *cobra.Command {
 				}
 			}()
 
-			var hasErrors bool
+			var execErrors []error
 			for _, execution := range executions {
 				printExecutionDetails(execution)
 
 				if execution.ExecutionResult != nil && execution.ExecutionResult.ErrorMessage != "" {
-					hasErrors = true
+					execErrors = append(execErrors, errors.New(execution.ExecutionResult.ErrorMessage))
 				}
 
 				if execution.Id != "" {
 					if watchEnabled && len(args) > 0 {
 						if err = watchLogs(execution.Id, silentMode, client); err != nil {
-							hasErrors = true
+							execErrors = append(execErrors, err)
 						}
 					}
 
@@ -269,7 +310,7 @@ func NewRunTestCmd() *cobra.Command {
 				}
 
 				if err = render.RenderExecutionResult(client, &execution, false); err != nil {
-					hasErrors = true
+					execErrors = append(execErrors, err)
 				}
 
 				if execution.Id != "" {
@@ -285,9 +326,7 @@ func NewRunTestCmd() *cobra.Command {
 				uiShellGetExecution(execution.Name)
 			}
 
-			if hasErrors {
-				ui.ExitOnError("executions contain failed on errors")
-			}
+			ui.ExitOnError("executions contain failed on errors", execErrors...)
 		},
 	}
 
@@ -342,6 +381,12 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&artifactStorageBucket, "artifact-storage-bucket", "", "artifact storage class name for container executor")
 	cmd.Flags().BoolVarP(&artifactOmitFolderPerExecution, "artifact-omit-folder-per-execution", "", false, "don't store artifacts in execution folder")
 	cmd.Flags().BoolVarP(&silentMode, "silent", "", false, "don't print intermediate test execution")
+	cmd.Flags().StringVar(&slavePodRequestsCpu, "slave-pod-requests-cpu", "", "slave pod resource requests cpu")
+	cmd.Flags().StringVar(&slavePodRequestsMemory, "slave-pod-requests-memory", "", "slave pod resource requests memory")
+	cmd.Flags().StringVar(&slavePodLimitsCpu, "slave-pod-limits-cpu", "", "slave pod resource limits cpu")
+	cmd.Flags().StringVar(&slavePodLimitsMemory, "slave-pod-limits-memory", "", "slave pod resource limits memory")
+	cmd.Flags().StringVar(&slavePodTemplate, "slave-pod-template", "", "slave pod template file path for extensions to slave pod template")
+	cmd.Flags().StringVar(&slavePodTemplateReference, "slave-pod-template-reference", "", "reference to slave pod template to use for the test")
 
 	return cmd
 }

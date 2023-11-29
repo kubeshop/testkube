@@ -60,7 +60,10 @@ func (r *MongoRepository) GetByNameAndTestSuite(ctx context.Context, name, testS
 func (r *MongoRepository) GetLatestByTestSuite(ctx context.Context, testSuiteName string) (*testkube.TestSuiteExecution, error) {
 	opts := options.Aggregate()
 	pipeline := []bson.M{
-		{"$documents": bson.A{bson.M{"name": testSuiteName}}},
+		{"$group": bson.M{"_id": "$testsuite.name", "doc": bson.M{"$first": bson.M{}}}},
+		{"$project": bson.M{"_id": 0, "name": "$_id"}},
+		{"$match": bson.M{"name": testSuiteName}},
+
 		{"$lookup": bson.M{"from": r.Coll.Name(), "let": bson.M{"name": "$name"}, "pipeline": []bson.M{
 			{"$match": bson.M{"$expr": bson.M{"$eq": bson.A{"$testsuite.name", "$$name"}}}},
 			{"$sort": bson.M{"starttime": -1}},
@@ -86,7 +89,7 @@ func (r *MongoRepository) GetLatestByTestSuite(ctx context.Context, testSuiteNam
 		{"$replaceRoot": bson.M{"newRoot": "$doc.content"}},
 		{"$limit": 1},
 	}
-	cursor, err := r.db.Aggregate(ctx, pipeline, opts)
+	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +115,10 @@ func (r *MongoRepository) GetLatestByTestSuites(ctx context.Context, testSuiteNa
 	}
 
 	pipeline := []bson.M{
-		{"$documents": documents},
+		{"$group": bson.M{"_id": "$testsuite.name", "doc": bson.M{"$first": bson.M{}}}},
+		{"$project": bson.M{"_id": 0, "name": "$_id"}},
+		{"$match": bson.M{"$or": documents}},
+
 		{"$lookup": bson.M{"from": r.Coll.Name(), "let": bson.M{"name": "$name"}, "pipeline": []bson.M{
 			{"$match": bson.M{"$expr": bson.M{"$eq": bson.A{"$testsuite.name", "$$name"}}}},
 			{"$sort": bson.M{"starttime": -1}},
@@ -143,7 +149,7 @@ func (r *MongoRepository) GetLatestByTestSuites(ctx context.Context, testSuiteNa
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
 
-	cursor, err := r.db.Aggregate(ctx, pipeline, opts)
+	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
 	if err != nil {
 		return nil, err
 	}

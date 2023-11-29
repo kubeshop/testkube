@@ -1,6 +1,6 @@
 ## testkube agent
 
-Testkube Cloud Agent related commands
+Testkube Pro Agent related commands
 
 ```
 testkube agent [flags]
