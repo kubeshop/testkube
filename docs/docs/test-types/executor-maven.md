@@ -9,9 +9,9 @@ Testkube allows you to run Maven-based tasks which could be also tests. For exam
 
 Parameters in `<>` are calculated at test execution:
 
-* `<settingsFile>` - will be calculated based on the contents of the `--variables-file` argument; when missing, this will be skipped
-* `<goalName>` - will be set to `test` in case the test type is `maven/test`, `integration-test` in case of `maven/integration-test`, and it will be empty on test type `maven/project`
-* `<mavenHome>` - will be set to `/home/maven`, unless the user of the image has been changed
+* `<settingsFile>` - Will be calculated based on the contents of the `--variables-file` argument; when missing, this will be skipped.
+* `<goalName>` - Will be set to `test` if the test type is `maven/test`, `integration-test` in the case of `maven/integration-test`, and it will be empty on test type `maven/project`.
+* `<mavenHome>` - Will be set to `/home/maven`, unless the user of the image has been changed.
 
 [See more at "Redefining the Prebuilt Executor Command and Arguments" on the Creating Test page.](../articles/creating-tests.md#redefining-the-prebuilt-executor-command-and-arguments)
 
