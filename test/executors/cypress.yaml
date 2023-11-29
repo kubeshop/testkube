@@ -1,6 +1,29 @@
 apiVersion: executor.testkube.io/v1
 kind: Executor
 metadata:
+  name: cypress-v13-executor
+spec:
+  image: kubeshop/testkube-cypress-executor:cypress13
+  command: ["./node_modules/cypress/bin/cypress"]
+  args: [
+    "run",
+    "--reporter",
+    "junit",
+    "--reporter-options",
+    "mochaFile=<reportFile>,toConsole=false",
+    "--project",
+    "<projectPath>",
+    "--env",
+    "<envVars>"
+  ]
+  types:
+    - cypress:v13/test
+  features:
+    - artifacts
+---
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
   name: cypress-v12-executor
 spec:
   image: kubeshop/testkube-cypress-executor:cypress12
