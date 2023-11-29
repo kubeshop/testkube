@@ -1,12 +1,16 @@
 package featureflags
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestGet(t *testing.T) {
+
+	os.Setenv("FF_LOGS_V2", "true")
+
 	assertion := require.New(t)
 
 	cfg, err := Get()
@@ -16,4 +20,5 @@ func TestGet(t *testing.T) {
 
 	assertion.NoError(err)
 	assertion.IsType(FeatureFlags{}, cfg)
+	assertion.True(cfg.LogsV2)
 }
