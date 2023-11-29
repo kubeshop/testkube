@@ -50,7 +50,7 @@ spec:
       containers:
       {{ if .Featues.LogsV2 }} 
       - name: "{{ .Name }}-logs"
-        image: ex00/testkube-logs-sidecar:latest
+        image: {{ .LogSidecarImage }}
         env:
         - name: DEBUG
           value: "true"

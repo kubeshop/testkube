@@ -307,11 +307,13 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	jobOptions.InitImage = images.Init
 	jobOptions.ScraperImage = images.Scraper
 
-	// TODO pass them from some condfig? we dont' have any in this context?
-	// Log sidecar
-	jobOptions.Debug = os.Getenv("DEBUG") == "true"
-	jobOptions.NatsUri = os.Getenv("NATS_URI")
-	jobOptions.LogSidecarImage = images.LogSidecar
+	// options needed for Log sidecar
+	if options.Features.LogsV2 {
+		// TODO pass them from some config? we dont' have any in this context?
+		jobOptions.Debug = os.Getenv("DEBUG") == "true"
+		jobOptions.NatsUri = os.Getenv("NATS_URI")
+		jobOptions.LogSidecarImage = images.LogSidecar
+	}
 
 	if jobOptions.JobTemplate == "" {
 		jobOptions.JobTemplate = templates.Job

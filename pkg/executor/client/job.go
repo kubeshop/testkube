@@ -824,14 +824,15 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	jobOptions.Jsn = string(jsn)
 	jobOptions.InitImage = images.Init
 	jobOptions.TestName = execution.TestName
-
-	// TODO pass them from some condfig? we dont' have any in this context?
-	// options needed for Log sidecar
-	jobOptions.Debug = os.Getenv("DEBUG") == "true"
-	jobOptions.NatsUri = os.Getenv("NATS_URI")
-	jobOptions.LogSidecarImage = images.LogSidecar
-
 	jobOptions.Features = options.Features
+
+	// options needed for Log sidecar
+	if options.Features.LogsV2 {
+		// TODO pass them from some config? we dont' have any in this context?
+		jobOptions.Debug = os.Getenv("DEBUG") == "true"
+		jobOptions.NatsUri = os.Getenv("NATS_URI")
+		jobOptions.LogSidecarImage = images.LogSidecar
+	}
 
 	if jobOptions.JobTemplate == "" {
 		jobOptions.JobTemplate = jobTemplate
