@@ -387,7 +387,7 @@ $ testkube create test --help
 
 By default, `--args-mode` is set to `append`, which means that the default list will be kept, and whatever is set in `--executor-args` will be added to the end.
 
-The `override` mode will ignore the default arguments and use only what is set in `--executor-args`. In case there are default values in between chevrons (`<>`), they can be reused in `--executor-args`.
+The `override` mode will ignore the default arguments and use only what is set in `--executor-args`. If there are default values in between chevrons (`<>`), they can be reused in `--executor-args`.
 
 When using `--args-mode` with `testkube run test ...` pay attention to set the arguments via the `--args` flag, not `--executor-args`.
 

@@ -148,7 +148,7 @@ Status Test execution completed with success 🥇
 
 Updating the commands and arguments is possible on both test and execution level.
 
-As an example, during a debug session, you could pass `pwd` in as the command in order to find out the path you are located at:
+As an example, during a debug session, you could pass `pwd` in as the command in order to find out the current path:
 
 ```sh
 kubectl testkube run test maven-example-test --command "pwd" --args-mode "override" --args "-L"
