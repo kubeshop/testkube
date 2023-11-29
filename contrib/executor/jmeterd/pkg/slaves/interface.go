@@ -3,6 +3,6 @@ package slaves
 import "context"
 
 type Interface interface {
-	CreateSlaves(context.Context) (SlaveMeta, error)
-	DeleteSlaves(context.Context, SlaveMeta) error
+	CreateSlaves(ctx context.Context, count int) (SlaveMeta, error)
+	DeleteSlaves(ctx context.Context, meta SlaveMeta) error
 }

@@ -3,11 +3,13 @@ kind: Pod
 metadata:
   name: "{{ .Name }}"
   namespace: {{ .Namespace }}
+  {{- if .JobUID }}
   ownerReferences:
   - apiVersion: batch/v1
     kind: job
     name: {{ .JobName }}
     uid: {{ .JobUID }}
+  {{- end }}
 spec:
   {{- if gt .ActiveDeadlineSeconds 0 }}
   activeDeadlineSeconds: {{ .ActiveDeadlineSeconds }}
@@ -20,7 +22,7 @@ spec:
     image: {{ .InitImage }}
     {{- end }}
     imagePullPolicy: IfNotPresent
-    command: 
+    command:
       - "/bin/runner"
       - '{{ .Jsn }}'
     volumeMounts:
@@ -56,7 +58,7 @@ spec:
       containerPort: {{ $port.ContainerPort }}
     {{- end}}
     {{- range $port := .Ports }}
-    {{- if eq $port.Name "server-port" }}  
+    {{- if eq $port.Name "server-port" }}
     livenessProbe:
       tcpSocket:
         port: {{ $port.ContainerPort }}

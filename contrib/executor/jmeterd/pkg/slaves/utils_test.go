@@ -19,35 +19,37 @@ func TestGetSlavesCount(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		input   testkube.Variable
+		input   map[string]testkube.Variable
 		want    int
 		wantErr bool
 	}{
 		{
 			name:    "Empty Value",
-			input:   testkube.Variable{Value: ""},
 			want:    defaultSlavesCount,
 			wantErr: false,
 		},
 		{
 			name:    "Valid Value",
-			input:   testkube.Variable{Value: "10"},
+			input:   map[string]testkube.Variable{"SLAVES_COUNT": {Value: "10"}},
 			want:    10,
 			wantErr: false,
 		},
 		{
 			name:    "Invalid Value",
-			input:   testkube.Variable{Value: "abc"},
+			input:   map[string]testkube.Variable{"SLAVES_COUNT": {Value: "abc"}},
 			want:    0,
 			wantErr: true,
 		},
 	}
 
-	for _, tt := range tests {
+	for i := range tests {
+		tt := tests[i]
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getSlavesCount(tt.input)
+			t.Parallel()
+
+			got, err := GetSlavesCount(tt.input)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("getSlavesCount() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetSlavesCount() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			assert.Equal(t, tt.want, got)
@@ -80,7 +82,7 @@ func TestValidateAndGetSlavePodName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.testName, func(t *testing.T) {
-			actualOutput := ValidateAndGetSlavePodName(tt.testName, tt.executionId, tt.currentSlaveCount)
+			actualOutput := validateAndGetSlavePodName(tt.testName, tt.executionId, tt.currentSlaveCount)
 			if actualOutput != tt.expectedOutput {
 				t.Errorf("expected %v, got %v", tt.expectedOutput, actualOutput)
 			}
@@ -94,6 +96,8 @@ func TestIsPodReady(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("poll until pod is ready", func(t *testing.T) {
+		t.Parallel()
+
 		clientset := fake.NewSimpleClientset()
 
 		pod := &v1.Pod{
@@ -128,6 +132,8 @@ func TestIsPodReady(t *testing.T) {
 	})
 
 	t.Run("poll times out", func(t *testing.T) {
+		t.Parallel()
+
 		clientset := fake.NewSimpleClientset()
 
 		pod := &v1.Pod{
