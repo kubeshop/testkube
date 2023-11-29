@@ -1,28 +1,26 @@
-## testkube init
+## testkube cloud init
 
-Install Helm chart registry in current kubectl context and update dependencies
+[Deprecated] Install Testkube Cloud Agent and connect to Testkube Cloud environment
 
 ```
-testkube init [flags]
+testkube cloud init [flags]
 ```
 
 ### Options
 
 ```
-      --agent-token string         Testkube Cloud agent key [required for cloud mode]
-      --agent-uri string           Testkube Cloud agent URI [required for cloud mode]
+      --agent-token string         Testkube Cloud agent key
       --chart string               chart name (usually you don't need to change it) (default "kubeshop/testkube")
       --cloud-root-domain string   defaults to testkube.io, usually don't need to be changed [required for cloud mode] (default "testkube.io")
       --dry-run                    dry run mode - only print commands that would be executed
-      --env-id string              Testkube Cloud environment id [required for cloud mode]
+      --env-id string              Testkube Cloud environment id
   -h, --help                       help for init
+      --multi-namespace            multi namespace mode
       --name string                installation name (usually you don't need to change it) (default "testkube")
       --namespace string           namespace where to install (default "testkube")
       --no-confirm                 don't ask for confirmation - unatended installation mode
-      --no-dashboard               don't install dashboard
-      --no-minio                   don't install MinIO
-      --no-mongo                   don't install MongoDB
-      --org-id string              Testkube Cloud organization id [required for cloud mode]
+      --no-operator                should operator be installed (for more instances in multi namespace mode it should be set to true)
+      --org-id string              Testkube Cloud organization id
       --values string              path to Helm values file
 ```
 
@@ -38,5 +36,5 @@ testkube init [flags]
 
 ### SEE ALSO
 
-* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube cloud](testkube_cloud.md)	 - [Deprecated] Testkube Cloud commands
 

@@ -1,19 +1,15 @@
-## testkube create-ticket
+## testkube cloud
 
-Create bug ticket
-
-### Synopsis
-
-Create an issue of type bug in the Testkube repository
+[Deprecated] Testkube Cloud commands
 
 ```
-testkube create-ticket [flags]
+testkube cloud [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for create-ticket
+  -h, --help   help for cloud
 ```
 
 ### Options inherited from parent commands
@@ -30,4 +26,8 @@ testkube create-ticket [flags]
 ### SEE ALSO
 
 * [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube cloud connect](testkube_cloud_connect.md)	 - [Deprecated] Testkube Cloud connect 
+* [testkube cloud disconnect](testkube_cloud_disconnect.md)	 - [Deprecated] Switch back to Testkube OSS mode, based on active .kube/config file
+* [testkube cloud init](testkube_cloud_init.md)	 - [Deprecated] Install Testkube Cloud Agent and connect to Testkube Cloud environment
+* [testkube cloud login](testkube_cloud_login.md)	 - [Deprecated] Login to Testkube Pro
 
