@@ -1,30 +1,26 @@
-## testkube pro connect
+## testkube cloud disconnect
 
-Testkube Pro connect 
+[Deprecated] Switch back to Testkube OSS mode, based on active .kube/config file
 
 ```
-testkube pro connect [flags]
+testkube cloud disconnect [flags]
 ```
 
 ### Options
 
 ```
-      --agent-token string       Testkube Pro agent key [required for pro mode]
       --chart string             chart name (usually you don't need to change it) (default "kubeshop/testkube")
-      --dashboard-replicas int   Dashboard replicas
+      --dashboard-replicas int   Dashboard replicas (default 1)
       --dry-run                  dry run mode - only print commands that would be executed
-      --env-id string            Testkube Pro environment id [required for pro mode]
-  -h, --help                     help for connect
-      --minio-replicas int       MinIO replicas
-      --mongo-replicas int       MongoDB replicas
+  -h, --help                     help for disconnect
+      --minio-replicas int       MinIO replicas (default 1)
+      --mongo-replicas int       MongoDB replicas (default 1)
       --name string              installation name (usually you don't need to change it) (default "testkube")
       --namespace string         namespace where to install (default "testkube")
       --no-confirm               don't ask for confirmation - unatended installation mode
       --no-dashboard             don't install dashboard
       --no-minio                 don't install MinIO
       --no-mongo                 don't install MongoDB
-      --org-id string            Testkube Pro organization id [required for pro mode]
-      --pro-root-domain string   defaults to testkube.io, usually don't need to be changed [required for pro mode] (default "testkube.io")
       --values string            path to Helm values file
 ```
 
@@ -40,5 +36,5 @@ testkube pro connect [flags]
 
 ### SEE ALSO
 
-* [testkube pro](testkube_pro.md)	 - Testkube Pro commands
+* [testkube cloud](testkube_cloud.md)	 - [Deprecated] Testkube Cloud commands
 

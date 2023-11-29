@@ -23,6 +23,7 @@ testkube delete executor [executorName] [flags]
 ```
   -a, --api-uri string     api uri, default value read from config if set (default "https://demo.testkube.io/results/v1")
   -c, --client string      Client used for connecting to testkube API one of proxy|direct (default "proxy")
+      --insecure           insecure connection for direct client
       --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")
       --oauth-enabled      enable oauth
       --verbose            should I show additional debug messages

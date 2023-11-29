@@ -18,6 +18,7 @@ testkube delete <resourceName> [flags]
 
 ```
   -a, --api-uri string     api uri, default value read from config if set (default "https://demo.testkube.io/results/v1")
+      --insecure           insecure connection for direct client
       --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")
       --oauth-enabled      enable oauth
 ```

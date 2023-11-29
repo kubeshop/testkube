@@ -1,6 +1,7 @@
 package http
 
 import (
+	"crypto/tls"
 	"net"
 	"net/http"
 	"time"
@@ -12,13 +13,21 @@ const (
 	ClientTimeout       = 5 * time.Minute
 )
 
-func NewClient() *http.Client {
+func NewClient(insecure ...bool) *http.Client {
+	var tlsConfig *tls.Config
+	if len(insecure) == 1 && insecure[0] {
+		tlsConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
+	}
+
 	var netTransport = &http.Transport{
 		Dial: (&net.Dialer{
 			Timeout: NetDialTimeout,
 		}).Dial,
 		TLSHandshakeTimeout: TLSHandshakeTimeout,
 		Proxy:               http.ProxyFromEnvironment,
+		TLSClientConfig:     tlsConfig,
 	}
 	return &http.Client{
 		Timeout:   ClientTimeout,
@@ -27,8 +36,18 @@ func NewClient() *http.Client {
 }
 
 // NewSSEClient is HTTP client with long timeout to be able to read SSE endpoints
-func NewSSEClient() *http.Client {
+func NewSSEClient(insecure ...bool) *http.Client {
+	var netTransport *http.Transport
+	if len(insecure) == 1 && insecure[0] {
+		netTransport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+	}
+
 	return &http.Client{
-		Timeout: time.Hour,
+		Timeout:   time.Hour,
+		Transport: netTransport,
 	}
 }

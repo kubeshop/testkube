@@ -1,15 +1,18 @@
-## testkube config api-server-name
+## testkube cloud login
 
-Set api server name for testkube client
+[Deprecated] Login to Testkube Pro
 
 ```
-testkube config api-server-name <value> [flags]
+testkube cloud login [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for api-server-name
+      --cloud-root-domain string   [Deprecated] defaults to testkube.io, usually don't need to be changed [required for cloud mode] (default "testkube.io")
+      --env-id string              Testkube Cloud environment id
+  -h, --help                       help for login
+      --org-id string              Testkube Cloud organization id
 ```
 
 ### Options inherited from parent commands
@@ -25,5 +28,5 @@ testkube config api-server-name <value> [flags]
 
 ### SEE ALSO
 
-* [testkube config](testkube_config.md)	 - Set feature configuration value
+* [testkube cloud](testkube_cloud.md)	 - [Deprecated] Testkube Cloud commands
 

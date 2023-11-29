@@ -42,6 +42,7 @@ testkube create testsuite [flags]
   -a, --api-uri string     api uri, default value read from config if set (default "https://demo.testkube.io/results/v1")
   -c, --client string      client used for connecting to Testkube API one of proxy|direct (default "proxy")
       --crd-only           generate only crd
+      --insecure           insecure connection for direct client
       --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")
       --oauth-enabled      enable oauth
       --verbose            show additional debug messages
