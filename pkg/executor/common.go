@@ -389,8 +389,8 @@ func SyncDefaultExecutors(
 		return images, nil
 	}
 
+	images.LogSidecar = SidecarImage
 	for _, executor := range executors {
-		images.LogSidecar = SidecarImage
 
 		if executor.Executor == nil {
 			continue

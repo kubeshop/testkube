@@ -36,6 +36,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	dbmigrations "github.com/kubeshop/testkube/internal/db-migrations"
+	"github.com/kubeshop/testkube/internal/featureflags"
 	parser "github.com/kubeshop/testkube/internal/template"
 	"github.com/kubeshop/testkube/pkg/version"
 
@@ -131,8 +132,11 @@ func runMongoMigrations(ctx context.Context, db *mongo.Database, migrationsDir s
 func main() {
 	cfg, err := config.Get()
 	cfg.CleanLegacyVars()
-
 	ui.ExitOnError("error getting application config", err)
+
+	ff, err := featureflags.Get()
+	ui.ExitOnError("error getting application feature flags", err)
+
 	// Run services within an errgroup to propagate errors between services.
 	g, ctx := errgroup.WithContext(context.Background())
 
@@ -429,6 +433,7 @@ func main() {
 		testsuiteExecutionsClient,
 		eventBus,
 		cfg.TestkubeDashboardURI,
+		ff,
 	)
 
 	slackLoader, err := newSlackLoader(cfg, envs)

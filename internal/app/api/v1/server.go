@@ -36,6 +36,7 @@ import (
 	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
+	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
@@ -187,6 +188,7 @@ type TestkubeAPI struct {
 	mode                  string
 	eventsBus             bus.Bus
 	enableSecretsEndpoint bool
+	featureFlags          featureflags.FeatureFlags
 }
 
 type storageParams struct {
@@ -208,6 +210,11 @@ type oauthParams struct {
 	ClientSecret string
 	Provider     oauth.ProviderType
 	Scopes       string
+}
+
+func (s *TestkubeAPI) WithFeatureFlags(ff featureflags.FeatureFlags) *TestkubeAPI {
+	s.featureFlags = ff
+	return s
 }
 
 // SendTelemetryStartEvent sends anonymous start event to telemetry trackers

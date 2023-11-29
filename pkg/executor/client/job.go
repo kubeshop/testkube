@@ -13,6 +13,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 
 	"github.com/pkg/errors"
@@ -177,6 +178,7 @@ type JobOptions struct {
 	LogSidecarImage       string
 	APIURI                string
 	SlavePodTemplate      string
+	Features              featureflags.FeatureFlags
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -556,6 +558,7 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		ExecutionNumber:       options.Request.Number,
 		ContextType:           contextType,
 		ContextData:           contextData,
+		Features:              options.Features,
 	}
 }
 
@@ -822,10 +825,13 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	jobOptions.InitImage = images.Init
 	jobOptions.TestName = execution.TestName
 
+	// TODO pass them from some condfig? we dont' have any in this context?
 	// options needed for Log sidecar
 	jobOptions.Debug = os.Getenv("DEBUG") == "true"
 	jobOptions.NatsUri = os.Getenv("NATS_URI")
 	jobOptions.LogSidecarImage = images.LogSidecar
+
+	jobOptions.Features = options.Features
 
 	if jobOptions.JobTemplate == "" {
 		jobOptions.JobTemplate = jobTemplate

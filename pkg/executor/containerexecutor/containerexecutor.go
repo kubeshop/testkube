@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/utils"
 
@@ -166,6 +167,7 @@ type JobOptions struct {
 	LogSidecarImage           string
 	NatsUri                   string
 	APIURI                    string
+	Features                  featureflags.FeatureFlags
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -669,6 +671,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		ExecutionNumber:           options.Request.Number,
 		ContextType:               contextType,
 		ContextData:               contextData,
+		Features:                  options.Features,
 	}
 }
 

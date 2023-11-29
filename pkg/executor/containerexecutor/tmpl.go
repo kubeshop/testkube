@@ -307,6 +307,7 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	jobOptions.InitImage = images.Init
 	jobOptions.ScraperImage = images.Scraper
 
+	// TODO pass them from some condfig? we dont' have any in this context?
 	// Log sidecar
 	jobOptions.Debug = os.Getenv("DEBUG") == "true"
 	jobOptions.NatsUri = os.Getenv("NATS_URI")

@@ -48,6 +48,7 @@ spec:
         {{- end }}
       {{- end }}
       containers:
+      {{ if .Featues.LogsV2 }} 
       - name: "{{ .Name }}-logs"
         image: ex00/testkube-logs-sidecar:latest
         env:
@@ -56,9 +57,10 @@ spec:
         - name: NAMESPACE
           value: {{ .Namespace }}
         - name: NATS_URI
-          value: "nats://testkube-js-nats:4222"
+          value: "{{ .NatsUri }}"
         - name: ID
           value: "{{ .Name }}"
+      {{ end }}
       - name: "{{ .Name }}"
         {{- if .Registry }}
         image: {{ .Registry }}/{{ .Image }}
