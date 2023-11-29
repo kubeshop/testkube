@@ -9,7 +9,7 @@ import Admonition from "@theme/Admonition";
 
 Parameters in `<>` are calculated at test execution:
 
-* `<entryPoint>` - the entrypoint for the JMeter runner set by the environment variable `ENTRYPOINT_CMD`, defaults to the file in `contrib/executor/jmeter/scripts/entrypoint.sh`
+* `<entryPoint>` - The entrypoint for the JMeter runner set by the environment variable `ENTRYPOINT_CMD`, defaults to the file in `contrib/executor/jmeter/scripts/entrypoint.sh`.
 * `<logFile>` - JMeter log path
 * `<runPath>` - path to the test files
 * `<jtlFile>` - path to the jrl report file
