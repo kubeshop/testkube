@@ -21,7 +21,7 @@ testkube [flags]
 ### SEE ALSO
 
 * [testkube abort](testkube_abort.md)	 - Abort tests or test suites
-* [testkube agent](testkube_agent.md)	 - Testkube Cloud Agent related commands
+* [testkube agent](testkube_agent.md)	 - Testkube Pro Agent related commands
 * [testkube cloud](testkube_cloud.md)	 - [Deprecated] Testkube Cloud commands
 * [testkube completion](testkube_completion.md)	 - Generate the autocompletion script for the specified shell
 * [testkube config](testkube_config.md)	 - Set feature configuration value
