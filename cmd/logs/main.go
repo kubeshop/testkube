@@ -8,12 +8,13 @@ import (
 	"os/signal"
 	"syscall"
 
+	"go.uber.org/zap"
+
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/logs"
 	"github.com/kubeshop/testkube/pkg/logs/config"
 	"github.com/kubeshop/testkube/pkg/logs/consumer"
-	"go.uber.org/zap"
 
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/oklog/run"
