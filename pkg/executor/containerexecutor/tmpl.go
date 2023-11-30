@@ -82,8 +82,6 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 		}
 	}
 
-	// log.Debugw("Executor job specification", "spec", jobSpec)
-
 	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(jobSpec), len(jobSpec))
 	if err := decoder.Decode(&job); err != nil {
 		return nil, fmt.Errorf("decoding executor job spec error: %w", err)
