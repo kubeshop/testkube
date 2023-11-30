@@ -51,7 +51,7 @@ spec:
       containers:
       {{ if .Features.LogsV2 -}} 
       - name: "{{ .Name }}-logs"
-        image: {{ .LogSidecarImage }}
+        image: {{ .Registry }}/{{ .LogSidecarImage }}
         env:
         - name: DEBUG
           value: "true"
