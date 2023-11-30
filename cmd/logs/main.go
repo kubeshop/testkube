@@ -35,7 +35,7 @@ func main() {
 
 	js := Must(jetstream.New(natsConn))
 
-	svc := logs.NewLogsService(natsEncodedConn, js)
+	svc := logs.NewLogsService(natsEncodedConn, js, cfg.HttpAddress)
 	svc.AddConsumer(consumer.NewDummyConsumer())
 
 	go svc.RunHealthCheckHandler(ctx)
