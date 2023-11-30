@@ -91,7 +91,7 @@ func TestLogs(t *testing.T) {
 		c := NewMockConsumer()
 
 		// and initialized log service
-		log := NewLogsService(ec, js)
+		log := NewLogsService(ec, js, ":8080")
 
 		// with 4 consumers (the same consumer is added 4 times so it'll receive 4 times more messages)
 		log.AddConsumer(c)

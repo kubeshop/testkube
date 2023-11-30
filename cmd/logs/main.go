@@ -37,6 +37,8 @@ func main() {
 
 	svc := logs.NewLogsService(natsEncodedConn, js)
 	svc.AddConsumer(consumer.NewDummyConsumer())
+
+	go svc.RunHealthCheckHandler(ctx)
 	svc.Run(ctx)
 }
 

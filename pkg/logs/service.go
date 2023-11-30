@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"sync"
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -24,13 +26,15 @@ const (
 	StopQueue  = "logsstop"
 )
 
-func NewLogsService(nats *nats.EncodedConn, js jetstream.JetStream) *LogsService {
+func NewLogsService(nats *nats.EncodedConn, js jetstream.JetStream, httpAddress string) *LogsService {
 	return &LogsService{
-		nats:      nats,
-		consumers: []consumer.Consumer{},
-		js:        js,
-		log:       log.DefaultLogger.With("service", "logs-service"),
-		Ready:     make(chan struct{}, 1),
+		nats:              nats,
+		consumers:         []consumer.Consumer{},
+		js:                js,
+		log:               log.DefaultLogger.With("service", "logs-service"),
+		Ready:             make(chan struct{}, 1),
+		httpAddress:       httpAddress,
+		consumerInstances: sync.Map{},
 	}
 }
 
@@ -41,10 +45,26 @@ type LogsService struct {
 	consumers []consumer.Consumer
 
 	Ready chan struct{}
+
+	// httpAddress is address for Kubernetes http health check handler
+	httpAddress string
+
+	// consumerInstances is internal executionID => consumer map which we need to clean
+	// each pod can have different executionId set of consumers
+	consumerInstances sync.Map
 }
 
 func (l *LogsService) AddConsumer(s consumer.Consumer) {
 	l.consumers = append(l.consumers, s)
+}
+
+// RunHealthCheckHandler is a handler for health check events
+// we need HTTP as GRPC probes starts from Kubernetes 1.25
+func (l *LogsService) RunHealthCheckHandler(ctx context.Context) {
+	http.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	l.log.Panic(http.ListenAndServe(l.httpAddress, nil))
 }
 
 func (l *LogsService) Run(ctx context.Context) (err error) {
@@ -53,17 +73,9 @@ func (l *LogsService) Run(ctx context.Context) (err error) {
 
 	// 1. Handle start stop events from nats
 	//    assuming after start event something is pushing data to the stream
-	//    it can be our handler or some other service (like NAT beat)
+	//    it can be our handler or some other service
 
 	l.log.Infow("starting logs service")
-
-	// TODO refactor abstract NATS logic from here?
-	// TODO consider using durable topics for queue with Ack / Nack
-	l.nats.QueueSubscribe(StopSubject, StopQueue, func(event events.Trigger) {
-		// TODO stop all consumers from consuming data for given execution id
-		// TODO it can be on different pod so we need to check if we have consumer for given execution id
-		// TODO should we use consumer groups here?
-	})
 
 	// 2. For start event we must build stream for given execution id and start consuming it
 	// this one will must a queue group each pod will get it's own
@@ -92,13 +104,24 @@ func (l *LogsService) Run(ctx context.Context) (err error) {
 			cons, err := c.Consume(l.HandleMessage(consumer, event))
 			log.Infow("consumer started", "consumer", consumer.Name(), "id", event.Id, "stream", streamName)
 
-			// TODO add `cons` and stop it on stop event
-			var _ = cons
+			// store consumer instance so we can stop it later
+			l.consumerInstances.Store(event.Id, cons)
 
 			if err != nil {
 				log.Errorw("error consuming", "error", err, "consumer", c.CachedInfo())
 			}
 		}
+	})
+
+	// listen on all pods as we don't control which one will have given consumer
+	l.nats.Subscribe(StopSubject, func(event events.Trigger) {
+		_, found := l.consumerInstances.LoadAndDelete(event.Id)
+		if found {
+			l.log.Infow("stopping consumer", "id", event.Id, "deleted", found)
+			return
+		}
+
+		l.log.Debugw("consumer not found", "id", event.Id, "deleted", found)
 	})
 
 	l.Ready <- struct{}{}
