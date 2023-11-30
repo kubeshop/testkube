@@ -277,10 +277,12 @@ func InspectDockerImage(namespace, registry, image string, imageSecrets []string
 	return append(dockerImage.Config.Entrypoint, dockerImage.Config.Cmd...), dockerImage.Shell, nil
 }
 
+// TODO refactor JobOptions to use builder pattern
+// TODO extract JobOptions for both container and job executor to common package in separate PR
 // NewJobOptions provides job options for templates
 func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, images executor.Images,
 	templates executor.Templates, serviceAccountName, registry, clusterID, apiURI string,
-	execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
+	execution testkube.Execution, options client.ExecuteOptions, natsUri string, debug bool) (*JobOptions, error) {
 	jobOptions := NewJobOptionsFromExecutionOptions(options)
 	if execution.PreRunScript != "" || execution.PostRunScript != "" {
 		jobOptions.Command = []string{filepath.Join(executor.VolumeDir, EntrypointScriptName)}
@@ -313,8 +315,8 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	// options needed for Log sidecar
 	if options.Features.LogsV2 {
 		// TODO pass them from some config? we dont' have any in this context?
-		jobOptions.Debug = os.Getenv("DEBUG") == "true"
-		jobOptions.NatsUri = os.Getenv("NATS_URI")
+		jobOptions.Debug = debug
+		jobOptions.NatsUri = natsUri
 		jobOptions.LogSidecarImage = images.LogSidecar
 	}
 

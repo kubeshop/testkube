@@ -223,6 +223,8 @@ func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 				},
 			},
 		},
+		"",
+		false,
 	)
 
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
@@ -266,6 +268,8 @@ func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 				},
 			},
 		},
+		"",
+		false,
 	)
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
@@ -307,6 +311,8 @@ func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
 				},
 			},
 		},
+		"",
+		false,
 	)
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
@@ -352,14 +358,12 @@ type FakeMetricCounter struct {
 }
 
 func (FakeMetricCounter) IncExecuteTest(execution testkube.Execution, dashboardURI string) {
-	return
 }
 
 type FakeEmitter struct {
 }
 
 func (FakeEmitter) Notify(event testkube.Event) {
-	return
 }
 
 type FakeResultRepository struct {

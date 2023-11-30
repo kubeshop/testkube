@@ -91,6 +91,8 @@ func NewJobExecutor(
 	clusterID string,
 	dashboardURI string,
 	apiURI string,
+	natsURI string,
+	debug bool,
 ) (client *JobExecutor, err error) {
 	return &JobExecutor{
 		ClientSet:            clientset,
@@ -112,6 +114,8 @@ func NewJobExecutor(
 		clusterID:            clusterID,
 		dashboardURI:         dashboardURI,
 		apiURI:               apiURI,
+		natsURI:              natsURI,
+		debug:                debug,
 	}, nil
 }
 
@@ -141,6 +145,8 @@ type JobExecutor struct {
 	clusterID            string
 	dashboardURI         string
 	apiURI               string
+	natsURI              string
+	debug                bool
 }
 
 type JobOptions struct {
@@ -304,7 +310,7 @@ func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) 
 func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
 	jobOptions, err := NewJobOptions(c.Log, c.templatesClient, c.images, c.jobTemplate, c.slavePodTemplate,
-		c.serviceAccountName, c.registry, c.clusterID, c.apiURI, execution, options)
+		c.serviceAccountName, c.registry, c.clusterID, c.apiURI, execution, options, c.natsURI, c.debug)
 	if err != nil {
 		return err
 	}
@@ -812,7 +818,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 
 func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, images executor.Images,
 	jobTemplate, slavePodTemplate, serviceAccountName, registry, clusterID, apiURI string,
-	execution testkube.Execution, options ExecuteOptions) (jobOptions JobOptions, err error) {
+	execution testkube.Execution, options ExecuteOptions, natsURI string, debug bool) (jobOptions JobOptions, err error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
 		return jobOptions, err
@@ -829,8 +835,8 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	// options needed for Log sidecar
 	if options.Features.LogsV2 {
 		// TODO pass them from some config? we dont' have any in this context?
-		jobOptions.Debug = os.Getenv("DEBUG") == "true"
-		jobOptions.NatsUri = os.Getenv("NATS_URI")
+		jobOptions.Debug = debug
+		jobOptions.NatsUri = natsURI
 		jobOptions.LogSidecarImage = images.LogSidecar
 	}
 

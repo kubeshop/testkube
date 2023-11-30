@@ -382,6 +382,8 @@ func main() {
 		clusterId,
 		cfg.TestkubeDashboardURI,
 		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
+		cfg.NatsURI,
+		cfg.Debug,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating executor client", err)
@@ -410,6 +412,8 @@ func main() {
 		clusterId,
 		cfg.TestkubeDashboardURI,
 		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
+		cfg.NatsURI,
+		cfg.Debug,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating container executor", err)

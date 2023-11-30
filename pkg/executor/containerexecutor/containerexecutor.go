@@ -69,6 +69,8 @@ func NewContainerExecutor(
 	clusterID string,
 	dashboardURI string,
 	apiURI string,
+	natsUri string,
+	debug bool,
 ) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -95,6 +97,8 @@ func NewContainerExecutor(
 		clusterID:            clusterID,
 		dashboardURI:         dashboardURI,
 		apiURI:               apiURI,
+		natsURI:              natsUri,
+		debug:                debug,
 	}, nil
 }
 
@@ -123,6 +127,8 @@ type ContainerExecutor struct {
 	clusterID            string
 	dashboardURI         string
 	apiURI               string
+	natsURI              string
+	debug                bool
 }
 
 type JobOptions struct {
@@ -273,7 +279,7 @@ func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Ex
 	jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
 
 	jobOptions, err := NewJobOptions(c.log, c.templatesClient, c.images, c.templates, c.serviceAccountName,
-		c.registry, c.clusterID, c.apiURI, execution, options)
+		c.registry, c.clusterID, c.apiURI, execution, options, c.natsURI, c.debug)
 	if err != nil {
 		return nil, err
 	}
