@@ -187,7 +187,7 @@ func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) 
 	}
 	result := (&items[0]).UnscapeDots()
 	if len(result.ExecutionResult.Output) == 0 {
-		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, "")
+		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
 		if err == mongo.ErrNoDocuments {
 			err = nil
 		}
