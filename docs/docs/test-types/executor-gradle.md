@@ -7,8 +7,8 @@ Testkube allows running Gradle based tasks that could also be tests. For example
 
 Parameters in `<>` are calculated at test execution:
 
-* `<taskName>` - will be `test` in case of tests of type `gradle/test`, `integrationTest` `gradle/integrationTest` on `gradle/integrationTest`, and empty for `gradle/project`
-* `<projectDir>` - will contain the path to the cloned git directory
+* `<taskName>` - Will be `test` in case of tests of type `gradle/test`, `integrationTest` `gradle/integrationTest` on `gradle/integrationTest`, and empty for `gradle/project`.
+* `<projectDir>` - Will contain the path to the cloned Git directory.
 
 [See more at "Redefining the Prebuilt Executor Command and Arguments" on the Creating Test page.](../articles/creating-tests.md#redefining-the-prebuilt-executor-command-and-arguments)
 
