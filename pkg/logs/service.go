@@ -115,8 +115,10 @@ func (l *LogsService) Run(ctx context.Context) (err error) {
 
 	// listen on all pods as we don't control which one will have given consumer
 	l.nats.Subscribe(StopSubject, func(event events.Trigger) {
-		_, found := l.consumerInstances.LoadAndDelete(event.Id)
+		_, found := l.consumerInstances.Load(event.Id)
 		if found {
+			// TODO: we need to check if all consumers are completed before deleting them
+			l.consumerInstances.Delete(event.Id)
 			l.log.Infow("stopping consumer", "id", event.Id, "deleted", found)
 			return
 		}
