@@ -126,6 +126,7 @@ func (p *Proxy) streamLogs(ctx context.Context, logs chan events.LogChunk) (err 
 			l.Debugw("streaming pod logs: waiting for pod to be ready")
 			testFunc := p.isPodLoggable(pod.Name)
 			if err = wait.PollUntilContextTimeout(ctx, pollInterval, podStartTimeout, true, testFunc); err != nil {
+				// try to get pod container statuses from Waiting and Terminated states
 				status := p.getPodContainerStatuses(pod)
 				p.handleError(err, "can't get pod container status after pod failure")
 				return errors.Wrap(err, status)
