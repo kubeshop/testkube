@@ -8,8 +8,10 @@ import (
 )
 
 func TestGet(t *testing.T) {
-
 	os.Setenv("FF_LOGS_V2", "true")
+	t.Cleanup(func() {
+		os.Unsetenv("FF_LOGS_V2")
+	})
 
 	assertion := require.New(t)
 

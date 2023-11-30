@@ -9,7 +9,7 @@ type FeatureFlags struct {
 }
 
 func Get() (ff FeatureFlags, err error) {
-	if err := envconfig.Process("FF", &ff); err != nil {
+	if err := envconfig.Process("", &ff); err != nil {
 		return ff, err
 	}
 	return
