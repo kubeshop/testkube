@@ -211,6 +211,17 @@ TESTKUBE_CLOUD_URL: {{ index .Envs "TESTKUBE_CLOUD_URL" }}
 You can add additional HTTP headers like `Authorization` or `x-api-key` to have a secret token.
 It's possible to use golang based template string as header or uri value.
 
+### Helper methods
+We also provide special helper methods to use in the webhook template:
+`executionstatustostring` is the method to convert a pointer to a execution status to a string type.
+`testsuiteexecutionstatustostring` is the method to convert a pointer to a test suite execution status to a string type.
+
+Usage example:
+```yaml
+  - name: TEXT_COLOUR
+    value: {{ if eq (.TestSuiteExecution.Status | testsuiteexecutionstatustostring ) "passed" }}"00FF00"{{ else }}"FF0000"{{ end }}
+```
+
 <Tabs>
 <TabItem value="dash" label="Dashboard">
 

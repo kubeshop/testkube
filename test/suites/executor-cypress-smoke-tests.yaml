@@ -9,6 +9,15 @@ spec:
   steps:
   - stopOnFailure: false
     execute:
+    - test: cypress-13-executor-smoke-electron
+  - stopOnFailure: false
+    execute:
+    - test: cypress-13-executor-smoke-chrome
+  - stopOnFailure: false
+    execute:
+    - test: cypress-13-executor-smoke-firefox
+  - stopOnFailure: false
+    execute:
     - test: cypress-12-executor-smoke-electron
   - stopOnFailure: false
     execute:
