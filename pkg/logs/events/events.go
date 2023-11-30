@@ -37,10 +37,6 @@ type LogOutputV1 struct {
 	Result *testkube.ExecutionResult
 }
 
-type Type string
-
-const ()
-
 type LogChunk struct {
 	Time     time.Time         `json:"ts,omitempty"`
 	Content  string            `json:"content,omitempty"`
@@ -130,6 +126,7 @@ func NewLogChunkFromBytes(b []byte) LogChunk {
 			return LogChunk{
 				Time:    ts,
 				Content: err.Error(),
+				Type:    o.Type_,
 				Error:   true,
 				Version: LogVersionV1,
 			}
