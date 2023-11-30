@@ -36,7 +36,7 @@ const (
 	logsBuffer      = 1000
 )
 
-func NewProxy(clientset *kubernetes.Clientset, podsClient tcorev1.PodInterface, logsStream logs.Stream, js jetstream.JetStream, log *zap.SugaredLogger, namespace, executionId string) *Proxy {
+func NewProxy(clientset kubernetes.Interface, podsClient tcorev1.PodInterface, logsStream logs.Stream, js jetstream.JetStream, log *zap.SugaredLogger, namespace, executionId string) *Proxy {
 	return &Proxy{
 		log:         log.With("namespace", namespace, "executionId", executionId),
 		js:          js,
@@ -51,7 +51,7 @@ func NewProxy(clientset *kubernetes.Clientset, podsClient tcorev1.PodInterface, 
 type Proxy struct {
 	log         *zap.SugaredLogger
 	js          jetstream.JetStream
-	clientset   *kubernetes.Clientset
+	clientset   kubernetes.Interface
 	namespace   string
 	executionId string
 	podsClient  tcorev1.PodInterface
