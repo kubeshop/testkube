@@ -5,8 +5,6 @@ import (
 	"regexp"
 	"time"
 
-	"encoding/json"
-
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 )
@@ -81,11 +79,6 @@ func (c *LogChunk) WithVersion(version LogVersion) *LogChunk {
 func (c *LogChunk) WithV1Result(result *testkube.ExecutionResult) *LogChunk {
 	c.V1.Result = result
 	return c
-}
-
-// TODO handle errrors
-func (c LogChunk) Encode() ([]byte, err) {
-	return json.Marshal(c)
 }
 
 var timestampRegexp = regexp.MustCompile("^[0-9]{4}-[0-9]{2}-[0-9]{2}T.*")
