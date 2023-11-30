@@ -363,6 +363,34 @@ testkube create test --name maven-example-test --git-uri https://github.com/kube
 Test created maven-example-test 🥇
 ```
 
+#### Overriding the Command
+
+As the above example showed, it is possible to override the original command of the Executor, as long as the executable is available in the Executor image. Use the `--command` parameter on test creation with the name of the executable:
+
+```sh
+$ testkube create test --help
+...
+      --command stringArray                        command passed to image in executor
+...
+```
+
+#### Overriding the Arguments
+
+There are two modes to pass arguments to the executor:
+
+```sh
+$ testkube create test --help
+...
+      --args-mode string                           usage mode for arguments. one of append|override (default "append")
+...
+```
+
+By default, `--args-mode` is set to `append`, which means that the default list will be kept, and whatever is set in `--executor-args` will be added to the end.
+
+The `override` mode will ignore the default arguments and use only what is set in `--executor-args`. If there are default values in between chevrons (`<>`), they can be reused in `--executor-args`.
+
+When using `--args-mode` with `testkube run test ...` pay attention to set the arguments via the `--args` flag, not `--executor-args`.
+
 ### Changing the Default Job Template Used for Test Execution
 
 You can always create your own custom executor with its own job template definition used for test execution. But sometimes you just need to adjust an existing job template of a standard Testkube executor with a few parameters. In this case you can use the additional parameter `--job-template` when you create or run the test:

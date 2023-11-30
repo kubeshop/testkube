@@ -4,7 +4,13 @@ Testkube allows running Gradle based tasks that could also be tests. For example
 
 * Default command for this executor: `gradle`
 * Default arguments for this executor command: `--no-daemon` `<taskName>` `-p` `<projectDir>`
-(parameters in `<>` are calculated at test execution)
+
+Parameters in `<>` are calculated at test execution:
+
+* `<taskName>` - Will be `test` in case of tests of type `gradle/test`, `integrationTest` `gradle/integrationTest` on `gradle/integrationTest`, and empty for `gradle/project`.
+* `<projectDir>` - Will contain the path to the cloned Git directory.
+
+[See more at "Redefining the Prebuilt Executor Command and Arguments" on the Creating Test page.](../articles/creating-tests.md#redefining-the-prebuilt-executor-command-and-arguments)
 
 ## **Test Environment**
 
@@ -106,6 +112,18 @@ BUILD SUCCESSFUL in 10s
 
 Status Test execution completed with success 🥇
 ```
+
+## Using Different Commands and Arguments
+
+Updating the commands and arguments is possible on both test and execution level.
+
+As an example, during a debug session, you could pass `pwd` in as the command in order to find out the current path:
+
+```sh
+kubectl testkube run test gradle-example-test --command "pwd" --args-mode "override" --args "-L"
+```
+
+If you check the execution logs, you will see that the path "/data/repo" is printed out. No Gradle command will be executed in this case, but you will notice that the rest of the preparations, like cloning the repo, have been done.
 
 ## Using Different JDKs 
 
