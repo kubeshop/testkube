@@ -32,8 +32,6 @@ func TestInitConsumer(t *testing.T) {
 	js, err := jetstream.New(nc)
 	assert.NoError(t, err)
 
-	fmt.Printf("%+v\n", ns.ClientURL())
-
 	// ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
 	defer cancel()
