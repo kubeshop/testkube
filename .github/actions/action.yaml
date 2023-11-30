@@ -1,0 +1,34 @@
+name: "Setup Go"
+
+description: "Setup Go with caching"
+
+inputs:
+  cache-prefix:
+    description: "Prefix for the cache key"
+    required: true
+  go-version:
+    description: "Go version to install"
+    required: false
+    default: "1.21"
+
+outputs:
+  go-version:
+    description: "The installed Go version"
+    value: ${{ steps.setup-go.outputs.go-version }}
+
+runs:
+  using: "composite"
+  steps:
+    - id: setup-go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ inputs.go-version }}
+        check-latest: true
+        cache: false
+    - id: cache-info
+      shell: bash
+      run: echo path=$(go env GOCACHE) >> $GITHUB_OUTPUT
+    - uses: actions/cache@v3
+      with:
+        path: ${{ steps.cache-info.outputs.path }}
+        key: ${{ inputs.cache-prefix }}-go-${{ steps.setup-go.outputs.go-version }}-mod-${{ hashFiles('go.sum') }}
