@@ -124,8 +124,6 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 
-	t.Log("DEF JOB TPL: ", defaultJobTemplate)
-
 	assert.NotEmpty(t, defaultJobTemplate)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
