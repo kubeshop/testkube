@@ -1,6 +1,6 @@
 ## testkube
 
-Testkube entrypoint for kubectl plugin
+Testkube entrypoint for kubectl plugin.
 
 ```
 testkube [flags]
