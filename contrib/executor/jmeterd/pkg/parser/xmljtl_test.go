@@ -70,7 +70,8 @@ func TestParseXML(t *testing.T) {
 		results, err := parseXML([]byte(errorXML))
 
 		assert.NoError(t, err)
-		assert.Nil(t, results)
+		assert.Nil(t, results.HTTPSamples)
+		assert.Nil(t, results.Samples)
 	})
 
 	t.Run("parse XML success test", func(t *testing.T) {

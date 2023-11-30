@@ -6,6 +6,9 @@ import (
 	"io"
 	"strconv"
 	"time"
+
+	"github.com/kubeshop/testkube/pkg/executor/output"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 type CSVResults struct {
@@ -68,7 +71,10 @@ func CSVToMap(reader io.Reader) ([]map[string]string, error) {
 }
 
 func MapElementToResult(in map[string]string) CSVResult {
-	elapsed, _ := strconv.Atoi(in["elapsed"])
+	elapsed, err := strconv.Atoi(in["elapsed"])
+	if err != nil {
+		output.PrintLogf("%s Error parsing elapsed time to int from JTL report: %s", ui.IconWarning, err.Error())
+	}
 
 	return CSVResult{
 		Success:      in["success"] == "true",

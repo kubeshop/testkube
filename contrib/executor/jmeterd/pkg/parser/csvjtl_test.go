@@ -34,7 +34,7 @@ func TestParseCSV(t *testing.T) {
 		results, err := parseCSV(strings.NewReader(errorCSV))
 
 		assert.NoError(t, err)
-		assert.Nil(t, results)
+		assert.Nil(t, results.Results)
 	})
 
 	t.Run("parse CSV failed test", func(t *testing.T) {

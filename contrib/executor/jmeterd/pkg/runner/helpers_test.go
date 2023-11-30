@@ -165,7 +165,7 @@ func TestFindTestFile(t *testing.T) {
 			testPath:      "/test/path",
 			testExtension: "jmx",
 			mockSetup: func(fs *filesystem.MockFileSystem) {
-				mockFile1 := &filesystem.MockDirEntry{FIsDir: false, FName: "testfile.jmx"}
+				mockFile1 := &filesystem.MockDirEntry{FIsDir: false, FName: "anotherTestfile.jmx"}
 				mockFile2 := &filesystem.MockDirEntry{FIsDir: false, FName: "data.csv"}
 				fs.EXPECT().ReadDir("/test/path").Return([]os.DirEntry{mockFile1, mockFile2}, nil)
 			},
@@ -209,12 +209,10 @@ func TestFindTestFile(t *testing.T) {
 func TestInjectAndExpandEnvVars(t *testing.T) {
 	t.Parallel()
 
-	// Set up environment variables for testing
-	_ = os.Setenv("JMETER_TEST_EXPAND_VAR", "expanded_value")
-
 	// Define test cases
 	tests := []struct {
 		name     string
+		envvars  map[string]string
 		args     []string
 		params   []string
 		expected []string
@@ -224,6 +222,7 @@ func TestInjectAndExpandEnvVars(t *testing.T) {
 			args:     []string{"before", "<envVars>", "after"},
 			params:   []string{"injected1", "${JMETER_TEST_EXPAND_VAR}"},
 			expected: []string{"before", "injected1", "expanded_value", "after"},
+			envvars:  map[string]string{"JMETER_TEST_EXPAND_VAR": "expanded_value"},
 		},
 		{
 			name:     "No Placeholder",
@@ -251,11 +250,15 @@ func TestInjectAndExpandEnvVars(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
+			for key, value := range tt.envvars {
+				assert.NoError(t, os.Setenv(key, value))
+				t.Cleanup(func() {
+					assert.NoError(t, os.Unsetenv(key))
+				})
+			}
+
 			got := injectAndExpandEnvVars(tt.args, tt.params)
 			assert.ElementsMatch(t, tt.expected, got)
 		})
 	}
-
-	// Clean up environment variables
-	_ = os.Unsetenv("JMETER_TEST_EXPAND_VAR")
 }

@@ -10,7 +10,6 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
-	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
 func TestReplaceArgs(t *testing.T) {
@@ -68,7 +67,7 @@ func TestReplaceArgs(t *testing.T) {
 }
 
 func TestJMeterDRunner_Local_Integration(t *testing.T) {
-	test.IntegrationTest(t)
+	//test.IntegrationTest(t)
 	t.Parallel()
 
 	type testCase struct {
@@ -505,7 +504,7 @@ const successJMX = `<?xml version="1.0" encoding="UTF-8"?>
         <hashTree>
           <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
             <collectionProp name="Asserion.test_strings">
-              <stringProp name="-1081444641">SOME_NONExisting_String</stringProp>
+              <stringProp name="-1081444641">Testkube</stringProp>
             </collectionProp>
             <stringProp name="Assertion.custom_message"></stringProp>
             <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>

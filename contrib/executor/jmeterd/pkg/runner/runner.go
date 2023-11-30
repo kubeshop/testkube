@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -33,11 +32,11 @@ import (
 type JMeterMode string
 
 const (
-	jmeterModeLocal         JMeterMode = "local"
-	jmeterModeDistributed   JMeterMode = "remote"
-	globalJMeterParamPrefix            = "-G"
-	localJMeterParamPrefix             = "-J"
-	jmxExtension                       = "jmx"
+	jmeterModeStandalone        JMeterMode = "standalone"
+	jmeterModeDistributed       JMeterMode = "distributed"
+	globalJMeterParamPrefix                = "-G"
+	standaloneJMeterParamPrefix            = "-J"
+	jmxExtension                           = "jmx"
 )
 
 // JMeterDRunner runner
@@ -91,8 +90,8 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 		output.PrintLogf("%s Failed to get slaves count %s", ui.IconCross, err)
 		return result, errors.Wrap(err, "error getting slaves count")
 	}
-	mode := jmeterModeLocal
-	jmeterParamFlag := localJMeterParamPrefix
+	mode := jmeterModeStandalone
+	jmeterParamFlag := standaloneJMeterParamPrefix
 	if slavesCount > 1 {
 		mode = jmeterModeDistributed
 		jmeterParamFlag = globalJMeterParamPrefix
@@ -156,8 +155,6 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 		}
 	}
 
-	d, _ := exec.Command("pwd").Output()
-	fmt.Println(string(d))
 	command, args := executor.MergeCommandAndArgs(execution.Command, args)
 	// run JMeter inside repo directory ignore execution error in case of failed test
 	output.PrintLogf("%s Test run command %s %s", ui.IconRocket, command, strings.Join(envManager.ObfuscateStringSlice(args), " "))
