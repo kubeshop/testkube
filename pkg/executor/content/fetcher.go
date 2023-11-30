@@ -286,22 +286,15 @@ func GetPathAndWorkingDir(content *testkube.TestContent, dataDir string) (path, 
 		basePath = dataDir
 	}
 	if content != nil {
-		isStringContentType := content.Type_ == string(testkube.TestContentTypeString)
-		isFileURIContentType := content.Type_ == string(testkube.TestContentTypeFileURI)
-		if isStringContentType || isFileURIContentType {
+		switch content.Type_ {
+		case string(testkube.TestContentTypeString), string(testkube.TestContentTypeFileURI):
 			path = filepath.Join(basePath, "test-content")
-		}
-
-		isGitFileContentType := content.Type_ == string(testkube.TestContentTypeGitFile)
-		isGitDirContentType := content.Type_ == string(testkube.TestContentTypeGitDir)
-		isGitContentType := content.Type_ == string(testkube.TestContentTypeGit)
-		if isGitFileContentType || isGitDirContentType || isGitContentType {
+		case string(testkube.TestContentTypeGitFile), string(testkube.TestContentTypeGitDir), string(testkube.TestContentTypeGit):
 			path = filepath.Join(basePath, "repo")
 			if content.Repository != nil {
 				if content.Repository.WorkingDir != "" {
 					workingDir = filepath.Join(path, content.Repository.WorkingDir)
 				}
-
 				path = filepath.Join(path, content.Repository.Path)
 			}
 		}

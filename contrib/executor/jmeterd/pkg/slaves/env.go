@@ -1,4 +1,4 @@
-package jmeterenv
+package slaves
 
 import (
 	"strings"

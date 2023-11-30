@@ -39,7 +39,6 @@ type Client struct {
 	accessKeyID     string
 	secretAccessKey string
 	ssl             bool
-	skipVerify      bool
 	region          string
 	token           string
 	bucket          string

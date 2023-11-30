@@ -1,14 +1,13 @@
-package runner
+package parser
 
 import (
 	"fmt"
 
-	"github.com/kubeshop/testkube/contrib/executor/jmeter/pkg/parser"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func mapResultsToExecutionResults(out []byte, results parser.Results) (result testkube.ExecutionResult) {
-	result = makeSuccessExecution(out)
+func mapCSVResultsToExecutionResults(out []byte, results CSVResults) (result testkube.ExecutionResult) {
+	result = MakeSuccessExecution(out)
 	if results.HasError {
 		result.Status = testkube.ExecutionStatusFailed
 		result.ErrorMessage = results.LastErrorMessage
@@ -20,10 +19,10 @@ func mapResultsToExecutionResults(out []byte, results parser.Results) (result te
 			testkube.ExecutionStepResult{
 				Name:     r.Label,
 				Duration: r.Duration.String(),
-				Status:   mapResultStatus(r),
+				Status:   mapCSVResultStatus(r),
 				AssertionResults: []testkube.AssertionResult{{
 					Name:   r.Label,
-					Status: mapResultStatus(r),
+					Status: mapCSVResultStatus(r),
 				}},
 			})
 	}
@@ -31,8 +30,16 @@ func mapResultsToExecutionResults(out []byte, results parser.Results) (result te
 	return result
 }
 
-func mapTestResultsToExecutionResults(out []byte, results parser.TestResults) (result testkube.ExecutionResult) {
-	result = makeSuccessExecution(out)
+func mapCSVResultStatus(result CSVResult) string {
+	if result.Success {
+		return string(testkube.PASSED_ExecutionStatus)
+	}
+
+	return string(testkube.FAILED_ExecutionStatus)
+}
+
+func mapXMLResultsToExecutionResults(out []byte, results XMLResults) (result testkube.ExecutionResult) {
+	result = MakeSuccessExecution(out)
 
 	samples := append(results.HTTPSamples, results.Samples...)
 	for _, r := range samples {
@@ -48,10 +55,10 @@ func mapTestResultsToExecutionResults(out []byte, results parser.TestResults) (r
 			testkube.ExecutionStepResult{
 				Name:     r.Label,
 				Duration: fmt.Sprintf("%dms", r.Time),
-				Status:   mapTestResultStatus(r.Success),
+				Status:   mapXMLResultStatus(r.Success),
 				AssertionResults: []testkube.AssertionResult{{
 					Name:   r.Label,
-					Status: mapTestResultStatus(r.Success),
+					Status: mapXMLResultStatus(r.Success),
 				}},
 			})
 	}
@@ -59,15 +66,7 @@ func mapTestResultsToExecutionResults(out []byte, results parser.TestResults) (r
 	return result
 }
 
-func mapResultStatus(result parser.Result) string {
-	if result.Success {
-		return string(testkube.PASSED_ExecutionStatus)
-	}
-
-	return string(testkube.FAILED_ExecutionStatus)
-}
-
-func mapTestResultStatus(success bool) string {
+func mapXMLResultStatus(success bool) string {
 	if success {
 		return string(testkube.PASSED_ExecutionStatus)
 	}
@@ -75,7 +74,7 @@ func mapTestResultStatus(success bool) string {
 	return string(testkube.FAILED_ExecutionStatus)
 }
 
-func makeSuccessExecution(out []byte) (result testkube.ExecutionResult) {
+func MakeSuccessExecution(out []byte) (result testkube.ExecutionResult) {
 	status := testkube.PASSED_ExecutionStatus
 	result.Status = &status
 	result.Output = string(out)
