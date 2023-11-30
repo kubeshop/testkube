@@ -38,8 +38,8 @@ const (
 	// SlavesConfigsEnv is slave configs for creating slaves in executor
 	SlavesConfigsEnv = "RUNNER_SLAVES_CONFIGS"
 
-	SidecarImage = "ex00/testkube-sidecar:latest" // TODO - change it to valid image name after deployment will be ready  
- 
+	SidecarImage = "ex00/testkube-sidecar:latest" // TODO - change it to valid image name after deployment will be ready
+)
 
 var RunnerEnvVars = []corev1.EnvVar{
 	{
