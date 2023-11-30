@@ -236,9 +236,10 @@ func main() {
 		mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
 		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)
 		ui.ExitOnError("Getting mongo database", err)
-		mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
+		isDocDb := cfg.APIMongoDBType == storage.TypeDocDB
+		mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb)
 		resultsRepository = mongoResultsRepository
-		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
+		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb)
 		configRepository = configrepository.NewMongoRepository(db)
 		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
 		minioClient := newStorageClient(cfg)
