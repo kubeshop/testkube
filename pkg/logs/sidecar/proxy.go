@@ -89,7 +89,12 @@ func (p *Proxy) Run(ctx context.Context) error {
 			p.log.Warn("logs proxy context cancelled, exiting")
 			return nil
 		default:
-			err := p.logsStream.PushBytes(ctx, l.Encode())
+			b, err := l.Encode()
+			if err != nil {
+				p.handleError(err, "error encoding log chunk")
+				continue
+			}
+			err = p.logsStream.PushBytes(ctx, b)
 			if err != nil {
 				p.handleError(err, "error pushing logs to stream")
 				return err

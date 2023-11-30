@@ -39,6 +39,10 @@ type LogOutputV1 struct {
 	Result *testkube.ExecutionResult
 }
 
+type Type string
+
+const ()
+
 type LogChunk struct {
 	Time     time.Time         `json:"ts,omitempty"`
 	Content  string            `json:"content,omitempty"`
@@ -80,12 +84,11 @@ func (c *LogChunk) WithV1Result(result *testkube.ExecutionResult) *LogChunk {
 }
 
 // TODO handle errrors
-func (c LogChunk) Encode() []byte {
-	b, _ := json.Marshal(c)
-	return b
+func (c LogChunk) Encode() ([]byte, err) {
+	return json.Marshal(c)
 }
 
-var rsRegexp = regexp.MustCompile("^[0-9]{4}-[0-9]{2}-[0-9]{2}T.*")
+var timestampRegexp = regexp.MustCompile("^[0-9]{4}-[0-9]{2}-[0-9]{2}T.*")
 
 // NewLogChunkFromBytes creates new LogChunk from bytes it's aware of new and old log formats
 // default log format will be based on raw bytes with timestamp on the beginning
@@ -99,7 +102,7 @@ func NewLogChunkFromBytes(b []byte) LogChunk {
 		err          error
 	)
 
-	if rsRegexp.Match(b) {
+	if timestampRegexp.Match(b) {
 		hasTimestamp = true
 	}
 
