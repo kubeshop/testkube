@@ -48,6 +48,7 @@ type LogsService struct {
 
 	// httpAddress is address for Kubernetes http health check handler
 	httpAddress string
+	httpServer  *http.Server
 
 	// consumerInstances is internal executionID => consumer map which we need to clean
 	// each pod can have different executionId set of consumers
@@ -60,11 +61,28 @@ func (l *LogsService) AddConsumer(s consumer.Consumer) {
 
 // RunHealthCheckHandler is a handler for health check events
 // we need HTTP as GRPC probes starts from Kubernetes 1.25
-func (l *LogsService) RunHealthCheckHandler(ctx context.Context) {
-	http.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
+func (l *LogsService) RunHealthCheckHandler(ctx context.Context) error {
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	l.log.Panic(http.ListenAndServe(l.httpAddress, nil))
+
+	l.httpServer = &http.Server{
+		Addr: ":8080",
+	}
+
+	l.log.Infow("starting health check handler", "address", l.httpAddress)
+	return l.httpServer.ListenAndServe()
+}
+
+func (l *LogsService) Shutdown(ctx context.Context) (err error) {
+	err = l.httpServer.Shutdown(ctx)
+	if err != nil {
+		return err
+	}
+
+	// TODO decide how to handle graceful shutdown of consumers
+
+	return nil
 }
 
 func (l *LogsService) Run(ctx context.Context) (err error) {
