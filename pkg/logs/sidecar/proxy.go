@@ -171,7 +171,7 @@ func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan events.LogChunk) (er
 		for {
 			b, err := utils.ReadLongLine(reader)
 			if err != nil {
-				if err == io.EOF {
+				if errors.Is(err, io.EOF) {
 					err = nil
 				}
 				break
