@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 	"os"
 	"path/filepath"
 	"testing"
@@ -67,7 +68,7 @@ func TestReplaceArgs(t *testing.T) {
 }
 
 func TestJMeterDRunner_Local_Integration(t *testing.T) {
-	//test.IntegrationTest(t)
+	test.IntegrationTest(t)
 	t.Parallel()
 
 	type testCase struct {
