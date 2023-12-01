@@ -79,53 +79,58 @@ type JobOptions struct {
 	SlavePodTemplate string
 }
 
-// TODO handle default job template when calling this func
-
 // job executor
 func NewJobOptions(
 	log *zap.SugaredLogger,
 	templatesClient templatesv1.Interface,
 	images executor.Images,
-	// TODO refactor in job executor (was: jobTemplate string)
 	templates executor.Templates,
-	// TODO refactor in job executor: move to templates -  was: slavePodTemplate,
 	serviceAccountName,
 	registry, clusterID, apiURI string,
 	execution testkube.Execution,
-	options ExecuteOptions,
+	executeOptions ExecuteOptions,
 	natsURI string,
 	debug bool,
-) (jobOptions JobOptions, err error) {
+) (opts JobOptions, err error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
-		return jobOptions, err
+		return opts, err
 	}
 
-	jobOptions = NewJobOptionsFromExecutionOptions(options)
+	opts = fromExecuteOptions(executeOptions)
 
-	jobOptions.Name = execution.Id
-	jobOptions.Namespace = execution.TestNamespace
-	jobOptions.Jsn = string(jsn)
-	jobOptions.Variables = execution.Variables
-	jobOptions.ServiceAccountName = serviceAccountName
-	jobOptions.Registry = registry
-	jobOptions.ClusterID = clusterID
-	jobOptions.ArtifactRequest = execution.ArtifactRequest
-	jobOptions.APIURI = apiURI
+	// options needed for Log sidecar
+	if opts.Features.LogsV2 {
+		opts.Debug = debug
+		opts.NatsUri = natsURI
+		opts.LogSidecarImage = images.LogSidecar
+	}
 
-	jobOptions.InitImage = images.Init
+	// append execution data to job options
+	opts.Name = execution.Id
+	opts.TestName = execution.TestName
+	opts.Namespace = execution.TestNamespace
+	opts.Variables = execution.Variables
+	opts.ArtifactRequest = execution.ArtifactRequest
+
+	// append additional data
+	opts.Jsn = string(jsn)
+	opts.ServiceAccountName = serviceAccountName
+	opts.Registry = registry
+	opts.ClusterID = clusterID
+	opts.APIURI = apiURI
+
+	// Init image
+	opts.InitImage = images.Init
 	if images.Scraper != "" {
-		jobOptions.ScraperImage = images.Scraper
+		opts.ScraperImage = images.Scraper
 	}
-
-	jobOptions.TestName = execution.TestName
-	jobOptions.Features = options.Features
 
 	// TODO validate - this one was only in container executor
 	if execution.PreRunScript != "" || execution.PostRunScript != "" {
-		jobOptions.Command = []string{filepath.Join(executor.VolumeDir, EntrypointScriptName)}
-		if jobOptions.Image != "" {
-			cmd, shell, err := InspectDockerImage(jobOptions.Namespace, registry, jobOptions.Image, jobOptions.ImagePullSecrets)
+		opts.Command = []string{filepath.Join(executor.VolumeDir, EntrypointScriptName)}
+		if opts.Image != "" {
+			cmd, shell, err := InspectDockerImage(opts.Namespace, registry, opts.Image, opts.ImagePullSecrets)
 			if err == nil {
 				if len(execution.Command) == 0 {
 					execution.Command = cmd
@@ -138,117 +143,113 @@ func NewJobOptions(
 		}
 	}
 
-	// options needed for Log sidecar
-	if options.Features.LogsV2 {
-		jobOptions.Debug = debug
-		jobOptions.NatsUri = natsURI
-		jobOptions.LogSidecarImage = images.LogSidecar
-	}
-
 	// Job template overrides
-	if jobOptions.JobTemplate == "" {
-		jobOptions.JobTemplate = templates.Job
+	if opts.JobTemplate == "" {
+		opts.JobTemplate = templates.Job
 	}
-	if options.ExecutorSpec.JobTemplateReference != "" {
-		template, err := templatesClient.Get(options.ExecutorSpec.JobTemplateReference)
+	if executeOptions.ExecutorSpec.JobTemplateReference != "" {
+		template, err := templatesClient.Get(executeOptions.ExecutorSpec.JobTemplateReference)
 		if err != nil {
-			return jobOptions, err
+			return opts, err
 		}
 
 		if template.Spec.Type_ != nil && (testkube.TemplateType(*template.Spec.Type_) == testkube.JOB_TemplateType || testkube.TemplateType(*template.Spec.Type_) == testkube.CONTAINER_TemplateType) {
-			jobOptions.JobTemplate = template.Spec.Body
+			opts.JobTemplate = template.Spec.Body
 		} else {
-			log.Warnw("Not matched template type", "template", options.ExecutorSpec.JobTemplateReference)
+			log.Warnw("Not matched template type", "template", executeOptions.ExecutorSpec.JobTemplateReference)
 		}
 	}
-	if options.Request.JobTemplateReference != "" {
-		template, err := templatesClient.Get(options.Request.JobTemplateReference)
+	if executeOptions.Request.JobTemplateReference != "" {
+		template, err := templatesClient.Get(executeOptions.Request.JobTemplateReference)
 		if err != nil {
-			return jobOptions, err
+			return opts, err
 		}
 
 		if template.Spec.Type_ != nil && (testkube.TemplateType(*template.Spec.Type_) == testkube.JOB_TemplateType || testkube.TemplateType(*template.Spec.Type_) == testkube.CONTAINER_TemplateType) {
-			jobOptions.JobTemplate = template.Spec.Body
+			opts.JobTemplate = template.Spec.Body
 		} else {
-			log.Warnw("Not matched template type", "template", options.Request.JobTemplateReference)
+			log.Warnw("Not matched template type", "template", executeOptions.Request.JobTemplateReference)
 		}
 	}
 
 	// Scraper template overrides
 	if templates.Scraper != "" {
-		jobOptions.ScraperTemplate = templates.Scraper
+		opts.ScraperTemplate = templates.Scraper
 	}
-	if options.Request.ScraperTemplateReference != "" {
-		template, err := templatesClient.Get(options.Request.ScraperTemplateReference)
+	if executeOptions.Request.ScraperTemplateReference != "" {
+		template, err := templatesClient.Get(executeOptions.Request.ScraperTemplateReference)
 		if err != nil {
-			return jobOptions, err
+			return opts, err
 		}
 
 		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.SCRAPER_TemplateType {
-			jobOptions.ScraperTemplate = template.Spec.Body
+			opts.ScraperTemplate = template.Spec.Body
 		} else {
-			log.Warnw("Not matched template type", "template", options.Request.ScraperTemplateReference)
+			log.Warnw("Not matched template type", "template", executeOptions.Request.ScraperTemplateReference)
 		}
 	}
 
 	// PVC template overrides
 	if templates.PVC != "" {
-		jobOptions.PvcTemplate = templates.PVC
+		opts.PvcTemplate = templates.PVC
 	}
-	if options.Request.PvcTemplateReference != "" {
-		template, err := templatesClient.Get(options.Request.PvcTemplateReference)
+	if executeOptions.Request.PvcTemplateReference != "" {
+		template, err := templatesClient.Get(executeOptions.Request.PvcTemplateReference)
 		if err != nil {
-			return jobOptions, err
+			return opts, err
 		}
 
 		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.PVC_TemplateType {
-			jobOptions.PvcTemplate = template.Spec.Body
+			opts.PvcTemplate = template.Spec.Body
 		} else {
-			log.Warnw("Not matched template type", "template", options.Request.PvcTemplateReference)
+			log.Warnw("Not matched template type", "template", executeOptions.Request.PvcTemplateReference)
 		}
 	}
 
-	jobOptions.SlavePodTemplate = templates.SlavePod
-	if options.Request.SlavePodRequest != nil && options.Request.SlavePodRequest.PodTemplateReference != "" {
-		template, err := templatesClient.Get(options.Request.SlavePodRequest.PodTemplateReference)
+	// Slave pod template overrides
+	opts.SlavePodTemplate = templates.SlavePod
+	if executeOptions.Request.SlavePodRequest != nil && executeOptions.Request.SlavePodRequest.PodTemplateReference != "" {
+		template, err := templatesClient.Get(executeOptions.Request.SlavePodRequest.PodTemplateReference)
 		if err != nil {
-			return jobOptions, err
+			return opts, err
 		}
 
 		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.POD_TemplateType {
-			jobOptions.SlavePodTemplate = template.Spec.Body
+			opts.SlavePodTemplate = template.Spec.Body
 		} else {
-			log.Warnw("Not matched template type", "template", options.Request.SlavePodRequest.PodTemplateReference)
+			log.Warnw("Not matched template type", "template", executeOptions.Request.SlavePodRequest.PodTemplateReference)
 		}
 	}
 
-	if options.ExecutorSpec.Slaves != nil {
+	if executeOptions.ExecutorSpec.Slaves != nil {
 		cfg := executor.GetSlavesConfigs(
 			images.Init,
-			*options.ExecutorSpec.Slaves,
-			jobOptions.Registry,
-			jobOptions.ServiceAccountName,
-			jobOptions.CertificateSecret,
-			jobOptions.SlavePodTemplate,
-			jobOptions.ImagePullSecrets,
-			jobOptions.EnvConfigMaps,
-			jobOptions.EnvSecrets,
-			int(jobOptions.ActiveDeadlineSeconds),
+			*executeOptions.ExecutorSpec.Slaves,
+			opts.Registry,
+			opts.ServiceAccountName,
+			opts.CertificateSecret,
+			opts.SlavePodTemplate,
+			opts.ImagePullSecrets,
+			opts.EnvConfigMaps,
+			opts.EnvSecrets,
+			int(opts.ActiveDeadlineSeconds),
 		)
 		slvesConfigs, err := json.Marshal(cfg)
 
 		if err != nil {
-			return jobOptions, err
+			return opts, err
 		}
-		jobOptions.Variables[executor.SlavesConfigsEnv] = testkube.NewBasicVariable(executor.SlavesConfigsEnv, string(slvesConfigs))
+
+		opts.Variables[executor.SlavesConfigsEnv] = testkube.NewBasicVariable(executor.SlavesConfigsEnv, string(slvesConfigs))
 	}
 
 	return
 }
 
 // job
-// NewJobOptionsFromExecutionOptions compose JobOptions based on ExecuteOptions
-func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
+// fromExecuteOptions compose JobOptions based on ExecuteOptions
+func fromExecuteOptions(options ExecuteOptions) JobOptions {
+
 	// for args, command and image, HTTP request takes priority, then test spec, then executor
 	var args []string
 	argsMode := options.Request.ArgsMode
@@ -342,7 +343,7 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		contextData = options.Request.RunningContext.Context
 	}
 
-	return JobOptions{
+	opts := JobOptions{
 		Image:                     image,
 		ImagePullSecrets:          options.ImagePullSecretNames,
 		Args:                      args,
@@ -372,6 +373,8 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		ContextData:               contextData,
 		Features:                  options.Features,
 	}
+
+	return opts
 }
 
 // InspectDockerImage inspects docker image
