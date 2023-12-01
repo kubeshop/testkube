@@ -2,25 +2,25 @@ package consumer
 
 import "github.com/kubeshop/testkube/pkg/logs/events"
 
-var _ Adapter = &S3Consumer{}
+var _ Adapter = &S3Adapter{}
 
-// NewS3Consumer creates new S3Subscriber which will send data to local MinIO bucket
-func NewS3Consumer() *S3Consumer {
-	return &S3Consumer{}
+// NewS3Adapter creates new S3Subscriber which will send data to local MinIO bucket
+func NewS3Adapter() *S3Adapter {
+	return &S3Adapter{}
 }
 
-type S3Consumer struct {
+type S3Adapter struct {
 	Bucket string
 }
 
-func (s *S3Consumer) Notify(id string, e events.LogChunk) error {
+func (s *S3Adapter) Notify(id string, e events.LogChunk) error {
 	panic("not implemented")
 }
 
-func (s *S3Consumer) Stop(id string) error {
+func (s *S3Adapter) Stop(id string) error {
 	panic("not implemented")
 }
 
-func (s *S3Consumer) Name() string {
+func (s *S3Adapter) Name() string {
 	return "s3"
 }

@@ -45,10 +45,14 @@ func main() {
 	js := Must(jetstream.New(natsConn))
 
 	kv := Must(js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: cfg.KVBucketName}))
-	state := state.State
+	state := state.NewState(kv)
 
 	svc := logs.NewLogsService(natsEncodedConn, js, state, cfg.HttpAddress)
-	svc.AddAdapter(consumer.NewDummyConsumer())
+
+	// TODO - add adapters here
+
+	// TODO - add adapters here
+	svc.AddAdapter(consumer.NewDummyAdapter())
 
 	g.Add(func() error {
 		err := interrupt(log, ctx)
@@ -68,6 +72,7 @@ func main() {
 		log.Warn("logs service shutdown")
 	})
 
+	// We need to do a http health check to be backward compatible with Kubernetes below 1.25
 	g.Add(func() error {
 		return svc.RunHealthCheckHandler(ctx)
 	}, func(error) {

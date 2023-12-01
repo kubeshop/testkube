@@ -6,27 +6,27 @@ import (
 	"github.com/kubeshop/testkube/pkg/logs/events"
 )
 
-var _ Adapter = &DummyConsumer{}
+var _ Adapter = &DummyAdapter{}
 
 // NewS3Subscriber creates new DummySubscriber which will send data to local MinIO bucket
-func NewDummyConsumer() *DummyConsumer {
-	return &DummyConsumer{}
+func NewDummyAdapter() *DummyAdapter {
+	return &DummyAdapter{}
 }
 
-type DummyConsumer struct {
+type DummyAdapter struct {
 	Bucket string
 }
 
-func (s *DummyConsumer) Notify(id string, e events.LogChunk) error {
+func (s *DummyAdapter) Notify(id string, e events.LogChunk) error {
 	fmt.Printf("%s %+v\n", id, e)
 	return nil
 }
 
-func (s *DummyConsumer) Stop(id string) error {
+func (s *DummyAdapter) Stop(id string) error {
 	fmt.Printf("stopping %s \n", id)
 	return nil
 }
 
-func (s *DummyConsumer) Name() string {
+func (s *DummyAdapter) Name() string {
 	return "dummy"
 }

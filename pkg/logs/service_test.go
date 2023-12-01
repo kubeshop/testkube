@@ -3,6 +3,7 @@ package logs
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"sync"
 	"testing"
 	"time"
@@ -93,7 +94,7 @@ func TestLogs(t *testing.T) {
 		defer cancel()
 
 		// and example consumer
-		c := NewMockConsumer()
+		a := NewMockAdapter()
 
 		fmt.Printf("%+v\n", kv)
 
@@ -104,10 +105,10 @@ func TestLogs(t *testing.T) {
 		log := NewLogsService(ec, js, state, ":8080")
 
 		// with 4 consumers (the same consumer is added 4 times so it'll receive 4 times more messages)
-		log.AddAdapter(c)
-		log.AddAdapter(c)
-		log.AddAdapter(c)
-		log.AddAdapter(c)
+		log.AddAdapter(a)
+		log.AddAdapter(a)
+		log.AddAdapter(a)
+		log.AddAdapter(a)
 
 		// and log service running
 		go func() {
@@ -149,26 +150,26 @@ func TestLogs(t *testing.T) {
 		time.Sleep(1000 * time.Millisecond)
 
 		// then we should have 4*4 messages in consumer
-		assert.Equal(t, 16, len(c.Messages))
+		assert.Equal(t, 16, len(a.Messages))
 	})
 }
 
 // Mock consumer
-var _ consumer.Adapter = &MockConsumer{}
+var _ consumer.Adapter = &MockAdapter{}
 
-// NewMockConsumer creates new mocked consumer to check amount of messages passed to it
-func NewMockConsumer() *MockConsumer {
-	return &MockConsumer{
+// NewMockAdapter creates new mocked consumer to check amount of messages passed to it
+func NewMockAdapter() *MockAdapter {
+	return &MockAdapter{
 		Messages: []events.LogChunk{},
 	}
 }
 
-type MockConsumer struct {
+type MockAdapter struct {
 	lock     sync.Mutex
 	Messages []events.LogChunk
 }
 
-func (s *MockConsumer) Notify(id string, e events.LogChunk) error {
+func (s *MockAdapter) Notify(id string, e events.LogChunk) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -177,11 +178,42 @@ func (s *MockConsumer) Notify(id string, e events.LogChunk) error {
 	return nil
 }
 
-func (s *MockConsumer) Stop(id string) error {
+func (s *MockAdapter) Stop(id string) error {
 	fmt.Printf("stopping %s \n", id)
 	return nil
 }
 
-func (s *MockConsumer) Name() string {
+func (s *MockAdapter) Name() string {
 	return "mock"
+}
+
+func TestToDeleteInLoop(t *testing.T) {
+
+	toDelete := []string{"1", "2", "3", "4", "5"}
+
+	for {
+
+	start:
+
+		fmt.Printf("starting: %+v\n", toDelete)
+
+		for i := range toDelete {
+			if rand.Intn(2) == 0 {
+				fmt.Printf("deleting %+v\n", i)
+
+				if len(toDelete) > 1 {
+					toDelete = append(toDelete[:i], toDelete[i+1:]...)
+				} else {
+					toDelete = []string{}
+				}
+				goto start
+			}
+		}
+
+		if len(toDelete) == 0 {
+			break
+		}
+	}
+
+	t.Fail()
 }

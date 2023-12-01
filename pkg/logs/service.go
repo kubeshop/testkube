@@ -58,7 +58,7 @@ type LogsService struct {
 	httpAddress string
 	httpServer  *http.Server
 
-	// consumerInstances is internal executionID => consumer map which we need to clean
+	// consumerInstances is internal executionID => Consumer map which we need to clean
 	// each pod can have different executionId set of consumers
 	consumerInstances sync.Map
 
@@ -116,87 +116,11 @@ func (l *LogsService) Run(ctx context.Context) (err error) {
 
 	// 2. For start event we must build stream for given execution id and start consuming it
 	// this one will must follow a queue group each pod will get it's own bunch of executions to handle
-	l.nats.QueueSubscribe(StartSubject, StartQueue, func(event events.Trigger) {
-		l.state.Put(ctx, event.Id, state.LogStatePending)
-		log := l.log.With("id", event.Id)
-		s, err := l.CreateStream(ctx, event)
-		if err != nil {
-			l.log.Errorw("error creating stream", "error", err, "id", event.Id)
-			return
-		}
-
-		log.Infow("stream created", "stream", s)
-
-		streamName := StreamPrefix + event.Id
-
-		// for each adapter create NATS consumer and consume stream from it e.g. cloud s3 or others
-		for i, adapter := range l.adapters {
-			c, err := l.InitConsumer(ctx, adapter, streamName, event.Id, i)
-			if err != nil {
-				log.Errorw("error creating consumer", "consumer", adapter.Name(), "error", err)
-				return
-			}
-			log.Infow("consumer created", "consumer", c.CachedInfo(), "stream", streamName)
-			cons, err := c.Consume(l.HandleMessage(adapter, event))
-			log.Infow("consumer started", "consumer", adapter.Name(), "id", event.Id, "stream", streamName)
-
-			// store consumer instance so we can stop it later in StopSubject handler
-			l.consumerInstances.Store(event.Id+"_"+adapter.Name(), Consumer{
-				Context:  cons,
-				Instance: c,
-			})
-
-			if err != nil {
-				log.Errorw("error consuming", "error", err, "consumer", c.CachedInfo())
-			}
-		}
-	})
+	l.nats.QueueSubscribe(StartSubject, StartQueue, l.handleStart(ctx))
 
 	// listen on all pods as we don't control which one will have given consumer
 	// Stop event will be triggered by logs process controller (scheduler)
-	l.nats.Subscribe(StopSubject, func(event events.Trigger) {
-		toDelete := []string{}
-		for _, consumer := range l.adapters {
-			toDelete = append(toDelete, event.Id+"_"+consumer.Name())
-		}
-
-		consumerDeleteWaitInterval := 5 * time.Second
-		for {
-			// Delete each consumer for given execution id
-			for _, name := range toDelete {
-				// load consumer and check if has pending messages
-				c, found := l.consumerInstances.Load(name)
-				if !found {
-					l.log.Errorw("error getting consumer", "found", found, "id", event.Id)
-					continue
-				}
-
-				consumer := c.(Consumer)
-
-				info, err := consumer.Instance.Info(ctx)
-				if err != nil {
-					l.log.Errorw("error getting consumer info", "error", err, "id", event.Id)
-					continue
-				}
-
-				// finally delete consumer
-				if info.NumPending == 0 {
-					consumer.Context.Stop()
-					l.consumerInstances.Delete(name)
-					l.log.Infow("stopping consumer", "id", name)
-					continue
-				}
-			}
-
-			if len(toDelete) == 0 {
-				l.state.Put(ctx, event.Id, state.LogStateFinished)
-				l.log.Infow("all logs consumers stopped", "id", event.Id)
-				return
-			}
-
-			time.Sleep(consumerDeleteWaitInterval)
-		}
-	})
+	l.nats.Subscribe(StopSubject, l.handleStop(ctx))
 
 	l.Ready <- struct{}{}
 
@@ -229,8 +153,8 @@ func (l *LogsService) CreateStream(ctx context.Context, event events.Trigger) (j
 	})
 }
 
-func (l *LogsService) HandleMessage(consumer consumer.Adapter, event events.Trigger) func(msg jetstream.Msg) {
-	log := l.log.With("id", event.Id, "consumer", consumer.Name())
+func (l *LogsService) HandleMessage(adapter consumer.Adapter, event events.Trigger) func(msg jetstream.Msg) {
+	log := l.log.With("id", event.Id, "consumer", adapter.Name())
 
 	return func(msg jetstream.Msg) {
 		log.Infow("got message", "data", string(msg.Data()))
@@ -238,7 +162,7 @@ func (l *LogsService) HandleMessage(consumer consumer.Adapter, event events.Trig
 		// deliver to subscriber
 		logChunk := events.LogChunk{}
 		json.Unmarshal(msg.Data(), &logChunk)
-		err := consumer.Notify(event.Id, logChunk)
+		err := adapter.Notify(event.Id, logChunk)
 
 		if err != nil {
 			if err := msg.Nak(); err != nil {
@@ -250,6 +174,110 @@ func (l *LogsService) HandleMessage(consumer consumer.Adapter, event events.Trig
 
 		if err := msg.Ack(); err != nil {
 			log.Errorw("error acking message", "error", err)
+		}
+	}
+}
+
+// handleStart will handle start event and create logs consumers, also manage state of given (execution) id
+func (l *LogsService) handleStart(ctx context.Context) func(event events.Trigger) {
+	return func(event events.Trigger) {
+		l.state.Put(ctx, event.Id, state.LogStatePending)
+		log := l.log.With("id", event.Id)
+		s, err := l.CreateStream(ctx, event)
+		if err != nil {
+			l.log.Errorw("error creating stream", "error", err, "id", event.Id)
+			return
+		}
+
+		log.Infow("stream created", "stream", s)
+
+		streamName := StreamPrefix + event.Id
+
+		// for each adapter create NATS consumer and consume stream from it e.g. cloud s3 or others
+		for i, adapter := range l.adapters {
+			log = log.With("adapter", adapter.Name())
+			c, err := l.InitConsumer(ctx, adapter, streamName, event.Id, i)
+			if err != nil {
+				log.Errorw("error creating consumer", "error", err)
+				return
+			}
+
+			// handle message per each adapter
+			log.Infow("consumer created", "consumer", c.CachedInfo(), "stream", streamName)
+			cons, err := c.Consume(l.HandleMessage(adapter, event))
+			if err != nil {
+				log.Errorw("error creating consumer", "error", err, "consumer", c.CachedInfo())
+				continue
+			}
+
+			// store consumer instance so we can stop it later in StopSubject handler
+			l.consumerInstances.Store(event.Id+"_"+adapter.Name(), Consumer{
+				Context:  cons,
+				Instance: c,
+			})
+
+			log.Infow("consumer started", "consumer", adapter.Name(), "id", event.Id, "stream", streamName)
+		}
+	}
+}
+
+// handleStop will handle stop event and stop logs consumers, also clean consumers state
+func (l *LogsService) handleStop(ctx context.Context) func(event events.Trigger) {
+	return func(event events.Trigger) {
+
+		maxRepeat := 10
+		repeated := 0
+
+		toDelete := []string{}
+		for _, adapter := range l.adapters {
+			toDelete = append(toDelete, event.Id+"_"+adapter.Name())
+		}
+
+		consumerDeleteWaitInterval := 5 * time.Second
+
+		for {
+		loop:
+			// Delete each consumer for given execution id
+			for i, name := range toDelete {
+				// load consumer and check if has pending messages
+				c, found := l.consumerInstances.Load(name)
+				if !found {
+					l.log.Errorw("error getting consumer", "found", found, "id", event.Id)
+					continue
+				}
+
+				consumer := c.(Consumer)
+
+				info, err := consumer.Instance.Info(ctx)
+				if err != nil {
+					l.log.Errorw("error getting consumer info", "error", err, "id", event.Id)
+					continue
+				}
+
+				// finally delete consumer
+				if info.NumPending == 0 {
+					consumer.Context.Stop()
+					l.consumerInstances.Delete(name)
+					toDelete = append(toDelete[:i], toDelete[i+1:]...)
+					l.log.Infow("stopping consumer", "id", name)
+					goto loop // rewrite toDelete and start again
+				}
+			}
+
+			if len(toDelete) == 0 {
+				l.state.Put(ctx, event.Id, state.LogStateFinished)
+				l.log.Infow("all logs consumers stopped", "id", event.Id)
+				return
+			}
+
+			// handle max tries of cleaning executors
+			repeated++
+			if repeated >= maxRepeat {
+				l.log.Errorw("error cleaning consumeres", "toDeleteLeft", toDelete)
+				return
+			}
+
+			time.Sleep(consumerDeleteWaitInterval)
 		}
 	}
 }
