@@ -189,9 +189,10 @@ func getRunnerCloudMode() string {
 
 // Templates contains templates for executor
 type Templates struct {
-	Job     string `json:"job"`
-	PVC     string `json:"pvc"`
-	Scraper string `json:"scraper"`
+	Job      string `json:"job,omitempty"`
+	PVC      string `json:"pvc,omitempty"`
+	Scraper  string `json:"scraper,omitempty"`
+	SlavePod string `json:"slavePod,omitempty"`
 }
 
 // Images contains images for executor

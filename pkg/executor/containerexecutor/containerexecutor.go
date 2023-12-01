@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/utils"
 
@@ -28,6 +27,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/executor/options"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -131,50 +131,51 @@ type ContainerExecutor struct {
 	debug                bool
 }
 
-type JobOptions struct {
-	Name                      string
-	Namespace                 string
-	Image                     string
-	ImagePullSecrets          []string
-	Command                   []string
-	Args                      []string
-	WorkingDir                string
-	Jsn                       string
-	TestName                  string
-	InitImage                 string
-	ScraperImage              string
-	JobTemplate               string
-	ScraperTemplate           string
-	PvcTemplate               string
-	SecretEnvs                map[string]string
-	Envs                      map[string]string
-	HTTPProxy                 string
-	HTTPSProxy                string
-	UsernameSecret            *testkube.SecretRef
-	TokenSecret               *testkube.SecretRef
-	CertificateSecret         string
-	Variables                 map[string]testkube.Variable
-	ActiveDeadlineSeconds     int64
-	ArtifactRequest           *testkube.ArtifactRequest
-	ServiceAccountName        string
-	DelaySeconds              int
-	JobTemplateExtensions     string
-	ScraperTemplateExtensions string
-	PvcTemplateExtensions     string
-	EnvConfigMaps             []testkube.EnvReference
-	EnvSecrets                []testkube.EnvReference
-	Labels                    map[string]string
-	Registry                  string
-	ClusterID                 string
-	ExecutionNumber           int32
-	ContextType               string
-	ContextData               string
-	Debug                     bool
-	LogSidecarImage           string
-	NatsUri                   string
-	APIURI                    string
-	Features                  featureflags.FeatureFlags
-}
+// TODO remove moved to options package
+// type JobOptions struct {
+// 	Name                      string
+// 	Namespace                 string
+// 	Image                     string
+// 	ImagePullSecrets          []string
+// 	Command                   []string
+// 	Args                      []string
+// 	WorkingDir                string
+// 	Jsn                       string
+// 	TestName                  string
+// 	InitImage                 string
+// 	ScraperImage              string
+// 	JobTemplate               string
+// 	ScraperTemplate           string
+// 	PvcTemplate               string
+// 	SecretEnvs                map[string]string
+// 	Envs                      map[string]string
+// 	HTTPProxy                 string
+// 	HTTPSProxy                string
+// 	UsernameSecret            *testkube.SecretRef
+// 	TokenSecret               *testkube.SecretRef
+// 	CertificateSecret         string
+// 	Variables                 map[string]testkube.Variable
+// 	ActiveDeadlineSeconds     int64
+// 	ArtifactRequest           *testkube.ArtifactRequest
+// 	ServiceAccountName        string
+// 	DelaySeconds              int
+// 	JobTemplateExtensions     string
+// 	ScraperTemplateExtensions string
+// 	PvcTemplateExtensions     string
+// 	EnvConfigMaps             []testkube.EnvReference
+// 	EnvSecrets                []testkube.EnvReference
+// 	Labels                    map[string]string
+// 	Registry                  string
+// 	ClusterID                 string
+// 	ExecutionNumber           int32
+// 	ContextType               string
+// 	ContextData               string
+// 	Debug                     bool
+// 	LogSidecarImage           string
+// 	NatsUri                   string
+// 	APIURI                    string
+// 	Features                  featureflags.FeatureFlags
+// }
 
 // Logs returns job logs stream channel using kubernetes api
 func (c *ContainerExecutor) Logs(ctx context.Context, id string) (out chan output.Output, err error) {
@@ -232,11 +233,11 @@ func (c *ContainerExecutor) Logs(ctx context.Context, id string) (out chan outpu
 
 // Execute starts new external test execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c *ContainerExecutor) Execute(ctx context.Context, execution *testkube.Execution, options client.ExecuteOptions) (*testkube.ExecutionResult, error) {
+func (c *ContainerExecutor) Execute(ctx context.Context, execution *testkube.Execution, executeOptions options.ExecuteOptions) (*testkube.ExecutionResult, error) {
 	executionResult := testkube.NewRunningExecutionResult()
 	execution.ExecutionResult = executionResult
 
-	jobOptions, err := c.createJob(ctx, *execution, options)
+	jobOptions, err := c.createJob(ctx, *execution, executeOptions)
 	if err != nil {
 		executionResult.Err(err)
 		return executionResult, err
@@ -249,11 +250,11 @@ func (c *ContainerExecutor) Execute(ctx context.Context, execution *testkube.Exe
 		return executionResult, err
 	}
 
-	l := c.log.With("executionID", execution.Id, "sync", options.Sync)
+	l := c.log.With("executionID", execution.Id, "sync", executeOptions.Sync)
 
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
-			if options.Sync {
+			if executeOptions.Sync {
 				return c.updateResultsFromPod(ctx, pod, l, execution, jobOptions)
 			}
 
@@ -275,38 +276,39 @@ func (c *ContainerExecutor) Execute(ctx context.Context, execution *testkube.Exe
 }
 
 // createJob creates new Kubernetes job based on execution and execute options
-func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
+func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Execution, executeOptions options.ExecuteOptions) (jobOptions options.JobOptions, err error) {
 	jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
 
-	jobOptions, err := NewJobOptions(c.log, c.templatesClient, c.images, c.templates, c.serviceAccountName,
-		c.registry, c.clusterID, c.apiURI, execution, options, c.natsURI, c.debug)
+	jobOptions, err = options.NewJobOptions(
+		c.log, c.templatesClient, c.images, c.templates, c.serviceAccountName,
+		c.registry, c.clusterID, c.apiURI, execution, executeOptions, c.natsURI, c.debug)
 	if err != nil {
-		return nil, err
+		return jobOptions, err
 	}
 
 	if jobOptions.ArtifactRequest != nil &&
 		jobOptions.ArtifactRequest.StorageClassName != "" {
 		c.log.Debug("creating persistent volume claim with options", "options", jobOptions)
 		pvcsClient := c.clientSet.CoreV1().PersistentVolumeClaims(c.namespace)
-		pvcSpec, err := NewPersistentVolumeClaimSpec(c.log, jobOptions)
+		pvcSpec, err := options.NewPersistentVolumeClaimSpec(c.log, jobOptions)
 		if err != nil {
-			return nil, err
+			return jobOptions, err
 		}
 
 		_, err = pvcsClient.Create(ctx, pvcSpec, metav1.CreateOptions{})
 		if err != nil {
-			return nil, err
+			return jobOptions, err
 		}
 	}
 
 	c.log.Debug("creating executor job with options", "options", jobOptions)
-	jobSpec, err := NewExecutorJobSpec(c.log, jobOptions)
+	jobSpec, err := options.NewExecutorJobSpec(c.log, jobOptions)
 	if err != nil {
-		return nil, err
+		return jobOptions, err
 	}
 
 	_, err = jobsClient.Create(ctx, jobSpec, metav1.CreateOptions{})
-	return jobOptions, err
+	return
 }
 
 // updateResultsFromPod watches logs and stores results if execution is finished
@@ -315,7 +317,7 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	executorPod corev1.Pod,
 	l *zap.SugaredLogger,
 	execution *testkube.Execution,
-	jobOptions *JobOptions,
+	jobOptions options.JobOptions,
 ) (*testkube.ExecutionResult, error) {
 	var err error
 
@@ -347,7 +349,7 @@ func (c *ContainerExecutor) updateResultsFromPod(
 		jobOptions.ArtifactRequest.StorageClassName != "" {
 		c.log.Debug("creating scraper job with options", "options", jobOptions)
 		jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
-		scraperSpec, err := NewScraperJobSpec(c.log, jobOptions)
+		scraperSpec, err := options.NewScraperJobSpec(c.log, jobOptions)
 		if err != nil {
 			return execution.ExecutionResult, err
 		}
@@ -393,6 +395,7 @@ func (c *ContainerExecutor) updateResultsFromPod(
 					execution.ExecutionResult.Error()
 				}
 
+				// TODO refactor to use logs-proxy
 				scraperLogs, err = executor.GetPodLogs(ctx, c.clientSet, c.namespace, *latestScraperPod)
 				if err != nil {
 					l.Errorw("get scraper pod logs error", "error", err)
@@ -413,6 +416,7 @@ func (c *ContainerExecutor) updateResultsFromPod(
 		}
 	}
 
+	// TODO refactor to use logs-proxy
 	executorLogs, err := executor.GetPodLogs(ctx, c.clientSet, c.namespace, *latestExecutorPod)
 	if err != nil {
 		l.Errorw("get executor pod logs error", "error", err)
