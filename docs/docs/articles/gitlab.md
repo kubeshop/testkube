@@ -16,36 +16,21 @@ If a test is already created, you can run it using the command `testkube run tes
 stages:
   - setup
 
-variables:
-  TESTKUBE_API_KEY: tkcapi_0123456789abcdef0123456789abcd
-  TESTKUBE_ORG_ID: tkcorg_0123456789abcdef
-  TESTKUBE_ENV_ID: tkcenv_fedcba9876543210
 
 setup-testkube:
   stage: setup
   image: 
     name: kubeshop/testkube-cli
-    entrypoint: ["/bin/sh", "-c"]
+  variables:
+    TESTKUBE_API_KEY: tkcapi_0123456789abcdef0123456789abcd
+    TESTKUBE_ORG_ID: tkcorg_0123456789abcdef
+    TESTKUBE_ENV_ID: tkcenv_fedcba9876543210
   script:
-    - testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
     - testkube run test test-name -f
 ```
 
 It is recommended that sensitive values should never be stored as plaintext in workflow files, but rather as [variables](https://docs.gitlab.com/ee/ci/variables/).  Secrets can be configured at the organization, repository, or environment level, and allow you to store sensitive information in Gitlab.
 
-```yaml
-stages:
-  - setup
-
-setup-testkube:
-  stage: setup
-  image: 
-    name: kubeshop/testkube-cli
-    entrypoint: ["/bin/sh", "-c"]
-  script:
-    - testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
-    - testkube run test test-name -f
- ```
 ## Testkube OSS
 
 ### How to configure Testkube CLI action for TK OSS and run a test
@@ -54,24 +39,19 @@ To connect to the self-hosted instance, you need to have **kubectl** configured 
 
 If a test is already created, you can run it using the command `testkube run test test-name -f` . However, if you need to create a test in this workflow, please add a creation command, e.g.: `testkube create test --name test-name --file path_to_file.json`.
 
-In order to connecting to your own cluster, you can put the your kubeconfig file into gitlab variable named KUBECONFIGFILE
+In order to connecting to your own cluster, you can put the your kubeconfig file into gitlab variable named `KUBECONFIG_FILE`
 
 ```yaml
 stages:
   - setup
 
-variables:
-  NAMESPACE: custom-testkube
-
 setup-testkube:
   stage: setup
   image: 
     name: kubeshop/testkube-cli
-    entrypoint: ["/bin/sh", "-c"]
+  variables:
+    NAMESPACE: custom-testkube
   script:
-    - echo $KUBECONFIGFILE > /tmp/kubeconfig/config
-    - export KUBECONFIG=/tmp/kubeconfig/config
-    - testkube set context --kubeconfig --namespace $NAMESPACE
     - testkube run test test-name -f
 ```
 
@@ -112,11 +92,10 @@ run-testkube:
   stage: test
   image: 
     name: kubeshop/testkube-cli
-    entrypoint: ["/bin/sh", "-c"]
+  variables:
+    NAMESPACE: custom-testkube
+    KUBECONFIG=$CI_PROJECT_DIR/tmp/kubeconfig/config
   script:
-    - export KUBECONFIG=$CI_PROJECT_DIR/tmp/kubeconfig/config
-    - testkube set context --kubeconfig --namespace $NAMESPACE
-    - echo "Running Testkube test..."
     - testkube run test test-name -f
   dependencies:
     - setup-aws
@@ -132,9 +111,6 @@ This example connects to a k8s cluster in Google Cloud, creates and runs a test 
 stages:
   - setup
   - test
-
-variables:
-  NAMESPACE: custom-testkube
 
 setup-gcp:
   stage: setup
@@ -156,11 +132,10 @@ run-testkube:
   stage: test
   image: 
     name: kubeshop/testkube-cli
-    entrypoint: ["/bin/sh", "-c"]
+  variables:
+    NAMESPACE: custom-testkube
+    KUBECONFIG=$CI_PROJECT_DIR/tmp/kubeconfig/config
   script:
-    - export KUBECONFIG=$CI_PROJECT_DIR/tmp/kubeconfig/config
-    - testkube set context --kubeconfig --namespace $NAMESPACE
-    - echo "Running Testkube test..."
     - testkube run test test-name -f
   dependencies:
     - setup-gcp
