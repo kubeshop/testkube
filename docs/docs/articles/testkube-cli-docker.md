@@ -45,7 +45,7 @@ make docker-build-cli DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubes
 Once you have the image, run the following command pointing to the Testkube demo:
 
 ```bash
-docker run kubeshop/testkube-cli:latest version --namespace testkube --api-uri https://demo.testkube.io/results --client direct
+docker run kubeshop/testkube-cli:latest testkube version --namespace testkube --api-uri https://demo.testkube.io/results --client direct
 ```
 
 This command starts a new Docker container with the Testkube CLI image and executes the command `testkube version`, pointing to the api-server running on the Testkube demo environment.
@@ -59,7 +59,7 @@ There are multiple *client types* you can set for the Testkube CLI:
 You can also use your existing `kubectl` configuration file as a volume:
 
 ```bash
-docker run -v ~/.testkube:/.testkube kubeshop/testkube-cli:1.11.13-SNAPSHOT-5f34248fd-arm64v8 --api-uri https://demo.testkube.io/results --client direct version 
+docker run -v ~/.testkube:/.testkube kubeshop/testkube-cli:latest testkube --api-uri https://demo.testkube.io/results --client direct version 
 ```
 
 ## Conclusion
