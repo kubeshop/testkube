@@ -212,7 +212,6 @@ func NewJobOptions(
 	if execution.Content != nil && execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
 		workingDir = filepath.Join(executor.VolumeDir, "repo", execution.Content.Repository.WorkingDir)
 	}
-
 	jobOptions.WorkingDir = workingDir
 
 	// TODO move to templates.Slave
