@@ -94,7 +94,7 @@ run-testkube:
     name: kubeshop/testkube-cli
   variables:
     NAMESPACE: custom-testkube
-    KUBECONFIG=$CI_PROJECT_DIR/tmp/kubeconfig/config
+    KUBECONFIG: $CI_PROJECT_DIR/tmp/kubeconfig/config
   script:
     - testkube run test test-name -f
   dependencies:
@@ -134,7 +134,7 @@ run-testkube:
     name: kubeshop/testkube-cli
   variables:
     NAMESPACE: custom-testkube
-    KUBECONFIG=$CI_PROJECT_DIR/tmp/kubeconfig/config
+    KUBECONFIG: $CI_PROJECT_DIR/tmp/kubeconfig/config
   script:
     - testkube run test test-name -f
   dependencies:
