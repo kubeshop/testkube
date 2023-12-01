@@ -54,8 +54,8 @@ import (
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/agent"
 	kubeexecutor "github.com/kubeshop/testkube/pkg/executor"
-	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/containerexecutor"
+	"github.com/kubeshop/testkube/pkg/executor/jobexecutor"
 
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
@@ -364,7 +364,7 @@ func main() {
 		ui.ExitOnError("Creating job templates", err)
 	}
 
-	executor, err := client.NewJobExecutor(
+	executor, err := jobexecutor.NewJobExecutor(
 		resultsRepository,
 		cfg.TestkubeNamespace,
 		images,

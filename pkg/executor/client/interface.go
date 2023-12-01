@@ -10,6 +10,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 )
 
+// TODO check if we can remove this - unused in testkube
 // ResultEvent event passed when watching execution changes
 type ResultEvent struct {
 	Result testkube.ExecutionResult
@@ -30,6 +31,7 @@ type Executor interface {
 	Logs(ctx context.Context, id string) (logs chan output.Output, err error)
 }
 
+// TODO check if we can remove this - unused in testkube
 // HTTPClient interface for getting REST based requests
 type HTTPClient interface {
 	Post(url, contentType string, body io.Reader) (resp *http.Response, err error)
