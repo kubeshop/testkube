@@ -31,6 +31,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/agent"
 	"github.com/kubeshop/testkube/pkg/executor/options"
 	"github.com/kubeshop/testkube/pkg/executor/output"
+	"github.com/kubeshop/testkube/pkg/executor/specs"
 	"github.com/kubeshop/testkube/pkg/log"
 	testexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testexecutions"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
@@ -286,7 +287,7 @@ func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Executio
 	}
 
 	c.Log.Debug("creating job with options", "options", jobOptions)
-	jobSpec, err := options.NewJobSpec(c.Log, jobOptions)
+	jobSpec, err := specs.NewExecutorJobSpec(c.Log, jobOptions)
 	if err != nil {
 		return err
 	}

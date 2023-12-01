@@ -1,9 +1,10 @@
-package options
+package specs
 
 import (
 	"bytes"
 	"fmt"
 
+	"github.com/kubeshop/testkube/pkg/executor/options"
 	"github.com/kubeshop/testkube/pkg/utils"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -13,7 +14,7 @@ import (
 )
 
 // NewPersistentVolumeClaimSpec is a method to create new persistent volume claim spec
-func NewPersistentVolumeClaimSpec(log *zap.SugaredLogger, options JobOptions) (*corev1.PersistentVolumeClaim, error) {
+func NewPersistentVolumeClaimSpec(log *zap.SugaredLogger, options options.JobOptions) (*corev1.PersistentVolumeClaim, error) {
 	tmpl, err := utils.NewTemplate("volume-claim").Parse(options.PvcTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("creating volume claim spec from pvc template error: %w", err)

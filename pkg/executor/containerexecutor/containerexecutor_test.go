@@ -21,6 +21,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/options"
+	"github.com/kubeshop/testkube/pkg/executor/specs"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 )
@@ -96,7 +97,7 @@ func TestNewExecutorJobSpecEmptyArgs(t *testing.T) {
 		Args:                      []string{},
 		Features:                  featureflags.FeatureFlags{},
 	}
-	spec, err := options.NewExecutorJobSpec(log.DefaultLogger, jobOptions)
+	spec, err := specs.NewExecutorJobSpec(log.DefaultLogger, jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 }
@@ -123,7 +124,7 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		Variables:                 map[string]testkube.Variable{"aa": {Name: "aa", Value: "bb", Type_: testkube.VariableTypeBasic}},
 		Features:                  featureflags.FeatureFlags{},
 	}
-	spec, err := options.NewExecutorJobSpec(log.DefaultLogger, jobOptions)
+	spec, err := specs.NewExecutorJobSpec(log.DefaultLogger, jobOptions)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
@@ -184,7 +185,7 @@ func TestNewExecutorJobSpecWithoutInitImage(t *testing.T) {
 		Args:                      []string{},
 		Features:                  featureflags.FeatureFlags{},
 	}
-	spec, err := options.NewExecutorJobSpec(log.DefaultLogger, jobOptions)
+	spec, err := specs.NewExecutorJobSpec(log.DefaultLogger, jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 }
@@ -231,7 +232,7 @@ func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 
 	assert.Equal(t, repoPath+"/relative/path", jobOptions.WorkingDir)
 
-	spec, err := options.NewExecutorJobSpec(log.DefaultLogger, jobOptions)
+	spec, err := specs.NewExecutorJobSpec(log.DefaultLogger, jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 
@@ -277,7 +278,7 @@ func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 		"",
 		false,
 	)
-	spec, err := options.NewExecutorJobSpec(log.DefaultLogger, jobOptions)
+	spec, err := specs.NewExecutorJobSpec(log.DefaultLogger, jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 
@@ -322,7 +323,7 @@ func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
 		"",
 		false,
 	)
-	spec, err := options.NewExecutorJobSpec(log.DefaultLogger, jobOptions)
+	spec, err := specs.NewExecutorJobSpec(log.DefaultLogger, jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 

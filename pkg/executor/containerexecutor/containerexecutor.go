@@ -27,6 +27,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/options"
 	"github.com/kubeshop/testkube/pkg/executor/output"
+	"github.com/kubeshop/testkube/pkg/executor/specs"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 	testexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testexecutions"
@@ -48,8 +49,6 @@ const (
 type EventEmitter interface {
 	Notify(event testkube.Event)
 }
-
-// TODO: remove duplicated code that was done when created container executor
 
 // NewContainerExecutor creates new job executor
 func NewContainerExecutor(
@@ -131,52 +130,6 @@ type ContainerExecutor struct {
 	natsURI              string
 	debug                bool
 }
-
-// TODO remove moved to options package
-// type JobOptions struct {
-// 	Name                      string
-// 	Namespace                 string
-// 	Image                     string
-// 	ImagePullSecrets          []string
-// 	Command                   []string
-// 	Args                      []string
-// 	WorkingDir                string
-// 	Jsn                       string
-// 	TestName                  string
-// 	InitImage                 string
-// 	ScraperImage              string
-// 	JobTemplate               string
-// 	ScraperTemplate           string
-// 	PvcTemplate               string
-// 	SecretEnvs                map[string]string
-// 	Envs                      map[string]string
-// 	HTTPProxy                 string
-// 	HTTPSProxy                string
-// 	UsernameSecret            *testkube.SecretRef
-// 	TokenSecret               *testkube.SecretRef
-// 	CertificateSecret         string
-// 	Variables                 map[string]testkube.Variable
-// 	ActiveDeadlineSeconds     int64
-// 	ArtifactRequest           *testkube.ArtifactRequest
-// 	ServiceAccountName        string
-// 	DelaySeconds              int
-// 	JobTemplateExtensions     string
-// 	ScraperTemplateExtensions string
-// 	PvcTemplateExtensions     string
-// 	EnvConfigMaps             []testkube.EnvReference
-// 	EnvSecrets                []testkube.EnvReference
-// 	Labels                    map[string]string
-// 	Registry                  string
-// 	ClusterID                 string
-// 	ExecutionNumber           int32
-// 	ContextType               string
-// 	ContextData               string
-// 	Debug                     bool
-// 	LogSidecarImage           string
-// 	NatsUri                   string
-// 	APIURI                    string
-// 	Features                  featureflags.FeatureFlags
-// }
 
 // Logs returns job logs stream channel using kubernetes api
 func (c *ContainerExecutor) Logs(ctx context.Context, id string) (out chan output.Output, err error) {
@@ -297,7 +250,7 @@ func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Ex
 		jobOptions.ArtifactRequest.StorageClassName != "" {
 		c.log.Debug("creating persistent volume claim with options", "options", jobOptions)
 		pvcsClient := c.clientSet.CoreV1().PersistentVolumeClaims(c.namespace)
-		pvcSpec, err := options.NewPersistentVolumeClaimSpec(c.log, jobOptions)
+		pvcSpec, err := specs.NewPersistentVolumeClaimSpec(c.log, jobOptions)
 		if err != nil {
 			return jobOptions, err
 		}
@@ -309,7 +262,7 @@ func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Ex
 	}
 
 	// c.log.Debugw("creating executor job with options", "options", jobOptions)
-	jobSpec, err := options.NewExecutorJobSpec(c.log, jobOptions)
+	jobSpec, err := specs.NewExecutorJobSpec(c.log, jobOptions)
 	if err != nil {
 		return jobOptions, err
 	}
@@ -356,7 +309,7 @@ func (c *ContainerExecutor) updateResultsFromPod(
 		jobOptions.ArtifactRequest.StorageClassName != "" {
 		c.log.Debug("creating scraper job with options", "options", jobOptions)
 		jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
-		scraperSpec, err := options.NewScraperJobSpec(c.log, jobOptions)
+		scraperSpec, err := specs.NewScraperJobSpec(c.log, jobOptions)
 		if err != nil {
 			return execution.ExecutionResult, err
 		}
