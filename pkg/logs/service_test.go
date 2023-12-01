@@ -96,11 +96,7 @@ func TestLogs(t *testing.T) {
 		// and example consumer
 		a := NewMockAdapter()
 
-		fmt.Printf("%+v\n", kv)
-
 		state := state.NewState(kv)
-		fmt.Printf("%+v\n", state)
-
 		// and initialized log service
 		log := NewLogsService(ec, js, state, ":8080")
 
