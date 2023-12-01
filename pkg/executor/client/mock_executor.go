@@ -10,6 +10,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	testkube "github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	options "github.com/kubeshop/testkube/pkg/executor/options"
 	output "github.com/kubeshop/testkube/pkg/executor/output"
 )
 
@@ -52,7 +53,7 @@ func (mr *MockExecutorMockRecorder) Abort(arg0, arg1 interface{}) *gomock.Call {
 }
 
 // Execute mocks base method.
-func (m *MockExecutor) Execute(arg0 context.Context, arg1 *testkube.Execution, arg2 ExecuteOptions) (*testkube.ExecutionResult, error) {
+func (m *MockExecutor) Execute(arg0 context.Context, arg1 *testkube.Execution, arg2 options.ExecuteOptions) (*testkube.ExecutionResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Execute", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*testkube.ExecutionResult)

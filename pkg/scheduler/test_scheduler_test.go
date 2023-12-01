@@ -14,7 +14,7 @@ import (
 	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/configmap"
-	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/executor/options"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/secret"
 )
@@ -179,7 +179,7 @@ func TestGetExecuteOptions(t *testing.T) {
 	got, err := sc.getExecuteOptions("namespace", "id", req)
 	assert.NoError(t, err)
 
-	want := client.ExecuteOptions{
+	want := options.ExecuteOptions{
 		ID:                   "",
 		TestName:             "id",
 		Namespace:            "namespace",

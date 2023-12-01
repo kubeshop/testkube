@@ -12,8 +12,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
-	"github.com/kubeshop/testkube/pkg/executor/containerexecutor"
 	"github.com/kubeshop/testkube/pkg/executor/content"
+	"github.com/kubeshop/testkube/pkg/executor/options"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
@@ -99,7 +99,7 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 			comment string
 		}{
 			{r.Params.WorkingDir, preRunScriptName, execution.PreRunScript, "prerun"},
-			{r.Params.DataDir, containerexecutor.EntrypointScriptName, command, "entrypoint"},
+			{r.Params.DataDir, options.EntrypointScriptName, command, "entrypoint"},
 			{r.Params.WorkingDir, postRunScriptName, execution.PostRunScript, "postrun"},
 		}
 

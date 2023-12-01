@@ -1,17 +1,5 @@
 package containerexecutor
 
-import (
-	_ "embed"
-)
-
-const (
-	// EntrypointScriptName is entrypoint script name
-	EntrypointScriptName = "entrypoint.sh"
-)
-
-//go:embed templates/job.tmpl
-var defaultJobTemplate string
-
 // // NewExecutorJobSpec is a method to create new executor job spec
 // func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.Job, error) {
 // 	envManager := env.NewManager()

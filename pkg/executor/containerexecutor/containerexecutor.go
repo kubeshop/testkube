@@ -2,12 +2,11 @@ package containerexecutor
 
 import (
 	"context"
+	_ "embed"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/repository/config"
-	"github.com/kubeshop/testkube/pkg/utils"
 
 	"github.com/kubeshop/testkube/pkg/repository/result"
 
@@ -26,7 +25,6 @@ import (
 	testsv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
-	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/options"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
@@ -35,6 +33,9 @@ import (
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 )
+
+//go:embed templates/job.tmpl
+var defaultJobTemplate string
 
 const (
 	pollTimeout             = 24 * time.Hour
@@ -278,6 +279,12 @@ func (c *ContainerExecutor) Execute(ctx context.Context, execution *testkube.Exe
 // createJob creates new Kubernetes job based on execution and execute options
 func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Execution, executeOptions options.ExecuteOptions) (jobOptions options.JobOptions, err error) {
 	jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
+
+	// TODO change loading files logic to have single way of doing things
+	//      this one was special case for container executor after merging job options into single package
+	if c.templates.Job == "" {
+		c.templates.Job = defaultJobTemplate
+	}
 
 	jobOptions, err = options.NewJobOptions(
 		c.log, c.templatesClient, c.images, c.templates, c.serviceAccountName,
@@ -559,131 +566,132 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testku
 
 }
 
-// NewJobOptionsFromExecutionOptions compose JobOptions based on ExecuteOptions
-func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOptions {
-	// for args, command and image, HTTP request takes priority, then test spec, then executor
-	var args []string
-	argsMode := options.Request.ArgsMode
-	if options.TestSpec.ExecutionRequest != nil && argsMode == "" {
-		argsMode = string(options.TestSpec.ExecutionRequest.ArgsMode)
-	}
+// TODO moved to options package
+// // NewJobOptionsFromExecutionOptions compose JobOptions based on ExecuteOptions
+// func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOptions {
+// 	// for args, command and image, HTTP request takes priority, then test spec, then executor
+// 	var args []string
+// 	argsMode := options.Request.ArgsMode
+// 	if options.TestSpec.ExecutionRequest != nil && argsMode == "" {
+// 		argsMode = string(options.TestSpec.ExecutionRequest.ArgsMode)
+// 	}
 
-	if argsMode == string(testkube.ArgsModeTypeAppend) || argsMode == "" {
-		args = options.Request.Args
-		if options.TestSpec.ExecutionRequest != nil && len(args) == 0 {
-			args = options.TestSpec.ExecutionRequest.Args
-		}
+// 	if argsMode == string(testkube.ArgsModeTypeAppend) || argsMode == "" {
+// 		args = options.Request.Args
+// 		if options.TestSpec.ExecutionRequest != nil && len(args) == 0 {
+// 			args = options.TestSpec.ExecutionRequest.Args
+// 		}
 
-		args = append(options.ExecutorSpec.Args, args...)
-	}
+// 		args = append(options.ExecutorSpec.Args, args...)
+// 	}
 
-	if argsMode == string(testkube.ArgsModeTypeOverride) {
-		args = options.Request.Args
-		if options.TestSpec.ExecutionRequest != nil && len(args) == 0 {
-			args = options.TestSpec.ExecutionRequest.Args
-		}
-	}
+// 	if argsMode == string(testkube.ArgsModeTypeOverride) {
+// 		args = options.Request.Args
+// 		if options.TestSpec.ExecutionRequest != nil && len(args) == 0 {
+// 			args = options.TestSpec.ExecutionRequest.Args
+// 		}
+// 	}
 
-	var command []string
-	if len(options.ExecutorSpec.Command) != 0 {
-		command = options.ExecutorSpec.Command
-	}
+// 	var command []string
+// 	if len(options.ExecutorSpec.Command) != 0 {
+// 		command = options.ExecutorSpec.Command
+// 	}
 
-	if options.TestSpec.ExecutionRequest != nil &&
-		len(options.TestSpec.ExecutionRequest.Command) != 0 {
-		command = options.TestSpec.ExecutionRequest.Command
-	}
+// 	if options.TestSpec.ExecutionRequest != nil &&
+// 		len(options.TestSpec.ExecutionRequest.Command) != 0 {
+// 		command = options.TestSpec.ExecutionRequest.Command
+// 	}
 
-	if len(options.Request.Command) != 0 {
-		command = options.Request.Command
-	}
+// 	if len(options.Request.Command) != 0 {
+// 		command = options.Request.Command
+// 	}
 
-	var image string
-	if options.ExecutorSpec.Image != "" {
-		image = options.ExecutorSpec.Image
-	}
+// 	var image string
+// 	if options.ExecutorSpec.Image != "" {
+// 		image = options.ExecutorSpec.Image
+// 	}
 
-	if options.TestSpec.ExecutionRequest != nil &&
-		options.TestSpec.ExecutionRequest.Image != "" {
-		image = options.TestSpec.ExecutionRequest.Image
-	}
+// 	if options.TestSpec.ExecutionRequest != nil &&
+// 		options.TestSpec.ExecutionRequest.Image != "" {
+// 		image = options.TestSpec.ExecutionRequest.Image
+// 	}
 
-	if options.Request.Image != "" {
-		image = options.Request.Image
-	}
+// 	if options.Request.Image != "" {
+// 		image = options.Request.Image
+// 	}
 
-	var workingDir string
-	if options.TestSpec.Content != nil &&
-		options.TestSpec.Content.Repository != nil &&
-		options.TestSpec.Content.Repository.WorkingDir != "" {
-		workingDir = options.TestSpec.Content.Repository.WorkingDir
-		if !filepath.IsAbs(workingDir) {
-			workingDir = filepath.Join(repoPath, workingDir)
-		}
-	}
+// 	var workingDir string
+// 	if options.TestSpec.Content != nil &&
+// 		options.TestSpec.Content.Repository != nil &&
+// 		options.TestSpec.Content.Repository.WorkingDir != "" {
+// 		workingDir = options.TestSpec.Content.Repository.WorkingDir
+// 		if !filepath.IsAbs(workingDir) {
+// 			workingDir = filepath.Join(repoPath, workingDir)
+// 		}
+// 	}
 
-	supportArtifacts := false
-	for _, feature := range options.ExecutorSpec.Features {
-		if feature == executorv1.FeatureArtifacts {
-			supportArtifacts = true
-			break
-		}
-	}
+// 	supportArtifacts := false
+// 	for _, feature := range options.ExecutorSpec.Features {
+// 		if feature == executorv1.FeatureArtifacts {
+// 			supportArtifacts = true
+// 			break
+// 		}
+// 	}
 
-	var artifactRequest *testkube.ArtifactRequest
-	jobDelaySeconds := jobDefaultDelaySeconds
-	if supportArtifacts {
-		artifactRequest = options.Request.ArtifactRequest
-		jobDelaySeconds = jobArtifactDelaySeconds
-	}
+// 	var artifactRequest *testkube.ArtifactRequest
+// 	jobDelaySeconds := jobDefaultDelaySeconds
+// 	if supportArtifacts {
+// 		artifactRequest = options.Request.ArtifactRequest
+// 		jobDelaySeconds = jobArtifactDelaySeconds
+// 	}
 
-	labels := map[string]string{
-		testkube.TestLabelTestType: utils.SanitizeName(options.TestSpec.Type_),
-		testkube.TestLabelExecutor: options.ExecutorName,
-		testkube.TestLabelTestName: options.TestName,
-	}
-	for key, value := range options.Labels {
-		labels[key] = value
-	}
+// 	labels := map[string]string{
+// 		testkube.TestLabelTestType: utils.SanitizeName(options.TestSpec.Type_),
+// 		testkube.TestLabelExecutor: options.ExecutorName,
+// 		testkube.TestLabelTestName: options.TestName,
+// 	}
+// 	for key, value := range options.Labels {
+// 		labels[key] = value
+// 	}
 
-	contextType := ""
-	contextData := ""
-	if options.Request.RunningContext != nil {
-		contextType = options.Request.RunningContext.Type_
-		contextData = options.Request.RunningContext.Context
-	}
+// 	contextType := ""
+// 	contextData := ""
+// 	if options.Request.RunningContext != nil {
+// 		contextType = options.Request.RunningContext.Type_
+// 		contextData = options.Request.RunningContext.Context
+// 	}
 
-	return &JobOptions{
-		Image:                     image,
-		ImagePullSecrets:          options.ImagePullSecretNames,
-		Args:                      args,
-		Command:                   command,
-		WorkingDir:                workingDir,
-		TestName:                  options.TestName,
-		Namespace:                 options.Namespace,
-		Envs:                      options.Request.Envs,
-		SecretEnvs:                options.Request.SecretEnvs,
-		HTTPProxy:                 options.Request.HttpProxy,
-		HTTPSProxy:                options.Request.HttpsProxy,
-		UsernameSecret:            options.UsernameSecret,
-		TokenSecret:               options.TokenSecret,
-		CertificateSecret:         options.CertificateSecret,
-		ActiveDeadlineSeconds:     options.Request.ActiveDeadlineSeconds,
-		ArtifactRequest:           artifactRequest,
-		DelaySeconds:              jobDelaySeconds,
-		JobTemplate:               options.ExecutorSpec.JobTemplate,
-		JobTemplateExtensions:     options.Request.JobTemplate,
-		ScraperTemplateExtensions: options.Request.ScraperTemplate,
-		PvcTemplateExtensions:     options.Request.PvcTemplate,
-		EnvConfigMaps:             options.Request.EnvConfigMaps,
-		EnvSecrets:                options.Request.EnvSecrets,
-		Labels:                    labels,
-		ExecutionNumber:           options.Request.Number,
-		ContextType:               contextType,
-		ContextData:               contextData,
-		Features:                  options.Features,
-	}
-}
+// 	return &JobOptions{
+// 		Image:                     image,
+// 		ImagePullSecrets:          options.ImagePullSecretNames,
+// 		Args:                      args,
+// 		Command:                   command,
+// 		WorkingDir:                workingDir,
+// 		TestName:                  options.TestName,
+// 		Namespace:                 options.Namespace,
+// 		Envs:                      options.Request.Envs,
+// 		SecretEnvs:                options.Request.SecretEnvs,
+// 		HTTPProxy:                 options.Request.HttpProxy,
+// 		HTTPSProxy:                options.Request.HttpsProxy,
+// 		UsernameSecret:            options.UsernameSecret,
+// 		TokenSecret:               options.TokenSecret,
+// 		CertificateSecret:         options.CertificateSecret,
+// 		ActiveDeadlineSeconds:     options.Request.ActiveDeadlineSeconds,
+// 		ArtifactRequest:           artifactRequest,
+// 		DelaySeconds:              jobDelaySeconds,
+// 		JobTemplate:               options.ExecutorSpec.JobTemplate,
+// 		JobTemplateExtensions:     options.Request.JobTemplate,
+// 		ScraperTemplateExtensions: options.Request.ScraperTemplate,
+// 		PvcTemplateExtensions:     options.Request.PvcTemplate,
+// 		EnvConfigMaps:             options.Request.EnvConfigMaps,
+// 		EnvSecrets:                options.Request.EnvSecrets,
+// 		Labels:                    labels,
+// 		ExecutionNumber:           options.Request.Number,
+// 		ContextType:               contextType,
+// 		ContextData:               contextData,
+// 		Features:                  options.Features,
+// 	}
+// }
 
 // Abort K8sJob aborts K8S by job name
 func (c *ContainerExecutor) Abort(ctx context.Context, execution *testkube.Execution) (*testkube.ExecutionResult, error) {

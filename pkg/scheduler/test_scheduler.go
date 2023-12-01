@@ -14,6 +14,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/executor/options"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
@@ -117,9 +118,9 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	return execution, nil
 }
 
-func (s *Scheduler) startTestExecution(ctx context.Context, options client.ExecuteOptions, execution *testkube.Execution) (result *testkube.ExecutionResult, err error) {
-	executor := s.getExecutor(options.TestName)
-	return executor.Execute(ctx, execution, options)
+func (s *Scheduler) startTestExecution(ctx context.Context, opts options.ExecuteOptions, execution *testkube.Execution) (result *testkube.ExecutionResult, err error) {
+	executor := s.getExecutor(opts.TestName)
+	return executor.Execute(ctx, execution, opts)
 }
 
 func (s *Scheduler) getExecutor(testName string) client.Executor {
@@ -195,53 +196,53 @@ func (s *Scheduler) createSecretsReferences(execution *testkube.Execution) (err 
 	return nil
 }
 
-func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Execution {
+func newExecutionFromExecutionOptions(opts options.ExecuteOptions) testkube.Execution {
 	execution := testkube.NewExecution(
-		options.Request.Id,
-		options.Namespace,
-		options.TestName,
-		options.Request.TestSuiteName,
-		options.Request.Name,
-		options.TestSpec.Type_,
-		int(options.Request.Number),
-		testsmapper.MapTestContentFromSpec(options.TestSpec.Content),
+		opts.Request.Id,
+		opts.Namespace,
+		opts.TestName,
+		opts.Request.TestSuiteName,
+		opts.Request.Name,
+		opts.TestSpec.Type_,
+		int(opts.Request.Number),
+		testsmapper.MapTestContentFromSpec(opts.TestSpec.Content),
 		*testkube.NewRunningExecutionResult(),
-		options.Request.Variables,
-		options.Request.TestSecretUUID,
-		options.Request.TestSuiteSecretUUID,
-		common.MergeMaps(options.Labels, options.Request.ExecutionLabels),
+		opts.Request.Variables,
+		opts.Request.TestSecretUUID,
+		opts.Request.TestSuiteSecretUUID,
+		common.MergeMaps(opts.Labels, opts.Request.ExecutionLabels),
 	)
 
-	execution.Envs = options.Request.Envs
-	execution.Command = options.Request.Command
-	execution.Args = options.Request.Args
-	execution.IsVariablesFileUploaded = options.Request.IsVariablesFileUploaded
-	execution.VariablesFile = options.Request.VariablesFile
-	execution.Uploads = options.Request.Uploads
-	execution.BucketName = options.Request.BucketName
-	execution.ArtifactRequest = options.Request.ArtifactRequest
-	execution.PreRunScript = options.Request.PreRunScript
-	execution.PostRunScript = options.Request.PostRunScript
-	execution.ExecutePostRunScriptBeforeScraping = options.Request.ExecutePostRunScriptBeforeScraping
-	execution.RunningContext = options.Request.RunningContext
-	execution.TestExecutionName = options.Request.TestExecutionName
-	execution.DownloadArtifactExecutionIDs = options.Request.DownloadArtifactExecutionIDs
-	execution.SlavePodRequest = options.Request.SlavePodRequest
+	execution.Envs = opts.Request.Envs
+	execution.Command = opts.Request.Command
+	execution.Args = opts.Request.Args
+	execution.IsVariablesFileUploaded = opts.Request.IsVariablesFileUploaded
+	execution.VariablesFile = opts.Request.VariablesFile
+	execution.Uploads = opts.Request.Uploads
+	execution.BucketName = opts.Request.BucketName
+	execution.ArtifactRequest = opts.Request.ArtifactRequest
+	execution.PreRunScript = opts.Request.PreRunScript
+	execution.PostRunScript = opts.Request.PostRunScript
+	execution.ExecutePostRunScriptBeforeScraping = opts.Request.ExecutePostRunScriptBeforeScraping
+	execution.RunningContext = opts.Request.RunningContext
+	execution.TestExecutionName = opts.Request.TestExecutionName
+	execution.DownloadArtifactExecutionIDs = opts.Request.DownloadArtifactExecutionIDs
+	execution.SlavePodRequest = opts.Request.SlavePodRequest
 
 	return execution
 }
 
-func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
+func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.ExecutionRequest) (opts options.ExecuteOptions, err error) {
 	// get test content from kubernetes CRs
 	testCR, err := s.testsClient.Get(id)
 	if err != nil {
-		return options, errors.Errorf("can't get test custom resource %v", err)
+		return opts, errors.Errorf("can't get test custom resource %v", err)
 	}
 
 	if testCR.Spec.Source != "" {
 		testSourceCR, err := s.testSourcesClient.Get(testCR.Spec.Source)
 		if err != nil {
-			return options, errors.Errorf("cannot get test source custom resource: %v", err)
+			return opts, errors.Errorf("cannot get test source custom resource: %v", err)
 		}
 
 		testCR.Spec = mergeContents(testCR.Spec, testSourceCR.Spec)
@@ -360,7 +361,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 	// get executor from kubernetes CRs
 	executorCR, err := s.executorsClient.GetByType(testCR.Spec.Type_)
 	if err != nil {
-		return options, errors.Errorf("can't get executor spec: %v", err)
+		return opts, errors.Errorf("can't get executor spec: %v", err)
 	}
 
 	var usernameSecret, tokenSecret *testkube.SecretRef
@@ -394,7 +395,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 
 		data, err := s.configMapClient.Get(context.Background(), configMap.Reference.Name)
 		if err != nil {
-			return options, errors.Errorf("can't get config map: %v", err)
+			return opts, errors.Errorf("can't get config map: %v", err)
 		}
 
 		for key := range data {
@@ -414,7 +415,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 
 		data, err := s.secretClient.Get(secret.Reference.Name)
 		if err != nil {
-			return options, errors.Errorf("can't get secret: %v", err)
+			return opts, errors.Errorf("can't get secret: %v", err)
 		}
 
 		for key := range data {
@@ -444,7 +445,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		}
 	}
 
-	return client.ExecuteOptions{
+	return options.ExecuteOptions{
 		TestName:             id,
 		Namespace:            namespace,
 		TestSpec:             testCR.Spec,

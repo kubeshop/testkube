@@ -2,18 +2,11 @@ package client
 
 import (
 	"bufio"
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
 	"io"
 	"os"
-	"path/filepath"
-	"strings"
-	"text/template"
 	"time"
 
-	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 
 	"github.com/pkg/errors"
@@ -23,15 +16,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/result"
 
 	"go.uber.org/zap"
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/kustomize/kyaml/yaml/merge2"
-
-	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 
 	templatesv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
 	testexecutionsv1 "github.com/kubeshop/testkube-operator/pkg/client/testexecutions/v1"
@@ -39,8 +27,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/executor"
-	"github.com/kubeshop/testkube/pkg/executor/agent"
-	"github.com/kubeshop/testkube/pkg/executor/env"
+	"github.com/kubeshop/testkube/pkg/executor/options"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
 	testexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testexecutions"
@@ -149,44 +136,6 @@ type JobExecutor struct {
 	debug                bool
 }
 
-type JobOptions struct {
-	Name                  string
-	Namespace             string
-	Image                 string
-	ImagePullSecrets      []string
-	Jsn                   string
-	TestName              string
-	InitImage             string
-	JobTemplate           string
-	Envs                  map[string]string
-	SecretEnvs            map[string]string
-	HTTPProxy             string
-	HTTPSProxy            string
-	UsernameSecret        *testkube.SecretRef
-	TokenSecret           *testkube.SecretRef
-	CertificateSecret     string
-	Variables             map[string]testkube.Variable
-	ActiveDeadlineSeconds int64
-	ServiceAccountName    string
-	JobTemplateExtensions string
-	EnvConfigMaps         []testkube.EnvReference
-	EnvSecrets            []testkube.EnvReference
-	Labels                map[string]string
-	Registry              string
-	ClusterID             string
-	ArtifactRequest       *testkube.ArtifactRequest
-	WorkingDir            string
-	ExecutionNumber       int32
-	ContextType           string
-	ContextData           string
-	Debug                 bool
-	NatsUri               string
-	LogSidecarImage       string
-	APIURI                string
-	SlavePodTemplate      string
-	Features              featureflags.FeatureFlags
-}
-
 // Logs returns job logs stream channel using kubernetes api
 func (c *JobExecutor) Logs(ctx context.Context, id string) (out chan output.Output, err error) {
 	out = make(chan output.Output)
@@ -217,7 +166,7 @@ func (c *JobExecutor) Logs(ctx context.Context, id string) (out chan output.Outp
 
 // Execute starts new external test execution, reads data and returns ID
 // Execution is started asynchronously client can check later for results
-func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution, options ExecuteOptions) (result *testkube.ExecutionResult, err error) {
+func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution, options options.ExecuteOptions) (result *testkube.ExecutionResult, err error) {
 	result = testkube.NewRunningExecutionResult()
 	execution.ExecutionResult = result
 
@@ -307,16 +256,24 @@ func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) 
 }
 
 // CreateJob creates new Kubernetes job based on execution and execute options
-func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
+func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, executeOptions options.ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
-	jobOptions, err := NewJobOptions(c.Log, c.templatesClient, c.images, c.jobTemplate, c.slavePodTemplate,
-		c.serviceAccountName, c.registry, c.clusterID, c.apiURI, execution, options, c.natsURI, c.debug)
+
+	tpls := executor.Templates{
+		Job:      c.jobTemplate,
+		SlavePod: c.slavePodTemplate,
+	}
+
+	jobOptions, err := options.NewJobOptions(
+		c.Log, c.templatesClient, c.images, tpls,
+		c.serviceAccountName, c.registry, c.clusterID, c.apiURI, execution,
+		executeOptions, c.natsURI, c.debug)
 	if err != nil {
 		return err
 	}
 
 	c.Log.Debug("creating job with options", "options", jobOptions)
-	jobSpec, err := NewJobSpec(c.Log, jobOptions)
+	jobSpec, err := options.NewJobSpec(c.Log, jobOptions)
 	if err != nil {
 		return err
 	}
@@ -511,63 +468,6 @@ func (c *JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, e
 	return nil
 }
 
-// NewJobOptionsFromExecutionOptions compose JobOptions based on ExecuteOptions
-func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
-	labels := map[string]string{
-		testkube.TestLabelTestType: utils.SanitizeName(options.TestSpec.Type_),
-		testkube.TestLabelExecutor: options.ExecutorName,
-		testkube.TestLabelTestName: options.TestName,
-	}
-	for key, value := range options.Labels {
-		labels[key] = value
-	}
-
-	contextType := ""
-	contextData := ""
-	if options.Request.RunningContext != nil {
-		contextType = options.Request.RunningContext.Type_
-		contextData = options.Request.RunningContext.Context
-	}
-
-	var image string
-	if options.ExecutorSpec.Image != "" {
-		image = options.ExecutorSpec.Image
-	}
-
-	if options.TestSpec.ExecutionRequest != nil &&
-		options.TestSpec.ExecutionRequest.Image != "" {
-		image = options.TestSpec.ExecutionRequest.Image
-	}
-
-	if options.Request.Image != "" {
-		image = options.Request.Image
-	}
-
-	return JobOptions{
-		Image:                 image,
-		ImagePullSecrets:      options.ImagePullSecretNames,
-		JobTemplate:           options.ExecutorSpec.JobTemplate,
-		TestName:              options.TestName,
-		Namespace:             options.Namespace,
-		Envs:                  options.Request.Envs,
-		SecretEnvs:            options.Request.SecretEnvs,
-		HTTPProxy:             options.Request.HttpProxy,
-		HTTPSProxy:            options.Request.HttpsProxy,
-		UsernameSecret:        options.UsernameSecret,
-		TokenSecret:           options.TokenSecret,
-		CertificateSecret:     options.CertificateSecret,
-		ActiveDeadlineSeconds: options.Request.ActiveDeadlineSeconds,
-		JobTemplateExtensions: options.Request.JobTemplate,
-		EnvConfigMaps:         options.Request.EnvConfigMaps,
-		EnvSecrets:            options.Request.EnvSecrets,
-		Labels:                labels,
-		ExecutionNumber:       options.Request.Number,
-		ContextType:           contextType,
-		ContextData:           contextData,
-		Features:              options.Features,
-	}
-}
-
 // TailJobLogs - locates logs for job pod(s)
 func (c *JobExecutor) TailJobLogs(ctx context.Context, id string, logs chan []byte) (err error) {
 
@@ -718,203 +618,6 @@ func (c *JobExecutor) Timeout(ctx context.Context, jobName string) (result *test
 	}
 	if err := c.stopExecution(ctx, l, &execution, result, false, nil); err != nil {
 		l.Errorw("error stopping execution on job executor timeout", "error", err)
-	}
-
-	return
-}
-
-// NewJobSpec is a method to create new job spec
-func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error) {
-	envManager := env.NewManager()
-	secretEnvVars := append(envManager.PrepareSecrets(options.SecretEnvs, options.Variables),
-		envManager.PrepareGitCredentials(options.UsernameSecret, options.TokenSecret)...)
-
-	tmpl, err := utils.NewTemplate("job").Funcs(template.FuncMap{"vartypeptrtostring": testkube.VariableTypeString}).
-		Parse(options.JobTemplate)
-	if err != nil {
-		return nil, errors.Errorf("creating job spec from options.JobTemplate error: %v", err)
-	}
-
-	options.Jsn = strings.ReplaceAll(options.Jsn, "'", "''")
-	var buffer bytes.Buffer
-	if err = tmpl.ExecuteTemplate(&buffer, "job", options); err != nil {
-		return nil, errors.Errorf("executing job spec template: %v", err)
-	}
-
-	var job batchv1.Job
-	jobSpec := buffer.String()
-	if options.JobTemplateExtensions != "" {
-		tmplExt, err := utils.NewTemplate("jobExt").Funcs(template.FuncMap{"vartypeptrtostring": testkube.VariableTypeString}).
-			Parse(options.JobTemplateExtensions)
-		if err != nil {
-			return nil, errors.Errorf("creating job extensions spec from template error: %v", err)
-		}
-
-		var bufferExt bytes.Buffer
-		if err = tmplExt.ExecuteTemplate(&bufferExt, "jobExt", options); err != nil {
-			return nil, errors.Errorf("executing job extensions spec template: %v", err)
-		}
-
-		if jobSpec, err = merge2.MergeStrings(bufferExt.String(), jobSpec, false, kyaml.MergeOptions{}); err != nil {
-			return nil, errors.Errorf("merging job spec templates: %v", err)
-		}
-	}
-
-	log.Debug("Job specification", jobSpec)
-	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(jobSpec), len(jobSpec))
-	if err := decoder.Decode(&job); err != nil {
-		return nil, errors.Errorf("decoding job spec error: %v", err)
-	}
-
-	for key, value := range options.Labels {
-		if job.Labels == nil {
-			job.Labels = make(map[string]string)
-		}
-
-		job.Labels[key] = value
-
-		if job.Spec.Template.Labels == nil {
-			job.Spec.Template.Labels = make(map[string]string)
-		}
-
-		job.Spec.Template.Labels[key] = value
-	}
-
-	envs := append(executor.RunnerEnvVars, corev1.EnvVar{Name: "RUNNER_CLUSTERID", Value: options.ClusterID})
-	if options.ArtifactRequest != nil && options.ArtifactRequest.StorageBucket != "" {
-		envs = append(envs, corev1.EnvVar{Name: "RUNNER_BUCKET", Value: options.ArtifactRequest.StorageBucket})
-	} else {
-		envs = append(envs, corev1.EnvVar{Name: "RUNNER_BUCKET", Value: os.Getenv("STORAGE_BUCKET")})
-	}
-
-	envs = append(envs, secretEnvVars...)
-	if options.HTTPProxy != "" {
-		envs = append(envs, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
-	}
-
-	if options.HTTPSProxy != "" {
-		envs = append(envs, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
-	}
-
-	envs = append(envs, envManager.PrepareEnvs(options.Envs, options.Variables)...)
-	envs = append(envs, corev1.EnvVar{Name: "RUNNER_WORKINGDIR", Value: options.WorkingDir})
-	envs = append(envs, corev1.EnvVar{Name: "RUNNER_EXECUTIONID", Value: options.Name})
-	envs = append(envs, corev1.EnvVar{Name: "RUNNER_TESTNAME", Value: options.TestName})
-	envs = append(envs, corev1.EnvVar{Name: "RUNNER_EXECUTIONNUMBER", Value: fmt.Sprint(options.ExecutionNumber)})
-	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTTYPE", Value: options.ContextType})
-	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTDATA", Value: options.ContextData})
-	envs = append(envs, corev1.EnvVar{Name: "RUNNER_APIURI", Value: options.APIURI})
-
-	for i := range job.Spec.Template.Spec.InitContainers {
-		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, envs...)
-	}
-
-	for i := range job.Spec.Template.Spec.Containers {
-		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, envs...)
-	}
-
-	return &job, nil
-}
-
-func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, images executor.Images,
-	jobTemplate, slavePodTemplate, serviceAccountName, registry, clusterID, apiURI string,
-	execution testkube.Execution, options ExecuteOptions, natsURI string, debug bool) (jobOptions JobOptions, err error) {
-	jsn, err := json.Marshal(execution)
-	if err != nil {
-		return jobOptions, err
-	}
-
-	jobOptions = NewJobOptionsFromExecutionOptions(options)
-	jobOptions.Name = execution.Id
-	jobOptions.Namespace = execution.TestNamespace
-	jobOptions.Jsn = string(jsn)
-	jobOptions.InitImage = images.Init
-	jobOptions.TestName = execution.TestName
-	jobOptions.Features = options.Features
-
-	// options needed for Log sidecar
-	if options.Features.LogsV2 {
-		// TODO pass them from some config? we dont' have any in this context?
-		jobOptions.Debug = debug
-		jobOptions.NatsUri = natsURI
-		jobOptions.LogSidecarImage = images.LogSidecar
-	}
-
-	if jobOptions.JobTemplate == "" {
-		jobOptions.JobTemplate = jobTemplate
-	}
-
-	if options.ExecutorSpec.JobTemplateReference != "" {
-		template, err := templatesClient.Get(options.ExecutorSpec.JobTemplateReference)
-		if err != nil {
-			return jobOptions, err
-		}
-
-		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.JOB_TemplateType {
-			jobOptions.JobTemplate = template.Spec.Body
-		} else {
-			log.Warnw("Not matched template type", "template", options.ExecutorSpec.JobTemplateReference)
-		}
-	}
-
-	if options.Request.JobTemplateReference != "" {
-		template, err := templatesClient.Get(options.Request.JobTemplateReference)
-		if err != nil {
-			return jobOptions, err
-		}
-
-		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.JOB_TemplateType {
-			jobOptions.JobTemplate = template.Spec.Body
-		} else {
-			log.Warnw("Not matched template type", "template", options.Request.JobTemplateReference)
-		}
-	}
-
-	jobOptions.Variables = execution.Variables
-	jobOptions.ServiceAccountName = serviceAccountName
-	jobOptions.Registry = registry
-	jobOptions.ClusterID = clusterID
-	jobOptions.ArtifactRequest = execution.ArtifactRequest
-	workingDir := agent.GetDefaultWorkingDir(executor.VolumeDir, execution)
-	if execution.Content != nil && execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
-		workingDir = filepath.Join(executor.VolumeDir, "repo", execution.Content.Repository.WorkingDir)
-	}
-
-	jobOptions.WorkingDir = workingDir
-	jobOptions.APIURI = apiURI
-
-	jobOptions.SlavePodTemplate = slavePodTemplate
-	if options.Request.SlavePodRequest != nil && options.Request.SlavePodRequest.PodTemplateReference != "" {
-		template, err := templatesClient.Get(options.Request.SlavePodRequest.PodTemplateReference)
-		if err != nil {
-			return jobOptions, err
-		}
-
-		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.POD_TemplateType {
-			jobOptions.SlavePodTemplate = template.Spec.Body
-		} else {
-			log.Warnw("Not matched template type", "template", options.Request.SlavePodRequest.PodTemplateReference)
-		}
-	}
-
-	if options.ExecutorSpec.Slaves != nil {
-		slvesConfigs, err := json.Marshal(executor.GetSlavesConfigs(
-			images.Init,
-			*options.ExecutorSpec.Slaves,
-			jobOptions.Registry,
-			jobOptions.ServiceAccountName,
-			jobOptions.CertificateSecret,
-			jobOptions.SlavePodTemplate,
-			jobOptions.ImagePullSecrets,
-			jobOptions.EnvConfigMaps,
-			jobOptions.EnvSecrets,
-			int(jobOptions.ActiveDeadlineSeconds),
-		))
-
-		if err != nil {
-			return jobOptions, err
-		}
-		jobOptions.Variables[executor.SlavesConfigsEnv] = testkube.NewBasicVariable(executor.SlavesConfigsEnv, string(slvesConfigs))
 	}
 
 	return
