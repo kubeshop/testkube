@@ -229,6 +229,8 @@ func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 		false,
 	)
 
+	assert.Equal(t, repoPath+"/relative/path", jobOptions.WorkingDir)
+
 	spec, err := options.NewExecutorJobSpec(log.DefaultLogger, jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)

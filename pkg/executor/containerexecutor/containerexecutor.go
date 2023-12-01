@@ -308,7 +308,7 @@ func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Ex
 		}
 	}
 
-	c.log.Debug("creating executor job with options", "options", jobOptions)
+	// c.log.Debugw("creating executor job with options", "options", jobOptions)
 	jobSpec, err := options.NewExecutorJobSpec(c.log, jobOptions)
 	if err != nil {
 		return jobOptions, err
