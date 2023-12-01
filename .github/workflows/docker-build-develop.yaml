@@ -27,7 +27,7 @@ jobs:
       - name: Setup Go
         uses: ./.github/actions/setup-go
         with:
-          cache-prefix: go-build
+          cache-prefix: go-build-api
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -82,7 +82,7 @@ jobs:
       - name: Setup Go
         uses: ./.github/actions/setup-go
         with:
-          cache-prefix: go-build
+          cache-prefix: go-build-${{ matrix.executor }}
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -129,7 +129,7 @@ jobs:
       - name: Setup Go
         uses: ./.github/actions/setup-go
         with:
-          cache-prefix: go-build
+          cache-prefix: go-build-jmeter
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -174,7 +174,7 @@ jobs:
       - name: Setup Go
         uses: ./.github/actions/setup-go
         with:
-          cache-prefix: go-build
+          cache-prefix: go-build-jmeterd
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -260,7 +260,7 @@ jobs:
       - name: Setup Go
         uses: ./.github/actions/setup-go
         with:
-          cache-prefix: go-build
+          cache-prefix: go-build-maven
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -304,7 +304,7 @@ jobs:
       - name: Setup Go
         uses: ./.github/actions/setup-go
         with:
-          cache-prefix: go-build
+          cache-prefix: go-build-gradle
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -348,7 +348,7 @@ jobs:
       - name: Setup Go
         uses: ./.github/actions/setup-go
         with:
-          cache-prefix: go-build
+          cache-prefix: go-build-cypress
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -392,7 +392,7 @@ jobs:
       - name: Setup Go
         uses: ./.github/actions/setup-go
         with:
-          cache-prefix: go-build
+          cache-prefix: go-build-playwright
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
