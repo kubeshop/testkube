@@ -104,10 +104,10 @@ func TestLogs(t *testing.T) {
 		log := NewLogsService(ec, js, state, ":8080")
 
 		// with 4 consumers (the same consumer is added 4 times so it'll receive 4 times more messages)
-		log.AddConsumer(c)
-		log.AddConsumer(c)
-		log.AddConsumer(c)
-		log.AddConsumer(c)
+		log.AddAdapter(c)
+		log.AddAdapter(c)
+		log.AddAdapter(c)
+		log.AddAdapter(c)
 
 		// and log service running
 		go func() {

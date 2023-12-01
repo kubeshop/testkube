@@ -68,7 +68,9 @@ type LogsService struct {
 	state state.Interface
 }
 
-func (l *LogsService) AddConsumer(a consumer.Adapter) {
+// AddAdapter adds new adapter to logs service adapters will be configred based on given mode
+// e.g. cloud mode will get cloud adapter to store logs directly on the cloud
+func (l *LogsService) AddAdapter(a consumer.Adapter) {
 	l.adapters = append(l.adapters, a)
 }
 

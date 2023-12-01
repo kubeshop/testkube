@@ -48,7 +48,7 @@ func main() {
 	state := state.State
 
 	svc := logs.NewLogsService(natsEncodedConn, js, state, cfg.HttpAddress)
-	svc.AddConsumer(consumer.NewDummyConsumer())
+	svc.AddAdapter(consumer.NewDummyConsumer())
 
 	g.Add(func() error {
 		err := interrupt(log, ctx)
