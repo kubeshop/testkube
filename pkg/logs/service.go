@@ -116,9 +116,10 @@ func (l *LogsService) Run(ctx context.Context) (err error) {
 
 	// 2. For start event we must build stream for given execution id and start consuming it
 	// this one will must follow a queue group each pod will get it's own bunch of executions to handle
+	// Start event will be triggered by logs process controller (scheduler)
 	l.nats.QueueSubscribe(StartSubject, StartQueue, l.handleStart(ctx))
 
-	// listen on all pods as we don't control which one will have given consumer
+	// 3. listen on all pods as we don't control which one will have given consumer
 	// Stop event will be triggered by logs process controller (scheduler)
 	l.nats.Subscribe(StopSubject, l.handleStop(ctx))
 
@@ -134,7 +135,7 @@ func (l *LogsService) Run(ctx context.Context) (err error) {
 	return nil
 }
 
-func (l *LogsService) InitConsumer(ctx context.Context, consumer consumer.Adapter, streamName, id string, i int) (jetstream.Consumer, error) {
+func (l *LogsService) initConsumer(ctx context.Context, consumer consumer.Adapter, streamName, id string, i int) (jetstream.Consumer, error) {
 	name := fmt.Sprintf("lc%s%s%d", id, consumer.Name(), i)
 	return l.js.CreateOrUpdateConsumer(ctx, streamName, jetstream.ConsumerConfig{
 		Name:    name,
@@ -144,16 +145,17 @@ func (l *LogsService) InitConsumer(ctx context.Context, consumer consumer.Adapte
 	})
 }
 
-func (l *LogsService) CreateStream(ctx context.Context, event events.Trigger) (jetstream.Stream, error) {
+func (l *LogsService) createStream(ctx context.Context, event events.Trigger) (jetstream.Stream, error) {
 	// create stream for incoming logs
 	streamName := StreamPrefix + event.Id
 	return l.js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
 		Name:    streamName,
-		Storage: jetstream.FileStorage, // durable stream
+		Storage: jetstream.FileStorage, // durable stream as we can hit mem limit
 	})
 }
 
-func (l *LogsService) HandleMessage(adapter consumer.Adapter, event events.Trigger) func(msg jetstream.Msg) {
+// handleMessage will handle incoming message from logs stream and proxy it to given adapter
+func (l *LogsService) handleMessage(adapter consumer.Adapter, event events.Trigger) func(msg jetstream.Msg) {
 	log := l.log.With("id", event.Id, "consumer", adapter.Name())
 
 	return func(msg jetstream.Msg) {
@@ -183,7 +185,7 @@ func (l *LogsService) handleStart(ctx context.Context) func(event events.Trigger
 	return func(event events.Trigger) {
 		l.state.Put(ctx, event.Id, state.LogStatePending)
 		log := l.log.With("id", event.Id)
-		s, err := l.CreateStream(ctx, event)
+		s, err := l.createStream(ctx, event)
 		if err != nil {
 			l.log.Errorw("error creating stream", "error", err, "id", event.Id)
 			return
@@ -196,7 +198,7 @@ func (l *LogsService) handleStart(ctx context.Context) func(event events.Trigger
 		// for each adapter create NATS consumer and consume stream from it e.g. cloud s3 or others
 		for i, adapter := range l.adapters {
 			log = log.With("adapter", adapter.Name())
-			c, err := l.InitConsumer(ctx, adapter, streamName, event.Id, i)
+			c, err := l.initConsumer(ctx, adapter, streamName, event.Id, i)
 			if err != nil {
 				log.Errorw("error creating consumer", "error", err)
 				return
@@ -204,7 +206,7 @@ func (l *LogsService) handleStart(ctx context.Context) func(event events.Trigger
 
 			// handle message per each adapter
 			log.Infow("consumer created", "consumer", c.CachedInfo(), "stream", streamName)
-			cons, err := c.Consume(l.HandleMessage(adapter, event))
+			cons, err := c.Consume(l.handleMessage(adapter, event))
 			if err != nil {
 				log.Errorw("error creating consumer", "error", err, "consumer", c.CachedInfo())
 				continue

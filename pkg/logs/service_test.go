@@ -126,7 +126,7 @@ func TestLogs(t *testing.T) {
 		assert.NoError(t, err)
 
 		// and push logs to given logs stream
-		str, err := log.CreateStream(ctx, event)
+		str, err := log.createStream(ctx, event)
 		assert.NoError(t, err)
 
 		// and example stream name
