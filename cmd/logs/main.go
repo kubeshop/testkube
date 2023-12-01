@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,6 +14,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/logs"
 	"github.com/kubeshop/testkube/pkg/logs/config"
 	"github.com/kubeshop/testkube/pkg/logs/consumer"
+	"github.com/kubeshop/testkube/pkg/logs/state"
 
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/oklog/run"
@@ -44,7 +44,10 @@ func main() {
 
 	js := Must(jetstream.New(natsConn))
 
-	svc := logs.NewLogsService(natsEncodedConn, js, cfg.HttpAddress)
+	kv := Must(js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: cfg.KVBucketName}))
+	state := state.State
+
+	svc := logs.NewLogsService(natsEncodedConn, js, state, cfg.HttpAddress)
 	svc.AddConsumer(consumer.NewDummyConsumer())
 
 	g.Add(func() error {
@@ -70,8 +73,6 @@ func main() {
 	}, func(error) {
 		cancel()
 	})
-
-	fmt.Printf("%+v\n", "RUN")
 
 	if err := g.Run(); err != nil {
 		log.Warnw("logs service run group returned an error", "error", err)

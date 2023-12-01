@@ -2,7 +2,7 @@ package consumer
 
 import "github.com/kubeshop/testkube/pkg/logs/events"
 
-var _ Consumer = &S3Consumer{}
+var _ Adapter = &S3Consumer{}
 
 // NewS3Consumer creates new S3Subscriber which will send data to local MinIO bucket
 func NewS3Consumer() *S3Consumer {

@@ -3,10 +3,10 @@ package consumer
 import "github.com/kubeshop/testkube/pkg/logs/events"
 
 type ConsumerGroup struct {
-	subscribers []Consumer
+	subscribers []Adapter
 }
 
-func (s *ConsumerGroup) Add(sub Consumer) {
+func (s *ConsumerGroup) Add(sub Adapter) {
 	s.subscribers = append(s.subscribers, sub)
 }
 

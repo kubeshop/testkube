@@ -10,6 +10,7 @@ import (
 	n "github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/logs/consumer"
 	"github.com/kubeshop/testkube/pkg/logs/events"
+	"github.com/kubeshop/testkube/pkg/logs/state"
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -70,6 +71,8 @@ func TestInitConsumer(t *testing.T) {
 
 func TestLogs(t *testing.T) {
 
+	ctx := context.Background()
+
 	ns, nc := n.TestServerWithConnection()
 	defer ns.Shutdown()
 
@@ -78,6 +81,10 @@ func TestLogs(t *testing.T) {
 
 	js, err := jetstream.New(nc)
 	assert.NoError(t, err)
+
+	kv, err := js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: "state-test"})
+	assert.NoError(t, err)
+	assert.NotNil(t, kv)
 
 	t.Run("should react on new message and pass data to consumer", func(t *testing.T) {
 
@@ -88,8 +95,13 @@ func TestLogs(t *testing.T) {
 		// and example consumer
 		c := NewMockConsumer()
 
+		fmt.Printf("%+v\n", kv)
+
+		state := state.NewState(kv)
+		fmt.Printf("%+v\n", state)
+
 		// and initialized log service
-		log := NewLogsService(ec, js, ":8080")
+		log := NewLogsService(ec, js, state, ":8080")
 
 		// with 4 consumers (the same consumer is added 4 times so it'll receive 4 times more messages)
 		log.AddConsumer(c)
@@ -142,7 +154,7 @@ func TestLogs(t *testing.T) {
 }
 
 // Mock consumer
-var _ consumer.Consumer = &MockConsumer{}
+var _ consumer.Adapter = &MockConsumer{}
 
 // NewMockConsumer creates new mocked consumer to check amount of messages passed to it
 func NewMockConsumer() *MockConsumer {

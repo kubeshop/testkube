@@ -6,7 +6,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/logs/events"
 )
 
-var _ Consumer = &DummyConsumer{}
+var _ Adapter = &DummyConsumer{}
 
 // NewS3Subscriber creates new DummySubscriber which will send data to local MinIO bucket
 func NewDummyConsumer() *DummyConsumer {
