@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/utils"
 
@@ -68,6 +69,8 @@ func NewContainerExecutor(
 	clusterID string,
 	dashboardURI string,
 	apiURI string,
+	natsUri string,
+	debug bool,
 ) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -94,6 +97,8 @@ func NewContainerExecutor(
 		clusterID:            clusterID,
 		dashboardURI:         dashboardURI,
 		apiURI:               apiURI,
+		natsURI:              natsUri,
+		debug:                debug,
 	}, nil
 }
 
@@ -122,6 +127,8 @@ type ContainerExecutor struct {
 	clusterID            string
 	dashboardURI         string
 	apiURI               string
+	natsURI              string
+	debug                bool
 }
 
 type JobOptions struct {
@@ -162,7 +169,11 @@ type JobOptions struct {
 	ExecutionNumber           int32
 	ContextType               string
 	ContextData               string
+	Debug                     bool
+	LogSidecarImage           string
+	NatsUri                   string
 	APIURI                    string
+	Features                  featureflags.FeatureFlags
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -268,7 +279,7 @@ func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Ex
 	jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
 
 	jobOptions, err := NewJobOptions(c.log, c.templatesClient, c.images, c.templates, c.serviceAccountName,
-		c.registry, c.clusterID, c.apiURI, execution, options)
+		c.registry, c.clusterID, c.apiURI, execution, options, c.natsURI, c.debug)
 	if err != nil {
 		return nil, err
 	}
@@ -666,6 +677,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		ExecutionNumber:           options.Request.Number,
 		ContextType:               contextType,
 		ContextData:               contextData,
+		Features:                  options.Features,
 	}
 }
 

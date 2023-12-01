@@ -13,6 +13,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 
 	"github.com/pkg/errors"
@@ -90,6 +91,8 @@ func NewJobExecutor(
 	clusterID string,
 	dashboardURI string,
 	apiURI string,
+	natsURI string,
+	debug bool,
 ) (client *JobExecutor, err error) {
 	return &JobExecutor{
 		ClientSet:            clientset,
@@ -111,6 +114,8 @@ func NewJobExecutor(
 		clusterID:            clusterID,
 		dashboardURI:         dashboardURI,
 		apiURI:               apiURI,
+		natsURI:              natsURI,
+		debug:                debug,
 	}, nil
 }
 
@@ -140,6 +145,8 @@ type JobExecutor struct {
 	clusterID            string
 	dashboardURI         string
 	apiURI               string
+	natsURI              string
+	debug                bool
 }
 
 type JobOptions struct {
@@ -172,8 +179,12 @@ type JobOptions struct {
 	ExecutionNumber       int32
 	ContextType           string
 	ContextData           string
+	Debug                 bool
+	NatsUri               string
+	LogSidecarImage       string
 	APIURI                string
 	SlavePodTemplate      string
+	Features              featureflags.FeatureFlags
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -298,8 +309,8 @@ func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) 
 // CreateJob creates new Kubernetes job based on execution and execute options
 func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
-	jobOptions, err := NewJobOptions(c.Log, c.templatesClient, c.images.Init, c.jobTemplate, c.slavePodTemplate,
-		c.serviceAccountName, c.registry, c.clusterID, c.apiURI, execution, options)
+	jobOptions, err := NewJobOptions(c.Log, c.templatesClient, c.images, c.jobTemplate, c.slavePodTemplate,
+		c.serviceAccountName, c.registry, c.clusterID, c.apiURI, execution, options, c.natsURI, c.debug)
 	if err != nil {
 		return err
 	}
@@ -553,6 +564,7 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		ExecutionNumber:       options.Request.Number,
 		ContextType:           contextType,
 		ContextData:           contextData,
+		Features:              options.Features,
 	}
 }
 
@@ -804,8 +816,9 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	return &job, nil
 }
 
-func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, initImage, jobTemplate, slavePodTemplate,
-	serviceAccountName, registry, clusterID, apiURI string, execution testkube.Execution, options ExecuteOptions) (jobOptions JobOptions, err error) {
+func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, images executor.Images,
+	jobTemplate, slavePodTemplate, serviceAccountName, registry, clusterID, apiURI string,
+	execution testkube.Execution, options ExecuteOptions, natsURI string, debug bool) (jobOptions JobOptions, err error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
 		return jobOptions, err
@@ -815,8 +828,18 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	jobOptions.Name = execution.Id
 	jobOptions.Namespace = execution.TestNamespace
 	jobOptions.Jsn = string(jsn)
-	jobOptions.InitImage = initImage
+	jobOptions.InitImage = images.Init
 	jobOptions.TestName = execution.TestName
+	jobOptions.Features = options.Features
+
+	// options needed for Log sidecar
+	if options.Features.LogsV2 {
+		// TODO pass them from some config? we dont' have any in this context?
+		jobOptions.Debug = debug
+		jobOptions.NatsUri = natsURI
+		jobOptions.LogSidecarImage = images.LogSidecar
+	}
+
 	if jobOptions.JobTemplate == "" {
 		jobOptions.JobTemplate = jobTemplate
 	}
@@ -876,7 +899,7 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 
 	if options.ExecutorSpec.Slaves != nil {
 		slvesConfigs, err := json.Marshal(executor.GetSlavesConfigs(
-			initImage,
+			images.Init,
 			*options.ExecutorSpec.Slaves,
 			jobOptions.Registry,
 			jobOptions.ServiceAccountName,

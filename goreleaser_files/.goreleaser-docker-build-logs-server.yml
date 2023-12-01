@@ -1,4 +1,4 @@
-project_name: testkube-api-server
+project_name: testkube-logs-server
 
 env:
   # Goreleaser always uses the docker buildx builder with name "default"; see
@@ -13,8 +13,8 @@ env:
   - DOCKER_BUILDX_CACHE_TO={{ if index .Env "DOCKER_BUILDX_CACHE_TO"  }}{{ .Env.DOCKER_BUILDX_CACHE_TO }}{{ else }}type=inline{{ end }}
 builds:
   - id: "linux"
-    main: ./cmd/api-server
-    binary: testkube-api-server
+    main: ./cmd/logs
+    binary: testkube-logs-server
     env:
       - CGO_ENABLED=0
     goos:
@@ -23,22 +23,15 @@ builds:
       - amd64
       - arm64
     mod_timestamp: "{{ .CommitTimestamp }}"
-    ldflags: 
-      -X github.com/kubeshop/testkube/pkg/version.Version={{ .Version }}
+    ldflags: -X github.com/kubeshop/testkube/pkg/version.Version={{ .Version }}
       -X github.com/kubeshop/testkube/pkg/version.Commit={{ .FullCommit }}
-      -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID={{ .Env.SLACK_BOT_CLIENT_ID}}
-      -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret={{ .Env.SLACK_BOT_CLIENT_SECRET }}
-      -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID={{ .Env.ANALYTICS_TRACKING_ID }}
-      -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret={{ .Env.ANALYTICS_API_KEY }}
-      -X github.com/kubeshop/testkube/pkg/telemetry.SegmentioKey={{ .Env.SEGMENTIO_KEY }}
-      -X github.com/kubeshop/testkube/pkg/telemetry.CloudSegmentioKey={{ .Env.CLOUD_SEGMENTIO_KEY }}
 dockers:
-  - dockerfile: ./build/api-server/Dockerfile
+  - dockerfile: ./build/logs/Dockerfile
     use: buildx
     goos: linux
     goarch: amd64
     image_templates:
-      - "kubeshop/testkube-api-server:{{ .Version }}-amd64"
+      - "kubeshop/testkube-logs-server:{{ .Version }}-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -50,12 +43,12 @@ dockers:
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
       - "--build-arg=ALPINE_IMAGE={{ .Env.ALPINE_IMAGE }}"
 
-  - dockerfile: ./build/api-server/Dockerfile
+  - dockerfile: ./build/logs/Dockerfile
     use: buildx
     goos: linux
     goarch: arm64
     image_templates:
-      - "kubeshop/testkube-api-server:{{ .Version }}-arm64v8"
+      - "kubeshop/testkube-logs-server:{{ .Version }}-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -68,14 +61,14 @@ dockers:
       - "--build-arg=ALPINE_IMAGE={{ .Env.ALPINE_IMAGE }}"
 
 docker_manifests:
-  - name_template: kubeshop/testkube-api-server:{{ .Version }}
+  - name_template: kubeshop/testkube-logs-server:{{ .Version }}
     image_templates:
-      - kubeshop/testkube-api-server:{{ .Version }}-amd64
-      - kubeshop/testkube-api-server:{{ .Version }}-arm64v8
-  - name_template: kubeshop/testkube-api-server:latest
+      - kubeshop/testkube-logs-server:{{ .Version }}-amd64
+      - kubeshop/testkube-logs-server:{{ .Version }}-arm64v8
+  - name_template: kubeshop/testkube-logs-server:latest
     image_templates:
-      - kubeshop/testkube-api-server:{{ .Version }}-amd64
-      - kubeshop/testkube-api-server:{{ .Version }}-arm64v8
+      - kubeshop/testkube-logs-server:{{ .Version }}-amd64
+      - kubeshop/testkube-logs-server:{{ .Version }}-arm64v8
 
 release:
   disable: true

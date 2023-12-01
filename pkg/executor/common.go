@@ -37,6 +37,8 @@ const (
 	GitTokenSecretName = "git-token"
 	// SlavesConfigsEnv is slave configs for creating slaves in executor
 	SlavesConfigsEnv = "RUNNER_SLAVES_CONFIGS"
+
+	SidecarImage = "kubeshop/testkube-logs-sidecar:v0-1" // TODO - change it to valid image name after deployment will be ready
 )
 
 var RunnerEnvVars = []corev1.EnvVar{
@@ -198,8 +200,9 @@ type Templates struct {
 
 // Images contains images for executor
 type Images struct {
-	Init    string
-	Scraper string
+	Init       string
+	Scraper    string
+	LogSidecar string
 }
 
 // IsPodReady defines if pod is ready or failed for logs scrapping
@@ -391,7 +394,9 @@ func SyncDefaultExecutors(
 		return images, nil
 	}
 
+	images.LogSidecar = SidecarImage
 	for _, executor := range executors {
+
 		if executor.Executor == nil {
 			continue
 		}
