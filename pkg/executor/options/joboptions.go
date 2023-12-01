@@ -10,7 +10,6 @@ import (
 	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
-	"github.com/kubeshop/testkube/pkg/executor/agent"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/skopeo"
 	"github.com/kubeshop/testkube/pkg/utils"
@@ -103,6 +102,7 @@ func NewJobOptions(
 	}
 
 	jobOptions = NewJobOptionsFromExecutionOptions(options)
+
 	jobOptions.Name = execution.Id
 	jobOptions.Namespace = execution.TestNamespace
 	jobOptions.Jsn = string(jsn)
@@ -208,13 +208,6 @@ func NewJobOptions(
 		}
 	}
 
-	workingDir := agent.GetDefaultWorkingDir(executor.VolumeDir, execution)
-	if execution.Content != nil && execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
-		workingDir = filepath.Join(executor.VolumeDir, "repo", execution.Content.Repository.WorkingDir)
-	}
-	jobOptions.WorkingDir = workingDir
-
-	// TODO move to templates.Slave
 	jobOptions.SlavePodTemplate = templates.SlavePod
 	if options.Request.SlavePodRequest != nil && options.Request.SlavePodRequest.PodTemplateReference != "" {
 		template, err := templatesClient.Get(options.Request.SlavePodRequest.PodTemplateReference)
@@ -307,6 +300,7 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		image = options.Request.Image
 	}
 
+	// TODO this one is from container executor - confirm if we can go with it in job executor
 	var workingDir string
 	if options.TestSpec.Content != nil &&
 		options.TestSpec.Content.Repository != nil &&

@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/repository/config"
@@ -27,6 +28,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/executor"
+	"github.com/kubeshop/testkube/pkg/executor/agent"
 	"github.com/kubeshop/testkube/pkg/executor/options"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -268,6 +270,17 @@ func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Executio
 		c.Log, c.templatesClient, c.images, tpls,
 		c.serviceAccountName, c.registry, c.clusterID, c.apiURI, execution,
 		executeOptions, c.natsURI, c.debug)
+
+	// allow to override working dir from execution
+	if jobOptions.WorkingDir == "" {
+		workingDir := agent.GetDefaultWorkingDir(executor.VolumeDir, execution)
+		if execution.Content != nil && execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
+			workingDir = filepath.Join(executor.VolumeDir, "repo", execution.Content.Repository.WorkingDir)
+		}
+
+		jobOptions.WorkingDir = workingDir
+	}
+
 	if err != nil {
 		return err
 	}
