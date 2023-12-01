@@ -17,6 +17,7 @@ import (
 	testsuiteexecutionsv1 "github.com/kubeshop/testkube-operator/pkg/client/testsuiteexecutions/v1"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
+	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/event"
@@ -120,6 +121,7 @@ func TestExecute(t *testing.T) {
 		mockTestSuiteExecutionsClient,
 		mockBus,
 		"",
+		featureflags.FeatureFlags{},
 	)
 	s := &Service{
 		triggerStatus:    make(map[statusKey]*triggerStatus),

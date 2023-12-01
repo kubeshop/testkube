@@ -79,6 +79,7 @@ type Config struct {
 	EnableDebugServer                bool          `envconfig:"ENABLE_DEBUG_SERVER" default:"false"`
 	EnableSecretsEndpoint            bool          `envconfig:"ENABLE_SECRETS_ENDPOINT" default:"false"`
 	DisableMongoMigrations           bool          `envconfig:"DISABLE_MONGO_MIGRATIONS" default:"false"`
+	Debug                            bool          `envconfig:"DEBUG" default:"false"`
 
 	// DEPRECATED: Use TestkubeProAPIKey instead
 	TestkubeCloudAPIKey string `envconfig:"TESTKUBE_CLOUD_API_KEY" default:""`
