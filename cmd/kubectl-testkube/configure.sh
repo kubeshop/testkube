@@ -2,6 +2,7 @@
 
 if [ -n "$KUBECONFIG_FILE" ]; then
 	echo "copying KUBECONFIG_FILE to /tmp/kubeconfig/config and exporting KUBECONFIG"
+        mkdir -p /tmp/kubeconfig
 	echo $KUBECONFIG_FILE > /tmp/kubeconfig/config
 	export KUBECONFIG=/tmp/kubeconfig/config
 fi
