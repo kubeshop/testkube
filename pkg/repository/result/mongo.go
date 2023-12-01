@@ -403,7 +403,10 @@ func (r *MongoRepository) GetExecutionTotals(ctx context.Context, paging bool, f
 		query, _ = composeQueryAndOpts(filter[0])
 	}
 
-	pipeline := []bson.D{{{Key: "$match", Value: query}}}
+	pipeline := []bson.D{
+		{{Key: "$sort", Value: bson.M{"executionresult.status": 1}}},
+		{{Key: "$match", Value: query}},
+	}
 	if len(filter) > 0 {
 		pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: "starttime", Value: -1}}}})
 		if paging {
