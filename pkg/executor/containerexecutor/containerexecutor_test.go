@@ -7,7 +7,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,7 +32,7 @@ func TestExecuteAsync(t *testing.T) {
 
 	ce := ContainerExecutor{
 		clientSet:       getFakeClient("1"),
-		log:             logger(),
+		log:             log.DefaultLogger,
 		repository:      FakeResultRepository{},
 		metrics:         FakeMetricCounter{},
 		emitter:         FakeEmitter{},
@@ -328,20 +327,6 @@ func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
 	assert.NotNil(t, spec)
 
 	assert.Empty(t, spec.Spec.Template.Spec.Containers[0].WorkingDir)
-}
-
-func logger() *zap.SugaredLogger {
-	atomicLevel := zap.NewAtomicLevel()
-	atomicLevel.SetLevel(zap.DebugLevel)
-
-	zapCfg := zap.NewDevelopmentConfig()
-	zapCfg.Level = atomicLevel
-
-	z, err := zapCfg.Build()
-	if err != nil {
-		panic(err)
-	}
-	return z.Sugar()
 }
 
 func getFakeClient(executionID string) *fake.Clientset {
