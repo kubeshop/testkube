@@ -19,7 +19,7 @@ import (
 	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/executor/options"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/server"
@@ -211,7 +211,7 @@ type MockExecutor struct {
 	LogsFn func(id string) (chan output.Output, error)
 }
 
-func (e MockExecutor) Execute(ctx context.Context, execution *testkube.Execution, options client.ExecuteOptions) (*testkube.ExecutionResult, error) {
+func (e MockExecutor) Execute(ctx context.Context, execution *testkube.Execution, options options.ExecuteOptions) (*testkube.ExecutionResult, error) {
 	panic("not implemented")
 }
 

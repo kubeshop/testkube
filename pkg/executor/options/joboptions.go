@@ -92,11 +92,6 @@ func NewJobOptions(
 	natsURI string,
 	debug bool,
 ) (opts JobOptions, err error) {
-	jsn, err := json.Marshal(execution)
-	if err != nil {
-		return opts, err
-	}
-
 	opts = fromExecuteOptions(executeOptions)
 
 	// options needed for Log sidecar
@@ -114,7 +109,6 @@ func NewJobOptions(
 	opts.ArtifactRequest = execution.ArtifactRequest
 
 	// append additional data
-	opts.Jsn = string(jsn)
 	opts.ServiceAccountName = serviceAccountName
 	opts.Registry = registry
 	opts.ClusterID = clusterID
@@ -126,7 +120,7 @@ func NewJobOptions(
 		opts.ScraperImage = images.Scraper
 	}
 
-	// TODO validate - this one was only in container executor
+	// Pre/Post run scripts - this one was only in container executor
 	if execution.PreRunScript != "" || execution.PostRunScript != "" {
 		opts.Command = []string{filepath.Join(executor.VolumeDir, EntrypointScriptName)}
 		if opts.Image != "" {
@@ -142,6 +136,13 @@ func NewJobOptions(
 			}
 		}
 	}
+
+	// Store execution data as JSON in string
+	jsn, err := json.Marshal(execution)
+	if err != nil {
+		return opts, err
+	}
+	opts.Jsn = string(jsn)
 
 	// Job template overrides
 	if opts.JobTemplate == "" {
