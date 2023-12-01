@@ -299,7 +299,10 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Fil
 		query, _ = composeQueryAndOpts(filter[0])
 	}
 
-	pipeline := []bson.D{{{Key: "$match", Value: query}}}
+	pipeline := []bson.D{
+		{{Key: "$sort", Value: bson.M{"status": 1}}},
+		{{Key: "$match", Value: query}},
+	}
 	if len(filter) > 0 {
 		pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: "starttime", Value: -1}}}})
 		pipeline = append(pipeline, bson.D{{Key: "$skip", Value: int64(filter[0].Page() * filter[0].PageSize())}})
