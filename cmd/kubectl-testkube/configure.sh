@@ -27,4 +27,4 @@ else
 	exit 1
 fi
 
-for cmd in "$@"; do eval "$cmd"; done
+eval "$@"
