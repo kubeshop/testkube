@@ -10,7 +10,7 @@ if [ -n "$NAMESPACE" ]; then
 	echo "setting the context for testkube to namespace $NAMESPACE"
 	testkube set context --kubeconfig --namespace $NAMESPACE
 elif [ -n "$TESTKUBE_API_KEY" ] && [ -n "$TESTKUBE_ORG_ID" ] && [ -n "TESTKUBE_ENV_ID" ]; then
-	echo "setting the context for testkube pro"
+	echo "setting the context for Testkube Pro"
 	testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
 fi
 
