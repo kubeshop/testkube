@@ -40,19 +40,6 @@ import (
 )
 
 const (
-	// GitUsernameSecretName is git username secret name
-	GitUsernameSecretName = "git-username"
-	// GitUsernameEnvVarName is git username environment var name
-	GitUsernameEnvVarName = "RUNNER_GITUSERNAME"
-	// GitTokenSecretName is git token secret name
-	GitTokenSecretName = "git-token"
-	// GitTokenEnvVarName is git token environment var name
-	GitTokenEnvVarName = "RUNNER_GITTOKEN"
-	// SecretTest is a test secret
-	SecretTest = "secrets"
-	// SecretSource is a source secret
-	SecretSource = "source-secrets"
-
 	pollTimeout  = 24 * time.Hour
 	pollInterval = 200 * time.Millisecond
 	// pollJobStatus is interval for checking if job timeout occurred

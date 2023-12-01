@@ -10,6 +10,21 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 )
 
+const (
+	// GitUsernameSecretName is git username secret name
+	GitUsernameSecretName = "git-username"
+	// GitUsernameEnvVarName is git username environment var name
+	GitUsernameEnvVarName = "RUNNER_GITUSERNAME"
+	// GitTokenSecretName is git token secret name
+	GitTokenSecretName = "git-token"
+	// GitTokenEnvVarName is git token environment var name
+	GitTokenEnvVarName = "RUNNER_GITTOKEN"
+	// SecretTest is a test secret
+	SecretTest = "secrets"
+	// SecretSource is a source secret
+	SecretSource = "source-secrets"
+)
+
 // TODO check if we can remove this - unused in testkube
 // ResultEvent event passed when watching execution changes
 type ResultEvent struct {
