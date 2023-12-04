@@ -28,11 +28,11 @@ dockers:
   - dockerfile: "./contrib/executor/jmeterd/build/agent/Dockerfile"
     use: buildx
     goos: linux
-    goarch: "{{ .Goarch }}"
+    goarch: "{{ .GOARCH }}"
     image_templates:
-      - "kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-{{ .Goarch }}"
+      - "kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-{{ .GOARCH }}"
     build_flag_templates:
-      - "--platform=linux/amd64"
+      - "--platform={{ .GOOS }}/{{ .GOARCH }}"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
       - "--label=org.opencontainers.image.created={{ .Date}}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
