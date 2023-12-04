@@ -50,8 +50,6 @@ func main() {
 	svc := logs.NewLogsService(natsEncodedConn, js, state, cfg.HttpAddress)
 
 	// TODO - add adapters here
-
-	// TODO - add adapters here
 	svc.AddAdapter(consumer.NewDummyAdapter())
 
 	g.Add(func() error {
