@@ -1,0 +1,196 @@
+package logs
+
+import (
+	"context"
+	"fmt"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/kubeshop/testkube/pkg/event/bus"
+	"github.com/kubeshop/testkube/pkg/logs/consumer"
+	"github.com/kubeshop/testkube/pkg/logs/events"
+	"github.com/kubeshop/testkube/pkg/logs/state"
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestLogs_EventsFlow(t *testing.T) {
+	t.Parallel()
+
+	// given context with 1s deadline
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(1*time.Second))
+	defer cancel()
+
+	// and NATS test server with connection
+	ns, nc := bus.TestServerWithConnection()
+	defer ns.Shutdown()
+
+	// and encoded connection
+	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+	assert.NoError(t, err)
+
+	// and jetstream configured
+	js, err := jetstream.New(nc)
+	assert.NoError(t, err)
+
+	// and KV store
+	kv, err := js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: "state-test"})
+	assert.NoError(t, err)
+	assert.NotNil(t, kv)
+
+	// and logs state manager
+	state := state.NewState(kv)
+
+	// and initialized log service
+	log := NewLogsService(ec, js, state).
+		WithRandomPort()
+
+	t.Run("should remove all consumers when stop event handled", func(t *testing.T) {
+		// given example consumers
+		a := NewMockAdapter("aaa")
+		b := NewMockAdapter("bbb")
+
+		// with 4 consumers (the same consumer is added 4 times so it'll receive 4 times more messages)
+		log.AddAdapter(a)
+		log.AddAdapter(b)
+
+		// and log service running
+		go func() {
+			log.Run(ctx)
+		}()
+
+		// and ready to get messages
+		<-log.Ready
+
+		// and logs stream client
+		stream, err := NewLogsStream(nc, "stop-test")
+		assert.NoError(t, err)
+
+		// and initialized log stream for given ID
+		meta, err := stream.Init(ctx)
+		assert.NotEmpty(t, meta.Name)
+		assert.NoError(t, err)
+
+		// when start event triggered
+		err = stream.Start(ctx)
+		assert.NoError(t, err)
+
+		// and when data pushed to the log stream
+		stream.Push(ctx, events.NewLogChunk(time.Now(), []byte("hello 1")))
+
+		// and wait for message to be propagated
+		time.Sleep(100 * time.Millisecond)
+
+		// and stop event triggered
+		err = stream.Stop(ctx)
+		assert.NoError(t, err)
+
+		// and wait for messages to be propagated
+		time.Sleep(100 * time.Millisecond)
+
+		// then all consumers should be gracefully stopped
+		assert.Equal(t, 0, log.GetConsumersStats(ctx).Count)
+	})
+
+	t.Run("should react on new message and pass data to consumer", func(t *testing.T) {
+
+		// given example adapter
+		a := NewMockAdapter()
+
+		// with 4 consumers (the same consumer is added 4 times so it'll receive 4 times more messages)
+		log.AddAdapter(a)
+		log.AddAdapter(a)
+		log.AddAdapter(a)
+		log.AddAdapter(a)
+
+		// and log service running
+		go func() {
+			log.Run(ctx)
+		}()
+
+		// and ready to get messages
+		<-log.Ready
+
+		// and stream client
+		stream, err := NewLogsStream(nc, "messages-test")
+		assert.NoError(t, err)
+
+		// and initialized log stream for given ID
+		meta, err := stream.Init(ctx)
+		assert.NotEmpty(t, meta.Name)
+		assert.NoError(t, err)
+
+		// when start event triggered
+		err = stream.Start(ctx)
+		assert.NoError(t, err)
+
+		// and data are pushed to the log stream
+		err = stream.Push(ctx, events.NewLogChunk(time.Now(), []byte("hello 1")))
+		assert.NoError(t, err)
+		err = stream.Push(ctx, events.NewLogChunk(time.Now(), []byte("hello 2")))
+		assert.NoError(t, err)
+		err = stream.Push(ctx, events.NewLogChunk(time.Now(), []byte("hello 3")))
+		assert.NoError(t, err)
+		err = stream.Push(ctx, events.NewLogChunk(time.Now(), []byte("hello 4")))
+		assert.NoError(t, err)
+
+		// and wait for message to be propagated
+		err = stream.Stop(ctx)
+		assert.NoError(t, err)
+
+		// and wait for messages to be propagated
+		time.Sleep(100 * time.Millisecond)
+
+		// then we should have 4*4 messages in consumer
+		assert.Equal(t, 16, len(a.Messages))
+	})
+
+}
+
+func TestLogsService_RunHealthchekHandler(t *testing.T) {
+
+	t.Parallel()
+
+}
+
+// Mock consumer
+var _ consumer.Adapter = &MockAdapter{}
+
+// NewMockAdapter creates new mocked consumer to check amount of messages passed to it
+func NewMockAdapter(name ...string) *MockAdapter {
+	n := "default"
+	if len(name) > 0 {
+		n = name[0]
+	}
+
+	return &MockAdapter{
+		Messages: []events.LogChunk{},
+		name:     n,
+	}
+}
+
+type MockAdapter struct {
+	lock     sync.Mutex
+	Messages []events.LogChunk
+	name     string
+}
+
+func (s *MockAdapter) Notify(id string, e events.LogChunk) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	e.Metadata = map[string]string{"id": id}
+	s.Messages = append(s.Messages, e)
+	return nil
+}
+
+func (s *MockAdapter) Stop(id string) error {
+	fmt.Printf("stopping %s \n", id)
+	return nil
+}
+
+func (s *MockAdapter) Name() string {
+	return s.name
+}

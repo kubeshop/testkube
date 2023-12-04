@@ -4,10 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/event/bus"
 )
 
 func TestState(t *testing.T) {

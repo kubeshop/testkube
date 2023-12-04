@@ -16,10 +16,10 @@ func TestStream_StartStop(t *testing.T) {
 	defer ns.Shutdown()
 
 	ctx := context.Background()
-	stream, err := NewNATSStream(nc, "111")
+	client, err := NewLogsStream(nc, "111")
 	assert.NoError(t, err)
-	stream.Init(ctx)
-	stream.PushBytes(ctx, []byte(`{"content":"hello 1"}`))
+	client.Init(ctx)
+	client.PushBytes(ctx, []byte(`{"content":"hello 1"}`))
 
 	var startReceived, stopReceived bool
 
@@ -32,10 +32,10 @@ func TestStream_StartStop(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	err = stream.Start(ctx)
+	err = client.Start(ctx)
 	assert.NoError(t, err)
 
-	err = stream.Stop(ctx)
+	err = client.Stop(ctx)
 	assert.NoError(t, err)
 
 	time.Sleep(time.Second * 1)

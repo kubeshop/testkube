@@ -47,7 +47,8 @@ func main() {
 	kv := Must(js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: cfg.KVBucketName}))
 	state := state.NewState(kv)
 
-	svc := logs.NewLogsService(natsEncodedConn, js, state, cfg.HttpAddress)
+	svc := logs.NewLogsService(natsEncodedConn, js, state).
+		WithAddress(cfg.HttpAddress)
 
 	// TODO - add adapters here
 	svc.AddAdapter(consumer.NewDummyAdapter())
