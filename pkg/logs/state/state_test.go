@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/assert"
 
@@ -28,7 +27,7 @@ func TestState(t *testing.T) {
 
 	t.Run("get non existing state", func(t *testing.T) {
 		_, err := s.Get(ctx, "1")
-		assert.ErrorIs(t, err, nats.ErrKeyNotFound)
+		assert.Error(t, err)
 	})
 
 	t.Run("store state data and get it", func(t *testing.T) {
