@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/assert"
 
@@ -21,16 +20,12 @@ func TestLogs_EventsFlow(t *testing.T) {
 	t.Parallel()
 
 	// given context with 1s deadline
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(1*time.Second))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(1*time.Minute))
 	defer cancel()
 
 	// and NATS test server with connection
 	ns, nc := bus.TestServerWithConnection()
 	defer ns.Shutdown()
-
-	// and encoded connection
-	ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
-	assert.NoError(t, err)
 
 	// and jetstream configured
 	js, err := jetstream.New(nc)
@@ -45,7 +40,7 @@ func TestLogs_EventsFlow(t *testing.T) {
 	state := state.NewState(kv)
 
 	// and initialized log service
-	log := NewLogsService(ec, js, state).
+	log := NewLogsService(nc, js, state).
 		WithRandomPort()
 
 	t.Run("should remove all consumers when stop event handled", func(t *testing.T) {
@@ -75,21 +70,15 @@ func TestLogs_EventsFlow(t *testing.T) {
 		assert.NoError(t, err)
 
 		// when start event triggered
-		err = stream.Start(ctx)
+		_, err = stream.Start(ctx)
 		assert.NoError(t, err)
 
 		// and when data pushed to the log stream
 		stream.Push(ctx, events.NewLogChunk(time.Now(), []byte("hello 1")))
 
-		// and wait for message to be propagated
-		time.Sleep(100 * time.Millisecond)
-
 		// and stop event triggered
-		err = stream.Stop(ctx)
+		_, err = stream.Stop(ctx)
 		assert.NoError(t, err)
-
-		// and wait for messages to be propagated
-		time.Sleep(100 * time.Millisecond)
 
 		// then all consumers should be gracefully stopped
 		assert.Equal(t, 0, log.GetConsumersStats(ctx).Count)
@@ -99,6 +88,8 @@ func TestLogs_EventsFlow(t *testing.T) {
 
 		// given example adapter
 		a := NewMockAdapter()
+
+		messagesCount := 10
 
 		// with 4 consumers (the same consumer is added 4 times so it'll receive 4 times more messages)
 		log.AddAdapter(a)
@@ -124,24 +115,21 @@ func TestLogs_EventsFlow(t *testing.T) {
 		assert.NoError(t, err)
 
 		// when start event triggered
-		err = stream.Start(ctx)
+		_, err = stream.Start(ctx)
 		assert.NoError(t, err)
 
-		for i := 0; i < 4; i++ {
+		for i := 0; i < messagesCount; i++ {
 			// and when data pushed to the log stream
 			err = stream.Push(ctx, events.NewLogChunk(time.Now(), []byte("hello")))
 			assert.NoError(t, err)
 		}
 
 		// and wait for message to be propagated
-		err = stream.Stop(ctx)
+		_, err = stream.Stop(ctx)
 		assert.NoError(t, err)
 
-		// and wait for messages to be propagated
-		time.Sleep(100 * time.Millisecond)
-
 		// then we should have 4*4 messages in consumer
-		assert.Equal(t, 16, len(a.Messages))
+		assert.Equal(t, 4*messagesCount, len(a.Messages))
 	})
 
 }

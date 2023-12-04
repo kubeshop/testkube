@@ -22,7 +22,7 @@ const (
 	DefaultHttpAddress = ":8080"
 )
 
-func NewLogsService(nats *nats.EncodedConn, js jetstream.JetStream, state state.Interface) *LogsService {
+func NewLogsService(nats *nats.Conn, js jetstream.JetStream, state state.Interface) *LogsService {
 	return &LogsService{
 		nats:              nats,
 		adapters:          []consumer.Adapter{},
@@ -37,7 +37,7 @@ func NewLogsService(nats *nats.EncodedConn, js jetstream.JetStream, state state.
 
 type LogsService struct {
 	log      *zap.SugaredLogger
-	nats     *nats.EncodedConn
+	nats     *nats.Conn
 	js       jetstream.JetStream
 	adapters []consumer.Adapter
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 
 	"github.com/kubeshop/testkube/pkg/logs/consumer"
@@ -61,9 +62,16 @@ func (ls *LogsService) handleMessage(adapter consumer.Adapter, event events.Trig
 
 		// deliver to subscriber
 		logChunk := events.LogChunk{}
-		json.Unmarshal(msg.Data(), &logChunk)
-		err := adapter.Notify(event.Id, logChunk)
+		err := json.Unmarshal(msg.Data(), &logChunk)
+		if err != nil {
+			if err := msg.Nak(); err != nil {
+				log.Errorw("error nacking message", "error", err)
+				return
+			}
+			return
+		}
 
+		err = adapter.Notify(event.Id, logChunk)
 		if err != nil {
 			if err := msg.Nak(); err != nil {
 				log.Errorw("error nacking message", "error", err)
@@ -79,8 +87,16 @@ func (ls *LogsService) handleMessage(adapter consumer.Adapter, event events.Trig
 }
 
 // handleStart will handle start event and create logs consumers, also manage state of given (execution) id
-func (ls *LogsService) handleStart(ctx context.Context) func(event events.Trigger) {
-	return func(event events.Trigger) {
+func (ls *LogsService) handleStart(ctx context.Context) func(msg *nats.Msg) {
+	return func(msg *nats.Msg) {
+		fmt.Printf("%+v\n", "got MSG")
+
+		event := events.Trigger{}
+		err := json.Unmarshal(msg.Data, &event)
+		if err != nil {
+			ls.log.Errorw("can't handle start event", "error", err)
+			return
+		}
 		log := ls.log.With("id", event.Id, "event", "start")
 
 		ls.state.Put(ctx, event.Id, state.LogStatePending)
@@ -119,12 +135,26 @@ func (ls *LogsService) handleStart(ctx context.Context) func(event events.Trigge
 
 			l.Infow("consumer started", "consumer", adapter.Name(), "id", event.Id, "stream", streamName)
 		}
+
+		err = msg.Respond([]byte("ok"))
+		if err != nil {
+			log.Errorw("error responding to start event", "error", err)
+			return
+		}
 	}
+
 }
 
 // handleStop will handle stop event and stop logs consumers, also clean consumers state
-func (ls *LogsService) handleStop(ctx context.Context) func(event events.Trigger) {
-	return func(event events.Trigger) {
+func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
+	return func(msg *nats.Msg) {
+
+		event := events.Trigger{}
+		err := json.Unmarshal(msg.Data, &event)
+		if err != nil {
+			ls.log.Errorw("can't handle stop event", "error", err)
+			return
+		}
 
 		l := ls.log.With("id", event.Id, "event", "stop")
 
@@ -146,7 +176,8 @@ func (ls *LogsService) handleStop(ctx context.Context) func(event events.Trigger
 				c, found := ls.consumerInstances.Load(name)
 				if !found {
 					l.Warnw("consumer not found", "found", found, "name", name)
-					continue
+					toDelete = append(toDelete[:i], toDelete[i+1:]...)
+					goto loop // rewrite toDelete and start again
 				}
 
 				consumer := c.(Consumer)
@@ -170,6 +201,13 @@ func (ls *LogsService) handleStop(ctx context.Context) func(event events.Trigger
 			if len(toDelete) == 0 {
 				ls.state.Put(ctx, event.Id, state.LogStateFinished)
 				l.Infow("all logs consumers stopped", "id", event.Id)
+
+				err = msg.Respond([]byte("stopped"))
+				if err != nil {
+					l.Errorw("error responding to start event", "error", err)
+					return
+				}
+
 				return
 			}
 

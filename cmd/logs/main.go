@@ -30,24 +30,18 @@ func main() {
 	cfg := Must(config.Get())
 
 	// Event bus
-	natsConn := Must(bus.NewNATSConnection(cfg.NatsURI))
+	nc := Must(bus.NewNATSConnection(cfg.NatsURI))
 	defer func() {
 		log.Infof("closing nats connection")
-		natsConn.Close()
+		nc.Close()
 	}()
 
-	natsEncodedConn := Must(bus.NewNATSEncoddedConnection(cfg.NatsURI))
-	defer func() {
-		log.Infof("closing encoded nats connection")
-		natsEncodedConn.Close()
-	}()
-
-	js := Must(jetstream.New(natsConn))
+	js := Must(jetstream.New(nc))
 
 	kv := Must(js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: cfg.KVBucketName}))
 	state := state.NewState(kv)
 
-	svc := logs.NewLogsService(natsEncodedConn, js, state).
+	svc := logs.NewLogsService(nc, js, state).
 		WithAddress(cfg.HttpAddress)
 
 	// TODO - add adapters here
