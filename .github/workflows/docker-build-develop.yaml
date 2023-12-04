@@ -235,7 +235,7 @@ jobs:
         with:
           distribution: goreleaser-pro
           version: latest
-          args: -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd-commit-only.yml continue --merge
+          args: continue --merge
         env:
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
