@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/event/bus"
-	"github.com/kubeshop/testkube/pkg/logs/consumer"
+	"github.com/kubeshop/testkube/pkg/logs/adapter"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/logs/state"
 )
@@ -43,12 +43,12 @@ func TestLogs_EventsFlow(t *testing.T) {
 	log := NewLogsService(nc, js, state).
 		WithRandomPort()
 
-	t.Run("should remove all consumers when stop event handled", func(t *testing.T) {
-		// given example consumers
+	t.Run("should remove all adapters when stop event handled", func(t *testing.T) {
+		// given example adapters
 		a := NewMockAdapter("aaa")
 		b := NewMockAdapter("bbb")
 
-		// with 4 consumers (the same consumer is added 4 times so it'll receive 4 times more messages)
+		// with 4 adapters (the same adapter is added 4 times so it'll receive 4 times more messages)
 		log.AddAdapter(a)
 		log.AddAdapter(b)
 
@@ -80,18 +80,18 @@ func TestLogs_EventsFlow(t *testing.T) {
 		_, err = stream.Stop(ctx)
 		assert.NoError(t, err)
 
-		// then all consumers should be gracefully stopped
+		// then all adapters should be gracefully stopped
 		assert.Equal(t, 0, log.GetConsumersStats(ctx).Count)
 	})
 
-	t.Run("should react on new message and pass data to consumer", func(t *testing.T) {
+	t.Run("should react on new message and pass data to adapter", func(t *testing.T) {
 
 		// given example adapter
 		a := NewMockAdapter()
 
 		messagesCount := 10
 
-		// with 4 consumers (the same consumer is added 4 times so it'll receive 4 times more messages)
+		// with 4 adapters (the same adapter is added 4 times so it'll receive 4 times more messages)
 		log.AddAdapter(a)
 		log.AddAdapter(a)
 		log.AddAdapter(a)
@@ -128,16 +128,16 @@ func TestLogs_EventsFlow(t *testing.T) {
 		_, err = stream.Stop(ctx)
 		assert.NoError(t, err)
 
-		// then we should have 4*4 messages in consumer
+		// then we should have 4*4 messages in adapter
 		assert.Equal(t, 4*messagesCount, len(a.Messages))
 	})
 
 }
 
-// Mock consumer
-var _ consumer.Adapter = &MockAdapter{}
+// Mock adapter
+var _ adapter.Adapter = &MockAdapter{}
 
-// NewMockAdapter creates new mocked consumer to check amount of messages passed to it
+// NewMockAdapter creates new mocked adapter to check amount of messages passed to it
 func NewMockAdapter(name ...string) *MockAdapter {
 	n := "default"
 	if len(name) > 0 {

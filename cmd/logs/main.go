@@ -12,8 +12,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/logs"
+	"github.com/kubeshop/testkube/pkg/logs/adapter"
 	"github.com/kubeshop/testkube/pkg/logs/config"
-	"github.com/kubeshop/testkube/pkg/logs/consumer"
 	"github.com/kubeshop/testkube/pkg/logs/state"
 
 	"github.com/nats-io/nats.go/jetstream"
@@ -45,7 +45,7 @@ func main() {
 		WithAddress(cfg.HttpAddress)
 
 	// TODO - add adapters here
-	svc.AddAdapter(consumer.NewDummyAdapter())
+	svc.AddAdapter(adapter.NewDummyAdapter())
 
 	g.Add(func() error {
 		err := interrupt(log, ctx)
