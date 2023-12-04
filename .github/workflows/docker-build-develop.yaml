@@ -193,7 +193,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd-commit-only.yml --snapshot
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd-commit-only.yml --clean --split
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
