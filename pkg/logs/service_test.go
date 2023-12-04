@@ -3,7 +3,6 @@ package logs
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"sync"
 	"testing"
 	"time"
@@ -19,22 +18,18 @@ import (
 )
 
 func TestInitConsumer(t *testing.T) {
-	event := events.Trigger{Id: "2"} ///rand.String(10)}
+	t.Parallel()
+
+	event := events.Trigger{Id: "2"}
 
 	streamName := StreamPrefix + event.Id
 
-	// TODO - this one don't work correctly - create subscriber don't work here
 	ns, nc := n.TestServerWithConnection()
 	defer ns.Shutdown()
-
-	// enbable this to make this test pass :/
-	// nc, err := n.NewNATSConnection("nats://localhost:4222")
-	// assert.NoError(t, err)
 
 	js, err := jetstream.New(nc)
 	assert.NoError(t, err)
 
-	// ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
 	defer cancel()
 
@@ -71,6 +66,7 @@ func TestInitConsumer(t *testing.T) {
 }
 
 func TestLogs(t *testing.T) {
+	t.Parallel()
 
 	ctx := context.Background()
 
@@ -181,35 +177,4 @@ func (s *MockAdapter) Stop(id string) error {
 
 func (s *MockAdapter) Name() string {
 	return "mock"
-}
-
-func TestToDeleteInLoop(t *testing.T) {
-
-	toDelete := []string{"1", "2", "3", "4", "5"}
-
-	for {
-
-	start:
-
-		fmt.Printf("starting: %+v\n", toDelete)
-
-		for i := range toDelete {
-			if rand.Intn(2) == 0 {
-				fmt.Printf("deleting %+v\n", i)
-
-				if len(toDelete) > 1 {
-					toDelete = append(toDelete[:i], toDelete[i+1:]...)
-				} else {
-					toDelete = []string{}
-				}
-				goto start
-			}
-		}
-
-		if len(toDelete) == 0 {
-			break
-		}
-	}
-
-	t.Fail()
 }
