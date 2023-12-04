@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/nats-io/nats.go/jetstream"
+
 	"github.com/kubeshop/testkube/pkg/logs/consumer"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/logs/state"
-	"github.com/nats-io/nats.go/jetstream"
 )
 
 const (
