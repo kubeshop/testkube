@@ -89,7 +89,7 @@ func TestLogs_EventsFlow(t *testing.T) {
 		// given example adapter
 		a := NewMockAdapter()
 
-		messagesCount := 10
+		messagesCount := 10000
 
 		// with 4 adapters (the same adapter is added 4 times so it'll receive 4 times more messages)
 		log.AddAdapter(a)
