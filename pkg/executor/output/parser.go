@@ -153,9 +153,11 @@ func parseLogs(b []byte) ([]Output, error) {
 				})
 				continue
 			}
+			message := getResultMessage(*log.Result)
 			logs = append(logs, Output{
-				Type_:  TypeResult,
-				Result: log.Result,
+				Type_:   TypeResult,
+				Content: message,
+				Result:  log.Result,
 			})
 			continue
 		}
@@ -200,9 +202,11 @@ func parseContainerLogs(b []byte) ([]Output, error) {
 
 		if log.Type_ == TypeResult &&
 			log.Result != nil && log.Result.Status != nil {
+			message := getResultMessage(*log.Result)
 			logs = append(logs, Output{
-				Type_:  TypeResult,
-				Result: log.Result,
+				Type_:   TypeResult,
+				Content: message,
+				Result:  log.Result,
 			})
 
 			continue
