@@ -89,12 +89,14 @@ func (c NATSStream) PushBytes(ctx context.Context, chunk []byte) error {
 	return err
 }
 
+// Start emits start event to the stream - logs service will handle start and create new stream
 func (c NATSStream) Start(ctx context.Context) error {
 	event := events.Trigger{Id: c.id}
 	b, _ := json.Marshal(event)
 	return c.nc.Publish(StartSubject, b)
 }
 
+// Stop emits stop event to the stream - logs service will handle stop and close stream and all subscribers
 func (c NATSStream) Stop(ctx context.Context) error {
 	event := events.Trigger{Id: c.id}
 	b, _ := json.Marshal(event)
