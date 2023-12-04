@@ -19,31 +19,31 @@ import (
 func TestLogs_EventsFlow(t *testing.T) {
 	t.Parallel()
 
-	// given context with 1s deadline
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(1*time.Minute))
-	defer cancel()
-
-	// and NATS test server with connection
-	ns, nc := bus.TestServerWithConnection()
-	defer ns.Shutdown()
-
-	// and jetstream configured
-	js, err := jetstream.New(nc)
-	assert.NoError(t, err)
-
-	// and KV store
-	kv, err := js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: "state-test"})
-	assert.NoError(t, err)
-	assert.NotNil(t, kv)
-
-	// and logs state manager
-	state := state.NewState(kv)
-
-	// and initialized log service
-	log := NewLogsService(nc, js, state).
-		WithRandomPort()
-
 	t.Run("should remove all adapters when stop event handled", func(t *testing.T) {
+		// given context with 1s deadline
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(1*time.Minute))
+		defer cancel()
+
+		// and NATS test server with connection
+		ns, nc := bus.TestServerWithConnection()
+		defer ns.Shutdown()
+
+		// and jetstream configured
+		js, err := jetstream.New(nc)
+		assert.NoError(t, err)
+
+		// and KV store
+		kv, err := js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: "state-test"})
+		assert.NoError(t, err)
+		assert.NotNil(t, kv)
+
+		// and logs state manager
+		state := state.NewState(kv)
+
+		// and initialized log service
+		log := NewLogsService(nc, js, state).
+			WithRandomPort()
+
 		// given example adapters
 		a := NewMockAdapter("aaa")
 		b := NewMockAdapter("bbb")
@@ -85,6 +85,29 @@ func TestLogs_EventsFlow(t *testing.T) {
 	})
 
 	t.Run("should react on new message and pass data to adapter", func(t *testing.T) {
+		// given context with 1s deadline
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(1*time.Minute))
+		defer cancel()
+
+		// and NATS test server with connection
+		ns, nc := bus.TestServerWithConnection()
+		defer ns.Shutdown()
+
+		// and jetstream configured
+		js, err := jetstream.New(nc)
+		assert.NoError(t, err)
+
+		// and KV store
+		kv, err := js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: "state-test"})
+		assert.NoError(t, err)
+		assert.NotNil(t, kv)
+
+		// and logs state manager
+		state := state.NewState(kv)
+
+		// and initialized log service
+		log := NewLogsService(nc, js, state).
+			WithRandomPort()
 
 		// given example adapter
 		a := NewMockAdapter()
@@ -133,6 +156,30 @@ func TestLogs_EventsFlow(t *testing.T) {
 	})
 
 	t.Run("can get stats about consumers in given pod", func(t *testing.T) {
+		// given context with 1s deadline
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(1*time.Minute))
+		defer cancel()
+
+		// and NATS test server with connection
+		ns, nc := bus.TestServerWithConnection()
+		defer ns.Shutdown()
+
+		// and jetstream configured
+		js, err := jetstream.New(nc)
+		assert.NoError(t, err)
+
+		// and KV store
+		kv, err := js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: "state-test"})
+		assert.NoError(t, err)
+		assert.NotNil(t, kv)
+
+		// and logs state manager
+		state := state.NewState(kv)
+
+		// and initialized log service
+		log := NewLogsService(nc, js, state).
+			WithRandomPort()
+
 		// given example adapters
 		a := NewMockAdapter("aaa")
 		b := NewMockAdapter("bbb")
