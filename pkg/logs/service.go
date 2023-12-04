@@ -14,7 +14,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/logs/consumer"
+	"github.com/kubeshop/testkube/pkg/logs/adapter"
 	"github.com/kubeshop/testkube/pkg/logs/state"
 )
 
@@ -25,7 +25,7 @@ const (
 func NewLogsService(nats *nats.Conn, js jetstream.JetStream, state state.Interface) *LogsService {
 	return &LogsService{
 		nats:              nats,
-		adapters:          []consumer.Adapter{},
+		adapters:          []adapter.Adapter{},
 		js:                js,
 		log:               log.DefaultLogger.With("service", "logs-service"),
 		Ready:             make(chan struct{}, 1),
@@ -39,7 +39,7 @@ type LogsService struct {
 	log      *zap.SugaredLogger
 	nats     *nats.Conn
 	js       jetstream.JetStream
-	adapters []consumer.Adapter
+	adapters []adapter.Adapter
 
 	Ready chan struct{}
 
@@ -59,7 +59,7 @@ type LogsService struct {
 
 // AddAdapter adds new adapter to logs service adapters will be configred based on given mode
 // e.g. cloud mode will get cloud adapter to store logs directly on the cloud
-func (ls *LogsService) AddAdapter(a consumer.Adapter) {
+func (ls *LogsService) AddAdapter(a adapter.Adapter) {
 	ls.adapters = append(ls.adapters, a)
 }
 

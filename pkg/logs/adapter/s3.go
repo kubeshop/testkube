@@ -1,4 +1,4 @@
-package consumer
+package adapter
 
 import "github.com/kubeshop/testkube/pkg/logs/events"
 

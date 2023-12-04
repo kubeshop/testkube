@@ -9,7 +9,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 
-	"github.com/kubeshop/testkube/pkg/logs/consumer"
+	"github.com/kubeshop/testkube/pkg/logs/adapter"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/logs/state"
 )
@@ -34,8 +34,8 @@ type Consumer struct {
 	Instance jetstream.Consumer
 }
 
-func (ls *LogsService) initConsumer(ctx context.Context, consumer consumer.Adapter, streamName, id string, i int) (jetstream.Consumer, error) {
-	name := fmt.Sprintf("lc%s%s%d", id, consumer.Name(), i)
+func (ls *LogsService) initConsumer(ctx context.Context, a adapter.Adapter, streamName, id string, i int) (jetstream.Consumer, error) {
+	name := fmt.Sprintf("lc%s%s%d", id, a.Name(), i)
 	return ls.js.CreateOrUpdateConsumer(ctx, streamName, jetstream.ConsumerConfig{
 		Name:    name,
 		Durable: name,
@@ -54,8 +54,8 @@ func (ls *LogsService) createStream(ctx context.Context, event events.Trigger) (
 }
 
 // handleMessage will handle incoming message from logs stream and proxy it to given adapter
-func (ls *LogsService) handleMessage(adapter consumer.Adapter, event events.Trigger) func(msg jetstream.Msg) {
-	log := ls.log.With("id", event.Id, "consumer", adapter.Name())
+func (ls *LogsService) handleMessage(a adapter.Adapter, event events.Trigger) func(msg jetstream.Msg) {
+	log := ls.log.With("id", event.Id, "consumer", a.Name())
 
 	return func(msg jetstream.Msg) {
 		log.Infow("got message", "data", string(msg.Data()))
@@ -71,7 +71,7 @@ func (ls *LogsService) handleMessage(adapter consumer.Adapter, event events.Trig
 			return
 		}
 
-		err = adapter.Notify(event.Id, logChunk)
+		err = a.Notify(event.Id, logChunk)
 		if err != nil {
 			if err := msg.Nak(); err != nil {
 				log.Errorw("error nacking message", "error", err)
@@ -89,8 +89,6 @@ func (ls *LogsService) handleMessage(adapter consumer.Adapter, event events.Trig
 // handleStart will handle start event and create logs consumers, also manage state of given (execution) id
 func (ls *LogsService) handleStart(ctx context.Context) func(msg *nats.Msg) {
 	return func(msg *nats.Msg) {
-		fmt.Printf("%+v\n", "got MSG")
-
 		event := events.Trigger{}
 		err := json.Unmarshal(msg.Data, &event)
 		if err != nil {
@@ -136,6 +134,7 @@ func (ls *LogsService) handleStart(ctx context.Context) func(msg *nats.Msg) {
 			l.Infow("consumer started", "consumer", adapter.Name(), "id", event.Id, "stream", streamName)
 		}
 
+		// reply to start event that everything was initialized correctly
 		err = msg.Respond([]byte("ok"))
 		if err != nil {
 			log.Errorw("error responding to start event", "error", err)
