@@ -132,6 +132,48 @@ func TestLogs_EventsFlow(t *testing.T) {
 		assert.Equal(t, 4*messagesCount, len(a.Messages))
 	})
 
+	t.Run("can get stats about consumers in given pod", func(t *testing.T) {
+		// given example adapters
+		a := NewMockAdapter("aaa")
+		b := NewMockAdapter("bbb")
+
+		// with 4 adapters (the same adapter is added 4 times so it'll receive 4 times more messages)
+		log.AddAdapter(a)
+		log.AddAdapter(b)
+
+		// and log service running
+		go func() {
+			log.Run(ctx)
+		}()
+
+		// and ready to get messages
+		<-log.Ready
+
+		// and logs stream client
+		stream, err := NewLogsStream(nc, "stop-test")
+		assert.NoError(t, err)
+
+		// and initialized log stream for given ID
+		meta, err := stream.Init(ctx)
+		assert.NotEmpty(t, meta.Name)
+		assert.NoError(t, err)
+
+		// when start event triggered
+		_, err = stream.Start(ctx)
+		assert.NoError(t, err)
+
+		// then we should have 2 consumers
+		stats := log.GetConsumersStats(ctx)
+		assert.Equal(t, 2, stats.Count)
+
+		// when stop event triggered
+		_, err = stream.Stop(ctx)
+		assert.NoError(t, err)
+
+		// then all adapters should be gracefully stopped
+		assert.Equal(t, 0, log.GetConsumersStats(ctx).Count)
+	})
+
 }
 
 // Mock adapter
