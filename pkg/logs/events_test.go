@@ -149,12 +149,6 @@ func TestLogs_EventsFlow(t *testing.T) {
 
 }
 
-func TestLogsService_RunHealthchekHandler(t *testing.T) {
-
-	t.Parallel()
-
-}
-
 // Mock consumer
 var _ consumer.Adapter = &MockAdapter{}
 

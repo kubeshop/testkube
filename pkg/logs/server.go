@@ -15,7 +15,7 @@ func (ls *LogsService) RunHealthCheckHandler(ctx context.Context) error {
 	})
 
 	ls.httpServer = &http.Server{
-		Addr: ":8080",
+		Addr: ls.httpAddress,
 	}
 
 	ls.log.Infow("starting health check handler", "address", ls.httpAddress)
