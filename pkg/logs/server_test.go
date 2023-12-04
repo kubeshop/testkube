@@ -13,6 +13,8 @@ import (
 )
 
 func TestLogsService_RunHealthcheckHandler(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	svc := LogsService{log: log.DefaultLogger}

@@ -127,15 +127,11 @@ func TestLogs_EventsFlow(t *testing.T) {
 		err = stream.Start(ctx)
 		assert.NoError(t, err)
 
-		// and data are pushed to the log stream
-		err = stream.Push(ctx, events.NewLogChunk(time.Now(), []byte("hello 1")))
-		assert.NoError(t, err)
-		err = stream.Push(ctx, events.NewLogChunk(time.Now(), []byte("hello 2")))
-		assert.NoError(t, err)
-		err = stream.Push(ctx, events.NewLogChunk(time.Now(), []byte("hello 3")))
-		assert.NoError(t, err)
-		err = stream.Push(ctx, events.NewLogChunk(time.Now(), []byte("hello 4")))
-		assert.NoError(t, err)
+		for i := 0; i < 4; i++ {
+			// and when data pushed to the log stream
+			err = stream.Push(ctx, events.NewLogChunk(time.Now(), []byte("hello")))
+			assert.NoError(t, err)
+		}
 
 		// and wait for message to be propagated
 		err = stream.Stop(ctx)
