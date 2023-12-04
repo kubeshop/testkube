@@ -205,6 +205,7 @@ jobs:
           version: latest
           args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd-commit-only.yml --clean --split
         env:
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
@@ -232,10 +233,11 @@ jobs:
       - name: Release
         uses: goreleaser/goreleaser-action@v4
         with:
-          distribution: goreleaser
+          distribution: goreleaser-pro
           version: latest
           args: -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd-commit-only.yml continue --merge
         env:
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
