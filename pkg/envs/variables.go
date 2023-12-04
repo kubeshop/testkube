@@ -1,9 +1,8 @@
 package envs
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/kelseyhightower/envconfig"
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -54,6 +53,7 @@ func LoadTestkubeVariables() (Params, error) {
 		output.PrintLogf("%s Failed to read environment variables: %s", ui.IconCross, err.Error())
 		return params, errors.Errorf("failed to read environment variables: %v", err)
 	}
+
 	output.PrintLogf("%s Environment variables read successfully", ui.IconCheckMark)
 	printParams(params)
 

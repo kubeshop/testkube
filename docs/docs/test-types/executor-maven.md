@@ -2,11 +2,18 @@ import Admonition from "@theme/Admonition";
 
 # Maven
 
-Testkube allows you to run Maven-based tasks which could be also tests. For example, we can easily run JUnit tests in Testkube now. 
+Testkube allows you to run Maven-based tasks which could be also tests. For example, we can easily run JUnit tests in Testkube now.
 
 * Default command for this executor: `mvn`
 * Default arguments for this executor command: `--settings` `<settingsFile>` `<goalName>` `-Duser.home` `<mavenHome>`
-(parameters in `<>` are calculated at test execution)
+
+Parameters in `<>` are calculated at test execution:
+
+* `<settingsFile>` - Will be calculated based on the contents of the `--variables-file` argument; when missing, this will be skipped.
+* `<goalName>` - Will be set to `test` if the test type is `maven/test`, `integration-test` in the case of `maven/integration-test`, and it will be empty on test type `maven/project`.
+* `<mavenHome>` - Will be set to `/home/maven`, unless the user of the image has been changed.
+
+[See more at "Redefining the Prebuilt Executor Command and Arguments" on the Creating Test page.](../articles/creating-tests.md#redefining-the-prebuilt-executor-command-and-arguments)
 
 export const ExecutorInfo = () => {
    return (
@@ -77,7 +84,11 @@ kubectl testkube run maven-example-project --args='runMyCustomTask'
 kubectl testkube create test --git-uri https://github.com/kubeshop/testkube-executor-maven.git --git-path examples/hello-maven --type maven/test --name maven-example-test --git-branch main
 ```
 
+Unless the `kubectl testkube run test maven-example-test...` does not overwrite it, this is equal to creating the following command in the `hello-maven` folder:
 
+```sh
+$ mvn test -Duser.home /home/maven 
+```
 
 ## Running a Test
 
@@ -132,6 +143,18 @@ Downloaded from central: https://repo.maven.apache.org/maven2/org/junit/platform
 
 Status Test execution completed with success 🥇
 ```
+
+## Using Different Commands and Arguments
+
+Updating the commands and arguments is possible on both test and execution level.
+
+As an example, during a debug session, you could pass `pwd` in as the command in order to find out the current path:
+
+```sh
+kubectl testkube run test maven-example-test --command "pwd" --args-mode "override" --args "-L"
+```
+
+If you check the execution logs, you will see that the path "/data/repo" is printed out. No Gradle command will be executed in this case, but you will notice that the rest of the preparations, like cloning the repo, have been done.
 
 ## Using Different JDKs 
 

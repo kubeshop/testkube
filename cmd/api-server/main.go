@@ -236,9 +236,10 @@ func main() {
 		mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
 		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)
 		ui.ExitOnError("Getting mongo database", err)
-		mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
+		isDocDb := cfg.APIMongoDBType == storage.TypeDocDB
+		mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb)
 		resultsRepository = mongoResultsRepository
-		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
+		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb)
 		configRepository = configrepository.NewMongoRepository(db)
 		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
 		minioClient := newStorageClient(cfg)
@@ -354,7 +355,7 @@ func main() {
 		ui.ExitOnError("Sync default executors", err)
 	}
 
-	jobTemplate, err := parser.ParseJobTemplate(cfg)
+	jobTemplate, slavePodTemplate, err := parser.ParseJobTemplates(cfg)
 	if err != nil {
 		ui.ExitOnError("Creating job templates", err)
 	}
@@ -364,6 +365,7 @@ func main() {
 		cfg.TestkubeNamespace,
 		images,
 		jobTemplate,
+		slavePodTemplate,
 		cfg.JobServiceAccountName,
 		metrics,
 		eventsEmitter,
@@ -453,7 +455,6 @@ func main() {
 		executor,
 		containerExecutor,
 		metrics,
-		jobTemplate,
 		sched,
 		slackLoader,
 		storageClient,

@@ -9,9 +9,10 @@ testkube [flags]
 ### Options
 
 ```
-  -a, --api-uri string     api uri, default value read from config if set (default "https://demo.testkube.io/results/v1")
+  -a, --api-uri string     api uri, default value read from config if set (default "https://demo.testkube.io/results")
   -c, --client string      client used for connecting to Testkube API one of proxy|direct (default "proxy")
   -h, --help               help for testkube
+      --insecure           insecure connection for direct client
       --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")
       --oauth-enabled      enable oauth
       --verbose            show additional debug messages
@@ -21,7 +22,7 @@ testkube [flags]
 
 * [testkube abort](testkube_abort.md)	 - Abort tests or test suites
 * [testkube agent](testkube_agent.md)	 - Testkube Pro Agent related commands
-* [testkube pro](testkube_pro.md)	 - Testkube Pro commands
+* [testkube cloud](testkube_cloud.md)	 - [Deprecated] Testkube Cloud commands
 * [testkube completion](testkube_completion.md)	 - Generate the autocompletion script for the specified shell
 * [testkube config](testkube_config.md)	 - Set feature configuration value
 * [testkube create](testkube_create.md)	 - Create resource
@@ -37,6 +38,7 @@ testkube [flags]
 * [testkube init](testkube_init.md)	 - Install Helm chart registry in current kubectl context and update dependencies
 * [testkube login](testkube_login.md)	 - Login to Testkube Pro
 * [testkube migrate](testkube_migrate.md)	 - manual migrate command
+* [testkube pro](testkube_pro.md)	 - Testkube Pro commands
 * [testkube purge](testkube_purge.md)	 - Uninstall Helm chart registry from current kubectl context
 * [testkube run](testkube_run.md)	 - Runs tests or test suites
 * [testkube set](testkube_set.md)	 - Set resources

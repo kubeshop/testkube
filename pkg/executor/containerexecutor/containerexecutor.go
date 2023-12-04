@@ -132,7 +132,6 @@ type JobOptions struct {
 	Command                   []string
 	Args                      []string
 	WorkingDir                string
-	ImageOverride             string
 	Jsn                       string
 	TestName                  string
 	InitImage                 string
@@ -571,28 +570,30 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 	}
 
 	var command []string
-	switch {
-	case len(options.ExecutorSpec.Command) != 0:
+	if len(options.ExecutorSpec.Command) != 0 {
 		command = options.ExecutorSpec.Command
+	}
 
-	case options.TestSpec.ExecutionRequest != nil &&
-		len(options.TestSpec.ExecutionRequest.Command) != 0:
+	if options.TestSpec.ExecutionRequest != nil &&
+		len(options.TestSpec.ExecutionRequest.Command) != 0 {
 		command = options.TestSpec.ExecutionRequest.Command
+	}
 
-	case len(options.Request.Command) != 0:
+	if len(options.Request.Command) != 0 {
 		command = options.Request.Command
 	}
 
 	var image string
-	switch {
-	case options.ExecutorSpec.Image != "":
+	if options.ExecutorSpec.Image != "" {
 		image = options.ExecutorSpec.Image
+	}
 
-	case options.TestSpec.ExecutionRequest != nil &&
-		options.TestSpec.ExecutionRequest.Image != "":
+	if options.TestSpec.ExecutionRequest != nil &&
+		options.TestSpec.ExecutionRequest.Image != "" {
 		image = options.TestSpec.ExecutionRequest.Image
+	}
 
-	case options.Request.Image != "":
+	if options.Request.Image != "" {
 		image = options.Request.Image
 	}
 

@@ -83,3 +83,62 @@ spec:
     negativeTest: true
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
     activeDeadlineSeconds: 180
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke
+  labels:
+    core-tests: executors
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+  executionRequest:
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke-slaves
+  labels:
+    core-tests: executors
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+  executionRequest:
+    variables:
+      SLAVES_COUNT:
+        name: SLAVES_COUNT
+        value: "2"
+        type: basic
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi

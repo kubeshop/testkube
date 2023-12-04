@@ -55,3 +55,7 @@ func ParseTestSuiteExecutionStatusList(source, separator string) (statusList Tes
 
 	return statusList, nil
 }
+
+func TestSuiteExecutionStatusString(ptr *TestSuiteExecutionStatus) string {
+	return string(*ptr)
+}

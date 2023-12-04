@@ -6,35 +6,58 @@ import Admonition from "@theme/Admonition";
 
 Testkube's k6 executor provides a convenient way of running k6 tests.
 
-* Default command for this executor: `k6`
-* Default arguments for this executor command: `<k6Command>` `<envVars>` `<runPath>`
-(parameters in `<>` are calculated at test execution)
+- Default command for this executor: `k6`
+- Default arguments for this executor command: `<k6Command>` `<envVars>` `<runPath>`
 
-<iframe width="100%" height="315" src="https://www.youtube.com/embed/e0NjGvGv_0c" title="YouTube video 
-player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; 
-picture-in-picture; web-share" allowfullscreen></iframe>
+Parameters in `<>` are calculated at test execution:
+
+- `<k6Command>` - `cloud` or `run` depending on the test type
+- `<envVars>` - list of environment variables
+- `<runPath>` - path to the test files
+
+[See more at "Redefining the Prebuilt Executor Command and Arguments" on the Creating Test page.](../articles/creating-tests.md#redefining-the-prebuilt-executor-command-and-arguments)
+
+<iframe
+  width="100%"
+  height="315"
+  src="https://www.youtube.com/embed/e0NjGvGv_0c"
+  title="YouTube video 
+player"
+  frameborder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; 
+picture-in-picture; web-share"
+  allowfullscreen
+></iframe>
 
 export const ExecutorInfo = () => {
   return (
     <div>
       <Admonition type="info" icon="🎓" title="What is k6?">
         <ul>
-          <li><a href="https://k6.io/docs/">k6</a> is a free, developer-centric, and extensible open-source load testing tool that makes performance testing easy and productive for engineering teams.</li>
+          <li>
+            <a href="https://k6.io/docs/">k6</a> is a free, developer-centric,
+            and extensible open-source load testing tool that makes performance
+            testing easy and productive for engineering teams.
+          </li>
         </ul>
         <b>What can I do with k6?</b>
         <ul>
-          <li>With k6, you can test the reliability and performance of your systems and catch performance regressions and problems earlier. K6 will help you to build resilient and performant applications that scale.</li>
+          <li>
+            With k6, you can test the reliability and performance of your
+            systems and catch performance regressions and problems earlier. K6
+            will help you to build resilient and performant applications that
+            scale.
+          </li>
         </ul>
         K6 is developed by Grafana Labs and the Open-Source community.
       </Admonition>
     </div>
   );
-}
+};
 
 <ExecutorInfo />
 
 **Check out our [blog post](https://kubeshop.io/blog/load-testing-in-kubernetes-with-k6-and-testkube) to follow tutorial steps to harness the power of k6 load testing in Kubernetes with Testkube's CLI and API.**
-
 
 ## Example k6 test
 
@@ -152,6 +175,7 @@ testkube run test -k6-test --args '--vus 100 --no-connection-reuse'
 <TabItem value="crd" label="Custom Resource">
 
 #### Git File
+
 ```yaml
 apiVersion: tests.testkube.io/v3
 kind: Test

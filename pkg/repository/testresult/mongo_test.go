@@ -107,7 +107,7 @@ func TestTestExecutionsMetrics(t *testing.T) {
 
 func getRepository() (*MongoRepository, error) {
 	db, err := storage.GetMongoDatabase(mongoDns, mongoDbName, storage.TypeMongoDB, false, nil)
-	repository := NewMongoRepository(db, true)
+	repository := NewMongoRepository(db, true, false)
 	return repository, err
 }
 

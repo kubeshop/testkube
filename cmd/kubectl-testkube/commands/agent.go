@@ -11,7 +11,7 @@ import (
 func NewAgentCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "agent",
-		Short: "Testkube Cloud Agent related commands",
+		Short: "Testkube Pro Agent related commands",
 		Run: func(cmd *cobra.Command, args []string) {
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)

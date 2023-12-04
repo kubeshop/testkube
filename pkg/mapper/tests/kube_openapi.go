@@ -127,6 +127,30 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 		}
 	}
 
+	var podRequest *testkube.PodRequest
+	if specExecutionRequest.SlavePodRequest != nil {
+		podRequest = &testkube.PodRequest{}
+		if specExecutionRequest.SlavePodRequest.Resources != nil {
+			podRequest.Resources = &testkube.PodResourcesRequest{}
+			if specExecutionRequest.SlavePodRequest.Resources.Requests != nil {
+				podRequest.Resources.Requests = &testkube.ResourceRequest{
+					Cpu:    specExecutionRequest.SlavePodRequest.Resources.Requests.Cpu,
+					Memory: specExecutionRequest.SlavePodRequest.Resources.Requests.Memory,
+				}
+			}
+
+			if specExecutionRequest.SlavePodRequest.Resources.Limits != nil {
+				podRequest.Resources.Limits = &testkube.ResourceRequest{
+					Cpu:    specExecutionRequest.SlavePodRequest.Resources.Limits.Cpu,
+					Memory: specExecutionRequest.SlavePodRequest.Resources.Limits.Memory,
+				}
+			}
+		}
+
+		podRequest.PodTemplate = specExecutionRequest.SlavePodRequest.PodTemplate
+		podRequest.PodTemplateReference = specExecutionRequest.SlavePodRequest.PodTemplateReference
+	}
+
 	return &testkube.ExecutionRequest{
 		Name:                               specExecutionRequest.Name,
 		TestSuiteName:                      specExecutionRequest.TestSuiteName,
@@ -164,6 +188,7 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 		NegativeTest:                       specExecutionRequest.NegativeTest,
 		EnvConfigMaps:                      MapEnvReferences(specExecutionRequest.EnvConfigMaps),
 		EnvSecrets:                         MapEnvReferences(specExecutionRequest.EnvSecrets),
+		SlavePodRequest:                    podRequest,
 	}
 }
 
@@ -502,6 +527,38 @@ func MapSpecExecutionRequestToExecutionUpdateRequest(
 		}
 
 		executionRequest.ArtifactRequest = &artifactRequest
+	}
+
+	if request.SlavePodRequest != nil {
+		podRequest := &testkube.PodUpdateRequest{
+			PodTemplate:          &request.SlavePodRequest.PodTemplate,
+			PodTemplateReference: &request.SlavePodRequest.PodTemplateReference,
+		}
+
+		if request.SlavePodRequest.Resources != nil {
+			resources := &testkube.PodResourcesUpdateRequest{}
+			if request.SlavePodRequest.Resources.Requests != nil {
+				requests := testkube.ResourceUpdateRequest{
+					Cpu:    &request.SlavePodRequest.Resources.Requests.Cpu,
+					Memory: &request.SlavePodRequest.Resources.Requests.Memory,
+				}
+
+				resources.Requests = &requests
+			}
+
+			if request.SlavePodRequest.Resources.Limits != nil {
+				limits := testkube.ResourceUpdateRequest{
+					Cpu:    &request.SlavePodRequest.Resources.Limits.Cpu,
+					Memory: &request.SlavePodRequest.Resources.Limits.Memory,
+				}
+
+				resources.Limits = &limits
+			}
+
+			podRequest.Resources = &resources
+		}
+
+		executionRequest.SlavePodRequest = &podRequest
 	}
 
 	return executionRequest

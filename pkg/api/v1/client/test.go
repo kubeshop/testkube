@@ -167,6 +167,7 @@ func (c TestClient) ExecuteTest(id, executionName string, options ExecuteTestOpt
 		EnvConfigMaps:                      options.EnvConfigMaps,
 		EnvSecrets:                         options.EnvSecrets,
 		RunningContext:                     options.RunningContext,
+		SlavePodRequest:                    options.SlavePodRequest,
 	}
 
 	body, err := json.Marshal(request)
@@ -208,6 +209,7 @@ func (c TestClient) ExecuteTests(selector string, concurrencyLevel int, options 
 		NegativeTest:                       options.NegativeTest,
 		IsNegativeTestChangedOnRun:         options.IsNegativeTestChangedOnRun,
 		RunningContext:                     options.RunningContext,
+		SlavePodRequest:                    options.SlavePodRequest,
 	}
 
 	body, err := json.Marshal(request)

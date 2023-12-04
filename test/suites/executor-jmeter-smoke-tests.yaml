@@ -5,7 +5,7 @@ metadata:
   labels:
     app: testkube
 spec:
-  description: "jmeter executor smoke tests"
+  description: "jmeter and jmeterd executor smoke tests"
   steps:
   - stopOnFailure: false
     execute:
@@ -19,3 +19,9 @@ spec:
   - stopOnFailure: false
     execute:
     - test: jmeter-executor-smoke-env-and-property-values
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-slaves

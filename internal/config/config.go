@@ -51,6 +51,7 @@ type Config struct {
 	TestkubeContainerTemplateJob     string        `envconfig:"TESTKUBE_CONTAINER_TEMPLATE_JOB" default:""`
 	TestkubeContainerTemplateScraper string        `envconfig:"TESTKUBE_CONTAINER_TEMPLATE_SCRAPER" default:""`
 	TestkubeContainerTemplatePVC     string        `envconfig:"TESTKUBE_CONTAINER_TEMPLATE_PVC" default:""`
+	TestkubeTemplateSlavePod         string        `envconfig:"TESTKUBE_TEMPLATE_SLAVE_POD" default:""`
 	TestkubeConfigDir                string        `envconfig:"TESTKUBE_CONFIG_DIR" default:"config"`
 	TestkubeAnalyticsEnabled         bool          `envconfig:"TESTKUBE_ANALYTICS_ENABLED" default:"false"`
 	TestkubeReadonlyExecutors        bool          `envconfig:"TESTKUBE_READONLY_EXECUTORS" default:"false"`

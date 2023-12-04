@@ -128,3 +128,69 @@ func TestOSFileSystem_OpenFileBuffered_Integration(t *testing.T) {
 		t.Errorf("unexpected data read from file: got %q, expected %q", string(data), "hello, world")
 	}
 }
+
+func TestOSFileSystem_Integration_ReadDir(t *testing.T) {
+	test.IntegrationTest(t)
+	t.Parallel()
+	// Setup: Create a temporary directory
+	tempDir, err := os.MkdirTemp("", "readDirTest")
+	if err != nil {
+		t.Fatalf("Failed to create temporary directory: %s", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create a few files in the directory
+	fileNames := []string{"file1.txt", "file2.txt", "file3.txt"}
+	for _, fName := range fileNames {
+		filePath := tempDir + "/" + fName
+		if _, err := os.Create(filePath); err != nil {
+			t.Fatalf("Failed to create file %s: %s", filePath, err)
+		}
+	}
+
+	// Execution: Call ReadDir
+	fs := NewOSFileSystem()
+	entries, err := fs.ReadDir(tempDir)
+	if err != nil {
+		t.Errorf("ReadDir returned error: %s", err)
+	}
+
+	// Verification: Check if the returned entries match the created files
+	if len(entries) != len(fileNames) {
+		t.Errorf("Expected %d entries, got %d", len(fileNames), len(entries))
+	}
+
+	found := make(map[string]bool)
+	for _, entry := range entries {
+		found[entry.Name()] = true
+	}
+
+	for _, fName := range fileNames {
+		if !found[fName] {
+			t.Errorf("File %s was not found in directory entries", fName)
+		}
+	}
+}
+
+func TestOSFileSystem_Getwd(t *testing.T) {
+	t.Parallel()
+
+	// Create an instance of OSFileSystem
+	fs := NewOSFileSystem()
+
+	// Execution: Call Getwd
+	wd, err := fs.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd returned error: %s", err)
+	}
+
+	// Verification: Check if the returned working directory matches os.Getwd
+	expectedWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("os.Getwd returned error: %s", err)
+	}
+
+	if wd != expectedWd {
+		t.Errorf("Expected working directory '%s', got '%s'", expectedWd, wd)
+	}
+}

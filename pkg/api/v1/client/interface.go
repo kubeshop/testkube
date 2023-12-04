@@ -66,7 +66,7 @@ type TestSuiteAPI interface {
 type TestSuiteExecutionAPI interface {
 	GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error)
 	ListTestSuiteExecutions(testsuite string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error)
-	WatchTestSuiteExecution(executionID string) (resp chan testkube.WatchTestSuiteExecutionResponse)
+	WatchTestSuiteExecution(executionID string) (execution chan testkube.TestSuiteExecution, err error)
 	AbortTestSuiteExecution(executionID string) error
 	AbortTestSuiteExecutions(testSuiteName string) error
 	GetTestSuiteExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
@@ -204,6 +204,7 @@ type ExecuteTestOptions struct {
 	EnvConfigMaps                      []testkube.EnvReference
 	EnvSecrets                         []testkube.EnvReference
 	RunningContext                     *testkube.RunningContext
+	SlavePodRequest                    *testkube.PodRequest
 }
 
 // ExecuteTestSuiteOptions contains test suite run options

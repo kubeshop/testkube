@@ -24,7 +24,7 @@ This executor is an extension of JMeter executor and has all the features of JMe
 
 1. **MASTER_OVERRIDE_JVM_ARGS / SLAVES_OVERRIDE_JVM_ARGS**: Used to override default memory options for JMeter master/slaves. Example: `MASTER_OVERRIDE_JVM_ARGS=-Xmn256m -Xms512m -Xmx512m`.
 
-2. **SLAVES_COUNT**: Specifies the number of slave pods required for Distributed JMeter tests. Example: `SLAVES_COUNT=3`. Default value of `SLAVES_COUNT` is 1.
+2. **SLAVES_COUNT**: Specifies the number of slave pods required for Distributed JMeter tests. Example: `SLAVES_COUNT=3`. If `SLAVES_COUNT` is not provided or is equal to 1, then the executor will run the test in standalone mode.
 
 3. **MASTER_ADDITIONAL_JVM_ARGS / SLAVES_ADDITIONAL_JMETER_ARGS**: Allows exporting additional JVM arguments for slaves/master. Example: `MASTER_ADDITIONAL_JVM_ARGS=-Xmx1024m -Xms512m -XX:MaxMetaspaceSize=256m`.
 

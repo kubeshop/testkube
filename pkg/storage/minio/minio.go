@@ -148,8 +148,9 @@ func (c *Client) Connect() error {
 	}
 	transport.TLSClientConfig = c.tlsConfig
 	opts := &minio.Options{
-		Creds:  creds,
-		Secure: c.ssl,
+		Creds:     creds,
+		Secure:    c.ssl,
+		Transport: transport,
 	}
 	if c.region != "" {
 		opts.Region = c.region

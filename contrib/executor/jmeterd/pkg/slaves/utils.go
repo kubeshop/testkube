@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/pkg/errors"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -13,7 +15,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
-	"github.com/kubeshop/testkube/pkg/executor/output"
 )
 
 const (
@@ -80,20 +81,23 @@ func isPodReady(c kubernetes.Interface, podName, namespace string) wait.Conditio
 	}
 }
 
-func getSlavesCount(count testkube.Variable) (int, error) {
+func GetSlavesCount(vars map[string]testkube.Variable) (int, error) {
+	count := vars[SlavesCount]
 	if count.Value == "" {
-		output.PrintLogf("Slaves count not provided in the SLAVES_COUNT env variable. Defaulting to %v slaves", defaultSlavesCount)
 		return defaultSlavesCount, nil
 	}
 
 	replicaCount, err := strconv.Atoi(count.Value)
 	if err != nil {
-		return 0, err
+		return 0, errors.Errorf("invalid SLAVES_COUNT value, expected integer, got: %v", count.Value)
+	}
+	if replicaCount < 1 {
+		return 0, errors.Errorf("SLAVES_COUNT must be at least 1")
 	}
 	return replicaCount, err
 }
 
-func ValidateAndGetSlavePodName(testName string, executionId string, currentSlaveCount int) string {
+func validateAndGetSlavePodName(testName string, executionId string, currentSlaveCount int) string {
 	slavePodName := fmt.Sprintf("%s-slave-%v-%s", testName, currentSlaveCount, executionId)
 	if len(slavePodName) > 64 {
 		//Get first 20 chars from testName name if pod name > 64

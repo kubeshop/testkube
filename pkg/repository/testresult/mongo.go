@@ -19,11 +19,12 @@ var _ Repository = (*MongoRepository)(nil)
 
 const CollectionName = "testresults"
 
-func NewMongoRepository(db *mongo.Database, allowDiskUse bool, opts ...MongoRepositoryOpt) *MongoRepository {
+func NewMongoRepository(db *mongo.Database, allowDiskUse, isDocDb bool, opts ...MongoRepositoryOpt) *MongoRepository {
 	r := &MongoRepository{
 		db:           db,
 		Coll:         db.Collection(CollectionName),
 		allowDiskUse: allowDiskUse,
+		isDocDb:      isDocDb,
 	}
 
 	for _, opt := range opts {
@@ -37,6 +38,7 @@ type MongoRepository struct {
 	db           *mongo.Database
 	Coll         *mongo.Collection
 	allowDiskUse bool
+	isDocDb      bool
 }
 
 func WithMongoRepositoryCollection(collection *mongo.Collection) MongoRepositoryOpt {
@@ -57,7 +59,49 @@ func (r *MongoRepository) GetByNameAndTestSuite(ctx context.Context, name, testS
 	return *result.UnscapeDots(), err
 }
 
+func (r *MongoRepository) slowGetLatestByTestSuite(ctx context.Context, testSuiteName string) (*testkube.TestSuiteExecution, error) {
+	opts := options.Aggregate()
+	pipeline := []bson.M{
+		{"$project": bson.M{"testsuite.name": 1, "starttime": 1, "endtime": 1}},
+		{"$match": bson.M{"testsuite.name": testSuiteName}},
+
+		{"$addFields": bson.M{
+			"updatetime": bson.M{"$max": bson.A{"$starttime", "$endtime"}},
+		}},
+		{"$group": bson.D{
+			{Key: "_id", Value: "$testsuite.name"},
+			{Key: "doc", Value: bson.M{"$max": bson.D{
+				{Key: "updatetime", Value: "$updatetime"},
+				{Key: "content", Value: "$$ROOT"},
+			}}},
+		}},
+		{"$sort": bson.M{"doc.updatetime": -1}},
+		{"$limit": 1},
+
+		{"$lookup": bson.M{"from": r.Coll.Name(), "localField": "doc.content._id", "foreignField": "_id", "as": "execution"}},
+		{"$replaceRoot": bson.M{"newRoot": bson.M{"$arrayElemAt": bson.A{"$execution", 0}}}},
+	}
+	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return nil, err
+	}
+	var items []testkube.TestSuiteExecution
+	err = cursor.All(ctx, &items)
+	if err != nil {
+		return nil, err
+	}
+	if len(items) == 0 {
+		return nil, mongo.ErrNoDocuments
+	}
+	return items[0].UnscapeDots(), err
+}
+
 func (r *MongoRepository) GetLatestByTestSuite(ctx context.Context, testSuiteName string) (*testkube.TestSuiteExecution, error) {
+	// Workaround, to use subset of MongoDB features available in AWS DocumentDB
+	if r.isDocDb {
+		return r.slowGetLatestByTestSuite(ctx, testSuiteName)
+	}
+
 	opts := options.Aggregate()
 	pipeline := []bson.M{
 		{"$group": bson.M{"_id": "$testsuite.name", "doc": bson.M{"$first": bson.M{}}}},
@@ -104,9 +148,64 @@ func (r *MongoRepository) GetLatestByTestSuite(ctx context.Context, testSuiteNam
 	return items[0].UnscapeDots(), err
 }
 
+func (r *MongoRepository) slowGetLatestByTestSuites(ctx context.Context, testSuiteNames []string) (executions []testkube.TestSuiteExecution, err error) {
+	documents := bson.A{}
+	for _, testSuiteName := range testSuiteNames {
+		documents = append(documents, bson.M{"testsuite.name": testSuiteName})
+	}
+
+	pipeline := []bson.M{
+		{"$project": bson.M{"testsuite.name": 1, "starttime": 1, "endtime": 1}},
+		{"$match": bson.M{"$or": documents}},
+
+		{"$addFields": bson.M{
+			"updatetime": bson.M{"$max": bson.A{"$starttime", "$endtime"}},
+		}},
+		{"$group": bson.D{
+			{Key: "_id", Value: "$testsuite.name"},
+			{Key: "doc", Value: bson.M{"$max": bson.D{
+				{Key: "updatetime", Value: "$updatetime"},
+				{Key: "content", Value: "$$ROOT"},
+			}}},
+		}},
+		{"$sort": bson.M{"doc.updatetime": -1}},
+
+		{"$lookup": bson.M{"from": r.Coll.Name(), "localField": "doc.content._id", "foreignField": "_id", "as": "execution"}},
+		{"$replaceRoot": bson.M{"newRoot": bson.M{"$arrayElemAt": bson.A{"$execution", 0}}}},
+	}
+
+	opts := options.Aggregate()
+	if r.allowDiskUse {
+		opts.SetAllowDiskUse(r.allowDiskUse)
+	}
+
+	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return nil, err
+	}
+	err = cursor.All(ctx, &executions)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(executions) == 0 {
+		return executions, nil
+	}
+
+	for i := range executions {
+		executions[i].UnscapeDots()
+	}
+	return executions, nil
+}
+
 func (r *MongoRepository) GetLatestByTestSuites(ctx context.Context, testSuiteNames []string) (executions []testkube.TestSuiteExecution, err error) {
 	if len(testSuiteNames) == 0 {
 		return executions, nil
+	}
+
+	// Workaround, to use subset of MongoDB features available in AWS DocumentDB
+	if r.isDocDb {
+		return r.slowGetLatestByTestSuites(ctx, testSuiteNames)
 	}
 
 	documents := bson.A{}
@@ -200,7 +299,10 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Fil
 		query, _ = composeQueryAndOpts(filter[0])
 	}
 
-	pipeline := []bson.D{{{Key: "$match", Value: query}}}
+	pipeline := []bson.D{
+		{{Key: "$sort", Value: bson.M{"status": 1}}},
+		{{Key: "$match", Value: query}},
+	}
 	if len(filter) > 0 {
 		pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: "starttime", Value: -1}}}})
 		pipeline = append(pipeline, bson.D{{Key: "$skip", Value: int64(filter[0].Page() * filter[0].PageSize())}})

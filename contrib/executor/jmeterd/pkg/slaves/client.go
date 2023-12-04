@@ -1,35 +1,39 @@
 package slaves
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"html/template"
+	"strings"
 	"time"
+
+	"github.com/kubeshop/testkube/pkg/ui"
 
 	batchv1 "k8s.io/api/batch/v1"
 
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
+	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
+	"sigs.k8s.io/kustomize/kyaml/yaml/merge2"
 
-	"github.com/kubeshop/testkube/contrib/executor/jmeterd/pkg/jmeterenv"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/output"
-	"github.com/kubeshop/testkube/pkg/k8sclient"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 const (
 	podsTimeout = 5 * time.Minute
-	job         = "Job"
-	batchV1     = "batch/v1"
 )
 
 type Client struct {
-	clientSet     *kubernetes.Clientset
+	clientSet     kubernetes.Interface
 	slavesConfigs executor.SlavesConfigs
 	namespace     string
 	execution     testkube.Execution
@@ -37,13 +41,33 @@ type Client struct {
 	envVariables  map[string]testkube.Variable
 }
 
-// NewClient is a method to create new slave client
-func NewClient(execution testkube.Execution, slavesConfigs executor.SlavesConfigs, envParams envs.Params, slavesEnvVariables map[string]testkube.Variable) (*Client, error) {
-	clientSet, err := k8sclient.ConnectToK8s()
-	if err != nil {
-		return nil, err
-	}
+type PodOptions struct {
+	Name                  string
+	Namespace             string
+	JobName               string
+	JobUID                string
+	ActiveDeadlineSeconds int
+	Registry              string
+	InitImage             string
+	Image                 string
+	Jsn                   string
+	CertificateSecret     string
+	ServiceAccountName    string
+	EnvConfigMaps         []testkube.EnvReference
+	EnvSecrets            []testkube.EnvReference
+	Ports                 []v1.ContainerPort
+	Resources             *testkube.PodResourcesRequest
+	ImagePullSecrets      []string
+}
 
+// NewClient is a method to create new slave client
+func NewClient(
+	clientSet kubernetes.Interface,
+	execution testkube.Execution,
+	slavesConfigs executor.SlavesConfigs,
+	envParams envs.Params,
+	slavesEnvVariables map[string]testkube.Variable,
+) *Client {
 	return &Client{
 		clientSet:     clientSet,
 		slavesConfigs: slavesConfigs,
@@ -51,27 +75,21 @@ func NewClient(execution testkube.Execution, slavesConfigs executor.SlavesConfig
 		execution:     execution,
 		envParams:     envParams,
 		envVariables:  slavesEnvVariables,
-	}, nil
+	}
 }
 
-// CreateSlaves creates slaves as per count provided in the SLAVES_COUNT env variable.
-// Default SLAVES_COUNT would be 1 if not provided in the env variables
-func (c *Client) CreateSlaves(ctx context.Context) (SlaveMeta, error) {
-	slavesCount, err := getSlavesCount(c.envVariables[jmeterenv.SlavesCount])
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting slaves count from SLAVES_COUNT environment variable")
-	}
-
-	output.PrintLogf("Creating slave pods: %d", slavesCount)
-	podIPAddressChan := make(chan map[string]string, slavesCount)
-	errorChan := make(chan error, slavesCount)
+// CreateSlaves creates slaves as per provided count
+func (c *Client) CreateSlaves(ctx context.Context, count int) (SlaveMeta, error) {
+	output.PrintLogf("%s Creating slave pods: %d", ui.IconRocket, count)
+	podIPAddressChan := make(chan map[string]string, count)
+	errorChan := make(chan error, count)
 	podIPAddresses := make(map[string]string)
 
-	for i := 1; i <= slavesCount; i++ {
+	for i := 1; i <= count; i++ {
 		go c.createSlavePod(ctx, i, podIPAddressChan, errorChan)
 	}
 
-	for i := 0; i < slavesCount; i++ {
+	for i := 0; i < count; i++ {
 		select {
 		case ipAddress := <-podIPAddressChan:
 			for podName, podIp := range ipAddress {
@@ -130,130 +148,133 @@ func (c *Client) getSlavePodConfiguration(ctx context.Context, currentSlavesCoun
 		return nil, errors.Wrap(err, "error marshalling runner execution")
 	}
 
-	podName := ValidateAndGetSlavePodName(c.execution.Name, c.execution.Id, currentSlavesCount)
+	podName := validateAndGetSlavePodName(c.execution.Name, c.execution.Id, currentSlavesCount)
 	if err != nil {
 		return nil, errors.Wrap(err, "error validating slave pod name")
 	}
 
 	executorJob, err := c.clientSet.BatchV1().Jobs(c.namespace).Get(ctx, c.execution.Id, metav1.GetOptions{})
 	if err != nil {
-		return nil, errors.Wrap(err, "error getting executor job")
+		output.PrintLogf("%s Failed to fetch Test Job info: %v", ui.IconWarning, err.Error())
 	}
 
-	return c.createSlavePodObject(runnerExecutionStr, podName, executorJob), nil
+	return c.createSlavePodObject(runnerExecutionStr, podName, executorJob)
 }
 
-func (c *Client) createSlavePodObject(runnerExecutionStr []byte, podName string, executorJob *batchv1.Job) *v1.Pod {
+func (c *Client) createSlavePodObject(runnerExecutionStr []byte, podName string, executorJob *batchv1.Job) (*v1.Pod, error) {
+	tmpl, err := utils.
+		NewTemplate("pod").
+		Funcs(template.FuncMap{"vartypeptrtostring": testkube.VariableTypeString}).
+		Parse(c.slavesConfigs.SlavePodTemplate)
+	if err != nil {
+		return nil, errors.Errorf("error creating pod spec from SlavePodTemplate: %v", err)
+	}
+
+	// TODO: Figure out a better approach which also works for localdev
+	if executorJob == nil {
+		executorJob = &batchv1.Job{}
+	}
+	podOptions := c.newPodOptions(runnerExecutionStr, podName, *executorJob)
+	var buffer bytes.Buffer
+	podOptions.Jsn = strings.ReplaceAll(podOptions.Jsn, "'", "''")
+	if err = tmpl.ExecuteTemplate(&buffer, "pod", podOptions); err != nil {
+		return nil, errors.Errorf("executing pod spec template: %v", err)
+	}
+
+	var pod v1.Pod
+	podSpec := buffer.String()
+	if c.execution.SlavePodRequest != nil && c.execution.SlavePodRequest.PodTemplate != "" {
+		tmplExt, err := utils.NewTemplate("podExt").Funcs(template.FuncMap{"vartypeptrtostring": testkube.VariableTypeString}).
+			Parse(c.execution.SlavePodRequest.PodTemplate)
+		if err != nil {
+			return nil, errors.Errorf("creating pod extensions spec from template error: %v", err)
+		}
+
+		var bufferExt bytes.Buffer
+		if err = tmplExt.ExecuteTemplate(&bufferExt, "podExt", podOptions); err != nil {
+			return nil, errors.Errorf("executing pod extensions spec template: %v", err)
+		}
+
+		if podSpec, err = merge2.MergeStrings(bufferExt.String(), podSpec, false, kyaml.MergeOptions{}); err != nil {
+			return nil, errors.Errorf("merging pod spec templates: %v", err)
+		}
+	}
+
+	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(podSpec), len(podSpec))
+	if err := decoder.Decode(&pod); err != nil {
+		return nil, errors.Errorf("decoding pod spec error: %v", err)
+	}
+
 	labels := map[string]string{
 		// Execution ID is the only unique field in case of multiple runs of the same test
 		// So this is the only field which can tag the slave pods to actual job of jmeterd executor
 		"testkube.io/managed-by": c.execution.Id,
 		"testkube.io/test-name":  c.execution.TestName,
 	}
-	ownerReference := []metav1.OwnerReference{
-		{
-			Kind:       job,
-			APIVersion: batchV1,
-			Name:       executorJob.Name,
-			UID:        executorJob.UID,
-		},
+	for key, value := range labels {
+		if pod.Labels == nil {
+			pod.Labels = make(map[string]string)
+		}
+
+		pod.Labels[key] = value
 	}
-	initContainers := []v1.Container{
-		{
-			Name:            "init",
-			Image:           c.slavesConfigs.Images.Init,
-			Command:         []string{"/bin/runner", string(runnerExecutionStr)},
-			Env:             getSlaveRunnerEnv(c.envParams, c.execution),
-			ImagePullPolicy: v1.PullIfNotPresent,
-			VolumeMounts: []v1.VolumeMount{
-				{
-					MountPath: "/data",
-					Name:      "data-volume",
-				},
-			},
-		},
+
+	for i := range pod.Spec.InitContainers {
+		pod.Spec.InitContainers[i].Env = append(pod.Spec.InitContainers[i].Env, getSlaveRunnerEnv(c.envParams, c.execution)...)
 	}
-	volumes := []v1.Volume{
-		{
-			Name:         "data-volume",
-			VolumeSource: v1.VolumeSource{EmptyDir: &v1.EmptyDirVolumeSource{}},
-		},
+
+	for i := range pod.Spec.Containers {
+		pod.Spec.Containers[i].Env = append(pod.Spec.Containers[i].Env, getSlaveConfigurationEnv(c.envVariables)...)
 	}
-	mainContainerLivenessProbe := &v1.Probe{
-		ProbeHandler: v1.ProbeHandler{
-			TCPSocket: &v1.TCPSocketAction{
-				Port: intstr.FromInt32(serverPort),
-			},
-		},
-		FailureThreshold: 3,
-		PeriodSeconds:    5,
-		SuccessThreshold: 1,
-		TimeoutSeconds:   1,
-	}
-	mainContainerReadinessProbe := &v1.Probe{
-		ProbeHandler: v1.ProbeHandler{
-			TCPSocket: &v1.TCPSocketAction{
-				Port: intstr.FromInt32(serverPort),
-			},
-		},
-		FailureThreshold:    3,
-		InitialDelaySeconds: 10,
-		PeriodSeconds:       5,
-		TimeoutSeconds:      1,
-	}
-	mainContainerPorts := []v1.ContainerPort{
-		{
-			ContainerPort: serverPort,
-			Name:          "server-port",
-		}, {
-			ContainerPort: localPort,
-			Name:          "local-port",
-		},
-	}
-	mainContainerVolumeMounts := []v1.VolumeMount{
-		{
-			MountPath: "/data",
-			Name:      "data-volume",
-		},
-	}
-	containers := []v1.Container{
-		{
-			Name:            "main",
-			Image:           c.slavesConfigs.Images.Slave,
-			Env:             getSlaveConfigurationEnv(c.envVariables),
-			ImagePullPolicy: v1.PullIfNotPresent,
-			Ports:           mainContainerPorts,
-			VolumeMounts:    mainContainerVolumeMounts,
-			LivenessProbe:   mainContainerLivenessProbe,
-			ReadinessProbe:  mainContainerReadinessProbe,
-		},
-	}
-	return &v1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            podName,
-			Labels:          labels,
-			OwnerReferences: ownerReference,
-		},
-		Spec: v1.PodSpec{
-			RestartPolicy:  v1.RestartPolicyAlways,
-			InitContainers: initContainers,
-			Containers:     containers,
-			Volumes:        volumes,
-		},
-	}
+
+	return &pod, nil
 }
 
 func (c *Client) DeleteSlaves(ctx context.Context, meta SlaveMeta) error {
 	for _, name := range meta.Names() {
-		output.PrintLogf("Deleting slave pod: %v", name)
+		output.PrintLogf("%s Cleaning up slave pods after test run: %v", ui.IconSuggestion, name)
 		err := c.clientSet.CoreV1().Pods(c.namespace).Delete(ctx, name, metav1.DeleteOptions{})
 		if err != nil {
-			output.PrintLogf("Error deleting slave pods: %v", err.Error())
+			output.PrintLogf("%s Failed to cleanup slave pods: %v", ui.IconCross, err.Error())
 			return err
 		}
 
 	}
 	return nil
+}
+
+func (c *Client) newPodOptions(runnerExecutionStr []byte, podName string, executorJob batchv1.Job) *PodOptions {
+	var resources *testkube.PodResourcesRequest
+	if c.execution.SlavePodRequest != nil {
+		resources = c.execution.SlavePodRequest.Resources
+	}
+
+	return &PodOptions{
+		Name:                  podName,
+		Namespace:             c.namespace,
+		JobName:               executorJob.Name,
+		JobUID:                string(executorJob.UID),
+		ActiveDeadlineSeconds: c.slavesConfigs.ActiveDeadlineSeconds,
+		Registry:              c.slavesConfigs.Images.Registry,
+		InitImage:             c.slavesConfigs.Images.Init,
+		Image:                 c.slavesConfigs.Images.Slave,
+		Jsn:                   string(runnerExecutionStr),
+		CertificateSecret:     c.slavesConfigs.CertificateSecret,
+		ServiceAccountName:    c.slavesConfigs.ServiceAccountName,
+		EnvConfigMaps:         c.slavesConfigs.EnvConfigMaps,
+		EnvSecrets:            c.slavesConfigs.EnvSecrets,
+		Ports: []v1.ContainerPort{
+			{
+				ContainerPort: serverPort,
+				Name:          "server-port",
+			}, {
+				ContainerPort: localPort,
+				Name:          "local-port",
+			},
+		},
+		Resources:        resources,
+		ImagePullSecrets: c.slavesConfigs.ImagePullSecrets,
+	}
 }
 
 var _ Interface = (*Client)(nil)
