@@ -282,8 +282,6 @@ func (r *CypressRunner) Validate(execution testkube.Execution) error {
 func makeSuccessExecution(out []byte) (result testkube.ExecutionResult) {
 	status := testkube.PASSED_ExecutionStatus
 	result.Status = &status
-	result.Output = string(out)
-	result.OutputType = "text/plain"
 
 	return result
 }
