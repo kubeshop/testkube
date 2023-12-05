@@ -174,6 +174,9 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v3
 
+      - shell: bash
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
 #      - name: Go Cache
 #        uses: actions/cache@v3
 #        with:
@@ -184,10 +187,21 @@ jobs:
 #          restore-keys: |
 #            ${{ runner.os }}-go-
 
-      - name: Setup Go
-        uses: ./.github/actions/setup-go
+#      - name: Setup Go
+      ##        uses: ./.github/actions/setup-go
+      ##        with:
+      ##          cache-prefix: go-build-jmeterd-${{ matrix.GOARCH }}
+
+      - uses: actions/setup-go@v3
         with:
-          cache-prefix: go-build-jmeterd-${{ matrix.GOARCH }}
+          go-version: 1.21
+          cache: true
+
+      - id: cache
+        uses: actions/cache@v3
+        with:
+          path: dist/linux-${{ matrix.GOARCH }}
+          key: linux-${{ matrix.GOARCH }}-${{ env.sha_short }}
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -222,13 +236,32 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v3
 
-      - uses: ./.github/actions/setup-go
+      - uses: actions/setup-go@v3
         with:
-          cache-prefix: go-build-jmeterd-amd64
+          go-version: 1.19
+          cache: true
 
-      - uses: ./.github/actions/setup-go
+      # copy the cashes from prepare
+      - shell: bash
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v3
         with:
-          cache-prefix: go-build-jmeterd-arm64
+          path: dist/linux
+          key: linux-amd64-${{ env.sha_short }}
+      - uses: actions/cache@v3
+        with:
+          path: dist/linux
+          key: linux-arm64-${{ env.sha_short }}
+
+
+      #      - uses: ./.github/actions/setup-go
+#        with:
+#          cache-prefix: go-build-jmeterd-amd64
+#
+#      - uses: ./.github/actions/setup-go
+#        with:
+#          cache-prefix: go-build-jmeterd-arm64
 
       - name: Release
         uses: goreleaser/goreleaser-action@v4
