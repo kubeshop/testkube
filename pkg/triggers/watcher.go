@@ -155,7 +155,7 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 	s.informers.testSuiteInformer.Informer().AddEventHandler(s.testSuiteEventHandler())
 	s.informers.testInformer.Informer().AddEventHandler(s.testEventHandler())
 	s.informers.executorInformer.Informer().AddEventHandler(s.executorEventHandler())
-	s.informers.webhookInformer.Informer().AddEventHandler(s.webhookEventHandler)
+	s.informers.webhookInformer.Informer().AddEventHandler(s.webhookEventHandler())
 
 	s.logger.Debugf("trigger service: starting pod informers")
 	for i := range s.informers.podInformers {
@@ -915,7 +915,7 @@ func (s *Service) executorEventHandler() cache.ResourceEventHandlerFuncs {
 			s.eventsBus.Publish(testkube.NewEvent(testkube.EventUpdated, testkube.EventResourceExecutor, executor.Name))
 		},
 		DeleteFunc: func(obj interface{}) {
-			executor, ok := newObj.(*executorv1.Executor)
+			executor, ok := obj.(*executorv1.Executor)
 			if !ok {
 				s.logger.Errorf("failed to process delete executor event due to it being an unexpected type, received type %+v", obj)
 				return
@@ -944,7 +944,7 @@ func (s *Service) webhookEventHandler() cache.ResourceEventHandlerFuncs {
 			s.eventsBus.Publish(testkube.NewEvent(testkube.EventCreated, testkube.EventResourceWebhook, webhook.Name))
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			webhook, ok := obj.(*executorv1.Webhook)
+			webhook, ok := newObj.(*executorv1.Webhook)
 			if !ok {
 				s.logger.Errorf("failed to process update webhook event due to it being an unexpected type, received type %+v", newObj)
 				return
