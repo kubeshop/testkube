@@ -18,7 +18,7 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
-    goarch: "{{ .ARCH }}"
+    goarch: "{{ .Arch }}"
     mod_timestamp: "{{ .CommitTimestamp }}"
 dockers:
   - dockerfile: "./contrib/executor/jmeterd/build/agent/Dockerfile"
