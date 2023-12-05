@@ -157,7 +157,7 @@ func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 
 		l := ls.log.With("id", event.Id, "event", "stop")
 
-		maxRepeat := 10
+		maxTries := 10
 		repeated := 0
 
 		toDelete := []string{}
@@ -203,7 +203,7 @@ func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 
 				err = msg.Respond([]byte("stopped"))
 				if err != nil {
-					l.Errorw("error responding to start event", "error", err)
+					l.Errorw("error responding to stop event", "error", err)
 					return
 				}
 
@@ -212,8 +212,8 @@ func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 
 			// handle max tries of cleaning executors
 			repeated++
-			if repeated >= maxRepeat {
-				l.Errorw("error cleaning consumeres", "toDeleteLeft", toDelete)
+			if repeated >= maxTries {
+				l.Errorw("error cleaning consumeres after max tries", "toDeleteLeft", toDelete, "tries", repeated)
 				return
 			}
 

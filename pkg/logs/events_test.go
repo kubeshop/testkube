@@ -151,8 +151,8 @@ func TestLogs_EventsFlow(t *testing.T) {
 		_, err = stream.Stop(ctx)
 		assert.NoError(t, err)
 
-		// then we should have 4*4 messages in adapter
-		assert.Equal(t, 4*messagesCount, len(a.Messages))
+		assertMessagesCount(t, a, 4*messagesCount)
+
 	})
 
 	t.Run("can get stats about consumers in given pod", func(t *testing.T) {
@@ -261,4 +261,23 @@ func (s *MockAdapter) Stop(id string) error {
 
 func (s *MockAdapter) Name() string {
 	return s.name
+}
+
+func assertMessagesCount(t *testing.T, a *MockAdapter, expectedCount int) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	ticker := time.NewTicker(100 * time.Millisecond)
+	for {
+
+		select {
+		case <-ctx.Done():
+			t.Errorf("timeout waiting for messages count %d (expected:%d)", len(a.Messages), expectedCount)
+			t.Fail()
+			return
+		case <-ticker.C:
+			if len(a.Messages) == expectedCount {
+				return
+			}
+		}
+	}
 }

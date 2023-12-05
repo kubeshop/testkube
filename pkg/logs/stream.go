@@ -108,6 +108,7 @@ func (c LogsStream) Stop(ctx context.Context) (resp StreamResponse, err error) {
 	return c.syncCall(ctx, StopSubject)
 }
 
+// syncCall sends request to given subject and waits for response
 func (c LogsStream) syncCall(ctx context.Context, subject string) (resp StreamResponse, err error) {
 	b, _ := json.Marshal(events.Trigger{Id: c.id})
 	m, err := c.nc.Request(subject, b, time.Minute)
