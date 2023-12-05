@@ -18,9 +18,7 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
-    goarch:
-      - amd64
-      - arm64
+    goarch: "{{ .Env.GOARCH }}"
     mod_timestamp: "{{ .CommitTimestamp }}"
 dockers:
   - dockerfile: "./contrib/executor/jmeterd/build/agent/Dockerfile"
@@ -28,9 +26,9 @@ dockers:
     goos: linux
     goarch: "{{ .Arch }}"
     image_templates:
-      - "kubeshop/testkube-jmeterd-executor:{{ .Version }}-{{ .Env.GOARCH }}"
+      - "kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-{{ .Env.GOARCH }}"
     build_flag_templates:
-      - "--platform={{ .Os }}/{{ .Arch }}"
+      - "--platform=linux/{{ .Env.GOARCH }}"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
       - "--label=org.opencontainers.image.created={{ .Date}}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
@@ -61,11 +59,11 @@ dockers:
 #      - ./contrib/executor/jmeterd/scripts/entrypoint.sh
 #      - ./contrib/executor/jmeterd/scripts/jmeter-master.sh
 
-docker_manifests:
-  - name_template: kubeshop/testkube-jmeterd-executor:{{ .Version }}
-    image_templates:
-      - kubeshop/testkube-jmeterd-executor:{{ .Version }}-amd64
-      - kubeshop/testkube-jmeterd-executor:{{ .Version }}-arm64
+#docker_manifests:
+#  - name_template: kubeshop/testkube-jmeterd-executor:{{ .Version }}
+#    image_templates:
+#      - kubeshop/testkube-jmeterd-executor:{{ .Version }}-amd64
+#      - kubeshop/testkube-jmeterd-executor:{{ .Version }}-arm64
 
 
 release:
