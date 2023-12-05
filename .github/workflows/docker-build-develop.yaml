@@ -183,7 +183,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: |
-#            ~/go/pkg/mod
+            ~/go/pkg/mod
             dist/jmeterd-${{ matrix.GOARCH }}
           key: jmeterd-${{ matrix.GOARCH }}
           restore-keys: |
@@ -210,9 +210,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - id: commit
-        uses: prompt/actions-commit-hash@v3
 
       - name: Release
         uses: goreleaser/goreleaser-action@v4
