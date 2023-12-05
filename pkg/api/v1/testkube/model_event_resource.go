@@ -20,4 +20,5 @@ const (
 	WEBHOOK_EventResource            EventResource = "webhook"
 	TESTEXECUTION_EventResource      EventResource = "testexecution"
 	TESTSUITEEXECUTION_EventResource EventResource = "testsuiteexecution"
+	TESTSOURCE_EventResource         EventResource = "testsource"
 )

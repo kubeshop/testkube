@@ -18,6 +18,8 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	testsourcev1 "github.com/kubeshop/testkube-operator/api/testsource/v1"
+
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 
 	testsuitev3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
@@ -48,6 +50,7 @@ type k8sInformers struct {
 	testInformer        testkubeinformerv3.TestInformer
 	executorInformer    testkubeexecutorinformerv1.ExecutorInformer
 	webhookInformer     testkubeexecutorinformerv1.WebhookInformer
+	testSourceInformer  testkubeinformerv1.TestSourceInformer
 }
 
 func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned.Interface,
@@ -76,6 +79,7 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 	k8sInformers.testInformer = testkubeInformerFactory.Tests().V3().Tests()
 	k8sInformers.executorInformer = testkubeInformerFactory.Executor().V1().Executor()
 	k8sInformers.webhookInformer = testkubeInformerFactory.Executor().V1().Webhook()
+	k8sInformers.testSourceInformer = testkubeInformerFactory.Tests().V1().TestSource()
 
 	return &k8sInformers
 }
@@ -156,6 +160,7 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 	s.informers.testInformer.Informer().AddEventHandler(s.testEventHandler())
 	s.informers.executorInformer.Informer().AddEventHandler(s.executorEventHandler())
 	s.informers.webhookInformer.Informer().AddEventHandler(s.webhookEventHandler())
+	s.informers.testSourceInformer.Informer().AddEventHandler(s.testSourceEventHandler())
 
 	s.logger.Debugf("trigger service: starting pod informers")
 	for i := range s.informers.podInformers {
@@ -207,6 +212,8 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 	go s.informers.executorInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting webhook informer")
 	go s.informers.webhookInformer.Informer().Run(stop)
+	s.logger.Debugf("trigger service: starting test source informer")
+	go s.informers.testSourceInformer.Informer().Run(stop)
 }
 
 func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {
@@ -967,6 +974,48 @@ func (s *Service) webhookEventHandler() cache.ResourceEventHandlerFuncs {
 				webhook.Namespace, webhook.Name,
 			)
 			s.eventsBus.Publish(testkube.NewEvent(testkube.EventDeleted, testkube.EventResourceWebhook, webhook.Name))
+		},
+	}
+}
+
+func (s *Service) testSourceEventHandler() cache.ResourceEventHandlerFuncs {
+	return cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			testSource, ok := obj.(*testsourcev1.TestSource)
+			if !ok {
+				s.logger.Errorf("failed to process create test source event due to it being an unexpected type, received type %+v", obj)
+				return
+			}
+			s.logger.Debug(
+				"trigger service: watcher component: emitting event for test source %s/%s",
+				testSource.Namespace, testSource.Name,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventCreated, testkube.EventResourceTestsource, testSource.Name))
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			testSource, ok := newObj.(*testsourcev1.TestSource)
+			if !ok {
+				s.logger.Errorf("failed to process update test source event due to it being an unexpected type, received type %+v", newObj)
+				return
+			}
+
+			s.logger.Debug(
+				"trigger service: watcher component: emitting event for updating test source %s/%s",
+				testSource.Namespace, testSource.Name,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventUpdated, testkube.EventResourceTestsource, testSource.Name))
+		},
+		DeleteFunc: func(obj interface{}) {
+			testSource, ok := obj.(*testsourcev1.TestSource)
+			if !ok {
+				s.logger.Errorf("failed to process delete test source event due to it being an unexpected type, received type %+v", obj)
+				return
+			}
+			s.logger.Debug(
+				"trigger service: watcher component: emitting event for deleting test source %s/%s",
+				testSource.Namespace, testSource.Name,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventDeleted, testkube.EventResourceTestsource, testSource.Name))
 		},
 	}
 }

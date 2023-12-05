@@ -5360,6 +5360,7 @@ components:
         - webhook
         - testexecution
         - testsuiteexecution
+        - testsource
 
     EventType:
       type: string
