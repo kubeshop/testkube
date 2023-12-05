@@ -200,7 +200,7 @@ jobs:
         with:
           distribution: goreleaser-pro
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd-commit-only.yml --snapshot
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd-commit-only.yml
         env:
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
