@@ -22,17 +22,15 @@ builds:
       - amd64
       - arm64
     mod_timestamp: "{{ .CommitTimestamp }}"
-partial:
-  by: target
 dockers:
   - dockerfile: "./contrib/executor/jmeterd/build/agent/Dockerfile"
     use: buildx
     goos: linux
-    goarch: "{{ .GOARCH }}"
+    goarch: "{{ .Arch }}"
     image_templates:
-      - "kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-{{ .GOARCH }}"
+      - "kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-{{ .Env.GOARCH }}"
     build_flag_templates:
-      - "--platform={{ .GOOS }}/{{ .GOARCH }}"
+      - "--platform={{ .Os }}/{{ .Arch }}"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
       - "--label=org.opencontainers.image.created={{ .Date}}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
@@ -67,7 +65,7 @@ docker_manifests:
   - name_template: kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}
     image_templates:
       - kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-amd64
-      - kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-arm64v8
+      - kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-arm64
 
 
 release:
