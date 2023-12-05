@@ -200,8 +200,8 @@ jobs:
       - id: cache
         uses: actions/cache@v3
         with:
-          path: dist/linux
-          key: ${{ matrix.GOARCH }}-${{ env.sha_short }}
+          path: dist/linux_${{ matrix.GOARCH }}
+          key: linux_${{ matrix.GOARCH }}
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -247,12 +247,12 @@ jobs:
 
       - uses: actions/cache@v3
         with:
-          path: dist/linux
-          key: arm64-${{ env.sha_short }}
+          path: dist/linux_arm64
+          key: linux_arm64
       - uses: actions/cache@v3
         with:
-          path: dist/linux
-          key: amd64-${{ env.sha_short }}
+          path: dist/linux_amd64
+          key: linux_amd64
 
 
       #      - uses: ./.github/actions/setup-go
