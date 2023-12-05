@@ -1,6 +1,6 @@
 ## testkube get context
 
-Set context for Testkube Cloud
+Set the context for Testkube Pro.
 
 ```
 testkube get context <value> [flags]

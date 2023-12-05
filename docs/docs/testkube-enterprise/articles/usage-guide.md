@@ -154,7 +154,7 @@ global:
   ingress:
     enabled: false
 
-testkube-cloud-api:
+testkube-pro-api:
   api:
     tls:
       serveHTTPS: false
@@ -212,15 +212,15 @@ global:
     issuerRef: <issuer|clusterissuer name>
 ```
 
-By default, Testkube Enterprise uses a `ClusterIssuer` `cert-manager` resource, that can be changed by setting the `testkube-cloud-api.api.tls.certManager.issuerKind` field to `Issuer`.
+By default, Testkube Enterprise uses a `ClusterIssuer` `cert-manager` resource, that can be changed by setting the `testkube-pro-api.api.tls.certManager.issuerKind` field to `Issuer`.
 
 If `cert-manager` is not installed in your cluster, valid TLS certificates (for API & Dashboard) which cover the following subdomains need to be provided:
-* API (tls secret name is configured with `testkube-cloud-api.api.tls.tlsSecret` field)
+* API (tls secret name is configured with `testkube-pro-api.api.tls.tlsSecret` field)
     * `api.<your-domain>`
     * `agent.<your-domain>`
     * `websockets.<your-domain>`
     * `status.<your-domain>`
-* Dashboard (TLS secret name is configured with `testkube-cloud-ui.ingress.tlsSecretName` field)
+* Dashboard (TLS secret name is configured with `testkube-pro-ui.ingress.tlsSecretName` field)
     * `dashboard.<your-domain>`
       Also, `global.certificateProvider` should be set to blank ("").
 ```helm
@@ -241,7 +241,7 @@ In order for this to work, you need to have `Prometheus Operator` installed in y
 
 Use the following configuration to enable metrics:
 ```helm
-testkube-cloud-api:
+testkube-pro-api:
   prometheus:
     enabled: true
 ```
@@ -255,11 +255,11 @@ Use `email` to send an invitation for the user to accept, and `auto-accept` to a
 
 #### Invitations Via Email
 
-If `testkube-cloud-api.api.inviteMode` is set to `email`, Testkube Enterprise will send emails when a user gets invited to
+If `testkube-pro-api.api.inviteMode` is set to `email`, Testkube Enterprise will send emails when a user gets invited to
 an Organization or an Environment and when SMTP settings need to be configured in the API Helm chart.
 
 ```helm
-testkube-cloud-api:
+testkube-pro-api:
   api:
     email:
       fromEmail: "example@gmail.com"
@@ -276,11 +276,11 @@ testkube-cloud-api:
 
 #### Auto-accept Invitations
 
-If `testkube-cloud-api.api.inviteMode` is set to `auto-accept`, Testkube Enterprise will automatically add users to
+If `testkube-pro-api.api.inviteMode` is set to `auto-accept`, Testkube Enterprise will automatically add users to
 Organizations and Environments when they get invited.
 
 ```helm
-testkube-cloud-api:
+testkube-pro-api:
   inviteMode: auto-accept
 ```
 
@@ -298,7 +298,7 @@ If you wish to use an existing MongoDB instance, you can configure the following
 mongodb:
   enabled: false
  
-testkube-cloud-api:
+testkube-pro-api:
   api:
     mongo:
       dsn: <mongodb dsn (mongodb://...)>
@@ -313,7 +313,7 @@ If you wish to use an existing NATS instance, you can configure the following va
 nats:
   enabled: false
   
-testkube-cloud-api:
+testkube-pro-api:
   api:
     nats:
       uri: <nats uri (nats://...)>
@@ -325,11 +325,11 @@ Testkube Enterprise uses MinIO as a storage backend for storing artifacts.
 
 If you wish to use an existing MinIO instance, you can configure the following values:
 ```helm
-testkube-cloud-api:
+testkube-pro-api:
   minio:
     enabled: false
   api:
-    minio: {} # check out the `testkube-cloud-api.api.minio` block in the values.yaml for all available settings
+    minio: {} # check out the `testkube-pro-api.api.minio` block in the values.yaml for all available settings
 ```
 
 ### Dex
@@ -343,16 +343,16 @@ global:
     issuer: <dex issuer url>
 dex:
   enabled: false
-testkube-cloud-api:
+testkube-pro-api:
   api:
-    oauth: {} # check out the `testkube-cloud-api.api.oauth` block in the values.yaml for all available settings
+    oauth: {} # check out the `testkube-pro-api.api.oauth` block in the values.yaml for all available settings
 ```
 
 ## Installation
 
 1. Add our Testkube Enterprise Helm registry:
     ```bash
-    helm repo add testkubeenterprise https://kubeshop.github.io/testkube-cloud-charts
+    helm repo add testkubeenterprise https://kubeshop.github.io/testkube-pro-charts
     ```
 2. Create a `values.yaml` with preferred configuration.
 3. Run `helm install testkube-enterprise testkubeenterprise/testkube-enterprise -f values.yaml --namespace testkube-enterprise`.
