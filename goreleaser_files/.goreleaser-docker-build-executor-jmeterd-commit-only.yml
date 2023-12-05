@@ -30,7 +30,7 @@ dockers:
     goos: linux
     goarch: "{{ .GOARCH }}"
     image_templates:
-      - "kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-{{ .GOARCH }}"
+      - "kubeshop/testkube-jmeterd-executor:{{ .Version }}-{{ .GOARCH }}"
     build_flag_templates:
       - "--platform={{ .GOOS }}/{{ .GOARCH }}"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -64,10 +64,11 @@ dockers:
 #      - ./contrib/executor/jmeterd/scripts/jmeter-master.sh
 
 docker_manifests:
-  - name_template: kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}
+  - name_template: kubeshop/testkube-jmeterd-executor:{{ .Version }}
     image_templates:
-      - kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-amd64
-      - kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-arm64v8
+      - kubeshop/testkube-jmeterd-executor:{{ .Version }}-amd64
+      - kubeshop/testkube-jmeterd-executor:{{ .Version }}-arm64v8
+
 
 release:
   disable: true
