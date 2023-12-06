@@ -195,12 +195,18 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - id: cache
+        uses: actions/cache@v3
+        with:
+          path: dist/linux_${{ matrix.GOARCH }}
+          key: linux_${{ matrix.GOARCH }}
+
       - name: Release
         uses: goreleaser/goreleaser-action@v4
         with:
           distribution: goreleaser-pro
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd-commit-only.yml --snapshot
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd-commit-only.yml --clean --split
         env:
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
@@ -208,6 +214,7 @@ jobs:
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           GOARCH: ${{ matrix.GOARCH }}
+
   image:
     runs-on: ubuntu-latest
     needs: executor_jmeterd
@@ -219,12 +226,33 @@ jobs:
       - id: commit
         uses: prompt/actions-commit-hash@v3
 
-      - name: Push multi-arch image to the Registry
-        run: |
-          docker push kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}-amd64
-          docker push kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}-arm64
-          docker manifest create kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }} --amend kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}-amd64 --amend kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}-arm64v8
-          docker manifest push -p kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}
+      - uses: actions/cache@v3
+        with:
+          path: dist/linux_arm64
+          key: linux_arm64
+      - uses: actions/cache@v3
+        with:
+          path: dist/linux_amd64
+          key: linux_amd64
+      - name: Release
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser-pro
+          version: latest
+          args: continue --merge
+        env:
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+
+#      - name: Push multi-arch image to the Registry
+#        run: |
+#          docker push kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}-amd64
+#          docker push kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}-arm64
+#          docker manifest create kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }} --amend kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}-amd64 --amend kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}-arm64v8
+#          docker manifest push -p kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}
 #  release:
 #    runs-on: ubuntu-latest
 #    needs: executor_jmeterd
