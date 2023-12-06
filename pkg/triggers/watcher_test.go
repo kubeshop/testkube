@@ -12,6 +12,7 @@ import (
 
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
 	faketestkube "github.com/kubeshop/testkube-operator/pkg/clientset/versioned/fake"
+	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
@@ -33,6 +34,7 @@ func TestService_runWatcher_lease(t *testing.T) {
 			testKubeClientset: testKubeClientset,
 			logger:            log.DefaultLogger,
 			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}),
+			eventsBus:         &bus.EventBusMock{},
 		}
 
 		leaseChan := make(chan bool)
@@ -91,6 +93,7 @@ func TestService_runWatcher_lease(t *testing.T) {
 			testKubeClientset: testKubeClientset,
 			logger:            log.DefaultLogger,
 			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}),
+			eventsBus:         &bus.EventBusMock{},
 		}
 
 		leaseChan := make(chan bool)
@@ -152,6 +155,7 @@ func TestService_runWatcher_noLease(t *testing.T) {
 			testKubeClientset: testKubeClientset,
 			logger:            log.DefaultLogger,
 			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}),
+			eventsBus:         &bus.EventBusMock{},
 		}
 
 		leaseChan := make(chan bool)
@@ -192,6 +196,7 @@ func TestService_runWatcher_noLease(t *testing.T) {
 			testKubeClientset: testKubeClientset,
 			logger:            log.DefaultLogger,
 			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}),
+			eventsBus:         &bus.EventBusMock{},
 		}
 
 		leaseChan := make(chan bool)
@@ -234,6 +239,7 @@ func TestService_runWatcher_noLease(t *testing.T) {
 			testKubeClientset: testKubeClientset,
 			logger:            log.DefaultLogger,
 			informers:         newK8sInformers(clientset, testKubeClientset, "", []string{}),
+			eventsBus:         &bus.EventBusMock{},
 		}
 
 		leaseChan := make(chan bool)

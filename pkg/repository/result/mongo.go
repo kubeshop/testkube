@@ -32,13 +32,14 @@ const (
 	StepMaxCount = 100
 )
 
-func NewMongoRepository(db *mongo.Database, allowDiskUse bool, opts ...MongoRepositoryOpt) *MongoRepository {
+func NewMongoRepository(db *mongo.Database, allowDiskUse, isDocDb bool, opts ...MongoRepositoryOpt) *MongoRepository {
 	r := &MongoRepository{
 		db:               db,
 		ResultsColl:      db.Collection(CollectionResults),
 		SequencesColl:    db.Collection(CollectionSequences),
 		OutputRepository: NewMongoOutputRepository(db),
 		allowDiskUse:     allowDiskUse,
+		isDocDb:          isDocDb,
 	}
 
 	for _, opt := range opts {
@@ -86,6 +87,7 @@ type MongoRepository struct {
 	SequencesColl    *mongo.Collection
 	OutputRepository OutputRepository
 	allowDiskUse     bool
+	isDocDb          bool
 }
 
 type MongoRepositoryOpt func(*MongoRepository)
@@ -142,10 +144,58 @@ func (r *MongoRepository) GetLatestTestNumber(ctx context.Context, testName stri
 	return result.Number, err
 }
 
-func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) (result testkube.Execution, err error) {
+func (r *MongoRepository) slowGetLatestByTest(ctx context.Context, testName string) (*testkube.Execution, error) {
 	opts := options.Aggregate()
 	pipeline := []bson.M{
-		{"$documents": bson.A{bson.M{"name": testName}}},
+		{"$project": bson.M{"testname": 1, "starttime": 1, "endtime": 1}},
+		{"$match": bson.M{"testname": testName}},
+
+		{"$group": bson.D{
+			{Key: "_id", Value: "$testname"},
+			{Key: "doc", Value: bson.M{"$max": bson.D{
+				{Key: "updatetime", Value: bson.M{"$max": bson.A{"$starttime", "$endtime"}}},
+				{Key: "content", Value: "$$ROOT"},
+			}}},
+		}},
+		{"$sort": bson.M{"doc.updatetime": -1}},
+		{"$limit": 1},
+
+		{"$lookup": bson.M{"from": r.ResultsColl.Name(), "localField": "doc.content._id", "foreignField": "_id", "as": "execution"}},
+		{"$replaceRoot": bson.M{"newRoot": bson.M{"$arrayElemAt": bson.A{"$execution", 0}}}},
+	}
+	cursor, err := r.ResultsColl.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return nil, err
+	}
+	var items []testkube.Execution
+	err = cursor.All(ctx, &items)
+	if err != nil {
+		return nil, err
+	}
+	if len(items) == 0 {
+		return nil, mongo.ErrNoDocuments
+	}
+	result := (&items[0]).UnscapeDots()
+	if len(result.ExecutionResult.Output) == 0 {
+		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
+		if err == mongo.ErrNoDocuments {
+			err = nil
+		}
+	}
+	return result, err
+}
+
+func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) (*testkube.Execution, error) {
+	// Workaround, to use subset of MongoDB features available in AWS DocumentDB
+	if r.isDocDb {
+		return r.slowGetLatestByTest(ctx, testName)
+	}
+
+	opts := options.Aggregate()
+	pipeline := []bson.M{
+		{"$group": bson.M{"_id": "$testname", "doc": bson.M{"$first": bson.M{}}}},
+		{"$project": bson.M{"_id": 0, "name": "$_id"}},
+		{"$match": bson.M{"name": testName}},
 		{"$lookup": bson.M{"from": r.ResultsColl.Name(), "let": bson.M{"name": "$name"}, "pipeline": []bson.M{
 			{"$match": bson.M{"$expr": bson.M{"$eq": bson.A{"$testname", "$$name"}}}},
 			{"$sort": bson.M{"starttime": -1}},
@@ -171,31 +221,79 @@ func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) 
 		{"$replaceRoot": bson.M{"newRoot": "$doc.content"}},
 		{"$limit": 1},
 	}
-	cursor, err := r.db.Aggregate(ctx, pipeline, opts)
+	cursor, err := r.ResultsColl.Aggregate(ctx, pipeline, opts)
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 	var items []testkube.Execution
 	err = cursor.All(ctx, &items)
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 	if len(items) == 0 {
-		return result, mongo.ErrNoDocuments
+		return nil, mongo.ErrNoDocuments
 	}
-	result = items[0]
+	result := (&items[0]).UnscapeDots()
 	if len(result.ExecutionResult.Output) == 0 {
-		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, "")
+		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
 		if err == mongo.ErrNoDocuments {
 			err = nil
 		}
 	}
-	return *result.UnscapeDots(), err
+	return result, err
+}
+
+func (r *MongoRepository) slowGetLatestByTests(ctx context.Context, testNames []string) (executions []testkube.Execution, err error) {
+	documents := bson.A{}
+	for _, testName := range testNames {
+		documents = append(documents, bson.M{"testname": testName})
+	}
+
+	pipeline := []bson.M{
+		{"$project": bson.M{"testname": 1, "starttime": 1, "endtime": 1}},
+		{"$match": bson.M{"$or": documents}},
+
+		{"$group": bson.D{
+			{Key: "_id", Value: "$testname"},
+			{Key: "doc", Value: bson.M{"$max": bson.D{
+				{Key: "updatetime", Value: bson.M{"$max": bson.A{"$starttime", "$endtime"}}},
+				{Key: "content", Value: "$$ROOT"},
+			}}},
+		}},
+		{"$sort": bson.M{"doc.updatetime": -1}},
+
+		{"$lookup": bson.M{"from": r.ResultsColl.Name(), "localField": "doc.content._id", "foreignField": "_id", "as": "execution"}},
+		{"$replaceRoot": bson.M{"newRoot": bson.M{"$arrayElemAt": bson.A{"$execution", 0}}}},
+	}
+
+	opts := options.Aggregate()
+	if r.allowDiskUse {
+		opts.SetAllowDiskUse(r.allowDiskUse)
+	}
+
+	cursor, err := r.ResultsColl.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return nil, err
+	}
+	err = cursor.All(ctx, &executions)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range executions {
+		executions[i].UnscapeDots()
+	}
+	return executions, nil
 }
 
 func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []string) (executions []testkube.Execution, err error) {
 	if len(testNames) == 0 {
 		return executions, nil
+	}
+
+	// Workaround, to use subset of MongoDB features available in AWS DocumentDB
+	if r.isDocDb {
+		return r.slowGetLatestByTests(ctx, testNames)
 	}
 
 	documents := bson.A{}
@@ -204,7 +302,10 @@ func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []stri
 	}
 
 	pipeline := []bson.M{
-		{"$documents": documents},
+		{"$group": bson.M{"_id": "$testname", "doc": bson.M{"$first": bson.M{}}}},
+		{"$project": bson.M{"_id": 0, "name": "$_id"}},
+		{"$match": bson.M{"$or": documents}},
+
 		{"$lookup": bson.M{"from": r.ResultsColl.Name(), "let": bson.M{"name": "$name"}, "pipeline": []bson.M{
 			{"$match": bson.M{"$expr": bson.M{"$eq": bson.A{"$testname", "$$name"}}}},
 			{"$sort": bson.M{"starttime": -1}},
@@ -235,7 +336,7 @@ func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []stri
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
 
-	cursor, err := r.db.Aggregate(ctx, pipeline, opts)
+	cursor, err := r.ResultsColl.Aggregate(ctx, pipeline, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -302,7 +403,10 @@ func (r *MongoRepository) GetExecutionTotals(ctx context.Context, paging bool, f
 		query, _ = composeQueryAndOpts(filter[0])
 	}
 
-	pipeline := []bson.D{{{Key: "$match", Value: query}}}
+	pipeline := []bson.D{
+		{{Key: "$sort", Value: bson.M{"executionresult.status": 1}}},
+		{{Key: "$match", Value: query}},
+	}
 	if len(filter) > 0 {
 		pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: "starttime", Value: -1}}}})
 		if paging {

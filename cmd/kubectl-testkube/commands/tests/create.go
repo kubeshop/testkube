@@ -59,6 +59,12 @@ type CreateCommonFlags struct {
 	ArtifactStorageBucket              string
 	ArtifactOmitFolderPerExecution     bool
 	Description                        string
+	SlavePodRequestsCpu                string
+	SlavePodRequestsMemory             string
+	SlavePodLimitsCpu                  string
+	SlavePodLimitsMemory               string
+	SlavePodTemplate                   string
+	SlavePodTemplateReference          string
 }
 
 // NewCreateTestsCmd is a command tp create new Test Custom Resource
@@ -234,7 +240,7 @@ func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
 	cmd.Flags().StringVar(&flags.HttpsProxy, "https-proxy", "", "https proxy for executor containers")
 	cmd.Flags().StringToStringVarP(&flags.SecretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
 	cmd.Flags().StringArrayVarP(&flags.CopyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
-	cmd.Flags().StringVar(&flags.Image, "image", "", "image for container executor")
+	cmd.Flags().StringVar(&flags.Image, "image", "", "override executor container image")
 	cmd.Flags().StringArrayVar(&flags.ImagePullSecretNames, "image-pull-secrets", []string{}, "secret name used to pull the image in container executor")
 	cmd.Flags().Int64Var(&flags.Timeout, "timeout", 0, "duration in seconds for test to timeout. 0 disables timeout.")
 	cmd.Flags().StringVar(&flags.ArtifactStorageClassName, "artifact-storage-class-name", "", "artifact storage class name for container executor")
@@ -260,6 +266,12 @@ func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
 	cmd.Flags().StringVar(&flags.ArtifactStorageBucket, "artifact-storage-bucket", "", "artifact storage class name for container executor")
 	cmd.Flags().BoolVarP(&flags.ArtifactOmitFolderPerExecution, "artifact-omit-folder-per-execution", "", false, "don't store artifacts in execution folder")
 	cmd.Flags().StringVarP(&flags.Description, "description", "", "", "test description")
+	cmd.Flags().StringVar(&flags.SlavePodRequestsCpu, "slave-pod-requests-cpu", "", "slave pod resource requests cpu")
+	cmd.Flags().StringVar(&flags.SlavePodRequestsMemory, "slave-pod-requests-memory", "", "slave pod resource requests memory")
+	cmd.Flags().StringVar(&flags.SlavePodLimitsCpu, "slave-pod-limits-cpu", "", "slave pod resource limits cpu")
+	cmd.Flags().StringVar(&flags.SlavePodLimitsMemory, "slave-pod-limits-memory", "", "slave pod resource limits memory")
+	cmd.Flags().StringVar(&flags.SlavePodTemplate, "slave-pod-template", "", "slave pod template file path for extensions to slave pod template")
+	cmd.Flags().StringVar(&flags.SlavePodTemplateReference, "slave-pod-template-reference", "", "reference to slave pod template to use for the test")
 }
 
 func validateExecutorTypeAndContent(executorType, contentType string, executors testkube.ExecutorsDetails) error {

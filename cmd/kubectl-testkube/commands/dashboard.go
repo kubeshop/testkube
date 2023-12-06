@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strconv"
 	"time"
 
 	"github.com/skratchdot/open-golang/open"
@@ -57,7 +58,7 @@ func NewDashboardCmd() *cobra.Command {
 				openCloudDashboard(cfg)
 
 			} else {
-				openLocalDashboard(cfg, useGlobalDashboard, namespace)
+				openLocalDashboard(cmd, cfg, useGlobalDashboard, namespace)
 			}
 
 		},
@@ -74,7 +75,7 @@ func openCloudDashboard(cfg config.Data) {
 	ui.PrintOnError("openning dashboard", err)
 }
 
-func openLocalDashboard(cfg config.Data, useGlobalDashboard bool, namespace string) {
+func openLocalDashboard(cmd *cobra.Command, cfg config.Data, useGlobalDashboard bool, namespace string) {
 
 	dashboardLocalPort, err := getDashboardLocalPort(cfg.APIServerPort)
 	ui.PrintOnError("checking dashboard port", err)
@@ -112,7 +113,7 @@ func openLocalDashboard(cfg config.Data, useGlobalDashboard bool, namespace stri
 	commandsToKill = append(commandsToKill, command)
 
 	// check for api and dasboard to be ready
-	ready, err := readinessCheck(apiAddress, dashboardAddress)
+	ready, err := readinessCheck(cmd, apiAddress, dashboardAddress)
 	ui.PrintOnError("checking readiness of services", err)
 	ui.Debug("Endpoints readiness", fmt.Sprintf("%v", ready))
 
@@ -133,9 +134,14 @@ func openLocalDashboard(cfg config.Data, useGlobalDashboard bool, namespace stri
 	fmt.Println("Got signal:", s)
 }
 
-func readinessCheck(apiURI, dashboardURI string) (bool, error) {
+func readinessCheck(cmd *cobra.Command, apiURI, dashboardURI string) (bool, error) {
 	const readinessCheckTimeout = 30 * time.Second
-	client := http.NewClient()
+	insecure, err := strconv.ParseBool(cmd.Flag("insecure").Value.String())
+	if err != nil {
+		return false, fmt.Errorf("parsing flag value %w", err)
+	}
+
+	client := http.NewClient(insecure)
 
 	ticker := time.NewTicker(readinessCheckTimeout)
 	defer ticker.Stop()

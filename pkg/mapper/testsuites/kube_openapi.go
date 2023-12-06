@@ -47,9 +47,18 @@ func MapCRToAPI(cr testsuitesv3.TestSuite) (test testkube.TestSuite) {
 				steps[j] = mapCRStepToAPI(b.Execute[j])
 			}
 
+			var downloadArtifacts *testkube.DownloadArtifactOptions
+			if b.DownloadArtifacts != nil {
+				downloadArtifacts = &testkube.DownloadArtifactOptions{
+					AllPreviousSteps:    b.DownloadArtifacts.AllPreviousSteps,
+					PreviousStepNumbers: b.DownloadArtifacts.PreviousStepNumbers,
+				}
+			}
+
 			*batches[i].dest = append(*batches[i].dest, testkube.TestSuiteBatchStep{
-				StopOnFailure: b.StopOnFailure,
-				Execute:       steps,
+				StopOnFailure:     b.StopOnFailure,
+				Execute:           steps,
+				DownloadArtifacts: downloadArtifacts,
 			})
 		}
 	}

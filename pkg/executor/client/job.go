@@ -13,6 +13,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 
 	"github.com/pkg/errors"
@@ -76,6 +77,7 @@ func NewJobExecutor(
 	namespace string,
 	images executor.Images,
 	jobTemplate string,
+	slavePodTemplate string,
 	serviceAccountName string,
 	metrics ExecutionCounter,
 	emiter *event.Emitter,
@@ -88,6 +90,9 @@ func NewJobExecutor(
 	podStartTimeout time.Duration,
 	clusterID string,
 	dashboardURI string,
+	apiURI string,
+	natsURI string,
+	debug bool,
 ) (client *JobExecutor, err error) {
 	return &JobExecutor{
 		ClientSet:            clientset,
@@ -96,6 +101,7 @@ func NewJobExecutor(
 		Namespace:            namespace,
 		images:               images,
 		jobTemplate:          jobTemplate,
+		slavePodTemplate:     slavePodTemplate,
 		serviceAccountName:   serviceAccountName,
 		metrics:              metrics,
 		Emitter:              emiter,
@@ -107,6 +113,9 @@ func NewJobExecutor(
 		podStartTimeout:      podStartTimeout,
 		clusterID:            clusterID,
 		dashboardURI:         dashboardURI,
+		apiURI:               apiURI,
+		natsURI:              natsURI,
+		debug:                debug,
 	}, nil
 }
 
@@ -123,6 +132,7 @@ type JobExecutor struct {
 	Cmd                  string
 	images               executor.Images
 	jobTemplate          string
+	slavePodTemplate     string
 	serviceAccountName   string
 	metrics              ExecutionCounter
 	Emitter              *event.Emitter
@@ -134,6 +144,9 @@ type JobExecutor struct {
 	podStartTimeout      time.Duration
 	clusterID            string
 	dashboardURI         string
+	apiURI               string
+	natsURI              string
+	debug                bool
 }
 
 type JobOptions struct {
@@ -141,7 +154,6 @@ type JobOptions struct {
 	Namespace             string
 	Image                 string
 	ImagePullSecrets      []string
-	ImageOverride         string
 	Jsn                   string
 	TestName              string
 	InitImage             string
@@ -170,6 +182,9 @@ type JobOptions struct {
 	Debug                 bool
 	NatsUri               string
 	LogSidecarImage       string
+	APIURI                string
+	SlavePodTemplate      string
+	Features              featureflags.FeatureFlags
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -294,10 +309,8 @@ func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) 
 // CreateJob creates new Kubernetes job based on execution and execute options
 func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
-	jobOptions, err := NewJobOptions(
-		c.Log, c.templatesClient, c.images, c.jobTemplate, c.serviceAccountName,
-		c.registry, c.clusterID, execution, options,
-	)
+	jobOptions, err := NewJobOptions(c.Log, c.templatesClient, c.images, c.jobTemplate, c.slavePodTemplate,
+		c.serviceAccountName, c.registry, c.clusterID, c.apiURI, execution, options, c.natsURI, c.debug)
 	if err != nil {
 		return err
 	}
@@ -516,9 +529,22 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		contextData = options.Request.RunningContext.Context
 	}
 
+	var image string
+	if options.ExecutorSpec.Image != "" {
+		image = options.ExecutorSpec.Image
+	}
+
+	if options.TestSpec.ExecutionRequest != nil &&
+		options.TestSpec.ExecutionRequest.Image != "" {
+		image = options.TestSpec.ExecutionRequest.Image
+	}
+
+	if options.Request.Image != "" {
+		image = options.Request.Image
+	}
+
 	return JobOptions{
-		Image:                 options.ExecutorSpec.Image,
-		ImageOverride:         options.ImageOverride,
+		Image:                 image,
 		ImagePullSecrets:      options.ImagePullSecretNames,
 		JobTemplate:           options.ExecutorSpec.JobTemplate,
 		TestName:              options.TestName,
@@ -538,6 +564,7 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		ExecutionNumber:       options.Request.Number,
 		ContextType:           contextType,
 		ContextData:           contextData,
+		Features:              options.Features,
 	}
 }
 
@@ -776,6 +803,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_EXECUTIONNUMBER", Value: fmt.Sprint(options.ExecutionNumber)})
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTTYPE", Value: options.ContextType})
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTDATA", Value: options.ContextData})
+	envs = append(envs, corev1.EnvVar{Name: "RUNNER_APIURI", Value: options.APIURI})
 
 	for i := range job.Spec.Template.Spec.InitContainers {
 		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, envs...)
@@ -783,17 +811,14 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 
 	for i := range job.Spec.Template.Spec.Containers {
 		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, envs...)
-		// override container image if provided
-		if options.ImageOverride != "" {
-			job.Spec.Template.Spec.Containers[i].Image = options.ImageOverride
-		}
 	}
 
 	return &job, nil
 }
 
-func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, images executor.Images, jobTemplate, serviceAccountName, registry, clusterID string,
-	execution testkube.Execution, options ExecuteOptions) (jobOptions JobOptions, err error) {
+func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, images executor.Images,
+	jobTemplate, slavePodTemplate, serviceAccountName, registry, clusterID, apiURI string,
+	execution testkube.Execution, options ExecuteOptions, natsURI string, debug bool) (jobOptions JobOptions, err error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
 		return jobOptions, err
@@ -805,11 +830,15 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	jobOptions.Jsn = string(jsn)
 	jobOptions.InitImage = images.Init
 	jobOptions.TestName = execution.TestName
+	jobOptions.Features = options.Features
 
 	// options needed for Log sidecar
-	jobOptions.Debug = os.Getenv("DEBUG") == "true"
-	jobOptions.NatsUri = os.Getenv("NATS_URI")
-	jobOptions.LogSidecarImage = images.LogSidecar
+	if options.Features.LogsV2 {
+		// TODO pass them from some config? we dont' have any in this context?
+		jobOptions.Debug = debug
+		jobOptions.NatsUri = natsURI
+		jobOptions.LogSidecarImage = images.LogSidecar
+	}
 
 	if jobOptions.JobTemplate == "" {
 		jobOptions.JobTemplate = jobTemplate
@@ -842,13 +871,6 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	}
 
 	jobOptions.Variables = execution.Variables
-	if options.ExecutorSpec.Slaves != nil {
-		slvesConfigs, err := json.Marshal(executor.GetSlavesConfigs(initImage, *options.ExecutorSpec.Slaves))
-		if err != nil {
-			return jobOptions, err
-		}
-		jobOptions.Variables[executor.SlavesConfigsEnv] = testkube.NewBasicVariable(executor.SlavesConfigsEnv, string(slvesConfigs))
-	}
 	jobOptions.ServiceAccountName = serviceAccountName
 	jobOptions.Registry = registry
 	jobOptions.ClusterID = clusterID
@@ -859,6 +881,41 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	}
 
 	jobOptions.WorkingDir = workingDir
+	jobOptions.APIURI = apiURI
+
+	jobOptions.SlavePodTemplate = slavePodTemplate
+	if options.Request.SlavePodRequest != nil && options.Request.SlavePodRequest.PodTemplateReference != "" {
+		template, err := templatesClient.Get(options.Request.SlavePodRequest.PodTemplateReference)
+		if err != nil {
+			return jobOptions, err
+		}
+
+		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.POD_TemplateType {
+			jobOptions.SlavePodTemplate = template.Spec.Body
+		} else {
+			log.Warnw("Not matched template type", "template", options.Request.SlavePodRequest.PodTemplateReference)
+		}
+	}
+
+	if options.ExecutorSpec.Slaves != nil {
+		slvesConfigs, err := json.Marshal(executor.GetSlavesConfigs(
+			images.Init,
+			*options.ExecutorSpec.Slaves,
+			jobOptions.Registry,
+			jobOptions.ServiceAccountName,
+			jobOptions.CertificateSecret,
+			jobOptions.SlavePodTemplate,
+			jobOptions.ImagePullSecrets,
+			jobOptions.EnvConfigMaps,
+			jobOptions.EnvSecrets,
+			int(jobOptions.ActiveDeadlineSeconds),
+		))
+
+		if err != nil {
+			return jobOptions, err
+		}
+		jobOptions.Variables[executor.SlavesConfigsEnv] = testkube.NewBasicVariable(executor.SlavesConfigsEnv, string(slvesConfigs))
+	}
 
 	return
 }

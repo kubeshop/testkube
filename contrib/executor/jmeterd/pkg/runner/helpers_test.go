@@ -1,0 +1,264 @@
+package runner
+
+import (
+	"errors"
+	"os"
+	"testing"
+
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/filesystem"
+)
+
+func TestGetTestPathAndWorkingDir(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	type args struct {
+		fs        *filesystem.MockFileSystem
+		execution testkube.Execution
+		dataDir   string
+	}
+	tests := []struct {
+		name           string
+		args           args
+		wantTestPath   string
+		wantWorkingDir string
+		wantTestFile   string
+		wantErr        bool
+		setup          func(fs *filesystem.MockFileSystem)
+	}{
+		{
+			name: "Get test path and working dir for file URI",
+			args: args{
+				fs: filesystem.NewMockFileSystem(mockCtrl),
+				execution: testkube.Execution{
+					Content: &testkube.TestContent{Type_: string(testkube.TestContentTypeFileURI)},
+					Args:    []string{"arg1"},
+				},
+				dataDir: "/tmp/data",
+			},
+			wantTestPath:   "/tmp/data/test-content",
+			wantWorkingDir: "",
+			wantTestFile:   "",
+			wantErr:        false,
+			setup: func(fs *filesystem.MockFileSystem) {
+				fs.EXPECT().Stat("/tmp/data/test-content").Return(&filesystem.MockFileInfo{FIsDir: false}, nil)
+			},
+		},
+		{
+			name: "Get test path and working dir for git dir (no repository)",
+			args: args{
+				fs: filesystem.NewMockFileSystem(mockCtrl),
+				execution: testkube.Execution{
+					Content: &testkube.TestContent{Type_: string(testkube.TestContentTypeGitFile)},
+					Args:    []string{"arg1", "test.jmx"},
+				},
+				dataDir: "/tmp/data",
+			},
+			wantTestPath:   "/tmp/data/repo/test.jmx",
+			wantWorkingDir: "",
+			wantTestFile:   "test.jmx",
+			wantErr:        false,
+			setup: func(fs *filesystem.MockFileSystem) {
+				gomock.InOrder(
+					fs.EXPECT().Stat("/tmp/data/repo").Return(&filesystem.MockFileInfo{FIsDir: true}, nil),
+					fs.EXPECT().Stat("/tmp/data/repo/test.jmx").Return(&filesystem.MockFileInfo{FIsDir: false}, nil),
+				)
+
+			},
+		},
+		{
+			name: "Get test path and working dir for git dir (repository)",
+			args: args{
+				fs: filesystem.NewMockFileSystem(mockCtrl),
+				execution: testkube.Execution{
+					Content: &testkube.TestContent{
+						Type_: string(testkube.TestContentTypeGitFile),
+						Repository: &testkube.Repository{
+							WorkingDir: "tests",
+							Path:       "tests/test1",
+						},
+					},
+					Args: []string{"arg1", "test.jmx"},
+				},
+				dataDir: "/tmp/data",
+			},
+			wantTestPath:   "/tmp/data/repo/tests/test1/test.jmx",
+			wantWorkingDir: "/tmp/data/repo/tests",
+			wantTestFile:   "test.jmx",
+			wantErr:        false,
+			setup: func(fs *filesystem.MockFileSystem) {
+				gomock.InOrder(
+					fs.EXPECT().Stat("/tmp/data/repo/tests/test1").Return(&filesystem.MockFileInfo{FIsDir: true}, nil),
+					fs.EXPECT().Stat("/tmp/data/repo/tests/test1/test.jmx").Return(&filesystem.MockFileInfo{FIsDir: false}, nil),
+				)
+			},
+		},
+		{
+			name: "Error on fs.Stat",
+			args: args{
+				fs:        filesystem.NewMockFileSystem(mockCtrl),
+				execution: testkube.Execution{
+					// Set appropriate fields
+				},
+				dataDir: "data/dir",
+			},
+			wantTestPath:   "",
+			wantWorkingDir: "",
+			wantTestFile:   "",
+			wantErr:        true,
+			setup: func(fs *filesystem.MockFileSystem) {
+				fs.EXPECT().Stat(gomock.Any()).Return(nil, errors.New("stat error"))
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt := tt
+			tt.setup(tt.args.fs)
+			gotTestPath, gotWorkingDir, gotTestFile, err := getTestPathAndWorkingDir(tt.args.fs, &tt.args.execution, tt.args.dataDir)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getTestPathAndWorkingDir() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			assert.Equal(t, tt.wantTestPath, gotTestPath)
+			assert.Equal(t, tt.wantWorkingDir, gotWorkingDir)
+			assert.Equal(t, tt.wantTestFile, gotTestFile)
+		})
+	}
+}
+
+func TestFindTestFile(t *testing.T) {
+	t.Parallel()
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	tests := []struct {
+		name          string
+		executionArgs []string
+		wantArgs      []string
+		testPath      string
+		testExtension string
+		mockSetup     func(fs *filesystem.MockFileSystem)
+		want          string
+		wantErr       bool
+	}{
+		{
+			name:          "Test file found in args",
+			executionArgs: []string{"arg1", "arg2", "testfile.jmx"},
+			wantArgs:      []string{"arg1", "arg2"},
+			testPath:      "/test/path",
+			testExtension: "jmx",
+			mockSetup:     func(fs *filesystem.MockFileSystem) {},
+			want:          "testfile.jmx",
+			wantErr:       false,
+		},
+		{
+			name:          "Test file found in directory",
+			executionArgs: []string{"arg1", "arg2"},
+			wantArgs:      []string{"arg1", "arg2"},
+			testPath:      "/test/path",
+			testExtension: "jmx",
+			mockSetup: func(fs *filesystem.MockFileSystem) {
+				mockFile1 := &filesystem.MockDirEntry{FIsDir: false, FName: "anotherTestfile.jmx"}
+				mockFile2 := &filesystem.MockDirEntry{FIsDir: false, FName: "data.csv"}
+				fs.EXPECT().ReadDir("/test/path").Return([]os.DirEntry{mockFile1, mockFile2}, nil)
+			},
+			want:    "anotherTestfile.jmx",
+			wantErr: false,
+		},
+		{
+			name:          "Test file not found",
+			executionArgs: []string{"arg1", "arg2"},
+			wantArgs:      []string{"arg1", "arg2"},
+			testPath:      "/test/path",
+			testExtension: "jmx",
+			mockSetup: func(fs *filesystem.MockFileSystem) {
+				fs.EXPECT().ReadDir("/test/path").Return(nil, errors.New("error reading directory"))
+			},
+			want:    "",
+			wantErr: true,
+		},
+	}
+
+	for i := range tests {
+		tt := tests[i]
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			mockFS := filesystem.NewMockFileSystem(mockCtrl)
+			tt.mockSetup(mockFS)
+			execution := &testkube.Execution{Args: tt.executionArgs}
+			got, err := findTestFile(mockFS, execution, tt.testPath, tt.testExtension)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			}
+			assert.Equal(t, tt.wantArgs, execution.Args)
+		})
+	}
+}
+
+func TestInjectAndExpandEnvVars(t *testing.T) {
+	t.Parallel()
+
+	// Define test cases
+	tests := []struct {
+		name     string
+		envvars  map[string]string
+		args     []string
+		params   []string
+		expected []string
+	}{
+		{
+			name:     "Placeholder Replaced and Env Var Expanded",
+			args:     []string{"before", "<envVars>", "after"},
+			params:   []string{"injected1", "${JMETER_TEST_EXPAND_VAR}"},
+			expected: []string{"before", "injected1", "expanded_value", "after"},
+			envvars:  map[string]string{"JMETER_TEST_EXPAND_VAR": "expanded_value"},
+		},
+		{
+			name:     "No Placeholder",
+			args:     []string{"start", "end"},
+			params:   []string{"middle"},
+			expected: []string{"start", "end"},
+		},
+		{
+			name:     "Placeholder with No Params",
+			args:     []string{"start", "<envVars>", "end"},
+			params:   []string{},
+			expected: []string{"start", "end"},
+		},
+		{
+			name:     "Empty Args",
+			args:     []string{},
+			params:   []string{"middle"},
+			expected: []string{},
+		},
+	}
+
+	// Run the test cases
+	for i := range tests {
+		tt := tests[i]
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			for key, value := range tt.envvars {
+				assert.NoError(t, os.Setenv(key, value))
+				t.Cleanup(func() {
+					assert.NoError(t, os.Unsetenv(key))
+				})
+			}
+
+			got := injectAndExpandEnvVars(tt.args, tt.params)
+			assert.ElementsMatch(t, tt.expected, got)
+		})
+	}
+}

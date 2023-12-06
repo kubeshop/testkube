@@ -11,6 +11,7 @@ package testkube
 
 // set of steps run in parallel
 type TestSuiteBatchStep struct {
-	StopOnFailure bool            `json:"stopOnFailure"`
-	Execute       []TestSuiteStep `json:"execute,omitempty"`
+	StopOnFailure     bool                     `json:"stopOnFailure"`
+	DownloadArtifacts *DownloadArtifactOptions `json:"downloadArtifacts,omitempty"`
+	Execute           []TestSuiteStep          `json:"execute,omitempty"`
 }

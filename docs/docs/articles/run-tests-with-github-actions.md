@@ -10,8 +10,8 @@ To use the action in your GitHub workflow, use the ``kubeshop/testkube-run-actio
 
 The most important options you will need are **test** and **testSuite** - you should pass a test or test suite name there.
 
-### Testkube Cloud
-To use this GitHub Action for the Testkube Cloud, you need to create an API token.
+### Testkube Pro
+To use this GitHub Action for Testkube Pro, you need to create an API token.
 
 Then, pass the **organization** and **environment** IDs for the test, along with the **token** and other parameters specific for your use case:
 
@@ -106,7 +106,7 @@ with:
 `testkube-run-action` is also used for running Testkube internal tests with Testkube. Workflow for Testkube Dashboard E2E tests can be found [here](https://github.com/kubeshop/testkube-dashboard/blob/develop/.github/workflows/pr_checks.yml#L28)
 
 ## Inputs
-There are different inputs available for tests and test suites, as well as for Cloud and your own instance.
+There are different inputs available for tests and test suites, as well as for Pro and your own instance.
 
 ### Test
 
@@ -134,14 +134,14 @@ There are different inputs available for tests and test suites, as well as for C
 |     ✗	   | namespace       | Set namespace to run test suite in.
 ```
 
-### Cloud and Enterprise
+### Pro and Enterprise
 
 ```sh
 | Required | Name	      | Description
 +----------+--------------+------------------------------------------------------------------------------------------------------------------------------
-|     ✓    | organization |	The organization ID from Testkube Cloud or Enterprise - it starts with tkc_org, you may find it i.e. in the dashboard's URL.
-|     ✓	   | environment  | The environment ID from Testkube Cloud or Enterprise - it starts with tkc_env, you may find it i.e. in the dashboard's URL.
-|     ✓	   | token        |	API token that has at least a permission to run specific test or test suite. Read more about creating API token in Testkube Cloud or Enterprise.
+|     ✓    | organization |	The organization ID from Testkube Pro or Enterprise - it starts with tkc_org, you may find it i.e. in the dashboard's URL.
+|     ✓	   | environment  | The environment ID from Testkube Pro or Enterprise - it starts with tkc_env, you may find it i.e. in the dashboard's URL.
+|     ✓	   | token        |	API token that has at least a permission to run specific test or test suite. Read more about creating API token in Testkube Pro or Enterprise.
 |     ✗    | url          | URL of the Testkube Enterprise instance, if applicable.
 |     ✗    | dashboardUrl | URL of the Testkube Enterprise dashboard, if applicable, to display links for the execution.
 ```

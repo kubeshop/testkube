@@ -225,6 +225,8 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution.ExecutePostRunScriptBeforeScraping = options.Request.ExecutePostRunScriptBeforeScraping
 	execution.RunningContext = options.Request.RunningContext
 	execution.TestExecutionName = options.Request.TestExecutionName
+	execution.DownloadArtifactExecutionIDs = options.Request.DownloadArtifactExecutionIDs
+	execution.SlavePodRequest = options.Request.SlavePodRequest
 
 	return execution
 }
@@ -347,6 +349,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 			request.ArtifactRequest.VolumeMountPath = filepath.Join(executor.VolumeDir, "artifacts")
 		}
 
+		request.SlavePodRequest = mergeSlavePodRequests(request.SlavePodRequest, test.ExecutionRequest.SlavePodRequest)
 		s.logger.Infow("checking for negative test change", "test", test.Name, "negativeTest", request.NegativeTest, "isNegativeTestChangedOnRun", request.IsNegativeTestChangedOnRun)
 		if !request.IsNegativeTestChangedOnRun {
 			s.logger.Infow("setting negative test from test definition", "test", test.Name, "negativeTest", test.ExecutionRequest.NegativeTest)
@@ -369,15 +372,17 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 	}
 
 	var imagePullSecrets []string
-	switch {
-	case len(executorCR.Spec.ImagePullSecrets) != 0:
+
+	if len(executorCR.Spec.ImagePullSecrets) != 0 {
 		imagePullSecrets = mapK8sImagePullSecrets(executorCR.Spec.ImagePullSecrets)
+	}
 
-	case testCR.Spec.ExecutionRequest != nil &&
-		len(testCR.Spec.ExecutionRequest.ImagePullSecrets) != 0:
+	if testCR.Spec.ExecutionRequest != nil &&
+		len(testCR.Spec.ExecutionRequest.ImagePullSecrets) != 0 {
 		imagePullSecrets = mapK8sImagePullSecrets(testCR.Spec.ExecutionRequest.ImagePullSecrets)
+	}
 
-	case len(request.ImagePullSecrets) != 0:
+	if len(request.ImagePullSecrets) != 0 {
 		imagePullSecrets = mapImagePullSecrets(request.ImagePullSecrets)
 	}
 
@@ -451,8 +456,8 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		UsernameSecret:       usernameSecret,
 		TokenSecret:          tokenSecret,
 		CertificateSecret:    certificateSecret,
-		ImageOverride:        request.Image,
 		ImagePullSecretNames: imagePullSecrets,
+		Features:             s.featureFlags,
 	}, nil
 }
 
@@ -713,4 +718,69 @@ func mergeEnvReferences(envs1 []testkube.EnvReference, envs2 []testkube.EnvRefer
 	}
 
 	return res
+}
+
+func mergeSlavePodRequests(podBase *testkube.PodRequest, podAdjust *testkube.PodRequest) *testkube.PodRequest {
+	switch {
+	case podBase == nil && podAdjust == nil:
+		return nil
+	case podBase == nil && podAdjust != nil:
+		return podAdjust
+	case podBase != nil && podAdjust == nil:
+		return podBase
+	default:
+		var fields = []struct {
+			source      string
+			destination *string
+		}{
+			{
+				podAdjust.PodTemplate,
+				&podBase.PodTemplate,
+			},
+			{
+				podAdjust.PodTemplateReference,
+				&podBase.PodTemplateReference,
+			},
+		}
+
+		for _, field := range fields {
+			if *field.destination == "" && field.source != "" {
+				*field.destination = field.source
+			}
+		}
+
+		if podBase.Resources == nil && podAdjust.Resources != nil {
+			podBase.Resources = podAdjust.Resources
+			return podBase
+		}
+
+		if podBase.Resources != nil && podAdjust.Resources != nil {
+			if podBase.Resources.Requests == nil && podAdjust.Resources.Requests != nil {
+				podBase.Resources.Requests = podAdjust.Resources.Requests
+			} else if podBase.Resources.Requests != nil && podAdjust.Resources.Requests != nil {
+				if podBase.Resources.Requests.Cpu == "" && podAdjust.Resources.Requests.Cpu != "" {
+					podBase.Resources.Requests.Cpu = podAdjust.Resources.Requests.Cpu
+				}
+
+				if podBase.Resources.Requests.Memory == "" && podAdjust.Resources.Requests.Memory != "" {
+					podBase.Resources.Requests.Memory = podAdjust.Resources.Requests.Memory
+				}
+			}
+
+			if podBase.Resources.Limits == nil && podAdjust.Resources.Limits != nil {
+				podBase.Resources.Limits = podAdjust.Resources.Limits
+			} else if podBase.Resources.Limits != nil && podAdjust.Resources.Limits != nil {
+				if podBase.Resources.Limits.Cpu == "" && podAdjust.Resources.Limits.Cpu != "" {
+					podBase.Resources.Limits.Cpu = podAdjust.Resources.Limits.Cpu
+				}
+
+				if podBase.Resources.Limits.Memory == "" && podAdjust.Resources.Limits.Memory != "" {
+					podBase.Resources.Limits.Memory = podAdjust.Resources.Limits.Memory
+				}
+			}
+		}
+
+	}
+
+	return podBase
 }

@@ -1,9 +1,8 @@
 package envs
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/kelseyhightower/envconfig"
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -18,6 +17,10 @@ type Params struct {
 	Token                     string // RUNNER_TOKEN
 	Bucket                    string // RUNNER_BUCKET
 	Ssl                       bool   // RUNNER_SSL
+	SkipVerify                bool   `envconfig:"RUNNER_SKIP_VERIFY" default:"false"` // RUNNER_SKIP_VERIFY
+	CertFile                  string `envconfig:"RUNNER_CERT_FILE"`                   // RUNNER_CERT_FILE
+	KeyFile                   string `envconfig:"RUNNER_KEY_FILE"`                    // RUNNER_KEY_FILE
+	CAFile                    string `envconfig:"RUNNER_CA_FILE"`
 	ScrapperEnabled           bool   // RUNNER_SCRAPPERENABLED
 	DataDir                   string // RUNNER_DATADIR
 	GitUsername               string // RUNNER_GITUSERNAME
@@ -29,6 +32,7 @@ type Params struct {
 	ExecutionNumber           int32  // RUNNER_EXECUTIONNUMBER
 	ContextType               string // RUNNER_CONTEXTTYPE
 	ContextData               string // RUNNER_CONTEXTDATA
+	APIURI                    string // RUNNER_APIURI
 	ClusterID                 string `envconfig:"RUNNER_CLUSTERID"`                             // RUNNER_CLUSTERID
 	CDEventsTarget            string `envconfig:"RUNNER_CDEVENTS_TARGET"`                       // RUNNER_CDEVENTS_TARGET
 	DashboardURI              string `envconfig:"RUNNER_DASHBOARD_URI"`                         // RUNNER_DASHBOARD_URI
@@ -43,20 +47,17 @@ type Params struct {
 // LoadTestkubeVariables loads the parameters provided as environment variables in the Test CRD
 func LoadTestkubeVariables() (Params, error) {
 	var params Params
-	output.PrintLogf("%s Reading environment variables...", ui.IconWorld)
 	err := envconfig.Process("runner", &params)
 	if err != nil {
-		output.PrintLogf("%s Failed to read environment variables: %s", ui.IconCross, err.Error())
 		return params, errors.Errorf("failed to read environment variables: %v", err)
 	}
-	output.PrintLogf("%s Environment variables read successfully", ui.IconCheckMark)
-	printParams(params)
 
 	return params, nil
 }
 
-// printParams shows the read parameters in logs
-func printParams(params Params) {
+// PrintParams shows the read parameters in logs
+func PrintParams(params Params) {
+	output.PrintLogf("%s Environment variables read successfully", ui.IconCheckMark)
 	output.PrintLogf("RUNNER_ENDPOINT=\"%s\"", params.Endpoint)
 	printSensitiveParam("RUNNER_ACCESSKEYID", params.AccessKeyID)
 	printSensitiveParam("RUNNER_SECRETACCESSKEY", params.SecretAccessKey)
@@ -75,6 +76,7 @@ func printParams(params Params) {
 	output.PrintLogf("RUNNER_EXECUTIONNUMBER=\"%d\"", params.ExecutionNumber)
 	output.PrintLogf("RUNNER_CONTEXTTYPE=\"%s\"", params.ContextType)
 	output.PrintLogf("RUNNER_CONTEXTDATA=\"%s\"", params.ContextData)
+	output.PrintLogf("RUNNER_APIURI=\"%s\"", params.APIURI)
 	output.PrintLogf("RUNNER_CLUSTERID=\"%s\"", params.ClusterID)
 	output.PrintLogf("RUNNER_CDEVENTS_TARGET=\"%s\"", params.CDEventsTarget)
 	output.PrintLogf("RUNNER_DASHBOARD_URI=\"%s\"", params.DashboardURI)

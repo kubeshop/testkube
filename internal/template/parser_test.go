@@ -19,9 +19,11 @@ func TestParseJobTemplate(t *testing.T) {
 	cfg, err := config.Get()
 	assertion.NoError(err)
 
-	jobTemplate, err := ParseJobTemplate(cfg)
+	jobTemplate, slavePodTemplate, err := ParseJobTemplates(cfg)
 
 	assertion.NoError(err)
 	// t.Log(jobTemplate)
 	assertion.NotEmpty(jobTemplate)
+	// t.Log(slavePodTemplate)
+	assertion.NotEmpty(slavePodTemplate)
 }

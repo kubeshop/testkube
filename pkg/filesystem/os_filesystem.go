@@ -37,4 +37,16 @@ func (s *OSFileSystem) OpenFileBuffered(name string) (*bufio.Reader, error) {
 	return bufio.NewReader(f), nil
 }
 
+func (s *OSFileSystem) ReadDir(dirname string) ([]os.DirEntry, error) {
+	return os.ReadDir(dirname)
+}
+
+func (s *OSFileSystem) Getwd() (string, error) {
+	return os.Getwd()
+}
+
+func (s *OSFileSystem) ReadFile(filename string) ([]byte, error) {
+	return os.ReadFile(filename)
+}
+
 var _ FileSystem = (*OSFileSystem)(nil)

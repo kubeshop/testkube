@@ -16,7 +16,7 @@ import (
 
 const (
 	listenAddr      = "127.0.0.1:8090"
-	docsUrl         = "https://docs.testkube.io/testkube-cloud/intro"
+	docsUrl         = "https://docs.testkube.io/testkube-pro/intro"
 	tokenQueryParam = "token"
 )
 
@@ -26,8 +26,9 @@ func NewConnectCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "connect",
 		Aliases: []string{"c"},
-		Short:   "Testkube Cloud connect ",
+		Short:   "[Deprecated] Testkube Cloud connect ",
 		Run: func(cmd *cobra.Command, args []string) {
+			ui.Warn("You are using a deprecated command, please switch to `testkube pro connect`.")
 
 			// create new cloud uris
 			opts.CloudUris = common.NewCloudUris(opts.CloudRootDomain)
@@ -192,7 +193,6 @@ func NewConnectCmd() *cobra.Command {
 	cmd.Flags().StringVar(&opts.CloudAgentToken, "agent-token", "", "Testkube Cloud agent key [required for cloud mode]")
 	cmd.Flags().StringVar(&opts.CloudOrgId, "org-id", "", "Testkube Cloud organization id [required for cloud mode]")
 	cmd.Flags().StringVar(&opts.CloudEnvId, "env-id", "", "Testkube Cloud environment id [required for cloud mode]")
-
 	cmd.Flags().StringVar(&opts.CloudRootDomain, "cloud-root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for cloud mode]")
 
 	cmd.Flags().BoolVar(&opts.NoMinio, "no-minio", false, "don't install MinIO")

@@ -9,6 +9,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -44,6 +45,7 @@ func NewDownloadCmd() *cobra.Command {
 
 	cmd.AddCommand(NewDownloadSingleArtifactsCmd())
 	cmd.AddCommand(NewDownloadAllArtifactsCmd())
+	cmd.AddCommand(NewDownloadTestSuiteArtifactsCmd())
 
 	return cmd
 }
@@ -125,6 +127,32 @@ func NewDownloadAllArtifactsCmd() *cobra.Command {
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "should I show additional debug messages")
 
 	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the execution")
+	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
+	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")
+	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
+
+	// output renderer flags
+	return cmd
+}
+
+func NewDownloadTestSuiteArtifactsCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "testsuite-artifacts <executionName>",
+		Short: "download test suite artifacts",
+		Args:  validator.ExecutionName,
+		Run: func(cmd *cobra.Command, args []string) {
+			executionID := args[0]
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
+			testsuites.DownloadArtifacts(executionID, downloadDir, format, masks, client)
+		},
+	}
+
+	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
+	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "should I show additional debug messages")
+
+	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the test suite execution")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
 	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")
 	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")

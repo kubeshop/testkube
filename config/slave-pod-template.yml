@@ -1,0 +1,149 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ .Name }}"
+  namespace: {{ .Namespace }}
+  {{- if .JobUID }}
+  ownerReferences:
+  - apiVersion: batch/v1
+    kind: job
+    name: {{ .JobName }}
+    uid: {{ .JobUID }}
+  {{- end }}
+spec:
+  {{- if gt .ActiveDeadlineSeconds 0 }}
+  activeDeadlineSeconds: {{ .ActiveDeadlineSeconds }}
+  {{- end }}
+  initContainers:
+  - name: init
+    {{- if .Registry }}
+    image: {{ .Registry }}/{{ .InitImage }}
+    {{- else }}
+    image: {{ .InitImage }}
+    {{- end }}
+    imagePullPolicy: IfNotPresent
+    command:
+      - "/bin/runner"
+      - '{{ .Jsn }}'
+    volumeMounts:
+    - name: data-volume
+      mountPath: /data
+    {{- if .CertificateSecret }}
+    - name: {{ .CertificateSecret }}
+      mountPath: /etc/certs
+    {{- end }}
+    {{- range $configmap := .EnvConfigMaps }}
+    {{- if and $configmap.Mount $configmap.Reference }}
+    - name: {{ $configmap.Reference.Name }}
+      mountPath: {{ $configmap.MountPath }}
+    {{- end }}
+    {{- end }}
+    {{- range $secret := .EnvSecrets }}
+    {{- if and $secret.Mount $secret.Reference }}
+    - name: {{ $secret.Reference.Name }}
+      mountPath: {{ $secret.MountPath }}
+    {{- end }}
+    {{- end }}
+  containers:
+  - name: main
+    {{- if .Registry }}
+    image: {{ .Registry }}/{{ .Image }}
+    {{- else }}
+    image: {{ .Image }}
+    {{- end }}
+    imagePullPolicy: IfNotPresent
+    ports:
+    {{- range $port := .Ports }}
+    - name: {{ $port.Name }}
+      containerPort: {{ $port.ContainerPort }}
+    {{- end}}
+    {{- range $port := .Ports }}
+    {{- if eq $port.Name "server-port" }}
+    livenessProbe:
+      tcpSocket:
+        port: {{ $port.ContainerPort }}
+      failureThreshold: 3
+      periodSeconds: 5
+      successThreshold: 1
+      timeoutSeconds: 1
+    readinessProbe:
+      tcpSocket:
+        port: {{ $port.ContainerPort }}
+      failureThreshold: 3
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 1
+    {{- end }}
+    {{- end }}
+    {{- if .Resources }}
+    resources:
+      {{- if .Resources.Limits }}
+      limits:
+        {{- if .Resources.Limits.Cpu }}
+        cpu: {{ .Resources.Limits.Cpu }}
+        {{- end }}
+        {{- if .Resources.Limits.Memory }}
+        memory: {{ .Resources.Limits.Memory }}
+        {{- end }}
+      {{- end }}
+      {{- if .Resources.Requests }}
+      requests:
+        {{- if .Resources.Requests.Cpu }}
+        cpu: {{ .Resources.Requests.Cpu }}
+        {{- end }}
+        {{- if .Resources.Requests.Memory }}
+        memory: {{ .Resources.Requests.Memory }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    volumeMounts:
+    - name: data-volume
+      mountPath: /data
+    {{- if .CertificateSecret }}
+    - name: {{ .CertificateSecret }}
+      mountPath: /etc/certs
+    {{- end }}
+    {{- range $configmap := .EnvConfigMaps }}
+    {{- if and $configmap.Mount $configmap.Reference }}
+    - name: {{ $configmap.Reference.Name }}
+      mountPath: {{ $configmap.MountPath }}
+    {{- end }}
+    {{- end }}
+    {{- range $secret := .EnvSecrets }}
+    {{- if and $secret.Mount $secret.Reference }}
+    - name: {{ $secret.Reference.Name }}
+      mountPath: {{ $secret.MountPath }}
+    {{- end }}
+    {{- end }}
+  volumes:
+  - name: data-volume
+    emptyDir: {}
+  {{- if .CertificateSecret }}
+  - name: {{ .CertificateSecret }}
+    secret:
+      secretName: {{ .CertificateSecret }}
+  {{- end }}
+  {{- range $configmap := .EnvConfigMaps }}
+  {{- if and $configmap.Mount $configmap.Reference }}
+  - name: {{ $configmap.Reference.Name }}
+    configmap:
+      name: {{ $configmap.Reference.Name }}
+  {{- end }}
+  {{- end }}
+  {{- range $secret := .EnvSecrets }}
+  {{- if and $secret.Mount $secret.Reference }}
+  - name: {{ $secret.Reference.Name }}
+    secret:
+      secretName: {{ $secret.Reference.Name }}
+  {{- end }}
+  {{- end }}
+  restartPolicy: Always
+  {{- if .ServiceAccountName }}
+  serviceAccountName: {{ .ServiceAccountName }}
+  {{- end }}
+  {{- if gt (len .ImagePullSecrets) 0 }}
+  imagePullSecrets:
+  {{- range $secret := .ImagePullSecrets }}
+  - name: {{ $secret -}}
+  {{- end }}
+  {{- end }}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
@@ -118,10 +119,10 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	}
 
 	// TODO: write a proper cloud implementation
-	// add copy files in case object storage is set
 	if r.Params.Endpoint != "" && !r.Params.CloudMode {
 		output.PrintLogf("%s Fetching uploads from object store %s...", ui.IconFile, r.Params.Endpoint)
-		minioClient := minio.NewClient(r.Params.Endpoint, r.Params.AccessKeyID, r.Params.SecretAccessKey, r.Params.Region, r.Params.Token, r.Params.Bucket, r.Params.Ssl)
+		opts := minio.GetTLSOptions(r.Params.Ssl, r.Params.SkipVerify, r.Params.CertFile, r.Params.KeyFile, r.Params.CAFile)
+		minioClient := minio.NewClient(r.Params.Endpoint, r.Params.AccessKeyID, r.Params.SecretAccessKey, r.Params.Region, r.Params.Token, r.Params.Bucket, opts...)
 		fp := content.NewCopyFilesPlacer(minioClient)
 		fp.PlaceFiles(ctx, execution.TestName, execution.BucketName)
 	} else if r.Params.CloudMode {
@@ -147,8 +148,51 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	}
 	output.PrintLogf("%s Access to files enabled", ui.IconCheckMark)
 
+	if len(execution.DownloadArtifactExecutionIDs) != 0 {
+		downloadedArtifacts := filepath.Join(r.Params.DataDir, "downloaded-artifacts")
+		options := client.Options{
+			ApiUri: r.Params.APIURI,
+		}
+
+		c, err := client.GetClient(client.ClientDirect, options)
+		if err != nil {
+			output.PrintLogf("%s Could not get client: %s", ui.IconCross, err.Error())
+		} else {
+			for _, id := range execution.DownloadArtifactExecutionIDs {
+				if err = downloadArtifacts(id, filepath.Join(downloadedArtifacts, id), c); err != nil {
+					output.PrintLogf("%s Could not download artifact: %s", ui.IconCross, err.Error())
+				}
+			}
+		}
+	}
+
 	output.PrintLogf("%s Initialization successful", ui.IconCheckMark)
 	return testkube.NewPendingExecutionResult(), nil
+}
+
+func downloadArtifacts(id, dir string, c client.Client) error {
+	artifacts, err := c.GetExecutionArtifacts(id)
+	if err != nil {
+		return err
+	}
+
+	if err = os.MkdirAll(dir, os.ModePerm); err != nil {
+		return err
+	}
+
+	if len(artifacts) > 0 {
+		output.PrintLogf("%s Getting %d artifacts...", ui.IconWorld, len(artifacts))
+		for _, artifact := range artifacts {
+			f, err := c.DownloadFile(id, artifact.Name, dir)
+			if err != nil {
+				return err
+			}
+
+			output.PrintLogf("%s Downloading file %s...", ui.IconWorld, f)
+		}
+	}
+
+	return nil
 }
 
 // GetType returns runner type

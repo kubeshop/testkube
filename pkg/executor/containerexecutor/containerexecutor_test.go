@@ -17,6 +17,7 @@ import (
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	templatesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
 	v3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -92,6 +93,7 @@ func TestNewExecutorJobSpecEmptyArgs(t *testing.T) {
 		PvcTemplateExtensions:     "",
 		Command:                   []string{},
 		Args:                      []string{},
+		Features:                  featureflags.FeatureFlags{},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
@@ -118,8 +120,11 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		ActiveDeadlineSeconds:     100,
 		Envs:                      map[string]string{"key": "value"},
 		Variables:                 map[string]testkube.Variable{"aa": {Name: "aa", Value: "bb", Type_: testkube.VariableTypeBasic}},
+		Features:                  featureflags.FeatureFlags{},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
+
+	assert.NotEmpty(t, defaultJobTemplate)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 
@@ -132,6 +137,10 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "RUNNER_TOKEN", Value: ""},
 		{Name: "RUNNER_BUCKET", Value: ""},
 		{Name: "RUNNER_SSL", Value: "false"},
+		{Name: "RUNNER_SKIP_VERIFY", Value: "false"},
+		{Name: "RUNNER_CERT_FILE", Value: ""},
+		{Name: "RUNNER_KEY_FILE", Value: ""},
+		{Name: "RUNNER_CA_FILE", Value: ""},
 		{Name: "RUNNER_SCRAPPERENABLED", Value: "false"},
 		{Name: "RUNNER_DATADIR", Value: "/data"},
 		{Name: "RUNNER_CDEVENTS_TARGET", Value: ""},
@@ -143,6 +152,7 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "RUNNER_EXECUTIONNUMBER", Value: "0"},
 		{Name: "RUNNER_CONTEXTTYPE", Value: ""},
 		{Name: "RUNNER_CONTEXTDATA", Value: ""},
+		{Name: "RUNNER_APIURI", Value: ""},
 		{Name: "RUNNER_CLOUD_MODE", Value: "false"},
 		{Name: "RUNNER_CLOUD_API_KEY", Value: ""},
 		{Name: "RUNNER_CLOUD_API_URL", Value: ""},
@@ -172,6 +182,7 @@ func TestNewExecutorJobSpecWithoutInitImage(t *testing.T) {
 		PvcTemplateExtensions:     "",
 		Command:                   []string{},
 		Args:                      []string{},
+		Features:                  featureflags.FeatureFlags{},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
@@ -194,6 +205,7 @@ func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 		"",
 		"",
 		"",
+		"",
 		testkube.Execution{
 			Id:            "name",
 			TestName:      "name-test-1",
@@ -211,7 +223,10 @@ func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 				},
 			},
 		},
+		"",
+		false,
 	)
+
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
@@ -235,6 +250,7 @@ func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 		"",
 		"",
 		"",
+		"",
 		testkube.Execution{
 			Id:            "name",
 			TestName:      "name-test-1",
@@ -252,6 +268,8 @@ func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 				},
 			},
 		},
+		"",
+		false,
 	)
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
@@ -276,6 +294,7 @@ func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
 		"",
 		"",
 		"",
+		"",
 		testkube.Execution{
 			Id:            "name",
 			TestName:      "name-test-1",
@@ -292,6 +311,8 @@ func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
 				},
 			},
 		},
+		"",
+		false,
 	)
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
@@ -337,14 +358,12 @@ type FakeMetricCounter struct {
 }
 
 func (FakeMetricCounter) IncExecuteTest(execution testkube.Execution, dashboardURI string) {
-	return
 }
 
 type FakeEmitter struct {
 }
 
 func (FakeEmitter) Notify(event testkube.Event) {
-	return
 }
 
 type FakeResultRepository struct {
@@ -360,7 +379,7 @@ func (r FakeResultRepository) GetByNameAndTest(ctx context.Context, name, testNa
 	panic("implement me")
 }
 
-func (r FakeResultRepository) GetLatestByTest(ctx context.Context, testName string) (testkube.Execution, error) {
+func (r FakeResultRepository) GetLatestByTest(ctx context.Context, testName string) (*testkube.Execution, error) {
 	//TODO implement me
 	panic("implement me")
 }

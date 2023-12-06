@@ -21,8 +21,9 @@ testkube delete template <templateName> [flags]
 ### Options inherited from parent commands
 
 ```
-  -a, --api-uri string     api uri, default value read from config if set (default "https://demo.testkube.io/results/v1")
+  -a, --api-uri string     api uri, default value read from config if set (default "https://demo.testkube.io/results")
   -c, --client string      Client used for connecting to testkube API one of proxy|direct (default "proxy")
+      --insecure           insecure connection for direct client
       --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")
       --oauth-enabled      enable oauth
       --verbose            should I show additional debug messages

@@ -82,7 +82,6 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 		}
 	}
 
-	log.Debug("Executor job specification", jobSpec)
 	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(jobSpec), len(jobSpec))
 	if err := decoder.Decode(&job); err != nil {
 		return nil, fmt.Errorf("decoding executor job spec error: %w", err)
@@ -125,7 +124,14 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_EXECUTIONNUMBER", Value: fmt.Sprint(options.ExecutionNumber)})
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTTYPE", Value: options.ContextType})
 	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTDATA", Value: options.ContextData})
-	envs = append(envs, corev1.EnvVar{Name: "NATS_URI", Value: options.NatsUri})
+	envs = append(envs, corev1.EnvVar{Name: "RUNNER_APIURI", Value: options.APIURI})
+
+	// envs needed for logs sidecar
+	if options.Features.LogsV2 {
+		envs = append(envs, corev1.EnvVar{Name: "ID", Value: options.Name})
+		envs = append(envs, corev1.EnvVar{Name: "NATS_URI", Value: options.NatsUri})
+		envs = append(envs, corev1.EnvVar{Name: "NAMESPACE", Value: options.Namespace})
+	}
 
 	for i := range job.Spec.Template.Spec.InitContainers {
 		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, envs...)
@@ -133,10 +139,6 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 
 	for i := range job.Spec.Template.Spec.Containers {
 		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, envs...)
-		// override container image if provided
-		if options.ImageOverride != "" {
-			job.Spec.Template.Spec.Containers[i].Image = options.ImageOverride
-		}
 	}
 
 	return &job, nil
@@ -273,9 +275,12 @@ func InspectDockerImage(namespace, registry, image string, imageSecrets []string
 	return append(dockerImage.Config.Entrypoint, dockerImage.Config.Cmd...), dockerImage.Shell, nil
 }
 
+// TODO refactor JobOptions to use builder pattern
+// TODO extract JobOptions for both container and job executor to common package in separate PR
 // NewJobOptions provides job options for templates
-func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, images executor.Images, templates executor.Templates,
-	serviceAccountName, registry, clusterID string, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
+func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, images executor.Images,
+	templates executor.Templates, serviceAccountName, registry, clusterID, apiURI string,
+	execution testkube.Execution, options client.ExecuteOptions, natsUri string, debug bool) (*JobOptions, error) {
 	jobOptions := NewJobOptionsFromExecutionOptions(options)
 	if execution.PreRunScript != "" || execution.PostRunScript != "" {
 		jobOptions.Command = []string{filepath.Join(executor.VolumeDir, EntrypointScriptName)}
@@ -305,10 +310,13 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	jobOptions.InitImage = images.Init
 	jobOptions.ScraperImage = images.Scraper
 
-	// Log sidecar
-	jobOptions.Debug = os.Getenv("DEBUG") == "true"
-	jobOptions.NatsUri = os.Getenv("NATS_URI")
-	jobOptions.LogSidecarImage = images.LogSidecar
+	// options needed for Log sidecar
+	if options.Features.LogsV2 {
+		// TODO pass them from some config? we dont' have any in this context?
+		jobOptions.Debug = debug
+		jobOptions.NatsUri = natsUri
+		jobOptions.LogSidecarImage = images.LogSidecar
+	}
 
 	if jobOptions.JobTemplate == "" {
 		jobOptions.JobTemplate = templates.Job
@@ -375,5 +383,6 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	jobOptions.ServiceAccountName = serviceAccountName
 	jobOptions.Registry = registry
 	jobOptions.ClusterID = clusterID
+	jobOptions.APIURI = apiURI
 	return jobOptions, nil
 }

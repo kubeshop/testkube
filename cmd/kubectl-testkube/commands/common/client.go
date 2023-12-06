@@ -25,9 +25,15 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 		return nil, "", fmt.Errorf("parsing flag value %w", err)
 	}
 
+	insecure, err := strconv.ParseBool(cmd.Flag("insecure").Value.String())
+	if err != nil {
+		return nil, "", fmt.Errorf("parsing flag value %w", err)
+	}
+
 	options := client.Options{
 		Namespace: namespace,
 		ApiUri:    apiURI,
+		Insecure:  insecure,
 	}
 
 	cfg, err := config.Load()

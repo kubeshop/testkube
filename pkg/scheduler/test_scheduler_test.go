@@ -173,6 +173,7 @@ func TestGetExecuteOptions(t *testing.T) {
 			Type_: string(testkube.RunningContextTypeUserCLI),
 		},
 		TestExecutionName: "",
+		SlavePodRequest:   &testkube.PodRequest{},
 	}
 
 	got, err := sc.getExecuteOptions("namespace", "id", req)
@@ -188,7 +189,6 @@ func TestGetExecuteOptions(t *testing.T) {
 		Request:              req,
 		Sync:                 false,
 		Labels:               map[string]string(nil),
-		ImageOverride:        "executor-image",
 		ImagePullSecretNames: []string{"secret-name1", "secret-name2"},
 	}
 

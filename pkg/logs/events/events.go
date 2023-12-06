@@ -5,8 +5,6 @@ import (
 	"regexp"
 	"time"
 
-	"encoding/json"
-
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 )
@@ -19,20 +17,12 @@ type Trigger struct {
 }
 
 type LogVersion string
-type Type string
 
 const (
 	// v1 - old log format based on shell output of executors {"line":"...", "time":"..."}
 	LogVersionV1 LogVersion = "v1"
 	// v2 - raw binary format, timestamps are based on Kubernetes logs, line is raw log line
 	LogVersionV2 LogVersion = "v2"
-
-	// TypeTestPod - logs from test pod (all containers)
-	TypeTestPod Type = "test-execution-pod"
-	// TypeSchduler - logs from scheduler pod
-	TypeSchduler Type = "test-scheduler"
-	// TypeOperator - logs from operator pod
-	TypeOperator Type = "operator"
 )
 
 type LogOutputV1 struct {
@@ -79,13 +69,7 @@ func (c *LogChunk) WithV1Result(result *testkube.ExecutionResult) *LogChunk {
 	return c
 }
 
-// TODO handle errrors
-func (c LogChunk) Encode() []byte {
-	b, _ := json.Marshal(c)
-	return b
-}
-
-var rsRegexp = regexp.MustCompile("^[0-9]{4}-[0-9]{2}-[0-9]{2}T.*")
+var timestampRegexp = regexp.MustCompile("^[0-9]{4}-[0-9]{2}-[0-9]{2}T.*")
 
 // NewLogChunkFromBytes creates new LogChunk from bytes it's aware of new and old log formats
 // default log format will be based on raw bytes with timestamp on the beginning
@@ -99,7 +83,7 @@ func NewLogChunkFromBytes(b []byte) LogChunk {
 		err          error
 	)
 
-	if rsRegexp.Match(b) {
+	if timestampRegexp.Match(b) {
 		hasTimestamp = true
 	}
 
@@ -134,6 +118,7 @@ func NewLogChunkFromBytes(b []byte) LogChunk {
 			return LogChunk{
 				Time:    ts,
 				Content: err.Error(),
+				Type:    o.Type_,
 				Error:   true,
 				Version: LogVersionV1,
 			}

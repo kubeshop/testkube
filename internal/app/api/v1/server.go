@@ -36,6 +36,7 @@ import (
 	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
+	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
@@ -75,7 +76,6 @@ func NewTestkubeAPI(
 	executor client.Executor,
 	containerExecutor client.Executor,
 	metrics metrics.Metrics,
-	jobTemplate string,
 	scheduler *scheduler.Scheduler,
 	slackLoader *slack.SlackLoader,
 	storage storage.Client,
@@ -121,7 +121,6 @@ func NewTestkubeAPI(
 		ConfigMap:             configMap,
 		Executor:              executor,
 		ContainerExecutor:     containerExecutor,
-		jobTemplate:           jobTemplate,
 		scheduler:             scheduler,
 		slackLoader:           slackLoader,
 		Storage:               storage,
@@ -178,7 +177,6 @@ type TestkubeAPI struct {
 	WebsocketLoader       *ws.WebsocketLoader
 	Events                *event.Emitter
 	ConfigMap             config.Repository
-	jobTemplate           string
 	scheduler             *scheduler.Scheduler
 	Clientset             kubernetes.Interface
 	slackLoader           *slack.SlackLoader
@@ -190,10 +188,15 @@ type TestkubeAPI struct {
 	mode                  string
 	eventsBus             bus.Bus
 	enableSecretsEndpoint bool
+	featureFlags          featureflags.FeatureFlags
 }
 
 type storageParams struct {
-	SSL             bool
+	SSL             bool   `envconfig:"STORAGE_SSL" default:"false"`
+	SkipVerify      bool   `envconfig:"STORAGE_SKIP_VERIFY" default:"false"`
+	CertFile        string `envconfig:"STORAGE_CERT_FILE"`
+	KeyFile         string `envconfig:"STORAGE_KEY_FILE"`
+	CAFile          string `envconfig:"STORAGE_CA_FILE"`
 	Endpoint        string
 	AccessKeyId     string
 	SecretAccessKey string
@@ -207,6 +210,11 @@ type oauthParams struct {
 	ClientSecret string
 	Provider     oauth.ProviderType
 	Scopes       string
+}
+
+func (s *TestkubeAPI) WithFeatureFlags(ff featureflags.FeatureFlags) *TestkubeAPI {
+	s.featureFlags = ff
+	return s
 }
 
 // SendTelemetryStartEvent sends anonymous start event to telemetry trackers

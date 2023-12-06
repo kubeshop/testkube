@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/utils"
 
@@ -67,6 +68,9 @@ func NewContainerExecutor(
 	podStartTimeout time.Duration,
 	clusterID string,
 	dashboardURI string,
+	apiURI string,
+	natsUri string,
+	debug bool,
 ) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -92,6 +96,9 @@ func NewContainerExecutor(
 		podStartTimeout:      podStartTimeout,
 		clusterID:            clusterID,
 		dashboardURI:         dashboardURI,
+		apiURI:               apiURI,
+		natsURI:              natsUri,
+		debug:                debug,
 	}, nil
 }
 
@@ -119,6 +126,9 @@ type ContainerExecutor struct {
 	podStartTimeout      time.Duration
 	clusterID            string
 	dashboardURI         string
+	apiURI               string
+	natsURI              string
+	debug                bool
 }
 
 type JobOptions struct {
@@ -129,7 +139,6 @@ type JobOptions struct {
 	Command                   []string
 	Args                      []string
 	WorkingDir                string
-	ImageOverride             string
 	Jsn                       string
 	TestName                  string
 	InitImage                 string
@@ -163,6 +172,8 @@ type JobOptions struct {
 	Debug                     bool
 	LogSidecarImage           string
 	NatsUri                   string
+	APIURI                    string
+	Features                  featureflags.FeatureFlags
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -268,7 +279,7 @@ func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Ex
 	jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
 
 	jobOptions, err := NewJobOptions(c.log, c.templatesClient, c.images, c.templates, c.serviceAccountName,
-		c.registry, c.clusterID, execution, options)
+		c.registry, c.clusterID, c.apiURI, execution, options, c.natsURI, c.debug)
 	if err != nil {
 		return nil, err
 	}
@@ -570,28 +581,30 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 	}
 
 	var command []string
-	switch {
-	case len(options.ExecutorSpec.Command) != 0:
+	if len(options.ExecutorSpec.Command) != 0 {
 		command = options.ExecutorSpec.Command
+	}
 
-	case options.TestSpec.ExecutionRequest != nil &&
-		len(options.TestSpec.ExecutionRequest.Command) != 0:
+	if options.TestSpec.ExecutionRequest != nil &&
+		len(options.TestSpec.ExecutionRequest.Command) != 0 {
 		command = options.TestSpec.ExecutionRequest.Command
+	}
 
-	case len(options.Request.Command) != 0:
+	if len(options.Request.Command) != 0 {
 		command = options.Request.Command
 	}
 
 	var image string
-	switch {
-	case options.ExecutorSpec.Image != "":
+	if options.ExecutorSpec.Image != "" {
 		image = options.ExecutorSpec.Image
+	}
 
-	case options.TestSpec.ExecutionRequest != nil &&
-		options.TestSpec.ExecutionRequest.Image != "":
+	if options.TestSpec.ExecutionRequest != nil &&
+		options.TestSpec.ExecutionRequest.Image != "" {
 		image = options.TestSpec.ExecutionRequest.Image
+	}
 
-	case options.Request.Image != "":
+	if options.Request.Image != "" {
 		image = options.Request.Image
 	}
 
@@ -664,6 +677,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		ExecutionNumber:           options.Request.Number,
 		ContextType:               contextType,
 		ContextData:               contextData,
+		Features:                  options.Features,
 	}
 }
 

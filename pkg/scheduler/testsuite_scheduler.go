@@ -20,7 +20,6 @@ import (
 )
 
 const (
-	abortionPollingInterval = 100 * time.Millisecond
 	// DefaultConcurrencyLevel is a default concurrency level for worker pool
 	DefaultConcurrencyLevel = 10
 )
@@ -214,7 +213,7 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 			s.logger.Infow("Updating test execution", "error", err)
 		}
 
-		s.executeTestStep(ctx, *testsuiteExecution, request, batchStepResult)
+		s.executeTestStep(ctx, *testsuiteExecution, request, batchStepResult, testsuiteExecution.ExecuteStepResults[:i])
 
 		var results []*testkube.ExecutionResult
 		for j := range batchStepResult.Execute {
@@ -378,11 +377,35 @@ func (s *Scheduler) timeoutCheck(ctx context.Context, testsuiteExecution *testku
 }
 
 func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution testkube.TestSuiteExecution,
-	request testkube.TestSuiteExecutionRequest, result *testkube.TestSuiteBatchStepExecutionResult) {
+	request testkube.TestSuiteExecutionRequest, result *testkube.TestSuiteBatchStepExecutionResult,
+	previousSteps []testkube.TestSuiteBatchStepExecutionResult) {
 
 	var testSuiteName string
 	if testsuiteExecution.TestSuite != nil {
 		testSuiteName = testsuiteExecution.TestSuite.Name
+	}
+
+	var ids []string
+	if result.Step != nil && result.Step.DownloadArtifacts != nil {
+		for i := range previousSteps {
+			for j := range previousSteps[i].Execute {
+				if previousSteps[i].Execute[j].Execution != nil &&
+					previousSteps[i].Execute[j].Step != nil && previousSteps[i].Execute[j].Step.Test != "" {
+					if previousSteps[i].Execute[j].Execution.IsPassed() || previousSteps[i].Execute[j].Execution.IsFailed() {
+						if result.Step.DownloadArtifacts.AllPreviousSteps {
+							ids = append(ids, previousSteps[i].Execute[j].Execution.Id)
+						} else {
+							for _, n := range result.Step.DownloadArtifacts.PreviousStepNumbers {
+								if n == int32(i+1) {
+									ids = append(ids, previousSteps[i].Execute[j].Execution.Id)
+									break
+								}
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 
 	var testTuples []testTuple
@@ -410,7 +433,7 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 			l.Info("executing test", "variables", testsuiteExecution.Variables, "request", request)
 
 			testTuples = append(testTuples, testTuple{
-				test:        testkube.Test{Name: executeTestStep},
+				test:        testkube.Test{Name: executeTestStep, Namespace: testsuiteExecution.TestSuite.Namespace},
 				executionID: execution.Id,
 			})
 		case testkube.TestSuiteStepTypeDelay:
@@ -456,12 +479,13 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 				Type_:   string(testkube.RunningContextTypeTestSuite),
 				Context: testsuiteExecution.Name,
 			},
-			JobTemplate:              request.JobTemplate,
-			JobTemplateReference:     request.JobTemplateReference,
-			ScraperTemplate:          request.ScraperTemplate,
-			ScraperTemplateReference: request.ScraperTemplateReference,
-			PvcTemplate:              request.PvcTemplate,
-			PvcTemplateReference:     request.PvcTemplateReference,
+			JobTemplate:                  request.JobTemplate,
+			JobTemplateReference:         request.JobTemplateReference,
+			ScraperTemplate:              request.ScraperTemplate,
+			ScraperTemplateReference:     request.ScraperTemplateReference,
+			PvcTemplate:                  request.PvcTemplate,
+			PvcTemplateReference:         request.PvcTemplateReference,
+			DownloadArtifactExecutionIDs: ids,
 		}
 
 		requests := make([]workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution], len(testTuples))
@@ -483,25 +507,27 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 		s.delayWithAbortionCheck(duration, testsuiteExecution.Id, result)
 	}
 
-	results := make(map[string]testkube.Execution, len(testTuples))
 	if len(testTuples) != 0 {
 		for r := range workerpoolService.GetResponses() {
-			results[r.Result.Id] = r.Result
 			status := ""
 			if r.Result.ExecutionResult != nil && r.Result.ExecutionResult.Status != nil {
 				status = string(*r.Result.ExecutionResult.Status)
 			}
 
 			s.logger.Infow("execution result", "id", r.Result.Id, "status", status)
-		}
+			value := r.Result
+			for i := range result.Execute {
+				if result.Execute[i].Execution == nil {
+					continue
+				}
 
-		for i := range result.Execute {
-			if result.Execute[i].Execution == nil {
-				continue
-			}
+				if result.Execute[i].Execution.Id == r.Result.Id {
+					result.Execute[i].Execution = &value
 
-			if value, ok := results[result.Execute[i].Execution.Id]; ok {
-				result.Execute[i].Execution = &value
+					if err := s.testExecutionResults.Update(ctx, testsuiteExecution); err != nil {
+						s.logger.Errorw("saving test suite execution results error", "error", err)
+					}
+				}
 			}
 		}
 	}

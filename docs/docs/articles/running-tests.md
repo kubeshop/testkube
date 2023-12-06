@@ -212,7 +212,7 @@ By default, there is a 10 second timeout limit on all requests on the client sid
 
 The following environment variables are automatically injected into each executed test pod:
 
-DEBUG:                          if debug mode is on                     
+DEBUG:                          if debug mode is on
 RUNNER_ENDPOINT:                minio endpoint
 RUNNER_ACCESSKEYID:             minio access key id
 RUNNER_SECRETACCESSKEY:         minio secret access key
@@ -237,6 +237,7 @@ RUNNER_TESTNAME:                test name
 RUNNER_EXECUTIONNUMBER:         test execution number
 RUNNER_CONTEXTTYPE:             running context type
 RUNNER_CONTEXTDATA:             running context data
+RUNNER_APIURI:                  api uri
 
 ## Summary
 

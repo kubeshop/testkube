@@ -37,7 +37,8 @@ const (
 	GitTokenSecretName = "git-token"
 	// SlavesConfigsEnv is slave configs for creating slaves in executor
 	SlavesConfigsEnv = "RUNNER_SLAVES_CONFIGS"
-	SidecarImage     = "ex00/testkube-sidecar:latest" // TODO - change it to valid image name
+
+	SidecarImage = "kubeshop/testkube-logs-sidecar:v0-1" // TODO - change it to valid image name after deployment will be ready
 )
 
 var RunnerEnvVars = []corev1.EnvVar{
@@ -65,10 +66,25 @@ var RunnerEnvVars = []corev1.EnvVar{
 		Name:  "RUNNER_TOKEN",
 		Value: os.Getenv("STORAGE_TOKEN"),
 	},
-
 	{
 		Name:  "RUNNER_SSL",
 		Value: getOr("STORAGE_SSL", "false"),
+	},
+	{
+		Name:  "RUNNER_SKIP_VERIFY",
+		Value: getOr("STORAGE_SKIP_VERIFY", "false"),
+	},
+	{
+		Name:  "RUNNER_CERT_FILE",
+		Value: os.Getenv("STORAGE_CERT_FILE"),
+	},
+	{
+		Name:  "RUNNER_KEY_FILE",
+		Value: os.Getenv("STORAGE_KEY_FILE"),
+	},
+	{
+		Name:  "RUNNER_CA_FILE",
+		Value: os.Getenv("STORAGE_CA_FILE"),
 	},
 	{
 		Name:  "RUNNER_SCRAPPERENABLED",
@@ -113,20 +129,46 @@ var RunnerEnvVars = []corev1.EnvVar{
 }
 
 type SlavesConfigs struct {
-	Images SlaveImages `json:"images"`
+	Images                SlaveImages             `json:"images"`
+	ServiceAccountName    string                  `json:"serviceAccountName"`
+	CertificateSecret     string                  `json:"certificateSecret"`
+	SlavePodTemplate      string                  `json:"slavePodTemplate"`
+	ImagePullSecrets      []string                `json:"imagePullSecrets"`
+	EnvConfigMaps         []testkube.EnvReference `json:"envConfigMaps"`
+	EnvSecrets            []testkube.EnvReference `json:"envSecrets"`
+	ActiveDeadlineSeconds int                     `json:"activeDeadlineSeconds"`
 }
 
 type SlaveImages struct {
-	Init  string `json:"init"`
-	Slave string `json:"slave"`
+	Init     string `json:"init"`
+	Slave    string `json:"slave"`
+	Registry string `json:"registry"`
 }
 
-func GetSlavesConfigs(initImage string, slavesMeta executorv1.SlavesMeta) SlavesConfigs {
+func GetSlavesConfigs(initImage string,
+	slavesMeta executorv1.SlavesMeta,
+	registry string,
+	serviceAccountName string,
+	certificateSecret string,
+	slavePodTemplate string,
+	imagePullSecrets []string,
+	envConfigMaps []testkube.EnvReference,
+	envSecrets []testkube.EnvReference,
+	activeDeadlineSeconds int,
+) SlavesConfigs {
 	return SlavesConfigs{
 		Images: SlaveImages{
-			Init:  initImage,
-			Slave: slavesMeta.Image,
+			Init:     initImage,
+			Slave:    slavesMeta.Image,
+			Registry: registry,
 		},
+		ServiceAccountName:    serviceAccountName,
+		CertificateSecret:     certificateSecret,
+		SlavePodTemplate:      slavePodTemplate,
+		ImagePullSecrets:      imagePullSecrets,
+		EnvConfigMaps:         envConfigMaps,
+		EnvSecrets:            envSecrets,
+		ActiveDeadlineSeconds: activeDeadlineSeconds,
 	}
 }
 
@@ -348,8 +390,8 @@ func SyncDefaultExecutors(
 		return images, nil
 	}
 
+	images.LogSidecar = SidecarImage
 	for _, executor := range executors {
-		images.LogSidecar = SidecarImage
 
 		if executor.Executor == nil {
 			continue

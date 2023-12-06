@@ -5,6 +5,38 @@ import (
 	"time"
 )
 
+// MockDirEntry implements os.DirEntry interface for mocking in tests.
+type MockDirEntry struct {
+	FName  string
+	FIsDir bool
+}
+
+// Name returns the mocked name of the directory entry.
+func (m *MockDirEntry) Name() string {
+	return m.FName
+}
+
+// IsDir returns the mocked directory flag.
+func (m *MockDirEntry) IsDir() bool {
+	return m.FIsDir
+}
+
+// Type returns the mocked file mode.
+func (m *MockDirEntry) Type() os.FileMode {
+	if m.FIsDir {
+		return os.ModeDir
+	}
+	return 0
+}
+
+// Info returns the mocked file info.
+func (m *MockDirEntry) Info() (os.FileInfo, error) {
+	return &MockFileInfo{
+		FName:  m.FName,
+		FIsDir: true,
+	}, nil
+}
+
 type MockFileInfo struct {
 	FName    string
 	FSize    int64

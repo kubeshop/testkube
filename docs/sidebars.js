@@ -22,7 +22,7 @@ const sidebars = {
         type: "doc",
         id: "index",
       },
-      items: ["articles/supported-tests", "articles/testkube-benefits", "articles/open-source-or-cloud"],
+      items: ["articles/supported-tests", "articles/testkube-benefits", "articles/open-source-or-pro"],
     },
     {
       type: "doc",
@@ -102,6 +102,7 @@ const sidebars = {
           },
           items: [
             "articles/github-actions",
+            "articles/gitlab",
             "articles/run-tests-with-github-actions",
             "articles/testkube-cli-docker",
             {
@@ -170,19 +171,27 @@ const sidebars = {
     },
     {
       type: "category",
-      label: "Testkube Cloud",
+      label: "Testkube Pro",
       items: [
-        "testkube-cloud/articles/intro",
-        "testkube-cloud/articles/installing-agent",
-        "testkube-cloud/articles/transition-from-oss",
-        "testkube-cloud/articles/organization-management",
-        "testkube-cloud/articles/environment-management",
-        "testkube-cloud/articles/managing-cli-context",
-        "testkube-cloud/articles/architecture",
-        "testkube-cloud/articles/running-parallel-tests-with-test-suite",
-        "testkube-cloud/articles/AI-test-insights",
-        "testkube-cloud/articles/status-pages",
-        "testkube-cloud/articles/cached-results",
+        "testkube-pro/articles/intro",
+        "testkube-pro/articles/installing-agent",
+        "testkube-pro/articles/transition-from-oss",
+        "testkube-pro/articles/organization-management",
+        "testkube-pro/articles/environment-management",
+        "testkube-pro/articles/managing-cli-context",
+        "testkube-pro/articles/architecture",
+        "testkube-pro/articles/running-parallel-tests-with-test-suite",
+        "testkube-pro/articles/AI-test-insights",
+        "testkube-pro/articles/status-pages",
+        "testkube-pro/articles/cached-results",
+      ],
+    },
+    {
+      type: "category",
+      label: "Testkube Enterprise",
+      items: [
+        "testkube-enterprise/articles/usage-guide",
+        "testkube-enterprise/articles/auth"
       ],
     },
     "articles/testkube-oss",

@@ -5,6 +5,7 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
+	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -25,6 +26,6 @@ type ExecuteOptions struct {
 	UsernameSecret       *testkube.SecretRef
 	TokenSecret          *testkube.SecretRef
 	CertificateSecret    string
-	ImageOverride        string
 	ImagePullSecretNames []string
+	Features             featureflags.FeatureFlags
 }

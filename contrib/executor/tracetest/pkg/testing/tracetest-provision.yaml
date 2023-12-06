@@ -1,0 +1,24 @@
+---
+type: PollingProfile
+spec:
+  name: Default
+  strategy: periodic
+  default: true
+  periodic:
+    retryDelay: 500ms
+    timeout: 1m
+
+---
+type: TestRunner
+spec:
+  id: current
+  name: default
+  requiredGates:
+    - test-specs
+
+---
+type: DataStore
+spec:
+  name: OpenTelemetry Collector pipeline
+  type: otlp
+  default: true

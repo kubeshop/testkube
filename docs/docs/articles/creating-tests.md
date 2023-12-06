@@ -363,6 +363,34 @@ testkube create test --name maven-example-test --git-uri https://github.com/kube
 Test created maven-example-test 🥇
 ```
 
+#### Overriding the Command
+
+As the above example showed, it is possible to override the original command of the Executor, as long as the executable is available in the Executor image. Use the `--command` parameter on test creation with the name of the executable:
+
+```sh
+$ testkube create test --help
+...
+      --command stringArray                        command passed to image in executor
+...
+```
+
+#### Overriding the Arguments
+
+There are two modes to pass arguments to the executor:
+
+```sh
+$ testkube create test --help
+...
+      --args-mode string                           usage mode for arguments. one of append|override (default "append")
+...
+```
+
+By default, `--args-mode` is set to `append`, which means that the default list will be kept, and whatever is set in `--executor-args` will be added to the end.
+
+The `override` mode will ignore the default arguments and use only what is set in `--executor-args`. If there are default values in between chevrons (`<>`), they can be reused in `--executor-args`.
+
+When using `--args-mode` with `testkube run test ...` pay attention to set the arguments via the `--args` flag, not `--executor-args`.
+
 ### Changing the Default Job Template Used for Test Execution
 
 You can always create your own custom executor with its own job template definition used for test execution. But sometimes you just need to adjust an existing job template of a standard Testkube executor with a few parameters. In this case you can use the additional parameter `--job-template` when you create or run the test:
@@ -393,17 +421,6 @@ spec:
 
 When you run such a test you will face a memory limit for the test executor pod, when the default job template doesn't have any resource constraints.
 
-```yaml
-apiVersion: batch/v1
-kind: Job
-spec:
-  template:
-    spec:
-      imagePullSecrets:
-        - name: yourSecretName
-
-```
-
 We also provide special helper methods to use in the job template:
 `vartypeptrtostring` is the method to convert a pointer to a variable type to a string type.
 
@@ -419,6 +436,40 @@ Usage example:
 
 Add the `imagePullSecrets` option if you use your own Image Registry. This will add the secret for both `init` and `executor` containers.
 
+```yaml
+apiVersion: batch/v1
+kind: Job
+spec:
+  template:
+    spec:
+      imagePullSecrets:
+        - name: yourSecretName
+```
+
+### Changing the Default Slave Pod Template and Resource Specs Used for Slave Pods of Distrubited Executtors
+
+For distributed executors you can adjust an existing slave pod specfication using template or resource fields. In this case you can use the additional parameters `--slave-pod-template` and/or `--slave-pod-requests-XXX`/`--slave-pod-limits-XXX` when you create or run the test:
+
+```sh
+testkube create test --git-branch develop --git-uri https://github.com/kubeshop/testkube.git --git-path contrib/executor/jmeterd/examples/gitflow --name distributed-jmeter --type jmeterd/test --slave-pod-template slave-pod.yaml --slave-pod-limits-cpu 20m --slave-pod-limits-memory 30Mi --slave-pod-requests-cpu 40m --slave-pod-requests-memory 50mi
+```
+
+Where `slave-pod.yaml` file contains adjusted slave pod template parts for merging with default slave pod template:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ .Name }}"
+  namespace: {{ .Namespace }}
+  ownerReferences:
+  - apiVersion: batch/v1
+    kind: job
+    name: {{ .JobName }}
+    uid: {{ .JobUID }}
+  labels:
+    distributed: jmeter
+```
 
 ### Changing the Default CronJob Template Used for Scheduled Test Execution
 

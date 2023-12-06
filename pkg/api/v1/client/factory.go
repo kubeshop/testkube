@@ -29,6 +29,7 @@ type Options struct {
 	Scopes        []string
 	APIServerName string
 	APIServerPort int
+	Insecure      bool
 
 	// Testkube Cloud
 	CloudApiPathPrefix string
@@ -39,15 +40,15 @@ type Options struct {
 
 // GetClient returns configured Testkube API client, can be one of direct and proxy - direct need additional proxy to be run (`make api-proxy`)
 func GetClient(clientType ClientType, options Options) (client Client, err error) {
-	httpClient := phttp.NewClient()
-	sseClient := phttp.NewSSEClient()
+	httpClient := phttp.NewClient(options.Insecure)
+	sseClient := phttp.NewSSEClient(options.Insecure)
 
 	switch clientType {
 
 	case ClientCloud:
 		ConfigureClient(httpClient, nil, options.CloudApiKey)
 		ConfigureClient(sseClient, nil, options.CloudApiKey)
-		client = NewDirectAPIClient(httpClient, sseClient, options.ApiUri, options.CloudApiPathPrefix)
+		client = NewCloudAPIClient(httpClient, sseClient, options.ApiUri, options.CloudApiPathPrefix)
 
 	case ClientDirect:
 		var token *oauth2.Token

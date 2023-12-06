@@ -1,11 +1,16 @@
 # KubePug
 
-[KubePug](https://github.com/rikatz/kubepug) is a kubectl plugin checking for deprecated Kubernetes clusters or deprecated versions of Kubernetes manifests. It can connect to both your cluster directly and it can run on input files.
+[KubePug](https://github.com/kubepug/kubepug) is a kubectl plugin checking for deprecated Kubernetes clusters or deprecated versions of Kubernetes manifests. It can connect to both your cluster directly and it can run on input files.
 For security, Testkube only supports scanning input files via the KubePug executor.
 
 * Default command for this executor: `kubepug`
 * Default arguments for this executor command: `--format=json` `--input-file` `<runPath>`
-(parameters in `<>` are calculated at test execution)
+
+Parameters in `<>` are calculated at test execution:
+
+* `<runPath>` - location of test files
+
+[See more at "Redefining the Prebuilt Executor Command and Arguments" on the Creating Test page.](../articles/creating-tests.md#redefining-the-prebuilt-executor-command-and-arguments)
 
 Running the KubePug Testkube executor does not require any special installation; Testkube comes with the ability to run Kubepug immediately after installation.
 
@@ -124,4 +129,4 @@ Args:     --k8s-version=v1.18.0
 Status Test execution completed with success 🥇
 ```
 
-It is also possible to pass other arguments to the executor. For the options please consult the [KubePug documentation](https://github.com/rikatz/kubepug#how-to-use-it-as-a-standalone-program).
+It is also possible to pass other arguments to the executor. For the options please consult the [KubePug documentation](https://github.com/kubepug/kubepug#how-to-use-it-as-a-standalone-program).

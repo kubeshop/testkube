@@ -79,55 +79,55 @@ function CardCategory({ item }) {
 const testExecutorLogo = new Map([
   [
     "/test-types/executor-artillery",
-    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/src/assets/images/artilleryIcon.svg",
+    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/packages/web/src/assets/images/artilleryIcon.svg",
   ],
   [
     "/test-types/executor-curl",
-    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/src/assets/images/curlIcon.svg",
+    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/packages/web/src/assets/images/curlIcon.svg",
   ],
   [
     "/test-types/executor-cypress",
-    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/src/assets/images/cypressIcon.svg",
+    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/packages/web/src/assets/images/cypressIcon.svg",
   ],
   [
     "/test-types/executor-ginkgo",
-    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/src/assets/images/ginkgoIcon.svg",
+    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/packages/web/src/assets/images/ginkgoIcon.svg",
   ],
   [
     "/test-types/executor-gradle",
-    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/src/assets/images/gradleIcon.svg",
+    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/packages/web/src/assets/images/gradleIcon.svg",
   ],
   [
     "/test-types/executor-jmeter",
-    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/src/assets/images/jmeterIcon.svg",
+    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/packages/web/src/assets/images/jmeterIcon.svg",
   ],
   [
     "/test-types/executor-k6",
-    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/src/assets/images/k6Icon.svg",
+    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/packages/web/src/assets/images/k6Icon.svg",
   ],
   [
     "/test-types/executor-kubepug",
-    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/src/assets/images/kubepug.svg",
+    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/packages/web/src/assets/images/kubepug.svg",
   ],
   [
     "/test-types/executor-maven",
-    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/src/assets/images/mavenIcon.svg",
+    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/packages/web/src/assets/images/mavenIcon.svg",
   ],
   [
     "/test-types/executor-postman",
-    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/src/assets/images/postmanIcon.svg",
+    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/packages/web/src/assets/images/postmanIcon.svg",
   ],
   [
     "/test-types/executor-soapui",
-    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/src/assets/images/soapIcon.svg",
+    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/packages/web/src/assets/images/soapIcon.svg",
   ],
   [
     "/test-types/executor-playwright",
-    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/src/assets/images/playwrightIcon.svg",
+    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/packages/web/src/assets/images/playwrightIcon.svg",
   ],
   [
     "/test-types/executor-zap",
-    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/src/assets/images/zapIcon.svg",
+    "https://raw.githubusercontent.com/kubeshop/testkube-dashboard/main/packages/web/src/assets/images/zapIcon.svg",
   ],
 ]);
 
