@@ -114,6 +114,70 @@ spec:
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
+  name: jmeterd-executor-smoke-slave-0
+  labels:
+    core-tests: executors
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+  executionRequest:
+    variables:
+      SLAVES_COUNT:
+        name: SLAVES_COUNT
+        value: "0"
+        type: basic
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke-slave-1
+  labels:
+    core-tests: executors
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+  executionRequest:
+    variables:
+      SLAVES_COUNT:
+        name: SLAVES_COUNT
+        value: "1"
+        type: basic
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
   name: jmeterd-executor-smoke-slaves
   labels:
     core-tests: executors
@@ -132,6 +196,154 @@ spec:
         name: SLAVES_COUNT
         value: "2"
         type: basic
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeter-executor-smoke-incorrect-url-assertion
+  labels:
+    core-tests: executors
+spec:
+  type: jmeter/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: executor-tests-jmeterd-extended # TODO: update before merge
+      path: test/jmeter/executor-tests/jmeter-executor-smoke-incorrect-url.jmx
+  executionRequest:
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke-incorrect-url-assertion
+  labels:
+    core-tests: executors
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: executor-tests-jmeterd-extended # TODO: update before merge
+      path: test/jmeter/executor-tests/jmeter-executor-smoke-incorrect-url.jmx
+  executionRequest:
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke-incorrect-url-assertion-slaves
+  labels:
+    core-tests: executors
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: executor-tests-jmeterd-extended # TODO: update before merge
+      path: test/jmeter/executor-tests/jmeter-executor-smoke-incorrect-url.jmx
+  executionRequest:
+    variables:
+      SLAVES_COUNT:
+        name: SLAVES_COUNT
+        value: "2"
+        type: basic
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke-correct-url-failed-assertion
+  labels:
+    core-tests: executors
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: executor-tests-jmeterd-extended # TODO: update before merge
+      path: test/jmeter/executor-tests/jmeter-executor-smoke-correct-url-failed-assertion.jmx
+  executionRequest:
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke-correct-url-failed-assertion-slaves
+  labels:
+    core-tests: executors
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: executor-tests-jmeterd-extended # TODO: update before merge
+      path: test/jmeter/executor-tests/jmeter-executor-smoke-correct-url-failed-assertion.jmx
+  executionRequest:
+    variables:
+      SLAVES_COUNT:
+        name: SLAVES_COUNT
+        value: "2"
+        type: basic
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke-failure-exit-code-0
+  labels:
+    core-tests: executors
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: contrib/executor/jmeterd/examples/gitflow/jmeter-properties-external.jmx
+  executionRequest:
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
     activeDeadlineSeconds: 180
     slavePodRequest:
