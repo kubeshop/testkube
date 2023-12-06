@@ -187,8 +187,8 @@ jobs:
             ~/.cache/go-build
              dist/jmeterd-${{ matrix.GOARCH }}
           key: jmeterd-${{ matrix.GOARCH }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+#          restore-keys: |
+#            ${{ runner.os }}-go-
 #
 #      - name: Setup Go
 #        uses: ./.github/actions/setup-go
