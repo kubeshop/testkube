@@ -179,20 +179,21 @@ jobs:
       - shell: bash
         run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
-#      - name: Go Cache
-#        uses: actions/cache@v3
-#        with:
-#          path: |
-#            ~/go/pkg/mod
-#            ~/.cache/go-build
-#          key: ${{ runner.os }}-go-jmeterd-${{ matrix.GOARCH }}-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-jmeterd-${{ matrix.GOARCH }}
-#
-      - name: Setup Go
-        uses: ./.github/actions/setup-go
+      - name: Go Cache
+        uses: actions/cache@v3
         with:
-          cache-prefix: go-build-jmeterd_${{ matrix.GOARCH }}
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+             dist/jmeterd-${{ matrix.GOARCH }}
+          key: jmeterd-${{ matrix.GOARCH }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+#
+#      - name: Setup Go
+#        uses: ./.github/actions/setup-go
+#        with:
+#          cache-prefix: go-build-jmeterd_${{ matrix.GOARCH }}
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -237,13 +238,15 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - uses: ./.github/actions/setup-go
+      - uses: actions/cache@v3
         with:
-          cache-prefix: go-build-jmeterd_amd64
+          path: dist/linux_arm64
+          key: linux_arm64
 
-      - uses: ./.github/actions/setup-go
+      - uses: actions/cache@v3
         with:
-          cache-prefix: go-build-jmeterd_arm64
+          path: dist/linux_amd64
+          key: linux_amd64
 
       - name: Release
         uses: goreleaser/goreleaser-action@v4
