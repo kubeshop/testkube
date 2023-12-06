@@ -12,4 +12,5 @@ var (
 	EventResourceWebhook            = EventResourcePtr(WEBHOOK_EventResource)
 	EventResourceTestexecution      = EventResourcePtr(TESTEXECUTION_EventResource)
 	EventResourceTestsuiteexecution = EventResourcePtr(TESTSUITEEXECUTION_EventResource)
+	EventResourceTestsource         = EventResourcePtr(TESTSOURCE_EventResource)
 )
