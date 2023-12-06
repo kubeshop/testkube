@@ -11,6 +11,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
+type WatchTestSuiteExecutionResponse struct {
+	Execution TestSuiteExecution
+	Error     error
+}
+
 func NewQueuedTestSuiteExecution(name, namespace string) *TestSuiteExecution {
 	return &TestSuiteExecution{
 		TestSuite: &ObjectRef{

@@ -66,7 +66,7 @@ type TestSuiteAPI interface {
 type TestSuiteExecutionAPI interface {
 	GetTestSuiteExecution(executionID string) (execution testkube.TestSuiteExecution, err error)
 	ListTestSuiteExecutions(testsuite string, limit int, selector string) (executions testkube.TestSuiteExecutionsResult, err error)
-	WatchTestSuiteExecution(executionID string) (execution chan testkube.TestSuiteExecution, err error)
+	WatchTestSuiteExecution(executionID string) (resp chan testkube.WatchTestSuiteExecutionResponse)
 	AbortTestSuiteExecution(executionID string) error
 	AbortTestSuiteExecutions(testSuiteName string) error
 	GetTestSuiteExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
