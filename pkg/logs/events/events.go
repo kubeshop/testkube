@@ -17,20 +17,12 @@ type Trigger struct {
 }
 
 type LogVersion string
-type Type string
 
 const (
 	// v1 - old log format based on shell output of executors {"line":"...", "time":"..."}
 	LogVersionV1 LogVersion = "v1"
 	// v2 - raw binary format, timestamps are based on Kubernetes logs, line is raw log line
 	LogVersionV2 LogVersion = "v2"
-
-	// TypeTestPod - logs from test pod (all containers)
-	TypeTestPod Type = "test-execution-pod"
-	// TypeSchduler - logs from scheduler pod
-	TypeSchduler Type = "test-scheduler"
-	// TypeOperator - logs from operator pod
-	TypeOperator Type = "operator"
 )
 
 type LogOutputV1 struct {

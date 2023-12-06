@@ -5,10 +5,11 @@ import (
 )
 
 type Config struct {
-	NatsURI     string `envconfig:"NATS_URI" default:"nats://localhost:4222"`
-	Namespace   string `envconfig:"NAMESPACE" default:"testkube"`
-	ExecutionId string `envconfig:"ID" default:""`
-	HttpAddress string `envconfig:"HTTP_ADDRESS" default:":8080"`
+	NatsURI      string `envconfig:"NATS_URI" default:"nats://localhost:4222"`
+	Namespace    string `envconfig:"NAMESPACE" default:"testkube"`
+	ExecutionId  string `envconfig:"ID" default:""`
+	HttpAddress  string `envconfig:"HTTP_ADDRESS" default:":8080"`
+	KVBucketName string `envconfig:"KV_BUCKET_NAME" default:"logsState"`
 }
 
 func Get() (*Config, error) {

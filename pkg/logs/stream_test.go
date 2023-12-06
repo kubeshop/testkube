@@ -2,8 +2,8 @@ package logs
 
 import (
 	"context"
+	"fmt"
 	"testing"
-	"time"
 
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
@@ -16,29 +16,40 @@ func TestStream_StartStop(t *testing.T) {
 	defer ns.Shutdown()
 
 	ctx := context.Background()
-	stream, err := NewNATSStream(nc, "111")
+
+	client, err := NewLogsStream(nc, "111")
 	assert.NoError(t, err)
-	stream.Init(ctx)
-	stream.PushBytes(ctx, []byte(`{"content":"hello 1"}`))
+
+	meta, err := client.Init(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, StreamPrefix+"111", meta.Name)
+
+	err = client.PushBytes(ctx, []byte(`{"content":"hello 1"}`))
+	assert.NoError(t, err)
 
 	var startReceived, stopReceived bool
 
 	_, err = nc.Subscribe(StartSubject, func(m *nats.Msg) {
+		fmt.Printf("%s\n", m.Data)
+		m.Respond([]byte("ok"))
 		startReceived = true
 	})
 	assert.NoError(t, err)
 	_, err = nc.Subscribe(StopSubject, func(m *nats.Msg) {
+		fmt.Printf("%s\n", m.Data)
+		m.Respond([]byte("ok"))
 		stopReceived = true
 	})
+
 	assert.NoError(t, err)
 
-	err = stream.Start(ctx)
+	d, err := client.Start(ctx)
 	assert.NoError(t, err)
+	assert.Equal(t, "ok", string(d.Message))
 
-	err = stream.Stop(ctx)
+	d, err = client.Stop(ctx)
 	assert.NoError(t, err)
-
-	time.Sleep(time.Second * 1)
+	assert.Equal(t, "ok", string(d.Message))
 
 	assert.True(t, startReceived)
 	assert.True(t, stopReceived)

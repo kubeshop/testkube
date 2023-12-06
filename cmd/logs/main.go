@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,8 +12,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/logs"
+	"github.com/kubeshop/testkube/pkg/logs/adapter"
 	"github.com/kubeshop/testkube/pkg/logs/config"
-	"github.com/kubeshop/testkube/pkg/logs/consumer"
+	"github.com/kubeshop/testkube/pkg/logs/state"
 
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/oklog/run"
@@ -30,22 +30,22 @@ func main() {
 	cfg := Must(config.Get())
 
 	// Event bus
-	natsConn := Must(bus.NewNATSConnection(cfg.NatsURI))
+	nc := Must(bus.NewNATSConnection(cfg.NatsURI))
 	defer func() {
 		log.Infof("closing nats connection")
-		natsConn.Close()
+		nc.Close()
 	}()
 
-	natsEncodedConn := Must(bus.NewNATSEncoddedConnection(cfg.NatsURI))
-	defer func() {
-		log.Infof("closing encoded nats connection")
-		natsEncodedConn.Close()
-	}()
+	js := Must(jetstream.New(nc))
 
-	js := Must(jetstream.New(natsConn))
+	kv := Must(js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: cfg.KVBucketName}))
+	state := state.NewState(kv)
 
-	svc := logs.NewLogsService(natsEncodedConn, js, cfg.HttpAddress)
-	svc.AddConsumer(consumer.NewDummyConsumer())
+	svc := logs.NewLogsService(nc, js, state).
+		WithAddress(cfg.HttpAddress)
+
+	// TODO - add adapters here
+	svc.AddAdapter(adapter.NewDummyAdapter())
 
 	g.Add(func() error {
 		err := interrupt(log, ctx)
@@ -65,13 +65,12 @@ func main() {
 		log.Warn("logs service shutdown")
 	})
 
+	// We need to do a http health check to be backward compatible with Kubernetes below 1.25
 	g.Add(func() error {
 		return svc.RunHealthCheckHandler(ctx)
 	}, func(error) {
 		cancel()
 	})
-
-	fmt.Printf("%+v\n", "RUN")
 
 	if err := g.Run(); err != nil {
 		log.Warnw("logs service run group returned an error", "error", err)
