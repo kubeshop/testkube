@@ -3,7 +3,6 @@ package sidecar
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -67,7 +66,7 @@ func (p *Proxy) Run(ctx context.Context) error {
 
 	// create stream for incoming logs
 
-	err := p.logsStream.Init(ctx)
+	_, err := p.logsStream.Init(ctx)
 	if err != nil {
 		return err
 	}
@@ -232,18 +231,20 @@ func (p *Proxy) getPodContainerStatuses(pod corev1.Pod) (status string) {
 	return status
 }
 
+// handleError will handle errors and push it as log chunk to logs stream
 func (p *Proxy) handleError(err error, title string) {
 	if err != nil {
-		p.log.Errorw(title, "error", err)
-
-		b, err := json.Marshal(events.LogChunk{
+		ch := events.LogChunk{
 			Error:   true,
 			Content: err.Error(),
-		})
+		}
+
+		p.log.Errorw(title, "error", err)
+
 		if err == nil {
-			p.logsStream.PushBytes(context.Background(), b)
+			p.logsStream.Push(context.Background(), ch)
 		} else {
-			p.log.Errorw("error pushing error to stream", "error", err, "log", b)
+			p.log.Errorw("error pushing error to stream", "title", title, "error", err)
 		}
 
 	}

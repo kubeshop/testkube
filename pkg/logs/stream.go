@@ -3,6 +3,7 @@ package logs
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -18,9 +19,13 @@ type Stream interface {
 	StreamTrigger
 }
 
+type StreamMetadata struct {
+	Name string
+}
+
 type StreamInitializer interface {
 	// Init creates or updates stream on demand
-	Init(ctx context.Context) error
+	Init(ctx context.Context) (meta StreamMetadata, err error)
 }
 
 type StreamPusher interface {
@@ -30,19 +35,25 @@ type StreamPusher interface {
 	PushBytes(ctx context.Context, chunk []byte) error
 }
 
-type StreamTrigger interface {
-	// Trigger start / stop events
-	Start(ctx context.Context) error
-	Stop(ctx context.Context) error
+type StreamResponse struct {
+	Message []byte
+	Error   bool
 }
 
-func NewNATSStream(nc *nats.Conn, id string) (Stream, error) {
+type StreamTrigger interface {
+	// Trigger start event
+	Start(ctx context.Context) (StreamResponse, error)
+	// Trigger stop event
+	Stop(ctx context.Context) (StreamResponse, error)
+}
+
+func NewLogsStream(nc *nats.Conn, id string) (Stream, error) {
 	js, err := jetstream.New(nc)
 	if err != nil {
-		return NATSStream{}, err
+		return LogsStream{}, err
 	}
 
-	return NATSStream{
+	return LogsStream{
 		nc:         nc,
 		js:         js,
 		log:        log.DefaultLogger,
@@ -51,7 +62,7 @@ func NewNATSStream(nc *nats.Conn, id string) (Stream, error) {
 	}, nil
 }
 
-type NATSStream struct {
+type LogsStream struct {
 	nc         *nats.Conn
 	js         jetstream.JetStream
 	log        *zap.SugaredLogger
@@ -59,44 +70,51 @@ type NATSStream struct {
 	id         string
 }
 
-func (c NATSStream) Init(ctx context.Context) error {
+func (c LogsStream) Init(ctx context.Context) (StreamMetadata, error) {
 	s, err := c.js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
 		Name:    c.streamName,
 		Storage: jetstream.FileStorage, // durable stream
 	})
 
-	c.log.Debugw("logs proxy stream upserted", "info", s.CachedInfo())
+	c.log.Debugw("stream upserted", "info", s.CachedInfo())
 
-	return err
+	return StreamMetadata{Name: c.streamName}, err
 
 }
 
 // Push log chunk to NATS stream
-// TODO handle message repeat with backoff strategy on error
-func (c NATSStream) Push(ctx context.Context, chunk events.LogChunk) error {
+func (c LogsStream) Push(ctx context.Context, chunk events.LogChunk) error {
 	b, err := json.Marshal(chunk)
 	if err != nil {
 		return err
 	}
-	_, err = c.js.Publish(ctx, c.streamName, b)
-	return err
+	return c.PushBytes(ctx, b)
 }
 
 // Push log chunk to NATS stream
 // TODO handle message repeat with backoff strategy on error
-func (c NATSStream) PushBytes(ctx context.Context, chunk []byte) error {
+func (c LogsStream) PushBytes(ctx context.Context, chunk []byte) error {
 	_, err := c.js.Publish(ctx, c.streamName, chunk)
 	return err
 }
 
-func (c NATSStream) Start(ctx context.Context) error {
-	event := events.Trigger{Id: c.id}
-	b, _ := json.Marshal(event)
-	return c.nc.Publish(StartSubject, b)
+// Start emits start event to the stream - logs service will handle start and create new stream
+func (c LogsStream) Start(ctx context.Context) (resp StreamResponse, err error) {
+	return c.syncCall(ctx, StartSubject)
 }
 
-func (c NATSStream) Stop(ctx context.Context) error {
-	event := events.Trigger{Id: c.id}
-	b, _ := json.Marshal(event)
-	return c.nc.Publish(StopSubject, b)
+// Stop emits stop event to the stream and waits for given stream to be stopped fully - logs service will handle stop and close stream and all subscribers
+func (c LogsStream) Stop(ctx context.Context) (resp StreamResponse, err error) {
+	return c.syncCall(ctx, StopSubject)
+}
+
+// syncCall sends request to given subject and waits for response
+func (c LogsStream) syncCall(ctx context.Context, subject string) (resp StreamResponse, err error) {
+	b, _ := json.Marshal(events.Trigger{Id: c.id})
+	m, err := c.nc.Request(subject, b, time.Minute)
+	if err != nil {
+		return resp, err
+	}
+
+	return StreamResponse{Message: m.Data}, nil
 }
