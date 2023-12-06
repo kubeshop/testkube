@@ -26,7 +26,7 @@ require (
 	github.com/joshdk/go-junit v1.0.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kubepug/kubepug v1.7.1
-	github.com/kubeshop/testkube-operator v1.15.2-beta1.0.20231205232920-614f8880d3cd
+	github.com/kubeshop/testkube-operator v1.15.2-beta1.0.20231206131856-83394de3b976
 	github.com/minio/minio-go/v7 v7.0.47
 	github.com/montanaflynn/stats v0.6.6
 	github.com/moogar0880/problems v0.1.1
