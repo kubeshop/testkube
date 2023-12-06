@@ -15,6 +15,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 // Run starts test runner, test runner can have 3 states
@@ -61,6 +62,11 @@ func Run(ctx context.Context, r runner.Runner, args []string) {
 	if err != nil {
 		output.PrintError(os.Stderr, errors.Wrap(err, "error loading env vars"))
 		os.Exit(1)
+	}
+
+	if r.GetType().IsMain() {
+		output.PrintLogf("%s Reading environment variables...", ui.IconWorld)
+		envs.PrintParams(params)
 	}
 
 	if r.GetType().IsMain() && e.PreRunScript != "" {
