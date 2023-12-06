@@ -226,6 +226,12 @@ jobs:
       - id: commit
         uses: prompt/actions-commit-hash@v3
 
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - uses: actions/cache@v3
         with:
           path: dist/linux_arm64
