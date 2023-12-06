@@ -27,7 +27,7 @@ dockers:
   - dockerfile: "./contrib/executor/jmeterd/build/agent/Dockerfile"
     use: buildx
     goos: linux
-    goarch: "{{ .Arch }}"
+    goarch: "amd64"
     image_templates:
       - "kubeshop/testkube-jmeterd-executor:{{ .Version }}-amd64"
     build_flag_templates:
@@ -50,7 +50,7 @@ dockers:
     image_templates:
       - "kubeshop/testkube-jmeterd-executor:{{ .Version }}-arm64"
     build_flag_templates:
-      - "--platform=linux/arm64/v8"
+      - "--platform=linux/arm64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
       - "--label=org.opencontainers.image.created={{ .Date}}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
