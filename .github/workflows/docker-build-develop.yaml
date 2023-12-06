@@ -240,13 +240,13 @@ jobs:
 
       - uses: actions/cache@v3
         with:
-          path: dist/linux_arm64
-          key: linux_arm64
+          path: dist/jmeterd-arm64
+          key: jmeterd-arm64
 
       - uses: actions/cache@v3
         with:
-          path: dist/linux_amd64
-          key: linux_amd64
+          path: dist/jmeterd-arm64
+          key: jmeterd-arm64
 
       - name: Release
         uses: goreleaser/goreleaser-action@v4
