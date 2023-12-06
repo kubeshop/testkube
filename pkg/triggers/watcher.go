@@ -732,7 +732,7 @@ func (s *Service) testTriggerEventHandler() cache.ResourceEventHandlerFuncs {
 			)
 			s.addTrigger(t)
 
-			s.logger.Debug(
+			s.logger.Debugf(
 				"trigger service: watcher component: emitting event for created testtrigger %s/%s for resource %s on event %s",
 				t.Namespace, t.Name, t.Spec.Resource, t.Spec.Event,
 			)
@@ -753,7 +753,7 @@ func (s *Service) testTriggerEventHandler() cache.ResourceEventHandlerFuncs {
 			)
 			s.updateTrigger(t)
 
-			s.logger.Debug(
+			s.logger.Debugf(
 				"trigger service: watcher component: emitting event for updated testtrigger %s/%s for resource %s on event %s",
 				t.Namespace, t.Name, t.Spec.Resource, t.Spec.Event,
 			)
@@ -771,7 +771,7 @@ func (s *Service) testTriggerEventHandler() cache.ResourceEventHandlerFuncs {
 			)
 			s.removeTrigger(t)
 
-			s.logger.Debug(
+			s.logger.Debugf(
 				"trigger service: watcher component: emitting event for deleted testtrigger %s/%s for resource %s on event %s",
 				t.Namespace, t.Name, t.Spec.Resource, t.Spec.Event,
 			)
@@ -801,7 +801,7 @@ func (s *Service) testSuiteEventHandler() cache.ResourceEventHandlerFuncs {
 			)
 			s.addTestSuite(testSuite)
 
-			s.logger.Debug(
+			s.logger.Debugf(
 				"trigger service: watcher component: emitting event for creating testsuite %s/%s",
 				testSuite.Namespace, testSuite.Name,
 			)
@@ -813,7 +813,7 @@ func (s *Service) testSuiteEventHandler() cache.ResourceEventHandlerFuncs {
 				s.logger.Errorf("failed to process update testsuite event due to it being an unexpected type, received type %+v", newObj)
 				return
 			}
-			s.logger.Debug(
+			s.logger.Debugf(
 				"trigger service: watcher component: emitting event for updating testsuite %s/%s",
 				testSuite.Namespace, testSuite.Name,
 			)
@@ -825,7 +825,7 @@ func (s *Service) testSuiteEventHandler() cache.ResourceEventHandlerFuncs {
 				s.logger.Errorf("failed to process delete testsuite event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
-			s.logger.Debug(
+			s.logger.Debugf(
 				"trigger service: watcher component: emitting event for deleting testsuite %s/%s",
 				testSuite.Namespace, testSuite.Name,
 			)
@@ -855,7 +855,7 @@ func (s *Service) testEventHandler() cache.ResourceEventHandlerFuncs {
 			)
 			s.addTest(test)
 
-			s.logger.Debug(
+			s.logger.Debugf(
 				"trigger service: watcher component: emitting event for test %s/%s",
 				test.Namespace, test.Name,
 			)
@@ -873,7 +873,7 @@ func (s *Service) testEventHandler() cache.ResourceEventHandlerFuncs {
 			)
 			s.updateTest(test)
 
-			s.logger.Debug(
+			s.logger.Debugf(
 				"trigger service: watcher component: emitting event for updating test %s/%s",
 				test.Namespace, test.Name,
 			)
@@ -885,7 +885,7 @@ func (s *Service) testEventHandler() cache.ResourceEventHandlerFuncs {
 				s.logger.Errorf("failed to process delete test event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
-			s.logger.Debug(
+			s.logger.Debugf(
 				"trigger service: watcher component: emitting event for deleting test %s/%s",
 				test.Namespace, test.Name,
 			)
@@ -902,7 +902,7 @@ func (s *Service) executorEventHandler() cache.ResourceEventHandlerFuncs {
 				s.logger.Errorf("failed to process create executor event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
-			s.logger.Debug(
+			s.logger.Debugf(
 				"trigger service: watcher component: emitting event for executor %s/%s",
 				executor.Namespace, executor.Name,
 			)
@@ -915,7 +915,7 @@ func (s *Service) executorEventHandler() cache.ResourceEventHandlerFuncs {
 				return
 			}
 
-			s.logger.Debug(
+			s.logger.Debugf(
 				"trigger service: watcher component: emitting event for updating executor %s/%s",
 				executor.Namespace, executor.Name,
 			)
@@ -927,7 +927,7 @@ func (s *Service) executorEventHandler() cache.ResourceEventHandlerFuncs {
 				s.logger.Errorf("failed to process delete executor event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
-			s.logger.Debug(
+			s.logger.Debugf(
 				"trigger service: watcher component: emitting event for deleting executor %s/%s",
 				executor.Namespace, executor.Name,
 			)
@@ -944,7 +944,7 @@ func (s *Service) webhookEventHandler() cache.ResourceEventHandlerFuncs {
 				s.logger.Errorf("failed to process create webhook event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
-			s.logger.Debug(
+			s.logger.Debugf(
 				"trigger service: watcher component: emitting event for webhook %s/%s",
 				webhook.Namespace, webhook.Name,
 			)
@@ -957,7 +957,7 @@ func (s *Service) webhookEventHandler() cache.ResourceEventHandlerFuncs {
 				return
 			}
 
-			s.logger.Debug(
+			s.logger.Debugf(
 				"trigger service: watcher component: emitting event for updating webhook %s/%s",
 				webhook.Namespace, webhook.Name,
 			)
@@ -969,7 +969,7 @@ func (s *Service) webhookEventHandler() cache.ResourceEventHandlerFuncs {
 				s.logger.Errorf("failed to process delete webhook event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
-			s.logger.Debug(
+			s.logger.Debugf(
 				"trigger service: watcher component: emitting event for deleting webhook %s/%s",
 				webhook.Namespace, webhook.Name,
 			)
@@ -986,7 +986,7 @@ func (s *Service) testSourceEventHandler() cache.ResourceEventHandlerFuncs {
 				s.logger.Errorf("failed to process create test source event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
-			s.logger.Debug(
+			s.logger.Debugf(
 				"trigger service: watcher component: emitting event for test source %s/%s",
 				testSource.Namespace, testSource.Name,
 			)
@@ -999,7 +999,7 @@ func (s *Service) testSourceEventHandler() cache.ResourceEventHandlerFuncs {
 				return
 			}
 
-			s.logger.Debug(
+			s.logger.Debugf(
 				"trigger service: watcher component: emitting event for updating test source %s/%s",
 				testSource.Namespace, testSource.Name,
 			)
@@ -1011,7 +1011,7 @@ func (s *Service) testSourceEventHandler() cache.ResourceEventHandlerFuncs {
 				s.logger.Errorf("failed to process delete test source event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
-			s.logger.Debug(
+			s.logger.Debugf(
 				"trigger service: watcher component: emitting event for deleting test source %s/%s",
 				testSource.Namespace, testSource.Name,
 			)
