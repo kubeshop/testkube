@@ -190,7 +190,7 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: ${{ runner.os }}-jmeterd-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-jmeterd-${{ matrix.GOARCH }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
 
