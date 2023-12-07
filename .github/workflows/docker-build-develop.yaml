@@ -190,10 +190,10 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-        #     dist/jmeterd
-          key: ${{ runner.os }}-go-jmeterd-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+             dist/linux
+          key: linux-jmeterd_${{ matrix.GOARCH }}
+#          restore-keys: |
+#            ${{ runner.os }}-go-
 #
 #      - name: Setup Go
 #        uses: ./.github/actions/setup-go
@@ -206,11 +206,11 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - id: cache
-        uses: actions/cache@v3
-        with:
-          path: dist/linux
-          key: linux-jmeterd_${{ matrix.GOARCH }}
+#      - id: cache
+#        uses: actions/cache@v3
+#        with:
+#          path: dist/linux
+#          key: linux-jmeterd_${{ matrix.GOARCH }}
 
       - name: Release
         uses: goreleaser/goreleaser-action@v4
@@ -236,17 +236,6 @@ jobs:
 
       - id: commit
         uses: prompt/actions-commit-hash@v3
-
-      - name: Go Cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          #     dist/jmeterd
-          key: ${{ runner.os }}-go-jmeterd-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
