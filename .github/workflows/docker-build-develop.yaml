@@ -184,21 +184,18 @@ jobs:
 #          go-version: 1.21
 #          cache: true
 
-      - uses: actions/setup-go@v3
-        with:
-          go-version: 1.21
-          cache: true
-
-#      - name: Go Cache dep
-#        uses: actions/cache@v3
+#      - uses: actions/setup-go@v3
 #        with:
-#          path: |
-#            ~/go/pkg/mod
-#            ~/.cache/go-build
-#          key: ${{ runner.os }}-${{ matrix.GOARCH }}-go-${{ hashFiles('**/go.sum') }}
-#          lookup-only: true
-#          restore-keys: |
-#            ${{ runner.os }}-go-
+#          go-version: 1.21
+#          cache: true
+
+      - name: Go Cache dep
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: Linux-jmeterd-arm64-go-1835d2f981868e31f47df6c9fdf5486f4c4163cd75129cd975b57ac0e3191b31
 
       - name: Go Cache
         uses: actions/cache@v3
