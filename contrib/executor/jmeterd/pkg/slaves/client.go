@@ -22,7 +22,6 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/yaml/merge2"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/utils"
@@ -37,7 +36,7 @@ type Client struct {
 	slavesConfigs executor.SlavesConfigs
 	namespace     string
 	execution     testkube.Execution
-	envParams     envs.Params
+	envs          map[string]string
 	envVariables  map[string]testkube.Variable
 }
 
@@ -65,7 +64,7 @@ func NewClient(
 	clientSet kubernetes.Interface,
 	execution testkube.Execution,
 	slavesConfigs executor.SlavesConfigs,
-	envParams envs.Params,
+	envs map[string]string,
 	slavesEnvVariables map[string]testkube.Variable,
 ) *Client {
 	return &Client{
@@ -73,7 +72,7 @@ func NewClient(
 		slavesConfigs: slavesConfigs,
 		namespace:     execution.TestNamespace,
 		execution:     execution,
-		envParams:     envParams,
+		envs:          envs,
 		envVariables:  slavesEnvVariables,
 	}
 }
@@ -220,7 +219,7 @@ func (c *Client) createSlavePodObject(runnerExecutionStr []byte, podName string,
 	}
 
 	for i := range pod.Spec.InitContainers {
-		pod.Spec.InitContainers[i].Env = append(pod.Spec.InitContainers[i].Env, getSlaveRunnerEnv(c.envParams, c.execution)...)
+		pod.Spec.InitContainers[i].Env = append(pod.Spec.InitContainers[i].Env, getSlaveRunnerEnv(c.envs, c.execution)...)
 	}
 
 	for i := range pod.Spec.Containers {
