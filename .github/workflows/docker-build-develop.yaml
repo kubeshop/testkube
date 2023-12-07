@@ -191,6 +191,7 @@ jobs:
             ~/go/pkg/mod
             ~/.cache/go-build
           key: ${{ runner.os }}-jmeterd-${{ matrix.GOARCH }}-go-${{ hashFiles('**/go.sum') }}
+          lookup-only: true
 #          restore-keys: |
 #            ${{ runner.os }}-go-
 
@@ -252,24 +253,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Go Cache dep
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-jmeterd-linux_arm64-go-${{ hashFiles('**/go.sum') }}
-
-
-      - name: Go Cache dep1
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-jmeterd-linux_amd64-go-${{ hashFiles('**/go.sum') }}
-
 
       - uses: actions/cache@v3
         with:
