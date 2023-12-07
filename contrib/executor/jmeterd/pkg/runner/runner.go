@@ -201,7 +201,8 @@ func initSlaves(
 ) (slaveMeta slaves.SlaveMeta, cleanupFunc func() error, err error) {
 	slavesEnvVariables["DATA_CONFIG"] = testkube.NewBasicVariable("DATA_CONFIG", parentTestFolder)
 	slavesEnvVariables["JMETER_SCRIPT"] = testkube.NewBasicVariable("JMETER_SCRIPT", testFile)
-	for key, value := range slaves.GetRunnerEnvVariables() {
+	envs := slaves.GetRunnerEnvVariables()
+	for key, value := range envs {
 		slavesEnvVariables[key] = testkube.NewBasicVariable(key, value)
 	}
 
@@ -210,7 +211,7 @@ func initSlaves(
 		return nil, nil, errors.Wrap(err, "error unmarshalling slaves configs")
 	}
 
-	slaveClient := slaves.NewClient(clientSet, execution, slavesConfigs, params, slavesEnvVariables)
+	slaveClient := slaves.NewClient(clientSet, execution, slavesConfigs, envs, slavesEnvVariables)
 	slaveMeta, err = slaveClient.CreateSlaves(ctx, slavesCount)
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
