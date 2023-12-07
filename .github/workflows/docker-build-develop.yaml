@@ -185,7 +185,7 @@ jobs:
 #          cache: true
 
       - name: Go Cache dep
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/go/pkg/mod
@@ -196,7 +196,7 @@ jobs:
 #            ${{ runner.os }}-go-
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: dist/linux_${{ matrix.GOARCH }}
 #            ~/go/pkg/mod
