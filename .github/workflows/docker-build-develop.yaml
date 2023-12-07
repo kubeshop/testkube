@@ -191,7 +191,7 @@ jobs:
             ~/go/pkg/mod
             ~/.cache/go-build
              dist/linux_${{ matrix.GOARCH }}
-          key: linux_{{ matrix.GOARCH }}
+          key: linux_${{ matrix.GOARCH }}
 #          restore-keys: |
 #            ${{ runner.os }}-go-
 #
