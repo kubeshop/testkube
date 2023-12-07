@@ -184,13 +184,22 @@ jobs:
 #          go-version: 1.21
 #          cache: true
 
-      - name: Go Cache
+      - name: Go Cache dep
         uses: actions/cache@v3
         with:
           path: |
-            dist/linux_${{ matrix.GOARCH }}
             ~/go/pkg/mod
             ~/.cache/go-build
+          key: ${{ runner.os }}-jmeterd-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Go Cache
+        uses: actions/cache@v3
+        with:
+          path: dist/linux_${{ matrix.GOARCH }}
+#            ~/go/pkg/mod
+#            ~/.cache/go-build
         #     dist/linux_${{ matrix.GOARCH }}
           key: linux_${{ matrix.GOARCH }}
 #          restore-keys: |
