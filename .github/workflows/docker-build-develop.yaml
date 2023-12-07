@@ -179,10 +179,10 @@ jobs:
       - shell: bash
         run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
-      - uses: actions/setup-go@v3
-        with:
-          go-version: 1.21
-          cache: true
+#      - uses: actions/setup-go@v3
+#        with:
+#          go-version: 1.21
+#          cache: true
 
       - name: Go Cache
         uses: actions/cache@v3
@@ -206,11 +206,11 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - id: cache
-        uses: actions/cache@v3
-        with:
-          path: dist/jmeterd_{{ matrix.GOARCH }}
-          key: jmeterd_${{ matrix.GOARCH }}
+#      - id: cache
+#        uses: actions/cache@v3
+#        with:
+#          path: dist/jmeterd_{{ matrix.GOARCH }}
+#          key: jmeterd_${{ matrix.GOARCH }}
 
       - name: Release
         uses: goreleaser/goreleaser-action@v4
