@@ -190,8 +190,8 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-             dist/linux
-          key: linux-jmeterd_${{ matrix.GOARCH }}
+             dist/linux_${{ matrix.GOARCH }}
+          key: linux_{{ matrix.GOARCH }}
 #          restore-keys: |
 #            ${{ runner.os }}-go-
 #
@@ -245,13 +245,13 @@ jobs:
 
       - uses: actions/cache@v3
         with:
-          path: dist/linux
-          key: linux-jmeterd_arm64
+          path: dist/linux_arm64
+          key: linux_arm64
 
       - uses: actions/cache@v3
         with:
-          path: dist/linux
-          key: linux-jmeterd_amd64
+          path: dist/linux_amd64
+          key: linux_amd64
 
       - name: Release
         uses: goreleaser/goreleaser-action@v4
