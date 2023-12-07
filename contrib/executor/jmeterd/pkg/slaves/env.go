@@ -1,6 +1,7 @@
 package slaves
 
 import (
+	"os"
 	"strings"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -15,6 +16,10 @@ const (
 	SlavesCount                = "SLAVES_COUNT"
 	MasterPrefix               = "MASTER_"
 	SlavesPrefix               = "SLAVES_"
+	RunnerPrefix               = "RUNNER_"
+	HttpProxyPrefix            = "HTTP_PROXY="
+	HttpsProxyPrefix           = "HTTPS_PROXY="
+	DebugPrefix                = "DEBUG="
 )
 
 // ExtractSlaveEnvVariables removes slave environment variables from the given map and returns them separately.
@@ -34,4 +39,25 @@ func ExtractSlaveEnvVariables(variables map[string]testkube.Variable) map[string
 		}
 	}
 	return slaveVariables
+}
+
+// GetRunnerEnvVariables returns runner env variables
+func GetRunnerEnvVariables() map[string]string {
+	envVars := make(map[string]string)
+	envs := os.Environ()
+	for _, env := range envs {
+		for _, prefix := range []string{RunnerPrefix, HttpProxyPrefix, HttpsProxyPrefix, DebugPrefix} {
+			if strings.HasPrefix(env, prefix) {
+				pair := strings.SplitN(env, "=", 2)
+				if len(pair) != 2 {
+					continue
+				}
+
+				envVars[pair[0]] += pair[1]
+			}
+		}
+	}
+
+	envVars["CI"] = "1"
+	return envVars
 }
