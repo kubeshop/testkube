@@ -184,16 +184,16 @@ jobs:
           go-version: 1.21
           cache: true
 
-#      - name: Go Cache
-#        uses: actions/cache@v3
-#        with:
-#          path: |
-#            ~/go/pkg/mod
-#            ~/.cache/go-build
-#             dist/jmeterd-${{ matrix.GOARCH }}
-#          key: jmeterd-${{ matrix.GOARCH }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
+      - name: Go Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+             dist/jmeterd
+          key: jmeterd-${{ matrix.GOARCH }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 #
 #      - name: Setup Go
 #        uses: ./.github/actions/setup-go
