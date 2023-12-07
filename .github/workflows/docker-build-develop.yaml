@@ -195,7 +195,7 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: Linux-jmeterd-arm64-go-1835d2f981868e31f47df6c9fdf5486f4c4163cd75129cd975b57ac0e3191b31
+          key: ${{ runner.os }}-jmeterd-arm64-go-${{ hashFiles('**/go.sum') }}
 
       - name: Go Cache
         uses: actions/cache@v3
