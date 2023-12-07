@@ -187,9 +187,10 @@ jobs:
       - name: Go Cache
         uses: actions/cache@v3
         with:
-          path: dist/linux_${{ matrix.GOARCH }}
-#            ~/go/pkg/mod
-#            ~/.cache/go-build
+          path: |
+            dist/linux_${{ matrix.GOARCH }}
+           ~/go/pkg/mod
+           ~/.cache/go-build
         #     dist/linux_${{ matrix.GOARCH }}
           key: linux_${{ matrix.GOARCH }}
 #          restore-keys: |
