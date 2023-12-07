@@ -201,6 +201,9 @@ func initSlaves(
 ) (slaveMeta slaves.SlaveMeta, cleanupFunc func() error, err error) {
 	slavesEnvVariables["DATA_CONFIG"] = testkube.NewBasicVariable("DATA_CONFIG", parentTestFolder)
 	slavesEnvVariables["JMETER_SCRIPT"] = testkube.NewBasicVariable("JMETER_SCRIPT", testFile)
+	for key, value := range slaves.GetRunnerEnvVariables() {
+		slavesEnvVariables[key] = testkube.NewBasicVariable(key, value)
+	}
 
 	slavesConfigs := executor.SlavesConfigs{}
 	if err := json.Unmarshal([]byte(params.SlavesConfigs), &slavesConfigs); err != nil {
