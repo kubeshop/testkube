@@ -209,8 +209,8 @@ jobs:
       - id: cache
         uses: actions/cache@v3
         with:
-          path: dist/jmeterd_${{ matrix.GOARCH }}
-          key: jmeterd_${{ matrix.GOARCH }}
+          path: dist/linux
+          key: linux-jmeterd_${{ matrix.GOARCH }}
 
       - name: Release
         uses: goreleaser/goreleaser-action@v4
@@ -256,13 +256,13 @@ jobs:
 
       - uses: actions/cache@v3
         with:
-          path: dist/jmeterd-arm64
-          key: jmeterd-arm64
+          path: dist/linux
+          key: linux-jmeterd_arm64
 
       - uses: actions/cache@v3
         with:
-          path: dist/jmeterd-arm64
-          key: jmeterd-arm64
+          path: dist/linux
+          key: linux-jmeterd_amd64
 
       - name: Release
         uses: goreleaser/goreleaser-action@v4
