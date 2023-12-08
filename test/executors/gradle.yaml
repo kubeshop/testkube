@@ -3,7 +3,7 @@ kind: Executor
 metadata:
   name: gradle-jdk18-executor
 spec:
-  image: kubeshop/testkube-gradle-executor:0.1-jdk18
+  image: kubeshop/testkube-gradle-executor:jdk18
   types:
   - gradle:jdk18/project
   - gradle:jdk18/test
@@ -14,7 +14,7 @@ kind: Executor
 metadata:
   name: gradle-jdk17-executor
 spec:
-  image: kubeshop/testkube-gradle-executor:0.1-jdk17
+  image: kubeshop/testkube-gradle-executor:jdk17
   types:
   - gradle:jdk17/project
   - gradle:jdk17/test
@@ -25,7 +25,7 @@ kind: Executor
 metadata:
   name: gradle-jdk11-executor
 spec:
-  image: kubeshop/testkube-gradle-executor:0.1-jdk11
+  image: kubeshop/testkube-gradle-executor:jdk11
   types:
   - gradle:jdk11/project
   - gradle:jdk11/test
@@ -36,7 +36,7 @@ kind: Executor
 metadata:
   name: gradle-jdk8-executor
 spec:
-  image: kubeshop/testkube-gradle-executor:0.1-jdk8
+  image: kubeshop/testkube-gradle-executor:jdk8
   types:
   - gradle:jdk8/project
   - gradle:jdk8/test
