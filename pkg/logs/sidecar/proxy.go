@@ -20,7 +20,7 @@ import (
 	tcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/kubeshop/testkube/pkg/executor"
-	"github.com/kubeshop/testkube/pkg/logs"
+	"github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
@@ -35,7 +35,7 @@ const (
 	logsBuffer      = 1000
 )
 
-func NewProxy(clientset kubernetes.Interface, podsClient tcorev1.PodInterface, logsStream logs.Stream, js jetstream.JetStream, log *zap.SugaredLogger, namespace, executionId string) *Proxy {
+func NewProxy(clientset kubernetes.Interface, podsClient tcorev1.PodInterface, logsStream client.Stream, js jetstream.JetStream, log *zap.SugaredLogger, namespace, executionId string) *Proxy {
 	return &Proxy{
 		log:         log.With("namespace", namespace, "executionId", executionId),
 		js:          js,
@@ -54,7 +54,7 @@ type Proxy struct {
 	namespace   string
 	executionId string
 	podsClient  tcorev1.PodInterface
-	logsStream  logs.Stream
+	logsStream  client.Stream
 }
 
 func (p *Proxy) Run(ctx context.Context) error {
@@ -62,7 +62,7 @@ func (p *Proxy) Run(ctx context.Context) error {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	logs := make(chan events.LogChunk, logsBuffer)
+	logs := make(chan events.Log, logsBuffer)
 
 	// create stream for incoming logs
 
@@ -100,7 +100,7 @@ func (p *Proxy) Run(ctx context.Context) error {
 	return nil
 }
 
-func (p *Proxy) streamLogs(ctx context.Context, logs chan events.LogChunk) (err error) {
+func (p *Proxy) streamLogs(ctx context.Context, logs chan events.Log) (err error) {
 	pods, err := executor.GetJobPods(ctx, p.podsClient, p.executionId, 1, 10)
 	if err != nil {
 		p.handleError(err, "error getting job pods")
@@ -138,7 +138,7 @@ func (p *Proxy) streamLogs(ctx context.Context, logs chan events.LogChunk) (err 
 	return
 }
 
-func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan events.LogChunk) (err error) {
+func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan events.Log) (err error) {
 	defer close(logs)
 
 	var containers []string
@@ -177,7 +177,7 @@ func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan events.LogChunk) (er
 			}
 
 			// parse log line - also handle old (output.Output) and new format (just unstructured []byte)
-			logs <- events.NewLogChunkFromBytes(b)
+			logs <- events.NewLogResponseFromBytes(b)
 		}
 
 		if err != nil {
@@ -234,7 +234,7 @@ func (p *Proxy) getPodContainerStatuses(pod corev1.Pod) (status string) {
 // handleError will handle errors and push it as log chunk to logs stream
 func (p *Proxy) handleError(err error, title string) {
 	if err != nil {
-		ch := events.LogChunk{
+		ch := events.Log{
 			Error:   true,
 			Content: err.Error(),
 		}

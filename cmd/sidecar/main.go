@@ -6,7 +6,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/logs"
+	"github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/logs/config"
 	"github.com/kubeshop/testkube/pkg/logs/sidecar"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -23,13 +23,13 @@ func main() {
 	cfg := Must(config.Get())
 
 	// Event bus
-	natsConn := Must(bus.NewNATSConnection(cfg.NatsURI))
+	nc := Must(bus.NewNATSConnection(cfg.NatsURI))
 	defer func() {
 		log.Infof("closing nats connection")
-		natsConn.Close()
+		nc.Close()
 	}()
 
-	js := Must(jetstream.New(natsConn))
+	js := Must(jetstream.New(nc))
 
 	clientset, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -39,7 +39,7 @@ func main() {
 
 	podsClient := clientset.CoreV1().Pods(cfg.Namespace)
 
-	logsStream, err := logs.NewLogsStream(natsConn, cfg.ExecutionId)
+	logsStream, err := client.NewNatsLogStream(nc, cfg.ExecutionId)
 	if err != nil {
 		ui.ExitOnError("error creating logs stream", err)
 		return

@@ -25,11 +25,12 @@ const (
 	LogVersionV2 LogVersion = "v2"
 )
 
-type LogOutputV1 struct {
-	Result *testkube.ExecutionResult
+type LogResponse struct {
+	Log   Log
+	Error error
 }
 
-type LogChunk struct {
+type Log struct {
 	Time     time.Time         `json:"ts,omitempty"`
 	Content  string            `json:"content,omitempty"`
 	Type     string            `json:"type,omitempty"`
@@ -41,9 +42,12 @@ type LogChunk struct {
 	// Old output - for backwards compatibility - will be removed
 	V1 *LogOutputV1 `json:"v1,omitempty"`
 }
+type LogOutputV1 struct {
+	Result *testkube.ExecutionResult
+}
 
-func NewLogChunk(ts time.Time, content []byte) LogChunk {
-	return LogChunk{
+func NewLogResponse(ts time.Time, content []byte) Log {
+	return Log{
 		Time:     ts,
 		Content:  string(content),
 		Metadata: map[string]string{},
@@ -51,7 +55,7 @@ func NewLogChunk(ts time.Time, content []byte) LogChunk {
 }
 
 // log line/chunk data
-func (c *LogChunk) WithMetadataEntry(key, value string) *LogChunk {
+func (c *Log) WithMetadataEntry(key, value string) *Log {
 	if c.Metadata == nil {
 		c.Metadata = map[string]string{}
 	}
@@ -59,21 +63,21 @@ func (c *LogChunk) WithMetadataEntry(key, value string) *LogChunk {
 	return c
 }
 
-func (c *LogChunk) WithVersion(version LogVersion) *LogChunk {
+func (c *Log) WithVersion(version LogVersion) *Log {
 	c.Version = version
 	return c
 }
 
-func (c *LogChunk) WithV1Result(result *testkube.ExecutionResult) *LogChunk {
+func (c *Log) WithV1Result(result *testkube.ExecutionResult) *Log {
 	c.V1.Result = result
 	return c
 }
 
 var timestampRegexp = regexp.MustCompile("^[0-9]{4}-[0-9]{2}-[0-9]{2}T.*")
 
-// NewLogChunkFromBytes creates new LogChunk from bytes it's aware of new and old log formats
+// NewLogResponseFromBytes creates new LogResponse from bytes it's aware of new and old log formats
 // default log format will be based on raw bytes with timestamp on the beginning
-func NewLogChunkFromBytes(b []byte) LogChunk {
+func NewLogResponseFromBytes(b []byte) Log {
 
 	// detect timestamp - new logs have timestamp
 	var (
@@ -115,7 +119,7 @@ func NewLogChunkFromBytes(b []byte) LogChunk {
 		if err != nil {
 			// try to read in case of some lines which we couldn't parse
 			// sometimes we're not able to control all stdout messages from libs
-			return LogChunk{
+			return Log{
 				Time:    ts,
 				Content: err.Error(),
 				Type:    o.Type_,
@@ -127,7 +131,7 @@ func NewLogChunkFromBytes(b []byte) LogChunk {
 		// pass parsed results for v1
 		// for new executor it'll be omitted in logs (as looks like we're not using it already)
 		if o.Type_ == output.TypeResult {
-			return LogChunk{
+			return Log{
 				Time:    ts,
 				Content: o.Content,
 				Version: LogVersionV1,
@@ -137,7 +141,7 @@ func NewLogChunkFromBytes(b []byte) LogChunk {
 			}
 		}
 
-		return LogChunk{
+		return Log{
 			Time:    ts,
 			Content: o.Content,
 			Version: LogVersionV1,
@@ -146,7 +150,7 @@ func NewLogChunkFromBytes(b []byte) LogChunk {
 	// END DEPRECATED
 
 	// new non-JSON format (just raw lines will be logged)
-	return LogChunk{
+	return Log{
 		Time:    ts,
 		Content: string(b),
 		Version: LogVersionV2,

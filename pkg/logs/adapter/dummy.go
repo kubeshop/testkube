@@ -17,7 +17,7 @@ type DummyAdapter struct {
 	Bucket string
 }
 
-func (s *DummyAdapter) Notify(id string, e events.LogChunk) error {
+func (s *DummyAdapter) Notify(id string, e events.Log) error {
 	fmt.Printf("%s %+v\n", id, e)
 	return nil
 }

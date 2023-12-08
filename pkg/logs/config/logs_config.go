@@ -9,6 +9,7 @@ type Config struct {
 	Namespace    string `envconfig:"NAMESPACE" default:"testkube"`
 	ExecutionId  string `envconfig:"ID" default:""`
 	HttpAddress  string `envconfig:"HTTP_ADDRESS" default:":8080"`
+	GrpcAddress  string `envconfig:"GRPC_ADDRESS" default:":9090"`
 	KVBucketName string `envconfig:"KV_BUCKET_NAME" default:"logsState"`
 }
 
