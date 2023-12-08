@@ -58,10 +58,10 @@ func (ls *LogsService) handleMessage(a adapter.Adapter, event events.Trigger) fu
 	log := ls.log.With("id", event.Id, "consumer", a.Name())
 
 	return func(msg jetstream.Msg) {
-		log.Infow("got message", "data", string(msg.Data()))
+		log.Debugw("got message", "data", string(msg.Data()))
 
 		// deliver to subscriber
-		logChunk := events.LogChunk{}
+		logChunk := events.Log{}
 		err := json.Unmarshal(msg.Data(), &logChunk)
 		if err != nil {
 			if err := msg.Nak(); err != nil {

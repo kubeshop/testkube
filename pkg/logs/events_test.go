@@ -12,6 +12,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/logs/adapter"
+	"github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/logs/state"
 )
@@ -61,7 +62,7 @@ func TestLogs_EventsFlow(t *testing.T) {
 		<-log.Ready
 
 		// and logs stream client
-		stream, err := NewLogsStream(nc, "stop-test")
+		stream, err := client.NewNatsLogStream(nc, "stop-test")
 		assert.NoError(t, err)
 
 		// and initialized log stream for given ID
@@ -74,7 +75,7 @@ func TestLogs_EventsFlow(t *testing.T) {
 		assert.NoError(t, err)
 
 		// and when data pushed to the log stream
-		stream.Push(ctx, events.NewLogChunk(time.Now(), []byte("hello 1")))
+		stream.Push(ctx, events.NewLogResponse(time.Now(), []byte("hello 1")))
 
 		// and stop event triggered
 		_, err = stream.Stop(ctx)
@@ -129,7 +130,7 @@ func TestLogs_EventsFlow(t *testing.T) {
 		<-log.Ready
 
 		// and stream client
-		stream, err := NewLogsStream(nc, "messages-test")
+		stream, err := client.NewNatsLogStream(nc, "messages-test")
 		assert.NoError(t, err)
 
 		// and initialized log stream for given ID
@@ -143,7 +144,7 @@ func TestLogs_EventsFlow(t *testing.T) {
 
 		for i := 0; i < messagesCount; i++ {
 			// and when data pushed to the log stream
-			err = stream.Push(ctx, events.NewLogChunk(time.Now(), []byte("hello")))
+			err = stream.Push(ctx, events.NewLogResponse(time.Now(), []byte("hello")))
 			assert.NoError(t, err)
 		}
 
@@ -197,7 +198,7 @@ func TestLogs_EventsFlow(t *testing.T) {
 		<-log.Ready
 
 		// and logs stream client
-		stream, err := NewLogsStream(nc, "stop-test")
+		stream, err := client.NewNatsLogStream(nc, "stop-test")
 		assert.NoError(t, err)
 
 		// and initialized log stream for given ID
@@ -234,18 +235,18 @@ func NewMockAdapter(name ...string) *MockAdapter {
 	}
 
 	return &MockAdapter{
-		Messages: []events.LogChunk{},
+		Messages: []events.Log{},
 		name:     n,
 	}
 }
 
 type MockAdapter struct {
 	lock     sync.Mutex
-	Messages []events.LogChunk
+	Messages []events.Log
 	name     string
 }
 
-func (s *MockAdapter) Notify(id string, e events.LogChunk) error {
+func (s *MockAdapter) Notify(id string, e events.Log) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 

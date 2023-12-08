@@ -6,20 +6,27 @@ package logs
 
 import (
 	"context"
+	"fmt"
+	"math/rand"
+	"net"
 	"net/http"
 	"sync"
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/logs/adapter"
+	"github.com/kubeshop/testkube/pkg/logs/pb"
+	"github.com/kubeshop/testkube/pkg/logs/repository"
 	"github.com/kubeshop/testkube/pkg/logs/state"
 )
 
 const (
 	DefaultHttpAddress = ":8080"
+	DefaultGrpcAddress = ":9090"
 )
 
 func NewLogsService(nats *nats.Conn, js jetstream.JetStream, state state.Interface) *LogsService {
@@ -30,22 +37,30 @@ func NewLogsService(nats *nats.Conn, js jetstream.JetStream, state state.Interfa
 		log:               log.DefaultLogger.With("service", "logs-service"),
 		Ready:             make(chan struct{}, 1),
 		httpAddress:       DefaultHttpAddress,
+		grpcAddress:       DefaultGrpcAddress,
 		consumerInstances: sync.Map{},
 		state:             state,
 	}
 }
 
 type LogsService struct {
-	log      *zap.SugaredLogger
-	nats     *nats.Conn
-	js       jetstream.JetStream
-	adapters []adapter.Adapter
+	logsRepositoryFactory repository.Factory
+	log                   *zap.SugaredLogger
+	nats                  *nats.Conn
+	js                    jetstream.JetStream
+	adapters              []adapter.Adapter
 
 	Ready chan struct{}
 
+	// grpcAddress is address for grpc server
+	grpcAddress string
+	// grpcServer is grpc server for logs service
+	grpcServer *grpc.Server
+
 	// httpAddress is address for Kubernetes http health check handler
 	httpAddress string
-	httpServer  *http.Server
+	// httpServer is http server for health check (for Kubernetes below 1.25)
+	httpServer *http.Server
 
 	// consumerInstances is internal executionID => Consumer map which we need to clean
 	// each pod can have different executionId set of consumers
@@ -86,4 +101,54 @@ func (ls *LogsService) Run(ctx context.Context) (err error) {
 	<-ctx.Done()
 
 	return nil
+}
+
+// TODO handle TLS
+func (ls *LogsService) RunGRPCServer(ctx context.Context) error {
+	lis, err := net.Listen("tcp", ls.grpcAddress)
+	if err != nil {
+		return err
+	}
+
+	ls.grpcServer = grpc.NewServer()
+	pb.RegisterLogsServiceServer(ls.grpcServer, NewLogsServer(ls.logsRepositoryFactory, ls.state))
+
+	ls.log.Infow("starting grpc server", "address", ls.grpcAddress)
+	return ls.grpcServer.Serve(lis)
+}
+
+func (ls *LogsService) Shutdown(ctx context.Context) (err error) {
+	err = ls.httpServer.Shutdown(ctx)
+	if err != nil {
+		return err
+	}
+
+	ls.grpcServer.GracefulStop()
+
+	// TODO decide how to handle graceful shutdown of consumers
+
+	return nil
+}
+
+func (ls *LogsService) WithHttpAddress(address string) *LogsService {
+	ls.httpAddress = address
+	return ls
+}
+
+func (ls *LogsService) WithGrpcAddress(address string) *LogsService {
+	ls.httpAddress = address
+	return ls
+}
+
+func (ls *LogsService) WithRandomPort() *LogsService {
+	port := rand.Intn(1000) + 17000
+	ls.httpAddress = fmt.Sprintf("127.0.0.1:%d", port)
+	port = rand.Intn(1000) + 18000
+	ls.grpcAddress = fmt.Sprintf("127.0.0.1:%d", port)
+	return ls
+}
+
+func (ls *LogsService) WithLogsRepositoryFactory(f repository.Factory) *LogsService {
+	ls.logsRepositoryFactory = f
+	return ls
 }

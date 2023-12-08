@@ -20,6 +20,7 @@ func TestLogsService_RunHealthcheckHandler(t *testing.T) {
 	svc := LogsService{log: log.DefaultLogger}
 	svc.WithRandomPort()
 	go svc.RunHealthCheckHandler(ctx)
+	go svc.RunGRPCServer(ctx)
 	defer svc.Shutdown(ctx)
 
 	time.Sleep(100 * time.Millisecond)
