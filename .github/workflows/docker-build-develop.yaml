@@ -192,25 +192,25 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Login to DockerHub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+#      - name: Login to DockerHub
+#        uses: docker/login-action@v1
+#        with:
+#          username: ${{ secrets.DOCKERHUB_USERNAME }}
+#          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Release
-        uses: goreleaser/goreleaser-action@v4
-        with:
-          distribution: goreleaser-pro
-          version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd-commit-only.yml --clean --split
-        env:
-          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
-          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-          GOARCH: ${{ matrix.GOARCH }}
+#      - name: Release
+#        uses: goreleaser/goreleaser-action@v4
+#        with:
+#          distribution: goreleaser-pro
+#          version: latest
+#          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd-commit-only.yml --clean --split
+#        env:
+#          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+#          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+#          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+#          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+#          GOARCH: ${{ matrix.GOARCH }}
 
   image:
     runs-on: ubuntu-latest
