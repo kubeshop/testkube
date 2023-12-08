@@ -1,0 +1,20 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: parallel-testsuite-2
+  labels:
+    core-tests: special-cases
+spec:
+  description: "parallel testsuite 2"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: artillery-executor-smoke
+    - test: k6-executor-smoke
+  - stopOnFailure: false
+    execute:
+    - test: k6-executor-smoke-git-file
+  - stopOnFailure: false
+    execute:
+    - test: artillery-executor-smoke-negative
+    - test: container-executor-curl-smoke

@@ -1,0 +1,23 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: expected-failure-parallel-testsuite-delays
+  labels:
+    core-tests: special-cases-expected-failure
+spec:
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: k6-executor-smoke
+    - delay: 30s
+    - test: container-executor-curl-smoke
+  - stopOnFailure: false
+    execute:
+    - test: k6-executor-smoke
+    - test: postman-executor-smoke
+    - delay: 12s
+  - stopOnFailure: false
+    execute:
+    - test: soapui-executor-smoke
+    - delay: 2s
+    - delay: 1.223s
