@@ -4,9 +4,9 @@ on:
   push:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+-*"
-    branches:
-      - develop
-      - ci/cache-optimization
+#    branches:
+#      - develop
+#      - ci/cache-optimization
     paths-ignore:
       - 'docs/**'
 env:
@@ -182,7 +182,7 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: ${{ runner.os }}-${{ matrix.GOARCH }}-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-${{ matrix.GOARCH }}-${{ hashFiles('**/go.sum') }}
 
       - name: Go Cache
         uses: actions/cache@v3
