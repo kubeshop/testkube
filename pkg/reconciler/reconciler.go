@@ -215,7 +215,7 @@ OuterLoop:
 					}
 				}
 
-				if step.EndTime.IsZero() {
+				if step.EndTime.IsZero() && stepDuration != 0 {
 					if time.Since(step.StartTime) < stepDuration {
 						continue OuterLoop
 					}
