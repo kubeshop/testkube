@@ -3,7 +3,7 @@ kind: TestSuite
 metadata:
   name: executor-curl-smoke-tests
   labels:
-    app: testkube
+    core-tests: executors
 spec:
   description: "curl executor smoke tests"
   steps:

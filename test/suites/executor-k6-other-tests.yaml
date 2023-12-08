@@ -3,7 +3,7 @@ kind: TestSuite
 metadata:
   name: executor-k6-other-tests
   labels:
-    app: testkube
+    core-tests: executors
 spec:
   description: "k6 executor - other tests and edge-cases"
   steps:

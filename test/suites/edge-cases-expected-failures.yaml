@@ -3,7 +3,6 @@ kind: TestSuite
 metadata:
   name: expected-fail
   labels:
-    app: testkube
     core-tests: expected-fail
 spec:
   description: "Edge cases - expected failures"
