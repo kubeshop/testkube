@@ -181,7 +181,7 @@ jobs:
         with:
           path: |
             ~/.cache/go-build
-          key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-golang-build-${{ hashFiles('**/go.sum') }}
       #          restore-keys: |
       #            ${{ runner.os }}-go-
 
