@@ -1,0 +1,75 @@
+
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: large-artifacts-1gb-test
+  labels:
+    core-tests: special-cases-large-artifacts
+spec:
+  type: container-executor-1gb-artifact/test
+  executionRequest:
+    artifactRequest:
+      storageClassName: standard
+      volumeMountPath: /share
+      dirs:
+        - artifacts
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: large-artifacts-1mb-test
+  labels:
+    core-tests: special-cases-large-artifacts
+spec:
+  type: container-executor-1mb-artifact/test
+  executionRequest:
+    artifactRequest:
+      storageClassName: standard
+      volumeMountPath: /share
+      dirs:
+        - artifacts
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: large-artifacts-1gb-urandom-test
+  labels:
+    core-tests: special-cases-large-artifacts
+spec:
+  type: container-executor-1gb-urandom-artifact/test
+  executionRequest:
+    artifactRequest:
+      storageClassName: standard
+      volumeMountPath: /share
+      dirs:
+        - artifacts
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: large-artifacts-1mb-urandom-test
+  labels:
+    core-tests: special-cases-large-artifacts
+spec:
+  type: container-executor-1mb-urandom-artifact/test
+  executionRequest:
+    artifactRequest:
+      storageClassName: standard
+      volumeMountPath: /share
+      dirs:
+        - artifacts
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: large-artifacts-1gb-openssl-test
+  labels:
+    core-tests: special-cases-large-artifacts
+spec:
+  type: container-executor-1gb-openssl-artifact/test
+  executionRequest:
+    artifactRequest:
+      storageClassName: standard
+      volumeMountPath: /share
+      dirs:
+        - artifacts

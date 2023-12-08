@@ -1,0 +1,36 @@
+
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: large-logs-1mb-test
+  labels:
+    core-tests: special-cases-large-logs
+spec:
+  type: container-executor-large-logs-1mb/test
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: large-logs-11mb-test
+  labels:
+    core-tests: special-cases-large-logs
+spec:
+  type: container-executor-large-logs-11mb/test
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: large-logs-22mb-test
+  labels:
+    core-tests: special-cases-large-logs
+spec:
+  type: container-executor-large-logs-22mb/test
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: large-logs-long-lines-81k-test
+  labels:
+    core-tests: special-cases-large-logs
+spec:
+  type: container-executor-large-logs-long-lines/test

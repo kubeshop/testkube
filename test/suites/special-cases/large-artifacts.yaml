@@ -1,0 +1,24 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: large-artifacts
+  labels:
+    core-tests: special-cases-large-artifacts
+spec:
+  description: "Special cases - large artifacts"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: large-artifacts-1gb-test
+  - stopOnFailure: false
+    execute:
+    - test: large-artifacts-1mb-test
+  - stopOnFailure: false
+    execute:
+    - test: large-artifacts-1gb-urandom-test
+  - stopOnFailure: false
+    execute:
+    - test: large-artifacts-1mb-urandom-test
+  - stopOnFailure: false
+    execute:
+    - test: large-artifacts-1gb-openssl-test

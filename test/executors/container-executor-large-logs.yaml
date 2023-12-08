@@ -1,0 +1,55 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: container-executor-large-logs-1mb
+spec:
+  types:
+    - container-executor-large-logs-1mb/test
+  executor_type: container
+  image: bash:5.1
+  command:
+    - bash
+    - -c
+    - 'for iteration in {1..100}; do printf "\niteration $iteration\n"; for sets in {1..20}; do printf "LINE_BEGINNING_"; printf "abc DEFghi JKL ASDF BBB CCC%.0s" {1..20}; printf "_LINE_END"; printf "\n"; done; done' # 100 iterations - about 1.1MB
+---
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: container-executor-large-logs-11mb
+spec:
+  types:
+    - container-executor-large-logs-11mb/test
+  executor_type: container
+  image: bash:5.1
+  command:
+    - bash
+    - -c
+    - 'for iteration in {1..1000}; do sleep 2; printf "\niteration $iteration\n"; for sets in {1..20}; do printf "LINE_BEGINNING_"; printf "abc DEFghi JKL ASDF BBB CCC%.0s" {1..20}; printf "_LINE_END"; printf "\n"; done; done' # 1000 iterations - about 11MB
+---
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: container-executor-large-logs-22mb
+spec:
+  types:
+    - container-executor-large-logs-22mb/test
+  executor_type: container
+  image: bash:5.1
+  command:
+    - bash
+    - -c
+    - 'for iteration in {1..2000}; do sleep 1; printf "\niteration $iteration\n"; for sets in {1..20}; do printf "LINE_BEGINNING_"; printf "abc DEFghi JKL ASDF BBB CCC%.0s" {1..20}; printf "_LINE_END"; printf "\n"; done; done' # 2000 iterations - about 22MB
+---
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: container-executor-large-logs-long-lines
+spec:
+  types:
+    - container-executor-large-logs-long-lines/test
+  executor_type: container
+  image: bash:5.1
+  command:
+    - bash
+    - -c
+    - 'for iteration in {1..100}; do printf "\niteration $iteration\n"; for sets in {1..1}; do printf "LINE_BEGINNING_"; printf "abc DEFghi JKL ASDF BBB CCC%.0s" {1..3000}; printf "_LINE_END"; printf "\n"; done; done' # 100 lines with 81k characters each
