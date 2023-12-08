@@ -7,10 +7,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/logs/events"
 )
 
-const (
-	buffer = 100
-)
-
 var _ LogsRepository = &JetstreamLogsRepository{}
 
 func NewJetstreamRepository(client client.Client) LogsRepository {

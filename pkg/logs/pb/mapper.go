@@ -1,8 +1,9 @@
 package pb
 
 import (
-	"github.com/kubeshop/testkube/pkg/logs/events"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/kubeshop/testkube/pkg/logs/events"
 )
 
 // TODO figure out how to pass errors better

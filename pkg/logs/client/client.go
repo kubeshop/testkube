@@ -5,12 +5,17 @@ import (
 	"io"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/logs/events"
-	"github.com/kubeshop/testkube/pkg/logs/pb"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/logs/events"
+	"github.com/kubeshop/testkube/pkg/logs/pb"
+)
+
+const (
+	buffer = 100
 )
 
 func NewGrpcClient(address string) Client {
@@ -27,7 +32,7 @@ type GrpcClient struct {
 
 // Get returns channel with log stream chunks for given execution id connects through GRPC to log service
 func (c GrpcClient) Get(ctx context.Context, id string) chan events.LogResponse {
-	ch := make(chan events.LogResponse, 1000)
+	ch := make(chan events.LogResponse, buffer)
 	log := c.log.With("id", id)
 
 	log.Debugw("getting logs", "address", c.address)

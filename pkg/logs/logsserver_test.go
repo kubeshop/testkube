@@ -6,11 +6,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/logs/repository"
 	"github.com/kubeshop/testkube/pkg/logs/state"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestGRPC_Server(t *testing.T) {
@@ -66,7 +67,7 @@ func (l LogsRepositoryMock) Get(ctx context.Context, id string) chan events.LogR
 	ch := make(chan events.LogResponse, 10)
 	defer close(ch)
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 100000; i++ {
 		ch <- events.LogResponse{Log: events.Log{Time: time.Now(), Content: fmt.Sprintf("test %d", i), Error: false, Type: "test", Source: "test", Metadata: map[string]string{"test": "test"}}}
 	}
 	return ch

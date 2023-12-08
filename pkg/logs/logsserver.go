@@ -1,11 +1,12 @@
 package logs
 
 import (
+	"go.uber.org/zap"
+
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/logs/pb"
 	"github.com/kubeshop/testkube/pkg/logs/repository"
 	"github.com/kubeshop/testkube/pkg/logs/state"
-	"go.uber.org/zap"
 )
 
 func NewLogsServer(repo repository.Factory, state state.Interface) *LogsServer {
