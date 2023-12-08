@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v2
 
       - uses: sigstore/cosign-installer@v3.0.5
       - uses: anchore/sbom-action/download-syft@v0.14.2
@@ -27,10 +27,10 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 
-      - name: Setup Go
-        uses: ./.github/actions/setup-go
+      - name: Setup Golang with Cache
+        uses: magnetikonline/action-golang-cache@v4
         with:
-          cache-prefix: go-build
+          go-version: "1.21"
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -91,7 +91,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v2
 
       - uses: sigstore/cosign-installer@v3.0.5
       - uses: anchore/sbom-action/download-syft@v0.14.2
@@ -200,30 +200,37 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   executor_jmeterd:
+    strategy:
+      matrix:
+        GOARCH: [ amd64, arm64 ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
-
-      - uses: sigstore/cosign-installer@v3.0.5
-      - uses: anchore/sbom-action/download-syft@v0.14.2
+        uses: actions/checkout@v4
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
-      - name: Go Cache
-        uses: actions/cache@v2
+      - name: Go Cache Dep
+        uses: actions/cache@v3
         with:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          key: jmeterd-${{ matrix.GOARCH }}-go-${{ hashFiles('**/go.sum') }}
+      #          restore-keys: |
+      #            ${{ runner.os }}-go-
+
+
+      - name: Go Cache
+        uses: actions/cache@v3
+        with:
+          path: dist/linux_${{ matrix.GOARCH }}
+          key: linux_${{ matrix.GOARCH }}
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -245,10 +252,52 @@ jobs:
       - name: Release
         uses: goreleaser/goreleaser-action@v4
         with:
-          distribution: goreleaser
+          distribution: goreleaser-pro
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd.yml
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd.yml --clean --split
         env:
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+          GOARCH: ${{ matrix.GOARCH }}
+
+  executor_merge:
+    runs-on: ubuntu-latest
+    needs: executor_jmeterd
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: sigstore/cosign-installer@v3.0.5
+      - uses: anchore/sbom-action/download-syft@v0.14.2
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: actions/cache@v3
+        with:
+          path: dist/linux_arm64
+          key: linux_arm64
+
+      - uses: actions/cache@v3
+        with:
+          path: dist/linux_amd64
+          key: linux_amd64
+
+      - name: Release
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser-pro
+          version: latest
+          args: continue --merge
+        env:
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
           DOCKER_BUILDX_CACHE_FROM: "type=gha"

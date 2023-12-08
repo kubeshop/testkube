@@ -9,8 +9,7 @@ env:
   # https://github.com/moby/buildkit#export-cache
   - DOCKER_BUILDX_CACHE_FROM={{ if index .Env "DOCKER_BUILDX_CACHE_FROM"  }}{{ .Env.DOCKER_BUILDX_CACHE_FROM }}{{ else }}type=registry{{ end }}
   - DOCKER_BUILDX_CACHE_TO={{ if index .Env "DOCKER_BUILDX_CACHE_TO"  }}{{ .Env.DOCKER_BUILDX_CACHE_TO }}{{ else }}type=inline{{ end }}
-#partial:
-#  by: target
+
 builds:
   - id: "linux"
     main: "./contrib/executor/jmeterd/cmd/agent"
@@ -27,9 +26,9 @@ dockers:
   - dockerfile: "./contrib/executor/jmeterd/build/agent/Dockerfile"
     use: buildx
     goos: linux
-    goarch: "amd64"
+    goarch: amd64
     image_templates:
-      - "kubeshop/testkube-jmeterd-executor:{{ .Version }}-amd64"
+      - "kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -48,9 +47,9 @@ dockers:
     goos: linux
     goarch: arm64
     image_templates:
-      - "kubeshop/testkube-jmeterd-executor:{{ .Version }}-arm64"
+      - "kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-arm64v8"
     build_flag_templates:
-      - "--platform=linux/arm64"
+      - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
       - "--label=org.opencontainers.image.created={{ .Date}}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
@@ -63,11 +62,10 @@ dockers:
       - ./contrib/executor/jmeterd/scripts/jmeter-master.sh
 
 docker_manifests:
-  - name_template: kubeshop/testkube-jmeterd-executor:{{ .Version }}
+  - name_template: kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}
     image_templates:
-      - kubeshop/testkube-jmeterd-executor:{{ .Version }}-amd64
-      - kubeshop/testkube-jmeterd-executor:{{ .Version }}-arm64
-
+      - kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-amd64
+      - kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-arm64v8
 
 release:
   disable: true
