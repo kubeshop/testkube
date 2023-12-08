@@ -6,13 +6,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/logs/repository"
 	"github.com/kubeshop/testkube/pkg/logs/state"
+	"github.com/stretchr/testify/assert"
 )
+
+const count = 10
 
 func TestGRPC_Server(t *testing.T) {
 	// Contact the server and print out its response.
@@ -27,7 +28,7 @@ func TestGRPC_Server(t *testing.T) {
 
 	go ls.RunGRPCServer(ctx)
 
-	count := 0
+	expectedCount := 0
 
 	stream := client.NewGrpcClient(ls.grpcAddress)
 	ch := stream.Get(ctx, "id1")
@@ -36,10 +37,10 @@ func TestGRPC_Server(t *testing.T) {
 
 	for l := range ch {
 		t.Log(l)
-		count++
+		expectedCount++
 	}
 
-	assert.Equal(t, 10, count)
+	assert.Equal(t, count, expectedCount)
 }
 
 type StateMock struct {
@@ -67,7 +68,7 @@ func (l LogsRepositoryMock) Get(ctx context.Context, id string) chan events.LogR
 	ch := make(chan events.LogResponse, 10)
 	defer close(ch)
 
-	for i := 0; i < 100000; i++ {
+	for i := 0; i < count; i++ {
 		ch <- events.LogResponse{Log: events.Log{Time: time.Now(), Content: fmt.Sprintf("test %d", i), Error: false, Type: "test", Source: "test", Metadata: map[string]string{"test": "test"}}}
 	}
 	return ch
