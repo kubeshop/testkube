@@ -1,4 +1,4 @@
-package consumer
+package adapter
 
 import (
 	"bufio"

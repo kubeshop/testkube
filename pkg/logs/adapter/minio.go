@@ -1,4 +1,4 @@
-package consumer
+package adapter
 
 import (
 	"bytes"
@@ -21,7 +21,7 @@ const (
 	defaultWriteSize  = 1024 * 80  // 80KB
 )
 
-var _ Consumer = &MinioConsumer{}
+var _ Adapter = &MinioConsumer{}
 
 type ErrMinioConsumerDisconnected struct {
 }
