@@ -21,7 +21,7 @@ spec:
     - test: jmeterd-executor-smoke-correct-url-failed-assertion-negative
   - stopOnFailure: false
     execute:
-    - test: jmeterd-executor-smoke-correct-url-failed-assertion-slaves-negative
+    - test: jmeterd-executor-smoke-failed-assertion-slaves-negative
   - stopOnFailure: false
     execute:
     - test: jmeterd-executor-smoke-failure-exit-code-0-negative

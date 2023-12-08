@@ -94,7 +94,7 @@ spec:
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: jmeterd-executor-smoke-correct-url-failed-assertion-slaves-negative
+  name: jmeterd-executor-smoke-failed-assertion-slaves-negative
   labels:
     core-tests: executors
 spec:
