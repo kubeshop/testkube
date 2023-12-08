@@ -176,18 +176,18 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Go Cache
-        uses: actions/cache@v2
+      - name: Go Cache Dep
+        uses: actions/cache@v3
         with:
           path: |
-            ~/go/pkg/mod
+#            ~/go/pkg/mod
             ~/.cache/go-build
-          key: ${{ runner.os }}-golang-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
+#          restore-keys: |
+#            ${{ runner.os }}-go-
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: dist/linux_${{ matrix.GOARCH }}
           key: linux_${{ matrix.GOARCH }}
@@ -228,12 +228,12 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: dist/linux_arm64
           key: linux_arm64
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: dist/linux_amd64
           key: linux_amd64
