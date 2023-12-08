@@ -213,7 +213,7 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 			s.logger.Infow("Updating test execution", "error", err)
 		}
 
-		s.executeTestStep(ctx, *testsuiteExecution, request, batchStepResult, testsuiteExecution.ExecuteStepResults[:i])
+		s.executeTestStep(ctx, *testsuiteExecution, request, batchStepResult, i, testsuiteExecution.ExecuteStepResults[:i])
 
 		var results []*testkube.ExecutionResult
 		for j := range batchStepResult.Execute {
@@ -378,7 +378,7 @@ func (s *Scheduler) timeoutCheck(ctx context.Context, testsuiteExecution *testku
 
 func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution testkube.TestSuiteExecution,
 	request testkube.TestSuiteExecutionRequest, result *testkube.TestSuiteBatchStepExecutionResult,
-	previousSteps []testkube.TestSuiteBatchStepExecutionResult) {
+	currentStep int, previousSteps []testkube.TestSuiteBatchStepExecutionResult) {
 
 	var testSuiteName string
 	if testsuiteExecution.TestSuite != nil {
@@ -503,6 +503,13 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 		go workerpoolService.Run(ctx)
 	}
 
+	if currentStep < len(testsuiteExecution.ExecuteStepResults) {
+		testsuiteExecution.ExecuteStepResults[currentStep].StartTime = time.Now()
+		if err := s.testExecutionResults.Update(ctx, testsuiteExecution); err != nil {
+			s.logger.Errorw("saving test suite execution start time error", "error", err)
+		}
+	}
+
 	if duration != 0 {
 		s.delayWithAbortionCheck(duration, testsuiteExecution.Id, result)
 	}
@@ -529,6 +536,15 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 					}
 				}
 			}
+		}
+	}
+
+	if currentStep < len(testsuiteExecution.ExecuteStepResults) {
+		testsuiteExecution.ExecuteStepResults[currentStep].EndTime = time.Now()
+		testsuiteExecution.ExecuteStepResults[currentStep].Duration =
+			testsuiteExecution.ExecuteStepResults[currentStep].EndTime.Sub(testsuiteExecution.ExecuteStepResults[currentStep].StartTime).String()
+		if err := s.testExecutionResults.Update(ctx, testsuiteExecution); err != nil {
+			s.logger.Errorw("saving test suite execution end time error", "error", err)
 		}
 	}
 }

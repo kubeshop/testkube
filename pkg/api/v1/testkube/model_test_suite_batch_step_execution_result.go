@@ -9,8 +9,18 @@
  */
 package testkube
 
+import (
+	"time"
+)
+
 // execution result returned from executor
 type TestSuiteBatchStepExecutionResult struct {
 	Step    *TestSuiteBatchStep            `json:"step,omitempty"`
 	Execute []TestSuiteStepExecutionResult `json:"execute,omitempty"`
+	// step start time
+	StartTime time.Time `json:"startTime,omitempty"`
+	// step end time
+	EndTime time.Time `json:"endTime,omitempty"`
+	// step duration
+	Duration string `json:"duration,omitempty"`
 }
