@@ -42,7 +42,8 @@ func main() {
 	state := state.NewState(kv)
 
 	svc := logs.NewLogsService(nc, js, state).
-		WithAddress(cfg.HttpAddress)
+		WithHttpAddress(cfg.HttpAddress).
+		WithGrpcAddress(cfg.GrpcAddress)
 
 	// TODO - add adapters here
 	svc.AddAdapter(adapter.NewDummyAdapter())
@@ -63,6 +64,12 @@ func main() {
 			log.Errorw("error shutting down logs service", "error", err)
 		}
 		log.Warn("logs service shutdown")
+	})
+
+	g.Add(func() error {
+		return svc.RunGRPCServer(ctx)
+	}, func(error) {
+		cancel()
 	})
 
 	// We need to do a http health check to be backward compatible with Kubernetes below 1.25
