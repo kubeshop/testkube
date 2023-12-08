@@ -39,6 +39,9 @@ spec:
     - test: expected-fail-jmeter-executor-JSR223
   - stopOnFailure: false
     execute:
+    - test: expected-fail-jmeterd-executor-JSR223
+  - stopOnFailure: false
+    execute:
     - test: expected-fail-kubepug-executor
   - stopOnFailure: false
     execute:
