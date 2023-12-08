@@ -182,7 +182,8 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: Linux-amd64-1835d2f981868e31f47df6c9fdf5486f4c4163cd75129cd975b57ac0e3191b31
+          key: ${{ runner.os }}-go-${{ matrix.GOARCH }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: ${{ runner.os }}-go-
 
       - name: Go Cache
         uses: actions/cache@v3
