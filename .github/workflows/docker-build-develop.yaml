@@ -160,9 +160,9 @@ jobs:
 #          docker push kubeshop/testkube-jmeter-executor:${{ steps.github_sha.outputs.sha_short }}
 
   executor_jmeterd:
-    #    strategy:
-    #      matrix:
-    #        GOARCH: [ amd64, arm64 ]
+    strategy:
+      matrix:
+        GOARCH: [ amd64, arm64 ]
     runs-on: ubuntu-latest
     steps:
 
@@ -179,15 +179,13 @@ jobs:
       - name: Setup Go
         uses: ./.github/actions/setup-go
         with:
-          cache-prefix: golang-test
+          cache-prefix: jmeterd-${{ matrix.GOARCH }}
 
-      #      - name: Go Cache
-      #        uses: actions/cache@v3
-      #        with:
-      #          path: dist/linux_${{ matrix.GOARCH }}
-      #          key: linux_${{ matrix.GOARCH }}
-      #          restore-keys: |
-      #            ${{ runner.os }}-go-
+      - name: Go Cache
+        uses: actions/cache@v3
+        with:
+          path: dist/linux_${{ matrix.GOARCH }}
+          key: linux_${{ matrix.GOARCH }}
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -200,51 +198,50 @@ jobs:
         with:
           distribution: goreleaser-pro
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd-commit-only.yml --clean --snapshot
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd-commit-only.yml --clean --split
         env:
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-          GOARCH: amd64
 
-#  image:
-#    runs-on: ubuntu-latest
-#    needs: executor_jmeterd
-#    steps:
-#
-#      - name: Checkout
-#        uses: actions/checkout@v4
-#
-#      - name: Login to DockerHub
-#        uses: docker/login-action@v1
-#        with:
-#          username: ${{ secrets.DOCKERHUB_USERNAME }}
-#          password: ${{ secrets.DOCKERHUB_TOKEN }}
-#
-#      - uses: actions/cache@v3
-#        with:
-#          path: dist/linux_arm64
-#          key: linux_arm64
-#
-#      - uses: actions/cache@v3
-#        with:
-#          path: dist/linux_amd64
-#          key: linux_amd64
-#
-#      - name: Release
-#        uses: goreleaser/goreleaser-action@v4
-#        with:
-#          distribution: goreleaser-pro
-#          version: latest
-#          args: continue --merge
-#        env:
-#          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
-#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-#          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-#          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-#          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+  image:
+    runs-on: ubuntu-latest
+    needs: executor_jmeterd
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: actions/cache@v3
+        with:
+          path: dist/linux_arm64
+          key: linux_arm64
+
+      - uses: actions/cache@v3
+        with:
+          path: dist/linux_amd64
+          key: linux_amd64
+
+      - name: Release
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser-pro
+          version: latest
+          args: continue --merge
+        env:
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
 #      - name: Push multi-arch image to the Registry
 #        run: |
