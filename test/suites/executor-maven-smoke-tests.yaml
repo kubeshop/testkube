@@ -3,7 +3,7 @@ kind: TestSuite
 metadata:
   name: executor-maven-smoke-tests
   labels:
-    app: testkube
+    core-tests: executors
 spec:
   description: "maven executor smoke tests"
   steps:

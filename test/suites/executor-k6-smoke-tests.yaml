@@ -3,7 +3,7 @@ kind: TestSuite
 metadata:
   name: executor-k6-smoke-tests
   labels:
-    app: testkube
+    core-tests: executors
 spec:
   description: "k6 executor smoke tests"
   steps:

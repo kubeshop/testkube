@@ -3,7 +3,6 @@ kind: TestSuite
 metadata:
   name: expected-fail
   labels:
-    app: testkube
     core-tests: expected-fail
 spec:
   description: "Edge cases - expected failures"
@@ -38,6 +37,9 @@ spec:
   - stopOnFailure: false
     execute:
     - test: expected-fail-jmeter-executor-JSR223
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-jmeterd-executor-JSR223
   - stopOnFailure: false
     execute:
     - test: expected-fail-kubepug-executor

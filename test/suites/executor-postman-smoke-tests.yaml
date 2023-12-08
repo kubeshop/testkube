@@ -3,7 +3,7 @@ kind: TestSuite
 metadata:
   name: executor-postman-smoke-tests
   labels:
-    app: testkube
+    core-tests: executors
 spec:
   description: "postman executor smoke tests"
   steps:

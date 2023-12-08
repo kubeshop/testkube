@@ -3,7 +3,7 @@ kind: Executor
 metadata:
   name: maven-jdk18-executor
 spec:
-  image: kubeshop/testkube-maven-executor:0.1-jdk18
+  image: kubeshop/testkube-maven-executor:jdk18
   types:
   - maven:jdk18/project
   - maven:jdk18/test
@@ -14,7 +14,7 @@ kind: Executor
 metadata:
   name: maven-jdk11-executor
 spec:
-  image: kubeshop/testkube-maven-executor:0.1-jdk11
+  image: kubeshop/testkube-maven-executor:jdk11
   types:
   - maven:jdk11/project
   - maven:jdk11/test
@@ -25,7 +25,7 @@ kind: Executor
 metadata:
   name: maven-jdk8-executor
 spec:
-  image: kubeshop/testkube-maven-executor:0.1-jdk8
+  image: kubeshop/testkube-maven-executor:jdk8
   types:
   - maven:jdk8/project
   - maven:jdk8/test

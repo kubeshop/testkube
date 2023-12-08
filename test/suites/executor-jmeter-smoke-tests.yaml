@@ -3,7 +3,7 @@ kind: TestSuite
 metadata:
   name: executor-jmeter-smoke-tests
   labels:
-    app: testkube
+    core-tests: executors
 spec:
   description: "jmeter and jmeterd executor smoke tests"
   steps:
@@ -22,6 +22,9 @@ spec:
   - stopOnFailure: false
     execute:
     - test: jmeterd-executor-smoke
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-slave-1
   - stopOnFailure: false
     execute:
     - test: jmeterd-executor-smoke-slaves

@@ -3,7 +3,7 @@ kind: TestSuite
 metadata:
   name: executor-soapui-smoke-tests
   labels:
-    app: testkube
+    core-tests: executors
 spec:
   description: "soapui executor smoke tests"
   steps:

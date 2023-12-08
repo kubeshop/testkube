@@ -3,7 +3,7 @@ kind: TestSuite
 metadata:
   name: executor-playwright-smoke-tests
   labels:
-    app: testkube
+    core-tests: executors
 spec:
   description: "playwright executor smoke tests"
   steps:
