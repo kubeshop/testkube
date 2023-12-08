@@ -6,11 +6,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/logs/repository"
 	"github.com/kubeshop/testkube/pkg/logs/state"
-	"github.com/stretchr/testify/assert"
 )
 
 const count = 10
