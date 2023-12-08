@@ -191,8 +191,8 @@ jobs:
         with:
           path: dist/linux_${{ matrix.GOARCH }}
           key: linux_${{ matrix.GOARCH }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -228,12 +228,12 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v2
         with:
           path: dist/linux_arm64
           key: linux_arm64
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v2
         with:
           path: dist/linux_amd64
           key: linux_amd64
