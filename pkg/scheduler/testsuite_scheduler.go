@@ -504,7 +504,7 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 	}
 
 	if currentStep < len(testsuiteExecution.ExecuteStepResults) {
-		testsuiteExecution.ExecuteStepResults[currentStep].StartTime = time.Now()
+		testsuiteExecution.ExecuteStepResults[currentStep].Start()
 		if err := s.testExecutionResults.Update(ctx, testsuiteExecution); err != nil {
 			s.logger.Errorw("saving test suite execution start time error", "error", err)
 		}
@@ -540,9 +540,7 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 	}
 
 	if currentStep < len(testsuiteExecution.ExecuteStepResults) {
-		testsuiteExecution.ExecuteStepResults[currentStep].EndTime = time.Now()
-		testsuiteExecution.ExecuteStepResults[currentStep].Duration =
-			testsuiteExecution.ExecuteStepResults[currentStep].EndTime.Sub(testsuiteExecution.ExecuteStepResults[currentStep].StartTime).String()
+		testsuiteExecution.ExecuteStepResults[currentStep].Stop()
 		if err := s.testExecutionResults.Update(ctx, testsuiteExecution); err != nil {
 			s.logger.Errorw("saving test suite execution end time error", "error", err)
 		}
