@@ -213,6 +213,15 @@ jmeter-smoke() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
 }
 
+jmeter-other() {
+  name="JMeter"
+  test_crd_file="test/jmeter/executor-tests/crd/other.yaml"
+  testsuite_name="executor-jmeter-other-tests"
+  testsuite_file="test/suites/executor-jmeter-other-tests.yaml"
+
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
+}
+
 k6-smoke() {
   name="k6 smoke"
   test_crd_file="test/k6/executor-tests/crd/smoke.yaml"
@@ -300,6 +309,7 @@ main() {
       ginkgo-smoke
       gradle-smoke
       jmeter-smoke
+      jmeter-other
       k6-smoke
       k6-other
       kubepug-smoke
