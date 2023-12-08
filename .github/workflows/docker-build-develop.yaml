@@ -182,8 +182,8 @@ jobs:
           path: |
             ~/.cache/go-build
           key: ${{ runner.os }}-golang-build-${{ hashFiles('**/go.sum') }}
-      #          restore-keys: |
-      #            ${{ runner.os }}-go-
+          restore-keys: |
+            ${{ runner.os }}-golang-build-
 
       #      - name: Go Cache
       #        uses: actions/cache@v3
