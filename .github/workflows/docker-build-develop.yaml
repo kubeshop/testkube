@@ -471,3 +471,4 @@ jobs:
           repository: kubeshop/helm-charts
           event-type: trigger-workflow-api-develop
           client-payload: '{"image_tag_api": "${{ steps.github_sha.outputs.sha_short }}"}'
+

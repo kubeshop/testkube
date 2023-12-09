@@ -256,7 +256,7 @@ jobs:
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
-  executor_jmeterd_image:
+  executor_merge :
     runs-on: ubuntu-latest
     needs: executor_jmeterd
     steps:
