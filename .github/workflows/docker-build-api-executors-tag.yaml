@@ -215,10 +215,20 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Setup Go
-        uses: ./.github/actions/setup-go
+      - name: Go Cache Dep
+        uses: actions/cache@v3
         with:
-          cache-prefix: jmeterd-${{ matrix.GOARCH }}
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: jmeterd-${{ matrix.GOARCH }}-go-${{ hashFiles('**/go.sum') }}
+      #          restore-keys: |
+      #            ${{ runner.os }}-go-
+
+#      - name: Setup Go
+#        uses: ./.github/actions/setup-go
+#        with:
+#          cache-prefix: jmeterd-${{ matrix.GOARCH }}
 
       - name: Go Cache
         uses: actions/cache@v3
