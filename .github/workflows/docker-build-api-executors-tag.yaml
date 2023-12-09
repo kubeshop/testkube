@@ -275,6 +275,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - uses: sigstore/cosign-installer@v3.0.5
+      - uses: anchore/sbom-action/download-syft@v0.14.2
+
       - name: Login to DockerHub
         uses: docker/login-action@v1
         with:
