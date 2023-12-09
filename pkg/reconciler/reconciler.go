@@ -21,6 +21,7 @@ import (
 
 const (
 	reconciliationInterval = 5 * time.Minute
+	delayTimeout           = time.Minute
 )
 
 var (
@@ -216,7 +217,7 @@ OuterLoop:
 				}
 
 				if step.EndTime.IsZero() && stepDuration != 0 {
-					if time.Since(step.StartTime) < stepDuration {
+					if time.Since(step.StartTime) < stepDuration+delayTimeout {
 						continue OuterLoop
 					}
 
