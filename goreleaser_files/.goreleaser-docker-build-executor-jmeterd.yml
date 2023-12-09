@@ -32,7 +32,7 @@ dockers:
     goos: linux
     goarch: amd64
     image_templates:
-      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeterd-executor:{{ .Env.IMAGE_TAG_SHA }}-amd64{{ end }}"
+      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeterd-executor:{{ .ShortCommit }}-amd64{{ end }}"
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeterd-executor:{{ .Version }}-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
@@ -52,7 +52,7 @@ dockers:
     goos: linux
     goarch: arm64
     image_templates:
-      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeterd-executor:{{ .Env.IMAGE_TAG_SHA }}-arm64{{ end }}"
+      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeterd-executor:{{ .ShortCommit }}-arm64{{ end }}"
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeterd-executor:{{ .Version }}-arm64"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
