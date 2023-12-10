@@ -2,6 +2,7 @@ package testsuiteexecutions
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testsuiteexecutionv1 "github.com/kubeshop/testkube-operator/api/testsuiteexecution/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -334,8 +335,11 @@ func MapAPIToCRD(request *testkube.TestSuiteExecution, generation int64) testsui
 		}
 
 		executeStepResults = append(executeStepResults, testsuiteexecutionv1.TestSuiteBatchStepExecutionResult{
-			Step:    MapTestSuiteBatchStepToCRD(stepResult.Step),
-			Execute: steps,
+			Step:      MapTestSuiteBatchStepToCRD(stepResult.Step),
+			Execute:   steps,
+			StartTime: metav1.Time{Time: stepResult.StartTime},
+			EndTime:   metav1.Time{Time: stepResult.EndTime},
+			Duration:  stepResult.Duration,
 		})
 	}
 

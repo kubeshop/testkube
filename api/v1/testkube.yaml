@@ -3739,6 +3739,18 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestSuiteStepExecutionResult"
+        startTime:
+          type: string
+          description: "step start time"
+          format: date-time
+        endTime:
+          type: string
+          description: "step end time"
+          format: date-time
+        duration:
+          type: string
+          description: "step duration"
+          example: "2m"
 
     TestSuiteExecutionsResult:
       description: the result for a page of executions

@@ -21,6 +21,7 @@ import (
 
 const (
 	reconciliationInterval = 5 * time.Minute
+	delayTimeout           = time.Minute
 )
 
 var (
@@ -166,35 +167,61 @@ OuterLoop:
 			status := testkube.TestSuiteExecutionStatusPassed
 		InnerLoop:
 			for _, step := range execution.ExecuteStepResults {
+				if step.StartTime.IsZero() {
+					continue
+				}
+
+				var stepDuration time.Duration
 				for _, execute := range step.Execute {
-					if execute.Step != nil && execute.Step.Type() == testkube.TestSuiteStepTypeExecuteTest && execute.Execution != nil {
-						exec, err := client.resultRepository.Get(ctx, execute.Execution.Id)
-						if err != nil && err != mongo.ErrNoDocuments {
-							return err
+					if execute.Step != nil {
+						if execute.Step.Type() == testkube.TestSuiteStepTypeExecuteTest && execute.Execution != nil {
+							exec, err := client.resultRepository.Get(ctx, execute.Execution.Id)
+							if err != nil && err != mongo.ErrNoDocuments {
+								return err
+							}
+
+							if exec.ExecutionResult == nil {
+								continue
+							}
+
+							if exec.ExecutionResult.IsRunning() || exec.ExecutionResult.IsQueued() {
+								continue OuterLoop
+							}
+
+							if exec.ExecutionResult.IsFailed() {
+								status = testkube.TestSuiteExecutionStatusFailed
+							}
+
+							if exec.ExecutionResult.IsAborted() {
+								status = testkube.TestSuiteExecutionStatusAborted
+								break InnerLoop
+							}
+
+							if exec.ExecutionResult.IsTimeout() {
+								status = testkube.TestSuiteExecutionStatusTimeout
+								break InnerLoop
+							}
 						}
 
-						if exec.ExecutionResult == nil {
-							continue
-						}
+						if execute.Step.Type() == testkube.TestSuiteStepTypeDelay {
+							duration, err := time.ParseDuration(execute.Step.Delay)
+							if err != nil {
+								return err
+							}
 
-						if exec.ExecutionResult.IsRunning() || exec.ExecutionResult.IsQueued() {
-							continue OuterLoop
-						}
-
-						if exec.ExecutionResult.IsFailed() {
-							status = testkube.TestSuiteExecutionStatusFailed
-						}
-
-						if exec.ExecutionResult.IsAborted() {
-							status = testkube.TestSuiteExecutionStatusAborted
-							break InnerLoop
-						}
-
-						if exec.ExecutionResult.IsTimeout() {
-							status = testkube.TestSuiteExecutionStatusTimeout
-							break InnerLoop
+							if duration > stepDuration {
+								stepDuration = duration
+							}
 						}
 					}
+				}
+
+				if step.EndTime.IsZero() && stepDuration != 0 {
+					if time.Since(step.StartTime) < stepDuration+delayTimeout {
+						continue OuterLoop
+					}
+
+					status = testkube.TestSuiteExecutionStatusFailed
 				}
 			}
 

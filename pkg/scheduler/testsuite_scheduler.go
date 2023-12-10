@@ -503,6 +503,11 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 		go workerpoolService.Run(ctx)
 	}
 
+	result.Start()
+	if err := s.testExecutionResults.Update(ctx, testsuiteExecution); err != nil {
+		s.logger.Errorw("saving test suite execution start time error", "error", err)
+	}
+
 	if duration != 0 {
 		s.delayWithAbortionCheck(duration, testsuiteExecution.Id, result)
 	}
@@ -530,6 +535,11 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 				}
 			}
 		}
+	}
+
+	result.Stop()
+	if err := s.testExecutionResults.Update(ctx, testsuiteExecution); err != nil {
+		s.logger.Errorw("saving test suite execution end time error", "error", err)
 	}
 }
 
