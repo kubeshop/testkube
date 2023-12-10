@@ -1,0 +1,20 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: parallel-testsuite-downloadartifacts2
+  labels:
+    core-tests: special-cases
+spec:
+  description: "standard"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: artillery-executor-smoke
+  - stopOnFailure: false
+    execute:
+    - test: container-executor-curl-smoke
+  - stopOnFailure: false
+    downloadArtifacts:
+      allPreviousSteps: true
+    execute:
+    - test: container-executor-curl-smoke

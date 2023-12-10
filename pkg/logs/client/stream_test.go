@@ -1,4 +1,4 @@
-package logs
+package client
 
 import (
 	"context"
@@ -17,7 +17,7 @@ func TestStream_StartStop(t *testing.T) {
 
 	ctx := context.Background()
 
-	client, err := NewLogsStream(nc, "111")
+	client, err := NewNatsLogStream(nc, "111")
 	assert.NoError(t, err)
 
 	meta, err := client.Init(ctx)

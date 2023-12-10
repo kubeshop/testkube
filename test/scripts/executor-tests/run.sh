@@ -287,13 +287,35 @@ soapui-smoke() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
 }
 
-edge-cases-failures() {
-  name="Edge Cases - Failures"
-  test_crd_file="test/edge-cases/failures.yaml"
+special-cases-failures() {
+  name="Special Cases - Edge Cases - Expected Failures"
+  test_crd_file="test/special-cases/edge-cases-expected-fails.yaml"
   testsuite_name="expected-fail"
-  testsuite_file="test/suites/edge-cases-expected-failures.yaml"
+  testsuite_file="test/suites/special-cases/edge-cases-expected-fails.yaml"
 
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
+}
+
+special-cases-large-logs() {
+  name="Special Cases - Large logs"
+  test_crd_file="test/special-cases/large-logs.yaml"
+  testsuite_name="large-logs"
+  testsuite_file="test/suites/special-cases/large-logs.yaml"
+
+  custom_executor_crd_file="test/executors/container-executor-large-logs.yaml"
+
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
+}
+
+special-cases-large-artifacts() {
+  name="Special Cases - Large artifacts"
+  test_crd_file="test/special-cases/large-artifacts.yaml"
+  testsuite_name="large-artifacts"
+  testsuite_file="test/suites/special-cases/large-artifacts.yaml"
+
+  custom_executor_crd_file="test/executors/container-executor-large-artifacts.yaml"
+
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
 main() {
@@ -317,7 +339,6 @@ main() {
       postman-smoke
       playwright-smoke
       soapui-smoke
-      edge-cases-failures
       ;;
     smoke)
       artillery-smoke
@@ -336,6 +357,11 @@ main() {
       playwright-smoke
       postman-smoke
       soapui-smoke
+      ;;
+    special)
+      special-cases-failures
+      special-cases-large-logs
+      special-cases-large-artifacts
       ;;
     *)
       $executor_type

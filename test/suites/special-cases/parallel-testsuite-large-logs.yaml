@@ -1,0 +1,30 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: parallel-large-logs
+  labels:
+    core-tests: special-cases
+spec:
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: large-logs-11mb-test
+    - test: large-logs-11mb-test
+    - test: large-logs-11mb-test
+    - test: large-logs-11mb-test
+    - test: large-logs-11mb-test
+    - test: large-logs-11mb-test
+    - test: large-logs-11mb-test
+    - test: large-logs-11mb-test
+    - test: large-logs-11mb-test
+    - test: large-logs-11mb-test
+    - test: large-logs-11mb-test
+    - test: large-logs-11mb-test
+    - test: large-logs-11mb-test
+    - test: large-logs-11mb-test
+    - test: large-logs-11mb-test
+    - test: large-logs-11mb-test
+    - test: large-logs-22mb-test
+    - test: large-logs-22mb-test
+    - test: large-logs-22mb-test
+    - test: large-logs-22mb-test

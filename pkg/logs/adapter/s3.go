@@ -13,7 +13,7 @@ type S3Adapter struct {
 	Bucket string
 }
 
-func (s *S3Adapter) Notify(id string, e events.LogChunk) error {
+func (s *S3Adapter) Notify(id string, e events.Log) error {
 	panic("not implemented")
 }
 

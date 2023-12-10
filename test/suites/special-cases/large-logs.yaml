@@ -1,0 +1,21 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: large-logs
+  labels:
+    core-tests: special-cases-large-logs
+spec:
+  description: "Special cases - large logs"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: large-logs-1mb-test
+  - stopOnFailure: false
+    execute:
+    - test: large-logs-11mb-test
+  - stopOnFailure: false
+    execute:
+    - test: large-logs-22mb-test
+  - stopOnFailure: false
+    execute:
+    - test: large-logs-long-lines-81k-test

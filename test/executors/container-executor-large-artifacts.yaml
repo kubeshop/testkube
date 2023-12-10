@@ -1,0 +1,79 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: container-executor-1gb-artifact
+spec:
+  types:
+    - container-executor-1gb-artifact/test
+  executor_type: container
+  image: alpine:3.17.2
+  command:
+    - /bin/sh
+    - -c
+    - cd /share; mkdir artifacts; cd artifacts; dd if=/dev/zero of=1g.img bs=1 count=0 seek=1G; ls -lah
+  features:
+    - artifacts
+---
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: container-executor-1mb-artifact
+spec:
+  types:
+    - container-executor-1mb-artifact/test
+  executor_type: container
+  image: alpine:3.17.2
+  command:
+    - /bin/sh
+    - -c
+    - cd /share; mkdir artifacts; cd artifacts; dd if=/dev/zero of=1mb.img bs=1024 count=0 seek=1024; ls -lah
+  features:
+    - artifacts
+---
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: container-executor-1gb-urandom-artifact
+spec:
+  types:
+    - container-executor-1gb-urandom-artifact/test
+  executor_type: container
+  image: alpine:3.17.2
+  command:
+    - /bin/sh
+    - -c
+    - cd /share; mkdir artifacts; cd artifacts; dd if=/dev/urandom of=1g.img bs=64M count=16; ls -lah
+  features:
+    - artifacts
+---
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: container-executor-1mb-urandom-artifact
+spec:
+  types:
+    - container-executor-1mb-urandom-artifact/test
+  executor_type: container
+  image: alpine:3.17.2
+  command:
+    - /bin/sh
+    - -c
+    - cd /share; mkdir artifacts; cd artifacts; dd if=/dev/urandom of=1mb.img bs=1024 count=0 seek=1024; ls -lah
+  features:
+    - artifacts
+---
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: container-executor-1gb-openssl-artifact
+spec:
+  types:
+    - container-executor-1gb-openssl-artifact/test
+  executor_type: container
+  image: alpine/openssl:latest
+  command:
+    - /bin/sh
+    - -c
+    - cd /share && mkdir artifacts && cd artifacts && openssl rand -out 1g.txt -base64 $(( 2**30 * 3/4 )) ; ls -lah && echo "File generated - OK"
+  features:
+    - artifacts
