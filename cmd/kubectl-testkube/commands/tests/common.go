@@ -228,20 +228,32 @@ func newArtifactRequestFromFlags(cmd *cobra.Command) (request *testkube.Artifact
 		return nil, err
 	}
 
+	masks, err := cmd.Flags().GetStringArray("artifact-mask")
+	if err != nil {
+		return nil, err
+	}
+
 	artifactStorageBucket := cmd.Flag("artifact-storage-bucket").Value.String()
 	artifactOmitFolderPerExecution, err := cmd.Flags().GetBool("artifact-omit-folder-per-execution")
 	if err != nil {
 		return nil, err
 	}
 
-	if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(dirs) != 0 ||
-		artifactStorageBucket != "" || artifactOmitFolderPerExecution {
+	artifactSharedBetweenPods, err := cmd.Flags().GetBool("artifact-shared-between-pods")
+	if err != nil {
+		return nil, err
+	}
+
+	if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(dirs) != 0 || len(masks) != 0 ||
+		artifactStorageBucket != "" || artifactOmitFolderPerExecution || artifactSharedBetweenPods {
 		request = &testkube.ArtifactRequest{
 			StorageClassName:       artifactStorageClassName,
 			VolumeMountPath:        artifactVolumeMountPath,
 			Dirs:                   dirs,
+			Masks:                  masks,
 			StorageBucket:          artifactStorageBucket,
 			OmitFolderPerExecution: artifactOmitFolderPerExecution,
+			SharedBetweenPods:      artifactSharedBetweenPods,
 		}
 	}
 
@@ -1127,6 +1139,16 @@ func newArtifactUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.Ar
 		nonEmpty = true
 	}
 
+	if cmd.Flag("artifact-mask").Changed {
+		masks, err := cmd.Flags().GetStringArray("artifact-mask")
+		if err != nil {
+			return nil, err
+		}
+
+		request.Masks = &masks
+		nonEmpty = true
+	}
+
 	if cmd.Flag("artifact-omit-folder-per-execution").Changed {
 		value, err := cmd.Flags().GetBool("artifact-omit-folder-per-execution")
 		if err != nil {
@@ -1134,6 +1156,16 @@ func newArtifactUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.Ar
 		}
 
 		request.OmitFolderPerExecution = &value
+		nonEmpty = true
+	}
+
+	if cmd.Flag("artifact-shared-between-pods").Changed {
+		value, err := cmd.Flags().GetBool("artifact-shared-between-pods")
+		if err != nil {
+			return nil, err
+		}
+
+		request.SharedBetweenPods = &value
 		nonEmpty = true
 	}
 

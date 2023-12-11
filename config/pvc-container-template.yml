@@ -6,7 +6,11 @@ metadata:
 spec:
   storageClassName: {{ .ArtifactRequest.StorageClassName }}
   accessModes:
+  {{- if .ArtifactRequest.SharedBetweenPods }}
+    - ReadWriteMany
+  {{- else }}
     - ReadWriteOnce
+  {{- end }}
   resources:
     requests:
       storage: 1Gi
