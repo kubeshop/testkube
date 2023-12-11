@@ -167,9 +167,6 @@ jobs:
 #          docker push kubeshop/testkube-jmeter-executor:${{ steps.github_sha.outputs.sha_short }}
 
   executor_jmeterd:
-    strategy:
-      matrix:
-        GOARCH: [ amd64, arm64 ]
     runs-on: ubuntu-latest
     steps:
 
@@ -189,15 +186,9 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: ${{ matrix.GOARCH }}-jmeterd-go-${{ hashFiles('**/go.sum') }}
+          key: jmeterd-go-${{ hashFiles('**/go.sum') }}
 #          restore-keys: |
 #            ${{ runner.os }}-go-
-
-      - name: Go Cache
-        uses: actions/cache@v3
-        with:
-          path: dist/linux_${{ matrix.GOARCH }}
-          key: linux_${{ matrix.GOARCH }}
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -213,7 +204,7 @@ jobs:
         with:
           distribution: goreleaser-pro
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd.yml --clean --split --snapshot
+          args: build -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd.yml --clean --single-target --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
@@ -224,7 +215,7 @@ jobs:
 
       - name: Push multi-arch image to the Registry
         run: |
-          docker push kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}-${{ matrix.GOARCH }}
+          docker push kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}
 
 
 #  executor_merge:
