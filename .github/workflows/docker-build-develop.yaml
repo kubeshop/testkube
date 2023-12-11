@@ -116,7 +116,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-commit-only.yml --snapshot
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor.yml --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           EXECUTOR: ${{ matrix.executor }}
