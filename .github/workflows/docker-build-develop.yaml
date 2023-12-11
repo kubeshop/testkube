@@ -209,7 +209,7 @@ jobs:
       - name: Release
         uses: goreleaser/goreleaser-action@v4
         with:
-          distribution: goreleaser
+          distribution: goreleaser-pro
           version: latest
           args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd.yml --clean --split --snapshot
         env:
