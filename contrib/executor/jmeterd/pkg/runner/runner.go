@@ -92,7 +92,7 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	}
 	mode := jmeterModeStandalone
 	jmeterParamFlag := standaloneJMeterParamPrefix
-	if slavesCount > 1 {
+	if slavesCount > 0 {
 		mode = jmeterModeDistributed
 		jmeterParamFlag = globalJMeterParamPrefix
 	}
