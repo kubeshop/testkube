@@ -62,7 +62,7 @@ dockers:
       - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
-    extra_files:
+    templated_extra_files:
       - "{{ if not .Env.IMAGE_TAG_SHA }} ./contrib/executor/jmeter/lib/jmeter-plugins-cmn-jmeter-0.6.jar{{ end }}"
       - ./contrib/executor/jmeter/plugins/jmeter-plugins-functions-2.1.jar
       - ./contrib/executor/jmeter/plugins/jmeter-plugins-manager-1.3.jar
