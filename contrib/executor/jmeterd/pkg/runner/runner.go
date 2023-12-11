@@ -91,7 +91,7 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 		return result, errors.Wrap(err, "error getting slaves count")
 	}
 	mode := jmeterModeStandalone
-	if slavesCount > 1 {
+	if slavesCount > 0 {
 		mode = jmeterModeDistributed
 	}
 
