@@ -67,62 +67,69 @@ jobs:
       - name: Push Docker images
         run: |
           docker push kubeshop/testkube-api-server:${{ steps.commit.outputs.short }}
-#
-#  single_executor:
-#    strategy:
-#      matrix:
-#        executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template, tracetest, zap ]
-#
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v2
-#
-#      - name: Set up QEMU
-#        uses: docker/setup-qemu-action@v1
-#
-#      - name: Set up Docker Buildx
-#        id: buildx
-#        uses: docker/setup-buildx-action@v1
-#
-#      - name: Go Cache
-#        uses: actions/cache@v2
-#        with:
-#          path: |
-#            ~/go/pkg/mod
-#            ~/.cache/go-build
-#          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
-#
-#      - name: Login to DockerHub
-#        uses: docker/login-action@v1
-#        with:
-#          username: ${{ secrets.DOCKERHUB_USERNAME }}
-#          password: ${{ secrets.DOCKERHUB_TOKEN }}
-#
-#      - name: Step
-#        id: github_sha
-#        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
-#
-#      - name: Release
-#        uses: goreleaser/goreleaser-action@v4
-#        with:
-#          distribution: goreleaser
-#          version: latest
-#          args: release -f goreleaser_files/.goreleaser-docker-build-executor-commit-only.yml --snapshot
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-#          EXECUTOR: ${{ matrix.executor }}
-#          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-#          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-#          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-#          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
-#
-#      - name: Push Docker images
-#        run: |
-#          docker push kubeshop/testkube-${{ matrix.executor }}-executor:${{ steps.github_sha.outputs.sha_short }}
-#
+
+  single_executor:
+    strategy:
+      matrix:
+        executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template, tracetest, zap ]
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Set-up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version:  ${{ env.GO_VERSION }}
+          cache: false
+
+      - name: Go Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ matrix.executor }}-go-${{ hashFiles('**/go.sum') }}
+  #          restore-keys: |
+  #            ${{ runner.os }}-go-
+
+      - id: commit
+        uses: prompt/actions-commit-hash@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Step
+        id: github_sha
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+
+      - name: Release
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-commit-only.yml --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          EXECUTOR: ${{ matrix.executor }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+          IMAGE_TAG_SHA: true
+
+      - name: Push Docker images
+        run: |
+          docker push kubeshop/testkube-${{ matrix.executor }}-executor:${{ steps.commit.outputs.short }}
+
   executor_jmeter:
     runs-on: ubuntu-latest
     steps:
@@ -241,9 +248,6 @@ jobs:
 #      - name: Checkout
 #        uses: actions/checkout@v2
 #
-#      - name: Set up QEMU
-#        uses: docker/setup-qemu-action@v3
-#
 #      - name: Set up Docker Buildx
 #        id: buildx
 #        uses: docker/setup-buildx-action@v1
@@ -280,9 +284,6 @@ jobs:
 #      - name: Checkout
 #        uses: actions/checkout@v2
 #
-#      - name: Set up QEMU
-#        uses: docker/setup-qemu-action@v1
-#
 #      - name: Set up Docker Buildx
 #        id: buildx
 #        uses: docker/setup-buildx-action@v1
@@ -318,6 +319,7 @@ jobs:
 #          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
 #          DOCKER_BUILDX_CACHE_FROM: "type=gha"
 #          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+#          IMAGE_TAG_SHA: true
 #
 #      - name: Push Docker images
 #        run: |
@@ -328,9 +330,6 @@ jobs:
 #    steps:
 #      - name: Checkout
 #        uses: actions/checkout@v2
-#
-#      - name: Set up QEMU
-#        uses: docker/setup-qemu-action@v1
 #
 #      - name: Set up Docker Buildx
 #        id: buildx
@@ -367,6 +366,7 @@ jobs:
 #          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
 #          DOCKER_BUILDX_CACHE_FROM: "type=gha"
 #          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+#          IMAGE_TAG_SHA: true
 #
 #      - name: Push Docker images
 #        run: |
@@ -377,9 +377,6 @@ jobs:
 #    steps:
 #      - name: Checkout
 #        uses: actions/checkout@v2
-#
-#      - name: Set up QEMU
-#        uses: docker/setup-qemu-action@v1
 #
 #      - name: Set up Docker Buildx
 #        id: buildx
@@ -416,6 +413,7 @@ jobs:
 #          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
 #          DOCKER_BUILDX_CACHE_FROM: "type=gha"
 #          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+#          IMAGE_TAG_SHA: true
 #
 #      - name: Push image to the Registry
 #        run: |
@@ -426,9 +424,6 @@ jobs:
 #    steps:
 #      -  name: Checkout
 #         uses: actions/checkout@v2
-#
-#      - name: Set up QEMU
-#        uses: docker/setup-qemu-action@v1
 #
 #      - name: Set up Docker Buildx
 #        id: buildx
@@ -465,6 +460,7 @@ jobs:
 #          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
 #          DOCKER_BUILDX_CACHE_FROM: "type=gha"
 #          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+#          IMAGE_TAG_SHA: true
 #
 #      - name: Push image to the Registry
 #        run: |
