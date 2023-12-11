@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	defaultSlavesCount = 1
+	defaultSlavesCount = 0
 	serverPort         = 1099
 	localPort          = 60001
 )
@@ -90,14 +90,14 @@ func GetSlavesCount(vars map[string]testkube.Variable) (int, error) {
 		return defaultSlavesCount, nil
 	}
 
-	replicaCount, err := strconv.Atoi(count.Value)
+	slavesCount, err := strconv.Atoi(count.Value)
 	if err != nil {
 		return 0, errors.Errorf("invalid SLAVES_COUNT value, expected integer, got: %v", count.Value)
 	}
-	if replicaCount < 1 {
-		return 0, errors.Errorf("SLAVES_COUNT must be at least 1")
+	if slavesCount < 0 {
+		return 0, errors.Errorf("SLAVES_COUNT cannot be less than 0, got: %v", count.Value)
 	}
-	return replicaCount, err
+	return slavesCount, err
 }
 
 func validateAndGetSlavePodName(testName string, executionId string, currentSlaveCount int) string {
