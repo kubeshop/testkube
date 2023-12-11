@@ -16,9 +16,9 @@ tasks.named('test') {
 
 test {
     reports {
-        html.enabled = false
+        html.required = false
         junitXml{
-            enabled = true
+            required = true
             outputPerTestCase = false
         }
     }
