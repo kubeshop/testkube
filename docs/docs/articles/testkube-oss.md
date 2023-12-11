@@ -34,3 +34,8 @@ Verify Your Installation: Ensure that Testkube is up and running with:
 
 Once set up, you're ready to unleash the full potential of Testkube in your environment. Whether you opt for the Open Source or Pro variant, Testkube is committed to powering your development and testing workflows seamlessly.
 
+## Minimum Resource Requirements
+
+To ensure optimal performance, the initial setup requires a minimum of **2 CPU cores** and **8 GB of RAM**. This configuration is suitable for basic operations. 
+
+For environments with higher demands or fluctuating workloads, we recommend implementing an **autoscaler**. This allows for dynamic scaling of resources based on actual usage, ensuring both efficient performance and cost-effectiveness. Users can configure the autoscaler according to their specific needs, adapting to varying workloads seamlessly.
