@@ -27,15 +27,22 @@ jobs:
           go-version:  ${{ env.GO_VERSION }}
           cache: false
 
+      - name: Go Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: testkube-api-go-${{ hashFiles('**/go.sum') }}
+
       - name: Login to DockerHub
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Get github sha
-        id: github_sha
-        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+      - id: commit
+        uses: prompt/actions-commit-hash@v3
 
       - name: Release
         uses: goreleaser/goreleaser-action@v4
@@ -55,10 +62,11 @@ jobs:
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+          IMAGE_TAG_SHA: true
 
       - name: Push Docker images
         run: |
-          docker push kubeshop/testkube-api-server:${{ steps.github_sha.outputs.sha_short }}
+          docker push kubeshop/testkube-api-server:${{ steps.commit.outputs.short }}
 #
 #  single_executor:
 #    strategy:
