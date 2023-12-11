@@ -52,7 +52,7 @@ dockers:
     image_templates:
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeterd-executor:{{ .Version }}-arm64{{ end }}"
     build_flag_templates:
-      - "--platform=linux/arm64"
+      - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"

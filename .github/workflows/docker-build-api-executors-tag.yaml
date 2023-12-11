@@ -542,13 +542,7 @@ jobs:
       matrix:
         version:
           [
-            cypress8,
-            cypress9,
-            cypress10,
-            cypress11,
-            cypress12,
-            cypress13,
-            yarn,
+            yarn
             npm,
           ]
 
@@ -581,20 +575,9 @@ jobs:
 
       - name: Create manifests
         run: |
-          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8
-          docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}
-          cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64 --yes
-          cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8 --yes
-          cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }} --yes
-
-          docker manifest create kubeshop/testkube-cypress-executor:${{ matrix.version }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8
-          docker manifest push -p kubeshop/testkube-cypress-executor:${{ matrix.version }}
-          cosign sign kubeshop/testkube-cypress-executor:${{ matrix.version }} --yes
-
           docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-arm64v8
           docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}
           cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --yes
-
 
           docker manifest create kubeshop/testkube-cypress-executor:latest --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-arm64v8
           docker manifest push -p kubeshop/testkube-cypress-executor:latest
