@@ -17,8 +17,12 @@ type ArtifactRequest struct {
 	VolumeMountPath string `json:"volumeMountPath,omitempty"`
 	// artifact directories for scraping
 	Dirs []string `json:"dirs,omitempty"`
+	// regexp to filter scraped artifacts, single or comma separated
+	Masks []string `json:"masks,omitempty"`
 	// artifact bucket storage
 	StorageBucket string `json:"storageBucket,omitempty"`
 	// don't use a separate folder for execution artifacts
 	OmitFolderPerExecution bool `json:"omitFolderPerExecution,omitempty"`
+	// whether to share volume between pods
+	SharedBetweenPods bool `json:"sharedBetweenPods,omitempty"`
 }

@@ -76,6 +76,8 @@ type Execution struct {
 	// test execution name started the test execution
 	TestExecutionName string `json:"testExecutionName,omitempty"`
 	// execution ids for artifacts to download
-	DownloadArtifactExecutionIDs []string    `json:"downloadArtifactExecutionIDs,omitempty"`
-	SlavePodRequest              *PodRequest `json:"slavePodRequest,omitempty"`
+	DownloadArtifactExecutionIDs []string `json:"downloadArtifactExecutionIDs,omitempty"`
+	// test names for artifacts to download from latest executions
+	DownloadArtifactTestNames []string    `json:"downloadArtifactTestNames,omitempty"`
+	SlavePodRequest           *PodRequest `json:"slavePodRequest,omitempty"`
 }
