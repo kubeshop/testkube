@@ -64,6 +64,7 @@ dockers:
 
 docker_manifests:
   - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Version }}{{ end }}"
+    image_templates:
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Version }}-amd64{{ end }}"
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Version }}-arm64v8{{ end }}"
   - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.EXECUTOR }}-executor:latest{{ end }}"
