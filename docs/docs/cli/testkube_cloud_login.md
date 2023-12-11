@@ -1,19 +1,18 @@
-## testkube set
+## testkube cloud login
 
-Set resources
-
-### Synopsis
-
-Set available resources, like context etc
+[Deprecated] Login to Testkube Pro
 
 ```
-testkube set <resourceName> [flags]
+testkube cloud login [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for set
+      --cloud-root-domain string   [Deprecated] defaults to testkube.io, usually don't need to be changed [required for cloud mode] (default "testkube.io")
+      --env-id string              Testkube Cloud environment id
+  -h, --help                       help for login
+      --org-id string              Testkube Cloud organization id
 ```
 
 ### Options inherited from parent commands
@@ -29,6 +28,5 @@ testkube set <resourceName> [flags]
 
 ### SEE ALSO
 
-* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
-* [testkube set context](testkube_set_context.md)	 - Set context data for Testkube Pro
+* [testkube cloud](testkube_cloud.md)	 - [Deprecated] Testkube Cloud commands
 

@@ -26,4 +26,8 @@ testkube cloud [flags]
 ### SEE ALSO
 
 * [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube cloud connect](testkube_cloud_connect.md)	 - [Deprecated] Testkube Cloud connect 
+* [testkube cloud disconnect](testkube_cloud_disconnect.md)	 - [Deprecated] Switch back to Testkube OSS mode, based on active .kube/config file
+* [testkube cloud init](testkube_cloud_init.md)	 - [Deprecated] Install Testkube Cloud Agent and connect to Testkube Cloud environment
+* [testkube cloud login](testkube_cloud_login.md)	 - [Deprecated] Login to Testkube Pro
 

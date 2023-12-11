@@ -134,8 +134,10 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 			StorageClassName:       executionRequest.ArtifactRequest.StorageClassName,
 			VolumeMountPath:        executionRequest.ArtifactRequest.VolumeMountPath,
 			Dirs:                   executionRequest.ArtifactRequest.Dirs,
+			Masks:                  executionRequest.ArtifactRequest.Masks,
 			StorageBucket:          executionRequest.ArtifactRequest.StorageBucket,
 			OmitFolderPerExecution: executionRequest.ArtifactRequest.OmitFolderPerExecution,
+			SharedBetweenPods:      executionRequest.ArtifactRequest.SharedBetweenPods,
 		}
 	}
 
@@ -647,6 +649,11 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 				emptyArtifact = false
 			}
 
+			if (*executionRequest.ArtifactRequest).Masks != nil {
+				request.ArtifactRequest.Masks = *(*executionRequest.ArtifactRequest).Masks
+				emptyArtifact = false
+			}
+
 			if (*executionRequest.ArtifactRequest).StorageBucket != nil {
 				request.ArtifactRequest.StorageBucket = *(*executionRequest.ArtifactRequest).StorageBucket
 				emptyArtifact = false
@@ -656,6 +663,12 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 				request.ArtifactRequest.OmitFolderPerExecution = *(*executionRequest.ArtifactRequest).OmitFolderPerExecution
 				emptyArtifact = false
 			}
+
+			if (*executionRequest.ArtifactRequest).SharedBetweenPods != nil {
+				request.ArtifactRequest.SharedBetweenPods = *(*executionRequest.ArtifactRequest).SharedBetweenPods
+				emptyArtifact = false
+			}
+
 		}
 
 		if emptyArtifact {

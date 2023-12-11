@@ -122,8 +122,10 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 			StorageClassName:       specExecutionRequest.ArtifactRequest.StorageClassName,
 			VolumeMountPath:        specExecutionRequest.ArtifactRequest.VolumeMountPath,
 			Dirs:                   specExecutionRequest.ArtifactRequest.Dirs,
+			Masks:                  specExecutionRequest.ArtifactRequest.Masks,
 			StorageBucket:          specExecutionRequest.ArtifactRequest.StorageBucket,
 			OmitFolderPerExecution: specExecutionRequest.ArtifactRequest.OmitFolderPerExecution,
+			SharedBetweenPods:      specExecutionRequest.ArtifactRequest.SharedBetweenPods,
 		}
 	}
 
@@ -522,8 +524,10 @@ func MapSpecExecutionRequestToExecutionUpdateRequest(
 			StorageClassName:       &request.ArtifactRequest.StorageClassName,
 			VolumeMountPath:        &request.ArtifactRequest.VolumeMountPath,
 			Dirs:                   &request.ArtifactRequest.Dirs,
+			Masks:                  &request.ArtifactRequest.Masks,
 			StorageBucket:          &request.ArtifactRequest.StorageBucket,
 			OmitFolderPerExecution: &request.ArtifactRequest.OmitFolderPerExecution,
+			SharedBetweenPods:      &request.ArtifactRequest.SharedBetweenPods,
 		}
 
 		executionRequest.ArtifactRequest = &artifactRequest
