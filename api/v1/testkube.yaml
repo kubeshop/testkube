@@ -4266,6 +4266,11 @@ components:
           description: "execution ids for artifacts to download"
           items:
             type: string
+        downloadArtifactTestNames:
+          type: array
+          description: "test names for artifacts to download from latest executions"
+          items:
+            type: string
         slavePodRequest:
           $ref: "#/components/schemas/PodRequest"
           description: configuration parameters for executed slave pods 
@@ -4615,6 +4620,11 @@ components:
           items:
             type: string
           description: artifact directories for scraping
+        masks:
+          type: array
+          items:
+            type: string
+          description: regexp to filter scraped artifacts, single or comma separated
         storageBucket:
           type: string
           description: artifact bucket storage
@@ -4622,6 +4632,9 @@ components:
         omitFolderPerExecution:
           type: boolean
           description: don't use a separate folder for execution artifacts
+        sharedBetweenPods:
+          type: boolean
+          description: whether to share volume between pods
 
     ArtifactUpdateRequest:
       description: artifact request update body
@@ -4884,6 +4897,11 @@ components:
         downloadArtifactExecutionIDs:
           type: array
           description: "execution ids for artifacts to download"
+          items:
+            type: string
+        downloadArtifactTestNames:
+          type: array
+          description: "test names for artifacts to download from latest executions"
           items:
             type: string
         slavePodRequest:
