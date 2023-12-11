@@ -133,7 +133,7 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: jmeter-go-${{ hashFiles('**/go.sum') }}
 #          restore-keys: |
 #            ${{ runner.os }}-go-
 
@@ -145,6 +145,9 @@ jobs:
 
       - id: commit
         uses: prompt/actions-commit-hash@v3
+
+      - id: go
+        run: go version
 
       - name: Release
         uses: goreleaser/goreleaser-action@v4
@@ -158,6 +161,9 @@ jobs:
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           IMAGE_TAG_SHA: true
+
+      - id: gov
+        run: go version
 
       - name: Push Docker images
         run: |
