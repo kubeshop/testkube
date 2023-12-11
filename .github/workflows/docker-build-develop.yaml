@@ -204,7 +204,7 @@ jobs:
         with:
           distribution: goreleaser-pro
           version: latest
-          args: build -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd.yml --clean --single-target --snapshot
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd.yml --clean --single-target --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
