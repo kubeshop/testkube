@@ -402,8 +402,8 @@ jobs:
             ~/go/pkg/mod
             ~/.cache/go-build
           key: cypress-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+#          restore-keys: |
+#            ${{ runner.os }}-go-
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
