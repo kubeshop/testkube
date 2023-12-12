@@ -249,6 +249,11 @@ func (c *Client) newPodOptions(runnerExecutionStr []byte, podName string, execut
 		resources = c.execution.SlavePodRequest.Resources
 	}
 
+	var artifactRequest *testkube.ArtifactRequest
+	if c.execution.ArtifactRequest != nil && c.execution.ArtifactRequest.SharedBetweenPods {
+		artifactRequest = c.execution.ArtifactRequest
+	}
+
 	return &PodOptions{
 		Name:                  podName,
 		Namespace:             c.namespace,
@@ -274,7 +279,7 @@ func (c *Client) newPodOptions(runnerExecutionStr []byte, podName string, execut
 		},
 		Resources:        resources,
 		ImagePullSecrets: c.slavesConfigs.ImagePullSecrets,
-		ArtifactRequest:  c.execution.ArtifactRequest,
+		ArtifactRequest:  artifactRequest,
 	}
 }
 
