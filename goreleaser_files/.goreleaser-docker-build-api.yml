@@ -95,4 +95,4 @@ docker_signs:
       - "--yes"
 
 snapshot:
-  name_template: '{{ .Version }}'
+  name_template: "{{ .ShortCommit }}"
