@@ -25,13 +25,12 @@ builds:
       - arm64
     mod_timestamp: "{{ .CommitTimestamp }}"
 dockers:
-  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.{{ .Env.EXECUTOR_VERSION }}"
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress8"
     use: buildx
     goos: linux
     goarch: amd64
     image_templates:
-      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .ShortCommit }}{{ end }}"
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-amd64{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress8-amd64{{ end }}"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
@@ -41,31 +40,323 @@ dockers:
       - "--label=org.opencontainers.image.created={{ .Date}}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
 
-  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.{{ .Env.EXECUTOR_VERSION }}"
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress8"
     use: buildx
     goos: linux
     goarch: arm64
     image_templates:
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress8-arm64v8{{ end }}"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
-      - "--label=org.opencontainers.image.created={{ .Date }}"
-      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
       - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress9"
+    use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress9-amd64{{ end }}"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
+      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
+      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress9"
+    use: buildx
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress9-arm64v8{{ end }}"
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
+      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
+      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress10"
+    use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress10-amd64{{ end }}"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
+      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
+      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress10"
+    use: buildx
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress10-arm64v8{{ end }}"
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
+      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
+      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress11"
+    use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress11-amd64{{ end }}"
+      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .ShortCommit }}{{ end }}"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
+      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
+      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress11"
+    use: buildx
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress11-arm64v8{{ end }}"
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
+      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
+      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress12"
+    use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress12-amd64{{ end }}"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
+      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
+      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress12"
+    use: buildx
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress12-arm64v8{{ end }}"
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
+      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
+      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress13"
+    use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress13-amd64{{ end }}"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
+      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
+      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress13"
+    use: buildx
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress13-arm64v8{{ end }}"
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
+      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
+      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.npm"
+    use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-npm-amd64{{ end }}"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
+      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
+      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.npm"
+    use: buildx
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-npm-arm64v8{{ end }}"
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
+      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
+      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.yarn"
+    use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-yarn-amd64{{ end }}"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
+      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
+      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.yarn"
+    use: buildx
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-yarn-arm64v8{{ end }}"
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
+      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
+      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.created={{ .Date}}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+
 
 docker_manifests:
-  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-{{ end }}"
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress8-{{ end }}"
     image_templates:
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-arm64v8{{ end }}"
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-amd64{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress8-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress8-amd64{{ end }}"
       
-  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Env.EXECUTOR_VERSION }}-{{ end }}"
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:cypress8-{{ end }}"
     image_templates:
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-arm64v8{{ end }}"
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-amd64{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress8-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress8-amd64{{ end }}"
+
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress9-{{ end }}"
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress9-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress9-amd64{{ end }}"
+
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:cypress9-{{ end }}"
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress9-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress9-amd64{{ end }}"
+
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress10-{{ end }}"
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress10-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress10-amd64{{ end }}"
+
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:cypress10-{{ end }}"
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress10-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress10-amd64{{ end }}"
+
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress11-{{ end }}"
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress11-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress11-amd64{{ end }}"
+
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:cypress11-{{ end }}"
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress11-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress11-amd64{{ end }}"
+
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress12-{{ end }}"
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress12-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress12-amd64{{ end }}"
+
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:cypress12-{{ end }}"
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress12-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress12-amd64{{ end }}"
+
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress13-{{ end }}"
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress13-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress13-amd64{{ end }}"
+
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:cypress13-{{ end }}"
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress13-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress13-amd64{{ end }}"
+
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-yarn-{{ end }}"
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-yarn-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-yarn-amd64{{ end }}"
+
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:yarn-{{ end }}"
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-yarn-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-yarn-amd64{{ end }}"
+
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-npm-{{ end }}"
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-npm-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-npm-amd64{{ end }}"
+
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:npm-{{ end }}"
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-npm-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-npm-amd64{{ end }}"
+
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-{{ end }}"
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress12-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress12-amd64{{ end }}"
+
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:latest-{{ end }}"
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress12-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-cypress12-amd64{{ end }}"
 
 
 snapshot:
