@@ -7,7 +7,7 @@ on:
       - 'docs/**'
 env:
   ALPINE_IMAGE: alpine:3.18.0
-  GO_VERSION: 1.21
+  GO_VERSION: 1.21.5
 
 jobs:
   api:

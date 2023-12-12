@@ -6,7 +6,7 @@ on:
 
 env:
   ALPINE_IMAGE: alpine:3.18.0
-  GO_VERSION: 1.21
+  GO_VERSION: 1.21.5
 
 permissions:
   id-token: write # needed for keyless signing with cosign
