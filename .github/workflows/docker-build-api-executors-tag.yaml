@@ -126,8 +126,8 @@ jobs:
             ~/go/pkg/mod
             ~/.cache/go-build
           key: ${{ matrix.executor }}-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -164,7 +164,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - uses: sigstore/cosign-installer@v3.0.5
       - uses: anchore/sbom-action/download-syft@v0.14.2
@@ -189,8 +189,8 @@ jobs:
             ~/go/pkg/mod
             ~/.cache/go-build
           key: jmeter-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -227,6 +227,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - uses: sigstore/cosign-installer@v3.0.5
+      - uses: anchore/sbom-action/download-syft@v0.14.2
+
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 
@@ -247,8 +251,8 @@ jobs:
             ~/go/pkg/mod
             ~/.cache/go-build
           key: jmeterd-go-${{ hashFiles('**/go.sum') }}
-      #          restore-keys: |
-      #            ${{ runner.os }}-go-
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -358,8 +362,8 @@ jobs:
             ~/go/pkg/mod
             ~/.cache/go-build
           key: maven-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -469,7 +473,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -516,9 +520,6 @@ jobs:
         uses: dawidd6/action-get-tag@v1
         with:
           strip_v: true
-
-      - name: Use tag
-        run: echo ${{steps.tag.outputs.tag}}
 
       - name: Release
         uses: goreleaser/goreleaser-action@v4
@@ -618,8 +619,8 @@ jobs:
             ~/go/pkg/mod
             ~/.cache/go-build
           key: playwright-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Login to DockerHub
         uses: docker/login-action@v1

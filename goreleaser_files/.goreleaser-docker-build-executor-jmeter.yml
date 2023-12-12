@@ -31,7 +31,7 @@ dockers:
     goarch: amd64
     image_templates:
       - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .ShortCommit }}{{ end }}"
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeterd-executor:{{ .Version }}-amd64{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .Version }}-amd64{{ end }}"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -73,7 +73,7 @@ docker_manifests:
     image_templates:
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .Version }}-arm64v8{{ end }}"
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .Version }}-amd64{{ end }}"
-  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeterd-executor:latest{{ end }}"
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:latest{{ end }}"
     image_templates:
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .Version }}-arm64v8{{ end }}"
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .Version }}-amd64{{ end }}"
