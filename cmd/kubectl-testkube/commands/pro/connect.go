@@ -191,7 +191,8 @@ func NewConnectCmd() *cobra.Command {
 	cmd.Flags().StringVar(&opts.CloudAgentToken, "agent-token", "", "Testkube Pro agent key [required for pro mode]")
 	cmd.Flags().StringVar(&opts.CloudOrgId, "org-id", "", "Testkube Pro organization id [required for pro mode]")
 	cmd.Flags().StringVar(&opts.CloudEnvId, "env-id", "", "Testkube Pro environment id [required for pro mode]")
-	cmd.Flags().StringVar(&opts.CloudRootDomain, "pro-root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for pro mode]")
+
+	common.PopulateProUriFlags(cmd, &opts)
 
 	cmd.Flags().BoolVar(&opts.NoMinio, "no-minio", false, "don't install MinIO")
 	cmd.Flags().BoolVar(&opts.NoDashboard, "no-dashboard", false, "don't install dashboard")

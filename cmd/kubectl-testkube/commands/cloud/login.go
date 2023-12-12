@@ -42,7 +42,11 @@ func NewLoginCmd() *cobra.Command {
 			common.UiPrintContext(cfg)
 		},
 	}
-	cmd.Flags().StringVar(&opts.CloudRootDomain, "cloud-root-domain", "testkube.io", "[Deprecated] defaults to testkube.io, usually don't need to be changed [required for cloud mode]")
+
+	cmd.Flags().BoolVar(&opts.CloudClientInsecure, "cloud-insecure", false, "should client connect in insecure mode (will use http instead of https)")
+	cmd.Flags().StringVar(&opts.CloudApiUrlPrefix, "cloud-api-prefix", "api", "defaults to 'api', usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().StringVar(&opts.CloudUiUrlPrefix, "cloud-ui-prefix", "ui", "defaults to 'ui', usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().StringVar(&opts.CloudRootDomain, "cloud-root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for custom cloud mode]")
 
 	cmd.Flags().StringVar(&opts.CloudOrgId, "org-id", "", "Testkube Cloud organization id")
 	cmd.Flags().StringVar(&opts.CloudEnvId, "env-id", "", "Testkube Cloud environment id")

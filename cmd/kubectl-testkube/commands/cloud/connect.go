@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/pterm/pterm"
@@ -30,8 +31,9 @@ func NewConnectCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Warn("You are using a deprecated command, please switch to `testkube pro connect`.")
 
-			// create new cloud uris
-			opts.CloudUris = common.NewCloudUris(opts.CloudRootDomain)
+			fmt.Printf("%+v\n", opts)
+
+			os.Exit(1)
 
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
@@ -85,13 +87,13 @@ func NewConnectCmd() *cobra.Command {
 				token, refreshToken, err = common.LoginUser(opts.CloudUris.Auth)
 				ui.ExitOnError("login", err)
 
-				orgId, orgName, err := uiGetOrganizationId(opts.CloudRootDomain, token)
+				orgId, orgName, err := uiGetOrganizationId(opts.CloudApiUrlPrefix+opts.CloudRootDomain, token)
 				ui.ExitOnError("getting organization", err)
 
 				envName, err := uiGetEnvName()
 				ui.ExitOnError("getting environment name", err)
 
-				envClient := cloudclient.NewEnvironmentsClient(opts.CloudRootDomain, token, orgId)
+				envClient := cloudclient.NewEnvironmentsClient(opts.CloudApiUrlPrefix+opts.CloudRootDomain, token, orgId)
 				env, err := envClient.Create(cloudclient.Environment{Name: envName, Owner: orgId})
 				ui.ExitOnError("creating environment", err)
 
@@ -193,7 +195,8 @@ func NewConnectCmd() *cobra.Command {
 	cmd.Flags().StringVar(&opts.CloudAgentToken, "agent-token", "", "Testkube Cloud agent key [required for cloud mode]")
 	cmd.Flags().StringVar(&opts.CloudOrgId, "org-id", "", "Testkube Cloud organization id [required for cloud mode]")
 	cmd.Flags().StringVar(&opts.CloudEnvId, "env-id", "", "Testkube Cloud environment id [required for cloud mode]")
-	cmd.Flags().StringVar(&opts.CloudRootDomain, "cloud-root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for cloud mode]")
+
+	common.PopulateProUriFlags(cmd, &opts)
 
 	cmd.Flags().BoolVar(&opts.NoMinio, "no-minio", false, "don't install MinIO")
 	cmd.Flags().BoolVar(&opts.NoDashboard, "no-dashboard", false, "don't install dashboard")

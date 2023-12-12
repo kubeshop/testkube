@@ -32,7 +32,6 @@ func NewInitCmd() *cobra.Command {
 			sendAttemptTelemetry(cmd, cfg)
 
 			// create new cloud uris
-			options.CloudUris = common.NewCloudUris(options.CloudRootDomain)
 			if !options.NoConfirm {
 				ui.Warn("This will install Testkube to the latest version. This may take a few minutes.")
 				ui.Warn("Please be sure you're on valid kubectl context before continuing!")
@@ -88,7 +87,7 @@ func NewInitCmd() *cobra.Command {
 	cmd.Flags().StringVar(&options.CloudOrgId, "org-id", "", "Testkube Cloud organization id")
 	cmd.Flags().StringVar(&options.CloudEnvId, "env-id", "", "Testkube Cloud environment id")
 
-	cmd.Flags().StringVar(&options.CloudRootDomain, "cloud-root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for cloud mode]")
+	common.PopulateProUriFlags(cmd, &options)
 
 	cmd.Flags().BoolVar(&options.NoConfirm, "no-confirm", false, "don't ask for confirmation - unatended installation mode")
 	cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")

@@ -11,10 +11,11 @@ import (
 
 func NewSetContextCmd() *cobra.Command {
 	var (
-		org, env, apiKey string
-		kubeconfig       bool
-		namespace        string
-		rootDomain       string
+		org, env, apiKey                 string
+		kubeconfig, insecureClient       bool
+		namespace                        string
+		rootDomain                       string
+		uiPrefix, apiPrefix, agentPrefix string
 	)
 
 	cmd := &cobra.Command{
@@ -37,7 +38,7 @@ func NewSetContextCmd() *cobra.Command {
 					ui.Errf("Please provide at least one of the following flags: --org, --env, --api-key, --cloud-root-domain")
 				}
 
-				cfg = common.PopulateCloudConfig(cfg, apiKey, org, env, rootDomain)
+				cfg = common.PopulateCloudConfig(cfg, apiKey, org, env, rootDomain, apiPrefix, uiPrefix, agentPrefix, insecureClient)
 
 			case config.ContextTypeKubeconfig:
 				// kubeconfig special use cases
@@ -69,7 +70,15 @@ func NewSetContextCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&env, "env", "e", "", "Testkube Cloud Environment ID")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "Testkube namespace to use for CLI commands")
 	cmd.Flags().StringVarP(&apiKey, "api-key", "k", "", "API Key for Testkube Cloud")
+
 	cmd.Flags().StringVarP(&rootDomain, "cloud-root-domain", "", "testkube.io", "defaults to testkube.io, usually you don't need to change it")
+	cmd.Flags().BoolVarP(&insecureClient, "cloud-client-insecure", "", false, "reset context mode for CLI to default kubeconfig based")
+
+	cmd.Flags().BoolVar(&insecureClient, "cloud-insecure", false, "should client connect in insecure mode (will use http instead of https)")
+	cmd.Flags().StringVar(&agentPrefix, "cloud-agent-prefix", "agent", "defaults to 'agent', usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().StringVar(&apiPrefix, "cloud-api-prefix", "api", "defaults to 'api', usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().StringVar(&uiPrefix, "cloud-ui-prefix", "ui", "defaults to 'ui', usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().StringVar(&rootDomain, "cloud-root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for custom cloud mode]")
 
 	return cmd
 }

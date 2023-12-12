@@ -25,9 +25,15 @@ type HelmOptions struct {
 	NoDashboard, NoMinio, NoMongo, NoConfirm        bool
 	MinioReplicas, MongoReplicas, DashboardReplicas int
 	// Cloud only params
-	CloudAgentToken        string
-	CloudIdToken           string
-	CloudRootDomain        string
+	CloudAgentToken string
+	CloudIdToken    string
+
+	CloudClientInsecure bool
+	CloudUiUrlPrefix    string
+	CloudAgentUrlPrefix string
+	CloudApiUrlPrefix   string
+	CloudRootDomain     string
+
 	CloudOrgId, CloudEnvId string
 	CloudUris              CloudUris
 	// For debug
@@ -40,6 +46,10 @@ const (
 	github = "GitHub"
 	gitlab = "GitLab"
 )
+
+func (o HelmOptions) GetApiURI() string {
+	return o.CloudUris.Api
+}
 
 func GetCurrentKubernetesContext() (string, error) {
 	kubectl, err := exec.LookPath("kubectl")
@@ -59,10 +69,6 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data, isM
 	// use config if set
 	if cfg.CloudContext.AgentKey != "" && options.CloudAgentToken == "" {
 		options.CloudAgentToken = cfg.CloudContext.AgentKey
-	}
-
-	if cfg.CloudContext.RootDomain != "" && options.CloudRootDomain == "" {
-		options.CloudUris = NewCloudUris(cfg.CloudContext.RootDomain)
 	}
 
 	if options.CloudAgentToken == "" {
@@ -180,12 +186,12 @@ func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
 	cmd.Flags().StringVar(&options.Namespace, "namespace", "testkube", "namespace where to install")
 	cmd.Flags().StringVar(&options.Values, "values", "", "path to Helm values file")
 
+	PopulateProUriFlags(cmd, options)
+
 	cmd.Flags().StringVar(&options.CloudUris.Agent, "agent-uri", "", "Testkube Cloud agent URI [required for cloud mode]")
 	cmd.Flags().StringVar(&options.CloudAgentToken, "agent-token", "", "Testkube Cloud agent key [required for cloud mode]")
 	cmd.Flags().StringVar(&options.CloudOrgId, "org-id", "", "Testkube Cloud organization id [required for cloud mode]")
 	cmd.Flags().StringVar(&options.CloudEnvId, "env-id", "", "Testkube Cloud environment id [required for cloud mode]")
-
-	cmd.Flags().StringVar(&options.CloudRootDomain, "cloud-root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for cloud mode]")
 
 	cmd.Flags().BoolVar(&options.NoMinio, "no-minio", false, "don't install MinIO")
 	cmd.Flags().BoolVar(&options.NoDashboard, "no-dashboard", false, "don't install dashboard")
@@ -366,13 +372,13 @@ func PopulateOrgAndEnvNames(cfg config.Data, orgId, envId, rootDomain string) (c
 	return cfg, nil
 }
 
-func PopulateCloudConfig(cfg config.Data, apiKey, orgId, envId, rootDomain string) config.Data {
+func PopulateCloudConfig(cfg config.Data, apiKey, orgId, envId, rootDomain, apiPrefix, uiPrefix, agentPrefix string, clientInsecure bool) config.Data {
 	if apiKey != "" {
 		cfg.CloudContext.ApiKey = apiKey
 	}
 
 	// set uris based on root domain
-	uris := NewCloudUris(rootDomain)
+	uris := NewCloudUris(apiPrefix, uiPrefix, agentPrefix, rootDomain, clientInsecure)
 	cfg.CloudContext.ApiUri = uris.Api
 	cfg.CloudContext.UiUri = uris.Ui
 	cfg.CloudContext.AgentUri = uris.Agent
