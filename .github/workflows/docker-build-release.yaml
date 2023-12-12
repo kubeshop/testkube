@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - release/**
-      - ci/cache-optimization
     paths-ignore:
       - 'docs/**'
 env:
@@ -475,21 +474,21 @@ jobs:
         run: |
           docker push kubeshop/testkube-playwright-executor:${{ steps.commit.outputs.short }}
 
-#  workflow_dispatch:
-#    needs: [ api, single_executor, executor_jmeter, executor_jmeterd, jmeterd_slave, executor_maven, executor_gradle, executor_cypress, executor_playwright ]
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v2
-#
-#      - name: Get commit sha
-#        id: github_sha
-#        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
-#
-#      - name: Repository Dispatch
-#        uses: peter-evans/repository-dispatch@v2
-#        with:
-#          token: ${{ secrets.CI_BOT_TOKEN }}
-#          repository: kubeshop/helm-charts
-#          event-type: trigger-workflow-api-release
-#          client-payload: '{"image_tag_api": "${{ steps.github_sha.outputs.sha_short }}"}'
+  workflow_dispatch:
+    needs: [ api, single_executor, executor_jmeter, executor_jmeterd, jmeterd_slave, executor_maven, executor_gradle, executor_cypress, executor_playwright ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Get commit sha
+        id: github_sha
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          repository: kubeshop/helm-charts
+          event-type: trigger-workflow-api-release
+          client-payload: '{"image_tag_api": "${{ steps.github_sha.outputs.sha_short }}"}'

@@ -2,7 +2,7 @@ name: Docker images building and pushing for API and executors
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+-*"
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 env:
   ALPINE_IMAGE: alpine:3.18.0
@@ -657,45 +657,45 @@ jobs:
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
-#  update_api_helm_charts:
-#    needs:
-#      [
-#        api,
-#        single_executor,
-#        executor_jmeter,
-#        executor_maven,
-#        executor_gradle,
-#        executor_cypress,
-#        executor_cypress_manifest,
-#        executor_playwright,
-#      ]
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Get tag
-#        id: tag
-#        uses: dawidd6/action-get-tag@v1
-#        with:
-#          strip_v: false
+  update_api_helm_charts:
+    needs:
+      [
+        api,
+        single_executor,
+        executor_jmeter,
+        executor_maven,
+        executor_gradle,
+        executor_cypress,
+        executor_cypress_manifest,
+        executor_playwright,
+      ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
+        with:
+          strip_v: false
 
-#      - name: Editing helm-release repo with version based on a Tag pushed.
-#        run: |
-#
-#          # Setting up Git:
-#          git clone https://kubeshop-bot:$GH_TOKEN@github.com/kubeshop/helm-charts
-#          cd ./helm-charts
-#          git config user.name "kubeshop-bot"
-#          git config user.email "kubeshop-bot@kubeshop.io"
-#
-#          export GH_TOKEN
-#          export RELEASE_VERSION
-#          export SERVICE
-#
-#          git fetch origin main
-#          git checkout main
-#          cd ./scripts
-#          ./chart_releaser.sh --helm-chart-folder testkube-$SERVICE --testkube-executor true
-#
-#        env:
-#          SERVICE: api
-#          GH_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-#          RELEASE_VERSION: ${{ steps.tag.outputs.tag }}
+      - name: Editing helm-release repo with version based on a Tag pushed.
+        run: |
+
+          # Setting up Git:
+          git clone https://kubeshop-bot:$GH_TOKEN@github.com/kubeshop/helm-charts
+          cd ./helm-charts
+          git config user.name "kubeshop-bot"
+          git config user.email "kubeshop-bot@kubeshop.io"
+
+          export GH_TOKEN
+          export RELEASE_VERSION
+          export SERVICE
+
+          git fetch origin main
+          git checkout main
+          cd ./scripts
+          ./chart_releaser.sh --helm-chart-folder testkube-$SERVICE --testkube-executor true
+
+        env:
+          SERVICE: api
+          GH_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          RELEASE_VERSION: ${{ steps.tag.outputs.tag }}
