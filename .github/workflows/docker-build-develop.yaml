@@ -76,7 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         id: buildx
@@ -95,8 +95,8 @@ jobs:
             ~/go/pkg/mod
             ~/.cache/go-build
           key: ${{ matrix.executor }}-go-${{ hashFiles('**/go.sum') }}
-  #          restore-keys: |
-  #            ${{ runner.os }}-go-
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - id: commit
         uses: prompt/actions-commit-hash@v3
@@ -106,10 +106,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Step
-        id: github_sha
-        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
 
       - name: Release
         uses: goreleaser/goreleaser-action@v4
@@ -154,8 +150,8 @@ jobs:
             ~/go/pkg/mod
             ~/.cache/go-build
           key: jmeter-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -207,8 +203,8 @@ jobs:
             ~/go/pkg/mod
             ~/.cache/go-build
           key: jmeterd-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -232,7 +228,7 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           IMAGE_TAG_SHA: true
 
-      - name: Push multi-arch image to the Registry
+      - name: Push Docker images
         run: |
           docker push kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}
 
@@ -240,7 +236,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         id: buildx
@@ -269,7 +265,7 @@ jobs:
           context: .
           file: ./contrib/executor/jmeterd/build/slaves/Dockerfile
           push: true
-          tags:  kubeshop/testkube-jmeterd-slave:${{ steps.commit.outputs.short }},kubeshop/testkube-jmeterd-slave:latest
+          tags:  kubeshop/testkube-jmeterd-slave:${{ steps.commit.outputs.short }}
           platforms: linux/amd64,linux/arm64
 
   executor_maven:
@@ -295,17 +291,14 @@ jobs:
             ~/go/pkg/mod
             ~/.cache/go-build
           key: maven-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Run Go
-        run: go version
 
       - id: commit
         uses: prompt/actions-commit-hash@v3
@@ -350,8 +343,8 @@ jobs:
             ~/go/pkg/mod
             ~/.cache/go-build
           key: gradle-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -402,8 +395,8 @@ jobs:
             ~/go/pkg/mod
             ~/.cache/go-build
           key: cypress-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -419,13 +412,12 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-cypress.yml --snapshot
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-cypress-commit-only.yml --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-          IMAGE_TAG_SHA: true
 
       - name: Push image to the Registry
         run: |
@@ -454,8 +446,8 @@ jobs:
             ~/go/pkg/mod
             ~/.cache/go-build
           key: playwright-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
