@@ -61,7 +61,6 @@ dockers:
     goarch: amd64
     image_templates:
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-maven-executor:{{ .Version }}-jdk11-amd64{{ end }}"
-      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-maven-executor:{{ .ShortCommit }}{{ end }}"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -122,6 +121,7 @@ dockers:
     goarch: amd64
     image_templates:
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-maven-executor:{{ .Version }}-jdk18-amd64{{ end }}"
+      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-maven-executor:{{ .ShortCommit }}{{ end }}"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -181,12 +181,12 @@ docker_manifests:
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-maven-executor:{{ .Version }}-jdk18-arm64v8{{ end }}"
   - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-maven-executor:latest{{ end }}"
     image_templates:
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-maven-executor:{{ .Version }}-jdk11-amd64{{ end }}"
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-maven-executor:{{ .Version }}-jdk11-arm64v8{{ end }}"
-  - name_template:  "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-maven-executor:{{ .Version }}{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-maven-executor:{{ .Version }}-jdk18-amd64{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-maven-executor:{{ .Version }}-jdk18-arm64v8{{ end }}"
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-maven-executor:{{ .Version }}{{ end }}"
     image_templates:
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-maven-executor:{{ .Version }}-jdk11-amd64{{ end }}"
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-maven-executor:{{ .Version }}-jdk11-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-maven-executor:{{ .Version }}-jdk18-amd64{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-maven-executor:{{ .Version }}-jdk18-arm64v8{{ end }}"
 
 release:
   disable: true
@@ -196,6 +196,6 @@ docker_signs:
     artifacts: all
     output: true
     args:
-      - 'sign'
-      - '${artifact}'
+      - "sign"
+      - "${artifact}"
       - "--yes"
