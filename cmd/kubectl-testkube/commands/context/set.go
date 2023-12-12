@@ -71,9 +71,6 @@ func NewSetContextCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "Testkube namespace to use for CLI commands")
 	cmd.Flags().StringVarP(&apiKey, "api-key", "k", "", "API Key for Testkube Cloud")
 
-	cmd.Flags().StringVarP(&rootDomain, "cloud-root-domain", "", "testkube.io", "defaults to testkube.io, usually you don't need to change it")
-	cmd.Flags().BoolVarP(&insecureClient, "cloud-client-insecure", "", false, "reset context mode for CLI to default kubeconfig based")
-
 	cmd.Flags().BoolVar(&insecureClient, "cloud-insecure", false, "should client connect in insecure mode (will use http instead of https)")
 	cmd.Flags().StringVar(&agentPrefix, "cloud-agent-prefix", "agent", "defaults to 'agent', usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().StringVar(&apiPrefix, "cloud-api-prefix", "api", "defaults to 'api', usually don't need to be changed [required for custom cloud mode]")

@@ -49,11 +49,25 @@ func CreateVariables(cmd *cobra.Command, ignoreSecretVariable bool) (vars map[st
 
 func PopulateProUriFlags(cmd *cobra.Command, opts *HelmOptions) {
 
-	cmd.Flags().BoolVar(&opts.CloudClientInsecure, "cloud-insecure", false, "should client connect in insecure mode (will use http instead of https)")
+	// TODO priority of values
+	// order
+	// pro
+	// cloud
+	// default value
+
+	var (
+	// cloudAPIUri string
+	)
+
+	// TODO depracate this
+	cmd.Flags().BoolVar(&opts.CloudClientInsecure, "cloud-insecure", false, "[deprecated] should client connect in insecure mode (will use http instead of https)")
 	cmd.Flags().StringVar(&opts.CloudAgentUrlPrefix, "cloud-agent-prefix", "agent", "defaults to 'agent', usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().StringVar(&opts.CloudApiUrlPrefix, "cloud-api-prefix", "api", "defaults to 'api', usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().StringVar(&opts.CloudUiUrlPrefix, "cloud-ui-prefix", "ui", "defaults to 'ui', usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().StringVar(&opts.CloudRootDomain, "cloud-root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for custom cloud mode]")
+
+	// TODO handle pro change here
+	// cmd.Flags().StringVar(&options.CloudRootDomain, "pro-root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for pro mode]")
 
 	opts.CloudUris = NewCloudUris(opts.CloudApiUrlPrefix, opts.CloudUiUrlPrefix, opts.CloudAgentUrlPrefix, opts.CloudRootDomain, opts.CloudClientInsecure)
 }

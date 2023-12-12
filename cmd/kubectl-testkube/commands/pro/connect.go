@@ -28,9 +28,6 @@ func NewConnectCmd() *cobra.Command {
 		Aliases: []string{"c"},
 		Short:   "Testkube Pro connect ",
 		Run: func(cmd *cobra.Command, args []string) {
-			// create new cloud uris
-			opts.CloudUris = common.NewCloudUris(opts.CloudRootDomain)
-
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
 
