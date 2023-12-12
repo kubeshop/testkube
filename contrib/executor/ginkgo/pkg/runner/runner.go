@@ -175,11 +175,13 @@ func (r *GinkgoRunner) Run(ctx context.Context, execution testkube.Execution) (r
 			reportsPath,
 		}
 
+		var masks []string
 		if execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
 			directories = append(directories, execution.ArtifactRequest.Dirs...)
+			masks = execution.ArtifactRequest.Masks
 		}
 
-		if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
+		if err := r.Scraper.Scrape(ctx, directories, masks, execution); err != nil {
 			return *result.Err(err), errors.Wrap(err, "error scraping artifacts for Ginkgo executor")
 		}
 	}

@@ -150,11 +150,13 @@ func (r *ArtilleryRunner) Run(ctx context.Context, execution testkube.Execution)
 		directories := []string{
 			testReportFile,
 		}
+		var masks []string
 		if execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
 			directories = append(directories, execution.ArtifactRequest.Dirs...)
+			masks = execution.ArtifactRequest.Masks
 		}
 
-		err = r.Scraper.Scrape(ctx, directories, execution)
+		err = r.Scraper.Scrape(ctx, directories, masks, execution)
 		if err != nil {
 			return *result.Err(err), errors.Wrap(err, "error scraping artifacts for Artillery executor")
 		}

@@ -226,12 +226,14 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		directories := []string{
 			outputDir,
 		}
+		var masks []string
 		if execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
 			directories = append(directories, execution.ArtifactRequest.Dirs...)
+			masks = execution.ArtifactRequest.Masks
 		}
 
-		output.PrintLogf("Scraping directories: %v", directories)
-		if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
+		output.PrintLogf("Scraping directories: %v with masks: %v", directories, masks)
+		if err := r.Scraper.Scrape(ctx, directories, masks, execution); err != nil {
 			return *executionResult.Err(err), errors.Wrap(err, "error scraping artifacts for JMeter executor")
 		}
 	}

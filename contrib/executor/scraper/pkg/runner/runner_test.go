@@ -23,7 +23,7 @@ func TestRun(t *testing.T) {
 	e := testkube.Execution{ArtifactRequest: &testkube.ArtifactRequest{VolumeMountPath: ".", StorageClassName: "standard"}}
 	tests := []struct {
 		name           string
-		scraper        func(id string, directories []string) error
+		scraper        func(id string, directories, masks []string) error
 		execution      testkube.Execution
 		expectedError  string
 		expectedStatus *testkube.ExecutionStatus
@@ -31,26 +31,26 @@ func TestRun(t *testing.T) {
 	}{
 		{
 			name:           "successful scraper",
-			scraper:        func(id string, directories []string) error { return nil },
+			scraper:        func(id string, directories, masks []string) error { return nil },
 			execution:      e,
 			expectedError:  "",
 			expectedStatus: nil,
 			scraperBuilder: func() scraper.Scraper {
 				s := scraper.NewMockScraper(mockCtrl)
-				s.EXPECT().Scrape(gomock.Any(), []string{"."}, gomock.Eq(e)).Return(nil)
+				s.EXPECT().Scrape(gomock.Any(), []string{"."}, []string{}, gomock.Eq(e)).Return(nil)
 				s.EXPECT().Close().Return(nil)
 				return s
 			},
 		},
 		{
 			name:           "failing scraper",
-			scraper:        func(id string, directories []string) error { return errors.New("Scraping failed") },
+			scraper:        func(id string, directories, masks []string) error { return errors.New("Scraping failed") },
 			execution:      testkube.Execution{ArtifactRequest: &testkube.ArtifactRequest{VolumeMountPath: ".", StorageClassName: "standard"}},
 			expectedError:  "error scraping artifacts from container executor: Scraping failed",
 			expectedStatus: testkube.ExecutionStatusFailed,
 			scraperBuilder: func() scraper.Scraper {
 				s := scraper.NewMockScraper(mockCtrl)
-				s.EXPECT().Scrape(gomock.Any(), []string{"."}, gomock.Eq(e)).Return(errors.New("Scraping failed"))
+				s.EXPECT().Scrape(gomock.Any(), []string{"."}, []string{}, gomock.Eq(e)).Return(errors.New("Scraping failed"))
 				s.EXPECT().Close().Return(nil)
 				return s
 			},
@@ -82,12 +82,12 @@ func TestRun(t *testing.T) {
 
 // Scraper implements a mock for the Scraper from "github.com/kubeshop/testkube/pkg/executor/scraper"
 type Scraper struct {
-	ScrapeFn func(id string, directories []string) error
+	ScrapeFn func(id string, directories, masks []string) error
 }
 
-func (s Scraper) Scrape(id string, directories []string) error {
+func (s Scraper) Scrape(id string, directories, masks []string) error {
 	if s.ScrapeFn == nil {
 		log.Fatal("not implemented")
 	}
-	return s.ScrapeFn(id, directories)
+	return s.ScrapeFn(id, directories, masks)
 }

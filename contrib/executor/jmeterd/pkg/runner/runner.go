@@ -301,12 +301,14 @@ func runPostRunScriptIfEnabled(execution testkube.Execution, workingDir string) 
 func runScraperIfEnabled(ctx context.Context, enabled bool, scraper scraper.Scraper, dirs []string, execution testkube.Execution) (err error) {
 	if enabled {
 		directories := dirs
+		var masks []string
 		if execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
 			directories = append(directories, execution.ArtifactRequest.Dirs...)
+			masks = execution.ArtifactRequest.Masks
 		}
 
-		output.PrintLogf("%s Running scraper to scrape for the following directories: %v", ui.IconTruck, directories)
-		if err = scraper.Scrape(ctx, directories, execution); err != nil {
+		output.PrintLogf("%s Running scraper to scrape for the following directories: %v with masks: %v", ui.IconTruck, directories, masks)
+		if err = scraper.Scrape(ctx, directories, masks, execution); err != nil {
 			output.PrintLogf("%s Failed to scrape artifacts %s", ui.IconWarning, err)
 		}
 		output.PrintLogf("%s Tests artifacts scrapped successfully!", ui.IconCheckMark)
