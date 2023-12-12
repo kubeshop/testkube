@@ -107,13 +107,15 @@ func (r *SoapUIRunner) Run(ctx context.Context, execution testkube.Execution) (r
 
 	if r.Params.ScrapperEnabled {
 		directories := []string{r.SoapUILogsPath}
+		var masks []string
 		if execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
 			directories = append(directories, execution.ArtifactRequest.Dirs...)
+			masks = execution.ArtifactRequest.Masks
 		}
 
-		output.PrintLogf("Scraping directories: %v", directories)
+		output.PrintLogf("Scraping directories: %v with masks: %v", directories, masks)
 
-		if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
+		if err := r.Scraper.Scrape(ctx, directories, masks, execution); err != nil {
 			return *result.Err(err), errors.Wrap(err, "error scraping artifacts from SoapUI executor")
 		}
 	}

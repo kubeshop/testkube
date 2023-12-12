@@ -177,13 +177,15 @@ func scrapeArtifacts(ctx context.Context, r *PlaywrightRunner, execution testkub
 		filepath.Join(projectPath, compressedName),
 	}
 
+	var masks []string
 	if execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
 		directories = append(directories, execution.ArtifactRequest.Dirs...)
+		masks = execution.ArtifactRequest.Masks
 	}
 
-	output.PrintLogf("Scraping directories: %v", directories)
+	output.PrintLogf("Scraping directories: %v with masks: %v", directories, masks)
 
-	if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
+	if err := r.Scraper.Scrape(ctx, directories, masks, execution); err != nil {
 		return errors.Wrap(err, "error scraping artifacts")
 	}
 

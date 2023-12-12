@@ -18,7 +18,7 @@ import (
 //go:generate mockgen -destination=./mock_scraper.go -package=scraper "github.com/kubeshop/testkube/pkg/executor/scraper" Scraper
 type Scraper interface {
 	// Scrape gets artifacts from the provided paths and the provided execution
-	Scrape(ctx context.Context, paths []string, execution testkube.Execution) error
+	Scrape(ctx context.Context, paths, masks []string, execution testkube.Execution) error
 	Close() error
 }
 
@@ -41,10 +41,10 @@ func NewExtractLoadScraper(extractor Extractor, loader Uploader, cdeventsClient 
 	}
 }
 
-func (s *ExtractLoadScraper) Scrape(ctx context.Context, paths []string, execution testkube.Execution) error {
+func (s *ExtractLoadScraper) Scrape(ctx context.Context, paths, masks []string, execution testkube.Execution) error {
 	return s.
 		extractor.
-		Extract(ctx, paths,
+		Extract(ctx, paths, masks,
 			func(ctx context.Context, object *Object) error {
 				return s.loader.Upload(ctx, object, execution)
 			},
