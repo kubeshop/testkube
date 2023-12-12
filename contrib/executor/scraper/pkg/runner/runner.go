@@ -73,9 +73,14 @@ func (r *ScraperRunner) Run(ctx context.Context, execution testkube.Execution) (
 			directories[i] = filepath.Join(mountPath, directories[i])
 		}
 
-		output.PrintLog(fmt.Sprintf("Scraping directories: %v with masks: %v", directories, execution.ArtifactRequest.Masks))
+		var masks []string
+		if execution.ArtifactRequest != nil {
+			masks = execution.ArtifactRequest.Masks
+		}
 
-		if err := r.Scraper.Scrape(ctx, directories, execution.ArtifactRequest.Masks, execution); err != nil {
+		output.PrintLog(fmt.Sprintf("Scraping directories: %v with masks: %v", directories, masks))
+
+		if err := r.Scraper.Scrape(ctx, directories, masks, execution); err != nil {
 			return *result.Err(err), errors.Wrap(err, "error scraping artifacts from container executor")
 		}
 	}
