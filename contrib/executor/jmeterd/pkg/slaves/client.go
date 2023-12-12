@@ -57,6 +57,7 @@ type PodOptions struct {
 	Ports                 []v1.ContainerPort
 	Resources             *testkube.PodResourcesRequest
 	ImagePullSecrets      []string
+	ArtifactRequest       *testkube.ArtifactRequest
 }
 
 // NewClient is a method to create new slave client
@@ -273,6 +274,7 @@ func (c *Client) newPodOptions(runnerExecutionStr []byte, podName string, execut
 		},
 		Resources:        resources,
 		ImagePullSecrets: c.slavesConfigs.ImagePullSecrets,
+		ArtifactRequest:  c.execution.ArtifactRequest,
 	}
 }
 
