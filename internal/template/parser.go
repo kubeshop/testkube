@@ -9,32 +9,77 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/internal/config"
+	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
-func ParseJobTemplates(cfg *config.Config) (jobTemplate, slavePodTemplate string, err error) {
-	jobTemplate, err = LoadConfigFromStringOrFile(
+func ParseJobTemplates(cfg *config.Config) (t executor.Templates, err error) {
+	t.Job, err = LoadConfigFromStringOrFile(
 		cfg.TestkubeTemplateJob,
 		cfg.TestkubeConfigDir,
 		"job-template.yml",
 		"job template",
 	)
 	if err != nil {
-		return "", "", err
+		return t, err
 	}
 
-	slavePodTemplate, err = LoadConfigFromStringOrFile(
+	t.Slave, err = LoadConfigFromStringOrFile(
 		cfg.TestkubeTemplateSlavePod,
 		cfg.TestkubeConfigDir,
 		"slave-pod-template.yml",
 		"slave pod template",
 	)
 	if err != nil {
-		return "", "", err
+		return t, err
 	}
 
-	return jobTemplate, slavePodTemplate, nil
+	t.PVC, err = LoadConfigFromStringOrFile(
+		cfg.TestkubeContainerTemplatePVC,
+		cfg.TestkubeConfigDir,
+		"pvc-template.yml",
+		"pvc template",
+	)
+	if err != nil {
+		return t, err
+	}
+
+	return t, nil
+}
+
+func ParseContainerTemplates(cfg *config.Config) (t executor.Templates, err error) {
+	t.Job, err = LoadConfigFromStringOrFile(
+		cfg.TestkubeContainerTemplateJob,
+		cfg.TestkubeConfigDir,
+		"job-container-template.yml",
+		"job container template",
+	)
+	if err != nil {
+		return t, err
+	}
+
+	t.Scraper, err = LoadConfigFromStringOrFile(
+		cfg.TestkubeContainerTemplateScraper,
+		cfg.TestkubeConfigDir,
+		"job-scraper-template.yml",
+		"job scraper template",
+	)
+	if err != nil {
+		return t, err
+	}
+
+	t.PVC, err = LoadConfigFromStringOrFile(
+		cfg.TestkubeContainerTemplatePVC,
+		cfg.TestkubeConfigDir,
+		"pvc-template.yml",
+		"pvc template",
+	)
+	if err != nil {
+		return t, err
+	}
+
+	return t, nil
 }
 
 func LoadConfigFromStringOrFile(inputString, configDir, filename, configType string) (raw string, err error) {

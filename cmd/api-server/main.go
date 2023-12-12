@@ -53,12 +53,11 @@ import (
 	"github.com/kubeshop/testkube/internal/app/api/debug"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/agent"
+	"github.com/kubeshop/testkube/pkg/event"
+	"github.com/kubeshop/testkube/pkg/event/bus"
 	kubeexecutor "github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/containerexecutor"
-
-	"github.com/kubeshop/testkube/pkg/event"
-	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
@@ -359,7 +358,7 @@ func main() {
 		ui.ExitOnError("Sync default executors", err)
 	}
 
-	jobTemplate, slavePodTemplate, err := parser.ParseJobTemplates(cfg)
+	jobTemplates, err := parser.ParseJobTemplates(cfg)
 	if err != nil {
 		ui.ExitOnError("Creating job templates", err)
 	}
@@ -368,8 +367,7 @@ func main() {
 		resultsRepository,
 		cfg.TestkubeNamespace,
 		images,
-		jobTemplate,
-		slavePodTemplate,
+		jobTemplates,
 		cfg.JobServiceAccountName,
 		metrics,
 		eventsEmitter,
@@ -390,7 +388,7 @@ func main() {
 		ui.ExitOnError("Creating executor client", err)
 	}
 
-	containerTemplates, err := parseContainerTemplates(cfg)
+	containerTemplates, err := parser.ParseContainerTemplates(cfg)
 	if err != nil {
 		ui.ExitOnError("Creating container job templates", err)
 	}
@@ -574,40 +572,6 @@ func main() {
 	if err := g.Wait(); err != nil {
 		log.DefaultLogger.Fatalf("Testkube is shutting down: %v", err)
 	}
-}
-
-func parseContainerTemplates(cfg *config.Config) (t kubeexecutor.Templates, err error) {
-	t.Job, err = parser.LoadConfigFromStringOrFile(
-		cfg.TestkubeContainerTemplateJob,
-		cfg.TestkubeConfigDir,
-		"job-container-template.yml",
-		"job container template",
-	)
-	if err != nil {
-		return t, err
-	}
-
-	t.Scraper, err = parser.LoadConfigFromStringOrFile(
-		cfg.TestkubeContainerTemplateScraper,
-		cfg.TestkubeConfigDir,
-		"job-scraper-template.yml",
-		"job scraper template",
-	)
-	if err != nil {
-		return t, err
-	}
-
-	t.PVC, err = parser.LoadConfigFromStringOrFile(
-		cfg.TestkubeContainerTemplatePVC,
-		cfg.TestkubeConfigDir,
-		"pvc-container-template.yml",
-		"pvc container template",
-	)
-	if err != nil {
-		return t, err
-	}
-
-	return t, nil
 }
 
 func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDetails, err error) {

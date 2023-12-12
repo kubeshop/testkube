@@ -288,7 +288,7 @@ func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Ex
 		jobOptions.ArtifactRequest.StorageClassName != "" {
 		c.log.Debug("creating persistent volume claim with options", "options", jobOptions)
 		pvcsClient := c.clientSet.CoreV1().PersistentVolumeClaims(c.namespace)
-		pvcSpec, err := NewPersistentVolumeClaimSpec(c.log, jobOptions)
+		pvcSpec, err := client.NewPersistentVolumeClaimSpec(c.log, NewPVCOptionsFromJobOptions(*jobOptions))
 		if err != nil {
 			return nil, err
 		}
@@ -684,4 +684,14 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 // Abort K8sJob aborts K8S by job name
 func (c *ContainerExecutor) Abort(ctx context.Context, execution *testkube.Execution) (*testkube.ExecutionResult, error) {
 	return executor.AbortJob(ctx, c.clientSet, c.namespace, execution.Id)
+}
+
+func NewPVCOptionsFromJobOptions(options JobOptions) client.PVCOptions {
+	return client.PVCOptions{
+		Name:                  options.Name,
+		Namespace:             options.Namespace,
+		PvcTemplate:           options.PvcTemplate,
+		PvcTemplateExtensions: options.PvcTemplateExtensions,
+		ArtifactRequest:       options.ArtifactRequest,
+	}
 }
