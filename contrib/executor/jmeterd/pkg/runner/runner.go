@@ -302,7 +302,7 @@ func runScraperIfEnabled(ctx context.Context, enabled bool, scraper scraper.Scra
 	if enabled {
 		directories := dirs
 		var masks []string
-		if execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
+		if execution.ArtifactRequest != nil {
 			directories = append(directories, execution.ArtifactRequest.Dirs...)
 			masks = execution.ArtifactRequest.Masks
 		}

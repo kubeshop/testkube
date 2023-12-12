@@ -37,7 +37,7 @@ func TestRun(t *testing.T) {
 			expectedStatus: nil,
 			scraperBuilder: func() scraper.Scraper {
 				s := scraper.NewMockScraper(mockCtrl)
-				s.EXPECT().Scrape(gomock.Any(), []string{"."}, []string{}, gomock.Eq(e)).Return(nil)
+				s.EXPECT().Scrape(gomock.Any(), []string{"."}, gomock.Any(), gomock.Eq(e)).Return(nil)
 				s.EXPECT().Close().Return(nil)
 				return s
 			},
@@ -50,7 +50,7 @@ func TestRun(t *testing.T) {
 			expectedStatus: testkube.ExecutionStatusFailed,
 			scraperBuilder: func() scraper.Scraper {
 				s := scraper.NewMockScraper(mockCtrl)
-				s.EXPECT().Scrape(gomock.Any(), []string{"."}, []string{}, gomock.Eq(e)).Return(errors.New("Scraping failed"))
+				s.EXPECT().Scrape(gomock.Any(), []string{"."}, gomock.Any(), gomock.Eq(e)).Return(errors.New("Scraping failed"))
 				s.EXPECT().Close().Return(nil)
 				return s
 			},

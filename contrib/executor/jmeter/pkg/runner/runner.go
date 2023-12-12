@@ -227,7 +227,7 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 			outputDir,
 		}
 		var masks []string
-		if execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
+		if execution.ArtifactRequest != nil {
 			directories = append(directories, execution.ArtifactRequest.Dirs...)
 			masks = execution.ArtifactRequest.Masks
 		}

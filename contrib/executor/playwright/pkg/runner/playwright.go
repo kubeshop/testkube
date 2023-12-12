@@ -178,7 +178,7 @@ func scrapeArtifacts(ctx context.Context, r *PlaywrightRunner, execution testkub
 	}
 
 	var masks []string
-	if execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
+	if execution.ArtifactRequest != nil {
 		directories = append(directories, execution.ArtifactRequest.Dirs...)
 		masks = execution.ArtifactRequest.Masks
 	}
