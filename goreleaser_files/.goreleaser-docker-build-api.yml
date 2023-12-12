@@ -93,3 +93,7 @@ docker_signs:
       - "sign"
       - "${artifact}"
       - "--yes"
+
+snapshot:
+  name_template: "{{ .ShortCommit }}"
+
