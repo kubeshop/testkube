@@ -5,7 +5,7 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
 env:
-  ALPINE_IMAGE: alpine:3.19.0
+  ALPINE_IMAGE: alpine:3.18.0
   GO_VERSION: 1.21.5
 
 permissions:
@@ -28,10 +28,10 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 
-      - name: Setup Golang with Cache
-        uses: magnetikonline/action-golang-cache@v4
+      - name: Set-up Go
+        uses: actions/setup-go@v4
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version:  ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
@@ -83,19 +83,19 @@ jobs:
       matrix:
         executor:
           [
-            artillery,
-            curl,
-            example,
-            ginkgo,
-            k6,
-            kubepug,
-            postman,
-            soapui,
-            init,
-            scraper,
-            template,
-            tracetest,
-            zap,
+              artillery,
+              curl,
+              example,
+              ginkgo,
+              k6,
+              kubepug,
+              postman,
+              soapui,
+              init,
+              scraper,
+              template,
+              tracetest,
+              zap,
           ]
 
     runs-on: ubuntu-latest
@@ -113,13 +113,19 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v2
 
+      - name: Set-up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
       - name: Go Cache
         uses: actions/cache@v2
         with:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ matrix.executor }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
 
@@ -158,7 +164,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - uses: sigstore/cosign-installer@v3.0.5
       - uses: anchore/sbom-action/download-syft@v0.14.2
@@ -170,13 +176,19 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v1
 
+      - name: Set-up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
       - name: Go Cache
         uses: actions/cache@v2
         with:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: jmeter-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
 
@@ -213,25 +225,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - uses: sigstore/cosign-installer@v3.0.5
       - uses: anchore/sbom-action/download-syft@v0.14.2
+
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set-up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: jmeterd-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
 
@@ -259,10 +278,12 @@ jobs:
           version: latest
           args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd.yml
         env:
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+          GOARCH: ${{ matrix.GOARCH }}
 
   jmeterd_slave:
     runs-on: ubuntu-latest
@@ -277,11 +298,17 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v1
 
+      - name: Set-up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
       - name: Docker Cache
         uses: actions/cache@v2
         with:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          key: jmeterd-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-
 
@@ -322,13 +349,19 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v1
 
+      - name: Set-up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
       - name: Go Cache
         uses: actions/cache@v2
         with:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: maven-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
 
@@ -365,7 +398,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - uses: sigstore/cosign-installer@v3.0.5
       - uses: anchore/sbom-action/download-syft@v0.14.2
@@ -377,13 +410,19 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v1
 
+      - name: Set-up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
       - name: Go Cache
         uses: actions/cache@v2
         with:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: gradle-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
 
@@ -421,20 +460,20 @@ jobs:
       matrix:
         version:
           [
-            cypress8,
-            cypress9,
-            cypress10,
-            cypress11,
-            cypress12,
-            cypress13,
-            yarn,
-            npm,
+              cypress8,
+              cypress9,
+              cypress10,
+              cypress11,
+              cypress12,
+              cypress13,
+              yarn,
+              npm,
           ]
 
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -443,13 +482,19 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v1
 
+      - name: Set-up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
       - name: Go Cache
         uses: actions/cache@v2
         with:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: cypress-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
 
@@ -476,15 +521,12 @@ jobs:
         with:
           strip_v: true
 
-      - name: Use tag
-        run: echo ${{steps.tag.outputs.tag}}
-
       - name: Release
         uses: goreleaser/goreleaser-action@v4
         with:
           distribution: goreleaser
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-cypress.yml --snapshot
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-cypress.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           EXECUTOR_VERSION: ${{ matrix.version }}
@@ -503,14 +545,14 @@ jobs:
       matrix:
         version:
           [
-            cypress8,
-            cypress9,
-            cypress10,
-            cypress11,
-            cypress12,
-            cypress13,
-            yarn,
-            npm,
+              cypress8,
+              cypress9,
+              cypress10,
+              cypress11,
+              cypress12,
+              cypress13,
+              yarn,
+              npm,
           ]
 
     runs-on: ubuntu-latest
@@ -542,11 +584,11 @@ jobs:
 
       - name: Create manifests
         run: |
-          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-arm64v8
+          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-arm64v8
           docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}
           cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --yes
 
-          docker manifest create kubeshop/testkube-cypress-executor:latest --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-arm64v8
+          docker manifest create kubeshop/testkube-cypress-executor:latest --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-arm64v8
           docker manifest push -p kubeshop/testkube-cypress-executor:latest
           cosign sign kubeshop/testkube-cypress-executor:latest --yes
 
@@ -570,13 +612,19 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v1
 
+      - name: Set-up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
       - name: Go Cache
         uses: actions/cache@v2
         with:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: playwright-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
 
@@ -612,14 +660,14 @@ jobs:
   update_api_helm_charts:
     needs:
       [
-        api,
-        single_executor,
-        executor_jmeter,
-        executor_maven,
-        executor_gradle,
-        executor_cypress,
-        executor_cypress_manifest,
-        executor_playwright,
+          api,
+          single_executor,
+          executor_jmeter,
+          executor_maven,
+          executor_gradle,
+          executor_cypress,
+          executor_cypress_manifest,
+          executor_playwright,
       ]
     runs-on: ubuntu-latest
     steps:
