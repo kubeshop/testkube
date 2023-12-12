@@ -33,6 +33,7 @@ import (
 
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 
+	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	templatesv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
 	testexecutionsv1 "github.com/kubeshop/testkube-operator/pkg/client/testexecutions/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
@@ -76,8 +77,7 @@ func NewJobExecutor(
 	repo result.Repository,
 	namespace string,
 	images executor.Images,
-	jobTemplate string,
-	slavePodTemplate string,
+	templates executor.Templates,
 	serviceAccountName string,
 	metrics ExecutionCounter,
 	emiter *event.Emitter,
@@ -100,8 +100,7 @@ func NewJobExecutor(
 		Log:                  log.DefaultLogger,
 		Namespace:            namespace,
 		images:               images,
-		jobTemplate:          jobTemplate,
-		slavePodTemplate:     slavePodTemplate,
+		templates:            templates,
 		serviceAccountName:   serviceAccountName,
 		metrics:              metrics,
 		Emitter:              emiter,
@@ -131,8 +130,7 @@ type JobExecutor struct {
 	Namespace            string
 	Cmd                  string
 	images               executor.Images
-	jobTemplate          string
-	slavePodTemplate     string
+	templates            executor.Templates
 	serviceAccountName   string
 	metrics              ExecutionCounter
 	Emitter              *event.Emitter
@@ -185,6 +183,8 @@ type JobOptions struct {
 	APIURI                string
 	SlavePodTemplate      string
 	Features              featureflags.FeatureFlags
+	PvcTemplate           string
+	PvcTemplateExtensions string
 }
 
 // Logs returns job logs stream channel using kubernetes api
@@ -309,10 +309,25 @@ func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) 
 // CreateJob creates new Kubernetes job based on execution and execute options
 func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
-	jobOptions, err := NewJobOptions(c.Log, c.templatesClient, c.images, c.jobTemplate, c.slavePodTemplate,
+	jobOptions, err := NewJobOptions(c.Log, c.templatesClient, c.images, c.templates,
 		c.serviceAccountName, c.registry, c.clusterID, c.apiURI, execution, options, c.natsURI, c.debug)
 	if err != nil {
 		return err
+	}
+
+	if jobOptions.ArtifactRequest != nil &&
+		jobOptions.ArtifactRequest.StorageClassName != "" {
+		c.Log.Debug("creating persistent volume claim with options", "options", jobOptions)
+		pvcsClient := c.ClientSet.CoreV1().PersistentVolumeClaims(c.Namespace)
+		pvcSpec, err := NewPersistentVolumeClaimSpec(c.Log, NewPVCOptionsFromJobOptions(jobOptions))
+		if err != nil {
+			return err
+		}
+
+		_, err = pvcsClient.Create(ctx, pvcSpec, metav1.CreateOptions{})
+		if err != nil {
+			return err
+		}
 	}
 
 	c.Log.Debug("creating job with options", "options", jobOptions)
@@ -351,6 +366,15 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 		execution.ExecutionResult.Err(err)
 	}
 	l.Debug("poll immediate end")
+
+	if execution.ArtifactRequest != nil &&
+		execution.ArtifactRequest.StorageClassName != "" {
+		pvcsClient := c.ClientSet.CoreV1().PersistentVolumeClaims(c.Namespace)
+		err = pvcsClient.Delete(ctx, execution.Id+"-pvc", metav1.DeleteOptions{})
+		if err != nil {
+			return execution.ExecutionResult, err
+		}
+	}
 
 	var logs []byte
 	logs, err = executor.GetPodLogs(ctx, c.ClientSet, c.Namespace, pod)
@@ -565,6 +589,7 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		ContextType:           contextType,
 		ContextData:           contextData,
 		Features:              options.Features,
+		PvcTemplateExtensions: options.Request.PvcTemplate,
 	}
 }
 
@@ -817,7 +842,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 }
 
 func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, images executor.Images,
-	jobTemplate, slavePodTemplate, serviceAccountName, registry, clusterID, apiURI string,
+	templates executor.Templates, serviceAccountName, registry, clusterID, apiURI string,
 	execution testkube.Execution, options ExecuteOptions, natsURI string, debug bool) (jobOptions JobOptions, err error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
@@ -841,7 +866,7 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	}
 
 	if jobOptions.JobTemplate == "" {
-		jobOptions.JobTemplate = jobTemplate
+		jobOptions.JobTemplate = templates.Job
 	}
 
 	if options.ExecutorSpec.JobTemplateReference != "" {
@@ -874,7 +899,19 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	jobOptions.ServiceAccountName = serviceAccountName
 	jobOptions.Registry = registry
 	jobOptions.ClusterID = clusterID
-	jobOptions.ArtifactRequest = execution.ArtifactRequest
+
+	supportArtifacts := false
+	for _, feature := range options.ExecutorSpec.Features {
+		if feature == executorv1.FeatureArtifacts {
+			supportArtifacts = true
+			break
+		}
+	}
+
+	if supportArtifacts {
+		jobOptions.ArtifactRequest = execution.ArtifactRequest
+	}
+
 	workingDir := agent.GetDefaultWorkingDir(executor.VolumeDir, execution)
 	if execution.Content != nil && execution.Content.Repository != nil && execution.Content.Repository.WorkingDir != "" {
 		workingDir = filepath.Join(executor.VolumeDir, "repo", execution.Content.Repository.WorkingDir)
@@ -883,7 +920,7 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	jobOptions.WorkingDir = workingDir
 	jobOptions.APIURI = apiURI
 
-	jobOptions.SlavePodTemplate = slavePodTemplate
+	jobOptions.SlavePodTemplate = templates.Slave
 	if options.Request.SlavePodRequest != nil && options.Request.SlavePodRequest.PodTemplateReference != "" {
 		template, err := templatesClient.Get(options.Request.SlavePodRequest.PodTemplateReference)
 		if err != nil {
@@ -917,5 +954,29 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 		jobOptions.Variables[executor.SlavesConfigsEnv] = testkube.NewBasicVariable(executor.SlavesConfigsEnv, string(slvesConfigs))
 	}
 
+	jobOptions.PvcTemplate = templates.PVC
+	if options.Request.PvcTemplateReference != "" {
+		template, err := templatesClient.Get(options.Request.PvcTemplateReference)
+		if err != nil {
+			return jobOptions, err
+		}
+
+		if template.Spec.Type_ != nil && testkube.TemplateType(*template.Spec.Type_) == testkube.PVC_TemplateType {
+			jobOptions.PvcTemplate = template.Spec.Body
+		} else {
+			log.Warnw("Not matched template type", "template", options.Request.PvcTemplateReference)
+		}
+	}
+
 	return
+}
+
+func NewPVCOptionsFromJobOptions(options JobOptions) PVCOptions {
+	return PVCOptions{
+		Name:                  options.Name,
+		Namespace:             options.Namespace,
+		PvcTemplate:           options.PvcTemplate,
+		PvcTemplateExtensions: options.PvcTemplateExtensions,
+		ArtifactRequest:       options.ArtifactRequest,
+	}
 }
