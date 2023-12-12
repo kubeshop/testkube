@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - develop
-      - ci/cache-optimization
     paths-ignore:
       - 'docs/**'
 env:
