@@ -170,6 +170,7 @@ func mapTestBatchStepsToCRD(batches []testkube.TestSuiteBatchStep) (out []testsu
 			downloadArtifacts = &testsuitesv3.DownloadArtifactOptions{
 				AllPreviousSteps:    batch.DownloadArtifacts.AllPreviousSteps,
 				PreviousStepNumbers: batch.DownloadArtifacts.PreviousStepNumbers,
+				PreviousTestNames:   batch.DownloadArtifacts.PreviousTestNames,
 			}
 		}
 

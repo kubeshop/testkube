@@ -18,6 +18,7 @@ spec:
   - stopOnFailure: false
     downloadArtifacts:
       previousStepNumbers: []
+      previousTestNames: []
     execute:
     - test: expected-fail-container-executor-k6-wrong-dir
     - test: soapui-executor-smoke

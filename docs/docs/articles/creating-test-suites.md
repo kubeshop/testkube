@@ -29,7 +29,7 @@ echo '
 	"steps": [
 		{"execute": [{"test": "testkube-api"}, {""test": "testkube-dashboard"}]},
 		{"execute": [{"delay": "1s"}]},
-		{"execute": [{"test": "testkube-dashboard"}, {"delay": "1s"}, {""test": "testkube-homepage"}]},
+		{"downloadArtifacts": {"previousTestNames": ["testkube-api"]}, "execute": [{"test": "testkube-dashboard"}, {"delay": "1s"}, {""test": "testkube-homepage"}]},
 		{"execute": [{"delay": "1s"}]},
 		{"downloadArtifacts": {"previousStepNumbers": [1, 3]}, "execute": [{"test": "testkube-api-performance"}]},
 		{"execute": [{"delay": "1s"}]},
@@ -77,6 +77,10 @@ spec:
     execute:
     - delay: 1s
   - stopOnFailure: false
+    downloadArtifacts:
+      allPreviousSteps: false
+      previousTestNames:
+      - testkube-api
     execute:
     - test: testkube-dashboard
     - delay: 1s
