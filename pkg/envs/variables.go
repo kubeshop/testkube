@@ -10,45 +10,48 @@ import (
 
 // Params are the environment variables provided by the Testkube api-server
 type Params struct {
-	Endpoint                  string // RUNNER_ENDPOINT
-	AccessKeyID               string // RUNNER_ACCESSKEYID
-	SecretAccessKey           string // RUNNER_SECRETACCESSKEY
-	Region                    string // RUNNER_REGION
-	Token                     string // RUNNER_TOKEN
-	Bucket                    string // RUNNER_BUCKET
-	Ssl                       bool   // RUNNER_SSL
-	SkipVerify                bool   `envconfig:"RUNNER_SKIP_VERIFY" default:"false"` // RUNNER_SKIP_VERIFY
-	CertFile                  string `envconfig:"RUNNER_CERT_FILE"`                   // RUNNER_CERT_FILE
-	KeyFile                   string `envconfig:"RUNNER_KEY_FILE"`                    // RUNNER_KEY_FILE
-	CAFile                    string `envconfig:"RUNNER_CA_FILE"`
-	ScrapperEnabled           bool   // RUNNER_SCRAPPERENABLED
-	DataDir                   string // RUNNER_DATADIR
-	GitUsername               string // RUNNER_GITUSERNAME
-	GitToken                  string // RUNNER_GITTOKEN
-	CompressArtifacts         bool   // RUNNER_COMPRESSARTIFACTS
-	WorkingDir                string // RUNNER_WORKINGDIR
-	ExecutionID               string // RUNNER_EXECUTIONID
-	TestName                  string // RUNNER_TESTNAME
-	ExecutionNumber           int32  // RUNNER_EXECUTIONNUMBER
-	ContextType               string // RUNNER_CONTEXTTYPE
-	ContextData               string // RUNNER_CONTEXTDATA
-	APIURI                    string // RUNNER_APIURI
-	ClusterID                 string `envconfig:"RUNNER_CLUSTERID"`                             // RUNNER_CLUSTERID
-	CDEventsTarget            string `envconfig:"RUNNER_CDEVENTS_TARGET"`                       // RUNNER_CDEVENTS_TARGET
-	DashboardURI              string `envconfig:"RUNNER_DASHBOARD_URI"`                         // RUNNER_DASHBOARD_URI
-	CloudMode                 bool   `envconfig:"RUNNER_CLOUD_MODE"`                            // RUNNER_CLOUD_MODE
-	CloudAPIKey               string `envconfig:"RUNNER_CLOUD_API_KEY"`                         // RUNNER_CLOUD_API_KEY
-	CloudAPITLSInsecure       bool   `envconfig:"RUNNER_CLOUD_API_TLS_INSECURE"`                // RUNNER_CLOUD_API_TLS_INSECURE
-	CloudAPIURL               string `envconfig:"RUNNER_CLOUD_API_URL"`                         // RUNNER_CLOUD_API_URL
-	CloudConnectionTimeoutSec int    `envconfig:"RUNNER_CLOUD_CONNECTION_TIMEOUT" default:"10"` // RUNNER_CLOUD_CONNECTION_TIMEOUT
-	SlavesConfigs             string `envconfig:"RUNNER_SLAVES_CONFIGS"`                        // RUNNER_SLAVES_CONFIGS
+	StorageEndpoint           string `envconfig:"RUNNER_STORAGE_ENDPOINT"`
+	StorageAccessKeyID        string `envconfig:"RUNNER_STORAGE_ACCESSKEYID"`
+	StorageSecretAccessKey    string `envconfig:"RUNNER_STORAGE_SECRETACCESSKEY"`
+	StorageRegion             string `envconfig:"RUNNER_STORAGE_REGION"`
+	StorageToken              string `envconfig:"RUNNER_STORAGE_TOKEN"`
+	StorageBucket             string `envconfig:"RUNNER_STORAGE_BUCKET"`
+	StorageSSL                bool   `envconfig:"RUNNER_STORAGE_SSL" default:"false"`
+	StorageSkipVerify         bool   `envconfig:"RUNNER_STORAGE_SKIP_VERIFY" default:"false"`
+	StorageCertFile           string `envconfig:"RUNNER_STORAGE_CERT_FILE"`
+	StorageKeyFile            string `envconfig:"RUNNER_STORAGE_KEY_FILE"`
+	StorageCAFile             string `envconfig:"RUNNER_STORAGE_CA_FILE"`
+	ScrapperEnabled           bool   `envconfig:"RUNNER_SCRAPPERENABLED" default:"false"`
+	DataDir                   string `envconfig:"RUNNER_DATADIR"`
+	GitUsername               string `envconfig:"RUNNER_GITUSERNAME"`
+	GitToken                  string `envconfig:"RUNNER_GITTOKEN"`
+	CompressArtifacts         bool   `envconfig:"RUNNER_COMPRESSARTIFACTS" default:"false"`
+	WorkingDir                string `envconfig:"RUNNER_WORKINGDIR"`
+	ExecutionID               string `envconfig:"RUNNER_EXECUTIONID"`
+	TestName                  string `envconfig:"RUNNER_TESTNAME"`
+	ExecutionNumber           int32  `envconfig:"RUNNER_EXECUTIONNUMBER"`
+	ContextType               string `envconfig:"RUNNER_CONTEXTTYPE"`
+	ContextData               string `envconfig:"RUNNER_CONTEXTDATA"`
+	APIURI                    string `envconfig:"RUNNER_APIURI"`
+	ClusterID                 string `envconfig:"RUNNER_CLUSTERID"`
+	CDEventsTarget            string `envconfig:"RUNNER_CDEVENTS_TARGET"`
+	DashboardURI              string `envconfig:"RUNNER_DASHBOARD_URI"`
+	CloudMode                 bool   `envconfig:"RUNNER_CLOUD_MODE" default:"false"`
+	CloudAPIKey               string `envconfig:"RUNNER_CLOUD_API_KEY"`
+	CloudAPIURL               string `envconfig:"RUNNER_CLOUD_API_URL"`
+	AgentConnectionTimeoutSec int    `envconfig:"RUNNER_CLOUD_CONNECTION_TIMEOUT" default:"10"`
+	AgentInsecure             bool   `envconfig:"RUNNER_AGENT_INSECURE" default:"false"`
+	AgentSkipVerify           bool   `envconfig:"RUNNER_AGENT_SKIP_VERIFY" default:"false"`
+	AgentCertFile             string `envconfig:"RUNNER_AGENT_CERT_FILE"`
+	AgentKeyFile              string `envconfig:"RUNNER_AGENT_KEY_FILE"`
+	AgentCAFile               string `envconfig:"RUNNER_AGENT_CA_FILE"`
+	SlavesConfigs             string `envconfig:"RUNNER_SLAVES_CONFIGS"`
 }
 
 // LoadTestkubeVariables loads the parameters provided as environment variables in the Test CRD
 func LoadTestkubeVariables() (Params, error) {
 	var params Params
-	err := envconfig.Process("runner", &params)
-	if err != nil {
+	if err := envconfig.Process("runner", &params); err != nil {
 		return params, errors.Errorf("failed to read environment variables: %v", err)
 	}
 
@@ -58,13 +61,17 @@ func LoadTestkubeVariables() (Params, error) {
 // PrintParams shows the read parameters in logs
 func PrintParams(params Params) {
 	output.PrintLogf("%s Environment variables read successfully", ui.IconCheckMark)
-	output.PrintLogf("RUNNER_ENDPOINT=\"%s\"", params.Endpoint)
-	printSensitiveParam("RUNNER_ACCESSKEYID", params.AccessKeyID)
-	printSensitiveParam("RUNNER_SECRETACCESSKEY", params.SecretAccessKey)
-	output.PrintLogf("RUNNER_REGION=\"%s\"", params.Region)
-	printSensitiveParam("RUNNER_TOKEN", params.Token)
-	output.PrintLogf("RUNNER_BUCKET=\"%s\"", params.Bucket)
-	output.PrintLogf("RUNNER_SSL=%t", params.Ssl)
+	output.PrintLogf("RUNNER_STORAGE_ENDPOINT=\"%s\"", params.StorageEndpoint)
+	printSensitiveParam("RUNNER_STORAGE_ACCESSKEYID", params.StorageAccessKeyID)
+	printSensitiveParam("RUNNER_STORAGE_SECRETACCESSKEY", params.StorageSecretAccessKey)
+	output.PrintLogf("RUNNER_STORAGE_REGION=\"%s\"", params.StorageRegion)
+	printSensitiveParam("RUNNER_STORAGE_TOKEN", params.StorageToken)
+	output.PrintLogf("RUNNER_STORAGE_BUCKET=\"%s\"", params.StorageBucket)
+	output.PrintLogf("RUNNER_STORAGE_SSL=%t", params.StorageSSL)
+	output.PrintLogf("RUNNER_STORAGE_SKIP_VERIFY=%t", params.StorageSkipVerify)
+	output.PrintLogf("RUNNER_STORAGE_CERT_FILE=\"%s\"", params.StorageCertFile)
+	output.PrintLogf("RUNNER_STORAGE_KEY_FILE=\"%s\"", params.StorageKeyFile)
+	output.PrintLogf("RUNNER_STORAGE_CA_FILE=\"%s\"", params.StorageCAFile)
 	output.PrintLogf("RUNNER_SCRAPPERENABLED=\"%t\"", params.ScrapperEnabled)
 	output.PrintLogf("RUNNER_GITUSERNAME=\"%s\"", params.GitUsername)
 	printSensitiveParam("RUNNER_GITTOKEN", params.GitToken)
@@ -81,10 +88,14 @@ func PrintParams(params Params) {
 	output.PrintLogf("RUNNER_CDEVENTS_TARGET=\"%s\"", params.CDEventsTarget)
 	output.PrintLogf("RUNNER_DASHBOARD_URI=\"%s\"", params.DashboardURI)
 	output.PrintLogf("RUNNER_CLOUD_MODE=\"%t\"", params.CloudMode)
-	output.PrintLogf("RUNNER_CLOUD_API_TLS_INSECURE=\"%t\"", params.CloudAPITLSInsecure)
 	output.PrintLogf("RUNNER_CLOUD_API_URL=\"%s\"", params.CloudAPIURL)
 	printSensitiveParam("RUNNER_CLOUD_API_KEY", params.CloudAPIKey)
-	output.PrintLogf("RUNNER_CLOUD_CONNECTION_TIMEOUT=%d", params.CloudConnectionTimeoutSec)
+	output.PrintLogf("RUNNER_AGENT_INSECURE=\"%t\"", params.AgentInsecure)
+	output.PrintLogf("RUNNER_AGENT_SKIP_VERIFY=\"%t\"", params.AgentSkipVerify)
+	output.PrintLogf("RUNNER_AGENT_CERT_FILE=\"%s\"", params.AgentCertFile)
+	output.PrintLogf("RUNNER_AGENT_KEY_FILE=\"%s\"", params.AgentKeyFile)
+	output.PrintLogf("RUNNER_AGENT_CA_FILE=\"%s\"", params.AgentCAFile)
+	output.PrintLogf("RUNNER_AGENT_CONNECTION_TIMEOUT=%d", params.AgentConnectionTimeoutSec)
 }
 
 // printSensitiveParam shows in logs if a parameter is set or not

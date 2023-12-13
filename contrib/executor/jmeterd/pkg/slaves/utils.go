@@ -3,6 +3,7 @@ package slaves
 import (
 	"context"
 	"fmt"
+	"github.com/kubeshop/testkube/pkg/envs/envsconst"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -21,11 +22,11 @@ const (
 	localPort          = 60001
 )
 
-func getSlaveRunnerEnv(envs map[string]string, runnerExecution testkube.Execution) []v1.EnvVar {
+func getSlaveRunnerEnv(envVarsMap map[string]string, runnerExecution testkube.Execution) []v1.EnvVar {
 	var gitEnvs []v1.EnvVar
 	if runnerExecution.Content.Type_ == "git" && runnerExecution.Content.Repository.UsernameSecret != nil && runnerExecution.Content.Repository.TokenSecret != nil {
 		gitEnvs = append(gitEnvs, v1.EnvVar{
-			Name: "RUNNER_GITUSERNAME",
+			Name: envsconst.EnvRunnerGitUsername,
 			ValueFrom: &v1.EnvVarSource{
 				SecretKeyRef: &v1.SecretKeySelector{
 					LocalObjectReference: v1.LocalObjectReference{
@@ -35,7 +36,7 @@ func getSlaveRunnerEnv(envs map[string]string, runnerExecution testkube.Executio
 				},
 			},
 		}, v1.EnvVar{
-			Name: "RUNNER_GITTOKEN",
+			Name: envsconst.EnvRunnerGitToken,
 			ValueFrom: &v1.EnvVarSource{
 				SecretKeyRef: &v1.SecretKeySelector{
 					LocalObjectReference: v1.LocalObjectReference{
@@ -49,7 +50,7 @@ func getSlaveRunnerEnv(envs map[string]string, runnerExecution testkube.Executio
 	}
 
 	var runnerEnvVars []v1.EnvVar
-	for key, value := range envs {
+	for key, value := range envVarsMap {
 		runnerEnvVars = append(runnerEnvVars, v1.EnvVar{Name: key, Value: value})
 	}
 
@@ -85,7 +86,7 @@ func isPodReady(c kubernetes.Interface, podName, namespace string) wait.Conditio
 }
 
 func GetSlavesCount(vars map[string]testkube.Variable) (int, error) {
-	count := vars[SlavesCount]
+	count := vars[envsconst.EnvSlavesCount]
 	if count.Value == "" {
 		return defaultSlavesCount, nil
 	}

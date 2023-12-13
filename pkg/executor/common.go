@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/kubeshop/testkube/pkg/envs/envsconst"
 	"io"
 	"os"
 	"strings"
@@ -31,14 +32,7 @@ const (
 	// VolumeDir is volume dir
 	VolumeDir            = "/data"
 	defaultLogLinesCount = 100
-	// GitUsernameSecretName is git username secret name
-	GitUsernameSecretName = "git-username"
-	// GitTokenSecretName is git token secret name
-	GitTokenSecretName = "git-token"
-	// SlavesConfigsEnv is slave configs for creating slaves in executor
-	SlavesConfigsEnv = "RUNNER_SLAVES_CONFIGS"
-
-	SidecarImage = "kubeshop/testkube-logs-sidecar:v0-1" // TODO - change it to valid image name after deployment will be ready
+	SidecarImage         = "kubeshop/testkube-logs-sidecar:v0-1" // TODO - change it to valid image name after deployment will be ready
 )
 
 var RunnerEnvVars = []corev1.EnvVar{
@@ -47,80 +41,100 @@ var RunnerEnvVars = []corev1.EnvVar{
 		Value: os.Getenv("DEBUG"),
 	},
 	{
-		Name:  "RUNNER_ENDPOINT",
+		Name:  envsconst.EnvRunnerStorageEndpoint,
 		Value: os.Getenv("STORAGE_ENDPOINT"),
 	},
 	{
-		Name:  "RUNNER_ACCESSKEYID",
+		Name:  envsconst.EnvRunnerStorageAccessKeyID,
 		Value: os.Getenv("STORAGE_ACCESSKEYID"),
 	},
 	{
-		Name:  "RUNNER_SECRETACCESSKEY",
+		Name:  envsconst.EnvRunnerStorageSecretAccessKey,
 		Value: os.Getenv("STORAGE_SECRETACCESSKEY"),
 	},
 	{
-		Name:  "RUNNER_REGION",
+		Name:  envsconst.EnvRunnerStorageRegion,
 		Value: os.Getenv("STORAGE_REGION"),
 	},
 	{
-		Name:  "RUNNER_TOKEN",
+		Name:  envsconst.EnvRunnerStorageToken,
 		Value: os.Getenv("STORAGE_TOKEN"),
 	},
 	{
-		Name:  "RUNNER_SSL",
+		Name:  envsconst.EnvRunnerStorageSSL,
 		Value: getOr("STORAGE_SSL", "false"),
 	},
 	{
-		Name:  "RUNNER_SKIP_VERIFY",
+		Name:  envsconst.EnvRunnerStorageSkipVerify,
 		Value: getOr("STORAGE_SKIP_VERIFY", "false"),
 	},
 	{
-		Name:  "RUNNER_CERT_FILE",
+		Name:  envsconst.EnvRunnerStorageCertFile,
 		Value: os.Getenv("STORAGE_CERT_FILE"),
 	},
 	{
-		Name:  "RUNNER_KEY_FILE",
+		Name:  envsconst.EnvRunnerStorageKeyFile,
 		Value: os.Getenv("STORAGE_KEY_FILE"),
 	},
 	{
-		Name:  "RUNNER_CA_FILE",
+		Name:  envsconst.EnvRunnerStorageCAFile,
 		Value: os.Getenv("STORAGE_CA_FILE"),
 	},
 	{
-		Name:  "RUNNER_SCRAPPERENABLED",
+		Name:  envsconst.EnvRunnerScrapperEnabled,
 		Value: getOr("SCRAPPERENABLED", "false"),
 	},
 	{
-		Name:  "RUNNER_DATADIR",
+		Name:  envsconst.EnvRunnerDataDir,
 		Value: VolumeDir,
 	},
 	{
-		Name:  "RUNNER_CDEVENTS_TARGET",
+		Name:  envsconst.EnvRunnerCDEventsTarget,
 		Value: os.Getenv("CDEVENTS_TARGET"),
 	},
 	{
-		Name:  "RUNNER_COMPRESSARTIFACTS",
+		Name:  envsconst.EnvRunnerCompressArtifacts,
 		Value: getOr("COMPRESSARTIFACTS", "false"),
 	},
 	{
-		Name:  "RUNNER_CLOUD_MODE",
+		Name:  envsconst.EnvRunnerCloudMode,
 		Value: getRunnerCloudMode(),
 	},
 	{
-		Name:  "RUNNER_CLOUD_API_KEY",
+		Name:  envsconst.EnvRunnerCloudAPIKey,
 		Value: os.Getenv("TESTKUBE_CLOUD_API_KEY"),
 	},
 	{
-		Name:  "RUNNER_CLOUD_API_TLS_INSECURE",
-		Value: getOr("TESTKUBE_CLOUD_TLS_INSECURE", "false"),
-	},
-	{
-		Name:  "RUNNER_CLOUD_API_URL",
+		Name:  envsconst.EnvRunnerCloudAPIURL,
 		Value: os.Getenv("TESTKUBE_CLOUD_URL"),
 	},
 	{
-		Name:  "RUNNER_DASHBOARD_URI",
+		Name:  envsconst.EnvRunnerDashboardURI,
 		Value: os.Getenv("TESTKUBE_DASHBOARD_URI"),
+	},
+	{
+		Name:  envsconst.EnvRunnerAgentInsecure,
+		Value: getOr("TESTKUBE_AGENT_INSECURE", "false"),
+	},
+	{
+		Name:  envsconst.EnvRunnerAgentSkipVerify,
+		Value: getOr("TESTKUBE_AGENT_SKIP_VERIFY", "false"),
+	},
+	{
+		Name:  envsconst.EnvRunnerAgentCertFile,
+		Value: os.Getenv("TESTKUBE_AGENT_CERT_FILE"),
+	},
+	{
+		Name:  envsconst.EnvRunnerAgentKeyFile,
+		Value: os.Getenv("TESTKUBE_AGENT_KEY_FILE"),
+	},
+	{
+		Name:  envsconst.EnvRunnerAgentCAFile,
+		Value: os.Getenv("TESTKUBE_AGENT_CA_FILE"),
+	},
+	{
+		Name:  envsconst.EnvRunnerAgentConnectionTimeoutSec,
+		Value: getOr("TESTKUBE_AGENT_CONNECTION_TIMEOUT", "10"),
 	},
 	{
 		Name:  "CI",

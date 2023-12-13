@@ -3,6 +3,9 @@ package agent
 import (
 	"context"
 	"fmt"
+	tlsutil "github.com/kubeshop/testkube/internal/tls"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"math"
 	"os"
 	"time"
@@ -10,8 +13,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/version"
 
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/encoding/gzip"
 
 	"github.com/pkg/errors"
@@ -41,15 +42,35 @@ const (
 // buffer up to five messages per worker
 const bufferSizePerWorker = 5
 
-func NewGRPCConnection(ctx context.Context, isInsecure bool, server string, logger *zap.SugaredLogger) (*grpc.ClientConn, error) {
-	creds := credentials.NewTLS(nil)
-	if isInsecure {
+// Config defines agent connection configuration
+type Config struct {
+	// Insecure defines if connection should be use GRPC or GRPCS
+	Insecure bool
+	// SkipVerify defines if TLS server certificate verification should be skipped
+	SkipVerify bool
+	// CertFile defines path to TLS certificate file
+	CertFile string
+	// KeyFile defines path to TLS key file
+	KeyFile string
+	// CAFile defines path to TLS CA file
+	CAFile string
+}
+
+func NewGRPCConnection(ctx context.Context, server string, config Config, logger *zap.SugaredLogger) (*grpc.ClientConn, error) {
+	tlsConfig, err := tlsutil.GetTLSConfig(config.Insecure, config.SkipVerify, config.CertFile, config.KeyFile, config.CAFile)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	creds := credentials.NewTLS(tlsConfig)
+	if config.Insecure {
 		creds = insecure.NewCredentials()
 	}
 
 	userAgent := version.Version + "/" + version.Commit
-	logger.Infow("initiating connection with Cloud API", "userAgent", userAgent)
-	return grpc.DialContext(ctx, server, grpc.WithBlock(), grpc.WithUserAgent(userAgent), grpc.WithTransportCredentials(creds))
+	logger.Infow("initiating connection with Agent API", "userAgent", userAgent, "secure", !config.Insecure)
+	conn, err := grpc.DialContext(ctx, server, grpc.WithBlock(), grpc.WithUserAgent(userAgent), grpc.WithTransportCredentials(creds))
+	logger.Infow("connection established with Agent API", "secure", !config.Insecure)
+	return conn, err
 }
 
 type Agent struct {
@@ -218,12 +239,12 @@ func (ag *Agent) runCommandLoop(ctx context.Context) error {
 	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, os.Getenv(cloudEnvIdEnvName))
 	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, os.Getenv(cloudOrgIdEnvName))
 
-	ag.logger.Infow("initiating streaming connection with Cloud API")
+	ag.logger.Infow("initiating streaming connection with Agent API")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	stream, err := ag.client.ExecuteAsync(ctx, opts...)
 	if err != nil {
-		ag.logger.Errorf("failed to execute: %w", err)
+		ag.logger.Errorf("failed to execute: %v", err)
 		return errors.Wrap(err, "failed to setup stream")
 	}
 

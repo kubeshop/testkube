@@ -55,8 +55,8 @@ func (r *JMeterRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		fmt.Sprintf("%s Running with config", ui.IconTruck),
 		"scraperEnabled", r.Params.ScrapperEnabled,
 		"dataDir", r.Params.DataDir,
-		"SSL", r.Params.Ssl,
-		"endpoint", r.Params.Endpoint,
+		"SSL", r.Params.StorageSSL,
+		"endpoint", r.Params.StorageEndpoint,
 	)
 
 	envManager := env.NewManagerWithVars(execution.Variables)

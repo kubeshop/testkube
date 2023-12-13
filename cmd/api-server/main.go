@@ -180,7 +180,14 @@ func main() {
 		mode = common.ModeAgent
 	}
 	if mode == common.ModeAgent {
-		grpcConn, err = agent.NewGRPCConnection(ctx, cfg.TestkubeProTLSInsecure, cfg.TestkubeProURL, log.DefaultLogger)
+		agentConfig := agent.Config{
+			Insecure:   cfg.TestkubeAgentInsecure,
+			SkipVerify: cfg.TestkubeAgentSkipVerify,
+			CertFile:   cfg.TestkubeAgentCertFile,
+			KeyFile:    cfg.TestkubeAgentKeyFile,
+			CAFile:     cfg.TestkubeAgentCAFile,
+		}
+		grpcConn, err = agent.NewGRPCConnection(ctx, cfg.TestkubeProURL, agentConfig, log.DefaultLogger)
 		ui.ExitOnError("error creating gRPC connection", err)
 		defer grpcConn.Close()
 

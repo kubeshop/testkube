@@ -62,9 +62,13 @@ type Config struct {
 	TestkubeOAuthScopes              string        `envconfig:"TESTKUBE_OAUTH_SCOPES" default:""`
 	TestkubeProAPIKey                string        `envconfig:"TESTKUBE_PRO_API_KEY" default:""`
 	TestkubeProURL                   string        `envconfig:"TESTKUBE_PRO_URL" default:""`
-	TestkubeProTLSInsecure           bool          `envconfig:"TESTKUBE_PRO_TLS_INSECURE" default:"false"`
 	TestkubeProWorkerCount           int           `envconfig:"TESTKUBE_PRO_WORKER_COUNT" default:"50"`
 	TestkubeProLogStreamWorkerCount  int           `envconfig:"TESTKUBE_PRO_LOG_STREAM_WORKER_COUNT" default:"25"`
+	TestkubeAgentInsecure            bool          `envconfig:"TESTKUBE_AGENT_INSECURE" default:"false"`
+	TestkubeAgentCertFile            string        `envconfig:"TESTKUBE_AGENT_CERT_FILE" default:""`
+	TestkubeAgentKeyFile             string        `envconfig:"TESTKUBE_AGENT_KEY_FILE" default:""`
+	TestkubeAgentCAFile              string        `envconfig:"TESTKUBE_AGENT_CA_FILE" default:""`
+	TestkubeAgentSkipVerify          bool          `envconfig:"TESTKUBE_AGENT_SKIP_VERIFY" default:"false"`
 	TestkubeWatcherNamespaces        string        `envconfig:"TESTKUBE_WATCHER_NAMESPACES" default:""`
 	GraphqlPort                      string        `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
 	TestkubeRegistry                 string        `envconfig:"TESTKUBE_REGISTRY" default:""`
@@ -111,8 +115,8 @@ func (c *Config) CleanLegacyVars() {
 		c.TestkubeProURL = c.TestkubeCloudURL
 	}
 
-	if !c.TestkubeProTLSInsecure && c.TestkubeCloudTLSInsecure {
-		c.TestkubeProTLSInsecure = c.TestkubeCloudTLSInsecure
+	if !c.TestkubeAgentInsecure && c.TestkubeCloudTLSInsecure {
+		c.TestkubeAgentInsecure = c.TestkubeCloudTLSInsecure
 	}
 
 	if c.TestkubeProWorkerCount == 0 && c.TestkubeCloudWorkerCount != 0 {

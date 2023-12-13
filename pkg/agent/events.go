@@ -82,7 +82,7 @@ func (ag *Agent) runEventLoop(ctx context.Context) error {
 
 			err = ag.sendEvent(ctx, stream, msg)
 			if err != nil {
-				ag.logger.Errorf("websocket stream send healthcheck: %w", err)
+				ag.logger.Errorf("websocket stream send healthcheck: %v", err)
 
 				return err
 			}
@@ -96,7 +96,7 @@ func (ag *Agent) runEventLoop(ctx context.Context) error {
 			msg := &cloud.WebsocketData{Opcode: cloud.Opcode_TEXT_FRAME, Body: b}
 			err = ag.sendEvent(ctx, stream, msg)
 			if err != nil {
-				ag.logger.Errorf("websocket stream send: %w", err)
+				ag.logger.Errorf("websocket stream send: %v", err)
 				return err
 			}
 		}

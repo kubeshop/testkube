@@ -45,7 +45,8 @@ func TestEventLoop(t *testing.T) {
 
 	logger, _ := zap.NewDevelopment()
 
-	grpcConn, err := agent.NewGRPCConnection(context.Background(), true, url, log.DefaultLogger)
+	config := agent.Config{Insecure: true}
+	grpcConn, err := agent.NewGRPCConnection(context.Background(), url, config, log.DefaultLogger)
 	ui.ExitOnError("error creating gRPC connection", err)
 	defer grpcConn.Close()
 

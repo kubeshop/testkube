@@ -119,10 +119,10 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	}
 
 	// TODO: write a proper cloud implementation
-	if r.Params.Endpoint != "" && !r.Params.CloudMode {
-		output.PrintLogf("%s Fetching uploads from object store %s...", ui.IconFile, r.Params.Endpoint)
-		opts := minio.GetTLSOptions(r.Params.Ssl, r.Params.SkipVerify, r.Params.CertFile, r.Params.KeyFile, r.Params.CAFile)
-		minioClient := minio.NewClient(r.Params.Endpoint, r.Params.AccessKeyID, r.Params.SecretAccessKey, r.Params.Region, r.Params.Token, r.Params.Bucket, opts...)
+	if r.Params.StorageEndpoint != "" && !r.Params.CloudMode {
+		output.PrintLogf("%s Fetching uploads from object store %s...", ui.IconFile, r.Params.StorageEndpoint)
+		opts := minio.GetTLSOptions(r.Params.StorageSSL, r.Params.StorageSkipVerify, r.Params.StorageCertFile, r.Params.StorageKeyFile, r.Params.StorageCAFile)
+		minioClient := minio.NewClient(r.Params.StorageEndpoint, r.Params.StorageAccessKeyID, r.Params.StorageSecretAccessKey, r.Params.StorageRegion, r.Params.StorageToken, r.Params.StorageBucket, opts...)
 		fp := content.NewCopyFilesPlacer(minioClient)
 		fp.PlaceFiles(ctx, execution.TestName, execution.BucketName)
 	} else if r.Params.CloudMode {

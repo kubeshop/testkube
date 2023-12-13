@@ -87,7 +87,7 @@ func GetScraper(ctx context.Context, params envs.Params, extractorType Extractor
 	if params.CDEventsTarget != "" {
 		cdeventsClient, err = cloudevents.NewClientHTTP(cloudevents.WithTarget(params.CDEventsTarget))
 		if err != nil {
-			log.DefaultLogger.Warnf("failed to create cloud event client %w", err)
+			log.DefaultLogger.Warnf("failed to create cloud event client: %v", err)
 		}
 	}
 
@@ -96,15 +96,21 @@ func GetScraper(ctx context.Context, params envs.Params, extractorType Extractor
 
 func getCloudLoader(ctx context.Context, params envs.Params) (uploader *cloudscraper.CloudUploader, err error) {
 	// timeout blocking connection to cloud
-	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(params.CloudConnectionTimeoutSec)*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(params.AgentConnectionTimeoutSec)*time.Second)
 	defer cancel()
 
-	output.PrintLogf("%s Uploading artifacts using Cloud Uploader (timeout:%ds)", ui.IconCheckMark, params.CloudConnectionTimeoutSec)
-	grpcConn, err := agent.NewGRPCConnection(ctxTimeout, params.CloudAPITLSInsecure, params.CloudAPIURL, log.DefaultLogger)
+	output.PrintLogf("%s Uploading artifacts using Cloud Uploader (timeout:%ds)", ui.IconCheckMark, params.AgentConnectionTimeoutSec)
+	agentConfig := agent.Config{
+		Insecure:   params.AgentInsecure,
+		SkipVerify: params.AgentSkipVerify,
+		CertFile:   params.AgentCertFile,
+		KeyFile:    params.AgentKeyFile,
+		CAFile:     params.AgentCAFile,
+	}
+	grpcConn, err := agent.NewGRPCConnection(ctxTimeout, params.CloudAPIURL, agentConfig, log.DefaultLogger)
 	if err != nil {
 		return nil, err
 	}
-	output.PrintLogf("%s Connected to Testkube Cloud", ui.IconCheckMark)
 
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 	cloudExecutor := cloudexecutor.NewCloudGRPCExecutor(grpcClient, grpcConn, params.CloudAPIKey)
@@ -114,16 +120,16 @@ func getCloudLoader(ctx context.Context, params envs.Params) (uploader *cloudscr
 func getMinIOLoader(params envs.Params) (*scraper.MinIOUploader, error) {
 	output.PrintLog(fmt.Sprintf("%s Uploading artifacts using MinIO Uploader", ui.IconCheckMark))
 	return scraper.NewMinIOUploader(
-		params.Endpoint,
-		params.AccessKeyID,
-		params.SecretAccessKey,
-		params.Region,
-		params.Token,
-		params.Bucket,
-		params.Ssl,
-		params.SkipVerify,
-		params.CertFile,
-		params.KeyFile,
-		params.CAFile,
+		params.StorageEndpoint,
+		params.StorageAccessKeyID,
+		params.StorageSecretAccessKey,
+		params.StorageRegion,
+		params.StorageToken,
+		params.StorageBucket,
+		params.StorageSSL,
+		params.StorageSkipVerify,
+		params.StorageCertFile,
+		params.StorageKeyFile,
+		params.StorageCAFile,
 	)
 }

@@ -213,21 +213,32 @@ By default, there is a 10 second timeout limit on all requests on the client sid
 The following environment variables are automatically injected into each executed test pod:
 
 DEBUG:                          if debug mode is on
-RUNNER_ENDPOINT:                minio endpoint
-RUNNER_ACCESSKEYID:             minio access key id
-RUNNER_SECRETACCESSKEY:         minio secret access key
-RUNNER_REGION:                  minio region
-RUNNER_TOKEN:                   mnio token
-RUNNER_SSL:                     if minio ssl is on
+RUNNER_STORAGE_ENDPOINT:        minio endpoint
+RUNNER_STORAGE_ACCESSKEYID:     minio access key id
+RUNNER_STORAGE_SECRETACCESSKEY: minio secret access key
+RUNNER_STORAGE_REGION:          minio region
+RUNNER_STORAGE_TOKEN:           minio token
+RUNNER_STORAGE_SSL:             if minio ssl is on
+RUNNER_STORAGE_BUCKET:          minio bucket
+RUNNER_STORAGE_INSECURE:        if minio connection is insecure
+RUNNER_STORAGE_SKIP_VERIFY:     if minio connection should be verified
+RUNNER_STORAGE_CERT_FILE:       minio cert file
+RUNNER_STORAGE_KEY_FILE:        minio key file
+RUNNER_STORAGE_CA_FILE:         minio ca file
 RUNNER_SCRAPPERENABLED:         if scraping is on
 RUNNER_DATADIR:                 data directory
 RUNNER_CDEVENTS_TARGET:         cd events target endpoint
 RUNNER_COMPRESSARTIFACTS:       if artfifacts should be compressed
 RUNNER_CLOUD_MODE:              cloud mode
 RUNNER_CLOUD_API_KEY:           cloud api key
-RUNNER_CLOUD_API_TLS_INSECURE:  if cloud connection is insecure
 RUNNER_CLOUD_API_URL:           cloud api url
 RUNNER_DASHBOARD_URI:           dashboard uri
+RUNNER_AGENT_INSECURE:          if agent connection is insecure
+RUNNER_AGENT_SKIP_VERIFY:       if agent connection should be verified
+RUNNER_AGENT_CERT_FILE:         agent cert file
+RUNNER_AGENT_KEY_FILE:          agent key file
+RUNNER_AGENT_CA_FILE:           agent ca file
+RUNNER_AGENT_CONNECTION_TIMEOUT:agent connection timeout
 CI:                             ci flag
 RUNNER_CLUSTERID:               cluster id
 RUNNER_BUCKET:                  minio bucket

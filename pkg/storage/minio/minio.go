@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"fmt"
+	tlsutil "github.com/kubeshop/testkube/internal/tls"
 	"hash/fnv"
 	"io"
 	"os"
@@ -64,18 +64,11 @@ func Insecure() Option {
 
 // RootCAs is a helper option to provide the RootCAs pool from a list of filenames.
 // If Secure is not already set this will set it as well.
-func RootCAs(file ...string) Option {
+func RootCAs(files ...string) Option {
 	return func(o *Client) error {
-		pool := x509.NewCertPool()
-		for _, f := range file {
-			rootPEM, err := os.ReadFile(f)
-			if err != nil || rootPEM == nil {
-				return fmt.Errorf("nats: error loading or parsing rootCA file: %v", err)
-			}
-			ok := pool.AppendCertsFromPEM(rootPEM)
-			if !ok {
-				return fmt.Errorf("nats: failed to parse root certificate from %q", f)
-			}
+		pool, err := tlsutil.LoadRootCAs(files...)
+		if err != nil {
+			return errors.WithStack(err)
 		}
 		if o.tlsConfig == nil {
 			o.tlsConfig = &tls.Config{MinVersion: tls.VersionTLS12}
@@ -90,18 +83,14 @@ func RootCAs(file ...string) Option {
 // If Secure is not already set this will set it as well.
 func ClientCert(certFile, keyFile string) Option {
 	return func(o *Client) error {
-		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+		cert, err := tlsutil.LoadCertificate(certFile, keyFile)
 		if err != nil {
-			return fmt.Errorf("nats: error loading client certificate: %v", err)
-		}
-		cert.Leaf, err = x509.ParseCertificate(cert.Certificate[0])
-		if err != nil {
-			return fmt.Errorf("nats: error parsing client certificate: %v", err)
+			return errors.WithStack(err)
 		}
 		if o.tlsConfig == nil {
 			o.tlsConfig = &tls.Config{MinVersion: tls.VersionTLS12}
 		}
-		o.tlsConfig.Certificates = []tls.Certificate{cert}
+		o.tlsConfig.Certificates = []tls.Certificate{*cert}
 		o.ssl = true
 		return nil
 	}

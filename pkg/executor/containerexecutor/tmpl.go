@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/kubeshop/testkube/pkg/envs/envsconst"
 	"os"
 	"path/filepath"
 	"strings"
@@ -101,44 +102,44 @@ func NewExecutorJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.J
 		job.Spec.Template.Labels[key] = value
 	}
 
-	envs := append(executor.RunnerEnvVars, corev1.EnvVar{Name: "RUNNER_CLUSTERID", Value: options.ClusterID})
+	envVars := append(executor.RunnerEnvVars, corev1.EnvVar{Name: envsconst.EnvRunnerClusterID, Value: options.ClusterID})
 	if options.ArtifactRequest != nil && options.ArtifactRequest.StorageBucket != "" {
-		envs = append(envs, corev1.EnvVar{Name: "RUNNER_BUCKET", Value: options.ArtifactRequest.StorageBucket})
+		envVars = append(envVars, corev1.EnvVar{Name: envsconst.EnvRunnerStorageBucket, Value: options.ArtifactRequest.StorageBucket})
 	} else {
-		envs = append(envs, corev1.EnvVar{Name: "RUNNER_BUCKET", Value: os.Getenv("STORAGE_BUCKET")})
+		envVars = append(envVars, corev1.EnvVar{Name: envsconst.EnvRunnerStorageBucket, Value: os.Getenv("STORAGE_BUCKET")})
 	}
 
-	envs = append(envs, secretEnvVars...)
+	envVars = append(envVars, secretEnvVars...)
 	if options.HTTPProxy != "" {
-		envs = append(envs, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
+		envVars = append(envVars, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
 	}
 
 	if options.HTTPSProxy != "" {
-		envs = append(envs, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
+		envVars = append(envVars, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
 	}
 
-	envs = append(envs, envManager.PrepareEnvs(options.Envs, options.Variables)...)
-	envs = append(envs, corev1.EnvVar{Name: "RUNNER_WORKINGDIR", Value: options.WorkingDir})
-	envs = append(envs, corev1.EnvVar{Name: "RUNNER_EXECUTIONID", Value: options.Name})
-	envs = append(envs, corev1.EnvVar{Name: "RUNNER_TESTNAME", Value: options.TestName})
-	envs = append(envs, corev1.EnvVar{Name: "RUNNER_EXECUTIONNUMBER", Value: fmt.Sprint(options.ExecutionNumber)})
-	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTTYPE", Value: options.ContextType})
-	envs = append(envs, corev1.EnvVar{Name: "RUNNER_CONTEXTDATA", Value: options.ContextData})
-	envs = append(envs, corev1.EnvVar{Name: "RUNNER_APIURI", Value: options.APIURI})
+	envVars = append(envVars, envManager.PrepareEnvs(options.Envs, options.Variables)...)
+	envVars = append(envVars, corev1.EnvVar{Name: envsconst.EnvRunnerWorkingDir, Value: options.WorkingDir})
+	envVars = append(envVars, corev1.EnvVar{Name: envsconst.EnvRunnerExecutionID, Value: options.Name})
+	envVars = append(envVars, corev1.EnvVar{Name: envsconst.EnvRunnerTestName, Value: options.TestName})
+	envVars = append(envVars, corev1.EnvVar{Name: envsconst.EnvRunnerExecutionNumber, Value: fmt.Sprint(options.ExecutionNumber)})
+	envVars = append(envVars, corev1.EnvVar{Name: envsconst.EnvRunnerContextType, Value: options.ContextType})
+	envVars = append(envVars, corev1.EnvVar{Name: envsconst.EnvRunnerContextData, Value: options.ContextData})
+	envVars = append(envVars, corev1.EnvVar{Name: envsconst.EnvRunnerAPIURI, Value: options.APIURI})
 
-	// envs needed for logs sidecar
+	// envVars needed for logs sidecar
 	if options.Features.LogsV2 {
-		envs = append(envs, corev1.EnvVar{Name: "ID", Value: options.Name})
-		envs = append(envs, corev1.EnvVar{Name: "NATS_URI", Value: options.NatsUri})
-		envs = append(envs, corev1.EnvVar{Name: "NAMESPACE", Value: options.Namespace})
+		envVars = append(envVars, corev1.EnvVar{Name: "ID", Value: options.Name})
+		envVars = append(envVars, corev1.EnvVar{Name: "NATS_URI", Value: options.NatsUri})
+		envVars = append(envVars, corev1.EnvVar{Name: "NAMESPACE", Value: options.Namespace})
 	}
 
 	for i := range job.Spec.Template.Spec.InitContainers {
-		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, envs...)
+		job.Spec.Template.Spec.InitContainers[i].Env = append(job.Spec.Template.Spec.InitContainers[i].Env, envVars...)
 	}
 
 	for i := range job.Spec.Template.Spec.Containers {
-		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, envs...)
+		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, envVars...)
 	}
 
 	return &job, nil
@@ -181,23 +182,23 @@ func NewScraperJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.Jo
 		return nil, fmt.Errorf("decoding scraper job spec error: %w", err)
 	}
 
-	envs := append(executor.RunnerEnvVars, corev1.EnvVar{Name: "RUNNER_CLUSTERID", Value: options.ClusterID})
+	envVars := append(executor.RunnerEnvVars, corev1.EnvVar{Name: envsconst.EnvRunnerClusterID, Value: options.ClusterID})
 	if options.ArtifactRequest != nil && options.ArtifactRequest.StorageBucket != "" {
-		envs = append(envs, corev1.EnvVar{Name: "RUNNER_BUCKET", Value: options.ArtifactRequest.StorageBucket})
+		envVars = append(envVars, corev1.EnvVar{Name: envsconst.EnvRunnerStorageBucket, Value: options.ArtifactRequest.StorageBucket})
 	} else {
-		envs = append(envs, corev1.EnvVar{Name: "RUNNER_BUCKET", Value: os.Getenv("STORAGE_BUCKET")})
+		envVars = append(envVars, corev1.EnvVar{Name: envsconst.EnvRunnerStorageBucket, Value: os.Getenv("STORAGE_BUCKET")})
 	}
 
 	if options.HTTPProxy != "" {
-		envs = append(envs, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
+		envVars = append(envVars, corev1.EnvVar{Name: "HTTP_PROXY", Value: options.HTTPProxy})
 	}
 
 	if options.HTTPSProxy != "" {
-		envs = append(envs, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
+		envVars = append(envVars, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
 	}
 
 	for i := range job.Spec.Template.Spec.Containers {
-		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, envs...)
+		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, envVars...)
 	}
 
 	return &job, nil

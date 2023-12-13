@@ -3,6 +3,7 @@ package env
 import (
 	"bytes"
 	"fmt"
+	"github.com/kubeshop/testkube/pkg/envs/envsconst"
 	"os"
 	"strings"
 
@@ -18,10 +19,6 @@ const (
 	SecretVarPrefix = "RUNNER_SECRET_VAR_"
 	// ConfigMapVarPrefix is a prefix for config map vars
 	ConfigMapVarPrefix = "RUNNER_CONFIGMAP_VAR_"
-	// GitUsernameEnvVarName is git username environment var name
-	GitUsernameEnvVarName = "RUNNER_GITUSERNAME"
-	// GitTokenEnvVarName is git token environment var name
-	GitTokenEnvVarName = "RUNNER_GITTOKEN"
 )
 
 // Interface is responsible for exchanging envs and vars with executor pod
@@ -200,11 +197,11 @@ func (m Manager) PrepareGitCredentials(usernameSecret, tokenSecret *testkube.Sec
 		secretRef *testkube.SecretRef
 	}{
 		{
-			GitUsernameEnvVarName,
+			envsconst.EnvRunnerGitUsername,
 			usernameSecret,
 		},
 		{
-			GitTokenEnvVarName,
+			envsconst.EnvRunnerGitToken,
 			tokenSecret,
 		},
 	}
@@ -230,7 +227,7 @@ func (m Manager) PrepareGitCredentials(usernameSecret, tokenSecret *testkube.Sec
 
 // GetSecretEnvs gets secret envs
 func (m Manager) GetSecretEnvs() (secretEnvs map[string]string) {
-	secretEnvs = make(map[string]string, 0)
+	secretEnvs = make(map[string]string)
 	i := 1
 	for {
 		envName := fmt.Sprintf("%s%d", SecretEnvVarPrefix, i)

@@ -47,7 +47,8 @@ func TestCommandExecution(t *testing.T) {
 		atomic.AddInt32(&msgCnt, 1)
 	}
 
-	grpcConn, err := agent.NewGRPCConnection(context.Background(), true, url, log.DefaultLogger)
+	config := agent.Config{Insecure: true}
+	grpcConn, err := agent.NewGRPCConnection(context.Background(), url, config, log.DefaultLogger)
 	ui.ExitOnError("error creating gRPC connection", err)
 	defer grpcConn.Close()
 
@@ -71,7 +72,7 @@ func TestCommandExecution(t *testing.T) {
 
 	g.Wait()
 
-	assert.True(t, msgCnt > 0)
+	assert.NotZero(t, msgCnt)
 }
 
 type CloudServer struct {

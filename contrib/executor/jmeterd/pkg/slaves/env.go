@@ -8,18 +8,14 @@ import (
 )
 
 const (
-	MasterOverrideJvmArgs      = "MASTER_OVERRIDE_JVM_ARGS"
-	MasterAdditionalJvmArgs    = "MASTER_ADDITIONAL_JVM_ARGS"
-	SlavesOverrideJvmArgs      = "SLAVES_OVERRIDE_JVM_ARGS"
-	SlavesAdditionalJvmArgs    = "SLAVES_ADDITIONAL_JVM_ARGS"
-	SlavesAdditionalJmeterArgs = "SLAVES_ADDITIONAL_JMETER_ARGS"
-	SlavesCount                = "SLAVES_COUNT"
-	MasterPrefix               = "MASTER_"
-	SlavesPrefix               = "SLAVES_"
-	RunnerPrefix               = "RUNNER_"
-	HttpProxyPrefix            = "HTTP_PROXY="
-	HttpsProxyPrefix           = "HTTPS_PROXY="
-	DebugPrefix                = "DEBUG="
+	MasterOverrideJvmArgs   = "MASTER_OVERRIDE_JVM_ARGS"
+	MasterAdditionalJvmArgs = "MASTER_ADDITIONAL_JVM_ARGS"
+	MasterPrefix            = "MASTER_"
+	SlavesPrefix            = "SLAVES_"
+	RunnerPrefix            = "RUNNER_"
+	HttpProxyPrefix         = "HTTP_PROXY="
+	HttpsProxyPrefix        = "HTTPS_PROXY="
+	DebugPrefix             = "DEBUG="
 )
 
 // ExtractSlaveEnvVariables removes slave environment variables from the given map and returns them separately.

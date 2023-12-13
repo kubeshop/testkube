@@ -59,9 +59,9 @@ Make sure the following tools are installed on your machine and available in you
       }
     }
     ```
-4. You need to provide the `RUNNER_SCRAPPERENABLED`, `RUNNER_SSL` and `RUNNER_DATADIR` environment variables and run the Executor using the `make run run_args="-f|--file <path>"` make command where `-f|--file <path>` argument is the path to the `execution.json` file you created in step 3.
+4. You need to provide the `RUNNER_SCRAPPERENABLED`, `RUNNER_STORAGE_SSL` and `RUNNER_DATADIR` environment variables and run the Executor using the `make run run_args="-f|--file <path>"` make command where `-f|--file <path>` argument is the path to the `execution.json` file you created in step 3.
     ```bash
-    RUNNER_SCRAPPERENABLED=false RUNNER_SSL=false RUNNER_DATADIR="./data" make run run_args="-f temp/execution.json"
+    RUNNER_SCRAPPERENABLED=false RUNNER_STORAGE_SSL=false RUNNER_DATADIR="./data" make run run_args="-f temp/execution.json"
     ```
 
 #### Execution JSON
@@ -92,7 +92,7 @@ Breakdown of the Execution JSON:
 
 #### Environment Variables
 ```bash
-RUNNER_SSL=false                  # used if storage backend is behind HTTPS, should be set to false for local development
+RUNNER_STORAGE_SSL=false          # used if storage backend is behind HTTPS, should be set to false for local development
 RUNNER_SCRAPPERENABLED=false      # used to enable/disable scrapper, should be set to false for local development
 RUNNER_DATADIR=<path-to-data-dir> # path to the data/ directory where JMeter will run and store results
 ```
