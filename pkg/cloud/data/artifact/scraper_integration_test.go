@@ -102,7 +102,7 @@ func TestCloudScraper_ArchiveFilesystemExtractor_Integration(t *testing.T) {
 		TestName:      "my-test",
 		TestSuiteName: "my-test-suite",
 	}
-	err = s.Scrape(context.Background(), []string{tempDir}, []string{}, execution)
+	err = s.Scrape(context.Background(), []string{tempDir}, []string{".*"}, execution)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 2, testServerRequests)
@@ -201,7 +201,7 @@ func TestCloudScraper_RecursiveFilesystemExtractor_Integration(t *testing.T) {
 		TestName:      "my-test",
 		TestSuiteName: "my-test-suite",
 	}
-	err = s.Scrape(context.Background(), []string{tempDir}, []string{}, execution)
+	err = s.Scrape(context.Background(), []string{tempDir}, []string{".*"}, execution)
 	assert.NoError(t, err)
 	assert.Equal(t, 3, testServerRequests)
 }
