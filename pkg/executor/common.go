@@ -120,7 +120,7 @@ var RunnerEnvVars = []corev1.EnvVar{
 	},
 	{
 		Name:  "RUNNER_CLOUD_API_SKIP_VERIFY",
-		Value: getOr("TESTKUBE_CLOUD_SKIP_VERIFY", "false"),
+		Value: getOr("TESTKUBE_PRO_SKIP_VERIFY", "false"),
 	},
 	{
 		Name:  "RUNNER_DASHBOARD_URI",
