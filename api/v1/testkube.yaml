@@ -3542,6 +3542,11 @@ components:
           description: previous step numbers starting from 1
           items:
             type: integer
+        previousTestNames:
+          type: array
+          description: previous test names
+          items:
+            type: string            
 
     TestSuiteStep:
       type: object

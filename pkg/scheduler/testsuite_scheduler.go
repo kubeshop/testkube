@@ -386,7 +386,9 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 	}
 
 	var ids []string
+	var testNames []string
 	if result.Step != nil && result.Step.DownloadArtifacts != nil {
+		testNames = result.Step.DownloadArtifacts.PreviousTestNames
 		for i := range previousSteps {
 			for j := range previousSteps[i].Execute {
 				if previousSteps[i].Execute[j].Execution != nil &&
@@ -486,6 +488,7 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 			PvcTemplate:                  request.PvcTemplate,
 			PvcTemplateReference:         request.PvcTemplateReference,
 			DownloadArtifactExecutionIDs: ids,
+			DownloadArtifactTestNames:    testNames,
 		}
 
 		requests := make([]workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution], len(testTuples))

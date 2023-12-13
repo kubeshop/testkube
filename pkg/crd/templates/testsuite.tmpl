@@ -26,6 +26,12 @@ spec:
       - {{ . }}
       {{- end }}
       {{- end }}
+      {{- if ne (len .DownloadArtifacts.PreviousTestNames) 0 }}
+      previousTestNames:
+      {{- range .DownloadArtifacts.PreviousTestNames }}
+      - {{ . }}
+      {{- end }}
+      {{- end }}      
     {{- end }}
     {{- if ne (len .Execute) 0 }}
     execute:
@@ -53,6 +59,12 @@ spec:
       - {{ . }}
       {{- end }}
       {{- end }}
+      {{- if ne (len .DownloadArtifacts.PreviousTestNames) 0 }}
+      previousTestNames:
+      {{- range .DownloadArtifacts.PreviousTestNames }}
+      - {{ . }}
+      {{- end }}
+      {{- end }}      
     {{- end }}
     {{- if ne (len .Execute) 0 }}
     execute:
@@ -77,6 +89,12 @@ spec:
       {{- if ne (len .DownloadArtifacts.PreviousStepNumbers) 0 }}
       previousStepNumbers:
       {{- range .DownloadArtifacts.PreviousStepNumbers }}
+      - {{ . }}
+      {{- end }}
+      {{- end }}
+      {{- if ne (len .DownloadArtifacts.PreviousTestNames) 0 }}
+      previousTestNames:
+      {{- range .DownloadArtifacts.PreviousTestNames }}
       - {{ . }}
       {{- end }}
       {{- end }}

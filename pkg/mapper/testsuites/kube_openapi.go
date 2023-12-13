@@ -52,6 +52,7 @@ func MapCRToAPI(cr testsuitesv3.TestSuite) (test testkube.TestSuite) {
 				downloadArtifacts = &testkube.DownloadArtifactOptions{
 					AllPreviousSteps:    b.DownloadArtifacts.AllPreviousSteps,
 					PreviousStepNumbers: b.DownloadArtifacts.PreviousStepNumbers,
+					PreviousTestNames:   b.DownloadArtifacts.PreviousTestNames,
 				}
 			}
 
