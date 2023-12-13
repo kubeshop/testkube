@@ -41,6 +41,7 @@ type Params struct {
 	CloudAPITLSInsecure       bool   `envconfig:"RUNNER_CLOUD_API_TLS_INSECURE"`                // RUNNER_CLOUD_API_TLS_INSECURE
 	CloudAPIURL               string `envconfig:"RUNNER_CLOUD_API_URL"`                         // RUNNER_CLOUD_API_URL
 	CloudConnectionTimeoutSec int    `envconfig:"RUNNER_CLOUD_CONNECTION_TIMEOUT" default:"10"` // RUNNER_CLOUD_CONNECTION_TIMEOUT
+	CloudAPISkipVerify        bool   `envconfig:"RUNNER_CLOUD_API_SKIP_VERIFY" default:"false"` // RUNNER_CLOUD_API_SKIP_VERIFY
 	SlavesConfigs             string `envconfig:"RUNNER_SLAVES_CONFIGS"`                        // RUNNER_SLAVES_CONFIGS
 }
 
@@ -85,6 +86,7 @@ func PrintParams(params Params) {
 	output.PrintLogf("RUNNER_CLOUD_API_URL=\"%s\"", params.CloudAPIURL)
 	printSensitiveParam("RUNNER_CLOUD_API_KEY", params.CloudAPIKey)
 	output.PrintLogf("RUNNER_CLOUD_CONNECTION_TIMEOUT=%d", params.CloudConnectionTimeoutSec)
+	output.PrintLogf("RUNNER_CLOUD_API_SKIP_VERIFY=\"%t\"", params.CloudAPISkipVerify)
 }
 
 // printSensitiveParam shows in logs if a parameter is set or not

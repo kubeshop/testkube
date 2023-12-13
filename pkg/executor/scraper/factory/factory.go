@@ -100,7 +100,7 @@ func getCloudLoader(ctx context.Context, params envs.Params) (uploader *cloudscr
 	defer cancel()
 
 	output.PrintLogf("%s Uploading artifacts using Cloud Uploader (timeout:%ds)", ui.IconCheckMark, params.CloudConnectionTimeoutSec)
-	grpcConn, err := agent.NewGRPCConnection(ctxTimeout, params.CloudAPITLSInsecure, params.CloudAPIURL, log.DefaultLogger)
+	grpcConn, err := agent.NewGRPCConnection(ctxTimeout, params.CloudAPITLSInsecure, params.SkipVerify, params.CloudAPIURL, log.DefaultLogger)
 	if err != nil {
 		return nil, err
 	}
