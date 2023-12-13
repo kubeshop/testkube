@@ -105,7 +105,7 @@ dockers:
     goos: linux
     goarch: arm64
     image_templates:
-      -  "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk17-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk17-arm64v8{{ end }}"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -115,12 +115,12 @@ dockers:
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
 
-  - dockerfile: "./contrib/executor/gradle/build/agent/Dockerfile.jdk18"
+  - dockerfile: "./contrib/executor/gradle/build/agent/Dockerfile.jdk21"
     use: buildx
     goos: linux
     goarch: amd64
     image_templates:
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk18-amd64{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk21-amd64{{ end }}"
       - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .ShortCommit }}{{ end }}"
     build_flag_templates:
       - "--platform=linux/amd64"
@@ -131,12 +131,12 @@ dockers:
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
 
-  - dockerfile: "./contrib/executor/gradle/build/agent/Dockerfile.jdk18"
+  - dockerfile: "./contrib/executor/gradle/build/agent/Dockerfile.jdk21"
     use: buildx
     goos: linux
     goarch: arm64
     image_templates:
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk18-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk21-arm64v8{{ end }}"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -171,22 +171,22 @@ docker_manifests:
     image_templates:
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk17-amd64{{ end }}"
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk17-arm64v8{{ end }}"
-  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk18{{ end }}"
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk21{{ end }}"
     image_templates:
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk18-amd64{{ end }}"
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk18-arm64v8{{ end }}"
-  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:jdk18{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk21-amd64{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk21-arm64v8{{ end }}"
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:jdk21{{ end }}"
     image_templates:
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk18-amd64{{ end }}"
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk18-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk21-amd64{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk21-arm64v8{{ end }}"
   - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:latest{{ end }}"
     image_templates:
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk18-amd64{{ end }}"
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk18-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk21-amd64{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk21-arm64v8{{ end }}"
   - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}{{ end }}"
     image_templates:
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk18-amd64{{ end }}"
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk18-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk21-amd64{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk21-arm64v8{{ end }}"
 
 release:
   disable: true
@@ -196,6 +196,6 @@ docker_signs:
     artifacts: all
     output: true
     args:
-      - 'sign'
-      - '${artifact}'
+      - "sign"
+      - "${artifact}"
       - "--yes"
