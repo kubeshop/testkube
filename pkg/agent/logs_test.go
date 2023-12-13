@@ -43,7 +43,7 @@ func TestLogStream(t *testing.T) {
 		fmt.Fprintf(ctx, "Hi there! RequestURI is %q", ctx.RequestURI())
 	}
 
-	grpcConn, err := agent.NewGRPCConnection(context.Background(), true, url, log.DefaultLogger)
+	grpcConn, err := agent.NewGRPCConnection(context.Background(), true, false, url, log.DefaultLogger)
 	ui.ExitOnError("error creating gRPC connection", err)
 	defer grpcConn.Close()
 

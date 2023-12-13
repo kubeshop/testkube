@@ -65,6 +65,7 @@ type Config struct {
 	TestkubeProTLSInsecure           bool          `envconfig:"TESTKUBE_PRO_TLS_INSECURE" default:"false"`
 	TestkubeProWorkerCount           int           `envconfig:"TESTKUBE_PRO_WORKER_COUNT" default:"50"`
 	TestkubeProLogStreamWorkerCount  int           `envconfig:"TESTKUBE_PRO_LOG_STREAM_WORKER_COUNT" default:"25"`
+	TestkubeProAgentSkipVerify       bool          `envconfig:"TESTKUBE_PRO_SKIP_VERIFY" default:"false"`
 	TestkubeWatcherNamespaces        string        `envconfig:"TESTKUBE_WATCHER_NAMESPACES" default:""`
 	GraphqlPort                      string        `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
 	TestkubeRegistry                 string        `envconfig:"TESTKUBE_REGISTRY" default:""`
