@@ -50,7 +50,7 @@ func TestRecursiveFilesystemExtractor_Extract(t *testing.T) {
 	}
 
 	// Call the Extract function
-	err := extractor.Extract(context.Background(), []string{"/my/directory"}, []string{}, processFn, notifyFn)
+	err := extractor.Extract(context.Background(), []string{"/my/directory"}, []string{".*"}, processFn, notifyFn)
 	assert.NoErrorf(t, err, "Extract failed: %v", err)
 }
 
@@ -102,7 +102,7 @@ func TestArchiveFilesystemExtractor_Extract_NoMeta(t *testing.T) {
 	}
 
 	// Call the Extract function
-	err := extractor.Extract(context.Background(), []string{"/my/directory"}, []string{}, processFn, notifyFn)
+	err := extractor.Extract(context.Background(), []string{"/my/directory"}, []string{".*"}, processFn, notifyFn)
 	assert.NoErrorf(t, err, "Extract failed: %v", err)
 	assert.Equal(t, 1, processFnCallCount)
 }
@@ -170,7 +170,7 @@ func TestArchiveFilesystemExtractor_Extract_Meta(t *testing.T) {
 	}
 
 	// Call the Extract function
-	err := extractor.Extract(context.Background(), []string{"/my/directory"}, []string{}, processFn, notifyFn)
+	err := extractor.Extract(context.Background(), []string{"/my/directory"}, []string{".*"}, processFn, notifyFn)
 	assert.NoErrorf(t, err, "Extract failed: %v", err)
 	assert.Equal(t, 2, processFnCallCount)
 }
@@ -196,7 +196,7 @@ func TestRecursiveFilesystemExtractor_ExtractEmpty(t *testing.T) {
 	}
 
 	// Call the Extract function
-	err := extractor.Extract(context.Background(), []string{"/my/directory"}, []string{}, processFn, notifyFn)
+	err := extractor.Extract(context.Background(), []string{"/my/directory"}, []string{".*"}, processFn, notifyFn)
 	assert.NoErrorf(t, err, "Extract failed: %v", err)
 }
 
@@ -221,6 +221,6 @@ func TestArchiveFilesystemExtractor_ExtractEmpty(t *testing.T) {
 	}
 
 	// Call the Extract function
-	err := extractor.Extract(context.Background(), []string{"/my/directory"}, []string{}, processFn, notifyFn)
+	err := extractor.Extract(context.Background(), []string{"/my/directory"}, []string{".*"}, processFn, notifyFn)
 	assert.NoErrorf(t, err, "Extract failed: %v", err)
 }

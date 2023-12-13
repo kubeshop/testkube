@@ -61,7 +61,7 @@ func TestArchiveFilesystemExtractor_Extract_NoMeta_Integration(t *testing.T) {
 
 	extractor := scraper.NewArchiveFilesystemExtractor(filesystem.NewOSFileSystem())
 	scrapeDirs := []string{tempDir}
-	masks := []string{}
+	masks := []string{".*"}
 	err = extractor.Extract(context.Background(), scrapeDirs, masks, processFn, notifyFn)
 	require.NoError(t, err)
 	assert.Equal(t, 1, processCallCount)
@@ -134,7 +134,7 @@ func TestArchiveFilesystemExtractor_Extract_Meta_Integration(t *testing.T) {
 
 	extractor := scraper.NewArchiveFilesystemExtractor(filesystem.NewOSFileSystem(), scraper.GenerateTarballMetaFile())
 	scrapeDirs := []string{tempDir}
-	masks := []string{}
+	masks := []string{".*"}
 	err = extractor.Extract(context.Background(), scrapeDirs, masks, processFn, notifyFn)
 	require.NoError(t, err)
 	assert.Equal(t, 2, processCallCount)
@@ -197,7 +197,7 @@ func TestRecursiveFilesystemExtractor_Extract_Integration(t *testing.T) {
 
 	extractor := scraper.NewRecursiveFilesystemExtractor(filesystem.NewOSFileSystem())
 	scrapeDirs := []string{tempDir, "/nonexistent"}
-	masks := []string{}
+	masks := []string{".*"}
 	err = extractor.Extract(context.Background(), scrapeDirs, masks, processFn, notifyFn)
 	require.NoError(t, err)
 	assert.Equal(t, processCallCount, 3)
@@ -241,7 +241,7 @@ func TestRecursiveFilesystemExtractor_Extract_RelPath_Integration(t *testing.T) 
 
 	extractor := scraper.NewRecursiveFilesystemExtractor(filesystem.NewOSFileSystem())
 	scrapeDirs := []string{filepath.Join(tempDir, "file1.txt"), "/nonexistent"}
-	masks := []string{}
+	masks := []string{".*"}
 	err = extractor.Extract(context.Background(), scrapeDirs, masks, processFn, notifyFn)
 	require.NoError(t, err)
 	assert.Equal(t, processCallCount, 1)

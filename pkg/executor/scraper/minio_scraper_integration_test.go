@@ -84,7 +84,7 @@ func TestMinIOScraper_Archive_Integration(t *testing.T) {
 	assert.NoError(t, err)
 
 	s := scraper.NewExtractLoadScraper(extractor, loader, client, "", "")
-	err = s.Scrape(context.Background(), []string{tempDir}, []string{}, execution)
+	err = s.Scrape(context.Background(), []string{tempDir}, []string{".*"}, execution)
 	if err != nil {
 		t.Fatalf("error scraping: %v", err)
 	}
@@ -164,7 +164,7 @@ func TestMinIOScraper_Recursive_Integration(t *testing.T) {
 	assert.NoError(t, err)
 
 	s := scraper.NewExtractLoadScraper(extractor, loader, client, "", "")
-	err = s.Scrape(context.Background(), []string{tempDir}, []string{}, execution)
+	err = s.Scrape(context.Background(), []string{tempDir}, []string{".*"}, execution)
 	if err != nil {
 		t.Fatalf("error scraping: %v", err)
 	}
