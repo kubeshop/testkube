@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"math"
 	"os"
@@ -41,8 +42,12 @@ const (
 // buffer up to five messages per worker
 const bufferSizePerWorker = 5
 
-func NewGRPCConnection(ctx context.Context, isInsecure bool, server string, logger *zap.SugaredLogger) (*grpc.ClientConn, error) {
-	creds := credentials.NewTLS(nil)
+func NewGRPCConnection(ctx context.Context, isInsecure bool, skipVerify bool, server string, logger *zap.SugaredLogger) (*grpc.ClientConn, error) {
+	var tlsConfig *tls.Config
+	if skipVerify {
+		tlsConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+	creds := credentials.NewTLS(tlsConfig)
 	if isInsecure {
 		creds = insecure.NewCredentials()
 	}

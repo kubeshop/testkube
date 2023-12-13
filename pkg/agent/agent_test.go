@@ -47,7 +47,7 @@ func TestCommandExecution(t *testing.T) {
 		atomic.AddInt32(&msgCnt, 1)
 	}
 
-	grpcConn, err := agent.NewGRPCConnection(context.Background(), true, url, log.DefaultLogger)
+	grpcConn, err := agent.NewGRPCConnection(context.Background(), true, false, url, log.DefaultLogger)
 	ui.ExitOnError("error creating gRPC connection", err)
 	defer grpcConn.Close()
 

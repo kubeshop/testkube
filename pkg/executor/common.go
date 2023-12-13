@@ -117,6 +117,10 @@ var RunnerEnvVars = []corev1.EnvVar{
 		Value: os.Getenv("TESTKUBE_CLOUD_URL"),
 	},
 	{
+		Name:  "RUNNER_CLOUD_API_SKIP_VERIFY",
+		Value: getOr("TESTKUBE_PRO_SKIP_VERIFY", "false"),
+	},
+	{
 		Name:  "RUNNER_DASHBOARD_URI",
 		Value: os.Getenv("TESTKUBE_DASHBOARD_URI"),
 	},
