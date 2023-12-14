@@ -13,7 +13,7 @@ By default the concurrency level for parallel tests is set to 10, you can redefi
 
 ## Passing Test Suite Artifacts between Steps
 
-In some scenarios you need to access artifacts generated on previous steps of the test suite. Testkube provides two options to define which artifacts to download in the init container: all previous step artifacts or artifacts for selected steps (step number is started from 1). All downloaded artifacts are stored in /data/downloaded-artifacts/{execution id} folder. See a few examples below.
+In some scenarios you need to access artifacts generated on previous steps of the test suite. Testkube provides two options to define which artifacts to download in the init container: all previous step artifacts or artifacts for selected steps (step number is started from 1) or artifacts for latest executions of previously executed tests (identified by names). All downloaded artifacts are stored in /data/downloaded-artifacts/{execution id} folder. See a few examples below.
 
 ## Test Suite Creation
 
