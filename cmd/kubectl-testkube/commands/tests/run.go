@@ -381,7 +381,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")
 	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
 	cmd.Flags().StringVar(&runningContext, "context", "", "running context description for test execution")
-	cmd.Flags().StringVar(&artifactStorageBucket, "artifact-storage-bucket", "", "artifact storage nucket")
+	cmd.Flags().StringVar(&artifactStorageBucket, "artifact-storage-bucket", "", "artifact storage bucket")
 	cmd.Flags().BoolVarP(&artifactOmitFolderPerExecution, "artifact-omit-folder-per-execution", "", false, "don't store artifacts in execution folder")
 	cmd.Flags().BoolVarP(&artifactSharedBetweenPods, "artifact-shared-between-pods", "", false, "whether to share volume between pods")
 	cmd.Flags().BoolVarP(&silentMode, "silent", "", false, "don't print intermediate test execution")
