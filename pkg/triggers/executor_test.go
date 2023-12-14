@@ -73,7 +73,7 @@ func TestExecute(t *testing.T) {
 	mockExecutionResult := testkube.ExecutionResult{Status: testkube.ExecutionStatusRunning}
 	mockExecution := testkube.Execution{Name: "test-execution-1"}
 	mockExecution.ExecutionResult = &mockExecutionResult
-	mockResultRepository.EXPECT().GetByNameAndTest(gomock.Any(), "some-custom-execution-1", "some-test").Return(mockExecution, nil)
+	mockResultRepository.EXPECT().GetByNameAndTest(gomock.Any(), "some-custom-execution", "some-test").Return(mockExecution, nil)
 	mockSecretUUID := "b524c2f6-6bcf-4178-87c1-1aa2b2abb5dc"
 	mockTestsClient.EXPECT().GetCurrentSecretUUID("some-test").Return(mockSecretUUID, nil)
 	mockExecutorTypes := "cypress"
