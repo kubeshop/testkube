@@ -52,6 +52,16 @@ dockers:
       - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
+      -
+docker_manifests:
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-{{ end }}"
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-amd64{{ end }}"
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Env.EXECUTOR_VERSION }}-{{ end }}"
+    image_templates:
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-amd64{{ end }}"
 
 snapshot:
   name_template: '{{ .Version }}'

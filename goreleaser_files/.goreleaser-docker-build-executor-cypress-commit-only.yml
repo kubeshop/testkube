@@ -23,7 +23,7 @@ builds:
       - arm64
     mod_timestamp: "{{ .CommitTimestamp }}"
 dockers:
-  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress12"
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress13"
     use: buildx
     goos: linux
     goarch: amd64
@@ -39,7 +39,7 @@ dockers:
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
 
 snapshot:
-  name_template: '{{ .Version }}'
+  name_template: "{{ .Version }}"
 
 release:
   disable: true
