@@ -23,26 +23,12 @@ builds:
       - arm64
     mod_timestamp: "{{ .CommitTimestamp }}"
 dockers:
-  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress12"
-    use: buildx
-    goos: linux
-    goarch: amd64
-    image_templates:
-      - "kubeshop/testkube-cypress-executor:{{ .ShortCommit }}"
-    build_flag_templates:
-      - "--platform=linux/amd64"
-      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-      - "--label=org.opencontainers.image.created={{ .Date}}"
-      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
-      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
-      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
   - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress13"
     use: buildx
     goos: linux
     goarch: amd64
     image_templates:
-      - "kubeshop/testkube-cypress-executor:{{ .ShortCommit }}-13"
+      - "kubeshop/testkube-cypress-executor:{{ .ShortCommit }}"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
