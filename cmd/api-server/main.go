@@ -592,6 +592,10 @@ func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDet
 	specifiedExecutors := make(map[string]struct{})
 	if cfg.TestkubeSpecifiedExecutors != "" {
 		for _, executor := range strings.Split(cfg.TestkubeSpecifiedExecutors, ",") {
+			if executor == "" {
+				continue
+			}
+
 			specifiedExecutors[strings.TrimSpace(executor)] = struct{}{}
 		}
 
