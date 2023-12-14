@@ -31,7 +31,7 @@ jobs:
       - name: Set-up Go
         uses: actions/setup-go@v4
         with:
-          go-version:  ${{ env.GO_VERSION }}
+          go-version: ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
@@ -229,7 +229,6 @@ jobs:
 
       - uses: sigstore/cosign-installer@v3.0.5
       - uses: anchore/sbom-action/download-syft@v0.14.2
-
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -584,11 +583,11 @@ jobs:
 
       - name: Create manifests
         run: |
-          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-arm64v8
+          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-arm64v8
           docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}
           cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --yes
 
-          docker manifest create kubeshop/testkube-cypress-executor:latest --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress12-arm64v8
+          docker manifest create kubeshop/testkube-cypress-executor:latest --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-arm64v8
           docker manifest push -p kubeshop/testkube-cypress-executor:latest
           cosign sign kubeshop/testkube-cypress-executor:latest --yes
 
