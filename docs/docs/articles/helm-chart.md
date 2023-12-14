@@ -85,40 +85,40 @@ helm install testkube1 kubeshop/testkube --namespace testkube1 --set testkube-ap
 
 The following Helm defaults are used in the `testkube` chart:
 
-| Parameter                                  | Is optional | Default                              |
-| ------------------------------------------ | ----------- | ------------------------------------ |
-| mongodb.auth.enabled                       | yes         | false                                |
-| mongodb.service.port                       | yes         | "27017"                              |
-| mongodb.service.portName                   | yes         | "mongodb"                            |
-| mongodb.service.nodePort                   | yes         | true                                 |
-| mongodb.service.clusterIP                  | yes         | ""                                   |
-| mongodb.nameOverride                       | yes         | "mongodb"                            |
-| mongodb.fullnameOverride                   | yes         | "testkube-mongodb"                   |
-| testkube-api.image.repository              | yes         | "kubeshop/testkube-api-server"       |
-| testkube-api.image.pullPolicy              | yes         | "Always"                             |
-| testkube-api.image.tag                     | yes         | "latest"                             |
-| testkube-api.service.type                  | yes         | "NodePort"                           |
-| testkube-api.service.port                  | yes         | 8088                                 |
-| testkube-api.mongodb.dsn                   | yes         | "mongodb://testkube-mongodb:27017"   |
-| testkube-api.nats.uri                      | yes         | "nats://testkube-nats"               |
-| testkube-api.telemetryEnabled              | yes         | true                                 |
-| testkube-api.storage.endpoint              | yes         | testkube-minio-service-testkube:9000 |
-| testkube-api.storage.accessKeyId           | yes         | minio                                |
-| testkube-api.storage.accessKey             | yes         | minio123                             |
-| testkube-api.storage.scrapperEnabled       | yes         | true                                 |
-| testkube-api.slackToken                    | yes         | ""                                   |
-| testkube-api.slackSecret                   | yes         | ""                                   |
-| testkube-api.slackConfig                   | yes         | ""                                   |
-| testkube-api.jobServiceAccountName         | yes         | ""                                   |
-| testkube-api.logs.storage                  | no          | "minio"                              |
-| testkube-api.logs.bucket                   | no          | "testkube-logs"                      |
-| testkube-api.cdeventsTarget                | yes         | ""                                   |
-| testkube-api.dashboardUri                  | yes         | ""                                   |
-| testkube-api.clusterName                   | yes         | ""                                   |
-| testkube-api.storage.compressArtifacts     | yes         | true                                 |
-| testkube-api.enableSecretsEndpoint         | yes         | false                                |
-| testkube-api.disableMongoMigrations        | yes         | false                                |
-| testkube-api.installOnlySpecifiedExecutors | no          | ""                                   |
+| Parameter                              | Is optional | Default                              |
+| -------------------------------------- | ----------- | ------------------------------------ |
+| mongodb.auth.enabled                   | yes         | false                                |
+| mongodb.service.port                   | yes         | "27017"                              |
+| mongodb.service.portName               | yes         | "mongodb"                            |
+| mongodb.service.nodePort               | yes         | true                                 |
+| mongodb.service.clusterIP              | yes         | ""                                   |
+| mongodb.nameOverride                   | yes         | "mongodb"                            |
+| mongodb.fullnameOverride               | yes         | "testkube-mongodb"                   |
+| testkube-api.image.repository          | yes         | "kubeshop/testkube-api-server"       |
+| testkube-api.image.pullPolicy          | yes         | "Always"                             |
+| testkube-api.image.tag                 | yes         | "latest"                             |
+| testkube-api.service.type              | yes         | "NodePort"                           |
+| testkube-api.service.port              | yes         | 8088                                 |
+| testkube-api.mongodb.dsn               | yes         | "mongodb://testkube-mongodb:27017"   |
+| testkube-api.nats.uri                  | yes         | "nats://testkube-nats"               |
+| testkube-api.telemetryEnabled          | yes         | true                                 |
+| testkube-api.storage.endpoint          | yes         | testkube-minio-service-testkube:9000 |
+| testkube-api.storage.accessKeyId       | yes         | minio                                |
+| testkube-api.storage.accessKey         | yes         | minio123                             |
+| testkube-api.storage.scrapperEnabled   | yes         | true                                 |
+| testkube-api.slackToken                | yes         | ""                                   |
+| testkube-api.slackSecret               | yes         | ""                                   |
+| testkube-api.slackConfig               | yes         | ""                                   |
+| testkube-api.jobServiceAccountName     | yes         | ""                                   |
+| testkube-api.logs.storage              | no          | "minio"                              |
+| testkube-api.logs.bucket               | no          | "testkube-logs"                      |
+| testkube-api.cdeventsTarget            | yes         | ""                                   |
+| testkube-api.dashboardUri              | yes         | ""                                   |
+| testkube-api.clusterName               | yes         | ""                                   |
+| testkube-api.storage.compressArtifacts | yes         | true                                 |
+| testkube-api.enableSecretsEndpoint     | yes         | false                                |
+| testkube-api.disableMongoMigrations    | yes         | false                                |
+| testkube-api.enabledExecutors          | no          | ""                                   |
 
 >For more configuration parameters of a `MongoDB` chart please visit: 
 <https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>
