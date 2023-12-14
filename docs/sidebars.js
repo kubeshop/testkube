@@ -217,7 +217,7 @@ const sidebars = {
         },
         "openapi",
         "articles/metrics",
-        "articles/artifacts-storage",
+        "articles/artifacts",
         "articles/testkube-dependencies",
         "articles/architecture",
         "articles/telemetry",

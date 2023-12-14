@@ -19,7 +19,7 @@ testkube run test <testName> [flags]
       --artifact-mask stringArray                  regexp to filter scraped artifacts, single or comma separated, like report/.* or .*\.json,.*\.js$
       --artifact-omit-folder-per-execution         don't store artifacts in execution folder
       --artifact-shared-between-pods               whether to share volume between pods
-      --artifact-storage-bucket string             artifact storage nucket
+      --artifact-storage-bucket string             artifact storage bucket
       --artifact-storage-class-name string         artifact storage class name for container executor
       --artifact-volume-mount-path string          artifact volume mount path for container executor
       --command stringArray                        command passed to image in executor
