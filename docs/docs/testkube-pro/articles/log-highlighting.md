@@ -14,7 +14,7 @@ export const ProBadge = () => {
 
 In Testkube Pro, we highlight relevant keywords in logs for faster debugging. To use this feature, open execution details.
 
-After that, all the lines that may be relevant will be highlighted in the interface.
+On this screen, all of the lines that may be relevant will be highlighted in the interface.
 
 ![log-highlighting.png](../../img/log-highlighting.png)
 
