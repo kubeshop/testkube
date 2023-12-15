@@ -76,6 +76,7 @@ func NewInitCmd() *cobra.Command {
 	}
 
 	common.PopulateHelmFlags(cmd, &options)
+	common.PopulateMasterFlags(cmd, &options)
 
 	cmd.Flags().BoolVar(&options.MultiNamespace, "multi-namespace", false, "multi namespace mode")
 	cmd.Flags().BoolVar(&options.NoOperator, "no-operator", false, "should operator be installed (for more instances in multi namespace mode it should be set to true)")

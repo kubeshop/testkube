@@ -181,6 +181,7 @@ func NewConnectCmd() *cobra.Command {
 	}
 
 	common.PopulateHelmFlags(cmd, &opts)
+	common.PopulateMasterFlags(cmd, &opts)
 
 	cmd.Flags().IntVar(&opts.MinioReplicas, "minio-replicas", 0, "MinIO replicas")
 	cmd.Flags().IntVar(&opts.MongoReplicas, "mongo-replicas", 0, "MongoDB replicas")

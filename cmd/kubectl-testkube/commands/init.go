@@ -53,6 +53,7 @@ func NewInitCmd() *cobra.Command {
 	}
 
 	common.PopulateHelmFlags(cmd, &options)
+	common.PopulateMasterFlags(cmd, &options)
 
 	return cmd
 }
