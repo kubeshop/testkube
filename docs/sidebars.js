@@ -184,6 +184,7 @@ const sidebars = {
         "testkube-pro/articles/AI-test-insights",
         "testkube-pro/articles/status-pages",
         "testkube-pro/articles/cached-results",
+        "testkube-pro/articles/log-highlighting",
       ],
     },
     {
