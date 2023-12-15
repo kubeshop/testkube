@@ -45,7 +45,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	}
 
 	request.Number = s.getNextExecutionNumber(test.Name)
-	if request.Name == "" {
+	if request.Name == "" || request.TestSuiteName != "" {
 		request.Name = fmt.Sprintf("%s-%d", test.Name, request.Number)
 	}
 
