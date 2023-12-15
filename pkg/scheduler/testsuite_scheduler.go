@@ -387,11 +387,11 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 
 	ids := make(map[string]struct{})
 	testNames := make(map[string]struct{})
-	for _, testName := range result.Step.DownloadArtifacts.PreviousTestNames {
-		testNames[testName] = struct{}{}
-	}
-
 	if result.Step != nil && result.Step.DownloadArtifacts != nil {
+		for _, testName := range result.Step.DownloadArtifacts.PreviousTestNames {
+			testNames[testName] = struct{}{}
+		}
+
 		for i := range previousSteps {
 			for j := range previousSteps[i].Execute {
 				if previousSteps[i].Execute[j].Execution != nil &&
