@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM postman/newman:6-alpine
+FROM postman/newman:6.0.0-alpine
 
 COPY postman /bin/runner
 RUN npm install -g newman
