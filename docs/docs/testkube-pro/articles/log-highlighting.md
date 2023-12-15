@@ -23,7 +23,7 @@ or use the scrollbar where all relevant lines are marked.
 
 ## Filtering
 
-To decide on the active highlight categories, you may click "Highlight for keywords" button.
+To decide on the active highlight categories, you may click the "Highlight for keywords" button.
 By default, all the categories are active.
 
 ![log-highlighting-filtering.png](../../img/log-highlighting-filtering.png)
