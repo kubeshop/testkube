@@ -44,8 +44,5 @@ func NewLoginCmd() *cobra.Command {
 
 	common.PopulateMasterFlags(cmd, &opts)
 
-	cmd.Flags().StringVar(&opts.Master.OrgId, "org-id", "", "Testkube Cloud organization id")
-	cmd.Flags().StringVar(&opts.Master.EnvId, "env-id", "", "Testkube Cloud environment id")
-
 	return cmd
 }
