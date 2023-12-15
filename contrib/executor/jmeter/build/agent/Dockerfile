@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1
+# Built on custom Testkube image
 FROM kubeshop/testkube-jmeter-executor:custom-jmeter-image
 COPY jmeter /bin/runner
 
