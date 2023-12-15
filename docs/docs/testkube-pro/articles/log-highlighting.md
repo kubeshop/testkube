@@ -18,7 +18,7 @@ On this screen, all the lines that may be relevant will be highlighted in the in
 
 ![log-highlighting.png](../../img/log-highlighting.png)
 
-You may navigate through the highlighted lines with the arrows on top of the interface,
+You may navigate through the highlighted lines with the arrows on top of the interface
 or using the scrollbar where all relevant lines are marked.
 
 ## Filtering
