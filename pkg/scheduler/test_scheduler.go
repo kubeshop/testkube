@@ -49,6 +49,10 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 		request.Name = fmt.Sprintf("%s-%d", test.Name, request.Number)
 	}
 
+	if request.TestSuiteName != "" {
+		request.Name = fmt.Sprintf("%s-%d", request.Name, request.Number)
+	}
+
 	// test name + test execution name should be unique
 	execution, _ = s.executionResults.GetByNameAndTest(ctx, request.Name, test.Name)
 	if execution.Name == request.Name {
