@@ -2,6 +2,8 @@ package common
 
 import (
 	"fmt"
+
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 )
 
 const (
@@ -12,7 +14,7 @@ const (
 	defaultRootDomain  = "testkube.io"
 )
 
-func NewCloudUris(apiPrefix, uiPrefix, agentPrefix, rootDomain string, insecure bool) CloudUris {
+func NewMasterUris(apiPrefix, uiPrefix, agentPrefix, rootDomain string, insecure bool) config.MasterURIs {
 	protocol := "https"
 	if insecure {
 		protocol = "http"
@@ -30,7 +32,7 @@ func NewCloudUris(apiPrefix, uiPrefix, agentPrefix, rootDomain string, insecure 
 		rootDomain = "testkube.io"
 	}
 
-	return CloudUris{
+	return config.MasterURIs{
 		ApiPrefix:  apiPrefix,
 		RootDomain: rootDomain,
 		Api:        fmt.Sprintf("%s://%s.%s", protocol, apiPrefix, rootDomain),
@@ -38,14 +40,4 @@ func NewCloudUris(apiPrefix, uiPrefix, agentPrefix, rootDomain string, insecure 
 		Ui:         fmt.Sprintf("%s://%s.%s", protocol, uiPrefix, rootDomain),
 		Auth:       fmt.Sprintf("%s://%s.%s/idp", protocol, apiPrefix, rootDomain),
 	}
-}
-
-type CloudUris struct {
-	UiPrefix   string `json:"uiPrefix"`
-	ApiPrefix  string `json:"apiPrefix"`
-	RootDomain string `json:"rootDomain"`
-	Api        string `json:"api"`
-	Agent      string `json:"agent"`
-	Ui         string `json:"ui"`
-	Auth       string `json:"auth"`
 }

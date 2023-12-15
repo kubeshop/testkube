@@ -83,41 +83,41 @@ func NewConnectCmd() *cobra.Command {
 				refreshToken string
 			)
 			// if no agent is passed create new environment and get its token
-			if opts.CloudAgentToken == "" && opts.CloudOrgId == "" && opts.CloudEnvId == "" {
-				token, refreshToken, err = common.LoginUser(opts.CloudUris.Auth)
+			if opts.Master.AgentToken == "" && opts.Master.OrgId == "" && opts.Master.EnvId == "" {
+				token, refreshToken, err = common.LoginUser(opts.Master.URIs.Auth)
 				ui.ExitOnError("login", err)
 
-				orgId, orgName, err := uiGetOrganizationId(opts.CloudApiUrlPrefix+opts.CloudRootDomain, token)
+				orgId, orgName, err := uiGetOrganizationId(opts.Master.ApiUrlPrefix+opts.Master.RootDomain, token)
 				ui.ExitOnError("getting organization", err)
 
 				envName, err := uiGetEnvName()
 				ui.ExitOnError("getting environment name", err)
 
-				envClient := cloudclient.NewEnvironmentsClient(opts.CloudApiUrlPrefix+opts.CloudRootDomain, token, orgId)
+				envClient := cloudclient.NewEnvironmentsClient(opts.Master.ApiUrlPrefix+opts.Master.RootDomain, token, orgId)
 				env, err := envClient.Create(cloudclient.Environment{Name: envName, Owner: orgId})
 				ui.ExitOnError("creating environment", err)
 
-				opts.CloudOrgId = orgId
-				opts.CloudEnvId = env.Id
-				opts.CloudAgentToken = env.AgentToken
+				opts.Master.OrgId = orgId
+				opts.Master.EnvId = env.Id
+				opts.Master.AgentToken = env.AgentToken
 
 				newStatus = append(
 					newStatus,
 					[][]string{
 						{"Testkube will be connected to cloud org/env"},
-						{"Organization Id", opts.CloudOrgId},
+						{"Organization Id", opts.Master.OrgId},
 						{"Organization name", orgName},
-						{"Environment Id", opts.CloudEnvId},
+						{"Environment Id", opts.Master.EnvId},
 						{"Environment name", env.Name},
 						{ui.Separator, ""},
 					}...)
 			}
 
 			// validate if user created env - or was passed from flags
-			if opts.CloudEnvId == "" {
+			if opts.Master.EnvId == "" {
 				ui.Failf("You need pass valid environment id to connect to cloud")
 			}
-			if opts.CloudOrgId == "" {
+			if opts.Master.OrgId == "" {
 				ui.Failf("You need pass valid organization id to connect to cloud")
 			}
 
@@ -168,10 +168,10 @@ func NewConnectCmd() *cobra.Command {
 
 			ui.H2("Saving testkube cli cloud context")
 			if token == "" && !common.IsUserLoggedIn(cfg, opts) {
-				token, refreshToken, err = common.LoginUser(opts.CloudUris.Auth)
+				token, refreshToken, err = common.LoginUser(opts.Master.URIs.Auth)
 				ui.ExitOnError("user login", err)
 			}
-			err = common.PopulateLoginDataToContext(opts.CloudOrgId, opts.CloudEnvId, token, refreshToken, opts, cfg)
+			err = common.PopulateLoginDataToContext(opts.Master.OrgId, opts.Master.EnvId, token, refreshToken, opts, cfg)
 
 			ui.ExitOnError("Setting cloud environment context", err)
 
@@ -181,35 +181,17 @@ func NewConnectCmd() *cobra.Command {
 
 			ui.Success("You can now login to Testkube Cloud and validate your connection:")
 			ui.NL()
-			ui.Link("https://cloud." + opts.CloudRootDomain + "/organization/" + opts.CloudOrgId + "/environment/" + opts.CloudEnvId + "/dashboard/tests")
+			ui.Link("https://cloud." + opts.Master.RootDomain + "/organization/" + opts.Master.OrgId + "/environment/" + opts.Master.EnvId + "/dashboard/tests")
 
 			ui.NL(2)
 		},
 	}
 
-	cmd.Flags().StringVar(&opts.Chart, "chart", "kubeshop/testkube", "chart name (usually you don't need to change it)")
-	cmd.Flags().StringVar(&opts.Name, "name", "testkube", "installation name (usually you don't need to change it)")
-	cmd.Flags().StringVar(&opts.Namespace, "namespace", "testkube", "namespace where to install")
-	cmd.Flags().StringVar(&opts.Values, "values", "", "path to Helm values file")
-
-	cmd.Flags().StringVar(&opts.CloudAgentToken, "agent-token", "", "Testkube Cloud agent key [required for cloud mode]")
-	cmd.Flags().StringVar(&opts.CloudOrgId, "org-id", "", "Testkube Cloud organization id [required for cloud mode]")
-	cmd.Flags().StringVar(&opts.CloudEnvId, "env-id", "", "Testkube Cloud environment id [required for cloud mode]")
-
-	common.PopulateProUriFlags(cmd, &opts)
-
-	cmd.Flags().BoolVar(&opts.NoMinio, "no-minio", false, "don't install MinIO")
-	cmd.Flags().BoolVar(&opts.NoDashboard, "no-dashboard", false, "don't install dashboard")
-	cmd.Flags().BoolVar(&opts.NoMongo, "no-mongo", false, "don't install MongoDB")
+	common.PopulateHelmFlags(cmd, &opts)
 
 	cmd.Flags().IntVar(&opts.MinioReplicas, "minio-replicas", 0, "MinIO replicas")
 	cmd.Flags().IntVar(&opts.MongoReplicas, "mongo-replicas", 0, "MongoDB replicas")
 	cmd.Flags().IntVar(&opts.DashboardReplicas, "dashboard-replicas", 0, "Dashboard replicas")
-
-	cmd.Flags().BoolVar(&opts.NoConfirm, "no-confirm", false, "don't ask for confirmation - unatended installation mode")
-
-	cmd.Flags().BoolVar(&opts.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
-
 	return cmd
 }
 

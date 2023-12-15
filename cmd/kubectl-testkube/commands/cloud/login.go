@@ -16,18 +16,18 @@ func NewLoginCmd() *cobra.Command {
 		Aliases: []string{"d"},
 		Short:   "[Deprecated] Login to Testkube Pro",
 		Run: func(cmd *cobra.Command, args []string) {
-			token, refreshToken, err := common.LoginUser(opts.CloudUris.Auth)
+			token, refreshToken, err := common.LoginUser(opts.Master.URIs.Auth)
 			ui.ExitOnError("getting token", err)
 
-			orgID := opts.CloudOrgId
-			envID := opts.CloudEnvId
+			orgID := opts.Master.OrgId
+			envID := opts.Master.EnvId
 
 			if orgID == "" {
-				orgID, _, err = uiGetOrganizationId(opts.CloudRootDomain, token)
+				orgID, _, err = uiGetOrganizationId(opts.Master.RootDomain, token)
 				ui.ExitOnError("getting organization", err)
 			}
 			if envID == "" {
-				envID, _, err = uiGetEnvironmentID(opts.CloudRootDomain, token, orgID)
+				envID, _, err = uiGetEnvironmentID(opts.Master.RootDomain, token, orgID)
 				ui.ExitOnError("getting environment", err)
 			}
 			cfg, err := config.Load()
@@ -42,10 +42,10 @@ func NewLoginCmd() *cobra.Command {
 		},
 	}
 
-	common.PopulateProUriFlags(cmd, &opts)
+	common.PopulateMasterFlags(cmd, &opts)
 
-	cmd.Flags().StringVar(&opts.CloudOrgId, "org-id", "", "Testkube Cloud organization id")
-	cmd.Flags().StringVar(&opts.CloudEnvId, "env-id", "", "Testkube Cloud environment id")
+	cmd.Flags().StringVar(&opts.Master.OrgId, "org-id", "", "Testkube Cloud organization id")
+	cmd.Flags().StringVar(&opts.Master.EnvId, "env-id", "", "Testkube Cloud environment id")
 
 	return cmd
 }

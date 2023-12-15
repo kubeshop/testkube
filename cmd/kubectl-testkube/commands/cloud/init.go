@@ -62,11 +62,11 @@ func NewInitCmd() *cobra.Command {
 			ui.H2("Saving testkube cli cloud context")
 			var token, refreshToken string
 			if !common.IsUserLoggedIn(cfg, options) {
-				token, refreshToken, err = common.LoginUser(options.CloudUris.Auth)
+				token, refreshToken, err = common.LoginUser(options.Master.URIs.Auth)
 				sendErrTelemetry(cmd, cfg, "login")
 				ui.ExitOnError("user login", err)
 			}
-			err = common.PopulateLoginDataToContext(options.CloudOrgId, options.CloudEnvId, token, refreshToken, options, cfg)
+			err = common.PopulateLoginDataToContext(options.Master.OrgId, options.Master.EnvId, token, refreshToken, options, cfg)
 			sendErrTelemetry(cmd, cfg, "setting_context")
 			ui.ExitOnError("Setting cloud environment context", err)
 
@@ -75,23 +75,10 @@ func NewInitCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&options.Chart, "chart", "kubeshop/testkube", "chart name (usually you don't need to change it)")
-	cmd.Flags().StringVar(&options.Name, "name", "testkube", "installation name (usually you don't need to change it)")
-	cmd.Flags().StringVar(&options.Values, "values", "", "path to Helm values file")
+	common.PopulateHelmFlags(cmd, &options)
 
 	cmd.Flags().BoolVar(&options.MultiNamespace, "multi-namespace", false, "multi namespace mode")
 	cmd.Flags().BoolVar(&options.NoOperator, "no-operator", false, "should operator be installed (for more instances in multi namespace mode it should be set to true)")
-	cmd.Flags().StringVar(&options.Namespace, "namespace", "testkube", "namespace where to install")
-
-	cmd.Flags().StringVar(&options.CloudAgentToken, "agent-token", "", "Testkube Cloud agent key")
-	cmd.Flags().StringVar(&options.CloudOrgId, "org-id", "", "Testkube Cloud organization id")
-	cmd.Flags().StringVar(&options.CloudEnvId, "env-id", "", "Testkube Cloud environment id")
-
-	common.PopulateProUriFlags(cmd, &options)
-
-	cmd.Flags().BoolVar(&options.NoConfirm, "no-confirm", false, "don't ask for confirmation - unatended installation mode")
-	cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
-
 	return cmd
 }
 

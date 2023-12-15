@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -47,27 +48,83 @@ func CreateVariables(cmd *cobra.Command, ignoreSecretVariable bool) (vars map[st
 	return
 }
 
-func PopulateProUriFlags(cmd *cobra.Command, opts *HelmOptions) {
+func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions) {
 
-	// TODO priority of values
-	// order
-	// pro
-	// cloud
-	// default value
+	cfg, err := config.Load()
+	if err != nil {
+		return
+	}
 
 	var (
-	// cloudAPIUri string
+		apiURIPrefix, uiURIPrefix, agentURIPrefix, rootDomain string
+		insecure                                              bool
 	)
 
-	// TODO depracate this
-	cmd.Flags().BoolVar(&opts.CloudClientInsecure, "cloud-insecure", false, "[deprecated] should client connect in insecure mode (will use http instead of https)")
-	cmd.Flags().StringVar(&opts.CloudAgentUrlPrefix, "cloud-agent-prefix", "agent", "defaults to 'agent', usually don't need to be changed [required for custom cloud mode]")
-	cmd.Flags().StringVar(&opts.CloudApiUrlPrefix, "cloud-api-prefix", "api", "defaults to 'api', usually don't need to be changed [required for custom cloud mode]")
-	cmd.Flags().StringVar(&opts.CloudUiUrlPrefix, "cloud-ui-prefix", "ui", "defaults to 'ui', usually don't need to be changed [required for custom cloud mode]")
-	cmd.Flags().StringVar(&opts.CloudRootDomain, "cloud-root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().BoolVar(&insecure, "cloud-insecure", false, "should client connect in insecure mode (will use http instead of https)")
+	cmd.Flags().MarkDeprecated("cloud-insecure", "use --master-insecure instead")
+	cmd.Flags().StringVar(&agentURIPrefix, "cloud-agent-prefix", "agent", "defaults to 'agent', usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().MarkDeprecated("cloud-agent-prefix", "use --agent-prefix instead")
+	cmd.Flags().StringVar(&apiURIPrefix, "cloud-api-prefix", "api", "defaults to 'api', usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().MarkDeprecated("cloud-api-prefix", "use --api-prefix instead")
+	cmd.Flags().StringVar(&uiURIPrefix, "cloud-ui-prefix", "ui", "defaults to 'ui', usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().MarkDeprecated("cloud-ui-prefix", "use --ui-prefix instead")
+	cmd.Flags().StringVar(&rootDomain, "cloud-root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().MarkDeprecated("cloud-root-domain", "use --root-domain instead")
 
-	// TODO handle pro change here
-	// cmd.Flags().StringVar(&options.CloudRootDomain, "pro-root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for pro mode]")
+	cmd.Flags().BoolVar(&opts.Master.Insecure, "master-insecure", false, "should client connect in insecure mode (will use http instead of https)")
+	cmd.Flags().StringVar(&opts.Master.AgentUrlPrefix, "agent-prefix", "agent", "defaults to 'agent', usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().StringVar(&opts.Master.ApiUrlPrefix, "api-prefix", "api", "defaults to 'api', usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().StringVar(&opts.Master.UiUrlPrefix, "ui-prefix", "ui", "defaults to 'ui', usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().StringVar(&opts.Master.RootDomain, "root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for custom cloud mode]")
 
-	opts.CloudUris = NewCloudUris(opts.CloudApiUrlPrefix, opts.CloudUiUrlPrefix, opts.CloudAgentUrlPrefix, opts.CloudRootDomain, opts.CloudClientInsecure)
+	cmd.Flags().StringVar(&opts.Master.URIs.Agent, "agent-uri", "", "Testkube Cloud agent URI [required for centralized mode]")
+	cmd.Flags().StringVar(&opts.Master.AgentToken, "agent-token", "", "Testkube Cloud agent key [required for centralized mode]")
+	cmd.Flags().StringVar(&opts.Master.OrgId, "org-id", "", "Testkube Cloud organization id [required for centralized mode]")
+	cmd.Flags().StringVar(&opts.Master.EnvId, "env-id", "", "Testkube Cloud environment id [required for centralized mode]")
+
+	if !cmd.Flags().Changed("master-insecure") {
+		if !cmd.Flags().Changed("cloud-insecure") {
+			opts.Master.Insecure = cfg.Master.Insecure
+		} else {
+			opts.Master.Insecure = insecure
+		}
+	}
+
+	if !cmd.Flags().Changed("agent-prefix") {
+		if !cmd.Flags().Changed("cloud-agent-prefix") {
+			opts.Master.AgentUrlPrefix = cfg.Master.AgentUrlPrefix
+		} else {
+			opts.Master.AgentUrlPrefix = agentURIPrefix
+		}
+	}
+
+	if !cmd.Flags().Changed("api-prefix") {
+		if !cmd.Flags().Changed("cloud-api-prefix") {
+			opts.Master.ApiUrlPrefix = cfg.Master.ApiUrlPrefix
+		} else {
+			opts.Master.ApiUrlPrefix = apiURIPrefix
+		}
+	}
+
+	if !cmd.Flags().Changed("ui-prefix") {
+		if !cmd.Flags().Changed("cloud-ui-prefix") {
+			opts.Master.UiUrlPrefix = cfg.Master.UiUrlPrefix
+		} else {
+			opts.Master.UiUrlPrefix = uiURIPrefix
+		}
+	}
+
+	if !cmd.Flags().Changed("root-domain") {
+		if !cmd.Flags().Changed("cloud-root-domain") {
+			opts.Master.RootDomain = cfg.Master.RootDomain
+		} else {
+			opts.Master.RootDomain = rootDomain
+		}
+	}
+
+	opts.Master.URIs = NewMasterUris(opts.Master.ApiUrlPrefix,
+		opts.Master.UiUrlPrefix,
+		opts.Master.AgentUrlPrefix,
+		opts.Master.RootDomain,
+		opts.Master.Insecure)
 }
