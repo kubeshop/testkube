@@ -27,3 +27,7 @@ const (
 	UPDATED_EventType               EventType = "updated"
 	DELETED_EventType               EventType = "deleted"
 )
+
+func (e EventType) String() string {
+	return string(e)
+}
