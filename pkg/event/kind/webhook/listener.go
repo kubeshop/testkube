@@ -170,6 +170,7 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 
 	var tmpl *template.Template
 	tmpl, err := utils.NewTemplate(field).Funcs(template.FuncMap{
+		"tostr":                            func(in any) string { return fmt.Sprintf("%v", in) },
 		"executionstatustostring":          testkube.ExecutionStatusString,
 		"testsuiteexecutionstatustostring": testkube.TestSuiteExecutionStatusString,
 	}).Parse(body)
