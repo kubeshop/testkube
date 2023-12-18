@@ -16,6 +16,7 @@ import (
 	thttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/utils"
+	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
 var _ common.Listener = (*WebhookListener)(nil)
@@ -170,6 +171,7 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 
 	var tmpl *template.Template
 	tmpl, err := utils.NewTemplate(field).Funcs(template.FuncMap{
+		"tostr":                            text.ToStr,
 		"executionstatustostring":          testkube.ExecutionStatusString,
 		"testsuiteexecutionstatustostring": testkube.TestSuiteExecutionStatusString,
 	}).Parse(body)
