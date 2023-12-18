@@ -92,7 +92,7 @@ dockers:
   - dockerfile: "./contrib/executor/jmeter/build/agent/Dockerfile.jmeter5.6.2-jdk21"
     use: buildx
     goos: linux
-    goarch: amd64
+    goarch: arm64
     image_templates:
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .Version }}-jmeter5.6.2-jdk21-arm64v8{{ end }}"
       - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .ShortCommit }}{{ end }}"
