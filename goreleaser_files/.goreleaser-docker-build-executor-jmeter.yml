@@ -30,7 +30,7 @@ dockers:
     goos: linux
     goarch: amd64
     image_templates:
-      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .ShortCommit }}{{ end }}"
+#      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .ShortCommit }}{{ end }}"
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .Version }}-amd64{{ end }}"
     build_flag_templates:
       - "--platform=linux/amd64"
@@ -95,6 +95,7 @@ dockers:
     goarch: amd64
     image_templates:
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .Version }}-jmeter5.6.2-jdk21-arm64v8{{ end }}"
+      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .ShortCommit }}{{ end }}"
     build_flag_templates:
       - "--platform=linux/arm64v8"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
