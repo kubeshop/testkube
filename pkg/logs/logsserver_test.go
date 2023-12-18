@@ -29,6 +29,9 @@ func TestGRPC_Server(t *testing.T) {
 
 	go ls.RunGRPCServer(ctx)
 
+	// allow server to splin up
+	time.Sleep(time.Millisecond * 100)
+
 	expectedCount := 0
 
 	stream := client.NewGrpcClient(ls.grpcAddress)
