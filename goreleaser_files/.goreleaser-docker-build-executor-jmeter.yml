@@ -96,7 +96,7 @@ dockers:
     image_templates:
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .Version }}-jmeter5.6.2-jdk21-arm64v8{{ end }}"
     build_flag_templates:
-      - "--platform=linux/amd64"
+      - "--platform=linux/arm64v8"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
       - "--label=org.opencontainers.image.created={{ .Date}}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
