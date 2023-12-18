@@ -589,6 +589,33 @@ func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDet
 		return nil, err
 	}
 
+	enabledExecutors, err := parser.LoadConfigFromStringOrFile(
+		cfg.TestkubeEnabledExecutors,
+		cfg.TestkubeConfigDir,
+		"enabledExecutors",
+		"enabled executors",
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	specifiedExecutors := make(map[string]struct{})
+	if enabledExecutors != "" {
+		for _, executor := range strings.Split(enabledExecutors, ",") {
+			if strings.TrimSpace(executor) == "" {
+				continue
+			}
+
+			specifiedExecutors[strings.TrimSpace(executor)] = struct{}{}
+		}
+
+		for i := len(executors) - 1; i >= 0; i-- {
+			if _, ok := specifiedExecutors[executors[i].Name]; !ok {
+				executors = append(executors[:i], executors[i+1:]...)
+			}
+		}
+	}
+
 	return executors, nil
 }
 
