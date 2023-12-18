@@ -49,12 +49,6 @@ func CreateVariables(cmd *cobra.Command, ignoreSecretVariable bool) (vars map[st
 }
 
 func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions) {
-
-	cfg, err := config.Load()
-	if err != nil {
-		return
-	}
-
 	var (
 		apiURIPrefix, uiURIPrefix, agentURIPrefix, rootDomain string
 		insecure                                              bool
@@ -82,43 +76,47 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions) {
 	cmd.Flags().StringVar(&opts.Master.OrgId, "org-id", "", "Testkube Cloud organization id [required for centralized mode]")
 	cmd.Flags().StringVar(&opts.Master.EnvId, "env-id", "", "Testkube Cloud environment id [required for centralized mode]")
 
+}
+
+func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data) {
+	configured := cfg != nil
 	if !cmd.Flags().Changed("master-insecure") {
-		if !cmd.Flags().Changed("cloud-insecure") {
+		if cmd.Flags().Changed("cloud-insecure") {
+			opts.Master.Insecure = cmd.Flag("cloud-insecure").Value.String() == "true"
+		} else if configured && cfg.Master.Insecure {
 			opts.Master.Insecure = cfg.Master.Insecure
-		} else {
-			opts.Master.Insecure = insecure
 		}
 	}
 
 	if !cmd.Flags().Changed("agent-prefix") {
-		if !cmd.Flags().Changed("cloud-agent-prefix") {
+		if cmd.Flags().Changed("cloud-agent-prefix") {
+			opts.Master.AgentUrlPrefix = cmd.Flag("cloud-agent-prefix").Value.String()
+		} else if configured && cfg.Master.AgentUrlPrefix != "" {
 			opts.Master.AgentUrlPrefix = cfg.Master.AgentUrlPrefix
-		} else {
-			opts.Master.AgentUrlPrefix = agentURIPrefix
 		}
 	}
 
 	if !cmd.Flags().Changed("api-prefix") {
-		if !cmd.Flags().Changed("cloud-api-prefix") {
+		if cmd.Flags().Changed("cloud-api-prefix") {
+			opts.Master.ApiUrlPrefix = cmd.Flag("cloud-api-prefix").Value.String()
+		} else if configured && cfg.Master.ApiUrlPrefix != "" {
 			opts.Master.ApiUrlPrefix = cfg.Master.ApiUrlPrefix
-		} else {
-			opts.Master.ApiUrlPrefix = apiURIPrefix
 		}
 	}
 
 	if !cmd.Flags().Changed("ui-prefix") {
-		if !cmd.Flags().Changed("cloud-ui-prefix") {
+		if cmd.Flags().Changed("cloud-ui-prefix") {
+			opts.Master.UiUrlPrefix = cmd.Flag("cloud-ui-prefix").Value.String()
+		} else if configured && cfg.Master.UiUrlPrefix != "" {
 			opts.Master.UiUrlPrefix = cfg.Master.UiUrlPrefix
-		} else {
-			opts.Master.UiUrlPrefix = uiURIPrefix
 		}
 	}
 
 	if !cmd.Flags().Changed("root-domain") {
-		if !cmd.Flags().Changed("cloud-root-domain") {
+		if cmd.Flags().Changed("cloud-root-domain") {
+			opts.Master.RootDomain = cmd.Flag("cloud-root-domain").Value.String()
+		} else if configured && cfg.Master.RootDomain != "" {
 			opts.Master.RootDomain = cfg.Master.RootDomain
-		} else {
-			opts.Master.RootDomain = rootDomain
 		}
 	}
 

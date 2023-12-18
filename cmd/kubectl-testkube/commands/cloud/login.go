@@ -33,6 +33,8 @@ func NewLoginCmd() *cobra.Command {
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config file", err)
 
+			common.ProcessMasterFlags(cmd, &opts, &cfg)
+
 			err = common.PopulateLoginDataToContext(orgID, envID, token, refreshToken, opts, cfg)
 			ui.ExitOnError("saving config file", err)
 

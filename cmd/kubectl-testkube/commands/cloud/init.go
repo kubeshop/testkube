@@ -29,6 +29,9 @@ func NewInitCmd() *cobra.Command {
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config file", err)
 			ui.NL()
+
+			common.ProcessMasterFlags(cmd, &options, &cfg)
+
 			sendAttemptTelemetry(cmd, cfg)
 
 			// create new cloud uris

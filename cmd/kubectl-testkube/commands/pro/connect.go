@@ -49,6 +49,8 @@ func NewConnectCmd() *cobra.Command {
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config", err)
 
+			common.ProcessMasterFlags(cmd, &opts, &cfg)
+
 			var clusterContext string
 			if cfg.ContextType == config.ContextTypeKubeconfig {
 				clusterContext, err = common.GetCurrentKubernetesContext()

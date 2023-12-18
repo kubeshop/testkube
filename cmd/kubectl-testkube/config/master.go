@@ -1,15 +1,15 @@
 package config
 
 type Master struct {
-	AgentToken     string
-	IdToken        string
-	OrgId          string
-	EnvId          string
-	Insecure       bool
-	UiUrlPrefix    string
-	AgentUrlPrefix string
-	ApiUrlPrefix   string
-	RootDomain     string
+	AgentToken     string `json:"agentToken"`
+	IdToken        string `json:"idToken"`
+	OrgId          string `json:"orgId"`
+	EnvId          string `json:"envId"`
+	Insecure       bool   `json:"insecure"`
+	UiUrlPrefix    string `json:"uiUrlPrefix"`
+	AgentUrlPrefix string `json:"agentUrlPrefix"`
+	ApiUrlPrefix   string `json:"apiUrlPrefix"`
+	RootDomain     string `json:"rootDomain"`
 
 	URIs MasterURIs
 }
