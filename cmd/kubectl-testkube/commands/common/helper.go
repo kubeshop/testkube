@@ -86,7 +86,7 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data, isM
 		"--namespace", options.Namespace,
 		"--set", "testkube-api.cloud.url=" + options.Master.URIs.Agent,
 		"--set", "testkube-api.cloud.key=" + options.Master.AgentToken,
-		"--set", "testkube-api.cloud.uiURL" + options.Master.URIs.Ui,
+		"--set", "testkube-api.cloud.uiURL=" + options.Master.URIs.Ui,
 	}
 	if isMigration {
 		args = append(args, "--set", "testkube-api.cloud.migrate=true")
