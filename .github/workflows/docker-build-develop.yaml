@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - develop
+      - update-jmeter-image
     paths-ignore:
       - 'docs/**'
 env:
