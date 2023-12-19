@@ -30,7 +30,7 @@ dockers:
     goos: linux
     goarch: amd64
     image_templates:
-#      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .ShortCommit }}{{ end }}"
+      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .ShortCommit }}{{ end }}"
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .Version }}-amd64{{ end }}"
     build_flag_templates:
       - "--platform=linux/amd64"
@@ -68,48 +68,7 @@ dockers:
       - ./contrib/executor/jmeter/plugins/jmeter-plugins-manager-1.3.jar
       - ./contrib/executor/jmeter/scripts/entrypoint.sh
 
-  - dockerfile: "./contrib/executor/jmeter/build/agent/Dockerfile.jmeter5.6.2-jdk21"
-    use: buildx
-    goos: linux
-    goarch: amd64
-    image_templates:
-      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .ShortCommit }}{{ end }}"
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .Version }}-jmeter5.6.2-jdk21-amd64{{ end }}"
-    build_flag_templates:
-      - "--platform=linux/amd64"
-      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-      - "--label=org.opencontainers.image.created={{ .Date}}"
-      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-      - "--label=org.opencontainers.image.version={{ .Version }}"
-      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
-      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
-      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
-    extra_files:
-      - ./contrib/executor/jmeter/lib/jmeter-plugins-cmn-jmeter-0.6.jar
-      - ./contrib/executor/jmeter/plugins/jmeter-plugins-functions-2.1.jar
-      - ./contrib/executor/jmeter/plugins/jmeter-plugins-manager-1.3.jar
-      - ./contrib/executor/jmeter/scripts/entrypoint.sh
 
-  - dockerfile: "./contrib/executor/jmeter/build/agent/Dockerfile.jmeter5.6.2-jdk21"
-    use: buildx
-    goos: linux
-    goarch: arm64
-    image_templates:
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .Version }}-jmeter5.6.2-jdk21-arm64v8{{ end }}"
-    build_flag_templates:
-      - "--platform=linux/arm64"
-      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-      - "--label=org.opencontainers.image.created={{ .Date}}"
-      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-      - "--label=org.opencontainers.image.version={{ .Version }}"
-      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
-      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
-      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
-    extra_files:
-      - ./contrib/executor/jmeter/lib/jmeter-plugins-cmn-jmeter-0.6.jar
-      - ./contrib/executor/jmeter/plugins/jmeter-plugins-functions-2.1.jar
-      - ./contrib/executor/jmeter/plugins/jmeter-plugins-manager-1.3.jar
-      - ./contrib/executor/jmeter/scripts/entrypoint.sh
 docker_manifests:
   - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .Version }}{{ end }}"
     image_templates:
@@ -119,10 +78,6 @@ docker_manifests:
     image_templates:
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .Version }}-arm64v8{{ end }}"
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .Version }}-amd64{{ end }}"
-  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .Version }}-jmeter5.6.2-jdk21{{ end }}"
-    image_templates:
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .Version }}-jmeter5.6.2-jdk21-arm64v8{{ end }}"
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeter-executor:{{ .Version }}-jmeter5.6.2-jdk21-amd64{{ end }}"
 
 release:
   disable: true
