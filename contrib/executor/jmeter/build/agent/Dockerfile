@@ -2,7 +2,6 @@
 FROM kubeshop/testkube-jmeter-executor:jmeter5.6.2-jdk21-base
 COPY jmeter /bin/runner
 
-RUN apk --no-cache add ca-certificates git openssh sshpass
 ENV ENTRYPOINT_CMD="/executor_entrypoint.sh"
 WORKDIR /root/
 
