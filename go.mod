@@ -17,8 +17,8 @@ require (
 	github.com/fluxcd/pkg/apis/event v0.2.0
 	github.com/gabriel-vasile/mimetype v1.4.1
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572
-	github.com/gofiber/adaptor/v2 v2.1.29
-	github.com/gofiber/fiber/v2 v2.39.0
+	github.com/gofiber/adaptor/v2 v2.2.1
+	github.com/gofiber/fiber/v2 v2.44.0
 	github.com/gofiber/websocket/v2 v2.1.1
 	github.com/golang/mock v1.6.0
 	github.com/gookit/color v1.5.3
@@ -43,7 +43,7 @@ require (
 	github.com/spf13/afero v1.10.0
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
-	github.com/valyala/fasthttp v1.44.0
+	github.com/valyala/fasthttp v1.45.0
 	github.com/vektah/gqlparser/v2 v2.5.2-0.20230422221642-25e09f9d292d
 	go.mongodb.org/mongo-driver v1.11.0
 	go.uber.org/zap v1.26.0
@@ -112,14 +112,17 @@ require (
 	github.com/nats-io/nkeys v0.3.0 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/package-url/packageurl-go v0.1.0 // indirect
+	github.com/philhofer/fwd v1.1.2 // indirect
 	github.com/pquerna/cachecontrol v0.2.0 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.0.0 // indirect
-	github.com/savsgio/gotils v0.0.0-20220530130905-52f3993e8d6d // indirect
+	github.com/savsgio/dictpool v0.0.0-20221023140959-7bf2e61cea94 // indirect
+	github.com/savsgio/gotils v0.0.0-20230208104028-c358bd845dee // indirect
 	github.com/segmentio/backo-go v1.0.1 // indirect
 	github.com/shurcooL/githubv4 v0.0.0-20220922232305-70b4d362a8cb // indirect
 	github.com/shurcooL/graphql v0.0.0-20220606043923-3cf50f8a0a29 // indirect
 	github.com/thlib/go-timezone-local v0.0.0-20210907160436-ef149e42d28e // indirect
+	github.com/tinylib/msgp v1.1.8 // indirect
 	github.com/urfave/cli/v2 v2.24.4 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	github.com/yuin/goldmark v1.5.2 // indirect
@@ -132,7 +135,7 @@ require (
 )
 
 require (
-	github.com/andybalholm/brotli v1.0.4 // indirect
+	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
@@ -151,7 +154,7 @@ require (
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.15.15 // indirect
+	github.com/klauspost/compress v1.16.3 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
