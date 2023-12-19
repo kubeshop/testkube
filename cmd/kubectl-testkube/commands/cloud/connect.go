@@ -31,8 +31,6 @@ func NewConnectCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Warn("You are using a deprecated command, please switch to `testkube pro connect`.")
 
-			fmt.Printf("%+v\n", opts)
-
 			os.Exit(1)
 
 			client, _, err := common.GetClient(cmd)
