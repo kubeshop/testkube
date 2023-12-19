@@ -3,9 +3,10 @@ package common
 import (
 	"testing"
 
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 )
 
 var (
