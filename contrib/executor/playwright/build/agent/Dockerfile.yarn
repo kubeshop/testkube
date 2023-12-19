@@ -1,9 +1,8 @@
-## Base image consists of:
-# FROM mcr.microsoft.com/playwright:v1.30.0-focal
-# RUN apt-get update && apt-get install -y zip
-
 # syntax=docker/dockerfile:1
-FROM kubeshop/testkube-playwright-executor:base
+FROM mcr.microsoft.com/playwright:v1.40.0-jammy
+
+RUN apt-get update && apt-get install -y zip
+
 COPY playwright /bin/runner
 
 RUN mkdir /home/runner
