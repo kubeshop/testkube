@@ -56,20 +56,20 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions) {
 
 	cmd.Flags().BoolVar(&insecure, "cloud-insecure", false, "should client connect in insecure mode (will use http instead of https)")
 	cmd.Flags().MarkDeprecated("cloud-insecure", "use --master-insecure instead")
-	cmd.Flags().StringVar(&agentURIPrefix, "cloud-agent-prefix", "agent", "defaults to 'agent', usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().StringVar(&agentURIPrefix, "cloud-agent-prefix", defaultAgentPrefix, "defaults to 'agent', usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().MarkDeprecated("cloud-agent-prefix", "use --agent-prefix instead")
-	cmd.Flags().StringVar(&apiURIPrefix, "cloud-api-prefix", "api", "defaults to 'api', usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().StringVar(&apiURIPrefix, "cloud-api-prefix", defaultApiPrefix, "defaults to 'api', usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().MarkDeprecated("cloud-api-prefix", "use --api-prefix instead")
-	cmd.Flags().StringVar(&uiURIPrefix, "cloud-ui-prefix", "ui", "defaults to 'ui', usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().StringVar(&uiURIPrefix, "cloud-ui-prefix", defaultUiPrefix, "defaults to 'ui', usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().MarkDeprecated("cloud-ui-prefix", "use --ui-prefix instead")
-	cmd.Flags().StringVar(&rootDomain, "cloud-root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().StringVar(&rootDomain, "cloud-root-domain", defaultRootDomain, "defaults to testkube.io, usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().MarkDeprecated("cloud-root-domain", "use --root-domain instead")
 
 	cmd.Flags().BoolVar(&opts.Master.Insecure, "master-insecure", false, "should client connect in insecure mode (will use http instead of https)")
-	cmd.Flags().StringVar(&opts.Master.AgentUrlPrefix, "agent-prefix", "agent", "defaults to 'agent', usually don't need to be changed [required for custom cloud mode]")
-	cmd.Flags().StringVar(&opts.Master.ApiUrlPrefix, "api-prefix", "api", "defaults to 'api', usually don't need to be changed [required for custom cloud mode]")
-	cmd.Flags().StringVar(&opts.Master.UiUrlPrefix, "ui-prefix", "ui", "defaults to 'ui', usually don't need to be changed [required for custom cloud mode]")
-	cmd.Flags().StringVar(&opts.Master.RootDomain, "root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().StringVar(&opts.Master.AgentUrlPrefix, "agent-prefix", defaultAgentPrefix, "defaults to 'agent', usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().StringVar(&opts.Master.ApiUrlPrefix, "api-prefix", defaultApiPrefix, "defaults to 'api', usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().StringVar(&opts.Master.UiUrlPrefix, "ui-prefix", defaultUiPrefix, "defaults to 'ui', usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().StringVar(&opts.Master.RootDomain, "root-domain", defaultRootDomain, "defaults to testkube.io, usually don't need to be changed [required for custom cloud mode]")
 
 	cmd.Flags().StringVar(&opts.Master.URIs.Agent, "agent-uri", "", "Testkube Cloud agent URI [required for centralized mode]")
 	cmd.Flags().StringVar(&opts.Master.AgentToken, "agent-token", "", "Testkube Cloud agent key [required for centralized mode]")
@@ -123,6 +123,7 @@ func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data)
 	opts.Master.URIs = NewMasterUris(opts.Master.ApiUrlPrefix,
 		opts.Master.UiUrlPrefix,
 		opts.Master.AgentUrlPrefix,
+		opts.Master.URIs.Agent,
 		opts.Master.RootDomain,
 		opts.Master.Insecure)
 }

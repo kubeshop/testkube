@@ -14,7 +14,7 @@ const (
 	defaultRootDomain  = "testkube.io"
 )
 
-func NewMasterUris(apiPrefix, uiPrefix, agentPrefix, rootDomain string, insecure bool) config.MasterURIs {
+func NewMasterUris(apiPrefix, uiPrefix, agentPrefix, agentURI, rootDomain string, insecure bool) config.MasterURIs {
 	protocol := "https"
 	if insecure {
 		protocol = "http"
@@ -29,14 +29,18 @@ func NewMasterUris(apiPrefix, uiPrefix, agentPrefix, rootDomain string, insecure
 		agentPrefix = defaultAgentPrefix
 	}
 	if rootDomain == "" {
-		rootDomain = "testkube.io"
+		rootDomain = defaultRootDomain
+	}
+	if agentURI == "" {
+		agentURI = fmt.Sprintf("%s.%s:%d", agentPrefix, rootDomain, defaultAgentPort)
 	}
 
 	return config.MasterURIs{
 		ApiPrefix:  apiPrefix,
+		UiPrefix:   uiPrefix,
 		RootDomain: rootDomain,
 		Api:        fmt.Sprintf("%s://%s.%s", protocol, apiPrefix, rootDomain),
-		Agent:      fmt.Sprintf("%s.%s:%d", agentPrefix, rootDomain, defaultAgentPort),
+		Agent:      agentURI,
 		Ui:         fmt.Sprintf("%s://%s.%s", protocol, uiPrefix, rootDomain),
 		Auth:       fmt.Sprintf("%s://%s.%s/idp", protocol, apiPrefix, rootDomain),
 	}

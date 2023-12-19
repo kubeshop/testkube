@@ -361,7 +361,7 @@ func PopulateCloudConfig(cfg config.Data, apiKey, orgId, envId, rootDomain, apiP
 	}
 
 	// set uris based on root domain
-	uris := NewMasterUris(apiPrefix, uiPrefix, agentPrefix, rootDomain, clientInsecure)
+	uris := NewMasterUris(apiPrefix, uiPrefix, agentPrefix, "", rootDomain, clientInsecure)
 	cfg.CloudContext.ApiUri = uris.Api
 	cfg.CloudContext.UiUri = uris.Ui
 	cfg.CloudContext.AgentUri = uris.Agent
