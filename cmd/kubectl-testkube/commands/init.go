@@ -37,6 +37,8 @@ func NewInitCmd() *cobra.Command {
 				}
 			}
 
+			common.ProcessMasterFlags(cmd, &options, nil)
+
 			err := common.HelmUpgradeOrInstalTestkube(options)
 			ui.ExitOnError("Installing testkube", err)
 
@@ -53,6 +55,7 @@ func NewInitCmd() *cobra.Command {
 	}
 
 	common.PopulateHelmFlags(cmd, &options)
+	common.PopulateMasterFlags(cmd, &options)
 
 	return cmd
 }

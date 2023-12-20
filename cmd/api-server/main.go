@@ -36,6 +36,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	dbmigrations "github.com/kubeshop/testkube/internal/db-migrations"
+	"github.com/kubeshop/testkube/internal/featureflags"
 	parser "github.com/kubeshop/testkube/internal/template"
 	"github.com/kubeshop/testkube/pkg/version"
 
@@ -131,8 +132,11 @@ func runMongoMigrations(ctx context.Context, db *mongo.Database, migrationsDir s
 func main() {
 	cfg, err := config.Get()
 	cfg.CleanLegacyVars()
-
 	ui.ExitOnError("error getting application config", err)
+
+	ff, err := featureflags.Get()
+	ui.ExitOnError("error getting application feature flags", err)
+
 	// Run services within an errgroup to propagate errors between services.
 	g, ctx := errgroup.WithContext(context.Background())
 
@@ -379,6 +383,8 @@ func main() {
 		clusterId,
 		cfg.TestkubeDashboardURI,
 		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
+		cfg.NatsURI,
+		cfg.Debug,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating executor client", err)
@@ -407,6 +413,8 @@ func main() {
 		clusterId,
 		cfg.TestkubeDashboardURI,
 		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
+		cfg.NatsURI,
+		cfg.Debug,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating container executor", err)
@@ -430,6 +438,7 @@ func main() {
 		testsuiteExecutionsClient,
 		eventBus,
 		cfg.TestkubeDashboardURI,
+		ff,
 	)
 
 	slackLoader, err := newSlackLoader(cfg, envs)
@@ -616,6 +625,19 @@ func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDet
 		return nil, err
 	}
 
+	specifiedExecutors := make(map[string]struct{})
+	if cfg.TestkubeSpecifiedExecutors != "" {
+		for _, executor := range strings.Split(cfg.TestkubeSpecifiedExecutors, ",") {
+			specifiedExecutors[strings.TrimSpace(executor)] = struct{}{}
+		}
+
+		for i := len(executors) - 1; i >= 0; i-- {
+			if _, ok := specifiedExecutors[executors[i].Name]; !ok {
+				executors = append(executors[:i], executors[i+1:]...)
+			}
+		}
+	}
+
 	return executors, nil
 }
 
@@ -631,7 +653,7 @@ func newNATSConnection(cfg *config.Config) (*nats.EncodedConn, error) {
 			}
 		}
 	}
-	nc, err := bus.NewNATSConnection(cfg.NatsURI, opts...)
+	nc, err := bus.NewNATSEncoddedConnection(cfg.NatsURI, opts...)
 	if err != nil {
 		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
 	}

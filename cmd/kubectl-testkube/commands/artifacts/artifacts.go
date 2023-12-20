@@ -13,11 +13,6 @@ import (
 
 var (
 	executionID string
-	filename    string
-	destination string
-	downloadDir string
-	format      string
-	masks       []string
 )
 
 func NewListArtifactsCmd() *cobra.Command {

@@ -39,6 +39,9 @@ refresh-config:
 	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/slack-config.json" -O config/slack-config.json &
 	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/slack-template.json" -O config/slack-template.json
 
+just-run-api: use-env-file 
+	TESTKUBE_DASHBOARD_URI=$(DASHBOARD_URI) APISERVER_CONFIG=testkube-api-server-config-testkube TESTKUBE_ANALYTICS_ENABLED=$(TESTKUBE_ANALYTICS_ENABLED) TESTKUBE_NAMESPACE=$(NAMESPACE) SCRAPPERENABLED=true STORAGE_SSL=true DEBUG=$(DEBUG) APISERVER_PORT=8088 go run  -ldflags='$(LD_FLAGS)' cmd/api-server/main.go
+
 run-api: use-env-file refresh-config
 	TESTKUBE_DASHBOARD_URI=$(DASHBOARD_URI) APISERVER_CONFIG=testkube-api-server-config-testkube TESTKUBE_ANALYTICS_ENABLED=$(TESTKUBE_ANALYTICS_ENABLED) TESTKUBE_NAMESPACE=$(NAMESPACE) SCRAPPERENABLED=true STORAGE_SSL=true DEBUG=$(DEBUG) APISERVER_PORT=8088 go run  -ldflags='$(LD_FLAGS)' cmd/api-server/main.go
 

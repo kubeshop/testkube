@@ -22,6 +22,7 @@ import (
 	testsuitesv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	faketestkube "github.com/kubeshop/testkube-operator/pkg/clientset/versioned/fake"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
+	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/event"
@@ -134,6 +135,7 @@ func TestService_Run(t *testing.T) {
 		mockTestSuiteExecutionsClient,
 		mockBus,
 		"",
+		featureflags.FeatureFlags{},
 	)
 
 	mockLeaseBackend := NewMockLeaseBackend(mockCtrl)

@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM maven:3.8.6-openjdk-18
+FROM maven:3.8.7-openjdk-18-slim
 COPY maven /bin/runner
 
 RUN useradd -m -d /home/maven -s /bin/bash -u 1001 -r -g root maven

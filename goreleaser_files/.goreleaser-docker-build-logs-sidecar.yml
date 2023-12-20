@@ -1,3 +1,5 @@
+project_name: testkube-logs-sidecar
+
 env:
   # Goreleaser always uses the docker buildx builder with name "default"; see
   # https://github.com/goreleaser/goreleaser/pull/3199
@@ -9,11 +11,10 @@ env:
   # https://github.com/moby/buildkit#export-cache
   - DOCKER_BUILDX_CACHE_FROM={{ if index .Env "DOCKER_BUILDX_CACHE_FROM"  }}{{ .Env.DOCKER_BUILDX_CACHE_FROM }}{{ else }}type=registry{{ end }}
   - DOCKER_BUILDX_CACHE_TO={{ if index .Env "DOCKER_BUILDX_CACHE_TO"  }}{{ .Env.DOCKER_BUILDX_CACHE_TO }}{{ else }}type=inline{{ end }}
-
 builds:
   - id: "linux"
-    main: "./contrib/executor/jmeterd/cmd/agent"
-    binary: "jmeterd"
+    main: ./cmd/sidecar
+    binary: testkube-logs-sidecar
     env:
       - CGO_ENABLED=0
     goos:
@@ -22,13 +23,15 @@ builds:
       - amd64
       - arm64
     mod_timestamp: "{{ .CommitTimestamp }}"
+    ldflags: -X github.com/kubeshop/testkube/pkg/version.Version={{ .Version }}
+      -X github.com/kubeshop/testkube/pkg/version.Commit={{ .FullCommit }}
 dockers:
-  - dockerfile: "./contrib/executor/jmeterd/build/agent/Dockerfile"
+  - dockerfile: ./build/sidecar/Dockerfile
     use: buildx
     goos: linux
     goarch: amd64
     image_templates:
-      - "kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-amd64"
+      - "kubeshop/testkube-logs-sidecar:{{ .Version }}-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -38,37 +41,43 @@ dockers:
       - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
-    extra_files:
-      - ./contrib/executor/jmeterd/scripts/entrypoint.sh
-      - ./contrib/executor/jmeterd/scripts/jmeter-master.sh
+      - "--build-arg=ALPINE_IMAGE={{ .Env.ALPINE_IMAGE }}"
 
-  - dockerfile: "./contrib/executor/jmeterd/build/agent/Dockerfile"
+  - dockerfile: ./build/sidecar/Dockerfile
     use: buildx
     goos: linux
     goarch: arm64
     image_templates:
-      - "kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-arm64v8"
+      - "kubeshop/testkube-logs-sidecar:{{ .Version }}-arm64v8"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-      - "--label=org.opencontainers.image.created={{ .Date}}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
       - "--label=org.opencontainers.image.version={{ .Version }}"
       - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
-    extra_files:
-      - ./contrib/executor/jmeterd/scripts/entrypoint.sh
-      - ./contrib/executor/jmeterd/scripts/jmeter-master.sh
+      - "--build-arg=ALPINE_IMAGE={{ .Env.ALPINE_IMAGE }}"
 
 docker_manifests:
-  - name_template: kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}
+  - name_template: kubeshop/testkube-logs-sidecar:{{ .Version }}
     image_templates:
-      - kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-amd64
-      - kubeshop/testkube-jmeterd-executor:{{ .ShortCommit }}-arm64v8
+      - kubeshop/testkube-logs-sidecar:{{ .Version }}-amd64
+      - kubeshop/testkube-logs-sidecar:{{ .Version }}-arm64v8
+  - name_template: kubeshop/testkube-logs-sidecar:latest
+    image_templates:
+      - kubeshop/testkube-logs-sidecar:{{ .Version }}-amd64
+      - kubeshop/testkube-logs-sidecar:{{ .Version }}-arm64v8
 
 release:
   disable: true
 
-snapshot:
-  name_template: '{{ .ShortCommit }}'
+docker_signs:
+  - cmd: cosign
+    artifacts: all
+    output: true
+    args:
+      - "sign"
+      - "${artifact}"
+      - "--yes"

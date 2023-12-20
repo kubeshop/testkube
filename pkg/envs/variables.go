@@ -48,21 +48,17 @@ type Params struct {
 // LoadTestkubeVariables loads the parameters provided as environment variables in the Test CRD
 func LoadTestkubeVariables() (Params, error) {
 	var params Params
-	output.PrintLogf("%s Reading environment variables...", ui.IconWorld)
 	err := envconfig.Process("runner", &params)
 	if err != nil {
-		output.PrintLogf("%s Failed to read environment variables: %s", ui.IconCross, err.Error())
 		return params, errors.Errorf("failed to read environment variables: %v", err)
 	}
-
-	output.PrintLogf("%s Environment variables read successfully", ui.IconCheckMark)
-	printParams(params)
 
 	return params, nil
 }
 
-// printParams shows the read parameters in logs
-func printParams(params Params) {
+// PrintParams shows the read parameters in logs
+func PrintParams(params Params) {
+	output.PrintLogf("%s Environment variables read successfully", ui.IconCheckMark)
 	output.PrintLogf("RUNNER_ENDPOINT=\"%s\"", params.Endpoint)
 	printSensitiveParam("RUNNER_ACCESSKEYID", params.AccessKeyID)
 	printSensitiveParam("RUNNER_SECRETACCESSKEY", params.SecretAccessKey)

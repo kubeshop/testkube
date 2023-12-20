@@ -12,6 +12,7 @@ import (
 	testsuiteexecutionsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testsuiteexecutions/v1"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
+	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -38,6 +39,7 @@ type Scheduler struct {
 	testSuiteExecutionsClient testsuiteexecutionsclientv1.Interface
 	eventsBus                 bus.Bus
 	dashboardURI              string
+	featureFlags              featureflags.FeatureFlags
 }
 
 func NewScheduler(
@@ -58,6 +60,7 @@ func NewScheduler(
 	testSuiteExecutionsClient testsuiteexecutionsclientv1.Interface,
 	eventsBus bus.Bus,
 	dashboardURI string,
+	featureFlags featureflags.FeatureFlags,
 ) *Scheduler {
 	return &Scheduler{
 		metrics:                   metrics,
@@ -77,5 +80,6 @@ func NewScheduler(
 		testSuiteExecutionsClient: testSuiteExecutionsClient,
 		eventsBus:                 eventsBus,
 		dashboardURI:              dashboardURI,
+		featureFlags:              featureFlags,
 	}
 }

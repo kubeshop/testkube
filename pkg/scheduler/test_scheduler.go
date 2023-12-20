@@ -459,6 +459,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		TokenSecret:          tokenSecret,
 		CertificateSecret:    certificateSecret,
 		ImagePullSecretNames: imagePullSecrets,
+		Features:             s.featureFlags,
 	}, nil
 }
 

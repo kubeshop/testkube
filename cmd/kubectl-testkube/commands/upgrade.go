@@ -22,11 +22,12 @@ func NewUpgradeCmd() *cobra.Command {
 			ui.ExitOnError("loading config file", err)
 			ui.NL()
 
+			common.ProcessMasterFlags(cmd, &options, &cfg)
+
 			// set to cloud context explicitly when user pass agent key and store the key later
-			if options.CloudAgentToken != "" {
-				cfg.CloudContext.AgentKey = options.CloudAgentToken
+			if options.Master.AgentToken != "" {
+				cfg.CloudContext.AgentKey = options.Master.AgentToken
 				cfg.ContextType = config.ContextTypeCloud
-				options.CloudUris = common.NewCloudUris(options.CloudRootDomain)
 			}
 
 			if !options.NoConfirm {
@@ -77,6 +78,7 @@ func NewUpgradeCmd() *cobra.Command {
 	}
 
 	common.PopulateHelmFlags(cmd, &options)
+	common.PopulateMasterFlags(cmd, &options)
 
 	return cmd
 }

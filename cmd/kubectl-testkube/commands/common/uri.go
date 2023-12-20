@@ -1,23 +1,47 @@
 package common
 
-import "fmt"
+import (
+	"fmt"
 
-const defaultAgentPort = 443
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+)
 
-func NewCloudUris(rootDomain string) CloudUris {
-	return CloudUris{
-		RootDomain: rootDomain,
-		Api:        fmt.Sprintf("https://api.%s", rootDomain),
-		Agent:      fmt.Sprintf("agent.%s:%d", rootDomain, defaultAgentPort),
-		Ui:         fmt.Sprintf("https://app.%s", rootDomain),
-		Auth:       fmt.Sprintf("https://api.%s/idp", rootDomain),
+const (
+	defaultAgentPort   = 443
+	defaultAgentPrefix = "agent"
+	defaultUiPrefix    = "ui"
+	defaultApiPrefix   = "api"
+	defaultRootDomain  = "testkube.io"
+)
+
+func NewMasterUris(apiPrefix, uiPrefix, agentPrefix, agentURI, rootDomain string, insecure bool) config.MasterURIs {
+	protocol := "https"
+	if insecure {
+		protocol = "http"
 	}
-}
+	if apiPrefix == "" {
+		apiPrefix = defaultApiPrefix
+	}
+	if uiPrefix == "" {
+		uiPrefix = defaultUiPrefix
+	}
+	if agentPrefix == "" {
+		agentPrefix = defaultAgentPrefix
+	}
+	if rootDomain == "" {
+		rootDomain = defaultRootDomain
+	}
+	if agentURI == "" {
+		agentURI = fmt.Sprintf("%s.%s:%d", agentPrefix, rootDomain, defaultAgentPort)
+	}
 
-type CloudUris struct {
-	RootDomain string `json:"rootDomain"`
-	Api        string `json:"api"`
-	Agent      string `json:"agent"`
-	Ui         string `json:"ui"`
-	Auth       string `json:"auth"`
+	return config.MasterURIs{
+		ApiPrefix:  apiPrefix,
+		UiPrefix:   uiPrefix,
+		RootDomain: rootDomain,
+		Api:        fmt.Sprintf("%s://%s.%s", protocol, apiPrefix, rootDomain),
+		Agent:      agentURI,
+		Ui:         fmt.Sprintf("%s://%s.%s", protocol, uiPrefix, rootDomain),
+		Auth:       fmt.Sprintf("%s://%s.%s/idp", protocol, apiPrefix, rootDomain),
+	}
 }

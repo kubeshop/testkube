@@ -17,6 +17,7 @@ import (
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	templatesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
 	v3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -92,6 +93,7 @@ func TestNewExecutorJobSpecEmptyArgs(t *testing.T) {
 		PvcTemplateExtensions:     "",
 		Command:                   []string{},
 		Args:                      []string{},
+		Features:                  featureflags.FeatureFlags{},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
@@ -118,8 +120,11 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		ActiveDeadlineSeconds:     100,
 		Envs:                      map[string]string{"key": "value"},
 		Variables:                 map[string]testkube.Variable{"aa": {Name: "aa", Value: "bb", Type_: testkube.VariableTypeBasic}},
+		Features:                  featureflags.FeatureFlags{},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
+
+	assert.NotEmpty(t, defaultJobTemplate)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
 
@@ -178,6 +183,7 @@ func TestNewExecutorJobSpecWithoutInitImage(t *testing.T) {
 		PvcTemplateExtensions:     "",
 		Command:                   []string{},
 		Args:                      []string{},
+		Features:                  featureflags.FeatureFlags{},
 	}
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
@@ -218,7 +224,10 @@ func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 				},
 			},
 		},
+		"",
+		false,
 	)
+
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
 	assert.NotNil(t, spec)
@@ -260,6 +269,8 @@ func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 				},
 			},
 		},
+		"",
+		false,
 	)
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
@@ -301,6 +312,8 @@ func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
 				},
 			},
 		},
+		"",
+		false,
 	)
 	spec, err := NewExecutorJobSpec(logger(), jobOptions)
 	assert.NoError(t, err)
@@ -346,14 +359,12 @@ type FakeMetricCounter struct {
 }
 
 func (FakeMetricCounter) IncExecuteTest(execution testkube.Execution, dashboardURI string) {
-	return
 }
 
 type FakeEmitter struct {
 }
 
 func (FakeEmitter) Notify(event testkube.Event) {
-	return
 }
 
 type FakeResultRepository struct {
