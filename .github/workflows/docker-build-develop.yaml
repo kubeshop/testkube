@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - develop
-      - build/use-new-gradle-image
     paths-ignore:
       - 'docs/**'
 env:
@@ -371,7 +370,6 @@ jobs:
       - name: Push Docker images
         run: |
           docker push kubeshop/testkube-gradle-executor:${{ steps.commit.outputs.short }}
-          docker push kubeshop/testkube-gradle-executor:${{ steps.commit.outputs.short }}-arm64v8
 
   executor_cypress:
     runs-on: ubuntu-latest
