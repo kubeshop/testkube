@@ -108,22 +108,9 @@ func NewDisconnectCmd() *cobra.Command {
 	}
 
 	// populate options
-	cmd.Flags().StringVar(&opts.Chart, "chart", "kubeshop/testkube", "chart name (usually you don't need to change it)")
-	cmd.Flags().StringVar(&opts.Name, "name", "testkube", "installation name (usually you don't need to change it)")
-	cmd.Flags().StringVar(&opts.Namespace, "namespace", "testkube", "namespace where to install")
-	cmd.Flags().StringVar(&opts.Values, "values", "", "path to Helm values file")
-
-	cmd.Flags().BoolVar(&opts.NoMinio, "no-minio", false, "don't install MinIO")
-	cmd.Flags().BoolVar(&opts.NoDashboard, "no-dashboard", false, "don't install dashboard")
-	cmd.Flags().BoolVar(&opts.NoMongo, "no-mongo", false, "don't install MongoDB")
-
+	common.PopulateHelmFlags(cmd, &opts)
 	cmd.Flags().IntVar(&opts.MinioReplicas, "minio-replicas", 1, "MinIO replicas")
 	cmd.Flags().IntVar(&opts.MongoReplicas, "mongo-replicas", 1, "MongoDB replicas")
 	cmd.Flags().IntVar(&opts.DashboardReplicas, "dashboard-replicas", 1, "Dashboard replicas")
-
-	cmd.Flags().BoolVar(&opts.NoConfirm, "no-confirm", false, "don't ask for confirmation - unatended installation mode")
-
-	cmd.Flags().BoolVar(&opts.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
-
 	return cmd
 }

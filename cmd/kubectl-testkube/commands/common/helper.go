@@ -24,12 +24,8 @@ type HelmOptions struct {
 	Name, Namespace, Chart, Values                  string
 	NoDashboard, NoMinio, NoMongo, NoConfirm        bool
 	MinioReplicas, MongoReplicas, DashboardReplicas int
-	// Cloud only params
-	CloudAgentToken        string
-	CloudIdToken           string
-	CloudRootDomain        string
-	CloudOrgId, CloudEnvId string
-	CloudUris              CloudUris
+
+	Master config.Master
 	// For debug
 	DryRun         bool
 	MultiNamespace bool
@@ -40,6 +36,10 @@ const (
 	github = "GitHub"
 	gitlab = "GitLab"
 )
+
+func (o HelmOptions) GetApiURI() string {
+	return o.Master.URIs.Api
+}
 
 func GetCurrentKubernetesContext() (string, error) {
 	kubectl, err := exec.LookPath("kubectl")
@@ -57,15 +57,11 @@ func GetCurrentKubernetesContext() (string, error) {
 
 func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data, isMigration bool) error {
 	// use config if set
-	if cfg.CloudContext.AgentKey != "" && options.CloudAgentToken == "" {
-		options.CloudAgentToken = cfg.CloudContext.AgentKey
+	if cfg.CloudContext.AgentKey != "" && options.Master.AgentToken == "" {
+		options.Master.AgentToken = cfg.CloudContext.AgentKey
 	}
 
-	if cfg.CloudContext.RootDomain != "" && options.CloudRootDomain == "" {
-		options.CloudUris = NewCloudUris(cfg.CloudContext.RootDomain)
-	}
-
-	if options.CloudAgentToken == "" {
+	if options.Master.AgentToken == "" {
 		return fmt.Errorf("agent key and agent uri are required, please pass it with `--agent-token` and `--agent-uri` flags")
 	}
 
@@ -88,18 +84,19 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data, isM
 	args = []string{
 		"upgrade", "--install", "--create-namespace",
 		"--namespace", options.Namespace,
-		"--set", "testkube-api.cloud.url=" + options.CloudUris.Agent,
-		"--set", "testkube-api.cloud.key=" + options.CloudAgentToken,
+		"--set", "testkube-api.cloud.url=" + options.Master.URIs.Agent,
+		"--set", "testkube-api.cloud.key=" + options.Master.AgentToken,
+		"--set", "testkube-api.cloud.uiURL=" + options.Master.URIs.Ui,
 	}
 	if isMigration {
 		args = append(args, "--set", "testkube-api.cloud.migrate=true")
 	}
 
-	if options.CloudEnvId != "" {
-		args = append(args, "--set", fmt.Sprintf("testkube-api.cloud.envId=%s", options.CloudEnvId))
+	if options.Master.EnvId != "" {
+		args = append(args, "--set", fmt.Sprintf("testkube-api.cloud.envId=%s", options.Master.EnvId))
 	}
-	if options.CloudOrgId != "" {
-		args = append(args, "--set", fmt.Sprintf("testkube-api.cloud.orgId=%s", options.CloudOrgId))
+	if options.Master.OrgId != "" {
+		args = append(args, "--set", fmt.Sprintf("testkube-api.cloud.orgId=%s", options.Master.OrgId))
 	}
 
 	args = append(args, "--set", fmt.Sprintf("testkube-api.multinamespace.enabled=%t", options.MultiNamespace))
@@ -180,33 +177,25 @@ func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
 	cmd.Flags().StringVar(&options.Namespace, "namespace", "testkube", "namespace where to install")
 	cmd.Flags().StringVar(&options.Values, "values", "", "path to Helm values file")
 
-	cmd.Flags().StringVar(&options.CloudUris.Agent, "agent-uri", "", "Testkube Cloud agent URI [required for cloud mode]")
-	cmd.Flags().StringVar(&options.CloudAgentToken, "agent-token", "", "Testkube Cloud agent key [required for cloud mode]")
-	cmd.Flags().StringVar(&options.CloudOrgId, "org-id", "", "Testkube Cloud organization id [required for cloud mode]")
-	cmd.Flags().StringVar(&options.CloudEnvId, "env-id", "", "Testkube Cloud environment id [required for cloud mode]")
-
-	cmd.Flags().StringVar(&options.CloudRootDomain, "cloud-root-domain", "testkube.io", "defaults to testkube.io, usually don't need to be changed [required for cloud mode]")
-
 	cmd.Flags().BoolVar(&options.NoMinio, "no-minio", false, "don't install MinIO")
 	cmd.Flags().BoolVar(&options.NoDashboard, "no-dashboard", false, "don't install dashboard")
 	cmd.Flags().BoolVar(&options.NoMongo, "no-mongo", false, "don't install MongoDB")
 	cmd.Flags().BoolVar(&options.NoConfirm, "no-confirm", false, "don't ask for confirmation - unatended installation mode")
-
 	cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
 }
 
 func PopulateLoginDataToContext(orgID, envID, token, refreshToken string, options HelmOptions, cfg config.Data) error {
-	if options.CloudAgentToken != "" {
-		cfg.CloudContext.AgentKey = options.CloudAgentToken
+	if options.Master.AgentToken != "" {
+		cfg.CloudContext.AgentKey = options.Master.AgentToken
 	}
-	if options.CloudUris.Api != "" {
-		cfg.CloudContext.AgentUri = options.CloudUris.Api
+	if options.Master.URIs.Api != "" {
+		cfg.CloudContext.AgentUri = options.Master.URIs.Api
 	}
-	if options.CloudUris.Ui != "" {
-		cfg.CloudContext.UiUri = options.CloudUris.Ui
+	if options.Master.URIs.Ui != "" {
+		cfg.CloudContext.UiUri = options.Master.URIs.Ui
 	}
-	if options.CloudUris.Api != "" {
-		cfg.CloudContext.ApiUri = options.CloudUris.Api
+	if options.Master.URIs.Api != "" {
+		cfg.CloudContext.ApiUri = options.Master.URIs.Api
 	}
 	cfg.ContextType = config.ContextTypeCloud
 	cfg.CloudContext.OrganizationId = orgID
@@ -219,7 +208,7 @@ func PopulateLoginDataToContext(orgID, envID, token, refreshToken string, option
 		cfg.CloudContext.RefreshToken = refreshToken
 	}
 
-	cfg, err := PopulateOrgAndEnvNames(cfg, orgID, envID, options.CloudRootDomain)
+	cfg, err := PopulateOrgAndEnvNames(cfg, orgID, envID, options.Master.RootDomain)
 	if err != nil {
 		return errors.Wrap(err, "error populating org and env names")
 	}
@@ -229,32 +218,32 @@ func PopulateLoginDataToContext(orgID, envID, token, refreshToken string, option
 
 func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 	updated := false
-	if options.CloudAgentToken != "" {
-		cfg.CloudContext.AgentKey = options.CloudAgentToken
+	if options.Master.AgentToken != "" {
+		cfg.CloudContext.AgentKey = options.Master.AgentToken
 		updated = true
 	}
-	if options.CloudUris.Api != "" {
-		cfg.CloudContext.AgentUri = options.CloudUris.Api
+	if options.Master.URIs.Api != "" {
+		cfg.CloudContext.AgentUri = options.Master.URIs.Api
 		updated = true
 	}
-	if options.CloudUris.Ui != "" {
-		cfg.CloudContext.UiUri = options.CloudUris.Ui
+	if options.Master.URIs.Ui != "" {
+		cfg.CloudContext.UiUri = options.Master.URIs.Ui
 		updated = true
 	}
-	if options.CloudUris.Api != "" {
-		cfg.CloudContext.ApiUri = options.CloudUris.Api
+	if options.Master.URIs.Api != "" {
+		cfg.CloudContext.ApiUri = options.Master.URIs.Api
 		updated = true
 	}
-	if options.CloudIdToken != "" {
-		cfg.CloudContext.ApiKey = options.CloudIdToken
+	if options.Master.IdToken != "" {
+		cfg.CloudContext.ApiKey = options.Master.IdToken
 		updated = true
 	}
-	if options.CloudEnvId != "" {
-		cfg.CloudContext.EnvironmentId = options.CloudEnvId
+	if options.Master.EnvId != "" {
+		cfg.CloudContext.EnvironmentId = options.Master.EnvId
 		updated = true
 	}
-	if options.CloudOrgId != "" {
-		cfg.CloudContext.OrganizationId = options.CloudOrgId
+	if options.Master.OrgId != "" {
+		cfg.CloudContext.OrganizationId = options.Master.OrgId
 		updated = true
 	}
 
@@ -266,7 +255,7 @@ func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 }
 
 func IsUserLoggedIn(cfg config.Data, options HelmOptions) bool {
-	if options.CloudUris.Api != cfg.CloudContext.ApiUri {
+	if options.Master.URIs.Api != cfg.CloudContext.ApiUri {
 		//different environment
 		return false
 	}
@@ -366,13 +355,13 @@ func PopulateOrgAndEnvNames(cfg config.Data, orgId, envId, rootDomain string) (c
 	return cfg, nil
 }
 
-func PopulateCloudConfig(cfg config.Data, apiKey, orgId, envId, rootDomain string) config.Data {
+func PopulateCloudConfig(cfg config.Data, apiKey, orgId, envId, rootDomain, apiPrefix, uiPrefix, agentPrefix string, clientInsecure bool) config.Data {
 	if apiKey != "" {
 		cfg.CloudContext.ApiKey = apiKey
 	}
 
 	// set uris based on root domain
-	uris := NewCloudUris(rootDomain)
+	uris := NewMasterUris(apiPrefix, uiPrefix, agentPrefix, "", rootDomain, clientInsecure)
 	cfg.CloudContext.ApiUri = uris.Api
 	cfg.CloudContext.UiUri = uris.Ui
 	cfg.CloudContext.AgentUri = uris.Agent

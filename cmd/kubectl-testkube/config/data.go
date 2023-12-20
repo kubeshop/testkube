@@ -44,6 +44,7 @@ type Data struct {
 
 	ContextType  ContextType  `json:"contextType,omitempty"`
 	CloudContext CloudContext `json:"cloudContext,omitempty"`
+	Master       Master       `json:"master,omitempty"`
 }
 
 func (c *Data) EnableAnalytics() {

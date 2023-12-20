@@ -16,23 +16,24 @@ func NewLoginCmd() *cobra.Command {
 		Aliases: []string{"d"},
 		Short:   "[Deprecated] Login to Testkube Pro",
 		Run: func(cmd *cobra.Command, args []string) {
-			opts.CloudUris = common.NewCloudUris(opts.CloudRootDomain)
-			token, refreshToken, err := common.LoginUser(opts.CloudUris.Auth)
+			token, refreshToken, err := common.LoginUser(opts.Master.URIs.Auth)
 			ui.ExitOnError("getting token", err)
 
-			orgID := opts.CloudOrgId
-			envID := opts.CloudEnvId
+			orgID := opts.Master.OrgId
+			envID := opts.Master.EnvId
 
 			if orgID == "" {
-				orgID, _, err = uiGetOrganizationId(opts.CloudRootDomain, token)
+				orgID, _, err = uiGetOrganizationId(opts.Master.RootDomain, token)
 				ui.ExitOnError("getting organization", err)
 			}
 			if envID == "" {
-				envID, _, err = uiGetEnvironmentID(opts.CloudRootDomain, token, orgID)
+				envID, _, err = uiGetEnvironmentID(opts.Master.RootDomain, token, orgID)
 				ui.ExitOnError("getting environment", err)
 			}
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config file", err)
+
+			common.ProcessMasterFlags(cmd, &opts, &cfg)
 
 			err = common.PopulateLoginDataToContext(orgID, envID, token, refreshToken, opts, cfg)
 			ui.ExitOnError("saving config file", err)
@@ -42,10 +43,8 @@ func NewLoginCmd() *cobra.Command {
 			common.UiPrintContext(cfg)
 		},
 	}
-	cmd.Flags().StringVar(&opts.CloudRootDomain, "cloud-root-domain", "testkube.io", "[Deprecated] defaults to testkube.io, usually don't need to be changed [required for cloud mode]")
 
-	cmd.Flags().StringVar(&opts.CloudOrgId, "org-id", "", "Testkube Cloud organization id")
-	cmd.Flags().StringVar(&opts.CloudEnvId, "env-id", "", "Testkube Cloud environment id")
+	common.PopulateMasterFlags(cmd, &opts)
 
 	return cmd
 }
