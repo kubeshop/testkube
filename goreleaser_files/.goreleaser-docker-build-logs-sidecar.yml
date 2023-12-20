@@ -5,12 +5,14 @@ env:
   # https://github.com/goreleaser/goreleaser/pull/3199
   # To use a builder other than "default", set this variable.
   # Necessary for, e.g., GitHub actions cache integration.
+  - DOCKER_REPO={{ if index .Env "DOCKER_REPO"  }}{{ .Env.DOCKER_REPO }}{{ else }}kubeshop{{ end }}
   - DOCKER_BUILDX_BUILDER={{ if index .Env "DOCKER_BUILDX_BUILDER"  }}{{ .Env.DOCKER_BUILDX_BUILDER }}{{ else }}default{{ end }}
   # Setup to enable Docker to use, e.g., the GitHub actions cache; see
   # https://docs.docker.com/build/building/cache/backends/
   # https://github.com/moby/buildkit#export-cache
   - DOCKER_BUILDX_CACHE_FROM={{ if index .Env "DOCKER_BUILDX_CACHE_FROM"  }}{{ .Env.DOCKER_BUILDX_CACHE_FROM }}{{ else }}type=registry{{ end }}
   - DOCKER_BUILDX_CACHE_TO={{ if index .Env "DOCKER_BUILDX_CACHE_TO"  }}{{ .Env.DOCKER_BUILDX_CACHE_TO }}{{ else }}type=inline{{ end }}
+  - IMAGE_TAG_SHA={{ if index .Env "IMAGE_TAG_SHA"  }}{{ .Env.IMAGE_TAG_SHA }}{{ else }}{{ end }}
 builds:
   - id: "linux"
     main: ./cmd/sidecar
@@ -31,7 +33,8 @@ dockers:
     goos: linux
     goarch: amd64
     image_templates:
-      - "kubeshop/testkube-logs-sidecar:{{ .Version }}-amd64"
+      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-logs-sidecar:{{ .ShortCommit }}{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-logs-sidecar:{{ .Version }}-amd64{{ end }}"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
@@ -48,7 +51,7 @@ dockers:
     goos: linux
     goarch: arm64
     image_templates:
-      - "kubeshop/testkube-logs-sidecar:{{ .Version }}-arm64v8"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-logs-sidecar:{{ .Version }}-arm64v8{{ end }}"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -61,14 +64,14 @@ dockers:
       - "--build-arg=ALPINE_IMAGE={{ .Env.ALPINE_IMAGE }}"
 
 docker_manifests:
-  - name_template: kubeshop/testkube-logs-sidecar:{{ .Version }}
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-logs-sidecar:{{ .Version }}{{ end }}"
     image_templates:
-      - kubeshop/testkube-logs-sidecar:{{ .Version }}-amd64
-      - kubeshop/testkube-logs-sidecar:{{ .Version }}-arm64v8
-  - name_template: kubeshop/testkube-logs-sidecar:latest
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-logs-sidecar:{{ .Version }}-amd64{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-logs-sidecar:{{ .Version }}-arm64v8{{ end }}"
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-logs-sidecar:latest{{ end }}"
     image_templates:
-      - kubeshop/testkube-logs-sidecar:{{ .Version }}-amd64
-      - kubeshop/testkube-logs-sidecar:{{ .Version }}-arm64v8
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-logs-sidecar:{{ .Version }}-amd64{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-logs-sidecar:{{ .Version }}-arm64v8{{ end }}"
 
 release:
   disable: true
@@ -81,3 +84,6 @@ docker_signs:
       - "sign"
       - "${artifact}"
       - "--yes"
+
+snapshot:
+  name_template: "{{ .ShortCommit }}"
