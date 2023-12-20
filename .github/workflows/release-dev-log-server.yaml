@@ -2,11 +2,13 @@ name: Release logs server dev
 
 on:
   push:
-    branches:
-      - develop
-    paths:
-      - "cmd/logs/**"
-      - "pkg/logs/**"
+    tags: 
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
+    #branches:
+    #  - develop
+    #paths:
+    #  - "cmd/logs/**"
+    #  - "pkg/logs/**"
 
 permissions:
   id-token: write
