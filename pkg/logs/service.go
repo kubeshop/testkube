@@ -123,7 +123,9 @@ func (ls *LogsService) Shutdown(ctx context.Context) (err error) {
 		return err
 	}
 
-	ls.grpcServer.GracefulStop()
+	if ls.grpcServer != nil {
+		ls.grpcServer.GracefulStop()
+	}
 
 	// TODO decide how to handle graceful shutdown of consumers
 
@@ -136,7 +138,7 @@ func (ls *LogsService) WithHttpAddress(address string) *LogsService {
 }
 
 func (ls *LogsService) WithGrpcAddress(address string) *LogsService {
-	ls.httpAddress = address
+	ls.grpcAddress = address
 	return ls
 }
 
