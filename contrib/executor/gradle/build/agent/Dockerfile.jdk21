@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # alpine is without critical security issues
-FROM gradle:8.5.0-jdk21-alpine
+FROM kubeshop/testkube-gradle-executor:gradle8.5.0-jk21-base
 COPY gradle /bin/runner
 
 RUN chown -R 1001:1001 /home/gradle

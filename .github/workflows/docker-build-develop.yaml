@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - develop
+      - build/use-new-gradle-image
     paths-ignore:
       - 'docs/**'
 env:
