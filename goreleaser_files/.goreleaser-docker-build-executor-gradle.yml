@@ -106,7 +106,6 @@ dockers:
     goarch: arm64
     image_templates:
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk17-arm64v8{{ end }}"
-      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .ShortCommit }}-arm64v8{{ end }}"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -138,6 +137,8 @@ dockers:
     goarch: arm64
     image_templates:
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .Version }}-jdk21-arm64v8{{ end }}"
+      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-gradle-executor:{{ .ShortCommit }}-arm64v8{{ end }}"
+
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
