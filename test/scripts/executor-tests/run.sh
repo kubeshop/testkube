@@ -164,6 +164,17 @@ container-playwright-smoke() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
+container-postman-smoke() {
+  name="Container executor - Postman"
+  test_crd_file="test/container-executor/executor-smoke/crd/postman.yaml"
+  testsuite_name="executor-container-postman-smoke-tests"
+  testsuite_file="test/suites/executor-container-postman-smoke-tests.yaml"
+
+  custom_executor_crd_file="test/executors/container-executor-postman.yaml"
+
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
+}
+
 curl-smoke() {
   name="curl"
   test_crd_file="test/curl/executor-tests/crd/smoke.yaml"
@@ -325,6 +336,7 @@ main() {
       container-curl-smoke
       container-cypress-smoke
       container-k6-smoke
+      container-postman-smoke
       container-playwright-smoke
       curl-smoke
       cypress-smoke
@@ -345,6 +357,7 @@ main() {
       container-curl-smoke
       container-cypress-smoke
       container-k6-smoke
+      container-postman-smoke
       container-playwright-smoke
       curl-smoke
       cypress-smoke

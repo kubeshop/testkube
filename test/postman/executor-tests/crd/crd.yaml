@@ -59,8 +59,8 @@ spec:
     args:
       - --env-var
       - TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
-    preRunScript: "echo \"\033[1;31m echo - pre-run script\""
-    postRunScript: "echo \"\033[1;31m echo - post-run script\""
+    preRunScript: "echo \"===== pre-run script\""
+    postRunScript: "echo \"===== post-run script\""
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
 ---
 # postman-executor-smoke-testsource - TestSource
