@@ -15,6 +15,9 @@ spec:
     - test: postman-executor-smoke-git-file
   - stopOnFailure: false
     execute:
+    - test: postman-executor-smoke-pre-post-run-scripts
+  - stopOnFailure: false
+    execute:
     - test: postman-executor-smoke-testsource
   - stopOnFailure: false
     execute:
