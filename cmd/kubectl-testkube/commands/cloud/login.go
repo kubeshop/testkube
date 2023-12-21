@@ -15,7 +15,7 @@ func NewLoginCmd() *cobra.Command {
 		Use:        "login",
 		Deprecated: "Use `testkube pro login` instead",
 		Hidden:     true,
-		Aliases:    []string{"d"},
+		Aliases:    []string{"l"},
 		Short:      "[Deprecated] Login to Testkube Pro",
 		Run: func(cmd *cobra.Command, args []string) {
 			token, refreshToken, err := common.LoginUser(opts.Master.URIs.Auth)
