@@ -92,7 +92,7 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		}
 
 		if len(execution.Command) != 0 {
-			entrypoint += strconv.Quote(filepath.Join(r.Params.DataDir, commandScriptName)) + " \"$@\"\n"
+			entrypoint += strconv.Quote(filepath.Join(r.Params.DataDir, commandScriptName)) + " $@\n"
 			command += strings.Join(execution.Command, " ")
 			command += " \"$@\"\n"
 		}
