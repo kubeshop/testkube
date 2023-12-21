@@ -17,9 +17,11 @@ func NewInitCmd() *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "init",
-		Short:   "[Deprecated] Install Testkube Cloud Agent and connect to Testkube Cloud environment",
-		Aliases: []string{"install"},
+		Use:        "init",
+		Deprecated: "Use `testkube pro init` instead",
+		Hidden:     true,
+		Short:      "[Deprecated] Install Testkube Cloud Agent and connect to Testkube Cloud environment",
+		Aliases:    []string{"install"},
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Warn("You are using a deprecated command, please switch to `testkube pro init`.")
 

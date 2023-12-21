@@ -10,9 +10,11 @@ import (
 func NewCloudCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:     "cloud",
-		Short:   "[Deprecated] Testkube Cloud commands",
-		Aliases: []string{"cl"},
+		Use:        "cloud",
+		Deprecated: "Use `testkube pro` instead",
+		Hidden:     true,
+		Short:      "[Deprecated] Testkube Cloud commands",
+		Aliases:    []string{"cl"},
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Warn("You are using a deprecated command, please switch to `testkube pro`.")
 		},
