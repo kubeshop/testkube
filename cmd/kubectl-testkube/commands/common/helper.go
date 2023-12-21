@@ -208,7 +208,7 @@ func PopulateLoginDataToContext(orgID, envID, token, refreshToken string, option
 		cfg.CloudContext.RefreshToken = refreshToken
 	}
 
-	cfg, err := PopulateOrgAndEnvNames(cfg, orgID, envID, options.Master.RootDomain)
+	cfg, err := PopulateOrgAndEnvNames(cfg, orgID, envID, options.Master.URIs.Api)
 	if err != nil {
 		return errors.Wrap(err, "error populating org and env names")
 	}
