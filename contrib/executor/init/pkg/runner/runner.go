@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -23,6 +24,7 @@ import (
 const (
 	defaultShell      = "/bin/sh"
 	preRunScriptName  = "prerun.sh"
+	commandScriptName = "command.sh"
 	postRunScriptName = "postrun.sh"
 )
 
@@ -73,23 +75,31 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	}
 
 	if execution.PreRunScript != "" || execution.PostRunScript != "" {
-		command := "#!" + defaultShell
+		shell := defaultShell
 		if execution.ContainerShell != "" {
-			command = "#!" + execution.ContainerShell
+			shell = execution.ContainerShell
 		}
-		command += "\n"
+
+		shebang := "#!" + shell + "\nset -e\n"
+		entrypoint := shebang
+		command := shebang
+		preRunScript := shebang
+		postRunScript := shebang
 
 		if execution.PreRunScript != "" {
-			command += filepath.Join(r.Params.WorkingDir, preRunScriptName) + "\n"
+			entrypoint += strconv.Quote(filepath.Join(r.Params.DataDir, preRunScriptName)) + "\n"
+			preRunScript += execution.PreRunScript
 		}
 
 		if len(execution.Command) != 0 {
+			entrypoint += strconv.Quote(filepath.Join(r.Params.DataDir, postRunScriptName)) + "\n"
 			command += strings.Join(execution.Command, " ")
 			command += " \"$@\"\n"
 		}
 
 		if execution.PostRunScript != "" {
-			command += filepath.Join(r.Params.WorkingDir, postRunScriptName) + "\n"
+			entrypoint += strconv.Quote(filepath.Join(r.Params.DataDir, postRunScriptName)) + "\n"
+			postRunScript += execution.PreRunScript
 		}
 
 		var scripts = []struct {
@@ -98,9 +108,10 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 			data    string
 			comment string
 		}{
-			{r.Params.WorkingDir, preRunScriptName, execution.PreRunScript, "prerun"},
-			{r.Params.DataDir, containerexecutor.EntrypointScriptName, command, "entrypoint"},
-			{r.Params.WorkingDir, postRunScriptName, execution.PostRunScript, "postrun"},
+			{r.Params.DataDir, preRunScriptName, preRunScript, "prerun"},
+			{r.Params.DataDir, commandScriptName, command, "command"},
+			{r.Params.DataDir, postRunScriptName, postRunScript, "postrun"},
+			{r.Params.DataDir, containerexecutor.EntrypointScriptName, entrypoint, "entrypoint"},
 		}
 
 		for _, script := range scripts {
