@@ -80,7 +80,7 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 			shell = execution.ContainerShell
 		}
 
-		shebang := "#!" + shell + "\n"
+		shebang := "#!" + shell + "\nset -e\n"
 		entrypoint := shebang
 		command := shebang
 		preRunScript := shebang
