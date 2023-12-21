@@ -325,7 +325,7 @@ func RunMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
 	return true, migrations.Migrator.Run(info.Version, migrator.MigrationTypeClient)
 }
 
-func PopulateOrgAndEnvNames(cfg config.Data, orgId, envId, rootDomain string) (config.Data, error) {
+func PopulateOrgAndEnvNames(cfg config.Data, orgId, envId, apiUrl string) (config.Data, error) {
 	if orgId != "" {
 		cfg.CloudContext.OrganizationId = orgId
 		// reset env when the org is changed
@@ -337,13 +337,13 @@ func PopulateOrgAndEnvNames(cfg config.Data, orgId, envId, rootDomain string) (c
 		cfg.CloudContext.EnvironmentId = envId
 	}
 
-	orgClient := cloudclient.NewOrganizationsClient(rootDomain, cfg.CloudContext.ApiKey)
+	orgClient := cloudclient.NewOrganizationsClient(apiUrl, cfg.CloudContext.ApiKey)
 	org, err := orgClient.Get(cfg.CloudContext.OrganizationId)
 	if err != nil {
 		return cfg, errors.Wrap(err, "error getting organization")
 	}
 
-	envsClient := cloudclient.NewEnvironmentsClient(rootDomain, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId)
+	envsClient := cloudclient.NewEnvironmentsClient(apiUrl, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId)
 	env, err := envsClient.Get(cfg.CloudContext.EnvironmentId)
 	if err != nil {
 		return cfg, errors.Wrap(err, "error getting environment")
@@ -355,19 +355,17 @@ func PopulateOrgAndEnvNames(cfg config.Data, orgId, envId, rootDomain string) (c
 	return cfg, nil
 }
 
-func PopulateCloudConfig(cfg config.Data, apiKey, orgId, envId, rootDomain, apiPrefix, uiPrefix, agentPrefix string, clientInsecure bool) config.Data {
+func PopulateCloudConfig(cfg config.Data, apiKey string, opts *HelmOptions) config.Data {
 	if apiKey != "" {
 		cfg.CloudContext.ApiKey = apiKey
 	}
 
-	// set uris based on root domain
-	uris := NewMasterUris(apiPrefix, uiPrefix, agentPrefix, "", rootDomain, clientInsecure)
-	cfg.CloudContext.ApiUri = uris.Api
-	cfg.CloudContext.UiUri = uris.Ui
-	cfg.CloudContext.AgentUri = uris.Agent
+	cfg.CloudContext.ApiUri = opts.Master.URIs.Api
+	cfg.CloudContext.UiUri = opts.Master.URIs.Ui
+	cfg.CloudContext.AgentUri = opts.Master.URIs.Agent
 
 	var err error
-	cfg, err = PopulateOrgAndEnvNames(cfg, orgId, envId, rootDomain)
+	cfg, err = PopulateOrgAndEnvNames(cfg, opts.Master.OrgId, opts.Master.EnvId, opts.Master.URIs.Api)
 	if err != nil {
 		ui.Failf("Error populating org and env names: %s", err)
 	}

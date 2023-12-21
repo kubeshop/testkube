@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/pterm/pterm"
-
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
