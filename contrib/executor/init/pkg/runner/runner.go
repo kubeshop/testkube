@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -73,14 +74,20 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	}
 
 	if execution.PreRunScript != "" || execution.PostRunScript != "" {
-		command := "#!" + defaultShell
+		shell := defaultShell
 		if execution.ContainerShell != "" {
-			command = "#!" + execution.ContainerShell
+			shell = execution.ContainerShell
 		}
-		command += "\n"
+
+		shebang := "#!" + shell + "\n"
+		command := shebang
+		preRunScript := shebang
+		postRunScript := shebang
 
 		if execution.PreRunScript != "" {
-			command += filepath.Join(r.Params.WorkingDir, preRunScriptName) + "\n"
+			command += strconv.Quote(filepath.Join(r.Params.DataDir, preRunScriptName)) + "\n"
+			preRunScript += "cd " + strconv.Quote(filepath.Join(r.Params.WorkingDir)) + "\n"
+			preRunScript += execution.PreRunScript
 		}
 
 		if len(execution.Command) != 0 {
@@ -89,7 +96,9 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		}
 
 		if execution.PostRunScript != "" {
-			command += filepath.Join(r.Params.WorkingDir, postRunScriptName) + "\n"
+			command += strconv.Quote(filepath.Join(r.Params.DataDir, postRunScriptName)) + "\n"
+			postRunScript += "cd " + strconv.Quote(filepath.Join(r.Params.WorkingDir)) + "\n"
+			postRunScript += execution.PreRunScript
 		}
 
 		var scripts = []struct {
@@ -98,9 +107,9 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 			data    string
 			comment string
 		}{
-			{r.Params.WorkingDir, preRunScriptName, execution.PreRunScript, "prerun"},
+			{r.Params.DataDir, preRunScriptName, preRunScript, "prerun"},
 			{r.Params.DataDir, containerexecutor.EntrypointScriptName, command, "entrypoint"},
-			{r.Params.WorkingDir, postRunScriptName, execution.PostRunScript, "postrun"},
+			{r.Params.DataDir, postRunScriptName, postRunScript, "postrun"},
 		}
 
 		for _, script := range scripts {
