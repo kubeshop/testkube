@@ -1,0 +1,22 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: container-executor-postman-smoke
+  labels:
+    core-tests: executors
+spec:
+  type: container-executor-postman-newman-6-alpine/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+      workingDir: test/postman/executor-tests
+  executionRequest:
+    args: ["run", "postman-executor-smoke.postman_collection.json", "--env-var", "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"]
+    preRunScript: "echo \"===== pre-run script\""
+    postRunScript: "echo \"===== post-run script\""
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
+    activeDeadlineSeconds: 180

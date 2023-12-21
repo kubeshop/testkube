@@ -1,0 +1,9 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: container-executor-postman-newman-6-alpine
+spec:
+  image: postman/newman:6-alpine
+  executor_type: container
+  types:
+  - container-executor-postman-newman-6-alpine/test
