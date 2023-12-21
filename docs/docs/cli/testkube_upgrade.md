@@ -9,10 +9,10 @@ testkube upgrade [flags]
 ### Options
 
 ```
-      --agent-prefix string   defaults to 'agent', usually don't need to be changed [required for custom cloud mode] (default "agent")
+      --agent-prefix string   usually don't need to be changed [required for custom cloud mode] (default "agent")
       --agent-token string    Testkube Cloud agent key [required for centralized mode]
       --agent-uri string      Testkube Cloud agent URI [required for centralized mode]
-      --api-prefix string     defaults to 'api', usually don't need to be changed [required for custom cloud mode] (default "api")
+      --api-prefix string     usually don't need to be changed [required for custom cloud mode] (default "api")
       --chart string          chart name (usually you don't need to change it) (default "kubeshop/testkube")
       --dry-run               dry run mode - only print commands that would be executed
       --env-id string         Testkube Cloud environment id [required for centralized mode]
@@ -25,8 +25,8 @@ testkube upgrade [flags]
       --no-minio              don't install MinIO
       --no-mongo              don't install MongoDB
       --org-id string         Testkube Cloud organization id [required for centralized mode]
-      --root-domain string    defaults to testkube.io, usually don't need to be changed [required for custom cloud mode] (default "testkube.io")
-      --ui-prefix string      defaults to 'ui', usually don't need to be changed [required for custom cloud mode] (default "ui")
+      --root-domain string    usually don't need to be changed [required for custom cloud mode] (default "testkube.io")
+      --ui-prefix string      usually don't need to be changed [required for custom cloud mode] (default "app")
       --values string         path to Helm values file
 ```
 
