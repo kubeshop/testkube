@@ -9,10 +9,16 @@ testkube pro login [flags]
 ### Options
 
 ```
-      --env-id string            Testkube Pro environment id
-  -h, --help                     help for login
-      --org-id string            Testkube Pro organization id
-      --pro-root-domain string   defaults to testkube.io, usually don't need to be changed [required for pro mode] (default "testkube.io")
+      --agent-prefix string   defaults to 'agent', usually don't need to be changed [required for custom cloud mode] (default "agent")
+      --agent-token string    Testkube Cloud agent key [required for centralized mode]
+      --agent-uri string      Testkube Cloud agent URI [required for centralized mode]
+      --api-prefix string     defaults to 'api', usually don't need to be changed [required for custom cloud mode] (default "api")
+      --env-id string         Testkube Cloud environment id [required for centralized mode]
+  -h, --help                  help for login
+      --master-insecure       should client connect in insecure mode (will use http instead of https)
+      --org-id string         Testkube Cloud organization id [required for centralized mode]
+      --root-domain string    defaults to testkube.io, usually don't need to be changed [required for custom cloud mode] (default "testkube.io")
+      --ui-prefix string      defaults to 'ui', usually don't need to be changed [required for custom cloud mode] (default "ui")
 ```
 
 ### Options inherited from parent commands
