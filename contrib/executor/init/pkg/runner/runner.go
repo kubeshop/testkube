@@ -24,6 +24,7 @@ import (
 const (
 	defaultShell      = "/bin/sh"
 	preRunScriptName  = "prerun.sh"
+	commandScriptName = "command.sh"
 	postRunScriptName = "postrun.sh"
 )
 
@@ -80,24 +81,24 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		}
 
 		shebang := "#!" + shell + "\n"
+		entrypoint := shebang
 		command := shebang
 		preRunScript := shebang
 		postRunScript := shebang
 
 		if execution.PreRunScript != "" {
-			command += strconv.Quote(filepath.Join(r.Params.DataDir, preRunScriptName)) + "\n"
-			preRunScript += "cd " + strconv.Quote(filepath.Join(r.Params.WorkingDir)) + "\n"
+			entrypoint += strconv.Quote(filepath.Join(r.Params.DataDir, preRunScriptName)) + "\n"
 			preRunScript += execution.PreRunScript
 		}
 
 		if len(execution.Command) != 0 {
+			entrypoint += strconv.Quote(filepath.Join(r.Params.DataDir, postRunScriptName)) + "\n"
 			command += strings.Join(execution.Command, " ")
 			command += " \"$@\"\n"
 		}
 
 		if execution.PostRunScript != "" {
-			command += strconv.Quote(filepath.Join(r.Params.DataDir, postRunScriptName)) + "\n"
-			postRunScript += "cd " + strconv.Quote(filepath.Join(r.Params.WorkingDir)) + "\n"
+			entrypoint += strconv.Quote(filepath.Join(r.Params.DataDir, postRunScriptName)) + "\n"
 			postRunScript += execution.PreRunScript
 		}
 
@@ -108,8 +109,9 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 			comment string
 		}{
 			{r.Params.DataDir, preRunScriptName, preRunScript, "prerun"},
-			{r.Params.DataDir, containerexecutor.EntrypointScriptName, command, "entrypoint"},
+			{r.Params.DataDir, commandScriptName, command, "command"},
 			{r.Params.DataDir, postRunScriptName, postRunScript, "postrun"},
+			{r.Params.DataDir, containerexecutor.EntrypointScriptName, entrypoint, "entrypoint"},
 		}
 
 		for _, script := range scripts {
