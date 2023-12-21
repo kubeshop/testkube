@@ -176,7 +176,7 @@ func NewConnectCmd() *cobra.Command {
 
 			ui.Success("You can now login to Testkube Pro and validate your connection:")
 			ui.NL()
-			ui.Link("https://app." + opts.Master.RootDomain + "/organization/" + opts.Master.OrgId + "/environment/" + opts.Master.EnvId + "/dashboard/tests")
+			ui.Link(opts.Master.URIs.Ui + "/organization/" + opts.Master.OrgId + "/environment/" + opts.Master.EnvId + "/dashboard/tests")
 
 			ui.NL(2)
 		},
