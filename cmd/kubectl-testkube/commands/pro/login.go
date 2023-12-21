@@ -28,11 +28,11 @@ func NewLoginCmd() *cobra.Command {
 			envID := opts.Master.EnvId
 
 			if orgID == "" {
-				orgID, _, err = uiGetOrganizationId(opts.Master.RootDomain, token)
+				orgID, _, err = common.UiGetOrganizationId(opts.Master.URIs.Api, token)
 				ui.ExitOnError("getting organization", err)
 			}
 			if envID == "" {
-				envID, _, err = uiGetEnvironmentID(opts.Master.RootDomain, token, orgID)
+				envID, _, err = common.UiGetEnvironmentID(opts.Master.URIs.Api, token, orgID)
 				ui.ExitOnError("getting environment", err)
 			}
 

@@ -1,4 +1,4 @@
-package cloud
+package common
 
 import (
 	"fmt"
@@ -13,12 +13,12 @@ type Organization struct {
 	Name string
 }
 
-func getOrganizations(rootDomain, token string) ([]cloudclient.Organization, error) {
-	c := cloudclient.NewOrganizationsClient(rootDomain, token)
+func GetOrganizations(url, token string) ([]cloudclient.Organization, error) {
+	c := cloudclient.NewOrganizationsClient(url, token)
 	return c.List()
 }
 
-func getNames(orgs []cloudclient.Organization) []string {
+func GetOrgNames(orgs []cloudclient.Organization) []string {
 	var names []string
 	for _, org := range orgs {
 		names = append(names, org.Name)
@@ -26,7 +26,7 @@ func getNames(orgs []cloudclient.Organization) []string {
 	return names
 }
 
-func findId(orgs []cloudclient.Organization, name string) string {
+func FindOrgId(orgs []cloudclient.Organization, name string) string {
 	for _, org := range orgs {
 		if org.Name == name {
 			return org.Id
@@ -35,9 +35,9 @@ func findId(orgs []cloudclient.Organization, name string) string {
 	return ""
 }
 
-func uiGetOrganizationId(rootDomain, token string) (string, string, error) {
+func UiGetOrganizationId(url, token string) (string, string, error) {
 	// Choose organization from orgs available
-	orgs, err := getOrganizations(rootDomain, token)
+	orgs, err := GetOrganizations(url, token)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to get organizations: %s", err.Error())
 	}
@@ -46,9 +46,9 @@ func uiGetOrganizationId(rootDomain, token string) (string, string, error) {
 		return "", "", fmt.Errorf("no organizations available, please create one first")
 	}
 
-	orgNames := getNames(orgs)
+	orgNames := GetOrgNames(orgs)
 	orgName := ui.Select("Choose organization", orgNames)
-	orgId := findId(orgs, orgName)
+	orgId := FindOrgId(orgs, orgName)
 
 	return orgId, orgName, nil
 }
