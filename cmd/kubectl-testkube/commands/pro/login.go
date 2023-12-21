@@ -13,7 +13,7 @@ func NewLoginCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "login",
-		Aliases: []string{"d"},
+		Aliases: []string{"l"},
 		Short:   "Login to Testkube Pro",
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg, err := config.Load()

@@ -24,9 +24,11 @@ func NewConnectCmd() *cobra.Command {
 	var opts = common.HelmOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "connect",
-		Aliases: []string{"c"},
-		Short:   "[Deprecated] Testkube Cloud connect ",
+		Use:        "connect",
+		Deprecated: "Use `testkube pro connect` instead",
+		Hidden:     true,
+		Aliases:    []string{"c"},
+		Short:      "[Deprecated] Testkube Cloud connect ",
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Warn("You are using a deprecated command, please switch to `testkube pro connect`.")
 

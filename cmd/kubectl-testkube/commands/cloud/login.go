@@ -12,9 +12,11 @@ func NewLoginCmd() *cobra.Command {
 	var opts common.HelmOptions
 
 	cmd := &cobra.Command{
-		Use:     "login",
-		Aliases: []string{"d"},
-		Short:   "[Deprecated] Login to Testkube Pro",
+		Use:        "login",
+		Deprecated: "Use `testkube pro login` instead",
+		Hidden:     true,
+		Aliases:    []string{"l"},
+		Short:      "[Deprecated] Login to Testkube Pro",
 		Run: func(cmd *cobra.Command, args []string) {
 			token, refreshToken, err := common.LoginUser(opts.Master.URIs.Auth)
 			ui.ExitOnError("getting token", err)
