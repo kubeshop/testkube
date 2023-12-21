@@ -82,13 +82,13 @@ func NewConnectCmd() *cobra.Command {
 				token, refreshToken, err = common.LoginUser(opts.Master.URIs.Auth)
 				ui.ExitOnError("login", err)
 
-				orgId, orgName, err := uiGetOrganizationId(opts.Master.RootDomain, token)
+				orgId, orgName, err := common.UiGetOrganizationId(opts.Master.URIs.Api, token)
 				ui.ExitOnError("getting organization", err)
 
 				envName, err := uiGetEnvName()
 				ui.ExitOnError("getting environment name", err)
 
-				envClient := cloudclient.NewEnvironmentsClient(opts.Master.RootDomain, token, orgId)
+				envClient := cloudclient.NewEnvironmentsClient(opts.Master.URIs.Api, token, orgId)
 				env, err := envClient.Create(cloudclient.Environment{Name: envName, Owner: orgId})
 				ui.ExitOnError("creating environment", err)
 
@@ -176,7 +176,7 @@ func NewConnectCmd() *cobra.Command {
 
 			ui.Success("You can now login to Testkube Pro and validate your connection:")
 			ui.NL()
-			ui.Link("https://app." + opts.Master.RootDomain + "/organization/" + opts.Master.OrgId + "/environment/" + opts.Master.EnvId + "/dashboard/tests")
+			ui.Link(opts.Master.URIs.Ui + "/organization/" + opts.Master.OrgId + "/environment/" + opts.Master.EnvId + "/dashboard/tests")
 
 			ui.NL(2)
 		},

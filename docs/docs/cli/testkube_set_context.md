@@ -9,13 +9,19 @@ testkube set context <value> [flags]
 ### Options
 
 ```
-  -k, --api-key string             API Key for Testkube Cloud
-      --cloud-root-domain string   defaults to testkube.io, usually you don't need to change it (default "testkube.io")
-  -e, --env string                 Testkube Cloud Environment ID
-  -h, --help                       help for context
-      --kubeconfig                 reset context mode for CLI to default kubeconfig based
-  -n, --namespace string           Testkube namespace to use for CLI commands
-  -o, --org string                 Testkube Cloud Organization ID
+      --agent-prefix string   usually don't need to be changed [required for custom cloud mode] (default "agent")
+      --agent-token string    Testkube Cloud agent key [required for centralized mode]
+      --agent-uri string      Testkube Cloud agent URI [required for centralized mode]
+  -k, --api-key string        API Key for Testkube Cloud
+      --api-prefix string     usually don't need to be changed [required for custom cloud mode] (default "api")
+      --env-id string         Testkube Cloud environment id [required for centralized mode]
+  -h, --help                  help for context
+      --kubeconfig            reset context mode for CLI to default kubeconfig based
+      --master-insecure       should client connect in insecure mode (will use http instead of https)
+  -n, --namespace string      Testkube namespace to use for CLI commands
+      --org-id string         Testkube Cloud organization id [required for centralized mode]
+      --root-domain string    usually don't need to be changed [required for custom cloud mode] (default "testkube.io")
+      --ui-prefix string      usually don't need to be changed [required for custom cloud mode] (default "app")
 ```
 
 ### Options inherited from parent commands
