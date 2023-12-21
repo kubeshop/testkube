@@ -152,7 +152,7 @@ func TestMasterCmds(t *testing.T) {
 		assert.Equal(t, "agent", opts.Master.AgentUrlPrefix)
 		assert.Equal(t, "testkube.io", opts.Master.RootDomain)
 		assert.Equal(t, "https://api.testkube.io", opts.Master.URIs.Api)
-		assert.Equal(t, "https://ui.testkube.io", opts.Master.URIs.Ui)
+		assert.Equal(t, "https://app.testkube.io", opts.Master.URIs.Ui)
 		assert.Equal(t, "agent.testkube.io:443", opts.Master.URIs.Agent)
 	})
 
@@ -170,7 +170,7 @@ func TestMasterCmds(t *testing.T) {
 		assert.Equal(t, "agent", opts.Master.AgentUrlPrefix)
 		assert.Equal(t, "testkube.io", opts.Master.RootDomain)
 		assert.Equal(t, "http://api.testkube.io", opts.Master.URIs.Api)
-		assert.Equal(t, "http://ui.testkube.io", opts.Master.URIs.Ui)
+		assert.Equal(t, "http://app.testkube.io", opts.Master.URIs.Ui)
 		assert.Equal(t, "agent.testkube.io:443", opts.Master.URIs.Agent)
 	})
 
@@ -188,7 +188,7 @@ func TestMasterCmds(t *testing.T) {
 		assert.Equal(t, "agent", opts.Master.AgentUrlPrefix)
 		assert.Equal(t, "testkube.io", opts.Master.RootDomain)
 		assert.Equal(t, "http://api.testkube.io", opts.Master.URIs.Api)
-		assert.Equal(t, "http://ui.testkube.io", opts.Master.URIs.Ui)
+		assert.Equal(t, "http://app.testkube.io", opts.Master.URIs.Ui)
 		assert.Equal(t, "agent.testkube.io:443", opts.Master.URIs.Agent)
 	})
 
@@ -206,7 +206,7 @@ func TestMasterCmds(t *testing.T) {
 		assert.Equal(t, "agent", opts.Master.AgentUrlPrefix)
 		assert.Equal(t, "dummy-root-domain", opts.Master.RootDomain)
 		assert.Equal(t, "https://api.dummy-root-domain", opts.Master.URIs.Api)
-		assert.Equal(t, "https://ui.dummy-root-domain", opts.Master.URIs.Ui)
+		assert.Equal(t, "https://app.dummy-root-domain", opts.Master.URIs.Ui)
 		assert.Equal(t, "agent.dummy-root-domain:443", opts.Master.URIs.Agent)
 	})
 
@@ -224,7 +224,7 @@ func TestMasterCmds(t *testing.T) {
 		assert.Equal(t, "agent", opts.Master.AgentUrlPrefix)
 		assert.Equal(t, "dummy-root-domain", opts.Master.RootDomain)
 		assert.Equal(t, "http://api.dummy-root-domain", opts.Master.URIs.Api)
-		assert.Equal(t, "http://ui.dummy-root-domain", opts.Master.URIs.Ui)
+		assert.Equal(t, "http://app.dummy-root-domain", opts.Master.URIs.Ui)
 		assert.Equal(t, "agent.dummy-root-domain:443", opts.Master.URIs.Agent)
 	})
 
@@ -242,7 +242,7 @@ func TestMasterCmds(t *testing.T) {
 		assert.Equal(t, "agent", opts.Master.AgentUrlPrefix)
 		assert.Equal(t, "dummy-root-domain", opts.Master.RootDomain)
 		assert.Equal(t, "https://api.dummy-root-domain", opts.Master.URIs.Api)
-		assert.Equal(t, "https://ui.dummy-root-domain", opts.Master.URIs.Ui)
+		assert.Equal(t, "https://app.dummy-root-domain", opts.Master.URIs.Ui)
 		assert.Equal(t, "agent.dummy-root-domain:443", opts.Master.URIs.Agent)
 	})
 
@@ -260,7 +260,7 @@ func TestMasterCmds(t *testing.T) {
 		assert.Equal(t, "agent", opts.Master.AgentUrlPrefix)
 		assert.Equal(t, "dummy-root-domain", opts.Master.RootDomain)
 		assert.Equal(t, "http://api.dummy-root-domain", opts.Master.URIs.Api)
-		assert.Equal(t, "http://ui.dummy-root-domain", opts.Master.URIs.Ui)
+		assert.Equal(t, "http://app.dummy-root-domain", opts.Master.URIs.Ui)
 		assert.Equal(t, "agent.dummy-root-domain:443", opts.Master.URIs.Agent)
 	})
 
@@ -278,7 +278,7 @@ func TestMasterCmds(t *testing.T) {
 		assert.Equal(t, "agent", opts.Master.AgentUrlPrefix)
 		assert.Equal(t, "testkube.io", opts.Master.RootDomain)
 		assert.Equal(t, "https://api.testkube.io", opts.Master.URIs.Api)
-		assert.Equal(t, "https://ui.testkube.io", opts.Master.URIs.Ui)
+		assert.Equal(t, "https://app.testkube.io", opts.Master.URIs.Ui)
 		assert.Equal(t, "dummy-agent-uri", opts.Master.URIs.Agent)
 	})
 
@@ -296,7 +296,7 @@ func TestMasterCmds(t *testing.T) {
 		assert.Equal(t, "agent", opts.Master.AgentUrlPrefix)
 		assert.Equal(t, "testkube.io", opts.Master.RootDomain)
 		assert.Equal(t, "http://api.testkube.io", opts.Master.URIs.Api)
-		assert.Equal(t, "http://ui.testkube.io", opts.Master.URIs.Ui)
+		assert.Equal(t, "http://app.testkube.io", opts.Master.URIs.Ui)
 		assert.Equal(t, "dummy-agent-uri", opts.Master.URIs.Agent)
 	})
 }
