@@ -9,7 +9,7 @@ import (
 const (
 	defaultAgentPort   = 443
 	defaultAgentPrefix = "agent"
-	defaultUiPrefix    = "ui"
+	defaultUiPrefix    = "app"
 	defaultApiPrefix   = "api"
 	defaultRootDomain  = "testkube.io"
 )

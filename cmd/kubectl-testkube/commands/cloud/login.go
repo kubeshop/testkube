@@ -12,9 +12,11 @@ func NewLoginCmd() *cobra.Command {
 	var opts common.HelmOptions
 
 	cmd := &cobra.Command{
-		Use:     "login",
-		Aliases: []string{"d"},
-		Short:   "[Deprecated] Login to Testkube Pro",
+		Use:        "login",
+		Deprecated: "Use `testkube pro login` instead",
+		Hidden:     true,
+		Aliases:    []string{"l"},
+		Short:      "[Deprecated] Login to Testkube Pro",
 		Run: func(cmd *cobra.Command, args []string) {
 			token, refreshToken, err := common.LoginUser(opts.Master.URIs.Auth)
 			ui.ExitOnError("getting token", err)
@@ -23,11 +25,11 @@ func NewLoginCmd() *cobra.Command {
 			envID := opts.Master.EnvId
 
 			if orgID == "" {
-				orgID, _, err = uiGetOrganizationId(opts.Master.RootDomain, token)
+				orgID, _, err = common.UiGetOrganizationId(opts.Master.URIs.Api, token)
 				ui.ExitOnError("getting organization", err)
 			}
 			if envID == "" {
-				envID, _, err = uiGetEnvironmentID(opts.Master.RootDomain, token, orgID)
+				envID, _, err = common.UiGetEnvironmentID(opts.Master.URIs.Api, token, orgID)
 				ui.ExitOnError("getting environment", err)
 			}
 			cfg, err := config.Load()

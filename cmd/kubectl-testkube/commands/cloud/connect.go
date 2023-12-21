@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/pterm/pterm"
-
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -25,9 +24,11 @@ func NewConnectCmd() *cobra.Command {
 	var opts = common.HelmOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "connect",
-		Aliases: []string{"c"},
-		Short:   "[Deprecated] Testkube Cloud connect ",
+		Use:        "connect",
+		Deprecated: "Use `testkube pro connect` instead",
+		Hidden:     true,
+		Aliases:    []string{"c"},
+		Short:      "[Deprecated] Testkube Cloud connect ",
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Warn("You are using a deprecated command, please switch to `testkube pro connect`.")
 
@@ -87,13 +88,13 @@ func NewConnectCmd() *cobra.Command {
 				token, refreshToken, err = common.LoginUser(opts.Master.URIs.Auth)
 				ui.ExitOnError("login", err)
 
-				orgId, orgName, err := uiGetOrganizationId(opts.Master.ApiUrlPrefix+opts.Master.RootDomain, token)
+				orgId, orgName, err := common.UiGetOrganizationId(opts.Master.URIs.Api, token)
 				ui.ExitOnError("getting organization", err)
 
 				envName, err := uiGetEnvName()
 				ui.ExitOnError("getting environment name", err)
 
-				envClient := cloudclient.NewEnvironmentsClient(opts.Master.ApiUrlPrefix+opts.Master.RootDomain, token, orgId)
+				envClient := cloudclient.NewEnvironmentsClient(opts.Master.URIs.Api, token, orgId)
 				env, err := envClient.Create(cloudclient.Environment{Name: envName, Owner: orgId})
 				ui.ExitOnError("creating environment", err)
 
@@ -181,7 +182,7 @@ func NewConnectCmd() *cobra.Command {
 
 			ui.Success("You can now login to Testkube Cloud and validate your connection:")
 			ui.NL()
-			ui.Link("https://cloud." + opts.Master.RootDomain + "/organization/" + opts.Master.OrgId + "/environment/" + opts.Master.EnvId + "/dashboard/tests")
+			ui.Link(opts.Master.URIs.Ui + "/organization/" + opts.Master.OrgId + "/environment/" + opts.Master.EnvId + "/dashboard/tests")
 
 			ui.NL(2)
 		},
