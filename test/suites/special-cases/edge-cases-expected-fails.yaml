@@ -58,3 +58,9 @@ spec:
   - stopOnFailure: false
     execute:
     - test: expected-fail-cypress-oomkilled
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-pre-run-script
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-post-run-script

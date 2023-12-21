@@ -1,0 +1,12 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: executor-container-postman-smoke-tests
+  labels:
+    core-tests: executors
+spec:
+  description: "container executor postman smoke tests"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: container-executor-postman-smoke

@@ -290,7 +290,7 @@ kind: Test
 metadata:
   name: expected-fail-cypress-oomkilled
   labels:
-    core-tests: executors
+    core-tests: expected-fail
 spec:
   type: cypress:v12/test
   content:
@@ -313,3 +313,49 @@ spec:
       - video=true
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            limits:\n              memory: 30Mi\n              cpu: 1\n"
     activeDeadlineSeconds: 600
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: expected-fail-pre-run-script
+  labels:
+    core-tests: expected-fail
+spec:
+  type: postman/collection
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+  executionRequest:
+    args:
+      - --env-var
+      - TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
+    preRunScript: "echo \"===== pre-run script - EXPECTED FAIL\" && exit 128"
+    postRunScript: "echo \"===== post-run script\""
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: expected-fail-post-run-script
+  labels:
+    core-tests: expected-fail
+spec:
+  type: postman/collection
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+  executionRequest:
+    args:
+      - --env-var
+      - TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
+    preRunScript: "echo \"===== pre-run script\""
+    postRunScript: "echo \"===== post-run script - EXPECTED FAIL\" && exit 128"
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
