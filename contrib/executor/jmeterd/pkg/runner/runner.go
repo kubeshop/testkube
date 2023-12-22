@@ -91,10 +91,14 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 		return result, errors.Wrap(err, "error getting slaves count")
 	}
 	mode := jmeterModeStandalone
-	jmeterParamFlag := standaloneJMeterParamPrefix
 	if slavesCount > 0 {
 		mode = jmeterModeDistributed
-		jmeterParamFlag = globalJMeterParamPrefix
+	}
+
+	for key, value := range envManager.Variables {
+		if err := os.Setenv(key, value.Value); err != nil {
+			output.PrintLogf("%s Failed to set env variable %s", ui.IconWarning, key)
+		}
 	}
 
 	output.PrintLogf("%s Running in %s mode", ui.IconTruck, mode)
@@ -144,7 +148,7 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 		args = append(args, fmt.Sprintf("-R %v", slaveMeta.ToIPString()))
 	}
 
-	args = composeJMeterParams(args, envManager.Variables, jmeterParamFlag)
+	args = injectAndExpandEnvVars(args, nil)
 	output.PrintLogf("%s Using arguments: %v", ui.IconWorld, envManager.ObfuscateStringSlice(args))
 
 	entryPoint := getEntryPoint()
@@ -201,8 +205,8 @@ func initSlaves(
 ) (slaveMeta slaves.SlaveMeta, cleanupFunc func() error, err error) {
 	slavesEnvVariables["DATA_CONFIG"] = testkube.NewBasicVariable("DATA_CONFIG", parentTestFolder)
 	slavesEnvVariables["JMETER_SCRIPT"] = testkube.NewBasicVariable("JMETER_SCRIPT", testFile)
-	envs := slaves.GetRunnerEnvVariables()
-	for key, value := range envs {
+	envVars := slaves.GetRunnerEnvVariables()
+	for key, value := range envVars {
 		slavesEnvVariables[key] = testkube.NewBasicVariable(key, value)
 	}
 
@@ -211,7 +215,7 @@ func initSlaves(
 		return nil, nil, errors.Wrap(err, "error unmarshalling slaves configs")
 	}
 
-	slaveClient := slaves.NewClient(clientSet, execution, slavesConfigs, envs, slavesEnvVariables)
+	slaveClient := slaves.NewClient(clientSet, execution, slavesConfigs, envVars, slavesEnvVariables)
 	slaveMeta, err = slaveClient.CreateSlaves(ctx, slavesCount)
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
