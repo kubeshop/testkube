@@ -145,6 +145,7 @@ func TestFindTestFile(t *testing.T) {
 		testPath      string
 		testExtension string
 		mockSetup     func(fs *filesystem.MockFileSystem)
+		cleanup       func()
 		want          string
 		wantErr       bool
 	}{
@@ -157,6 +158,21 @@ func TestFindTestFile(t *testing.T) {
 			mockSetup:     func(fs *filesystem.MockFileSystem) {},
 			want:          "testfile.jmx",
 			wantErr:       false,
+		},
+		{
+			name:          "Test file found in args as envvar",
+			executionArgs: []string{"arg1", "arg2", "${JMETER_TEST_EXPAND_VAR_ARG}"},
+			wantArgs:      []string{"arg1", "arg2"},
+			testPath:      "/test/path",
+			testExtension: "jmx",
+			mockSetup: func(fs *filesystem.MockFileSystem) {
+				os.Setenv("JMETER_TEST_EXPAND_VAR_ARG", "testfile.jmx")
+			},
+			cleanup: func() {
+				os.Unsetenv("JMETER_TEST_EXPAND_VAR_ARG")
+			},
+			want:    "testfile.jmx",
+			wantErr: false,
 		},
 		{
 			name:          "Test file found in directory",
@@ -190,6 +206,9 @@ func TestFindTestFile(t *testing.T) {
 		tt := tests[i]
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+			if tt.cleanup != nil {
+				t.Cleanup(tt.cleanup)
+			}
 
 			mockFS := filesystem.NewMockFileSystem(mockCtrl)
 			tt.mockSetup(mockFS)

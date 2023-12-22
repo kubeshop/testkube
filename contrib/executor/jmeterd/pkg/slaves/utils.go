@@ -13,7 +13,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
 )
 
@@ -23,7 +22,7 @@ const (
 	localPort          = 60001
 )
 
-func getSlaveRunnerEnv(envParams envs.Params, runnerExecution testkube.Execution) []v1.EnvVar {
+func getSlaveRunnerEnv(envs map[string]string, runnerExecution testkube.Execution) []v1.EnvVar {
 	var gitEnvs []v1.EnvVar
 	if runnerExecution.Content.Type_ == "git" && runnerExecution.Content.Repository.UsernameSecret != nil && runnerExecution.Content.Repository.TokenSecret != nil {
 		gitEnvs = append(gitEnvs, v1.EnvVar{

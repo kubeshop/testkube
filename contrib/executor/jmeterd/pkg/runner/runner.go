@@ -91,10 +91,14 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 		return result, errors.Wrap(err, "error getting slaves count")
 	}
 	mode := jmeterModeStandalone
-	jmeterParamFlag := standaloneJMeterParamPrefix
 	if slavesCount > 1 {
 		mode = jmeterModeDistributed
-		jmeterParamFlag = globalJMeterParamPrefix
+	}
+
+	for key, value := range envManager.Variables {
+		if err := os.Setenv(key, value.Value); err != nil {
+			output.PrintLogf("%s Failed to set env variable %s", ui.IconWarning, key)
+		}
 	}
 
 	output.PrintLogf("%s Running in %s mode", ui.IconTruck, mode)
@@ -144,7 +148,7 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 		args = append(args, fmt.Sprintf("-R %v", slaveMeta.ToIPString()))
 	}
 
-	args = composeJMeterParams(args, envManager.Variables, jmeterParamFlag)
+	args = injectAndExpandEnvVars(args, nil)
 	output.PrintLogf("%s Using arguments: %v", ui.IconWorld, envManager.ObfuscateStringSlice(args))
 
 	entryPoint := getEntryPoint()
@@ -201,13 +205,17 @@ func initSlaves(
 ) (slaveMeta slaves.SlaveMeta, cleanupFunc func() error, err error) {
 	slavesEnvVariables["DATA_CONFIG"] = testkube.NewBasicVariable("DATA_CONFIG", parentTestFolder)
 	slavesEnvVariables["JMETER_SCRIPT"] = testkube.NewBasicVariable("JMETER_SCRIPT", testFile)
+	envVars := slaves.GetRunnerEnvVariables()
+	for key, value := range envVars {
+		slavesEnvVariables[key] = testkube.NewBasicVariable(key, value)
+	}
 
 	slavesConfigs := executor.SlavesConfigs{}
 	if err := json.Unmarshal([]byte(params.SlavesConfigs), &slavesConfigs); err != nil {
 		return nil, nil, errors.Wrap(err, "error unmarshalling slaves configs")
 	}
 
-	slaveClient := slaves.NewClient(clientSet, execution, slavesConfigs, params, slavesEnvVariables)
+	slaveClient := slaves.NewClient(clientSet, execution, slavesConfigs, envVars, slavesEnvVariables)
 	slaveMeta, err = slaveClient.CreateSlaves(ctx, slavesCount)
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
@@ -247,20 +255,6 @@ func getEntryPoint() (entrypoint string) {
 		wd = "."
 	}
 	return filepath.Join(wd, "scripts/entrypoint.sh")
-}
-
-// composeJMeterParams composes JMeter parameters depending on paramFlag (-J or -G) from testkube variables and returns them as a slice of strings
-func composeJMeterParams(args []string, params map[string]testkube.Variable, paramFlag string) []string {
-	jmeterParams := make([]string, 0, len(params))
-	for _, value := range params {
-		if value.Name == slaves.MasterOverrideJvmArgs || value.Name == slaves.MasterAdditionalJvmArgs {
-			// Skip JVM ARGS to be appended in the command
-			continue
-		}
-		jmeterParams = append(jmeterParams, fmt.Sprintf("%s%s=%s", paramFlag, value.Name, value.Value))
-	}
-
-	return injectAndExpandEnvVars(args, jmeterParams)
 }
 
 func processJTLReport(fs filesystem.FileSystem, jtlPath string, resultOutput []byte) (testkube.ExecutionResult, error) {
