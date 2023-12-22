@@ -257,20 +257,6 @@ func getEntryPoint() (entrypoint string) {
 	return filepath.Join(wd, "scripts/entrypoint.sh")
 }
 
-// composeJMeterParams composes JMeter parameters depending on paramFlag (-J or -G) from testkube variables and returns them as a slice of strings
-func composeJMeterParams(args []string, params map[string]testkube.Variable, paramFlag string) []string {
-	jmeterParams := make([]string, 0, len(params))
-	for _, value := range params {
-		if value.Name == slaves.MasterOverrideJvmArgs || value.Name == slaves.MasterAdditionalJvmArgs {
-			// Skip JVM ARGS to be appended in the command
-			continue
-		}
-		jmeterParams = append(jmeterParams, fmt.Sprintf("%s%s=%s", paramFlag, value.Name, value.Value))
-	}
-
-	return injectAndExpandEnvVars(args, jmeterParams)
-}
-
 func processJTLReport(fs filesystem.FileSystem, jtlPath string, resultOutput []byte) (testkube.ExecutionResult, error) {
 	var executionResult testkube.ExecutionResult
 	output.PrintLogf("%s Getting report %s", ui.IconFile, jtlPath)

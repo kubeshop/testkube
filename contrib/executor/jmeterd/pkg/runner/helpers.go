@@ -51,7 +51,7 @@ func getTestPathAndWorkingDir(fs filesystem.FileSystem, execution *testkube.Exec
 func findTestFile(fs filesystem.FileSystem, execution *testkube.Execution, testPath, testExtension string) (testFile string, err error) {
 	if len(execution.Args) > 0 {
 		testFile = execution.Args[len(execution.Args)-1]
-		if strings.HasPrefix(testFile, "$") {
+		if strings.HasPrefix(testFile, envVarPrefix) {
 			testFile = os.ExpandEnv(testFile)
 		}
 		if !strings.HasSuffix(testFile, testExtension) {
