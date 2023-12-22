@@ -162,6 +162,9 @@ jobs:
           paths: |
             integration-tests.xml
 
+      - name: Logs
+        run: cat integration-tests.json
+
       - name: Annotate Integration Tests
         if: always()
         uses: guyarb/golang-test-annotations@v0.6.0
