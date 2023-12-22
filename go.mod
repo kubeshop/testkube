@@ -21,7 +21,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.51.0
 	github.com/gofiber/websocket/v2 v2.1.1
 	github.com/golang/mock v1.6.0
-	github.com/gookit/color v1.5.3
+	github.com/gookit/color v1.5.4
 	github.com/gorilla/websocket v1.5.0
 	github.com/joshdk/go-junit v1.0.0
 	github.com/kelseyhightower/envconfig v1.4.0
