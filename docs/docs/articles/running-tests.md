@@ -107,7 +107,7 @@ For some 'real world' tests, configuration variables are passed in order to run 
 
 Let's assume that our example Cypress test needs the `testparam` parameter with the value `testvalue`.
 
-This is done by using the `--variable` flag (or just `-v`). If you need to pass more parameters, either pass the values as a comma-separated string or simply pass multiple `-p` flags.
+This is done by using the `--variable` flag (or just `-v`). If you need to pass more parameters, either pass the values as a comma-separated string or simply pass multiple `-v` flags.
 
 It's possible to pass parameters securely to the executed test. It's necessary to use the `--secret` flag,
 which contains a key value pair - a name of the Kubernetes secret and a secret key.
