@@ -405,6 +405,10 @@ func (s *TestkubeAPI) InitRoutes() {
 	repositories := root.Group("/repositories")
 	repositories.Post("/", s.ValidateRepositoryHandler())
 
+	// mount everything on results
+	// TODO it should be named /api/ + dashboard refactor
+	s.Mux.Mount("/results", s.Mux)
+
 	// mount dashboard on /ui
 	dashboardURI := os.Getenv("TESTKUBE_DASHBOARD_URI")
 	if dashboardURI == "" {
