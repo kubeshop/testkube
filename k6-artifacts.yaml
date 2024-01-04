@@ -1,0 +1,31 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: k6-artifacts
+  namespace: testkube
+  labels:
+    batch.kubernetes.io/job-name:
+      batch.kubernetes.io/controller-uid: 7d0cc5a9-18aa-4e4e-abd4-d3899ec9a1d7
+spec:
+  type: k6/script
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/k6/executor-tests/k6-smoke-test.js
+  executionRequest:
+    variables:
+      K6_SYSTEM_ENV:
+        name: K6_SYSTEM_ENV
+        value: K6_SYSTEM_ENV_value
+        type: basic
+    args:
+      - -e
+      - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+      - --out
+      - csv=test/k6/test_results.csv
+    artifactRequest:
+      dirs:
+        - /data/repo/test/k6

@@ -175,7 +175,6 @@ func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan events.Log) (err err
 		reader := bufio.NewReader(stream)
 		for {
 			b, err := utils.ReadLongLine(reader)
-
 			if err != nil {
 				if errors.Is(err, io.EOF) {
 					err = nil

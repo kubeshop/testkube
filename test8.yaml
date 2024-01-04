@@ -1,0 +1,14 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: k6-demo-test
+  namespace: testkube
+spec:
+  type: curl/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube-cloud-ui.git
+      commit: kjskjnsad
+      path: path

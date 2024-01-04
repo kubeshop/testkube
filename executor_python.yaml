@@ -1,0 +1,22 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: python-executor
+  namespace: testkube
+spec:
+  types:
+  - python/test
+  executor_type: container
+  image: python:3.8-slim
+  args:
+  - |
+    import time
+    # This will consume memory rapidly until it hits an OOM condition
+    a = []
+    while True:
+        print("Allocating memory...")
+        a.append(' ' * 10**7)  # allocate 10MB at a time
+        time.sleep(0.5)  # this will slow down the memory allocation a little
+  command:
+  - "python"
+  - "-c"

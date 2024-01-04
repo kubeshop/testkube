@@ -1,0 +1,12 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: fakecurl
+  namespace: testkube
+spec:
+  type: curl/test
+  content:
+    type: string
+    data: "{\n\t\"command\": [\n\t  \"curl\",\n\t  \"https://reqbin.com/echo/get/json\",\n\t  \"-H\",\n\t  \"'Accept: application/json'\"\n\t],\n\t\"expected_status\": \"200\",\n\t\"expected_body\": \"{\\\"success\\\":\\\"true\\\"}\"\n  }"
+
+---

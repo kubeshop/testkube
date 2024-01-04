@@ -1,0 +1,13 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: container-test
+  namespace: testkube
+spec:
+  type: cli/test
+  executionRequest:
+    artifactRequest:
+      storageClassName: standard
+      volumeMountPath: /share
+      dirs:
+      - test/files

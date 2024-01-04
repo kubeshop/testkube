@@ -1,0 +1,24 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeter-arg
+  namespace: testkube
+spec:
+  type: jmeter/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/jmeter/executor-tests/jmeter-executor-smoke-env-and-property.jmx
+  executionRequest:
+    variables:
+      URL_ENV:
+        name: URL_ENV
+        value: "testkube.io"
+        type: basic
+    args:
+      - "-JURL_PROPERTY=$URL_ENV"
+    activeDeadlineSeconds: 180
+

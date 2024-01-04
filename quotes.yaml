@@ -1,0 +1,24 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: quotes-test
+  namespace: testkube
+spec:
+  type: cypress/project
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube-example-cypress-project.git
+      branch: main
+      path: cypress
+      authType: basic
+  executionRequest:
+    args:
+      - '--env TAGS="@Sanity and @Desktop"'
+    variables:
+      TEST:
+        name: TEST
+        value: '"quotes"'
+        type: basic
+    executePostRunScriptBeforeScraping: false

@@ -1,0 +1,22 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: locust-query
+  namespace: testkube
+spec:
+  type: cypress/project
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube-example-cypress-project.git
+      branch: main
+      path: cypress
+  executionRequest:
+    args:
+      - "--dimension"
+      - "768"
+      - "-u"
+      - "1"
+      - "-t"
+      - "10"

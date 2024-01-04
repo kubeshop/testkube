@@ -1,0 +1,10 @@
+apiVersion: executor.testkube.io/v1
+kind: Webhook
+metadata:
+  name: env-webhook
+  namespace: testkube
+spec:
+  events:
+  - start-test
+  uri: 'https://webhook.site/5a92915e-70c0-47b4-8044-f2aeb2b16414'
+  payloadTemplate: "TESTKUBE_CLOUD_URL: {{ index .Envs \"TESTKUBE_CLOUD_URL\"}}\n"

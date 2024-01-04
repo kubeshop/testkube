@@ -1,0 +1,16 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: data-executor
+  namespace: testkube
+spec:
+  types:
+  - data/test
+  executor_type: container
+  image: soleware/nx-cli:8.5.2
+  command:
+  - /bin/bash
+  - -c
+  - pwd; echo 'Change dir to /data/artifacts'; cd /data/artifacts; echo 'create test/files'; mkdir -p test/files; echo 'test data' > test/files/result.txt
+  features:
+  - artifacts

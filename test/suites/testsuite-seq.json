@@ -1,0 +1,9 @@
+{
+	"name": "testsuite-seq",
+	"description": "k6 executor smoke tests - old testsuite structure",
+	"steps": [
+		{"execute": {"name": "k6-executor-smoke"}},
+		{"execute": {"name": "k6-executor-smoke-negative"}},
+                {"delay": {"duration": 1000}}
+	]
+}

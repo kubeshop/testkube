@@ -1,0 +1,14 @@
+apiVersion: tests.testkube.io/v1
+kind: TestExecution
+metadata:
+  name: k6-testexec
+  namespace: testkube
+spec:
+  test:
+    name: k6-executor-smoke
+  executionRequest:
+    variables:
+      K6_TEST:
+        name: K6_TEST
+        value: "K6_VALUE"
+        type: basic

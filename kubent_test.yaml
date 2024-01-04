@@ -1,0 +1,10 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: kubent-test
+  namespace: testkube
+  labels:
+    executor: kubent-executor
+    test-type: kubent
+spec:
+  type: kubent

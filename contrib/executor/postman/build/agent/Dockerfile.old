@@ -1,0 +1,27 @@
+# syntax=docker/dockerfile:1
+FROM golang:1.21
+WORKDIR contrib/executor/postman/build
+COPY . .
+ENV CGO_ENABLED=0 
+ENV GOOS=linux
+
+RUN cd contrib/executor/postman/cmd/agent;go build -o /runner -mod mod -a .
+
+FROM postman/newman
+RUN apk --no-cache add ca-certificates git
+
+# support npm report permissions
+RUN mkdir -p /.npm
+RUN chmod 777 /.npm
+RUN chmod 777 /root/
+RUN chmod 777 /usr/local/lib/node_modules
+RUN chmod 777 /usr/local/bin
+
+WORKDIR /root/
+
+COPY --from=0 /runner /bin/runner
+EXPOSE 8082
+
+USER 1001 
+
+ENTRYPOINT ["/bin/runner"]

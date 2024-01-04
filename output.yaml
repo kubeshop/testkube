@@ -1,0 +1,15 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: my test
+  namespace: testkube
+spec:
+  type: k6/script
+  content:
+    type: git
+    repository:
+      type: git
+      uri: http://github.com
+      branch: master
+      path: test
+

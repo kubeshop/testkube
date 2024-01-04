@@ -1,0 +1,16 @@
+{
+	"name": "test-example-4",
+	"description": "Tests fast first",
+        "before": [
+                {"execute": {"namespace": "testkube", "name": "cool-again"}},
+                {"delay": {"duration": 1000}}
+        ],
+	"steps": [
+		{"execute": {"namespace": "testkube", "name": "cool"}},
+		{"delay": {"duration": 1000}}
+	],
+        "after": [
+                {"execute": {"namespace": "testkube", "name": "k6-test"}},
+                {"delay": {"duration": 1000}}
+        ]
+}

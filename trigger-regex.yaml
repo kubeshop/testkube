@@ -1,0 +1,16 @@
+apiVersion: tests.testkube.io/v1
+kind: TestTrigger
+metadata:
+  name: testtrigger-regex
+  namespace: testkube
+spec:
+  resource: deployment
+  resourceSelector:
+    nameRegex: ngi.*
+    namespace: default
+  event: deleted
+  action: run
+  execution: test
+  testSelector:
+    nameRegex: k6-executor.*
+    namespace: testkube

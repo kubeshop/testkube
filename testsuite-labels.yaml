@@ -1,0 +1,28 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: executor-jmeter-other-tests
+  namespace: testkube
+  labels:
+    core-tests: executors
+spec:
+  description: "jmeter and jmeterd executor - other tests and edge-cases"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: jmeter-executor-smoke-incorrect-url-assertion-negative
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-incorrect-url-assertion-negative
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-incorrect-url-assertion-slaves-negative
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-correct-url-failed-assertion-negative
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-failed-assertion-slaves-negative
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-failure-exit-code-0-negative

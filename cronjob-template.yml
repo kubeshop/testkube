@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: "{{ .Name }}"
+  namespace: {{ .Namespace }}
+  labels:
+    testkube: {{ .Resource }}
+  annotations:
+    testkube.io: true
+spec:
+  schedule: "{{ .Schedule }}"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: curlimage
+            {{- if .Registry }}
+            image: {{ .Registry }}/curlimages/curl
+            {{- else }}
+            image: curlimages/curl
+            {{- end }}
+            imagePullPolicy: IfNotPresent
+            command:
+            - sh
+            - -c
+            args:
+            - 'curl -X POST -H "Content-Type: application/json" -d ''{{ .Data }}'' "http://{{ .ServiceName }}:{{ .ServicePort}}/v1/{{ .Resource }}/{{ .Id }}/executions"'
+          restartPolicy: Never
+      backoffLimit: 0
+      ttlSecondsAfterFinished: 180

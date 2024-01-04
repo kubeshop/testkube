@@ -1,0 +1,27 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-example
+  namespace: testkube
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: develop
+      path: contrib/executor/jmeterd/examples/gitflow
+  executionRequest:
+    variables:
+      DATA_CONFIG:
+        name: DATA_CONFIG
+        value: "/data/repo/contrib/executor/jmeterd/examples/gitflow"
+        type: basic
+      SLAVES_COUNT:
+        name: SLAVES_COUNT
+        value: "2"
+        type: basic
+    args:
+      - "-GJMETER_UC1_NBUSERS=5"
+      - "jmeter-properties-external.jmx"

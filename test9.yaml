@@ -1,0 +1,17 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: curl-empty
+  namespace: testkube
+spec:
+  type: curl/test
+  content:
+    type: string
+    data: "{\"expected_status\":\"200\"}"
+  executionRequest:
+    args: ["-o", "/data/page.html", "https://testkube.io", "https://testkube.io"]
+    argsMode: append
+    command: ["curl"]
+    artifactRequest:
+      dirs:
+      - /data

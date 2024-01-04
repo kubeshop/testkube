@@ -1,0 +1,16 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: postman-executor-url
+  namespace: testkube
+spec:
+  type: postman/collection
+  content:
+   type: string
+  executionRequest:
+    argsMode: override
+    args:
+      - run
+      - "https://api.getpostman.com/collections/collection-id?apikey=postman-api-key"
+      - --environment
+      - "https://api.getpostman.com/environments/environment-id?apikey=postman-api-key"

@@ -1,0 +1,16 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: ginkgo-test
+  namespace: testkube
+  labels:
+    core-tests: executors
+spec:
+  type: ginkgo/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube-executor-ginkgo.git
+      branch: main # TODO: update before merge
+      path: examples/testkube-api

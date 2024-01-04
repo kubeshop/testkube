@@ -1,0 +1,60 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: testkube-jmeter-template
+  namespace: default
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://git.devops.etat-ge.ch/gitlab/tests/testkube/testkube-jmeter-template.git
+      branch: trunk
+      usernameSecret:
+        name: testkube-jmeter-template-secrets
+        key: git-username
+      tokenSecret:
+        name: testkube-jmeter-template-secrets
+        key: git-token
+  executionRequest:
+    variables:
+      DATA_CONFIG:
+        name: DATA_CONFIG
+        value: "/data/repo"
+        type: basic
+      DURATION:
+        name: DURATION
+        value: "0"
+        type: basic
+      JMETER_SCRIPT:
+        name: JMETER_SCRIPT
+        value: "jmeter-properties-internal-parallel.jmx"
+        type: basic
+      SLAVES_COUNT:
+        name: SLAVES_COUNT
+        value: "2"
+        type: basic
+      UC1_NBUSERS:
+        name: UC1_NBUSERS
+        value: "10"
+        type: basic
+      UC1_RAMPUP:
+        name: UC1_RAMPUP
+        value: "1"
+        type: basic
+    args:
+      - "-GJMETER_UC1_NBUSERS=$UC1_NBUSERS"
+      - "-GJMETER_IC1_RAMPUP=$UC1_RAMPUP"
+      - "-GJMETER_DURATION=$DURATION"
+      - "jmeter-properties-internal-parallel.jmx"
+    executePostRunScriptBeforeScraping: false
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 1024Mi
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            limits:\n              memory: 1024Mi\n              cpu: 500m\n"`

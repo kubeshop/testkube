@@ -83,19 +83,19 @@ jobs:
       matrix:
         executor:
           [
-            artillery,
-            curl,
-            example,
-            ginkgo,
-            k6,
-            kubepug,
-            postman,
-            soapui,
-            init,
-            scraper,
-            template,
-            tracetest,
-            zap,
+              artillery,
+              curl,
+              example,
+              ginkgo,
+              k6,
+              kubepug,
+              postman,
+              soapui,
+              init,
+              scraper,
+              template,
+              tracetest,
+              zap,
           ]
 
     runs-on: ubuntu-latest
@@ -229,6 +229,7 @@ jobs:
 
       - uses: sigstore/cosign-installer@v3.0.5
       - uses: anchore/sbom-action/download-syft@v0.14.2
+
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -459,14 +460,14 @@ jobs:
       matrix:
         version:
           [
-            cypress8,
-            cypress9,
-            cypress10,
-            cypress11,
-            cypress12,
-            cypress13,
-            yarn,
-            npm,
+              cypress8,
+              cypress9,
+              cypress10,
+              cypress11,
+              cypress12,
+              cypress13,
+              yarn,
+              npm,
           ]
 
     runs-on: ubuntu-latest
@@ -544,14 +545,14 @@ jobs:
       matrix:
         version:
           [
-            cypress8,
-            cypress9,
-            cypress10,
-            cypress11,
-            cypress12,
-            cypress13,
-            yarn,
-            npm,
+              cypress8,
+              cypress9,
+              cypress10,
+              cypress11,
+              cypress12,
+              cypress13,
+              yarn,
+              npm,
           ]
 
     runs-on: ubuntu-latest
@@ -659,14 +660,14 @@ jobs:
   update_api_helm_charts:
     needs:
       [
-        api,
-        single_executor,
-        executor_jmeter,
-        executor_maven,
-        executor_gradle,
-        executor_cypress,
-        executor_cypress_manifest,
-        executor_playwright,
+          api,
+          single_executor,
+          executor_jmeter,
+          executor_maven,
+          executor_gradle,
+          executor_cypress,
+          executor_cypress_manifest,
+          executor_playwright,
       ]
     runs-on: ubuntu-latest
     steps:
