@@ -44,7 +44,9 @@ func (c NatsLogStream) Init(ctx context.Context) (StreamMetadata, error) {
 		Storage: jetstream.FileStorage, // durable stream
 	})
 
-	c.log.Debugw("stream upserted", "info", s.CachedInfo())
+	if err == nil {
+		c.log.Debugw("stream upserted", "info", s.CachedInfo())
+	}
 
 	return StreamMetadata{Name: c.streamName}, err
 

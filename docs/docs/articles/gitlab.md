@@ -71,8 +71,8 @@ setup-testkube:
   script:
     - echo $KUBECONFIGFILE > /tmp/kubeconfig/config
     - export KUBECONFIG=/tmp/kubeconfig/config
-    - kubectl-testkube set context --kubeconfig --namespace $NAMESPACE
-    - kubectl-testkube run test test-name -f
+    - testkube set context --kubeconfig --namespace $NAMESPACE
+    - testkube run test test-name -f
 ```
 
 The steps to connect to your Kubernetes cluster differ for each provider. You should check the docs of your Cloud provider for how to connect to the Kubernetes cluster from Gitlab CI.
@@ -115,9 +115,9 @@ run-testkube:
     entrypoint: ["/bin/sh", "-c"]
   script:
     - export KUBECONFIG=$CI_PROJECT_DIR/tmp/kubeconfig/config
-    - kubectl-testkube set context --kubeconfig --namespace $NAMESPACE
+    - testkube set context --kubeconfig --namespace $NAMESPACE
     - echo "Running Testkube test..."
-    - kubectl-testkube run test test-name -f
+    - testkube run test test-name -f
   dependencies:
     - setup-aws
 
@@ -159,9 +159,9 @@ run-testkube:
     entrypoint: ["/bin/sh", "-c"]
   script:
     - export KUBECONFIG=$CI_PROJECT_DIR/tmp/kubeconfig/config
-    - kubectl-testkube set context --kubeconfig --namespace $NAMESPACE
+    - testkube set context --kubeconfig --namespace $NAMESPACE
     - echo "Running Testkube test..."
-    - kubectl-testkube run test test-name -f
+    - testkube run test test-name -f
   dependencies:
     - setup-gcp
 ```

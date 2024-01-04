@@ -38,7 +38,7 @@ const (
 	// SlavesConfigsEnv is slave configs for creating slaves in executor
 	SlavesConfigsEnv = "RUNNER_SLAVES_CONFIGS"
 
-	SidecarImage = "kubeshop/testkube-logs-sidecar:v0-1" // TODO - change it to valid image name after deployment will be ready
+	SidecarImage = "kubeshop/testkube-logs-sidecar:v0-3" // TODO - change it to valid image name after deployment will be ready
 )
 
 var RunnerEnvVars = []corev1.EnvVar{
@@ -395,10 +395,17 @@ func SyncDefaultExecutors(
 		return images, nil
 	}
 
+	// TODO - remove it after merging helm templates fully
 	images.LogSidecar = SidecarImage
+
 	for _, executor := range executors {
 
 		if executor.Executor == nil {
+			continue
+		}
+
+		if executor.Name == "logs-sidecar" {
+			images.LogSidecar = executor.Executor.Image
 			continue
 		}
 

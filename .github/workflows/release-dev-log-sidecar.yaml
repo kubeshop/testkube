@@ -2,11 +2,8 @@ name: Release logs sidecar dev
 
 on:
   push:
-    branches:
-      - develop
-    paths:
-      - "cmd/sidecar/**"
-      - "pkg/logs/sidecar/**"
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 permissions:
   id-token: write

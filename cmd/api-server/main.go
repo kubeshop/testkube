@@ -136,6 +136,8 @@ func main() {
 	ff, err := featureflags.Get()
 	ui.ExitOnError("error getting application feature flags", err)
 
+	log.DefaultLogger.Infow("Feature flags configured", "ff", ff)
+
 	// Run services within an errgroup to propagate errors between services.
 	g, ctx := errgroup.WithContext(context.Background())
 
@@ -474,6 +476,7 @@ func main() {
 		mode,
 		eventBus,
 		cfg.EnableSecretsEndpoint,
+		ff,
 	)
 
 	if mode == common.ModeAgent {

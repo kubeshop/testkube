@@ -449,6 +449,10 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 			}
 		}
 
+		if testSpec.Spec.Content != nil && testSpec.Spec.Content.Repository != nil && testSpec.Spec.Content.Repository.Uri == "" {
+			testSpec.Spec.Content.Repository = nil
+		}
+
 		var updatedTest *testsv3.Test
 		if option != nil {
 			updatedTest, err = s.TestsClient.Update(testSpec, *option)

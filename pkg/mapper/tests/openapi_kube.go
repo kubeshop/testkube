@@ -87,7 +87,7 @@ func MapContentToSpecContent(content *testkube.TestContent) (specContent *testsv
 	}
 
 	var repository *testsv3.Repository
-	if content.Repository != nil {
+	if content.Repository != nil && !content.Repository.IsEmpty() {
 		repository = &testsv3.Repository{
 			Type_:             content.Repository.Type_,
 			Uri:               content.Repository.Uri,
