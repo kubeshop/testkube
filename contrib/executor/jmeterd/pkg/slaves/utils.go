@@ -13,17 +13,16 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
 )
 
 const (
-	defaultSlavesCount = 1
+	defaultSlavesCount = 0
 	serverPort         = 1099
 	localPort          = 60001
 )
 
-func getSlaveRunnerEnv(envParams envs.Params, runnerExecution testkube.Execution) []v1.EnvVar {
+func getSlaveRunnerEnv(envs map[string]string, runnerExecution testkube.Execution) []v1.EnvVar {
 	var gitEnvs []v1.EnvVar
 	if runnerExecution.Content.Type_ == "git" && runnerExecution.Content.Repository.UsernameSecret != nil && runnerExecution.Content.Repository.TokenSecret != nil {
 		gitEnvs = append(gitEnvs, v1.EnvVar{
@@ -87,14 +86,14 @@ func GetSlavesCount(vars map[string]testkube.Variable) (int, error) {
 		return defaultSlavesCount, nil
 	}
 
-	replicaCount, err := strconv.Atoi(count.Value)
+	slavesCount, err := strconv.Atoi(count.Value)
 	if err != nil {
 		return 0, errors.Errorf("invalid SLAVES_COUNT value, expected integer, got: %v", count.Value)
 	}
-	if replicaCount < 1 {
-		return 0, errors.Errorf("SLAVES_COUNT must be at least 1")
+	if slavesCount < 0 {
+		return 0, errors.Errorf("SLAVES_COUNT cannot be less than 0, got: %v", count.Value)
 	}
-	return replicaCount, err
+	return slavesCount, err
 }
 
 func validateAndGetSlavePodName(testName string, executionId string, currentSlaveCount int) string {
