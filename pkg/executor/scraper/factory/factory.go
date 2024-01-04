@@ -77,7 +77,7 @@ func GetScraper(ctx context.Context, params envs.Params, extractorType Extractor
 	case CloudUploader:
 		loader, err = getRemoteStorageUploader(ctx, params)
 		if err != nil {
-			return nil, errors.Wrap(err, "error creating cloud uploader")
+			return nil, errors.Wrap(err, "error creating remote storage uploader")
 		}
 	default:
 		return nil, errors.Errorf("unknown uploader type: %s", uploaderType)
