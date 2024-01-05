@@ -56,11 +56,13 @@ func getSlaveRunnerEnv(envs map[string]string, runnerExecution testkube.Executio
 	return append(runnerEnvVars, gitEnvs...)
 }
 
-func getSlaveConfigurationEnv(slaveEnv map[string]testkube.Variable) []v1.EnvVar {
+func getSlaveConfigurationEnv(slaveEnv map[string]testkube.Variable, currentSlavesCount int) []v1.EnvVar {
 	var envVars []v1.EnvVar
 	for envKey, t := range slaveEnv {
 		envVars = append(envVars, v1.EnvVar{Name: envKey, Value: t.Value})
 	}
+
+	envVars = append(envVars, v1.EnvVar{Name: "SLAVE_POD_NUMBER", Value: strconv.Itoa(currentSlavesCount)})
 	return envVars
 }
 
