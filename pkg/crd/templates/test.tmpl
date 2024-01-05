@@ -188,12 +188,21 @@ spec:
       - {{ . }}
       {{- end }}
       {{- end }}
+      {{- if gt (len .ExecutionRequest.ArtifactRequest.Masks) 0 }}
+      masks:
+      {{- range .ExecutionRequest.ArtifactRequest.Masks }}
+      - {{ . }}
+      {{- end }}
+      {{- end }}
       {{- if .ExecutionRequest.ArtifactRequest.StorageBucket }}
       storageBucket: {{ .ExecutionRequest.ArtifactRequest.StorageBucket }}
       {{- end }}
       {{- if .ExecutionRequest.ArtifactRequest.OmitFolderPerExecution }}
       omitFolderPerExecution: {{ .ExecutionRequest.ArtifactRequest.OmitFolderPerExecution }}
       {{- end }}
+      {{- if .ExecutionRequest.ArtifactRequest.SharedBetweenPods }}
+      sharedBetweenPods: {{ .ExecutionRequest.ArtifactRequest.SharedBetweenPods }}
+      {{- end }}      
     {{- end }}
     {{- if .ExecutionRequest.JobTemplate }}
     jobTemplate: {{ .ExecutionRequest.JobTemplate }}

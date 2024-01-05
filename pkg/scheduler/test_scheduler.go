@@ -228,6 +228,7 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution.RunningContext = options.Request.RunningContext
 	execution.TestExecutionName = options.Request.TestExecutionName
 	execution.DownloadArtifactExecutionIDs = options.Request.DownloadArtifactExecutionIDs
+	execution.DownloadArtifactTestNames = options.Request.DownloadArtifactTestNames
 	execution.SlavePodRequest = options.Request.SlavePodRequest
 
 	return execution
@@ -602,9 +603,14 @@ func mergeArtifacts(artifactBase *testkube.ArtifactRequest, artifactAdjust *test
 		return artifactBase
 	default:
 		artifactBase.Dirs = append(artifactBase.Dirs, artifactAdjust.Dirs...)
+		artifactBase.Masks = append(artifactBase.Masks, artifactAdjust.Masks...)
 
 		if !artifactBase.OmitFolderPerExecution && artifactAdjust.OmitFolderPerExecution {
 			artifactBase.OmitFolderPerExecution = artifactAdjust.OmitFolderPerExecution
+		}
+
+		if !artifactBase.SharedBetweenPods && artifactAdjust.SharedBetweenPods {
+			artifactBase.SharedBetweenPods = artifactAdjust.SharedBetweenPods
 		}
 
 		var fields = []struct {

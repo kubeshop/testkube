@@ -35,7 +35,7 @@ refresh-config:
 	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/job-container-template.yml" -O config/job-container-template.yml &
 	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/job-scraper-template.yml" -O config/job-scraper-template.yml &
 	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/job-template.yml" -O config/job-template.yml &
-	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/pvc-container-template.yml" -O config/pvc-container-template.yml &
+	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/pvc-template.yml" -O config/pvc-template.yml &
 	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/slack-config.json" -O config/slack-config.json &
 	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/slack-template.json" -O config/slack-template.json
 

@@ -17,14 +17,21 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
+	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	testsourcev1 "github.com/kubeshop/testkube-operator/api/testsource/v1"
+
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
+
 	testsuitev3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
 	"github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube-operator/pkg/informers/externalversions"
+	testkubeexecutorinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/executor/v1"
 	testkubeinformerv1 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v1"
+
 	testkubeinformerv3 "github.com/kubeshop/testkube-operator/pkg/informers/externalversions/tests/v3"
 	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 )
 
@@ -41,6 +48,9 @@ type k8sInformers struct {
 	testTriggerInformer testkubeinformerv1.TestTriggerInformer
 	testSuiteInformer   testkubeinformerv3.TestSuiteInformer
 	testInformer        testkubeinformerv3.TestInformer
+	executorInformer    testkubeexecutorinformerv1.ExecutorInformer
+	webhookInformer     testkubeexecutorinformerv1.WebhookInformer
+	testSourceInformer  testkubeinformerv1.TestSourceInformer
 }
 
 func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned.Interface,
@@ -67,6 +77,9 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 	k8sInformers.testTriggerInformer = testkubeInformerFactory.Tests().V1().TestTriggers()
 	k8sInformers.testSuiteInformer = testkubeInformerFactory.Tests().V3().TestSuites()
 	k8sInformers.testInformer = testkubeInformerFactory.Tests().V3().Tests()
+	k8sInformers.executorInformer = testkubeInformerFactory.Executor().V1().Executor()
+	k8sInformers.webhookInformer = testkubeInformerFactory.Executor().V1().Webhook()
+	k8sInformers.testSourceInformer = testkubeInformerFactory.Tests().V1().TestSource()
 
 	return &k8sInformers
 }
@@ -145,6 +158,9 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 	s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler())
 	s.informers.testSuiteInformer.Informer().AddEventHandler(s.testSuiteEventHandler())
 	s.informers.testInformer.Informer().AddEventHandler(s.testEventHandler())
+	s.informers.executorInformer.Informer().AddEventHandler(s.executorEventHandler())
+	s.informers.webhookInformer.Informer().AddEventHandler(s.webhookEventHandler())
+	s.informers.testSourceInformer.Informer().AddEventHandler(s.testSourceEventHandler())
 
 	s.logger.Debugf("trigger service: starting pod informers")
 	for i := range s.informers.podInformers {
@@ -192,6 +208,12 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 	go s.informers.testSuiteInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting test informer")
 	go s.informers.testInformer.Informer().Run(stop)
+	s.logger.Debugf("trigger service: starting executor informer")
+	go s.informers.executorInformer.Informer().Run(stop)
+	s.logger.Debugf("trigger service: starting webhook informer")
+	go s.informers.webhookInformer.Informer().Run(stop)
+	s.logger.Debugf("trigger service: starting test source informer")
+	go s.informers.testSourceInformer.Informer().Run(stop)
 }
 
 func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {
@@ -709,6 +731,12 @@ func (s *Service) testTriggerEventHandler() cache.ResourceEventHandlerFuncs {
 				t.Namespace, t.Name, t.Spec.Resource, t.Spec.Event,
 			)
 			s.addTrigger(t)
+
+			s.logger.Debugf(
+				"trigger service: watcher component: emitting event for created testtrigger %s/%s for resource %s on event %s",
+				t.Namespace, t.Name, t.Spec.Resource, t.Spec.Event,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventCreated, testkube.EventResourceTrigger, t.Name))
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			t, ok := newObj.(*testtriggersv1.TestTrigger)
@@ -724,6 +752,12 @@ func (s *Service) testTriggerEventHandler() cache.ResourceEventHandlerFuncs {
 				t.Namespace, t.Name, t.Spec.Resource, t.Spec.Event,
 			)
 			s.updateTrigger(t)
+
+			s.logger.Debugf(
+				"trigger service: watcher component: emitting event for updated testtrigger %s/%s for resource %s on event %s",
+				t.Namespace, t.Name, t.Spec.Resource, t.Spec.Event,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventUpdated, testkube.EventResourceTrigger, t.Name))
 		},
 		DeleteFunc: func(obj interface{}) {
 			t, ok := obj.(*testtriggersv1.TestTrigger)
@@ -736,6 +770,12 @@ func (s *Service) testTriggerEventHandler() cache.ResourceEventHandlerFuncs {
 				t.Namespace, t.Name, t.Spec.Resource, t.Spec.Event,
 			)
 			s.removeTrigger(t)
+
+			s.logger.Debugf(
+				"trigger service: watcher component: emitting event for deleted testtrigger %s/%s for resource %s on event %s",
+				t.Namespace, t.Name, t.Spec.Resource, t.Spec.Event,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventDeleted, testkube.EventResourceTrigger, t.Name))
 		},
 	}
 }
@@ -760,6 +800,36 @@ func (s *Service) testSuiteEventHandler() cache.ResourceEventHandlerFuncs {
 				testSuite.Namespace, testSuite.Name,
 			)
 			s.addTestSuite(testSuite)
+
+			s.logger.Debugf(
+				"trigger service: watcher component: emitting event for creating testsuite %s/%s",
+				testSuite.Namespace, testSuite.Name,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventCreated, testkube.EventResourceTestsuite, testSuite.Name))
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			testSuite, ok := newObj.(*testsuitev3.TestSuite)
+			if !ok {
+				s.logger.Errorf("failed to process update testsuite event due to it being an unexpected type, received type %+v", newObj)
+				return
+			}
+			s.logger.Debugf(
+				"trigger service: watcher component: emitting event for updating testsuite %s/%s",
+				testSuite.Namespace, testSuite.Name,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventUpdated, testkube.EventResourceTestsuite, testSuite.Name))
+		},
+		DeleteFunc: func(obj interface{}) {
+			testSuite, ok := obj.(*testsuitev3.TestSuite)
+			if !ok {
+				s.logger.Errorf("failed to process delete testsuite event due to it being an unexpected type, received type %+v", obj)
+				return
+			}
+			s.logger.Debugf(
+				"trigger service: watcher component: emitting event for deleting testsuite %s/%s",
+				testSuite.Namespace, testSuite.Name,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventDeleted, testkube.EventResourceTestsuite, testSuite.Name))
 		},
 	}
 }
@@ -784,6 +854,12 @@ func (s *Service) testEventHandler() cache.ResourceEventHandlerFuncs {
 				test.Namespace, test.Name,
 			)
 			s.addTest(test)
+
+			s.logger.Debugf(
+				"trigger service: watcher component: emitting event for test %s/%s",
+				test.Namespace, test.Name,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventCreated, testkube.EventResourceTest, test.Name))
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			test, ok := newObj.(*testsv3.Test)
@@ -796,6 +872,150 @@ func (s *Service) testEventHandler() cache.ResourceEventHandlerFuncs {
 				test.Namespace, test.Name,
 			)
 			s.updateTest(test)
+
+			s.logger.Debugf(
+				"trigger service: watcher component: emitting event for updating test %s/%s",
+				test.Namespace, test.Name,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventUpdated, testkube.EventResourceTest, test.Name))
+		},
+		DeleteFunc: func(obj interface{}) {
+			test, ok := obj.(*testsv3.Test)
+			if !ok {
+				s.logger.Errorf("failed to process delete test event due to it being an unexpected type, received type %+v", obj)
+				return
+			}
+			s.logger.Debugf(
+				"trigger service: watcher component: emitting event for deleting test %s/%s",
+				test.Namespace, test.Name,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventDeleted, testkube.EventResourceTest, test.Name))
+		},
+	}
+}
+
+func (s *Service) executorEventHandler() cache.ResourceEventHandlerFuncs {
+	return cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			executor, ok := obj.(*executorv1.Executor)
+			if !ok {
+				s.logger.Errorf("failed to process create executor event due to it being an unexpected type, received type %+v", obj)
+				return
+			}
+			s.logger.Debugf(
+				"trigger service: watcher component: emitting event for executor %s/%s",
+				executor.Namespace, executor.Name,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventCreated, testkube.EventResourceExecutor, executor.Name))
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			executor, ok := newObj.(*executorv1.Executor)
+			if !ok {
+				s.logger.Errorf("failed to process update executor event due to it being an unexpected type, received type %+v", newObj)
+				return
+			}
+
+			s.logger.Debugf(
+				"trigger service: watcher component: emitting event for updating executor %s/%s",
+				executor.Namespace, executor.Name,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventUpdated, testkube.EventResourceExecutor, executor.Name))
+		},
+		DeleteFunc: func(obj interface{}) {
+			executor, ok := obj.(*executorv1.Executor)
+			if !ok {
+				s.logger.Errorf("failed to process delete executor event due to it being an unexpected type, received type %+v", obj)
+				return
+			}
+			s.logger.Debugf(
+				"trigger service: watcher component: emitting event for deleting executor %s/%s",
+				executor.Namespace, executor.Name,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventDeleted, testkube.EventResourceExecutor, executor.Name))
+		},
+	}
+}
+
+func (s *Service) webhookEventHandler() cache.ResourceEventHandlerFuncs {
+	return cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			webhook, ok := obj.(*executorv1.Webhook)
+			if !ok {
+				s.logger.Errorf("failed to process create webhook event due to it being an unexpected type, received type %+v", obj)
+				return
+			}
+			s.logger.Debugf(
+				"trigger service: watcher component: emitting event for webhook %s/%s",
+				webhook.Namespace, webhook.Name,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventCreated, testkube.EventResourceWebhook, webhook.Name))
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			webhook, ok := newObj.(*executorv1.Webhook)
+			if !ok {
+				s.logger.Errorf("failed to process update webhook event due to it being an unexpected type, received type %+v", newObj)
+				return
+			}
+
+			s.logger.Debugf(
+				"trigger service: watcher component: emitting event for updating webhook %s/%s",
+				webhook.Namespace, webhook.Name,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventUpdated, testkube.EventResourceWebhook, webhook.Name))
+		},
+		DeleteFunc: func(obj interface{}) {
+			webhook, ok := obj.(*executorv1.Webhook)
+			if !ok {
+				s.logger.Errorf("failed to process delete webhook event due to it being an unexpected type, received type %+v", obj)
+				return
+			}
+			s.logger.Debugf(
+				"trigger service: watcher component: emitting event for deleting webhook %s/%s",
+				webhook.Namespace, webhook.Name,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventDeleted, testkube.EventResourceWebhook, webhook.Name))
+		},
+	}
+}
+
+func (s *Service) testSourceEventHandler() cache.ResourceEventHandlerFuncs {
+	return cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			testSource, ok := obj.(*testsourcev1.TestSource)
+			if !ok {
+				s.logger.Errorf("failed to process create test source event due to it being an unexpected type, received type %+v", obj)
+				return
+			}
+			s.logger.Debugf(
+				"trigger service: watcher component: emitting event for test source %s/%s",
+				testSource.Namespace, testSource.Name,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventCreated, testkube.EventResourceTestsource, testSource.Name))
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			testSource, ok := newObj.(*testsourcev1.TestSource)
+			if !ok {
+				s.logger.Errorf("failed to process update test source event due to it being an unexpected type, received type %+v", newObj)
+				return
+			}
+
+			s.logger.Debugf(
+				"trigger service: watcher component: emitting event for updating test source %s/%s",
+				testSource.Namespace, testSource.Name,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventUpdated, testkube.EventResourceTestsource, testSource.Name))
+		},
+		DeleteFunc: func(obj interface{}) {
+			testSource, ok := obj.(*testsourcev1.TestSource)
+			if !ok {
+				s.logger.Errorf("failed to process delete test source event due to it being an unexpected type, received type %+v", obj)
+				return
+			}
+			s.logger.Debugf(
+				"trigger service: watcher component: emitting event for deleting test source %s/%s",
+				testSource.Namespace, testSource.Name,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventDeleted, testkube.EventResourceTestsource, testSource.Name))
 		},
 	}
 }

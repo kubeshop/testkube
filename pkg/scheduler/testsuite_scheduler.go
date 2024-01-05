@@ -385,21 +385,30 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 		testSuiteName = testsuiteExecution.TestSuite.Name
 	}
 
-	var ids []string
+	ids := make(map[string]struct{})
+	testNames := make(map[string]struct{})
 	if result.Step != nil && result.Step.DownloadArtifacts != nil {
+		for _, testName := range result.Step.DownloadArtifacts.PreviousTestNames {
+			testNames[testName] = struct{}{}
+		}
+
 		for i := range previousSteps {
 			for j := range previousSteps[i].Execute {
 				if previousSteps[i].Execute[j].Execution != nil &&
 					previousSteps[i].Execute[j].Step != nil && previousSteps[i].Execute[j].Step.Test != "" {
 					if previousSteps[i].Execute[j].Execution.IsPassed() || previousSteps[i].Execute[j].Execution.IsFailed() {
 						if result.Step.DownloadArtifacts.AllPreviousSteps {
-							ids = append(ids, previousSteps[i].Execute[j].Execution.Id)
+							ids[previousSteps[i].Execute[j].Execution.Id] = struct{}{}
 						} else {
 							for _, n := range result.Step.DownloadArtifacts.PreviousStepNumbers {
 								if n == int32(i+1) {
-									ids = append(ids, previousSteps[i].Execute[j].Execution.Id)
+									ids[previousSteps[i].Execute[j].Execution.Id] = struct{}{}
 									break
 								}
+							}
+
+							if _, ok := testNames[previousSteps[i].Execute[j].Step.Test]; ok {
+								ids[previousSteps[i].Execute[j].Execution.Id] = struct{}{}
 							}
 						}
 					}
@@ -465,6 +474,11 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 	workerpoolService := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](concurrencyLevel)
 
 	if len(testTuples) != 0 {
+		var executionIDs []string
+		for id := range ids {
+			executionIDs = append(executionIDs, id)
+		}
+
 		req := testkube.ExecutionRequest{
 			TestSuiteName:         testSuiteName,
 			Variables:             testsuiteExecution.Variables,
@@ -485,7 +499,7 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 			ScraperTemplateReference:     request.ScraperTemplateReference,
 			PvcTemplate:                  request.PvcTemplate,
 			PvcTemplateReference:         request.PvcTemplateReference,
-			DownloadArtifactExecutionIDs: ids,
+			DownloadArtifactExecutionIDs: executionIDs,
 		}
 
 		requests := make([]workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution], len(testTuples))
@@ -501,6 +515,11 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 
 		go workerpoolService.SendRequests(requests)
 		go workerpoolService.Run(ctx)
+	}
+
+	result.Start()
+	if err := s.testExecutionResults.Update(ctx, testsuiteExecution); err != nil {
+		s.logger.Errorw("saving test suite execution start time error", "error", err)
 	}
 
 	if duration != 0 {
@@ -530,6 +549,11 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 				}
 			}
 		}
+	}
+
+	result.Stop()
+	if err := s.testExecutionResults.Update(ctx, testsuiteExecution); err != nil {
+		s.logger.Errorw("saving test suite execution end time error", "error", err)
 	}
 }
 

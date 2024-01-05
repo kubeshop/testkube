@@ -19,7 +19,7 @@ func NewSetContextCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "context <value>",
-		Short: "Set context data for Testkube Cloud",
+		Short: "Set context data for Testkube Pro",
 		Run: func(cmd *cobra.Command, args []string) {
 
 			cfg, err := config.Load()

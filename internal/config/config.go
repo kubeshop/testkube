@@ -47,7 +47,7 @@ type Config struct {
 	JobTemplateFile                  string        `envconfig:"JOB_TEMPLATE_FILE" default:""`
 	DisableTestTriggers              bool          `envconfig:"DISABLE_TEST_TRIGGERS" default:"false"`
 	TestkubeDefaultExecutors         string        `envconfig:"TESTKUBE_DEFAULT_EXECUTORS" default:""`
-	TestkubeSpecifiedExecutors       string        `envconfig:"TESTKUBE_SPECIFIED_EXECUTORS" default:""`
+	TestkubeEnabledExecutors         string        `envconfig:"TESTKUBE_ENABLED_EXECUTORS" default:""`
 	TestkubeTemplateJob              string        `envconfig:"TESTKUBE_TEMPLATE_JOB" default:""`
 	TestkubeContainerTemplateJob     string        `envconfig:"TESTKUBE_CONTAINER_TEMPLATE_JOB" default:""`
 	TestkubeContainerTemplateScraper string        `envconfig:"TESTKUBE_CONTAINER_TEMPLATE_SCRAPER" default:""`

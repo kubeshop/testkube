@@ -71,7 +71,7 @@ jobs:
         with:
           distribution: goreleaser-pro
           version: latest
-          args: release -f ${{ matrix.path }} --snapshot
+          args: release -f ${{ matrix.path }} --skip-publish
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
@@ -116,7 +116,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - uses: sigstore/cosign-installer@v3.0.5
@@ -158,7 +158,7 @@ jobs:
         with:
           distribution: goreleaser-pro
           version: latest
-          args: release -f .goreleaser-dev.yml --rm-dist
+          args: release -f .goreleaser-dev.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
@@ -180,7 +180,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -231,6 +231,13 @@ jobs:
           $hash=Get-FileHash testkube.msi
           $hash.Hash + "  " + $installer_name + ".msi" >> msi_checksum.txt
           echo "::set-output name=INSTALLER_NAME::${installer_name}"
+
+          #export MSI hash to environment
+          $hashsum = $hash.Hash
+          echo "::set-output name=CHECKSUM::${hashsum}"
+
+          #copy MSI to choco directory to build a nuget package
+          Copy-Item -Path "testkube.msi" -Destination ".\choco\tools\$env:MSI_NAME.msi"
         env:
           MSI_NAME: testkube_${{steps.tag.outputs.tag}}_Windows_i386
 

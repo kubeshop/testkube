@@ -56,7 +56,7 @@ func TestRun_Integration(t *testing.T) {
 			expectedStatus:  *testkube.ExecutionStatusPassed,
 			scraperBuilder: func() scraper.Scraper {
 				s := scraper.NewMockScraper(mockCtrl)
-				s.EXPECT().Scrape(gomock.Any(), []string{"/logs"}, gomock.Eq(e)).Return(nil)
+				s.EXPECT().Scrape(gomock.Any(), []string{"/logs"}, []string{}, gomock.Eq(e)).Return(nil)
 				return s
 			},
 		},
@@ -68,7 +68,7 @@ func TestRun_Integration(t *testing.T) {
 			expectedStatus:  *testkube.ExecutionStatusFailed,
 			scraperBuilder: func() scraper.Scraper {
 				s := scraper.NewMockScraper(mockCtrl)
-				s.EXPECT().Scrape(gomock.Any(), []string{"/logs"}, gomock.Eq(e)).Return(nil)
+				s.EXPECT().Scrape(gomock.Any(), []string{"/logs"}, []string{}, gomock.Eq(e)).Return(nil)
 				return s
 			},
 		},
@@ -80,7 +80,7 @@ func TestRun_Integration(t *testing.T) {
 			expectedStatus:  *testkube.ExecutionStatusPassed,
 			scraperBuilder: func() scraper.Scraper {
 				s := scraper.NewMockScraper(mockCtrl)
-				s.EXPECT().Scrape(gomock.Any(), []string{"/logs"}, gomock.Eq(e)).Return(errors.New("Scraping failed"))
+				s.EXPECT().Scrape(gomock.Any(), []string{"/logs"}, []string{}, gomock.Eq(e)).Return(errors.New("Scraping failed"))
 				return s
 			},
 		},
@@ -92,7 +92,7 @@ func TestRun_Integration(t *testing.T) {
 			expectedStatus:  *testkube.ExecutionStatusFailed,
 			scraperBuilder: func() scraper.Scraper {
 				s := scraper.NewMockScraper(mockCtrl)
-				s.EXPECT().Scrape(gomock.Any(), []string{"/logs"}, gomock.Eq(e)).Return(errors.New("Scraping failed"))
+				s.EXPECT().Scrape(gomock.Any(), []string{"/logs"}, []string{}, gomock.Eq(e)).Return(errors.New("Scraping failed"))
 				return s
 			},
 		},

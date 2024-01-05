@@ -3,7 +3,7 @@ kind: TestSuite
 metadata:
   name: executor-postman-smoke-tests
   labels:
-    app: testkube
+    core-tests: executors
 spec:
   description: "postman executor smoke tests"
   steps:
@@ -13,6 +13,9 @@ spec:
   - stopOnFailure: false
     execute:
     - test: postman-executor-smoke-git-file
+  - stopOnFailure: false
+    execute:
+    - test: postman-executor-smoke-pre-post-run-scripts
   - stopOnFailure: false
     execute:
     - test: postman-executor-smoke-testsource

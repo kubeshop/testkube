@@ -8,6 +8,8 @@ import (
 	"os"
 	"time"
 
+	"google.golang.org/grpc/keepalive"
+
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/version"
 
@@ -27,6 +29,7 @@ import (
 )
 
 const (
+	timeout            = 10 * time.Second
 	apiKeyMeta         = "api-key"
 	clusterIDMeta      = "cluster-id"
 	cloudMigrateMeta   = "migrate"
@@ -43,6 +46,8 @@ const (
 const bufferSizePerWorker = 5
 
 func NewGRPCConnection(ctx context.Context, isInsecure bool, skipVerify bool, server string, logger *zap.SugaredLogger) (*grpc.ClientConn, error) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 	var tlsConfig *tls.Config
 	if skipVerify {
 		tlsConfig = &tls.Config{InsecureSkipVerify: true}
@@ -52,9 +57,26 @@ func NewGRPCConnection(ctx context.Context, isInsecure bool, skipVerify bool, se
 		creds = insecure.NewCredentials()
 	}
 
+	kacp := keepalive.ClientParameters{
+		Time:                10 * time.Second,
+		Timeout:             5 * time.Second,
+		PermitWithoutStream: true,
+	}
+
 	userAgent := version.Version + "/" + version.Commit
-	logger.Infow("initiating connection with Cloud API", "userAgent", userAgent)
-	return grpc.DialContext(ctx, server, grpc.WithBlock(), grpc.WithUserAgent(userAgent), grpc.WithTransportCredentials(creds))
+	logger.Infow("initiating connection with agent api", "userAgent", userAgent)
+	// WithBlock, WithReturnConnectionError and FailOnNonTempDialError are recommended not to be used by gRPC go docs
+	// but given that Agent will not work if gRPC connection cannot be established, it is ok to use them and assert issues at dial time
+	return grpc.DialContext(
+		ctx,
+		server,
+		grpc.WithBlock(),
+		grpc.WithReturnConnectionError(),
+		grpc.FailOnNonTempDialError(true),
+		grpc.WithUserAgent(userAgent),
+		grpc.WithTransportCredentials(creds),
+		grpc.WithKeepaliveParams(kacp),
+	)
 }
 
 type Agent struct {

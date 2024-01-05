@@ -175,13 +175,15 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 
 	if r.Params.ScrapperEnabled {
 		directories := []string{reportFolder}
-		if execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
+		var masks []string
+		if execution.ArtifactRequest != nil {
 			directories = append(directories, execution.ArtifactRequest.Dirs...)
+			masks = execution.ArtifactRequest.Masks
 		}
 
-		output.PrintLogf("%s Scraping directories: %v", ui.IconCabinet, directories)
+		output.PrintLogf("%s Scraping directories: %v with masks: %v", ui.IconCabinet, directories, masks)
 
-		if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
+		if err := r.Scraper.Scrape(ctx, directories, masks, execution); err != nil {
 			return *result.Err(err), errors.Wrap(err, "error scraping artifacts from ZAP executor")
 		}
 	}

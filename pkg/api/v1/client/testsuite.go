@@ -206,33 +206,46 @@ func (c TestSuiteClient) ExecuteTestSuites(selector string, concurrencyLevel int
 }
 
 // WatchTestSuiteExecution watches for changes in channels of test suite executions steps
-func (c TestSuiteClient) WatchTestSuiteExecution(executionID string) (executionCh chan testkube.TestSuiteExecution, err error) {
-	executionCh = make(chan testkube.TestSuiteExecution)
+func (c TestSuiteClient) WatchTestSuiteExecution(executionID string) (respCh chan testkube.WatchTestSuiteExecutionResponse) {
+	respCh = make(chan testkube.WatchTestSuiteExecutionResponse)
 
 	go func() {
+		defer close(respCh)
+
 		execution, err := c.GetTestSuiteExecution(executionID)
 		if err != nil {
-			close(executionCh)
+			respCh <- testkube.WatchTestSuiteExecutionResponse{
+				Error: err,
+			}
 			return
 		}
 
-		executionCh <- execution
+		respCh <- testkube.WatchTestSuiteExecutionResponse{
+			Execution: execution,
+		}
+
 		for range time.NewTicker(time.Second).C {
 			execution, err = c.GetTestSuiteExecution(executionID)
 			if err != nil {
-				close(executionCh)
+				respCh <- testkube.WatchTestSuiteExecutionResponse{
+					Error: err,
+				}
 				return
 			}
 
 			if execution.IsCompleted() {
-				close(executionCh)
+				respCh <- testkube.WatchTestSuiteExecutionResponse{
+					Execution: execution,
+				}
 				return
 			}
 
-			executionCh <- execution
+			respCh <- testkube.WatchTestSuiteExecutionResponse{
+				Execution: execution,
+			}
 		}
 	}()
-	return
+	return respCh
 }
 
 // ListTestSuiteExecutions list all executions for given test suite

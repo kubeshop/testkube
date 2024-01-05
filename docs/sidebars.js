@@ -184,6 +184,7 @@ const sidebars = {
         "testkube-pro/articles/AI-test-insights",
         "testkube-pro/articles/status-pages",
         "testkube-pro/articles/cached-results",
+        "testkube-pro/articles/log-highlighting",
       ],
     },
     {
@@ -217,7 +218,7 @@ const sidebars = {
         },
         "openapi",
         "articles/metrics",
-        "articles/artifacts-storage",
+        "articles/artifacts",
         "articles/testkube-dependencies",
         "articles/architecture",
         "articles/telemetry",

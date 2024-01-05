@@ -179,8 +179,8 @@ const redirects = [
     to: "/articles/scheduling-tests",
   },
   {
-    from: ["/concepts/artifacts-storage", "/using-testkube/artifacts-storage"],
-    to: "/articles/artifacts-storage",
+    from: ["/concepts/artifacts", "/using-testkube/artifacts"],
+    to: "/articles/artifacts",
   },
   {
     from: "/concepts/metrics",

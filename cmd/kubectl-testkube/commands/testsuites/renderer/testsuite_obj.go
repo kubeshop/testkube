@@ -99,7 +99,13 @@ func TestSuiteRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 			if batch.DownloadArtifacts.AllPreviousSteps {
 				downloadArtifacts = "all previous steps"
 			} else {
-				downloadArtifacts = fmt.Sprintf("previous step numbers: %v", batch.DownloadArtifacts.PreviousStepNumbers)
+				if len(batch.DownloadArtifacts.PreviousStepNumbers) != 0 {
+					downloadArtifacts = fmt.Sprintf("previous step numbers: %v", batch.DownloadArtifacts.PreviousStepNumbers)
+				}
+
+				if len(batch.DownloadArtifacts.PreviousTestNames) != 0 {
+					downloadArtifacts = fmt.Sprintf("previous test names: %v", batch.DownloadArtifacts.PreviousTestNames)
+				}
 			}
 		}
 

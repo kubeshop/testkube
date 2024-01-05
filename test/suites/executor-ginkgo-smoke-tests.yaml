@@ -3,7 +3,7 @@ kind: TestSuite
 metadata:
   name: executor-ginkgo-smoke-tests
   labels:
-    app: testkube
+    core-tests: executors
 spec:
   description: "ginkgo executor smoke tests"
   steps:

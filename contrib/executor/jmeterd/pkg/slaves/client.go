@@ -57,6 +57,7 @@ type PodOptions struct {
 	Ports                 []v1.ContainerPort
 	Resources             *testkube.PodResourcesRequest
 	ImagePullSecrets      []string
+	ArtifactRequest       *testkube.ArtifactRequest
 }
 
 // NewClient is a method to create new slave client
@@ -157,10 +158,10 @@ func (c *Client) getSlavePodConfiguration(ctx context.Context, currentSlavesCoun
 		output.PrintLogf("%s Failed to fetch Test Job info: %v", ui.IconWarning, err.Error())
 	}
 
-	return c.createSlavePodObject(runnerExecutionStr, podName, executorJob)
+	return c.createSlavePodObject(runnerExecutionStr, podName, executorJob, currentSlavesCount)
 }
 
-func (c *Client) createSlavePodObject(runnerExecutionStr []byte, podName string, executorJob *batchv1.Job) (*v1.Pod, error) {
+func (c *Client) createSlavePodObject(runnerExecutionStr []byte, podName string, executorJob *batchv1.Job, currentSlavesCount int) (*v1.Pod, error) {
 	tmpl, err := utils.
 		NewTemplate("pod").
 		Funcs(template.FuncMap{"vartypeptrtostring": testkube.VariableTypeString}).
@@ -223,7 +224,7 @@ func (c *Client) createSlavePodObject(runnerExecutionStr []byte, podName string,
 	}
 
 	for i := range pod.Spec.Containers {
-		pod.Spec.Containers[i].Env = append(pod.Spec.Containers[i].Env, getSlaveConfigurationEnv(c.envVariables)...)
+		pod.Spec.Containers[i].Env = append(pod.Spec.Containers[i].Env, getSlaveConfigurationEnv(c.envVariables, currentSlavesCount)...)
 	}
 
 	return &pod, nil
@@ -246,6 +247,11 @@ func (c *Client) newPodOptions(runnerExecutionStr []byte, podName string, execut
 	var resources *testkube.PodResourcesRequest
 	if c.execution.SlavePodRequest != nil {
 		resources = c.execution.SlavePodRequest.Resources
+	}
+
+	var artifactRequest *testkube.ArtifactRequest
+	if c.execution.ArtifactRequest != nil && c.execution.ArtifactRequest.SharedBetweenPods {
+		artifactRequest = c.execution.ArtifactRequest
 	}
 
 	return &PodOptions{
@@ -273,6 +279,7 @@ func (c *Client) newPodOptions(runnerExecutionStr []byte, podName string, execut
 		},
 		Resources:        resources,
 		ImagePullSecrets: c.slavesConfigs.ImagePullSecrets,
+		ArtifactRequest:  artifactRequest,
 	}
 }
 

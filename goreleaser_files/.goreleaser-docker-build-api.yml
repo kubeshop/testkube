@@ -96,4 +96,3 @@ docker_signs:
 
 snapshot:
   name_template: "{{ .ShortCommit }}"
-

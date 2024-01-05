@@ -196,6 +196,7 @@ type Templates struct {
 	Job     string `json:"job"`
 	PVC     string `json:"pvc"`
 	Scraper string `json:"scraper"`
+	Slave   string `json:"slave"`
 }
 
 // Images contains images for executor

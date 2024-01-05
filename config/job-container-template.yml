@@ -29,7 +29,7 @@ spec:
           mountPath: /etc/certs
         {{- end }}
         {{- if .ArtifactRequest }}
-          {{- if .ArtifactRequest.VolumeMountPath }}
+          {{- if and .ArtifactRequest.VolumeMountPath  .ArtifactRequest.StorageClassName }}
         - name: artifact-volume
           mountPath: {{ .ArtifactRequest.VolumeMountPath }}
           {{- end }}
@@ -78,7 +78,7 @@ spec:
           mountPath: /etc/certs
         {{- end }}
         {{- if .ArtifactRequest }}
-          {{- if .ArtifactRequest.VolumeMountPath }}
+          {{- if and .ArtifactRequest.VolumeMountPath .ArtifactRequest.StorageClassName }}
         - name: artifact-volume
           mountPath: {{ .ArtifactRequest.VolumeMountPath }}
           {{- end }}

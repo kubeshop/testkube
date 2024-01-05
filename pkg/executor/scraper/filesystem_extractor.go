@@ -7,6 +7,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/kubeshop/testkube/pkg/archive"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -44,7 +46,7 @@ func GenerateTarballMetaFile() ArchiveFilesystemExtractorOpts {
 	}
 }
 
-func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths []string, process ProcessFn, notify NotifyFn) error {
+func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths, masks []string, process ProcessFn, notify NotifyFn) error {
 	var archiveFiles []*archive.File
 	for _, dir := range paths {
 		log.DefaultLogger.Infof("scraping artifacts in directory: %v", dir)
@@ -64,6 +66,30 @@ func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths []string
 
 				if fileInfo.IsDir() {
 					log.DefaultLogger.Debugf("skipping directory %s", path)
+					return nil
+				}
+
+				var regexps []*regexp.Regexp
+				for _, mask := range masks {
+					values := strings.Split(mask, ",")
+					for _, value := range values {
+						re, err := regexp.Compile(value)
+						if err != nil {
+							return errors.Wrap(err, "regexp compilation error")
+						}
+
+						regexps = append(regexps, re)
+					}
+				}
+
+				found := len(regexps) == 0
+				for i := range regexps {
+					if found = regexps[i].MatchString(path); found {
+						break
+					}
+				}
+
+				if !found {
 					return nil
 				}
 
@@ -194,7 +220,7 @@ func NewRecursiveFilesystemExtractor(fs filesystem.FileSystem) *RecursiveFilesys
 	return &RecursiveFilesystemExtractor{fs: fs}
 }
 
-func (e *RecursiveFilesystemExtractor) Extract(ctx context.Context, paths []string, process ProcessFn, notify NotifyFn) error {
+func (e *RecursiveFilesystemExtractor) Extract(ctx context.Context, paths, masks []string, process ProcessFn, notify NotifyFn) error {
 	for _, dir := range paths {
 		log.DefaultLogger.Infof("scraping artifacts in directory: %v", dir)
 
@@ -213,6 +239,30 @@ func (e *RecursiveFilesystemExtractor) Extract(ctx context.Context, paths []stri
 
 				if fileInfo.IsDir() {
 					log.DefaultLogger.Infof("skipping directory %s", path)
+					return nil
+				}
+
+				var regexps []*regexp.Regexp
+				for _, mask := range masks {
+					values := strings.Split(mask, ",")
+					for _, value := range values {
+						re, err := regexp.Compile(value)
+						if err != nil {
+							return errors.Wrap(err, "regexp compilation error")
+						}
+
+						regexps = append(regexps, re)
+					}
+				}
+
+				found := len(regexps) == 0
+				for i := range regexps {
+					if found = regexps[i].MatchString(path); found {
+						break
+					}
+				}
+
+				if !found {
 					return nil
 				}
 

@@ -16,8 +16,10 @@ testkube run test <testName> [flags]
       --args stringArray                           executor binary additional arguments
       --args-mode string                           usage mode for argumnets. one of append|override (default "append")
       --artifact-dir stringArray                   artifact dirs for scraping
+      --artifact-mask stringArray                  regexp to filter scraped artifacts, single or comma separated, like report/.* or .*\.json,.*\.js$
       --artifact-omit-folder-per-execution         don't store artifacts in execution folder
-      --artifact-storage-bucket string             artifact storage class name for container executor
+      --artifact-shared-between-pods               whether to share volume between pods
+      --artifact-storage-bucket string             artifact storage bucket
       --artifact-storage-class-name string         artifact storage class name for container executor
       --artifact-volume-mount-path string          artifact volume mount path for container executor
       --command stringArray                        command passed to image in executor

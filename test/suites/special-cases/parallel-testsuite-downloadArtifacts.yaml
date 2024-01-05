@@ -1,0 +1,24 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: parallel-testsuite-downloadartifacts
+  labels:
+    core-tests: special-cases
+spec:
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: artillery-executor-smoke
+    - test: soapui-executor-smoke
+  - stopOnFailure: false
+    execute:
+    - test: container-executor-curl-smoke
+    - test: container-executor-curl-smoke
+    - test: soapui-executor-smoke
+  - stopOnFailure: false
+    downloadArtifacts:
+      previousStepNumbers: []
+      previousTestNames: []
+    execute:
+    - test: expected-fail-container-executor-k6-wrong-dir
+    - test: soapui-executor-smoke

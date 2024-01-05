@@ -3,7 +3,7 @@ kind: TestSuite
 metadata:
   name: executor-cypress-smoke-tests
   labels:
-    app: testkube
+    core-tests: executors
 spec:
   description: "Cypress executor smoke tests"
   steps:

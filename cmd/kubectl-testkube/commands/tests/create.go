@@ -39,6 +39,7 @@ type CreateCommonFlags struct {
 	ArtifactStorageClassName           string
 	ArtifactVolumeMountPath            string
 	ArtifactDirs                       []string
+	ArtifactMasks                      []string
 	JobTemplate                        string
 	JobTemplateReference               string
 	CronJobTemplate                    string
@@ -58,6 +59,7 @@ type CreateCommonFlags struct {
 	UploadTimeout                      string
 	ArtifactStorageBucket              string
 	ArtifactOmitFolderPerExecution     bool
+	ArtifactSharedBetweenPods          bool
 	Description                        string
 	SlavePodRequestsCpu                string
 	SlavePodRequestsMemory             string
@@ -246,6 +248,7 @@ func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
 	cmd.Flags().StringVar(&flags.ArtifactStorageClassName, "artifact-storage-class-name", "", "artifact storage class name for container executor")
 	cmd.Flags().StringVar(&flags.ArtifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
 	cmd.Flags().StringArrayVarP(&flags.ArtifactDirs, "artifact-dir", "", []string{}, "artifact dirs for scraping")
+	cmd.Flags().StringArrayVarP(&flags.ArtifactMasks, "artifact-mask", "", []string{}, "regexp to filter scraped artifacts, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
 	cmd.Flags().StringVar(&flags.JobTemplate, "job-template", "", "job template file path for extensions to job template")
 	cmd.Flags().StringVar(&flags.JobTemplateReference, "job-template-reference", "", "reference to job template to use for the test")
 	cmd.Flags().StringVar(&flags.CronJobTemplate, "cronjob-template", "", "cron job template file path for extensions to cron job template")
@@ -263,8 +266,9 @@ func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
 	cmd.Flags().StringToStringVarP(&flags.MountSecrets, "mount-secret", "", map[string]string{}, "secret value pair for mounting it to executor pod: --mount-secret secret_name=secret_mountpath")
 	cmd.Flags().StringArrayVar(&flags.VariableSecrets, "variable-secret", []string{}, "secret name used to map all keys to secret variables")
 	cmd.Flags().StringVar(&flags.UploadTimeout, "upload-timeout", "", "timeout to use when uploading files, example: 30s")
-	cmd.Flags().StringVar(&flags.ArtifactStorageBucket, "artifact-storage-bucket", "", "artifact storage class name for container executor")
+	cmd.Flags().StringVar(&flags.ArtifactStorageBucket, "artifact-storage-bucket", "", "artifact storage bucket")
 	cmd.Flags().BoolVarP(&flags.ArtifactOmitFolderPerExecution, "artifact-omit-folder-per-execution", "", false, "don't store artifacts in execution folder")
+	cmd.Flags().BoolVarP(&flags.ArtifactSharedBetweenPods, "artifact-shared-between-pods", "", false, "whether to share volume between pods")
 	cmd.Flags().StringVarP(&flags.Description, "description", "", "", "test description")
 	cmd.Flags().StringVar(&flags.SlavePodRequestsCpu, "slave-pod-requests-cpu", "", "slave pod resource requests cpu")
 	cmd.Flags().StringVar(&flags.SlavePodRequestsMemory, "slave-pod-requests-memory", "", "slave pod resource requests memory")

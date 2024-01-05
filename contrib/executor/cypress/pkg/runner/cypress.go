@@ -196,13 +196,15 @@ func (r *CypressRunner) Run(ctx context.Context, execution testkube.Execution) (
 			filepath.Join(projectPath, "cypress/screenshots"),
 		}
 
-		if execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
+		var masks []string
+		if execution.ArtifactRequest != nil {
 			directories = append(directories, execution.ArtifactRequest.Dirs...)
+			masks = execution.ArtifactRequest.Masks
 		}
 
 		output.PrintLogf("Scraping directories: %v", directories)
 
-		if err := r.Scraper.Scrape(ctx, directories, execution); err != nil {
+		if err := r.Scraper.Scrape(ctx, directories, masks, execution); err != nil {
 			return *result.WithErrors(err), nil
 		}
 	}

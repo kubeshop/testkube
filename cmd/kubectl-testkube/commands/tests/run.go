@@ -41,6 +41,7 @@ func NewRunTestCmd() *cobra.Command {
 		artifactStorageClassName           string
 		artifactVolumeMountPath            string
 		artifactDirs                       []string
+		artifactMasks                      []string
 		jobTemplate                        string
 		jobTemplateReference               string
 		gitBranch                          string
@@ -67,6 +68,7 @@ func NewRunTestCmd() *cobra.Command {
 		argsMode                           string
 		artifactStorageBucket              string
 		artifactOmitFolderPerExecution     bool
+		artifactSharedBetweenPods          bool
 		silentMode                         bool
 		slavePodRequestsCpu                string
 		slavePodRequestsMemory             string
@@ -354,6 +356,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&artifactStorageClassName, "artifact-storage-class-name", "", "artifact storage class name for container executor")
 	cmd.Flags().StringVar(&artifactVolumeMountPath, "artifact-volume-mount-path", "", "artifact volume mount path for container executor")
 	cmd.Flags().StringArrayVarP(&artifactDirs, "artifact-dir", "", []string{}, "artifact dirs for scraping")
+	cmd.Flags().StringArrayVarP(&artifactMasks, "artifact-mask", "", []string{}, "regexp to filter scraped artifacts, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
 	cmd.Flags().StringVar(&jobTemplate, "job-template", "", "job template file path for extensions to job template")
 	cmd.Flags().StringVar(&jobTemplateReference, "job-template-reference", "", "reference to job template to use for the test")
 	cmd.Flags().StringVarP(&gitBranch, "git-branch", "", "", "if uri is git repository we can set additional branch parameter")
@@ -378,8 +381,9 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")
 	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
 	cmd.Flags().StringVar(&runningContext, "context", "", "running context description for test execution")
-	cmd.Flags().StringVar(&artifactStorageBucket, "artifact-storage-bucket", "", "artifact storage class name for container executor")
+	cmd.Flags().StringVar(&artifactStorageBucket, "artifact-storage-bucket", "", "artifact storage bucket")
 	cmd.Flags().BoolVarP(&artifactOmitFolderPerExecution, "artifact-omit-folder-per-execution", "", false, "don't store artifacts in execution folder")
+	cmd.Flags().BoolVarP(&artifactSharedBetweenPods, "artifact-shared-between-pods", "", false, "whether to share volume between pods")
 	cmd.Flags().BoolVarP(&silentMode, "silent", "", false, "don't print intermediate test execution")
 	cmd.Flags().StringVar(&slavePodRequestsCpu, "slave-pod-requests-cpu", "", "slave pod resource requests cpu")
 	cmd.Flags().StringVar(&slavePodRequestsMemory, "slave-pod-requests-memory", "", "slave pod resource requests memory")

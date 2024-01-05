@@ -159,7 +159,7 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	}
 	output.PrintLogf("%s Access to files enabled", ui.IconCheckMark)
 
-	if len(execution.DownloadArtifactExecutionIDs) != 0 {
+	if len(execution.DownloadArtifactExecutionIDs) != 0 || len(execution.DownloadArtifactTestNames) != 0 {
 		downloadedArtifacts := filepath.Join(r.Params.DataDir, "downloaded-artifacts")
 		options := client.Options{
 			ApiUri: r.Params.APIURI,
@@ -170,8 +170,29 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 			output.PrintLogf("%s Could not get client: %s", ui.IconCross, err.Error())
 		} else {
 			for _, id := range execution.DownloadArtifactExecutionIDs {
-				if err = downloadArtifacts(id, filepath.Join(downloadedArtifacts, id), c); err != nil {
-					output.PrintLogf("%s Could not download artifact: %s", ui.IconCross, err.Error())
+				execution, err := c.GetExecution(id)
+				if err != nil {
+					output.PrintLogf("%s Could not get execution: %s", ui.IconCross, err.Error())
+					continue
+				}
+
+				if err = downloadArtifacts(id, filepath.Join(downloadedArtifacts, execution.TestName+"-"+id), c); err != nil {
+					output.PrintLogf("%s Could not download execution artifact: %s", ui.IconCross, err.Error())
+				}
+			}
+
+			for _, name := range execution.DownloadArtifactTestNames {
+				test, err := c.GetTestWithExecution(name)
+				if err != nil {
+					output.PrintLogf("%s Could not get test with execution: %s", ui.IconCross, err.Error())
+					continue
+				}
+
+				if test.LatestExecution != nil {
+					id := test.LatestExecution.Id
+					if err = downloadArtifacts(id, filepath.Join(downloadedArtifacts, name+"-"+id), c); err != nil {
+						output.PrintLogf("%s Could not download test artifact: %s", ui.IconCross, err.Error())
+					}
 				}
 			}
 		}

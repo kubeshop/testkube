@@ -27,6 +27,12 @@ spec:
         - name: {{ .CertificateSecret }}
           mountPath: /etc/certs
         {{- end }}
+        {{- if .ArtifactRequest }}
+          {{- if and .ArtifactRequest.VolumeMountPath .ArtifactRequest.StorageClassName }}
+        - name: artifact-volume
+          mountPath: {{ .ArtifactRequest.VolumeMountPath }}
+          {{- end }}
+        {{- end }}
         {{- range $configmap := .EnvConfigMaps }}
         {{- if and $configmap.Mount $configmap.Reference }}
         - name: {{ $configmap.Reference.Name }}
@@ -70,6 +76,12 @@ spec:
         - name: {{ .CertificateSecret }}
           mountPath: /etc/certs
         {{- end }}
+        {{- if .ArtifactRequest }}
+          {{- if and .ArtifactRequest.VolumeMountPath .ArtifactRequest.StorageClassName }}
+        - name: artifact-volume
+          mountPath: {{ .ArtifactRequest.VolumeMountPath }}
+          {{- end }}
+        {{- end }}
         {{- range $configmap := .EnvConfigMaps }}
         {{- if and $configmap.Mount $configmap.Reference }}
         - name: {{ $configmap.Reference.Name }}
@@ -89,6 +101,13 @@ spec:
       - name: {{ .CertificateSecret }}
         secret:
           secretName: {{ .CertificateSecret }}
+      {{- end }}
+      {{- if .ArtifactRequest }}
+        {{- if and .ArtifactRequest.VolumeMountPath .ArtifactRequest.StorageClassName }}
+      - name: artifact-volume
+        persistentVolumeClaim:
+          claimName: {{ .Name }}-pvc
+        {{- end }}
       {{- end }}
       {{- range $configmap := .EnvConfigMaps }}
       {{- if and $configmap.Mount $configmap.Reference }}

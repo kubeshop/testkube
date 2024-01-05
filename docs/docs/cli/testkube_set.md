@@ -30,5 +30,5 @@ testkube set <resourceName> [flags]
 ### SEE ALSO
 
 * [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
-* [testkube set context](testkube_set_context.md)	 - Set context data for Testkube Cloud
+* [testkube set context](testkube_set_context.md)	 - Set context data for Testkube Pro
 

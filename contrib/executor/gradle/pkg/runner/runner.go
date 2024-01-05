@@ -177,9 +177,9 @@ func (r *GradleRunner) Run(ctx context.Context, execution testkube.Execution) (r
 
 	// scrape artifacts first even if there are errors above
 	if r.params.ScrapperEnabled && execution.ArtifactRequest != nil && len(execution.ArtifactRequest.Dirs) != 0 {
-		output.PrintLogf("Scraping directories: %v", execution.ArtifactRequest.Dirs)
+		output.PrintLogf("Scraping directories: %v with masks: %v", execution.ArtifactRequest.Dirs, execution.ArtifactRequest.Masks)
 
-		if err := r.Scraper.Scrape(ctx, execution.ArtifactRequest.Dirs, execution); err != nil {
+		if err := r.Scraper.Scrape(ctx, execution.ArtifactRequest.Dirs, execution.ArtifactRequest.Masks, execution); err != nil {
 			return *result.WithErrors(err), nil
 		}
 	}

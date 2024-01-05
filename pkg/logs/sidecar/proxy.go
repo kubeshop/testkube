@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -151,7 +152,12 @@ func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan events.Log) (err err
 	}
 
 	for _, container := range containers {
-
+		// We skip logsidecar container logs,
+		// because following the logs for it will never finish
+		// and the sidecar will run forever.
+		if strings.HasSuffix(container, "-logs") {
+			continue
+		}
 		req := p.podsClient.GetLogs(
 			pod.Name,
 			&corev1.PodLogOptions{
