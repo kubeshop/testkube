@@ -413,6 +413,8 @@ func (r *MongoRepository) GetExecutionTotals(ctx context.Context, paging bool, f
 			pipeline = append(pipeline, bson.D{{Key: "$skip", Value: int64(filter[0].Page() * filter[0].PageSize())}})
 			pipeline = append(pipeline, bson.D{{Key: "$limit", Value: int64(filter[0].PageSize())}})
 		}
+	} else {
+		pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: "executionresult.status", Value: 1}}}})
 	}
 
 	pipeline = append(pipeline, bson.D{{Key: "$group", Value: bson.D{{Key: "_id", Value: "$executionresult.status"},
