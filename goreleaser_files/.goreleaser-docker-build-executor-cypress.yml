@@ -3,6 +3,8 @@ env:
   # https://github.com/goreleaser/goreleaser/pull/3199
   # To use a builder other than "default", set this variable.
   # Necessary for, e.g., GitHub actions cache integration.
+  - DOCKER_REPO={{ if index .Env "DOCKER_REPO"  }}{{ .Env.DOCKER_REPO }}{{ else }}kubeshop{{ end }}
+  - IMAGE_TAG_SHA={{ if index .Env "IMAGE_TAG_SHA"  }}{{ .Env.IMAGE_TAG_SHA }}{{ else }}{{ end }}
   - DOCKER_BUILDX_BUILDER={{ if index .Env "DOCKER_BUILDX_BUILDER"  }}{{ .Env.DOCKER_BUILDX_BUILDER }}{{ else }}default{{ end }}
   # Setup to enable Docker to use, e.g., the GitHub actions cache; see
   # https://docs.docker.com/build/building/cache/backends/
