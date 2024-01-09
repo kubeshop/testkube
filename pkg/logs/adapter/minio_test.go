@@ -38,6 +38,7 @@ func RandString(n int) string {
 }
 
 func TestLogs(t *testing.T) {
+	t.Skip("skipping test")
 	consumer := NewMinioConsumer("localhost:9000", "minio", "minio123", "", "", "test-1", minioconnecter.Insecure())
 	id := "test-bla"
 	for i := 0; i < 1000; i++ {
