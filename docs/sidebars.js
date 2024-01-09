@@ -225,6 +225,7 @@ const sidebars = {
       ],
     },
     "articles/common-issues",
+    "articles/deprecations",
     {
       type: "category",
       label: "Contributing",
