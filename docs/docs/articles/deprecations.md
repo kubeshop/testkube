@@ -1,8 +1,8 @@
 # Deprecations
 
-Software deprecation refers to the process of phasing out or discontinuing support for a particular software feature, API (Application Programming Interface), or an entire software product. This decision is typically made by software developers or vendors due to various reasons such as security concerns, outdated technology, or the introduction of more efficient alternatives.
+Software deprecation refers to the process of phasing out or discontinuing support for a particular software feature. This decision is typically made by software developers or vendors due to various reasons such as security concerns, outdated technology, or the introduction of more efficient alternatives.
 
-Some of deprecations in Testkube are caused by security reasons, some of them are caused by changes in dependencies. Usually if possible and reasonable we try to keep backward compatibility.
+Usually if possible and reasonable we try to keep backward compatibility.
 
 ## List of Testkube deprecations
 
