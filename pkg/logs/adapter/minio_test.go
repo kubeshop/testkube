@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/logs/events"
+	minioconnecter "github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
@@ -37,7 +38,7 @@ func RandString(n int) string {
 }
 
 func TestLogs(t *testing.T) {
-	consumer := NewMinioConsumer("localhost:9000", "minio", "minio123", "", "", "test-1", false)
+	consumer := NewMinioConsumer("localhost:9000", "minio", "minio123", "", "", "test-1", minioconnecter.Insecure())
 	id := "test-bla"
 	for i := 0; i < 1000; i++ {
 		fmt.Println("sending", i)
@@ -53,7 +54,7 @@ func TestLogs(t *testing.T) {
 func BenchmarkLogs(b *testing.B) {
 	randomString := RandString(5)
 	bucket := "test-bench"
-	consumer := NewMinioConsumer("localhost:9000", "minio", "minio123", "", "", bucket, false)
+	consumer := NewMinioConsumer("localhost:9000", "minio", "minio123", "", "", bucket, minioconnecter.Insecure())
 	id := "test-bench" + "-" + randomString + "-" + strconv.Itoa(b.N)
 	totalSize := 0
 	for i := 0; i < b.N; i++ {
@@ -71,7 +72,7 @@ func BenchmarkLogs(b *testing.B) {
 func BenchmarkLogs2(b *testing.B) {
 	//b.SetParallelism(1)
 	bucket := "test-bench"
-	consumer := NewMinioConsumer("localhost:9000", "minio", "minio123", "", "", bucket, false)
+	consumer := NewMinioConsumer("localhost:9000", "minio", "minio123", "", "", bucket, minioconnecter.Insecure())
 	idChan := make(chan string, 100)
 	go verifyConsumer(idChan, bucket, consumer.minioClient)
 	var counter atomic.Int32
@@ -163,7 +164,7 @@ func verifyConsumer(idChan chan string, bucket string, minioClient *minio.Client
 func DoRunBenchmark() {
 	numberOfConsumers := 100
 	bucket := "test-bench"
-	consumer := NewMinioConsumer("testkube-minio-service-testkube:9000", "minio", "minio123", "", "", bucket, false)
+	consumer := NewMinioConsumer("testkube-minio-service-testkube:9000", "minio", "minio123", "", "", bucket, minioconnecter.Insecure())
 
 	idChan := make(chan string, numberOfConsumers)
 	DoRunBenchmark2(idChan, numberOfConsumers, consumer)
