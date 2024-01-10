@@ -80,6 +80,7 @@ func (s *TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 		}
 
 		l := s.Log.With("testID", id)
+
 		if len(tests) != 0 {
 			l.Infow("executing test", "test", tests[0])
 		}
