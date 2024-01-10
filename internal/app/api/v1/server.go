@@ -88,6 +88,7 @@ func NewTestkubeAPI(
 	mode string,
 	eventsBus bus.Bus,
 	enableSecretsEndpoint bool,
+	ff featureflags.FeatureFlags,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -132,6 +133,7 @@ func NewTestkubeAPI(
 		mode:                  mode,
 		eventsBus:             eventsBus,
 		enableSecretsEndpoint: enableSecretsEndpoint,
+		featureFlags:          ff,
 	}
 
 	// will be reused in websockets handler
