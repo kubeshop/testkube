@@ -449,7 +449,7 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 			}
 		}
 
-		if testSpec.Spec.Content != nil && testSpec.Spec.Content.Repository != nil && testSpec.Spec.Content.Repository.IsEmpty() {
+		if testSpec.Spec.Content != nil && testSpec.Spec.Content.Repository != nil && testSpec.Spec.Content.Repository.Uri == "" {
 			testSpec.Spec.Content.Repository = nil
 		}
 
