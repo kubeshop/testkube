@@ -436,7 +436,7 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 		s.Log.Infow("updating test", "request", request)
 
 		var option *tests.Option
-		if request.Content != nil && (*request.Content) != nil && (*request.Content).Repository != nil && *(*request.Content).Repository != nil {
+		if request.Content != nil && (*request.Content) != nil && (*request.Content).Repository != nil {
 			username := (*(*request.Content).Repository).Username
 			token := (*(*request.Content).Repository).Token
 			if username != nil || token != nil {
