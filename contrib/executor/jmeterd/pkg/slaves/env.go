@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	exenv "github.com/kubeshop/testkube/pkg/executor/env"
 )
 
 const (
@@ -45,12 +46,20 @@ func ExtractSlaveEnvVariables(variables map[string]testkube.Variable) map[string
 func GetRunnerEnvVariables() map[string]string {
 	envVars := make(map[string]string)
 	envs := os.Environ()
+OuterLoop:
 	for _, env := range envs {
+		for _, prefix := range []string{exenv.SecretEnvVarPrefix, exenv.SecretVarPrefix,
+			exenv.GitUsernameEnvVarName, exenv.GitTokenEnvVarName} {
+			if strings.HasPrefix(env, prefix) {
+				break OuterLoop
+			}
+		}
+
 		for _, prefix := range []string{RunnerPrefix, HttpProxyPrefix, HttpsProxyPrefix, DebugPrefix} {
 			if strings.HasPrefix(env, prefix) {
 				pair := strings.SplitN(env, "=", 2)
 				if len(pair) != 2 {
-					continue
+					break OuterLoop
 				}
 
 				envVars[pair[0]] += pair[1]
