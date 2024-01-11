@@ -1,9 +1,0 @@
-apiVersion: batch/v1
-kind: Job
-spec:
-  template:
-    spec:
-      hostAliases:
-        - ip: 10.10.0.128
-          hostnames:
-            - "internal.nexus.repo.bla"

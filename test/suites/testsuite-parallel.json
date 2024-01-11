@@ -1,9 +1,0 @@
-{
-	"name": "testsuite-p",
-	"description": "Run test several times in parallel",
-	"steps": [
-		{"stopOnFailure": true, "execute": [{"test": "jmeter-executor-smoke"}, {"test": "k6-executor-smoke"}, {"delay": "1s"}]},
-                {"stopOnFailure": true, "execute": [{"test": "jmeter-executor-smoke"}, {"delay": "1s"}]},
-		{"execute": [{"delay": "5s"}]}
-	]
-}
