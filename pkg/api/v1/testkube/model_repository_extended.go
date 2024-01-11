@@ -38,3 +38,8 @@ func (r *Repository) WithAuthType(authType GitAuthType) *Repository {
 	r.AuthType = string(authType)
 	return r
 }
+
+// IsEmpty returns true if repository is empty
+func (r *Repository) IsEmpty() bool {
+	return r == nil || r.Uri == ""
+}
