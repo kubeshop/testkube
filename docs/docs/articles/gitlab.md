@@ -27,8 +27,8 @@ setup-testkube:
     name: kubeshop/testkube-cli
     entrypoint: ["/bin/sh", "-c"]
   script:
-    - kubectl-testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
-    - kubectl-testkube run test test-name -f
+    - testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
+    - testkube run test test-name -f
 ```
 
 It is recommended that sensitive values should never be stored as plaintext in workflow files, but rather as [variables](https://docs.gitlab.com/ee/ci/variables/).  Secrets can be configured at the organization, repository, or environment level, and allow you to store sensitive information in Gitlab.
@@ -43,8 +43,8 @@ setup-testkube:
     name: kubeshop/testkube-cli
     entrypoint: ["/bin/sh", "-c"]
   script:
-    - kubectl-testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
-    - kubectl-testkube run test test-name -f
+    - testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
+    - testkube run test test-name -f
  ```
 ## Testkube OSS
 
