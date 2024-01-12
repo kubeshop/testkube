@@ -28,3 +28,6 @@ spec:
   - stopOnFailure: false
     execute:
     - test: jmeterd-executor-smoke-slaves
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-env-and-property-values

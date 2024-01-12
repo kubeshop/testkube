@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+
 	"os"
 	"os/signal"
 	"syscall"
@@ -30,7 +31,15 @@ func main() {
 	cfg := Must(config.Get())
 
 	// Event bus
-	nc := Must(bus.NewNATSConnection(cfg.NatsURI))
+	nc := Must(bus.NewNATSConnection(bus.ConnectionConfig{
+		NatsURI:            cfg.NatsURI,
+		NatsSecure:         cfg.NatsSecure,
+		NatsSkipVerify:     cfg.NatsSkipVerify,
+		NatsCertFile:       cfg.NatsCertFile,
+		NatsKeyFile:        cfg.NatsKeyFile,
+		NatsCAFile:         cfg.NatsCAFile,
+		NatsConnectTimeout: cfg.NatsConnectTimeout,
+	}))
 	defer func() {
 		log.Infof("closing nats connection")
 		nc.Close()

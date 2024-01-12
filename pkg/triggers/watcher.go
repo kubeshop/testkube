@@ -9,7 +9,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	appsinformerv1 "k8s.io/client-go/informers/apps/v1"
 	coreinformerv1 "k8s.io/client-go/informers/core/v1"
@@ -57,7 +56,7 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 	testkubeNamespace string, watcherNamespaces []string) *k8sInformers {
 	var k8sInformers k8sInformers
 	if len(watcherNamespaces) == 0 {
-		watcherNamespaces = append(watcherNamespaces, v1.NamespaceAll)
+		watcherNamespaces = append(watcherNamespaces, metav1.NamespaceAll)
 	}
 
 	for _, namespace := range watcherNamespaces {
