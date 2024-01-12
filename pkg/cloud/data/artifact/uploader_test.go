@@ -60,7 +60,7 @@ func TestCloudLoader_Load(t *testing.T) {
 				}
 
 				mockExecutor.EXPECT().Execute(gomock.Any(), cloudscraper.CmdScraperPutObjectSignedURL, gomock.Eq(req)).Return([]byte(`{"URL":"`+testServer.URL+`/dummy"}`), nil).Times(1)
-				return cloudscraper.NewCloudUploader(mockExecutor)
+				return cloudscraper.NewCloudUploader(mockExecutor, false)
 			},
 			putErr:  nil,
 			wantErr: false,
@@ -82,7 +82,7 @@ func TestCloudLoader_Load(t *testing.T) {
 				}
 
 				mockExecutor.EXPECT().Execute(gomock.Any(), cloudscraper.CmdScraperPutObjectSignedURL, gomock.Eq(req)).Return(nil, errors.New("connection error")).Times(1)
-				return cloudscraper.NewCloudUploader(mockExecutor)
+				return cloudscraper.NewCloudUploader(mockExecutor, false)
 			},
 			wantErr:     true,
 			errContains: "failed to get signed URL for object [my-object]: connection error",

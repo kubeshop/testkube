@@ -47,9 +47,9 @@ create_update_testsuite_json() { # testsuite_name testsuite_path
 
   if [ "$schedule" = true ] ; then # workaround for appending schedule
     random_minute="$(($RANDOM % 59))"
-    cat $2 | kubectl testkube --namespace $namespace $type testsuite --name $1 --label app=testkube --schedule "$random_minute */4 * * *" 
+    cat $2 | kubectl testkube --namespace $namespace $type testsuite --name $1 --schedule "$random_minute */4 * * *"
   else
-    cat $2 | kubectl testkube --namespace $namespace $type testsuite --name $1 --label app=testkube
+    cat $2 | kubectl testkube --namespace $namespace $type testsuite --name $1
   fi
 }
 
@@ -58,7 +58,7 @@ create_update_testsuite() { # testsuite_name testsuite_path
 
     if [ "$schedule" = true ] ; then # workaround for appending schedule
       random_minute="$(($RANDOM % 59))"
-      kubectl testkube --namespace $namespace update testsuite --name $1 --label app=testkube --schedule "$random_minute */4 * * *" 
+      kubectl testkube --namespace $namespace update testsuite --name $1 --schedule "$random_minute */4 * * *"
     fi
 }
 
@@ -142,6 +142,17 @@ container-cypress-smoke() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
+container-gradle-smoke() {
+  name="Container executor - Gradle"
+  test_crd_file="test/container-executor/executor-smoke/crd/gradle.yaml"
+  testsuite_name="executor-container-gradle-smoke-tests"
+  testsuite_file="test/suites/executor-container-gradle-smoke-tests.yaml"
+
+  custom_executor_crd_file="test/executors/container-executor-gradle.yaml"
+
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
+}
+
 container-k6-smoke() {
   name="Container executor - K6"
   test_crd_file="test/container-executor/executor-smoke/crd/k6.yaml"
@@ -149,6 +160,17 @@ container-k6-smoke() {
   testsuite_file="test/suites/executor-container-k6-smoke-tests.yaml"
 
   custom_executor_crd_file="test/executors/container-executor-k6.yaml"
+
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
+}
+
+container-maven-smoke() {
+  name="Container executor - Maven"
+  test_crd_file="test/container-executor/executor-smoke/crd/maven.yaml"
+  testsuite_name="executor-container-maven-smoke-tests"
+  testsuite_file="test/suites/executor-container-maven-smoke-tests.yaml"
+
+  custom_executor_crd_file="test/executors/container-executor-maven.yaml"
 
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
@@ -329,13 +351,24 @@ special-cases-large-artifacts() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
+special-cases-jmeter() {
+  name="Special Cases - JMeter/JMeterd"
+  test_crd_file="test/jmeter/executor-tests/crd/special-cases.yaml"
+  testsuite_name="jmeter-special-cases"
+  testsuite_file="test/suites/special-cases/jmeter-special-cases.yaml"
+
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
+}
+
 main() {
   case $executor_type in
     all)
       artillery-smoke
       container-curl-smoke
       container-cypress-smoke
+      container-gradle-smoke
       container-k6-smoke
+      container-maven-smoke
       container-postman-smoke
       container-playwright-smoke
       curl-smoke
@@ -356,7 +389,9 @@ main() {
       artillery-smoke
       container-curl-smoke
       container-cypress-smoke
+      container-gradle-smoke
       container-k6-smoke
+      container-maven-smoke
       container-postman-smoke
       container-playwright-smoke
       curl-smoke
@@ -375,6 +410,7 @@ main() {
       special-cases-failures
       special-cases-large-logs
       special-cases-large-artifacts
+      special-cases-jmeter
       ;;
     *)
       $executor_type

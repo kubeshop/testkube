@@ -36,11 +36,13 @@ func GetLogEntry(b []byte) (out Output, err error) {
 // {"type": "line", "message": "runner execution started  ------------", "time": "..."}
 // {"type": "line", "message": "GET /results", "time": "..."}
 // {"type": "result", "result": {"id": "2323", "output": "-----"}, "time": "..."}
-func ParseRunnerOutput(b []byte) (*testkube.ExecutionResult, error) {
+func ParseRunnerOutput(b []byte, attachLogs bool) (*testkube.ExecutionResult, error) {
 	result := &testkube.ExecutionResult{}
 	if len(b) == 0 {
 		errMessage := "no logs found"
-		result.Output = errMessage
+		if attachLogs {
+			result.Output = errMessage
+		}
 		return result.Err(errors.New(errMessage)), nil
 	}
 	logs, err := parseLogs(b)
@@ -69,7 +71,10 @@ func ParseRunnerOutput(b []byte) (*testkube.ExecutionResult, error) {
 	default:
 		result.Err(fmt.Errorf("wrong log type was found as last log: %v", log))
 	}
-	result.Output = sanitizeLogs(logs)
+
+	if attachLogs {
+		result.Output = sanitizeLogs(logs)
+	}
 
 	return result, nil
 }
@@ -308,7 +313,7 @@ func getResultMessage(result testkube.ExecutionResult) string {
 		return result.Output
 	}
 
-	return fmt.Sprintf("%s", *result.Status)
+	return string(*result.Status)
 }
 
 // sameSeverity decides if a and b are of the same severity type

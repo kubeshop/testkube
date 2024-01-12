@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -58,6 +57,7 @@ import (
 	kubeexecutor "github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/containerexecutor"
+	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
@@ -133,10 +133,10 @@ func main() {
 	cfg.CleanLegacyVars()
 	ui.ExitOnError("error getting application config", err)
 
-	ff, err := featureflags.Get()
+	features, err := featureflags.Get()
 	ui.ExitOnError("error getting application feature flags", err)
 
-	log.DefaultLogger.Infow("Feature flags configured", "ff", ff)
+	log.DefaultLogger.Infow("Feature flags configured", "ff", features)
 
 	// Run services within an errgroup to propagate errors between services.
 	g, ctx := errgroup.WithContext(context.Background())
@@ -348,6 +348,15 @@ func main() {
 	eventBus := bus.NewNATSBus(nc)
 	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName, envs)
 
+	var logsStream logsclient.Stream
+
+	if features.LogsV2 {
+		logsStream, err = logsclient.NewNatsLogStream(nc.Conn)
+		if err != nil {
+			ui.ExitOnError("Creating logs streaming client", err)
+		}
+	}
+
 	metrics := metrics.NewMetrics()
 
 	defaultExecutors, err := parseDefaultExecutors(cfg)
@@ -385,6 +394,8 @@ func main() {
 		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
 		cfg.NatsURI,
 		cfg.Debug,
+		logsStream,
+		features,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating executor client", err)
@@ -415,6 +426,8 @@ func main() {
 		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
 		cfg.NatsURI,
 		cfg.Debug,
+		logsStream,
+		features,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating container executor", err)
@@ -438,7 +451,8 @@ func main() {
 		testsuiteExecutionsClient,
 		eventBus,
 		cfg.TestkubeDashboardURI,
-		ff,
+		features,
+		logsStream,
 	)
 
 	slackLoader, err := newSlackLoader(cfg, envs)
@@ -476,7 +490,8 @@ func main() {
 		mode,
 		eventBus,
 		cfg.EnableSecretsEndpoint,
-		ff,
+		features,
+		logsStream,
 	)
 
 	if mode == common.ModeAgent {
@@ -623,22 +638,15 @@ func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDet
 }
 
 func newNATSConnection(cfg *config.Config) (*nats.EncodedConn, error) {
-	var opts []nats.Option
-	if cfg.NatsSecure {
-		if cfg.NatsSkipVerify {
-			opts = append(opts, nats.Secure(&tls.Config{InsecureSkipVerify: true}))
-		} else {
-			opts = append(opts, nats.ClientCert(cfg.NatsCertFile, cfg.NatsKeyFile))
-			if cfg.NatsCAFile != "" {
-				opts = append(opts, nats.RootCAs(cfg.NatsCAFile))
-			}
-		}
-	}
-	nc, err := bus.NewNATSEncoddedConnection(cfg.NatsURI, opts...)
-	if err != nil {
-		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
-	}
-	return nc, nil
+	return bus.NewNATSEncodedConnection(bus.ConnectionConfig{
+		NatsURI:            cfg.NatsURI,
+		NatsSecure:         cfg.NatsSecure,
+		NatsSkipVerify:     cfg.NatsSkipVerify,
+		NatsCertFile:       cfg.NatsCertFile,
+		NatsKeyFile:        cfg.NatsKeyFile,
+		NatsCAFile:         cfg.NatsCAFile,
+		NatsConnectTimeout: cfg.NatsConnectTimeout,
+	})
 }
 
 func newStorageClient(cfg *config.Config) *minio.Client {

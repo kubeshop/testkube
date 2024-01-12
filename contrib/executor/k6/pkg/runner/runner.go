@@ -110,6 +110,7 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 
 	// in case of Git directory we will run k6 here and
 	// use the last argument as test file
+	changedArgs := false
 	if execution.Content.Type_ == string(testkube.TestContentTypeGitFile) ||
 		execution.Content.Type_ == string(testkube.TestContentTypeGitDir) ||
 		execution.Content.Type_ == string(testkube.TestContentTypeGit) {
@@ -130,7 +131,7 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 		if fileInfo.IsDir() {
 			testPath = filepath.Join(path, args[len(args)-1])
 			args = append(args[:len(args)-1], args[len(args):]...)
-
+			changedArgs = true
 		} else {
 			testPath = path
 		}
@@ -144,6 +145,7 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 		}
 	}
 
+	hasRunPath := false
 	for i := range args {
 		if args[i] == "<k6Command>" {
 			args[i] = k6Command
@@ -151,7 +153,12 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 
 		if args[i] == "<runPath>" {
 			args[i] = testPath
+			hasRunPath = true
 		}
+	}
+
+	if changedArgs && !hasRunPath {
+		args = append(args, testPath)
 	}
 
 	for i := range args {

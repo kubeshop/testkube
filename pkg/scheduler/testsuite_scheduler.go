@@ -117,7 +117,7 @@ func (s *Scheduler) executeTestSuite(ctx context.Context, testSuite testkube.Tes
 	}
 
 	testsuiteExecution = testkube.NewStartedTestSuiteExecution(testSuite, request)
-	err = s.testExecutionResults.Insert(ctx, testsuiteExecution)
+	err = s.testsuiteResults.Insert(ctx, testsuiteExecution)
 	if err != nil {
 		s.logger.Infow("Inserting test execution", "error", err)
 	}
@@ -208,7 +208,7 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 			}
 		}
 
-		err := s.testExecutionResults.Update(ctx, *testsuiteExecution)
+		err := s.testsuiteResults.Update(ctx, *testsuiteExecution)
 		if err != nil {
 			s.logger.Infow("Updating test execution", "error", err)
 		}
@@ -224,7 +224,7 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 
 		s.logger.Debugw("Batch step execution result", "step", batchStepResult.Execute, "results", results)
 
-		err = s.testExecutionResults.Update(ctx, *testsuiteExecution)
+		err = s.testsuiteResults.Update(ctx, *testsuiteExecution)
 		if err != nil {
 			s.logger.Errorw("saving test suite execution results error", "error", err)
 
@@ -262,7 +262,7 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 
 	s.metrics.IncExecuteTestSuite(*testsuiteExecution, s.dashboardURI)
 
-	err = s.testExecutionResults.Update(ctx, *testsuiteExecution)
+	err = s.testsuiteResults.Update(ctx, *testsuiteExecution)
 	if err != nil {
 		s.logger.Errorw("saving final test suite execution result error", "error", err)
 	}
@@ -272,7 +272,7 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 
 func (s *Scheduler) runAfterEachStep(ctx context.Context, execution *testkube.TestSuiteExecution, wg *sync.WaitGroup) {
 	execution.Stop()
-	err := s.testExecutionResults.EndExecution(ctx, *execution)
+	err := s.testsuiteResults.EndExecution(ctx, *execution)
 	if err != nil {
 		s.logger.Errorw("error setting end time", "error", err.Error())
 	}
@@ -518,7 +518,7 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 	}
 
 	result.Start()
-	if err := s.testExecutionResults.Update(ctx, testsuiteExecution); err != nil {
+	if err := s.testsuiteResults.Update(ctx, testsuiteExecution); err != nil {
 		s.logger.Errorw("saving test suite execution start time error", "error", err)
 	}
 
@@ -543,7 +543,7 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 				if result.Execute[i].Execution.Id == r.Result.Id {
 					result.Execute[i].Execution = &value
 
-					if err := s.testExecutionResults.Update(ctx, testsuiteExecution); err != nil {
+					if err := s.testsuiteResults.Update(ctx, testsuiteExecution); err != nil {
 						s.logger.Errorw("saving test suite execution results error", "error", err)
 					}
 				}
@@ -552,7 +552,7 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 	}
 
 	result.Stop()
-	if err := s.testExecutionResults.Update(ctx, testsuiteExecution); err != nil {
+	if err := s.testsuiteResults.Update(ctx, testsuiteExecution); err != nil {
 		s.logger.Errorw("saving test suite execution end time error", "error", err)
 	}
 }

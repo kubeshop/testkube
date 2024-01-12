@@ -7,7 +7,15 @@ spec:
   types:
   - maven:jdk18/project
   - maven:jdk18/test
-  - maven:jdk18/integration-test 
+  - maven:jdk18/integration-test
+  command: ["mvn"]
+  args: [
+      "--settings",
+      "<settingsFile>",
+      "<goalName>",
+      "-Duser.home",
+      "<mavenHome>"
+  ]
 ---
 apiVersion: executor.testkube.io/v1
 kind: Executor
@@ -18,7 +26,15 @@ spec:
   types:
   - maven:jdk11/project
   - maven:jdk11/test
-  - maven:jdk11/integration-test 
+  - maven:jdk11/integration-test
+  command: ["mvn"]
+  args: [
+      "--settings",
+      "<settingsFile>",
+      "<goalName>",
+      "-Duser.home",
+      "<mavenHome>"
+  ]
 ---
 apiVersion: executor.testkube.io/v1
 kind: Executor
@@ -30,3 +46,11 @@ spec:
   - maven:jdk8/project
   - maven:jdk8/test
   - maven:jdk8/integration-test
+  command: ["mvn"]
+  args: [
+      "--settings",
+      "<settingsFile>",
+      "<goalName>",
+      "-Duser.home",
+      "<mavenHome>"
+  ]
