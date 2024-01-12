@@ -31,6 +31,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
+	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	testexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testexecutions"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/telemetry"
@@ -71,6 +72,8 @@ func NewContainerExecutor(
 	apiURI string,
 	natsUri string,
 	debug bool,
+	logsStream logsclient.Stream,
+	features featureflags.FeatureFlags,
 ) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -99,6 +102,8 @@ func NewContainerExecutor(
 		apiURI:               apiURI,
 		natsURI:              natsUri,
 		debug:                debug,
+		logsStream:           logsStream,
+		features:             features,
 	}, nil
 }
 
@@ -129,6 +134,8 @@ type ContainerExecutor struct {
 	apiURI               string
 	natsURI              string
 	debug                bool
+	logsStream           logsclient.Stream
+	features             featureflags.FeatureFlags
 }
 
 type JobOptions struct {
