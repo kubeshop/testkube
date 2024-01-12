@@ -27,8 +27,8 @@ setup-testkube:
     name: kubeshop/testkube-cli
     entrypoint: ["/bin/sh", "-c"]
   script:
-    - kubectl-testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
-    - kubectl-testkube run test test-name -f
+    - testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
+    - testkube run test test-name -f
 ```
 
 It is recommended that sensitive values should never be stored as plaintext in workflow files, but rather as [variables](https://docs.gitlab.com/ee/ci/variables/).  Secrets can be configured at the organization, repository, or environment level, and allow you to store sensitive information in Gitlab.
@@ -43,8 +43,8 @@ setup-testkube:
     name: kubeshop/testkube-cli
     entrypoint: ["/bin/sh", "-c"]
   script:
-    - kubectl-testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
-    - kubectl-testkube run test test-name -f
+    - testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID
+    - testkube run test test-name -f
  ```
 ## Testkube OSS
 
@@ -71,8 +71,8 @@ setup-testkube:
   script:
     - echo $KUBECONFIGFILE > /tmp/kubeconfig/config
     - export KUBECONFIG=/tmp/kubeconfig/config
-    - kubectl-testkube set context --kubeconfig --namespace $NAMESPACE
-    - kubectl-testkube run test test-name -f
+    - testkube set context --kubeconfig --namespace $NAMESPACE
+    - testkube run test test-name -f
 ```
 
 The steps to connect to your Kubernetes cluster differ for each provider. You should check the docs of your Cloud provider for how to connect to the Kubernetes cluster from Gitlab CI.
@@ -115,9 +115,9 @@ run-testkube:
     entrypoint: ["/bin/sh", "-c"]
   script:
     - export KUBECONFIG=$CI_PROJECT_DIR/tmp/kubeconfig/config
-    - kubectl-testkube set context --kubeconfig --namespace $NAMESPACE
+    - testkube set context --kubeconfig --namespace $NAMESPACE
     - echo "Running Testkube test..."
-    - kubectl-testkube run test test-name -f
+    - testkube run test test-name -f
   dependencies:
     - setup-aws
 
@@ -159,9 +159,9 @@ run-testkube:
     entrypoint: ["/bin/sh", "-c"]
   script:
     - export KUBECONFIG=$CI_PROJECT_DIR/tmp/kubeconfig/config
-    - kubectl-testkube set context --kubeconfig --namespace $NAMESPACE
+    - testkube set context --kubeconfig --namespace $NAMESPACE
     - echo "Running Testkube test..."
-    - kubectl-testkube run test test-name -f
+    - testkube run test test-name -f
   dependencies:
     - setup-gcp
 ```

@@ -50,8 +50,8 @@ func CreateVariables(cmd *cobra.Command, ignoreSecretVariable bool) (vars map[st
 
 func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions) {
 	var (
-		apiURIPrefix, uiURIPrefix, agentURIPrefix, rootDomain string
-		insecure                                              bool
+		apiURIPrefix, uiURIPrefix, agentURIPrefix, cloudRootDomain, proRootDomain string
+		insecure                                                                  bool
 	)
 
 	cmd.Flags().BoolVar(&insecure, "cloud-insecure", false, "should client connect in insecure mode (will use http instead of https)")
@@ -62,8 +62,10 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions) {
 	cmd.Flags().MarkDeprecated("cloud-api-prefix", "use --api-prefix instead")
 	cmd.Flags().StringVar(&uiURIPrefix, "cloud-ui-prefix", defaultUiPrefix, "usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().MarkDeprecated("cloud-ui-prefix", "use --ui-prefix instead")
-	cmd.Flags().StringVar(&rootDomain, "cloud-root-domain", defaultRootDomain, "usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().StringVar(&cloudRootDomain, "cloud-root-domain", defaultRootDomain, "usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().MarkDeprecated("cloud-root-domain", "use --root-domain instead")
+	cmd.Flags().StringVar(&proRootDomain, "pro-root-domain", defaultRootDomain, "usually don't need to be changed [required for custom pro mode]")
+	cmd.Flags().MarkDeprecated("pro-root-domain", "use --root-domain instead")
 
 	cmd.Flags().BoolVar(&opts.Master.Insecure, "master-insecure", false, "should client connect in insecure mode (will use http instead of https)")
 	cmd.Flags().StringVar(&opts.Master.AgentUrlPrefix, "agent-prefix", defaultAgentPrefix, "usually don't need to be changed [required for custom cloud mode]")
@@ -75,7 +77,6 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions) {
 	cmd.Flags().StringVar(&opts.Master.AgentToken, "agent-token", "", "Testkube Cloud agent key [required for centralized mode]")
 	cmd.Flags().StringVar(&opts.Master.OrgId, "org-id", "", "Testkube Cloud organization id [required for centralized mode]")
 	cmd.Flags().StringVar(&opts.Master.EnvId, "env-id", "", "Testkube Cloud environment id [required for centralized mode]")
-
 }
 
 func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data) {
@@ -113,9 +114,12 @@ func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data)
 	}
 
 	if !cmd.Flags().Changed("root-domain") {
-		if cmd.Flags().Changed("cloud-root-domain") {
+		switch {
+		case cmd.Flags().Changed("pro-root-domain"):
+			opts.Master.RootDomain = cmd.Flag("pro-root-domain").Value.String()
+		case cmd.Flags().Changed("cloud-root-domain"):
 			opts.Master.RootDomain = cmd.Flag("cloud-root-domain").Value.String()
-		} else if configured && cfg.Master.RootDomain != "" {
+		case configured && cfg.Master.RootDomain != "":
 			opts.Master.RootDomain = cfg.Master.RootDomain
 		}
 	}

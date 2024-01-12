@@ -299,4 +299,36 @@ func TestMasterCmds(t *testing.T) {
 		assert.Equal(t, "http://app.testkube.io", opts.Master.URIs.Ui)
 		assert.Equal(t, "dummy-agent-uri", opts.Master.URIs.Agent)
 	})
+
+	t.Run("Test --root-domain for master flags", func(t *testing.T) {
+		cmd := NewTestCmd()
+		cmd.SetArgs([]string{"--root-domain", "test-domain"})
+		err := cmd.Execute()
+		assert.NoError(t, err)
+		assert.Equal(t, "test-domain", opts.Master.RootDomain)
+	})
+
+	t.Run("Test deprecated --cloud-root-domain for master flags", func(t *testing.T) {
+		cmd := NewTestCmd()
+		cmd.SetArgs([]string{"--cloud-root-domain", "test-domain"})
+		err := cmd.Execute()
+		assert.NoError(t, err)
+		assert.Equal(t, "test-domain", opts.Master.RootDomain)
+	})
+
+	t.Run("Test deprecated --pro-root-domain for master flags", func(t *testing.T) {
+		cmd := NewTestCmd()
+		cmd.SetArgs([]string{"--pro-root-domain", "test-domain"})
+		err := cmd.Execute()
+		assert.NoError(t, err)
+		assert.Equal(t, "test-domain", opts.Master.RootDomain)
+	})
+
+	t.Run("Test deprecated --cloud-root-domain and --pro-root-domain for master flags", func(t *testing.T) {
+		cmd := NewTestCmd()
+		cmd.SetArgs([]string{"--pro-root-domain", "pro-test-domain", "--cloud-root-domain", "cloud-test-domain"})
+		err := cmd.Execute()
+		assert.NoError(t, err)
+		assert.Equal(t, "pro-test-domain", opts.Master.RootDomain)
+	})
 }

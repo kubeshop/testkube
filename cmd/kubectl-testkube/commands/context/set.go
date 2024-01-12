@@ -43,7 +43,7 @@ func NewSetContextCmd() *cobra.Command {
 			switch cfg.ContextType {
 			case config.ContextTypeCloud:
 				if opts.Master.OrgId == "" && opts.Master.EnvId == "" && apiKey == "" && opts.Master.RootDomain == "" {
-					ui.Errf("Please provide at least one of the following flags: --org, --env, --api-key, --cloud-root-domain")
+					ui.Errf("Please provide at least one of the following flags: --org, --env, --api-key, --root-domain")
 				}
 
 				cfg = common.PopulateCloudConfig(cfg, apiKey, &opts)

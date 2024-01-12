@@ -10,6 +10,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/utils"
+	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
 type MessageArgs struct {
@@ -47,7 +48,7 @@ func NewNotifier(template, clusterName, dashboardURI string, config []Notificati
 		config: NewConfig(config), envs: envs}
 	notifier.timestamps = make(map[string]string)
 	if token, ok := os.LookupEnv("SLACK_TOKEN"); ok {
-		log.DefaultLogger.Infow("initializing slack client", "SLACK_TOKEN", token)
+		log.DefaultLogger.Infow("initializing slack client", "SLACK_TOKEN", text.Obfuscate(token))
 		notifier.client = slack.New(token, slack.OptionDebug(true))
 		notifier.Ready = true
 	} else {
