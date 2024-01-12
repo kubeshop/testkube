@@ -6,6 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/pkg/errors"
+
+	"github.com/kubeshop/testkube/pkg/filesystem"
+
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/stretchr/testify/assert"
@@ -14,7 +19,69 @@ import (
 	"github.com/kubeshop/testkube/pkg/envs"
 )
 
-func TestReplaceArgs(t *testing.T) {
+func TestCheckIfTestFileExists(t *testing.T) {
+	t.Parallel()
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	testCases := []struct {
+		name        string
+		args        []string
+		setupMock   func(*filesystem.MockFileSystem)
+		expectError bool
+	}{
+		{
+			name:        "no arguments",
+			args:        []string{},
+			setupMock:   func(mockFS *filesystem.MockFileSystem) {},
+			expectError: true,
+		},
+		{
+			name: "file does not exist",
+			args: []string{"-t", "test.txt"},
+			setupMock: func(mockFS *filesystem.MockFileSystem) {
+				mockFS.EXPECT().Stat("test.txt").Return(nil, errors.New("file not found"))
+			},
+			expectError: true,
+		},
+		{
+			name: "file is a directory",
+			args: []string{"-t", "testdir"},
+			setupMock: func(mockFS *filesystem.MockFileSystem) {
+				mockFileInfo := filesystem.MockFileInfo{FIsDir: true}
+				mockFS.EXPECT().Stat("testdir").Return(&mockFileInfo, nil)
+			},
+			expectError: true,
+		},
+		{
+			name: "file exists",
+			args: []string{"-t", "test.txt"},
+			setupMock: func(mockFS *filesystem.MockFileSystem) {
+				mockFileInfo := filesystem.MockFileInfo{FName: "test.txt", FSize: 100}
+				mockFS.EXPECT().Stat("test.txt").Return(&mockFileInfo, nil)
+			},
+			expectError: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			mockFS := filesystem.NewMockFileSystem(mockCtrl)
+			tc.setupMock(mockFS)
+			err := checkIfTestFileExists(mockFS, tc.args)
+			if tc.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestPrepareArgsReplacements(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -57,9 +124,86 @@ func TestReplaceArgs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			hasJunit, hasReport := replacePlaceholderArgs(tt.args, tt.path, tt.jtlPath, tt.reportPath, tt.jmeterLogPath)
+			hasJunit, hasReport, args := prepareArgs(tt.args, tt.path, tt.jtlPath, tt.reportPath, tt.jmeterLogPath)
 
-			for i, arg := range tt.args {
+			for i, arg := range args {
+				assert.Equal(t, tt.expectedArgs[i], arg)
+			}
+			assert.Equal(t, tt.expectedJunit, hasJunit)
+			assert.Equal(t, tt.expectedReport, hasReport)
+		})
+	}
+}
+
+func TestPrepareArgsDuplication(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		args           []string
+		expectedArgs   []string
+		expectedJunit  bool
+		expectedReport bool
+	}{
+		{
+			name:           "Duplicated args",
+			args:           []string{"-t", "<runPath>", "-t", "path", "-l"},
+			expectedArgs:   []string{"-t", "path", "-l"},
+			expectedJunit:  true,
+			expectedReport: false,
+		},
+		{
+			name:           "Multiple duplicated args",
+			args:           []string{"-t", "<runPath>", "-o", "<reportFile>", "-t", "path", "-o", "output", "-l"},
+			expectedArgs:   []string{"-t", "path", "-o", "output", "-l"},
+			expectedJunit:  true,
+			expectedReport: false,
+		},
+		{
+			name:           "Non duplicated args",
+			args:           []string{"-t", "path", "-l"},
+			expectedArgs:   []string{"-t", "path", "-l"},
+			expectedJunit:  true,
+			expectedReport: false,
+		},
+		{
+			name:           "Wrong arg order",
+			args:           []string{"<runPath>", "-t", "-t", "path", "-l"},
+			expectedArgs:   []string{"-t", "-t", "path", "-l"},
+			expectedJunit:  true,
+			expectedReport: false,
+		},
+		{
+			name:           "Missed template arg",
+			args:           []string{"-t", "-t", "path", "-l"},
+			expectedArgs:   []string{"-t", "-t", "path", "-l"},
+			expectedJunit:  true,
+			expectedReport: false,
+		},
+		{
+			name:           "Wrong arg before template",
+			args:           []string{"-d", "-o", "<runPath>", "-t", "-t", "path", "-l"},
+			expectedArgs:   []string{"-d", "-o", "-t", "-t", "path", "-l"},
+			expectedJunit:  true,
+			expectedReport: false,
+		},
+		{
+			name:           "Duplicated not template args",
+			args:           []string{"-t", "first", "-t", "second", "-l"},
+			expectedArgs:   []string{"-t", "first", "-t", "second", "-l"},
+			expectedJunit:  true,
+			expectedReport: false,
+		},
+	}
+
+	for i := range tests {
+		tt := tests[i]
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			hasJunit, hasReport, args := prepareArgs(tt.args, "", "", "", "")
+
+			for i, arg := range args {
 				assert.Equal(t, tt.expectedArgs[i], arg)
 			}
 			assert.Equal(t, tt.expectedJunit, hasJunit)

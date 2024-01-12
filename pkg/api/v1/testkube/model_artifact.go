@@ -17,4 +17,5 @@ type Artifact struct {
 	Size int32 `json:"size,omitempty"`
 	// execution name that produced the artifact
 	ExecutionName string `json:"executionName,omitempty"`
+	Status        string `json:"status,omitempty"`
 }

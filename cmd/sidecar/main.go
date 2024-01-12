@@ -23,7 +23,15 @@ func main() {
 	cfg := Must(config.Get())
 
 	// Event bus
-	nc := Must(bus.NewNATSConnection(cfg.NatsURI))
+	nc := Must(bus.NewNATSConnection(bus.ConnectionConfig{
+		NatsURI:            cfg.NatsURI,
+		NatsSecure:         cfg.NatsSecure,
+		NatsSkipVerify:     cfg.NatsSkipVerify,
+		NatsCertFile:       cfg.NatsCertFile,
+		NatsKeyFile:        cfg.NatsKeyFile,
+		NatsCAFile:         cfg.NatsCAFile,
+		NatsConnectTimeout: cfg.NatsConnectTimeout,
+	}))
 	defer func() {
 		log.Infof("closing nats connection")
 		nc.Close()
@@ -39,7 +47,7 @@ func main() {
 
 	podsClient := clientset.CoreV1().Pods(cfg.Namespace)
 
-	logsStream, err := client.NewNatsLogStream(nc, cfg.ExecutionId)
+	logsStream, err := client.NewNatsLogStream(nc)
 	if err != nil {
 		ui.ExitOnError("error creating logs stream", err)
 		return
