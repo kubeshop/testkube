@@ -38,7 +38,7 @@ const (
 
 func NewProxy(clientset kubernetes.Interface, podsClient tcorev1.PodInterface, logsStream client.Stream, js jetstream.JetStream, log *zap.SugaredLogger, namespace, executionId string) *Proxy {
 	return &Proxy{
-		log:         log.With("namespace", namespace, "executionId", executionId),
+		log:         log.With("service", "logs-proxy", "namespace", namespace, "executionId", executionId),
 		js:          js,
 		clientset:   clientset,
 		namespace:   namespace,
@@ -55,7 +55,7 @@ type Proxy struct {
 	namespace   string
 	executionId string
 	podsClient  tcorev1.PodInterface
-	logsStream  client.Stream
+	logsStream  client.InitializedStreamPusher
 }
 
 func (p *Proxy) Run(ctx context.Context) error {
@@ -63,11 +63,10 @@ func (p *Proxy) Run(ctx context.Context) error {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	logs := make(chan events.Log, logsBuffer)
+	logs := make(chan *events.Log, logsBuffer)
 
 	// create stream for incoming logs
-
-	_, err := p.logsStream.Init(ctx)
+	_, err := p.logsStream.Init(ctx, p.executionId)
 	if err != nil {
 		return err
 	}
@@ -76,7 +75,7 @@ func (p *Proxy) Run(ctx context.Context) error {
 		p.log.Debugw("logs proxy stream started")
 		err := p.streamLogs(ctx, logs)
 		if err != nil {
-			p.handleError(err, "proxy stream logs error")
+			p.handleError(err, "logs proxy stream error")
 		}
 	}()
 
@@ -84,12 +83,13 @@ func (p *Proxy) Run(ctx context.Context) error {
 		select {
 		case <-sigs:
 			p.log.Warn("logs proxy received signal, exiting", "signal", sigs)
+			p.handleError(ErrStopSignalReceived, "context cancelled stopping logs proxy")
 			return ErrStopSignalReceived
 		case <-ctx.Done():
 			p.log.Warn("logs proxy context cancelled, exiting")
 			return nil
 		default:
-			err = p.logsStream.Push(ctx, l)
+			err = p.logsStream.Push(ctx, p.executionId, l)
 			if err != nil {
 				p.handleError(err, "error pushing logs to stream")
 				return err
@@ -101,7 +101,7 @@ func (p *Proxy) Run(ctx context.Context) error {
 	return nil
 }
 
-func (p *Proxy) streamLogs(ctx context.Context, logs chan events.Log) (err error) {
+func (p *Proxy) streamLogs(ctx context.Context, logs chan *events.Log) (err error) {
 	pods, err := executor.GetJobPods(ctx, p.podsClient, p.executionId, 1, 10)
 	if err != nil {
 		p.handleError(err, "error getting job pods")
@@ -139,7 +139,7 @@ func (p *Proxy) streamLogs(ctx context.Context, logs chan events.Log) (err error
 	return
 }
 
-func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan events.Log) (err error) {
+func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan *events.Log) (err error) {
 	defer close(logs)
 
 	var containers []string
@@ -183,7 +183,8 @@ func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan events.Log) (err err
 			}
 
 			// parse log line - also handle old (output.Output) and new format (just unstructured []byte)
-			logs <- events.NewLogResponseFromBytes(b)
+			logs <- events.NewLogFromBytes(b).
+				WithSource(events.SourceJobPod)
 		}
 
 		if err != nil {
@@ -240,16 +241,9 @@ func (p *Proxy) getPodContainerStatuses(pod corev1.Pod) (status string) {
 // handleError will handle errors and push it as log chunk to logs stream
 func (p *Proxy) handleError(err error, title string) {
 	if err != nil {
-		ch := events.Log{
-			Error:   true,
-			Content: err.Error(),
-		}
-
 		p.log.Errorw(title, "error", err)
-
-		if err == nil {
-			p.logsStream.Push(context.Background(), ch)
-		} else {
+		err = p.logsStream.Push(context.Background(), p.executionId, events.NewErrorLog(err))
+		if err != nil {
 			p.log.Errorw("error pushing error to stream", "title", title, "error", err)
 		}
 

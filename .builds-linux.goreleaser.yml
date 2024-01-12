@@ -70,16 +70,6 @@ dockers:
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
       - "--build-arg=ALPINE_IMAGE={{ .Env.ALPINE_IMAGE }}"
 
-docker_manifests:
-  - name_template: kubeshop/testkube-cli:{{ .Env.DOCKER_IMAGE_TAG }}
-    image_templates:
-      - kubeshop/testkube-cli:{{ .Env.DOCKER_IMAGE_TAG }}-amd64
-      - kubeshop/testkube-cli:{{ .Env.DOCKER_IMAGE_TAG }}-arm64v8
-  - name_template: kubeshop/testkube-cli:latest
-    image_templates:
-      - kubeshop/testkube-cli:{{ .Env.DOCKER_IMAGE_TAG }}-amd64
-      - kubeshop/testkube-cli:{{ .Env.DOCKER_IMAGE_TAG }}-arm64v8
-
 docker_signs:
   - cmd: cosign
     artifacts: all

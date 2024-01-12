@@ -1,0 +1,12 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: executor-container-gradle-smoke-tests
+  labels:
+    core-tests: executors
+spec:
+  description: "container executor gradle smoke tests"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: container-executor-gradle-jdk-11

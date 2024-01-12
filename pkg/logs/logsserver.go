@@ -44,8 +44,12 @@ func (s LogsServer) Logs(req *pb.LogRequest, stream pb.LogsService_LogsServer) e
 	s.log.Debugw("starting sending stream", "repo", repo)
 
 	// stream logs from repository through GRPC channel
-	for l := range repo.Get(ctx, req.ExecutionId) {
+	ch, err := repo.Get(ctx, req.ExecutionId)
+	if err != nil {
+		return err
+	}
 
+	for l := range ch {
 		s.log.Debug("sending log chunk", "log", l)
 		if err := stream.Send(pb.MapResponseToPB(l)); err != nil {
 			return err

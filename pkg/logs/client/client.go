@@ -18,7 +18,8 @@ const (
 	buffer = 100
 )
 
-func NewGrpcClient(address string) Client {
+// NewGrpcClient imlpements getter interface for log stream for given ID
+func NewGrpcClient(address string) StreamGetter {
 	return &GrpcClient{
 		log:     log.DefaultLogger.With("service", "logs-grpc-client"),
 		address: address,
@@ -31,7 +32,7 @@ type GrpcClient struct {
 }
 
 // Get returns channel with log stream chunks for given execution id connects through GRPC to log service
-func (c GrpcClient) Get(ctx context.Context, id string) chan events.LogResponse {
+func (c GrpcClient) Get(ctx context.Context, id string) (chan events.LogResponse, error) {
 	ch := make(chan events.LogResponse, buffer)
 	log := c.log.With("id", id)
 
@@ -78,5 +79,5 @@ func (c GrpcClient) Get(ctx context.Context, id string) chan events.LogResponse 
 		}
 	}()
 
-	return ch
+	return ch, nil
 }
