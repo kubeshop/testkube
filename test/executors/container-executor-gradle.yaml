@@ -1,0 +1,9 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: container-executor-gradle-8.5-jdk11
+spec:
+  image: gradle:8.5.0-jdk11
+  executor_type: container
+  types:
+  - container-executor-gradle-8.5-jdk11/test

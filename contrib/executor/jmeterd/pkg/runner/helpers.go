@@ -18,6 +18,11 @@ const (
 	envVarPrefix = "$"
 )
 
+var (
+	ErrParamMissingValue = errors.New("no value found for parameter")
+	ErrMissingParam      = errors.New("parameter not found")
+)
+
 func getTestPathAndWorkingDir(fs filesystem.FileSystem, execution *testkube.Execution, dataDir string) (testPath string, workingDir, testFile string, err error) {
 	testPath, workingDir, err = content.GetPathAndWorkingDir(execution.Content, dataDir)
 	if err != nil {
@@ -41,7 +46,6 @@ func getTestPathAndWorkingDir(fs filesystem.FileSystem, execution *testkube.Exec
 		if err != nil || fileInfo.IsDir() {
 			output.PrintLogf("%s Could not find file %s in the directory, error: %s", ui.IconCross, testFile, err)
 			return "", "", "", errors.Wrapf(err, "could not find file %s in the directory", testFile)
-
 		}
 	}
 	return
@@ -71,7 +75,7 @@ func findTestFile(fs filesystem.FileSystem, execution *testkube.Execution, testP
 		}
 	}
 	if testFile == "" {
-		output.PrintLogf("%s %s file not found in args or test path!", ui.IconCross, testExtension)
+		output.PrintLogf("%s  %s file not found in args or test path!", ui.IconCross, testExtension)
 		return "", errors.Errorf("no %s file found", testExtension)
 	}
 	return testFile, nil
@@ -113,4 +117,19 @@ func injectAndExpandEnvVars(args []string, params []string) []string {
 	}
 
 	return copied
+}
+
+// getParamValue searches for a parameter in the args slice and returns its value.
+// It returns an error if the parameter is not found or if it does not have an associated value.
+func getParamValue(args []string, param string) (string, error) {
+	for i, arg := range args {
+		if arg == param {
+			// Check if the next element exists
+			if i+1 < len(args) {
+				return args[i+1], nil
+			}
+			return "", errors.WithStack(ErrParamMissingValue)
+		}
+	}
+	return "", errors.WithStack(ErrMissingParam)
 }

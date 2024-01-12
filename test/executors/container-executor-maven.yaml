@@ -1,0 +1,10 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: container-executor-maven-3.9-jdk11
+spec:
+  image: maven:3.9.6-eclipse-temurin-11-focal
+  executor_type: container
+  types:
+  - container-executor-maven-3.9-jdk11/test
+  command: ["mvn", "test"]

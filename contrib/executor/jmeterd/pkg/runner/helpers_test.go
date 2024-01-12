@@ -281,3 +281,34 @@ func TestInjectAndExpandEnvVars(t *testing.T) {
 		})
 	}
 }
+
+func TestGetParamValue(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		args     []string
+		param    string
+		expected string
+		wantErr  error
+	}{
+		{name: "get last param successfully", args: []string{"-n", "-o", "/data", "-t", "/data/repo"}, param: "-t", expected: "/data/repo", wantErr: nil},
+		{name: "get middle param successfully", args: []string{"-n", "-o", "/data", "-t", "/data/repo"}, param: "-o", expected: "/data", wantErr: nil},
+		{name: "param missing value returns error", args: []string{"-n", "-o", "/data", "-t"}, param: "-t", expected: "", wantErr: ErrParamMissingValue},
+		{name: "param missing", args: []string{"-n", "-o", "/data", "-t", "/data/repo"}, param: "-x", expected: "", wantErr: ErrMissingParam},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			value, err := getParamValue(tc.args, tc.param)
+			if tc.wantErr != nil {
+				assert.ErrorIs(t, err, tc.wantErr)
+				assert.Empty(t, value)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expected, value)
+			}
+		})
+	}
+}
