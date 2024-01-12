@@ -51,7 +51,7 @@ OuterLoop:
 		for _, prefix := range []string{exenv.SecretEnvVarPrefix, exenv.SecretVarPrefix,
 			exenv.GitUsernameEnvVarName, exenv.GitTokenEnvVarName} {
 			if strings.HasPrefix(env, prefix) {
-				break OuterLoop
+				continue OuterLoop
 			}
 		}
 
@@ -59,7 +59,7 @@ OuterLoop:
 			if strings.HasPrefix(env, prefix) {
 				pair := strings.SplitN(env, "=", 2)
 				if len(pair) != 2 {
-					break OuterLoop
+					continue OuterLoop
 				}
 
 				envVars[pair[0]] += pair[1]
