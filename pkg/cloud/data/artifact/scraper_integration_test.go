@@ -61,7 +61,7 @@ func TestCloudScraper_ArchiveFilesystemExtractor_Integration(t *testing.T) {
 	defer testServer.Close()
 
 	mockExecutor := executor.NewMockExecutor(mockCtrl)
-	cloudLoader := cloudscraper.NewCloudUploader(mockExecutor)
+	cloudLoader := cloudscraper.NewCloudUploader(mockExecutor, false)
 	req := &cloudscraper.PutObjectSignedURLRequest{
 		Object:        "artifacts.tar.gz",
 		ExecutionID:   "my-execution-id",
@@ -148,7 +148,7 @@ func TestCloudScraper_RecursiveFilesystemExtractor_Integration(t *testing.T) {
 	defer testServer.Close()
 
 	mockExecutor := executor.NewMockExecutor(mockCtrl)
-	cloudLoader := cloudscraper.NewCloudUploader(mockExecutor)
+	cloudLoader := cloudscraper.NewCloudUploader(mockExecutor, false)
 	req1 := &cloudscraper.PutObjectSignedURLRequest{
 		Object:        "file1.txt",
 		ExecutionID:   "my-execution-id",

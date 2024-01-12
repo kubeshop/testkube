@@ -2,6 +2,7 @@ package artifact
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -18,10 +19,12 @@ import (
 
 type CloudUploader struct {
 	executor executor.Executor
+	// skipVerify is used to skip TLS verification when artifacts
+	skipVerify bool
 }
 
-func NewCloudUploader(executor executor.Executor) *CloudUploader {
-	return &CloudUploader{executor: executor}
+func NewCloudUploader(executor executor.Executor, skipVerify bool) *CloudUploader {
+	return &CloudUploader{executor: executor, skipVerify: skipVerify}
 }
 
 func (u *CloudUploader) Upload(ctx context.Context, object *scraper.Object, execution testkube.Execution) error {
@@ -63,7 +66,10 @@ func (u *CloudUploader) putObject(ctx context.Context, url string, data io.Reade
 		return err
 	}
 	req.Header.Set("Content-Type", "application/octet-stream")
-	rsp, err := http.DefaultClient.Do(req)
+	tr := http.DefaultTransport.(*http.Transport).Clone()
+	tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: u.skipVerify}
+	client := &http.Client{Transport: tr}
+	rsp, err := client.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "failed to send file to cloud")
 	}

@@ -4306,6 +4306,12 @@ components:
           type: string
           description: execution name that produced the artifact
           example: "test-1"
+        status:
+          type: string
+          enum:
+            - ready
+            - processing
+            - failed
 
     ExecutionsResult:
       description: the result for a page of executions

@@ -16,7 +16,7 @@ type Factory interface {
 
 type JsMinioFactory struct {
 	minio *minio.Client
-	js    client.Client
+	js    client.StreamGetter
 }
 
 func (b JsMinioFactory) GetRepository(s state.LogState) (LogsRepository, error) {

@@ -32,11 +32,10 @@ import (
 type JMeterMode string
 
 const (
-	jmeterModeStandalone        JMeterMode = "standalone"
-	jmeterModeDistributed       JMeterMode = "distributed"
-	globalJMeterParamPrefix                = "-G"
-	standaloneJMeterParamPrefix            = "-J"
-	jmxExtension                           = "jmx"
+	jmeterModeStandalone  JMeterMode = "standalone"
+	jmeterModeDistributed JMeterMode = "distributed"
+	jmxExtension                     = "jmx"
+	jmeterTestFileFlag               = "-t"
 )
 
 // JMeterDRunner runner
@@ -122,7 +121,14 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	if workingDir != "" {
 		runPath = workingDir
 	}
+
 	outputDir := filepath.Join(runPath, "output")
+	err = os.Setenv("OUTPUT_DIR", outputDir)
+	if err != nil {
+		output.PrintLogf("%s Failed to set output directory %s", ui.IconWarning, outputDir)
+	}
+	slavesEnvVariables["OUTPUT_DIR"] = testkube.NewBasicVariable("OUTPUT_DIR", outputDir)
+
 	// recreate output directory with wide permissions so JMeter can create report files
 	if err = os.Mkdir(outputDir, 0777); err != nil {
 		return *result.Err(errors.Wrapf(err, "error creating directory %s", outputDir)), nil
@@ -132,7 +138,7 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	reportPath := filepath.Join(outputDir, "report")
 	jmeterLogPath := filepath.Join(outputDir, "jmeter.log")
 	args := execution.Args
-	hasJunit, hasReport := replacePlaceholderArgs(args, testPath, jtlPath, reportPath, jmeterLogPath)
+	hasJunit, hasReport, args := prepareArgs(args, testPath, jtlPath, reportPath, jmeterLogPath)
 
 	if mode == jmeterModeDistributed {
 		clientSet, err := k8sclient.ConnectToK8s()
@@ -150,6 +156,12 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 
 	args = injectAndExpandEnvVars(args, nil)
 	output.PrintLogf("%s Using arguments: %v", ui.IconWorld, envManager.ObfuscateStringSlice(args))
+
+	// TODO: this is a workaround, the check should be ideally performed in the getTestPathAndWorkingDir function
+	if err := checkIfTestFileExists(r.fs, args); err != nil {
+		output.PrintLogf("%s  Error validating test file exists: %v", ui.IconCross, err.Error())
+		return result, errors.WithStack(err)
+	}
 
 	entryPoint := getEntryPoint()
 	for i := range execution.Command {
@@ -224,10 +236,58 @@ func initSlaves(
 		return slaveClient.DeleteSlaves(ctx, slaveMeta)
 	}
 	return slaveMeta, cleanupFunc, nil
-
 }
 
-func replacePlaceholderArgs(args []string, path, jtlPath, reportPath, jmeterLogPath string) (hasJunit, hasReport bool) {
+func checkIfTestFileExists(fs filesystem.FileSystem, args []string) error {
+	if len(args) == 0 {
+		return errors.New("no arguments provided")
+	}
+	testParamValue, err := getParamValue(args, jmeterTestFileFlag)
+	if err != nil {
+		return errors.Wrapf(err, "error extracting value for %s flag", jmeterTestFileFlag)
+	}
+	info, err := fs.Stat(testParamValue)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	if info.IsDir() {
+		return errors.Errorf("test file %s is a directory", testParamValue)
+	}
+
+	return nil
+}
+
+func prepareArgs(args []string, path, jtlPath, reportPath, jmeterLogPath string) (hasJunit, hasReport bool, result []string) {
+	counters := make(map[string]int)
+	duplicates := make(map[string]string)
+	for _, arg := range args {
+		counters[arg] += 1
+		if counters[arg] > 1 {
+			switch arg {
+			case "-t":
+				duplicates["<runPath>"] = arg
+			case "-l":
+				duplicates["<jtlFile>"] = arg
+			case "-o":
+				duplicates["<reportFile>"] = arg
+			case "-j":
+				duplicates["<logFile>"] = arg
+			}
+		}
+	}
+
+	for i := len(args) - 1; i >= 0; i-- {
+		if arg, ok := duplicates[args[i]]; ok {
+			args = append(args[:i], args[i+1:]...)
+			if i > 0 {
+				i--
+				if args[i] == arg {
+					args = append(args[:i], args[i+1:]...)
+				}
+			}
+		}
+	}
+
 	for i, arg := range args {
 		switch arg {
 		case "<runPath>":
@@ -243,7 +303,7 @@ func replacePlaceholderArgs(args []string, path, jtlPath, reportPath, jmeterLogP
 			hasJunit = true
 		}
 	}
-	return
+	return hasJunit, hasReport, args
 }
 
 func getEntryPoint() (entrypoint string) {

@@ -2,8 +2,8 @@ name: Release logs server dev
 
 on:
   push:
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+-*"
+    branches:
+      - develop
 
 permissions:
   id-token: write
@@ -74,6 +74,9 @@ jobs:
         run: |
           docker push kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }}-arm64v8
           docker push kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }}-amd64
+
+          docker manifest create kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }} --amend kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }}-arm64v8 --amend kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }}-amd64
+          docker manifest push -p kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }}
 
       - name: Push README to Dockerhub
         uses: christian-korneck/update-container-description-action@v1
