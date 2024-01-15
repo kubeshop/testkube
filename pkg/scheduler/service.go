@@ -26,8 +26,8 @@ type Scheduler struct {
 	metrics                   v1.Metrics
 	executor                  client.Executor
 	containerExecutor         client.Executor
-	executionResults          result.Repository
-	testExecutionResults      testresult.Repository
+	testResults               result.Repository
+	testsuiteResults          testresult.Repository
 	executorsClient           executorsv1.Interface
 	testsClient               testsv3.Interface
 	testSuitesClient          testsuitesv3.Interface
@@ -70,8 +70,8 @@ func NewScheduler(
 		executor:                  executor,
 		containerExecutor:         containerExecutor,
 		secretClient:              secretClient,
-		executionResults:          executionResults,
-		testExecutionResults:      testExecutionResults,
+		testResults:               executionResults,
+		testsuiteResults:          testExecutionResults,
 		executorsClient:           executorsClient,
 		testsClient:               testsClient,
 		testSuitesClient:          testSuitesClient,

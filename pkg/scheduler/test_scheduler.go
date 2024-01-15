@@ -57,7 +57,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	s.events.Notify(testkube.NewEventStartTest(&execution))
 
 	// test name + test execution name should be unique
-	execution, _ = s.executionResults.GetByNameAndTest(ctx, request.Name, test.Name)
+	execution, _ = s.testResults.GetByNameAndTest(ctx, request.Name, test.Name)
 	if execution.Name == request.Name {
 		err := errors.Errorf("test execution with name %s already exists", request.Name)
 		return s.handleExecutionError(ctx, execution, "duplicate execution: %w", err)
@@ -83,7 +83,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 		return s.handleExecutionError(ctx, execution, "can't create secret variables `Secret` references: %w", err)
 	}
 
-	err = s.executionResults.Insert(ctx, execution)
+	err = s.testResults.Insert(ctx, execution)
 	if err != nil {
 		return s.handleExecutionError(ctx, execution, "can't create new test execution, can't insert into storage: %w", err)
 	}
@@ -93,7 +93,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	execution.Start()
 
 	// update storage with current execution status
-	err = s.executionResults.StartExecution(ctx, execution.Id, execution.StartTime)
+	err = s.testResults.StartExecution(ctx, execution.Id, execution.StartTime)
 	if err != nil {
 		return s.handleExecutionError(ctx, execution, "can't execute test, can't insert into storage error: %w", err)
 	}
@@ -105,7 +105,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	execution.ExecutionResult = result
 
 	// update storage with current execution status
-	if uerr := s.executionResults.UpdateResult(ctx, execution.Id, execution); uerr != nil {
+	if uerr := s.testResults.UpdateResult(ctx, execution.Id, execution); uerr != nil {
 		return s.handleExecutionError(ctx, execution, "update execution error: %w", err)
 	}
 
@@ -162,7 +162,7 @@ func (s *Scheduler) getExecutor(testName string) client.Executor {
 }
 
 func (s *Scheduler) getNextExecutionNumber(testName string) int32 {
-	number, err := s.executionResults.GetNextExecutionNumber(context.Background(), testName)
+	number, err := s.testResults.GetNextExecutionNumber(context.Background(), testName)
 	if err != nil {
 		s.logger.Errorw("retrieving latest execution", "error", err)
 		return number
