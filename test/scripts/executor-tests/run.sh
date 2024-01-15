@@ -331,7 +331,7 @@ special-cases-large-artifacts() {
 
 special-cases-jmeter() {
   name="Special Cases - JMeter/JMeterd"
-  test_crd_file="test/jmeter/executor-smoke/crd/special-cases.yaml"
+  test_crd_file="test/jmeter/executor-tests/crd/special-cases.yaml"
   testsuite_name="jmeter-special-cases"
   testsuite_file="test/suites/special-cases/jmeter-special-cases.yaml"
 
