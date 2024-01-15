@@ -1,163 +1,9 @@
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: jmeter-executor-smoke-incorrect-url-assertion-negative
+  name: jmeterd-executor-smoke-custom-envs-replication # TODO: validation on the test side
   labels:
-    core-tests: executors
-spec:
-  type: jmeter/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke-incorrect-url.jmx
-  executionRequest:
-    negativeTest: true
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
-    activeDeadlineSeconds: 180
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: jmeterd-executor-smoke-incorrect-url-assertion-negative
-  labels:
-    core-tests: executors
-spec:
-  type: jmeterd/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke-incorrect-url.jmx
-  executionRequest:
-    negativeTest: true
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
-    activeDeadlineSeconds: 180
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: jmeterd-executor-smoke-incorrect-url-assertion-slaves-negative
-  labels:
-    core-tests: executors
-spec:
-  type: jmeterd/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke-incorrect-url.jmx
-  executionRequest:
-    negativeTest: true
-    variables:
-      SLAVES_COUNT:
-        name: SLAVES_COUNT
-        value: "2"
-        type: basic
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
-    activeDeadlineSeconds: 180
-    slavePodRequest:
-      resources:
-        requests:
-          cpu: 400m
-          memory: 512Mi
-        limits:
-          cpu: 500m
-          memory: 512Mi
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: jmeterd-executor-smoke-correct-url-failed-assertion-negative
-  labels:
-    core-tests: executors
-spec:
-  type: jmeterd/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke-correct-url-failed-assertion.jmx
-  executionRequest:
-    negativeTest: true
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
-    activeDeadlineSeconds: 180
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: jmeterd-executor-smoke-failed-assertion-slaves-negative
-  labels:
-    core-tests: executors
-spec:
-  type: jmeterd/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke-correct-url-failed-assertion.jmx
-  executionRequest:
-    negativeTest: true
-    variables:
-      SLAVES_COUNT:
-        name: SLAVES_COUNT
-        value: "2"
-        type: basic
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
-    activeDeadlineSeconds: 180
-    slavePodRequest:
-      resources:
-        requests:
-          cpu: 400m
-          memory: 512Mi
-        limits:
-          cpu: 500m
-          memory: 512Mi
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: jmeterd-executor-smoke-failure-exit-code-0-negative
-  labels:
-    core-tests: executors
-spec:
-  type: jmeterd/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube.git
-      branch: main
-      path: contrib/executor/jmeterd/examples/gitflow/jmeter-properties-external.jmx
-  executionRequest:
-    negativeTest: true
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
-    activeDeadlineSeconds: 180
-    slavePodRequest:
-      resources:
-        requests:
-          cpu: 400m
-          memory: 512Mi
-        limits:
-          cpu: 500m
-          memory: 512Mi
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: jmeterd-executor-smoke-slave-0 # standalone mode
-  labels:
-    core-tests: executors
+    core-tests: special-cases-jmeter
 spec:
   type: jmeterd/test
   content:
@@ -171,7 +17,11 @@ spec:
     variables:
       SLAVES_COUNT:
         name: SLAVES_COUNT
-        value: "0"
+        value: "2"
+        type: basic
+      CUSTOM_ENV_VARIABLE:
+        name: CUSTOM_ENV_VARIABLE
+        value: CUSTOM_ENV_VARIABLE_value
         type: basic
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
     activeDeadlineSeconds: 180
@@ -187,7 +37,99 @@ spec:
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: jmeterd-executor-smoke-slave-not-set # standalone mode
+  name: jmeterd-executor-smoke-env-value-in-args
+  labels:
+    core-tests: special-cases-jmeter
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/jmeter/executor-tests
+  executionRequest:
+    variables:
+      JMETER_SCRIPT:
+        name: JMETER_SCRIPT
+        value: jmeter-executor-smoke.jmx
+        type: basic
+    args:
+      - "${JMETER_SCRIPT}"
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke-directory-1
+  labels:
+    core-tests: special-cases-jmeter
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/jmeter/executor-tests
+  executionRequest:
+    args:
+      - "jmeter-executor-smoke.jmx"
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke-directory-2
+  labels:
+    core-tests: special-cases-jmeter
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/jmeter/executor-tests
+  executionRequest:
+    args:
+      - "jmeter-executor-smoke-2.jmx"
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke-slaves-sharedbetweenpods # can be run only at cluster with storageClassName (NFS volume)
   labels:
     core-tests: executors
 spec:
@@ -200,8 +142,20 @@ spec:
       branch: main
       path: test/jmeter/executor-tests/jmeter-executor-smoke.jmx
   executionRequest:
+    executePostRunScriptBeforeScraping: true
+    postRunScript: "echo \"postrun script\" && echo \"artifact file - contents\" > /data/output/artifact-`uuidgen`.txt"
+    artifactRequest:
+      storageClassName: standard-rwx
+      masks:
+        - .*\.txt
+      sharedBetweenPods: true
+    variables:
+      SLAVES_COUNT:
+        name: SLAVES_COUNT
+        value: "2"
+        type: basic
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
-    activeDeadlineSeconds: 180
+    # activeDeadlineSeconds: 180 TODO: increase - too low to create volume
     slavePodRequest:
       resources:
         requests:

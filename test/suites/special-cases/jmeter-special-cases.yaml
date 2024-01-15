@@ -1,0 +1,24 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: jmeter-special-cases
+  labels:
+    core-tests: special-cases
+spec:
+  description: "jmeter and jmeterd executor - special-cases"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-custom-envs-replication
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-env-value-in-args
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-directory-1
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-directory-2
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-slaves-sharedbetweenpods

@@ -114,7 +114,7 @@ spec:
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: jmeterd-executor-smoke-slave-1
+  name: jmeterd-executor-smoke-slave-1 # standalone mode
   labels:
     core-tests: executors
 spec:
@@ -174,3 +174,29 @@ spec:
         limits:
           cpu: 500m
           memory: 512Mi
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke-env-and-property-values
+  labels:
+    core-tests: executors
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/jmeter/executor-tests/jmeter-executor-smoke-env-and-property.jmx
+  executionRequest:
+    variables:
+      URL_ENV:
+        name: URL_ENV
+        value: "testkube.io"
+        type: basic
+    args:
+      - "-JURL_PROPERTY=testkube.io"
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
