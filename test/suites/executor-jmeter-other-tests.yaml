@@ -5,7 +5,7 @@ metadata:
   labels:
     core-tests: executors
 spec:
-  description: "jmeter and jmeterd executor - other tests and edge-cases"
+  description: "jmeter and jmeterd executor - other tests"
   steps:
   - stopOnFailure: false
     execute:
@@ -25,3 +25,9 @@ spec:
   - stopOnFailure: false
     execute:
     - test: jmeterd-executor-smoke-failure-exit-code-0-negative
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-slave-0
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-slave-not-set
