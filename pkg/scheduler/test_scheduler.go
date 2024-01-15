@@ -14,6 +14,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/logs/events"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
@@ -53,22 +54,25 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 		request.Name = fmt.Sprintf("%s-%d", request.Name, request.Number)
 	}
 
+	s.events.Notify(testkube.NewEventStartTest(&execution))
+
 	// test name + test execution name should be unique
 	execution, _ = s.executionResults.GetByNameAndTest(ctx, request.Name, test.Name)
 	if execution.Name == request.Name {
-		return execution.Err(errors.Errorf("test execution with name %s already exists", request.Name)), nil
+		err := errors.Errorf("test execution with name %s already exists", request.Name)
+		return s.handleExecutionError(ctx, execution, "duplicate execution: %w", err)
 	}
 
 	secretUUID, err := s.testsClient.GetCurrentSecretUUID(test.Name)
 	if err != nil {
-		return execution.Errw(request.Id, "can't get current secret uuid: %w", err), nil
+		return s.handleExecutionError(ctx, execution, "can't get current secret uuid: %w", err)
 	}
 
 	request.TestSecretUUID = secretUUID
 	// merge available data into execution options test spec, executor spec, request, test id
 	options, err := s.getExecuteOptions(test.Namespace, test.Name, request)
 	if err != nil {
-		return execution.Errw(request.Id, "can't create valid execution options: %w", err), nil
+		return s.handleExecutionError(ctx, execution, "can't get current secret uuid: %w", err)
 	}
 
 	// store execution in storage, can be fetched from API now
@@ -76,25 +80,22 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	options.ID = execution.Id
 
 	if err := s.createSecretsReferences(&execution); err != nil {
-		return execution.Errw(execution.Id, "can't create secret variables `Secret` references: %w", err), nil
+		return s.handleExecutionError(ctx, execution, "can't create secret variables `Secret` references: %w", err)
 	}
 
 	err = s.executionResults.Insert(ctx, execution)
 	if err != nil {
-		return execution.Errw(execution.Id, "can't create new test execution, can't insert into storage: %w", err), nil
+		return s.handleExecutionError(ctx, execution, "can't create new test execution, can't insert into storage: %w", err)
 	}
 
 	s.logger.Infow("calling executor with options", "options", options.Request)
 
 	execution.Start()
 
-	s.events.Notify(testkube.NewEventStartTest(&execution))
-
 	// update storage with current execution status
 	err = s.executionResults.StartExecution(ctx, execution.Id, execution.StartTime)
 	if err != nil {
-		s.events.Notify(testkube.NewEventEndTestFailed(&execution))
-		return execution.Errw(execution.Id, "can't execute test, can't insert into storage error: %w", err), nil
+		return s.handleExecutionError(ctx, execution, "can't execute test, can't insert into storage error: %w", err)
 	}
 
 	// sync/async test execution
@@ -105,18 +106,33 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 
 	// update storage with current execution status
 	if uerr := s.executionResults.UpdateResult(ctx, execution.Id, execution); uerr != nil {
-		s.events.Notify(testkube.NewEventEndTestFailed(&execution))
-		return execution.Errw(execution.Id, "update execution error: %w", uerr), nil
+		return s.handleExecutionError(ctx, execution, "update execution error: %w", err)
 	}
 
 	if err != nil {
-		s.events.Notify(testkube.NewEventEndTestFailed(&execution))
-		return execution.Errw(execution.Id, "test execution failed: %w", err), nil
+		return s.handleExecutionError(ctx, execution, "test execution failed: %w", err)
 	}
 
 	s.logger.Infow("test started", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
 
 	return execution, nil
+}
+
+func (s *Scheduler) handleExecutionError(ctx context.Context, execution testkube.Execution, msgTpl string, err error) (testkube.Execution, error) {
+	// push error log to the log stream if logs v2 enabled
+	if s.featureFlags.LogsV2 {
+		l := events.NewLog(fmt.Sprintf(msgTpl, err)).
+			WithType("error").
+			WithVersion(events.LogVersionV2).
+			WithSource("test-scheduler")
+
+		s.logsStream.Push(ctx, execution.Id, *l)
+	}
+
+	// notify events that execution failed
+	s.events.Notify(testkube.NewEventEndTestFailed(&execution))
+
+	return execution.Errw(execution.Id, msgTpl, err), nil
 }
 
 func (s *Scheduler) startTestExecution(ctx context.Context, options client.ExecuteOptions, execution *testkube.Execution) (result *testkube.ExecutionResult, err error) {

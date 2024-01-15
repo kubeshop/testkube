@@ -39,11 +39,19 @@ type Log struct {
 	Error    bool              `json:"error,omitempty"`
 	Version  LogVersion        `json:"version,omitempty"`
 
-	// Old output - for backwards compatibility - will be removed
+	// Old output - for backwards compatibility - will be removed for non-structured logs
 	V1 *LogOutputV1 `json:"v1,omitempty"`
 }
 type LogOutputV1 struct {
 	Result *testkube.ExecutionResult
+}
+
+func NewLog(content string) *Log {
+	return &Log{
+		Time:     time.Now(),
+		Content:  string(content),
+		Metadata: map[string]string{},
+	}
 }
 
 func NewLogResponse(ts time.Time, content []byte) Log {
@@ -54,13 +62,22 @@ func NewLogResponse(ts time.Time, content []byte) Log {
 	}
 }
 
-// log line/chunk data
-func (c *Log) WithMetadataEntry(key, value string) *Log {
-	if c.Metadata == nil {
-		c.Metadata = map[string]string{}
+func (l *Log) WithMetadataEntry(key, value string) *Log {
+	if l.Metadata == nil {
+		l.Metadata = map[string]string{}
 	}
-	c.Metadata[key] = value
-	return c
+	l.Metadata[key] = value
+	return l
+}
+
+func (l *Log) WithType(t string) *Log {
+	l.Type = t
+	return l
+}
+
+func (l *Log) WithSource(s string) *Log {
+	l.Source = s
+	return l
 }
 
 func (c *Log) WithVersion(version LogVersion) *Log {
@@ -68,9 +85,9 @@ func (c *Log) WithVersion(version LogVersion) *Log {
 	return c
 }
 
-func (c *Log) WithV1Result(result *testkube.ExecutionResult) *Log {
-	c.V1.Result = result
-	return c
+func (l *Log) WithV1Result(result *testkube.ExecutionResult) *Log {
+	l.V1.Result = result
+	return l
 }
 
 var timestampRegexp = regexp.MustCompile("^[0-9]{4}-[0-9]{2}-[0-9]{2}T.*")
