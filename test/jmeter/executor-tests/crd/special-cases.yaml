@@ -47,7 +47,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube.git
-      branch: executor-tests-jmeter-special-cases # TODO: replace before merge
+      branch: main
       path: test/jmeter/executor-tests
   executionRequest:
     variables:
@@ -81,7 +81,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube.git
-      branch: executor-tests-jmeter-special-cases # TODO: replace before merge
+      branch: main
       path: test/jmeter/executor-tests
   executionRequest:
     args:
@@ -110,7 +110,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube.git
-      branch: executor-tests-jmeter-special-cases # TODO: replace before merge
+      branch: main
       path: test/jmeter/executor-tests
   executionRequest:
     args:
