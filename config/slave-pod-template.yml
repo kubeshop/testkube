@@ -139,7 +139,7 @@ spec:
     {{- if and .ArtifactRequest.VolumeMountPath .ArtifactRequest.StorageClassName }}
   - name: artifact-volume
     persistentVolumeClaim:
-      claimName: {{ .Name }}-pvc
+      claimName: {{ .JobName }}-pvc
     {{- end }}
   {{- end }}
   {{- range $configmap := .EnvConfigMaps }}
