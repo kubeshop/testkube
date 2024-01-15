@@ -449,7 +449,14 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 			}
 		}
 
-		if testSpec.Spec.Content != nil && testSpec.Spec.Content.Repository != nil && testSpec.Spec.Content.Repository.Uri == "" {
+		if testSpec.Spec.Content != nil &&
+			testSpec.Spec.Content.Repository != nil &&
+			testSpec.Spec.Content.Repository.Type_ == "" &&
+			testSpec.Spec.Content.Repository.Uri == "" &&
+			testSpec.Spec.Content.Repository.Branch == "" &&
+			testSpec.Spec.Content.Repository.Path == "" &&
+			testSpec.Spec.Content.Repository.Commit == "" &&
+			testSpec.Spec.Content.Repository.WorkingDir == "" {
 			testSpec.Spec.Content.Repository = nil
 		}
 
