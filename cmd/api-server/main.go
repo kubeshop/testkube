@@ -349,9 +349,13 @@ func main() {
 	eventBus := bus.NewNATSBus(nc)
 	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName, envs)
 
-	logsStream, err := logsclient.NewNatsLogStream(nc.Conn)
-	if err != nil {
-		ui.ExitOnError("Creating logs streaming client", err)
+	var logsStream logsclient.Stream
+
+	if ff.LogsV2 {
+		logsStream, err = logsclient.NewNatsLogStream(nc.Conn)
+		if err != nil {
+			ui.ExitOnError("Creating logs streaming client", err)
+		}
 	}
 
 	metrics := metrics.NewMetrics()
