@@ -55,7 +55,7 @@ type Proxy struct {
 	namespace   string
 	executionId string
 	podsClient  tcorev1.PodInterface
-	logsStream  client.Stream
+	logsStream  client.InitializedStreamPusher
 }
 
 func (p *Proxy) Run(ctx context.Context) error {
@@ -67,7 +67,7 @@ func (p *Proxy) Run(ctx context.Context) error {
 
 	// create stream for incoming logs
 
-	_, err := p.logsStream.Init(ctx)
+	_, err := p.logsStream.Init(ctx, p.executionId)
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func (p *Proxy) Run(ctx context.Context) error {
 			p.log.Warn("logs proxy context cancelled, exiting")
 			return nil
 		default:
-			err = p.logsStream.Push(ctx, l)
+			err = p.logsStream.Push(ctx, p.executionId, l)
 			if err != nil {
 				p.handleError(err, "error pushing logs to stream")
 				return err
@@ -248,7 +248,7 @@ func (p *Proxy) handleError(err error, title string) {
 		p.log.Errorw(title, "error", err)
 
 		if err == nil {
-			p.logsStream.Push(context.Background(), ch)
+			p.logsStream.Push(context.Background(), p.executionId, ch)
 		} else {
 			p.log.Errorw("error pushing error to stream", "title", title, "error", err)
 		}

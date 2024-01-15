@@ -39,7 +39,7 @@ func main() {
 
 	podsClient := clientset.CoreV1().Pods(cfg.Namespace)
 
-	logsStream, err := client.NewNatsLogStream(nc, cfg.ExecutionId)
+	logsStream, err := client.NewNatsLogStream(nc)
 	if err != nil {
 		ui.ExitOnError("error creating logs stream", err)
 		return

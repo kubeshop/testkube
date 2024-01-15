@@ -58,6 +58,7 @@ import (
 	kubeexecutor "github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/containerexecutor"
+	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
@@ -348,6 +349,11 @@ func main() {
 	eventBus := bus.NewNATSBus(nc)
 	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName, envs)
 
+	logsStream, err := logsclient.NewNatsLogStream(nc.Conn)
+	if err != nil {
+		ui.ExitOnError("Creating logs streaming client", err)
+	}
+
 	metrics := metrics.NewMetrics()
 
 	defaultExecutors, err := parseDefaultExecutors(cfg)
@@ -439,6 +445,7 @@ func main() {
 		eventBus,
 		cfg.TestkubeDashboardURI,
 		ff,
+		logsStream,
 	)
 
 	slackLoader, err := newSlackLoader(cfg, envs)
