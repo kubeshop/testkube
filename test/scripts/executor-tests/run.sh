@@ -329,6 +329,15 @@ special-cases-large-artifacts() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
+special-cases-jmeter() {
+  name="Special Cases - JMeter/JMeterd"
+  test_crd_file="test/jmeter/executor-smoke/crd/special-cases.yaml"
+  testsuite_name="jmeter-special-cases"
+  testsuite_file="test/suites/special-cases/jmeter-special-cases.yaml"
+
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
+}
+
 main() {
   case $executor_type in
     all)
@@ -375,6 +384,7 @@ main() {
       special-cases-failures
       special-cases-large-logs
       special-cases-large-artifacts
+      special-cases-jmeter
       ;;
     *)
       $executor_type
