@@ -449,7 +449,7 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 			}
 		}
 
-		if testSpec.Spec.Content != nil && testSpec.Spec.Content.Repository != nil && testSpec.Spec.Content.Repository.Uri == "" {
+		if isRepositoryEmpty(testSpec.Spec) {
 			testSpec.Spec.Content.Repository = nil
 		}
 
@@ -468,6 +468,17 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 
 		return c.JSON(updatedTest)
 	}
+}
+
+func isRepositoryEmpty(s testsv3.TestSpec) bool {
+	return s.Content != nil &&
+		s.Content.Repository != nil &&
+		s.Content.Repository.Type_ == "" &&
+		s.Content.Repository.Uri == "" &&
+		s.Content.Repository.Branch == "" &&
+		s.Content.Repository.Path == "" &&
+		s.Content.Repository.Commit == "" &&
+		s.Content.Repository.WorkingDir == ""
 }
 
 // DeleteTestHandler is a method for deleting a test with id
