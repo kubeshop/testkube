@@ -14,18 +14,18 @@ func TestStream_StartStop(t *testing.T) {
 	ns, nc := bus.TestServerWithConnection()
 	defer ns.Shutdown()
 
-	name := "111"
+	id := "111"
 
 	ctx := context.Background()
 
 	client, err := NewNatsLogStream(nc)
 	assert.NoError(t, err)
 
-	meta, err := client.Init(ctx, name)
+	meta, err := client.Init(ctx, id)
 	assert.NoError(t, err)
-	assert.Equal(t, StreamPrefix+name, meta.Name)
+	assert.Equal(t, StreamPrefix+id, meta.Name)
 
-	err = client.PushBytes(ctx, name, []byte(`{"content":"hello 1"}`))
+	err = client.PushBytes(ctx, id, []byte(`{"content":"hello 1"}`))
 	assert.NoError(t, err)
 
 	var startReceived, stopReceived bool
@@ -42,11 +42,11 @@ func TestStream_StartStop(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	d, err := client.Start(ctx, name)
+	d, err := client.Start(ctx, id)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", string(d.Message))
 
-	d, err = client.Stop(ctx, name)
+	d, err = client.Stop(ctx, id)
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", string(d.Message))
 

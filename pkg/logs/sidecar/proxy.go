@@ -38,7 +38,7 @@ const (
 
 func NewProxy(clientset kubernetes.Interface, podsClient tcorev1.PodInterface, logsStream client.Stream, js jetstream.JetStream, log *zap.SugaredLogger, namespace, executionId string) *Proxy {
 	return &Proxy{
-		log:         log.With("namespace", namespace, "executionId", executionId),
+		log:         log.With("service", "logs-proxy", "namespace", namespace, "executionId", executionId),
 		js:          js,
 		clientset:   clientset,
 		namespace:   namespace,
@@ -66,7 +66,6 @@ func (p *Proxy) Run(ctx context.Context) error {
 	logs := make(chan events.Log, logsBuffer)
 
 	// create stream for incoming logs
-
 	_, err := p.logsStream.Init(ctx, p.executionId)
 	if err != nil {
 		return err
@@ -76,7 +75,7 @@ func (p *Proxy) Run(ctx context.Context) error {
 		p.log.Debugw("logs proxy stream started")
 		err := p.streamLogs(ctx, logs)
 		if err != nil {
-			p.handleError(err, "proxy stream logs error")
+			p.handleError(err, "logs proxy stream error")
 		}
 	}()
 
