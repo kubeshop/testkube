@@ -1,0 +1,22 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: container-executor-maven-jdk-11
+  labels:
+    core-tests: executors
+spec:
+  type: container-executor-maven-3.9-jdk11/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: contrib/executor/maven/examples/hello-maven
+      workingDir: contrib/executor/maven/examples/hello-maven
+  executionRequest:
+    variables:
+      TESTKUBE_MAVEN:
+        name: TESTKUBE_MAVEN
+        value: "true"
+        type: basic

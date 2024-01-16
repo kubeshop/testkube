@@ -1,0 +1,12 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: executor-container-maven-smoke-tests
+  labels:
+    core-tests: executors
+spec:
+  description: "container executor maven smoke tests"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: container-executor-maven-jdk-11
