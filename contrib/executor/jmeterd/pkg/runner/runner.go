@@ -132,7 +132,7 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	reportPath := filepath.Join(outputDir, "report")
 	jmeterLogPath := filepath.Join(outputDir, "jmeter.log")
 	args := execution.Args
-	hasJunit, hasReport := replacePlaceholderArgs(args, testPath, jtlPath, reportPath, jmeterLogPath)
+	hasJunit, hasReport := prepareArgs(args, testPath, jtlPath, reportPath, jmeterLogPath)
 
 	if mode == jmeterModeDistributed {
 		clientSet, err := k8sclient.ConnectToK8s()
@@ -227,7 +227,37 @@ func initSlaves(
 
 }
 
-func replacePlaceholderArgs(args []string, path, jtlPath, reportPath, jmeterLogPath string) (hasJunit, hasReport bool) {
+func prepareArgs(args []string, path, jtlPath, reportPath, jmeterLogPath string) (hasJunit, hasReport bool) {
+	duplicates := make(map[string]int)
+	removals := make(map[string]string)
+	for _, arg := range args {
+		duplicates[arg] += 1
+		if duplicates[arg] > 1 {
+			switch arg {
+			case "-t":
+				removals["<runPath>"] = arg
+			case "-l":
+				removals["<jtlFile>"] = arg
+			case "-o":
+				removals["<reportFile>"] = arg
+			case "-j":
+				removals["<logFile>"] = arg
+			}
+		}
+	}
+
+	for i := len(args) - 1; i >= 0; i-- {
+		if arg, ok := removals[args[i]]; ok {
+			args = append(args[:i], args[i+1:]...)
+			if i > 0 {
+				i--
+				if args[i] == arg {
+					args = append(args[:i], args[i+1:]...)
+				}
+			}
+		}
+	}
+
 	for i, arg := range args {
 		switch arg {
 		case "<runPath>":
