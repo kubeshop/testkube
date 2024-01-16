@@ -72,12 +72,17 @@ func ClientCert(certFile, keyFile string) Option {
 }
 
 type Connecter struct {
-	Endpoint, AccessKeyID, SecretAccessKey, Region, Token, Bucket string
-	Ssl                                                           bool
-	TlsConfig                                                     *tls.Config
-	Opts                                                          []Option
-	Log                                                           *zap.SugaredLogger
-	client                                                        *minio.Client
+	Endpoint        string
+	AccessKeyID     string
+	SecretAccessKey string
+	Region          string
+	Token           string
+	Bucket          string
+	Ssl             bool
+	TlsConfig       *tls.Config
+	Opts            []Option
+	Log             *zap.SugaredLogger
+	client          *minio.Client
 }
 
 // NewConnecter creates a new Connecter
