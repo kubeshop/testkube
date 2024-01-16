@@ -15,6 +15,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
+const ConsumerPrefix = "lc"
+
 func NewNatsLogStream(nc *nats.Conn) (s Stream, err error) {
 	js, err := jetstream.New(nc)
 	if err != nil {
@@ -78,7 +80,7 @@ func (c NatsLogStream) Stop(ctx context.Context, id string) (resp StreamResponse
 func (c NatsLogStream) Get(ctx context.Context, id string) (chan events.LogResponse, error) {
 	ch := make(chan events.LogResponse)
 
-	name := fmt.Sprintf("lc%s%s", id, utils.RandAlphanum(6))
+	name := fmt.Sprintf("%s%s%s", ConsumerPrefix, id, utils.RandAlphanum(6))
 	cons, err := c.js.CreateOrUpdateConsumer(ctx, c.streamName(id), jetstream.ConsumerConfig{
 		Name:          name,
 		Durable:       name,
@@ -120,7 +122,10 @@ func (c NatsLogStream) Get(ctx context.Context, id string) (chan events.LogRespo
 
 // syncCall sends request to given subject and waits for response
 func (c NatsLogStream) syncCall(ctx context.Context, subject, id string) (resp StreamResponse, err error) {
-	b, _ := json.Marshal(events.Trigger{Id: id})
+	b, err := json.Marshal(events.Trigger{Id: id})
+	if err != nil {
+		return resp, err
+	}
 	m, err := c.nc.Request(subject, b, time.Minute)
 	if err != nil {
 		return resp, err
