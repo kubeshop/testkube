@@ -38,6 +38,14 @@ func (e ErrIdNotFound) Error() string {
 	return fmt.Sprintf("id %s not found", e.Id)
 }
 
+type ErrChucnkTooBig struct {
+	Length int
+}
+
+func (e ErrChucnkTooBig) Error() string {
+	return fmt.Sprintf("chunk too big: %d", e.Length)
+}
+
 type BufferInfo struct {
 	Buffer *bytes.Buffer
 	Part   int
@@ -104,9 +112,12 @@ func (s *MinioConsumer) Notify(id string, e events.Log) error {
 	if err != nil {
 		return err
 	}
+
 	if len(chunckToAdd) > defaultWriteSize {
 		s.Log.Warnw("chunck too big", "length", len(chunckToAdd))
+		return ErrChucnkTooBig{len(chunckToAdd)}
 	}
+
 	chunckToAdd = append(chunckToAdd, []byte("\n")...)
 
 	writer := buffInfo.Buffer
