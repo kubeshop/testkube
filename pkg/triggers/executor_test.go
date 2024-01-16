@@ -24,6 +24,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/log"
+	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
@@ -103,6 +104,8 @@ func TestExecute(t *testing.T) {
 	mockExecutor.EXPECT().Execute(gomock.Any(), gomock.Any(), gomock.Any()).Return(&mockExecutionResult, nil)
 	mockResultRepository.EXPECT().UpdateResult(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
+	mockLogsStream := logsclient.NewMockInitializedStreamPusher(mockCtrl)
+
 	sched := scheduler.NewScheduler(
 		metricsHandle,
 		mockExecutor,
@@ -122,6 +125,7 @@ func TestExecute(t *testing.T) {
 		mockBus,
 		"",
 		featureflags.FeatureFlags{},
+		mockLogsStream,
 	)
 	s := &Service{
 		triggerStatus:    make(map[statusKey]*triggerStatus),

@@ -14,7 +14,6 @@ import (
 	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
-	v1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	testsourcesv1 "github.com/kubeshop/testkube-operator/pkg/client/testsources/v1"
@@ -29,6 +28,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/log"
+	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
@@ -117,6 +117,8 @@ func TestService_Run(t *testing.T) {
 
 	testLogger := log.DefaultLogger
 
+	mockLogsStream := logsclient.NewMockInitializedStreamPusher(mockCtrl)
+
 	sched := scheduler.NewScheduler(
 		testMetrics,
 		mockExecutor,
@@ -136,6 +138,7 @@ func TestService_Run(t *testing.T) {
 		mockBus,
 		"",
 		featureflags.FeatureFlags{},
+		mockLogsStream,
 	)
 
 	mockLeaseBackend := NewMockLeaseBackend(mockCtrl)
@@ -207,7 +210,7 @@ func TestService_addTrigger(t *testing.T) {
 
 	s := Service{triggerStatus: make(map[statusKey]*triggerStatus)}
 
-	testTrigger := v1.TestTrigger{
+	testTrigger := testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Name: "test-trigger-1", Namespace: "testkube"},
 	}
 	s.addTrigger(&testTrigger)
@@ -222,10 +225,10 @@ func TestService_removeTrigger(t *testing.T) {
 
 	s := Service{triggerStatus: make(map[statusKey]*triggerStatus)}
 
-	testTrigger1 := v1.TestTrigger{
+	testTrigger1 := testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Name: "test-trigger-1", Namespace: "testkube"},
 	}
-	testTrigger2 := v1.TestTrigger{
+	testTrigger2 := testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Name: "test-trigger-2", Namespace: "testkube"},
 	}
 	s.addTrigger(&testTrigger1)
@@ -247,15 +250,15 @@ func TestService_updateTrigger(t *testing.T) {
 
 	s := Service{triggerStatus: make(map[statusKey]*triggerStatus)}
 
-	oldTestTrigger := v1.TestTrigger{
+	oldTestTrigger := testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
-		Spec:       v1.TestTriggerSpec{Event: "created"},
+		Spec:       testtriggersv1.TestTriggerSpec{Event: "created"},
 	}
 	s.addTrigger(&oldTestTrigger)
 
-	newTestTrigger := v1.TestTrigger{
+	newTestTrigger := testtriggersv1.TestTrigger{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
-		Spec:       v1.TestTriggerSpec{Event: "modified"},
+		Spec:       testtriggersv1.TestTriggerSpec{Event: "modified"},
 	}
 
 	s.updateTrigger(&newTestTrigger)
