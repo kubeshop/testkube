@@ -81,8 +81,8 @@ func (l *Log) WithSource(s string) *Log {
 }
 
 func (l *Log) WithVersion(version LogVersion) *Log {
-	c.Version = version
-	return c
+	l.Version = version
+	return l
 }
 
 func (l *Log) WithV1Result(result *testkube.ExecutionResult) *Log {
