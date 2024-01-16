@@ -39,7 +39,7 @@ func RandString(n int) string {
 
 func TestLogs(t *testing.T) {
 	t.Skip("skipping test")
-	consumer := NewMinioConsumer("localhost:9000", "minio", "minio123", "", "", "test-1", minioconnecter.Insecure())
+	consumer, _ := NewMinioConsumer("localhost:9000", "minio", "minio123", "", "", "test-1", minioconnecter.Insecure())
 	id := "test-bla"
 	for i := 0; i < 1000; i++ {
 		fmt.Println("sending", i)
@@ -55,7 +55,7 @@ func TestLogs(t *testing.T) {
 func BenchmarkLogs(b *testing.B) {
 	randomString := RandString(5)
 	bucket := "test-bench"
-	consumer := NewMinioConsumer("localhost:9000", "minio", "minio123", "", "", bucket, minioconnecter.Insecure())
+	consumer, _ := NewMinioConsumer("localhost:9000", "minio", "minio123", "", "", bucket, minioconnecter.Insecure())
 	id := "test-bench" + "-" + randomString + "-" + strconv.Itoa(b.N)
 	totalSize := 0
 	for i := 0; i < b.N; i++ {
@@ -71,9 +71,8 @@ func BenchmarkLogs(b *testing.B) {
 }
 
 func BenchmarkLogs2(b *testing.B) {
-	//b.SetParallelism(1)
 	bucket := "test-bench"
-	consumer := NewMinioConsumer("localhost:9000", "minio", "minio123", "", "", bucket, minioconnecter.Insecure())
+	consumer, _ := NewMinioConsumer("localhost:9000", "minio", "minio123", "", "", bucket, minioconnecter.Insecure())
 	idChan := make(chan string, 100)
 	go verifyConsumer(idChan, bucket, consumer.minioClient)
 	var counter atomic.Int32
@@ -82,7 +81,6 @@ func BenchmarkLogs2(b *testing.B) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			//randomString := RandString(5)
 			randomString := strconv.Itoa(int(counter.Add(1)))
 			id := "test-bench" + "-" + randomString
 			testOneConsumer(consumer, id)
@@ -108,7 +106,6 @@ func testOneConsumer(consumer *MinioConsumer, id string) {
 	if err != nil {
 		fmt.Println("#####error stopping", err)
 	}
-	//assert.NoError(b, err)
 	fmt.Printf("#####Total size for %s logs is %f MB\n\n\n", id, sizeInMB)
 }
 
@@ -116,12 +113,10 @@ func verifyConsumer(idChan chan string, bucket string, minioClient *minio.Client
 	okSlice := make([]string, 0)
 	notOkSlice := make([]string, 0)
 	for id := range idChan {
-		//fmt.Println("#####verifying", id)
 		reader, err := minioClient.GetObject(context.Background(), bucket, id, minio.GetObjectOptions{})
 		if err != nil {
 			fmt.Println("######error getting object", err)
 		}
-		//assert.NoError(b, err)
 		count := 0
 
 		r := bufio.NewReader(reader)
@@ -141,13 +136,11 @@ func verifyConsumer(idChan chan string, bucket string, minioClient *minio.Client
 				isOk = false
 				break
 			}
-			//assert.NoError(b, err, "for id", id)
 			if LogChunk.Source == "" || LogChunk.Source != strconv.Itoa(count) {
 				fmt.Printf("for id %s not equal for count %d line %s \n logChunk %+v\n\n\n", id, count, string(line), LogChunk)
 				isOk = false
 				break
 			}
-			//assert.Equal(b, strconv.Itoa(count), LogChunk.Source, "for id", id)
 			count++
 		}
 		if isOk {
@@ -165,7 +158,7 @@ func verifyConsumer(idChan chan string, bucket string, minioClient *minio.Client
 func DoRunBenchmark() {
 	numberOfConsumers := 100
 	bucket := "test-bench"
-	consumer := NewMinioConsumer("testkube-minio-service-testkube:9000", "minio", "minio123", "", "", bucket, minioconnecter.Insecure())
+	consumer, _ := NewMinioConsumer("testkube-minio-service-testkube:9000", "minio", "minio123", "", "", bucket, minioconnecter.Insecure())
 
 	idChan := make(chan string, numberOfConsumers)
 	DoRunBenchmark2(idChan, numberOfConsumers, consumer)
@@ -173,15 +166,12 @@ func DoRunBenchmark() {
 }
 
 func DoRunBenchmark2(idChan chan string, numberOfConsumers int, consumer *MinioConsumer) {
-	//b.SetParallelism(1)
-
 	var counter atomic.Int32
 	var wg sync.WaitGroup
 	for i := 0; i < numberOfConsumers; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			//randomString := RandString(5)
 			randomString := strconv.Itoa(int(counter.Add(1)))
 			id := "test-bench" + "-" + randomString
 			testOneConsumer(consumer, id)
