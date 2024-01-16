@@ -150,15 +150,22 @@ func (s *MinioConsumer) putData(name string, buffer *bytes.Buffer) {
 }
 
 func (s *MinioConsumer) combineData(ctxt context.Context, minioClient *minio.Client, id string, parts int, deleteIntermediaryData bool) error {
+	var returnedError []error
+	returnedError = nil
 	buffer := bytes.NewBuffer(make([]byte, 0, parts*defaultBufferSize))
 	for i := 0; i < parts; i++ {
-		objInfo, err := minioClient.GetObject(ctxt, s.bucket, fmt.Sprintf("%s-%d", id, i), minio.GetObjectOptions{})
-		if err != nil {
-			s.Log.Errorw("error getting object", "err", err)
-		}
-		_, err = buffer.ReadFrom(objInfo)
-		if err != nil {
-			s.Log.Errorw("error reading object", "err", err)
+		objectName := fmt.Sprintf("%s-%d", id, i)
+		if s.objectExists(objectName) {
+			objInfo, err := minioClient.GetObject(ctxt, s.bucket, objectName, minio.GetObjectOptions{})
+			if err != nil {
+				s.Log.Errorw("error getting object", "err", err)
+				returnedError = append(returnedError, err)
+			}
+			_, err = buffer.ReadFrom(objInfo)
+			if err != nil {
+				s.Log.Errorw("error reading object", "err", err)
+				returnedError = append(returnedError, err)
+			}
 		}
 	}
 	_, err := minioClient.PutObject(ctxt, s.bucket, id, buffer, int64(buffer.Len()), minio.PutObjectOptions{ContentType: "application/octet-stream"})
@@ -169,14 +176,26 @@ func (s *MinioConsumer) combineData(ctxt context.Context, minioClient *minio.Cli
 
 	if deleteIntermediaryData {
 		for i := 0; i < parts; i++ {
-			err = minioClient.RemoveObject(ctxt, s.bucket, fmt.Sprintf("%s-%d", id, i), minio.RemoveObjectOptions{})
-			if err != nil {
-				s.Log.Errorw("error removing object", "err", err)
+			objectName := fmt.Sprintf("%s-%d", id, i)
+			if s.objectExists(objectName) {
+				err = minioClient.RemoveObject(ctxt, s.bucket, objectName, minio.RemoveObjectOptions{})
+				if err != nil {
+					s.Log.Errorw("error removing object", "err", err)
+					returnedError = append(returnedError, err)
+				}
 			}
 		}
 	}
 	buffer.Reset()
-	return nil
+	if len(returnedError) == 0 {
+		return nil
+	}
+	return fmt.Errorf("executed with errors: %v", returnedError)
+}
+
+func (s *MinioConsumer) objectExists(objectName string) bool {
+	_, err := s.minioClient.StatObject(context.Background(), s.bucket, objectName, minio.StatObjectOptions{})
+	return err == nil
 }
 
 func (s *MinioConsumer) Stop(id string) error {
