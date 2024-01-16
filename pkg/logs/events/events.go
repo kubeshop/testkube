@@ -80,7 +80,7 @@ func (l *Log) WithSource(s string) *Log {
 	return l
 }
 
-func (c *Log) WithVersion(version LogVersion) *Log {
+func (l *Log) WithVersion(version LogVersion) *Log {
 	c.Version = version
 	return c
 }
