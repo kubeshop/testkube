@@ -62,23 +62,23 @@ func TestLogs_EventsFlow(t *testing.T) {
 		<-log.Ready
 
 		// and logs stream client
-		stream, err := client.NewNatsLogStream(nc, "stop-test")
+		stream, err := client.NewNatsLogStream(nc)
 		assert.NoError(t, err)
 
 		// and initialized log stream for given ID
-		meta, err := stream.Init(ctx)
+		meta, err := stream.Init(ctx, "stop-test")
 		assert.NotEmpty(t, meta.Name)
 		assert.NoError(t, err)
 
 		// when start event triggered
-		_, err = stream.Start(ctx)
+		_, err = stream.Start(ctx, "stop-test")
 		assert.NoError(t, err)
 
 		// and when data pushed to the log stream
-		stream.Push(ctx, events.NewLogResponse(time.Now(), []byte("hello 1")))
+		stream.Push(ctx, "stop-test", events.NewLogResponse(time.Now(), []byte("hello 1")))
 
 		// and stop event triggered
-		_, err = stream.Stop(ctx)
+		_, err = stream.Stop(ctx, "stop-test")
 		assert.NoError(t, err)
 
 		// then all adapters should be gracefully stopped
@@ -130,26 +130,26 @@ func TestLogs_EventsFlow(t *testing.T) {
 		<-log.Ready
 
 		// and stream client
-		stream, err := client.NewNatsLogStream(nc, "messages-test")
+		stream, err := client.NewNatsLogStream(nc)
 		assert.NoError(t, err)
 
 		// and initialized log stream for given ID
-		meta, err := stream.Init(ctx)
+		meta, err := stream.Init(ctx, "messages-test")
 		assert.NotEmpty(t, meta.Name)
 		assert.NoError(t, err)
 
 		// when start event triggered
-		_, err = stream.Start(ctx)
+		_, err = stream.Start(ctx, "messages-test")
 		assert.NoError(t, err)
 
 		for i := 0; i < messagesCount; i++ {
 			// and when data pushed to the log stream
-			err = stream.Push(ctx, events.NewLogResponse(time.Now(), []byte("hello")))
+			err = stream.Push(ctx, "messages-test", events.NewLogResponse(time.Now(), []byte("hello")))
 			assert.NoError(t, err)
 		}
 
 		// and wait for message to be propagated
-		_, err = stream.Stop(ctx)
+		_, err = stream.Stop(ctx, "messages-test")
 		assert.NoError(t, err)
 
 		assertMessagesCount(t, a, 4*messagesCount)
@@ -198,16 +198,16 @@ func TestLogs_EventsFlow(t *testing.T) {
 		<-log.Ready
 
 		// and logs stream client
-		stream, err := client.NewNatsLogStream(nc, "stop-test")
+		stream, err := client.NewNatsLogStream(nc)
 		assert.NoError(t, err)
 
 		// and initialized log stream for given ID
-		meta, err := stream.Init(ctx)
+		meta, err := stream.Init(ctx, "consumer-stats")
 		assert.NotEmpty(t, meta.Name)
 		assert.NoError(t, err)
 
 		// when start event triggered
-		_, err = stream.Start(ctx)
+		_, err = stream.Start(ctx, "consumer-stats")
 		assert.NoError(t, err)
 
 		// then we should have 2 consumers
@@ -215,7 +215,7 @@ func TestLogs_EventsFlow(t *testing.T) {
 		assert.Equal(t, 2, stats.Count)
 
 		// when stop event triggered
-		_, err = stream.Stop(ctx)
+		_, err = stream.Stop(ctx, "consumer-stats")
 		assert.NoError(t, err)
 
 		// then all adapters should be gracefully stopped

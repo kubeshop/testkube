@@ -15,32 +15,30 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
-func NewNatsLogStream(nc *nats.Conn, id string) (Stream, error) {
+const ConsumerPrefix = "lc"
+
+func NewNatsLogStream(nc *nats.Conn) (s Stream, err error) {
 	js, err := jetstream.New(nc)
 	if err != nil {
-		return &NatsLogStream{}, err
+		return s, err
 	}
 
 	return &NatsLogStream{
-		nc:         nc,
-		js:         js,
-		log:        log.DefaultLogger,
-		id:         id,
-		streamName: StreamPrefix + id,
+		nc:  nc,
+		js:  js,
+		log: log.DefaultLogger,
 	}, nil
 }
 
 type NatsLogStream struct {
-	nc         *nats.Conn
-	js         jetstream.JetStream
-	log        *zap.SugaredLogger
-	streamName string
-	id         string
+	nc  *nats.Conn
+	js  jetstream.JetStream
+	log *zap.SugaredLogger
 }
 
-func (c NatsLogStream) Init(ctx context.Context) (StreamMetadata, error) {
+func (c NatsLogStream) Init(ctx context.Context, id string) (StreamMetadata, error) {
 	s, err := c.js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
-		Name:    c.streamName,
+		Name:    c.streamName(id),
 		Storage: jetstream.FileStorage, // durable stream
 	})
 
@@ -48,42 +46,42 @@ func (c NatsLogStream) Init(ctx context.Context) (StreamMetadata, error) {
 		c.log.Debugw("stream upserted", "info", s.CachedInfo())
 	}
 
-	return StreamMetadata{Name: c.streamName}, err
+	return StreamMetadata{Name: c.streamName(id)}, err
 
 }
 
 // Push log chunk to NATS stream
-func (c NatsLogStream) Push(ctx context.Context, chunk events.Log) error {
+func (c NatsLogStream) Push(ctx context.Context, id string, chunk events.Log) error {
 	b, err := json.Marshal(chunk)
 	if err != nil {
 		return err
 	}
-	return c.PushBytes(ctx, b)
+	return c.PushBytes(ctx, id, b)
 }
 
 // Push log chunk to NATS stream
 // TODO handle message repeat with backoff strategy on error
-func (c NatsLogStream) PushBytes(ctx context.Context, chunk []byte) error {
-	_, err := c.js.Publish(ctx, c.streamName, chunk)
+func (c NatsLogStream) PushBytes(ctx context.Context, id string, chunk []byte) error {
+	_, err := c.js.Publish(ctx, c.streamName(id), chunk)
 	return err
 }
 
 // Start emits start event to the stream - logs service will handle start and create new stream
-func (c NatsLogStream) Start(ctx context.Context) (resp StreamResponse, err error) {
-	return c.syncCall(ctx, StartSubject)
+func (c NatsLogStream) Start(ctx context.Context, id string) (resp StreamResponse, err error) {
+	return c.syncCall(ctx, StartSubject, id)
 }
 
 // Stop emits stop event to the stream and waits for given stream to be stopped fully - logs service will handle stop and close stream and all subscribers
-func (c NatsLogStream) Stop(ctx context.Context) (resp StreamResponse, err error) {
-	return c.syncCall(ctx, StopSubject)
+func (c NatsLogStream) Stop(ctx context.Context, id string) (resp StreamResponse, err error) {
+	return c.syncCall(ctx, StopSubject, id)
 }
 
 // Get returns channel with log stream chunks for given execution id connects through GRPC to log service
-func (c NatsLogStream) Get(ctx context.Context) (chan events.LogResponse, error) {
+func (c NatsLogStream) Get(ctx context.Context, id string) (chan events.LogResponse, error) {
 	ch := make(chan events.LogResponse)
 
-	name := fmt.Sprintf("lc%s%s", c.id, utils.RandAlphanum(6))
-	cons, err := c.js.CreateOrUpdateConsumer(ctx, c.streamName, jetstream.ConsumerConfig{
+	name := fmt.Sprintf("%s%s%s", ConsumerPrefix, id, utils.RandAlphanum(6))
+	cons, err := c.js.CreateOrUpdateConsumer(ctx, c.streamName(id), jetstream.ConsumerConfig{
 		Name:          name,
 		Durable:       name,
 		DeliverPolicy: jetstream.DeliverAllPolicy,
@@ -93,7 +91,7 @@ func (c NatsLogStream) Get(ctx context.Context) (chan events.LogResponse, error)
 		return ch, err
 	}
 
-	log := c.log.With("id", c.id)
+	log := c.log.With("id", id)
 	cons.Consume(func(msg jetstream.Msg) {
 		log.Debugw("got message", "data", string(msg.Data()))
 
@@ -123,12 +121,19 @@ func (c NatsLogStream) Get(ctx context.Context) (chan events.LogResponse, error)
 }
 
 // syncCall sends request to given subject and waits for response
-func (c NatsLogStream) syncCall(ctx context.Context, subject string) (resp StreamResponse, err error) {
-	b, _ := json.Marshal(events.Trigger{Id: c.id})
+func (c NatsLogStream) syncCall(ctx context.Context, subject, id string) (resp StreamResponse, err error) {
+	b, err := json.Marshal(events.Trigger{Id: id})
+	if err != nil {
+		return resp, err
+	}
 	m, err := c.nc.Request(subject, b, time.Minute)
 	if err != nil {
 		return resp, err
 	}
 
 	return StreamResponse{Message: m.Data}, nil
+}
+
+func (c NatsLogStream) streamName(id string) string {
+	return StreamPrefix + id
 }

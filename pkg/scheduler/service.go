@@ -16,6 +16,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/secret"
@@ -25,8 +26,8 @@ type Scheduler struct {
 	metrics                   v1.Metrics
 	executor                  client.Executor
 	containerExecutor         client.Executor
-	executionResults          result.Repository
-	testExecutionResults      testresult.Repository
+	testResults               result.Repository
+	testsuiteResults          testresult.Repository
 	executorsClient           executorsv1.Interface
 	testsClient               testsv3.Interface
 	testSuitesClient          testsuitesv3.Interface
@@ -40,6 +41,7 @@ type Scheduler struct {
 	eventsBus                 bus.Bus
 	dashboardURI              string
 	featureFlags              featureflags.FeatureFlags
+	logsStream                logsclient.InitializedStreamPusher
 }
 
 func NewScheduler(
@@ -61,14 +63,15 @@ func NewScheduler(
 	eventsBus bus.Bus,
 	dashboardURI string,
 	featureFlags featureflags.FeatureFlags,
+	logsStream logsclient.InitializedStreamPusher,
 ) *Scheduler {
 	return &Scheduler{
 		metrics:                   metrics,
 		executor:                  executor,
 		containerExecutor:         containerExecutor,
 		secretClient:              secretClient,
-		executionResults:          executionResults,
-		testExecutionResults:      testExecutionResults,
+		testResults:               executionResults,
+		testsuiteResults:          testExecutionResults,
 		executorsClient:           executorsClient,
 		testsClient:               testsClient,
 		testSuitesClient:          testSuitesClient,
@@ -81,5 +84,6 @@ func NewScheduler(
 		eventsBus:                 eventsBus,
 		dashboardURI:              dashboardURI,
 		featureFlags:              featureFlags,
+		logsStream:                logsStream,
 	}
 }
