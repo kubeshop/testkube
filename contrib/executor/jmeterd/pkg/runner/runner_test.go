@@ -14,7 +14,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/envs"
 )
 
-func TestReplaceArgs(t *testing.T) {
+func TestPrepareArgsReplacements(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -57,9 +57,51 @@ func TestReplaceArgs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			hasJunit, hasReport := prepareArgs(tt.args, tt.path, tt.jtlPath, tt.reportPath, tt.jmeterLogPath)
+			hasJunit, hasReport, args := prepareArgs(tt.args, tt.path, tt.jtlPath, tt.reportPath, tt.jmeterLogPath)
 
-			for i, arg := range tt.args {
+			for i, arg := range args {
+				assert.Equal(t, tt.expectedArgs[i], arg)
+			}
+			assert.Equal(t, tt.expectedJunit, hasJunit)
+			assert.Equal(t, tt.expectedReport, hasReport)
+		})
+	}
+}
+
+func TestPrepareArgsDuplication(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		args           []string
+		expectedArgs   []string
+		expectedJunit  bool
+		expectedReport bool
+	}{
+		{
+			name:           "Duplicated args",
+			args:           []string{"-t", "<runPath>", "-t", "path", "-l"},
+			expectedArgs:   []string{"-t", "path", "-l"},
+			expectedJunit:  true,
+			expectedReport: false,
+		},
+		{
+			name:           "Non duplicated args",
+			args:           []string{"-t", "path", "-l"},
+			expectedArgs:   []string{"-t", "path", "-l"},
+			expectedJunit:  true,
+			expectedReport: false,
+		},
+	}
+
+	for i := range tests {
+		tt := tests[i]
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			hasJunit, hasReport, args := prepareArgs(tt.args, "", "", "", "")
+
+			for i, arg := range args {
 				assert.Equal(t, tt.expectedArgs[i], arg)
 			}
 			assert.Equal(t, tt.expectedJunit, hasJunit)
