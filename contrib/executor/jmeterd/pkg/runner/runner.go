@@ -122,7 +122,14 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	if workingDir != "" {
 		runPath = workingDir
 	}
+
 	outputDir := filepath.Join(runPath, "output")
+	err = os.Setenv("OUTPUT_DIR", outputDir)
+	if err != nil {
+		output.PrintLogf("%s Failed to set output directory %s", ui.IconWarning, outputDir)
+	}
+	slavesEnvVariables["OUTPUT_DIR"] = testkube.NewBasicVariable("OUTPUT_DIR", outputDir)
+
 	// recreate output directory with wide permissions so JMeter can create report files
 	if err = os.Mkdir(outputDir, 0777); err != nil {
 		return *result.Err(errors.Wrapf(err, "error creating directory %s", outputDir)), nil
