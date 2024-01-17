@@ -67,8 +67,14 @@ jobs:
         id: github_sha
         run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
 
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
+        with:
+          strip_v: true
+
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v2
+        uses: goreleaser/goreleaser-action@v4
         with:
           distribution: goreleaser-pro
           version: latest
@@ -83,20 +89,20 @@ jobs:
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
-          DOCKER_IMAGE_TAG: ${{ steps.github_sha.outputs.sha_short }}
+          DOCKER_IMAGE_TAG: ${{steps.tag.outputs.tag}}
 
       - name: Push Docker images
         if: matrix.name == 'linux'
         run: |
-          docker push kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-arm64v8
-          docker push kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-amd64
+          docker push kubeshop/testkube-cli:${{steps.tag.outputs.tag}}-arm64v8
+          docker push kubeshop/testkube-cli:${{steps.tag.outputs.tag}}-amd64
+
           # adding the docker manifest for the latest image tag
-          docker manifest create kubeshop/testkube-cli:latest \
-            kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-amd64 \
-            kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-arm64v8
-          docker manifest annotate kubeshop/testkube-cli:latest kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-amd64 --arch amd64
-          docker manifest annotate kubeshop/testkube-cli:latest kubeshop/testkube-cli:${{ steps.github_sha.outputs.sha_short }}-arm64v8 --arch arm64 --variant v8
-          docker manifest push kubeshop/testkube-cli:latest
+          docker manifest create kubeshop/testkube-cli:latest --amend kubeshop/testkube-cli:${{steps.tag.outputs.tag}}-amd64 --amend kubeshop/testkube-cli:${{steps.tag.outputs.tag}}-arm64v8
+          docker manifest push -p kubeshop/testkube-cli:latest
+
+          docker manifest create kubeshop/testkube-cli:${{steps.tag.outputs.tag}} --amend kubeshop/testkube-cli:${{steps.tag.outputs.tag}}-amd64 --amend kubeshop/testkube-cli:${{steps.tag.outputs.tag}}-arm64v8
+          docker manifest push -p kubeshop/testkube-cli:${{steps.tag.outputs.tag}}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@master
