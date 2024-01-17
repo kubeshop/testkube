@@ -47,7 +47,7 @@ func NewNotifier(template, clusterName, dashboardURI string, config []Notificati
 	notifier := Notifier{messageTemplate: template, clusterName: clusterName, dashboardURI: dashboardURI,
 		config: NewConfig(config), envs: envs}
 	notifier.timestamps = make(map[string]string)
-	if token, ok := os.LookupEnv("SLACK_TOKEN"); ok {
+	if token, ok := os.LookupEnv("SLACK_TOKEN"); ok && token != "" {
 		log.DefaultLogger.Infow("initializing slack client", "SLACK_TOKEN", text.Obfuscate(token))
 		notifier.client = slack.New(token, slack.OptionDebug(true))
 		notifier.Ready = true
