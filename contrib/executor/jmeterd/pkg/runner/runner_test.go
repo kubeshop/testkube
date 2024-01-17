@@ -120,6 +120,13 @@ func TestPrepareArgsDuplication(t *testing.T) {
 			expectedJunit:  true,
 			expectedReport: false,
 		},
+		{
+			name:           "Duplicated not template args",
+			args:           []string{"-t", "first", "-t", "second", "-l"},
+			expectedArgs:   []string{"-t", "first", "-t", "second", "-l"},
+			expectedJunit:  true,
+			expectedReport: false,
+		},
 	}
 
 	for i := range tests {
