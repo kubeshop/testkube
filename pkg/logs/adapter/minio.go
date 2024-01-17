@@ -53,6 +53,7 @@ type BufferInfo struct {
 
 // MinioConsumer creates new MinioSubscriber which will send data to local MinIO bucket
 func NewMinioConsumer(endpoint, accessKeyID, secretAccessKey, region, token, bucket string, opts ...minioconnecter.Option) (*MinioConsumer, error) {
+	ctx := context.TODO()
 	c := &MinioConsumer{
 		minioConnecter: minioconnecter.NewConnecter(endpoint, accessKeyID, secretAccessKey, region, token, bucket, log.DefaultLogger, opts...),
 		Log:            log.DefaultLogger,
@@ -68,14 +69,14 @@ func NewMinioConsumer(endpoint, accessKeyID, secretAccessKey, region, token, buc
 	}
 
 	c.minioClient = minioClient
-	exists, err := c.minioClient.BucketExists(context.TODO(), c.bucket)
+	exists, err := c.minioClient.BucketExists(ctx, c.bucket)
 	if err != nil {
 		c.Log.Errorw("error checking if bucket exists", "err", err)
 		return c, err
 	}
 
 	if !exists {
-		err = c.minioClient.MakeBucket(context.TODO(), c.bucket,
+		err = c.minioClient.MakeBucket(ctx, c.bucket,
 			minio.MakeBucketOptions{Region: c.region})
 		if err != nil {
 			c.Log.Errorw("error creating bucket", "err", err)
@@ -131,15 +132,15 @@ func (s *MinioConsumer) Notify(id string, e events.Log) error {
 		name := id + "-" + strconv.Itoa(buffInfo.Part)
 		buffInfo.Part++
 		s.UpdateBuffInfo(id, buffInfo)
-		go s.putData(name, writer)
+		go s.putData(context.TODO(), name, writer)
 	}
 
 	return nil
 }
 
-func (s *MinioConsumer) putData(name string, buffer *bytes.Buffer) {
+func (s *MinioConsumer) putData(ctx context.Context, name string, buffer *bytes.Buffer) {
 	if buffer != nil && buffer.Len() != 0 {
-		_, err := s.minioClient.PutObject(context.TODO(), s.bucket, name, buffer, int64(buffer.Len()), minio.PutObjectOptions{ContentType: "application/octet-stream"})
+		_, err := s.minioClient.PutObject(ctx, s.bucket, name, buffer, int64(buffer.Len()), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 		if err != nil {
 			s.Log.Errorw("error putting object", "err", err)
 		}
@@ -199,15 +200,16 @@ func (s *MinioConsumer) objectExists(objectName string) bool {
 }
 
 func (s *MinioConsumer) Stop(id string) error {
+	ctx := context.TODO()
 	buffInfo, ok := s.GetBuffInfo(id)
 	if !ok {
 		return ErrIdNotFound{id}
 	}
 	name := id + "-" + strconv.Itoa(buffInfo.Part)
-	s.putData(name, buffInfo.Buffer)
+	s.putData(ctx, name, buffInfo.Buffer)
 	parts := buffInfo.Part + 1
 	s.DeleteBuffInfo(id)
-	return s.combineData(context.TODO(), s.minioClient, id, parts, true)
+	return s.combineData(ctx, s.minioClient, id, parts, true)
 }
 
 func (s *MinioConsumer) Name() string {
