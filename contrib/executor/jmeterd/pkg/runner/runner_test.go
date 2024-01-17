@@ -178,6 +178,13 @@ func TestRemoveDuplicatedArgs(t *testing.T) {
 			args:         []string{"-t", "first", "-t", "second", "-l"},
 			expectedArgs: []string{"-t", "first", "-t", "second", "-l"},
 		},
+		{
+			name:           "Duplicated not template args",
+			args:           []string{"-t", "first", "-t", "second", "-l"},
+			expectedArgs:   []string{"-t", "first", "-t", "second", "-l"},
+			expectedJunit:  true,
+			expectedReport: false,
+		},
 	}
 
 	for i := range tests {
