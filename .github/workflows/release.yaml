@@ -63,10 +63,6 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Get github sha
-        id: github_sha
-        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
-
       - name: Get tag
         id: tag
         uses: dawidd6/action-get-tag@v1
