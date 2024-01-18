@@ -41,4 +41,7 @@ type FilesMeta struct {
 type FileStat struct {
 	Name string `json:"name"`
 	Size int64  `json:"size"`
+	// Status shows if file is ready to be downloaded
+	// One of: ready, processing, error
+	Status string `json:"status,omitempty"`
 }
