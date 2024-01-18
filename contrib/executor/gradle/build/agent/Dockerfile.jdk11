@@ -2,6 +2,9 @@
 FROM gradle:8.5.0-jdk11
 COPY gradle /bin/runner
 
+RUN chown -R 1001:1001 /home/gradle
+ENV GRADLE_USER_HOME /home/gradle
+
 USER 1001
 
 ENTRYPOINT ["/bin/runner"]
