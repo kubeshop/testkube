@@ -6,13 +6,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/kubeshop/testkube/pkg/version"
-
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/oauth"
+	"github.com/kubeshop/testkube/pkg/version"
 )
 
 const (
