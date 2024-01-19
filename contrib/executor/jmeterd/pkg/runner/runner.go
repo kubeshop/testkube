@@ -176,26 +176,27 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	out = envManager.ObfuscateSecrets(out)
 
 	var executionResult testkube.ExecutionResult
+	var jtlCheckError error
 	if hasJunit && hasReport {
 		executionResult, err = processJTLReport(r.fs, jtlPath, out)
 		if err != nil {
+			jtlCheckError = errors.Wrap(err, "error processing jtl report")
 			if errors.Is(err, parser.ErrEmptyReport) {
-				output.PrintLogf("%s JTL report is empty which probably indicates an issue with the test. Check the jmeter.log for more info.", ui.IconCross)
+				errMsg := "JTL report is empty which probably indicates an issue with the test. Check the jmeter.log for more info."
+				output.PrintLogf("%s %s", ui.IconCross, errMsg)
+				jtlCheckError = errors.New(errMsg)
 			}
-			return *result.Err(errors.Wrap(err, "error processing jtl report")), nil
 		}
 	} else {
 		executionResult = parser.MakeSuccessExecution(out)
 	}
 
-	output.PrintLogf("%s Mapped JMeter results to Execution Results...", ui.IconCheckMark)
-
 	postRunScriptErr := runPostRunScriptIfEnabled(execution, r.Params.WorkingDir)
 
 	scrapeErr := runScraperIfEnabled(ctx, r.Params.ScrapperEnabled, r.Scraper, []string{outputDir}, execution)
 
-	if postRunScriptErr != nil || scrapeErr != nil {
-		return *result.WithErrors(postRunScriptErr, scrapeErr), nil
+	if jtlCheckError != nil || postRunScriptErr != nil || scrapeErr != nil {
+		return *result.WithErrors(jtlCheckError, postRunScriptErr, scrapeErr), nil
 	}
 
 	return executionResult, nil
