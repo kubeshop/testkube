@@ -43,6 +43,7 @@ type Config struct {
 	NatsCertFile                     string        `envconfig:"NATS_CERT_FILE" default:""`
 	NatsKeyFile                      string        `envconfig:"NATS_KEY_FILE" default:""`
 	NatsCAFile                       string        `envconfig:"NATS_CA_FILE" default:""`
+	NatsConnectTimeout               time.Duration `envconfig:"NATS_CONNECT_TIMEOUT" default:"5s"`
 	JobServiceAccountName            string        `envconfig:"JOB_SERVICE_ACCOUNT_NAME" default:""`
 	JobTemplateFile                  string        `envconfig:"JOB_TEMPLATE_FILE" default:""`
 	DisableTestTriggers              bool          `envconfig:"DISABLE_TEST_TRIGGERS" default:"false"`
