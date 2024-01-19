@@ -100,8 +100,8 @@ func getRemoteStorageUploader(ctx context.Context, params envs.Params) (uploader
 	defer cancel()
 
 	output.PrintLogf(
-		"%s Uploading artifacts using Remote Storage Uploader (timeout:%ds, insecure:%v, skipVerify: %v, url: %s)",
-		ui.IconCheckMark, params.CloudConnectionTimeoutSec, params.CloudAPITLSInsecure, params.CloudAPISkipVerify, params.CloudAPIURL)
+		"%s Uploading artifacts using Remote Storage Uploader (timeout:%ds, agentInsecure:%v, agentSkipVerify: %v, url: %s, scraperSkipVerify: %v)",
+		ui.IconCheckMark, params.CloudConnectionTimeoutSec, params.CloudAPITLSInsecure, params.CloudAPISkipVerify, params.CloudAPIURL, params.SkipVerify)
 	grpcConn, err := agent.NewGRPCConnection(ctxTimeout, params.CloudAPITLSInsecure, params.CloudAPISkipVerify, params.CloudAPIURL, log.DefaultLogger)
 	if err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func getRemoteStorageUploader(ctx context.Context, params envs.Params) (uploader
 
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 	cloudExecutor := cloudexecutor.NewCloudGRPCExecutor(grpcClient, grpcConn, params.CloudAPIKey)
-	return cloudscraper.NewCloudUploader(cloudExecutor), nil
+	return cloudscraper.NewCloudUploader(cloudExecutor, params.SkipVerify), nil
 }
 
 func getMinIOUploader(params envs.Params) (*scraper.MinIOUploader, error) {
