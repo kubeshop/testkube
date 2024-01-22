@@ -57,7 +57,7 @@ func optsFromConfig(cfg ConnectionConfig) (opts []nats.Option) {
 func NewNATSEncodedConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.EncodedConn, error) {
 	opts = append(opts, optsFromConfig(cfg)...)
 
-	nc, err := nats.Connect(cfg.NatsURI, opts...)
+	nc, err := NewNATSConnection(cfg, opts...)
 	if err != nil {
 		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
 		return nil, err
