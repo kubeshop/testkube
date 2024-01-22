@@ -87,7 +87,6 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 		if err != nil {
 			return execution, err
 		}
-		// stop is synchronous
 		defer s.triggerLogsStopEvent(ctx, execution.Id)
 	}
 
@@ -841,6 +840,7 @@ func (s *Scheduler) triggerLogsStartEvent(ctx context.Context, id string) error 
 
 func (s *Scheduler) triggerLogsStopEvent(ctx context.Context, id string) error {
 	if s.featureFlags.LogsV2 {
+		// as Stop is synchro
 		go func() {
 			r, err := s.logsStream.Stop(ctx, id)
 			if err != nil {

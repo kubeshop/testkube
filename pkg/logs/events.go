@@ -150,7 +150,12 @@ func (ls *LogsService) handleStart(ctx context.Context) func(msg *nats.Msg) {
 func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 	return func(msg *nats.Msg) {
 		ls.log.Debugw("got stop event")
-		time.Sleep(StopWaitTime)
+
+		t := time.NewTicker(StopWaitTime)
+		select {
+		case <-t.C:
+		case <-ctx.Done():
+		}
 
 		event := events.Trigger{}
 		err := json.Unmarshal(msg.Data, &event)
