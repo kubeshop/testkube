@@ -20,7 +20,10 @@ import (
 func GetTestNATSEmitter() *Emitter {
 	os.Setenv("DEBUG", "true")
 	// configure NATS event bus
-	nc, err := bus.NewNATSEncoddedConnection("http://localhost:4222")
+	nc, err := bus.NewNATSEncodedConnection(bus.ConnectionConfig{
+		NatsURI: "http://localhost:4222",
+	})
+
 	if err != nil {
 		panic(err)
 	}
