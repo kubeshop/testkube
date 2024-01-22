@@ -25,8 +25,6 @@ const (
 
 	StartQueue = "logsstart"
 	StopQueue  = "logsstop"
-
-	StopWaitTime = 60 * time.Second // when stop event is faster than first message arrived
 )
 
 type Consumer struct {
@@ -151,7 +149,7 @@ func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 	return func(msg *nats.Msg) {
 		ls.log.Debugw("got stop event")
 
-		t := time.NewTicker(StopWaitTime)
+		t := time.NewTicker(ls.stopWaitTime)
 		select {
 		case <-t.C:
 		case <-ctx.Done():

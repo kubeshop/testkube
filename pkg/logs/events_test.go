@@ -17,6 +17,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/logs/state"
 )
 
+var waitTime = time.Millisecond * 100
+
 func TestLogs_EventsFlow(t *testing.T) {
 	t.Parallel()
 
@@ -43,7 +45,8 @@ func TestLogs_EventsFlow(t *testing.T) {
 
 		// and initialized log service
 		log := NewLogsService(nc, js, state).
-			WithRandomPort()
+			WithRandomPort().
+			WithStopWaitTime(waitTime)
 
 		// given example adapters
 		a := NewMockAdapter("aaa")
@@ -76,6 +79,7 @@ func TestLogs_EventsFlow(t *testing.T) {
 
 		// and when data pushed to the log stream
 		stream.Push(ctx, "stop-test", events.NewLogResponse(time.Now(), []byte("hello 1")))
+		stream.Push(ctx, "stop-test", events.NewLogResponse(time.Now(), []byte("hello 2")))
 
 		// and stop event triggered
 		_, err = stream.Stop(ctx, "stop-test")
@@ -108,7 +112,8 @@ func TestLogs_EventsFlow(t *testing.T) {
 
 		// and initialized log service
 		log := NewLogsService(nc, js, state).
-			WithRandomPort()
+			WithRandomPort().
+			WithStopWaitTime(waitTime)
 
 		// given example adapter
 		a := NewMockAdapter()
@@ -179,7 +184,8 @@ func TestLogs_EventsFlow(t *testing.T) {
 
 		// and initialized log service
 		log := NewLogsService(nc, js, state).
-			WithRandomPort()
+			WithRandomPort().
+			WithStopWaitTime(waitTime)
 
 		// given example adapters
 		a := NewMockAdapter("aaa")
