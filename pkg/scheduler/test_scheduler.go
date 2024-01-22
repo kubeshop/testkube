@@ -87,6 +87,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 		if err != nil {
 			return execution, err
 		}
+		// stop is synchronous
 		defer s.triggerLogsStopEvent(ctx, execution.Id)
 	}
 
@@ -840,18 +841,20 @@ func (s *Scheduler) triggerLogsStartEvent(ctx context.Context, id string) error 
 
 func (s *Scheduler) triggerLogsStopEvent(ctx context.Context, id string) error {
 	if s.featureFlags.LogsV2 {
-		r, err := s.logsStream.Stop(ctx, id)
-		if err != nil {
-			s.logger.Errorw("can't send stop event for logs", "id", id, "error", err)
-			return err
-		}
+		go func() {
+			r, err := s.logsStream.Stop(ctx, id)
+			if err != nil {
+				s.logger.Errorw("can't send stop event for logs", "id", id, "error", err)
+				return
+			}
 
-		if r.Error {
-			s.logger.Errorw("can't send stop event for logs", "id", id, "error", err)
-			return err
-		}
+			if r.Error {
+				s.logger.Errorw("can't send stop event for logs", "id", id, "error", err)
+				return
+			}
 
-		s.logger.Infow("triggering logs stop event", "id", id)
+			s.logger.Infow("triggering logs stop event", "id", id)
+		}()
 	}
 	return nil
 }

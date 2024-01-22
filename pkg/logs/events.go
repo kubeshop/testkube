@@ -25,6 +25,8 @@ const (
 
 	StartQueue = "logsstart"
 	StopQueue  = "logsstop"
+
+	StopWaitTime = 60 * time.Second // when stop event is faster than first message arrived
 )
 
 type Consumer struct {
@@ -58,7 +60,7 @@ func (ls *LogsService) handleMessage(a adapter.Adapter, event events.Trigger) fu
 	log := ls.log.With("id", event.Id, "consumer", a.Name())
 
 	return func(msg jetstream.Msg) {
-		log.Debugw("got message", "data", string(msg.Data()))
+		log.Infow("got message", "data", string(msg.Data()))
 
 		// deliver to subscriber
 		logChunk := events.Log{}
@@ -147,6 +149,8 @@ func (ls *LogsService) handleStart(ctx context.Context) func(msg *nats.Msg) {
 // handleStop will handle stop event and stop logs consumers, also clean consumers state
 func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 	return func(msg *nats.Msg) {
+		ls.log.Debugw("got stop event")
+		time.Sleep(StopWaitTime)
 
 		event := events.Trigger{}
 		err := json.Unmarshal(msg.Data, &event)
@@ -161,6 +165,7 @@ func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 		repeated := 0
 
 		toDelete := []string{}
+		deleted := false
 		for _, adapter := range ls.adapters {
 			toDelete = append(toDelete, event.Id+"_"+adapter.Name())
 		}
@@ -174,7 +179,7 @@ func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 				// load consumer and check if has pending messages
 				c, found := ls.consumerInstances.Load(name)
 				if !found {
-					l.Warnw("consumer not found", "found", found, "name", name)
+					l.Debugw("consumer not found on this pod", "found", found, "name", name)
 					toDelete = append(toDelete[:i], toDelete[i+1:]...)
 					goto loop // rewrite toDelete and start again
 				}
@@ -189,6 +194,9 @@ func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 
 				// finally delete consumer
 				if info.NumPending == 0 {
+					if !deleted {
+						deleted = true
+					}
 					consumer.Context.Stop()
 					ls.consumerInstances.Delete(name)
 					toDelete = append(toDelete[:i], toDelete[i+1:]...)
@@ -197,16 +205,17 @@ func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 				}
 			}
 
-			if len(toDelete) == 0 {
+			if len(toDelete) == 0 && !deleted {
+				l.Debugw("no consumers on this pod registered for id", "id", event.Id)
+				return
+			} else if len(toDelete) == 0 {
 				ls.state.Put(ctx, event.Id, state.LogStateFinished)
 				l.Infow("execution logs consumers stopped", "id", event.Id)
-
 				err = msg.Respond([]byte("stopped"))
 				if err != nil {
 					l.Errorw("error responding to stop event", "error", err)
 					return
 				}
-
 				return
 			}
 
