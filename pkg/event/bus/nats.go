@@ -1,8 +1,10 @@
 package bus
 
 import (
+	"crypto/tls"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/nats-io/nats.go"
 
@@ -22,18 +24,40 @@ const (
 	InternalSubscribeTopic = "internal.>"
 )
 
-func NewNATSConnection(uri string, opts ...nats.Option) (*nats.Conn, error) {
-	nc, err := nats.Connect(uri, opts...)
-	if err != nil {
-		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
-		return nil, err
-	}
-
-	return nc, nil
+type ConnectionConfig struct {
+	NatsURI            string
+	NatsSecure         bool
+	NatsSkipVerify     bool
+	NatsCertFile       string
+	NatsKeyFile        string
+	NatsCAFile         string
+	NatsConnectTimeout time.Duration
 }
 
-func NewNATSEncoddedConnection(uri string, opts ...nats.Option) (*nats.EncodedConn, error) {
-	nc, err := nats.Connect(uri, opts...)
+func optsFromConfig(cfg ConnectionConfig) (opts []nats.Option) {
+	opts = []nats.Option{}
+	if cfg.NatsSecure {
+		if cfg.NatsSkipVerify {
+			opts = append(opts, nats.Secure(&tls.Config{InsecureSkipVerify: true}))
+		} else {
+			opts = append(opts, nats.ClientCert(cfg.NatsCertFile, cfg.NatsKeyFile))
+			if cfg.NatsCAFile != "" {
+				opts = append(opts, nats.RootCAs(cfg.NatsCAFile))
+			}
+		}
+	}
+
+	if cfg.NatsConnectTimeout > 0 {
+		opts = append(opts, nats.Timeout(cfg.NatsConnectTimeout))
+	}
+
+	return opts
+}
+
+func NewNATSEncodedConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.EncodedConn, error) {
+	opts = append(opts, optsFromConfig(cfg)...)
+
+	nc, err := nats.Connect(cfg.NatsURI, opts...)
 	if err != nil {
 		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
 		return nil, err
@@ -46,7 +70,23 @@ func NewNATSEncoddedConnection(uri string, opts ...nats.Option) (*nats.EncodedCo
 		return nil, err
 	}
 
+	if err != nil {
+		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
+	}
+
 	return ec, nil
+}
+
+func NewNATSConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.Conn, error) {
+	opts = append(opts, optsFromConfig(cfg)...)
+
+	nc, err := nats.Connect(cfg.NatsURI, opts...)
+	if err != nil {
+		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
+		return nil, err
+	}
+
+	return nc, nil
 }
 
 func NewNATSBus(nc *nats.EncodedConn) *NATSBus {

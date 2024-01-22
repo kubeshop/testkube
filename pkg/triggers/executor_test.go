@@ -104,7 +104,7 @@ func TestExecute(t *testing.T) {
 	mockExecutor.EXPECT().Execute(gomock.Any(), gomock.Any(), gomock.Any()).Return(&mockExecutionResult, nil)
 	mockResultRepository.EXPECT().UpdateResult(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
-	mockLogsStream := logsclient.NewMockInitializedStreamPusher(mockCtrl)
+	mockLogsStream := logsclient.NewMockStream(mockCtrl)
 
 	sched := scheduler.NewScheduler(
 		metricsHandle,

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -634,22 +633,15 @@ func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDet
 }
 
 func newNATSConnection(cfg *config.Config) (*nats.EncodedConn, error) {
-	var opts []nats.Option
-	if cfg.NatsSecure {
-		if cfg.NatsSkipVerify {
-			opts = append(opts, nats.Secure(&tls.Config{InsecureSkipVerify: true}))
-		} else {
-			opts = append(opts, nats.ClientCert(cfg.NatsCertFile, cfg.NatsKeyFile))
-			if cfg.NatsCAFile != "" {
-				opts = append(opts, nats.RootCAs(cfg.NatsCAFile))
-			}
-		}
-	}
-	nc, err := bus.NewNATSEncoddedConnection(cfg.NatsURI, opts...)
-	if err != nil {
-		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
-	}
-	return nc, nil
+	return bus.NewNATSEncodedConnection(bus.ConnectionConfig{
+		NatsURI:            cfg.NatsURI,
+		NatsSecure:         cfg.NatsSecure,
+		NatsSkipVerify:     cfg.NatsSkipVerify,
+		NatsCertFile:       cfg.NatsCertFile,
+		NatsKeyFile:        cfg.NatsKeyFile,
+		NatsCAFile:         cfg.NatsCAFile,
+		NatsConnectTimeout: cfg.NatsConnectTimeout,
+	})
 }
 
 func newStorageClient(cfg *config.Config) *minio.Client {

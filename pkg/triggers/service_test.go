@@ -117,7 +117,7 @@ func TestService_Run(t *testing.T) {
 
 	testLogger := log.DefaultLogger
 
-	mockLogsStream := logsclient.NewMockInitializedStreamPusher(mockCtrl)
+	mockLogsStream := logsclient.NewMockStream(mockCtrl)
 
 	sched := scheduler.NewScheduler(
 		testMetrics,

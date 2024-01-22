@@ -41,7 +41,7 @@ type Scheduler struct {
 	eventsBus                 bus.Bus
 	dashboardURI              string
 	featureFlags              featureflags.FeatureFlags
-	logsStream                logsclient.InitializedStreamPusher
+	logsStream                logsclient.Stream
 }
 
 func NewScheduler(
@@ -63,7 +63,7 @@ func NewScheduler(
 	eventsBus bus.Bus,
 	dashboardURI string,
 	featureFlags featureflags.FeatureFlags,
-	logsStream logsclient.InitializedStreamPusher,
+	logsStream logsclient.Stream,
 ) *Scheduler {
 	return &Scheduler{
 		metrics:                   metrics,

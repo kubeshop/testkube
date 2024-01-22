@@ -58,6 +58,16 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 
 	// test name + test execution name should be unique
 	execution, _ = s.testResults.GetByNameAndTest(ctx, request.Name, test.Name)
+
+	// for logs.v2 service trigger start / stop events
+	if s.featureFlags.LogsV2 {
+		err := s.triggerLogsStartEvent(ctx, execution.Id)
+		if err != nil {
+			return execution, err
+		}
+		defer s.triggerLogsStopEvent(ctx, execution.Id)
+	}
+
 	if execution.Name == request.Name {
 		err := errors.Errorf("test execution with name %s already exists", request.Name)
 		return s.handleExecutionError(ctx, execution, "duplicate execution: %w", err)
@@ -127,6 +137,7 @@ func (s *Scheduler) handleExecutionError(ctx context.Context, execution testkube
 			WithSource("test-scheduler")
 
 		s.logsStream.Push(ctx, execution.Id, *l)
+
 	}
 
 	// notify events that execution failed
@@ -807,4 +818,39 @@ func mergeSlavePodRequests(podBase *testkube.PodRequest, podAdjust *testkube.Pod
 	}
 
 	return podBase
+}
+
+func (s *Scheduler) triggerLogsStartEvent(ctx context.Context, id string) error {
+	if s.featureFlags.LogsV2 {
+		r, err := s.logsStream.Start(ctx, id)
+		if err != nil {
+			return err
+		}
+
+		if r.Error {
+			return errors.New(string(r.Message))
+		}
+
+		s.logger.Infow("triggering logs start event", "id", id)
+	}
+
+	return nil
+}
+
+func (s *Scheduler) triggerLogsStopEvent(ctx context.Context, id string) error {
+	if s.featureFlags.LogsV2 {
+		r, err := s.logsStream.Stop(ctx, id)
+		if err != nil {
+			s.logger.Errorw("can't send stop event for logs", "id", id, "error", err)
+			return err
+		}
+
+		if r.Error {
+			s.logger.Errorw("can't send stop event for logs", "id", id, "error", err)
+			return err
+		}
+
+		s.logger.Infow("triggering logs stop event", "id", id)
+	}
+	return nil
 }
