@@ -199,7 +199,7 @@ func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 
 			if len(toDelete) == 0 {
 				ls.state.Put(ctx, event.Id, state.LogStateFinished)
-				l.Infow("all logs consumers stopped", "id", event.Id)
+				l.Infow("execution logs consumers stopped", "id", event.Id)
 
 				err = msg.Respond([]byte("stopped"))
 				if err != nil {
