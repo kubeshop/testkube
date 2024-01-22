@@ -54,19 +54,8 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 		request.Name = fmt.Sprintf("%s-%d", request.Name, request.Number)
 	}
 
-	s.events.Notify(testkube.NewEventStartTest(&execution))
-
 	// test name + test execution name should be unique
 	execution, _ = s.testResults.GetByNameAndTest(ctx, request.Name, test.Name)
-
-	// for logs.v2 service trigger start / stop events
-	if s.featureFlags.LogsV2 {
-		err := s.triggerLogsStartEvent(ctx, execution.Id)
-		if err != nil {
-			return execution, err
-		}
-		defer s.triggerLogsStopEvent(ctx, execution.Id)
-	}
 
 	if execution.Name == request.Name {
 		err := errors.Errorf("test execution with name %s already exists", request.Name)
@@ -89,6 +78,18 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	execution = newExecutionFromExecutionOptions(options)
 	options.ID = execution.Id
 
+	// TODO consider using single event for test start and logs
+	s.events.Notify(testkube.NewEventStartTest(&execution))
+
+	// for logs.v2 service trigger start / stop events
+	if s.featureFlags.LogsV2 {
+		err := s.triggerLogsStartEvent(ctx, execution.Id)
+		if err != nil {
+			return execution, err
+		}
+		defer s.triggerLogsStopEvent(ctx, execution.Id)
+	}
+
 	if err := s.createSecretsReferences(&execution); err != nil {
 		return s.handleExecutionError(ctx, execution, "can't create secret variables `Secret` references: %w", err)
 	}
@@ -98,7 +99,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 		return s.handleExecutionError(ctx, execution, "can't create new test execution, can't insert into storage: %w", err)
 	}
 
-	s.logger.Infow("calling executor with options", "options", options.Request)
+	s.logger.Infow("calling executor with options", "executionId", execution.Id, "options", options.Request)
 
 	execution.Start()
 
