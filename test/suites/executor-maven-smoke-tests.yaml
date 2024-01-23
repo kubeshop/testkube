@@ -12,6 +12,9 @@ spec:
     - test: maven-executor-smoke
   - stopOnFailure: false
     execute:
+    - test: maven-executor-smoke-jdk18
+  - stopOnFailure: false
+    execute:
     - test: maven-executor-smoke-jdk11
   - stopOnFailure: false
     execute:
