@@ -65,7 +65,7 @@ workflows:
 
 ### How to configure Testkube CLI action for TK OSS and run a test
 
-To connect to the self-hosted instance, you need to have **kubectl** configured for accessing your Kubernetes cluster, and pass an optional namespace, if Testkube is not deployed in the default **testkube** namespace. 
+To connect to the self-hosted instance, you need to have **kubectl** configured for accessing your Kubernetes cluster and pass an optional namespace, if Testkube is not deployed in the default **testkube** namespace. 
 
 If a test is already created, you can run it using the command `testkube run test test-name -f` . However, if you need to create a test in this workflow, please add a creation command, e.g.: `testkube create test --name test-name --file path_to_file.json`.
 
