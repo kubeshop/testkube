@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -27,6 +28,8 @@ import (
 const (
 	DefaultHttpAddress = ":8080"
 	DefaultGrpcAddress = ":9090"
+
+	DefaultStopWaitTime = 60 * time.Second // when stop event is faster than first message arrived
 )
 
 func NewLogsService(nats *nats.Conn, js jetstream.JetStream, state state.Interface) *LogsService {
@@ -40,6 +43,7 @@ func NewLogsService(nats *nats.Conn, js jetstream.JetStream, state state.Interfa
 		grpcAddress:       DefaultGrpcAddress,
 		consumerInstances: sync.Map{},
 		state:             state,
+		stopWaitTime:      DefaultStopWaitTime,
 	}
 }
 
@@ -70,6 +74,9 @@ type LogsService struct {
 	// will allow to distiguish from where load data from in OSS
 	// cloud will be loading always them locally
 	state state.Interface
+
+	// stop wait time for messages cool down
+	stopWaitTime time.Duration
 }
 
 // AddAdapter adds new adapter to logs service adapters will be configred based on given mode
@@ -139,6 +146,11 @@ func (ls *LogsService) WithHttpAddress(address string) *LogsService {
 
 func (ls *LogsService) WithGrpcAddress(address string) *LogsService {
 	ls.grpcAddress = address
+	return ls
+}
+
+func (ls *LogsService) WithStopWaitTime(duration time.Duration) *LogsService {
+	ls.stopWaitTime = duration
 	return ls
 }
 
