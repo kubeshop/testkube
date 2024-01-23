@@ -13,7 +13,7 @@
   <a href="https://testkube.io">Website</a>&nbsp;|&nbsp;
   <a href="https://docs.testkube.io">Documentation</a>&nbsp;|&nbsp; 
   <a href="https://twitter.com/testkube_io">Twitter</a>&nbsp;|&nbsp; 
-  <a href="https://discord.gg/hfq44wtR6Q">Discord</a>&nbsp;|&nbsp; 
+  <a href="https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email">Slack</a>&nbsp;|&nbsp; 
   <a href="https://kubeshop.io/category/testkube">Blog</a>
 </p>
 
@@ -112,4 +112,4 @@ Go to [contribution document](CONTRIBUTING.md) to read more how can you help us 
 
 # Feedback
 Whether it helps you or not - we'd LOVE to hear from you.  Please let us know what you think and of course, how we can make it better.
-Please join our growing community on [Discord](https://discord.com/invite/6zupCZFQbe)
+Please join our growing community on [Slack](https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email)
