@@ -9,7 +9,7 @@ spec:
   steps:
   - stopOnFailure: false
     execute:
-    - test:   maven-executor-smoke
+    - test: maven-executor-smoke
   - stopOnFailure: false
     execute:
     - test: maven-executor-smoke-jdk11
