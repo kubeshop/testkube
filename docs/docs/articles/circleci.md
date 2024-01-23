@@ -104,7 +104,7 @@ The steps to connect to your Kubernetes cluster differ for each provider. You sh
 
 This workflow establishes a connection to the EKS cluster and creates and runs a test using TK CLI. In this example we also use CircleCI variables not to reveal sensitive data. Please make sure that the following points are satisfied:
 - The **_AwsAccessKeyId_**, **_AwsSecretAccessKeyId_** secrets should contain your AWS IAM keys with proper permissions to connect to EKS cluster.
-- The **_AwsRegion_** secret should contain AWS region where EKS is
+- The **_AwsRegion_** secret should contain the AWS region where EKS is.
 - Tke **EksClusterName** secret points to the name of EKS cluster you want to connect.
 
 ```yaml
