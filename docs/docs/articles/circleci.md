@@ -38,7 +38,7 @@ workflows:
       - run-tests
 ```
 
-It is recommended that sensitive values should never be stored as plaintext in workflow files, but rather as [project variables](https://circleci.com/docs/set-environment-variable/#set-an-environment-variable-in-a-project).  Secrets can be configured at the organization or project level, and allow you to store sensitive information in CircleCI.
+It is recommended that sensitive values should never be stored as plaintext in workflow files, but rather as [project variables](https://circleci.com/docs/set-environment-variable/#set-an-environment-variable-in-a-project).  Secrets can be configured at the organization or project level and allow you to store sensitive information in CircleCI.
 
 ```yaml
 version: 2.1
