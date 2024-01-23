@@ -82,7 +82,7 @@ Now if you execute the test again, it passes. Note that the AI Analysis tab is n
 
 This was a simple demo to show you how to use Testkube’s AI Analysis feature to analyze logs and fix failing tests quickly. You can create complex tests to test your applications and infrastructure. 
 
-If you have feedback or concerns using the AI analysis feature, do share them on our [Discord channel](https://discord.com/invite/6zupCZFQbe) for faster resolution.
+If you have feedback or concerns using the AI analysis feature, do share them on our [Slack Channel](https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email) for faster resolution.
 
 
 

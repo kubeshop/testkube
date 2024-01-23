@@ -125,7 +125,7 @@ For more info go to [main testkube repo](https://github.com/kubeshop/testkube)
 
 ![Twitter](https://img.shields.io/twitter/follow/thekubeshop?style=social)
 
-#### [Documentation](https://kubeshop.github.io/testkube) | [Discord](https://discord.gg/hfq44wtR6Q)
+#### [Documentation](https://kubeshop.github.io/testkube) | [Slack](https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email)
 
 # Tracetest
 
@@ -133,4 +133,4 @@ For more info go to [main tracetest repo](https://github.com/kubeshop/tracetest)
 
 ![Twitter](https://img.shields.io/twitter/follow/tracetest_io?style=social)
 
-#### [Documentation](https://docs.tracetest.io/) | [Discord](https://discord.gg/6zupCZFQbe)
+#### [Documentation](https://docs.tracetest.io/) | [Slack](https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email)

@@ -120,6 +120,6 @@ For more info go to [main Testkube repo](https://github.com/kubeshop/testkube)
 
 ![Docker builds](https://img.shields.io/docker/automated/kubeshop/testkube-api-server) ![Code build](https://img.shields.io/github/workflow/status/kubeshop/testkube/Code%20build%20and%20checks) ![Release date](https://img.shields.io/github/release-date/kubeshop/testkube)
 
-![Twitter](https://img.shields.io/twitter/follow/thekubeshop?style=social) ![Discord](https://img.shields.io/discord/884464549347074049)
+![Twitter](https://img.shields.io/twitter/follow/thekubeshop?style=social) ![Slack](https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email)
 
-#### [Documentation](https://docs.testkube.io) | [Discord](https://discord.gg/hfq44wtR6Q)
+#### [Documentation](https://docs.testkube.io) | [Slack](https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email)
