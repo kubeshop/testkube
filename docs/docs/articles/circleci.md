@@ -151,7 +151,7 @@ workflows:
 ### How to connect to GKE (Google Kubernetes Engine) cluster and run a test 
 
 This example connects to a k8s cluster in Google Cloud then creates and runs a test using Testkube CircleCI. Please make sure that the following points are satisfied:
-- The **_GKE Sevice Account_** should be created prior in Google Cloud and added to CircleCI variables along with **_GKE Project_** value;
+- The **_GKE Sevice Account_** should already be created in Google Cloud and added to CircleCI variables along with **_GKE Project_** value.
 - The **_GKE Cluster Name_** and **_GKE Zone_** can be added as environment variables in the workflow.
 
 
