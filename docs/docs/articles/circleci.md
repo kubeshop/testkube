@@ -69,7 +69,7 @@ To connect to the self-hosted instance, you need to have **kubectl** configured 
 
 If a test is already created, you can run it using the command `testkube run test test-name -f` . However, if you need to create a test in this workflow, please add a creation command, e.g.: `testkube create test --name test-name --file path_to_file.json`.
 
-In order to connect to your own cluster, you can put the your kubeconfig file into CircleCI variable named KUBECONFIGFILE
+In order to connect to your own cluster, you can put your kubeconfig file into CircleCI variable named KUBECONFIGFILE.
 
 ```yaml
 version: 2.1
