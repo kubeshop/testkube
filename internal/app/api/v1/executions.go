@@ -14,6 +14,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 
+	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 
 	"github.com/gofiber/fiber/v2"
@@ -245,27 +246,7 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 					return
 				}
 
-				enc := json.NewEncoder(w)
-				s.Log.Infow("looping through logs channel")
-				// loop through pods log lines - it's blocking channel
-				// and pass single log output as sse data chunk
-				for out := range logs {
-					if out.Error != nil {
-						s.Log.Errorw("can't get log line", "error", out.Error)
-						continue
-					}
-
-					s.Log.Debugw("got log line from execution result", "out", out.Log)
-					_, _ = fmt.Fprintf(w, "data: ")
-					err := enc.Encode(out.Log)
-					if err != nil {
-						s.Log.Infow("Encode", "error", err)
-					}
-					// enc.Encode adds \n and we need \n\n after `data: {}` chunk
-					_, _ = fmt.Fprintf(w, "\n")
-					_ = w.Flush()
-				}
-
+				s.streamLogsFromLogServer(logs, w)
 				return
 			}
 
@@ -695,4 +676,28 @@ func (s *TestkubeAPI) getArtifactStorage(bucket string) (storage.ArtifactsStorag
 	}
 
 	return minio.NewMinIOArtifactClient(minioClient), nil
+}
+
+// streamLogsFromLogServer writes logs from the output of log server to the writer
+func (s *TestkubeAPI) streamLogsFromLogServer(logs chan events.LogResponse, w *bufio.Writer) {
+	enc := json.NewEncoder(w)
+	s.Log.Infow("looping through logs channel")
+	// loop through pods log lines - it's blocking channel
+	// and pass single log output as sse data chunk
+	for out := range logs {
+		if out.Error != nil {
+			s.Log.Errorw("can't get log line", "error", out.Error)
+			continue
+		}
+
+		s.Log.Debugw("got log line from execution result", "out", out.Log)
+		_, _ = fmt.Fprintf(w, "data: ")
+		err := enc.Encode(out.Log)
+		if err != nil {
+			s.Log.Infow("Encode", "error", err)
+		}
+		// enc.Encode adds \n and we need \n\n after `data: {}` chunk
+		_, _ = fmt.Fprintf(w, "\n")
+		_ = w.Flush()
+	}
 }
