@@ -72,6 +72,9 @@ jobs:
 
       - name: Push Docker images
         run: |
+          docker push kubeshop/testkube-logs-sidecar:${{ steps.github_sha.outputs.sha_short }}-arm64v8
+          docker push kubeshop/testkube-logs-sidecar:${{ steps.github_sha.outputs.sha_short }}-amd64
+
           docker manifest create kubeshop/testkube-logs-sidecar:${{ steps.github_sha.outputs.sha_short }} --amend kubeshop/testkube-logs-sidecar:${{ steps.github_sha.outputs.sha_short }}-arm64v8 --amend kubeshop/testkube-logs-sidecar:${{ steps.github_sha.outputs.sha_short }}-amd64
           docker manifest push -p kubeshop/testkube-logs-sidecar:${{ steps.github_sha.outputs.sha_short }}
 
