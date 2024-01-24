@@ -14,6 +14,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/logs"
 	"github.com/kubeshop/testkube/pkg/logs/adapter"
+	"github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/logs/config"
 	"github.com/kubeshop/testkube/pkg/logs/repository"
 	"github.com/kubeshop/testkube/pkg/logs/state"
@@ -47,6 +48,7 @@ func main() {
 	}()
 
 	js := Must(jetstream.New(nc))
+	logStream := Must(client.NewNatsLogStream(nc))
 
 	kv := Must(js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: cfg.KVBucketName}))
 	state := state.NewState(kv)
@@ -54,7 +56,7 @@ func main() {
 	svc := logs.NewLogsService(nc, js, state).
 		WithHttpAddress(cfg.HttpAddress).
 		WithGrpcAddress(cfg.GrpcAddress).
-		WithLogsRepositoryFactory(repository.NewJsMinioFactory(nil, "", js))
+		WithLogsRepositoryFactory(repository.NewJsMinioFactory(nil, "", logStream))
 
 	// TODO - add adapters here
 	svc.AddAdapter(adapter.NewDummyAdapter())
