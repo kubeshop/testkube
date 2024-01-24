@@ -28,3 +28,6 @@ spec:
   - stopOnFailure: false
     execute:
     - test: jmeterd-executor-smoke-directory-t-o-slaves-2
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-incorrect-file-path-negative
