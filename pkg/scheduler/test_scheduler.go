@@ -872,7 +872,7 @@ func (s *Scheduler) triggerLogsStopEvent(ctx context.Context, id string) error {
 			}
 
 			if r.Error {
-				s.logger.Errorw("can't send stop event for logs", "id", id, "error", err)
+				s.logger.Errorw("received invalid response from log stream on stop event", "id", id, "response", r)
 				return
 			}
 
