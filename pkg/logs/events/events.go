@@ -23,6 +23,8 @@ const (
 	LogVersionV1 LogVersion = "v1"
 	// v2 - raw binary format, timestamps are based on Kubernetes logs, line is raw log line
 	LogVersionV2 LogVersion = "v2"
+
+	JobPodLogSource = "job-pod"
 )
 
 type LogResponse struct {
@@ -142,6 +144,7 @@ func NewLogResponseFromBytes(b []byte) Log {
 				Type:    o.Type_,
 				Error:   true,
 				Version: LogVersionV1,
+				Source:  JobPodLogSource,
 			}
 		}
 
@@ -171,5 +174,6 @@ func NewLogResponseFromBytes(b []byte) Log {
 		Time:    ts,
 		Content: string(b),
 		Version: LogVersionV2,
+		Source:  JobPodLogSource,
 	}
 }
