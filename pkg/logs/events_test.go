@@ -85,6 +85,9 @@ func TestLogs_EventsFlow(t *testing.T) {
 		_, err = stream.Stop(ctx, "stop-test")
 		assert.NoError(t, err)
 
+		// cooldown stop time
+		time.Sleep(waitTime * 2)
+
 		// then all adapters should be gracefully stopped
 		assert.Equal(t, 0, log.GetConsumersStats(ctx).Count)
 	})
@@ -224,8 +227,8 @@ func TestLogs_EventsFlow(t *testing.T) {
 		_, err = stream.Stop(ctx, "consumer-stats")
 		assert.NoError(t, err)
 
-		// wait for mess
-		time.Sleep(time.Millisecond * 100)
+		// there will be wait timwait for mess
+		time.Sleep(waitTime * 2)
 
 		// then all adapters should be gracefully stopped
 		assert.Equal(t, 0, log.GetConsumersStats(ctx).Count)
