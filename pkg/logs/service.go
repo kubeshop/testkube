@@ -29,7 +29,7 @@ const (
 	DefaultHttpAddress = ":8080"
 	DefaultGrpcAddress = ":9090"
 
-	DefaultStopWaitTime = 5 * time.Second // when stop event is faster than first message arrived
+	defaultStopPauseInterval = 200 * time.Millisecond
 )
 
 func NewLogsService(nats *nats.Conn, js jetstream.JetStream, state state.Interface) *LogsService {
@@ -43,7 +43,7 @@ func NewLogsService(nats *nats.Conn, js jetstream.JetStream, state state.Interfa
 		grpcAddress:       DefaultGrpcAddress,
 		consumerInstances: sync.Map{},
 		state:             state,
-		stopWaitTime:      DefaultStopWaitTime,
+		stopPauseInterval: defaultStopPauseInterval,
 	}
 }
 
@@ -76,7 +76,7 @@ type LogsService struct {
 	state state.Interface
 
 	// stop wait time for messages cool down
-	stopWaitTime time.Duration
+	stopPauseInterval time.Duration
 }
 
 // AddAdapter adds new adapter to logs service adapters will be configred based on given mode
@@ -149,8 +149,8 @@ func (ls *LogsService) WithGrpcAddress(address string) *LogsService {
 	return ls
 }
 
-func (ls *LogsService) WithStopWaitTime(duration time.Duration) *LogsService {
-	ls.stopWaitTime = duration
+func (ls *LogsService) WithPauseInterval(duration time.Duration) *LogsService {
+	ls.stopPauseInterval = duration
 	return ls
 }
 
