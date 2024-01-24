@@ -90,7 +90,7 @@ func NewTestkubeAPI(
 	eventsBus bus.Bus,
 	enableSecretsEndpoint bool,
 	ff featureflags.FeatureFlags,
-	logGrpcClient logsclient.Client,
+	logGrpcClient logsclient.StreamGetter,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -194,7 +194,7 @@ type TestkubeAPI struct {
 	eventsBus             bus.Bus
 	enableSecretsEndpoint bool
 	featureFlags          featureflags.FeatureFlags
-	logGrpcClient         logsclient.Client
+	logGrpcClient         logsclient.StreamGetter
 }
 
 type storageParams struct {

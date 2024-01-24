@@ -456,7 +456,7 @@ func main() {
 		ui.ExitOnError("Creating slack loader", err)
 	}
 
-	var logGrpcClient logsclient.Client
+	var logGrpcClient logsclient.StreamGetter
 	if ff.LogsV2 {
 		logGrpcClient = logsclient.NewGrpcClient(cfg.LogServerGrpcAddress)
 	}
