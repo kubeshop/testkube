@@ -14,7 +14,7 @@ func NewMinioRepository(minio *minio.Client) LogsRepository {
 type MinioLogsRepository struct {
 }
 
-func (r MinioLogsRepository) Get(ctx context.Context, id string) chan events.LogResponse {
+func (r MinioLogsRepository) Get(ctx context.Context, id string) (chan events.LogResponse, error) {
 	ch := make(chan events.LogResponse, 100)
-	return ch
+	return ch, nil
 }
