@@ -8,6 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/nats-io/nats.go/jetstream"
+	"github.com/oklog/run"
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/pkg/event/bus"
@@ -18,10 +20,21 @@ import (
 	"github.com/kubeshop/testkube/pkg/logs/config"
 	"github.com/kubeshop/testkube/pkg/logs/repository"
 	"github.com/kubeshop/testkube/pkg/logs/state"
-
-	"github.com/nats-io/nats.go/jetstream"
-	"github.com/oklog/run"
+	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
+
+func newStorageClient(cfg *config.Config) *minio.Client {
+	opts := minio.GetTLSOptions(cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
+	return minio.NewClient(
+		cfg.StorageEndpoint,
+		cfg.StorageAccessKeyID,
+		cfg.StorageSecretAccessKey,
+		cfg.StorageRegion,
+		cfg.StorageToken,
+		cfg.StorageBucket,
+		opts...,
+	)
+}
 
 func main() {
 	var g run.Group
@@ -50,13 +63,22 @@ func main() {
 	js := Must(jetstream.New(nc))
 	logStream := Must(client.NewNatsLogStream(nc))
 
+	minioClient := newStorageClient(cfg)
+	if err := minioClient.Connect(); err != nil {
+		log.Fatalw("error connecting to minio", "error", err)
+	}
+
+	if err := minioClient.SetExpirationPolicy(cfg.StorageExpiration); err != nil {
+		log.Warnw("error setting expiration policy", "error", err)
+	}
+
 	kv := Must(js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: cfg.KVBucketName}))
 	state := state.NewState(kv)
 
 	svc := logs.NewLogsService(nc, js, state).
 		WithHttpAddress(cfg.HttpAddress).
 		WithGrpcAddress(cfg.GrpcAddress).
-		WithLogsRepositoryFactory(repository.NewJsMinioFactory(nil, "", logStream))
+		WithLogsRepositoryFactory(repository.NewJsMinioFactory(minioClient, cfg.StorageBucket, logStream))
 
 	// TODO - add adapters here
 	svc.AddAdapter(adapter.NewDummyAdapter())

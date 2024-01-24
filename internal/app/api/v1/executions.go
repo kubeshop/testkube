@@ -255,7 +255,7 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 						continue
 					}
 
-					s.Log.Debugw("got log line from execution reult", "out", out.Log)
+					s.Log.Debugw("got log line from execution result", "out", out.Log)
 					_, _ = fmt.Fprintf(w, "data: ")
 					err := enc.Encode(out.Log)
 					if err != nil {
