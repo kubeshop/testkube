@@ -114,8 +114,8 @@ const config = {
             title: "Community",
             items: [
               {
-                label: "Discord",
-                href: "https://discord.com/invite/6zupCZFQbe",
+                label: "Slack",
+                href: "https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email",
               },
               {
                 label: "Twitter",

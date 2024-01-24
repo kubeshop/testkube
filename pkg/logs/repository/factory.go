@@ -15,7 +15,7 @@ type Factory interface {
 	GetRepository(state state.LogState) (LogsRepository, error)
 }
 
-func NewJsMinioFactory(minio *minio.Client, bucket string, logStream client.Stream) Factory {
+func NewJsMinioFactory(minio *minio.Client, bucket string, js client.StreamGetter) Factory {
 	return JsMinioFactory{
 		minio:  minio,
 		bucket: bucket,
@@ -24,9 +24,9 @@ func NewJsMinioFactory(minio *minio.Client, bucket string, logStream client.Stre
 }
 
 type JsMinioFactory struct {
-	minio     *minio.Client
-	bucket    string
-	logStream client.Stream
+	minio  *minio.Client
+	bucket string
+	js     client.StreamGetter
 }
 
 func (b JsMinioFactory) GetRepository(s state.LogState) (LogsRepository, error) {

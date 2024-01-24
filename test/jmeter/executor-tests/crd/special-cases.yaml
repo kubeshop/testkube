@@ -164,3 +164,116 @@ spec:
         limits:
           cpu: 500m
           memory: 512Mi
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke-directory-t-o
+  labels:
+    core-tests: special-cases-jmeter
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: develop
+      path: test/jmeter/executor-tests
+  executionRequest:
+    args:
+      - "-t"
+      - "/data/repo/test/jmeter/executor-tests/jmeter-executor-smoke-2.jmx"
+      - "-o"
+      - "/data/output/custom-report-directory"
+      - "-l"
+      - "/data/output/custom-report.jtl"
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke-directory-t-o-slaves-2
+  labels:
+    core-tests: special-cases-jmeter
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: develop
+      path: test/jmeter/executor-tests
+  executionRequest:
+    args:
+      - "-t"
+      - "/data/repo/test/jmeter/executor-tests/jmeter-executor-smoke-2.jmx"
+      - "-o"
+      - "/data/output/custom-report-directory"
+      - "-l"
+      - "/data/output/custom-report.jtl"
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    variables:
+      SLAVES_COUNT:
+        name: SLAVES_COUNT
+        value: "2"
+        type: basic
+    activeDeadlineSeconds: 180
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke-directory-wdir-t-o-slaves-2
+  labels:
+    core-tests: special-cases-jmeter
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: develop
+      path: test/jmeter/executor-tests
+      workingDir: test/jmeter/executor-tests
+  executionRequest:
+    args:
+      - "-t"
+      - "/data/repo/test/jmeter/executor-tests/jmeter-executor-smoke-2.jmx"
+      - "-o"
+      - "/data/output/custom-report-directory"
+      - "-l"
+      - "/data/output/custom-report.jtl"
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    variables:
+      SLAVES_COUNT:
+        name: SLAVES_COUNT
+        value: "2"
+        type: basic
+    activeDeadlineSeconds: 180
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi

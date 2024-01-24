@@ -9,15 +9,15 @@ import (
 
 var _ LogsRepository = &JetstreamLogsRepository{}
 
-func NewJetstreamRepository(client client.Client) LogsRepository {
+func NewJetstreamRepository(client client.StreamGetter) LogsRepository {
 	return JetstreamLogsRepository{c: client}
 }
 
 // Jet
 type JetstreamLogsRepository struct {
-	c client.Client
+	c client.StreamGetter
 }
 
-func (r JetstreamLogsRepository) Get(ctx context.Context, id string) chan events.LogResponse {
+func (r JetstreamLogsRepository) Get(ctx context.Context, id string) (chan events.LogResponse, error) {
 	return r.c.Get(ctx, id)
 }

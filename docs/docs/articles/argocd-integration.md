@@ -219,7 +219,7 @@ spec:
    namespace: testkube
 ```
 
-Notice that we have defined path `postman-collections` which is the test folder with our Postman collections from the steps earlier. With Testkube you can use multiple test executors like `curl`, for example, so it is convenient to have a folder for each. We have also defined the `.destination.namespace` to be `testkube`, which is where the tests should be deployed in our cluster.
+Notice that we have defined the path `postman-collections` which is the test folder with our Postman collections from the steps earlier. With Testkube you can use multiple test executors like `curl`, for example, so it is convenient to have a folder for each. We have also defined the `.destination.namespace` to be `testkube`, which is where the tests should be deployed in our cluster.
 ‍
 
 Now let’s create the application with:
@@ -297,12 +297,12 @@ And you will be able to see the results of the execution in the Executions tab a
 
 We now have an automated test deployment and execution pipeline based on GitOps principles!
 
-### 11. Allow to add ownerReferences to CronJobs metadata for Tests and Test Suites
+### 11. Allow adding ownerReferences to CronJobs metadata for Tests and Test Suites
 
-You will need to enable helm chart variable `useArgoCDSync = true` in order to make CronJobs created for Tests and Test Suites syncronized in ArgoCD.
+You will need to enable the Helm chart variable `useArgoCDSync = true` in order to make CronJobs created for Tests and Test Suites syncronized in ArgoCD.
 
 ## GitOps Takeaways
 
 Once fully realized - using GitOps for testing of Kubernetes applications as described above provides a powerful alternative to a more traditional approach where orchestration is tied to your current CI/CD tooling and not closely aligned with the lifecycle of Kubernetes applications.
 
-We would love to get your thoughts on the above approach - over-engineering done right? Waste of time? Let us know on [our Discord server](https://discord.com/channels/884464549347074049/885185660808474664)!
+We would love to get your thoughts on the above approach - over-engineering done right? Waste of time? Let us know on [our Slack Channel](https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email)!

@@ -250,4 +250,4 @@ data "aws_iam_policy_document" "testkube" {
 
 With just a few changes you can deploy Testkube into an EKS cluster and expose it to the outside world while all the necessary resources are created automatically.
 
-If you have any questions you can [join our Discord community](https://discord.com/invite/6zupCZFQbe) or, if you have any ideas for other useful features, you can create feature requests at our [GitHub Issues](https://github.com/kubeshop/testkube) page.
+If you have any questions you can [join our Slack Channel](https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email) or, if you have any ideas for other useful features, you can create feature requests at our [GitHub Issues](https://github.com/kubeshop/testkube) page.

@@ -83,11 +83,11 @@ Please stop the application that listens on 8080, 8088 ports.
 
 ## If You're Still Having Issues
 
-If these guides do not solve the issue that you encountered or you have other questions or comments, please contact us on [Discord](https://discord.com/invite/6zupCZFQbe).
+If these guides do not solve the issue that you encountered or you have other questions or comments, please contact us on [Slack](https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email).
 
 ## Other Installation Methods
 
-### Installation on OpenShift deployed on GCP
+### Installation on OpenShift Deployed on GCP
 
 To install Testkube you need an empty OpenShift cluster. Once the cluster is up and running update `values.yaml` file, including the configuration below.
 
