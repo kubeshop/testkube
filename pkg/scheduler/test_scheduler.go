@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
@@ -140,7 +141,9 @@ func (s *Scheduler) handleExecutionStart(ctx context.Context, execution testkube
 			WithVersion(events.LogVersionV2).
 			WithSource("test-scheduler")
 
-		l.WithMetadataEntry("execution", execution)
+		l.WithMetadataEntry("command", strings.Join(execution.Command, " "))
+		l.WithMetadataEntry("argsmode", execution.ArgsMode)
+		l.WithMetadataEntry("args", strings.Join(execution.Args, " "))
 
 		s.logsStream.Push(ctx, execution.Id, *l)
 	}
