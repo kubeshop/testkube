@@ -876,7 +876,7 @@ func (s *Scheduler) triggerLogsStopEvent(ctx context.Context, id string) error {
 				return
 			}
 
-			s.logger.Infow("triggering logs stop event", "id", id)
+			s.logger.Infow("triggering logs stop event", "id", id, "response", string(r.Message))
 		}()
 	}
 	return nil
