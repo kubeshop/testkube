@@ -13,11 +13,6 @@ const (
 	StopSubject  = "events.logs.stop"
 )
 
-//go:generate mockgen -destination=./mock_client.go -package=client "github.com/kubeshop/testkube/pkg/logs/client" Client
-type Client interface {
-	Get(ctx context.Context, id string) chan events.LogResponse
-}
-
 //go:generate mockgen -destination=./mock_stream.go -package=client "github.com/kubeshop/testkube/pkg/logs/client" Stream
 type Stream interface {
 	StreamInitializer
@@ -54,7 +49,9 @@ type StreamPusher interface {
 	PushBytes(ctx context.Context, id string, chunk []byte) error
 }
 
-// LogStream is a single log stream chunk with possible errors
+// StreamGetter interface for getting logs stream channel
+//
+//go:generate mockgen -destination=./mock_streamgetter.go -package=client "github.com/kubeshop/testkube/pkg/logs/client" StreamGetter
 type StreamGetter interface {
 	// Init creates or updates stream on demand
 	Get(ctx context.Context, id string) (chan events.LogResponse, error)
