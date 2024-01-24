@@ -126,7 +126,24 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 
 	s.logger.Infow("test started", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
 
+	s.handleExecutionStart(ctx, execution)
+
 	return execution, nil
+}
+
+func (s *Scheduler) handleExecutionStart(ctx context.Context, execution testkube.Execution) {
+	// pass here all needed execution data to the log
+	if s.featureFlags.LogsV2 {
+
+		l := events.NewLog(fmt.Sprintf("starting execution %s (%s)", execution.Name, execution.Id)).
+			WithType("execution-config").
+			WithVersion(events.LogVersionV2).
+			WithSource("test-scheduler")
+
+		l.WithMetadataEntry("execution", execution)
+
+		s.logsStream.Push(ctx, execution.Id, *l)
+	}
 }
 
 func (s *Scheduler) handleExecutionError(ctx context.Context, execution testkube.Execution, msgTpl string, err error) (testkube.Execution, error) {

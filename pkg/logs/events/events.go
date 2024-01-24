@@ -31,13 +31,13 @@ type LogResponse struct {
 }
 
 type Log struct {
-	Time     time.Time         `json:"ts,omitempty"`
-	Content  string            `json:"content,omitempty"`
-	Type     string            `json:"type,omitempty"`
-	Source   string            `json:"source,omitempty"`
-	Metadata map[string]string `json:"metadata,omitempty"`
-	Error    bool              `json:"error,omitempty"`
-	Version  LogVersion        `json:"version,omitempty"`
+	Time     time.Time      `json:"ts,omitempty"`
+	Content  string         `json:"content,omitempty"`
+	Type     string         `json:"type,omitempty"`
+	Source   string         `json:"source,omitempty"`
+	Metadata map[string]any `json:"metadata,omitempty"`
+	Error    bool           `json:"error,omitempty"`
+	Version  LogVersion     `json:"version,omitempty"`
 
 	// Old output - for backwards compatibility - will be removed for non-structured logs
 	V1 *LogOutputV1 `json:"v1,omitempty"`
@@ -50,7 +50,7 @@ func NewLog(content string) *Log {
 	return &Log{
 		Time:     time.Now(),
 		Content:  string(content),
-		Metadata: map[string]string{},
+		Metadata: map[string]any{},
 	}
 }
 
@@ -58,13 +58,13 @@ func NewLogResponse(ts time.Time, content []byte) Log {
 	return Log{
 		Time:     ts,
 		Content:  string(content),
-		Metadata: map[string]string{},
+		Metadata: map[string]any{},
 	}
 }
 
-func (l *Log) WithMetadataEntry(key, value string) *Log {
+func (l *Log) WithMetadataEntry(key string, value any) *Log {
 	if l.Metadata == nil {
-		l.Metadata = map[string]string{}
+		l.Metadata = map[string]any{}
 	}
 	l.Metadata[key] = value
 	return l
