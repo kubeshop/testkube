@@ -2,8 +2,8 @@ name: Release logs server dev
 
 on:
   push:
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+-*"
+    branches:
+      - develop
 
 permissions:
   id-token: write
