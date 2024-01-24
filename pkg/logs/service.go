@@ -29,7 +29,7 @@ const (
 	DefaultHttpAddress = ":8080"
 	DefaultGrpcAddress = ":9090"
 
-	DefaultStopWaitTime = 60 * time.Second // when stop event is faster than first message arrived
+	DefaultStopWaitTime = 5 * time.Second // when stop event is faster than first message arrived
 )
 
 func NewLogsService(nats *nats.Conn, js jetstream.JetStream, state state.Interface) *LogsService {

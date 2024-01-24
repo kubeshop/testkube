@@ -149,6 +149,11 @@ func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 	return func(msg *nats.Msg) {
 		ls.log.Debugw("got stop event")
 
+		err := msg.Respond([]byte("stop-queued"))
+		if err != nil {
+			ls.log.Errorw("error responding to stop event", "error", err)
+		}
+
 		t := time.NewTicker(ls.stopWaitTime)
 		select {
 		case <-t.C:
@@ -156,7 +161,7 @@ func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 		}
 
 		event := events.Trigger{}
-		err := json.Unmarshal(msg.Data, &event)
+		err = json.Unmarshal(msg.Data, &event)
 		if err != nil {
 			ls.log.Errorw("can't handle stop event", "error", err)
 			return
@@ -214,11 +219,6 @@ func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 			} else if len(toDelete) == 0 {
 				ls.state.Put(ctx, event.Id, state.LogStateFinished)
 				l.Infow("execution logs consumers stopped", "id", event.Id)
-				err = msg.Respond([]byte("stopped"))
-				if err != nil {
-					l.Errorw("error responding to stop event", "error", err)
-					return
-				}
 				return
 			}
 
