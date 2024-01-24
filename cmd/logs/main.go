@@ -15,6 +15,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/logs"
 	"github.com/kubeshop/testkube/pkg/logs/adapter"
 	"github.com/kubeshop/testkube/pkg/logs/config"
+	"github.com/kubeshop/testkube/pkg/logs/repository"
 	"github.com/kubeshop/testkube/pkg/logs/state"
 
 	"github.com/nats-io/nats.go/jetstream"
@@ -52,7 +53,8 @@ func main() {
 
 	svc := logs.NewLogsService(nc, js, state).
 		WithHttpAddress(cfg.HttpAddress).
-		WithGrpcAddress(cfg.GrpcAddress)
+		WithGrpcAddress(cfg.GrpcAddress).
+		WithLogsRepositoryFactory(repository.NewJsMinioFactory(nil, "", js))
 
 	// TODO - add adapters here
 	svc.AddAdapter(adapter.NewDummyAdapter())

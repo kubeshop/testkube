@@ -188,6 +188,20 @@ func (s *TestkubeAPI) ExecutionLogsStreamHandler() fiber.Handler {
 
 		defer c.Conn.Close()
 
+		if s.featureFlags.LogsV2 {
+			logs := s.logGrpcClient.Get(context.Background(), executionID)
+			for logLine := range logs {
+				if logLine.Error != nil {
+					l.Errorw("can't get pod log", "error", logLine.Error)
+					return
+				}
+
+				l.Debugw("sending log line to websocket", "line", logLine.Log)
+				_ = c.WriteJSON(logLine.Log)
+			}
+			return
+		}
+
 		logs, err := s.GetLogsStream(context.Background(), executionID)
 		if err != nil {
 			l.Errorw("can't get pod logs", "error", err)
@@ -217,6 +231,34 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 		ctx.SetBodyStreamWriter(func(w *bufio.Writer) {
 			s.Log.Debug("start streaming logs")
 			_ = w.Flush()
+
+			if s.featureFlags.LogsV2 {
+				s.Log.Infow("getting logs from grpc log server")
+				logs := s.logGrpcClient.Get(ctx, executionID)
+
+				enc := json.NewEncoder(w)
+				s.Log.Infow("looping through logs channel")
+				// loop through pods log lines - it's blocking channel
+				// and pass single log output as sse data chunk
+				for out := range logs {
+					if out.Error != nil {
+						s.Log.Errorw("can't get pod log", "error", out.Error)
+						return
+					}
+
+					s.Log.Debugw("got log line from pod", "out", out.Log)
+					_, _ = fmt.Fprintf(w, "data: ")
+					err := enc.Encode(out.Log)
+					if err != nil {
+						s.Log.Infow("Encode", "error", err)
+					}
+					// enc.Encode adds \n and we need \n\n after `data: {}` chunk
+					_, _ = fmt.Fprintf(w, "\n")
+					_ = w.Flush()
+				}
+
+				return
+			}
 
 			execution, err := s.ExecutionResults.Get(ctx, executionID)
 			if err != nil {

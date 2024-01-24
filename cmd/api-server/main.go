@@ -456,6 +456,11 @@ func main() {
 		ui.ExitOnError("Creating slack loader", err)
 	}
 
+	var logGrpcClient logsclient.Client
+	if ff.LogsV2 {
+		logGrpcClient = logsclient.NewGrpcClient(cfg.LogServerGrpcAddress)
+	}
+
 	api := apiv1.NewTestkubeAPI(
 		cfg.TestkubeNamespace,
 		resultsRepository,
@@ -487,6 +492,7 @@ func main() {
 		eventBus,
 		cfg.EnableSecretsEndpoint,
 		ff,
+		logGrpcClient,
 	)
 
 	if mode == common.ModeAgent {

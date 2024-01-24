@@ -44,6 +44,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
@@ -89,6 +90,7 @@ func NewTestkubeAPI(
 	eventsBus bus.Bus,
 	enableSecretsEndpoint bool,
 	ff featureflags.FeatureFlags,
+	logGrpcClient logsclient.Client,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -134,6 +136,7 @@ func NewTestkubeAPI(
 		eventsBus:             eventsBus,
 		enableSecretsEndpoint: enableSecretsEndpoint,
 		featureFlags:          ff,
+		logGrpcClient:         logGrpcClient,
 	}
 
 	// will be reused in websockets handler
@@ -191,6 +194,7 @@ type TestkubeAPI struct {
 	eventsBus             bus.Bus
 	enableSecretsEndpoint bool
 	featureFlags          featureflags.FeatureFlags
+	logGrpcClient         logsclient.Client
 }
 
 type storageParams struct {

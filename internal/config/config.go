@@ -83,6 +83,7 @@ type Config struct {
 	EnableSecretsEndpoint            bool          `envconfig:"ENABLE_SECRETS_ENDPOINT" default:"false"`
 	DisableMongoMigrations           bool          `envconfig:"DISABLE_MONGO_MIGRATIONS" default:"false"`
 	Debug                            bool          `envconfig:"DEBUG" default:"false"`
+	LogServerGrpcAddress             string        `envconfig:"LOG_SERVER_GRPC_ADDRESS" default:":9090"`
 
 	// DEPRECATED: Use TestkubeProAPIKey instead
 	TestkubeCloudAPIKey string `envconfig:"TESTKUBE_CLOUD_API_KEY" default:""`
