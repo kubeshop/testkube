@@ -35,7 +35,8 @@ func TestGRPC_Server(t *testing.T) {
 	expectedCount := 0
 
 	stream := client.NewGrpcClient(ls.grpcAddress)
-	ch := stream.Get(ctx, "id1")
+	ch, err := stream.Get(ctx, "id1")
+	assert.NoError(t, err)
 
 	t.Log("waiting for logs")
 
@@ -68,12 +69,12 @@ func (l LogsFactoryMock) GetRepository(state state.LogState) (repository.LogsRep
 
 type LogsRepositoryMock struct{}
 
-func (l LogsRepositoryMock) Get(ctx context.Context, id string) chan events.LogResponse {
+func (l LogsRepositoryMock) Get(ctx context.Context, id string) (chan events.LogResponse, error) {
 	ch := make(chan events.LogResponse, 10)
 	defer close(ch)
 
 	for i := 0; i < count; i++ {
 		ch <- events.LogResponse{Log: events.Log{Time: time.Now(), Content: fmt.Sprintf("test %d", i), Error: false, Type: "test", Source: "test", Metadata: map[string]string{"test": "test"}}}
 	}
-	return ch
+	return ch, nil
 }

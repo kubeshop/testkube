@@ -15,5 +15,5 @@ type RepositoryBuilder interface {
 
 // LogsRepository is the repository primitive to get logs from
 type LogsRepository interface {
-	Get(ctx context.Context, id string) chan events.LogResponse
+	Get(ctx context.Context, id string) (chan events.LogResponse, error)
 }
