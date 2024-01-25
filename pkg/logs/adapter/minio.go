@@ -52,7 +52,7 @@ type BufferInfo struct {
 }
 
 // MinioConsumer creates new MinioSubscriber which will send data to local MinIO bucket
-func NewMinioConsumer(endpoint, accessKeyID, secretAccessKey, region, token, bucket string, opts ...minioconnecter.Option) (*MinioConsumer, error) {
+func NewMinioAdapter(endpoint, accessKeyID, secretAccessKey, region, token, bucket string, opts ...minioconnecter.Option) (*MinioConsumer, error) {
 	ctx := context.TODO()
 	c := &MinioConsumer{
 		minioConnecter: minioconnecter.NewConnecter(endpoint, accessKeyID, secretAccessKey, region, token, bucket, log.DefaultLogger, opts...),
@@ -98,6 +98,7 @@ type MinioConsumer struct {
 }
 
 func (s *MinioConsumer) Notify(id string, e events.Log) error {
+	s.Log.Debugw("minio consumer notify", "id", id, "event", e)
 	if s.disconnected {
 		s.Log.Debugw("minio consumer disconnected", "id", id)
 		return ErrMinioConsumerDisconnected{}
@@ -144,6 +145,7 @@ func (s *MinioConsumer) putData(ctx context.Context, name string, buffer *bytes.
 		if err != nil {
 			s.Log.Errorw("error putting object", "err", err)
 		}
+		s.Log.Debugw("put object successfully", "name", name, "s.bucket", s.bucket)
 	} else {
 		s.Log.Warn("empty buffer for name: ", name)
 	}
@@ -174,6 +176,7 @@ func (s *MinioConsumer) combineData(ctxt context.Context, minioClient *minio.Cli
 		s.Log.Errorw("error putting object", "err", err)
 		return err
 	}
+	s.Log.Debugw("put object successfully", "id", id, "s.bucket", s.bucket, "parts", parts)
 
 	if deleteIntermediaryData {
 		for i := 0; i < parts; i++ {
@@ -200,6 +203,7 @@ func (s *MinioConsumer) objectExists(objectName string) bool {
 }
 
 func (s *MinioConsumer) Stop(id string) error {
+	s.Log.Debugw("minio consumer stop", "id", id)
 	ctx := context.TODO()
 	buffInfo, ok := s.GetBuffInfo(id)
 	if !ok {
