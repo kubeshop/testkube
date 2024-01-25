@@ -24,7 +24,10 @@ const (
 	// v2 - raw binary format, timestamps are based on Kubernetes logs, line is raw log line
 	LogVersionV2 LogVersion = "v2"
 
-	JobPodLogSource = "job-pod"
+	SourceJobPod            = "job-pod"
+	SourceScheduler         = "test-scheduler"
+	SourceContainerExecutor = "container-executor"
+	SourceJobExecutor       = "job-executor"
 )
 
 type LogResponse struct {

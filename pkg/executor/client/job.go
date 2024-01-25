@@ -96,6 +96,7 @@ func NewJobExecutor(
 	natsURI string,
 	debug bool,
 	logsStream logsclient.Stream,
+	ff featureflags.FeatureFlags,
 ) (client *JobExecutor, err error) {
 	return &JobExecutor{
 		ClientSet:            clientset,
@@ -119,6 +120,7 @@ func NewJobExecutor(
 		natsURI:              natsURI,
 		debug:                debug,
 		logsStream:           logsStream,
+		ff:                   ff,
 	}, nil
 }
 
@@ -150,6 +152,7 @@ type JobExecutor struct {
 	natsURI              string
 	debug                bool
 	logsStream           logsclient.Stream
+	ff                   featureflags.FeatureFlags
 }
 
 type JobOptions struct {
@@ -231,7 +234,10 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 		return result.Err(err), err
 	}
 
-	c.logsStream.Push(ctx, execution.Id, events.NewLog("created kubernetes job"))
+	if c.ff.LogsV2 {
+		// TODO should we pass job spec here?
+		c.logsStream.Push(ctx, execution.Id, events.NewLog("created kubernetes job").WithSource(events.SourceJobExecutor))
+	}
 
 	if !options.Sync {
 		go c.MonitorJobForTimeout(ctx, execution.Id)

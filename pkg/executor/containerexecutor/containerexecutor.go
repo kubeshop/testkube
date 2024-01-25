@@ -73,6 +73,7 @@ func NewContainerExecutor(
 	natsUri string,
 	debug bool,
 	logsStream logsclient.Stream,
+	ff featureflags.FeatureFlags,
 ) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -102,6 +103,7 @@ func NewContainerExecutor(
 		natsURI:              natsUri,
 		debug:                debug,
 		logsStream:           logsStream,
+		ff:                   ff,
 	}, nil
 }
 
@@ -133,6 +135,7 @@ type ContainerExecutor struct {
 	natsURI              string
 	debug                bool
 	logsStream           logsclient.Stream
+	ff                   featureflags.FeatureFlags
 }
 
 type JobOptions struct {

@@ -184,7 +184,7 @@ func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan *events.Log) (err er
 
 			// parse log line - also handle old (output.Output) and new format (just unstructured []byte)
 			logs <- events.NewLogFromBytes(b).
-				WithSource(events.JobPodLogSource)
+				WithSource(events.SourceJobPod)
 		}
 
 		if err != nil {
