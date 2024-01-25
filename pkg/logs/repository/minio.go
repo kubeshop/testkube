@@ -1,14 +1,17 @@
 package repository
 
 import (
+	"bufio"
 	"context"
-	"encoding/json"
+	"errors"
+	"io"
 
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/storage"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 const (
@@ -37,16 +40,24 @@ func (r MinioLogsRepository) Get(ctx context.Context, id string) (chan events.Lo
 		return ch, err
 	}
 
-	var output []events.Log
-	decoder := json.NewDecoder(file)
-	err = decoder.Decode(&output)
-	if err != nil {
-		r.log.Errorw("error decoding log lines", "error", err)
-		return ch, err
-	}
+	reader := bufio.NewReader(file)
+	for {
+		b, err := utils.ReadLongLine(reader)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				err = nil
+			}
+			break
+		}
 
-	for _, log := range output {
-		ch <- events.LogResponse{Log: log}
+		if err != nil {
+			ch <- events.LogResponse{Error: err}
+			r.log.Errorw("error getting log line", "error", err)
+			return ch, nil
+		}
+
+		// parse log line - also handle old (output.Output) and new format (just unstructured []byte)
+		ch <- events.LogResponse{Log: events.NewLogResponseFromBytes(b)}
 	}
 
 	return ch, nil
