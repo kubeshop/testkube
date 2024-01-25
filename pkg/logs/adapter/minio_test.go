@@ -89,7 +89,7 @@ func BenchmarkLogs2(b *testing.B) {
 	wg.Wait()
 }
 
-func testOneConsumer(consumer *MinioConsumer, id string) {
+func testOneConsumer(consumer *MinioAdapter, id string) {
 	fmt.Println("#####starting", id)
 	totalSize := 0
 	numberOFLogs := rand.Intn(100000)
@@ -164,7 +164,7 @@ func DoRunBenchmark() {
 	verifyConsumer(idChan, bucket, consumer.minioClient)
 }
 
-func DoRunBenchmark2(idChan chan string, numberOfConsumers int, consumer *MinioConsumer) {
+func DoRunBenchmark2(idChan chan string, numberOfConsumers int, consumer *MinioAdapter) {
 	var counter atomic.Int32
 	var wg sync.WaitGroup
 	for i := 0; i < numberOfConsumers; i++ {

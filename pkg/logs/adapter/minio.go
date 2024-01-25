@@ -21,7 +21,7 @@ const (
 	defaultWriteSize  = 1024 * 80  // 80KB
 )
 
-var _ Adapter = &MinioConsumer{}
+var _ Adapter = &MinioAdapter{}
 
 type ErrMinioConsumerDisconnected struct {
 }
@@ -52,10 +52,10 @@ type BufferInfo struct {
 }
 
 // MinioConsumer creates new MinioSubscriber which will send data to local MinIO bucket
-func NewMinioAdapter(endpoint, accessKeyID, secretAccessKey, region, token, bucket string, ssl, skipVerify bool, certFile, keyFile, caFile string) (*MinioConsumer, error) {
+func NewMinioAdapter(endpoint, accessKeyID, secretAccessKey, region, token, bucket string, ssl, skipVerify bool, certFile, keyFile, caFile string) (*MinioAdapter, error) {
 	ctx := context.TODO()
 	opts := minioconnecter.GetTLSOptions(ssl, skipVerify, certFile, keyFile, caFile)
-	c := &MinioConsumer{
+	c := &MinioAdapter{
 		minioConnecter: minioconnecter.NewConnecter(endpoint, accessKeyID, secretAccessKey, region, token, bucket, log.DefaultLogger, opts...),
 		Log:            log.DefaultLogger,
 		bucket:         bucket,
@@ -87,7 +87,7 @@ func NewMinioAdapter(endpoint, accessKeyID, secretAccessKey, region, token, buck
 	return c, nil
 }
 
-type MinioConsumer struct {
+type MinioAdapter struct {
 	minioConnecter *minioconnecter.Connecter
 	minioClient    *minio.Client
 	bucket         string
@@ -98,7 +98,7 @@ type MinioConsumer struct {
 	mapLock        sync.RWMutex
 }
 
-func (s *MinioConsumer) Notify(id string, e events.Log) error {
+func (s *MinioAdapter) Notify(id string, e events.Log) error {
 	s.Log.Debugw("minio consumer notify", "id", id, "event", e)
 	if s.disconnected {
 		s.Log.Debugw("minio consumer disconnected", "id", id)
@@ -140,7 +140,7 @@ func (s *MinioConsumer) Notify(id string, e events.Log) error {
 	return nil
 }
 
-func (s *MinioConsumer) putData(ctx context.Context, name string, buffer *bytes.Buffer) {
+func (s *MinioAdapter) putData(ctx context.Context, name string, buffer *bytes.Buffer) {
 	if buffer != nil && buffer.Len() != 0 {
 		_, err := s.minioClient.PutObject(ctx, s.bucket, name, buffer, int64(buffer.Len()), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 		if err != nil {
@@ -153,7 +153,7 @@ func (s *MinioConsumer) putData(ctx context.Context, name string, buffer *bytes.
 
 }
 
-func (s *MinioConsumer) combineData(ctxt context.Context, minioClient *minio.Client, id string, parts int, deleteIntermediaryData bool) error {
+func (s *MinioAdapter) combineData(ctxt context.Context, minioClient *minio.Client, id string, parts int, deleteIntermediaryData bool) error {
 	var returnedError []error
 	returnedError = nil
 	buffer := bytes.NewBuffer(make([]byte, 0, parts*defaultBufferSize))
@@ -198,12 +198,12 @@ func (s *MinioConsumer) combineData(ctxt context.Context, minioClient *minio.Cli
 	return fmt.Errorf("executed with errors: %v", returnedError)
 }
 
-func (s *MinioConsumer) objectExists(objectName string) bool {
+func (s *MinioAdapter) objectExists(objectName string) bool {
 	_, err := s.minioClient.StatObject(context.Background(), s.bucket, objectName, minio.StatObjectOptions{})
 	return err == nil
 }
 
-func (s *MinioConsumer) Stop(id string) error {
+func (s *MinioAdapter) Stop(id string) error {
 	s.Log.Debugw("minio consumer stop", "id", id)
 	ctx := context.TODO()
 	buffInfo, ok := s.GetBuffInfo(id)
@@ -217,24 +217,24 @@ func (s *MinioConsumer) Stop(id string) error {
 	return s.combineData(ctx, s.minioClient, id, parts, true)
 }
 
-func (s *MinioConsumer) Name() string {
+func (s *MinioAdapter) Name() string {
 	return "minio"
 }
 
-func (s *MinioConsumer) GetBuffInfo(id string) (BufferInfo, bool) {
+func (s *MinioAdapter) GetBuffInfo(id string) (BufferInfo, bool) {
 	s.mapLock.RLock()
 	defer s.mapLock.RUnlock()
 	buffInfo, ok := s.buffInfos[id]
 	return buffInfo, ok
 }
 
-func (s *MinioConsumer) UpdateBuffInfo(id string, buffInfo BufferInfo) {
+func (s *MinioAdapter) UpdateBuffInfo(id string, buffInfo BufferInfo) {
 	s.mapLock.Lock()
 	defer s.mapLock.Unlock()
 	s.buffInfos[id] = buffInfo
 }
 
-func (s *MinioConsumer) DeleteBuffInfo(id string) {
+func (s *MinioAdapter) DeleteBuffInfo(id string) {
 	s.mapLock.Lock()
 	defer s.mapLock.Unlock()
 	delete(s.buffInfos, id)
