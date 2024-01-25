@@ -79,8 +79,8 @@ func TestLogs_EventsFlow(t *testing.T) {
 		assert.NoError(t, err)
 
 		// and when data pushed to the log stream
-		stream.Push(ctx, id, events.NewLogResponse(time.Now(), []byte("hello 1")))
-		stream.Push(ctx, id, events.NewLogResponse(time.Now(), []byte("hello 2")))
+		stream.Push(ctx, id, events.NewLog("hello 1"))
+		stream.Push(ctx, id, events.NewLog("hello 2"))
 
 		// and stop event triggered
 		_, err = stream.Stop(ctx, id)
@@ -154,7 +154,7 @@ func TestLogs_EventsFlow(t *testing.T) {
 
 		for i := 0; i < messagesCount; i++ {
 			// and when data pushed to the log stream
-			err = stream.Push(ctx, id, events.NewLogResponse(time.Now(), []byte("hello")))
+			err = stream.Push(ctx, id, events.NewLog("hello"))
 			assert.NoError(t, err)
 		}
 
@@ -226,9 +226,9 @@ func TestLogs_EventsFlow(t *testing.T) {
 		stats := log.GetConsumersStats(ctx)
 		assert.Equal(t, 2, stats.Count)
 
-		stream.Push(ctx, id, events.NewLogResponse(time.Now(), []byte("hello 1")))
-		stream.Push(ctx, id, events.NewLogResponse(time.Now(), []byte("hello 1")))
-		stream.Push(ctx, id, events.NewLogResponse(time.Now(), []byte("hello 1")))
+		stream.Push(ctx, id, events.NewLog("hello 1"))
+		stream.Push(ctx, id, events.NewLog("hello 1"))
+		stream.Push(ctx, id, events.NewLog("hello 1"))
 
 		// when stop event triggered
 		r, err := stream.Stop(ctx, id)

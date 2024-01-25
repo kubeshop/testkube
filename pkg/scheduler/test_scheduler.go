@@ -139,16 +139,14 @@ func (s *Scheduler) handleExecutionStart(ctx context.Context, execution testkube
 		l := events.NewLog(fmt.Sprintf("starting execution %s (%s)", execution.Name, execution.Id)).
 			WithType("execution-config").
 			WithVersion(events.LogVersionV2).
-			WithSource("test-scheduler")
+			WithSource("test-scheduler").
+			WithMetadataEntry("command", strings.Join(execution.Command, " ")).
+			WithMetadataEntry("argsmode", execution.ArgsMode).
+			WithMetadataEntry("args", strings.Join(execution.Args, " ")).
+			WithMetadataEntry("pre-run", execution.PreRunScript).
+			WithMetadataEntry("post-run", execution.PostRunScript)
 
-		// TODO try to store map[strin]any through protobuf for now it'll be map[string]string
-		l.WithMetadataEntry("command", strings.Join(execution.Command, " "))
-		l.WithMetadataEntry("argsmode", execution.ArgsMode)
-		l.WithMetadataEntry("args", strings.Join(execution.Args, " "))
-		l.WithMetadataEntry("pre-run", execution.PreRunScript)
-		l.WithMetadataEntry("post-run", execution.PostRunScript)
-
-		s.logsStream.Push(ctx, execution.Id, *l)
+		s.logsStream.Push(ctx, execution.Id, l)
 	}
 }
 
@@ -160,7 +158,7 @@ func (s *Scheduler) handleExecutionError(ctx context.Context, execution testkube
 			WithVersion(events.LogVersionV2).
 			WithSource("test-scheduler")
 
-		s.logsStream.Push(ctx, execution.Id, *l)
+		s.logsStream.Push(ctx, execution.Id, l)
 
 	}
 

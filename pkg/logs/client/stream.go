@@ -51,8 +51,8 @@ func (c NatsLogStream) Init(ctx context.Context, id string) (StreamMetadata, err
 }
 
 // Push log chunk to NATS stream
-func (c NatsLogStream) Push(ctx context.Context, id string, chunk events.Log) error {
-	b, err := json.Marshal(chunk)
+func (c NatsLogStream) Push(ctx context.Context, id string, log *events.Log) error {
+	b, err := json.Marshal(log)
 	if err != nil {
 		return err
 	}
@@ -61,8 +61,8 @@ func (c NatsLogStream) Push(ctx context.Context, id string, chunk events.Log) er
 
 // Push log chunk to NATS stream
 // TODO handle message repeat with backoff strategy on error
-func (c NatsLogStream) PushBytes(ctx context.Context, id string, chunk []byte) error {
-	_, err := c.js.Publish(ctx, c.streamName(id), chunk)
+func (c NatsLogStream) PushBytes(ctx context.Context, id string, bytes []byte) error {
+	_, err := c.js.Publish(ctx, c.streamName(id), bytes)
 	return err
 }
 

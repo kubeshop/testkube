@@ -24,7 +24,10 @@ const (
 	// v2 - raw binary format, timestamps are based on Kubernetes logs, line is raw log line
 	LogVersionV2 LogVersion = "v2"
 
-	JobPodLogSource = "job-pod"
+	SourceJobPod            = "job-pod"
+	SourceScheduler         = "test-scheduler"
+	SourceContainerExecutor = "container-executor"
+	SourceJobExecutor       = "job-executor"
 )
 
 type LogResponse struct {
@@ -48,20 +51,43 @@ type LogOutputV1 struct {
 	Result *testkube.ExecutionResult
 }
 
-func NewLog(content string) *Log {
+func NewErrorLog(err error) *Log {
+	var msg string
+	if err != nil {
+		msg = err.Error()
+	}
 	return &Log{
-		Time:     time.Now(),
-		Content:  string(content),
-		Metadata: map[string]string{},
+		Error:   true,
+		Content: msg,
 	}
 }
 
-func NewLogResponse(ts time.Time, content []byte) Log {
-	return Log{
-		Time:     ts,
-		Content:  string(content),
+func NewLog(content ...string) *Log {
+	log := &Log{
+		Time:     time.Now(),
 		Metadata: map[string]string{},
 	}
+
+	if len(content) > 0 {
+		log.WithContent(content[0])
+	}
+
+	return log
+}
+
+func (l *Log) WithContent(s string) *Log {
+	l.Content = s
+	return l
+}
+
+func (l *Log) WithError(err error) *Log {
+	l.Error = true
+
+	if err != nil {
+		l.Content = err.Error()
+	}
+
+	return l
 }
 
 func (l *Log) WithMetadataEntry(key, value string) *Log {
@@ -94,9 +120,9 @@ func (l *Log) WithV1Result(result *testkube.ExecutionResult) *Log {
 
 var timestampRegexp = regexp.MustCompile("^[0-9]{4}-[0-9]{2}-[0-9]{2}T.*")
 
-// NewLogResponseFromBytes creates new LogResponse from bytes it's aware of new and old log formats
+// NewLogFromBytes creates new LogResponse from bytes it's aware of new and old log formats
 // default log format will be based on raw bytes with timestamp on the beginning
-func NewLogResponseFromBytes(b []byte) Log {
+func NewLogFromBytes(b []byte) *Log {
 
 	// detect timestamp - new logs have timestamp
 	var (
@@ -138,20 +164,19 @@ func NewLogResponseFromBytes(b []byte) Log {
 		if err != nil {
 			// try to read in case of some lines which we couldn't parse
 			// sometimes we're not able to control all stdout messages from libs
-			return Log{
+			return &Log{
 				Time:    ts,
 				Content: err.Error(),
 				Type:    o.Type_,
 				Error:   true,
 				Version: LogVersionV1,
-				Source:  JobPodLogSource,
 			}
 		}
 
 		// pass parsed results for v1
 		// for new executor it'll be omitted in logs (as looks like we're not using it already)
 		if o.Type_ == output.TypeResult {
-			return Log{
+			return &Log{
 				Time:    ts,
 				Content: o.Content,
 				Version: LogVersionV1,
@@ -161,7 +186,7 @@ func NewLogResponseFromBytes(b []byte) Log {
 			}
 		}
 
-		return Log{
+		return &Log{
 			Time:    ts,
 			Content: o.Content,
 			Version: LogVersionV1,
@@ -170,10 +195,9 @@ func NewLogResponseFromBytes(b []byte) Log {
 	// END DEPRECATED
 
 	// new non-JSON format (just raw lines will be logged)
-	return Log{
+	return &Log{
 		Time:    ts,
 		Content: string(b),
 		Version: LogVersionV2,
-		Source:  JobPodLogSource,
 	}
 }
