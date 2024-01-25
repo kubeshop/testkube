@@ -51,9 +51,8 @@ func (r MinioLogsRepository) Get(ctx context.Context, id string) (chan events.Lo
 		}
 
 		if err != nil {
-			ch <- events.LogResponse{Error: err}
 			r.log.Errorw("error getting log line", "error", err)
-			return ch, nil
+			return ch, err
 		}
 
 		// parse log line - also handle old (output.Output) and new format (just unstructured []byte)
