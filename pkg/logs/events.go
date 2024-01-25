@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -28,6 +29,8 @@ const (
 )
 
 type Consumer struct {
+	// Name of the consumer
+	Name string
 	// Context is a consumer context you can call Stop() method on it when no more messages are expected
 	Context jetstream.ConsumeContext
 	// Instance is a NATS consumer instance
@@ -37,8 +40,8 @@ type Consumer struct {
 func (ls *LogsService) initConsumer(ctx context.Context, a adapter.Adapter, streamName, id string, i int) (jetstream.Consumer, error) {
 	name := fmt.Sprintf("lc%s%s%d", id, a.Name(), i)
 	return ls.js.CreateOrUpdateConsumer(ctx, streamName, jetstream.ConsumerConfig{
-		Name:    name,
-		Durable: name,
+		Name: name,
+		// Durable: name,
 		// FilterSubject: streamName,
 		DeliverPolicy: jetstream.DeliverAllPolicy,
 	})
@@ -127,6 +130,7 @@ func (ls *LogsService) handleStart(ctx context.Context) func(msg *nats.Msg) {
 
 			// store consumer instance so we can stop it later in StopSubject handler
 			ls.consumerInstances.Store(event.Id+"_"+adapter.Name(), Consumer{
+				Name:     event.Id + "_" + adapter.Name(),
 				Context:  cons,
 				Instance: c,
 			})
@@ -147,15 +151,14 @@ func (ls *LogsService) handleStart(ctx context.Context) func(msg *nats.Msg) {
 // handleStop will handle stop event and stop logs consumers, also clean consumers state
 func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 	return func(msg *nats.Msg) {
+		var (
+			wg      sync.WaitGroup
+			stopped = 0
+			event   = events.Trigger{}
+		)
+
 		ls.log.Debugw("got stop event")
 
-		t := time.NewTicker(ls.stopWaitTime)
-		select {
-		case <-t.C:
-		case <-ctx.Done():
-		}
-
-		event := events.Trigger{}
 		err := json.Unmarshal(msg.Data, &event)
 		if err != nil {
 			ls.log.Errorw("can't handle stop event", "error", err)
@@ -164,73 +167,86 @@ func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 
 		l := ls.log.With("id", event.Id, "event", "stop")
 
-		maxTries := 10
-		repeated := 0
+		err = msg.Respond([]byte("stop-queued"))
+		if err != nil {
+			l.Errorw("error responding to stop event", "error", err)
+		}
 
-		toDelete := []string{}
-		deleted := false
 		for _, adapter := range ls.adapters {
-			toDelete = append(toDelete, event.Id+"_"+adapter.Name())
+			consumerName := event.Id + "_" + adapter.Name()
+
+			// locate consumer on this pod
+			c, found := ls.consumerInstances.Load(consumerName)
+			l.Debugw("consumer instance", "c", c, "found", found, "name", consumerName)
+			if !found {
+				l.Debugw("consumer not found on this pod", "found", found, "name", consumerName)
+				continue
+			}
+
+			// stop consumer
+			wg.Add(1)
+			stopped++
+			consumer := c.(Consumer)
+
+			go ls.stopConsumer(ctx, &wg, consumer)
 		}
 
-		consumerDeleteWaitInterval := 5 * time.Second
+		wg.Wait()
+		l.Debugw("wait completed")
 
-		for {
-		loop:
-			// Delete each consumer for given execution id
-			for i, name := range toDelete {
-				// load consumer and check if has pending messages
-				c, found := ls.consumerInstances.Load(name)
-				if !found {
-					l.Debugw("consumer not found on this pod", "found", found, "name", name)
-					toDelete = append(toDelete[:i], toDelete[i+1:]...)
-					goto loop // rewrite toDelete and start again
-				}
-
-				consumer := c.(Consumer)
-
-				info, err := consumer.Instance.Info(ctx)
-				if err != nil {
-					l.Errorw("error getting consumer info", "error", err, "id", event.Id)
-					continue
-				}
-
-				// finally delete consumer
-				if info.NumPending == 0 {
-					if !deleted {
-						deleted = true
-					}
-					consumer.Context.Stop()
-					ls.consumerInstances.Delete(name)
-					toDelete = append(toDelete[:i], toDelete[i+1:]...)
-					l.Infow("stopping consumer", "id", name)
-					goto loop // rewrite toDelete and start again
-				}
-			}
-
-			if len(toDelete) == 0 && !deleted {
-				l.Debugw("no consumers on this pod registered for id", "id", event.Id)
-				return
-			} else if len(toDelete) == 0 {
-				ls.state.Put(ctx, event.Id, state.LogStateFinished)
-				l.Infow("execution logs consumers stopped", "id", event.Id)
-				err = msg.Respond([]byte("stopped"))
-				if err != nil {
-					l.Errorw("error responding to stop event", "error", err)
-					return
-				}
-				return
-			}
-
-			// handle max tries of cleaning executors
-			repeated++
-			if repeated >= maxTries {
-				l.Errorw("error cleaning consumeres after max tries", "toDeleteLeft", toDelete, "tries", repeated)
-				return
-			}
-
-			time.Sleep(consumerDeleteWaitInterval)
+		if stopped > 0 {
+			ls.state.Put(ctx, event.Id, state.LogStateFinished)
+			l.Infow("execution logs consumers stopped", "id", event.Id, "stopped", stopped)
+		} else {
+			l.Debugw("no consumers found on this pod to stop")
 		}
+
+	}
+}
+
+func (ls *LogsService) stopConsumer(ctx context.Context, wg *sync.WaitGroup, consumer Consumer) {
+	defer wg.Done()
+
+	var (
+		info       *jetstream.ConsumerInfo
+		err        error
+		l          = ls.log
+		retries    = 0
+		maxRetries = 50
+	)
+
+	l.Debugw("stopping consumer", "name", consumer.Name)
+
+	for {
+		info, err = consumer.Instance.Info(ctx)
+		if err != nil {
+			l.Errorw("error getting consumer info", "error", err, "name", consumer.Name)
+			return
+		}
+
+		nothingToProcess := info.NumAckPending == 0 && info.NumPending == 0
+		messagesDelivered := info.Delivered.Consumer > 0 && info.Delivered.Stream > 0
+
+		l.Debugw("consumer info", "nothingToProcess", nothingToProcess, "messagesDelivered", messagesDelivered, "info", info)
+
+		// check if there was some messages processed
+		if nothingToProcess && messagesDelivered {
+			consumer.Context.Stop()
+			ls.consumerInstances.Delete(consumer.Name)
+			l.Infow("stopping and removing consumer", "name", consumer.Name, "consumerSeq", info.Delivered.Consumer, "streamSeq", info.Delivered.Stream, "last", info.Delivered.Last)
+			return
+		}
+
+		// retry if there is no messages processed as there could be slower logs
+		retries++
+		if retries >= maxRetries {
+			l.Errorw("error stopping consumer", "error", err, "name", consumer.Name, "consumerSeq", info.Delivered.Consumer, "streamSeq", info.Delivered.Stream, "last", info.Delivered.Last)
+			return
+		}
+
+		// pause a little bit
+		l.Debugw("waiting for consumer to finish", "name", consumer.Name, "retries", retries, "consumerSeq", info.Delivered.Consumer, "streamSeq", info.Delivered.Stream, "last", info.Delivered.Last)
+		time.Sleep(ls.stopPauseInterval)
 	}
 }
 
