@@ -56,7 +56,7 @@ func main() {
 
 	// TODO - add adapters here
 	minioAdapter, err := adapter.NewMinioAdapter(cfg.StorageEndpoint,
-		cfg.StorageSecretAccessKey,
+		cfg.StorageAccessKeyID,
 		cfg.StorageSecretAccessKey,
 		cfg.StorageRegion,
 		cfg.StorageToken,
