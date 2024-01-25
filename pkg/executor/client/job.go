@@ -234,10 +234,7 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 		return result.Err(err), err
 	}
 
-	if c.features.LogsV2 {
-		// TODO should we pass job spec here?
-		c.logsStream.Push(ctx, execution.Id, events.NewLog("created kubernetes job").WithSource(events.SourceJobExecutor))
-	}
+	c.streamLog(ctx, execution.Id, events.NewLog("created kubernetes job").WithSource(events.SourceJobExecutor))
 
 	if !options.Sync {
 		go c.MonitorJobForTimeout(ctx, execution.Id)
@@ -250,6 +247,8 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 	}
 
 	l := c.Log.With("executionID", execution.Id, "type", "async")
+
+	c.streamLog(ctx, execution.Id, events.NewLog("waiting for pod to spin up").WithSource(events.SourceJobExecutor))
 
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
@@ -272,7 +271,7 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 
 	l.Debugw("no pods was found", "totalPodsCount", len(pods.Items))
 
-	return testkube.NewRunningExecutionResult(), nil
+	return result, nil
 }
 
 func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) {
@@ -296,7 +295,7 @@ func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) 
 			job := jobs.Items[0]
 
 			if job.Status.Succeeded > 0 {
-				l.Debugw("job succeeded", "status")
+				l.Debugw("job succeeded", "status", "succeded")
 				return
 			}
 
@@ -361,12 +360,14 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	// save stop time and final state
 	defer func() {
 		if err := c.stopExecution(ctx, l, execution, execution.ExecutionResult, isNegativeTest, err); err != nil {
+			c.streamLog(ctx, execution.Id, events.NewErrorLog(err))
 			l.Errorw("error stopping execution after updating results from pod", "error", err)
 		}
 	}()
 
 	// wait for pod to be loggable
 	if err = wait.PollUntilContextTimeout(ctx, pollInterval, c.podStartTimeout, true, executor.IsPodLoggable(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+		c.streamLog(ctx, execution.Id, events.NewErrorLog(errors.Wrap(err, "can't start test job pod")))
 		l.Errorw("waiting for pod started error", "error", err)
 	}
 
@@ -374,13 +375,16 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	// wait for pod
 	if err = wait.PollUntilContextTimeout(ctx, pollInterval, pollTimeout, true, executor.IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
 		// continue on poll err and try to get logs later
+		c.streamLog(ctx, execution.Id, events.NewErrorLog(errors.Wrap(err, "can't read data from pod, pod was not completed")))
 		l.Errorw("waiting for pod complete error", "error", err)
 	}
+
 	if err != nil {
 		execution.ExecutionResult.Err(err)
 	}
 	l.Debug("poll immediate end")
 
+	c.streamLog(ctx, execution.Id, events.NewLog("analyzing test results and artfacts"))
 	if execution.ArtifactRequest != nil &&
 		execution.ArtifactRequest.StorageClassName != "" {
 		pvcsClient := c.ClientSet.CoreV1().PersistentVolumeClaims(c.Namespace)
@@ -394,13 +398,17 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	logs, err = executor.GetPodLogs(ctx, c.ClientSet, c.Namespace, pod)
 	if err != nil {
 		l.Errorw("get pod logs error", "error", err)
+		c.streamLog(ctx, execution.Id, events.NewErrorLog(err))
 		return execution.ExecutionResult, err
 	}
 
+	// attachLogs only for previous version of logs, they are not needed here as will be passed from other sources
+	attachLogs := !c.features.LogsV2
 	// parse job output log (JSON stream)
-	execution.ExecutionResult, err = output.ParseRunnerOutput(logs)
+	execution.ExecutionResult, err = output.ParseRunnerOutput(logs, attachLogs)
 	if err != nil {
 		l.Errorw("parse output error", "error", err)
+		c.streamLog(ctx, execution.Id, events.NewErrorLog(errors.Wrap(err, "can't get test execution job output")))
 		return execution.ExecutionResult, err
 	}
 
@@ -411,6 +419,10 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 		}
 
 		execution.ExecutionResult.ErrorMessage = errorMessage
+
+		c.streamLog(ctx, execution.Id, events.NewErrorLog(errors.Wrap(err, "test execution finished with failed state")))
+	} else {
+		c.streamLog(ctx, execution.Id, events.NewLog("test execution finshed").WithMetadataEntry("status", string(*execution.ExecutionResult.Status)))
 	}
 
 	// saving result in the defer function
@@ -423,21 +435,28 @@ func (c *JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, e
 		l.Errorw("get execution error", "error", err)
 		return err
 	}
+
+	logEvent := events.NewLog().WithSource(events.SourceJobExecutor)
+
 	l.Debugw("stopping execution", "executionId", execution.Id, "status", result.Status, "executionStatus", execution.ExecutionResult.Status, "passedError", passedErr, "savedExecutionStatus", savedExecution.ExecutionResult.Status)
 
+	c.streamLog(ctx, execution.Id, logEvent.WithContent("stopping execution"))
+	defer c.streamLog(ctx, execution.Id, logEvent.WithContent("execution stopped"))
+
 	if savedExecution.IsCanceled() || savedExecution.IsTimeout() {
+		c.streamLog(ctx, execution.Id, logEvent.WithContent("execution is cancelled"))
 		return nil
 	}
 
 	execution.Stop()
 	if isNegativeTest {
 		if result.IsFailed() {
-			l.Infow("test run was expected to fail, and it failed as expected", "test", execution.TestName)
+			l.Debugw("test run was expected to fail, and it failed as expected", "test", execution.TestName)
 			execution.ExecutionResult.Status = testkube.ExecutionStatusPassed
 			result.Status = testkube.ExecutionStatusPassed
 			result.Output = result.Output + "\nTest run was expected to fail, and it failed as expected"
 		} else {
-			l.Infow("test run was expected to fail - the result will be reversed", "test", execution.TestName)
+			l.Debugw("test run was expected to fail - the result will be reversed", "test", execution.TestName)
 			execution.ExecutionResult.Status = testkube.ExecutionStatusFailed
 			result.Status = testkube.ExecutionStatusFailed
 			result.Output = result.Output + "\nTest run was expected to fail, the result will be reversed"
@@ -752,6 +771,9 @@ func (c *JobExecutor) Timeout(ctx context.Context, jobName string) (result *test
 		l.Errorw("error getting execution", "error", err)
 		return
 	}
+
+	c.streamLog(ctx, execution.Id, events.NewLog("execution took too long, pod deadline exceeded"))
+
 	result = &testkube.ExecutionResult{
 		Status: testkube.ExecutionStatusTimeout,
 	}
@@ -760,6 +782,12 @@ func (c *JobExecutor) Timeout(ctx context.Context, jobName string) (result *test
 	}
 
 	return
+}
+
+func (c *JobExecutor) streamLog(ctx context.Context, id string, log *events.Log) {
+	if c.features.LogsV2 {
+		c.logsStream.Push(ctx, id, log)
+	}
 }
 
 // NewJobSpec is a method to create new job spec

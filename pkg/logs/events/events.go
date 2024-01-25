@@ -62,12 +62,32 @@ func NewErrorLog(err error) *Log {
 	}
 }
 
-func NewLog(content string) *Log {
-	return &Log{
+func NewLog(content ...string) *Log {
+	log := &Log{
 		Time:     time.Now(),
-		Content:  content,
 		Metadata: map[string]string{},
 	}
+
+	if len(content) > 0 {
+		log.WithContent(content[0])
+	}
+
+	return log
+}
+
+func (l *Log) WithContent(s string) *Log {
+	l.Content = s
+	return l
+}
+
+func (l *Log) WithError(err error) *Log {
+	l.Error = true
+
+	if err != nil {
+		l.Content = err.Error()
+	}
+
+	return l
 }
 
 func (l *Log) WithMetadataEntry(key, value string) *Log {
