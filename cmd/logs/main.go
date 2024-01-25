@@ -55,7 +55,14 @@ func main() {
 		WithGrpcAddress(cfg.GrpcAddress)
 
 	// TODO - add adapters here
-	svc.AddAdapter(adapter.NewDummyAdapter())
+	minioAdapter, err := adapter.NewMinioAdapter(cfg.MinioEndpoint, cfg.MinioAccessKey, cfg.MinioSecretKey, cfg.MinioRegion, cfg.MinioToken, cfg.MinioBucket)
+	if err != nil {
+		log.Errorw("error creating minio adapter", "error", err)
+		svc.AddAdapter(adapter.NewDummyAdapter())
+	} else {
+		log.Infof("minio adapter created")
+		svc.AddAdapter(minioAdapter)
+	}
 
 	g.Add(func() error {
 		err := interrupt(log, ctx)

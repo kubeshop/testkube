@@ -19,6 +19,12 @@ type Config struct {
 	HttpAddress        string        `envconfig:"HTTP_ADDRESS" default:":8080"`
 	GrpcAddress        string        `envconfig:"GRPC_ADDRESS" default:":9090"`
 	KVBucketName       string        `envconfig:"KV_BUCKET_NAME" default:"logsState"`
+	MinioEndpoint      string        `envconfig:"MINIO_ENDPOINT" default:"testkube-minio-service-testkube:9000"`
+	MinioAccessKey     string        `envconfig:"MINIO_ACCESS_KEY" default:"minio"`
+	MinioSecretKey     string        `envconfig:"MINIO_SECRET_KEY" default:"minio123"`
+	MinioRegion        string        `envconfig:"MINIO_REGION" default:"us-east-1"`
+	MinioToken         string        `envconfig:"MINIO_TOKEN" default:""`
+	MinioBucket        string        `envconfig:"MINIO_BUCKET" default:"testkube-new-logs"`
 }
 
 func Get() (*Config, error) {
