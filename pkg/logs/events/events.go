@@ -62,15 +62,7 @@ func NewErrorLog(err error) *Log {
 func NewLog(content string) *Log {
 	return &Log{
 		Time:     time.Now(),
-		Content:  string(content),
-		Metadata: map[string]string{},
-	}
-}
-
-func NewLogTs(ts time.Time, content []byte) Log {
-	return Log{
-		Time:     ts,
-		Content:  string(content),
+		Content:  content,
 		Metadata: map[string]string{},
 	}
 }
@@ -169,6 +161,7 @@ func NewLogFromBytes(b []byte) *Log {
 				V1: &LogOutputV1{
 					Result: o.Result,
 				},
+				Source: JobPodLogSource,
 			}
 		}
 
@@ -176,6 +169,7 @@ func NewLogFromBytes(b []byte) *Log {
 			Time:    ts,
 			Content: o.Content,
 			Version: LogVersionV1,
+			Source:  JobPodLogSource,
 		}
 	}
 	// END DEPRECATED
