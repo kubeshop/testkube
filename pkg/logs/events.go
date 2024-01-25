@@ -226,6 +226,53 @@ func (ls *LogsService) handleStop(ctx context.Context, group string) func(msg *n
 		} else {
 			l.Debugw("no consumers found on this pod to stop")
 		}
+
+	}
+}
+
+func (ls *LogsService) stopConsumer(ctx context.Context, wg *sync.WaitGroup, consumer Consumer) {
+	defer wg.Done()
+
+	var (
+		info       *jetstream.ConsumerInfo
+		err        error
+		l          = ls.log
+		retries    = 0
+		maxRetries = 50
+	)
+
+	l.Debugw("stopping consumer", "name", consumer.Name)
+
+	for {
+		info, err = consumer.Instance.Info(ctx)
+		if err != nil {
+			l.Errorw("error getting consumer info", "error", err, "name", consumer.Name)
+			return
+		}
+
+		nothingToProcess := info.NumAckPending == 0 && info.NumPending == 0
+		messagesDelivered := info.Delivered.Consumer > 0 && info.Delivered.Stream > 0
+
+		l.Debugw("consumer info", "nothingToProcess", nothingToProcess, "messagesDelivered", messagesDelivered, "info", info)
+
+		// check if there was some messages processed
+		if nothingToProcess && messagesDelivered {
+			consumer.Context.Stop()
+			ls.consumerInstances.Delete(consumer.Name)
+			l.Infow("stopping and removing consumer", "name", consumer.Name, "consumerSeq", info.Delivered.Consumer, "streamSeq", info.Delivered.Stream, "last", info.Delivered.Last)
+			return
+		}
+
+		// retry if there is no messages processed as there could be slower logs
+		retries++
+		if retries >= maxRetries {
+			l.Errorw("error stopping consumer", "error", err, "name", consumer.Name, "consumerSeq", info.Delivered.Consumer, "streamSeq", info.Delivered.Stream, "last", info.Delivered.Last)
+			return
+		}
+
+		// pause a little bit
+		l.Debugw("waiting for consumer to finish", "name", consumer.Name, "retries", retries, "consumerSeq", info.Delivered.Consumer, "streamSeq", info.Delivered.Stream, "last", info.Delivered.Last)
+		time.Sleep(ls.stopPauseInterval)
 	}
 }
 
