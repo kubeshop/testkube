@@ -187,14 +187,7 @@ func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 			wg.Add(1)
 			stopped++
 			consumer := c.(Consumer)
-			go ls.stopConsumer(ctx, &wg, consumer)
-
-			// call adapter stop to handle given id
-			err := adapter.Stop(event.Id)
-			if err != nil {
-				l.Errorw("stop error", "adapter", adapter.Name(), "error", err)
-				continue
-			}
+			go ls.stopConsumer(ctx, &wg, consumer, adapter, event.Id)
 
 		}
 
@@ -210,7 +203,7 @@ func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 	}
 }
 
-func (ls *LogsService) stopConsumer(ctx context.Context, wg *sync.WaitGroup, consumer Consumer) {
+func (ls *LogsService) stopConsumer(ctx context.Context, wg *sync.WaitGroup, consumer Consumer, adapter adapter.Adapter, id string) {
 	defer wg.Done()
 
 	var (
@@ -242,6 +235,14 @@ func (ls *LogsService) stopConsumer(ctx context.Context, wg *sync.WaitGroup, con
 			// delete nats consumer instance from memory
 			ls.consumerInstances.Delete(consumer.Name)
 			l.Infow("stopping and removing consumer", "name", consumer.Name, "consumerSeq", info.Delivered.Consumer, "streamSeq", info.Delivered.Stream, "last", info.Delivered.Last)
+
+			// call adapter stop to handle given id
+			err := adapter.Stop(id)
+			if err != nil {
+				l.Errorw("stop error", "adapter", adapter.Name(), "error", err)
+				continue
+			}
+
 			return
 		}
 
