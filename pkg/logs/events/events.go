@@ -48,6 +48,17 @@ type LogOutputV1 struct {
 	Result *testkube.ExecutionResult
 }
 
+func NewErrorLog(err error) *Log {
+	var msg string
+	if err != nil {
+		msg = err.Error()
+	}
+	return &Log{
+		Error:   true,
+		Content: msg,
+	}
+}
+
 func NewLog(content string) *Log {
 	return &Log{
 		Time:     time.Now(),
@@ -56,7 +67,7 @@ func NewLog(content string) *Log {
 	}
 }
 
-func NewLogResponse(ts time.Time, content []byte) Log {
+func NewLogTs(ts time.Time, content []byte) Log {
 	return Log{
 		Time:     ts,
 		Content:  string(content),
@@ -96,7 +107,7 @@ var timestampRegexp = regexp.MustCompile("^[0-9]{4}-[0-9]{2}-[0-9]{2}T.*")
 
 // NewLogResponseFromBytes creates new LogResponse from bytes it's aware of new and old log formats
 // default log format will be based on raw bytes with timestamp on the beginning
-func NewLogResponseFromBytes(b []byte) Log {
+func NewLogResponseFromBytes(b []byte) *Log {
 
 	// detect timestamp - new logs have timestamp
 	var (
@@ -138,7 +149,7 @@ func NewLogResponseFromBytes(b []byte) Log {
 		if err != nil {
 			// try to read in case of some lines which we couldn't parse
 			// sometimes we're not able to control all stdout messages from libs
-			return Log{
+			return &Log{
 				Time:    ts,
 				Content: err.Error(),
 				Type:    o.Type_,
@@ -151,7 +162,7 @@ func NewLogResponseFromBytes(b []byte) Log {
 		// pass parsed results for v1
 		// for new executor it'll be omitted in logs (as looks like we're not using it already)
 		if o.Type_ == output.TypeResult {
-			return Log{
+			return &Log{
 				Time:    ts,
 				Content: o.Content,
 				Version: LogVersionV1,
@@ -161,7 +172,7 @@ func NewLogResponseFromBytes(b []byte) Log {
 			}
 		}
 
-		return Log{
+		return &Log{
 			Time:    ts,
 			Content: o.Content,
 			Version: LogVersionV1,
@@ -170,7 +181,7 @@ func NewLogResponseFromBytes(b []byte) Log {
 	// END DEPRECATED
 
 	// new non-JSON format (just raw lines will be logged)
-	return Log{
+	return &Log{
 		Time:    ts,
 		Content: string(b),
 		Version: LogVersionV2,

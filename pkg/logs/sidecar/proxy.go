@@ -63,7 +63,7 @@ func (p *Proxy) Run(ctx context.Context) error {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	logs := make(chan events.Log, logsBuffer)
+	logs := make(chan *events.Log, logsBuffer)
 
 	// create stream for incoming logs
 	_, err := p.logsStream.Init(ctx, p.executionId)
@@ -83,6 +83,7 @@ func (p *Proxy) Run(ctx context.Context) error {
 		select {
 		case <-sigs:
 			p.log.Warn("logs proxy received signal, exiting", "signal", sigs)
+			p.handleError(ErrStopSignalReceived, "context cancelled stopping logs proxy")
 			return ErrStopSignalReceived
 		case <-ctx.Done():
 			p.log.Warn("logs proxy context cancelled, exiting")
@@ -100,7 +101,7 @@ func (p *Proxy) Run(ctx context.Context) error {
 	return nil
 }
 
-func (p *Proxy) streamLogs(ctx context.Context, logs chan events.Log) (err error) {
+func (p *Proxy) streamLogs(ctx context.Context, logs chan *events.Log) (err error) {
 	pods, err := executor.GetJobPods(ctx, p.podsClient, p.executionId, 1, 10)
 	if err != nil {
 		p.handleError(err, "error getting job pods")
@@ -138,7 +139,7 @@ func (p *Proxy) streamLogs(ctx context.Context, logs chan events.Log) (err error
 	return
 }
 
-func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan events.Log) (err error) {
+func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan *events.Log) (err error) {
 	defer close(logs)
 
 	var containers []string
@@ -239,16 +240,9 @@ func (p *Proxy) getPodContainerStatuses(pod corev1.Pod) (status string) {
 // handleError will handle errors and push it as log chunk to logs stream
 func (p *Proxy) handleError(err error, title string) {
 	if err != nil {
-		ch := events.Log{
-			Error:   true,
-			Content: err.Error(),
-		}
-
 		p.log.Errorw(title, "error", err)
-
-		if err == nil {
-			p.logsStream.Push(context.Background(), p.executionId, ch)
-		} else {
+		err = p.logsStream.Push(context.Background(), p.executionId, events.NewErrorLog(err))
+		if err != nil {
 			p.log.Errorw("error pushing error to stream", "title", title, "error", err)
 		}
 

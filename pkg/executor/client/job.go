@@ -44,6 +44,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/env"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
+	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
+	"github.com/kubeshop/testkube/pkg/logs/events"
 	testexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testexecutions"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/telemetry"
@@ -93,6 +95,7 @@ func NewJobExecutor(
 	apiURI string,
 	natsURI string,
 	debug bool,
+	logsStream logsclient.Stream,
 ) (client *JobExecutor, err error) {
 	return &JobExecutor{
 		ClientSet:            clientset,
@@ -115,6 +118,7 @@ func NewJobExecutor(
 		apiURI:               apiURI,
 		natsURI:              natsURI,
 		debug:                debug,
+		logsStream:           logsStream,
 	}, nil
 }
 
@@ -145,6 +149,7 @@ type JobExecutor struct {
 	apiURI               string
 	natsURI              string
 	debug                bool
+	logsStream           logsclient.Stream
 }
 
 type JobOptions struct {
@@ -225,6 +230,9 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 	if err != nil {
 		return result.Err(err), err
 	}
+
+	c.logsStream.Push(ctx, execution.Id, events.NewLog("created kubernetes job"))
+
 	if !options.Sync {
 		go c.MonitorJobForTimeout(ctx, execution.Id)
 	}

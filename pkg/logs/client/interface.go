@@ -44,9 +44,9 @@ type StreamInitializer interface {
 
 type StreamPusher interface {
 	// Push sends logs to log stream
-	Push(ctx context.Context, id string, chunk events.Log) error
+	Push(ctx context.Context, id string, log *events.Log) error
 	// PushBytes sends RAW bytes to log stream, developer is responsible for marshaling valid data
-	PushBytes(ctx context.Context, id string, chunk []byte) error
+	PushBytes(ctx context.Context, id string, bytes []byte) error
 }
 
 // StreamGetter interface for getting logs stream channel

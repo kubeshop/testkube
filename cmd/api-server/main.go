@@ -394,6 +394,7 @@ func main() {
 		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
 		cfg.NatsURI,
 		cfg.Debug,
+		logsStream,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating executor client", err)
@@ -424,6 +425,7 @@ func main() {
 		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
 		cfg.NatsURI,
 		cfg.Debug,
+		logsStream,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating container executor", err)
@@ -487,6 +489,7 @@ func main() {
 		eventBus,
 		cfg.EnableSecretsEndpoint,
 		ff,
+		logsStream,
 	)
 
 	if mode == common.ModeAgent {
