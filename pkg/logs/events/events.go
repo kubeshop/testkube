@@ -147,7 +147,6 @@ func NewLogFromBytes(b []byte) *Log {
 				Type:    o.Type_,
 				Error:   true,
 				Version: LogVersionV1,
-				Source:  JobPodLogSource,
 			}
 		}
 
@@ -161,7 +160,6 @@ func NewLogFromBytes(b []byte) *Log {
 				V1: &LogOutputV1{
 					Result: o.Result,
 				},
-				Source: JobPodLogSource,
 			}
 		}
 
@@ -169,7 +167,6 @@ func NewLogFromBytes(b []byte) *Log {
 			Time:    ts,
 			Content: o.Content,
 			Version: LogVersionV1,
-			Source:  JobPodLogSource,
 		}
 	}
 	// END DEPRECATED
@@ -179,6 +176,5 @@ func NewLogFromBytes(b []byte) *Log {
 		Time:    ts,
 		Content: string(b),
 		Version: LogVersionV2,
-		Source:  JobPodLogSource,
 	}
 }
