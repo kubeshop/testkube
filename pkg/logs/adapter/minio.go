@@ -52,8 +52,9 @@ type BufferInfo struct {
 }
 
 // MinioConsumer creates new MinioSubscriber which will send data to local MinIO bucket
-func NewMinioAdapter(endpoint, accessKeyID, secretAccessKey, region, token, bucket string, opts ...minioconnecter.Option) (*MinioConsumer, error) {
+func NewMinioAdapter(endpoint, accessKeyID, secretAccessKey, region, token, bucket string, ssl, skipVerify bool, certFile, keyFile, caFile string) (*MinioConsumer, error) {
 	ctx := context.TODO()
+	opts := minioconnecter.GetTLSOptions(ssl, skipVerify, certFile, keyFile, caFile)
 	c := &MinioConsumer{
 		minioConnecter: minioconnecter.NewConnecter(endpoint, accessKeyID, secretAccessKey, region, token, bucket, log.DefaultLogger, opts...),
 		Log:            log.DefaultLogger,

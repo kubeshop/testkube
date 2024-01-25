@@ -55,10 +55,20 @@ func main() {
 		WithGrpcAddress(cfg.GrpcAddress)
 
 	// TODO - add adapters here
-	minioAdapter, err := adapter.NewMinioAdapter(cfg.MinioEndpoint, cfg.MinioAccessKey, cfg.MinioSecretKey, cfg.MinioRegion, cfg.MinioToken, cfg.MinioBucket)
+	minioAdapter, err := adapter.NewMinioAdapter(cfg.StorageEndpoint,
+		cfg.StorageSecretAccessKey,
+		cfg.StorageSecretAccessKey,
+		cfg.StorageRegion,
+		cfg.StorageToken,
+		cfg.StorageLogsBucket,
+		cfg.StorageSSL,
+		cfg.StorageSkipVerify,
+		cfg.StorageCertFile,
+		cfg.StorageKeyFile,
+		cfg.StorageCAFile)
 	if err != nil {
-		log.Errorw("error creating minio adapter", "error", err)
-		svc.AddAdapter(adapter.NewDummyAdapter())
+		log.Errorw("error creating minio adapter, debug adapter created instead", "error", err)
+		svc.AddAdapter(adapter.NewDebugAdapter())
 	} else {
 		log.Infof("minio adapter created")
 		svc.AddAdapter(minioAdapter)
