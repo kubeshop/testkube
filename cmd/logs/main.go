@@ -70,7 +70,7 @@ func main() {
 		log.Errorw("error creating minio adapter, debug adapter created instead", "error", err)
 		svc.AddAdapter(adapter.NewDebugAdapter())
 	} else {
-		log.Infof("minio adapter created")
+		log.Infow("minio adapter created", "bucket", cfg.StorageLogsBucket, "endpoint", cfg.StorageEndpoint)
 		svc.AddAdapter(minioAdapter)
 	}
 
