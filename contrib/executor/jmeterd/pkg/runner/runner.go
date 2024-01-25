@@ -32,11 +32,10 @@ import (
 type JMeterMode string
 
 const (
-	jmeterModeStandalone        JMeterMode = "standalone"
-	jmeterModeDistributed       JMeterMode = "distributed"
-	globalJMeterParamPrefix                = "-G"
-	standaloneJMeterParamPrefix            = "-J"
-	jmxExtension                           = "jmx"
+	jmeterModeStandalone  JMeterMode = "standalone"
+	jmeterModeDistributed JMeterMode = "distributed"
+	jmxExtension                     = "jmx"
+	jmeterTestFileFlag               = "-t"
 )
 
 // JMeterDRunner runner
@@ -158,6 +157,12 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	args = injectAndExpandEnvVars(args, nil)
 	output.PrintLogf("%s Using arguments: %v", ui.IconWorld, envManager.ObfuscateStringSlice(args))
 
+	// TODO: this is a workaround, the check should be ideally performed in the getTestPathAndWorkingDir function
+	if err := checkIfTestFileExists(r.fs, args); err != nil {
+		output.PrintLogf("%s  Error validating test file exists: %v", ui.IconCross, err.Error())
+		return result, errors.WithStack(err)
+	}
+
 	entryPoint := getEntryPoint()
 	for i := range execution.Command {
 		if execution.Command[i] == "<entryPoint>" {
@@ -231,7 +236,25 @@ func initSlaves(
 		return slaveClient.DeleteSlaves(ctx, slaveMeta)
 	}
 	return slaveMeta, cleanupFunc, nil
+}
 
+func checkIfTestFileExists(fs filesystem.FileSystem, args []string) error {
+	if len(args) == 0 {
+		return errors.New("no arguments provided")
+	}
+	testParamValue, err := getParamValue(args, jmeterTestFileFlag)
+	if err != nil {
+		return errors.Wrapf(err, "error extracting value for %s flag", jmeterTestFileFlag)
+	}
+	info, err := fs.Stat(testParamValue)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	if info.IsDir() {
+		return errors.Errorf("test file %s is a directory", testParamValue)
+	}
+
+	return nil
 }
 
 func prepareArgs(args []string, path, jtlPath, reportPath, jmeterLogPath string) (hasJunit, hasReport bool, result []string) {

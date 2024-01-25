@@ -6,6 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/pkg/errors"
+
+	"github.com/kubeshop/testkube/pkg/filesystem"
+
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/stretchr/testify/assert"
@@ -13,6 +18,68 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 )
+
+func TestCheckIfTestFileExists(t *testing.T) {
+	t.Parallel()
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	testCases := []struct {
+		name        string
+		args        []string
+		setupMock   func(*filesystem.MockFileSystem)
+		expectError bool
+	}{
+		{
+			name:        "no arguments",
+			args:        []string{},
+			setupMock:   func(mockFS *filesystem.MockFileSystem) {},
+			expectError: true,
+		},
+		{
+			name: "file does not exist",
+			args: []string{"-t", "test.txt"},
+			setupMock: func(mockFS *filesystem.MockFileSystem) {
+				mockFS.EXPECT().Stat("test.txt").Return(nil, errors.New("file not found"))
+			},
+			expectError: true,
+		},
+		{
+			name: "file is a directory",
+			args: []string{"-t", "testdir"},
+			setupMock: func(mockFS *filesystem.MockFileSystem) {
+				mockFileInfo := filesystem.MockFileInfo{FIsDir: true}
+				mockFS.EXPECT().Stat("testdir").Return(&mockFileInfo, nil)
+			},
+			expectError: true,
+		},
+		{
+			name: "file exists",
+			args: []string{"-t", "test.txt"},
+			setupMock: func(mockFS *filesystem.MockFileSystem) {
+				mockFileInfo := filesystem.MockFileInfo{FName: "test.txt", FSize: 100}
+				mockFS.EXPECT().Stat("test.txt").Return(&mockFileInfo, nil)
+			},
+			expectError: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			mockFS := filesystem.NewMockFileSystem(mockCtrl)
+			tc.setupMock(mockFS)
+			err := checkIfTestFileExists(mockFS, tc.args)
+			if tc.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
 
 func TestPrepareArgsReplacements(t *testing.T) {
 	t.Parallel()
