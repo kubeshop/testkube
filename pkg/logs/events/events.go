@@ -105,9 +105,9 @@ func (l *Log) WithV1Result(result *testkube.ExecutionResult) *Log {
 
 var timestampRegexp = regexp.MustCompile("^[0-9]{4}-[0-9]{2}-[0-9]{2}T.*")
 
-// NewLogResponseFromBytes creates new LogResponse from bytes it's aware of new and old log formats
+// NewLogFromBytes creates new LogResponse from bytes it's aware of new and old log formats
 // default log format will be based on raw bytes with timestamp on the beginning
-func NewLogResponseFromBytes(b []byte) *Log {
+func NewLogFromBytes(b []byte) *Log {
 
 	// detect timestamp - new logs have timestamp
 	var (

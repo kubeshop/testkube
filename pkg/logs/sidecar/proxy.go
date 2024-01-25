@@ -183,7 +183,7 @@ func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan *events.Log) (err er
 			}
 
 			// parse log line - also handle old (output.Output) and new format (just unstructured []byte)
-			logs <- events.NewLogResponseFromBytes(b)
+			logs <- events.NewLogFromBytes(b)
 		}
 
 		if err != nil {
