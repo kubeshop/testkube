@@ -24,9 +24,9 @@ pipeline {
     agent any
 
     environment {
-        TK_ORG = credentials("TK_ORG_ID")
-        TK_ENV = credentials("TK_ENV_ID")
-        TK_API_TOKEN = credentials("tk_api_token")
+        TK_ORG = credentials("TK_ORG")
+        TK_ENV = credentials("TK_ENV")
+        TK_API_TOKEN = credentials("TK_API_TOKEN")
     }
     stages {
         stage('Example') {
@@ -92,9 +92,9 @@ pipeline {
     agent any
 
     environment {
-        TK_ORG = credentials("TK_ORG_ID")
-        TK_ENV = credentials("TK_ENV_ID")
-        TK_API_TOKEN = credentials("tk_api_token")
+        TK_ORG = credentials("TK_ORG")
+        TK_ENV = credentials("TK_ENV")
+        TK_API_TOKEN = credentials("TK_API_TOKEN")
     }
     stages {
         stage('Setup Testkube') {
@@ -136,9 +136,9 @@ pipeline {
     agent any
 
     environment {
-        TK_ORG = credentials("TK_ORG_ID")
-        TK_ENV = credentials("TK_ENV_ID")
-        TK_API_TOKEN = credentials("tk_api_token")
+        TK_ORG = credentials("TK_ORG")
+        TK_ENV = credentials("TK_ENV")
+        TK_API_TOKEN = credentials("TK_API_TOKEN")
     }
     stages {
         stage('Deploy to GKE') {
