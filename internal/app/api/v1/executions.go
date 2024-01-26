@@ -753,7 +753,7 @@ func (s *TestkubeAPI) streamLogsFromLogServer(logs chan events.LogResponse, w *b
 			continue
 		}
 
-		s.Log.Debugw("got log line from execution result", "out", out.Log)
+		s.Log.Debugw("got log line from log server", "out", out.Log)
 		_, _ = fmt.Fprintf(w, "data: ")
 		err := enc.Encode(out.Log)
 		if err != nil {
