@@ -8,6 +8,11 @@ This Jenkins integration offers a versatile solution for managing your pipeline 
 Install the Testkube CLI plugin by searching it in the "Available Plugins" section on Jenkins Plugins, or using the following url:
 [https://plugins.jenkins.io/testkube-cli](https://plugins.jenkins.io/testkube-cli)
 
+### Testkube CLI Jenkins Plugin
+
+Install the Testkube CLI plugin by searching it in the "Available Plugins" section on Jenkins Plugins, or using the following url:
+[https://plugins.jenkins.io/testkube-cli](https://plugins.jenkins.io/testkube-cli)
+
 ## Testkube Pro
 
 ### How to configure Testkube CLI action for Testkube Pro and run a test
