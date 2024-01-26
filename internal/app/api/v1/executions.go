@@ -308,7 +308,7 @@ func (s *TestkubeAPI) ExecutionLogsHandlerV2() fiber.Handler {
 			s.Log.Infow("getting logs from grpc log server")
 			logs, err := s.logGrpcClient.Get(ctx, executionID)
 			if err != nil {
-				s.Log.Errorw("can't get execution result", "error", err)
+				s.Log.Errorw("can't get logs from grpc", "error", err)
 				return
 			}
 
