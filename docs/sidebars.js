@@ -72,7 +72,7 @@ const sidebars = {
         "articles/webhooks",
         "articles/test-sources",
         "articles/test-executions",
-        "articles/templates",        
+        "articles/templates",
       ],
     },
     {
@@ -103,6 +103,8 @@ const sidebars = {
           items: [
             "articles/github-actions",
             "articles/gitlab",
+            "articles/jenkins",
+            "articles/circleci",
             "articles/run-tests-with-github-actions",
             "articles/testkube-cli-docker",
             {
@@ -133,7 +135,7 @@ const sidebars = {
         "articles/generate-test-crds",
         "articles/logging",
         "articles/install-cli",
-        "articles/uninstall"
+        "articles/uninstall",
       ],
     },
     {
@@ -161,7 +163,7 @@ const sidebars = {
         "test-types/executor-tracetest",
         "test-types/executor-zap",
         "test-types/prebuilt-executor",
-        "test-types/container-executor", 
+        "test-types/container-executor",
         "test-types/executor-distributed-jmeter",
       ],
     },
@@ -190,10 +192,7 @@ const sidebars = {
     {
       type: "category",
       label: "Testkube Enterprise",
-      items: [
-        "testkube-enterprise/articles/usage-guide",
-        "testkube-enterprise/articles/auth"
-      ],
+      items: ["testkube-enterprise/articles/usage-guide", "testkube-enterprise/articles/auth"],
     },
     "articles/testkube-oss",
     {

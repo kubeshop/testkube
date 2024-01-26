@@ -20,7 +20,7 @@ type Config struct {
 	GrpcAddress            string        `envconfig:"GRPC_ADDRESS" default:":9090"`
 	KVBucketName           string        `envconfig:"KV_BUCKET_NAME" default:"logsState"`
 	StorageEndpoint        string        `envconfig:"STORAGE_ENDPOINT" default:"localhost:9000"`
-	StorageBucket          string        `envconfig:"STORAGE_BUCKET" default:"testkube-logs"`
+	StorageBucket          string        `envconfig:"STORAGE_BUCKET" default:"testkube-new-logs"`
 	StorageExpiration      int           `envconfig:"STORAGE_EXPIRATION"`
 	StorageAccessKeyID     string        `envconfig:"STORAGE_ACCESSKEYID" default:""`
 	StorageSecretAccessKey string        `envconfig:"STORAGE_SECRETACCESSKEY" default:""`
