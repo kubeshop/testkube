@@ -34,13 +34,13 @@ type MinioLogsRepository struct {
 }
 
 func (r MinioLogsRepository) Get(ctx context.Context, id string) (chan events.LogResponse, error) {
-	ch := make(chan events.LogResponse, defaultBufferSize)
 	file, err := r.storageClient.DownloadFileFromBucket(ctx, r.bucket, "", id)
 	if err != nil {
 		r.log.Errorw("error downloading log file from bucket", "error", err)
-		return ch, err
+		return nil, err
 	}
 
+	ch := make(chan events.LogResponse, defaultBufferSize)
 	reader := bufio.NewReader(file)
 	go func() {
 		defer close(ch)
