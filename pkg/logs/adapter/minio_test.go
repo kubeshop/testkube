@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/logs/events"
-	minioconnecter "github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
@@ -39,7 +38,7 @@ func RandString(n int) string {
 
 func TestLogs(t *testing.T) {
 	t.Skip("skipping test")
-	consumer, _ := NewMinioConsumer("localhost:9000", "minio", "minio123", "", "", "test-1", minioconnecter.Insecure())
+	consumer, _ := NewMinioAdapter("localhost:9000", "minio", "minio123", "", "", "test-1", false, false, "", "", "")
 	id := "test-bla"
 	for i := 0; i < 1000; i++ {
 		fmt.Println("sending", i)
@@ -55,7 +54,7 @@ func TestLogs(t *testing.T) {
 func BenchmarkLogs(b *testing.B) {
 	randomString := RandString(5)
 	bucket := "test-bench"
-	consumer, _ := NewMinioConsumer("localhost:9000", "minio", "minio123", "", "", bucket, minioconnecter.Insecure())
+	consumer, _ := NewMinioAdapter("localhost:9000", "minio", "minio123", "", "", bucket, false, false, "", "", "")
 	id := "test-bench" + "-" + randomString + "-" + strconv.Itoa(b.N)
 	totalSize := 0
 	for i := 0; i < b.N; i++ {
@@ -72,7 +71,7 @@ func BenchmarkLogs(b *testing.B) {
 
 func BenchmarkLogs2(b *testing.B) {
 	bucket := "test-bench"
-	consumer, _ := NewMinioConsumer("localhost:9000", "minio", "minio123", "", "", bucket, minioconnecter.Insecure())
+	consumer, _ := NewMinioAdapter("localhost:9000", "minio", "minio123", "", "", bucket, false, false, "", "", "")
 	idChan := make(chan string, 100)
 	go verifyConsumer(idChan, bucket, consumer.minioClient)
 	var counter atomic.Int32
@@ -90,7 +89,7 @@ func BenchmarkLogs2(b *testing.B) {
 	wg.Wait()
 }
 
-func testOneConsumer(consumer *MinioConsumer, id string) {
+func testOneConsumer(consumer *MinioAdapter, id string) {
 	fmt.Println("#####starting", id)
 	totalSize := 0
 	numberOFLogs := rand.Intn(100000)
@@ -158,14 +157,14 @@ func verifyConsumer(idChan chan string, bucket string, minioClient *minio.Client
 func DoRunBenchmark() {
 	numberOfConsumers := 100
 	bucket := "test-bench"
-	consumer, _ := NewMinioConsumer("testkube-minio-service-testkube:9000", "minio", "minio123", "", "", bucket, minioconnecter.Insecure())
+	consumer, _ := NewMinioAdapter("testkube-minio-service-testkube:9000", "minio", "minio123", "", "", bucket, false, false, "", "", "")
 
 	idChan := make(chan string, numberOfConsumers)
 	DoRunBenchmark2(idChan, numberOfConsumers, consumer)
 	verifyConsumer(idChan, bucket, consumer.minioClient)
 }
 
-func DoRunBenchmark2(idChan chan string, numberOfConsumers int, consumer *MinioConsumer) {
+func DoRunBenchmark2(idChan chan string, numberOfConsumers int, consumer *MinioAdapter) {
 	var counter atomic.Int32
 	var wg sync.WaitGroup
 	for i := 0; i < numberOfConsumers; i++ {
