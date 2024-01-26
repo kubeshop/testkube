@@ -4538,7 +4538,9 @@ components:
         dashboardUri:
           type: string
           description: dashboard uri
-          example: "http://localhost:8080"          
+          example: "http://localhost:8080"
+        features:
+          $ref: "#/components/schemas/Features"
 
     Repository:
       description: repository representation for tests in git repositories
@@ -5526,8 +5528,6 @@ components:
             items:
               type: string
             example: ["logline1", "logline2", "logline3"]
-        features:
-          $ref: "#/components/schemas/Features"        
 
     Features:
       type: object

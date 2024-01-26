@@ -17,5 +17,4 @@ type DebugInfo struct {
 	ApiLogs        []string            `json:"apiLogs,omitempty"`
 	OperatorLogs   []string            `json:"operatorLogs,omitempty"`
 	ExecutionLogs  map[string][]string `json:"executionLogs,omitempty"`
-	Features       *Features           `json:"features,omitempty"`
 }
