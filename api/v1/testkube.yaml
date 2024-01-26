@@ -1337,6 +1337,35 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /executions/{id}/logs/v2:
+    get:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      tags:
+        - logs
+        - executions
+        - api
+      summary: "Get execution's logs by ID version 2"
+      description: "Returns logs of the given executionID version 2"
+      operationId: getExecutionLogsV2
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LogV2"
+        500:
+          description: "problem with getting execution's logs version 2"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /executions/{id}/artifacts/{filename}:
     get:
       parameters:
@@ -5253,6 +5282,62 @@ components:
           format: date-time
           description: Timestamp of log
           example: "2018-03-20T09:12:28Z"
+
+    LogV2:
+      description: Log format version 2
+      type: object
+      required:
+        - logVersion
+        - source
+      properties:
+        time:
+          type: string
+          format: date-time
+          description: Timestamp of log
+          example: "2018-03-20T09:12:28Z"  
+        content:
+          type: string
+          description: Message/event data passed from executor (like log lines etc)  
+        type:
+          type: string
+          description: One of possible log types
+        source:
+          type: string
+          description: One of possible log sources
+          enum:
+            - job-pod
+            - test-scheduler
+            - container-executor
+            - job-executor
+        error:
+          type: boolean
+          description: indicates a log error 
+        version:
+          type: string
+          description: One of possible log versions
+          enum:
+            - v1
+            - v2
+        metadata:
+          type: object
+          description: additional log details
+          additionalProperties:
+            type: string
+          example:
+            argsl: "passed command arguments"
+        v1:
+          $ref: "#/components/schemas/LogV1"
+          description: Old output - for backwards compatibility - will be removed for non-structured logs
+       
+    LogV1:
+      description: Log format version 1
+      type: object
+      required:
+        - type
+      properties:
+        result:
+          $ref: "#/components/schemas/ExecutionResult"
+          description: output for previous log format
 
     ExecutorMeta:
       description: Executor meta data
