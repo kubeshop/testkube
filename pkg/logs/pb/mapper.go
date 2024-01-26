@@ -19,7 +19,7 @@ func MapResponseToPB(r events.LogResponse) *LogResponse {
 		Time:     timestamppb.New(chunk.Time),
 		Content:  content,
 		Error:    isError,
-		Type:     chunk.Type,
+		Type:     chunk.Type_,
 		Source:   chunk.Source,
 		Metadata: chunk.Metadata,
 		Version:  string(chunk.Version),
@@ -30,10 +30,10 @@ func MapFromPB(chunk *LogResponse) events.Log {
 	return events.Log{
 		Time:     chunk.Time.AsTime(),
 		Content:  chunk.Content,
-		Error:    chunk.Error,
-		Type:     chunk.Type,
+		Error_:   chunk.Error,
+		Type_:    chunk.Type,
 		Source:   chunk.Source,
 		Metadata: chunk.Metadata,
-		Version:  events.LogVersion(chunk.Version),
+		Version:  chunk.Version,
 	}
 }
