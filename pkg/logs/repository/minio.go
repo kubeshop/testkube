@@ -3,6 +3,7 @@ package repository
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 
@@ -55,8 +56,14 @@ func (r MinioLogsRepository) Get(ctx context.Context, id string) (chan events.Lo
 			return ch, err
 		}
 
-		// parse log line - also handle old (output.Output) and new format (just unstructured []byte)
-		ch <- events.LogResponse{Log: *events.NewLogFromBytes(b)}
+		var log events.Log
+		err = json.Unmarshal(b, &log)
+		if err != nil {
+			ch <- events.LogResponse{Error: err}
+			continue
+		}
+
+		ch <- events.LogResponse{Log: log}
 	}
 
 	return ch, nil
