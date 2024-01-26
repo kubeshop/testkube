@@ -514,6 +514,7 @@ func main() {
 			clusterId,
 			cfg.TestkubeClusterName,
 			envs,
+			features,
 		)
 		if err != nil {
 			ui.ExitOnError("Starting agent", err)
