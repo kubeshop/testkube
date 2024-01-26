@@ -676,7 +676,7 @@ func (s *TestkubeAPI) getExecutionLogs(ctx context.Context, execution testkube.E
 	if s.featureFlags.LogsV2 {
 		logs, err := s.logGrpcClient.Get(ctx, execution.Id)
 		if err != nil {
-			return []string{}, fmt.Errorf("could not get logs for execution %s: %w", execution.Id, err)
+			return []string{}, fmt.Errorf("could not get logs for grpc %s: %w", execution.Id, err)
 		}
 
 		for out := range logs {
@@ -746,7 +746,7 @@ func (s *TestkubeAPI) getArtifactStorage(bucket string) (storage.ArtifactsStorag
 func (s *TestkubeAPI) streamLogsFromLogServer(logs chan events.LogResponse, w *bufio.Writer) {
 	enc := json.NewEncoder(w)
 	s.Log.Infow("looping through logs channel")
-	// loop through pods log lines - it's blocking channel
+	// loop through grpc server log lines - it's blocking channel
 	// and pass single log output as sse data chunk
 	for out := range logs {
 		if out.Error != nil {
@@ -754,7 +754,7 @@ func (s *TestkubeAPI) streamLogsFromLogServer(logs chan events.LogResponse, w *b
 			continue
 		}
 
-		s.Log.Debugw("got log line from log server", "out", out.Log)
+		s.Log.Debugw("got log line from grpc log server", "out", out.Log)
 		_, _ = fmt.Fprintf(w, "data: ")
 		err := enc.Encode(out.Log)
 		if err != nil {
