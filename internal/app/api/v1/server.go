@@ -299,6 +299,8 @@ func (s *TestkubeAPI) InitRoutes() {
 	executions.Get("/:executionID/artifacts", s.ListArtifactsHandler())
 	executions.Get("/:executionID/logs", s.ExecutionLogsHandler())
 	executions.Get("/:executionID/logs/stream", s.ExecutionLogsStreamHandler())
+	executions.Get("/:executionID/logs/v2", s.ExecutionLogsHandler())
+	executions.Get("/:executionID/logs/stream/v2", s.ExecutionLogsStreamHandler())
 	executions.Get("/:executionID/artifacts/:filename", s.GetArtifactHandler())
 	executions.Get("/:executionID/artifact-archive", s.GetArtifactArchiveHandler())
 

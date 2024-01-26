@@ -182,31 +182,16 @@ func (s *TestkubeAPI) GetLogsStream(ctx context.Context, executionID string) (ch
 
 func (s *TestkubeAPI) ExecutionLogsStreamHandler() fiber.Handler {
 	return websocket.New(func(c *websocket.Conn) {
+		if s.featureFlags.LogsV2 {
+			return
+		}
+
 		executionID := c.Params("executionID")
 		l := s.Log.With("executionID", executionID)
 
 		l.Debugw("getting pod logs and passing to websocket", "id", c.Params("id"), "locals", c.Locals, "remoteAddr", c.RemoteAddr(), "localAddr", c.LocalAddr())
 
 		defer c.Conn.Close()
-
-		if s.featureFlags.LogsV2 {
-			logs, err := s.logGrpcClient.Get(context.Background(), executionID)
-			if err != nil {
-				l.Errorw("can't get pod logs", "error", err)
-				return
-			}
-
-			for logLine := range logs {
-				if logLine.Error != nil {
-					l.Errorw("can't get log line", "error", logLine.Error)
-					continue
-				}
-
-				l.Debugw("sending log line to websocket", "line", logLine.Log)
-				_ = c.WriteJSON(logLine.Log)
-			}
-			return
-		}
 
 		logs, err := s.GetLogsStream(context.Background(), executionID)
 		if err != nil {
@@ -220,9 +205,44 @@ func (s *TestkubeAPI) ExecutionLogsStreamHandler() fiber.Handler {
 	})
 }
 
+func (s *TestkubeAPI) ExecutionLogsStreamHandlerV2() fiber.Handler {
+	return websocket.New(func(c *websocket.Conn) {
+		if !s.featureFlags.LogsV2 {
+			return
+		}
+
+		executionID := c.Params("executionID")
+		l := s.Log.With("executionID", executionID)
+
+		l.Debugw("getting pod logs and passing to websocket", "id", c.Params("id"), "locals", c.Locals, "remoteAddr", c.RemoteAddr(), "localAddr", c.LocalAddr())
+
+		defer c.Conn.Close()
+
+		logs, err := s.logGrpcClient.Get(context.Background(), executionID)
+		if err != nil {
+			l.Errorw("can't get pod logs", "error", err)
+			return
+		}
+
+		for logLine := range logs {
+			if logLine.Error != nil {
+				l.Errorw("can't get log line", "error", logLine.Error)
+				continue
+			}
+
+			l.Debugw("sending log line to websocket", "line", logLine.Log)
+			_ = c.WriteJSON(logLine.Log)
+		}
+	})
+}
+
 // ExecutionLogsHandler streams the logs from a test execution
 func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		if s.featureFlags.LogsV2 {
+			return nil
+		}
+
 		executionID := c.Params("executionID")
 
 		s.Log.Debug("getting logs", "executionID", executionID)
@@ -237,18 +257,6 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 		ctx.SetBodyStreamWriter(func(w *bufio.Writer) {
 			s.Log.Debug("start streaming logs")
 			_ = w.Flush()
-
-			if s.featureFlags.LogsV2 {
-				s.Log.Infow("getting logs from grpc log server")
-				logs, err := s.logGrpcClient.Get(ctx, executionID)
-				if err != nil {
-					s.Log.Errorw("can't get execution result", "error", err)
-					return
-				}
-
-				s.streamLogsFromLogServer(logs, w)
-				return
-			}
 
 			execution, err := s.ExecutionResults.Get(ctx, executionID)
 			if err != nil {
@@ -269,6 +277,42 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 			}
 
 			s.streamLogsFromJob(ctx, executionID, execution.TestType, w)
+		})
+
+		return nil
+	}
+}
+
+// ExecutionLogsHandlerV2 streams the logs from a test execution version 2
+func (s *TestkubeAPI) ExecutionLogsHandlerV2() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if !s.featureFlags.LogsV2 {
+			return nil
+		}
+
+		executionID := c.Params("executionID")
+
+		s.Log.Debug("getting logs", "executionID", executionID)
+
+		ctx := c.Context()
+
+		ctx.SetContentType("text/event-stream")
+		ctx.Response.Header.Set("Cache-Control", "no-cache")
+		ctx.Response.Header.Set("Connection", "keep-alive")
+		ctx.Response.Header.Set("Transfer-Encoding", "chunked")
+
+		ctx.SetBodyStreamWriter(func(w *bufio.Writer) {
+			s.Log.Debug("start streaming logs")
+			_ = w.Flush()
+
+			s.Log.Infow("getting logs from grpc log server")
+			logs, err := s.logGrpcClient.Get(ctx, executionID)
+			if err != nil {
+				s.Log.Errorw("can't get execution result", "error", err)
+				return
+			}
+
+			s.streamLogsFromLogServer(logs, w)
 		})
 
 		return nil
