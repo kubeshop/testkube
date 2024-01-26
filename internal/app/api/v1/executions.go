@@ -627,6 +627,25 @@ func (s *TestkubeAPI) getNewestExecutions(ctx context.Context) ([]testkube.Execu
 // getExecutionLogs returns logs from an execution
 func (s *TestkubeAPI) getExecutionLogs(ctx context.Context, execution testkube.Execution) ([]string, error) {
 	var res []string
+
+	if s.featureFlags.LogsV2 {
+		logs, err := s.logGrpcClient.Get(ctx, execution.Id)
+		if err != nil {
+			return []string{}, fmt.Errorf("could not get logs for execution %s: %w", execution.Id, err)
+		}
+
+		for out := range logs {
+			if out.Error != nil {
+				s.Log.Errorw("can't get log line", "error", out.Error)
+				continue
+			}
+
+			res = append(res, out.Log.Content)
+		}
+
+		return res, nil
+	}
+
 	if execution.ExecutionResult.IsCompleted() {
 		return append(res, execution.ExecutionResult.Output), nil
 	}
