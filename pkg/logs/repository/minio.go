@@ -56,7 +56,7 @@ func (r MinioLogsRepository) Get(ctx context.Context, id string) (chan events.Lo
 		}
 
 		// parse log line - also handle old (output.Output) and new format (just unstructured []byte)
-		ch <- events.LogResponse{Log: events.NewLogResponseFromBytes(b)}
+		ch <- events.LogResponse{Log: *events.NewLogFromBytes(b)}
 	}
 
 	return ch, nil

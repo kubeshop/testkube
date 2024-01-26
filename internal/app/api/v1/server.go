@@ -90,6 +90,7 @@ func NewTestkubeAPI(
 	eventsBus bus.Bus,
 	enableSecretsEndpoint bool,
 	ff featureflags.FeatureFlags,
+	logsStream logsclient.Stream,
 	logGrpcClient logsclient.StreamGetter,
 ) TestkubeAPI {
 
@@ -136,6 +137,7 @@ func NewTestkubeAPI(
 		eventsBus:             eventsBus,
 		enableSecretsEndpoint: enableSecretsEndpoint,
 		featureFlags:          ff,
+		logsStream:            logsStream,
 		logGrpcClient:         logGrpcClient,
 	}
 
@@ -194,6 +196,7 @@ type TestkubeAPI struct {
 	eventsBus             bus.Bus
 	enableSecretsEndpoint bool
 	featureFlags          featureflags.FeatureFlags
+	logsStream            logsclient.Stream
 	logGrpcClient         logsclient.StreamGetter
 }
 

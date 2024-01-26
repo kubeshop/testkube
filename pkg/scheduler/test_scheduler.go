@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
@@ -126,7 +127,27 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 
 	s.logger.Infow("test started", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
 
+	s.handleExecutionStart(ctx, execution)
+
 	return execution, nil
+}
+
+func (s *Scheduler) handleExecutionStart(ctx context.Context, execution testkube.Execution) {
+	// pass here all needed execution data to the log
+	if s.featureFlags.LogsV2 {
+
+		l := events.NewLog(fmt.Sprintf("starting execution %s (%s)", execution.Name, execution.Id)).
+			WithType("execution-config").
+			WithVersion(events.LogVersionV2).
+			WithSource("test-scheduler").
+			WithMetadataEntry("command", strings.Join(execution.Command, " ")).
+			WithMetadataEntry("argsmode", execution.ArgsMode).
+			WithMetadataEntry("args", strings.Join(execution.Args, " ")).
+			WithMetadataEntry("pre-run", execution.PreRunScript).
+			WithMetadataEntry("post-run", execution.PostRunScript)
+
+		s.logsStream.Push(ctx, execution.Id, l)
+	}
 }
 
 func (s *Scheduler) handleExecutionError(ctx context.Context, execution testkube.Execution, msgTpl string, err error) (testkube.Execution, error) {
@@ -137,7 +158,7 @@ func (s *Scheduler) handleExecutionError(ctx context.Context, execution testkube
 			WithVersion(events.LogVersionV2).
 			WithSource("test-scheduler")
 
-		s.logsStream.Push(ctx, execution.Id, *l)
+		s.logsStream.Push(ctx, execution.Id, l)
 
 	}
 
@@ -849,11 +870,11 @@ func (s *Scheduler) triggerLogsStopEvent(ctx context.Context, id string) error {
 			}
 
 			if r.Error {
-				s.logger.Errorw("can't send stop event for logs", "id", id, "error", err)
+				s.logger.Errorw("received invalid response from log stream on stop event", "id", id, "response", r)
 				return
 			}
 
-			s.logger.Infow("triggering logs stop event", "id", id)
+			s.logger.Infow("triggering logs stop event", "id", id, "response", string(r.Message))
 		}()
 	}
 	return nil

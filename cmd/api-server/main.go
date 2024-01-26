@@ -133,10 +133,10 @@ func main() {
 	cfg.CleanLegacyVars()
 	ui.ExitOnError("error getting application config", err)
 
-	ff, err := featureflags.Get()
+	features, err := featureflags.Get()
 	ui.ExitOnError("error getting application feature flags", err)
 
-	log.DefaultLogger.Infow("Feature flags configured", "ff", ff)
+	log.DefaultLogger.Infow("Feature flags configured", "ff", features)
 
 	// Run services within an errgroup to propagate errors between services.
 	g, ctx := errgroup.WithContext(context.Background())
@@ -350,7 +350,7 @@ func main() {
 
 	var logsStream logsclient.Stream
 
-	if ff.LogsV2 {
+	if features.LogsV2 {
 		logsStream, err = logsclient.NewNatsLogStream(nc.Conn)
 		if err != nil {
 			ui.ExitOnError("Creating logs streaming client", err)
@@ -394,6 +394,8 @@ func main() {
 		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
 		cfg.NatsURI,
 		cfg.Debug,
+		logsStream,
+		features,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating executor client", err)
@@ -424,6 +426,8 @@ func main() {
 		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
 		cfg.NatsURI,
 		cfg.Debug,
+		logsStream,
+		features,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating container executor", err)
@@ -447,7 +451,7 @@ func main() {
 		testsuiteExecutionsClient,
 		eventBus,
 		cfg.TestkubeDashboardURI,
-		ff,
+		features,
 		logsStream,
 	)
 
@@ -457,7 +461,7 @@ func main() {
 	}
 
 	var logGrpcClient logsclient.StreamGetter
-	if ff.LogsV2 {
+	if features.LogsV2 {
 		logGrpcClient = logsclient.NewGrpcClient(cfg.LogServerGrpcAddress)
 	}
 
@@ -491,7 +495,8 @@ func main() {
 		mode,
 		eventBus,
 		cfg.EnableSecretsEndpoint,
-		ff,
+		features,
+		logsStream,
 		logGrpcClient,
 	)
 
