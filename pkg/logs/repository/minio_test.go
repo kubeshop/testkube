@@ -65,8 +65,6 @@ func TestRepository_MinioGet(t *testing.T) {
 			logs, err := r.Get(ctx, "test-execution-1")
 			assert.NoError(t, err)
 
-			close(logs)
-
 			for out := range logs {
 				res = append(res, out.Log)
 			}

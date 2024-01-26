@@ -42,29 +42,35 @@ func (r MinioLogsRepository) Get(ctx context.Context, id string) (chan events.Lo
 	}
 
 	reader := bufio.NewReader(file)
-	for {
-		b, err := utils.ReadLongLine(reader)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				err = nil
+	go func() {
+		defer close(ch)
+
+		for {
+			b, err := utils.ReadLongLine(reader)
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					err = nil
+				}
+				break
 			}
-			break
-		}
 
-		if err != nil {
-			r.log.Errorw("error getting log line", "error", err)
-			return ch, err
-		}
+			if err != nil {
+				r.log.Errorw("error getting log line", "error", err)
+				ch <- events.LogResponse{Error: err}
+				return
+			}
 
-		var log events.Log
-		err = json.Unmarshal(b, &log)
-		if err != nil {
-			ch <- events.LogResponse{Error: err}
-			continue
-		}
+			var log events.Log
+			err = json.Unmarshal(b, &log)
+			if err != nil {
+				r.log.Errorw("error unmarshalling log line", "error", err)
+				ch <- events.LogResponse{Error: err}
+				continue
+			}
 
-		ch <- events.LogResponse{Log: log}
-	}
+			ch <- events.LogResponse{Log: log}
+		}
+	}()
 
 	return ch, nil
 }
