@@ -5526,6 +5526,17 @@ components:
             items:
               type: string
             example: ["logline1", "logline2", "logline3"]
+        features:
+          $ref: "#/components/schemas/Features"        
+
+    Features:
+      type: object
+      required:
+        - logsV2
+      properties:
+        logsV2:
+          type: boolean
+          description: Log processing version 2 
 
     TestTrigger:
       type: object
