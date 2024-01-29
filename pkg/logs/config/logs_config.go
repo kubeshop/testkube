@@ -7,6 +7,7 @@ import (
 )
 
 type Config struct {
+	Debug                  bool          `envconfig:"DEBUG" default:"false"`
 	NatsURI                string        `envconfig:"NATS_URI" default:"nats://localhost:4222"`
 	NatsSecure             bool          `envconfig:"NATS_SECURE" default:"false"`
 	NatsSkipVerify         bool          `envconfig:"NATS_SKIP_VERIFY" default:"false"`

@@ -9,13 +9,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 )
 
-// Generic event like log-start log-end
-type Trigger struct {
-	Id       string            `json:"id,omitempty"`
-	Type     string            `json:"type,omitempty"`
-	Metadata map[string]string `json:"metadata,omitempty"`
-}
-
 type LogVersion string
 
 const (
@@ -29,6 +22,24 @@ const (
 	SourceContainerExecutor = "container-executor"
 	SourceJobExecutor       = "job-executor"
 )
+
+// check if trigger implements model generic event type
+var _ testkube.Trigger = Trigger{}
+
+// NewTrigger returns Trigger instance
+func NewTrigger(id string) Trigger {
+	return Trigger{ResourceId: id}
+}
+
+// Generic event like log-start log-end with resource id
+type Trigger struct {
+	ResourceId string `json:"resourceId,omitempty"`
+}
+
+// GetResourceId implements testkube.Trigger interface
+func (t Trigger) GetResourceId() string {
+	return t.ResourceId
+}
 
 type LogResponse struct {
 	Log   Log

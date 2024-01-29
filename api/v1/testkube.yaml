@@ -1132,7 +1132,7 @@ paths:
         - $ref: "#/components/parameters/Namespace"
         - $ref: "#/components/parameters/Selector"
         - $ref: "#/components/parameters/ExecutionSelector"
-        - $ref: "#/components/parameters/ConcurrencyLevel"    
+        - $ref: "#/components/parameters/ConcurrencyLevel"
       tags:
         - api
         - tests
@@ -2347,7 +2347,7 @@ paths:
               $ref: "#/components/schemas/WebhookCreateRequest"
           text/yaml:
             schema:
-              type: string              
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -2497,7 +2497,7 @@ paths:
               $ref: "#/components/schemas/WebhookUpdateRequest"
           text/yaml:
             schema:
-              type: string              
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -2584,7 +2584,7 @@ paths:
               $ref: "#/components/schemas/TemplateCreateRequest"
           text/yaml:
             schema:
-              type: string              
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -2734,7 +2734,7 @@ paths:
               $ref: "#/components/schemas/TemplateUpdateRequest"
           text/yaml:
             schema:
-              type: string              
+              type: string
       responses:
         200:
           description: "successful operation"
@@ -3575,7 +3575,7 @@ components:
           type: array
           description: previous test names
           items:
-            type: string            
+            type: string
 
     TestSuiteStep:
       type: object
@@ -3761,14 +3761,14 @@ components:
           description: object name and namespace
         execution:
           $ref: "#/components/schemas/Execution"
-          description: test step execution          
+          description: test step execution
 
     TestSuiteBatchStepExecutionResult:
       description: execution result returned from executor
       type: object
       properties:
         step:
-          $ref: "#/components/schemas/TestSuiteBatchStep"          
+          $ref: "#/components/schemas/TestSuiteBatchStep"
         execute:
           type: array
           items:
@@ -3929,7 +3929,7 @@ components:
         description:
           type: string
           description: test description
-          example: "this test is used for that purpose"      
+          example: "this test is used for that purpose"
         type:
           type: string
           description: test type
@@ -4004,7 +4004,7 @@ components:
       properties:
         type:
           type: string
-          description: | 
+          description: |
             type of sources a runner can get data from.
               string: String content (e.g. Postman JSON file).
               file-uri: content stored on the webserver.
@@ -4296,7 +4296,7 @@ components:
           example: "sleep 30"
         executePostRunScriptBeforeScraping:
           type: boolean
-          description: execute post run script before scraping (prebuilt executor only) 
+          description: execute post run script before scraping (prebuilt executor only)
         runningContext:
           $ref: "#/components/schemas/RunningContext"
           description: running context for the test execution
@@ -4319,7 +4319,7 @@ components:
             type: string
         slavePodRequest:
           $ref: "#/components/schemas/PodRequest"
-          description: configuration parameters for executed slave pods 
+          description: configuration parameters for executed slave pods
 
     Artifact:
       type: object
@@ -4703,13 +4703,13 @@ components:
       properties:
         resources:
           $ref: "#/components/schemas/PodResourcesRequest"
-          description: pod resources request parameters       
+          description: pod resources request parameters
         podTemplate:
           type: string
           description: pod template extensions
         podTemplateReference:
           type: string
-          description: name of the template resource 
+          description: name of the template resource
 
     PodUpdateRequest:
       description: pod request update body
@@ -4727,7 +4727,7 @@ components:
           description: pod resources requests
         limits:
           $ref: "#/components/schemas/ResourceRequest"
-          description: pod resources limits          
+          description: pod resources limits
 
     PodResourcesUpdateRequest:
       description: pod resources update request specification
@@ -4828,7 +4828,7 @@ components:
           description: usage mode for arguments
           enum:
             - append
-            - override 
+            - override
         image:
           type: string
           description: container image, executor will run inside this image
@@ -4899,7 +4899,7 @@ components:
           description: job template extensions
         jobTemplateReference:
           type: string
-          description: name of the template resource   
+          description: name of the template resource
         cronJobTemplate:
           type: string
           description: cron job template extensions
@@ -4960,7 +4960,7 @@ components:
             type: string
         slavePodRequest:
           $ref: "#/components/schemas/PodRequest"
-          description: configuration parameters for executed slave pods          
+          description: configuration parameters for executed slave pods
 
     ExecutionUpdateRequest:
       description: test execution request update body
@@ -5241,7 +5241,7 @@ components:
               - junit-report
         meta:
           $ref: "#/components/schemas/ExecutorMeta"
-        useDataDirAsWorkingDir: 
+        useDataDirAsWorkingDir:
           type: boolean
           description: use data dir as working dir for executor
 
@@ -5370,12 +5370,12 @@ components:
       description: Slave data for executing tests in distributed environment
       type: object
       properties:
-        image: 
+        image:
           description: slave image
           type: string
           example: kubeshop/ex-slaves-image:latest
       required:
-      - image
+        - image
 
     RunningContext:
       description: running context for test or test suite execution
@@ -5469,14 +5469,14 @@ components:
           $ref: "#/components/schemas/TestSuiteExecution"
         clusterName:
           type: string
-          description: cluster name of event   
+          description: cluster name of event
         envs:
           type: object
           description: "environment variables"
           additionalProperties:
             type: string
           example:
-            WEBHOOK_PARAMETER: "any value"           
+            WEBHOOK_PARAMETER: "any value"
 
     EventResource:
       type: string
@@ -5660,7 +5660,7 @@ components:
         conditionSpec:
           $ref: "#/components/schemas/TestTriggerConditionSpec"
         probeSpec:
-          $ref: "#/components/schemas/TestTriggerProbeSpec"          
+          $ref: "#/components/schemas/TestTriggerProbeSpec"
         action:
           $ref: "#/components/schemas/TestTriggerActions"
         execution:
@@ -5707,7 +5707,7 @@ components:
         nameRegex:
           type: string
           description: kubernetes resource name regex
-          example: nginx.* 
+          example: nginx.*
         namespace:
           type: string
           description: resource namespace
@@ -5759,7 +5759,7 @@ components:
           type: integer
           format: int32
           description: duration in seconds the test trigger waits between condition checks
-          example: 1            
+          example: 1
 
     TestTriggerCondition:
       description: supported condition for test triggers
@@ -5781,8 +5781,8 @@ components:
         ttl:
           type: integer
           format: int32
-          description: duration in seconds in the past from current time when the condition is still valid 
-          example: 1          
+          description: duration in seconds in the past from current time when the condition is still valid
+          example: 1
 
     TestTriggerConditionStatuses:
       description: supported kubernetes condition statuses for test triggers
@@ -5809,7 +5809,7 @@ components:
           type: integer
           format: int32
           description: duration in seconds the test trigger waits between probes
-          example: 1        
+          example: 1
 
     TestTriggerProbe:
       description: supported probe for test triggers
@@ -5818,7 +5818,7 @@ components:
         scheme:
           type: string
           description: test trigger condition probe scheme to connect to host, default is http
-          example: http        
+          example: http
         host:
           type: string
           description: test trigger condition probe host, default is pod ip or service name
@@ -5831,7 +5831,7 @@ components:
           type: integer
           format: int32
           description: test trigger condition probe port to connect
-          example: 80        
+          example: 80
         headers:
           type: object
           description: test trigger condition probe headers to submit
@@ -5965,7 +5965,7 @@ components:
         body:
           type: string
           description: template body to use
-          example: "{\"id\": \"{{ .Id }}\"}"
+          example: '{"id": "{{ .Id }}"}'
         labels:
           type: object
           description: "template labels"
@@ -6187,7 +6187,7 @@ components:
       name: testSuiteExecutionName
       schema:
         type: string
-        description: test suite execution name stated the test suite execution    
+        description: test suite execution name stated the test suite execution
     Namespace:
       in: query
       name: namespace

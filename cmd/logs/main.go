@@ -92,9 +92,13 @@ func main() {
 		cfg.StorageCertFile,
 		cfg.StorageKeyFile,
 		cfg.StorageCAFile)
+
+	if cfg.Debug {
+		svc.AddAdapter(adapter.NewDebugAdapter())
+	}
+
 	if err != nil {
 		log.Errorw("error creating minio adapter, debug adapter created instead", "error", err)
-		svc.AddAdapter(adapter.NewDebugAdapter())
 	} else {
 		log.Infow("minio adapter created", "bucket", cfg.StorageBucket, "endpoint", cfg.StorageEndpoint)
 		svc.AddAdapter(minioAdapter)

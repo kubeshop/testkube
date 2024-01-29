@@ -7,6 +7,19 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
+const (
+	TestStartSubject = "events.test.start"
+	TestStopSubject  = "events.test.stop"
+)
+
+// check if Event implements model generic event type
+var _ Trigger = Event{}
+
+// Trigger for generic events
+type Trigger interface {
+	GetResourceId() string
+}
+
 func NewEvent(t *EventType, resource *EventResource, id string) Event {
 	return Event{
 		Id:         uuid.NewString(),
@@ -21,6 +34,8 @@ func NewEventStartTest(execution *Execution) Event {
 		Id:            uuid.NewString(),
 		Type_:         EventStartTest,
 		TestExecution: execution,
+		StreamTopic:   TestStartSubject,
+		ResourceId:    execution.Id,
 	}
 }
 
@@ -29,6 +44,8 @@ func NewEventEndTestSuccess(execution *Execution) Event {
 		Id:            uuid.NewString(),
 		Type_:         EventEndTestSuccess,
 		TestExecution: execution,
+		StreamTopic:   TestStopSubject,
+		ResourceId:    execution.Id,
 	}
 }
 
@@ -37,6 +54,8 @@ func NewEventEndTestFailed(execution *Execution) Event {
 		Id:            uuid.NewString(),
 		Type_:         EventEndTestFailed,
 		TestExecution: execution,
+		StreamTopic:   TestStopSubject,
+		ResourceId:    execution.Id,
 	}
 }
 
@@ -45,6 +64,8 @@ func NewEventEndTestAborted(execution *Execution) Event {
 		Id:            uuid.NewString(),
 		Type_:         EventEndTestAborted,
 		TestExecution: execution,
+		StreamTopic:   TestStopSubject,
+		ResourceId:    execution.Id,
 	}
 }
 
@@ -53,6 +74,8 @@ func NewEventEndTestTimeout(execution *Execution) Event {
 		Id:            uuid.NewString(),
 		Type_:         EventEndTestTimeout,
 		TestExecution: execution,
+		StreamTopic:   TestStopSubject,
+		ResourceId:    execution.Id,
 	}
 }
 
@@ -184,6 +207,10 @@ func (e Event) Valid(selector string, types []EventType) (valid bool) {
 // Topic returns topic for event based on resource and resource id
 // or fallback to global "events" topic
 func (e Event) Topic() string {
+	if e.StreamTopic != "" {
+		return e.StreamTopic
+	}
+
 	if e.Resource == nil {
 		return "events.all"
 	}
@@ -193,4 +220,9 @@ func (e Event) Topic() string {
 	}
 
 	return "events." + string(*e.Resource) + "." + e.ResourceId
+}
+
+// GetResourceId implmenents generic event trigger
+func (e Event) GetResourceId() string {
+	return e.ResourceId
 }

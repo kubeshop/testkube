@@ -3,7 +3,6 @@ package runner
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -87,8 +86,6 @@ func TestRunGradle_Integration(t *testing.T) {
 
 		// when
 		result, err := runner.Run(ctx, *execution)
-
-		fmt.Printf("%+v\n", result)
 
 		// then
 		assert.NoError(t, err)

@@ -7,9 +7,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/logs/adapter"
 	"github.com/kubeshop/testkube/pkg/logs/client"
@@ -91,6 +94,82 @@ func TestLogs_EventsFlow(t *testing.T) {
 
 		// then all adapters should be gracefully stopped
 		assert.Equal(t, 0, log.GetConsumersStats(ctx).Count)
+	})
+
+	t.Run("should start and stop on test event", func(t *testing.T) {
+		// given context with 1s deadline
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(1*time.Minute))
+		defer cancel()
+
+		// and NATS test server with connection
+		ns, nc := bus.TestServerWithConnection()
+		defer ns.Shutdown()
+
+		id := "id1"
+
+		// and jetstream configured
+		js, err := jetstream.New(nc)
+		assert.NoError(t, err)
+
+		// and KV store
+		kv, err := js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: "start-stop-on-test"})
+		assert.NoError(t, err)
+		assert.NotNil(t, kv)
+
+		// and logs state manager
+		state := state.NewState(kv)
+
+		// and initialized log service
+		log := NewLogsService(nc, js, state).
+			WithRandomPort()
+
+		// given example adapter
+		a := NewMockAdapter()
+
+		messagesCount := 10000
+
+		// with 4 adapters (the same adapter is added 4 times so it'll receive 4 times more messages)
+		log.AddAdapter(a)
+
+		// and log service running
+		go func() {
+			log.Run(ctx)
+		}()
+
+		// and test event emitter
+		ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+		assert.NoError(t, err)
+		eventBus := bus.NewNATSBus(ec)
+		emitter := event.NewEmitter(eventBus, "test-cluster", map[string]string{})
+
+		// and stream client
+		stream, err := client.NewNatsLogStream(nc)
+		assert.NoError(t, err)
+
+		// and initialized log stream for given ID
+		meta, err := stream.Init(ctx, id)
+		assert.NotEmpty(t, meta.Name)
+		assert.NoError(t, err)
+
+		// and ready to get messages
+		<-log.Ready
+
+		// when start event triggered
+		emitter.Notify(testkube.NewEventStartTest(&testkube.Execution{Id: "id1"}))
+
+		for i := 0; i < messagesCount; i++ {
+			// and when data pushed to the log stream
+			err = stream.Push(ctx, id, events.NewLog("hello"))
+			assert.NoError(t, err)
+		}
+
+		// and wait for message to be propagated
+		emitter.Notify(testkube.NewEventEndTestFailed(&testkube.Execution{Id: "id1"}))
+
+		time.Sleep(time.Second)
+
+		assertMessagesCount(t, a, messagesCount)
+
 	})
 
 	t.Run("should react on new message and pass data to adapter", func(t *testing.T) {
