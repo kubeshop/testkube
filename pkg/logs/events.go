@@ -31,12 +31,12 @@ const (
 
 var (
 	StartSubjects = []string{
-		testkube.StartSubject,
+		testkube.TestStartSubject,
 		LogStartSubject,
 	}
 
 	StopSubjects = []string{
-		testkube.StopSubject,
+		testkube.TestStopSubject,
 		LogStopSubject,
 	}
 )

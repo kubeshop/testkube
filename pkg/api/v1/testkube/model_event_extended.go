@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	StartSubject = "events.test.start"
-	StopSubject  = "events.test.stop"
+	TestStartSubject = "events.test.start"
+	TestStopSubject  = "events.test.stop"
 )
 
 func NewEvent(t *EventType, resource *EventResource, id string) Event {
@@ -26,7 +26,7 @@ func NewEventStartTest(execution *Execution) Event {
 		Id:            uuid.NewString(),
 		Type_:         EventStartTest,
 		TestExecution: execution,
-		StreamTopic:   StartSubject,
+		StreamTopic:   TestStartSubject,
 		ResourceId:    execution.Id,
 	}
 }
@@ -36,7 +36,7 @@ func NewEventEndTestSuccess(execution *Execution) Event {
 		Id:            uuid.NewString(),
 		Type_:         EventEndTestSuccess,
 		TestExecution: execution,
-		StreamTopic:   StopSubject,
+		StreamTopic:   TestStopSubject,
 		ResourceId:    execution.Id,
 	}
 }
@@ -46,7 +46,7 @@ func NewEventEndTestFailed(execution *Execution) Event {
 		Id:            uuid.NewString(),
 		Type_:         EventEndTestFailed,
 		TestExecution: execution,
-		StreamTopic:   StopSubject,
+		StreamTopic:   TestStopSubject,
 		ResourceId:    execution.Id,
 	}
 }
@@ -56,7 +56,7 @@ func NewEventEndTestAborted(execution *Execution) Event {
 		Id:            uuid.NewString(),
 		Type_:         EventEndTestAborted,
 		TestExecution: execution,
-		StreamTopic:   StopSubject,
+		StreamTopic:   TestStopSubject,
 		ResourceId:    execution.Id,
 	}
 }
@@ -66,7 +66,7 @@ func NewEventEndTestTimeout(execution *Execution) Event {
 		Id:            uuid.NewString(),
 		Type_:         EventEndTestTimeout,
 		TestExecution: execution,
-		StreamTopic:   StopSubject,
+		StreamTopic:   TestStopSubject,
 		ResourceId:    execution.Id,
 	}
 }
