@@ -224,6 +224,11 @@ func main() {
 		ui.ExitOnError("Creating TestKube Clientset", err)
 	}
 
+	var logGrpcClient logsclient.StreamGetter
+	if features.LogsV2 {
+		logGrpcClient = logsclient.NewGrpcClient(cfg.LogServerGrpcAddress)
+	}
+
 	// DI
 	var resultsRepository result.Repository
 	var testResultsRepository testresult.Repository
@@ -242,7 +247,7 @@ func main() {
 		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)
 		ui.ExitOnError("Getting mongo database", err)
 		isDocDb := cfg.APIMongoDBType == storage.TypeDocDB
-		mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb)
+		mongoResultsRepository := result.NewMongoRepository(db, logGrpcClient, cfg.APIMongoAllowDiskUse, isDocDb, features)
 		resultsRepository = mongoResultsRepository
 		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb)
 		configRepository = configrepository.NewMongoRepository(db)
@@ -458,11 +463,6 @@ func main() {
 	slackLoader, err := newSlackLoader(cfg, envs)
 	if err != nil {
 		ui.ExitOnError("Creating slack loader", err)
-	}
-
-	var logGrpcClient logsclient.StreamGetter
-	if features.LogsV2 {
-		logGrpcClient = logsclient.NewGrpcClient(cfg.LogServerGrpcAddress)
 	}
 
 	api := apiv1.NewTestkubeAPI(
