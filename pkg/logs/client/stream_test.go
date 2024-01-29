@@ -25,7 +25,7 @@ func TestStream_StartStop(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, StreamPrefix+id, meta.Name)
 
-	err = client.PushBytes(ctx, id, []byte(`{"content":"hello 1"}`))
+	err = client.PushBytes(ctx, id, []byte(`{"resourceId":"hello 1"}`))
 	assert.NoError(t, err)
 
 	var startReceived, stopReceived bool

@@ -103,7 +103,7 @@ func (ls *LogsService) handleMessage(a adapter.Adapter, id string) func(msg jets
 }
 
 // handleStart will handle start event and create logs consumers, also manage state of given (execution) id
-func (ls *LogsService) handleStart(ctx context.Context) func(msg *nats.Msg) {
+func (ls *LogsService) handleStart(ctx context.Context, subject string) func(msg *nats.Msg) {
 	return func(msg *nats.Msg) {
 		event := events.Trigger{}
 		err := json.Unmarshal(msg.Data, &event)
@@ -142,9 +142,10 @@ func (ls *LogsService) handleStart(ctx context.Context) func(msg *nats.Msg) {
 				continue
 			}
 
+			consumerName := id + "_" + adapter.Name() + "_" + subject
 			// store consumer instance so we can stop it later in StopSubject handler
-			ls.consumerInstances.Store(id+"_"+adapter.Name(), Consumer{
-				Name:     id + "_" + adapter.Name(),
+			ls.consumerInstances.Store(consumerName, Consumer{
+				Name:     consumerName,
 				Context:  cons,
 				Instance: c,
 			})
@@ -152,18 +153,21 @@ func (ls *LogsService) handleStart(ctx context.Context) func(msg *nats.Msg) {
 			l.Infow("consumer started", "consumer", adapter.Name(), "id", id, "stream", streamName)
 		}
 
-		// reply to start event that everything was initialized correctly
-		err = msg.Respond([]byte("ok"))
-		if err != nil {
-			log.Errorw("error responding to start event", "error", err)
-			return
+		// confirm when reply is set
+		if msg.Reply != "" {
+			// reply to start event that everything was initialized correctly
+			err = msg.Respond([]byte("ok"))
+			if err != nil {
+				log.Errorw("error responding to start event", "error", err)
+				return
+			}
 		}
 	}
 
 }
 
 // handleStop will handle stop event and stop logs consumers, also clean consumers state
-func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
+func (ls *LogsService) handleStop(ctx context.Context, subject string) func(msg *nats.Msg) {
 	return func(msg *nats.Msg) {
 		var (
 			wg      sync.WaitGroup
@@ -179,15 +183,19 @@ func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 			return
 		}
 
-		l := ls.log.With("id", event.ResourceId, "event", "stop")
+		id := event.ResourceId
 
-		err = msg.Respond([]byte("stop-queued"))
-		if err != nil {
-			l.Errorw("error responding to stop event", "error", err)
+		l := ls.log.With("id", id, "event", "stop")
+
+		if msg.Reply != "" {
+			err = msg.Respond([]byte("stop-queued"))
+			if err != nil {
+				l.Errorw("error responding to stop event", "error", err)
+			}
 		}
 
 		for _, adapter := range ls.adapters {
-			consumerName := event.ResourceId + "_" + adapter.Name()
+			consumerName := id + "_" + adapter.Name() + "_" + subject
 
 			// locate consumer on this pod
 			c, found := ls.consumerInstances.Load(consumerName)
@@ -201,7 +209,7 @@ func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 			wg.Add(1)
 			stopped++
 			consumer := c.(Consumer)
-			go ls.stopConsumer(ctx, &wg, consumer, adapter, event.ResourceId)
+			go ls.stopConsumer(ctx, &wg, consumer, adapter, id)
 
 		}
 

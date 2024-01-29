@@ -12,6 +12,14 @@ const (
 	TestStopSubject  = "events.test.stop"
 )
 
+// check if Event implements model generic event type
+var _ Trigger = Event{}
+
+// Trigger for generic events
+type Trigger interface {
+	GetResourceId() string
+}
+
 func NewEvent(t *EventType, resource *EventResource, id string) Event {
 	return Event{
 		Id:         uuid.NewString(),
@@ -212,4 +220,9 @@ func (e Event) Topic() string {
 	}
 
 	return "events." + string(*e.Resource) + "." + e.ResourceId
+}
+
+// GetResourceId implmenents generic event trigger
+func (e Event) GetResourceId() string {
+	return e.ResourceId
 }
