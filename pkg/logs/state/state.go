@@ -40,7 +40,6 @@ func (s State) Get(ctx context.Context, key string) (LogState, error) {
 	}
 
 	return LogState(state.Value()[0]), nil
-
 }
 
 // Put puts state for given key - executionId
