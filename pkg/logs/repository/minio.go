@@ -132,7 +132,7 @@ func (r MinioLogsRepository) readLineLogsV1(ch chan events.LogResponse, buffer [
 
 		ch <- events.LogResponse{Log: events.Log{
 			Content: string(b),
-			Version: string(events.LogVersionV2),
+			Version: string(events.LogVersionV1),
 		}}
 	}
 

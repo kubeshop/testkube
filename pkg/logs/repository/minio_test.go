@@ -109,11 +109,11 @@ func TestRepository_MinioGetLogsV1(t *testing.T) {
 			eventLogs: []events.Log{
 				{
 					Content: contentLog1,
-					Version: string(events.LogVersionV2),
+					Version: string(events.LogVersionV1),
 				},
 				{
 					Content: contentLog2,
-					Version: string(events.LogVersionV2),
+					Version: string(events.LogVersionV1),
 				},
 			},
 		},

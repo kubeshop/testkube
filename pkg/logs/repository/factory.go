@@ -33,7 +33,7 @@ func (b JsMinioFactory) GetRepository(s state.LogState) (LogsRepository, error) 
 	// pending get from buffer
 	case state.LogStatePending:
 		return NewJetstreamRepository(b.logStream), nil
-	case state.LogStateFinished:
+	case state.LogStateFinished, state.LogStateUnknown:
 		return NewMinioRepository(b.storageClient, b.bucket), nil
 	default:
 		return nil, ErrUnknownState
