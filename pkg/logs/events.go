@@ -30,14 +30,14 @@ const (
 )
 
 var (
-	StartSubjects = []string{
-		testkube.TestStartSubject,
-		LogStartSubject,
+	StartSubjects = map[string]string{
+		"test":    testkube.TestStartSubject,
+		"generic": LogStartSubject,
 	}
 
-	StopSubjects = []string{
-		testkube.TestStopSubject,
-		LogStopSubject,
+	StopSubjects = map[string]string{
+		"test":    testkube.TestStopSubject,
+		"generic": LogStopSubject,
 	}
 )
 
@@ -71,7 +71,7 @@ func (ls *LogsService) createStream(ctx context.Context, id string) (jetstream.S
 
 // handleMessage will handle incoming message from logs stream and proxy it to given adapter
 func (ls *LogsService) handleMessage(a adapter.Adapter, id string) func(msg jetstream.Msg) {
-	log := ls.log.With("id", id, "consumer", a.Name())
+	log := ls.log.With("id", id, "adapter", a.Name())
 
 	return func(msg jetstream.Msg) {
 		log.Debugw("got message", "data", string(msg.Data()))
@@ -150,7 +150,7 @@ func (ls *LogsService) handleStart(ctx context.Context, subject string) func(msg
 				Instance: c,
 			})
 
-			l.Infow("consumer started", "consumer", adapter.Name(), "id", id, "stream", streamName)
+			l.Infow("consumer started", "adapter", adapter.Name(), "id", id, "stream", streamName)
 		}
 
 		// confirm when reply is set
@@ -167,7 +167,7 @@ func (ls *LogsService) handleStart(ctx context.Context, subject string) func(msg
 }
 
 // handleStop will handle stop event and stop logs consumers, also clean consumers state
-func (ls *LogsService) handleStop(ctx context.Context, subject string) func(msg *nats.Msg) {
+func (ls *LogsService) handleStop(ctx context.Context, group string) func(msg *nats.Msg) {
 	return func(msg *nats.Msg) {
 		var (
 			wg      sync.WaitGroup
@@ -195,15 +195,15 @@ func (ls *LogsService) handleStop(ctx context.Context, subject string) func(msg 
 		}
 
 		for _, adapter := range ls.adapters {
-			consumerName := id + "_" + adapter.Name() + "_" + subject
+			consumerName := id + "_" + adapter.Name() + "_" + group
 
 			// locate consumer on this pod
 			c, found := ls.consumerInstances.Load(consumerName)
-			l.Debugw("consumer instance", "c", c, "found", found, "name", consumerName)
 			if !found {
 				l.Debugw("consumer not found on this pod", "found", found, "name", consumerName)
 				continue
 			}
+			l.Debugw("consumer instance found", "c", c, "found", found, "name", consumerName)
 
 			// stop consumer
 			wg.Add(1)
