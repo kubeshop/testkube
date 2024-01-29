@@ -177,7 +177,8 @@ func (s *MinioAdapter) combineData(ctxt context.Context, minioClient *minio.Clie
 		s.Log.Errorw("error putting object", "err", err)
 		return err
 	}
-	s.Log.Debugw("put object successfully", "id", id, "s.bucket", s.bucket, "parts", parts)
+
+	s.Log.Debugw("data combined", "id", id, "s.bucket", s.bucket, "parts", parts)
 
 	if deleteIntermediaryData {
 		for i := 0; i < parts; i++ {

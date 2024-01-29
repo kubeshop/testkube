@@ -95,11 +95,16 @@ func (ls *LogsService) Run(ctx context.Context) (err error) {
 	// For start event we must build stream for given execution id and start consuming it
 	// this one will must follow a queue group each pod will get it's own bunch of executions to handle
 	// Start event will be triggered by logs process controller (scheduler)
-	ls.nats.QueueSubscribe(StartSubject, StartQueue, ls.handleStart(ctx))
+	// group is common name for both start and stop subjects
+	for group, subject := range StartSubjects {
+		ls.nats.QueueSubscribe(subject, StartQueue, ls.handleStart(ctx, group))
+	}
 
 	// listen on all pods as we don't control which one will have given consumer
 	// Stop event will be triggered by logs process controller (scheduler)
-	ls.nats.Subscribe(StopSubject, ls.handleStop(ctx))
+	for group, subject := range StopSubjects {
+		ls.nats.Subscribe(subject, ls.handleStop(ctx, group))
+	}
 
 	// Send ready signal
 	ls.Ready <- struct{}{}
