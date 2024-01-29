@@ -122,7 +122,7 @@ func (c NatsLogStream) Get(ctx context.Context, id string) (chan events.LogRespo
 
 // syncCall sends request to given subject and waits for response
 func (c NatsLogStream) syncCall(ctx context.Context, subject, id string) (resp StreamResponse, err error) {
-	b, err := json.Marshal(events.Trigger{Id: id})
+	b, err := json.Marshal(events.Trigger{ResourceId: id})
 	if err != nil {
 		return resp, err
 	}

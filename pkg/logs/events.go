@@ -10,6 +10,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/logs/adapter"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/logs/state"
@@ -21,11 +22,23 @@ const (
 
 	StreamPrefix = "log"
 
-	StartSubject = "events.logs.start"
-	StopSubject  = "events.logs.stop"
-
 	StartQueue = "logsstart"
 	StopQueue  = "logsstop"
+
+	LogStartSubject = "events.logs.start"
+	LogStopSubject  = "events.logs.stop"
+)
+
+var (
+	StartSubjects = []string{
+		testkube.StartSubject,
+		LogStartSubject,
+	}
+
+	StopSubjects = []string{
+		testkube.StopSubject,
+		LogStopSubject,
+	}
 )
 
 type Consumer struct {
@@ -47,9 +60,9 @@ func (ls *LogsService) initConsumer(ctx context.Context, a adapter.Adapter, stre
 	})
 }
 
-func (ls *LogsService) createStream(ctx context.Context, event events.Trigger) (jetstream.Stream, error) {
+func (ls *LogsService) createStream(ctx context.Context, id string) (jetstream.Stream, error) {
 	// create stream for incoming logs
-	streamName := StreamPrefix + event.Id
+	streamName := StreamPrefix + id
 	return ls.js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
 		Name:    streamName,
 		Storage: jetstream.FileStorage, // durable stream as we can hit mem limit
@@ -57,8 +70,8 @@ func (ls *LogsService) createStream(ctx context.Context, event events.Trigger) (
 }
 
 // handleMessage will handle incoming message from logs stream and proxy it to given adapter
-func (ls *LogsService) handleMessage(a adapter.Adapter, event events.Trigger) func(msg jetstream.Msg) {
-	log := ls.log.With("id", event.Id, "consumer", a.Name())
+func (ls *LogsService) handleMessage(a adapter.Adapter, id string) func(msg jetstream.Msg) {
+	log := ls.log.With("id", id, "consumer", a.Name())
 
 	return func(msg jetstream.Msg) {
 		log.Debugw("got message", "data", string(msg.Data()))
@@ -74,7 +87,7 @@ func (ls *LogsService) handleMessage(a adapter.Adapter, event events.Trigger) fu
 			return
 		}
 
-		err = a.Notify(event.Id, logChunk)
+		err = a.Notify(id, logChunk)
 		if err != nil {
 			if err := msg.Nak(); err != nil {
 				log.Errorw("error nacking message", "error", err)
@@ -98,23 +111,24 @@ func (ls *LogsService) handleStart(ctx context.Context) func(msg *nats.Msg) {
 			ls.log.Errorw("can't handle start event", "error", err)
 			return
 		}
-		log := ls.log.With("id", event.Id, "event", "start")
+		id := event.ResourceId
+		log := ls.log.With("id", id, "event", "start")
 
-		ls.state.Put(ctx, event.Id, state.LogStatePending)
-		s, err := ls.createStream(ctx, event)
+		ls.state.Put(ctx, id, state.LogStatePending)
+		s, err := ls.createStream(ctx, id)
 		if err != nil {
-			ls.log.Errorw("error creating stream", "error", err, "id", event.Id)
+			ls.log.Errorw("error creating stream", "error", err, "id", id)
 			return
 		}
 
 		log.Infow("stream created", "stream", s)
 
-		streamName := StreamPrefix + event.Id
+		streamName := StreamPrefix + id
 
 		// for each adapter create NATS consumer and consume stream from it e.g. cloud s3 or others
 		for i, adapter := range ls.adapters {
 			l := log.With("adapter", adapter.Name())
-			c, err := ls.initConsumer(ctx, adapter, streamName, event.Id, i)
+			c, err := ls.initConsumer(ctx, adapter, streamName, id, i)
 			if err != nil {
 				log.Errorw("error creating consumer", "error", err)
 				return
@@ -122,20 +136,20 @@ func (ls *LogsService) handleStart(ctx context.Context) func(msg *nats.Msg) {
 
 			// handle message per each adapter
 			l.Infow("consumer created", "consumer", c.CachedInfo(), "stream", streamName)
-			cons, err := c.Consume(ls.handleMessage(adapter, event))
+			cons, err := c.Consume(ls.handleMessage(adapter, id))
 			if err != nil {
 				log.Errorw("error creating consumer", "error", err, "consumer", c.CachedInfo())
 				continue
 			}
 
 			// store consumer instance so we can stop it later in StopSubject handler
-			ls.consumerInstances.Store(event.Id+"_"+adapter.Name(), Consumer{
-				Name:     event.Id + "_" + adapter.Name(),
+			ls.consumerInstances.Store(id+"_"+adapter.Name(), Consumer{
+				Name:     id + "_" + adapter.Name(),
 				Context:  cons,
 				Instance: c,
 			})
 
-			l.Infow("consumer started", "consumer", adapter.Name(), "id", event.Id, "stream", streamName)
+			l.Infow("consumer started", "consumer", adapter.Name(), "id", id, "stream", streamName)
 		}
 
 		// reply to start event that everything was initialized correctly
@@ -165,7 +179,7 @@ func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 			return
 		}
 
-		l := ls.log.With("id", event.Id, "event", "stop")
+		l := ls.log.With("id", event.ResourceId, "event", "stop")
 
 		err = msg.Respond([]byte("stop-queued"))
 		if err != nil {
@@ -173,7 +187,7 @@ func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 		}
 
 		for _, adapter := range ls.adapters {
-			consumerName := event.Id + "_" + adapter.Name()
+			consumerName := event.ResourceId + "_" + adapter.Name()
 
 			// locate consumer on this pod
 			c, found := ls.consumerInstances.Load(consumerName)
@@ -187,7 +201,7 @@ func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 			wg.Add(1)
 			stopped++
 			consumer := c.(Consumer)
-			go ls.stopConsumer(ctx, &wg, consumer, adapter, event.Id)
+			go ls.stopConsumer(ctx, &wg, consumer, adapter, event.ResourceId)
 
 		}
 
@@ -195,8 +209,8 @@ func (ls *LogsService) handleStop(ctx context.Context) func(msg *nats.Msg) {
 		l.Debugw("wait completed")
 
 		if stopped > 0 {
-			ls.state.Put(ctx, event.Id, state.LogStateFinished)
-			l.Infow("execution logs consumers stopped", "id", event.Id, "stopped", stopped)
+			ls.state.Put(ctx, event.ResourceId, state.LogStateFinished)
+			l.Infow("execution logs consumers stopped", "id", event.ResourceId, "stopped", stopped)
 		} else {
 			l.Debugw("no consumers found on this pod to stop")
 		}

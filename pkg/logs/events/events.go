@@ -9,11 +9,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/output"
 )
 
-// Generic event like log-start log-end
+// Generic event like log-start log-end with resource id
 type Trigger struct {
-	Id       string            `json:"id,omitempty"`
-	Type     string            `json:"type,omitempty"`
-	Metadata map[string]string `json:"metadata,omitempty"`
+	ResourceId string `json:"id,omitempty"`
 }
 
 type LogVersion string
