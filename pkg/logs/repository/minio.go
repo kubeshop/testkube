@@ -20,6 +20,7 @@ import (
 
 const (
 	defaultBufferSize = 100
+	logsV1Prefix      = "{\"id\""
 )
 
 func NewMinioRepository(storageClient storage.ClientBucket, bucket string) LogsRepository {
@@ -83,7 +84,7 @@ func (r MinioLogsRepository) readLineLogsV2(file io.Reader, ch chan events.LogRe
 
 		if !firstLine {
 			firstLine = true
-			if strings.HasPrefix(string(b), "{\"id\"") {
+			if strings.HasPrefix(string(b), logsV1Prefix) {
 				version = events.LogVersionV1
 			}
 		}
