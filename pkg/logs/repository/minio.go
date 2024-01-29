@@ -2,15 +2,18 @@ package repository
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"io"
+	"strings"
 
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/logs/events"
+	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
@@ -41,25 +44,55 @@ func (r MinioLogsRepository) Get(ctx context.Context, id string) (chan events.Lo
 	}
 
 	ch := make(chan events.LogResponse, defaultBufferSize)
-	reader := bufio.NewReader(file)
+
 	go func() {
 		defer close(ch)
 
-		for {
-			b, err := utils.ReadLongLine(reader)
-			if err != nil {
-				if errors.Is(err, io.EOF) {
-					err = nil
-				}
-				break
-			}
+		buffer, version, err := r.readLineLogsV2(file, ch)
+		if err != nil {
+			ch <- events.LogResponse{Error: err}
+			return
+		}
 
-			if err != nil {
-				r.log.Errorw("error getting log line", "error", err)
+		if version == events.LogVersionV1 {
+			if err = r.readLineLogsV1(ch, buffer); err != nil {
 				ch <- events.LogResponse{Error: err}
 				return
 			}
+		}
+	}()
 
+	return ch, nil
+}
+
+func (r MinioLogsRepository) readLineLogsV2(file io.Reader, ch chan events.LogResponse) ([]byte, events.LogVersion, error) {
+	var buffer []byte
+	reader := bufio.NewReader(file)
+	firstLine := false
+	version := events.LogVersionV2
+	for {
+		b, err := utils.ReadLongLine(reader)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+
+			r.log.Errorw("error getting log line", "error", err)
+			return nil, "", err
+		}
+
+		if !firstLine {
+			firstLine = true
+			if strings.HasPrefix(string(b), "{\"id\"") {
+				version = events.LogVersionV1
+			}
+		}
+
+		if version == events.LogVersionV1 {
+			buffer = append(buffer, b...)
+		}
+
+		if version == events.LogVersionV2 {
 			var log events.Log
 			err = json.Unmarshal(b, &log)
 			if err != nil {
@@ -70,7 +103,37 @@ func (r MinioLogsRepository) Get(ctx context.Context, id string) (chan events.Lo
 
 			ch <- events.LogResponse{Log: log}
 		}
-	}()
+	}
 
-	return ch, nil
+	return buffer, version, nil
+}
+
+func (r MinioLogsRepository) readLineLogsV1(ch chan events.LogResponse, buffer []byte) error {
+	var output result.ExecutionOutput
+	decoder := json.NewDecoder(bytes.NewBuffer(buffer))
+	err := decoder.Decode(&output)
+	if err != nil {
+		r.log.Errorw("error decoding logs", "error", err)
+		return err
+	}
+
+	reader := bufio.NewReader(bytes.NewBuffer([]byte(output.Output)))
+	for {
+		b, err := utils.ReadLongLine(reader)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+
+			r.log.Errorw("error getting log line", "error", err)
+			return err
+		}
+
+		ch <- events.LogResponse{Log: events.Log{
+			Content: string(b),
+			Version: string(events.LogVersionV2),
+		}}
+	}
+
+	return nil
 }
