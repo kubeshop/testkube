@@ -6,27 +6,27 @@ import (
 	"github.com/kubeshop/testkube/pkg/logs/events"
 )
 
-var _ Adapter = &DummyAdapter{}
+var _ Adapter = &DebugAdapter{}
 
-// NewS3Subscriber creates new DummySubscriber which will send data to local MinIO bucket
-func NewDummyAdapter() *DummyAdapter {
-	return &DummyAdapter{}
+// NewDebugAdapter creates new DebugAdapter which will write logs to stdout
+func NewDebugAdapter() *DebugAdapter {
+	return &DebugAdapter{}
 }
 
-type DummyAdapter struct {
+type DebugAdapter struct {
 	Bucket string
 }
 
-func (s *DummyAdapter) Notify(id string, e events.Log) error {
+func (s *DebugAdapter) Notify(id string, e events.Log) error {
 	fmt.Printf("%s %+v\n", id, e)
 	return nil
 }
 
-func (s *DummyAdapter) Stop(id string) error {
+func (s *DebugAdapter) Stop(id string) error {
 	fmt.Printf("stopping %s \n", id)
 	return nil
 }
 
-func (s *DummyAdapter) Name() string {
+func (s *DebugAdapter) Name() string {
 	return "dummy"
 }
