@@ -196,6 +196,7 @@ func (s *MinioAdapter) combineData(ctxt context.Context, minioClient *minio.Clie
 			}
 		}
 	}
+
 	buffer.Reset()
 	if len(returnedError) == 0 {
 		return nil
