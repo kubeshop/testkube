@@ -33,9 +33,11 @@ func StreamToLogsChannel(resp io.Reader, logs chan output.Output) {
 	for {
 		b, err := utils.ReadLongLine(reader)
 		if err != nil {
-			if err == io.EOF {
-				break
+			if err != io.EOF {
+				fmt.Printf("Read long line error: %+v' \n", err)
 			}
+
+			break
 		}
 		chunk := trimDataChunk(b)
 
@@ -64,9 +66,11 @@ func StreamToLogsChannelV2(resp io.Reader, logs chan events.Log) {
 	for {
 		b, err := utils.ReadLongLine(reader)
 		if err != nil {
-			if err == io.EOF {
-				break
+			if err != io.EOF {
+				fmt.Printf("Read long line error: %+v' \n", err)
 			}
+
+			break
 		}
 		chunk := trimDataChunk(b)
 
