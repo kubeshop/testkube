@@ -193,7 +193,7 @@ func watchLogsV2(id string, silentMode bool, client apiclientv1.Client) error {
 		}
 
 		if !silentMode {
-			ui.LogLine(l.String())
+			ui.LogLine(l.Content)
 		}
 	}
 
