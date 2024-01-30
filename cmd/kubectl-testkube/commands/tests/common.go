@@ -177,6 +177,44 @@ func watchLogs(id string, silentMode bool, client apiclientv1.Client) error {
 	return result
 }
 
+func watchLogsV2(id string, silentMode bool, client apiclientv1.Client) error {
+	ui.Info("Getting logs from test job", id)
+
+	logs, err := client.LogsV2(id)
+	ui.ExitOnError("getting logs from executor", err)
+
+	var result error
+	for l := range logs {
+		if l.Error_ {
+			ui.UseStderr()
+			ui.Errf(l.Content)
+			result = errors.New(l.Content)
+			continue
+		}
+
+		if !silentMode {
+			ui.LogLine(l.String())
+		}
+	}
+
+	ui.NL()
+
+	// TODO Websocket research + plug into Event bus (EventEmitter)
+	// watch for success | error status - in case of connection error on logs watch need fix in 0.8
+	for range time.Tick(time.Second) {
+		execution, err := client.GetExecution(id)
+		ui.ExitOnError("get test execution details", err)
+
+		fmt.Print(".")
+
+		if execution.ExecutionResult.IsCompleted() {
+			return result
+		}
+	}
+
+	return result
+}
+
 func newContentFromFlags(cmd *cobra.Command) (content *testkube.TestContent, err error) {
 	testContentType := cmd.Flag("test-content-type").Value.String()
 	uri := cmd.Flag("uri").Value.String()
