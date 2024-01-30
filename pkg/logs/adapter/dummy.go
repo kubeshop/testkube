@@ -1,9 +1,10 @@
 package adapter
 
 import (
+	"go.uber.org/zap"
+
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/logs/events"
-	"go.uber.org/zap"
 )
 
 var _ Adapter = &DebugAdapter{}
