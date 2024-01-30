@@ -172,13 +172,14 @@ func (s *MinioAdapter) combineData(ctxt context.Context, minioClient *minio.Clie
 			}
 		}
 	}
-	_, err := minioClient.PutObject(ctxt, s.bucket, id, buffer, int64(buffer.Len()), minio.PutObjectOptions{ContentType: "application/octet-stream"})
+
+	info, err := minioClient.PutObject(ctxt, s.bucket, id, buffer, int64(buffer.Len()), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
 		s.Log.Errorw("error putting object", "err", err)
 		return err
 	}
 
-	s.Log.Debugw("data combined", "id", id, "s.bucket", s.bucket, "parts", parts)
+	s.Log.Debugw("data combined", "id", id, "s.bucket", s.bucket, "parts", parts, "uploadinfo", info)
 
 	if deleteIntermediaryData {
 		for i := 0; i < parts; i++ {
@@ -192,6 +193,7 @@ func (s *MinioAdapter) combineData(ctxt context.Context, minioClient *minio.Clie
 			}
 		}
 	}
+
 	buffer.Reset()
 	if len(returnedError) == 0 {
 		return nil
