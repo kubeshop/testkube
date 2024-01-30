@@ -5,8 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/minio/minio-go/v7"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/logs/events"
@@ -97,7 +99,9 @@ func TestRepository_MinioGetLogsV1(t *testing.T) {
 	data, err := json.Marshal(output)
 	assert.NoError(t, err)
 
-	storageClient.EXPECT().DownloadFileFromBucket(gomock.Any(), "bucket", "", "test-execution-1").Return(bytes.NewReader(data), nil)
+	current := time.Now()
+	storageClient.EXPECT().DownloadFileFromBucket(gomock.Any(), "bucket", "", "test-execution-1").
+		Return(bytes.NewReader(data), minio.ObjectInfo{LastModified: current}, nil)
 	r := NewMinioRepository(storageClient, "bucket")
 
 	tests := []struct {
@@ -108,10 +112,12 @@ func TestRepository_MinioGetLogsV1(t *testing.T) {
 			name: "Test getting logs from minio",
 			eventLogs: []events.Log{
 				{
+					Time:    current,
 					Content: contentLog1,
 					Version: string(events.LogVersionV1),
 				},
 				{
+					Time:    current,
 					Content: contentLog2,
 					Version: string(events.LogVersionV1),
 				},

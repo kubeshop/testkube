@@ -10,14 +10,14 @@ import (
 )
 
 // Client is storage client abstraction
+//
+//go:generate mockgen -destination=./storage_mock.go -package=storage "github.com/kubeshop/testkube/pkg/storage" Client
 type Client interface {
 	ClientBucket
 	ClientImplicitBucket
 }
 
 // ClientImplicitBucket is storage client abstraction where bucket name is provided from config
-//
-//go:generate mockgen -destination=./storage_mock.go -package=storage "github.com/kubeshop/testkube/pkg/storage" ClientImplicitBucket
 type ClientImplicitBucket interface {
 	IsConnectionPossible(ctx context.Context) (bool, error)
 	ListFiles(ctx context.Context, bucketFolder string) ([]testkube.Artifact, error)
@@ -34,7 +34,7 @@ type ClientBucket interface {
 	CreateBucket(ctx context.Context, bucket string) error
 	DeleteBucket(ctx context.Context, bucket string, force bool) error
 	ListBuckets(ctx context.Context) ([]string, error)
-	DownloadFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) (io.Reader, error)
+	DownloadFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) (io.Reader, minio.ObjectInfo, error)
 	DownloadArchiveFromBucket(ctx context.Context, bucket, bucketFolder string, masks []string) (io.Reader, error)
 	UploadFileToBucket(ctx context.Context, bucket, bucketFolder, filePath string, reader io.Reader, objectSize int64) error
 	GetValidBucketName(parentType string, parentName string) string

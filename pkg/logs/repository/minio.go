@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"strings"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -38,7 +39,7 @@ type MinioLogsRepository struct {
 }
 
 func (r MinioLogsRepository) Get(ctx context.Context, id string) (chan events.LogResponse, error) {
-	file, err := r.storageClient.DownloadFileFromBucket(ctx, r.bucket, "", id)
+	file, info, err := r.storageClient.DownloadFileFromBucket(ctx, r.bucket, "", id)
 	if err != nil {
 		r.log.Errorw("error downloading log file from bucket", "error", err)
 		return nil, err
@@ -56,7 +57,7 @@ func (r MinioLogsRepository) Get(ctx context.Context, id string) (chan events.Lo
 		}
 
 		if version == events.LogVersionV1 {
-			if err = r.readLineLogsV1(ch, buffer); err != nil {
+			if err = r.readLineLogsV1(ch, buffer, info.LastModified); err != nil {
 				ch <- events.LogResponse{Error: err}
 				return
 			}
@@ -109,7 +110,7 @@ func (r MinioLogsRepository) readLineLogsV2(file io.Reader, ch chan events.LogRe
 	return buffer, version, nil
 }
 
-func (r MinioLogsRepository) readLineLogsV1(ch chan events.LogResponse, buffer []byte) error {
+func (r MinioLogsRepository) readLineLogsV1(ch chan events.LogResponse, buffer []byte, logTime time.Time) error {
 	var output result.ExecutionOutput
 	decoder := json.NewDecoder(bytes.NewBuffer(buffer))
 	err := decoder.Decode(&output)
@@ -131,6 +132,7 @@ func (r MinioLogsRepository) readLineLogsV1(ch chan events.LogResponse, buffer [
 		}
 
 		ch <- events.LogResponse{Log: events.Log{
+			Time:    logTime,
 			Content: string(b),
 			Version: string(events.LogVersionV1),
 		}}
