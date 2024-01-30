@@ -208,6 +208,7 @@ func watchLogsV2(id string, silentMode bool, client apiclientv1.Client) error {
 		fmt.Print(".")
 
 		if execution.ExecutionResult.IsCompleted() {
+			ui.Info("Execution completed")
 			return result
 		}
 	}
