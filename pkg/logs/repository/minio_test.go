@@ -49,7 +49,8 @@ func TestRepository_MinioGetLogV2(t *testing.T) {
 	data = append(data, b...)
 	data = append(data, []byte("\n")...)
 
-	storageClient.EXPECT().DownloadFileFromBucket(gomock.Any(), "bucket", "", "test-execution-1").Return(bytes.NewReader(data), nil)
+	storageClient.EXPECT().DownloadFileFromBucket(gomock.Any(), "bucket", "", "test-execution-1").
+		Return(bytes.NewReader(data), minio.ObjectInfo{}, nil)
 	r := NewMinioRepository(storageClient, "bucket")
 
 	tests := []struct {
