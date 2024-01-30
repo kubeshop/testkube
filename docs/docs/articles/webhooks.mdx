@@ -5,6 +5,25 @@ import TabItem from "@theme/TabItem";
 
 Webhooks allow you to integrate Testkube with external systems by sending HTTP POST payloads containing information about Testkube executions and their current state when specific events occur. To set up webhooks in Testkube, you'll need to have an HTTPS endpoint to receive the events and a payload template to be sent along with the data.
 
+:::note
+Please visit our Blog, [Empowering Kubernetes Tests with Webhooks](https://testkube.io/blog/empowering-kubernetes-tests-with-webhooks) for a tutorial on setting up webhooks for Slack and Grafana Dashboard.
+:::
+
+## Benefits of using Webhooks in Testkube
+
+Testkube uses webhooks to integrate with external systems, allowing you to effortlessly synchronize your testing workflows with other tools and platforms. These webhooks are designed to carry critical information regarding your tests as HTTP POST payloads. The information can include the execution and real-time status depending on how you configure it.
+
+To leverage webhooks, you need to ensure that the platform that you want to send information to has an HTTPS endpoint to receive the events. Testkube also allows you to customize the payloads.
+
+You can create a webhook from the dashboard, use the CLI, or create it as a custom resource. Before we show how it’s done, let’s understand a few scenarios where Webhooks in Testkube shine:
+
+- Incident Management & Response: Webhooks can be used to create incidents and alert on-call teams when a critical test fails. This ensures a timely response and avoids any potential disruption due to failures and bugs. With Testkube, you can configure incident management tools like PagerDuty and OpsGenie to receive alerts based on critical events for your tests.
+
+- Communication and Collaboration: You can configure Webhooks in Testkube to send alerts to your teams in your communication tool. This will notify your team of any critical event that needs attention and attend to it before the issue escalates. Some of the popular communications tools like Slack and MS Teams can be configured to receive alerts from Testkube.
+
+- Monitoring and Observability: Webhooks can also be used to send alerts and notifications to your monitoring and observability tools like Prometheus and Grafana. This provides visibility into your tests, alerts you, and ensures that timely corrective actions can be taken.
+
+
 ## Creating a Webhook
 The webhook can be created using the Dashboard, CLI, or a Custom Resource.
 
