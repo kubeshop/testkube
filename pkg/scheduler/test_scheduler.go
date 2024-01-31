@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
@@ -78,17 +79,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	execution = newExecutionFromExecutionOptions(options)
 	options.ID = execution.Id
 
-	// TODO consider using single event for test start and logs
 	s.events.Notify(testkube.NewEventStartTest(&execution))
-
-	// for logs.v2 service trigger start / stop events
-	if s.featureFlags.LogsV2 {
-		err := s.triggerLogsStartEvent(ctx, execution.Id)
-		if err != nil {
-			return execution, err
-		}
-		defer s.triggerLogsStopEvent(ctx, execution.Id)
-	}
 
 	if err := s.createSecretsReferences(&execution); err != nil {
 		return s.handleExecutionError(ctx, execution, "can't create secret variables `Secret` references: %w", err)
@@ -126,7 +117,27 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 
 	s.logger.Infow("test started", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
 
+	s.handleExecutionStart(ctx, execution)
+
 	return execution, nil
+}
+
+func (s *Scheduler) handleExecutionStart(ctx context.Context, execution testkube.Execution) {
+	// pass here all needed execution data to the log
+	if s.featureFlags.LogsV2 {
+
+		l := events.NewLog(fmt.Sprintf("starting execution %s (%s)", execution.Name, execution.Id)).
+			WithType("execution-config").
+			WithVersion(events.LogVersionV2).
+			WithSource("test-scheduler").
+			WithMetadataEntry("command", strings.Join(execution.Command, " ")).
+			WithMetadataEntry("argsmode", execution.ArgsMode).
+			WithMetadataEntry("args", strings.Join(execution.Args, " ")).
+			WithMetadataEntry("pre-run", execution.PreRunScript).
+			WithMetadataEntry("post-run", execution.PostRunScript)
+
+		s.logsStream.Push(ctx, execution.Id, l)
+	}
 }
 
 func (s *Scheduler) handleExecutionError(ctx context.Context, execution testkube.Execution, msgTpl string, err error) (testkube.Execution, error) {
@@ -137,7 +148,7 @@ func (s *Scheduler) handleExecutionError(ctx context.Context, execution testkube
 			WithVersion(events.LogVersionV2).
 			WithSource("test-scheduler")
 
-		s.logsStream.Push(ctx, execution.Id, *l)
+		s.logsStream.Push(ctx, execution.Id, l)
 
 	}
 
@@ -819,42 +830,4 @@ func mergeSlavePodRequests(podBase *testkube.PodRequest, podAdjust *testkube.Pod
 	}
 
 	return podBase
-}
-
-func (s *Scheduler) triggerLogsStartEvent(ctx context.Context, id string) error {
-	if s.featureFlags.LogsV2 {
-		r, err := s.logsStream.Start(ctx, id)
-		if err != nil {
-			return err
-		}
-
-		if r.Error {
-			return errors.New(string(r.Message))
-		}
-
-		s.logger.Infow("triggering logs start event", "id", id)
-	}
-
-	return nil
-}
-
-func (s *Scheduler) triggerLogsStopEvent(ctx context.Context, id string) error {
-	if s.featureFlags.LogsV2 {
-		// as Stop is synchro
-		go func() {
-			r, err := s.logsStream.Stop(ctx, id)
-			if err != nil {
-				s.logger.Errorw("can't send stop event for logs", "id", id, "error", err)
-				return
-			}
-
-			if r.Error {
-				s.logger.Errorw("can't send stop event for logs", "id", id, "error", err)
-				return
-			}
-
-			s.logger.Infow("triggering logs stop event", "id", id)
-		}()
-	}
-	return nil
 }

@@ -32,11 +32,10 @@ import (
 type JMeterMode string
 
 const (
-	jmeterModeStandalone        JMeterMode = "standalone"
-	jmeterModeDistributed       JMeterMode = "distributed"
-	globalJMeterParamPrefix                = "-G"
-	standaloneJMeterParamPrefix            = "-J"
-	jmxExtension                           = "jmx"
+	jmeterModeStandalone  JMeterMode = "standalone"
+	jmeterModeDistributed JMeterMode = "distributed"
+	jmxExtension                     = "jmx"
+	jmeterTestFileFlag               = "-t"
 )
 
 // JMeterDRunner runner
@@ -139,7 +138,9 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	reportPath := filepath.Join(outputDir, "report")
 	jmeterLogPath := filepath.Join(outputDir, "jmeter.log")
 	args := execution.Args
-	hasJunit, hasReport, args := prepareArgs(args, testPath, jtlPath, reportPath, jmeterLogPath)
+	args = removeDuplicatedArgs(args)
+	args, params := mergeDuplicatedArgs(args)
+	hasJunit, hasReport := prepareArgs(args, testPath, jtlPath, reportPath, jmeterLogPath)
 
 	if mode == jmeterModeDistributed {
 		clientSet, err := k8sclient.ConnectToK8s()
@@ -155,8 +156,14 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 		args = append(args, fmt.Sprintf("-R %v", slaveMeta.ToIPString()))
 	}
 
-	args = injectAndExpandEnvVars(args, nil)
+	args = injectAndExpandEnvVars(args, params["-e"])
 	output.PrintLogf("%s Using arguments: %v", ui.IconWorld, envManager.ObfuscateStringSlice(args))
+
+	// TODO: this is a workaround, the check should be ideally performed in the getTestPathAndWorkingDir function
+	if err := checkIfTestFileExists(r.fs, args); err != nil {
+		output.PrintLogf("%s  Error validating test file exists: %v", ui.IconCross, err.Error())
+		return result, errors.WithStack(err)
+	}
 
 	entryPoint := getEntryPoint()
 	for i := range execution.Command {
@@ -231,10 +238,28 @@ func initSlaves(
 		return slaveClient.DeleteSlaves(ctx, slaveMeta)
 	}
 	return slaveMeta, cleanupFunc, nil
-
 }
 
-func prepareArgs(args []string, path, jtlPath, reportPath, jmeterLogPath string) (hasJunit, hasReport bool, result []string) {
+func checkIfTestFileExists(fs filesystem.FileSystem, args []string) error {
+	if len(args) == 0 {
+		return errors.New("no arguments provided")
+	}
+	testParamValue, err := getParamValue(args, jmeterTestFileFlag)
+	if err != nil {
+		return errors.Wrapf(err, "error extracting value for %s flag", jmeterTestFileFlag)
+	}
+	info, err := fs.Stat(testParamValue)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	if info.IsDir() {
+		return errors.Errorf("test file %s is a directory", testParamValue)
+	}
+
+	return nil
+}
+
+func removeDuplicatedArgs(args []string) []string {
 	counters := make(map[string]int)
 	duplicates := make(map[string]string)
 	for _, arg := range args {
@@ -265,6 +290,34 @@ func prepareArgs(args []string, path, jtlPath, reportPath, jmeterLogPath string)
 		}
 	}
 
+	return args
+}
+
+func mergeDuplicatedArgs(args []string) ([]string, map[string][]string) {
+	allowed := map[string]string{
+		"-e": "<envVars>",
+	}
+
+	duplicates := make(map[string][]string)
+	for i := len(args) - 1; i >= 0; i-- {
+		if arg, ok := allowed[args[i]]; ok {
+			if i+1 >= len(args) {
+				continue
+			}
+
+			if args[i+1] == arg {
+				continue
+			}
+
+			duplicates[args[i]] = append(duplicates[args[i]], args[i+1])
+			args = append(args[:i], args[i+2:]...)
+		}
+	}
+
+	return args, duplicates
+}
+
+func prepareArgs(args []string, path, jtlPath, reportPath, jmeterLogPath string) (hasJunit, hasReport bool) {
 	for i, arg := range args {
 		switch arg {
 		case "<runPath>":
@@ -280,7 +333,7 @@ func prepareArgs(args []string, path, jtlPath, reportPath, jmeterLogPath string)
 			hasJunit = true
 		}
 	}
-	return hasJunit, hasReport, args
+	return hasJunit, hasReport
 }
 
 func getEntryPoint() (entrypoint string) {

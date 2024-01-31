@@ -13,10 +13,10 @@ func TestLogsService_AddAdapter(t *testing.T) {
 	t.Run("should add adapter", func(t *testing.T) {
 		svc := LogsService{}
 
-		svc.AddAdapter(adapter.NewDummyAdapter())
-		svc.AddAdapter(adapter.NewDummyAdapter())
-		svc.AddAdapter(adapter.NewDummyAdapter())
-		svc.AddAdapter(adapter.NewDummyAdapter())
+		svc.AddAdapter(adapter.NewDebugAdapter())
+		svc.AddAdapter(adapter.NewDebugAdapter())
+		svc.AddAdapter(adapter.NewDebugAdapter())
+		svc.AddAdapter(adapter.NewDebugAdapter())
 
 		assert.Equal(t, 4, len(svc.adapters))
 	})

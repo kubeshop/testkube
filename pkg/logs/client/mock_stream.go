@@ -66,7 +66,7 @@ func (mr *MockStreamMockRecorder) Init(arg0, arg1 interface{}) *gomock.Call {
 }
 
 // Push mocks base method.
-func (m *MockStream) Push(arg0 context.Context, arg1 string, arg2 events.Log) error {
+func (m *MockStream) Push(arg0 context.Context, arg1 string, arg2 *events.Log) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Push", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)

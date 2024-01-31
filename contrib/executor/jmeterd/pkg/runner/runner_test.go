@@ -6,6 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/pkg/errors"
+
+	"github.com/kubeshop/testkube/pkg/filesystem"
+
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/stretchr/testify/assert"
@@ -14,7 +19,69 @@ import (
 	"github.com/kubeshop/testkube/pkg/envs"
 )
 
-func TestPrepareArgsReplacements(t *testing.T) {
+func TestCheckIfTestFileExists(t *testing.T) {
+	t.Parallel()
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	testCases := []struct {
+		name        string
+		args        []string
+		setupMock   func(*filesystem.MockFileSystem)
+		expectError bool
+	}{
+		{
+			name:        "no arguments",
+			args:        []string{},
+			setupMock:   func(mockFS *filesystem.MockFileSystem) {},
+			expectError: true,
+		},
+		{
+			name: "file does not exist",
+			args: []string{"-t", "test.txt"},
+			setupMock: func(mockFS *filesystem.MockFileSystem) {
+				mockFS.EXPECT().Stat("test.txt").Return(nil, errors.New("file not found"))
+			},
+			expectError: true,
+		},
+		{
+			name: "file is a directory",
+			args: []string{"-t", "testdir"},
+			setupMock: func(mockFS *filesystem.MockFileSystem) {
+				mockFileInfo := filesystem.MockFileInfo{FIsDir: true}
+				mockFS.EXPECT().Stat("testdir").Return(&mockFileInfo, nil)
+			},
+			expectError: true,
+		},
+		{
+			name: "file exists",
+			args: []string{"-t", "test.txt"},
+			setupMock: func(mockFS *filesystem.MockFileSystem) {
+				mockFileInfo := filesystem.MockFileInfo{FName: "test.txt", FSize: 100}
+				mockFS.EXPECT().Stat("test.txt").Return(&mockFileInfo, nil)
+			},
+			expectError: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			mockFS := filesystem.NewMockFileSystem(mockCtrl)
+			tc.setupMock(mockFS)
+			err := checkIfTestFileExists(mockFS, tc.args)
+			if tc.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestPrepareArgs(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -57,9 +124,9 @@ func TestPrepareArgsReplacements(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			hasJunit, hasReport, args := prepareArgs(tt.args, tt.path, tt.jtlPath, tt.reportPath, tt.jmeterLogPath)
+			hasJunit, hasReport := prepareArgs(tt.args, tt.path, tt.jtlPath, tt.reportPath, tt.jmeterLogPath)
 
-			for i, arg := range args {
+			for i, arg := range tt.args {
 				assert.Equal(t, tt.expectedArgs[i], arg)
 			}
 			assert.Equal(t, tt.expectedJunit, hasJunit)
@@ -68,64 +135,48 @@ func TestPrepareArgsReplacements(t *testing.T) {
 	}
 }
 
-func TestPrepareArgsDuplication(t *testing.T) {
+func TestRemoveDuplicatedArgs(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		args           []string
-		expectedArgs   []string
-		expectedJunit  bool
-		expectedReport bool
+		name         string
+		args         []string
+		expectedArgs []string
 	}{
 		{
-			name:           "Duplicated args",
-			args:           []string{"-t", "<runPath>", "-t", "path", "-l"},
-			expectedArgs:   []string{"-t", "path", "-l"},
-			expectedJunit:  true,
-			expectedReport: false,
+			name:         "Duplicated args",
+			args:         []string{"-t", "<runPath>", "-t", "path", "-l"},
+			expectedArgs: []string{"-t", "path", "-l"},
 		},
 		{
-			name:           "Multiple duplicated args",
-			args:           []string{"-t", "<runPath>", "-o", "<reportFile>", "-t", "path", "-o", "output", "-l"},
-			expectedArgs:   []string{"-t", "path", "-o", "output", "-l"},
-			expectedJunit:  true,
-			expectedReport: false,
+			name:         "Multiple duplicated args",
+			args:         []string{"-t", "<runPath>", "-o", "<reportFile>", "-t", "path", "-o", "output", "-l"},
+			expectedArgs: []string{"-t", "path", "-o", "output", "-l"},
 		},
 		{
-			name:           "Non duplicated args",
-			args:           []string{"-t", "path", "-l"},
-			expectedArgs:   []string{"-t", "path", "-l"},
-			expectedJunit:  true,
-			expectedReport: false,
+			name:         "Non duplicated args",
+			args:         []string{"-t", "path", "-l"},
+			expectedArgs: []string{"-t", "path", "-l"},
 		},
 		{
-			name:           "Wrong arg order",
-			args:           []string{"<runPath>", "-t", "-t", "path", "-l"},
-			expectedArgs:   []string{"-t", "-t", "path", "-l"},
-			expectedJunit:  true,
-			expectedReport: false,
+			name:         "Wrong arg order",
+			args:         []string{"<runPath>", "-t", "-t", "path", "-l"},
+			expectedArgs: []string{"-t", "-t", "path", "-l"},
 		},
 		{
-			name:           "Missed template arg",
-			args:           []string{"-t", "-t", "path", "-l"},
-			expectedArgs:   []string{"-t", "-t", "path", "-l"},
-			expectedJunit:  true,
-			expectedReport: false,
+			name:         "Missed template arg",
+			args:         []string{"-t", "-t", "path", "-l"},
+			expectedArgs: []string{"-t", "-t", "path", "-l"},
 		},
 		{
-			name:           "Wrong arg before template",
-			args:           []string{"-d", "-o", "<runPath>", "-t", "-t", "path", "-l"},
-			expectedArgs:   []string{"-d", "-o", "-t", "-t", "path", "-l"},
-			expectedJunit:  true,
-			expectedReport: false,
+			name:         "Wrong arg before template",
+			args:         []string{"-d", "-o", "<runPath>", "-t", "-t", "path", "-l"},
+			expectedArgs: []string{"-d", "-o", "-t", "-t", "path", "-l"},
 		},
 		{
-			name:           "Duplicated not template args",
-			args:           []string{"-t", "first", "-t", "second", "-l"},
-			expectedArgs:   []string{"-t", "first", "-t", "second", "-l"},
-			expectedJunit:  true,
-			expectedReport: false,
+			name:         "Duplicated not template args",
+			args:         []string{"-t", "first", "-t", "second", "-l"},
+			expectedArgs: []string{"-t", "first", "-t", "second", "-l"},
 		},
 	}
 
@@ -134,13 +185,72 @@ func TestPrepareArgsDuplication(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			hasJunit, hasReport, args := prepareArgs(tt.args, "", "", "", "")
+			args := removeDuplicatedArgs(tt.args)
 
-			for i, arg := range args {
-				assert.Equal(t, tt.expectedArgs[i], arg)
+			assert.Equal(t, len(args), len(tt.expectedArgs))
+			for j, arg := range args {
+				assert.Equal(t, tt.expectedArgs[j], arg)
 			}
-			assert.Equal(t, tt.expectedJunit, hasJunit)
-			assert.Equal(t, tt.expectedReport, hasReport)
+		})
+	}
+}
+
+func TestMergeDuplicatedArgs(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		args         []string
+		expectedArgs []string
+		arg          string
+		params       []string
+	}{
+		{
+			name:         "Duplicated args",
+			args:         []string{"-e", "<envVars>", "-e", "var", "-l"},
+			expectedArgs: []string{"-e", "<envVars>", "-l"},
+			arg:          "-e",
+			params:       []string{"var"},
+		},
+		{
+			name:         "Multiple duplicated args",
+			args:         []string{"-e", "<envVars>", "-e", "var 1", "-e", "var 2", "-l"},
+			expectedArgs: []string{"-e", "<envVars>", "-l"},
+			arg:          "-e",
+			params:       []string{"var 2", "var 1"},
+		},
+		{
+			name:         "Non duplicated args",
+			args:         []string{"-e", "<envVars>", "-l"},
+			expectedArgs: []string{"-e", "<envVars>", "-l"},
+			arg:          "-e",
+			params:       []string{},
+		},
+		{
+			name:         "Wrong arg order",
+			args:         []string{"-e", "<envVars>", "var", "-e"},
+			expectedArgs: []string{"-e", "<envVars>", "var", "-e"},
+			arg:          "-e",
+			params:       []string{},
+		},
+	}
+
+	for i := range tests {
+		tt := tests[i]
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			args, params := mergeDuplicatedArgs(tt.args)
+
+			assert.Equal(t, len(args), len(tt.expectedArgs))
+			for j, arg := range args {
+				assert.Equal(t, tt.expectedArgs[j], arg)
+			}
+
+			assert.Equal(t, len(params[tt.arg]), len(tt.params))
+			for j, arg := range params[tt.arg] {
+				assert.Equal(t, tt.params[j], arg)
+			}
 		})
 	}
 }
@@ -205,7 +315,7 @@ func TestJMeterDRunner_Local_Integration(t *testing.T) {
 				TestNamespace: "testkube",
 				Name:          "test1",
 				Command:       []string{"jmeter"},
-				Args:          []string{"-n", "-j", "<logFile>", "-t", "<runPath>", "-l", "<jtlFile>", "-e", "-o", "<reportFile>", "<envVars>"},
+				Args:          []string{"-n", "-j", "<logFile>", "-t", "<runPath>", "-l", "<jtlFile>", "-o", "<reportFile>", "-e", "<envVars>"},
 				Content: &testkube.TestContent{
 					Type_: string(testkube.TestContentTypeString),
 					Data:  tt.jmxContent,

@@ -3,6 +3,11 @@
 The Testkube Jenkins integration streamlines the installation of Testkube, enabling the execution of any [Testkube CLI](https://docs.testkube.io/cli/testkube) command within Jenkins pipelines. This integration can be effortlessly integrated into your Jenkins setup, enhancing your continuous integration and delivery processes.
 This Jenkins integration offers a versatile solution for managing your pipeline workflows and is compatible with Testkube Pro, Testkube Enterprise, and the open-source Testkube platform. It allows Jenkins users to effectively utilize Testkube's capabilities within their CI/CD pipelines, providing a robust and flexible framework for test execution and automation.
 
+### Testkube CLI Jenkins Plugin
+
+Install the Testkube CLI plugin by searching it in the "Available Plugins" section on Jenkins Plugins, or using the following url:
+[https://plugins.jenkins.io/testkube-cli](https://plugins.jenkins.io/testkube-cli)
+
 ## Testkube Pro
 
 ### How to configure Testkube CLI action for Testkube Pro and run a test
@@ -12,39 +17,31 @@ Then, pass the **organization** and **environment** IDs, along with the **token*
 
 If a test is already created, you can run it using the command `testkube run test test-name -f` . However, if you need to create a test in this workflow, please add a creation command, e.g.: `testkube create test --name test-name --file path_to_file.json`.
 
-you'll need to create a Jenkinsfile. This Jenkinsfile should define the stages and steps necessary to execute the workflow
+You'll need to create a Jenkinsfile. This Jenkinsfile should define the stages and steps necessary to execute the workflow
 
 ```groovy
 pipeline {
     agent any
 
+    environment {
+        TK_ORG = credentials("TK_ORG")
+        TK_ENV = credentials("TK_ENV")
+        TK_API_TOKEN = credentials("TK_API_TOKEN")
+    }
     stages {
-        stage('Setup Testkube') {
+        stage('Example') {
             steps {
                 script {
-                    // Retrieve credentials
-                    def apiKey = credentials('TESTKUBE_API_KEY')
-                    def orgId  = credentials('TESTKUBE_ORG_ID')
-                    def envId  = credentials('TESTKUBE_ENV_ID')
-
-                    // Install Testkube
-                    sh 'curl -sSLf https://get.testkube.io | sh'
-
-                    // Initialize Testkube
-                    sh "testkube set context --api-key ${apiKey} --org ${orgId} --env ${envId}"
+                    // Setup the Testkube CLI
+                    setupTestkube()
+                    // Run testkube commands
+                    sh 'testkube run test your-test'
+                    sh 'testkube run testsuite your-test-suite --some-arg --other-arg'
                 }
-            }
-        }
-
-        stage('Run Testkube Test') {
-            steps {
-                // Run a Testkube test
-                sh 'testkube run test test-name -f'
             }
         }
     }
 }
-
 ```
 
 ## Testkube OSS
@@ -61,26 +58,16 @@ you'll need to create a Jenkinsfile. This Jenkinsfile should define the stages a
 pipeline {
     agent any
 
+    environment {
+        TK_NAMESPACE = 'custom-testkube-namespace'
+    }
     stages {
-        stage('Setup Testkube') {
+        stage('Example') {
             steps {
                 script {
-                    // Retrieve credentials
-                    def namespace='custom-testkube'
-
-                    // Install Testkube
-                    sh 'curl -sSLf https://get.testkube.io | sh'
-
-                    // Initialize Testkube
-                    sh "testkube set context --kubeconfig --namespace ${namespace}"
+                    setupTestkube()
+                    sh 'testkube run test your-test'
                 }
-            }
-        }
-
-        stage('Run Testkube Test') {
-            steps {
-                // Run a Testkube test
-                sh 'testkube run test test-name -f'
             }
         }
     }
@@ -104,6 +91,11 @@ you'll need to create a Jenkinsfile. This Jenkinsfile should define the stages a
 pipeline {
     agent any
 
+    environment {
+        TK_ORG = credentials("TK_ORG")
+        TK_ENV = credentials("TK_ENV")
+        TK_API_TOKEN = credentials("TK_API_TOKEN")
+    }
     stages {
         stage('Setup Testkube') {
             steps {
@@ -120,17 +112,8 @@ pipeline {
                         sh 'aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION'
                     }
 
-                    // Installing Testkube
-                    sh 'curl -sSLf https://get.testkube.io | sh'
-
-                    // Initializing Testkube
-                    withCredentials([
-                        string(credentialsId: 'TestkubeApiKey', variable: 'TESTKUBE_API_KEY'),
-                        string(credentialsId: 'TestkubeOrgId', variable: 'TESTKUBE_ORG_ID'),
-                        string(credentialsId: 'TestkubeEnvId', variable: 'TESTKUBE_ENV_ID')
-                    ]) {
-                        sh 'testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID'
-                    }
+                    // Installing and configuring Testkube based on env vars
+                    setupTestkube()
 
                     // Running Testkube test
                     sh 'testkube run test test-name -f'
@@ -152,6 +135,11 @@ you'll need to create a Jenkinsfile. This Jenkinsfile should define the stages a
 pipeline {
     agent any
 
+    environment {
+        TK_ORG = credentials("TK_ORG")
+        TK_ENV = credentials("TK_ENV")
+        TK_API_TOKEN = credentials("TK_API_TOKEN")
+    }
     stages {
         stage('Deploy to GKE') {
             steps {
@@ -177,15 +165,8 @@ pipeline {
                         sh 'gcloud container clusters get-credentials $GKE_CLUSTER_NAME --zone $GKE_ZONE'
                     }
 
-                    // Installing and initializing Testkube
-                    withCredentials([
-                        string(credentialsId: 'TESTKUBE_API_KEY', variable: 'TESTKUBE_API_KEY'),
-                        string(credentialsId: 'TESTKUBE_ORG_ID', variable: 'TESTKUBE_ORG_ID'),
-                        string(credentialsId: 'TESTKUBE_ENV_ID', variable: 'TESTKUBE_ENV_ID')
-                    ]) {
-                        sh 'curl -sSLf https://get.testkube.io | sh'
-                        sh 'testkube set context --api-key $TESTKUBE_API_KEY --org $TESTKUBE_ORG_ID --env $TESTKUBE_ENV_ID'
-                    }
+                    // Installing and configuring Testkube based on env vars
+                    setupTestkube()
 
                     // Running Testkube test
                     sh 'testkube run test test-name -f'

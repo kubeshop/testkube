@@ -7,9 +7,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/logs/adapter"
 	"github.com/kubeshop/testkube/pkg/logs/client"
@@ -17,7 +20,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/logs/state"
 )
 
-var waitTime = time.Millisecond * 100
+var waitTime = time.Second
 
 func TestLogs_EventsFlow(t *testing.T) {
 	t.Parallel()
@@ -30,6 +33,8 @@ func TestLogs_EventsFlow(t *testing.T) {
 		// and NATS test server with connection
 		ns, nc := bus.TestServerWithConnection()
 		defer ns.Shutdown()
+
+		id := "stop-test"
 
 		// and jetstream configured
 		js, err := jetstream.New(nc)
@@ -45,8 +50,7 @@ func TestLogs_EventsFlow(t *testing.T) {
 
 		// and initialized log service
 		log := NewLogsService(nc, js, state).
-			WithRandomPort().
-			WithStopWaitTime(waitTime)
+			WithRandomPort()
 
 		// given example adapters
 		a := NewMockAdapter("aaa")
@@ -69,24 +73,103 @@ func TestLogs_EventsFlow(t *testing.T) {
 		assert.NoError(t, err)
 
 		// and initialized log stream for given ID
-		meta, err := stream.Init(ctx, "stop-test")
+		meta, err := stream.Init(ctx, id)
 		assert.NotEmpty(t, meta.Name)
 		assert.NoError(t, err)
 
 		// when start event triggered
-		_, err = stream.Start(ctx, "stop-test")
+		_, err = stream.Start(ctx, id)
 		assert.NoError(t, err)
 
 		// and when data pushed to the log stream
-		stream.Push(ctx, "stop-test", events.NewLogResponse(time.Now(), []byte("hello 1")))
-		stream.Push(ctx, "stop-test", events.NewLogResponse(time.Now(), []byte("hello 2")))
+		stream.Push(ctx, id, events.NewLog("hello 1"))
+		stream.Push(ctx, id, events.NewLog("hello 2"))
 
 		// and stop event triggered
-		_, err = stream.Stop(ctx, "stop-test")
+		_, err = stream.Stop(ctx, id)
 		assert.NoError(t, err)
+
+		// cooldown stop time
+		time.Sleep(waitTime * 2)
 
 		// then all adapters should be gracefully stopped
 		assert.Equal(t, 0, log.GetConsumersStats(ctx).Count)
+	})
+
+	t.Run("should start and stop on test event", func(t *testing.T) {
+		// given context with 1s deadline
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(1*time.Minute))
+		defer cancel()
+
+		// and NATS test server with connection
+		ns, nc := bus.TestServerWithConnection()
+		defer ns.Shutdown()
+
+		id := "id1"
+
+		// and jetstream configured
+		js, err := jetstream.New(nc)
+		assert.NoError(t, err)
+
+		// and KV store
+		kv, err := js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: "start-stop-on-test"})
+		assert.NoError(t, err)
+		assert.NotNil(t, kv)
+
+		// and logs state manager
+		state := state.NewState(kv)
+
+		// and initialized log service
+		log := NewLogsService(nc, js, state).
+			WithRandomPort()
+
+		// given example adapter
+		a := NewMockAdapter()
+
+		messagesCount := 10000
+
+		// with 4 adapters (the same adapter is added 4 times so it'll receive 4 times more messages)
+		log.AddAdapter(a)
+
+		// and log service running
+		go func() {
+			log.Run(ctx)
+		}()
+
+		// and test event emitter
+		ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+		assert.NoError(t, err)
+		eventBus := bus.NewNATSBus(ec)
+		emitter := event.NewEmitter(eventBus, "test-cluster", map[string]string{})
+
+		// and stream client
+		stream, err := client.NewNatsLogStream(nc)
+		assert.NoError(t, err)
+
+		// and initialized log stream for given ID
+		meta, err := stream.Init(ctx, id)
+		assert.NotEmpty(t, meta.Name)
+		assert.NoError(t, err)
+
+		// and ready to get messages
+		<-log.Ready
+
+		// when start event triggered
+		emitter.Notify(testkube.NewEventStartTest(&testkube.Execution{Id: "id1"}))
+
+		for i := 0; i < messagesCount; i++ {
+			// and when data pushed to the log stream
+			err = stream.Push(ctx, id, events.NewLog("hello"))
+			assert.NoError(t, err)
+		}
+
+		// and wait for message to be propagated
+		emitter.Notify(testkube.NewEventEndTestFailed(&testkube.Execution{Id: "id1"}))
+
+		time.Sleep(time.Second)
+
+		assertMessagesCount(t, a, messagesCount)
+
 	})
 
 	t.Run("should react on new message and pass data to adapter", func(t *testing.T) {
@@ -97,6 +180,8 @@ func TestLogs_EventsFlow(t *testing.T) {
 		// and NATS test server with connection
 		ns, nc := bus.TestServerWithConnection()
 		defer ns.Shutdown()
+
+		id := "messages-test"
 
 		// and jetstream configured
 		js, err := jetstream.New(nc)
@@ -112,8 +197,7 @@ func TestLogs_EventsFlow(t *testing.T) {
 
 		// and initialized log service
 		log := NewLogsService(nc, js, state).
-			WithRandomPort().
-			WithStopWaitTime(waitTime)
+			WithRandomPort()
 
 		// given example adapter
 		a := NewMockAdapter()
@@ -139,22 +223,22 @@ func TestLogs_EventsFlow(t *testing.T) {
 		assert.NoError(t, err)
 
 		// and initialized log stream for given ID
-		meta, err := stream.Init(ctx, "messages-test")
+		meta, err := stream.Init(ctx, id)
 		assert.NotEmpty(t, meta.Name)
 		assert.NoError(t, err)
 
 		// when start event triggered
-		_, err = stream.Start(ctx, "messages-test")
+		_, err = stream.Start(ctx, id)
 		assert.NoError(t, err)
 
 		for i := 0; i < messagesCount; i++ {
 			// and when data pushed to the log stream
-			err = stream.Push(ctx, "messages-test", events.NewLogResponse(time.Now(), []byte("hello")))
+			err = stream.Push(ctx, id, events.NewLog("hello"))
 			assert.NoError(t, err)
 		}
 
 		// and wait for message to be propagated
-		_, err = stream.Stop(ctx, "messages-test")
+		_, err = stream.Stop(ctx, id)
 		assert.NoError(t, err)
 
 		assertMessagesCount(t, a, 4*messagesCount)
@@ -174,6 +258,8 @@ func TestLogs_EventsFlow(t *testing.T) {
 		js, err := jetstream.New(nc)
 		assert.NoError(t, err)
 
+		id := "executionid1"
+
 		// and KV store
 		kv, err := js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: "state-test"})
 		assert.NoError(t, err)
@@ -184,8 +270,7 @@ func TestLogs_EventsFlow(t *testing.T) {
 
 		// and initialized log service
 		log := NewLogsService(nc, js, state).
-			WithRandomPort().
-			WithStopWaitTime(waitTime)
+			WithRandomPort()
 
 		// given example adapters
 		a := NewMockAdapter("aaa")
@@ -208,21 +293,30 @@ func TestLogs_EventsFlow(t *testing.T) {
 		assert.NoError(t, err)
 
 		// and initialized log stream for given ID
-		meta, err := stream.Init(ctx, "consumer-stats")
+		meta, err := stream.Init(ctx, id)
 		assert.NotEmpty(t, meta.Name)
 		assert.NoError(t, err)
 
 		// when start event triggered
-		_, err = stream.Start(ctx, "consumer-stats")
+		_, err = stream.Start(ctx, id)
 		assert.NoError(t, err)
 
 		// then we should have 2 consumers
 		stats := log.GetConsumersStats(ctx)
 		assert.Equal(t, 2, stats.Count)
 
+		stream.Push(ctx, id, events.NewLog("hello 1"))
+		stream.Push(ctx, id, events.NewLog("hello 1"))
+		stream.Push(ctx, id, events.NewLog("hello 1"))
+
 		// when stop event triggered
-		_, err = stream.Stop(ctx, "consumer-stats")
+		r, err := stream.Stop(ctx, id)
 		assert.NoError(t, err)
+		assert.False(t, r.Error)
+		assert.Equal(t, "stop-queued", string(r.Message))
+
+		// there will be wait for mess
+		time.Sleep(waitTime * 2)
 
 		// then all adapters should be gracefully stopped
 		assert.Equal(t, 0, log.GetConsumersStats(ctx).Count)
