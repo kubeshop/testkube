@@ -140,7 +140,7 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	args := execution.Args
 	args = removeDuplicatedArgs(args)
 	args, params := mergeDuplicatedArgs(args)
-	hasJunit, hasReport, args := prepareArgs(args, testPath, jtlPath, reportPath, jmeterLogPath)
+	hasJunit, hasReport := prepareArgs(args, testPath, jtlPath, reportPath, jmeterLogPath)
 
 	if mode == jmeterModeDistributed {
 		clientSet, err := k8sclient.ConnectToK8s()
@@ -317,7 +317,7 @@ func mergeDuplicatedArgs(args []string) ([]string, map[string][]string) {
 	return args, duplicates
 }
 
-func prepareArgs(args []string, path, jtlPath, reportPath, jmeterLogPath string) (hasJunit, hasReport bool, result []string) {
+func prepareArgs(args []string, path, jtlPath, reportPath, jmeterLogPath string) (hasJunit, hasReport bool) {
 	for i, arg := range args {
 		switch arg {
 		case "<runPath>":
@@ -333,7 +333,7 @@ func prepareArgs(args []string, path, jtlPath, reportPath, jmeterLogPath string)
 			hasJunit = true
 		}
 	}
-	return hasJunit, hasReport, args
+	return hasJunit, hasReport
 }
 
 func getEntryPoint() (entrypoint string) {

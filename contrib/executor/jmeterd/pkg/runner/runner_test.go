@@ -124,9 +124,9 @@ func TestPrepareArgs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			hasJunit, hasReport, args := prepareArgs(tt.args, tt.path, tt.jtlPath, tt.reportPath, tt.jmeterLogPath)
+			hasJunit, hasReport := prepareArgs(tt.args, tt.path, tt.jtlPath, tt.reportPath, tt.jmeterLogPath)
 
-			for i, arg := range args {
+			for i, arg := range tt.args {
 				assert.Equal(t, tt.expectedArgs[i], arg)
 			}
 			assert.Equal(t, tt.expectedJunit, hasJunit)
