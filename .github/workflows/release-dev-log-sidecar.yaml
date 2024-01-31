@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - develop
+      - ci/logs-service-fix
 
 permissions:
   id-token: write
