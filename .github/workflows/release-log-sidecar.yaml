@@ -3,7 +3,7 @@ name: Release logs sidecar
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 permissions:
   id-token: write
@@ -59,7 +59,7 @@ jobs:
         with:
           distribution: goreleaser-pro
           version: latest
-          args: release -f ./goreleaser_files/.goreleaser-docker-build-logs-sidecar.yml --skip-publish
+          args: release -f ./goreleaser_files/.goreleaser-docker-build-logs-sidecar.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
