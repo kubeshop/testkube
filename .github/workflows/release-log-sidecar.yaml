@@ -69,17 +69,17 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
 
-      - name: Push Docker images
-        run: |
-          docker push kubeshop/testkube-logs-sidecar:${{ steps.github_sha.outputs.sha_short }}-arm64v8
-          docker push kubeshop/testkube-logs-sidecar:${{ steps.github_sha.outputs.sha_short }}-amd64
-          # adding the docker manifest for the latest image tag
-          docker manifest create kubeshop/testkube-logs-sidecar:latest \
-            kubeshop/testkube-logs-sidecar:${{ steps.github_sha.outputs.sha_short }}-amd64 \
-            kubeshop/testkube-logs-sidecar:${{ steps.github_sha.outputs.sha_short }}-arm64v8
-          docker manifest annotate kubeshop/testkube-logs-sidecar:latest kubeshop/testkube-logs-sidecar:${{ steps.github_sha.outputs.sha_short }}-amd64 --arch amd64
-          docker manifest annotate kubeshop/testkube-logs-sidecar:latest kubeshop/testkube-logs-sidecar:${{ steps.github_sha.outputs.sha_short }}-arm64v8 --arch arm64 --variant v8
-          docker manifest push kubeshop/testkube-logs-sidecar:latest
+#      - name: Push Docker images
+#        run: |
+#          docker push kubeshop/testkube-logs-sidecar:${{ steps.github_sha.outputs.sha_short }}-arm64v8
+#          docker push kubeshop/testkube-logs-sidecar:${{ steps.github_sha.outputs.sha_short }}-amd64
+#          # adding the docker manifest for the latest image tag
+#          docker manifest create kubeshop/testkube-logs-sidecar:latest \
+#            kubeshop/testkube-logs-sidecar:${{ steps.github_sha.outputs.sha_short }}-amd64 \
+#            kubeshop/testkube-logs-sidecar:${{ steps.github_sha.outputs.sha_short }}-arm64v8
+#          docker manifest annotate kubeshop/testkube-logs-sidecar:latest kubeshop/testkube-logs-sidecar:${{ steps.github_sha.outputs.sha_short }}-amd64 --arch amd64
+#          docker manifest annotate kubeshop/testkube-logs-sidecar:latest kubeshop/testkube-logs-sidecar:${{ steps.github_sha.outputs.sha_short }}-arm64v8 --arch arm64 --variant v8
+#          docker manifest push kubeshop/testkube-logs-sidecar:latest
 
       - name: Push README to Dockerhub
         uses: christian-korneck/update-container-description-action@v1
