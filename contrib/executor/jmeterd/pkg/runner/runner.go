@@ -138,6 +138,8 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	reportPath := filepath.Join(outputDir, "report")
 	jmeterLogPath := filepath.Join(outputDir, "jmeter.log")
 	args := execution.Args
+	args = removeDuplicatedArgs(args)
+	args, params := mergeDuplicatedArgs(args)
 	hasJunit, hasReport, args := prepareArgs(args, testPath, jtlPath, reportPath, jmeterLogPath)
 
 	if mode == jmeterModeDistributed {
@@ -154,7 +156,7 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 		args = append(args, fmt.Sprintf("-R %v", slaveMeta.ToIPString()))
 	}
 
-	args = injectAndExpandEnvVars(args, nil)
+	args = injectAndExpandEnvVars(args, params["-e"])
 	output.PrintLogf("%s Using arguments: %v", ui.IconWorld, envManager.ObfuscateStringSlice(args))
 
 	// TODO: this is a workaround, the check should be ideally performed in the getTestPathAndWorkingDir function
@@ -257,7 +259,7 @@ func checkIfTestFileExists(fs filesystem.FileSystem, args []string) error {
 	return nil
 }
 
-func prepareArgs(args []string, path, jtlPath, reportPath, jmeterLogPath string) (hasJunit, hasReport bool, result []string) {
+func removeDuplicatedArgs(args []string) []string {
 	counters := make(map[string]int)
 	duplicates := make(map[string]string)
 	for _, arg := range args {
@@ -288,6 +290,34 @@ func prepareArgs(args []string, path, jtlPath, reportPath, jmeterLogPath string)
 		}
 	}
 
+	return args
+}
+
+func mergeDuplicatedArgs(args []string) ([]string, map[string][]string) {
+	allowed := map[string]string{
+		"-e": "<envVars>",
+	}
+
+	duplicates := make(map[string][]string)
+	for i := len(args) - 1; i >= 0; i-- {
+		if arg, ok := allowed[args[i]]; ok {
+			if i+1 >= len(args) {
+				continue
+			}
+
+			if args[i+1] == arg {
+				continue
+			}
+
+			duplicates[args[i]] = append(duplicates[args[i]], args[i+1])
+			args = append(args[:i], args[i+2:]...)
+		}
+	}
+
+	return args, duplicates
+}
+
+func prepareArgs(args []string, path, jtlPath, reportPath, jmeterLogPath string) (hasJunit, hasReport bool, result []string) {
 	for i, arg := range args {
 		switch arg {
 		case "<runPath>":
