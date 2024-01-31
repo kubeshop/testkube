@@ -3,7 +3,7 @@ name: Release logs server
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 permissions:
   id-token: write
