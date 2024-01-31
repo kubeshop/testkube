@@ -3,7 +3,7 @@ name: Release logs server
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+-*"
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
   id-token: write
@@ -65,24 +65,11 @@ jobs:
           args: release -f ./goreleaser_files/.goreleaser-docker-build-logs-server.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
           DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
-
-#      - name: Push Docker images
-#        run: |
-#          docker push kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }}-arm64v8
-#          docker push kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }}-amd64
-#          # adding the docker manifest for the latest image tag
-#          docker manifest create kubeshop/testkube-logs-server:latest \
-#            kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }}-amd64 \
-#            kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }}-arm64v8
-#          docker manifest annotate kubeshop/testkube-logs-server:latest kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }}-amd64 --arch amd64
-#          docker manifest annotate kubeshop/testkube-logs-server:latest kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }}-arm64v8 --arch arm64 --variant v8
-#          docker manifest push kubeshop/testkube-logs-server:latest
 
       - name: Push README to Dockerhub
         uses: christian-korneck/update-container-description-action@v1
