@@ -33,6 +33,9 @@ jobs:
       - uses: sigstore/cosign-installer@v3.5.0
       - uses: anchore/sbom-action/download-syft@v0.15.11
 
+      - uses: sigstore/cosign-installer@v3.0.5
+      - uses: anchore/sbom-action/download-syft@v0.14.2
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
