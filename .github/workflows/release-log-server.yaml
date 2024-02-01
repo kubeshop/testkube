@@ -29,6 +29,9 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v1
 
+      - uses: sigstore/cosign-installer@v3.0.5
+      - uses: anchore/sbom-action/download-syft@v0.14.2
+
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
@@ -59,28 +62,14 @@ jobs:
         with:
           distribution: goreleaser-pro
           version: latest
-          args: release -f ./goreleaser_files/.goreleaser-docker-build-logs-server.yml --skip-publish
+          args: release -f ./goreleaser_files/.goreleaser-docker-build-logs-server.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
           DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
-          DOCKER_IMAGE_TAG: ${{ steps.github_sha.outputs.sha_short }}
-
-      - name: Push Docker images
-        run: |
-          docker push kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }}-arm64v8
-          docker push kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }}-amd64
-          # adding the docker manifest for the latest image tag
-          docker manifest create kubeshop/testkube-logs-server:latest \
-            kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }}-amd64 \
-            kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }}-arm64v8
-          docker manifest annotate kubeshop/testkube-logs-server:latest kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }}-amd64 --arch amd64
-          docker manifest annotate kubeshop/testkube-logs-server:latest kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }}-arm64v8 --arch arm64 --variant v8
-          docker manifest push kubeshop/testkube-logs-server:latest
 
       - name: Push README to Dockerhub
         uses: christian-korneck/update-container-description-action@v1

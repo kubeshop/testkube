@@ -1,8 +1,9 @@
 package adapter
 
 import (
-	"fmt"
+	"go.uber.org/zap"
 
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 )
 
@@ -10,20 +11,22 @@ var _ Adapter = &DebugAdapter{}
 
 // NewDebugAdapter creates new DebugAdapter which will write logs to stdout
 func NewDebugAdapter() *DebugAdapter {
-	return &DebugAdapter{}
+	return &DebugAdapter{
+		l: log.DefaultLogger,
+	}
 }
 
 type DebugAdapter struct {
-	Bucket string
+	l *zap.SugaredLogger
 }
 
 func (s *DebugAdapter) Notify(id string, e events.Log) error {
-	fmt.Printf("%s %+v\n", id, e)
+	s.l.Debugw("got event", "id", id, "event", e)
 	return nil
 }
 
 func (s *DebugAdapter) Stop(id string) error {
-	fmt.Printf("stopping %s \n", id)
+	s.l.Debugw("Stopping", "id", id)
 	return nil
 }
 
