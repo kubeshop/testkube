@@ -137,9 +137,7 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	jtlPath := filepath.Join(outputDir, "report.jtl")
 	reportPath := filepath.Join(outputDir, "report")
 	jmeterLogPath := filepath.Join(outputDir, "jmeter.log")
-	args := execution.Args
-	args = removeDuplicatedArgs(args)
-	args, params := mergeDuplicatedArgs(args)
+	args := mergeDuplicatedArgs(removeDuplicatedArgs(execution.Args))
 	hasJunit, hasReport := prepareArgs(args, testPath, jtlPath, reportPath, jmeterLogPath)
 
 	if mode == jmeterModeDistributed {
@@ -156,7 +154,7 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 		args = append(args, fmt.Sprintf("-R %v", slaveMeta.ToIPString()))
 	}
 
-	args = injectAndExpandEnvVars(args, params["-e"])
+	args = injectAndExpandEnvVars(args, nil)
 	output.PrintLogf("%s Using arguments: %v", ui.IconWorld, envManager.ObfuscateStringSlice(args))
 
 	// TODO: this is a workaround, the check should be ideally performed in the getTestPathAndWorkingDir function
@@ -293,28 +291,23 @@ func removeDuplicatedArgs(args []string) []string {
 	return args
 }
 
-func mergeDuplicatedArgs(args []string) ([]string, map[string][]string) {
-	allowed := map[string]string{
-		"-e": "<envVars>",
+func mergeDuplicatedArgs(args []string) []string {
+	allowed := map[string]int{
+		"-e": 0,
 	}
 
-	duplicates := make(map[string][]string)
 	for i := len(args) - 1; i >= 0; i-- {
-		if arg, ok := allowed[args[i]]; ok {
-			if i+1 >= len(args) {
+		if counter, ok := allowed[args[i]]; ok {
+			allowed[args[i]]++
+			if counter == 0 {
 				continue
 			}
 
-			if args[i+1] == arg {
-				continue
-			}
-
-			duplicates[args[i]] = append(duplicates[args[i]], args[i+1])
-			args = append(args[:i], args[i+2:]...)
+			args = append(args[:i], args[i+1:]...)
 		}
 	}
 
-	return args, duplicates
+	return args
 }
 
 func prepareArgs(args []string, path, jtlPath, reportPath, jmeterLogPath string) (hasJunit, hasReport bool) {
