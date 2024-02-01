@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/kubeshop/testkube/pkg/utils/test"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 
