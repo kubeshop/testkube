@@ -157,7 +157,7 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 		args = append(args, fmt.Sprintf("-R %v", slaveMeta.ToIPString()))
 	}
 
-	args = injectAndExpandEnvVars(args, params["-e"])
+	args = injectAndExpandEnvVars(args, nil)
 	output.PrintLogf("%s Using arguments: %v", ui.IconWorld, envManager.ObfuscateStringSlice(args))
 
 	// TODO: this is a workaround, the check should be ideally performed in the getTestPathAndWorkingDir function
