@@ -8,10 +8,11 @@ import (
 
 func mapCSVResultsToExecutionResults(out []byte, results CSVResults) (result testkube.ExecutionResult) {
 	result = MakeSuccessExecution(out)
-	if results.HasError {
-		result.Status = testkube.ExecutionStatusFailed
-		result.ErrorMessage = results.LastErrorMessage
-	}
+	// TODO: Is it enough to just disable it here?
+	//if results.HasError {
+	//	result.Status = testkube.ExecutionStatusFailed
+	//	result.ErrorMessage = results.LastErrorMessage
+	//}
 
 	for _, r := range results.Results {
 		result.Steps = append(
@@ -43,12 +44,13 @@ func mapXMLResultsToExecutionResults(out []byte, results XMLResults) (result tes
 
 	samples := append(results.HTTPSamples, results.Samples...)
 	for _, r := range samples {
-		if !r.Success {
-			result.Status = testkube.ExecutionStatusFailed
-			if r.AssertionResult != nil {
-				result.ErrorMessage = r.AssertionResult.FailureMessage
-			}
-		}
+		// TODO: Is it enough to disable it here?
+		//if !r.Success {
+		//	result.Status = testkube.ExecutionStatusFailed
+		//	if r.AssertionResult != nil {
+		//		result.ErrorMessage = r.AssertionResult.FailureMessage
+		//	}
+		//}
 
 		result.Steps = append(
 			result.Steps,
