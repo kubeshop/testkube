@@ -202,36 +202,21 @@ func TestMergeDuplicatedArgs(t *testing.T) {
 		name         string
 		args         []string
 		expectedArgs []string
-		arg          string
-		params       []string
 	}{
 		{
 			name:         "Duplicated args",
-			args:         []string{"-e", "<envVars>", "-e", "var", "-l"},
-			expectedArgs: []string{"-e", "<envVars>", "-l"},
-			arg:          "-e",
-			params:       []string{"var"},
+			args:         []string{"-e", "<envVars>", "-e"},
+			expectedArgs: []string{"<envVars>", "-e"},
 		},
 		{
 			name:         "Multiple duplicated args",
-			args:         []string{"-e", "<envVars>", "-e", "var 1", "-e", "var 2", "-l"},
-			expectedArgs: []string{"-e", "<envVars>", "-l"},
-			arg:          "-e",
-			params:       []string{"var 2", "var 1"},
+			args:         []string{"<envVars>", "-e", "-e", "-l"},
+			expectedArgs: []string{"<envVars>", "-e", "-l"},
 		},
 		{
 			name:         "Non duplicated args",
 			args:         []string{"-e", "<envVars>", "-l"},
 			expectedArgs: []string{"-e", "<envVars>", "-l"},
-			arg:          "-e",
-			params:       []string{},
-		},
-		{
-			name:         "Wrong arg order",
-			args:         []string{"-e", "<envVars>", "var", "-e"},
-			expectedArgs: []string{"-e", "<envVars>", "var", "-e"},
-			arg:          "-e",
-			params:       []string{},
 		},
 	}
 
@@ -240,16 +225,11 @@ func TestMergeDuplicatedArgs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			args, params := mergeDuplicatedArgs(tt.args)
+			args := mergeDuplicatedArgs(tt.args)
 
 			assert.Equal(t, len(args), len(tt.expectedArgs))
 			for j, arg := range args {
 				assert.Equal(t, tt.expectedArgs[j], arg)
-			}
-
-			assert.Equal(t, len(params[tt.arg]), len(tt.params))
-			for j, arg := range params[tt.arg] {
-				assert.Equal(t, tt.params[j], arg)
 			}
 		})
 	}
