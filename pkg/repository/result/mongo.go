@@ -124,12 +124,16 @@ func WithMongoRepositorySequenceCollection(collection *mongo.Collection) MongoRe
 	}
 }
 
-func (r *MongoRepository) getOutputFromLogServer(ctx context.Context, id string) (string, error) {
+func (r *MongoRepository) getOutputFromLogServer(ctx context.Context, result *testkube.Execution) (string, error) {
 	if r.logGrpcClient == nil {
 		return "", nil
 	}
 
-	logs, err := r.logGrpcClient.Get(ctx, id)
+	if result.ExecutionResult == nil || !result.ExecutionResult.IsCompleted() {
+		return "", nil
+	}
+
+	logs, err := r.logGrpcClient.Get(ctx, result.Id)
 	if err != nil {
 		return "", err
 	}
@@ -154,7 +158,7 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.E
 	}
 	if len(result.ExecutionResult.Output) == 0 {
 		if r.features.LogsV2 {
-			result.ExecutionResult.Output, err = r.getOutputFromLogServer(ctx, id)
+			result.ExecutionResult.Output, err = r.getOutputFromLogServer(ctx, &result)
 		} else {
 			result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
 			if err == mongo.ErrNoDocuments {
@@ -172,7 +176,7 @@ func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName s
 	}
 	if len(result.ExecutionResult.Output) == 0 {
 		if r.features.LogsV2 {
-			result.ExecutionResult.Output, err = r.getOutputFromLogServer(ctx, result.Id)
+			result.ExecutionResult.Output, err = r.getOutputFromLogServer(ctx, &result)
 		} else {
 			result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
 			if err == mongo.ErrNoDocuments {
@@ -229,7 +233,7 @@ func (r *MongoRepository) slowGetLatestByTest(ctx context.Context, testName stri
 	result := (&items[0]).UnscapeDots()
 	if len(result.ExecutionResult.Output) == 0 {
 		if r.features.LogsV2 {
-			result.ExecutionResult.Output, err = r.getOutputFromLogServer(ctx, result.Id)
+			result.ExecutionResult.Output, err = r.getOutputFromLogServer(ctx, result)
 		} else {
 			result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
 			if err == mongo.ErrNoDocuments {
@@ -291,7 +295,7 @@ func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) 
 	result := (&items[0]).UnscapeDots()
 	if len(result.ExecutionResult.Output) == 0 {
 		if r.features.LogsV2 {
-			result.ExecutionResult.Output, err = r.getOutputFromLogServer(ctx, result.Id)
+			result.ExecutionResult.Output, err = r.getOutputFromLogServer(ctx, result)
 		} else {
 			result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
 			if err == mongo.ErrNoDocuments {
