@@ -27,7 +27,7 @@ To use Jenkins CI/CD for [Testkube Pro](https://app.testkube.io/), you need to c
 3. Click on "Add Build Step" and select "Testkube Setup".
 ![jenkins testkube setup build step](../img/jenkins-build-step.png)
 
-4. Specify a Testkube CLI version or leave it empty to use the latest version
+4. Specify a Testkube CLI version or leave it empty to use the latest version.
 
 5. Add a new "Execute Shell" Build Step and run one or multiple Testkube CLI commands
 ![jenkins execute shell](../img/jenkins-execute-shell.png)
