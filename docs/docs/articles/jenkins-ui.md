@@ -16,7 +16,7 @@ To use Jenkins CI/CD for [Testkube Pro](https://app.testkube.io/), you need to c
 
 ### How to set up a Freestyle Project to run tests on Testkube Pro
 
-1. Create a new Freestyle Project
+1. Create a new Freestyle Project.
 2. In General settings, configure the environment variables:
    - TK_ORG
    - TK_ENV
