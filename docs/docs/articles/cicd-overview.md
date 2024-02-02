@@ -11,6 +11,7 @@ We have different tutorials for the options of being CI driven or using GitOps a
 - [Jenkins Pipelines](./jenkins.md)
 - [Jenkins UI](./jenkins-ui.md)
 - [CircleCI](./circleci.md)
+- [Azure DevOps](./azure.md)
 - [GitOps Testing](./gitops-overview.md)
   - [Flux](./flux-integration.md)
   - [ArgoCD](./argocd-integration.md)
