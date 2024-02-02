@@ -2,7 +2,7 @@
 
 The Testkube Jenkins integration streamlines the installation of Testkube, enabling the execution of any [Testkube CLI](https://docs.testkube.io/cli/testkube) command within Jenkins Pipelines or Freestyle Projects.  
 
-If you're looking to use Pipelines and Groovy scripts, then look at examples from [Testkube Jenkins Pipelines](./jenkins.md).
+If you are using Pipelines and Groovy scripts, then look at examples from [Testkube Jenkins Pipelines](./jenkins.md).
 
 ### Testkube CLI Jenkins Plugin
 
