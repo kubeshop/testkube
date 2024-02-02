@@ -6,7 +6,7 @@ If you are using Pipelines and Groovy scripts, then look at examples from [Testk
 
 ### Testkube CLI Jenkins Plugin
 
-Install the Testkube CLI plugin by searching it in the "Available Plugins" section on Jenkins Plugins, or using the following url:
+Install the Testkube CLI plugin by searching for it in the "Available Plugins" section on Jenkins Plugins, or using the following url:
 [https://plugins.jenkins.io/testkube-cli](https://plugins.jenkins.io/testkube-cli)
 
 ## Testkube Pro
