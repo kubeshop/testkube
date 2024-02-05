@@ -32,7 +32,7 @@ var (
 
 const (
 	pollInterval    = time.Second
-	podStartTimeout = time.Second * 60
+	podStartTimeout = 30 * time.Minute
 	logsBuffer      = 1000
 )
 
