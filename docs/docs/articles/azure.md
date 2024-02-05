@@ -15,7 +15,7 @@ Install the Testkube CLI extension using the following url:
 To use Azure DevOps Pipelines for [Testkube Pro](https://app.testkube.io/), you need to create an [API token](https://docs.testkube.io/testkube-pro/articles/organization-management/#api-tokens).
 Then, pass the **organization** and **environment** IDs, along with the **token** and other parameters specific for your use case.
 
-If a test is already created, you can run it using the command `testkube run test test-name -f` . However, if you need to create a test in this workflow, please add a creation command, e.g.: `testkube create test --name test-name --file path_to_file.json`.
+If a test is already created, you can run it using the command `testkube run test test-name -f`. However, if you need to create a test in this workflow, you need to add a creation command, e.g.: `testkube create test --name test-name --file path_to_file.json`.
 
 You'll need to create a `azure-pipelines.yml`` file. This will include the stages, jobs and tasks necessary to execute the workflow
 
@@ -42,7 +42,7 @@ stages:
 
 ## Testkube OSS
 
-### How to configure Testkube CLI action for TK OSS and run a test
+### How to configure the Testkube CLI action for TK OSS and run a test
 
 To connect to the self-hosted instance, you need to have **kubectl** configured for accessing your Kubernetes cluster, and pass an optional namespace, if Testkube is not deployed in the default **testkube** namespace. 
 
@@ -72,12 +72,11 @@ The steps to connect to your Kubernetes cluster differ for each provider. You sh
 
 ### How to configure Testkube CLI action for TK OSS and run a test
 
-This workflow establishes a connection to EKS cluster and creates and runs a test using TK CLI. In this example we also use variables not
+This workflow establishes a connection to the EKS cluster and creates and runs a test using TK CLI. In this example we also use variables not
  to reveal sensitive data. Please make sure that the following points are satisfied:
-- The **AWS_ACCESS_KEY_ID**, **AWS_SECRET_ACCESS_KEY** secrets should contain your AWS IAM keys with proper permissions to connect to EKS cluste
-r.
-- The **AWS_REGION** secret should contain AWS region where EKS is
-- Tke **EKS_CLUSTER_NAME** secret points to the name of EKS cluster you want to connect.
+- The **AWS_ACCESS_KEY_ID**, **AWS_SECRET_ACCESS_KEY** secrets should contain your AWS IAM keys with proper permissions to connect to the EKS cluster.
+- The **AWS_REGION** secret should contain the AWS region where EKS is.
+- Tke **EKS_CLUSTER_NAME** secret points to the name of the EKS cluster you want to connect.
 
 ```yaml
 trigger:
@@ -114,8 +113,8 @@ stages:
 
 ### How to connect to GKE (Google Kubernetes Engine) cluster and run a test 
 
-This example connects to a k8s cluster in Google Cloud, creates and runs a test using Testkube Azure DevOps pipeline. Please make sure that the following points are satisfied:
-- The **GKE Sevice Account** should be created prior in Google Cloud and added to pipeline variables along with **GKE_PROJECT** value;
+This example connects to a k8s cluster in Google Cloud and creates and runs a test using Testkube Azure DevOps pipeline. Please make sure that the following points are satisfied:
+- The **GKE Sevice Account** should have already been created in Google Cloud and added to pipeline variables along with **GKE_PROJECT** value.
 - The **GKE_CLUSTER_NAME** and **GKE_ZONE** can be added as environmental variables in the workflow.
 
 ```yaml
