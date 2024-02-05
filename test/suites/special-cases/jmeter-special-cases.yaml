@@ -31,3 +31,15 @@ spec:
   - stopOnFailure: false
     execute:
     - test: jmeterd-executor-smoke-incorrect-file-path-negative
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-incorrect-url-2
+  - stopOnFailure: false
+    execute:
+    - test: jmeter-executor-smoke-incorrect-url-2
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-args-override
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-args-override-workingdir
