@@ -137,8 +137,8 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	jtlPath := filepath.Join(outputDir, "report.jtl")
 	reportPath := filepath.Join(outputDir, "report")
 	jmeterLogPath := filepath.Join(outputDir, "jmeter.log")
-	args := execution.Args
-	hasJunit, hasReport, args := prepareArgs(args, testPath, jtlPath, reportPath, jmeterLogPath)
+	args := mergeDuplicatedArgs(removeDuplicatedArgs(execution.Args))
+	hasJunit, hasReport := prepareArgs(args, testPath, jtlPath, reportPath, jmeterLogPath)
 
 	if mode == jmeterModeDistributed {
 		clientSet, err := k8sclient.ConnectToK8s()
@@ -257,7 +257,7 @@ func checkIfTestFileExists(fs filesystem.FileSystem, args []string) error {
 	return nil
 }
 
-func prepareArgs(args []string, path, jtlPath, reportPath, jmeterLogPath string) (hasJunit, hasReport bool, result []string) {
+func removeDuplicatedArgs(args []string) []string {
 	counters := make(map[string]int)
 	duplicates := make(map[string]string)
 	for _, arg := range args {
@@ -288,6 +288,29 @@ func prepareArgs(args []string, path, jtlPath, reportPath, jmeterLogPath string)
 		}
 	}
 
+	return args
+}
+
+func mergeDuplicatedArgs(args []string) []string {
+	allowed := map[string]int{
+		"-e": 0,
+	}
+
+	for i := len(args) - 1; i >= 0; i-- {
+		if counter, ok := allowed[args[i]]; ok {
+			allowed[args[i]]++
+			if counter == 0 {
+				continue
+			}
+
+			args = append(args[:i], args[i+1:]...)
+		}
+	}
+
+	return args
+}
+
+func prepareArgs(args []string, path, jtlPath, reportPath, jmeterLogPath string) (hasJunit, hasReport bool) {
 	for i, arg := range args {
 		switch arg {
 		case "<runPath>":
@@ -303,7 +326,7 @@ func prepareArgs(args []string, path, jtlPath, reportPath, jmeterLogPath string)
 			hasJunit = true
 		}
 	}
-	return hasJunit, hasReport, args
+	return hasJunit, hasReport
 }
 
 func getEntryPoint() (entrypoint string) {

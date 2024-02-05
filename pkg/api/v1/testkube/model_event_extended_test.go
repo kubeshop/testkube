@@ -116,6 +116,11 @@ func TestEvent_IsSuccess(t *testing.T) {
 
 func TestEvent_Topic(t *testing.T) {
 
+	t.Run("should return events topic if explicitly set", func(t *testing.T) {
+		evt := Event{Type_: EventStartTest, StreamTopic: "topic"}
+		assert.Equal(t, "topic", evt.Topic())
+	})
+
 	t.Run("should return events topic if not resource set", func(t *testing.T) {
 		evt := Event{Type_: EventStartTest, Resource: nil}
 		assert.Equal(t, "events.all", evt.Topic())

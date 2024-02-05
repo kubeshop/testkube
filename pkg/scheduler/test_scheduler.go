@@ -79,17 +79,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	execution = newExecutionFromExecutionOptions(options)
 	options.ID = execution.Id
 
-	// TODO consider using single event for test start and logs
 	s.events.Notify(testkube.NewEventStartTest(&execution))
-
-	// for logs.v2 service trigger start / stop events
-	if s.featureFlags.LogsV2 {
-		err := s.triggerLogsStartEvent(ctx, execution.Id)
-		if err != nil {
-			return execution, err
-		}
-		defer s.triggerLogsStopEvent(ctx, execution.Id)
-	}
 
 	if err := s.createSecretsReferences(&execution); err != nil {
 		return s.handleExecutionError(ctx, execution, "can't create secret variables `Secret` references: %w", err)
@@ -840,42 +830,4 @@ func mergeSlavePodRequests(podBase *testkube.PodRequest, podAdjust *testkube.Pod
 	}
 
 	return podBase
-}
-
-func (s *Scheduler) triggerLogsStartEvent(ctx context.Context, id string) error {
-	if s.featureFlags.LogsV2 {
-		r, err := s.logsStream.Start(ctx, id)
-		if err != nil {
-			return err
-		}
-
-		if r.Error {
-			return errors.New(string(r.Message))
-		}
-
-		s.logger.Infow("triggering logs start event", "id", id)
-	}
-
-	return nil
-}
-
-func (s *Scheduler) triggerLogsStopEvent(ctx context.Context, id string) error {
-	if s.featureFlags.LogsV2 {
-		// as Stop is synchro
-		go func() {
-			r, err := s.logsStream.Stop(ctx, id)
-			if err != nil {
-				s.logger.Errorw("can't send stop event for logs", "id", id, "error", err)
-				return
-			}
-
-			if r.Error {
-				s.logger.Errorw("received invalid response from log stream on stop event", "id", id, "response", r)
-				return
-			}
-
-			s.logger.Infow("triggering logs stop event", "id", id, "response", string(r.Message))
-		}()
-	}
-	return nil
 }
