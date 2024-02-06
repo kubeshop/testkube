@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	buffer = 100
+	buffer          = 100
+	requestDeadline = time.Minute * 5
 )
 
 // NewGrpcClient imlpements getter interface for log stream for given ID
@@ -39,7 +40,7 @@ func (c GrpcClient) Get(ctx context.Context, id string) (chan events.LogResponse
 	log.Debugw("getting logs", "address", c.address)
 	go func() {
 		// Contact the server and print out its response.
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), requestDeadline)
 		defer cancel()
 		defer close(ch)
 
@@ -67,7 +68,7 @@ func (c GrpcClient) Get(ctx context.Context, id string) (chan events.LogResponse
 			log.Debugw("received log chunk from client", "log", l, "error", err)
 			if err == io.EOF {
 				log.Debugw("client stream finished", "error", err)
-				break
+				return
 			} else if err != nil {
 				log.Errorw("error receiving log response", "error", err)
 				ch <- events.LogResponse{Error: err}

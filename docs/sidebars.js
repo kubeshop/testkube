@@ -104,6 +104,7 @@ const sidebars = {
             "articles/github-actions",
             "articles/gitlab",
             "articles/jenkins",
+            "articles/jenkins-ui",
             "articles/circleci",
             "articles/run-tests-with-github-actions",
             "articles/testkube-cli-docker",
