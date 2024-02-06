@@ -262,9 +262,7 @@ func (ls *LogsService) stopConsumer(ctx context.Context, wg *sync.WaitGroup, con
 			err := adapter.Stop(id)
 			if err != nil {
 				l.Errorw("stop error", "adapter", adapter.Name(), "error", err)
-				continue
 			}
-
 			return
 		}
 

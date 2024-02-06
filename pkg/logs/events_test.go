@@ -90,7 +90,7 @@ func TestLogs_EventsFlow(t *testing.T) {
 		assert.NoError(t, err)
 
 		// cooldown stop time
-		time.Sleep(waitTime * 2)
+		time.Sleep(waitTime)
 
 		// then all adapters should be gracefully stopped
 		assert.Equal(t, 0, log.GetConsumersStats(ctx).Count)
@@ -316,7 +316,7 @@ func TestLogs_EventsFlow(t *testing.T) {
 		assert.Equal(t, "stop-queued", string(r.Message))
 
 		// there will be wait for mess
-		time.Sleep(waitTime * 2)
+		time.Sleep(waitTime)
 
 		// then all adapters should be gracefully stopped
 		assert.Equal(t, 0, log.GetConsumersStats(ctx).Count)
