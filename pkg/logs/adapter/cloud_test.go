@@ -64,7 +64,7 @@ func TestCloudAdapter(t *testing.T) {
 		time.Sleep(time.Millisecond * 100)
 
 		// then all messahes should be delivered to the GRPC server
-		assertMessagesProcessed(t, ts, id, 4)
+		ts.AssertMessagesProcessed(t, id, 4)
 	})
 
 	t.Run("cleaning GRPC connections in adapter on Stop", func(t *testing.T) {
@@ -110,9 +110,9 @@ func TestCloudAdapter(t *testing.T) {
 		time.Sleep(time.Millisecond * 100)
 
 		// then messages should be delivered
-		assertMessagesProcessed(t, ts, id1, 1)
-		assertMessagesProcessed(t, ts, id2, 1)
-		assertMessagesProcessed(t, ts, id3, 1)
+		ts.AssertMessagesProcessed(t, id1, 1)
+		ts.AssertMessagesProcessed(t, id2, 1)
+		ts.AssertMessagesProcessed(t, id3, 1)
 
 		// and no stream are registered anymore in cloud adapter
 		assertNoStreams(t, a)
@@ -150,7 +150,7 @@ func TestCloudAdapter(t *testing.T) {
 		time.Sleep(time.Millisecond * 100)
 
 		// then messages should be delivered to GRPC server
-		assertMessagesProcessed(t, ts, id, messageCount)
+		ts.AssertMessagesProcessed(t, id, messageCount)
 	})
 
 	t.Run("Send to a lot of streams in parallel", func(t *testing.T) {
@@ -196,7 +196,7 @@ func TestCloudAdapter(t *testing.T) {
 
 		// then each stream should receive valid data amount
 		for j := 0; j < streamsCount; j++ {
-			assertMessagesProcessed(t, ts, fmt.Sprintf("id%d", j), messageCount)
+			ts.AssertMessagesProcessed(t, fmt.Sprintf("id%d", j), messageCount)
 		}
 	})
 
@@ -301,12 +301,12 @@ func (s *TestServer) Run() (err error) {
 	return nil
 }
 
-func (s *TestServer) assertMessagesProcessed(t *testing.T, ts *TestServer, id string, messageCount int) {
+func (s *TestServer) AssertMessagesProcessed(t *testing.T, id string, messageCount int) {
 	var received int
 
 	for i := 0; i < 100; i++ {
 		s.lock.Lock()
-		received = len(ts.Received[id])
+		received = len(s.Received[id])
 		s.lock.Unlock()
 
 		if received == messageCount {
