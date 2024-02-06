@@ -9,6 +9,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/logs/adapter"
@@ -52,6 +53,12 @@ type Consumer struct {
 
 func (ls *LogsService) initConsumer(ctx context.Context, a adapter.Adapter, streamName, id string, i int) (jetstream.Consumer, error) {
 	name := fmt.Sprintf("lc%s%s%d", id, a.Name(), i)
+
+	err := a.Init(ctx, id)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't init adapter")
+	}
+
 	return ls.js.CreateOrUpdateConsumer(ctx, streamName, jetstream.ConsumerConfig{
 		Name: name,
 		// Durable: name,
@@ -70,7 +77,7 @@ func (ls *LogsService) createStream(ctx context.Context, id string) (jetstream.S
 }
 
 // handleMessage will handle incoming message from logs stream and proxy it to given adapter
-func (ls *LogsService) handleMessage(a adapter.Adapter, id string) func(msg jetstream.Msg) {
+func (ls *LogsService) handleMessage(ctx context.Context, a adapter.Adapter, id string) func(msg jetstream.Msg) {
 	log := ls.log.With("id", id, "adapter", a.Name())
 
 	return func(msg jetstream.Msg) {
@@ -87,7 +94,7 @@ func (ls *LogsService) handleMessage(a adapter.Adapter, id string) func(msg jets
 			return
 		}
 
-		err = a.Notify(id, logChunk)
+		err = a.Notify(ctx, id, logChunk)
 		if err != nil {
 			if err := msg.Nak(); err != nil {
 				log.Errorw("error nacking message", "error", err)
@@ -136,7 +143,7 @@ func (ls *LogsService) handleStart(ctx context.Context, subject string) func(msg
 
 			// handle message per each adapter
 			l.Infow("consumer created", "consumer", c.CachedInfo(), "stream", streamName)
-			cons, err := c.Consume(ls.handleMessage(adapter, id))
+			cons, err := c.Consume(ls.handleMessage(ctx, adapter, id))
 			if err != nil {
 				log.Errorw("error creating consumer", "error", err, "consumer", c.CachedInfo())
 				continue
@@ -259,7 +266,7 @@ func (ls *LogsService) stopConsumer(ctx context.Context, wg *sync.WaitGroup, con
 			l.Infow("stopping and removing consumer", "name", consumer.Name, "consumerSeq", info.Delivered.Consumer, "streamSeq", info.Delivered.Stream, "last", info.Delivered.Last)
 
 			// call adapter stop to handle given id
-			err := adapter.Stop(id)
+			err := adapter.Stop(ctx, id)
 			if err != nil {
 				l.Errorw("stop error", "adapter", adapter.Name(), "error", err)
 			}
