@@ -207,12 +207,6 @@ func (e *Emitter) Logs() []any {
 	return e.Listeners.Log()
 }
 
-func (e *Emitter) ListenersCount() int {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-	return len(e.Listeners)
-}
-
 func (e *Emitter) GetListeners() common.Listeners {
 	e.mutex.RLock()
 	defer e.mutex.RUnlock()
