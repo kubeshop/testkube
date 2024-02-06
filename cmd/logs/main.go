@@ -12,15 +12,19 @@ import (
 	"github.com/oklog/run"
 	"go.uber.org/zap"
 
+	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/agent"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/logs"
 	"github.com/kubeshop/testkube/pkg/logs/adapter"
 	"github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/logs/config"
+	"github.com/kubeshop/testkube/pkg/logs/pb"
 	"github.com/kubeshop/testkube/pkg/logs/repository"
 	"github.com/kubeshop/testkube/pkg/logs/state"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func newStorageClient(cfg *config.Config) *minio.Client {
@@ -44,6 +48,11 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	cfg := Must(config.Get())
+
+	mode := common.ModeStandalone
+	if cfg.TestkubeProAPIKey != "" {
+		mode = common.ModeAgent
+	}
 
 	// Event bus
 	nc := Must(bus.NewNATSConnection(bus.ConnectionConfig{
@@ -80,26 +89,36 @@ func main() {
 		WithGrpcAddress(cfg.GrpcAddress).
 		WithLogsRepositoryFactory(repository.NewJsMinioFactory(minioClient, cfg.StorageBucket, logStream))
 
-	// TODO - add adapters here
-	minioAdapter, err := adapter.NewMinioAdapter(cfg.StorageEndpoint,
-		cfg.StorageAccessKeyID,
-		cfg.StorageSecretAccessKey,
-		cfg.StorageRegion,
-		cfg.StorageToken,
-		cfg.StorageBucket,
-		cfg.StorageSSL,
-		cfg.StorageSkipVerify,
-		cfg.StorageCertFile,
-		cfg.StorageKeyFile,
-		cfg.StorageCAFile)
-
 	if cfg.Debug {
 		svc.AddAdapter(adapter.NewDebugAdapter())
 	}
+	// add given log adapter depends from mode
+	switch mode {
 
-	if err != nil {
-		log.Errorw("error creating minio adapter, debug adapter created instead", "error", err)
-	} else {
+	case common.ModeAgent:
+		grpcConn, err := agent.NewGRPCConnection(ctx, cfg.TestkubeProTLSInsecure, cfg.TestkubeProSkipVerify, cfg.TestkubeProURL+cfg.TestkubeProLogsPath, log)
+		ui.ExitOnError("error creating gRPC connection for logs service", err)
+		defer grpcConn.Close()
+		grpcClient := pb.NewCloudLogsServiceClient(grpcConn)
+		cloudAdapter := adapter.NewCloudAdapter(grpcClient, cfg.TestkubeProAPIKey)
+		svc.AddAdapter(cloudAdapter)
+
+	case common.ModeStandalone:
+		minioAdapter, err := adapter.NewMinioAdapter(cfg.StorageEndpoint,
+			cfg.StorageAccessKeyID,
+			cfg.StorageSecretAccessKey,
+			cfg.StorageRegion,
+			cfg.StorageToken,
+			cfg.StorageBucket,
+			cfg.StorageSSL,
+			cfg.StorageSkipVerify,
+			cfg.StorageCertFile,
+			cfg.StorageKeyFile,
+			cfg.StorageCAFile)
+
+		if err != nil {
+			log.Errorw("error creating minio adapter", "error", err)
+		}
 		log.Infow("minio adapter created", "bucket", cfg.StorageBucket, "endpoint", cfg.StorageEndpoint)
 		svc.AddAdapter(minioAdapter)
 	}

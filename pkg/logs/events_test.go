@@ -346,7 +346,11 @@ type MockAdapter struct {
 	name     string
 }
 
-func (s *MockAdapter) Notify(id string, e events.Log) error {
+func (s *MockAdapter) Init(ctx context.Context, id string) error {
+	return nil
+}
+
+func (s *MockAdapter) Notify(ctx context.Context, id string, e events.Log) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -355,7 +359,7 @@ func (s *MockAdapter) Notify(id string, e events.Log) error {
 	return nil
 }
 
-func (s *MockAdapter) Stop(id string) error {
+func (s *MockAdapter) Stop(ctx context.Context, id string) error {
 	fmt.Printf("stopping %s \n", id)
 	return nil
 }

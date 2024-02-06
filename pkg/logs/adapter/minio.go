@@ -98,7 +98,11 @@ type MinioAdapter struct {
 	mapLock        sync.RWMutex
 }
 
-func (s *MinioAdapter) Notify(id string, e events.Log) error {
+func (s *MinioAdapter) Init(ctx context.Context, id string) error {
+	return nil
+}
+
+func (s *MinioAdapter) Notify(ctx context.Context, id string, e events.Log) error {
 	s.Log.Debugw("minio consumer notify", "id", id, "event", e)
 	if s.disconnected {
 		s.Log.Debugw("minio consumer disconnected", "id", id)
@@ -206,9 +210,8 @@ func (s *MinioAdapter) objectExists(objectName string) bool {
 	return err == nil
 }
 
-func (s *MinioAdapter) Stop(id string) error {
+func (s *MinioAdapter) Stop(ctx context.Context, id string) error {
 	s.Log.Debugw("minio consumer stop", "id", id)
-	ctx := context.TODO()
 	buffInfo, ok := s.GetBuffInfo(id)
 	if !ok {
 		return ErrIdNotFound{id}
