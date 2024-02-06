@@ -202,16 +202,6 @@ func TestCloudAdapter(t *testing.T) {
 
 }
 
-func assertMessagesProcessed(t *testing.T, ts *TestServer, id string, messageCount int) {
-	for i := 0; i < 100; i++ {
-		if len(ts.Received[id]) == messageCount {
-			return
-		}
-	}
-
-	assert.Len(t, ts.Received[id], messageCount)
-}
-
 func assertNoStreams(t *testing.T, a *CloudAdapter) {
 	t.Helper()
 	// no stream are registered anymore
@@ -309,4 +299,21 @@ func (s *TestServer) Run() (err error) {
 		return errors.Wrap(err, "grpc server error")
 	}
 	return nil
+}
+
+func (s *TestServer) assertMessagesProcessed(t *testing.T, ts *TestServer, id string, messageCount int) {
+	var received int
+
+	for i := 0; i < 100; i++ {
+		s.lock.Lock()
+		received = len(ts.Received[id])
+		s.lock.Unlock()
+
+		if received == messageCount {
+			return
+		}
+		time.Sleep(time.Millisecond * 10)
+	}
+
+	assert.Equal(t, messageCount, received)
 }
