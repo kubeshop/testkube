@@ -302,8 +302,17 @@ func NewRunTestCmd() *cobra.Command {
 
 				if execution.Id != "" {
 					if watchEnabled && len(args) > 0 {
-						if err = watchLogs(execution.Id, silentMode, client); err != nil {
-							execErrors = append(execErrors, err)
+						info, err := client.GetServerInfo()
+						ui.ExitOnError("getting server info", err)
+
+						if info.Features.LogsV2 {
+							if err = watchLogsV2(execution.Id, silentMode, client); err != nil {
+								execErrors = append(execErrors, err)
+							}
+						} else {
+							if err = watchLogs(execution.Id, silentMode, client); err != nil {
+								execErrors = append(execErrors, err)
+							}
 						}
 					}
 
