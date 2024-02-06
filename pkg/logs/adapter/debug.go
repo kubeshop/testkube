@@ -1,6 +1,8 @@
 package adapter
 
 import (
+	"context"
+
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/pkg/log"
@@ -20,12 +22,17 @@ type DebugAdapter struct {
 	l *zap.SugaredLogger
 }
 
-func (s *DebugAdapter) Notify(id string, e events.Log) error {
+func (s *DebugAdapter) Init(ctx context.Context, id string) error {
+	s.l.Debugw("Initializing", "id", id)
+	return nil
+}
+
+func (s *DebugAdapter) Notify(ctx context.Context, id string, e events.Log) error {
 	s.l.Debugw("got event", "id", id, "event", e)
 	return nil
 }
 
-func (s *DebugAdapter) Stop(id string) error {
+func (s *DebugAdapter) Stop(ctx context.Context, id string) error {
 	s.l.Debugw("Stopping", "id", id)
 	return nil
 }
