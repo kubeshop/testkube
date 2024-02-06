@@ -23,10 +23,10 @@ const (
 
 var _ Adapter = &MinioAdapter{}
 
-type ErrMinioConsumerDisconnected struct {
+type ErrMinioAdapterDisconnected struct {
 }
 
-func (e ErrMinioConsumerDisconnected) Error() string {
+func (e ErrMinioAdapterDisconnected) Error() string {
 	return "minio consumer disconnected"
 }
 
@@ -51,7 +51,7 @@ type BufferInfo struct {
 	Part   int
 }
 
-// MinioConsumer creates new MinioSubscriber which will send data to local MinIO bucket
+// NewMinioAdapter creates new MinioAdapter which will send data to local MinIO bucket
 func NewMinioAdapter(endpoint, accessKeyID, secretAccessKey, region, token, bucket string, ssl, skipVerify bool, certFile, keyFile, caFile string) (*MinioAdapter, error) {
 	ctx := context.TODO()
 	opts := minioconnecter.GetTLSOptions(ssl, skipVerify, certFile, keyFile, caFile)
@@ -99,10 +99,10 @@ type MinioAdapter struct {
 }
 
 func (s *MinioAdapter) Notify(id string, e events.Log) error {
-	s.Log.Debugw("minio consumer notify", "id", id, "event", e)
+	s.Log.Infow("minio consumer notify", "id", id, "event", e)
 	if s.disconnected {
-		s.Log.Debugw("minio consumer disconnected", "id", id)
-		return ErrMinioConsumerDisconnected{}
+		s.Log.Infow("minio consumer disconnected", "id", id)
+		return ErrMinioAdapterDisconnected{}
 	}
 
 	buffInfo, ok := s.GetBuffInfo(id)
@@ -146,7 +146,7 @@ func (s *MinioAdapter) putData(ctx context.Context, name string, buffer *bytes.B
 		if err != nil {
 			s.Log.Errorw("error putting object", "err", err)
 		}
-		s.Log.Debugw("put object successfully", "name", name, "s.bucket", s.bucket)
+		s.Log.Infow("put object successfully", "name", name, "s.bucket", s.bucket)
 	} else {
 		s.Log.Warn("empty buffer for name: ", name)
 	}
@@ -178,8 +178,7 @@ func (s *MinioAdapter) combineData(ctxt context.Context, minioClient *minio.Clie
 		s.Log.Errorw("error putting object", "err", err)
 		return err
 	}
-
-	s.Log.Debugw("data combined", "id", id, "s.bucket", s.bucket, "parts", parts, "uploadinfo", info)
+	s.Log.Infow("put object successfully", "id", id, "s.bucket", s.bucket, "parts", parts)
 
 	if deleteIntermediaryData {
 		for i := 0; i < parts; i++ {
@@ -207,7 +206,7 @@ func (s *MinioAdapter) objectExists(objectName string) bool {
 }
 
 func (s *MinioAdapter) Stop(id string) error {
-	s.Log.Debugw("minio consumer stop", "id", id)
+	s.Log.Infow("minio consumer stop", "id", id)
 	ctx := context.TODO()
 	buffInfo, ok := s.GetBuffInfo(id)
 	if !ok {
