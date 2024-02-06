@@ -224,6 +224,11 @@ func main() {
 		ui.ExitOnError("Creating TestKube Clientset", err)
 	}
 
+	var logGrpcClient logsclient.StreamGetter
+	if features.LogsV2 {
+		logGrpcClient = logsclient.NewGrpcClient(cfg.LogServerGrpcAddress)
+	}
+
 	// DI
 	var resultsRepository result.Repository
 	var testResultsRepository testresult.Repository
@@ -242,7 +247,7 @@ func main() {
 		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)
 		ui.ExitOnError("Getting mongo database", err)
 		isDocDb := cfg.APIMongoDBType == storage.TypeDocDB
-		mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb)
+		mongoResultsRepository := result.NewMongoRepository(db, logGrpcClient, cfg.APIMongoAllowDiskUse, isDocDb, features)
 		resultsRepository = mongoResultsRepository
 		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb)
 		configRepository = configrepository.NewMongoRepository(db)
@@ -492,6 +497,7 @@ func main() {
 		cfg.EnableSecretsEndpoint,
 		features,
 		logsStream,
+		logGrpcClient,
 	)
 
 	if mode == common.ModeAgent {
@@ -508,6 +514,7 @@ func main() {
 			clusterId,
 			cfg.TestkubeClusterName,
 			envs,
+			features,
 		)
 		if err != nil {
 			ui.ExitOnError("Starting agent", err)

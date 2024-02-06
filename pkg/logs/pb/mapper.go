@@ -18,11 +18,11 @@ func MapToPB(r events.Log) *Log {
 	return &Log{
 		Time:     timestamppb.New(r.Time),
 		Content:  r.Content,
-		Error:    r.Error,
-		Type:     r.Type,
+		Error:    r.Error_,
+		Type:     r.Type_,
 		Source:   r.Source,
 		Metadata: r.Metadata,
-		Version:  string(r.Version),
+		Version:  r.Version,
 	}
 }
 
@@ -30,10 +30,10 @@ func MapFromPB(log *Log) events.Log {
 	return events.Log{
 		Time:     log.Time.AsTime(),
 		Content:  log.Content,
-		Error:    log.Error,
-		Type:     log.Type,
+		Error_:   log.Error,
+		Type_:    log.Type,
 		Source:   log.Source,
 		Metadata: log.Metadata,
-		Version:  events.LogVersion(log.Version),
+		Version:  log.Version,
 	}
 }

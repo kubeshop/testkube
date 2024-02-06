@@ -91,6 +91,7 @@ func NewTestkubeAPI(
 	enableSecretsEndpoint bool,
 	ff featureflags.FeatureFlags,
 	logsStream logsclient.Stream,
+	logGrpcClient logsclient.StreamGetter,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -137,6 +138,7 @@ func NewTestkubeAPI(
 		enableSecretsEndpoint: enableSecretsEndpoint,
 		featureFlags:          ff,
 		logsStream:            logsStream,
+		logGrpcClient:         logGrpcClient,
 	}
 
 	// will be reused in websockets handler
@@ -195,6 +197,7 @@ type TestkubeAPI struct {
 	enableSecretsEndpoint bool
 	featureFlags          featureflags.FeatureFlags
 	logsStream            logsclient.Stream
+	logGrpcClient         logsclient.StreamGetter
 }
 
 type storageParams struct {
@@ -296,6 +299,8 @@ func (s *TestkubeAPI) InitRoutes() {
 	executions.Get("/:executionID/artifacts", s.ListArtifactsHandler())
 	executions.Get("/:executionID/logs", s.ExecutionLogsHandler())
 	executions.Get("/:executionID/logs/stream", s.ExecutionLogsStreamHandler())
+	executions.Get("/:executionID/logs/v2", s.ExecutionLogsHandlerV2())
+	executions.Get("/:executionID/logs/stream/v2", s.ExecutionLogsStreamHandlerV2())
 	executions.Get("/:executionID/artifacts/:filename", s.GetArtifactHandler())
 	executions.Get("/:executionID/artifact-archive", s.GetArtifactArchiveHandler())
 

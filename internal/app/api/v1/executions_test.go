@@ -7,9 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -19,9 +21,11 @@ import (
 	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/executor/client"
+	executorclient "github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
+	logclient "github.com/kubeshop/testkube/pkg/logs/client"
+	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/server"
 )
 
@@ -120,6 +124,76 @@ func TestTestkubeAPI_ExecutionLogsHandler(t *testing.T) {
 	}
 }
 
+func TestTestkubeAPI_ExecutionLogsHandlerV2(t *testing.T) {
+	app := fiber.New()
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	grpcClient := logclient.NewMockStreamGetter(mockCtrl)
+
+	eventLog := events.Log{
+		Content: "storage logs",
+		Source:  events.SourceJobPod,
+		Version: string(events.LogVersionV2),
+	}
+
+	out := make(chan events.LogResponse)
+	go func() {
+		defer func() {
+			close(out)
+		}()
+
+		out <- events.LogResponse{Log: eventLog}
+	}()
+
+	grpcClient.EXPECT().Get(gomock.Any(), "test-execution-1").Return(out, nil)
+	s := &TestkubeAPI{
+		HTTPServer: server.HTTPServer{
+			Mux: app,
+			Log: log.DefaultLogger,
+		},
+		featureFlags:  featureflags.FeatureFlags{LogsV2: true},
+		logGrpcClient: grpcClient,
+	}
+	app.Get("/executions/:executionID/logs/v2", s.ExecutionLogsHandlerV2())
+
+	tests := []struct {
+		name         string
+		route        string
+		expectedCode int
+		eventLog     events.Log
+	}{
+		{
+			name:         "Test getting logs from grpc client",
+			route:        "/executions/test-execution-1/logs/v2",
+			expectedCode: 200,
+			eventLog:     eventLog,
+		},
+	}
+
+	responsePrefix := "data: "
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", tt.route, nil)
+			resp, err := app.Test(req, -1)
+			assert.NoError(t, err)
+			defer resp.Body.Close()
+
+			assert.Equal(t, tt.expectedCode, resp.StatusCode, tt.name)
+
+			b := make([]byte, len(responsePrefix))
+			resp.Body.Read(b)
+			assert.Equal(t, responsePrefix, string(b))
+
+			var res events.Log
+			err = json.NewDecoder(resp.Body).Decode(&res)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.eventLog, res)
+		})
+	}
+}
+
 type MockExecutionResultsRepository struct {
 	GetFn func(ctx context.Context, id string) (testkube.Execution, error)
 }
@@ -211,7 +285,7 @@ type MockExecutor struct {
 	LogsFn func(id string) (chan output.Output, error)
 }
 
-func (e MockExecutor) Execute(ctx context.Context, execution *testkube.Execution, options client.ExecuteOptions) (*testkube.ExecutionResult, error) {
+func (e MockExecutor) Execute(ctx context.Context, execution *testkube.Execution, options executorclient.ExecuteOptions) (*testkube.ExecutionResult, error) {
 	panic("not implemented")
 }
 

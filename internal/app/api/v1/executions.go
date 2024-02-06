@@ -14,6 +14,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 
+	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 
 	"github.com/gofiber/fiber/v2"
@@ -181,6 +182,10 @@ func (s *TestkubeAPI) GetLogsStream(ctx context.Context, executionID string) (ch
 
 func (s *TestkubeAPI) ExecutionLogsStreamHandler() fiber.Handler {
 	return websocket.New(func(c *websocket.Conn) {
+		if s.featureFlags.LogsV2 {
+			return
+		}
+
 		executionID := c.Params("executionID")
 		l := s.Log.With("executionID", executionID)
 
@@ -200,9 +205,45 @@ func (s *TestkubeAPI) ExecutionLogsStreamHandler() fiber.Handler {
 	})
 }
 
+func (s *TestkubeAPI) ExecutionLogsStreamHandlerV2() fiber.Handler {
+	return websocket.New(func(c *websocket.Conn) {
+		if !s.featureFlags.LogsV2 {
+			return
+		}
+
+		executionID := c.Params("executionID")
+		l := s.Log.With("executionID", executionID)
+
+		l.Debugw("getting logs from grpc log server and passing to websocket",
+			"id", c.Params("id"), "locals", c.Locals, "remoteAddr", c.RemoteAddr(), "localAddr", c.LocalAddr())
+
+		defer c.Conn.Close()
+
+		logs, err := s.logGrpcClient.Get(context.Background(), executionID)
+		if err != nil {
+			l.Errorw("can't get logs fom grpc", "error", err)
+			return
+		}
+
+		for logLine := range logs {
+			if logLine.Error != nil {
+				l.Errorw("can't get log line", "error", logLine.Error)
+				continue
+			}
+
+			l.Debugw("sending log line to websocket", "line", logLine.Log)
+			_ = c.WriteJSON(logLine.Log)
+		}
+	})
+}
+
 // ExecutionLogsHandler streams the logs from a test execution
 func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		if s.featureFlags.LogsV2 {
+			return nil
+		}
+
 		executionID := c.Params("executionID")
 
 		s.Log.Debug("getting logs", "executionID", executionID)
@@ -237,6 +278,42 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 			}
 
 			s.streamLogsFromJob(ctx, executionID, execution.TestType, w)
+		})
+
+		return nil
+	}
+}
+
+// ExecutionLogsHandlerV2 streams the logs from a test execution version 2
+func (s *TestkubeAPI) ExecutionLogsHandlerV2() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if !s.featureFlags.LogsV2 {
+			return nil
+		}
+
+		executionID := c.Params("executionID")
+
+		s.Log.Debug("getting logs", "executionID", executionID)
+
+		ctx := c.Context()
+
+		ctx.SetContentType("text/event-stream")
+		ctx.Response.Header.Set("Cache-Control", "no-cache")
+		ctx.Response.Header.Set("Connection", "keep-alive")
+		ctx.Response.Header.Set("Transfer-Encoding", "chunked")
+
+		ctx.SetBodyStreamWriter(func(w *bufio.Writer) {
+			s.Log.Debug("start streaming logs")
+			_ = w.Flush()
+
+			s.Log.Infow("getting logs from grpc log server")
+			logs, err := s.logGrpcClient.Get(ctx, executionID)
+			if err != nil {
+				s.Log.Errorw("can't get logs from grpc", "error", err)
+				return
+			}
+
+			s.streamLogsFromLogServer(logs, w)
 		})
 
 		return nil
@@ -595,6 +672,25 @@ func (s *TestkubeAPI) getNewestExecutions(ctx context.Context) ([]testkube.Execu
 // getExecutionLogs returns logs from an execution
 func (s *TestkubeAPI) getExecutionLogs(ctx context.Context, execution testkube.Execution) ([]string, error) {
 	var res []string
+
+	if s.featureFlags.LogsV2 {
+		logs, err := s.logGrpcClient.Get(ctx, execution.Id)
+		if err != nil {
+			return []string{}, fmt.Errorf("could not get logs for grpc %s: %w", execution.Id, err)
+		}
+
+		for out := range logs {
+			if out.Error != nil {
+				s.Log.Errorw("can't get log line", "error", out.Error)
+				continue
+			}
+
+			res = append(res, out.Log.Content)
+		}
+
+		return res, nil
+	}
+
 	if execution.ExecutionResult.IsCompleted() {
 		return append(res, execution.ExecutionResult.Output), nil
 	}
@@ -644,4 +740,28 @@ func (s *TestkubeAPI) getArtifactStorage(bucket string) (storage.ArtifactsStorag
 	}
 
 	return minio.NewMinIOArtifactClient(minioClient), nil
+}
+
+// streamLogsFromLogServer writes logs from the output of log server to the writer
+func (s *TestkubeAPI) streamLogsFromLogServer(logs chan events.LogResponse, w *bufio.Writer) {
+	enc := json.NewEncoder(w)
+	s.Log.Infow("looping through logs channel")
+	// loop through grpc server log lines - it's blocking channel
+	// and pass single log output as sse data chunk
+	for out := range logs {
+		if out.Error != nil {
+			s.Log.Errorw("can't get log line", "error", out.Error)
+			continue
+		}
+
+		s.Log.Debugw("got log line from grpc log server", "out", out.Log)
+		_, _ = fmt.Fprintf(w, "data: ")
+		err := enc.Encode(out.Log)
+		if err != nil {
+			s.Log.Infow("Encode", "error", err)
+		}
+		// enc.Encode adds \n and we need \n\n after `data: {}` chunk
+		_, _ = fmt.Fprintf(w, "\n")
+		_ = w.Flush()
+	}
 }

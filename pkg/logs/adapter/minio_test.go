@@ -45,7 +45,7 @@ func TestLogs(t *testing.T) {
 		fmt.Println("sending", i)
 		consumer.Notify(ctx, id, events.Log{Time: time.Now(),
 			Content: fmt.Sprintf("Test %d: %s", i, hugeString),
-			Type:    "test", Source: strconv.Itoa(i)})
+			Type_:   "test", Source: strconv.Itoa(i)})
 		time.Sleep(100 * time.Millisecond)
 	}
 	err := consumer.Stop(ctx, id)
@@ -62,7 +62,7 @@ func BenchmarkLogs(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		consumer.Notify(ctx, id, events.Log{Time: time.Now(),
 			Content: fmt.Sprintf("Test %d: %s", i, hugeString),
-			Type:    "test", Source: strconv.Itoa(i)})
+			Type_:   "test", Source: strconv.Itoa(i)})
 		totalSize += len(hugeString)
 	}
 	sizeInMB := float64(totalSize) / 1024 / 1024
@@ -99,7 +99,7 @@ func testOneConsumer(consumer *MinioAdapter, id string) {
 	for i := 0; i < numberOFLogs; i++ {
 		consumer.Notify(ctx, id, events.Log{Time: time.Now(),
 			Content: fmt.Sprintf("Test %d: %s", i, hugeString),
-			Type:    "test", Source: strconv.Itoa(i)})
+			Type_:   "test", Source: strconv.Itoa(i)})
 		totalSize += len(hugeString)
 		time.Sleep(time.Duration(rand.Intn(10)) * time.Millisecond)
 	}

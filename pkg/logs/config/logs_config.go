@@ -31,10 +31,11 @@ type Config struct {
 	GrpcAddress  string `envconfig:"GRPC_ADDRESS" default:":9090"`
 	KVBucketName string `envconfig:"KV_BUCKET_NAME" default:"logsState"`
 
-	StorageEndpoint        string `envconfig:"STORAGE_ENDPOINT" default:"testkube-minio-service-testkube:9000"`
-	StorageLogsBucket      string `envconfig:"STORAGE_LOGS_BUCKET" default:"testkube-new-logs"`
-	StorageAccessKeyID     string `envconfig:"STORAGE_ACCESSKEYID" default:"minio"`
-	StorageSecretAccessKey string `envconfig:"STORAGE_SECRETACCESSKEY" default:"minio123"`
+	StorageEndpoint        string `envconfig:"STORAGE_ENDPOINT" default:"localhost:9000"`
+	StorageBucket          string `envconfig:"STORAGE_BUCKET" default:"testkube-logs"`
+	StorageExpiration      int    `envconfig:"STORAGE_EXPIRATION"`
+	StorageAccessKeyID     string `envconfig:"STORAGE_ACCESSKEYID" default:""`
+	StorageSecretAccessKey string `envconfig:"STORAGE_SECRETACCESSKEY" default:""`
 	StorageRegion          string `envconfig:"STORAGE_REGION" default:""`
 	StorageToken           string `envconfig:"STORAGE_TOKEN" default:""`
 	StorageSSL             bool   `envconfig:"STORAGE_SSL" default:"false"`

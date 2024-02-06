@@ -74,7 +74,7 @@ func (l LogsRepositoryMock) Get(ctx context.Context, id string) (chan events.Log
 	defer close(ch)
 
 	for i := 0; i < count; i++ {
-		ch <- events.LogResponse{Log: events.Log{Time: time.Now(), Content: fmt.Sprintf("test %d", i), Error: false, Type: "test", Source: "test", Metadata: map[string]string{"test": "test"}}}
+		ch <- events.LogResponse{Log: events.Log{Time: time.Now(), Content: fmt.Sprintf("test %d", i), Error_: false, Type_: "test", Source: "test", Metadata: map[string]string{"test": "test"}}}
 	}
 	return ch, nil
 }

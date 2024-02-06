@@ -9,6 +9,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/output"
+	"github.com/kubeshop/testkube/pkg/logs/events"
 )
 
 // NewTestClient creates new Test client
@@ -257,6 +258,14 @@ func (c TestClient) Logs(id string) (logs chan output.Output, err error) {
 	logs = make(chan output.Output)
 	uri := c.testTransport.GetURI("/executions/%s/logs", id)
 	err = c.testTransport.GetLogs(uri, logs)
+	return logs, err
+}
+
+// LogsV2 returns logs version 2 stream from log sever, based on job pods logs
+func (c TestClient) LogsV2(id string) (logs chan events.Log, err error) {
+	logs = make(chan events.Log)
+	uri := c.testTransport.GetURI("/executions/%s/logs/v2", id)
+	err = c.testTransport.GetLogsV2(uri, logs)
 	return logs, err
 }
 

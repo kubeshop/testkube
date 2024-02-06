@@ -139,12 +139,13 @@ func (mr *MockClientMockRecorder) DownloadFile(arg0, arg1, arg2 interface{}) *go
 }
 
 // DownloadFileFromBucket mocks base method.
-func (m *MockClient) DownloadFileFromBucket(arg0 context.Context, arg1, arg2, arg3 string) (io.Reader, error) {
+func (m *MockClient) DownloadFileFromBucket(arg0 context.Context, arg1, arg2, arg3 string) (io.Reader, minio.ObjectInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DownloadFileFromBucket", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(io.Reader)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(minio.ObjectInfo)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // DownloadFileFromBucket indicates an expected call of DownloadFileFromBucket.

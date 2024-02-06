@@ -8,6 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/nats-io/nats.go/jetstream"
+	"github.com/oklog/run"
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/internal/common"
@@ -16,14 +18,27 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/logs"
 	"github.com/kubeshop/testkube/pkg/logs/adapter"
+	"github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/logs/config"
 	"github.com/kubeshop/testkube/pkg/logs/pb"
+	"github.com/kubeshop/testkube/pkg/logs/repository"
 	"github.com/kubeshop/testkube/pkg/logs/state"
+	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/ui"
-
-	"github.com/nats-io/nats.go/jetstream"
-	"github.com/oklog/run"
 )
+
+func newStorageClient(cfg *config.Config) *minio.Client {
+	opts := minio.GetTLSOptions(cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
+	return minio.NewClient(
+		cfg.StorageEndpoint,
+		cfg.StorageAccessKeyID,
+		cfg.StorageSecretAccessKey,
+		cfg.StorageRegion,
+		cfg.StorageToken,
+		cfg.StorageBucket,
+		opts...,
+	)
+}
 
 func main() {
 	var g run.Group
@@ -55,18 +70,28 @@ func main() {
 	}()
 
 	js := Must(jetstream.New(nc))
+	logStream := Must(client.NewNatsLogStream(nc))
+
+	minioClient := newStorageClient(cfg)
+	if err := minioClient.Connect(); err != nil {
+		log.Fatalw("error connecting to minio", "error", err)
+	}
+
+	if err := minioClient.SetExpirationPolicy(cfg.StorageExpiration); err != nil {
+		log.Warnw("error setting expiration policy", "error", err)
+	}
 
 	kv := Must(js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: cfg.KVBucketName}))
 	state := state.NewState(kv)
 
 	svc := logs.NewLogsService(nc, js, state).
 		WithHttpAddress(cfg.HttpAddress).
-		WithGrpcAddress(cfg.GrpcAddress)
+		WithGrpcAddress(cfg.GrpcAddress).
+		WithLogsRepositoryFactory(repository.NewJsMinioFactory(minioClient, cfg.StorageBucket, logStream))
 
 	if cfg.Debug {
 		svc.AddAdapter(adapter.NewDebugAdapter())
 	}
-
 	// add given log adapter depends from mode
 	switch mode {
 
@@ -84,7 +109,7 @@ func main() {
 			cfg.StorageSecretAccessKey,
 			cfg.StorageRegion,
 			cfg.StorageToken,
-			cfg.StorageLogsBucket,
+			cfg.StorageBucket,
 			cfg.StorageSSL,
 			cfg.StorageSkipVerify,
 			cfg.StorageCertFile,
@@ -94,7 +119,7 @@ func main() {
 		if err != nil {
 			log.Errorw("error creating minio adapter", "error", err)
 		}
-		log.Infow("minio adapter created", "bucket", cfg.StorageLogsBucket, "endpoint", cfg.StorageEndpoint)
+		log.Infow("minio adapter created", "bucket", cfg.StorageBucket, "endpoint", cfg.StorageEndpoint)
 		svc.AddAdapter(minioAdapter)
 	}
 

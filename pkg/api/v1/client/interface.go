@@ -5,6 +5,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/output"
+	"github.com/kubeshop/testkube/pkg/logs/events"
 )
 
 // Client is the Testkube API client abstraction
@@ -35,6 +36,7 @@ type TestAPI interface {
 	ExecuteTest(id, executionName string, options ExecuteTestOptions) (executions testkube.Execution, err error)
 	ExecuteTests(selector string, concurrencyLevel int, options ExecuteTestOptions) (executions []testkube.Execution, err error)
 	Logs(id string) (logs chan output.Output, err error)
+	LogsV2(id string) (logs chan events.Log, err error)
 }
 
 // ExecutionAPI describes execution api methods
@@ -251,5 +253,6 @@ type Transport[A All] interface {
 	ExecuteMethod(method, uri, selector string, isContentExpected bool) error
 	GetURI(pathTemplate string, params ...interface{}) string
 	GetLogs(uri string, logs chan output.Output) error
+	GetLogsV2(uri string, logs chan events.Log) error
 	GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error)
 }

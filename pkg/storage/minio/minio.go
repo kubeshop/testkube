@@ -409,9 +409,19 @@ func (c *Client) DownloadArchive(ctx context.Context, bucketFolder string, masks
 }
 
 // DownloadFileFromBucket downloads file from given bucket
-func (c *Client) DownloadFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) (io.Reader, error) {
+func (c *Client) DownloadFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) (io.Reader, minio.ObjectInfo, error) {
 	c.Log.Debugw("Downloading file", "bucket", bucket, "bucketFolder", bucketFolder, "file", file)
-	return c.downloadFile(ctx, bucket, bucketFolder, file)
+	object, err := c.downloadFile(ctx, bucket, bucketFolder, file)
+	if err != nil {
+		return nil, minio.ObjectInfo{}, err
+	}
+
+	info, err := object.Stat()
+	if err != nil {
+		return nil, minio.ObjectInfo{}, err
+	}
+
+	return object, info, nil
 }
 
 // DownloadArrchiveFromBucket downloads archive from given bucket
