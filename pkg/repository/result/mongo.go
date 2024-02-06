@@ -14,6 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.uber.org/zap"
 
+	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -43,6 +44,7 @@ func NewMongoRepository(db *mongo.Database, allowDiskUse, isDocDb bool, opts ...
 		ResultsColl:      db.Collection(CollectionResults),
 		SequencesColl:    db.Collection(CollectionSequences),
 		OutputRepository: NewMongoOutputRepository(db),
+		logGrpcClient:    logGrpcClient,
 		allowDiskUse:     allowDiskUse,
 		isDocDb:          isDocDb,
 		log:              log.DefaultLogger,
@@ -59,6 +61,8 @@ func NewMongoRepositoryWithOutputRepository(
 	db *mongo.Database,
 	allowDiskUse bool,
 	outputRepository OutputRepository,
+	logGrpcClient logsclient.StreamGetter,
+	features featureflags.FeatureFlags,
 	opts ...MongoRepositoryOpt,
 ) *MongoRepository {
 	r := &MongoRepository{
@@ -66,6 +70,7 @@ func NewMongoRepositoryWithOutputRepository(
 		ResultsColl:      db.Collection(CollectionResults),
 		SequencesColl:    db.Collection(CollectionSequences),
 		OutputRepository: outputRepository,
+		logGrpcClient:    logGrpcClient,
 		allowDiskUse:     allowDiskUse,
 		log:              log.DefaultLogger,
 	}
@@ -77,11 +82,13 @@ func NewMongoRepositoryWithOutputRepository(
 	return r
 }
 
-func NewMongoRepositoryWithMinioOutputStorage(db *mongo.Database, allowDiskUse bool, storageClient storage.Client, bucket string) *MongoRepository {
+func NewMongoRepositoryWithMinioOutputStorage(db *mongo.Database, allowDiskUse bool, storageClient storage.Client,
+	logGrpcClient logsclient.StreamGetter, bucket string, features featureflags.FeatureFlags) *MongoRepository {
 	repo := MongoRepository{
 		db:            db,
 		ResultsColl:   db.Collection(CollectionResults),
 		SequencesColl: db.Collection(CollectionSequences),
+		logGrpcClient: logGrpcClient,
 		allowDiskUse:  allowDiskUse,
 		log:           log.DefaultLogger,
 	}

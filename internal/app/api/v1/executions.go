@@ -322,6 +322,42 @@ func (s *TestkubeAPI) ExecutionLogsHandlerV2() fiber.Handler {
 	}
 }
 
+// ExecutionLogsHandlerV2 streams the logs from a test execution version 2
+func (s *TestkubeAPI) ExecutionLogsHandlerV2() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if !s.featureFlags.LogsV2 {
+			return nil
+		}
+
+		executionID := c.Params("executionID")
+
+		s.Log.Debug("getting logs", "executionID", executionID)
+
+		ctx := c.Context()
+
+		ctx.SetContentType("text/event-stream")
+		ctx.Response.Header.Set("Cache-Control", "no-cache")
+		ctx.Response.Header.Set("Connection", "keep-alive")
+		ctx.Response.Header.Set("Transfer-Encoding", "chunked")
+
+		ctx.SetBodyStreamWriter(func(w *bufio.Writer) {
+			s.Log.Debug("start streaming logs")
+			_ = w.Flush()
+
+			s.Log.Infow("getting logs from grpc log server")
+			logs, err := s.logGrpcClient.Get(ctx, executionID)
+			if err != nil {
+				s.Log.Errorw("can't get logs from grpc", "error", err)
+				return
+			}
+
+			s.streamLogsFromLogServer(logs, w)
+		})
+
+		return nil
+	}
+}
+
 // GetExecutionHandler returns test execution object for given test and execution id/name
 func (s *TestkubeAPI) GetExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
