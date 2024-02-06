@@ -38,11 +38,11 @@ func (e ErrIdNotFound) Error() string {
 	return fmt.Sprintf("id %s not found", e.Id)
 }
 
-type ErrChucnkTooBig struct {
+type ErrChunckTooBig struct {
 	Length int
 }
 
-func (e ErrChucnkTooBig) Error() string {
+func (e ErrChunckTooBig) Error() string {
 	return fmt.Sprintf("chunk too big: %d", e.Length)
 }
 
@@ -99,9 +99,9 @@ type MinioAdapter struct {
 }
 
 func (s *MinioAdapter) Notify(id string, e events.Log) error {
-	s.Log.Infow("minio consumer notify", "id", id, "event", e)
+	s.Log.Debugw("minio consumer notify", "id", id, "event", e)
 	if s.disconnected {
-		s.Log.Infow("minio consumer disconnected", "id", id)
+		s.Log.Debugw("minio consumer disconnected", "id", id)
 		return ErrMinioAdapterDisconnected{}
 	}
 
@@ -118,7 +118,7 @@ func (s *MinioAdapter) Notify(id string, e events.Log) error {
 
 	if len(chunckToAdd) > defaultWriteSize {
 		s.Log.Warnw("chunck too big", "length", len(chunckToAdd))
-		return ErrChucnkTooBig{len(chunckToAdd)}
+		return ErrChunckTooBig{len(chunckToAdd)}
 	}
 
 	chunckToAdd = append(chunckToAdd, []byte("\n")...)
@@ -146,7 +146,7 @@ func (s *MinioAdapter) putData(ctx context.Context, name string, buffer *bytes.B
 		if err != nil {
 			s.Log.Errorw("error putting object", "err", err)
 		}
-		s.Log.Infow("put object successfully", "name", name, "s.bucket", s.bucket)
+		s.Log.Debugw("put object successfully", "name", name, "s.bucket", s.bucket)
 	} else {
 		s.Log.Warn("empty buffer for name: ", name)
 	}
@@ -178,7 +178,7 @@ func (s *MinioAdapter) combineData(ctxt context.Context, minioClient *minio.Clie
 		s.Log.Errorw("error putting object", "err", err)
 		return err
 	}
-	s.Log.Infow("put object successfully", "id", id, "s.bucket", s.bucket, "parts", parts)
+	s.Log.Debugw("put object successfully", "id", id, "s.bucket", s.bucket, "parts", parts)
 
 	if deleteIntermediaryData {
 		for i := 0; i < parts; i++ {
@@ -206,7 +206,7 @@ func (s *MinioAdapter) objectExists(objectName string) bool {
 }
 
 func (s *MinioAdapter) Stop(id string) error {
-	s.Log.Infow("minio consumer stop", "id", id)
+	s.Log.Debugw("minio consumer stop", "id", id)
 	ctx := context.TODO()
 	buffInfo, ok := s.GetBuffInfo(id)
 	if !ok {
