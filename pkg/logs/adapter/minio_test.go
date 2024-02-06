@@ -37,8 +37,8 @@ func RandString(n int) string {
 }
 
 func TestLogs(t *testing.T) {
-	ctx := context.Background()
 	t.Skip("skipping test")
+	ctx := context.Background()
 	consumer, _ := NewMinioAdapter("localhost:9000", "minio", "minio123", "", "", "test-1", false, false, "", "", "")
 	id := "test-bla"
 	for i := 0; i < 1000; i++ {

@@ -11,10 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/agent"
-	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/logs/events"
-	"github.com/kubeshop/testkube/pkg/logs/pb"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
@@ -22,6 +18,11 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+
+	"github.com/kubeshop/testkube/pkg/agent"
+	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/logs/events"
+	"github.com/kubeshop/testkube/pkg/logs/pb"
 )
 
 func TestCloudAdapter(t *testing.T) {
@@ -63,7 +64,7 @@ func TestCloudAdapter(t *testing.T) {
 		time.Sleep(time.Millisecond * 100)
 
 		// then all messahes should be delivered to the GRPC server
-		assert.Len(t, ts.Received[id], 4)
+		assertMessagesProcessed(t, ts, id, 4)
 	})
 
 	t.Run("cleaning GRPC connections in adapter on Stop", func(t *testing.T) {
@@ -109,9 +110,9 @@ func TestCloudAdapter(t *testing.T) {
 		time.Sleep(time.Millisecond * 100)
 
 		// then messages should be delivered
-		assert.Len(t, ts.Received[id1], 1)
-		assert.Len(t, ts.Received[id2], 1)
-		assert.Len(t, ts.Received[id3], 1)
+		assertMessagesProcessed(t, ts, id1, 1)
+		assertMessagesProcessed(t, ts, id2, 1)
+		assertMessagesProcessed(t, ts, id3, 1)
 
 		// and no stream are registered anymore in cloud adapter
 		assertNoStreams(t, a)
@@ -149,7 +150,7 @@ func TestCloudAdapter(t *testing.T) {
 		time.Sleep(time.Millisecond * 100)
 
 		// then messages should be delivered to GRPC server
-		assert.Len(t, ts.Received[id], messageCount)
+		assertMessagesProcessed(t, ts, id, messageCount)
 	})
 
 	t.Run("Send to a lot of streams in parallel", func(t *testing.T) {
@@ -195,10 +196,20 @@ func TestCloudAdapter(t *testing.T) {
 
 		// then each stream should receive valid data amount
 		for j := 0; j < streamsCount; j++ {
-			assert.Len(t, ts.Received[fmt.Sprintf("id%d", j)], messageCount)
+			assertMessagesProcessed(t, ts, fmt.Sprintf("id%d", j), messageCount)
 		}
 	})
 
+}
+
+func assertMessagesProcessed(t *testing.T, ts *TestServer, id string, messageCount int) {
+	for i := 0; i < 100; i++ {
+		if len(ts.Received[id]) == messageCount {
+			return
+		}
+	}
+
+	assert.Len(t, ts.Received[id], messageCount)
 }
 
 func assertNoStreams(t *testing.T, a *CloudAdapter) {
