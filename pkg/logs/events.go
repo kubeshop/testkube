@@ -263,7 +263,7 @@ func (ls *LogsService) stopConsumer(ctx context.Context, wg *sync.WaitGroup, con
 			l.Infow("stopping and removing consumer", "name", consumer.Name, "consumerSeq", info.Delivered.Consumer, "streamSeq", info.Delivered.Stream, "last", info.Delivered.Last)
 
 			// call adapter stop to handle given id
-			err := adapter.Stop(id)
+			err := adapter.Stop(ctx, id)
 			if err != nil {
 				l.Errorw("stop error", "adapter", adapter.Name(), "error", err)
 			}
