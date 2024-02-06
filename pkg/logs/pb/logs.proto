@@ -30,7 +30,8 @@ message Log{
 
 
 
-// Cloud service definition will be used in cloud adapter in logs server
+// CloudLogsService client will be used in cloud adapter in logs server
+// CloudLogsService server will be implemented on cloud side
 service CloudLogsService {
     rpc Stream(stream Log) returns (StreamResponse);
 }
