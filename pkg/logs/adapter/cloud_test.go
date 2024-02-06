@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/rand"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -26,20 +27,26 @@ import (
 func TestCloudAdapter(t *testing.T) {
 
 	t.Run("GRPC server receives log data", func(t *testing.T) {
+		// given grpc test server
 		ts := NewTestServer().WithRandomPort()
 		go ts.Run()
 
 		ctx := context.Background()
 		id := "id1"
 
+		// and connection
 		grpcConn, err := agent.NewGRPCConnection(ctx, true, true, ts.Url, log.DefaultLogger)
 		assert.NoError(t, err)
 		defer grpcConn.Close()
+
+		// and log stream client
 		grpcClient := pb.NewCloudLogsServiceClient(grpcConn)
 		a := NewCloudAdapter(grpcClient, "APIKEY")
 
+		// when stream is initialized
 		err = a.Init(ctx, id)
 		assert.NoError(t, err)
+		// and data is sent to it
 		err = a.Notify(ctx, id, *events.NewLog("log1"))
 		assert.NoError(t, err)
 		err = a.Notify(ctx, id, *events.NewLog("log2"))
@@ -48,16 +55,19 @@ func TestCloudAdapter(t *testing.T) {
 		assert.NoError(t, err)
 		err = a.Notify(ctx, id, *events.NewLog("log4"))
 		assert.NoError(t, err)
+		// and stream is stopped after sending logs to it
 		err = a.Stop(ctx, id)
 		assert.NoError(t, err)
 
 		// cooldown
 		time.Sleep(time.Millisecond * 100)
 
+		// then all messahes should be delivered to the GRPC server
 		assert.Len(t, ts.Received[id], 4)
 	})
 
 	t.Run("cleaning GRPC connections in adapter on Stop", func(t *testing.T) {
+		// given new test server
 		ts := NewTestServer().WithRandomPort()
 		go ts.Run()
 
@@ -66,13 +76,14 @@ func TestCloudAdapter(t *testing.T) {
 		id2 := "id2"
 		id3 := "id3"
 
+		// and connection
 		grpcConn, err := agent.NewGRPCConnection(ctx, true, true, ts.Url, log.DefaultLogger)
 		assert.NoError(t, err)
 		defer grpcConn.Close()
 		grpcClient := pb.NewCloudLogsServiceClient(grpcConn)
 		a := NewCloudAdapter(grpcClient, "APIKEY")
 
-		// send 3 streams
+		// when 3 streams are initialized, data is sent, and then stopped
 		err = a.Init(ctx, id1)
 		assert.NoError(t, err)
 		err = a.Notify(ctx, id1, *events.NewLog("log1"))
@@ -97,32 +108,39 @@ func TestCloudAdapter(t *testing.T) {
 		// cooldown
 		time.Sleep(time.Millisecond * 100)
 
+		// then messages should be delivered
 		assert.Len(t, ts.Received[id1], 1)
 		assert.Len(t, ts.Received[id2], 1)
 		assert.Len(t, ts.Received[id3], 1)
 
-		// no stream are registered anymore
+		// and no stream are registered anymore in cloud adapter
 		assertNoStreams(t, a)
 	})
 
 	t.Run("Send and receive a lot of messages", func(t *testing.T) {
+		// given test server
 		ts := NewTestServer().WithRandomPort()
 		go ts.Run()
 
 		ctx := context.Background()
 		id := "id1M"
 
+		// and grpc connetion to the server
 		grpcConn, err := agent.NewGRPCConnection(ctx, true, true, ts.Url, log.DefaultLogger)
 		assert.NoError(t, err)
 		defer grpcConn.Close()
+
+		// and logs stream client
 		grpcClient := pb.NewCloudLogsServiceClient(grpcConn)
 		a := NewCloudAdapter(grpcClient, "APIKEY")
 
+		// when streams are initialized
 		err = a.Init(ctx, id)
 		assert.NoError(t, err)
 
 		messageCount := 10_000
 		for i := 0; i < messageCount; i++ {
+			// and data is sent
 			err = a.Notify(ctx, id, *events.NewLog("log1"))
 			assert.NoError(t, err)
 		}
@@ -130,12 +148,61 @@ func TestCloudAdapter(t *testing.T) {
 		// cooldown
 		time.Sleep(time.Millisecond * 100)
 
+		// then messages should be delivered to GRPC server
 		assert.Len(t, ts.Received[id], messageCount)
+	})
+
+	t.Run("Send to a lot of streams in parallel", func(t *testing.T) {
+		// given test server
+		ts := NewTestServer().WithRandomPort()
+		go ts.Run()
+
+		ctx := context.Background()
+
+		// and grpc connetion to the server
+		grpcConn, err := agent.NewGRPCConnection(ctx, true, true, ts.Url, log.DefaultLogger)
+		assert.NoError(t, err)
+		defer grpcConn.Close()
+
+		// and logs stream client
+		grpcClient := pb.NewCloudLogsServiceClient(grpcConn)
+		a := NewCloudAdapter(grpcClient, "APIKEY")
+
+		streamsCount := 100
+		messageCount := 1_000
+
+		// when streams are initialized
+		var wg sync.WaitGroup
+		wg.Add(streamsCount)
+		for j := 0; j < streamsCount; j++ {
+			err = a.Init(ctx, fmt.Sprintf("id%d", j))
+			assert.NoError(t, err)
+
+			go func(j int) {
+				defer wg.Done()
+				for i := 0; i < messageCount; i++ {
+					// and when data are sent
+					err = a.Notify(ctx, fmt.Sprintf("id%d", j), *events.NewLog("log1"))
+					assert.NoError(t, err)
+				}
+			}(j)
+		}
+
+		wg.Wait()
+
+		// and wait for cooldown
+		time.Sleep(time.Millisecond * 100)
+
+		// then each stream should receive valid data amount
+		for j := 0; j < streamsCount; j++ {
+			assert.Len(t, ts.Received[fmt.Sprintf("id%d", j)], messageCount)
+		}
 	})
 
 }
 
 func assertNoStreams(t *testing.T, a *CloudAdapter) {
+	t.Helper()
 	// no stream are registered anymore
 	count := 0
 	a.streams.Range(func(key, value any) bool {
@@ -156,6 +223,7 @@ type TestServer struct {
 	Url string
 	pb.UnimplementedCloudLogsServiceServer
 	Received map[string][]*pb.Log
+	lock     sync.Mutex
 }
 
 func getVal(ctx context.Context, key string) (string, error) {
@@ -181,7 +249,10 @@ func (s *TestServer) Stream(stream pb.CloudLogsService_StreamServer) error {
 		return err
 	}
 	id := v
+
+	s.lock.Lock()
 	s.Received[id] = []*pb.Log{}
+	s.lock.Unlock()
 
 	for {
 		in, err := stream.Recv()
@@ -196,7 +267,9 @@ func (s *TestServer) Stream(stream pb.CloudLogsService_StreamServer) error {
 			return status.Error(codes.Internal, "can't receive stream: "+err.Error())
 		}
 
+		s.lock.Lock()
 		s.Received[id] = append(s.Received[id], in)
+		s.lock.Unlock()
 	}
 }
 
