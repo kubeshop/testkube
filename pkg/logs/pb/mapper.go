@@ -7,7 +7,7 @@ import (
 )
 
 // TODO figure out how to pass errors better
-func MapResponseToPB(r events.LogResponse) *LogResponse {
+func MapResponseToPB(r events.LogResponse) *Log {
 	chunk := r.Log
 	content := chunk.Content
 	isError := false
@@ -15,7 +15,7 @@ func MapResponseToPB(r events.LogResponse) *LogResponse {
 		content = r.Error.Error()
 		isError = true
 	}
-	return &LogResponse{
+	return &Log{
 		Time:     timestamppb.New(chunk.Time),
 		Content:  content,
 		Error:    isError,
@@ -26,14 +26,14 @@ func MapResponseToPB(r events.LogResponse) *LogResponse {
 	}
 }
 
-func MapFromPB(chunk *LogResponse) events.Log {
+func MapFromPB(l *Log) events.Log {
 	return events.Log{
-		Time:     chunk.Time.AsTime(),
-		Content:  chunk.Content,
-		Error:    chunk.Error,
-		Type:     chunk.Type,
-		Source:   chunk.Source,
-		Metadata: chunk.Metadata,
-		Version:  events.LogVersion(chunk.Version),
+		Time:     l.Time.AsTime(),
+		Content:  l.Content,
+		Error:    l.Error,
+		Type:     l.Type,
+		Source:   l.Source,
+		Metadata: l.Metadata,
+		Version:  events.LogVersion(l.Version),
 	}
 }
