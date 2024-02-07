@@ -84,7 +84,7 @@ func main() {
 	kv := Must(js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: cfg.KVBucketName}))
 	state := state.NewState(kv)
 
-	svc := logs.NewLogsService(nc, js, state).
+	svc := logs.NewLogsService(nc, js, state, logStream).
 		WithHttpAddress(cfg.HttpAddress).
 		WithGrpcAddress(cfg.GrpcAddress).
 		WithLogsRepositoryFactory(repository.NewJsMinioFactory(minioClient, cfg.StorageBucket, logStream))

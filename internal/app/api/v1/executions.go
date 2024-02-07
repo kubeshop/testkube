@@ -234,6 +234,8 @@ func (s *TestkubeAPI) ExecutionLogsStreamHandlerV2() fiber.Handler {
 			l.Debugw("sending log line to websocket", "line", logLine.Log)
 			_ = c.WriteJSON(logLine.Log)
 		}
+
+		l.Debug("stream stopped in v2 logs handler")
 	})
 }
 
@@ -293,7 +295,7 @@ func (s *TestkubeAPI) ExecutionLogsHandlerV2() fiber.Handler {
 
 		executionID := c.Params("executionID")
 
-		s.Log.Debug("getting logs", "executionID", executionID)
+		s.Log.Debugw("getting logs", "executionID", executionID)
 
 		ctx := c.Context()
 
@@ -764,4 +766,6 @@ func (s *TestkubeAPI) streamLogsFromLogServer(logs chan events.LogResponse, w *b
 		_, _ = fmt.Fprintf(w, "\n")
 		_ = w.Flush()
 	}
+
+	s.Log.Debugw("logs streaming stopped")
 }

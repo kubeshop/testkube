@@ -35,9 +35,11 @@ type GrpcClient struct {
 // Get returns channel with log stream chunks for given execution id connects through GRPC to log service
 func (c GrpcClient) Get(ctx context.Context, id string) (chan events.LogResponse, error) {
 	ch := make(chan events.LogResponse, buffer)
+
 	log := c.log.With("id", id)
 
 	log.Debugw("getting logs", "address", c.address)
+
 	go func() {
 		// Contact the server and print out its response.
 		ctx, cancel := context.WithTimeout(context.Background(), requestDeadline)
@@ -63,20 +65,32 @@ func (c GrpcClient) Get(ctx context.Context, id string) (chan events.LogResponse
 		}
 
 		log.Debugw("client start streaming")
+		defer func() {
+			log.Debugw("client stopped streaming")
+		}()
+
 		for {
 			l, err := r.Recv()
-			log.Debugw("received log chunk from client", "log", l, "error", err)
 			if err == io.EOF {
-				log.Debugw("client stream finished", "error", err)
+				log.Infow("client stream finished", "error", err)
 				return
 			} else if err != nil {
-				log.Errorw("error receiving log response", "error", err)
 				ch <- events.LogResponse{Error: err}
+				log.Errorw("error receiving log response", "error", err)
 				return
 			}
 
+			logChunk := pb.MapFromPB(l)
+
+			// catch finish event
+			if events.IsFinished(&logChunk) {
+				log.Infow("received finish", "log", l)
+				return
+			}
+
+			log.Debugw("grpc client log", "log", l)
 			// send to the channel
-			ch <- events.LogResponse{Log: pb.MapFromPB(l)}
+			ch <- events.LogResponse{Log: logChunk}
 		}
 	}()
 

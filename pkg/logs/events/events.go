@@ -48,6 +48,18 @@ type LogResponse struct {
 
 type Log testkube.LogV2
 
+func NewFinishLog() *Log {
+	return &Log{
+		Content: "processing logs finished",
+		Type_:   "finish",
+		Source:  "log-server",
+	}
+}
+
+func IsFinished(log *Log) bool {
+	return log.Type_ == "finish"
+}
+
 func NewErrorLog(err error) *Log {
 	var msg string
 	if err != nil {

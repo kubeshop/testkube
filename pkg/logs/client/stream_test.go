@@ -2,54 +2,112 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/event/bus"
+	"github.com/kubeshop/testkube/pkg/logs/events"
 )
 
 func TestStream_StartStop(t *testing.T) {
-	ns, nc := bus.TestServerWithConnection()
-	defer ns.Shutdown()
+	t.Run("start and stop events are triggered", func(t *testing.T) {
+		// given nats server with jetstream
+		ns, nc := bus.TestServerWithConnection()
+		defer ns.Shutdown()
 
-	id := "111"
+		id := "111"
 
-	ctx := context.Background()
+		ctx := context.Background()
 
-	client, err := NewNatsLogStream(nc)
-	assert.NoError(t, err)
+		// and log stream
+		client, err := NewNatsLogStream(nc)
+		assert.NoError(t, err)
 
-	meta, err := client.Init(ctx, id)
-	assert.NoError(t, err)
-	assert.Equal(t, StreamPrefix+id, meta.Name)
+		// initialized
+		meta, err := client.Init(ctx, id)
+		assert.NoError(t, err)
+		assert.Equal(t, StreamPrefix+id, meta.Name)
 
-	err = client.PushBytes(ctx, id, []byte(`{"resourceId":"hello 1"}`))
-	assert.NoError(t, err)
+		// when data are passed
+		err = client.PushBytes(ctx, id, []byte(`{"resourceId":"hello 1"}`))
+		assert.NoError(t, err)
 
-	var startReceived, stopReceived bool
+		var startReceived, stopReceived bool
 
-	_, err = nc.Subscribe(StartSubject, func(m *nats.Msg) {
-		m.Respond([]byte("ok"))
-		startReceived = true
+		_, err = nc.Subscribe(StartSubject, func(m *nats.Msg) {
+			m.Respond([]byte("ok"))
+			startReceived = true
+		})
+		assert.NoError(t, err)
+		_, err = nc.Subscribe(StopSubject, func(m *nats.Msg) {
+			m.Respond([]byte("ok"))
+			stopReceived = true
+		})
+
+		assert.NoError(t, err)
+
+		// and stream started
+		d, err := client.Start(ctx, id)
+		assert.NoError(t, err)
+		assert.Equal(t, "ok", string(d.Message))
+
+		// and stream stopped
+		d, err = client.Stop(ctx, id)
+		assert.NoError(t, err)
+		assert.Equal(t, "ok", string(d.Message))
+
+		// then start/stop subjects should be notified
+		assert.True(t, startReceived)
+		assert.True(t, stopReceived)
 	})
-	assert.NoError(t, err)
-	_, err = nc.Subscribe(StopSubject, func(m *nats.Msg) {
-		m.Respond([]byte("ok"))
-		stopReceived = true
+
+	t.Run("channel is closed when log is finished", func(t *testing.T) {
+		// given nats server with jetstream
+		ns, nc := bus.TestServerWithConnection()
+		defer ns.Shutdown()
+
+		id := "222"
+
+		ctx := context.Background()
+
+		// and log stream
+		client, err := NewNatsLogStream(nc)
+		assert.NoError(t, err)
+
+		// initialized
+		meta, err := client.Init(ctx, id)
+		assert.NoError(t, err)
+		assert.Equal(t, StreamPrefix+id, meta.Name)
+
+		// when messages are sent
+		err = client.Push(ctx, id, events.NewLog("log line 1"))
+		assert.NoError(t, err)
+		err = client.Push(ctx, id, events.NewLog("log line 2"))
+		assert.NoError(t, err)
+		err = client.Push(ctx, id, events.NewLog("log line 3"))
+		assert.NoError(t, err)
+		// and stream is set as finished
+		err = client.Finish(ctx, id)
+		assert.NoError(t, err)
+
+		// and replay of messages is done
+		ch, err := client.Get(ctx, id)
+		assert.NoError(t, err)
+
+		messagesCount := 0
+
+		for l := range ch {
+			fmt.Printf("%+v\n", l)
+			messagesCount++
+			if events.IsFinished(&l.Log) {
+				break
+			}
+		}
+
+		// then
+		assert.Equal(t, 3, messagesCount)
 	})
-
-	assert.NoError(t, err)
-
-	d, err := client.Start(ctx, id)
-	assert.NoError(t, err)
-	assert.Equal(t, "ok", string(d.Message))
-
-	d, err = client.Stop(ctx, id)
-	assert.NoError(t, err)
-	assert.Equal(t, "ok", string(d.Message))
-
-	assert.True(t, startReceived)
-	assert.True(t, stopReceived)
 }

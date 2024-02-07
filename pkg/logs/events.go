@@ -67,15 +67,6 @@ func (ls *LogsService) initConsumer(ctx context.Context, a adapter.Adapter, stre
 	})
 }
 
-func (ls *LogsService) createStream(ctx context.Context, id string) (jetstream.Stream, error) {
-	// create stream for incoming logs
-	streamName := StreamPrefix + id
-	return ls.js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
-		Name:    streamName,
-		Storage: jetstream.FileStorage, // durable stream as we can hit mem limit
-	})
-}
-
 // handleMessage will handle incoming message from logs stream and proxy it to given adapter
 func (ls *LogsService) handleMessage(ctx context.Context, a adapter.Adapter, id string) func(msg jetstream.Msg) {
 	log := ls.log.With("id", id, "adapter", a.Name())
@@ -122,7 +113,8 @@ func (ls *LogsService) handleStart(ctx context.Context, subject string) func(msg
 		log := ls.log.With("id", id, "event", "start")
 
 		ls.state.Put(ctx, id, state.LogStatePending)
-		s, err := ls.createStream(ctx, id)
+
+		s, err := ls.logStream.Init(ctx, id)
 		if err != nil {
 			ls.log.Errorw("error creating stream", "error", err, "id", id)
 			return
@@ -216,8 +208,8 @@ func (ls *LogsService) handleStop(ctx context.Context, group string) func(msg *n
 			wg.Add(1)
 			stopped++
 			consumer := c.(Consumer)
-			go ls.stopConsumer(ctx, &wg, consumer, adapter, id)
 
+			go ls.stopConsumer(ctx, &wg, consumer, adapter, id)
 		}
 
 		wg.Wait()
@@ -242,6 +234,14 @@ func (ls *LogsService) stopConsumer(ctx context.Context, wg *sync.WaitGroup, con
 		retries    = 0
 		maxRetries = 50
 	)
+
+	defer func() {
+		// send log finish message as consumer listening for logs needs to be closed
+		err = ls.logStream.Finish(ctx, id)
+		if err != nil {
+			ls.log.Errorw("log stream finish error")
+		}
+	}()
 
 	l.Debugw("stopping consumer", "name", consumer.Name)
 

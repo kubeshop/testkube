@@ -305,7 +305,7 @@ func NewRunTestCmd() *cobra.Command {
 						info, err := client.GetServerInfo()
 						ui.ExitOnError("getting server info", err)
 
-						if info.Features.LogsV2 {
+						if info.Features != nil && info.Features.LogsV2 {
 							if err = watchLogsV2(execution.Id, silentMode, client); err != nil {
 								execErrors = append(execErrors, err)
 							}
