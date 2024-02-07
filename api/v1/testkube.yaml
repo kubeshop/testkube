@@ -2259,6 +2259,51 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /executors/{testType}/type:
+    get:
+      parameters:
+        - $ref: "#/components/parameters/TestType"
+      tags:
+        - api
+        - executor
+      summary: "Get executor details by type"
+      description: "Returns executors data with executions passed to executor"
+      operationId: getExecutorByType
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutorDetails"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with input for CRD generation"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with getting executor data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /labels:
     get:
       tags:
@@ -6218,6 +6263,13 @@ components:
         default: false
       description: dont delete executions
       required: false
+    TestType:
+      in: path
+      name: testType
+      schema:
+        type: string
+      required: true
+      description: test type of the executor
   requestBodies:
     UploadsBody:
       description: "Upload files request body data"
