@@ -216,8 +216,8 @@ func (ls *LogsService) handleStop(ctx context.Context, group string) func(msg *n
 			wg.Add(1)
 			stopped++
 			consumer := c.(Consumer)
-			go ls.stopConsumer(ctx, &wg, consumer, adapter, id)
 
+			go ls.stopConsumer(ctx, &wg, consumer, adapter, id)
 		}
 
 		wg.Wait()
@@ -242,6 +242,14 @@ func (ls *LogsService) stopConsumer(ctx context.Context, wg *sync.WaitGroup, con
 		retries    = 0
 		maxRetries = 50
 	)
+
+	defer func() {
+		// send log finish message as consumer listening for logs needs to be closed
+		err = ls.logStream.Finish(ctx, id)
+		if err != nil {
+			ls.log.Errorw("log stream finish error")
+		}
+	}()
 
 	l.Debugw("stopping consumer", "name", consumer.Name)
 

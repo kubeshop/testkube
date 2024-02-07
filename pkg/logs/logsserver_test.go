@@ -23,7 +23,7 @@ func TestGRPC_Server(t *testing.T) {
 
 	state := &StateMock{state: state.LogStatePending}
 
-	ls := NewLogsService(nil, nil, state).
+	ls := NewLogsService(nil, nil, state, nil).
 		WithLogsRepositoryFactory(LogsFactoryMock{}).
 		WithRandomPort()
 

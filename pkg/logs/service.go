@@ -20,6 +20,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/logs/adapter"
+	"github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/logs/pb"
 	"github.com/kubeshop/testkube/pkg/logs/repository"
 	"github.com/kubeshop/testkube/pkg/logs/state"
@@ -32,7 +33,7 @@ const (
 	defaultStopPauseInterval = 200 * time.Millisecond
 )
 
-func NewLogsService(nats *nats.Conn, js jetstream.JetStream, state state.Interface) *LogsService {
+func NewLogsService(nats *nats.Conn, js jetstream.JetStream, state state.Interface, stream client.Stream) *LogsService {
 	return &LogsService{
 		nats:              nats,
 		adapters:          []adapter.Adapter{},
@@ -44,6 +45,7 @@ func NewLogsService(nats *nats.Conn, js jetstream.JetStream, state state.Interfa
 		consumerInstances: sync.Map{},
 		state:             state,
 		stopPauseInterval: defaultStopPauseInterval,
+		logStream:         stream,
 	}
 }
 
@@ -53,6 +55,9 @@ type LogsService struct {
 	nats                  *nats.Conn
 	js                    jetstream.JetStream
 	adapters              []adapter.Adapter
+
+	// logStream to manage and send data to logs streams
+	logStream client.Stream
 
 	Ready chan struct{}
 

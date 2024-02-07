@@ -48,8 +48,11 @@ func TestLogs_EventsFlow(t *testing.T) {
 		// and logs state manager
 		state := state.NewState(kv)
 
+		logsStream, err := client.NewNatsLogStream(nc)
+		assert.NoError(t, err)
+
 		// and initialized log service
-		log := NewLogsService(nc, js, state).
+		log := NewLogsService(nc, js, state, logsStream).
 			WithRandomPort()
 
 		// given example adapters
@@ -119,8 +122,11 @@ func TestLogs_EventsFlow(t *testing.T) {
 		// and logs state manager
 		state := state.NewState(kv)
 
+		logsStream, err := client.NewNatsLogStream(nc)
+		assert.NoError(t, err)
+
 		// and initialized log service
-		log := NewLogsService(nc, js, state).
+		log := NewLogsService(nc, js, state, logsStream).
 			WithRandomPort()
 
 		// given example adapter
@@ -195,8 +201,11 @@ func TestLogs_EventsFlow(t *testing.T) {
 		// and logs state manager
 		state := state.NewState(kv)
 
+		logsStream, err := client.NewNatsLogStream(nc)
+		assert.NoError(t, err)
+
 		// and initialized log service
-		log := NewLogsService(nc, js, state).
+		log := NewLogsService(nc, js, state, logsStream).
 			WithRandomPort()
 
 		// given example adapter
@@ -268,8 +277,11 @@ func TestLogs_EventsFlow(t *testing.T) {
 		// and logs state manager
 		state := state.NewState(kv)
 
+		logsStream, err := client.NewNatsLogStream(nc)
+		assert.NoError(t, err)
+
 		// and initialized log service
-		log := NewLogsService(nc, js, state).
+		log := NewLogsService(nc, js, state, logsStream).
 			WithRandomPort()
 
 		// given example adapters
