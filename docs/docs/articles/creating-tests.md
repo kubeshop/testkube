@@ -353,7 +353,7 @@ There are many differences between `--variables-file` and `--copy-files`. The fo
 
 ### Redefining the Prebuilt Executor Command and Arguments
 
-Each of Testkube Prebuilt executors has a default command and arguments it uses to execute the test. They are provided as a part of Executor CRD and can be either overidden(replaced) or appended during test creation or execution, for example:
+Each of Testkube Prebuilt executors has a default command and arguments it uses to execute the test. They are provided as a part of Executor CRD and can be either overridden, replaced, or appended during test creation or execution, for example:
 
 ```sh
 testkube create test --name maven-example-test --git-uri https://github.com/kubeshop/testkube-executor-maven.git --git-path examples/hello-maven --type maven/test --git-branch main --command "mvn" --args-mode "override" --executor-args="--settings <settingsFile> <goalName> -Duser.home <mavenHome>"
