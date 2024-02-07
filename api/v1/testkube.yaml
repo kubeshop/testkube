@@ -4224,6 +4224,7 @@ components:
           enum:
             - append
             - override
+            - replace
         variables:
           $ref: "#/components/schemas/Variables"
         isVariablesFileUploaded:
@@ -4829,6 +4830,7 @@ components:
           enum:
             - append
             - override
+            - replace
         image:
           type: string
           description: container image, executor will run inside this image

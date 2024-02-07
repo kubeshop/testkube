@@ -580,7 +580,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		args = append(options.ExecutorSpec.Args, args...)
 	}
 
-	if argsMode == string(testkube.ArgsModeTypeOverride) {
+	if argsMode == string(testkube.ArgsModeTypeOverride) || argsMode == string(testkube.ArgsModeTypeReplace) {
 		args = options.Request.Args
 		if options.TestSpec.ExecutionRequest != nil && len(args) == 0 {
 			args = options.TestSpec.ExecutionRequest.Args

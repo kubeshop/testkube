@@ -14,7 +14,7 @@ testkube run test <testName> [flags]
 
 ```
       --args stringArray                           executor binary additional arguments
-      --args-mode string                           usage mode for argumnets. one of append|override (default "append")
+      --args-mode string                           usage mode for argumnets. one of append|override|replace (default "append")
       --artifact-dir stringArray                   artifact dirs for scraping
       --artifact-mask stringArray                  regexp to filter scraped artifacts, single or comma separated, like report/.* or .*\.json,.*\.js$
       --artifact-omit-folder-per-execution         don't store artifacts in execution folder
