@@ -51,11 +51,7 @@ func (c NatsLogStream) Init(ctx context.Context, id string) (StreamMetadata, err
 }
 
 func (c NatsLogStream) Finish(ctx context.Context, id string) error {
-	b, err := json.Marshal(events.NewFinishLog())
-	if err != nil {
-		return err
-	}
-	return c.PushBytes(ctx, id, b)
+	return c.Push(ctx, id, events.NewFinishLog())
 }
 
 // Push log chunk to NATS stream
