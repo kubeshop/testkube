@@ -72,7 +72,7 @@ func (c GrpcClient) Get(ctx context.Context, id string) (chan events.LogResponse
 			} else if err != nil {
 				log.Errorw("error receiving log response", "error", err)
 				ch <- events.LogResponse{Error: err}
-				continue
+				return
 			}
 
 			// send to the channel
