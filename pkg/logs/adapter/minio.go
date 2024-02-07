@@ -23,10 +23,10 @@ const (
 
 var _ Adapter = &MinioAdapter{}
 
-type ErrMinioConsumerDisconnected struct {
+type ErrMinioAdapterDisconnected struct {
 }
 
-func (e ErrMinioConsumerDisconnected) Error() string {
+func (e ErrMinioAdapterDisconnected) Error() string {
 	return "minio consumer disconnected"
 }
 
@@ -38,11 +38,11 @@ func (e ErrIdNotFound) Error() string {
 	return fmt.Sprintf("id %s not found", e.Id)
 }
 
-type ErrChucnkTooBig struct {
+type ErrChunckTooBig struct {
 	Length int
 }
 
-func (e ErrChucnkTooBig) Error() string {
+func (e ErrChunckTooBig) Error() string {
 	return fmt.Sprintf("chunk too big: %d", e.Length)
 }
 
@@ -51,7 +51,7 @@ type BufferInfo struct {
 	Part   int
 }
 
-// MinioConsumer creates new MinioSubscriber which will send data to local MinIO bucket
+// NewMinioAdapter creates new MinioAdapter which will send data to local MinIO bucket
 func NewMinioAdapter(endpoint, accessKeyID, secretAccessKey, region, token, bucket string, ssl, skipVerify bool, certFile, keyFile, caFile string) (*MinioAdapter, error) {
 	ctx := context.TODO()
 	opts := minioconnecter.GetTLSOptions(ssl, skipVerify, certFile, keyFile, caFile)
@@ -106,7 +106,7 @@ func (s *MinioAdapter) Notify(ctx context.Context, id string, e events.Log) erro
 	s.Log.Debugw("minio consumer notify", "id", id, "event", e)
 	if s.disconnected {
 		s.Log.Debugw("minio consumer disconnected", "id", id)
-		return ErrMinioConsumerDisconnected{}
+		return ErrMinioAdapterDisconnected{}
 	}
 
 	buffInfo, ok := s.GetBuffInfo(id)
@@ -122,7 +122,7 @@ func (s *MinioAdapter) Notify(ctx context.Context, id string, e events.Log) erro
 
 	if len(chunckToAdd) > defaultWriteSize {
 		s.Log.Warnw("chunck too big", "length", len(chunckToAdd))
-		return ErrChucnkTooBig{len(chunckToAdd)}
+		return ErrChunckTooBig{len(chunckToAdd)}
 	}
 
 	chunckToAdd = append(chunckToAdd, []byte("\n")...)
@@ -182,8 +182,7 @@ func (s *MinioAdapter) combineData(ctxt context.Context, minioClient *minio.Clie
 		s.Log.Errorw("error putting object", "err", err)
 		return err
 	}
-
-	s.Log.Debugw("data combined", "id", id, "s.bucket", s.bucket, "parts", parts, "uploadinfo", info)
+	s.Log.Debugw("put object successfully", "id", id, "s.bucket", s.bucket, "parts", parts, "uploadInfo", info)
 
 	if deleteIntermediaryData {
 		for i := 0; i < parts; i++ {
