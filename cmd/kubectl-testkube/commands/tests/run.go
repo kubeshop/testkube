@@ -320,7 +320,7 @@ func NewRunTestCmd() *cobra.Command {
 					ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 				}
 
-				if err = render.RenderExecutionResult(client, &execution, false); err != nil {
+				if err = render.RenderExecutionResult(client, &execution, false, !watchEnabled); err != nil {
 					execErrors = append(execErrors, err)
 				}
 
