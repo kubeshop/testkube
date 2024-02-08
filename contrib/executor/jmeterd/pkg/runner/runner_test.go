@@ -71,7 +71,7 @@ func TestCheckIfTestFileExists(t *testing.T) {
 			t.Parallel()
 			mockFS := filesystem.NewMockFileSystem(mockCtrl)
 			tc.setupMock(mockFS)
-			err := checkIfTestFileExists(mockFS, tc.args)
+			err := checkIfTestFileExists(mockFS, tc.args, "")
 			if tc.expectError {
 				assert.Error(t, err)
 			} else {
