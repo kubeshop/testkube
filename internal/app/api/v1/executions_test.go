@@ -281,6 +281,10 @@ func (r MockExecutionResultsRepository) GetTestMetrics(ctx context.Context, name
 	panic("not implemented")
 }
 
+func (r MockExecutionResultsRepository) Count(ctx context.Context, filter result.Filter) (int64, error) {
+	panic("not implemented")
+}
+
 type MockExecutor struct {
 	LogsFn func(id string) (chan output.Output, error)
 }

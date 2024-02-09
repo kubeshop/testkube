@@ -234,3 +234,7 @@ func (r *CloudRepository) GetTestSuiteMetrics(ctx context.Context, name string, 
 	}
 	return commandResponse.Metrics, nil
 }
+
+func (r *CloudRepository) Count(ctx context.Context, filter testresult.Filter) (int64, error) {
+	return 0, nil
+}
