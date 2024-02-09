@@ -118,11 +118,20 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	slavesEnvVariables["JMETER_PARENT_TEST_FOLDER"] = testkube.NewBasicVariable("JMETER_PARENT_TEST_FOLDER", parentTestFolder)
 
 	runPath := workingDir
-	outputDir := filepath.Join(runPath, "output")
-	err = os.Setenv("OUTPUT_DIR", outputDir)
-	if err != nil {
-		output.PrintLogf("%s Failed to set output directory %s", ui.IconWarning, outputDir)
+
+	outputDir := ""
+	if envVar, ok := envManager.Variables["OUTPUT_DIR"]; ok {
+		outputDir = envVar.Value
 	}
+
+	if outputDir == "" {
+		outputDir = filepath.Join(runPath, "output")
+		err = os.Setenv("OUTPUT_DIR", outputDir)
+		if err != nil {
+			output.PrintLogf("%s Failed to set output directory %s", ui.IconWarning, outputDir)
+		}
+	}
+
 	slavesEnvVariables["OUTPUT_DIR"] = testkube.NewBasicVariable("OUTPUT_DIR", outputDir)
 
 	// recreate output directory with wide permissions so JMeter can create report files
