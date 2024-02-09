@@ -41,7 +41,7 @@ func TestGetTestPathAndWorkingDir(t *testing.T) {
 				dataDir: "/tmp/data",
 			},
 			wantTestPath:   "/tmp/data/test-content",
-			wantWorkingDir: "",
+			wantWorkingDir: "/tmp/data",
 			wantTestFile:   "",
 			wantErr:        false,
 			setup: func(fs *filesystem.MockFileSystem) {
@@ -59,7 +59,7 @@ func TestGetTestPathAndWorkingDir(t *testing.T) {
 				dataDir: "/tmp/data",
 			},
 			wantTestPath:   "/tmp/data/repo/test.jmx",
-			wantWorkingDir: "",
+			wantWorkingDir: "/tmp/data",
 			wantTestFile:   "test.jmx",
 			wantErr:        false,
 			setup: func(fs *filesystem.MockFileSystem) {
