@@ -54,24 +54,25 @@ func getTestPathAndWorkingDir(fs filesystem.FileSystem, execution *testkube.Exec
 	sanityCheck := false
 	if testFlag != "" {
 		if filepath.IsAbs(testFlag) {
-			testPath = dataDir
-			testFile = strings.TrimPrefix(testFlag, dataDir)
+			testPath = testFlag
 		} else {
-			testPath = workingDir
-			testFile = testFlag
+			testPath = filepath.Join(workingDir, testFlag)
 		}
+
+		testFile = filepath.Base(testPath)
 		sanityCheck = true
 	} else if fileInfo.IsDir() {
 		testFile, err = findTestFile(fs, execution, testPath, jmxExtension)
 		if err != nil {
 			return "", "", "", errors.Wrapf(err, "error searching for %s file in test path %s", jmxExtension, testPath)
 		}
+
+		testPath = filepath.Join(testPath, testFile)
 		sanityCheck = true
 	}
 
 	if sanityCheck {
 		// sanity checking for test script
-		testPath = filepath.Join(testPath, testFile)
 		fileInfo, err = fs.Stat(testPath)
 		if err != nil || fileInfo.IsDir() {
 			output.PrintLogf("%s Could not find file %s in the directory, error: %s", ui.IconCross, testFile, err)
