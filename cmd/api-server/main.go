@@ -502,19 +502,31 @@ func main() {
 
 	if mode == common.ModeAgent {
 		log.DefaultLogger.Info("starting agent service")
+		proContext := config.ProContext{
+			APIKey:               cfg.TestkubeProAPIKey,
+			URL:                  cfg.TestkubeProURL,
+			LogsPath:             cfg.TestkubeProLogsPath,
+			TLSInsecure:          cfg.TestkubeProTLSInsecure,
+			WorkerCount:          cfg.TestkubeProWorkerCount,
+			LogStreamWorkerCount: cfg.TestkubeProLogStreamWorkerCount,
+			SkipVerify:           cfg.TestkubeProSkipVerify,
+			EnvID:                cfg.TestkubeProEnvID,
+			OrgID:                cfg.TestkubeProOrgID,
+			Migrate:              cfg.TestkubeProMigrate,
+		}
+
+		api.WithProContext(&proContext)
 
 		agentHandle, err := agent.NewAgent(
 			log.DefaultLogger,
 			api.Mux.Handler(),
-			cfg.TestkubeProAPIKey,
 			grpcClient,
-			cfg.TestkubeProWorkerCount,
-			cfg.TestkubeProLogStreamWorkerCount,
 			api.GetLogsStream,
 			clusterId,
 			cfg.TestkubeClusterName,
 			envs,
 			features,
+			proContext,
 		)
 		if err != nil {
 			ui.ExitOnError("Starting agent", err)
