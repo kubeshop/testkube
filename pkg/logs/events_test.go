@@ -172,7 +172,7 @@ func TestLogs_EventsFlow(t *testing.T) {
 		// and wait for message to be propagated
 		emitter.Notify(testkube.NewEventEndTestFailed(&testkube.Execution{Id: "id1"}))
 
-		time.Sleep(time.Second)
+		time.Sleep(waitTime)
 
 		assertMessagesCount(t, a, messagesCount)
 
@@ -252,6 +252,9 @@ func TestLogs_EventsFlow(t *testing.T) {
 		// and wait for message to be propagated
 		_, err = stream.Stop(ctx, id)
 		assert.NoError(t, err)
+
+		// cool down
+		time.Sleep(waitTime)
 
 		// then each adapter should receive messages
 		assertMessagesCount(t, a1, messagesCount)
