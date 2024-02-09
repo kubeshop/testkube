@@ -455,6 +455,11 @@ func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (res
 	return
 }
 
+func (r *MongoRepository) Count(ctx context.Context, filter Filter) (count int64, err error) {
+	query, _ := composeQueryAndOpts(filter)
+	return r.ResultsColl.CountDocuments(ctx, query)
+}
+
 func (r *MongoRepository) GetExecutionTotals(ctx context.Context, paging bool, filter ...Filter) (totals testkube.ExecutionsTotals, err error) {
 	var result []struct {
 		Status string `bson:"_id"`
