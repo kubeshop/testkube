@@ -166,7 +166,7 @@ func TestLogs_EventsFlow(t *testing.T) {
 		// and wait for message to be propagated
 		emitter.Notify(testkube.NewEventEndTestFailed(&testkube.Execution{Id: "id1"}))
 
-		time.Sleep(time.Second)
+		time.Sleep(waitTime)
 
 		assertMessagesCount(t, a, messagesCount)
 
