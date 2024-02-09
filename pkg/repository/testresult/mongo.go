@@ -288,6 +288,11 @@ func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (r
 	return
 }
 
+func (r *MongoRepository) Count(ctx context.Context, filter Filter) (count int64, err error) {
+	query, _ := composeQueryAndOpts(filter)
+	return r.Coll.CountDocuments(ctx, query)
+}
+
 func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Filter) (totals testkube.ExecutionsTotals, err error) {
 	var result []struct {
 		Status string `bson:"_id"`
