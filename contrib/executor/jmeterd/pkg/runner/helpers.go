@@ -66,6 +66,8 @@ func getTestPathAndWorkingDir(fs filesystem.FileSystem, execution *testkube.Exec
 		if err != nil {
 			return "", "", "", errors.Wrapf(err, "error searching for %s file in test path %s", jmxExtension, testPath)
 		}
+
+		testPath = filepath.Join(testPath, testFile)
 		sanityCheck = true
 	}
 
