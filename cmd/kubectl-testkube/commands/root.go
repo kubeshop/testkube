@@ -180,6 +180,10 @@ func Execute() {
 		case <-ctx.Done():
 			return nil
 		case sig := <-stopSignal:
+			go func() {
+				<-stopSignal
+				os.Exit(137)
+			}()
 			return errors.Errorf("received signal: %v", sig)
 		}
 	})
