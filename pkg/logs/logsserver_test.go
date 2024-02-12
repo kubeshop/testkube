@@ -27,7 +27,7 @@ func TestGRPC_Server(t *testing.T) {
 		WithLogsRepositoryFactory(LogsFactoryMock{}).
 		WithRandomPort()
 
-	go ls.RunGRPCServer(ctx)
+	go ls.RunGRPCServer(ctx, nil)
 
 	// allow server to splin up
 	time.Sleep(time.Millisecond * 100)
