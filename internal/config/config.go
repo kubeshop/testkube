@@ -69,6 +69,9 @@ type Config struct {
 	TestkubeProWorkerCount           int           `envconfig:"TESTKUBE_PRO_WORKER_COUNT" default:"50"`
 	TestkubeProLogStreamWorkerCount  int           `envconfig:"TESTKUBE_PRO_LOG_STREAM_WORKER_COUNT" default:"25"`
 	TestkubeProSkipVerify            bool          `envconfig:"TESTKUBE_PRO_SKIP_VERIFY" default:"false"`
+	TestkubeProEnvID                 string        `envconfig:"TESTKUBE_PRO_ENV_ID" default:""`
+	TestkubeProOrgID                 string        `envconfig:"TESTKUBE_PRO_ORG_ID" default:""`
+	TestkubeProMigrate               string        `envconfig:"TESTKUBE_PRO_MIGRATE" default:"false"`
 	TestkubeWatcherNamespaces        string        `envconfig:"TESTKUBE_WATCHER_NAMESPACES" default:""`
 	GraphqlPort                      string        `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
 	TestkubeRegistry                 string        `envconfig:"TESTKUBE_REGISTRY" default:""`
@@ -96,6 +99,12 @@ type Config struct {
 	TestkubeCloudWorkerCount int `envconfig:"TESTKUBE_CLOUD_WORKER_COUNT" default:"50"`
 	// DEPRECATED: Use TestkubeProLogStreamWorkerCount instead
 	TestkubeCloudLogStreamWorkerCount int `envconfig:"TESTKUBE_CLOUD_LOG_STREAM_WORKER_COUNT" default:"25"`
+	// DEPRECATED: Use TestkubeProEnvID instead
+	TestkubeCloudEnvID string `envconfig:"TESTKUBE_CLOUD_ENV_ID" default:""`
+	// DEPRECATED: Use TestkubeProOrgID instead
+	TestkubeCloudOrgID string `envconfig:"TESTKUBE_CLOUD_ORG_ID" default:""`
+	// DEPRECATED: Use TestkubeProMigrate instead
+	TestkubeCloudMigrate string `envconfig:"TESTKUBE_CLOUD_MIGRATE" default:"false"`
 }
 
 func Get() (*Config, error) {
@@ -126,5 +135,17 @@ func (c *Config) CleanLegacyVars() {
 
 	if c.TestkubeProLogStreamWorkerCount == 0 && c.TestkubeCloudLogStreamWorkerCount != 0 {
 		c.TestkubeProLogStreamWorkerCount = c.TestkubeCloudLogStreamWorkerCount
+	}
+
+	if c.TestkubeProEnvID == "" && c.TestkubeCloudEnvID != "" {
+		c.TestkubeProEnvID = c.TestkubeCloudEnvID
+	}
+
+	if c.TestkubeProOrgID == "" && c.TestkubeCloudOrgID != "" {
+		c.TestkubeProOrgID = c.TestkubeCloudOrgID
+	}
+
+	if c.TestkubeProMigrate == "" && c.TestkubeCloudMigrate != "" {
+		c.TestkubeProMigrate = c.TestkubeCloudMigrate
 	}
 }

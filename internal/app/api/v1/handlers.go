@@ -3,7 +3,6 @@ package v1
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -21,11 +20,6 @@ const (
 	mediaTypeJSON = "application/json"
 	// mediaTypeYAML is yaml media type
 	mediaTypeYAML = "text/yaml"
-
-	// env names for cloud context
-	cloudApiKeyEnvName = "TESTKUBE_CLOUD_API_KEY"
-	cloudEnvIdEnvName  = "TESTKUBE_CLOUD_ENV_ID"
-	cloudOrgIdEnvName  = "TESTKUBE_CLOUD_ORG_ID"
 
 	// contextCloud is cloud context
 	contextCloud = "cloud"
@@ -57,8 +51,13 @@ func (s *TestkubeAPI) AuthHandler() fiber.Handler {
 // InfoHandler is a handler to get info
 func (s *TestkubeAPI) InfoHandler() fiber.Handler {
 	apiContext := contextOSS
-	if os.Getenv(cloudApiKeyEnvName) != "" {
+	if s.proContext != nil && s.proContext.APIKey != "" {
 		apiContext = contextCloud
+	}
+	var envID, orgID string
+	if s.proContext != nil {
+		envID = s.proContext.EnvID
+		orgID = s.proContext.OrgID
 	}
 	return func(c *fiber.Ctx) error {
 		return c.JSON(testkube.ServerInfo{
@@ -66,8 +65,8 @@ func (s *TestkubeAPI) InfoHandler() fiber.Handler {
 			Version:          version.Version,
 			Namespace:        s.Namespace,
 			Context:          apiContext,
-			EnvId:            os.Getenv(cloudEnvIdEnvName),
-			OrgId:            os.Getenv(cloudOrgIdEnvName),
+			EnvId:            envID,
+			OrgId:            orgID,
 			HelmchartVersion: s.helmchartVersion,
 			DashboardUri:     s.dashboardURI,
 			Features: &testkube.Features{

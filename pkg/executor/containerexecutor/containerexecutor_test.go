@@ -153,11 +153,16 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "RUNNER_CONTEXTTYPE", Value: ""},
 		{Name: "RUNNER_CONTEXTDATA", Value: ""},
 		{Name: "RUNNER_APIURI", Value: ""},
-		{Name: "RUNNER_CLOUD_MODE", Value: "false"},
-		{Name: "RUNNER_CLOUD_API_KEY", Value: ""},
-		{Name: "RUNNER_CLOUD_API_URL", Value: ""},
-		{Name: "RUNNER_CLOUD_API_TLS_INSECURE", Value: "false"},
-		{Name: "RUNNER_CLOUD_API_SKIP_VERIFY", Value: "false"},
+		{Name: "RUNNER_PRO_MODE", Value: "false"},
+		{Name: "RUNNER_PRO_API_KEY", Value: ""},
+		{Name: "RUNNER_PRO_API_URL", Value: ""},
+		{Name: "RUNNER_PRO_API_TLS_INSECURE", Value: "false"},
+		{Name: "RUNNER_PRO_API_SKIP_VERIFY", Value: "false"},
+		{Name: "RUNNER_CLOUD_MODE", Value: "false"},             // DEPRECATED
+		{Name: "RUNNER_CLOUD_API_KEY", Value: ""},               // DEPRECATED
+		{Name: "RUNNER_CLOUD_API_URL", Value: ""},               // DEPRECATED
+		{Name: "RUNNER_CLOUD_API_TLS_INSECURE", Value: "false"}, // DEPRECATED
+		{Name: "RUNNER_CLOUD_API_SKIP_VERIFY", Value: "false"},  // DEPRECATED
 		{Name: "RUNNER_CLUSTERID", Value: ""},
 		{Name: "CI", Value: "1"},
 		{Name: "key", Value: "value"},
