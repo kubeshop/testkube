@@ -129,7 +129,7 @@ spec:
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: jmeterd-executor-smoke-slaves-sharedbetweenpods # can be run only at cluster with storageClassName (NFS volume)
+  name: jmeterd-executor-smoke-slaves-sharedbetweenpods # can be run only at cluster with storageClassName (NFS volume), not included in TestSuite
   labels:
     core-tests: executors
 spec:
