@@ -7,6 +7,7 @@ import (
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/kubeshop/testkube/pkg/log"
@@ -20,15 +21,17 @@ const (
 )
 
 // NewGrpcClient imlpements getter interface for log stream for given ID
-func NewGrpcClient(address string) StreamGetter {
+func NewGrpcClient(address string, creds credentials.TransportCredentials) StreamGetter {
 	return &GrpcClient{
 		log:     log.DefaultLogger.With("service", "logs-grpc-client"),
+		creds:   creds,
 		address: address,
 	}
 }
 
 type GrpcClient struct {
 	log     *zap.SugaredLogger
+	creds   credentials.TransportCredentials
 	address string
 }
 
@@ -47,7 +50,12 @@ func (c GrpcClient) Get(ctx context.Context, id string) (chan events.LogResponse
 		defer close(ch)
 
 		// TODO add TLS to GRPC client
-		conn, err := grpc.Dial(c.address, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		creds := insecure.NewCredentials()
+		if c.creds != nil {
+			creds = c.creds
+		}
+
+		conn, err := grpc.Dial(c.address, grpc.WithTransportCredentials(creds))
 		if err != nil {
 			ch <- events.LogResponse{Error: err}
 			return
