@@ -72,7 +72,7 @@ func (r *SoapUIRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	if fileInfo.IsDir() {
 		scriptName := execution.Args[len(execution.Args)-1]
 		if workingDir != "" {
-			testFile = filepath.Join(r.Params.DataDir, "repo")
+			testFile = ""
 			if execution.Content != nil && execution.Content.Repository != nil {
 				scriptName = filepath.Join(execution.Content.Repository.Path, scriptName)
 			}
@@ -82,7 +82,7 @@ func (r *SoapUIRunner) Run(ctx context.Context, execution testkube.Execution) (r
 		output.PrintLogf("%s It is a directory test - trying to find file from the last executor argument %s in directory %s", ui.IconWorld, scriptName, testFile)
 
 		// sanity checking for test script
-		scriptFile := filepath.Join(workingDir, scriptName)
+		scriptFile := filepath.Join(testFile, workingDir, scriptName)
 		fileInfo, errFile := os.Stat(scriptFile)
 		if errors.Is(errFile, os.ErrNotExist) || fileInfo.IsDir() {
 			output.PrintLogf("%s Could not find file %s in the directory, error: %s", ui.IconCross, scriptName, errFile)
