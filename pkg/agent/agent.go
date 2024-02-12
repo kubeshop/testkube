@@ -24,6 +24,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
+	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 )
@@ -102,6 +103,7 @@ type Agent struct {
 	clusterID   string
 	clusterName string
 	envs        map[string]string
+	features    featureflags.FeatureFlags
 }
 
 func NewAgent(logger *zap.SugaredLogger,
@@ -114,6 +116,7 @@ func NewAgent(logger *zap.SugaredLogger,
 	clusterID string,
 	clusterName string,
 	envs map[string]string,
+	features featureflags.FeatureFlags,
 ) (*Agent, error) {
 	return &Agent{
 		handler:                 handler,
@@ -134,6 +137,7 @@ func NewAgent(logger *zap.SugaredLogger,
 		clusterID:               clusterID,
 		clusterName:             clusterName,
 		envs:                    envs,
+		features:                features,
 	}, nil
 }
 
@@ -165,12 +169,14 @@ func (ag *Agent) run(ctx context.Context) (err error) {
 		return ag.runEventLoop(groupCtx)
 	})
 
-	g.Go(func() error {
-		return ag.runLogStreamLoop(groupCtx)
-	})
-	g.Go(func() error {
-		return ag.runLogStreamWorker(groupCtx, ag.logStreamWorkerCount)
-	})
+	if !ag.features.LogsV2 {
+		g.Go(func() error {
+			return ag.runLogStreamLoop(groupCtx)
+		})
+		g.Go(func() error {
+			return ag.runLogStreamWorker(groupCtx, ag.logStreamWorkerCount)
+		})
+	}
 
 	err = g.Wait()
 

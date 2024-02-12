@@ -12,8 +12,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.uber.org/zap"
 
+	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/log"
+	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/storage"
 )
 
@@ -32,14 +36,18 @@ const (
 	StepMaxCount = 100
 )
 
-func NewMongoRepository(db *mongo.Database, allowDiskUse, isDocDb bool, opts ...MongoRepositoryOpt) *MongoRepository {
+func NewMongoRepository(db *mongo.Database, logGrpcClient logsclient.StreamGetter, allowDiskUse, isDocDb bool,
+	features featureflags.FeatureFlags, opts ...MongoRepositoryOpt) *MongoRepository {
 	r := &MongoRepository{
 		db:               db,
 		ResultsColl:      db.Collection(CollectionResults),
 		SequencesColl:    db.Collection(CollectionSequences),
 		OutputRepository: NewMongoOutputRepository(db),
+		logGrpcClient:    logGrpcClient,
 		allowDiskUse:     allowDiskUse,
 		isDocDb:          isDocDb,
+		features:         features,
+		log:              log.DefaultLogger,
 	}
 
 	for _, opt := range opts {
@@ -53,6 +61,8 @@ func NewMongoRepositoryWithOutputRepository(
 	db *mongo.Database,
 	allowDiskUse bool,
 	outputRepository OutputRepository,
+	logGrpcClient logsclient.StreamGetter,
+	features featureflags.FeatureFlags,
 	opts ...MongoRepositoryOpt,
 ) *MongoRepository {
 	r := &MongoRepository{
@@ -60,7 +70,10 @@ func NewMongoRepositoryWithOutputRepository(
 		ResultsColl:      db.Collection(CollectionResults),
 		SequencesColl:    db.Collection(CollectionSequences),
 		OutputRepository: outputRepository,
+		logGrpcClient:    logGrpcClient,
 		allowDiskUse:     allowDiskUse,
+		features:         features,
+		log:              log.DefaultLogger,
 	}
 
 	for _, opt := range opts {
@@ -70,12 +83,16 @@ func NewMongoRepositoryWithOutputRepository(
 	return r
 }
 
-func NewMongoRepositoryWithMinioOutputStorage(db *mongo.Database, allowDiskUse bool, storageClient storage.Client, bucket string) *MongoRepository {
+func NewMongoRepositoryWithMinioOutputStorage(db *mongo.Database, allowDiskUse bool, storageClient storage.Client,
+	logGrpcClient logsclient.StreamGetter, bucket string, features featureflags.FeatureFlags) *MongoRepository {
 	repo := MongoRepository{
 		db:            db,
 		ResultsColl:   db.Collection(CollectionResults),
 		SequencesColl: db.Collection(CollectionSequences),
+		logGrpcClient: logGrpcClient,
 		allowDiskUse:  allowDiskUse,
+		features:      features,
+		log:           log.DefaultLogger,
 	}
 	repo.OutputRepository = NewMinioOutputRepository(storageClient, repo.ResultsColl, bucket)
 	return &repo
@@ -86,8 +103,11 @@ type MongoRepository struct {
 	ResultsColl      *mongo.Collection
 	SequencesColl    *mongo.Collection
 	OutputRepository OutputRepository
+	logGrpcClient    logsclient.StreamGetter
 	allowDiskUse     bool
 	isDocDb          bool
+	features         featureflags.FeatureFlags
+	log              *zap.SugaredLogger
 }
 
 type MongoRepositoryOpt func(*MongoRepository)
@@ -104,15 +124,46 @@ func WithMongoRepositorySequenceCollection(collection *mongo.Collection) MongoRe
 	}
 }
 
+func (r *MongoRepository) getOutputFromLogServer(ctx context.Context, result *testkube.Execution) (string, error) {
+	if r.logGrpcClient == nil {
+		return "", nil
+	}
+
+	if result.ExecutionResult == nil || !result.ExecutionResult.IsCompleted() {
+		return "", nil
+	}
+
+	logs, err := r.logGrpcClient.Get(ctx, result.Id)
+	if err != nil {
+		return "", err
+	}
+
+	output := ""
+	for log := range logs {
+		if log.Error != nil {
+			r.log.Errorw("can't get log line", "error", log.Error)
+			continue
+		}
+
+		output += log.Log.Content + "\n"
+	}
+
+	return output, nil
+}
+
 func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.Execution, err error) {
 	err = r.ResultsColl.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&result)
 	if err != nil {
 		return
 	}
 	if len(result.ExecutionResult.Output) == 0 {
-		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
-		if err == mongo.ErrNoDocuments {
-			err = nil
+		if r.features.LogsV2 {
+			result.ExecutionResult.Output, err = r.getOutputFromLogServer(ctx, &result)
+		} else {
+			result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
+			if err == mongo.ErrNoDocuments {
+				err = nil
+			}
 		}
 	}
 	return *result.UnscapeDots(), err
@@ -124,9 +175,13 @@ func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName s
 		return
 	}
 	if len(result.ExecutionResult.Output) == 0 {
-		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
-		if err == mongo.ErrNoDocuments {
-			err = nil
+		if r.features.LogsV2 {
+			result.ExecutionResult.Output, err = r.getOutputFromLogServer(ctx, &result)
+		} else {
+			result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
+			if err == mongo.ErrNoDocuments {
+				err = nil
+			}
 		}
 	}
 	return *result.UnscapeDots(), err
@@ -177,9 +232,13 @@ func (r *MongoRepository) slowGetLatestByTest(ctx context.Context, testName stri
 	}
 	result := (&items[0]).UnscapeDots()
 	if len(result.ExecutionResult.Output) == 0 {
-		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
-		if err == mongo.ErrNoDocuments {
-			err = nil
+		if r.features.LogsV2 {
+			result.ExecutionResult.Output, err = r.getOutputFromLogServer(ctx, result)
+		} else {
+			result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
+			if err == mongo.ErrNoDocuments {
+				err = nil
+			}
 		}
 	}
 	return result, err
@@ -235,9 +294,13 @@ func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) 
 	}
 	result := (&items[0]).UnscapeDots()
 	if len(result.ExecutionResult.Output) == 0 {
-		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
-		if err == mongo.ErrNoDocuments {
-			err = nil
+		if r.features.LogsV2 {
+			result.ExecutionResult.Output, err = r.getOutputFromLogServer(ctx, result)
+		} else {
+			result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
+			if err == mongo.ErrNoDocuments {
+				err = nil
+			}
 		}
 	}
 	return result, err
@@ -392,6 +455,11 @@ func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (res
 	return
 }
 
+func (r *MongoRepository) Count(ctx context.Context, filter Filter) (count int64, err error) {
+	query, _ := composeQueryAndOpts(filter)
+	return r.ResultsColl.CountDocuments(ctx, query)
+}
+
 func (r *MongoRepository) GetExecutionTotals(ctx context.Context, paging bool, filter ...Filter) (totals testkube.ExecutionsTotals, err error) {
 	var result []struct {
 		Status string `bson:"_id"`
@@ -500,7 +568,10 @@ func (r *MongoRepository) Insert(ctx context.Context, result testkube.Execution)
 	if err != nil {
 		return
 	}
-	err = r.OutputRepository.InsertOutput(ctx, result.Id, result.TestName, result.TestSuiteName, output)
+
+	if !r.features.LogsV2 {
+		err = r.OutputRepository.InsertOutput(ctx, result.Id, result.TestName, result.TestSuiteName, output)
+	}
 	return
 }
 
@@ -512,7 +583,10 @@ func (r *MongoRepository) Update(ctx context.Context, result testkube.Execution)
 	if err != nil {
 		return
 	}
-	err = r.OutputRepository.UpdateOutput(ctx, result.Id, result.TestName, result.TestSuiteName, output)
+
+	if !r.features.LogsV2 {
+		err = r.OutputRepository.UpdateOutput(ctx, result.Id, result.TestName, result.TestSuiteName, output)
+	}
 	return
 }
 
@@ -543,7 +617,9 @@ func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result te
 		return err
 	}
 
-	err = r.OutputRepository.UpdateOutput(ctx, id, result.TestName, result.TestSuiteName, cleanOutput(output))
+	if !r.features.LogsV2 {
+		err = r.OutputRepository.UpdateOutput(ctx, id, result.TestName, result.TestSuiteName, cleanOutput(output))
+	}
 	return
 }
 

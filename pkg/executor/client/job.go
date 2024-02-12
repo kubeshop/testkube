@@ -993,6 +993,11 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 		if err != nil {
 			return jobOptions, err
 		}
+
+		if jobOptions.Variables == nil {
+			jobOptions.Variables = make(map[string]testkube.Variable)
+		}
+
 		jobOptions.Variables[executor.SlavesConfigsEnv] = testkube.NewBasicVariable(executor.SlavesConfigsEnv, string(slvesConfigs))
 	}
 

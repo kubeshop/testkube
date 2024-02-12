@@ -26,8 +26,9 @@ func TestState(t *testing.T) {
 	s := NewState(kv)
 
 	t.Run("get non existing state", func(t *testing.T) {
-		_, err := s.Get(ctx, "1")
-		assert.Error(t, err)
+		state1, err := s.Get(ctx, "1")
+		assert.NoError(t, err)
+		assert.Equal(t, LogStateUnknown, state1)
 	})
 
 	t.Run("store state data and get it", func(t *testing.T) {

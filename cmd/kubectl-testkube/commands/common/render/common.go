@@ -65,7 +65,7 @@ func RenderPrettyList(obj ui.TableData, w io.Writer) error {
 	return nil
 }
 
-func RenderExecutionResult(client client.Client, execution *testkube.Execution, logsOnly bool) error {
+func RenderExecutionResult(client client.Client, execution *testkube.Execution, logsOnly bool, showLogs bool) error {
 	result := execution.ExecutionResult
 	if result == nil {
 		ui.Errf("got execution without `Result`")
@@ -81,7 +81,10 @@ func RenderExecutionResult(client client.Client, execution *testkube.Execution, 
 		ui.Warn("Test execution started")
 
 	case result.IsPassed():
-		ui.Info(result.Output)
+		if showLogs {
+			ui.Info(result.Output)
+		}
+
 		if !logsOnly {
 			duration := execution.EndTime.Sub(execution.StartTime)
 			ui.Success("Test execution completed with success in " + duration.String())
@@ -112,7 +115,9 @@ func RenderExecutionResult(client client.Client, execution *testkube.Execution, 
 			PrintExecutionURIs(execution, info.DashboardUri)
 		}
 
-		ui.Info(result.Output)
+		if showLogs {
+			ui.Info(result.Output)
+		}
 		return errors.New(result.ErrorMessage)
 
 	default:
@@ -124,7 +129,9 @@ func RenderExecutionResult(client client.Client, execution *testkube.Execution, 
 			ui.Errf(result.ErrorMessage)
 		}
 
-		ui.Info(result.Output)
+		if showLogs {
+			ui.Info(result.Output)
+		}
 		return errors.New(result.ErrorMessage)
 	}
 

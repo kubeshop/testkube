@@ -59,5 +59,4 @@ func (s LogsServer) Logs(req *pb.LogRequest, stream pb.LogsService_LogsServer) e
 	s.log.Debugw("stream finished", "id", req.ExecutionId)
 
 	return nil
-
 }

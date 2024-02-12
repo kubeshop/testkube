@@ -7,6 +7,11 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 )
 
+var (
+	// state not found error
+	ErrStateNotFound = errors.New("no state found")
+)
+
 // NewState creates new state storage
 func NewState(kv jetstream.KeyValue) Interface {
 	return &State{
@@ -23,15 +28,18 @@ type State struct {
 func (s State) Get(ctx context.Context, key string) (LogState, error) {
 	state, err := s.kv.Get(ctx, key)
 	if err != nil {
+		if err == jetstream.ErrKeyNotFound {
+			return LogStateUnknown, nil
+		}
+
 		return LogStateUnknown, err
 	}
 
 	if len(state.Value()) == 0 {
-		return LogStateUnknown, errors.New("no state found")
+		return LogStateUnknown, ErrStateNotFound
 	}
 
 	return LogState(state.Value()[0]), nil
-
 }
 
 // Put puts state for given key - executionId

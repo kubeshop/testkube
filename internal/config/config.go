@@ -64,6 +64,7 @@ type Config struct {
 	TestkubeOAuthScopes              string        `envconfig:"TESTKUBE_OAUTH_SCOPES" default:""`
 	TestkubeProAPIKey                string        `envconfig:"TESTKUBE_PRO_API_KEY" default:""`
 	TestkubeProURL                   string        `envconfig:"TESTKUBE_PRO_URL" default:""`
+	TestkubeProLogsPath              string        `envconfig:"TESTKUBE_PRO_LOGS_PATH" default:"/logs"`
 	TestkubeProTLSInsecure           bool          `envconfig:"TESTKUBE_PRO_TLS_INSECURE" default:"false"`
 	TestkubeProWorkerCount           int           `envconfig:"TESTKUBE_PRO_WORKER_COUNT" default:"50"`
 	TestkubeProLogStreamWorkerCount  int           `envconfig:"TESTKUBE_PRO_LOG_STREAM_WORKER_COUNT" default:"25"`
@@ -83,6 +84,7 @@ type Config struct {
 	EnableSecretsEndpoint            bool          `envconfig:"ENABLE_SECRETS_ENDPOINT" default:"false"`
 	DisableMongoMigrations           bool          `envconfig:"DISABLE_MONGO_MIGRATIONS" default:"false"`
 	Debug                            bool          `envconfig:"DEBUG" default:"false"`
+	LogServerGrpcAddress             string        `envconfig:"LOG_SERVER_GRPC_ADDRESS" default:":9090"`
 
 	// DEPRECATED: Use TestkubeProAPIKey instead
 	TestkubeCloudAPIKey string `envconfig:"TESTKUBE_CLOUD_API_KEY" default:""`

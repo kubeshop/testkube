@@ -38,33 +38,35 @@ func RandString(n int) string {
 
 func TestLogs(t *testing.T) {
 	t.Skip("skipping test")
+	ctx := context.Background()
 	consumer, _ := NewMinioAdapter("localhost:9000", "minio", "minio123", "", "", "test-1", false, false, "", "", "")
 	id := "test-bla"
 	for i := 0; i < 1000; i++ {
 		fmt.Println("sending", i)
-		consumer.Notify(id, events.Log{Time: time.Now(),
+		consumer.Notify(ctx, id, events.Log{Time: time.Now(),
 			Content: fmt.Sprintf("Test %d: %s", i, hugeString),
-			Type:    "test", Source: strconv.Itoa(i)})
+			Type_:   "test", Source: strconv.Itoa(i)})
 		time.Sleep(100 * time.Millisecond)
 	}
-	err := consumer.Stop(id)
+	err := consumer.Stop(ctx, id)
 	assert.NoError(t, err)
 }
 
 func BenchmarkLogs(b *testing.B) {
+	ctx := context.Background()
 	randomString := RandString(5)
 	bucket := "test-bench"
 	consumer, _ := NewMinioAdapter("localhost:9000", "minio", "minio123", "", "", bucket, false, false, "", "", "")
 	id := "test-bench" + "-" + randomString + "-" + strconv.Itoa(b.N)
 	totalSize := 0
 	for i := 0; i < b.N; i++ {
-		consumer.Notify(id, events.Log{Time: time.Now(),
+		consumer.Notify(ctx, id, events.Log{Time: time.Now(),
 			Content: fmt.Sprintf("Test %d: %s", i, hugeString),
-			Type:    "test", Source: strconv.Itoa(i)})
+			Type_:   "test", Source: strconv.Itoa(i)})
 		totalSize += len(hugeString)
 	}
 	sizeInMB := float64(totalSize) / 1024 / 1024
-	err := consumer.Stop(id)
+	err := consumer.Stop(ctx, id)
 	assert.NoError(b, err)
 	b.Logf("Total size for %s logs is %f MB", id, sizeInMB)
 }
@@ -90,18 +92,19 @@ func BenchmarkLogs2(b *testing.B) {
 }
 
 func testOneConsumer(consumer *MinioAdapter, id string) {
+	ctx := context.Background()
 	fmt.Println("#####starting", id)
 	totalSize := 0
 	numberOFLogs := rand.Intn(100000)
 	for i := 0; i < numberOFLogs; i++ {
-		consumer.Notify(id, events.Log{Time: time.Now(),
+		consumer.Notify(ctx, id, events.Log{Time: time.Now(),
 			Content: fmt.Sprintf("Test %d: %s", i, hugeString),
-			Type:    "test", Source: strconv.Itoa(i)})
+			Type_:   "test", Source: strconv.Itoa(i)})
 		totalSize += len(hugeString)
 		time.Sleep(time.Duration(rand.Intn(10)) * time.Millisecond)
 	}
 	sizeInMB := float64(totalSize) / 1024 / 1024
-	err := consumer.Stop(id)
+	err := consumer.Stop(ctx, id)
 	if err != nil {
 		fmt.Println("#####error stopping", err)
 	}

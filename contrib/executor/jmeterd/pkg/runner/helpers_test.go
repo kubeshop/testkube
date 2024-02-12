@@ -41,7 +41,7 @@ func TestGetTestPathAndWorkingDir(t *testing.T) {
 				dataDir: "/tmp/data",
 			},
 			wantTestPath:   "/tmp/data/test-content",
-			wantWorkingDir: "",
+			wantWorkingDir: "/tmp/data",
 			wantTestFile:   "",
 			wantErr:        false,
 			setup: func(fs *filesystem.MockFileSystem) {
@@ -59,7 +59,7 @@ func TestGetTestPathAndWorkingDir(t *testing.T) {
 				dataDir: "/tmp/data",
 			},
 			wantTestPath:   "/tmp/data/repo/test.jmx",
-			wantWorkingDir: "",
+			wantWorkingDir: "/tmp/data",
 			wantTestFile:   "test.jmx",
 			wantErr:        false,
 			setup: func(fs *filesystem.MockFileSystem) {
@@ -112,6 +112,112 @@ func TestGetTestPathAndWorkingDir(t *testing.T) {
 			wantErr:        true,
 			setup: func(fs *filesystem.MockFileSystem) {
 				fs.EXPECT().Stat(gomock.Any()).Return(nil, errors.New("stat error"))
+			},
+		},
+		{
+			name: "Get test path and working dir for -t absolute with working dir",
+			args: args{
+				fs: filesystem.NewMockFileSystem(mockCtrl),
+				execution: testkube.Execution{
+					Content: &testkube.TestContent{
+						Type_: string(testkube.TestContentTypeGitFile),
+						Repository: &testkube.Repository{
+							WorkingDir: "tests",
+							Path:       "tests/test1",
+						},
+					},
+					Args: []string{"-t", "/tmp/data/repo/tests/test1/test.jmx"},
+				},
+				dataDir: "/tmp/data",
+			},
+			wantTestPath:   "/tmp/data/repo/tests/test1/test.jmx",
+			wantWorkingDir: "/tmp/data/repo/tests",
+			wantTestFile:   "test.jmx",
+			wantErr:        false,
+			setup: func(fs *filesystem.MockFileSystem) {
+				gomock.InOrder(
+					fs.EXPECT().Stat("/tmp/data/repo/tests/test1").Return(&filesystem.MockFileInfo{FIsDir: true}, nil),
+					fs.EXPECT().Stat("/tmp/data/repo/tests/test1/test.jmx").Return(&filesystem.MockFileInfo{FIsDir: false}, nil),
+				)
+			},
+		},
+		{
+			name: "Get test path and working dir for -t absolute without working dir",
+			args: args{
+				fs: filesystem.NewMockFileSystem(mockCtrl),
+				execution: testkube.Execution{
+					Content: &testkube.TestContent{
+						Type_: string(testkube.TestContentTypeGitFile),
+						Repository: &testkube.Repository{
+							Path: "tests/test1",
+						},
+					},
+					Args: []string{"-t", "/tmp/data/repo/tests/test1/test.jmx"},
+				},
+				dataDir: "/tmp/data",
+			},
+			wantTestPath:   "/tmp/data/repo/tests/test1/test.jmx",
+			wantWorkingDir: "/tmp/data",
+			wantTestFile:   "test.jmx",
+			wantErr:        false,
+			setup: func(fs *filesystem.MockFileSystem) {
+				gomock.InOrder(
+					fs.EXPECT().Stat("/tmp/data/repo/tests/test1").Return(&filesystem.MockFileInfo{FIsDir: true}, nil),
+					fs.EXPECT().Stat("/tmp/data/repo/tests/test1/test.jmx").Return(&filesystem.MockFileInfo{FIsDir: false}, nil),
+				)
+			},
+		},
+		{
+			name: "Get test path and working dir for -t relative with working dir",
+			args: args{
+				fs: filesystem.NewMockFileSystem(mockCtrl),
+				execution: testkube.Execution{
+					Content: &testkube.TestContent{
+						Type_: string(testkube.TestContentTypeGitFile),
+						Repository: &testkube.Repository{
+							WorkingDir: "tests",
+							Path:       "tests/test1",
+						},
+					},
+					Args: []string{"-t", "test1/test.jmx"},
+				},
+				dataDir: "/tmp/data",
+			},
+			wantTestPath:   "/tmp/data/repo/tests/test1/test.jmx",
+			wantWorkingDir: "/tmp/data/repo/tests",
+			wantTestFile:   "test.jmx",
+			wantErr:        false,
+			setup: func(fs *filesystem.MockFileSystem) {
+				gomock.InOrder(
+					fs.EXPECT().Stat("/tmp/data/repo/tests/test1").Return(&filesystem.MockFileInfo{FIsDir: true}, nil),
+					fs.EXPECT().Stat("/tmp/data/repo/tests/test1/test.jmx").Return(&filesystem.MockFileInfo{FIsDir: false}, nil),
+				)
+			},
+		},
+		{
+			name: "Get test path and working dir for -t relative without working dir",
+			args: args{
+				fs: filesystem.NewMockFileSystem(mockCtrl),
+				execution: testkube.Execution{
+					Content: &testkube.TestContent{
+						Type_: string(testkube.TestContentTypeGitFile),
+						Repository: &testkube.Repository{
+							Path: "tests/test1",
+						},
+					},
+					Args: []string{"-t", "repo/tests/test1/test.jmx"},
+				},
+				dataDir: "/tmp/data",
+			},
+			wantTestPath:   "/tmp/data/repo/tests/test1/test.jmx",
+			wantWorkingDir: "/tmp/data",
+			wantTestFile:   "test.jmx",
+			wantErr:        false,
+			setup: func(fs *filesystem.MockFileSystem) {
+				gomock.InOrder(
+					fs.EXPECT().Stat("/tmp/data/repo/tests/test1").Return(&filesystem.MockFileInfo{FIsDir: true}, nil),
+					fs.EXPECT().Stat("/tmp/data/repo/tests/test1/test.jmx").Return(&filesystem.MockFileInfo{FIsDir: false}, nil),
+				)
 			},
 		},
 	}

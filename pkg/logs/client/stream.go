@@ -50,6 +50,10 @@ func (c NatsLogStream) Init(ctx context.Context, id string) (StreamMetadata, err
 
 }
 
+func (c NatsLogStream) Finish(ctx context.Context, id string) error {
+	return c.Push(ctx, id, events.NewFinishLog())
+}
+
 // Push log chunk to NATS stream
 func (c NatsLogStream) Push(ctx context.Context, id string, log *events.Log) error {
 	b, err := json.Marshal(log)
@@ -81,43 +85,68 @@ func (c NatsLogStream) Get(ctx context.Context, id string) (chan events.LogRespo
 	ch := make(chan events.LogResponse)
 
 	name := fmt.Sprintf("%s%s%s", ConsumerPrefix, id, utils.RandAlphanum(6))
-	cons, err := c.js.CreateOrUpdateConsumer(ctx, c.streamName(id), jetstream.ConsumerConfig{
-		Name:          name,
-		Durable:       name,
-		DeliverPolicy: jetstream.DeliverAllPolicy,
-	})
+	cons, err := c.js.CreateOrUpdateConsumer(
+		ctx,
+		c.streamName(id),
+		jetstream.ConsumerConfig{
+			Name:          name,
+			Durable:       name,
+			DeliverPolicy: jetstream.DeliverAllPolicy,
+		},
+	)
 
 	if err != nil {
 		return ch, err
 	}
 
 	log := c.log.With("id", id)
-	cons.Consume(func(msg jetstream.Msg) {
-		log.Debugw("got message", "data", string(msg.Data()))
 
-		// deliver to subscriber
-		logChunk := events.Log{}
-		err := json.Unmarshal(msg.Data(), &logChunk)
-		if err != nil {
-			if err := msg.Nak(); err != nil {
-				log.Errorw("error nacking message", "error", err)
+	go func() {
+		defer close(ch)
+		for {
+			msg, err := cons.Next()
+			if err != nil {
 				ch <- events.LogResponse{Error: err}
 				return
 			}
-			return
-		}
 
-		if err := msg.Ack(); err != nil {
-			ch <- events.LogResponse{Error: err}
-			log.Errorw("error acking message", "error", err)
-			return
+			if finished := c.handleJetstreamMessage(log, ch, msg); finished {
+				return
+			}
 		}
-
-		ch <- events.LogResponse{Log: logChunk}
-	})
+	}()
 
 	return ch, nil
+}
 
+func (c NatsLogStream) handleJetstreamMessage(log *zap.SugaredLogger, ch chan events.LogResponse, msg jetstream.Msg) (finish bool) {
+	log.Debugw("got message", "data", string(msg.Data()))
+
+	// deliver to subscriber
+	logChunk := events.Log{}
+	err := json.Unmarshal(msg.Data(), &logChunk)
+	if err != nil {
+		if err := msg.Nak(); err != nil {
+			log.Errorw("error nacking message", "error", err)
+			ch <- events.LogResponse{Error: err}
+			return
+		}
+		return
+	}
+
+	if err := msg.Ack(); err != nil {
+		ch <- events.LogResponse{Error: err}
+		log.Errorw("error acking message", "error", err)
+		return
+	}
+
+	if events.IsFinished(&logChunk) {
+		return true
+	}
+
+	ch <- events.LogResponse{Log: logChunk}
+
+	return
 }
 
 // syncCall sends request to given subject and waits for response

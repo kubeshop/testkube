@@ -140,7 +140,7 @@ func TestEmitter_Reconcile(t *testing.T) {
 		go emitter.Reconcile(ctx)
 
 		time.Sleep(100 * time.Millisecond)
-		assert.Len(t, emitter.Listeners, 4)
+		assert.Len(t, emitter.GetListeners(), 4)
 
 		cancel()
 
@@ -155,7 +155,7 @@ func TestEmitter_Reconcile(t *testing.T) {
 
 		// then each reconciler (3 reconcilers) should load 2 listeners
 		time.Sleep(100 * time.Millisecond)
-		assert.Len(t, emitter.Listeners, 6)
+		assert.Len(t, emitter.GetListeners(), 6)
 
 		cancel()
 	})

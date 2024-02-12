@@ -316,3 +316,7 @@ func (r *CloudRepository) GetTestMetrics(ctx context.Context, name string, limit
 	}
 	return commandResponse.Metrics, nil
 }
+
+func (r *CloudRepository) Count(ctx context.Context, filter result.Filter) (int64, error) {
+	return 0, nil
+}

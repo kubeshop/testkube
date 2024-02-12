@@ -28,7 +28,15 @@ func NewWatchExecutionCmd() *cobra.Command {
 			if execution.ExecutionResult.IsCompleted() {
 				ui.Completed("execution is already finished")
 			} else {
-				err = watchLogs(execution.Id, false, client)
+				info, err := client.GetServerInfo()
+				ui.ExitOnError("getting server info", err)
+
+				if info.Features.LogsV2 {
+					err = watchLogsV2(execution.Id, false, client)
+				} else {
+					err = watchLogs(execution.Id, false, client)
+				}
+
 				ui.NL()
 				uiShellGetExecution(execution.Id)
 				if err != nil {

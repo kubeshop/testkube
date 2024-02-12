@@ -38,7 +38,7 @@ type Emitter struct {
 	Listeners   common.Listeners
 	Loader      *Loader
 	Log         *zap.SugaredLogger
-	mutex       sync.Mutex
+	mutex       sync.RWMutex
 	Bus         bus.Bus
 	ClusterName string
 	Envs        map[string]string
@@ -195,8 +195,20 @@ func (e *Emitter) Reconcile(ctx context.Context) {
 		default:
 			listeners := e.Loader.Reconcile()
 			e.UpdateListeners(listeners)
-			e.Log.Debugw("reconciled listeners", e.Listeners.Log()...)
+			e.Log.Debugw("reconciled listeners", e.Logs()...)
 			time.Sleep(reconcileInterval)
 		}
 	}
+}
+
+func (e *Emitter) Logs() []any {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+	return e.Listeners.Log()
+}
+
+func (e *Emitter) GetListeners() common.Listeners {
+	e.mutex.RLock()
+	defer e.mutex.RUnlock()
+	return e.Listeners
 }

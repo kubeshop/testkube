@@ -117,16 +117,21 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	// Add user plugins folder in slaves env variables
 	slavesEnvVariables["JMETER_PARENT_TEST_FOLDER"] = testkube.NewBasicVariable("JMETER_PARENT_TEST_FOLDER", parentTestFolder)
 
-	runPath := r.Params.DataDir
-	if workingDir != "" {
-		runPath = workingDir
+	runPath := workingDir
+
+	outputDir := ""
+	if envVar, ok := envManager.Variables["OUTPUT_DIR"]; ok {
+		outputDir = envVar.Value
 	}
 
-	outputDir := filepath.Join(runPath, "output")
-	err = os.Setenv("OUTPUT_DIR", outputDir)
-	if err != nil {
-		output.PrintLogf("%s Failed to set output directory %s", ui.IconWarning, outputDir)
+	if outputDir == "" {
+		outputDir = filepath.Join(runPath, "output")
+		err = os.Setenv("OUTPUT_DIR", outputDir)
+		if err != nil {
+			output.PrintLogf("%s Failed to set output directory %s", ui.IconWarning, outputDir)
+		}
 	}
+
 	slavesEnvVariables["OUTPUT_DIR"] = testkube.NewBasicVariable("OUTPUT_DIR", outputDir)
 
 	// recreate output directory with wide permissions so JMeter can create report files
@@ -158,7 +163,7 @@ func (r *JMeterDRunner) Run(ctx context.Context, execution testkube.Execution) (
 	output.PrintLogf("%s Using arguments: %v", ui.IconWorld, envManager.ObfuscateStringSlice(args))
 
 	// TODO: this is a workaround, the check should be ideally performed in the getTestPathAndWorkingDir function
-	if err := checkIfTestFileExists(r.fs, args); err != nil {
+	if err := checkIfTestFileExists(r.fs, args, workingDir); err != nil {
 		output.PrintLogf("%s  Error validating test file exists: %v", ui.IconCross, err.Error())
 		return result, errors.WithStack(err)
 	}
@@ -238,13 +243,16 @@ func initSlaves(
 	return slaveMeta, cleanupFunc, nil
 }
 
-func checkIfTestFileExists(fs filesystem.FileSystem, args []string) error {
+func checkIfTestFileExists(fs filesystem.FileSystem, args []string, workingDir string) error {
 	if len(args) == 0 {
 		return errors.New("no arguments provided")
 	}
 	testParamValue, err := getParamValue(args, jmeterTestFileFlag)
 	if err != nil {
 		return errors.Wrapf(err, "error extracting value for %s flag", jmeterTestFileFlag)
+	}
+	if !filepath.IsAbs(testParamValue) {
+		testParamValue = filepath.Join(workingDir, testParamValue)
 	}
 	info, err := fs.Stat(testParamValue)
 	if err != nil {

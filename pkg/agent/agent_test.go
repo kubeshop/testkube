@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
+	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/agent"
 	"github.com/kubeshop/testkube/pkg/cloud"
 )
@@ -56,7 +57,7 @@ func TestCommandExecution(t *testing.T) {
 	var logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error)
 
 	logger, _ := zap.NewDevelopment()
-	agent, err := agent.NewAgent(logger.Sugar(), m, "api-key", grpcClient, 5, 5, logStreamFunc, "", "", nil)
+	agent, err := agent.NewAgent(logger.Sugar(), m, "api-key", grpcClient, 5, 5, logStreamFunc, "", "", nil, featureflags.FeatureFlags{})
 	if err != nil {
 		t.Fatal(err)
 	}

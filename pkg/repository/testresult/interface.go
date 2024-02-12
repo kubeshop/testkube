@@ -27,7 +27,7 @@ type Filter interface {
 	Selector() string
 }
 
-//go:generate mockgen -destination=./mock_repository.go -package=testresult "github.com/kubeshop/testkube/internal/pkg/api/repository/testresult" Repository
+//go:generate mockgen -destination=./mock_repository.go -package=testresult "github.com/kubeshop/testkube/pkg/repository/testresult" Repository
 type Repository interface {
 	// Get gets execution result by id or name
 	Get(ctx context.Context, id string) (testkube.TestSuiteExecution, error)
@@ -55,6 +55,8 @@ type Repository interface {
 	DeleteAll(ctx context.Context) error
 	// DeleteByTestSuites deletes execution results by test suites
 	DeleteByTestSuites(ctx context.Context, testSuiteNames []string) (err error)
-
+	// GetTestSuiteMetrics returns metrics for test suite
 	GetTestSuiteMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error)
+	// Count returns executions count
+	Count(ctx context.Context, filter Filter) (int64, error)
 }

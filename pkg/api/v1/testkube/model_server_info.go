@@ -26,5 +26,6 @@ type ServerInfo struct {
 	// helm chart version
 	HelmchartVersion string `json:"helmchartVersion,omitempty"`
 	// dashboard uri
-	DashboardUri string `json:"dashboardUri,omitempty"`
+	DashboardUri string    `json:"dashboardUri,omitempty"`
+	Features     *Features `json:"features,omitempty"`
 }

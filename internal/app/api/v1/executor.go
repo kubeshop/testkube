@@ -196,3 +196,29 @@ func (s TestkubeAPI) DeleteExecutorsHandler() fiber.Handler {
 		return nil
 	}
 }
+
+func (s TestkubeAPI) GetExecutorByTestTypeHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to get executor by test type"
+
+		testType := c.Query("testType", "")
+		if testType == "" {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not fine test type", errPrefix))
+		}
+
+		item, err := s.ExecutorsClient.GetByType(testType)
+		if err != nil {
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get executor: %w", errPrefix, err))
+		}
+
+		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
+			result := executorsmapper.MapCRDToAPI(*item)
+			result.QuoteExecutorTextFields()
+			data, err := crd.GenerateYAML(crd.TemplateExecutor, []testkube.ExecutorUpsertRequest{result})
+			return s.getCRDs(c, data, err)
+		}
+
+		result := executorsmapper.MapExecutorCRDToExecutorDetails(*item)
+		return c.JSON(result)
+	}
+}

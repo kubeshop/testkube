@@ -46,20 +46,18 @@ type LogResponse struct {
 	Error error
 }
 
-type Log struct {
-	Time     time.Time         `json:"ts,omitempty"`
-	Content  string            `json:"content,omitempty"`
-	Type     string            `json:"type,omitempty"`
-	Source   string            `json:"source,omitempty"`
-	Metadata map[string]string `json:"metadata,omitempty"`
-	Error    bool              `json:"error,omitempty"`
-	Version  LogVersion        `json:"version,omitempty"`
+type Log testkube.LogV2
 
-	// Old output - for backwards compatibility - will be removed for non-structured logs
-	V1 *LogOutputV1 `json:"v1,omitempty"`
+func NewFinishLog() *Log {
+	return &Log{
+		Content: "processing logs finished",
+		Type_:   "finish",
+		Source:  "log-server",
+	}
 }
-type LogOutputV1 struct {
-	Result *testkube.ExecutionResult
+
+func IsFinished(log *Log) bool {
+	return log.Type_ == "finish"
 }
 
 func NewErrorLog(err error) *Log {
@@ -68,7 +66,7 @@ func NewErrorLog(err error) *Log {
 		msg = err.Error()
 	}
 	return &Log{
-		Error:   true,
+		Error_:  true,
 		Content: msg,
 	}
 }
@@ -92,7 +90,7 @@ func (l *Log) WithContent(s string) *Log {
 }
 
 func (l *Log) WithError(err error) *Log {
-	l.Error = true
+	l.Error_ = true
 
 	if err != nil {
 		l.Content = err.Error()
@@ -110,7 +108,7 @@ func (l *Log) WithMetadataEntry(key, value string) *Log {
 }
 
 func (l *Log) WithType(t string) *Log {
-	l.Type = t
+	l.Type_ = t
 	return l
 }
 
@@ -120,7 +118,7 @@ func (l *Log) WithSource(s string) *Log {
 }
 
 func (l *Log) WithVersion(version LogVersion) *Log {
-	l.Version = version
+	l.Version = string(version)
 	return l
 }
 
@@ -178,9 +176,9 @@ func NewLogFromBytes(b []byte) *Log {
 			return &Log{
 				Time:    ts,
 				Content: err.Error(),
-				Type:    o.Type_,
-				Error:   true,
-				Version: LogVersionV1,
+				Type_:   o.Type_,
+				Error_:  true,
+				Version: string(LogVersionV1),
 			}
 		}
 
@@ -190,8 +188,8 @@ func NewLogFromBytes(b []byte) *Log {
 			return &Log{
 				Time:    ts,
 				Content: o.Content,
-				Version: LogVersionV1,
-				V1: &LogOutputV1{
+				Version: string(LogVersionV1),
+				V1: &testkube.LogV1{
 					Result: o.Result,
 				},
 			}
@@ -200,7 +198,7 @@ func NewLogFromBytes(b []byte) *Log {
 		return &Log{
 			Time:    ts,
 			Content: o.Content,
-			Version: LogVersionV1,
+			Version: string(LogVersionV1),
 		}
 	}
 	// END DEPRECATED
@@ -209,6 +207,6 @@ func NewLogFromBytes(b []byte) *Log {
 	return &Log{
 		Time:    ts,
 		Content: string(b),
-		Version: LogVersionV2,
+		Version: string(LogVersionV2),
 	}
 }
