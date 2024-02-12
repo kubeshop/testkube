@@ -34,7 +34,7 @@ func TestGRPC_Server(t *testing.T) {
 
 	expectedCount := 0
 
-	stream := client.NewGrpcClient(ls.grpcAddress)
+	stream := client.NewGrpcClient(ls.grpcAddress, nil)
 	ch, err := stream.Get(ctx, "id1")
 	assert.NoError(t, err)
 
