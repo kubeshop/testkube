@@ -21,7 +21,7 @@ spec:
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: jmeterd-executor-smoke-incorrect-url-assertion-negative
+  name: jmeterd-executor-smoke-incorrect-url-assertion
   labels:
     core-tests: executors
 spec:
@@ -34,14 +34,13 @@ spec:
       branch: main
       path: test/jmeter/executor-tests/jmeter-executor-smoke-incorrect-url.jmx
   executionRequest:
-    negativeTest: true
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
     activeDeadlineSeconds: 180
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: jmeterd-executor-smoke-incorrect-url-assertion-slaves-negative
+  name: jmeterd-executor-smoke-incorrect-url-assertion-slaves
   labels:
     core-tests: executors
 spec:
@@ -54,7 +53,6 @@ spec:
       branch: main
       path: test/jmeter/executor-tests/jmeter-executor-smoke-incorrect-url.jmx
   executionRequest:
-    negativeTest: true
     variables:
       SLAVES_COUNT:
         name: SLAVES_COUNT
@@ -74,7 +72,7 @@ spec:
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: jmeterd-executor-smoke-correct-url-failed-assertion-negative
+  name: jmeterd-executor-smoke-correct-url-failed-assertion
   labels:
     core-tests: executors
 spec:
@@ -87,14 +85,13 @@ spec:
       branch: main
       path: test/jmeter/executor-tests/jmeter-executor-smoke-correct-url-failed-assertion.jmx
   executionRequest:
-    negativeTest: true
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
     activeDeadlineSeconds: 180
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: jmeterd-executor-smoke-failed-assertion-slaves-negative
+  name: jmeterd-executor-smoke-failed-assertion-slaves
   labels:
     core-tests: executors
 spec:
@@ -107,7 +104,6 @@ spec:
       branch: main
       path: test/jmeter/executor-tests/jmeter-executor-smoke-correct-url-failed-assertion.jmx
   executionRequest:
-    negativeTest: true
     variables:
       SLAVES_COUNT:
         name: SLAVES_COUNT
