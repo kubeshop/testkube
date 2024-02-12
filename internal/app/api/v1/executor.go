@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
-	"net/url"
 
 	"github.com/gofiber/fiber/v2"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -202,9 +201,9 @@ func (s TestkubeAPI) GetExecutorByTestTypeHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to get executor by test type"
 
-		testType, err := url.PathUnescape(c.Params("testType"))
-		if err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse test type: %w", errPrefix, err))
+		testType := c.Query("testType", "")
+		if testType == "" {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not fine test type", errPrefix))
 		}
 
 		item, err := s.ExecutorsClient.GetByType(testType)
