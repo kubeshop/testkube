@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
-	"net/url"
 
 	"github.com/gofiber/fiber/v2"
 	"k8s.io/apimachinery/pkg/api/errors"
