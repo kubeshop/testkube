@@ -150,6 +150,10 @@ func main() {
 		case <-ctx.Done():
 			return nil
 		case sig := <-stopSignal:
+			go func() {
+				<-stopSignal
+				os.Exit(137)
+			}()
 			// Returning an error cancels the errgroup.
 			return errors.Errorf("received signal: %v", sig)
 		}
