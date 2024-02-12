@@ -25,11 +25,14 @@ type Config struct {
 	NatsCAFile         string        `envconfig:"NATS_CA_FILE" default:""`
 	NatsConnectTimeout time.Duration `envconfig:"NATS_CONNECT_TIMEOUT" default:"5s"`
 
-	Namespace    string `envconfig:"NAMESPACE" default:"testkube"`
-	ExecutionId  string `envconfig:"ID" default:""`
-	HttpAddress  string `envconfig:"HTTP_ADDRESS" default:":8080"`
-	GrpcAddress  string `envconfig:"GRPC_ADDRESS" default:":9090"`
-	KVBucketName string `envconfig:"KV_BUCKET_NAME" default:"logsState"`
+	Namespace        string `envconfig:"NAMESPACE" default:"testkube"`
+	ExecutionId      string `envconfig:"ID" default:""`
+	HttpAddress      string `envconfig:"HTTP_ADDRESS" default:":8080"`
+	GrpcAddress      string `envconfig:"GRPC_ADDRESS" default:":9090"`
+	KVBucketName     string `envconfig:"KV_BUCKET_NAME" default:"logsState"`
+	TLSSecretName    string `envconfig:"TLS_SECRET_NAME" default:""`
+	TLSCertSecretKey string `envconfig:"TLS_CERT_SECRET_KEY" default:""`
+	TLSKeySecretKey  string `envconfig:"TLS_KEY_SECRET_KEY" default:""`
 
 	StorageEndpoint        string `envconfig:"STORAGE_ENDPOINT" default:"localhost:9000"`
 	StorageBucket          string `envconfig:"STORAGE_BUCKET" default:"testkube-logs"`

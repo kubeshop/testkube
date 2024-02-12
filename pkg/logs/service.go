@@ -17,6 +17,7 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/logs/adapter"
@@ -121,13 +122,13 @@ func (ls *LogsService) Run(ctx context.Context) (err error) {
 }
 
 // TODO handle TLS
-func (ls *LogsService) RunGRPCServer(ctx context.Context) error {
+func (ls *LogsService) RunGRPCServer(ctx context.Context, creds credentials.TransportCredentials) error {
 	lis, err := net.Listen("tcp", ls.grpcAddress)
 	if err != nil {
 		return err
 	}
 
-	ls.grpcServer = grpc.NewServer()
+	ls.grpcServer = grpc.NewServer(grpc.Creds(creds))
 	pb.RegisterLogsServiceServer(ls.grpcServer, NewLogsServer(ls.logsRepositoryFactory, ls.state))
 
 	ls.log.Infow("starting grpc server", "address", ls.grpcAddress)

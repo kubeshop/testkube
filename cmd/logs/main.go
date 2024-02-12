@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
+	"fmt"
+	"path/filepath"
 
 	"os"
 	"os/signal"
@@ -11,6 +14,7 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/oklog/run"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/credentials"
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/agent"
@@ -23,6 +27,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/logs/pb"
 	"github.com/kubeshop/testkube/pkg/logs/repository"
 	"github.com/kubeshop/testkube/pkg/logs/state"
+	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -92,6 +97,17 @@ func main() {
 	if cfg.Debug {
 		svc.AddAdapter(adapter.NewDebugAdapter())
 	}
+
+	secretClient, err := secret.NewClient(cfg.Namespace)
+	if err != nil {
+		log.Fatalw("error creating secret client", "error", err)
+	}
+
+	creds, err := getServerTLSCredentials(cfg, secretClient)
+	if err != nil {
+		log.Fatalw("error getting tls credentials", "error", err)
+	}
+
 	// add given log adapter depends from mode
 	switch mode {
 
@@ -142,7 +158,7 @@ func main() {
 	})
 
 	g.Add(func() error {
-		return svc.RunGRPCServer(ctx)
+		return svc.RunGRPCServer(ctx, creds)
 	}, func(error) {
 		cancel()
 	})
@@ -178,4 +194,58 @@ func Must[T any](val T, err error) T {
 		panic(err)
 	}
 	return val
+}
+
+// getServerTLSCredentials builds the necessary SSL connection info from the settings in the environment variables
+// and the given secret reference
+func getServerTLSCredentials(cfg *config.Config, secretClient *secret.Client) (credentials.TransportCredentials, error) {
+	if cfg.TLSSecretName == "" || cfg.TLSCertSecretKey == "" || cfg.TLSKeySecretKey == "" {
+		return nil, nil
+	}
+
+	tlsSecret, err := secretClient.Get(cfg.TLSSecretName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load server's certificate and private key
+	certificate, ok := tlsSecret[cfg.TLSCertSecretKey]
+	if !ok {
+		return nil, fmt.Errorf("could not find TLS certificate with key %s in secret %s",
+			cfg.TLSCertSecretKey, cfg.TLSSecretName)
+	}
+
+	privateKey, ok := tlsSecret[cfg.TLSKeySecretKey]
+	if !ok {
+		return nil, fmt.Errorf("could not find TLS key with key %s in secret %s",
+			cfg.TLSKeySecretKey, cfg.TLSSecretName)
+	}
+
+	tempDir, err := os.MkdirTemp("", "")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(tempDir)
+
+	certPath := filepath.Join(tempDir, "cert.pem")
+	keyPath := filepath.Join(tempDir, "key.pem")
+	if err = os.WriteFile(certPath, []byte(certificate), 0644); err != nil {
+		return nil, err
+	}
+
+	if err = os.WriteFile(keyPath, []byte(privateKey), 0644); err != nil {
+		return nil, err
+	}
+
+	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	config := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		ClientAuth:   tls.NoClientCert,
+	}
+
+	return credentials.NewTLS(config), nil
 }
