@@ -2259,7 +2259,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
-  /executors/{testType}/type:
+  /executor-by-types:
     get:
       parameters:
         - $ref: "#/components/parameters/TestType"
@@ -6264,7 +6264,7 @@ components:
       description: dont delete executions
       required: false
     TestType:
-      in: path
+      in: query
       name: testType
       schema:
         type: string
