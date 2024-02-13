@@ -359,3 +359,47 @@ spec:
     preRunScript: "echo \"===== pre-run script\""
     postRunScript: "echo \"===== post-run script - EXPECTED FAIL\" && exit 128"
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: expected-fail-container-pre-run-script
+  labels:
+    core-tests: expected-fail
+spec:
+  type: container-executor-postman-newman-6-alpine/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+      workingDir: test/postman/executor-tests
+  executionRequest:
+    args: ["run", "postman-executor-smoke.postman_collection.json", "--env-var", "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"]
+    preRunScript: "echo \"===== pre-run script - EXPECTED FAIL\" && exit 128"
+    postRunScript: "echo \"===== post-run script\""
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: expected-fail-container-post-run-script
+  labels:
+    core-tests: expected-fail
+spec:
+  type: container-executor-postman-newman-6-alpine/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+      workingDir: test/postman/executor-tests
+  executionRequest:
+    args: ["run", "postman-executor-smoke.postman_collection.json", "--env-var", "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"]
+    preRunScript: "echo \"===== pre-run script\""
+    postRunScript: "echo \"===== post-run script - EXPECTED FAIL\" && exit 128"
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
