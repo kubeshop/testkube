@@ -218,7 +218,7 @@ func GetGrpcTransportCredentials(cfg GrpcConnectionConfig) (credentials.Transpor
 
 			certPool := x509.NewCertPool()
 			if !certPool.AppendCertsFromPEM(caCertificate) {
-				return nil, fmt.Errorf("failed to add server CA's certificate")
+				return nil, fmt.Errorf("failed to add client CA's certificate")
 			}
 
 			tlsConfig.ClientCAs = certPool
