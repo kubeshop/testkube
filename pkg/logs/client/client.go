@@ -2,7 +2,11 @@ package client
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"go.uber.org/zap"
@@ -103,4 +107,53 @@ func (c GrpcClient) Get(ctx context.Context, id string) (chan events.LogResponse
 	}()
 
 	return ch, nil
+}
+
+// GrpcConnectionConfig contains GRPC connection parameters
+type GrpcConnectionConfig struct {
+	Secure     bool
+	SkipVerify bool
+	CertFile   string
+	KeyFile    string
+	CAFile     string
+}
+
+// GetGrpcTransportCredentials returns transport credentials for GRPC connection config
+func GetGrpcTransportCredentials(cfg GrpcConnectionConfig) (credentials.TransportCredentials, error) {
+	var creds credentials.TransportCredentials
+
+	if cfg.Secure {
+		var tlsConfig tls.Config
+
+		if cfg.SkipVerify {
+			tlsConfig.InsecureSkipVerify = true
+		} else {
+			if cfg.CertFile != "" && cfg.KeyFile != "" {
+				cert, err := tls.LoadX509KeyPair(cfg.CertFile, cfg.KeyFile)
+				if err != nil {
+					return nil, err
+				}
+
+				tlsConfig.Certificates = []tls.Certificate{cert}
+			}
+
+			if cfg.CAFile != "" {
+				caCertificate, err := os.ReadFile(cfg.CAFile)
+				if err != nil {
+					return nil, err
+				}
+
+				certPool := x509.NewCertPool()
+				if !certPool.AppendCertsFromPEM(caCertificate) {
+					return nil, fmt.Errorf("failed to add server CA's certificate")
+				}
+
+				tlsConfig.RootCAs = certPool
+			}
+		}
+
+		creds = credentials.NewTLS(&tlsConfig)
+	}
+
+	return creds, nil
 }

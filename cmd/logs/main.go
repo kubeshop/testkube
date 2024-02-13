@@ -2,10 +2,7 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
-	"fmt"
-	"path/filepath"
 
 	"os"
 	"os/signal"
@@ -27,7 +24,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/logs/pb"
 	"github.com/kubeshop/testkube/pkg/logs/repository"
 	"github.com/kubeshop/testkube/pkg/logs/state"
-	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -98,12 +94,7 @@ func main() {
 		svc.AddAdapter(adapter.NewDebugAdapter())
 	}
 
-	secretClient, err := secret.NewClient(cfg.Namespace)
-	if err != nil {
-		log.Fatalw("error creating secret client", "error", err)
-	}
-
-	creds, err := getServerTLSCredentials(cfg, secretClient)
+	creds, err := newGRPCTransportCredentials(cfg)
 	if err != nil {
 		log.Fatalw("error getting tls credentials", "error", err)
 	}
@@ -196,56 +187,12 @@ func Must[T any](val T, err error) T {
 	return val
 }
 
-// getServerTLSCredentials builds the necessary SSL connection info from the settings in the environment variables
-// and the given secret reference
-func getServerTLSCredentials(cfg *config.Config, secretClient *secret.Client) (credentials.TransportCredentials, error) {
-	if cfg.TLSSecretName == "" || cfg.TLSCertSecretKey == "" || cfg.TLSKeySecretKey == "" {
-		return nil, nil
-	}
-
-	tlsSecret, err := secretClient.Get(cfg.TLSSecretName)
-	if err != nil {
-		return nil, err
-	}
-
-	// Load server's certificate and private key
-	certificate, ok := tlsSecret[cfg.TLSCertSecretKey]
-	if !ok {
-		return nil, fmt.Errorf("could not find TLS certificate with key %s in secret %s",
-			cfg.TLSCertSecretKey, cfg.TLSSecretName)
-	}
-
-	privateKey, ok := tlsSecret[cfg.TLSKeySecretKey]
-	if !ok {
-		return nil, fmt.Errorf("could not find TLS key with key %s in secret %s",
-			cfg.TLSKeySecretKey, cfg.TLSSecretName)
-	}
-
-	tempDir, err := os.MkdirTemp("", "")
-	if err != nil {
-		return nil, err
-	}
-	defer os.RemoveAll(tempDir)
-
-	certPath := filepath.Join(tempDir, "cert.pem")
-	keyPath := filepath.Join(tempDir, "key.pem")
-	if err = os.WriteFile(certPath, []byte(certificate), 0644); err != nil {
-		return nil, err
-	}
-
-	if err = os.WriteFile(keyPath, []byte(privateKey), 0644); err != nil {
-		return nil, err
-	}
-
-	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
-	if err != nil {
-		return nil, err
-	}
-
-	config := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		ClientAuth:   tls.NoClientCert,
-	}
-
-	return credentials.NewTLS(config), nil
+func newGRPCTransportCredentials(cfg *config.Config) (credentials.TransportCredentials, error) {
+	return logs.GetGrpcTransportCredentials(logs.GrpcConnectionConfig{
+		Secure:       cfg.GrpcSecure,
+		ClientAuth:   cfg.GrpcClientAuth,
+		CertFile:     cfg.GrpcCertFile,
+		KeyFile:      cfg.GrpcKeyFile,
+		ClientCAFile: cfg.GrpcClientCAFile,
+	})
 }

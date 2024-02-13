@@ -6,10 +6,13 @@ package logs
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"math/rand"
 	"net"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -176,4 +179,53 @@ func (ls *LogsService) WithRandomPort() *LogsService {
 func (ls *LogsService) WithLogsRepositoryFactory(f repository.Factory) *LogsService {
 	ls.logsRepositoryFactory = f
 	return ls
+}
+
+// GrpcConnectionConfig contains GRPC connection parameters
+type GrpcConnectionConfig struct {
+	Secure       bool
+	ClientAuth   bool
+	CertFile     string
+	KeyFile      string
+	ClientCAFile string
+}
+
+// GetGrpcTransportCredentials returns transport credentials for GRPC connection config
+func GetGrpcTransportCredentials(cfg GrpcConnectionConfig) (credentials.TransportCredentials, error) {
+	var creds credentials.TransportCredentials
+
+	if cfg.Secure {
+		var tlsConfig *tls.Config
+		tlsConfig.ClientAuth = tls.NoClientCert
+		if cfg.ClientAuth {
+			tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+		}
+
+		if cfg.CertFile != "" && cfg.KeyFile != "" {
+			cert, err := tls.LoadX509KeyPair(cfg.CertFile, cfg.KeyFile)
+			if err != nil {
+				return nil, err
+			}
+
+			tlsConfig.Certificates = []tls.Certificate{cert}
+		}
+
+		if cfg.ClientCAFile != "" {
+			caCertificate, err := os.ReadFile(cfg.ClientCAFile)
+			if err != nil {
+				return nil, err
+			}
+
+			certPool := x509.NewCertPool()
+			if !certPool.AppendCertsFromPEM(caCertificate) {
+				return nil, fmt.Errorf("failed to add server CA's certificate")
+			}
+
+			tlsConfig.ClientCAs = certPool
+		}
+
+		creds = credentials.NewTLS(tlsConfig)
+	}
+
+	return creds, nil
 }

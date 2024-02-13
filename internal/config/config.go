@@ -85,8 +85,11 @@ type Config struct {
 	DisableMongoMigrations           bool          `envconfig:"DISABLE_MONGO_MIGRATIONS" default:"false"`
 	Debug                            bool          `envconfig:"DEBUG" default:"false"`
 	LogServerGrpcAddress             string        `envconfig:"LOG_SERVER_GRPC_ADDRESS" default:":9090"`
-	LogServerTLSSecretName           string        `envconfig:"LOG_SERVER_TLS_SECRET_NAME" default:""`
-	LogServerTLSCASecretKey          string        `envconfig:"LOG_SERVER_TLS_CA_SECRET_KEY" default:""`
+	LogServerSecure                  bool          `envconfig:"LOG_SERVER_SECURE" default:"false"`
+	LogServerSkipVerify              bool          `envconfig:"LOG_SERVER_SKIP_VERIFY" default:"false"`
+	LogServerCertFile                string        `envconfig:"LOG_SERVER_CERT_FILE" default:""`
+	LogServerKeyFile                 string        `envconfig:"LOG_SERVER_KEY_FILE" default:""`
+	LogServerCAFile                  string        `envconfig:"LOG_SERVER_CA_FILE" default:""`
 
 	// DEPRECATED: Use TestkubeProAPIKey instead
 	TestkubeCloudAPIKey string `envconfig:"TESTKUBE_CLOUD_API_KEY" default:""`

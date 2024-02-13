@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -229,7 +227,7 @@ func main() {
 
 	var logGrpcClient logsclient.StreamGetter
 	if features.LogsV2 {
-		creds, err := getClientTLSCredentials(cfg, secretClient)
+		creds, err := newGRPCTransportCredentials(cfg)
 		ui.ExitOnError("Getting log server TLS credentials", err)
 		logGrpcClient = logsclient.NewGrpcClient(cfg.LogServerGrpcAddress, creds)
 	}
@@ -731,34 +729,12 @@ func getMongoSSLConfig(cfg *config.Config, secretClient *secret.Client) *storage
 	}
 }
 
-// getClientTLSCredentials builds the necessary SSL connection info from the settings in the environment variables
-// and the given secret reference
-func getClientTLSCredentials(cfg *config.Config, secretClient *secret.Client) (credentials.TransportCredentials, error) {
-	if cfg.LogServerTLSSecretName == "" || cfg.LogServerTLSCASecretKey == "" {
-		return nil, nil
-	}
-
-	logServerTLSSecret, err := secretClient.Get(cfg.LogServerTLSSecretName)
-	if err != nil {
-		return nil, err
-	}
-
-	// Load certificate of the CA who signed server's certificate
-	caCertificate, ok := logServerTLSSecret[cfg.LogServerTLSCASecretKey]
-	if !ok {
-		return nil, fmt.Errorf("could not find log server TLS CA certificate with key %s in secret %s",
-			cfg.LogServerTLSCASecretKey, cfg.LogServerTLSSecretName)
-	}
-
-	certPool := x509.NewCertPool()
-	if !certPool.AppendCertsFromPEM([]byte(caCertificate)) {
-		return nil, fmt.Errorf("failed to add server CA's certificate")
-	}
-
-	// Create the credentials and return it
-	config := &tls.Config{
-		RootCAs: certPool,
-	}
-
-	return credentials.NewTLS(config), nil
+func newGRPCTransportCredentials(cfg *config.Config) (credentials.TransportCredentials, error) {
+	return logsclient.GetGrpcTransportCredentials(logsclient.GrpcConnectionConfig{
+		Secure:     cfg.LogServerSecure,
+		SkipVerify: cfg.LogServerSkipVerify,
+		CertFile:   cfg.LogServerCertFile,
+		KeyFile:    cfg.LogServerKeyFile,
+		CAFile:     cfg.LogServerCAFile,
+	})
 }
