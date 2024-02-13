@@ -131,7 +131,13 @@ func (ls *LogsService) RunGRPCServer(ctx context.Context, creds credentials.Tran
 		return err
 	}
 
-	ls.grpcServer = grpc.NewServer(grpc.Creds(creds))
+	var opts []grpc.ServerOption
+	if creds != nil {
+		opts = append(opts, grpc.Creds(creds))
+	}
+
+	ls.grpcServer = grpc.NewServer(opts...)
+
 	pb.RegisterLogsServiceServer(ls.grpcServer, NewLogsServer(ls.logsRepositoryFactory, ls.state))
 
 	ls.log.Infow("starting grpc server", "address", ls.grpcAddress)
