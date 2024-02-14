@@ -1,5 +1,7 @@
 ignore:
-  - "cmd/****"
+  - "cmd/**/*"
+  - "**/*_mock.go"
+  - "**/mock_*.go"
 
 coverage:
   status:
