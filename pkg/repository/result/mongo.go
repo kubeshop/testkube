@@ -44,7 +44,6 @@ func NewMongoRepository(db *mongo.Database, allowDiskUse, isDocDb bool, opts ...
 		ResultsColl:      db.Collection(CollectionResults),
 		SequencesColl:    db.Collection(CollectionSequences),
 		OutputRepository: NewMongoOutputRepository(db),
-		logGrpcClient:    logGrpcClient,
 		allowDiskUse:     allowDiskUse,
 		isDocDb:          isDocDb,
 		log:              log.DefaultLogger,
