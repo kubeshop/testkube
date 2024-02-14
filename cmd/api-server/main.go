@@ -15,6 +15,7 @@ import (
 	"github.com/nats-io/nats.go"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
+	"github.com/kubeshop/testkube/pkg/imageinspector"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
@@ -411,11 +412,25 @@ func main() {
 		ui.ExitOnError("Creating container job templates", err)
 	}
 
+	inspectorStorages := []imageinspector.Storage{imageinspector.NewMemoryStorage()}
+	if cfg.EnableImageDataPersistentCache {
+		configmapStorage := imageinspector.NewConfigMapStorage(configMapClient, cfg.ImageDataPersistentCacheKey, true)
+		_ = configmapStorage.CopyTo(context.Background(), inspectorStorages[0].(imageinspector.StorageTransfer))
+		inspectorStorages = append(inspectorStorages, configmapStorage)
+	}
+	inspector := imageinspector.NewInspector(
+		cfg.TestkubeRegistry,
+		imageinspector.NewSkopeoFetcher(),
+		imageinspector.NewSecretFetcher(secretClient),
+		inspectorStorages...,
+	)
+
 	containerExecutor, err := containerexecutor.NewContainerExecutor(
 		resultsRepository,
 		cfg.TestkubeNamespace,
 		images,
 		containerTemplates,
+		inspector,
 		cfg.JobServiceAccountName,
 		metrics,
 		eventsEmitter,
