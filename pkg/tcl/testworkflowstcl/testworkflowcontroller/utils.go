@@ -416,6 +416,9 @@ func watchEvents(clientSet kubernetes.Interface, namespace string, options ListO
 				if !ok {
 					return
 				}
+				if event.Object == nil {
+					continue
+				}
 				switch event.Type {
 				case watch.Added, watch.Modified:
 					w.SendValue(event.Object.(*corev1.Event))

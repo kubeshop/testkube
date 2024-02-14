@@ -36,6 +36,7 @@ var (
 
 var (
 	defaultInitImage       = getInitImage()
+	defaultToolkitImage    = getToolkitImage()
 	defaultContainerConfig = testworkflowsv1.ContainerConfig{
 		Image: defaultImage,
 		Env: []corev1.EnvVar{
@@ -52,6 +53,18 @@ func getInitImage() string {
 			version = "latest"
 		}
 		img = fmt.Sprintf("kubeshop/testkube-tw-init:%s", version)
+	}
+	return img
+}
+
+func getToolkitImage() string {
+	img := os.Getenv("TESTKUBE_TW_TOOLKIT_IMAGE")
+	if img == "" {
+		version := common.Version
+		if version == "" || version == "dev" {
+			version = "latest"
+		}
+		img = fmt.Sprintf("kubeshop/testkube-tw-toolkit:%s", version)
 	}
 	return img
 }

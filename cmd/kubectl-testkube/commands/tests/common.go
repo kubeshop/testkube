@@ -52,11 +52,40 @@ func printExecutionDetails(execution testkube.Execution) {
 	ui.NL()
 }
 
-func DownloadArtifacts(id, dir, format string, masks []string, client apiclientv1.Client) {
+func DownloadTestArtifacts(id, dir, format string, masks []string, client apiclientv1.Client) {
 	artifacts, err := client.GetExecutionArtifacts(id)
-	ui.ExitOnError("getting artifacts ", err)
+	ui.ExitOnError("getting artifacts", err)
 
-	err = os.MkdirAll(dir, os.ModePerm)
+	downloadFile := func(artifact testkube.Artifact, dir string) (string, error) {
+		return client.DownloadFile(id, artifact.Name, dir)
+	}
+	downloadArchive := func(dir string, masks []string) (string, error) {
+		return client.DownloadArchive(id, dir, masks)
+	}
+	downloadArtifacts(dir, format, masks, artifacts, downloadFile, downloadArchive)
+}
+
+func DownloadTestWorkflowArtifacts(id, dir, format string, masks []string, client apiclientv1.Client) {
+	artifacts, err := client.GetTestWorkflowExecutionArtifacts(id)
+	ui.ExitOnError("getting artifacts", err)
+
+	downloadFile := func(artifact testkube.Artifact, dir string) (string, error) {
+		return client.DownloadTestWorkflowArtifact(id, artifact.Name, dir)
+	}
+	downloadArchive := func(dir string, masks []string) (string, error) {
+		return client.DownloadTestWorkflowArtifactArchive(id, dir, masks)
+	}
+	downloadArtifacts(dir, format, masks, artifacts, downloadFile, downloadArchive)
+}
+
+func downloadArtifacts(
+	dir, format string,
+	masks []string,
+	artifacts testkube.Artifacts,
+	downloadFile func(artifact testkube.Artifact, dir string) (string, error),
+	downloadArchive func(dir string, masks []string) (string, error),
+) {
+	err := os.MkdirAll(dir, os.ModePerm)
 	ui.ExitOnError("creating dir "+dir, err)
 
 	if len(artifacts) > 0 {
@@ -91,7 +120,7 @@ func DownloadArtifacts(id, dir, format string, masks []string, client apiclientv
 				continue
 			}
 
-			f, err := client.DownloadFile(id, artifact.Name, dir)
+			f, err := downloadFile(artifact, dir)
 			ui.ExitOnError("downloading file: "+f, err)
 			ui.Warn(" - downloading file ", f)
 		}
@@ -106,7 +135,7 @@ func DownloadArtifacts(id, dir, format string, masks []string, client apiclientv
 		defer close(ch)
 
 		go func() {
-			f, err := client.DownloadArchive(id, dir, masks)
+			f, err := downloadArchive(dir, masks)
 			ui.ExitOnError("downloading archive: "+f, err)
 
 			ch <- f

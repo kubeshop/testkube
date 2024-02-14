@@ -728,7 +728,7 @@ func (s TestkubeAPI) getExecutionArtfacts(ctx context.Context, execution *testku
 	var stepArtifacts []testkube.Artifact
 	var bucket string
 
-	artifactsStorage := s.artifactsStorage
+	artifactsStorage := s.ArtifactsStorage
 	folder := execution.Id
 	if execution.ArtifactRequest != nil {
 		bucket = execution.ArtifactRequest.StorageBucket
@@ -746,7 +746,7 @@ func (s TestkubeAPI) getExecutionArtfacts(ctx context.Context, execution *testku
 		}
 	}
 
-	stepArtifacts, err = artifactsStorage.ListFiles(ctx, folder, execution.TestName, execution.TestSuiteName)
+	stepArtifacts, err = artifactsStorage.ListFiles(ctx, folder, execution.TestName, execution.TestSuiteName, "")
 	if err != nil {
 		s.Log.Warnw("can't list artifacts", "executionID", execution.Id, "error", err)
 		return artifacts, err

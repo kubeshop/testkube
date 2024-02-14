@@ -12,6 +12,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -306,7 +308,35 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 		id := primitive.NewObjectID().Hex()
 		now := time.Now()
 		machine := expressionstcl.NewMachine().
-			Register("execution.id", id)
+			RegisterStringMap("internal", map[string]string{
+				"storage.url":        os.Getenv("STORAGE_ENDPOINT"),
+				"storage.accessKey":  os.Getenv("STORAGE_ACCESSKEYID"),
+				"storage.secretKey":  os.Getenv("STORAGE_SECRETACCESSKEY"),
+				"storage.region":     os.Getenv("STORAGE_REGION"),
+				"storage.bucket":     os.Getenv("STORAGE_BUCKET"),
+				"storage.token":      os.Getenv("STORAGE_TOKEN"),
+				"storage.ssl":        common.GetOr(os.Getenv("STORAGE_SSL"), "false"),
+				"storage.skipVerify": common.GetOr(os.Getenv("STORAGE_SKIP_VERIFY"), "false"),
+				"storage.certFile":   os.Getenv("STORAGE_CERT_FILE"),
+				"storage.keyFile":    os.Getenv("STORAGE_KEY_FILE"),
+				"storage.caFile":     os.Getenv("STORAGE_CA_FILE"),
+
+				"cloud.enabled":         strconv.FormatBool(os.Getenv("TESTKUBE_PRO_API_KEY") != "" || os.Getenv("TESTKUBE_CLOUD_API_KEY") != ""),
+				"cloud.api.key":         common.GetOr(os.Getenv("TESTKUBE_PRO_API_KEY"), os.Getenv("TESTKUBE_CLOUD_API_KEY")),
+				"cloud.api.tlsInsecure": common.GetOr(os.Getenv("TESTKUBE_PRO_TLS_INSECURE"), os.Getenv("TESTKUBE_CLOUD_TLS_INSECURE"), "false"),
+				"cloud.api.skipVerify":  common.GetOr(os.Getenv("TESTKUBE_PRO_SKIP_VERIFY"), os.Getenv("TESTKUBE_CLOUD_SKIP_VERIFY"), "false"),
+				"cloud.api.url":         common.GetOr(os.Getenv("TESTKUBE_PRO_URL"), os.Getenv("TESTKUBE_CLOUD_URL")),
+
+				"dashboard.url": os.Getenv("TESTKUBE_DASHBOARD_URI"),
+				"api.url":       s.ApiUrl,
+				"namespace":     s.Namespace,
+			}).
+			RegisterStringMap("workflow", map[string]string{
+				"name": workflow.Name,
+			}).
+			RegisterStringMap("execution", map[string]string{
+				"id": id,
+			})
 
 		// Preserve resolved TestWorkflow
 		resolvedWorkflow := workflow.DeepCopy()

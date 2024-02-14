@@ -11,7 +11,7 @@ func (r *TestWorkflowResult) IsFinished() bool {
 }
 
 func (r *TestWorkflowResult) IsStatus(s TestWorkflowStatus) bool {
-	if r.Status == nil {
+	if r == nil || r.Status == nil {
 		return s == QUEUED_TestWorkflowStatus
 	}
 	return *r.Status == s

@@ -3838,6 +3838,148 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+
+  /test-workflow-executions/{executionID}/artifacts:
+    get:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      tags:
+        - test-workflows
+        - artifacts
+        - executions
+        - api
+        - pro
+      summary: "Get test workflow execution's artifacts by ID"
+      description: "Returns artifacts of the given executionID"
+      operationId: getTestWorkflowExecutionArtifacts
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Artifact"
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with getting execution's artifacts from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /test-workflow-executions/{executionID}/artifacts/{filename}:
+    get:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/Filename"
+      tags:
+        - test-workflows
+        - artifacts
+        - executions
+        - api
+        - pro
+      summary: "Download test workflow artifact"
+      description: "Download the artifact file from the given execution"
+      operationId: downloadTestWorkflowArtifact
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with getting artifacts from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /test-workflow-executions/{executionID}/artifact-archive:
+    get:
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/Mask"
+      tags:
+        - test-workflows
+        - artifacts
+        - executions
+        - api
+        - pro
+      summary: "Download test workflow artifact archive"
+      description: "Download the artifact archive from the given execution"
+      operationId: downloadTestWorkflowArtifactArchive
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with getting artifact archive from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /test-workflow-executions/{executionID}/abort:
     post:
       tags:

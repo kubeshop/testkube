@@ -3,6 +3,8 @@ package renderer
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -36,6 +38,11 @@ func TestWorkflowExecutionRenderer(client client.Client, ui *ui.UI, obj interfac
 				ui.Warn("Duration:         ", execution.Result.FinishedAt.Sub(execution.Result.QueuedAt).String())
 			}
 		}
+	}
+
+	if execution.Result != nil && execution.Result.Initialization != nil && execution.Result.Initialization.ErrorMessage != "" {
+		ui.NL()
+		ui.Err(errors.New(execution.Result.Initialization.ErrorMessage))
 	}
 
 	return nil
