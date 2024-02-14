@@ -84,7 +84,7 @@ func (c *configmapStorage) StoreMany(ctx context.Context, data map[Hash]Info) (e
 	}
 	serialized, err := c.fetch(ctx)
 	if err != nil {
-		return nil
+		return
 	}
 	for k, v := range data {
 		serialized[string(k)], err = marshalInfo(v)
