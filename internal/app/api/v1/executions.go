@@ -441,7 +441,7 @@ func (s *TestkubeAPI) GetArtifactHandler() fiber.Handler {
 
 		var file io.Reader
 		var bucket string
-		artifactsStorage := s.artifactsStorage
+		artifactsStorage := s.ArtifactsStorage
 		folder := execution.Id
 		if execution.ArtifactRequest != nil {
 			bucket = execution.ArtifactRequest.StorageBucket
@@ -457,7 +457,7 @@ func (s *TestkubeAPI) GetArtifactHandler() fiber.Handler {
 			}
 		}
 
-		file, err = artifactsStorage.DownloadFile(c.Context(), fileName, folder, execution.TestName, execution.TestSuiteName)
+		file, err = artifactsStorage.DownloadFile(c.Context(), fileName, folder, execution.TestName, execution.TestSuiteName, "")
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not download file: %w", errPrefix, err))
 		}
@@ -489,7 +489,7 @@ func (s *TestkubeAPI) GetArtifactArchiveHandler() fiber.Handler {
 
 		var archive io.Reader
 		var bucket string
-		artifactsStorage := s.artifactsStorage
+		artifactsStorage := s.ArtifactsStorage
 		folder := execution.Id
 		if execution.ArtifactRequest != nil {
 			bucket = execution.ArtifactRequest.StorageBucket
@@ -532,7 +532,7 @@ func (s *TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 
 		var files []testkube.Artifact
 		var bucket string
-		artifactsStorage := s.artifactsStorage
+		artifactsStorage := s.ArtifactsStorage
 		folder := execution.Id
 		if execution.ArtifactRequest != nil {
 			bucket = execution.ArtifactRequest.StorageBucket
@@ -548,7 +548,7 @@ func (s *TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 			}
 		}
 
-		files, err = artifactsStorage.ListFiles(c.Context(), folder, execution.TestName, execution.TestSuiteName)
+		files, err = artifactsStorage.ListFiles(c.Context(), folder, execution.TestName, execution.TestSuiteName, "")
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: storage client could not list files %w", errPrefix, err))
 		}
@@ -724,7 +724,7 @@ func (s *TestkubeAPI) getExecutorByTestType(testType string) (client.Executor, e
 
 func (s *TestkubeAPI) getArtifactStorage(bucket string) (storage.ArtifactsStorage, error) {
 	if s.mode == common.ModeAgent {
-		return s.artifactsStorage, nil
+		return s.ArtifactsStorage, nil
 	}
 
 	opts := minio.GetTLSOptions(s.storageParams.SSL, s.storageParams.SkipVerify, s.storageParams.CertFile, s.storageParams.KeyFile, s.storageParams.CAFile)

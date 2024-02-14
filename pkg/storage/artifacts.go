@@ -10,9 +10,9 @@ import (
 //go:generate mockgen -destination=./artifacts_mock.go -package=storage "github.com/kubeshop/testkube/pkg/storage" ArtifactsStorage
 type ArtifactsStorage interface {
 	// ListFiles lists available files in the configured bucket
-	ListFiles(ctx context.Context, executionId, testName, testSuiteName string) ([]testkube.Artifact, error)
+	ListFiles(ctx context.Context, executionId, testName, testSuiteName, testWorkflowName string) ([]testkube.Artifact, error)
 	// DownloadFile downloads file from configured
-	DownloadFile(ctx context.Context, file, executionId, testName, testSuiteName string) (io.Reader, error)
+	DownloadFile(ctx context.Context, file, executionId, testName, testSuiteName, testWorkflowName string) (io.Reader, error)
 	// DownloadArchive downloads archive from configured
 	DownloadArchive(ctx context.Context, executionId string, masks []string) (io.Reader, error)
 	// UploadFile uploads file to configured bucket

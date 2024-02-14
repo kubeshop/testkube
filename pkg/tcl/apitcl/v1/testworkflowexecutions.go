@@ -16,6 +16,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -278,6 +279,82 @@ func (s *apiTCL) AbortAllTestWorkflowExecutionsHandler() fiber.Handler {
 		c.Status(http.StatusNoContent)
 
 		return nil
+	}
+}
+
+func (s *apiTCL) ListTestWorkflowExecutionArtifactsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		executionID := c.Params("executionID")
+		errPrefix := fmt.Sprintf("failed to list artifacts for test workflow execution %s", executionID)
+
+		execution, err := s.TestWorkflowResults.Get(c.Context(), executionID)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		files, err := s.ArtifactsStorage.ListFiles(c.Context(), execution.Id, "", "", execution.Workflow.Name)
+		if err != nil {
+			return s.InternalError(c, errPrefix, "storage client could not list test workflow files", err)
+		}
+
+		return c.JSON(files)
+	}
+}
+
+func (s *apiTCL) GetTestWorkflowArtifactHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		executionID := c.Params("executionID")
+		fileName := c.Params("filename")
+		errPrefix := fmt.Sprintf("failed to get artifact %s for workflow execution %s", fileName, executionID)
+
+		// TODO fix this someday :) we don't know 15 mins before release why it's working this way
+		// remember about CLI client and Dashboard client too!
+		unescaped, err := url.QueryUnescape(fileName)
+		if err == nil {
+			fileName = unescaped
+		}
+		unescaped, err = url.QueryUnescape(fileName)
+		if err == nil {
+			fileName = unescaped
+		}
+		//// quickfix end
+
+		execution, err := s.TestWorkflowResults.Get(c.Context(), executionID)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		file, err := s.ArtifactsStorage.DownloadFile(c.Context(), fileName, execution.Id, "", "", execution.Workflow.Name)
+		if err != nil {
+			return s.InternalError(c, errPrefix, "could not download file", err)
+		}
+
+		return c.SendStream(file)
+	}
+}
+
+func (s *apiTCL) GetTestWorkflowArtifactArchiveHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		executionID := c.Params("executionID")
+		query := c.Request().URI().QueryString()
+		errPrefix := fmt.Sprintf("failed to get artifact archive for test workflow execution %s", executionID)
+
+		values, err := url.ParseQuery(string(query))
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "could not parse query string", err)
+		}
+
+		execution, err := s.TestWorkflowResults.Get(c.Context(), executionID)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		archive, err := s.ArtifactsStorage.DownloadArchive(c.Context(), execution.Id, values["mask"])
+		if err != nil {
+			return s.InternalError(c, errPrefix, "could not download workflow artifact archive", err)
+		}
+
+		return c.SendStream(archive)
 	}
 }
 

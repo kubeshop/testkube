@@ -602,7 +602,15 @@ func main() {
 	}
 
 	// Apply Pro server enhancements
-	apitclv1.NewApiTCL(api, &proContext, kubeClient, inspector, testWorkflowResultsRepository, testWorkflowOutputRepository).AppendRoutes()
+	apitclv1.NewApiTCL(
+		api,
+		&proContext,
+		kubeClient,
+		inspector,
+		testWorkflowResultsRepository,
+		testWorkflowOutputRepository,
+		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
+	).AppendRoutes()
 
 	api.InitEvents()
 	if !cfg.DisableTestTriggers {

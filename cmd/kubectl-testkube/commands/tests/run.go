@@ -331,7 +331,7 @@ func NewRunTestCmd() *cobra.Command {
 				if execution.Id != "" {
 					if watchEnabled && len(args) > 0 {
 						if downloadArtifactsEnabled && (execution.IsPassed() || execution.IsFailed()) {
-							DownloadArtifacts(execution.Id, downloadDir, format, masks, client)
+							DownloadTestArtifacts(execution.Id, downloadDir, format, masks, client)
 						}
 					}
 
