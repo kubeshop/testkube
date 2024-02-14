@@ -221,15 +221,23 @@ func (s *Notifier) composeTestMessage(execution *testkube.Execution, eventType t
 		Labels:        testkube.MapToString(execution.Labels),
 		TestName:      execution.TestName,
 		TestType:      execution.TestType,
-		Status:        string(*execution.ExecutionResult.Status),
+		Status:        string(testkube.QUEUED_ExecutionStatus),
 		StartTime:     execution.StartTime.String(),
 		EndTime:       execution.EndTime.String(),
 		Duration:      execution.Duration,
-		TotalSteps:    len(execution.ExecutionResult.Steps),
-		FailedSteps:   execution.ExecutionResult.FailedStepsCount(),
+		TotalSteps:    0,
+		FailedSteps:   0,
 		ClusterName:   s.clusterName,
 		DashboardURI:  s.dashboardURI,
 		Envs:          s.envs,
+	}
+
+	if execution.ExecutionResult != nil {
+		if execution.ExecutionResult.Status != nil {
+			args.Status = string(*execution.ExecutionResult.Status)
+		}
+		args.TotalSteps = len(execution.ExecutionResult.Steps)
+		args.FailedSteps = execution.ExecutionResult.FailedStepsCount()
 	}
 
 	log.DefaultLogger.Infow("Execution changed", "status", execution.ExecutionResult.Status)
