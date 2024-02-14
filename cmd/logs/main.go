@@ -11,6 +11,7 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/oklog/run"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/credentials"
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/agent"
@@ -92,6 +93,12 @@ func main() {
 	if cfg.Debug {
 		svc.AddAdapter(adapter.NewDebugAdapter())
 	}
+
+	creds, err := newGRPCTransportCredentials(cfg)
+	if err != nil {
+		log.Fatalw("error getting tls credentials", "error", err)
+	}
+
 	// add given log adapter depends from mode
 	switch mode {
 
@@ -142,7 +149,7 @@ func main() {
 	})
 
 	g.Add(func() error {
-		return svc.RunGRPCServer(ctx)
+		return svc.RunGRPCServer(ctx, creds)
 	}, func(error) {
 		cancel()
 	})
@@ -178,4 +185,14 @@ func Must[T any](val T, err error) T {
 		panic(err)
 	}
 	return val
+}
+
+func newGRPCTransportCredentials(cfg *config.Config) (credentials.TransportCredentials, error) {
+	return logs.GetGrpcTransportCredentials(logs.GrpcConnectionConfig{
+		Secure:       cfg.GrpcSecure,
+		ClientAuth:   cfg.GrpcClientAuth,
+		CertFile:     cfg.GrpcCertFile,
+		KeyFile:      cfg.GrpcKeyFile,
+		ClientCAFile: cfg.GrpcClientCAFile,
+	})
 }

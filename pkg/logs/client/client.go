@@ -2,11 +2,16 @@ package client
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/kubeshop/testkube/pkg/log"
@@ -20,15 +25,17 @@ const (
 )
 
 // NewGrpcClient imlpements getter interface for log stream for given ID
-func NewGrpcClient(address string) StreamGetter {
+func NewGrpcClient(address string, creds credentials.TransportCredentials) StreamGetter {
 	return &GrpcClient{
 		log:     log.DefaultLogger.With("service", "logs-grpc-client"),
+		creds:   creds,
 		address: address,
 	}
 }
 
 type GrpcClient struct {
 	log     *zap.SugaredLogger
+	creds   credentials.TransportCredentials
 	address string
 }
 
@@ -47,7 +54,12 @@ func (c GrpcClient) Get(ctx context.Context, id string) (chan events.LogResponse
 		defer close(ch)
 
 		// TODO add TLS to GRPC client
-		conn, err := grpc.Dial(c.address, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		creds := insecure.NewCredentials()
+		if c.creds != nil {
+			creds = c.creds
+		}
+
+		conn, err := grpc.Dial(c.address, grpc.WithTransportCredentials(creds))
 		if err != nil {
 			ch <- events.LogResponse{Error: err}
 			return
@@ -95,4 +107,53 @@ func (c GrpcClient) Get(ctx context.Context, id string) (chan events.LogResponse
 	}()
 
 	return ch, nil
+}
+
+// GrpcConnectionConfig contains GRPC connection parameters
+type GrpcConnectionConfig struct {
+	Secure     bool
+	SkipVerify bool
+	CertFile   string
+	KeyFile    string
+	CAFile     string
+}
+
+// GetGrpcTransportCredentials returns transport credentials for GRPC connection config
+func GetGrpcTransportCredentials(cfg GrpcConnectionConfig) (credentials.TransportCredentials, error) {
+	var creds credentials.TransportCredentials
+
+	if cfg.Secure {
+		var tlsConfig tls.Config
+
+		if cfg.SkipVerify {
+			tlsConfig.InsecureSkipVerify = true
+		} else {
+			if cfg.CertFile != "" && cfg.KeyFile != "" {
+				cert, err := tls.LoadX509KeyPair(cfg.CertFile, cfg.KeyFile)
+				if err != nil {
+					return nil, err
+				}
+
+				tlsConfig.Certificates = []tls.Certificate{cert}
+			}
+
+			if cfg.CAFile != "" {
+				caCertificate, err := os.ReadFile(cfg.CAFile)
+				if err != nil {
+					return nil, err
+				}
+
+				certPool := x509.NewCertPool()
+				if !certPool.AppendCertsFromPEM(caCertificate) {
+					return nil, fmt.Errorf("failed to add server CA's certificate")
+				}
+
+				tlsConfig.RootCAs = certPool
+			}
+		}
+
+		creds = credentials.NewTLS(&tlsConfig)
+	}
+
+	return creds, nil
 }

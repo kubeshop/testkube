@@ -19,6 +19,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 
@@ -231,7 +232,9 @@ func main() {
 
 	var logGrpcClient logsclient.StreamGetter
 	if features.LogsV2 {
-		logGrpcClient = logsclient.NewGrpcClient(cfg.LogServerGrpcAddress)
+		creds, err := newGRPCTransportCredentials(cfg)
+		ui.ExitOnError("Getting log server TLS credentials", err)
+		logGrpcClient = logsclient.NewGrpcClient(cfg.LogServerGrpcAddress, creds)
 	}
 
 	// DI
@@ -755,4 +758,14 @@ func getMongoSSLConfig(cfg *config.Config, secretClient *secret.Client) *storage
 		SSLClientCertificateKeyFilePassword: pass,
 		SSLCertificateAuthoritiyFile:        rootCAPath,
 	}
+}
+
+func newGRPCTransportCredentials(cfg *config.Config) (credentials.TransportCredentials, error) {
+	return logsclient.GetGrpcTransportCredentials(logsclient.GrpcConnectionConfig{
+		Secure:     cfg.LogServerSecure,
+		SkipVerify: cfg.LogServerSkipVerify,
+		CertFile:   cfg.LogServerCertFile,
+		KeyFile:    cfg.LogServerKeyFile,
+		CAFile:     cfg.LogServerCAFile,
+	})
 }
