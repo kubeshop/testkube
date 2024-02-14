@@ -252,7 +252,7 @@ func main() {
 		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)
 		ui.ExitOnError("Getting mongo database", err)
 		isDocDb := cfg.APIMongoDBType == storage.TypeDocDB
-		mongoResultsRepository := result.NewMongoRepository(db, logGrpcClient, cfg.APIMongoAllowDiskUse, isDocDb, features)
+		mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb, result.WithFeatureFlags(features), result.WithLogsClient(logGrpcClient))
 		resultsRepository = mongoResultsRepository
 		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb)
 		configRepository = configrepository.NewMongoRepository(db)
