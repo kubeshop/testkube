@@ -59,8 +59,6 @@ func NewMongoRepositoryWithOutputRepository(
 	db *mongo.Database,
 	allowDiskUse bool,
 	outputRepository OutputRepository,
-	logGrpcClient logsclient.StreamGetter,
-	features featureflags.FeatureFlags,
 	opts ...MongoRepositoryOpt,
 ) *MongoRepository {
 	r := &MongoRepository{
@@ -68,9 +66,7 @@ func NewMongoRepositoryWithOutputRepository(
 		ResultsColl:      db.Collection(CollectionResults),
 		SequencesColl:    db.Collection(CollectionSequences),
 		OutputRepository: outputRepository,
-		logGrpcClient:    logGrpcClient,
 		allowDiskUse:     allowDiskUse,
-		features:         features,
 		log:              log.DefaultLogger,
 	}
 
@@ -81,15 +77,12 @@ func NewMongoRepositoryWithOutputRepository(
 	return r
 }
 
-func NewMongoRepositoryWithMinioOutputStorage(db *mongo.Database, allowDiskUse bool, storageClient storage.Client,
-	logGrpcClient logsclient.StreamGetter, bucket string, features featureflags.FeatureFlags) *MongoRepository {
+func NewMongoRepositoryWithMinioOutputStorage(db *mongo.Database, allowDiskUse bool, storageClient storage.Client, bucket string) *MongoRepository {
 	repo := MongoRepository{
 		db:            db,
 		ResultsColl:   db.Collection(CollectionResults),
 		SequencesColl: db.Collection(CollectionSequences),
-		logGrpcClient: logGrpcClient,
 		allowDiskUse:  allowDiskUse,
-		features:      features,
 		log:           log.DefaultLogger,
 	}
 	repo.OutputRepository = NewMinioOutputRepository(storageClient, repo.ResultsColl, bucket)
