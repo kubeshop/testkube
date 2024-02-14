@@ -2,13 +2,13 @@ package containerexecutor
 
 import (
 	"bytes"
+	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
-
-	_ "embed"
 
 	"go.uber.org/zap"
 	batchv1 "k8s.io/api/batch/v1"
@@ -22,8 +22,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/executor/env"
-	"github.com/kubeshop/testkube/pkg/secret"
-	"github.com/kubeshop/testkube/pkg/skopeo"
+	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
@@ -203,56 +202,22 @@ func NewScraperJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.Jo
 	return &job, nil
 }
 
-// InspectDockerImage inspects docker image
-func InspectDockerImage(namespace, registry, image string, imageSecrets []string) ([]string, string, error) {
-	inspector := skopeo.NewClient()
-	if len(imageSecrets) != 0 {
-		secretClient, err := secret.NewClient(namespace)
-		if err != nil {
-			return nil, "", err
-		}
-
-		var secrets []corev1.Secret
-		for _, imageSecret := range imageSecrets {
-			object, err := secretClient.GetObject(imageSecret)
-			if err != nil {
-				return nil, "", err
-			}
-
-			secrets = append(secrets, *object)
-		}
-
-		inspector, err = skopeo.NewClientFromSecrets(secrets, registry)
-		if err != nil {
-			return nil, "", err
-		}
-	}
-
-	dockerImage, err := inspector.Inspect(image)
-	if err != nil {
-		return nil, "", err
-	}
-
-	return append(dockerImage.Config.Entrypoint, dockerImage.Config.Cmd...), dockerImage.Shell, nil
-}
-
 // TODO refactor JobOptions to use builder pattern
 // TODO extract JobOptions for both container and job executor to common package in separate PR
 // NewJobOptions provides job options for templates
 func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, images executor.Images,
-	templates executor.Templates, serviceAccountName, registry, clusterID, apiURI string,
+	templates executor.Templates, inspector imageinspector.Inspector, serviceAccountName, registry, clusterID, apiURI string,
 	execution testkube.Execution, options client.ExecuteOptions, natsUri string, debug bool) (*JobOptions, error) {
 	jobOptions := NewJobOptionsFromExecutionOptions(options)
 	if execution.PreRunScript != "" || execution.PostRunScript != "" {
 		jobOptions.Command = []string{filepath.Join(executor.VolumeDir, EntrypointScriptName)}
 		if jobOptions.Image != "" {
-			cmd, shell, err := InspectDockerImage(jobOptions.Namespace, registry, jobOptions.Image, jobOptions.ImagePullSecrets)
+			info, err := inspector.Inspect(context.Background(), registry, jobOptions.Image, corev1.PullIfNotPresent, jobOptions.ImagePullSecrets)
 			if err == nil {
 				if len(execution.Command) == 0 {
-					execution.Command = cmd
+					execution.Command = info.Cmd
 				}
-
-				execution.ContainerShell = shell
+				execution.ContainerShell = info.Shell
 			} else {
 				log.Errorw("Docker image inspection error", "error", err)
 			}
