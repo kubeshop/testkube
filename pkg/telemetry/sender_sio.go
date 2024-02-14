@@ -8,10 +8,12 @@ import (
 	"github.com/segmentio/analytics-go/v3"
 
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 const SegmentioEnvVariableName = "TESTKUBE_SEGMENTIO_KEY"
 const CloudEnvVariableName = "TESTKUBE_CLOUD_API_KEY"
+const ProEnvVariableName = "TESTKUBE_PRO_API_KEY"
 
 // Brew builds can't be parametrized so we are embedding this one
 var SegmentioKey = "jELokNFNcLeQhxdpGF47PcxCtOLpwVuu"
@@ -40,10 +42,9 @@ func SegmentioSender(client *http.Client, payload Payload) (out string, err erro
 	if key, ok := os.LookupEnv(SegmentioEnvVariableName); ok {
 		SegmentioKey = key
 	}
-	if key, ok := os.LookupEnv(CloudEnvVariableName); ok {
-		if key != "" {
-			SegmentioKey = CloudSegmentioKey
-		}
+	key := utils.GetEnvVarWithDeprecation(ProEnvVariableName, CloudEnvVariableName, "")
+	if key != "" {
+		SegmentioKey = CloudSegmentioKey
 	}
 
 	segmentio, err := analytics.NewWithConfig(SegmentioKey, analytics.Config{Logger: StdLogger()})

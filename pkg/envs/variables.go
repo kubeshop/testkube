@@ -42,6 +42,12 @@ type Params struct {
 	CloudAPIURL               string `envconfig:"RUNNER_CLOUD_API_URL"`                         // RUNNER_CLOUD_API_URL
 	CloudConnectionTimeoutSec int    `envconfig:"RUNNER_CLOUD_CONNECTION_TIMEOUT" default:"10"` // RUNNER_CLOUD_CONNECTION_TIMEOUT
 	CloudAPISkipVerify        bool   `envconfig:"RUNNER_CLOUD_API_SKIP_VERIFY" default:"false"` // RUNNER_CLOUD_API_SKIP_VERIFY
+	ProMode                   bool   `envconfig:"RUNNER_PRO_MODE"`                              // RUNNER_PRO_MODE
+	ProAPIKey                 string `envconfig:"RUNNER_PRO_API_KEY"`                           // RUNNER_PRO_API_KEY
+	ProAPITLSInsecure         bool   `envconfig:"RUNNER_PRO_API_TLS_INSECURE"`                  // RUNNER_PRO_API_TLS_INSECURE
+	ProAPIURL                 string `envconfig:"RUNNER_PRO_API_URL"`                           // RUNNER_PRO_API_URL
+	ProConnectionTimeoutSec   int    `envconfig:"RUNNER_PRO_CONNECTION_TIMEOUT" default:"10"`   // RUNNER_PRO_CONNECTION_TIMEOUT
+	ProAPISkipVerify          bool   `envconfig:"RUNNER_PRO_API_SKIP_VERIFY" default:"false"`   // RUNNER_PRO_API_SKIP_VERIFY
 	SlavesConfigs             string `envconfig:"RUNNER_SLAVES_CONFIGS"`                        // RUNNER_SLAVES_CONFIGS
 }
 
@@ -52,7 +58,7 @@ func LoadTestkubeVariables() (Params, error) {
 	if err != nil {
 		return params, errors.Errorf("failed to read environment variables: %v", err)
 	}
-
+	cleanDeprecatedParams(&params)
 	return params, nil
 }
 
@@ -81,12 +87,19 @@ func PrintParams(params Params) {
 	output.PrintLogf("RUNNER_CLUSTERID=\"%s\"", params.ClusterID)
 	output.PrintLogf("RUNNER_CDEVENTS_TARGET=\"%s\"", params.CDEventsTarget)
 	output.PrintLogf("RUNNER_DASHBOARD_URI=\"%s\"", params.DashboardURI)
-	output.PrintLogf("RUNNER_CLOUD_MODE=\"%t\"", params.CloudMode)
-	output.PrintLogf("RUNNER_CLOUD_API_TLS_INSECURE=\"%t\"", params.CloudAPITLSInsecure)
-	output.PrintLogf("RUNNER_CLOUD_API_URL=\"%s\"", params.CloudAPIURL)
-	printSensitiveParam("RUNNER_CLOUD_API_KEY", params.CloudAPIKey)
-	output.PrintLogf("RUNNER_CLOUD_CONNECTION_TIMEOUT=%d", params.CloudConnectionTimeoutSec)
-	output.PrintLogf("RUNNER_CLOUD_API_SKIP_VERIFY=\"%t\"", params.CloudAPISkipVerify)
+	output.PrintLogf("RUNNER_CLOUD_MODE=\"%t\" - DEPRECATED: please use RUNNER_PRO_MODE instead", params.CloudMode)
+	output.PrintLogf("RUNNER_CLOUD_API_TLS_INSECURE=\"%t\" - DEPRECATED: please use RUNNER_PRO_API_TLS_INSECURE instead", params.CloudAPITLSInsecure)
+	output.PrintLogf("RUNNER_CLOUD_API_URL=\"%s\" - DEPRECATED: please use RUNNER_PRO_API_URL instead", params.CloudAPIURL)
+	printSensitiveDeprecatedParam("RUNNER_CLOUD_API_KEY", params.CloudAPIKey, "RUNNER_PRO_API_KEY")
+	output.PrintLogf("RUNNER_CLOUD_CONNECTION_TIMEOUT=%d - DEPRECATED: please use RUNNER_PRO_CONNECTION_TIMEOUT instead", params.CloudConnectionTimeoutSec)
+	output.PrintLogf("RUNNER_CLOUD_API_SKIP_VERIFY=\"%t\" - DEPRECATED: please use RUNNER_PRO_API_SKIP_VERIFY instead", params.CloudAPISkipVerify)
+	output.PrintLogf("RUNNER_PRO_MODE=\"%t\"", params.ProMode)
+	output.PrintLogf("RUNNER_PRO_API_TLS_INSECURE=\"%t\"", params.ProAPITLSInsecure)
+	output.PrintLogf("RUNNER_PRO_API_URL=\"%s\"", params.ProAPIURL)
+	printSensitiveParam("RUNNER_PRO_API_KEY", params.ProAPIKey)
+	output.PrintLogf("RUNNER_PRO_CONNECTION_TIMEOUT=%d", params.ProConnectionTimeoutSec)
+	output.PrintLogf("RUNNER_PRO_API_SKIP_VERIFY=\"%t\"", params.ProAPISkipVerify)
+
 }
 
 // printSensitiveParam shows in logs if a parameter is set or not
@@ -95,5 +108,41 @@ func printSensitiveParam(name string, value string) {
 		output.PrintLogf("%s=\"\"", name)
 	} else {
 		output.PrintLogf("%s=\"********\"", name)
+	}
+}
+
+// printSensitiveDeprecatedParam shows in logs if a parameter is set or not
+func printSensitiveDeprecatedParam(name string, value string, newName string) {
+	if len(value) == 0 {
+		output.PrintLogf("%s=\"\" - DEPRECATED: please use %s instead", name, newName)
+	} else {
+		output.PrintLogf("%s=\"********\" - DEPRECATED: please use %s instead", name, newName)
+	}
+}
+
+// cleanDeprecatedParams makes sure deprecated parameter values are set in replacements
+func cleanDeprecatedParams(params *Params) {
+	if !params.ProMode && params.CloudMode {
+		params.ProMode = params.CloudMode
+	}
+
+	if params.ProAPIKey == "" && params.CloudAPIKey != "" {
+		params.ProAPIKey = params.CloudAPIKey
+	}
+
+	if !params.ProAPITLSInsecure && params.CloudAPITLSInsecure {
+		params.ProAPITLSInsecure = params.CloudAPITLSInsecure
+	}
+
+	if params.ProAPIURL == "" && params.CloudAPIURL != "" {
+		params.ProAPIURL = params.CloudAPIURL
+	}
+
+	if params.ProConnectionTimeoutSec == 0 && params.CloudConnectionTimeoutSec != 0 {
+		params.ProConnectionTimeoutSec = params.CloudConnectionTimeoutSec
+	}
+
+	if !params.ProAPISkipVerify && params.CloudAPISkipVerify {
+		params.ProAPISkipVerify = params.CloudAPISkipVerify
 	}
 }

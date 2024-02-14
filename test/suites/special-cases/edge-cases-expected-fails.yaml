@@ -64,3 +64,12 @@ spec:
   - stopOnFailure: false
     execute:
     - test: expected-fail-post-run-script
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-container-pre-run-script
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-container-post-run-script
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-pre-post-run-script

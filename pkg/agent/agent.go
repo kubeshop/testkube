@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"math"
-	"os"
 	"time"
 
 	"google.golang.org/grpc/keepalive"
@@ -24,6 +23,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
+	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -37,10 +37,6 @@ const (
 	orgIdMeta          = "environment-id"
 	envIdMeta          = "organization-id"
 	healthcheckCommand = "healthcheck"
-
-	cloudMigrateEnvName = "TESTKUBE_CLOUD_MIGRATE"
-	cloudEnvIdEnvName   = "TESTKUBE_CLOUD_ENV_ID"
-	cloudOrgIdEnvName   = "TESTKUBE_CLOUD_ORG_ID"
 )
 
 // buffer up to five messages per worker
@@ -104,40 +100,41 @@ type Agent struct {
 	clusterName string
 	envs        map[string]string
 	features    featureflags.FeatureFlags
+
+	proContext config.ProContext
 }
 
 func NewAgent(logger *zap.SugaredLogger,
 	handler fasthttp.RequestHandler,
-	apiKey string,
 	client cloud.TestKubeCloudAPIClient,
-	workerCount int,
-	logStreamWorkerCount int,
 	logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error),
 	clusterID string,
 	clusterName string,
 	envs map[string]string,
 	features featureflags.FeatureFlags,
+	proContext config.ProContext,
 ) (*Agent, error) {
 	return &Agent{
 		handler:                 handler,
 		logger:                  logger,
-		apiKey:                  apiKey,
+		apiKey:                  proContext.APIKey,
 		client:                  client,
 		events:                  make(chan testkube.Event),
-		workerCount:             workerCount,
-		requestBuffer:           make(chan *cloud.ExecuteRequest, bufferSizePerWorker*workerCount),
-		responseBuffer:          make(chan *cloud.ExecuteResponse, bufferSizePerWorker*workerCount),
+		workerCount:             proContext.WorkerCount,
+		requestBuffer:           make(chan *cloud.ExecuteRequest, bufferSizePerWorker*proContext.WorkerCount),
+		responseBuffer:          make(chan *cloud.ExecuteResponse, bufferSizePerWorker*proContext.WorkerCount),
 		receiveTimeout:          5 * time.Minute,
 		sendTimeout:             30 * time.Second,
 		healthcheckInterval:     30 * time.Second,
-		logStreamWorkerCount:    logStreamWorkerCount,
-		logStreamRequestBuffer:  make(chan *cloud.LogsStreamRequest, bufferSizePerWorker*logStreamWorkerCount),
-		logStreamResponseBuffer: make(chan *cloud.LogsStreamResponse, bufferSizePerWorker*logStreamWorkerCount),
+		logStreamWorkerCount:    proContext.LogStreamWorkerCount,
+		logStreamRequestBuffer:  make(chan *cloud.LogsStreamRequest, bufferSizePerWorker*proContext.LogStreamWorkerCount),
+		logStreamResponseBuffer: make(chan *cloud.LogsStreamResponse, bufferSizePerWorker*proContext.LogStreamWorkerCount),
 		logStreamFunc:           logStreamFunc,
 		clusterID:               clusterID,
 		clusterName:             clusterName,
 		envs:                    envs,
 		features:                features,
+		proContext:              proContext,
 	}, nil
 }
 
@@ -244,14 +241,14 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 }
 
 func (ag *Agent) runCommandLoop(ctx context.Context) error {
-	ctx = AddAPIKeyMeta(ctx, ag.apiKey)
+	ctx = AddAPIKeyMeta(ctx, ag.proContext.APIKey)
 
 	ctx = metadata.AppendToOutgoingContext(ctx, clusterIDMeta, ag.clusterID)
-	ctx = metadata.AppendToOutgoingContext(ctx, cloudMigrateMeta, os.Getenv(cloudMigrateEnvName))
-	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, os.Getenv(cloudEnvIdEnvName))
-	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, os.Getenv(cloudOrgIdEnvName))
+	ctx = metadata.AppendToOutgoingContext(ctx, cloudMigrateMeta, ag.proContext.Migrate)
+	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
+	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
 
-	ag.logger.Infow("initiating streaming connection with Cloud API")
+	ag.logger.Infow("initiating streaming connection with Pro API")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	stream, err := ag.client.ExecuteAsync(ctx, opts...)

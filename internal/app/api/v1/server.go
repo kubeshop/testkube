@@ -13,8 +13,9 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/repository/config"
+	repoConfig "github.com/kubeshop/testkube/pkg/repository/config"
 
 	"github.com/kubeshop/testkube/pkg/version"
 
@@ -71,7 +72,7 @@ func NewTestkubeAPI(
 	clientset kubernetes.Interface,
 	testkubeClientset testkubeclientset.Interface,
 	testsourcesClient *testsourcesclientv1.TestSourcesClient,
-	configMap config.Repository,
+	configMap repoConfig.Repository,
 	clusterId string,
 	eventsEmitter *event.Emitter,
 	executor client.Executor,
@@ -183,7 +184,7 @@ type TestkubeAPI struct {
 	oauthParams           oauthParams
 	WebsocketLoader       *ws.WebsocketLoader
 	Events                *event.Emitter
-	ConfigMap             config.Repository
+	ConfigMap             repoConfig.Repository
 	scheduler             *scheduler.Scheduler
 	Clientset             kubernetes.Interface
 	slackLoader           *slack.SlackLoader
@@ -198,6 +199,7 @@ type TestkubeAPI struct {
 	featureFlags          featureflags.FeatureFlags
 	logsStream            logsclient.Stream
 	logGrpcClient         logsclient.StreamGetter
+	proContext            *config.ProContext
 }
 
 type storageParams struct {
@@ -587,4 +589,9 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 	}
 
 	return filter
+}
+
+func (s *TestkubeAPI) WithProContext(proContext *config.ProContext) *TestkubeAPI {
+	s.proContext = proContext
+	return s
 }

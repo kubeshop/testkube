@@ -36,17 +36,15 @@ const (
 	StepMaxCount = 100
 )
 
-func NewMongoRepository(db *mongo.Database, logGrpcClient logsclient.StreamGetter, allowDiskUse, isDocDb bool,
-	features featureflags.FeatureFlags, opts ...MongoRepositoryOpt) *MongoRepository {
+// NewMongoRepository creates a new MongoRepository - used by other testkube components - use opts to extend the functionality
+func NewMongoRepository(db *mongo.Database, allowDiskUse, isDocDb bool, opts ...MongoRepositoryOpt) *MongoRepository {
 	r := &MongoRepository{
 		db:               db,
 		ResultsColl:      db.Collection(CollectionResults),
 		SequencesColl:    db.Collection(CollectionSequences),
 		OutputRepository: NewMongoOutputRepository(db),
-		logGrpcClient:    logGrpcClient,
 		allowDiskUse:     allowDiskUse,
 		isDocDb:          isDocDb,
-		features:         features,
 		log:              log.DefaultLogger,
 	}
 
@@ -61,8 +59,6 @@ func NewMongoRepositoryWithOutputRepository(
 	db *mongo.Database,
 	allowDiskUse bool,
 	outputRepository OutputRepository,
-	logGrpcClient logsclient.StreamGetter,
-	features featureflags.FeatureFlags,
 	opts ...MongoRepositoryOpt,
 ) *MongoRepository {
 	r := &MongoRepository{
@@ -70,9 +66,7 @@ func NewMongoRepositoryWithOutputRepository(
 		ResultsColl:      db.Collection(CollectionResults),
 		SequencesColl:    db.Collection(CollectionSequences),
 		OutputRepository: outputRepository,
-		logGrpcClient:    logGrpcClient,
 		allowDiskUse:     allowDiskUse,
-		features:         features,
 		log:              log.DefaultLogger,
 	}
 
@@ -83,15 +77,12 @@ func NewMongoRepositoryWithOutputRepository(
 	return r
 }
 
-func NewMongoRepositoryWithMinioOutputStorage(db *mongo.Database, allowDiskUse bool, storageClient storage.Client,
-	logGrpcClient logsclient.StreamGetter, bucket string, features featureflags.FeatureFlags) *MongoRepository {
+func NewMongoRepositoryWithMinioOutputStorage(db *mongo.Database, allowDiskUse bool, storageClient storage.Client, bucket string) *MongoRepository {
 	repo := MongoRepository{
 		db:            db,
 		ResultsColl:   db.Collection(CollectionResults),
 		SequencesColl: db.Collection(CollectionSequences),
-		logGrpcClient: logGrpcClient,
 		allowDiskUse:  allowDiskUse,
-		features:      features,
 		log:           log.DefaultLogger,
 	}
 	repo.OutputRepository = NewMinioOutputRepository(storageClient, repo.ResultsColl, bucket)
@@ -111,6 +102,18 @@ type MongoRepository struct {
 }
 
 type MongoRepositoryOpt func(*MongoRepository)
+
+func WithLogsClient(client logsclient.StreamGetter) MongoRepositoryOpt {
+	return func(r *MongoRepository) {
+		r.logGrpcClient = client
+	}
+}
+
+func WithFeatureFlags(features featureflags.FeatureFlags) MongoRepositoryOpt {
+	return func(r *MongoRepository) {
+		r.features = features
+	}
+}
 
 func WithMongoRepositoryResultCollection(collection *mongo.Collection) MongoRepositoryOpt {
 	return func(r *MongoRepository) {
