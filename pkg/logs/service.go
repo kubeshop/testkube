@@ -201,7 +201,7 @@ func GetGrpcTransportCredentials(cfg GrpcConnectionConfig) (credentials.Transpor
 	var creds credentials.TransportCredentials
 
 	if cfg.Secure {
-		var tlsConfig *tls.Config
+		var tlsConfig tls.Config
 		tlsConfig.ClientAuth = tls.NoClientCert
 		if cfg.ClientAuth {
 			tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
@@ -230,7 +230,7 @@ func GetGrpcTransportCredentials(cfg GrpcConnectionConfig) (credentials.Transpor
 			tlsConfig.ClientCAs = certPool
 		}
 
-		creds = credentials.NewTLS(tlsConfig)
+		creds = credentials.NewTLS(&tlsConfig)
 	}
 
 	return creds, nil
