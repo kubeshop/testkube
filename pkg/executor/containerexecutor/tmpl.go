@@ -210,7 +210,7 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	execution testkube.Execution, options client.ExecuteOptions, natsUri string, debug bool) (*JobOptions, error) {
 	jobOptions := NewJobOptionsFromExecutionOptions(options)
 	if execution.PreRunScript != "" || execution.PostRunScript != "" {
-		jobOptions.Command = []string{filepath.Join(executor.VolumeDir, EntrypointScriptName)}
+		jobOptions.Command = []string{"source", filepath.Join(executor.VolumeDir, EntrypointScriptName)}
 		if jobOptions.Image != "" {
 			info, err := inspector.Inspect(context.Background(), registry, jobOptions.Image, corev1.PullIfNotPresent, jobOptions.ImagePullSecrets)
 			if err == nil {

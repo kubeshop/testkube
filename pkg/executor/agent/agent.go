@@ -124,7 +124,7 @@ func RunScript(body, workingDir string) error {
 		return err
 	}
 
-	if _, err = executor.Run(workingDir, "/bin/sh", nil, filename); err != nil {
+	if _, err = executor.Run(workingDir, "/bin/sh", nil, "source", filename); err != nil {
 		return err
 	}
 
