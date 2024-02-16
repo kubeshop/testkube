@@ -194,7 +194,7 @@ func (r *K6Runner) Run(ctx context.Context, execution testkube.Execution) (resul
 			runPath = r.Params.WorkingDir
 		}
 
-		if rerr = agent.RunScript(execution.PostRunScript, runPath); rerr != nil {
+		if rerr = agent.RunScript(execution.PostRunScript, runPath, execution.SourceScripts); rerr != nil {
 			outputPkg.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, rerr)
 		}
 	}

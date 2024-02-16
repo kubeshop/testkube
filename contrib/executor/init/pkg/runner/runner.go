@@ -87,18 +87,30 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		postRunScript := shebang
 
 		if execution.PreRunScript != "" {
-			entrypoint += "source " + strconv.Quote(filepath.Join(r.Params.DataDir, preRunScriptName)) + "\n"
+			if execution.SourceScripts {
+				entrypoint += ". "
+			}
+
+			entrypoint += strconv.Quote(filepath.Join(r.Params.DataDir, preRunScriptName)) + "\n"
 			preRunScript += execution.PreRunScript
 		}
 
 		if len(execution.Command) != 0 {
-			entrypoint += "source " + strconv.Quote(filepath.Join(r.Params.DataDir, commandScriptName)) + " $@\n"
+			if execution.SourceScripts {
+				entrypoint += ". "
+			}
+
+			entrypoint += strconv.Quote(filepath.Join(r.Params.DataDir, commandScriptName)) + " $@\n"
 			command += strings.Join(execution.Command, " ")
 			command += " \"$@\"\n"
 		}
 
 		if execution.PostRunScript != "" {
-			entrypoint += "source " + strconv.Quote(filepath.Join(r.Params.DataDir, postRunScriptName)) + "\n"
+			if execution.SourceScripts {
+				entrypoint += ". "
+			}
+
+			entrypoint += strconv.Quote(filepath.Join(r.Params.DataDir, postRunScriptName)) + "\n"
 			postRunScript += execution.PostRunScript
 		}
 

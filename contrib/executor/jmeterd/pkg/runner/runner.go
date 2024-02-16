@@ -370,7 +370,7 @@ func runPostRunScriptIfEnabled(execution testkube.Execution, workingDir string) 
 	if executePostRunScript {
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconTruck))
 
-		if err = agent.RunScript(execution.PostRunScript, workingDir); err != nil {
+		if err = agent.RunScript(execution.PostRunScript, workingDir, execution.SourceScripts); err != nil {
 			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, err)
 		}
 

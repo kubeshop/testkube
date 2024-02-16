@@ -211,6 +211,7 @@ func MapExecutionCRD(request *testkube.Execution) *testsuiteexecutionv1.Executio
 		PreRunScript:                       request.PreRunScript,
 		PostRunScript:                      request.PostRunScript,
 		ExecutePostRunScriptBeforeScraping: request.ExecutePostRunScriptBeforeScraping,
+		SourceScripts:                      request.SourceScripts,
 		RunningContext:                     runningContext,
 		ContainerShell:                     request.ContainerShell,
 		SlavePodRequest:                    podRequest,

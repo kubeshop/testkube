@@ -195,6 +195,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 		PreRunScript:                       executionRequest.PreRunScript,
 		PostRunScript:                      executionRequest.PostRunScript,
 		ExecutePostRunScriptBeforeScraping: executionRequest.ExecutePostRunScriptBeforeScraping,
+		SourceScripts:                      executionRequest.SourceScripts,
 		PvcTemplate:                        executionRequest.PvcTemplate,
 		PvcTemplateReference:               executionRequest.PvcTemplateReference,
 		ScraperTemplate:                    executionRequest.ScraperTemplate,
@@ -624,6 +625,11 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 
 	if executionRequest.ExecutePostRunScriptBeforeScraping != nil {
 		request.ExecutePostRunScriptBeforeScraping = *executionRequest.ExecutePostRunScriptBeforeScraping
+		emptyExecution = false
+	}
+
+	if executionRequest.SourceScripts != nil {
+		request.SourceScripts = *executionRequest.SourceScripts
 		emptyExecution = false
 	}
 

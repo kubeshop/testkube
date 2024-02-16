@@ -63,6 +63,7 @@ testkube run test <testName> [flags]
       --slave-pod-requests-memory string           slave pod resource requests memory
       --slave-pod-template string                  slave pod template file path for extensions to slave pod template
       --slave-pod-template-reference string        reference to slave pod template to use for the test
+      --source-scripts                             run scripts using source command
       --upload-timeout string                      timeout to use when uploading files, example: 30s
   -v, --variable stringToString                    execution variable passed to executor (default [])
       --variable-configmap stringArray             config map name used to map all keys to basis variables

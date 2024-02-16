@@ -70,7 +70,7 @@ func Run(ctx context.Context, r runner.Runner, args []string) {
 	if r.GetType().IsMain() && e.PreRunScript != "" {
 		output.PrintEvent("running prerun script", e.Id)
 
-		if serr := RunScript(e.PreRunScript, params.WorkingDir); serr != nil {
+		if serr := RunScript(e.PreRunScript, params.WorkingDir, e.SourceScripts); serr != nil {
 			output.PrintError(os.Stderr, serr)
 			os.Exit(1)
 		}
@@ -86,7 +86,7 @@ func Run(ctx context.Context, r runner.Runner, args []string) {
 	if r.GetType().IsMain() && e.PostRunScript != "" && !e.ExecutePostRunScriptBeforeScraping {
 		output.PrintEvent("running postrun script", e.Id)
 
-		if serr := RunScript(e.PostRunScript, params.WorkingDir); serr != nil {
+		if serr := RunScript(e.PostRunScript, params.WorkingDir, e.SourceScripts); serr != nil {
 			output.PrintError(os.Stderr, serr)
 			os.Exit(1)
 		}
@@ -105,7 +105,7 @@ func Run(ctx context.Context, r runner.Runner, args []string) {
 }
 
 // RunScript runs script
-func RunScript(body, workingDir string) error {
+func RunScript(body, workingDir string, sourceScripts bool) error {
 	scriptFile, err := os.CreateTemp("", "runscript*.sh")
 	if err != nil {
 		return err
@@ -124,7 +124,12 @@ func RunScript(body, workingDir string) error {
 		return err
 	}
 
-	if _, err = executor.Run(workingDir, "/bin/sh", nil, "source", filename); err != nil {
+	arguments := []string{filename}
+	if sourceScripts {
+		arguments = append([]string{"."}, arguments...)
+	}
+
+	if _, err = executor.Run(workingDir, "/bin/sh", nil, arguments...); err != nil {
 		return err
 	}
 

@@ -95,7 +95,7 @@ func (r *KubepugRunner) Run(ctx context.Context, execution testkube.Execution) (
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if rerr = agent.RunScript(execution.PostRunScript, r.params.WorkingDir); rerr != nil {
+		if rerr = agent.RunScript(execution.PostRunScript, r.params.WorkingDir, execution.SourceScripts); rerr != nil {
 			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, rerr)
 		}
 	}

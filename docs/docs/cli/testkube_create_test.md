@@ -71,6 +71,7 @@ testkube create test [flags]
       --slave-pod-template string                  slave pod template file path for extensions to slave pod template
       --slave-pod-template-reference string        reference to slave pod template to use for the test
       --source string                              source name - will be used together with content parameters
+      --source-scripts                             run scripts using source command
       --test-content-type string                   content type of test one of string|file-uri|git
       --timeout int                                duration in seconds for test to timeout. 0 disables timeout.
   -t, --type string                                test type

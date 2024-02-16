@@ -168,7 +168,7 @@ func (r *ZapRunner) Run(ctx context.Context, execution testkube.Execution) (resu
 	if execution.PostRunScript != "" && execution.ExecutePostRunScriptBeforeScraping {
 		output.PrintLog(fmt.Sprintf("%s Running post run script...", ui.IconCheckMark))
 
-		if rerr = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir); rerr != nil {
+		if rerr = agent.RunScript(execution.PostRunScript, r.Params.WorkingDir, execution.SourceScripts); rerr != nil {
 			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, rerr)
 		}
 	}

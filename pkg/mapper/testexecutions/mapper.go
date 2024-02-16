@@ -208,6 +208,7 @@ func MapAPIToCRD(request *testkube.Execution, generation int64) testexecutionv1.
 			PreRunScript:                       request.PreRunScript,
 			PostRunScript:                      request.PostRunScript,
 			ExecutePostRunScriptBeforeScraping: request.ExecutePostRunScriptBeforeScraping,
+			SourceScripts:                      request.SourceScripts,
 			RunningContext:                     runningContext,
 			ContainerShell:                     request.ContainerShell,
 			SlavePodRequest:                    podRequest,

@@ -159,7 +159,14 @@ func TestRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 			ui.Warn("  Post run script:             ", "\n", test.ExecutionRequest.PostRunScript)
 		}
 
-		ui.Warn("  Execute postrun script before scraping: ", fmt.Sprint(test.ExecutionRequest.ExecutePostRunScriptBeforeScraping))
+		if test.ExecutionRequest.ExecutePostRunScriptBeforeScraping {
+			ui.Warn("  Execute postrun script before scraping: ", fmt.Sprint(test.ExecutionRequest.ExecutePostRunScriptBeforeScraping))
+		}
+
+		if test.ExecutionRequest.SourceScripts {
+			ui.Warn("  Source scripts:                         ", fmt.Sprint(test.ExecutionRequest.SourceScripts))
+		}
+
 		if test.ExecutionRequest.ScraperTemplate != "" {
 			ui.Warn("  Scraper template:            ", "\n", test.ExecutionRequest.ScraperTemplate)
 		}

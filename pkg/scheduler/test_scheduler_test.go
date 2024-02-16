@@ -145,6 +145,7 @@ func TestGetExecuteOptions(t *testing.T) {
 		PreRunScript:                       "",
 		PostRunScript:                      "",
 		ExecutePostRunScriptBeforeScraping: true,
+		SourceScripts:                      true,
 		ScraperTemplate:                    "",
 		ScraperTemplateReference:           "",
 		PvcTemplate:                        "",

@@ -183,6 +183,7 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 		PreRunScript:                       specExecutionRequest.PreRunScript,
 		PostRunScript:                      specExecutionRequest.PostRunScript,
 		ExecutePostRunScriptBeforeScraping: specExecutionRequest.ExecutePostRunScriptBeforeScraping,
+		SourceScripts:                      specExecutionRequest.SourceScripts,
 		PvcTemplate:                        specExecutionRequest.PvcTemplate,
 		PvcTemplateReference:               specExecutionRequest.PvcTemplateReference,
 		ScraperTemplate:                    specExecutionRequest.ScraperTemplate,
@@ -518,6 +519,7 @@ func MapSpecExecutionRequestToExecutionUpdateRequest(
 	envSecrets := MapEnvReferences(request.EnvSecrets)
 	executionRequest.EnvSecrets = &envSecrets
 	executionRequest.ExecutePostRunScriptBeforeScraping = &request.ExecutePostRunScriptBeforeScraping
+	executionRequest.SourceScripts = &request.SourceScripts
 
 	if request.ArtifactRequest != nil {
 		artifactRequest := &testkube.ArtifactUpdateRequest{

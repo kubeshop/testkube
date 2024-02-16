@@ -491,6 +491,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 	scraperTemplateReference := cmd.Flag("scraper-template-reference").Value.String()
 	pvcTemplateReference := cmd.Flag("pvc-template-reference").Value.String()
 	executePostRunScriptBeforeScraping, err := cmd.Flags().GetBool("execute-postrun-script-before-scraping")
+	sourceScripts, err := cmd.Flags().GetBool("source-scripts")
 	if err != nil {
 		return nil, err
 	}
@@ -514,6 +515,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		PvcTemplateReference:               pvcTemplateReference,
 		NegativeTest:                       negativeTest,
 		ExecutePostRunScriptBeforeScraping: executePostRunScriptBeforeScraping,
+		SourceScripts:                      sourceScripts,
 	}
 
 	var fields = []struct {
@@ -1102,6 +1104,15 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 			return nil, err
 		}
 		request.ExecutePostRunScriptBeforeScraping = &executePostRunScriptBeforeScraping
+		nonEmpty = true
+	}
+
+	if cmd.Flag("source-scripts").Changed {
+		sourceScripts, err := cmd.Flags().GetBool("source-scripts")
+		if err != nil {
+			return nil, err
+		}
+		request.SourceScripts = &sourceScripts
 		nonEmpty = true
 	}
 
