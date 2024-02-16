@@ -4343,6 +4343,9 @@ components:
         executePostRunScriptBeforeScraping:
           type: boolean
           description: execute post run script before scraping (prebuilt executor only)
+        sourceScripts:
+          type: boolean
+          description: run scripts using source command
         runningContext:
           $ref: "#/components/schemas/RunningContext"
           description: running context for the test execution
@@ -4967,6 +4970,9 @@ components:
         executePostRunScriptBeforeScraping:
           type: boolean
           description: execute post run script before scraping (prebuilt executor only)
+        sourceScripts:
+          type: boolean
+          description: run scripts using source command
         scraperTemplate:
           type: string
           description: scraper template extensions
@@ -5503,6 +5509,9 @@ components:
         id:
           type: string
           description: UUID of event
+        streamTopic:
+          type: string
+          description: stream topic
         resource:
           $ref: "#/components/schemas/EventResource"
         resourceId:
