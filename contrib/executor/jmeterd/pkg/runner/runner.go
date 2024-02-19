@@ -300,6 +300,7 @@ func removeDuplicatedArgs(args []string) []string {
 func mergeDuplicatedArgs(args []string) []string {
 	allowed := map[string]int{
 		"-e": 0,
+		"-n": 0,
 	}
 
 	for i := len(args) - 1; i >= 0; i-- {
