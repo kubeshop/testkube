@@ -12,6 +12,7 @@ import (
 	"github.com/oklog/run"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/agent"
@@ -21,6 +22,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/logs/adapter"
 	"github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/logs/config"
+	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/logs/pb"
 	"github.com/kubeshop/testkube/pkg/logs/repository"
 	"github.com/kubeshop/testkube/pkg/logs/state"
@@ -44,8 +46,6 @@ func newStorageClient(cfg *config.Config) *minio.Client {
 func main() {
 	var g run.Group
 
-	log := log.DefaultLogger.With("service", "logs-service-init")
-
 	ctx, cancel := context.WithCancel(context.Background())
 
 	cfg := Must(config.Get())
@@ -54,6 +54,10 @@ func main() {
 	if cfg.TestkubeProAPIKey != "" {
 		mode = common.ModeAgent
 	}
+
+	log := log.DefaultLogger.With("service", "logs-service-init", "mode", mode)
+
+	log.Debugw("starting logs service", "config", cfg)
 
 	// Event bus
 	nc := Must(bus.NewNATSConnection(bus.ConnectionConfig{
@@ -105,10 +109,29 @@ func main() {
 	case common.ModeAgent:
 		grpcConn, err := agent.NewGRPCConnection(ctx, cfg.TestkubeProTLSInsecure, cfg.TestkubeProSkipVerify, cfg.TestkubeProURL+cfg.TestkubeProLogsPath, log)
 		ui.ExitOnError("error creating gRPC connection for logs service", err)
+		log.Infow("grpc connection state", "state", grpcConn.GetState())
+
 		defer grpcConn.Close()
 		grpcClient := pb.NewCloudLogsServiceClient(grpcConn)
+
+		// write metadata to the stream context
+		md := metadata.Pairs("api-key", cfg.TestkubeProAPIKey, "execution-id", "test-id")
+		ctx = metadata.NewOutgoingContext(ctx, md)
+
+		stream, err := grpcClient.Stream(ctx)
+		ui.ExitOnError("error creating gRPC logs stream", err)
+
+		err = stream.Send(pb.MapToPB(*events.NewLog("aaaaa")))
+		ui.ExitOnError("error sending test message", err)
+
+		err = stream.CloseSend()
+		ui.ExitOnError("error sending test message", err)
+
+		log.Debugw("test message sent")
+
 		cloudAdapter := adapter.NewCloudAdapter(grpcClient, cfg.TestkubeProAPIKey)
 		svc.AddAdapter(cloudAdapter)
+		log.Debugw("cloud adapter configured", "url", cfg.TestkubeProURL+cfg.TestkubeProLogsPath)
 
 	case common.ModeStandalone:
 		minioAdapter, err := adapter.NewMinioAdapter(cfg.StorageEndpoint,
@@ -126,8 +149,8 @@ func main() {
 		if err != nil {
 			log.Errorw("error creating minio adapter", "error", err)
 		}
-		log.Infow("minio adapter created", "bucket", cfg.StorageBucket, "endpoint", cfg.StorageEndpoint)
 		svc.AddAdapter(minioAdapter)
+		log.Infow("minio adapter configured", "bucket", cfg.StorageBucket, "endpoint", cfg.StorageEndpoint)
 	}
 
 	g.Add(func() error {

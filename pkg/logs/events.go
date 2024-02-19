@@ -68,34 +68,26 @@ func (ls *LogsService) initConsumer(ctx context.Context, a adapter.Adapter, stre
 }
 
 // handleMessage will handle incoming message from logs stream and proxy it to given adapter
+// TODO define how to handle Nacks - as currently they in case
 func (ls *LogsService) handleMessage(ctx context.Context, a adapter.Adapter, id string) func(msg jetstream.Msg) {
 	log := ls.log.With("id", id, "adapter", a.Name())
 
 	return func(msg jetstream.Msg) {
+		defer msg.Ack()
 		log.Debugw("got message", "data", string(msg.Data()))
 
 		// deliver to subscriber
 		logChunk := events.Log{}
 		err := json.Unmarshal(msg.Data(), &logChunk)
 		if err != nil {
-			if err := msg.Nak(); err != nil {
-				log.Errorw("error nacking message", "error", err)
-				return
-			}
+			log.Errorw("message decode json error", "error", err)
 			return
 		}
 
 		err = a.Notify(ctx, id, logChunk)
 		if err != nil {
-			if err := msg.Nak(); err != nil {
-				log.Errorw("error nacking message", "error", err)
-				return
-			}
+			log.Errorw("error notifying", "error", err)
 			return
-		}
-
-		if err := msg.Ack(); err != nil {
-			log.Errorw("error acking message", "error", err)
 		}
 	}
 }
