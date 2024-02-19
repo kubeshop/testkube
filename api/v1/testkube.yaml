@@ -5341,10 +5341,10 @@ components:
           type: string
           format: date-time
           description: Timestamp of log
-          example: "2018-03-20T09:12:28Z"  
+          example: "2018-03-20T09:12:28Z"
         content:
           type: string
-          description: Message/event data passed from executor (like log lines etc)  
+          description: Message/event data passed from executor (like log lines etc)
         type:
           type: string
           description: One of possible log types
@@ -5358,7 +5358,7 @@ components:
             - job-executor
         error:
           type: boolean
-          description: indicates a log error 
+          description: indicates a log error
         version:
           type: string
           description: One of possible log versions
@@ -5375,7 +5375,7 @@ components:
         v1:
           $ref: "#/components/schemas/LogV1"
           description: Old output - for backwards compatibility - will be removed for non-structured logs
-       
+
     LogV1:
       description: Log format version 1
       type: object
@@ -5505,6 +5505,9 @@ components:
           description: UUID of event
         resource:
           $ref: "#/components/schemas/EventResource"
+        streamTopic:
+          type: string
+          description: custom stream topic for event
         resourceId:
           type: string
           description: ID of resource
@@ -5668,7 +5671,7 @@ components:
       properties:
         logsV2:
           type: boolean
-          description: Log processing version 2 
+          description: Log processing version 2
 
     TestTrigger:
       type: object
