@@ -46,7 +46,7 @@ func SendCmdEvent(cmd *cobra.Command, version string) (string, error) {
 	return sendData(senders, payload)
 }
 
-func SendCmdErrorEvent(cmd *cobra.Command, version, errType string) (string, error) {
+func SendCmdErrorEvent(cmd *cobra.Command, version, errType string, errorLogs string) (string, error) {
 	// get all sub-commands passed to cli
 	command := strings.TrimPrefix(cmd.CommandPath(), "kubectl-testkube ")
 	if command == "" {
@@ -72,6 +72,7 @@ func SendCmdErrorEvent(cmd *cobra.Command, version, errType string) (string, err
 					Context:         getCurrentContext(),
 					ClusterType:     GetClusterType(),
 					ErrorType:       errType,
+					ErrorLogs: 	 	 errorLogs,
 				},
 			}},
 	}
