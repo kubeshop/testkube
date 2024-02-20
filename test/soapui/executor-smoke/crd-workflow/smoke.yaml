@@ -1,5 +1,5 @@
 apiVersion: workflows.testkube.io/v1beta1
-kind: TestWorkflow
+kind: Workflow
 metadata:
   name: soapui-workflow-smoke
   labels:

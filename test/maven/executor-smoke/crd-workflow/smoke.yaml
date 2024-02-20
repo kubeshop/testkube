@@ -1,5 +1,5 @@
 apiVersion: workflows.testkube.io/v1beta1
-kind: TestWorkflow
+kind: Workflow
 metadata:
   name: maven-workflow-smoke-jdk11
   labels:

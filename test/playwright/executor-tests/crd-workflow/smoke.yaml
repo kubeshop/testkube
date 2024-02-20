@@ -1,5 +1,5 @@
 apiVersion: workflows.testkube.io/v1beta1
-kind: TestWorkflow
+kind: Workflow
 metadata:
   name: playwright-workflow-smoke-v1.32.3
   labels:
@@ -42,7 +42,7 @@ spec:
       - '*'
 ---
 apiVersion: workflows.testkube.io/v1beta1
-kind: TestWorkflow
+kind: Workflow
 metadata:
   name: playwright-workflow-smoke-official-trait
   labels:
