@@ -9,56 +9,36 @@
 package checktcl
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"github.com/kubeshop/testkube/internal/config"
+	"github.com/kubeshop/testkube/pkg/cloud"
+	cloudconfig "github.com/kubeshop/testkube/pkg/cloud/data/config"
+	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 )
-
-// Enterprise / Pro mode.
-type OrganizationPlanTestkubeMode string
-
-const (
-	OrganizationPlanTestkubeModeEnterprise OrganizationPlanTestkubeMode = "enterprise"
-	// TODO: Use "pro" in the future when refactoring TK Pro API server to use "pro" instead of "cloud"
-	OrganizationPlanTestkubeModePro OrganizationPlanTestkubeMode = "cloud"
-)
-
-// Ref: #/components/schemas/PlanStatus
-type PlanStatus string
-
-const (
-	PlanStatusActive            PlanStatus = "Active"
-	PlanStatusCanceled          PlanStatus = "Canceled"
-	PlanStatusIncomplete        PlanStatus = "Incomplete"
-	PlanStatusIncompleteExpired PlanStatus = "IncompleteExpired"
-	PlanStatusPastDue           PlanStatus = "PastDue"
-	PlanStatusTrailing          PlanStatus = "Trailing"
-	PlanStatusUnpaid            PlanStatus = "Unpaid"
-	PlanStatusDeleted           PlanStatus = "Deleted"
-	PlanStatusLocked            PlanStatus = "Locked"
-	PlanStatusBlocked           PlanStatus = "Blocked"
-)
-
-// Ref: #/components/schemas/OrganizationPlan
-type OrganizationPlan struct {
-	// Enterprise / Pro mode.
-	TestkubeMode OrganizationPlanTestkubeMode `json:"testkubeMode"`
-	// Is current plan trial.
-	IsTrial    bool       `json:"isTrial"`
-	PlanStatus PlanStatus `json:"planStatus"`
-}
 
 type SubscriptionChecker struct {
 	proContext config.ProContext
 	orgPlan    *OrganizationPlan
 }
 
-// NewSubscriptionChecker creates a new subscription checker
-func NewSubscriptionChecker(proContext config.ProContext) (*SubscriptionChecker, error) {
-	resp, err := http.Get(fmt.Sprintf("%s/organizations/%s/plan", proContext.URL, proContext.OrgID))
+// NewCLISubscriptionChecker creates a new subscription checker using a user token instead of the agent token
+func NewCLISubscriptionChecker(proContext config.ProContext, token string) (*SubscriptionChecker, error) {
+	var bearer = fmt.Sprintf("Bearer %s", token)
+
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/organizations/%s/plan", proContext.URL, proContext.OrgID), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Authorization", bearer)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -71,6 +51,30 @@ func NewSubscriptionChecker(proContext config.ProContext) (*SubscriptionChecker,
 	var subscription OrganizationPlan
 	if err := json.NewDecoder(resp.Body).Decode(&subscription); err != nil {
 		return nil, errors.Wrap(err, "failed to decode organization plan")
+	}
+
+	return &SubscriptionChecker{proContext: proContext, orgPlan: &subscription}, nil
+}
+
+// NewAgentSubscriptionChecker creates a new subscription checker using the agent token
+func NewAgentSubscriptionChecker(ctx context.Context, proContext config.ProContext, cloudClient cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn) (*SubscriptionChecker, error) {
+	executor := executor.NewCloudGRPCExecutor(cloudClient, grpcConn, proContext.APIKey)
+
+	req := GetOrganizationPlanRequest{}
+	response, err := executor.Execute(ctx, cloudconfig.CmdConfigGetOrganizationPlan, req)
+	if err != nil {
+		return nil, err
+	}
+
+	var commandResponse GetOrganizationPlanResponse
+	if err := json.Unmarshal(response, &commandResponse); err != nil {
+		return nil, err
+	}
+
+	subscription := OrganizationPlan{
+		TestkubeMode: OrganizationPlanTestkubeMode(commandResponse.TestkubeMode),
+		IsTrial:      commandResponse.IsTrial,
+		PlanStatus:   PlanStatus(commandResponse.PlanStatus),
 	}
 
 	return &SubscriptionChecker{proContext: proContext, orgPlan: &subscription}, nil

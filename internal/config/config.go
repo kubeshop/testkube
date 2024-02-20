@@ -72,6 +72,7 @@ type Config struct {
 	TestkubeProEnvID                 string        `envconfig:"TESTKUBE_PRO_ENV_ID" default:""`
 	TestkubeProOrgID                 string        `envconfig:"TESTKUBE_PRO_ORG_ID" default:""`
 	TestkubeProMigrate               string        `envconfig:"TESTKUBE_PRO_MIGRATE" default:"false"`
+	TestkubeProConnectionTimeout     int           `envconfig:"TESTKUBE_PRO_CONNECTION_TIMEOUT" default:"10"`
 	TestkubeWatcherNamespaces        string        `envconfig:"TESTKUBE_WATCHER_NAMESPACES" default:""`
 	GraphqlPort                      string        `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
 	TestkubeRegistry                 string        `envconfig:"TESTKUBE_REGISTRY" default:""`

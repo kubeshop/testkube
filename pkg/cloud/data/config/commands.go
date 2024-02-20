@@ -7,4 +7,5 @@ const (
 	CmdConfigGetTelemetryEnabled executor.Command = "get_telemetry_enabled"
 	CmdConfigGet                 executor.Command = "get"
 	CmdConfigUpsert              executor.Command = "upsert"
+	CmdConfigGetOrganizationPlan executor.Command = "get_org_plan"
 )

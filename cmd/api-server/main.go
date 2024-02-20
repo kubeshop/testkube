@@ -535,6 +535,7 @@ func main() {
 			EnvID:                cfg.TestkubeProEnvID,
 			OrgID:                cfg.TestkubeProOrgID,
 			Migrate:              cfg.TestkubeProMigrate,
+			ConnectionTimeout:    cfg.TestkubeProConnectionTimeout,
 		}
 
 		api.WithProContext(&proContext)
