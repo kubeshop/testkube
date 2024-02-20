@@ -1,10 +1,10 @@
 package telemetry
 
 import (
-	"os"
 	"runtime"
 	"strings"
 
+	"github.com/kubeshop/testkube/pkg/utils"
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
@@ -194,8 +194,8 @@ func AnonymizeHost(host string) string {
 }
 
 func getAgentContext() RunContext {
-	orgID := os.Getenv("TESTKUBE_CLOUD_ORG_ID")
-	envID := os.Getenv("TESTKUBE_CLOUD_ENV_ID")
+	orgID := utils.GetEnvVarWithDeprecation("TESTKUBE_PRO_ORG_ID", "TESTKUBE_CLOUD_ORG_ID", "")
+	envID := utils.GetEnvVarWithDeprecation("TESTKUBE_PRO_ENV_ID", "TESTKUBE_CLOUD_ENV_ID", "")
 
 	if orgID == "" || envID == "" {
 		return RunContext{}

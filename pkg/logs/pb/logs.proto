@@ -34,6 +34,7 @@ message Log{
 // CloudLogsService server will be implemented on cloud side
 service CloudLogsService {
     rpc Stream(stream Log) returns (StreamResponse);
+    rpc Logs(LogRequest) returns (stream Log);
 }
 
 message StreamResponse {

@@ -23,6 +23,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 var ErrPodInitializing = errors.New("PodInitializing")
@@ -103,23 +104,23 @@ var RunnerEnvVars = []corev1.EnvVar{
 		Value: getOr("COMPRESSARTIFACTS", "false"),
 	},
 	{
-		Name:  "RUNNER_CLOUD_MODE",
-		Value: getRunnerCloudMode(),
+		Name:  "RUNNER_PRO_MODE",
+		Value: getRunnerProMode(),
 	},
 	{
-		Name:  "RUNNER_CLOUD_API_KEY",
-		Value: os.Getenv("TESTKUBE_CLOUD_API_KEY"),
+		Name:  "RUNNER_PRO_API_KEY",
+		Value: utils.GetEnvVarWithDeprecation("TESTKUBE_PRO_API_KEY", "TESTKUBE_CLOUD_API_KEY", ""),
 	},
 	{
-		Name:  "RUNNER_CLOUD_API_TLS_INSECURE",
-		Value: getOr("TESTKUBE_CLOUD_TLS_INSECURE", "false"),
+		Name:  "RUNNER_PRO_API_TLS_INSECURE",
+		Value: utils.GetEnvVarWithDeprecation("TESTKUBE_PRO_TLS_INSECURE", "TESTKUBE_CLOUD_TLS_INSECURE", "false"),
 	},
 	{
-		Name:  "RUNNER_CLOUD_API_URL",
-		Value: os.Getenv("TESTKUBE_CLOUD_URL"),
+		Name:  "RUNNER_PRO_API_URL",
+		Value: utils.GetEnvVarWithDeprecation("TESTKUBE_PRO_URL", "TESTKUBE_CLOUD_URL", ""),
 	},
 	{
-		Name:  "RUNNER_CLOUD_API_SKIP_VERIFY",
+		Name:  "RUNNER_PRO_API_SKIP_VERIFY",
 		Value: getOr("TESTKUBE_PRO_SKIP_VERIFY", "false"),
 	},
 	{
@@ -129,6 +130,31 @@ var RunnerEnvVars = []corev1.EnvVar{
 	{
 		Name:  "CI",
 		Value: "1",
+	},
+	// DEPRECATED: Use RUNNER_PRO_MODE instead
+	{
+		Name:  "RUNNER_CLOUD_MODE",
+		Value: getRunnerProMode(),
+	},
+	// DEPRECATED: Use RUNNER_PRO_API_KEY instead
+	{
+		Name:  "RUNNER_CLOUD_API_KEY",
+		Value: utils.GetEnvVarWithDeprecation("TESTKUBE_PRO_API_KEY", "TESTKUBE_CLOUD_API_KEY", ""),
+	},
+	// DEPRECATED: Use RUNNER_PRO_API_TLS_INSECURE instead
+	{
+		Name:  "RUNNER_CLOUD_API_TLS_INSECURE",
+		Value: utils.GetEnvVarWithDeprecation("TESTKUBE_PRO_TLS_INSECURE", "TESTKUBE_CLOUD_TLS_INSECURE", "false"),
+	},
+	// DEPRECATED: Use RUNNER_PRO_API_URL instead
+	{
+		Name:  "RUNNER_CLOUD_API_URL",
+		Value: utils.GetEnvVarWithDeprecation("TESTKUBE_PRO_URL", "TESTKUBE_CLOUD_URL", ""),
+	},
+	// DEPRECATED: Use RUNNER_PRO_API_SKIP_VERIFY instead
+	{
+		Name:  "RUNNER_CLOUD_API_SKIP_VERIFY",
+		Value: getOr("TESTKUBE_PRO_SKIP_VERIFY", "false"),
 	},
 }
 
@@ -183,9 +209,9 @@ func getOr(key, defaultVal string) string {
 	return defaultVal
 }
 
-func getRunnerCloudMode() string {
+func getRunnerProMode() string {
 	val := "false"
-	if os.Getenv("TESTKUBE_CLOUD_API_KEY") != "" {
+	if utils.GetEnvVarWithDeprecation("TESTKUBE_PRO_API_KEY", "TESTKUBE_CLOUD_API_KEY", "") != "" {
 		val = "true"
 	}
 	return val

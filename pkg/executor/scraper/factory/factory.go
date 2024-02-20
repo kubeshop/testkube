@@ -33,7 +33,7 @@ const (
 func TryGetScrapper(ctx context.Context, params envs.Params) (scraper.Scraper, error) {
 	if params.ScrapperEnabled {
 		uploader := MinIOUploader
-		if params.CloudMode {
+		if params.ProMode {
 			uploader = CloudUploader
 		}
 		extractor := RecursiveFilesystemExtractor
@@ -58,7 +58,7 @@ func GetScraper(ctx context.Context, params envs.Params, extractorType Extractor
 		extractor = scraper.NewRecursiveFilesystemExtractor(filesystem.NewOSFileSystem())
 	case ArchiveFilesystemExtractor:
 		var opts []scraper.ArchiveFilesystemExtractorOpts
-		if params.CloudMode {
+		if params.ProMode {
 			opts = append(opts, scraper.GenerateTarballMetaFile())
 		}
 		extractor = scraper.NewArchiveFilesystemExtractor(filesystem.NewOSFileSystem(), opts...)
@@ -96,20 +96,20 @@ func GetScraper(ctx context.Context, params envs.Params, extractorType Extractor
 
 func getRemoteStorageUploader(ctx context.Context, params envs.Params) (uploader *cloudscraper.CloudUploader, err error) {
 	// timeout blocking connection to cloud
-	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(params.CloudConnectionTimeoutSec)*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(params.ProConnectionTimeoutSec)*time.Second)
 	defer cancel()
 
 	output.PrintLogf(
 		"%s Uploading artifacts using Remote Storage Uploader (timeout:%ds, agentInsecure:%v, agentSkipVerify: %v, url: %s, scraperSkipVerify: %v)",
-		ui.IconCheckMark, params.CloudConnectionTimeoutSec, params.CloudAPITLSInsecure, params.CloudAPISkipVerify, params.CloudAPIURL, params.SkipVerify)
-	grpcConn, err := agent.NewGRPCConnection(ctxTimeout, params.CloudAPITLSInsecure, params.CloudAPISkipVerify, params.CloudAPIURL, log.DefaultLogger)
+		ui.IconCheckMark, params.ProConnectionTimeoutSec, params.ProAPITLSInsecure, params.ProAPISkipVerify, params.ProAPIURL, params.SkipVerify)
+	grpcConn, err := agent.NewGRPCConnection(ctxTimeout, params.ProAPITLSInsecure, params.ProAPISkipVerify, params.ProAPIURL, log.DefaultLogger)
 	if err != nil {
 		return nil, err
 	}
 	output.PrintLogf("%s Connected to Agent API", ui.IconCheckMark)
 
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
-	cloudExecutor := cloudexecutor.NewCloudGRPCExecutor(grpcClient, grpcConn, params.CloudAPIKey)
+	cloudExecutor := cloudexecutor.NewCloudGRPCExecutor(grpcClient, grpcConn, params.ProAPIKey)
 	return cloudscraper.NewCloudUploader(cloudExecutor, params.SkipVerify), nil
 }
 

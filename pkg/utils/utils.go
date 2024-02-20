@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"math/big"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -140,4 +141,17 @@ func IsBase64Encoded(base64Val string) bool {
 
 	encoded := base64.StdEncoding.EncodeToString(decoded)
 	return base64Val == encoded
+}
+
+// GetEnvVarWithDeprecation returns the value of the environment variable with the given key,
+// or the value of the environment variable with the given deprecated key, or the default value
+// if neither is set
+func GetEnvVarWithDeprecation(key, deprecatedKey, defaultVal string) string {
+	if val, ok := os.LookupEnv(key); ok {
+		return val
+	}
+	if val, ok := os.LookupEnv(deprecatedKey); ok {
+		return val
+	}
+	return defaultVal
 }

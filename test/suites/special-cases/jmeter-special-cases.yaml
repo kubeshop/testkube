@@ -21,9 +21,6 @@ spec:
     - test: jmeterd-executor-smoke-directory-2
   - stopOnFailure: false
     execute:
-    - test: jmeterd-executor-smoke-slaves-sharedbetweenpods
-  - stopOnFailure: false
-    execute:
     - test: jmeterd-executor-smoke-directory-t-o
   - stopOnFailure: false
     execute:

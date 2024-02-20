@@ -130,13 +130,13 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 	}
 
 	// TODO: write a proper cloud implementation
-	if r.Params.Endpoint != "" && !r.Params.CloudMode {
+	if r.Params.Endpoint != "" && !r.Params.ProMode {
 		output.PrintLogf("%s Fetching uploads from object store %s...", ui.IconFile, r.Params.Endpoint)
 		opts := minio.GetTLSOptions(r.Params.Ssl, r.Params.SkipVerify, r.Params.CertFile, r.Params.KeyFile, r.Params.CAFile)
 		minioClient := minio.NewClient(r.Params.Endpoint, r.Params.AccessKeyID, r.Params.SecretAccessKey, r.Params.Region, r.Params.Token, r.Params.Bucket, opts...)
 		fp := content.NewCopyFilesPlacer(minioClient)
 		fp.PlaceFiles(ctx, execution.TestName, execution.BucketName)
-	} else if r.Params.CloudMode {
+	} else if r.Params.ProMode {
 		output.PrintLogf("%s Copy files functionality is currently not supported in cloud mode", ui.IconWarning)
 	}
 
