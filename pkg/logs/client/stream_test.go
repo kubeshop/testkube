@@ -121,7 +121,7 @@ func TestStream_Name(t *testing.T) {
 		assert.Equal(t, StreamPrefix+"111", name)
 	})
 
-	t.Run("passed no string params", func(t *testing.T) {
+	t.Run("passed no string params generates random name", func(t *testing.T) {
 		name := client.Name()
 		assert.Len(t, name, len(StreamPrefix)+10)
 	})
