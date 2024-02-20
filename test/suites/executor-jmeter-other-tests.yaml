@@ -12,16 +12,16 @@ spec:
     - test: jmeter-executor-smoke-incorrect-url-assertion-negative
   - stopOnFailure: false
     execute:
-    - test: jmeterd-executor-smoke-incorrect-url-assertion-negative
+    - test: jmeterd-executor-smoke-incorrect-url-assertion
   - stopOnFailure: false
     execute:
-    - test: jmeterd-executor-smoke-incorrect-url-assertion-slaves-negative
+    - test: jmeterd-executor-smoke-incorrect-url-assertion-slaves
   - stopOnFailure: false
     execute:
-    - test: jmeterd-executor-smoke-correct-url-failed-assertion-negative
+    - test: jmeterd-executor-smoke-correct-url-failed-assertion
   - stopOnFailure: false
     execute:
-    - test: jmeterd-executor-smoke-failed-assertion-slaves-negative
+    - test: jmeterd-executor-smoke-failed-assertion-slaves
   - stopOnFailure: false
     execute:
     - test: jmeterd-executor-smoke-failure-exit-code-0-negative

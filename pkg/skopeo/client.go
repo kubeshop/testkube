@@ -40,6 +40,7 @@ type DockerImage struct {
 	Config struct {
 		Entrypoint []string `json:"Entrypoint"`
 		Cmd        []string `json:"Cmd"`
+		WorkingDir string   `json:"WorkingDir"`
 	} `json:"config"`
 	History []struct {
 		Created   time.Time `json:"created"`

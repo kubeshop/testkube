@@ -302,8 +302,17 @@ func NewRunTestCmd() *cobra.Command {
 
 				if execution.Id != "" {
 					if watchEnabled && len(args) > 0 {
-						if err = watchLogs(execution.Id, silentMode, client); err != nil {
-							execErrors = append(execErrors, err)
+						info, err := client.GetServerInfo()
+						ui.ExitOnError("getting server info", err)
+
+						if info.Features != nil && info.Features.LogsV2 {
+							if err = watchLogsV2(execution.Id, silentMode, client); err != nil {
+								execErrors = append(execErrors, err)
+							}
+						} else {
+							if err = watchLogs(execution.Id, silentMode, client); err != nil {
+								execErrors = append(execErrors, err)
+							}
 						}
 					}
 
@@ -311,7 +320,7 @@ func NewRunTestCmd() *cobra.Command {
 					ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 				}
 
-				if err = render.RenderExecutionResult(client, &execution, false); err != nil {
+				if err = render.RenderExecutionResult(client, &execution, false, !watchEnabled); err != nil {
 					execErrors = append(execErrors, err)
 				}
 
@@ -339,7 +348,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&secretVariables, "secret-variable", "s", map[string]string{}, "execution secret variable passed to executor")
 	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in executor")
 	cmd.Flags().StringArrayVarP(&binaryArgs, "args", "", []string{}, "executor binary additional arguments")
-	cmd.Flags().StringVarP(&argsMode, "args-mode", "", "append", "usage mode for argumnets. one of append|override")
+	cmd.Flags().StringVarP(&argsMode, "args-mode", "", "append", "usage mode for argumnets. one of append|override|replace")
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
 	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "download artifacts automatically")

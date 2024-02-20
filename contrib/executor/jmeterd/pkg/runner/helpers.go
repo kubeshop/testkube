@@ -34,20 +34,52 @@ func getTestPathAndWorkingDir(fs filesystem.FileSystem, execution *testkube.Exec
 		return "", "", "", err
 	}
 
-	if fileInfo.IsDir() {
+	testFlag := ""
+	for i, arg := range execution.Args {
+		if arg == jmeterTestFileFlag {
+			if (i + 1) < len(execution.Args) {
+				if execution.Args[i+1] != "<runPath>" {
+					testFlag = execution.Args[i+1]
+					i++
+					continue
+				}
+			}
+		}
+	}
+
+	if workingDir == "" {
+		workingDir = dataDir
+	}
+
+	sanityCheck := false
+	if testFlag != "" {
+		if filepath.IsAbs(testFlag) {
+			testPath = testFlag
+		} else {
+			testPath = filepath.Join(workingDir, testFlag)
+		}
+
+		testFile = filepath.Base(testPath)
+		sanityCheck = true
+	} else if fileInfo.IsDir() {
 		testFile, err = findTestFile(fs, execution, testPath, jmxExtension)
 		if err != nil {
 			return "", "", "", errors.Wrapf(err, "error searching for %s file in test path %s", jmxExtension, testPath)
 		}
 
-		// sanity checking for test script
 		testPath = filepath.Join(testPath, testFile)
-		fileInfo, err := fs.Stat(testPath)
+		sanityCheck = true
+	}
+
+	if sanityCheck {
+		// sanity checking for test script
+		fileInfo, err = fs.Stat(testPath)
 		if err != nil || fileInfo.IsDir() {
 			output.PrintLogf("%s Could not find file %s in the directory, error: %s", ui.IconCross, testFile, err)
 			return "", "", "", errors.Wrapf(err, "could not find file %s in the directory", testFile)
 		}
 	}
+
 	return
 }
 

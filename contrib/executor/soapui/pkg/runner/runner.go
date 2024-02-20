@@ -72,7 +72,7 @@ func (r *SoapUIRunner) Run(ctx context.Context, execution testkube.Execution) (r
 	if fileInfo.IsDir() {
 		scriptName := execution.Args[len(execution.Args)-1]
 		if workingDir != "" {
-			testFile = filepath.Join(r.Params.DataDir, "repo")
+			testFile = ""
 			if execution.Content != nil && execution.Content.Repository != nil {
 				scriptName = filepath.Join(execution.Content.Repository.Path, scriptName)
 			}

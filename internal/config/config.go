@@ -64,10 +64,14 @@ type Config struct {
 	TestkubeOAuthScopes              string        `envconfig:"TESTKUBE_OAUTH_SCOPES" default:""`
 	TestkubeProAPIKey                string        `envconfig:"TESTKUBE_PRO_API_KEY" default:""`
 	TestkubeProURL                   string        `envconfig:"TESTKUBE_PRO_URL" default:""`
+	TestkubeProLogsPath              string        `envconfig:"TESTKUBE_PRO_LOGS_PATH" default:"/logs"`
 	TestkubeProTLSInsecure           bool          `envconfig:"TESTKUBE_PRO_TLS_INSECURE" default:"false"`
 	TestkubeProWorkerCount           int           `envconfig:"TESTKUBE_PRO_WORKER_COUNT" default:"50"`
 	TestkubeProLogStreamWorkerCount  int           `envconfig:"TESTKUBE_PRO_LOG_STREAM_WORKER_COUNT" default:"25"`
 	TestkubeProSkipVerify            bool          `envconfig:"TESTKUBE_PRO_SKIP_VERIFY" default:"false"`
+	TestkubeProEnvID                 string        `envconfig:"TESTKUBE_PRO_ENV_ID" default:""`
+	TestkubeProOrgID                 string        `envconfig:"TESTKUBE_PRO_ORG_ID" default:""`
+	TestkubeProMigrate               string        `envconfig:"TESTKUBE_PRO_MIGRATE" default:"false"`
 	TestkubeWatcherNamespaces        string        `envconfig:"TESTKUBE_WATCHER_NAMESPACES" default:""`
 	GraphqlPort                      string        `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
 	TestkubeRegistry                 string        `envconfig:"TESTKUBE_REGISTRY" default:""`
@@ -83,6 +87,14 @@ type Config struct {
 	EnableSecretsEndpoint            bool          `envconfig:"ENABLE_SECRETS_ENDPOINT" default:"false"`
 	DisableMongoMigrations           bool          `envconfig:"DISABLE_MONGO_MIGRATIONS" default:"false"`
 	Debug                            bool          `envconfig:"DEBUG" default:"false"`
+	EnableImageDataPersistentCache   bool          `envconfig:"ENABLE_IMAGE_DATA_PERSISTENT_CACHE" default:"false"`
+	ImageDataPersistentCacheKey      string        `envconfig:"IMAGE_DATA_PERSISTENT_CACHE_KEY" default:"testkube-image-cache"`
+	LogServerGrpcAddress             string        `envconfig:"LOG_SERVER_GRPC_ADDRESS" default:":9090"`
+	LogServerSecure                  bool          `envconfig:"LOG_SERVER_SECURE" default:"false"`
+	LogServerSkipVerify              bool          `envconfig:"LOG_SERVER_SKIP_VERIFY" default:"false"`
+	LogServerCertFile                string        `envconfig:"LOG_SERVER_CERT_FILE" default:""`
+	LogServerKeyFile                 string        `envconfig:"LOG_SERVER_KEY_FILE" default:""`
+	LogServerCAFile                  string        `envconfig:"LOG_SERVER_CA_FILE" default:""`
 
 	// DEPRECATED: Use TestkubeProAPIKey instead
 	TestkubeCloudAPIKey string `envconfig:"TESTKUBE_CLOUD_API_KEY" default:""`
@@ -94,6 +106,12 @@ type Config struct {
 	TestkubeCloudWorkerCount int `envconfig:"TESTKUBE_CLOUD_WORKER_COUNT" default:"50"`
 	// DEPRECATED: Use TestkubeProLogStreamWorkerCount instead
 	TestkubeCloudLogStreamWorkerCount int `envconfig:"TESTKUBE_CLOUD_LOG_STREAM_WORKER_COUNT" default:"25"`
+	// DEPRECATED: Use TestkubeProEnvID instead
+	TestkubeCloudEnvID string `envconfig:"TESTKUBE_CLOUD_ENV_ID" default:""`
+	// DEPRECATED: Use TestkubeProOrgID instead
+	TestkubeCloudOrgID string `envconfig:"TESTKUBE_CLOUD_ORG_ID" default:""`
+	// DEPRECATED: Use TestkubeProMigrate instead
+	TestkubeCloudMigrate string `envconfig:"TESTKUBE_CLOUD_MIGRATE" default:"false"`
 }
 
 func Get() (*Config, error) {
@@ -124,5 +142,17 @@ func (c *Config) CleanLegacyVars() {
 
 	if c.TestkubeProLogStreamWorkerCount == 0 && c.TestkubeCloudLogStreamWorkerCount != 0 {
 		c.TestkubeProLogStreamWorkerCount = c.TestkubeCloudLogStreamWorkerCount
+	}
+
+	if c.TestkubeProEnvID == "" && c.TestkubeCloudEnvID != "" {
+		c.TestkubeProEnvID = c.TestkubeCloudEnvID
+	}
+
+	if c.TestkubeProOrgID == "" && c.TestkubeCloudOrgID != "" {
+		c.TestkubeProOrgID = c.TestkubeCloudOrgID
+	}
+
+	if c.TestkubeProMigrate == "" && c.TestkubeCloudMigrate != "" {
+		c.TestkubeProMigrate = c.TestkubeCloudMigrate
 	}
 }

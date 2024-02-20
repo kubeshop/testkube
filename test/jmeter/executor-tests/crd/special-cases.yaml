@@ -129,7 +129,7 @@ spec:
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: jmeterd-executor-smoke-slaves-sharedbetweenpods # can be run only at cluster with storageClassName (NFS volume)
+  name: jmeterd-executor-smoke-slaves-sharedbetweenpods # can be run only at cluster with storageClassName (NFS volume), not included in TestSuite
   labels:
     core-tests: executors
 spec:
@@ -310,3 +310,272 @@ spec:
         limits:
           cpu: 500m
           memory: 512Mi
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke-duplicated-args
+  labels:
+    core-tests: special-cases-jmeter
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/jmeter/executor-tests
+  executionRequest:
+    args:
+      - "-t"
+      - "/data/repo/test/jmeter/executor-tests/jmeter-executor-smoke.jmx"
+      - "-t"
+      - "/data/repo/test/jmeter/executor-tests/jmeter-executor-smoke-2.jmx"
+      - "-o"
+      - "/data/output/custom-report.jtl"
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke-duplicated-args-2
+  labels:
+    core-tests: special-cases-jmeter
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/jmeter/executor-tests
+  executionRequest:
+    args:
+      - "-t"
+      - "/data/repo/test/jmeter/executor-tests/jmeter-executor-smoke.jmx"
+      - "-o"
+      - "/data/output/custom-report.jtl"
+      - "-e"
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke-args-override-l-e
+  labels:
+    core-tests: special-cases-jmeter
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/jmeter/executor-tests
+  executionRequest:
+    argsMode: override
+    args:
+      - "-n"
+      - "-t"
+      - "/data/repo/test/jmeter/executor-tests/jmeter-executor-smoke.jmx"
+      - "-o"
+      - "/data/output/custom-report.jtl"
+      - "-l"
+      - "/data/output/report.jtl"
+      - "-e"
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke-incorrect-url-2
+  labels:
+    core-tests: special-cases-jmeter
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: develop
+      path: test/jmeter/executor-tests/jmeter-executor-smoke-incorrect-url-2.jmx
+  executionRequest:
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeter-executor-smoke-incorrect-url-2
+  labels:
+    core-tests: special-cases-jmeter
+spec:
+  type: jmeter/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: develop
+      path: test/jmeter/executor-tests/jmeter-executor-smoke-incorrect-url-2.jmx
+  executionRequest:
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke-args-override
+  labels:
+    core-tests: special-cases-jmeter
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/jmeter/executor-tests
+  executionRequest:
+    argsMode: override
+    args:
+      - "-n"
+      - "-t"
+      - "/data/repo/test/jmeter/executor-tests/jmeter-executor-smoke.jmx"
+      - "-o"
+      - "/data/output/custom-report.jtl"
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke-args-override-workingdir
+  labels:
+    core-tests: special-cases-jmeter
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/jmeter/executor-tests
+      workingDir: test/jmeter/executor-tests
+  executionRequest:
+    argsMode: override
+    args:
+      - "-n"
+      - "-t"
+      - "jmeter-executor-smoke.jmx"
+      - "-o"
+      - "/data/output/custom-report.jtl"
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeterd-executor-smoke-output-dir
+  labels:
+    core-tests: special-cases-jmeter
+spec:
+  type: jmeterd/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/jmeter/executor-tests
+  executionRequest:
+    argsMode: override
+    args:
+      - "-n"
+      - "-t"
+      - "/data/repo/test/jmeter/executor-tests/jmeter-executor-smoke.jmx"
+      - "-o"
+      - "/data/artifacts-custom/custom-report.jtl"
+      - "-l"
+      - "/data/artifacts-custom/report.jtl"
+      - "-e"
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+    slavePodRequest:
+      resources:
+        requests:
+          cpu: 400m
+          memory: 512Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+    variables:
+      OUTPUT_DIR:
+        name: OUTPUT_DIR
+        value: "/data/artifacts-custom"
+        type: basic

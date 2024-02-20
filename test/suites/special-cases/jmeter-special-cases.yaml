@@ -21,9 +21,6 @@ spec:
     - test: jmeterd-executor-smoke-directory-2
   - stopOnFailure: false
     execute:
-    - test: jmeterd-executor-smoke-slaves-sharedbetweenpods
-  - stopOnFailure: false
-    execute:
     - test: jmeterd-executor-smoke-directory-t-o
   - stopOnFailure: false
     execute:
@@ -31,3 +28,18 @@ spec:
   - stopOnFailure: false
     execute:
     - test: jmeterd-executor-smoke-incorrect-file-path-negative
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-incorrect-url-2
+  - stopOnFailure: false
+    execute:
+    - test: jmeter-executor-smoke-incorrect-url-2
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-args-override
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-args-override-workingdir
+  - stopOnFailure: false
+    execute:
+    - test: jmeterd-executor-smoke-output-dir

@@ -6,34 +6,34 @@ import (
 	"github.com/kubeshop/testkube/pkg/logs/events"
 )
 
-// TODO figure out how to pass errors better
-func MapResponseToPB(r events.LogResponse) *LogResponse {
-	chunk := r.Log
-	content := chunk.Content
-	isError := false
+func MapResponseToPB(r events.LogResponse) *Log {
+	log := r.Log
 	if r.Error != nil {
-		content = r.Error.Error()
-		isError = true
+		log.Content = r.Error.Error()
 	}
-	return &LogResponse{
-		Time:     timestamppb.New(chunk.Time),
-		Content:  content,
-		Error:    isError,
-		Type:     chunk.Type,
-		Source:   chunk.Source,
-		Metadata: chunk.Metadata,
-		Version:  string(chunk.Version),
+	return MapToPB(log)
+}
+
+func MapToPB(r events.Log) *Log {
+	return &Log{
+		Time:     timestamppb.New(r.Time),
+		Content:  r.Content,
+		Error:    r.Error_,
+		Type:     r.Type_,
+		Source:   r.Source,
+		Metadata: r.Metadata,
+		Version:  r.Version,
 	}
 }
 
-func MapFromPB(chunk *LogResponse) events.Log {
+func MapFromPB(log *Log) events.Log {
 	return events.Log{
-		Time:     chunk.Time.AsTime(),
-		Content:  chunk.Content,
-		Error:    chunk.Error,
-		Type:     chunk.Type,
-		Source:   chunk.Source,
-		Metadata: chunk.Metadata,
-		Version:  events.LogVersion(chunk.Version),
+		Time:     log.Time.AsTime(),
+		Content:  log.Content,
+		Error_:   log.Error,
+		Type_:    log.Type,
+		Source:   log.Source,
+		Metadata: log.Metadata,
+		Version:  log.Version,
 	}
 }

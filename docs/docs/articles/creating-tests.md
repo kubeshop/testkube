@@ -353,7 +353,7 @@ There are many differences between `--variables-file` and `--copy-files`. The fo
 
 ### Redefining the Prebuilt Executor Command and Arguments
 
-Each of Testkube Prebuilt executors has a default command and arguments it uses to execute the test. They are provided as a part of Executor CRD and can be either overidden or appended during test creation or execution, for example:
+Each of Testkube Prebuilt executors has a default command and arguments it uses to execute the test. They are provided as a part of Executor CRD and can be either overridden, replaced, or appended during test creation or execution, for example:
 
 ```sh
 testkube create test --name maven-example-test --git-uri https://github.com/kubeshop/testkube-executor-maven.git --git-path examples/hello-maven --type maven/test --git-branch main --command "mvn" --args-mode "override" --executor-args="--settings <settingsFile> <goalName> -Duser.home <mavenHome>"
@@ -381,13 +381,13 @@ There are two modes to pass arguments to the executor:
 ```sh
 $ testkube create test --help
 ...
-      --args-mode string                           usage mode for arguments. one of append|override (default "append")
+      --args-mode string                           usage mode for arguments. one of append|override|replace (default "append")
 ...
 ```
 
 By default, `--args-mode` is set to `append`, which means that the default list will be kept, and whatever is set in `--executor-args` will be added to the end.
 
-The `override` mode will ignore the default arguments and use only what is set in `--executor-args`. If there are default values in between chevrons (`<>`), they can be reused in `--executor-args`.
+The `override` or `replace` mode will ignore the default arguments and use only what is set in `--executor-args`. If there are default values in between chevrons (`<>`), they can be reused in `--executor-args`.
 
 When using `--args-mode` with `testkube run test ...` pay attention to set the arguments via the `--args` flag, not `--executor-args`.
 

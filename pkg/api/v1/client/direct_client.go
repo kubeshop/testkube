@@ -13,6 +13,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/kubeshop/testkube/pkg/executor/output"
+	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/problem"
 )
@@ -177,6 +178,29 @@ func (t DirectClient[A]) GetLogs(uri string, logs chan output.Output) error {
 		defer resp.Body.Close()
 
 		StreamToLogsChannel(resp.Body, logs)
+	}()
+
+	return nil
+}
+
+// GetLogsV2 returns logs stream version 2 from log server, based on job pods logs
+func (t DirectClient[A]) GetLogsV2(uri string, logs chan events.Log) error {
+	req, err := http.NewRequest(http.MethodGet, uri, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Accept", "text/event-stream")
+	resp, err := t.sseClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		defer close(logs)
+		defer resp.Body.Close()
+
+		StreamToLogsChannelV2(resp.Body, logs)
 	}()
 
 	return nil

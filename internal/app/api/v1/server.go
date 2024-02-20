@@ -13,8 +13,9 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/repository/config"
+	repoConfig "github.com/kubeshop/testkube/pkg/repository/config"
 
 	"github.com/kubeshop/testkube/pkg/version"
 
@@ -71,7 +72,7 @@ func NewTestkubeAPI(
 	clientset kubernetes.Interface,
 	testkubeClientset testkubeclientset.Interface,
 	testsourcesClient *testsourcesclientv1.TestSourcesClient,
-	configMap config.Repository,
+	configMap repoConfig.Repository,
 	clusterId string,
 	eventsEmitter *event.Emitter,
 	executor client.Executor,
@@ -91,6 +92,7 @@ func NewTestkubeAPI(
 	enableSecretsEndpoint bool,
 	ff featureflags.FeatureFlags,
 	logsStream logsclient.Stream,
+	logGrpcClient logsclient.StreamGetter,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -137,6 +139,7 @@ func NewTestkubeAPI(
 		enableSecretsEndpoint: enableSecretsEndpoint,
 		featureFlags:          ff,
 		logsStream:            logsStream,
+		logGrpcClient:         logGrpcClient,
 	}
 
 	// will be reused in websockets handler
@@ -181,7 +184,7 @@ type TestkubeAPI struct {
 	oauthParams           oauthParams
 	WebsocketLoader       *ws.WebsocketLoader
 	Events                *event.Emitter
-	ConfigMap             config.Repository
+	ConfigMap             repoConfig.Repository
 	scheduler             *scheduler.Scheduler
 	Clientset             kubernetes.Interface
 	slackLoader           *slack.SlackLoader
@@ -195,6 +198,8 @@ type TestkubeAPI struct {
 	enableSecretsEndpoint bool
 	featureFlags          featureflags.FeatureFlags
 	logsStream            logsclient.Stream
+	logGrpcClient         logsclient.StreamGetter
+	proContext            *config.ProContext
 }
 
 type storageParams struct {
@@ -279,6 +284,9 @@ func (s *TestkubeAPI) InitRoutes() {
 	executors.Delete("/:name", s.DeleteExecutorHandler())
 	executors.Delete("/", s.DeleteExecutorsHandler())
 
+	executorByTypes := root.Group("/executor-by-types")
+	executorByTypes.Get("/", s.GetExecutorByTestTypeHandler())
+
 	webhooks := root.Group("/webhooks")
 
 	webhooks.Post("/", s.CreateWebhookHandler())
@@ -296,6 +304,8 @@ func (s *TestkubeAPI) InitRoutes() {
 	executions.Get("/:executionID/artifacts", s.ListArtifactsHandler())
 	executions.Get("/:executionID/logs", s.ExecutionLogsHandler())
 	executions.Get("/:executionID/logs/stream", s.ExecutionLogsStreamHandler())
+	executions.Get("/:executionID/logs/v2", s.ExecutionLogsHandlerV2())
+	executions.Get("/:executionID/logs/stream/v2", s.ExecutionLogsStreamHandlerV2())
 	executions.Get("/:executionID/artifacts/:filename", s.GetArtifactHandler())
 	executions.Get("/:executionID/artifact-archive", s.GetArtifactArchiveHandler())
 
@@ -579,4 +589,9 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 	}
 
 	return filter
+}
+
+func (s *TestkubeAPI) WithProContext(proContext *config.ProContext) *TestkubeAPI {
+	s.proContext = proContext
+	return s
 }

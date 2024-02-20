@@ -35,6 +35,20 @@ func (m *MockStream) EXPECT() *MockStreamMockRecorder {
 	return m.recorder
 }
 
+// Finish mocks base method.
+func (m *MockStream) Finish(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Finish", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Finish indicates an expected call of Finish.
+func (mr *MockStreamMockRecorder) Finish(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Finish", reflect.TypeOf((*MockStream)(nil).Finish), arg0, arg1)
+}
+
 // Get mocks base method.
 func (m *MockStream) Get(arg0 context.Context, arg1 string) (chan events.LogResponse, error) {
 	m.ctrl.T.Helper()

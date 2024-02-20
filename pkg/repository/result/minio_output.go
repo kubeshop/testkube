@@ -42,7 +42,7 @@ func (m *MinioRepository) GetOutput(ctx context.Context, id, testName, testSuite
 }
 
 func (m *MinioRepository) getOutput(ctx context.Context, id string) (ExecutionOutput, error) {
-	file, err := m.storage.DownloadFileFromBucket(ctx, m.bucket, "", id)
+	file, _, err := m.storage.DownloadFileFromBucket(ctx, m.bucket, "", id)
 	if err != nil && err == minio.ErrArtifactsNotFound {
 		log.DefaultLogger.Infow("output not found in minio", "id", id)
 		return ExecutionOutput{}, nil
@@ -180,7 +180,7 @@ func (m *MinioRepository) DeleteAllOutput(ctx context.Context) error {
 }
 
 func (m *MinioRepository) StreamOutput(ctx context.Context, executionID, testName, testSuiteName string) (reader io.Reader, err error) {
-	file, err := m.storage.DownloadFileFromBucket(ctx, m.bucket, "", executionID)
+	file, _, err := m.storage.DownloadFileFromBucket(ctx, m.bucket, "", executionID)
 	if err != nil {
 		return nil, err
 	}

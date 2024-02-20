@@ -23,8 +23,8 @@ You can create a webhook from the dashboard, use the CLI, or create it as a cust
 
 - Monitoring and Observability: Webhooks can also be used to send alerts and notifications to your monitoring and observability tools like Prometheus and Grafana. This provides visibility into your tests, alerts you, and ensures that timely corrective actions can be taken.
 
-
 ## Creating a Webhook
+
 The webhook can be created using the Dashboard, CLI, or a Custom Resource.
 
 <Tabs>
@@ -56,6 +56,7 @@ Webhooks can be created with Testkube CLI using the `create webhook` command.
 ```sh
 testkube create webhook --name example-webhook --events start-test --events end-test-success --events end-test-failed --uri <YOUR_ENDPOINT_URL>
 ```
+
 `--name` - Your webhook name (in this case `example-webhook`).
 `--events` - Event that will trigger a webhook. Multiple `--events` can be defined (in this case `--events start-test --events end-test-success --events end-test-failed`). All available trigger events can be found in the [Supported Event types](#supported-event-types) section.
 `--uri` - The HTTPS endpoint where you want to receive the webhook events.
@@ -78,6 +79,7 @@ spec:
     - end-test-failed
   selector: ""
 ```
+
 Where <YOUR_ENDPOINT_URL> should be replaced with the HTTPS endpoint URL where you want to receive the webhook events.
 
 And then apply with:
@@ -91,6 +93,7 @@ kubectl apply -f webhook.yaml
 </Tabs>
 
 ### Resource Selector (labels)
+
 In order to limit webhook triggers to a specific resource, or resources, the Resource Selector can be used. It allows you to select the specific resource by label, or labels.
 
 <Tabs>
@@ -134,10 +137,10 @@ spec:
 </TabItem>
 </Tabs>
 
-
 ### Webhook Payload
 
 Webhook payload can be configured - in this example, `event id`:
+
 ```
 {"text": "event id {{ .Id }}"}
 ```
@@ -166,8 +169,8 @@ And set it with `--payload-template template.json`.
 ```sh
 testkube create webhook --name example-webhook --events start-test --events end-test-passed --events end-test-failed --payload-template template.json --uri <YOUR_ENDPOINT_URL>
 ```
-Where <YOUR_ENDPOINT_URL> should be replaced with the HTTPS endpoint URL where you want to receive the webhook events.
 
+Where <YOUR_ENDPOINT_URL> should be replaced with the HTTPS endpoint URL where you want to receive the webhook events.
 
 ```sh title="Expected output:"
 Webhook created example-webhook 🥇
@@ -178,12 +181,14 @@ Webhook created example-webhook 🥇
 <TabItem value="crd" label="Custom Resource">
 
 Payload template can be configured with `spec.payloadTemplate`.
+
 ```
   payloadTemplate: |
     {"text": "event id {{ .Id }}"}
 ```
 
 Example:
+
 ```
 apiVersion: executor.testkube.io/v1
 kind: Webhook
@@ -207,35 +212,43 @@ spec:
 </Tabs>
 
 ### Webhook Payload Variables
-Webhook payload can contain **event-specific** variables - they will be replaced with actual data when the events occurs. In the above examples, only the event `Id` is being sent. 
+
+Webhook payload can contain **event-specific** variables - they will be replaced with actual data when the events occurs. In the above examples, only the event `Id` is being sent.
 However, any of these [supported Event Variables](#supported-event-variables) can be used.
 
 For example, the following payload:
+
 ```
 {"text": "Event {{ .Type_ }} - Test '{{ .TestExecution.TestName }}' execution ({{ .TestExecution.Number }}) finished with '{{ .TestExecution.ExecutionResult.Status }}' status"}
 ```
+
 will result in:
+
 ```
 {"text": "Event end-test-success - Test 'postman-executor-smoke' execution (948) finished with 'passed' status"}
 ```
 
 #### testkube-api-server ENV variables
+
 In addition to event-specific variables, it's also possible to pass testkube-api-server ENV variables:
 
 ```sh title="template.txt"
-TESTKUBE_CLOUD_URL: {{ index .Envs "TESTKUBE_CLOUD_URL" }}
+TESTKUBE_PRO_URL: {{ index .Envs "TESTKUBE_PRO_URL" }}
 ```
 
 ### URI and HTTP Headers
+
 You can add additional HTTP headers like `Authorization` or `x-api-key` to have a secret token.
 It's possible to use golang based template string as header or uri value.
 
 ### Helper methods
+
 We also provide special helper methods to use in the webhook template:
 `executionstatustostring` is the method to convert a pointer to a execution status to a string type.
 `testsuiteexecutionstatustostring` is the method to convert a pointer to a test suite execution status to a string type.
 
 Usage example:
+
 ```yaml
   - name: TEXT_COLOUR
     value: {{ if eq (.TestSuiteExecution.Status | testsuiteexecutionstatustostring ) "passed" }}"00FF00"{{ else }}"FF0000"{{ end }}
@@ -288,7 +301,9 @@ spec:
 </Tabs>
 
 ## Supported Event types
+
 Webhooks can be triggered on any of the following events:
+
 - start-test
 - end-test-success
 - end-test-failed
@@ -304,6 +319,7 @@ Webhooks can be triggered on any of the following events:
 - deleted
 
 They can be triggered by the following resources:
+
 - test
 - testsuite
 - executor
@@ -315,6 +331,7 @@ They can be triggered by the following resources:
 ## Supported Event Variables
 
 ### Event-specific variables:
+
 - `Id` - event ID (for example, `2a20c7da-3b77-4ea9-a33d-403187d3e9e6`)
 - `Resource`
 - `ResourceId`
@@ -327,16 +344,17 @@ They can be triggered by the following resources:
 The full Event Data Model can be found [here](https://github.com/kubeshop/testkube/blob/main/pkg/api/v1/testkube/model_event.go).
 
 ### TestExecution (Execution):
+
 - `Id` - Execution ID (for example, `64f8cf3c712890925aea51ce`)
 - `TestName` - Test Name (for example, `postman-executor-smoke`)
 - `TestSuiteName` - Test Suite name (if run as a part of a Test Suite)
 - `TestNamespace` - Execution namespace, where testkube is installed (for example, `testkube`)
 - `TestType` - Test type (for example, `postman/collection`)
-- `Name` -  Execution name (for example, `postman-executor-smoke-937)
+- `Name` - Execution name (for example, `postman-executor-smoke-937)
 - `Number` - Execution number (for example, `937`)
-- `Envs` -  List of ENV variables for specific Test (if defined)
+- `Envs` - List of ENV variables for specific Test (if defined)
 - `Command` - Command executed inside the Pod (for example, `newman`)
-- `Args` -  Command arguments (for example, `run <runPath> -e <envFile> --reporters cli,json --reporter-json-export <reportFile>`)
+- `Args` - Command arguments (for example, `run <runPath> -e <envFile> --reporters cli,json --reporter-json-export <reportFile>`)
 - `Variables` - List of variables
 - `Content` - Test content
 - `StartTime` - Test start time (for example, `2023-09-06 19:23:34.543433547 +0000 UTC`)
@@ -369,10 +387,12 @@ The full TestSuiteExecution data model can be found [here](https://github.com/ku
 ## Additional Examples
 
 ### Microsoft Teams
+
 Webhooks can also be used to send messages to Microsoft Teams channels.
 First, you need to create an incoming webhook in Teams for a specific channel. You can see how to do it in the Teams Docs [here](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook?tabs=dotnet#create-incoming-webhooks-1). After your Teams incoming webhook is created, you can use it with Testkube webhooks - just use the URL provided (it will probably look like this: `https://xxxxx.webhook.office.com/xxxxxxxxx`).
 
 In order to send the message when test execution finishes, the following Webhook can be used:
+
 ```
 apiVersion: executor.testkube.io/v1
 kind: Webhook

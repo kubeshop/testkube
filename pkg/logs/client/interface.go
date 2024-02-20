@@ -19,6 +19,7 @@ type Stream interface {
 	StreamPusher
 	StreamTrigger
 	StreamGetter
+	StreamFinisher
 }
 
 //go:generate mockgen -destination=./mock_initializedstreampusher.go -package=client "github.com/kubeshop/testkube/pkg/logs/client" InitializedStreamPusher
@@ -47,6 +48,11 @@ type StreamPusher interface {
 	Push(ctx context.Context, id string, log *events.Log) error
 	// PushBytes sends RAW bytes to log stream, developer is responsible for marshaling valid data
 	PushBytes(ctx context.Context, id string, bytes []byte) error
+}
+
+type StreamFinisher interface {
+	// Finish sends termination log message
+	Finish(ctx context.Context, id string) error
 }
 
 // StreamGetter interface for getting logs stream channel

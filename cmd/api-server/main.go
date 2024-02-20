@@ -15,9 +15,11 @@ import (
 	"github.com/nats-io/nats.go"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
+	"github.com/kubeshop/testkube/pkg/imageinspector"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 
@@ -150,6 +152,10 @@ func main() {
 		case <-ctx.Done():
 			return nil
 		case sig := <-stopSignal:
+			go func() {
+				<-stopSignal
+				os.Exit(137)
+			}()
 			// Returning an error cancels the errgroup.
 			return errors.Errorf("received signal: %v", sig)
 		}
@@ -224,6 +230,13 @@ func main() {
 		ui.ExitOnError("Creating TestKube Clientset", err)
 	}
 
+	var logGrpcClient logsclient.StreamGetter
+	if features.LogsV2 {
+		creds, err := newGRPCTransportCredentials(cfg)
+		ui.ExitOnError("Getting log server TLS credentials", err)
+		logGrpcClient = logsclient.NewGrpcClient(cfg.LogServerGrpcAddress, creds)
+	}
+
 	// DI
 	var resultsRepository result.Repository
 	var testResultsRepository testresult.Repository
@@ -242,7 +255,7 @@ func main() {
 		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)
 		ui.ExitOnError("Getting mongo database", err)
 		isDocDb := cfg.APIMongoDBType == storage.TypeDocDB
-		mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb)
+		mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb, result.WithFeatureFlags(features), result.WithLogsClient(logGrpcClient))
 		resultsRepository = mongoResultsRepository
 		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb)
 		configRepository = configrepository.NewMongoRepository(db)
@@ -406,11 +419,25 @@ func main() {
 		ui.ExitOnError("Creating container job templates", err)
 	}
 
+	inspectorStorages := []imageinspector.Storage{imageinspector.NewMemoryStorage()}
+	if cfg.EnableImageDataPersistentCache {
+		configmapStorage := imageinspector.NewConfigMapStorage(configMapClient, cfg.ImageDataPersistentCacheKey, true)
+		_ = configmapStorage.CopyTo(context.Background(), inspectorStorages[0].(imageinspector.StorageTransfer))
+		inspectorStorages = append(inspectorStorages, configmapStorage)
+	}
+	inspector := imageinspector.NewInspector(
+		cfg.TestkubeRegistry,
+		imageinspector.NewSkopeoFetcher(),
+		imageinspector.NewSecretFetcher(secretClient),
+		inspectorStorages...,
+	)
+
 	containerExecutor, err := containerexecutor.NewContainerExecutor(
 		resultsRepository,
 		cfg.TestkubeNamespace,
 		images,
 		containerTemplates,
+		inspector,
 		cfg.JobServiceAccountName,
 		metrics,
 		eventsEmitter,
@@ -492,22 +519,36 @@ func main() {
 		cfg.EnableSecretsEndpoint,
 		features,
 		logsStream,
+		logGrpcClient,
 	)
 
 	if mode == common.ModeAgent {
 		log.DefaultLogger.Info("starting agent service")
+		proContext := config.ProContext{
+			APIKey:               cfg.TestkubeProAPIKey,
+			URL:                  cfg.TestkubeProURL,
+			LogsPath:             cfg.TestkubeProLogsPath,
+			TLSInsecure:          cfg.TestkubeProTLSInsecure,
+			WorkerCount:          cfg.TestkubeProWorkerCount,
+			LogStreamWorkerCount: cfg.TestkubeProLogStreamWorkerCount,
+			SkipVerify:           cfg.TestkubeProSkipVerify,
+			EnvID:                cfg.TestkubeProEnvID,
+			OrgID:                cfg.TestkubeProOrgID,
+			Migrate:              cfg.TestkubeProMigrate,
+		}
+
+		api.WithProContext(&proContext)
 
 		agentHandle, err := agent.NewAgent(
 			log.DefaultLogger,
 			api.Mux.Handler(),
-			cfg.TestkubeProAPIKey,
 			grpcClient,
-			cfg.TestkubeProWorkerCount,
-			cfg.TestkubeProLogStreamWorkerCount,
 			api.GetLogsStream,
 			clusterId,
 			cfg.TestkubeClusterName,
 			envs,
+			features,
+			proContext,
 		)
 		if err != nil {
 			ui.ExitOnError("Starting agent", err)
@@ -717,4 +758,14 @@ func getMongoSSLConfig(cfg *config.Config, secretClient *secret.Client) *storage
 		SSLClientCertificateKeyFilePassword: pass,
 		SSLCertificateAuthoritiyFile:        rootCAPath,
 	}
+}
+
+func newGRPCTransportCredentials(cfg *config.Config) (credentials.TransportCredentials, error) {
+	return logsclient.GetGrpcTransportCredentials(logsclient.GrpcConnectionConfig{
+		Secure:     cfg.LogServerSecure,
+		SkipVerify: cfg.LogServerSkipVerify,
+		CertFile:   cfg.LogServerCertFile,
+		KeyFile:    cfg.LogServerKeyFile,
+		CAFile:     cfg.LogServerCAFile,
+	})
 }

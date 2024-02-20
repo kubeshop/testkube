@@ -6,10 +6,13 @@ package logs
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"math/rand"
 	"net"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -17,9 +20,11 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/logs/adapter"
+	"github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/logs/pb"
 	"github.com/kubeshop/testkube/pkg/logs/repository"
 	"github.com/kubeshop/testkube/pkg/logs/state"
@@ -32,7 +37,7 @@ const (
 	defaultStopPauseInterval = 200 * time.Millisecond
 )
 
-func NewLogsService(nats *nats.Conn, js jetstream.JetStream, state state.Interface) *LogsService {
+func NewLogsService(nats *nats.Conn, js jetstream.JetStream, state state.Interface, stream client.Stream) *LogsService {
 	return &LogsService{
 		nats:              nats,
 		adapters:          []adapter.Adapter{},
@@ -44,6 +49,7 @@ func NewLogsService(nats *nats.Conn, js jetstream.JetStream, state state.Interfa
 		consumerInstances: sync.Map{},
 		state:             state,
 		stopPauseInterval: defaultStopPauseInterval,
+		logStream:         stream,
 	}
 }
 
@@ -53,6 +59,9 @@ type LogsService struct {
 	nats                  *nats.Conn
 	js                    jetstream.JetStream
 	adapters              []adapter.Adapter
+
+	// logStream to manage and send data to logs streams
+	logStream client.Stream
 
 	Ready chan struct{}
 
@@ -116,13 +125,19 @@ func (ls *LogsService) Run(ctx context.Context) (err error) {
 }
 
 // TODO handle TLS
-func (ls *LogsService) RunGRPCServer(ctx context.Context) error {
+func (ls *LogsService) RunGRPCServer(ctx context.Context, creds credentials.TransportCredentials) error {
 	lis, err := net.Listen("tcp", ls.grpcAddress)
 	if err != nil {
 		return err
 	}
 
-	ls.grpcServer = grpc.NewServer()
+	var opts []grpc.ServerOption
+	if creds != nil {
+		opts = append(opts, grpc.Creds(creds))
+	}
+
+	ls.grpcServer = grpc.NewServer(opts...)
+
 	pb.RegisterLogsServiceServer(ls.grpcServer, NewLogsServer(ls.logsRepositoryFactory, ls.state))
 
 	ls.log.Infow("starting grpc server", "address", ls.grpcAddress)
@@ -170,4 +185,53 @@ func (ls *LogsService) WithRandomPort() *LogsService {
 func (ls *LogsService) WithLogsRepositoryFactory(f repository.Factory) *LogsService {
 	ls.logsRepositoryFactory = f
 	return ls
+}
+
+// GrpcConnectionConfig contains GRPC connection parameters
+type GrpcConnectionConfig struct {
+	Secure       bool
+	ClientAuth   bool
+	CertFile     string
+	KeyFile      string
+	ClientCAFile string
+}
+
+// GetGrpcTransportCredentials returns transport credentials for GRPC connection config
+func GetGrpcTransportCredentials(cfg GrpcConnectionConfig) (credentials.TransportCredentials, error) {
+	var creds credentials.TransportCredentials
+
+	if cfg.Secure {
+		var tlsConfig tls.Config
+		tlsConfig.ClientAuth = tls.NoClientCert
+		if cfg.ClientAuth {
+			tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+		}
+
+		if cfg.CertFile != "" && cfg.KeyFile != "" {
+			cert, err := tls.LoadX509KeyPair(cfg.CertFile, cfg.KeyFile)
+			if err != nil {
+				return nil, err
+			}
+
+			tlsConfig.Certificates = []tls.Certificate{cert}
+		}
+
+		if cfg.ClientCAFile != "" {
+			caCertificate, err := os.ReadFile(cfg.ClientCAFile)
+			if err != nil {
+				return nil, err
+			}
+
+			certPool := x509.NewCertPool()
+			if !certPool.AppendCertsFromPEM(caCertificate) {
+				return nil, fmt.Errorf("failed to add client CA's certificate")
+			}
+
+			tlsConfig.ClientCAs = certPool
+		}
+
+		creds = credentials.NewTLS(&tlsConfig)
+	}
+
+	return creds, nil
 }

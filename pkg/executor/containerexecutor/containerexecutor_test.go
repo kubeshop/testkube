@@ -21,6 +21,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 )
 
@@ -153,11 +154,16 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "RUNNER_CONTEXTTYPE", Value: ""},
 		{Name: "RUNNER_CONTEXTDATA", Value: ""},
 		{Name: "RUNNER_APIURI", Value: ""},
-		{Name: "RUNNER_CLOUD_MODE", Value: "false"},
-		{Name: "RUNNER_CLOUD_API_KEY", Value: ""},
-		{Name: "RUNNER_CLOUD_API_URL", Value: ""},
-		{Name: "RUNNER_CLOUD_API_TLS_INSECURE", Value: "false"},
-		{Name: "RUNNER_CLOUD_API_SKIP_VERIFY", Value: "false"},
+		{Name: "RUNNER_PRO_MODE", Value: "false"},
+		{Name: "RUNNER_PRO_API_KEY", Value: ""},
+		{Name: "RUNNER_PRO_API_URL", Value: ""},
+		{Name: "RUNNER_PRO_API_TLS_INSECURE", Value: "false"},
+		{Name: "RUNNER_PRO_API_SKIP_VERIFY", Value: "false"},
+		{Name: "RUNNER_CLOUD_MODE", Value: "false"},             // DEPRECATED
+		{Name: "RUNNER_CLOUD_API_KEY", Value: ""},               // DEPRECATED
+		{Name: "RUNNER_CLOUD_API_URL", Value: ""},               // DEPRECATED
+		{Name: "RUNNER_CLOUD_API_TLS_INSECURE", Value: "false"}, // DEPRECATED
+		{Name: "RUNNER_CLOUD_API_SKIP_VERIFY", Value: "false"},  // DEPRECATED
 		{Name: "RUNNER_CLUSTERID", Value: ""},
 		{Name: "CI", Value: "1"},
 		{Name: "key", Value: "value"},
@@ -197,12 +203,14 @@ func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	mockTemplatesClient := templatesclientv1.NewMockInterface(mockCtrl)
+	mockInspector := imageinspector.NewMockInspector(mockCtrl)
 
 	jobOptions, _ := NewJobOptions(
 		logger(),
 		mockTemplatesClient,
 		executor.Images{},
 		executor.Templates{},
+		mockInspector,
 		"",
 		"",
 		"",
@@ -242,12 +250,14 @@ func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	mockTemplatesClient := templatesclientv1.NewMockInterface(mockCtrl)
+	mockInspector := imageinspector.NewMockInspector(mockCtrl)
 
 	jobOptions, _ := NewJobOptions(
 		logger(),
 		mockTemplatesClient,
 		executor.Images{},
 		executor.Templates{},
+		mockInspector,
 		"",
 		"",
 		"",
@@ -286,12 +296,14 @@ func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	mockTemplatesClient := templatesclientv1.NewMockInterface(mockCtrl)
+	mockInspector := imageinspector.NewMockInspector(mockCtrl)
 
 	jobOptions, _ := NewJobOptions(
 		logger(),
 		mockTemplatesClient,
 		executor.Images{},
 		executor.Templates{},
+		mockInspector,
 		"",
 		"",
 		"",

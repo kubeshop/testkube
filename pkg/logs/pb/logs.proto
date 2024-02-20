@@ -7,14 +7,14 @@ option go_package = "pkg/logs/pb";
 import "google/protobuf/timestamp.proto";
 
 service LogsService {
-    rpc Logs(LogRequest) returns (stream LogResponse);
+    rpc Logs(LogRequest) returns (stream Log);
 }
 
 message LogRequest {
   string execution_id = 2;
 }
 
-message LogResponse{
+message Log{
 
   google.protobuf.Timestamp time = 1;
   string content = 2;
@@ -29,3 +29,20 @@ message LogResponse{
 }
 
 
+
+// CloudLogsService client will be used in cloud adapter in logs server
+// CloudLogsService server will be implemented on cloud side
+service CloudLogsService {
+    rpc Stream(stream Log) returns (StreamResponse);
+    rpc Logs(LogRequest) returns (stream Log);
+}
+
+message StreamResponse {
+	string message = 1;
+	StreamResponseStatus status = 2;
+}
+
+enum StreamResponseStatus {
+  Completed = 0;
+  Failed = 1;
+}

@@ -48,8 +48,11 @@ func TestLogs_EventsFlow(t *testing.T) {
 		// and logs state manager
 		state := state.NewState(kv)
 
+		logsStream, err := client.NewNatsLogStream(nc)
+		assert.NoError(t, err)
+
 		// and initialized log service
-		log := NewLogsService(nc, js, state).
+		log := NewLogsService(nc, js, state, logsStream).
 			WithRandomPort()
 
 		// given example adapters
@@ -90,7 +93,7 @@ func TestLogs_EventsFlow(t *testing.T) {
 		assert.NoError(t, err)
 
 		// cooldown stop time
-		time.Sleep(waitTime * 2)
+		time.Sleep(waitTime)
 
 		// then all adapters should be gracefully stopped
 		assert.Equal(t, 0, log.GetConsumersStats(ctx).Count)
@@ -119,8 +122,11 @@ func TestLogs_EventsFlow(t *testing.T) {
 		// and logs state manager
 		state := state.NewState(kv)
 
+		logsStream, err := client.NewNatsLogStream(nc)
+		assert.NoError(t, err)
+
 		// and initialized log service
-		log := NewLogsService(nc, js, state).
+		log := NewLogsService(nc, js, state, logsStream).
 			WithRandomPort()
 
 		// given example adapter
@@ -195,20 +201,26 @@ func TestLogs_EventsFlow(t *testing.T) {
 		// and logs state manager
 		state := state.NewState(kv)
 
+		logsStream, err := client.NewNatsLogStream(nc)
+		assert.NoError(t, err)
+
 		// and initialized log service
-		log := NewLogsService(nc, js, state).
+		log := NewLogsService(nc, js, state, logsStream).
 			WithRandomPort()
 
 		// given example adapter
-		a := NewMockAdapter()
+		a1 := NewMockAdapter()
+		a2 := NewMockAdapter()
+		a3 := NewMockAdapter()
+		a4 := NewMockAdapter()
 
-		messagesCount := 10000
+		messagesCount := 1000
 
 		// with 4 adapters (the same adapter is added 4 times so it'll receive 4 times more messages)
-		log.AddAdapter(a)
-		log.AddAdapter(a)
-		log.AddAdapter(a)
-		log.AddAdapter(a)
+		log.AddAdapter(a1)
+		log.AddAdapter(a2)
+		log.AddAdapter(a3)
+		log.AddAdapter(a4)
 
 		// and log service running
 		go func() {
@@ -241,7 +253,14 @@ func TestLogs_EventsFlow(t *testing.T) {
 		_, err = stream.Stop(ctx, id)
 		assert.NoError(t, err)
 
-		assertMessagesCount(t, a, 4*messagesCount)
+		// cool down
+		time.Sleep(waitTime)
+
+		// then each adapter should receive messages
+		assertMessagesCount(t, a1, messagesCount)
+		assertMessagesCount(t, a2, messagesCount)
+		assertMessagesCount(t, a3, messagesCount)
+		assertMessagesCount(t, a4, messagesCount)
 
 	})
 
@@ -268,8 +287,11 @@ func TestLogs_EventsFlow(t *testing.T) {
 		// and logs state manager
 		state := state.NewState(kv)
 
+		logsStream, err := client.NewNatsLogStream(nc)
+		assert.NoError(t, err)
+
 		// and initialized log service
-		log := NewLogsService(nc, js, state).
+		log := NewLogsService(nc, js, state, logsStream).
 			WithRandomPort()
 
 		// given example adapters
@@ -316,7 +338,7 @@ func TestLogs_EventsFlow(t *testing.T) {
 		assert.Equal(t, "stop-queued", string(r.Message))
 
 		// there will be wait for mess
-		time.Sleep(waitTime * 2)
+		time.Sleep(waitTime)
 
 		// then all adapters should be gracefully stopped
 		assert.Equal(t, 0, log.GetConsumersStats(ctx).Count)
@@ -346,7 +368,15 @@ type MockAdapter struct {
 	name     string
 }
 
-func (s *MockAdapter) Notify(id string, e events.Log) error {
+func (s *MockAdapter) Init(ctx context.Context, id string) error {
+	return nil
+}
+
+func (s *MockAdapter) Notify(ctx context.Context, id string, e events.Log) error {
+	// don't count finished logs
+	if events.IsFinished(&e) {
+		return nil
+	}
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -355,7 +385,7 @@ func (s *MockAdapter) Notify(id string, e events.Log) error {
 	return nil
 }
 
-func (s *MockAdapter) Stop(id string) error {
+func (s *MockAdapter) Stop(ctx context.Context, id string) error {
 	fmt.Printf("stopping %s \n", id)
 	return nil
 }
