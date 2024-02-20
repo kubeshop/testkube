@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             v3.19.4
-// source: logs.proto
+// source: pkg/logs/pb/logs.proto
 
 package pb
 
@@ -128,7 +128,7 @@ var LogsService_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: "logs.proto",
+	Metadata: "pkg/logs/pb/logs.proto",
 }
 
 // CloudLogsServiceClient is the client API for CloudLogsService service.
@@ -136,6 +136,7 @@ var LogsService_ServiceDesc = grpc.ServiceDesc{
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CloudLogsServiceClient interface {
 	Stream(ctx context.Context, opts ...grpc.CallOption) (CloudLogsService_StreamClient, error)
+	Logs(ctx context.Context, in *LogRequest, opts ...grpc.CallOption) (CloudLogsService_LogsClient, error)
 }
 
 type cloudLogsServiceClient struct {
@@ -180,11 +181,44 @@ func (x *cloudLogsServiceStreamClient) CloseAndRecv() (*StreamResponse, error) {
 	return m, nil
 }
 
+func (c *cloudLogsServiceClient) Logs(ctx context.Context, in *LogRequest, opts ...grpc.CallOption) (CloudLogsService_LogsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &CloudLogsService_ServiceDesc.Streams[1], "/logs.CloudLogsService/Logs", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &cloudLogsServiceLogsClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type CloudLogsService_LogsClient interface {
+	Recv() (*Log, error)
+	grpc.ClientStream
+}
+
+type cloudLogsServiceLogsClient struct {
+	grpc.ClientStream
+}
+
+func (x *cloudLogsServiceLogsClient) Recv() (*Log, error) {
+	m := new(Log)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // CloudLogsServiceServer is the server API for CloudLogsService service.
 // All implementations must embed UnimplementedCloudLogsServiceServer
 // for forward compatibility
 type CloudLogsServiceServer interface {
 	Stream(CloudLogsService_StreamServer) error
+	Logs(*LogRequest, CloudLogsService_LogsServer) error
 	mustEmbedUnimplementedCloudLogsServiceServer()
 }
 
@@ -194,6 +228,9 @@ type UnimplementedCloudLogsServiceServer struct {
 
 func (UnimplementedCloudLogsServiceServer) Stream(CloudLogsService_StreamServer) error {
 	return status.Errorf(codes.Unimplemented, "method Stream not implemented")
+}
+func (UnimplementedCloudLogsServiceServer) Logs(*LogRequest, CloudLogsService_LogsServer) error {
+	return status.Errorf(codes.Unimplemented, "method Logs not implemented")
 }
 func (UnimplementedCloudLogsServiceServer) mustEmbedUnimplementedCloudLogsServiceServer() {}
 
@@ -234,6 +271,27 @@ func (x *cloudLogsServiceStreamServer) Recv() (*Log, error) {
 	return m, nil
 }
 
+func _CloudLogsService_Logs_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(LogRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(CloudLogsServiceServer).Logs(m, &cloudLogsServiceLogsServer{stream})
+}
+
+type CloudLogsService_LogsServer interface {
+	Send(*Log) error
+	grpc.ServerStream
+}
+
+type cloudLogsServiceLogsServer struct {
+	grpc.ServerStream
+}
+
+func (x *cloudLogsServiceLogsServer) Send(m *Log) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // CloudLogsService_ServiceDesc is the grpc.ServiceDesc for CloudLogsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -247,6 +305,11 @@ var CloudLogsService_ServiceDesc = grpc.ServiceDesc{
 			Handler:       _CloudLogsService_Stream_Handler,
 			ClientStreams: true,
 		},
+		{
+			StreamName:    "Logs",
+			Handler:       _CloudLogsService_Logs_Handler,
+			ServerStreams: true,
+		},
 	},
-	Metadata: "logs.proto",
+	Metadata: "pkg/logs/pb/logs.proto",
 }
