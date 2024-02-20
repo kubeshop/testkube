@@ -9,39 +9,172 @@
 package v1
 
 import (
+	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
+	"github.com/pkg/errors"
+
+	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/tcl/workflowstcl/mappers"
 )
 
 func (s *apiTCL) ListTestWorkflowsHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		return s.NotImplemented(c)
+	errPrefix := "failed to list test workflows"
+	return func(c *fiber.Ctx) (err error) {
+		workflows, err := s.getFilteredTestWorkflowList(c)
+		if err != nil {
+			return s.BadGateway(c, errPrefix, "client problem", err)
+		}
+		err = SendResourceList(c, "TestWorkflow", testworkflowsv1.GroupVersion, mappers.MapTestWorkflowKubeToAPI, workflows.Items...)
+		if err != nil {
+			return s.InternalError(c, errPrefix, "serialization problem", err)
+		}
+		return
 	}
 }
 
 func (s *apiTCL) GetTestWorkflowHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		_ = c.Params("id")
-		return s.NotImplemented(c)
+	return func(c *fiber.Ctx) (err error) {
+		name := c.Params("id")
+		errPrefix := fmt.Sprintf("failed to get test workflow '%s'", name)
+		workflow, err := s.TestWorkflowsClient.Get(name)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, mappers.MapKubeToAPI, workflow)
+		if err != nil {
+			return s.InternalError(c, errPrefix, "serialization problem", err)
+		}
+		return
 	}
 }
 
 func (s *apiTCL) DeleteTestWorkflowHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		_ = c.Params("id")
-		return s.NotImplemented(c)
+		name := c.Params("id")
+		errPrefix := fmt.Sprintf("failed to delete test workflow '%s'", name)
+		err := s.TestWorkflowsClient.Delete(name)
+		s.Metrics.IncDeleteTestWorkflow(err)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+		skipExecutions := c.Query("skipDeleteExecutions", "")
+		if skipExecutions != "true" {
+			// TODO: Delete Executions
+		}
+		return c.SendStatus(http.StatusNoContent)
 	}
 }
 
 func (s *apiTCL) CreateTestWorkflowHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		_ = c.Params("id")
-		return s.NotImplemented(c)
+	errPrefix := "failed to create test workflow"
+	return func(c *fiber.Ctx) (err error) {
+		// Deserialize resource
+		obj := new(testworkflowsv1.TestWorkflow)
+		if HasYAML(c) {
+			err = common.DeserializeCRD(obj, c.Body())
+			if err != nil {
+				return s.BadRequest(c, errPrefix, "invalid body", err)
+			}
+		} else {
+			var v *testkube.TestWorkflow
+			err = c.BodyParser(&v)
+			if err != nil {
+				return s.BadRequest(c, errPrefix, "invalid body", err)
+			}
+			obj = mappers.MapAPIToKube(v)
+		}
+
+		// Validate resource
+		if obj == nil || obj.Name == "" {
+			return s.BadRequest(c, errPrefix, "invalid body", errors.New("name is required"))
+		}
+		obj.Namespace = s.Namespace
+
+		// Create the resource
+		obj, err = s.TestWorkflowsClient.Create(obj)
+		s.Metrics.IncCreateTestWorkflow(err)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "client error", err)
+		}
+
+		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, mappers.MapKubeToAPI, obj)
+		if err != nil {
+			return s.InternalError(c, errPrefix, "serialization problem", err)
+		}
+		return
 	}
 }
 
-func (s *apiTCL) PatchTestWorkflowHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		_ = c.Params("id")
-		return s.NotImplemented(c)
+func (s *apiTCL) UpdateTestWorkflowHandler() fiber.Handler {
+	errPrefix := "failed to update test workflow"
+	return func(c *fiber.Ctx) (err error) {
+		name := c.Params("id")
+
+		// Deserialize resource
+		obj := new(testworkflowsv1.TestWorkflow)
+		if HasYAML(c) {
+			err = common.DeserializeCRD(obj, c.Body())
+			if err != nil {
+				return s.BadRequest(c, errPrefix, "invalid body", err)
+			}
+		} else {
+			var v *testkube.TestWorkflow
+			err = c.BodyParser(&v)
+			if err != nil {
+				return s.BadRequest(c, errPrefix, "invalid body", err)
+			}
+			obj = mappers.MapAPIToKube(v)
+		}
+
+		// Read existing resource
+		workflow, err := s.TestWorkflowsClient.Get(name)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		// Validate resource
+		if obj == nil {
+			return s.BadRequest(c, errPrefix, "invalid body", errors.New("body is required"))
+		}
+		obj.Namespace = workflow.Namespace
+		obj.Name = workflow.Name
+		obj.ResourceVersion = workflow.ResourceVersion
+
+		// Update the resource
+		obj, err = s.TestWorkflowsClient.Update(obj)
+		s.Metrics.IncUpdateTestWorkflow(err)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "client error", err)
+		}
+
+		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, mappers.MapKubeToAPI, obj)
+		if err != nil {
+			return s.InternalError(c, errPrefix, "serialization problem", err)
+		}
+		return
 	}
+}
+
+func (s *apiTCL) getFilteredTestWorkflowList(c *fiber.Ctx) (*testworkflowsv1.TestWorkflowList, error) {
+	crWorkflows, err := s.TestWorkflowsClient.List(c.Query("selector"))
+	if err != nil {
+		return nil, err
+	}
+
+	search := c.Query("textSearch")
+	if search != "" {
+		// filter items array
+		for i := len(crWorkflows.Items) - 1; i >= 0; i-- {
+			if !strings.Contains(crWorkflows.Items[i].Name, search) {
+				crWorkflows.Items = append(crWorkflows.Items[:i], crWorkflows.Items[i+1:]...)
+			}
+		}
+	}
+
+	return crWorkflows, nil
 }

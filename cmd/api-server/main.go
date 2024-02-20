@@ -568,7 +568,7 @@ func main() {
 	}
 
 	// Apply Pro server enhancements
-	apitclv1.NewApiTCL(api).AppendRoutes()
+	apitclv1.NewApiTCL(api, kubeClient).AppendRoutes()
 
 	api.InitEvents()
 
