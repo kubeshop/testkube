@@ -164,7 +164,7 @@ func (c NatsLogStream) syncCall(ctx context.Context, subject, id string) (resp S
 }
 
 func (c NatsLogStream) Name(id ...string) string {
-	if len(id) == 1 {
+	if len(id) > 0 {
 		return StreamPrefix + id[0]
 	}
 

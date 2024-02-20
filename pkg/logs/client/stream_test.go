@@ -111,3 +111,24 @@ func TestStream_StartStop(t *testing.T) {
 		assert.Equal(t, 3, messagesCount)
 	})
 }
+
+func TestStream_Name(t *testing.T) {
+	client, err := NewNatsLogStream(nil)
+	assert.NoError(t, err)
+
+	t.Run("passed one string param", func(t *testing.T) {
+		name := client.Name("111")
+		assert.Equal(t, StreamPrefix+"111", name)
+	})
+
+	t.Run("passed no string params", func(t *testing.T) {
+		name := client.Name()
+		assert.Len(t, name, len(StreamPrefix)+10)
+	})
+
+	t.Run("passed more string params ignore rest", func(t *testing.T) {
+		name := client.Name("111", "222", "333")
+		assert.Equal(t, StreamPrefix+"111", name)
+	})
+
+}
