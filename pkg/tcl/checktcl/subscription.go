@@ -14,12 +14,13 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/pkg/errors"
+	"google.golang.org/grpc"
+
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudconfig "github.com/kubeshop/testkube/pkg/cloud/data/config"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
-	"github.com/pkg/errors"
-	"google.golang.org/grpc"
 )
 
 type SubscriptionChecker struct {
