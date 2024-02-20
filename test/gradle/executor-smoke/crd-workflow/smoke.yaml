@@ -1,5 +1,5 @@
 apiVersion: workflows.testkube.io/v1beta1
-kind: Workflow
+kind: TestWorkflow
 metadata:
   name: gradle-workflow-smoke-jdk11
   labels:
@@ -29,7 +29,7 @@ spec:
         value: "true"
 ---
 apiVersion: workflows.testkube.io/v1beta1
-kind: Workflow
+kind: TestWorkflow
 metadata:
   name: gradle-workflow-smoke-jdk11-default-command # TODO: recheck if it's fixed - the step passes without being executed
   labels:

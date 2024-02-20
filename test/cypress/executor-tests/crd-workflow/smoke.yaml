@@ -1,5 +1,5 @@
 apiVersion: workflows.testkube.io/v1beta1
-kind: Workflow
+kind: TestWorkflow
 metadata:
   name: cypress-workflow-smoke-13
   labels:
@@ -35,7 +35,7 @@ spec:
       - '*'
 ---
 apiVersion: workflows.testkube.io/v1beta1
-kind: Workflow
+kind: TestWorkflow
 metadata:
   name: cypress-workflow-smoke-13-negative
   labels:
@@ -69,7 +69,7 @@ spec:
       - '**/*'
 ---
 apiVersion: workflows.testkube.io/v1beta1
-kind: Workflow
+kind: TestWorkflow
 metadata:
   name: cypress-workflow-smoke-13-preofficial-trait
   labels:

@@ -1,4 +1,4 @@
-kind: Trait
+kind: TestWorkflowTemplate
 apiVersion: workflows.testkube.io/v1beta1
 metadata:
   name: pre-official--cypress
