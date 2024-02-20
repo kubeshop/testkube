@@ -4614,6 +4614,9 @@ components:
           type: string
           description: dashboard uri
           example: "http://localhost:8080"
+        disableSecretCreation:
+          type: boolean
+          description: disable secret creation for tests and test sources
         features:
           $ref: "#/components/schemas/Features"
 
