@@ -520,6 +520,7 @@ func main() {
 		features,
 		logsStream,
 		logGrpcClient,
+		cfg.DisableSecretCreation,
 	)
 
 	if mode == common.ModeAgent {
