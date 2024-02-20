@@ -38,7 +38,7 @@ type NatsLogStream struct {
 
 func (c NatsLogStream) Init(ctx context.Context, id string) (StreamMetadata, error) {
 	s, err := c.js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
-		Name:    c.streamName(id),
+		Name:    c.Name(id),
 		Storage: jetstream.FileStorage, // durable stream
 	})
 
@@ -46,7 +46,7 @@ func (c NatsLogStream) Init(ctx context.Context, id string) (StreamMetadata, err
 		c.log.Debugw("stream upserted", "info", s.CachedInfo())
 	}
 
-	return StreamMetadata{Name: c.streamName(id)}, err
+	return StreamMetadata{Name: c.Name(id)}, err
 
 }
 
@@ -66,7 +66,7 @@ func (c NatsLogStream) Push(ctx context.Context, id string, log *events.Log) err
 // Push log chunk to NATS stream
 // TODO handle message repeat with backoff strategy on error
 func (c NatsLogStream) PushBytes(ctx context.Context, id string, bytes []byte) error {
-	_, err := c.js.Publish(ctx, c.streamName(id), bytes)
+	_, err := c.js.Publish(ctx, c.Name(id), bytes)
 	return err
 }
 
@@ -87,7 +87,7 @@ func (c NatsLogStream) Get(ctx context.Context, id string) (chan events.LogRespo
 	name := fmt.Sprintf("%s%s%s", ConsumerPrefix, id, utils.RandAlphanum(6))
 	cons, err := c.js.CreateOrUpdateConsumer(
 		ctx,
-		c.streamName(id),
+		c.Name(id),
 		jetstream.ConsumerConfig{
 			Name:          name,
 			Durable:       name,
@@ -163,6 +163,10 @@ func (c NatsLogStream) syncCall(ctx context.Context, subject, id string) (resp S
 	return StreamResponse{Message: m.Data}, nil
 }
 
-func (c NatsLogStream) streamName(id string) string {
-	return StreamPrefix + id
+func (c NatsLogStream) Name(id ...string) string {
+	if len(id) == 1 {
+		return StreamPrefix + id[0]
+	}
+
+	return StreamPrefix + utils.RandAlphanum(10)
 }
