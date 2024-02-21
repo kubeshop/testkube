@@ -23,7 +23,7 @@ import (
 )
 
 func MapStringToIntOrString(i string) intstr.IntOrString {
-	if v, err := strconv.Atoi(i); err == nil {
+	if v, err := strconv.ParseInt(i, 10, 32); err == nil {
 		return intstr.IntOrString{Type: intstr.Int, IntVal: int32(v)}
 	}
 	return intstr.IntOrString{Type: intstr.String, StrVal: i}
