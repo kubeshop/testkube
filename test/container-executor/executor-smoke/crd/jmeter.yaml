@@ -15,5 +15,12 @@ spec:
       path: test/jmeter/executor-tests/jmeter-executor-smoke.jmx
       workingDir: test/jmeter/executor-tests
   executionRequest:
+    executePostRunScriptBeforeScraping: true
+    postRunScript: "echo 'post-run script' && cd /data/artifacts && ls -lah"
     args:
-      - "jmeter-executor-smoke.jmx"
+      - "-n -t jmeter-executor-smoke.jmx -j /data/artifacts/jmeter.log -o /data/artifacts/report -l /data/artifacts/jtl-report.jtl -e"
+    artifactRequest:
+      storageClassName: standard
+      volumeMountPath: /data/artifacts
+      dirs:
+        - ./
