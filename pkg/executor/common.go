@@ -124,6 +124,10 @@ var RunnerEnvVars = []corev1.EnvVar{
 		Value: getOr("TESTKUBE_PRO_SKIP_VERIFY", "false"),
 	},
 	{
+		Name:  "RUNNER_PRO_CONNECTION_TIMEOUT",
+		Value: getOr("TESTKUBE_PRO_CONNECTION_TIMEOUT", "10"),
+	},
+	{
 		Name:  "RUNNER_DASHBOARD_URI",
 		Value: os.Getenv("TESTKUBE_DASHBOARD_URI"),
 	},

@@ -159,6 +159,7 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "RUNNER_PRO_API_URL", Value: ""},
 		{Name: "RUNNER_PRO_API_TLS_INSECURE", Value: "false"},
 		{Name: "RUNNER_PRO_API_SKIP_VERIFY", Value: "false"},
+		{Name: "RUNNER_PRO_CONNECTION_TIMEOUT", Value: "10"},
 		{Name: "RUNNER_CLOUD_MODE", Value: "false"},             // DEPRECATED
 		{Name: "RUNNER_CLOUD_API_KEY", Value: ""},               // DEPRECATED
 		{Name: "RUNNER_CLOUD_API_URL", Value: ""},               // DEPRECATED

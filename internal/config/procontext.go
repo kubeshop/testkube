@@ -11,4 +11,5 @@ type ProContext struct {
 	EnvID                string
 	OrgID                string
 	Migrate              string
+	ConnectionTimeout    int
 }
