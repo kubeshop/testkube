@@ -21,6 +21,8 @@ type Client interface {
 	TestSourceAPI
 	CopyFileAPI
 	TemplateAPI
+	TestWorkflowAPI
+	TestWorkflowTemplateAPI
 }
 
 // TestAPI describes test api methods
@@ -124,6 +126,24 @@ type TestSourceAPI interface {
 	ListTestSources(selector string) (testSources testkube.TestSources, err error)
 	DeleteTestSource(name string) (err error)
 	DeleteTestSources(selector string) (err error)
+}
+
+// TestWorkflowAPI describes test workflow api methods
+type TestWorkflowAPI interface {
+	GetTestWorkflow(id string) (testkube.TestWorkflow, error)
+	ListTestWorkflows(selector string) (testkube.TestWorkflows, error)
+	CreateTestWorkflow(workflow testkube.TestWorkflow) (testkube.TestWorkflow, error)
+	UpdateTestWorkflow(workflow testkube.TestWorkflow) (testkube.TestWorkflow, error)
+	DeleteTestWorkflow(name string) error
+}
+
+// TestWorkflowTemplateAPI describes test workflow api methods
+type TestWorkflowTemplateAPI interface {
+	GetTestWorkflowTemplate(id string) (testkube.TestWorkflowTemplate, error)
+	ListTestWorkflowTemplates(selector string) (testkube.TestWorkflowTemplates, error)
+	CreateTestWorkflowTemplate(workflow testkube.TestWorkflowTemplate) (testkube.TestWorkflowTemplate, error)
+	UpdateTestWorkflowTemplate(workflow testkube.TestWorkflowTemplate) (testkube.TestWorkflowTemplate, error)
+	DeleteTestWorkflowTemplate(name string) error
 }
 
 // CopyFileAPI describes methods to handle files in the object storage
@@ -231,7 +251,8 @@ type Gettable interface {
 	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails |
 		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution | testkube.TestWithExecutionSummary |
 		testkube.TestSuiteWithExecutionSummary | testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo |
-		testkube.TestSource | testkube.Template
+		testkube.TestSource | testkube.Template |
+		testkube.TestWorkflow | testkube.TestWorkflowTemplate
 }
 
 // Executable is an interface of executable objects
