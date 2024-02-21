@@ -132,6 +132,7 @@ type TestSourceAPI interface {
 type TestWorkflowAPI interface {
 	GetTestWorkflow(id string) (testkube.TestWorkflow, error)
 	ListTestWorkflows(selector string) (testkube.TestWorkflows, error)
+	DeleteTestWorkflows(selector string) error
 	CreateTestWorkflow(workflow testkube.TestWorkflow) (testkube.TestWorkflow, error)
 	UpdateTestWorkflow(workflow testkube.TestWorkflow) (testkube.TestWorkflow, error)
 	DeleteTestWorkflow(name string) error
@@ -141,6 +142,7 @@ type TestWorkflowAPI interface {
 type TestWorkflowTemplateAPI interface {
 	GetTestWorkflowTemplate(id string) (testkube.TestWorkflowTemplate, error)
 	ListTestWorkflowTemplates(selector string) (testkube.TestWorkflowTemplates, error)
+	DeleteTestWorkflowTemplates(selector string) error
 	CreateTestWorkflowTemplate(workflow testkube.TestWorkflowTemplate) (testkube.TestWorkflowTemplate, error)
 	UpdateTestWorkflowTemplate(workflow testkube.TestWorkflowTemplate) (testkube.TestWorkflowTemplate, error)
 	DeleteTestWorkflowTemplate(name string) error

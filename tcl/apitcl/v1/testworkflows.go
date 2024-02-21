@@ -70,6 +70,31 @@ func (s *apiTCL) DeleteTestWorkflowHandler() fiber.Handler {
 	}
 }
 
+func (s *apiTCL) DeleteTestWorkflowsHandler() fiber.Handler {
+	errPrefix := "failed to delete test workflows"
+	return func(c *fiber.Ctx) error {
+		selector := c.Query("selector")
+		workflows, err := s.TestWorkflowsClient.List(selector)
+		if err != nil {
+			return s.BadGateway(c, errPrefix, "client problem", err)
+		}
+
+		err = s.TestWorkflowsClient.DeleteByLabels(selector)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		skipExecutions := c.Query("skipDeleteExecutions", "")
+		for range workflows.Items {
+			s.Metrics.IncDeleteTestWorkflow(err)
+			if skipExecutions != "true" {
+				// TODO: Delete Executions
+			}
+		}
+		return c.SendStatus(http.StatusNoContent)
+	}
+}
+
 func (s *apiTCL) CreateTestWorkflowHandler() fiber.Handler {
 	errPrefix := "failed to create test workflow"
 	return func(c *fiber.Ctx) (err error) {

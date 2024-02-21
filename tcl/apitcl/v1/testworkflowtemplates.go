@@ -66,6 +66,18 @@ func (s *apiTCL) DeleteTestWorkflowTemplateHandler() fiber.Handler {
 	}
 }
 
+func (s *apiTCL) DeleteTestWorkflowTemplatesHandler() fiber.Handler {
+	errPrefix := "failed to delete test workflow templates"
+	return func(c *fiber.Ctx) error {
+		selector := c.Query("selector")
+		err := s.TestWorkflowTemplatesClient.DeleteByLabels(selector)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+		return c.SendStatus(http.StatusNoContent)
+	}
+}
+
 func (s *apiTCL) CreateTestWorkflowTemplateHandler() fiber.Handler {
 	errPrefix := "failed to create test workflow template"
 	return func(c *fiber.Ctx) (err error) {

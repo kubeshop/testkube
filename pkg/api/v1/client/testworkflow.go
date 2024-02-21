@@ -35,6 +35,12 @@ func (c TestWorkflowClient) ListTestWorkflows(selector string) (testkube.TestWor
 	return c.testWorkflowTransport.ExecuteMultiple(http.MethodGet, uri, nil, params)
 }
 
+// DeleteTestWorkflows deletes multiple test workflows by labels
+func (c TestWorkflowClient) DeleteTestWorkflows(selector string) error {
+	uri := c.testWorkflowTransport.GetURI("/test-workflows")
+	return c.testWorkflowTransport.Delete(uri, selector, true)
+}
+
 // CreateTestWorkflow creates new TestWorkflow Custom Resource
 func (c TestWorkflowClient) CreateTestWorkflow(workflow testkube.TestWorkflow) (result testkube.TestWorkflow, err error) {
 	uri := c.testWorkflowTransport.GetURI("/test-workflows")
