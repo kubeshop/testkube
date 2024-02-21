@@ -7,3 +7,5 @@ spec:
   executor_type: container
   types:
   - container-executor-soapui-5.7/test
+  features:
+  - artifacts
