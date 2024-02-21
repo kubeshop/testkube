@@ -14,10 +14,18 @@ spec:
       branch: main
       path: test/soapui/executor-smoke/soapui-smoke-test.xml
   executionRequest:
+    executePostRunScriptBeforeScraping: true
+    postRunScript: "cd ~ && pwd && cd /root && ls -lah"
+    # postRunScript: "echo \"postrun script - /reports contents\" && cd /reports && ls -lah"
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 256Mi\n              cpu: 512m\n"
     activeDeadlineSeconds: 180
     variables:
       COMMAND_LINE:
         name: COMMAND_LINE
-        value: "/data/repo/test/soapui/executor-smoke/soapui-smoke-test.xml"
+        value: "-r -f /reports -a -j /data/repo/test/soapui/executor-smoke/soapui-smoke-incorrect-name.xml"
         type: basic
+    artifactRequest:
+      storageClassName: standard
+      volumeMountPath: /usr/local/SmartBear/reports
+      dirs:
+        - ./

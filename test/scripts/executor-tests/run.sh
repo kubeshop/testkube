@@ -153,6 +153,17 @@ container-gradle-smoke() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
+container-jmeter-smoke() {
+  name="Container executor - JMeter"
+  test_crd_file="test/container-executor/executor-smoke/crd/jmeter.yaml"
+  testsuite_name="executor-container-jmeter-smoke-tests"
+  testsuite_file="test/suites/executor-container-jmeter-smoke-tests.yaml"
+
+  custom_executor_crd_file="test/executors/container-executor-jmeter.yaml"
+
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
+}
+
 container-k6-smoke() {
   name="Container executor - K6"
   test_crd_file="test/container-executor/executor-smoke/crd/k6.yaml"
@@ -378,6 +389,7 @@ main() {
       container-curl-smoke
       container-cypress-smoke
       container-gradle-smoke
+      container-jmeter-smoke
       container-k6-smoke
       container-maven-smoke
       container-postman-smoke
@@ -402,6 +414,7 @@ main() {
       container-curl-smoke
       container-cypress-smoke
       container-gradle-smoke
+      container-jmeter-smoke
       container-k6-smoke
       container-maven-smoke
       container-postman-smoke
