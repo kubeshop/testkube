@@ -18,10 +18,12 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
+	"github.com/kubeshop/testkube/internal/config"
 )
 
 type apiTCL struct {
 	apiv1.TestkubeAPI
+	ProContext                  *config.ProContext
 	TestWorkflowsClient         testworkflowsv1.Interface
 	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
 }
@@ -32,10 +34,12 @@ type ApiTCL interface {
 
 func NewApiTCL(
 	testkubeAPI apiv1.TestkubeAPI,
+	proContext *config.ProContext,
 	kubeClient kubeclient.Client,
 ) ApiTCL {
 	return &apiTCL{
 		TestkubeAPI:                 testkubeAPI,
+		ProContext:                  proContext,
 		TestWorkflowsClient:         testworkflowsv1.NewClient(kubeClient, testkubeAPI.Namespace),
 		TestWorkflowTemplatesClient: testworkflowsv1.NewTestWorkflowTemplatesClient(kubeClient, testkubeAPI.Namespace),
 	}

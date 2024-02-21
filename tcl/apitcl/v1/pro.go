@@ -16,8 +16,7 @@ import (
 )
 
 func (s *apiTCL) isPro() bool {
-	// TODO: Replace with proper implementation
-	return false
+	return s.ProContext != nil
 }
 
 func (s *apiTCL) isProPaid() bool {

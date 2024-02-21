@@ -525,9 +525,10 @@ func main() {
 		cfg.DisableSecretCreation,
 	)
 
+	var proContext *config.ProContext
 	if mode == common.ModeAgent {
 		log.DefaultLogger.Info("starting agent service")
-		proContext := config.ProContext{
+		proContext = &config.ProContext{
 			APIKey:               cfg.TestkubeProAPIKey,
 			URL:                  cfg.TestkubeProURL,
 			LogsPath:             cfg.TestkubeProLogsPath,
@@ -541,7 +542,7 @@ func main() {
 			ConnectionTimeout:    cfg.TestkubeProConnectionTimeout,
 		}
 
-		api.WithProContext(&proContext)
+		api.WithProContext(proContext)
 
 		agentHandle, err := agent.NewAgent(
 			log.DefaultLogger,
@@ -552,7 +553,7 @@ func main() {
 			cfg.TestkubeClusterName,
 			envs,
 			features,
-			proContext,
+			*proContext,
 		)
 		if err != nil {
 			ui.ExitOnError("Starting agent", err)
@@ -568,7 +569,7 @@ func main() {
 	}
 
 	// Apply Pro server enhancements
-	apitclv1.NewApiTCL(api, kubeClient).AppendRoutes()
+	apitclv1.NewApiTCL(api, proContext, kubeClient).AppendRoutes()
 
 	api.InitEvents()
 
