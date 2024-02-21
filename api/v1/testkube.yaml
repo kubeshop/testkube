@@ -5506,6 +5506,9 @@ components:
         id:
           type: string
           description: UUID of event
+        streamTopic:
+          type: string
+          description: stream topic
         resource:
           $ref: "#/components/schemas/EventResource"
         resourceId:
