@@ -2,6 +2,7 @@ package events
 
 import (
 	"bytes"
+	"encoding/json"
 	"regexp"
 	"time"
 
@@ -173,13 +174,7 @@ func NewLogFromBytes(b []byte) *Log {
 		if err != nil {
 			// try to read in case of some lines which we couldn't parse
 			// sometimes we're not able to control all stdout messages from libs
-			return &Log{
-				Time:    ts,
-				Content: err.Error(),
-				Type_:   o.Type_,
-				Error_:  true,
-				Version: string(LogVersionV1),
-			}
+			return newErrorLog(err, content)
 		}
 
 		// pass parsed results for v1
@@ -209,4 +204,66 @@ func NewLogFromBytes(b []byte) *Log {
 		Content: string(b),
 		Version: string(LogVersionV2),
 	}
+}
+
+// ReadLogLine tries to read possible log lines from any source
+// - logv2 - JSON
+// - logv1 - old log format JSON - DEPRECATED
+// - possible errors or raw log lines
+func ReadLogLine(b []byte) *Log {
+	logsV1Prefix := []byte("{\"id\"")
+	logsV2Prefix := []byte("{")
+
+	switch true {
+	case bytes.HasPrefix(b, logsV1Prefix):
+		o, err := output.GetLogEntry(b)
+		if err != nil {
+			return newErrorLog(err, b)
+		}
+		return mapLogV1toV2(o)
+
+	case bytes.HasPrefix(b, logsV2Prefix):
+		var o Log
+		err := json.Unmarshal(b, &o)
+		if err != nil {
+			return newErrorLog(err, b)
+		}
+		return &o
+	}
+
+	return &Log{
+		Content: string(b),
+	}
+}
+
+func newErrorLog(err error, b []byte) *Log {
+	return &Log{
+		Content:  string(b),
+		Error_:   true,
+		Version:  string(LogVersionV1),
+		Metadata: map[string]string{"error": err.Error()},
+	}
+
+}
+
+func mapLogV1toV2(o output.Output) *Log {
+	// pass parsed results for v1
+	// for new executor it'll be omitted in logs (as looks like we're not using it already)
+	if o.Type_ == output.TypeResult {
+		return &Log{
+			Time:    o.Time,
+			Content: o.Content,
+			Version: string(LogVersionV1),
+			V1: &testkube.LogV1{
+				Result: o.Result,
+			},
+		}
+	}
+
+	return &Log{
+		Time:    o.Time,
+		Content: o.Content,
+		Version: string(LogVersionV1),
+	}
+
 }
