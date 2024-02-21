@@ -13,3 +13,6 @@ spec:
   - stopOnFailure: false
     execute:
     - test: container-executor-cypress-v12.7.0-smoke-git-dir
+  - stopOnFailure: false
+    execute:
+    - test: container-executor-cypress-v12.7.0-video-artifacts-only
