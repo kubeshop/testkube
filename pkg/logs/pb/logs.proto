@@ -14,6 +14,8 @@ message LogRequest {
   string execution_id = 2;
 }
 
+
+
 message Log{
 
   google.protobuf.Timestamp time = 1;
@@ -29,12 +31,18 @@ message Log{
 }
 
 
-
 // CloudLogsService client will be used in cloud adapter in logs server
 // CloudLogsService server will be implemented on cloud side
 service CloudLogsService {
     rpc Stream(stream Log) returns (StreamResponse);
+    rpc Logs(CloudLogRequest) returns (stream Log);
 }
+
+message CloudLogRequest {
+  string environment_id = 1;
+  string execution_id = 2;
+}
+
 
 message StreamResponse {
 	string message = 1;
