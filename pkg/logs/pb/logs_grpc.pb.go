@@ -136,7 +136,7 @@ var LogsService_ServiceDesc = grpc.ServiceDesc{
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CloudLogsServiceClient interface {
 	Stream(ctx context.Context, opts ...grpc.CallOption) (CloudLogsService_StreamClient, error)
-	Logs(ctx context.Context, in *LogRequest, opts ...grpc.CallOption) (CloudLogsService_LogsClient, error)
+	Logs(ctx context.Context, in *CloudLogRequest, opts ...grpc.CallOption) (CloudLogsService_LogsClient, error)
 }
 
 type cloudLogsServiceClient struct {
@@ -181,7 +181,7 @@ func (x *cloudLogsServiceStreamClient) CloseAndRecv() (*StreamResponse, error) {
 	return m, nil
 }
 
-func (c *cloudLogsServiceClient) Logs(ctx context.Context, in *LogRequest, opts ...grpc.CallOption) (CloudLogsService_LogsClient, error) {
+func (c *cloudLogsServiceClient) Logs(ctx context.Context, in *CloudLogRequest, opts ...grpc.CallOption) (CloudLogsService_LogsClient, error) {
 	stream, err := c.cc.NewStream(ctx, &CloudLogsService_ServiceDesc.Streams[1], "/logs.CloudLogsService/Logs", opts...)
 	if err != nil {
 		return nil, err
@@ -218,7 +218,7 @@ func (x *cloudLogsServiceLogsClient) Recv() (*Log, error) {
 // for forward compatibility
 type CloudLogsServiceServer interface {
 	Stream(CloudLogsService_StreamServer) error
-	Logs(*LogRequest, CloudLogsService_LogsServer) error
+	Logs(*CloudLogRequest, CloudLogsService_LogsServer) error
 	mustEmbedUnimplementedCloudLogsServiceServer()
 }
 
@@ -229,7 +229,7 @@ type UnimplementedCloudLogsServiceServer struct {
 func (UnimplementedCloudLogsServiceServer) Stream(CloudLogsService_StreamServer) error {
 	return status.Errorf(codes.Unimplemented, "method Stream not implemented")
 }
-func (UnimplementedCloudLogsServiceServer) Logs(*LogRequest, CloudLogsService_LogsServer) error {
+func (UnimplementedCloudLogsServiceServer) Logs(*CloudLogRequest, CloudLogsService_LogsServer) error {
 	return status.Errorf(codes.Unimplemented, "method Logs not implemented")
 }
 func (UnimplementedCloudLogsServiceServer) mustEmbedUnimplementedCloudLogsServiceServer() {}
@@ -272,7 +272,7 @@ func (x *cloudLogsServiceStreamServer) Recv() (*Log, error) {
 }
 
 func _CloudLogsService_Logs_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(LogRequest)
+	m := new(CloudLogRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}

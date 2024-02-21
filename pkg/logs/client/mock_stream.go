@@ -79,6 +79,24 @@ func (mr *MockStreamMockRecorder) Init(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockStream)(nil).Init), arg0, arg1)
 }
 
+// Name mocks base method.
+func (m *MockStream) Name(arg0 ...string) string {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Name", varargs...)
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Name indicates an expected call of Name.
+func (mr *MockStreamMockRecorder) Name(arg0 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockStream)(nil).Name), arg0...)
+}
+
 // Push mocks base method.
 func (m *MockStream) Push(arg0 context.Context, arg1 string, arg2 *events.Log) error {
 	m.ctrl.T.Helper()
