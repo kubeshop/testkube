@@ -3289,6 +3289,473 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /test-workflows:
+    get:
+      tags:
+        - test-workflows
+        - api
+      parameters:
+        - $ref: "#/components/parameters/Selector"
+      summary: List test workflows
+      description: List test workflows from the kubernetes cluster
+      operationId: listTestWorkflows
+      responses:
+        200:
+          description: successful list operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestWorkflow"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with selector parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    post:
+      tags:
+        - test-workflows
+        - api
+      summary: Create test workflow
+      description: Create test workflow in the kubernetes cluster
+      operationId: createTestWorkflow
+      requestBody:
+        description: test workflow body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestWorkflow"
+          text/yaml:
+            schema:
+              type: string
+      responses:
+        200:
+          description: successful creation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestWorkflow"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with body parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+  /test-workflows/{id}:
+    get:
+      tags:
+        - test-workflows
+        - api
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      summary: Get test workflow details
+      description: Get test workflow details from the kubernetes cluster
+      operationId: getTestWorkflow
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestWorkflow"
+            text/yaml:
+              schema:
+                type: string
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "the resource has not been found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    put:
+      tags:
+        - test-workflows
+        - api
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      summary: Update test workflow details
+      description: Update test workflow details in the kubernetes cluster
+      operationId: updateTestWorkflow
+      requestBody:
+        description: test workflow body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestWorkflow"
+          text/yaml:
+            schema:
+              type: string
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestWorkflow"
+            text/yaml:
+              schema:
+                type: string
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "the resource has not been found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    delete:
+      tags:
+        - test-workflows
+        - api
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/SkipDeleteExecutions"
+      summary: Delete test workflow
+      description: Delete test workflow from the kubernetes cluster
+      operationId: deleteTestWorkflow
+      responses:
+        204:
+          description: no content
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "the resource has not been found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /test-workflow-templates:
+    get:
+      tags:
+        - test-workflows
+        - api
+      parameters:
+        - $ref: "#/components/parameters/Selector"
+      summary: List test workflow templates
+      description: List test workflow templates from the kubernetes cluster
+      operationId: listTestWorkflowTemplates
+      responses:
+        200:
+          description: successful list operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestWorkflowTemplate"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with selector parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    post:
+      tags:
+        - test-workflows
+        - api
+      summary: Create test workflow template
+      description: Create test workflow template in the kubernetes cluster
+      operationId: createTestWorkflowTemplate
+      requestBody:
+        description: test workflow template body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestWorkflowTemplate"
+          text/yaml:
+            schema:
+              type: string
+      responses:
+        200:
+          description: successful creation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestWorkflowTemplate"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with body parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+  /test-workflow-templates/{id}:
+    get:
+      tags:
+        - test-workflows
+        - api
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      summary: Get test workflow template details
+      description: Get test workflow template details from the kubernetes cluster
+      operationId: getTestWorkflowTemplate
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestWorkflowTemplate"
+            text/yaml:
+              schema:
+                type: string
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "the resource has not been found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    put:
+      tags:
+        - test-workflows
+        - api
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      summary: Update test workflow template details
+      description: Update test workflow template details in the kubernetes cluster
+      operationId: updateTestWorkflow
+      requestBody:
+        description: test workflow template body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestWorkflowTemplate"
+          text/yaml:
+            schema:
+              type: string
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestWorkflowTemplate"
+            text/yaml:
+              schema:
+                type: string
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "the resource has not been found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    delete:
+      tags:
+        - test-workflows
+        - api
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      summary: Delete test workflow template
+      description: Delete test workflow template from the kubernetes cluster
+      operationId: deleteTestWorkflowTemplate
+      responses:
+        204:
+          description: no content
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "the resource has not been found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
 components:
   schemas:
     ExecutionsMetrics:
