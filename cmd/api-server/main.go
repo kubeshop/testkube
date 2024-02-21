@@ -16,8 +16,7 @@ import (
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
-
-	apitclv1 "github.com/kubeshop/testkube/tcl/apitcl/v1"
+	apitclv1 "github.com/kubeshop/testkube/pkg/tcl/apitcl/v1"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
