@@ -19,6 +19,7 @@ func (s *apiTCL) isPro() bool {
 	return s.ProContext != nil
 }
 
+//nolint:unused
 func (s *apiTCL) isProPaid() bool {
 	// TODO: Replace with proper implementation
 	return s.isPro()
@@ -33,6 +34,7 @@ func (s *apiTCL) pro(h fiber.Handler) fiber.Handler {
 	}
 }
 
+//nolint:unused
 func (s *apiTCL) proPaid(h fiber.Handler) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		if s.isProPaid() {
