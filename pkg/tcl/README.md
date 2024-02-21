@@ -1,4 +1,4 @@
-# Testkube Operator - TCL Package
+# Testkube - TCL Package
 
 This folder contains special code with the Testkube Community license.
 
