@@ -197,6 +197,17 @@ container-postman-smoke() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
 }
 
+container-soapui-smoke() {
+  name="Container executor - SoapUI"
+  test_crd_file="test/container-executor/executor-smoke/crd/soapui.yaml"
+  testsuite_name="executor-container-soapui-smoke-tests"
+  testsuite_file="test/suites/executor-container-soapui-smoke-tests.yaml"
+
+  custom_executor_crd_file="test/executors/container-executor-soapui.yaml"
+
+  common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file" "$custom_executor_crd_file"
+}
+
 curl-smoke() {
   name="curl"
   test_crd_file="test/curl/executor-tests/crd/smoke.yaml"
@@ -371,6 +382,7 @@ main() {
       container-maven-smoke
       container-postman-smoke
       container-playwright-smoke
+      container-soapui-smoke
       curl-smoke
       cypress-smoke
       ginkgo-smoke
@@ -394,6 +406,7 @@ main() {
       container-maven-smoke
       container-postman-smoke
       container-playwright-smoke
+      container-soapui-smoke
       curl-smoke
       cypress-smoke
       ginkgo-smoke
