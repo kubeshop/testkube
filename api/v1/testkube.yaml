@@ -6070,6 +6070,719 @@ components:
             type: string
           example: ["key1", "key2", "key3"]
 
+    TestWorkflow:
+      type: object
+      properties:
+        name:
+          type: string
+          description: kubernetes resource name
+        namespace:
+          type: string
+          description: kubernetes namespace
+        description:
+          type: string
+          description: human-readable description
+        labels:
+          type: object
+          description: "test workflow labels"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"
+        annotations:
+          type: object
+          description: "test workflow annotations"
+          additionalProperties:
+            type: string
+        created:
+          type: string
+          format: date-time
+          example: "2022-07-30T06:54:15Z"
+        spec:
+          $ref: "#/components/schemas/TestWorkflowSpec"
+
+    TestWorkflowTemplate:
+      type: object
+      properties:
+        name:
+          type: string
+          description: kubernetes resource name
+        namespace:
+          type: string
+          description: kubernetes namespace
+        description:
+          type: string
+          description: human-readable description
+        labels:
+          type: object
+          description: "test workflow labels"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"
+        annotations:
+          type: object
+          description: "test workflow annotations"
+          additionalProperties:
+            type: string
+        created:
+          type: string
+          format: date-time
+          example: "2022-07-30T06:54:15Z"
+        spec:
+          $ref: "#/components/schemas/TestWorkflowTemplateSpec"
+
+    TestWorkflowSpec:
+      type: object
+      properties:
+        use:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestWorkflowTemplateRef"
+        config:
+          $ref: "#/components/schemas/TestWorkflowConfigSchema"
+        content:
+          $ref: "#/components/schemas/TestWorkflowContent"
+        container:
+          $ref: "#/components/schemas/TestWorkflowContainerConfig"
+        job:
+          $ref: "#/components/schemas/TestWorkflowJobConfig"
+        pod:
+          $ref: "#/components/schemas/TestWorkflowPodConfig"
+        setup:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestWorkflowStep"
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestWorkflowStep"
+        after:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestWorkflowStep"
+
+    TestWorkflowTemplateSpec:
+      type: object
+      properties:
+        config:
+          $ref: "#/components/schemas/TestWorkflowConfigSchema"
+        content:
+          $ref: "#/components/schemas/TestWorkflowContent"
+        container:
+          $ref: "#/components/schemas/TestWorkflowContainerConfig"
+        job:
+          $ref: "#/components/schemas/TestWorkflowJobConfig"
+        pod:
+          $ref: "#/components/schemas/TestWorkflowPodConfig"
+        setup:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestWorkflowIndependentStep"
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestWorkflowIndependentStep"
+        after:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestWorkflowIndependentStep"
+
+    TestWorkflowIndependentStep:
+      type: object
+      properties:
+        name:
+          type: string
+          description: readable name for the step
+        condition:
+          type: string
+          description: expression to declare under which conditions the step should be run; defaults to "passed", except artifacts where it defaults to "always"
+        negative:
+          type: boolean
+          description: is the step expected to fail
+        optional:
+          type: boolean
+          description: is the step optional, so the failure won't affect the TestWorkflow result
+        virtualGroup:
+          type: boolean
+          description: should not display it as a nested group
+        retry:
+          $ref: "#/components/schemas/TestWorkflowRetryPolicy"
+        timeout:
+          type: string
+          pattern: "^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$"
+          description: maximum time this step may take
+        delay:
+          type: string
+          pattern: "^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$"
+          description: delay before the step
+        content:
+          $ref: "#/components/schemas/TestWorkflowContent"
+        shell:
+          type: string
+          description: script to run in a default shell for the container
+        run:
+          $ref: "#/components/schemas/TestWorkflowContainerConfig"
+        workingDir:
+          $ref: "#/components/schemas/BoxedString"
+        container:
+          $ref: "#/components/schemas/TestWorkflowContainerConfig"
+        execute:
+          $ref: "#/components/schemas/TestWorkflowStepExecute"
+        artifacts:
+          $ref: "#/components/schemas/TestWorkflowStepArtifacts"
+        steps:
+          type: array
+          description: nested steps to run
+          items:
+            $ref: "#/components/schemas/TestWorkflowIndependentStep"
+
+    TestWorkflowStep:
+      type: object
+      properties:
+        name:
+          type: string
+          description: readable name for the step
+        condition:
+          type: string
+          description: expression to declare under which conditions the step should be run; defaults to "passed", except artifacts where it defaults to "always"
+        negative:
+          type: boolean
+          description: is the step expected to fail
+        optional:
+          type: boolean
+          description: is the step optional, so the failure won't affect the TestWorkflow result
+        virtualGroup:
+          type: boolean
+          description: should not display it as a nested group
+        use:
+          type: array
+          description: list of TestWorkflowTemplates to use
+          items:
+            $ref: "#/components/schemas/TestWorkflowTemplateRef"
+        template:
+          $ref: "#/components/schemas/TestWorkflowTemplateRef"
+        retry:
+          $ref: "#/components/schemas/TestWorkflowRetryPolicy"
+        timeout:
+          type: string
+          pattern: "^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$"
+          description: maximum time this step may take
+        delay:
+          type: string
+          pattern: "^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$"
+          description: delay before the step
+        content:
+          $ref: "#/components/schemas/TestWorkflowContent"
+        shell:
+          type: string
+          description: script to run in a default shell for the container
+        run:
+          $ref: "#/components/schemas/TestWorkflowContainerConfig"
+        workingDir:
+          $ref: "#/components/schemas/BoxedString"
+        container:
+          $ref: "#/components/schemas/TestWorkflowContainerConfig"
+        execute:
+          $ref: "#/components/schemas/TestWorkflowStepExecute"
+        artifacts:
+          $ref: "#/components/schemas/TestWorkflowStepArtifacts"
+        steps:
+          type: array
+          description: nested steps to run
+          items:
+            $ref: "#/components/schemas/TestWorkflowStep"
+
+    TestWorkflowStepExecute:
+      type: object
+      properties:
+        parallelism:
+          type: integer
+          description: how many resources could be scheduled in parallel
+        async:
+          type: boolean
+          description: only schedule the resources, don't watch for the results (unless it is needed for parallelism)
+        tests:
+          type: array
+          description: tests to schedule
+          items:
+            $ref: "#/components/schemas/TestWorkflowStepExecuteTestRef"
+        workflows:
+          type: array
+          description: workflows to schedule
+          items:
+            $ref: "#/components/schemas/TestWorkflowRef"
+
+    TestWorkflowStepExecuteTestRef:
+      type: object
+      properties:
+        name:
+          type: string
+          description: test name to schedule
+
+    TestWorkflowStepArtifacts:
+      type: object
+      properties:
+        compress:
+          $ref: "#/components/schemas/TestWorkflowStepArtifactsCompression"
+        paths:
+          type: array
+          description: file paths to fetch from the container
+          items:
+            type: string
+          minItems: 1
+      required:
+        - paths
+
+    TestWorkflowStepArtifactsCompression:
+      type: object
+      properties:
+        name:
+          type: string
+          description: artifact name
+
+    TestWorkflowRetryPolicy:
+      type: object
+      properties:
+        count:
+          type: integer
+          minimum: 1
+          description: how many times at most it should retry
+        until:
+          type: string
+          description: until when it should retry (defaults to "passed")
+      required:
+        - count
+
+    TestWorkflowContent:
+      type: object
+      properties:
+        git:
+          $ref: "#/components/schemas/TestWorkflowContentGit"
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestWorkflowContentFile"
+
+    TestWorkflowContentGit:
+      type: object
+      properties:
+        uri:
+          type: string
+          description: uri for the Git repository
+        revision:
+          type: string
+          description: branch, commit or a tag name to fetch
+        username:
+          type: string
+          description: plain text username to fetch with
+        usernameFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+        token:
+          type: string
+          description: plain text token to fetch with
+        tokenFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+        authType:
+          $ref: "#/components/schemas/ContentGitAuthType"
+        mountPath:
+          type: string
+          description: where to mount the fetched repository contents (defaults to "repo" directory in the data volume)
+        paths:
+          type: array
+          description: paths to fetch for the sparse checkout
+          items:
+            type: string
+
+    TestWorkflowContentFile:
+      type: object
+      properties:
+        path:
+          type: string
+          description: path where the file should be accessible at
+          minLength: 1
+        content:
+          type: string
+          description: plain-text content to put inside
+        contentFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+        mode:
+          $ref: "#/components/schemas/BoxedInteger"
+      required:
+        - path
+
+    TestWorkflowRef:
+      type: object
+      properties:
+        name:
+          type: string
+          description: TestWorkflow name to include
+        config:
+          $ref: "#/components/schemas/TestWorkflowConfigValue"
+      required:
+        - name
+        - path
+
+    TestWorkflowTemplateRef:
+      type: object
+      properties:
+        name:
+          type: string
+          description: TestWorkflowTemplate name to include
+        config:
+          $ref: "#/components/schemas/TestWorkflowConfigValue"
+      required:
+        - name
+
+    TestWorkflowJobConfig:
+      type: object
+      properties:
+        labels:
+          type: object
+          description: labels to attach to the job
+          additionalProperties:
+            type: string
+        annotations:
+          type: object
+          description: annotations to attach to the job
+          additionalProperties:
+            type: string
+
+    TestWorkflowPodConfig:
+      type: object
+      properties:
+        labels:
+          type: object
+          description: labels to attach to the pod
+          additionalProperties:
+            type: string
+        annotations:
+          type: object
+          description: annotations to attach to the pod
+          additionalProperties:
+            type: string
+        imagePullSecrets:
+          type: array
+          description: secret references for pulling images
+          items:
+            $ref: "#/components/schemas/LocalObjectReference"
+        serviceAccountName:
+          type: string
+          description: default service account name for the containers
+        nodeSelector:
+          type: object
+          description: label selector for node that the pod should land on
+          additionalProperties:
+            type: string
+
+    TestWorkflowContainerConfig:
+      type: object
+      properties:
+        workingDir:
+          $ref: "#/components/schemas/BoxedString"
+        image:
+          type: string
+          description: image to be used for the container
+        imagePullPolicy:
+          $ref: "#/components/schemas/ImagePullPolicy"
+        env:
+          type: array
+          description: environment variables to append to the container
+          items:
+            $ref: "#/components/schemas/EnvVar"
+        envFrom:
+          type: array
+          description: external environment variables to append to the container
+          items:
+            $ref: "#/components/schemas/EnvFromSource"
+        command:
+          $ref: "#/components/schemas/BoxedStringList"
+        args:
+          $ref: "#/components/schemas/BoxedStringList"
+        resources:
+          $ref: "#/components/schemas/TestWorkflowResources"
+        securityContext:
+          $ref: "#/components/schemas/SecurityContext"
+
+    TestWorkflowConfigValue:
+      type: object
+      description: configuration values to pass to the template
+      additionalProperties:
+        type: string
+
+    TestWorkflowConfigSchema:
+      type: object
+      description: configuration definition
+      additionalProperties:
+        $ref: "#/components/schemas/TestWorkflowParameterSchema"
+
+    TestWorkflowResources:
+      type: object
+      properties:
+        limits:
+          $ref: "#/components/schemas/TestWorkflowResourcesList"
+        requests:
+          $ref: "#/components/schemas/TestWorkflowResourcesList"
+
+    TestWorkflowResourcesList:
+      type: object
+      properties:
+        cpu:
+          type: string
+          description: number of CPUs
+          pattern: "^[0-9]+m?$"
+        memory:
+          type: string
+          description: size of RAM memory
+          pattern: "^[0-9]+[GMK]i$"
+        storage:
+          type: string
+          description: storage size
+          pattern: "^[0-9]+[GMK]i$"
+        ephemeral-storage:
+          type: string
+          description: ephemeral storage size
+          pattern: "^[0-9]+[GMK]i$"
+
+    TestWorkflowParameterSchema:
+      type: object
+      properties:
+        description:
+          type: string
+          description: human-readable description for the property
+        type:
+          $ref: "#/components/schemas/TestWorkflowParameterType"
+        enum:
+          type: array
+          description: list of acceptable values
+          items:
+            type: string
+        example:
+          type: string
+          description: example value for the parameter
+        default:
+          $ref: "#/components/schemas/BoxedString"
+        format:
+          type: string
+          description: "predefined format for the string"
+        pattern:
+          type: string
+          description: "regular expression to match"
+        minLength:
+          $ref: "#/components/schemas/BoxedInteger"
+        maxLength:
+          $ref: "#/components/schemas/BoxedInteger"
+        minimum:
+          $ref: "#/components/schemas/BoxedInteger"
+        maximum:
+          $ref: "#/components/schemas/BoxedInteger"
+        exclusiveMinimum:
+          $ref: "#/components/schemas/BoxedInteger"
+        exclusiveMaximum:
+          $ref: "#/components/schemas/BoxedInteger"
+        multipleOf:
+          $ref: "#/components/schemas/BoxedInteger"
+      required:
+        - type
+
+    TestWorkflowParameterType:
+      type: string
+      description: type of the config parameter
+      enum:
+        - string
+        - integer
+        - number
+        - boolean
+
+    ContentGitAuthType:
+      type: string
+      description: auth type for git requests
+      enum:
+        - basic
+        - header
+
+    BoxedStringList:
+      type: object
+      properties:
+        value:
+          type: array
+          items:
+            type: string
+      required:
+        - value
+
+    BoxedString:
+      type: object
+      properties:
+        value:
+          type: string
+      required:
+        - value
+
+    BoxedInteger:
+      type: object
+      properties:
+        value:
+          type: integer
+      required:
+        - value
+
+    BoxedBoolean:
+      type: object
+      properties:
+        value:
+          type: boolean
+      required:
+        - value
+
+    ImagePullPolicy:
+      type: string
+      enum:
+        - Always
+        - Never
+        - IfNotPresent
+
+    EnvVar:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+        valueFrom:
+          $ref: "#/components/schemas/EnvVarSource"
+
+    ConfigMapEnvSource:
+      type: object
+      properties:
+        name:
+          type: string
+        optional:
+          type: boolean
+          default: false
+      required:
+        - name
+
+    SecretEnvSource:
+      type: object
+      properties:
+        name:
+          type: string
+        optional:
+          type: boolean
+          default: false
+      required:
+        - name
+
+    EnvFromSource:
+      type: object
+      properties:
+        prefix:
+          type: string
+        configMapRef:
+          $ref: "#/components/schemas/ConfigMapEnvSource"
+        secretRef:
+          $ref: "#/components/schemas/SecretEnvSource"
+
+    SecurityContext:
+      type: object
+      properties:
+        privileged:
+          $ref: "#/components/schemas/BoxedBoolean"
+        runAsUser:
+          $ref: "#/components/schemas/BoxedInteger"
+        runAsGroup:
+          $ref: "#/components/schemas/BoxedInteger"
+        runAsNonRoot:
+          $ref: "#/components/schemas/BoxedBoolean"
+        readOnlyRootFilesystem:
+          $ref: "#/components/schemas/BoxedBoolean"
+        allowPrivilegeEscalation:
+          $ref: "#/components/schemas/BoxedBoolean"
+
+    EnvVarSource:
+      type: object
+      description: EnvVarSource represents a source for the value
+        of an EnvVar.
+      properties:
+        configMapKeyRef:
+          type: object
+          required:
+            - key
+          description: Selects a key of a ConfigMap.
+          properties:
+            key:
+              description: The key to select.
+              type: string
+            name:
+              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                TODO: Add other useful fields. apiVersion, kind,
+                uid?'
+              type: string
+            optional:
+              description: Specify whether the ConfigMap or its
+                key must be defined
+              type: boolean
+        fieldRef:
+          type: object
+          required:
+            - fieldPath
+          description: 'Selects a field of the pod: supports metadata.name,
+            metadata.namespace, `metadata.labels[''<KEY>'']`,
+            `metadata.annotations[''<KEY>'']`, spec.nodeName,
+            spec.serviceAccountName, status.hostIP, status.podIP,
+            status.podIPs.'
+          properties:
+            apiVersion:
+              description: Version of the schema the FieldPath
+                is written in terms of, defaults to "v1".
+              type: string
+            fieldPath:
+              description: Path of the field to select in the
+                specified API version.
+              type: string
+        resourceFieldRef:
+          type: object
+          required:
+            - resource
+          description: 'Selects a resource of the container: only
+            resources limits and requests (limits.cpu, limits.memory,
+            limits.ephemeral-storage, requests.cpu, requests.memory
+            and requests.ephemeral-storage) are currently supported.'
+          properties:
+            containerName:
+              description: 'Container name: required for volumes,
+                optional for env vars'
+              type: string
+            divisor:
+              type: string
+              pattern: "^[0-9]+(m|[GMK]i)$"
+            resource:
+              description: 'Required: resource to select'
+              type: string
+        secretKeyRef:
+          type: object
+          required:
+            - key
+          description: Selects a key of a secret in the pod's
+            namespace
+          properties:
+            key:
+              description: The key of the secret to select from.  Must
+                be a valid secret key.
+              type: string
+            name:
+              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                TODO: Add other useful fields. apiVersion, kind,
+                uid?'
+              type: string
+            optional:
+              description: Specify whether the Secret or its key
+                must be defined
+              type: boolean
+
     #
     # Errors
     #
