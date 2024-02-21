@@ -11,8 +11,6 @@ package checktcl
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"net/http"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -28,37 +26,8 @@ type SubscriptionChecker struct {
 	orgPlan    *OrganizationPlan
 }
 
-// NewCLISubscriptionChecker creates a new subscription checker using a user token instead of the agent token
-func NewCLISubscriptionChecker(proContext config.ProContext, token string) (*SubscriptionChecker, error) {
-	var bearer = fmt.Sprintf("Bearer %s", token)
-
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/organizations/%s/plan", proContext.URL, proContext.OrgID), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Add("Authorization", bearer)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get organization plan: %d", resp.StatusCode)
-	}
-
-	var subscription OrganizationPlan
-	if err := json.NewDecoder(resp.Body).Decode(&subscription); err != nil {
-		return nil, errors.Wrap(err, "failed to decode organization plan")
-	}
-
-	return &SubscriptionChecker{proContext: proContext, orgPlan: &subscription}, nil
-}
-
-// NewAgentSubscriptionChecker creates a new subscription checker using the agent token
-func NewAgentSubscriptionChecker(ctx context.Context, proContext config.ProContext, cloudClient cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn) (*SubscriptionChecker, error) {
+// NewSubscriptionChecker creates a new subscription checker using the agent token
+func NewSubscriptionChecker(ctx context.Context, proContext config.ProContext, cloudClient cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn) (*SubscriptionChecker, error) {
 	executor := executor.NewCloudGRPCExecutor(cloudClient, grpcConn, proContext.APIKey)
 
 	req := GetOrganizationPlanRequest{}
