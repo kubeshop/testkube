@@ -528,6 +528,9 @@ func MapSpecExecutionRequestToExecutionUpdateRequest(
 	// Pro edition only (tcl protected code)
 	mappertcl.MapSpecExecutionRequestToExecutionUpdateRequest(request, executionRequest)
 
+	// Pro edition only (tcl protected code)
+	mappertcl.MapSpecExecutionRequestToExecutionUpdateRequest(request, executionRequest)
+
 	if request.ArtifactRequest != nil {
 		artifactRequest := &testkube.ArtifactUpdateRequest{
 			StorageClassName:       &request.ArtifactRequest.StorageClassName,
