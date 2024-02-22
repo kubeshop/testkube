@@ -14,6 +14,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	testsuiteexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testsuiteexecutions"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
+	"github.com/kubeshop/testkube/pkg/tcl/testsuitestcl"
+
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/version"
 	"github.com/kubeshop/testkube/pkg/workerpool"
@@ -27,6 +29,7 @@ const (
 type testTuple struct {
 	test        testkube.Test
 	executionID string
+	stepRequest *testkube.TestSuiteStepExecutionRequest
 }
 
 func (s *Scheduler) PrepareTestSuiteRequests(work []testsuitesv3.TestSuite, request testkube.TestSuiteExecutionRequest) []workerpool.Request[
@@ -444,6 +447,7 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 			testTuples = append(testTuples, testTuple{
 				test:        testkube.Test{Name: executeTestStep, Namespace: testsuiteExecution.TestSuite.Namespace},
 				executionID: execution.Id,
+				stepRequest: step.TestSuiteStepExecutionRequest, //TODO make sure this is correct
 			})
 		case testkube.TestSuiteStepTypeDelay:
 			if step.Delay == "" {
@@ -506,6 +510,7 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 		for i := range testTuples {
 			req.Name = fmt.Sprintf("%s-%s", testSuiteName, testTuples[i].test.Name)
 			req.Id = testTuples[i].executionID
+			req = testsuitestcl.MergeStepRequest(testTuples[i].stepRequest, req)
 			requests[i] = workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution]{
 				Object:  testTuples[i].test,
 				Options: req,

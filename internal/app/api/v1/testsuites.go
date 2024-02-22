@@ -27,6 +27,7 @@ import (
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/scheduler"
+	"github.com/kubeshop/testkube/pkg/tcl/testsuitestcl"
 	"github.com/kubeshop/testkube/pkg/types"
 	"github.com/kubeshop/testkube/pkg/utils"
 	"github.com/kubeshop/testkube/pkg/workerpool"
@@ -43,7 +44,15 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 			if err := decoder.Decode(&testSuite); err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse yaml request: %w", errPrefix, err))
 			}
-
+			if testsuitestcl.HasStepsExecutionRequest(testSuite) {
+				ok, err := s.SubscriptionChecker.IsOrgPlanActive()
+				if err != nil {
+					return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: test suite step execution requests are a Pro feature: %w", errPrefix, err))
+				}
+				if !ok {
+					return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: test suite step execution requests are not available: inactive subscription plan", errPrefix))
+				}
+			}
 			errPrefix = errPrefix + " " + testSuite.Name
 		} else {
 			var request testkube.TestSuiteUpsertRequest
@@ -116,7 +125,15 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 			if err := decoder.Decode(&testSuite); err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse yaml request: %w", errPrefix, err))
 			}
-
+			if testsuitestcl.HasStepsExecutionRequest(testSuite) {
+				ok, err := s.SubscriptionChecker.IsOrgPlanActive()
+				if err != nil {
+					return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: test suite step execution requests are a Pro feature: %w", errPrefix, err))
+				}
+				if !ok {
+					return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: test suite step execution requests are not available: inactive subscription plan", errPrefix))
+				}
+			}
 			request = testsuitesmapper.MapTestSuiteTestCRDToUpdateRequest(&testSuite)
 		} else {
 			data := c.Body()
@@ -564,7 +581,15 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 
 				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could get test suite: %w", errPrefix, err))
 			}
-
+			if testsuitestcl.HasStepsExecutionRequest(*testSuite) {
+				ok, err := s.SubscriptionChecker.IsOrgPlanActive()
+				if err != nil {
+					return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: test suite step execution requests are a pro feature: %w", errPrefix, err))
+				}
+				if !ok {
+					return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: test suite step execution requests are not available: inactive subscription plan", errPrefix))
+				}
+			}
 			testSuites = append(testSuites, *testSuite)
 		} else {
 			testSuiteList, err := s.TestsSuitesClient.List(selector)

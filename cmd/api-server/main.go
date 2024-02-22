@@ -16,6 +16,7 @@ import (
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
+	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
@@ -540,6 +541,9 @@ func main() {
 		}
 
 		api.WithProContext(&proContext)
+		subscriptionChecker, err := checktcl.NewSubscriptionChecker(ctx, proContext, grpcClient, grpcConn)
+		ui.WarnOnError("Creating subscription checker", err)
+		api.WithSubscriptionChecker(*subscriptionChecker)
 
 		agentHandle, err := agent.NewAgent(
 			log.DefaultLogger,

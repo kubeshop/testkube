@@ -16,6 +16,7 @@ import (
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	repoConfig "github.com/kubeshop/testkube/pkg/repository/config"
+	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 
 	"github.com/kubeshop/testkube/pkg/version"
 
@@ -203,6 +204,7 @@ type TestkubeAPI struct {
 	logGrpcClient         logsclient.StreamGetter
 	proContext            *config.ProContext
 	disableSecretCreation bool
+	SubscriptionChecker   checktcl.SubscriptionChecker
 }
 
 type storageParams struct {
@@ -594,7 +596,14 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 	return filter
 }
 
+// WithProContext sets pro context for the API
 func (s *TestkubeAPI) WithProContext(proContext *config.ProContext) *TestkubeAPI {
 	s.proContext = proContext
+	return s
+}
+
+// WithSubscriptionChecker sets subscription checker for the API
+func (s *TestkubeAPI) WithSubscriptionChecker(subscriptionChecker checktcl.SubscriptionChecker) *TestkubeAPI {
+	s.SubscriptionChecker = subscriptionChecker
 	return s
 }
