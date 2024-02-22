@@ -7,3 +7,4 @@ spec:
   executor_type: container
   types:
   - container-executor-postman-newman-6-alpine/test
+  command: ["newman"]
