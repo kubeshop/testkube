@@ -100,4 +100,6 @@ type ExecutionRequest struct {
 	// test names for artifacts to download from latest executions
 	DownloadArtifactTestNames []string    `json:"downloadArtifactTestNames,omitempty"`
 	SlavePodRequest           *PodRequest `json:"slavePodRequest,omitempty"`
+	// namespace for test execution (Pro edition only)
+	ExecutionNamespace string `json:"executionNamespace,omitempty"`
 }

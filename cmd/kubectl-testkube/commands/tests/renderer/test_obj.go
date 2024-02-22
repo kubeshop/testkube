@@ -176,6 +176,10 @@ func TestRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 			ui.Warn("  PVC template reference:      ", test.ExecutionRequest.PvcTemplateReference)
 		}
 
+		if test.ExecutionRequest.ExecutionNamespace != "" {
+			ui.Warn("  Execution namespace:         ", test.ExecutionRequest.ExecutionNamespace)
+		}
+
 		if test.ExecutionRequest.SlavePodRequest != nil {
 			ui.Warn("  Slave pod request:           ")
 			if test.ExecutionRequest.SlavePodRequest.Resources != nil {
