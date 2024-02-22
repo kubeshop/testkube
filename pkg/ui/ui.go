@@ -94,15 +94,8 @@ func Confirm(message string) bool                           { return ui.Confirm(
 func Select(title string, options []string) string          { return ui.Select(title, options) }
 func TextInput(message string) string                       { return ui.TextInput(message) }
 
-func PrintCRD(cr interface{}, kind string, groupVersion schema.GroupVersion) {
-	bytes, err := common.SerializeCRD(cr, common.SerializeOptions{
-		OmitCreationTimestamp: true,
-		CleanMeta:             true,
-		Kind:                  kind,
-		GroupVersion:          &groupVersion,
-	})
-	ui.ExitOnError("serializing the crd", err)
-	_, _ = os.Stdout.Write(bytes)
+func PrintCRD[T interface{}](cr T, kind string, groupVersion schema.GroupVersion) {
+	PrintCRDs([]T{cr}, kind, groupVersion)
 }
 
 func PrintCRDs[T interface{}](crs []T, kind string, groupVersion schema.GroupVersion) {
