@@ -61,7 +61,7 @@ spec:
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 64Mi\n              cpu: 128m\n"
     activeDeadlineSeconds: 180
     variables:
-      CYPRESS_CUSTOM_ENV:
+      K6_WEB_DASHBOARD_EXPORT:
         name: K6_WEB_DASHBOARD_EXPORT
         value: "/data/artifacts/k6-test-report.html"
         type: basic
