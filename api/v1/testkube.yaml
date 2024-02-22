@@ -6050,9 +6050,6 @@ components:
           description: stream topic
         resource:
           $ref: "#/components/schemas/EventResource"
-        streamTopic:
-          type: string
-          description: custom stream topic for event
         resourceId:
           type: string
           description: ID of resource
@@ -7259,9 +7256,10 @@ components:
               description: The key to select.
               type: string
             name:
-              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+              description:
+                "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                 TODO: Add other useful fields. apiVersion, kind,
-                uid?'
+                uid?"
               type: string
             optional:
               description: Specify whether the ConfigMap or its
@@ -7271,11 +7269,11 @@ components:
           type: object
           required:
             - fieldPath
-          description: 'Selects a field of the pod: supports metadata.name,
-            metadata.namespace, `metadata.labels[''<KEY>'']`,
-            `metadata.annotations[''<KEY>'']`, spec.nodeName,
+          description: "Selects a field of the pod: supports metadata.name,
+            metadata.namespace, `metadata.labels['<KEY>']`,
+            `metadata.annotations['<KEY>']`, spec.nodeName,
             spec.serviceAccountName, status.hostIP, status.podIP,
-            status.podIPs.'
+            status.podIPs."
           properties:
             apiVersion:
               description: Version of the schema the FieldPath
@@ -7289,20 +7287,20 @@ components:
           type: object
           required:
             - resource
-          description: 'Selects a resource of the container: only
+          description: "Selects a resource of the container: only
             resources limits and requests (limits.cpu, limits.memory,
             limits.ephemeral-storage, requests.cpu, requests.memory
-            and requests.ephemeral-storage) are currently supported.'
+            and requests.ephemeral-storage) are currently supported."
           properties:
             containerName:
-              description: 'Container name: required for volumes,
-                optional for env vars'
+              description: "Container name: required for volumes,
+                optional for env vars"
               type: string
             divisor:
               type: string
               pattern: "^[0-9]+(m|[GMK]i)$"
             resource:
-              description: 'Required: resource to select'
+              description: "Required: resource to select"
               type: string
         secretKeyRef:
           type: object
@@ -7316,9 +7314,10 @@ components:
                 be a valid secret key.
               type: string
             name:
-              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+              description:
+                "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                 TODO: Add other useful fields. apiVersion, kind,
-                uid?'
+                uid?"
               type: string
             optional:
               description: Specify whether the Secret or its key

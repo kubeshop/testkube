@@ -12,10 +12,10 @@ package testkube
 // Event data
 type Event struct {
 	// UUID of event
-	Id       string         `json:"id"`
-	Resource *EventResource `json:"resource"`
-	// custom stream topic for event
-	StreamTopic string `json:"streamTopic,omitempty"`
+	Id string `json:"id"`
+	// stream topic
+	StreamTopic string         `json:"streamTopic,omitempty"`
+	Resource    *EventResource `json:"resource"`
 	// ID of resource
 	ResourceId         string              `json:"resourceId"`
 	Type_              *EventType          `json:"type"`
