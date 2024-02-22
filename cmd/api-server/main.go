@@ -16,6 +16,7 @@ import (
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
+	apitclv1 "github.com/kubeshop/testkube/pkg/tcl/apitcl/v1"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 
@@ -594,6 +595,9 @@ func main() {
 		})
 		eventsEmitter.Loader.Register(agentHandle)
 	}
+
+	// Apply Pro server enhancements
+	apitclv1.NewApiTCL(api, &proContext, kubeClient).AppendRoutes()
 
 	api.InitEvents()
 	if !cfg.DisableTestTriggers {
