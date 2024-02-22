@@ -25,6 +25,11 @@ spec:
     preRunScript: "npm ci"
     args:
       - "tests/smoke2.spec.js"
+    variables:
+      PLAYWRIGHT_HTML_REPORT:
+        name: PLAYWRIGHT_HTML_REPORT
+        value: "/data/artifacts/playwright-report"
+        type: basic
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -50,3 +55,8 @@ spec:
         - ./
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
     activeDeadlineSeconds: 600
+    variables:
+      PLAYWRIGHT_HTML_REPORT:
+        name: PLAYWRIGHT_HTML_REPORT
+        value: "/data/artifacts/playwright-report"
+        type: basic
