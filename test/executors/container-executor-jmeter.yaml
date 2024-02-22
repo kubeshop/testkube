@@ -1,0 +1,13 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: container-executor-jmeter-5.5
+spec:
+  image: justb4/jmeter:5.5
+  command:
+  - "jmeter"
+  executor_type: container
+  types:
+  - container-executor-jmeter-5.5/test
+  features:
+  - artifacts
