@@ -17,3 +17,5 @@ spec:
   executor_type: container
   types:
   - container-executor-k6-0.49.0/test
+  features:
+  - artifacts
