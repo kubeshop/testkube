@@ -607,7 +607,7 @@ func main() {
 			cfg.TestkubeClusterName,
 			envs,
 			features,
-			proContext,
+			*proContext,
 		)
 		if err != nil {
 			ui.ExitOnError("Starting agent", err)
@@ -621,6 +621,9 @@ func main() {
 		})
 		eventsEmitter.Loader.Register(agentHandle)
 	}
+
+	// Apply Pro server enhancements
+	apitclv1.NewApiTCL(api, proContext, kubeClient).AppendRoutes()
 
 	api.InitEvents()
 	if !cfg.DisableTestTriggers {
