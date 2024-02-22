@@ -10,8 +10,8 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows/renderer"
+	"github.com/kubeshop/testkube/pkg/tcl/workflowstcl/mappers"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/kubeshop/testkube/tcl/workflowstcl/mappers"
 )
 
 func NewGetTestWorkflowsCmd() *cobra.Command {

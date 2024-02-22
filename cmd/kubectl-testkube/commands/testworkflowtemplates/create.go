@@ -9,8 +9,8 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	common2 "github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/tcl/workflowstcl/mappers"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/kubeshop/testkube/tcl/workflowstcl/mappers"
 )
 
 func NewCreateTestWorkflowTemplateCmd() *cobra.Command {
