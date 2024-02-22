@@ -20,6 +20,7 @@ type Stream interface {
 	StreamTrigger
 	StreamGetter
 	StreamFinisher
+	StreamNamer
 }
 
 //go:generate mockgen -destination=./mock_initializedstreampusher.go -package=client "github.com/kubeshop/testkube/pkg/logs/client" InitializedStreamPusher
@@ -53,6 +54,12 @@ type StreamPusher interface {
 type StreamFinisher interface {
 	// Finish sends termination log message
 	Finish(ctx context.Context, id string) error
+}
+
+//go:generate mockgen -destination=./mock_namer.go -package=client "github.com/kubeshop/testkube/pkg/logs/client" StreamNamer
+type StreamNamer interface {
+	// Name returns stream name based on possible name groups
+	Name(parts ...string) string
 }
 
 // StreamGetter interface for getting logs stream channel

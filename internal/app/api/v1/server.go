@@ -93,6 +93,7 @@ func NewTestkubeAPI(
 	ff featureflags.FeatureFlags,
 	logsStream logsclient.Stream,
 	logGrpcClient logsclient.StreamGetter,
+	disableSecretCreation bool,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -140,6 +141,7 @@ func NewTestkubeAPI(
 		featureFlags:          ff,
 		logsStream:            logsStream,
 		logGrpcClient:         logGrpcClient,
+		disableSecretCreation: disableSecretCreation,
 	}
 
 	// will be reused in websockets handler
@@ -200,6 +202,7 @@ type TestkubeAPI struct {
 	logsStream            logsclient.Stream
 	logGrpcClient         logsclient.StreamGetter
 	proContext            *config.ProContext
+	disableSecretCreation bool
 }
 
 type storageParams struct {

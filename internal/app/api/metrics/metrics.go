@@ -71,36 +71,78 @@ var testAbortCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Help: "The total number of tests aborted by type events",
 }, []string{"type", "result"})
 
+var testWorkflowCreationCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_testworkflow_creations_count",
+	Help: "The total number of test workflow created by type events",
+}, []string{"result"})
+
+var testWorkflowUpdatesCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_testworkflow_updates_count",
+	Help: "The total number of test workflow updated by type events",
+}, []string{"result"})
+
+var testWorkflowDeletesCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_testworkflow_deletes_count",
+	Help: "The total number of test workflow deleted events",
+}, []string{"result"})
+
+var testWorkflowTemplateCreationCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_testworkflowtemplate_creations_count",
+	Help: "The total number of test workflow template created by type events",
+}, []string{"result"})
+
+var testWorkflowTemplateUpdatesCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_testworkflowtemplate_updates_count",
+	Help: "The total number of test workflow template updated by type events",
+}, []string{"result"})
+
+var testWorkflowTemplateDeletesCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_testworkflowtemplate_deletes_count",
+	Help: "The total number of test workflow template deleted events",
+}, []string{"result"})
+
 func NewMetrics() Metrics {
 	return Metrics{
-		TestExecutions:         testExecutionCount,
-		TestSuiteExecutions:    testSuiteExecutionCount,
-		TestCreations:          testCreationCount,
-		TestSuiteCreations:     testSuiteCreationCount,
-		TestUpdates:            testUpdatesCount,
-		TestSuiteUpdates:       testSuiteUpdatesCount,
-		TestTriggerCreations:   testTriggerCreationCount,
-		TestTriggerUpdates:     testTriggerUpdatesCount,
-		TestTriggerDeletes:     testTriggerDeletesCount,
-		TestTriggerBulkUpdates: testTriggerBulkUpdatesCount,
-		TestTriggerBulkDeletes: testTriggerBulkDeletesCount,
-		TestAbort:              testAbortCount,
+		TestExecutions:                testExecutionCount,
+		TestSuiteExecutions:           testSuiteExecutionCount,
+		TestCreations:                 testCreationCount,
+		TestSuiteCreations:            testSuiteCreationCount,
+		TestUpdates:                   testUpdatesCount,
+		TestSuiteUpdates:              testSuiteUpdatesCount,
+		TestTriggerCreations:          testTriggerCreationCount,
+		TestTriggerUpdates:            testTriggerUpdatesCount,
+		TestTriggerDeletes:            testTriggerDeletesCount,
+		TestTriggerBulkUpdates:        testTriggerBulkUpdatesCount,
+		TestTriggerBulkDeletes:        testTriggerBulkDeletesCount,
+		TestAbort:                     testAbortCount,
+		TestWorkflowCreations:         testWorkflowCreationCount,
+		TestWorkflowUpdates:           testWorkflowUpdatesCount,
+		TestWorkflowDeletes:           testWorkflowDeletesCount,
+		TestWorkflowTemplateCreations: testWorkflowTemplateCreationCount,
+		TestWorkflowTemplateUpdates:   testWorkflowTemplateUpdatesCount,
+		TestWorkflowTemplateDeletes:   testWorkflowTemplateDeletesCount,
 	}
 }
 
 type Metrics struct {
-	TestExecutions         *prometheus.CounterVec
-	TestSuiteExecutions    *prometheus.CounterVec
-	TestCreations          *prometheus.CounterVec
-	TestSuiteCreations     *prometheus.CounterVec
-	TestUpdates            *prometheus.CounterVec
-	TestSuiteUpdates       *prometheus.CounterVec
-	TestTriggerCreations   *prometheus.CounterVec
-	TestTriggerUpdates     *prometheus.CounterVec
-	TestTriggerDeletes     *prometheus.CounterVec
-	TestTriggerBulkUpdates *prometheus.CounterVec
-	TestTriggerBulkDeletes *prometheus.CounterVec
-	TestAbort              *prometheus.CounterVec
+	TestExecutions                *prometheus.CounterVec
+	TestSuiteExecutions           *prometheus.CounterVec
+	TestCreations                 *prometheus.CounterVec
+	TestSuiteCreations            *prometheus.CounterVec
+	TestUpdates                   *prometheus.CounterVec
+	TestSuiteUpdates              *prometheus.CounterVec
+	TestTriggerCreations          *prometheus.CounterVec
+	TestTriggerUpdates            *prometheus.CounterVec
+	TestTriggerDeletes            *prometheus.CounterVec
+	TestTriggerBulkUpdates        *prometheus.CounterVec
+	TestTriggerBulkDeletes        *prometheus.CounterVec
+	TestAbort                     *prometheus.CounterVec
+	TestWorkflowCreations         *prometheus.CounterVec
+	TestWorkflowUpdates           *prometheus.CounterVec
+	TestWorkflowDeletes           *prometheus.CounterVec
+	TestWorkflowTemplateCreations *prometheus.CounterVec
+	TestWorkflowTemplateUpdates   *prometheus.CounterVec
+	TestWorkflowTemplateDeletes   *prometheus.CounterVec
 }
 
 func (m Metrics) IncExecuteTest(execution testkube.Execution, dashboardURI string) {
@@ -263,6 +305,72 @@ func (m Metrics) IncAbortTest(testType string, failed bool) {
 
 	m.TestAbort.With(map[string]string{
 		"type":   testType,
+		"result": result,
+	}).Inc()
+}
+
+func (m Metrics) IncCreateTestWorkflow(err error) {
+	result := "created"
+	if err != nil {
+		result = "error"
+	}
+
+	m.TestWorkflowCreations.With(map[string]string{
+		"result": result,
+	}).Inc()
+}
+
+func (m Metrics) IncUpdateTestWorkflow(err error) {
+	result := "updated"
+	if err != nil {
+		result = "error"
+	}
+
+	m.TestWorkflowUpdates.With(map[string]string{
+		"result": result,
+	}).Inc()
+}
+
+func (m Metrics) IncDeleteTestWorkflow(err error) {
+	result := "deleted"
+	if err != nil {
+		result = "error"
+	}
+
+	m.TestWorkflowDeletes.With(map[string]string{
+		"result": result,
+	}).Inc()
+}
+
+func (m Metrics) IncCreateTestWorkflowTemplate(err error) {
+	result := "created"
+	if err != nil {
+		result = "error"
+	}
+
+	m.TestWorkflowTemplateCreations.With(map[string]string{
+		"result": result,
+	}).Inc()
+}
+
+func (m Metrics) IncUpdateTestWorkflowTemplate(err error) {
+	result := "updated"
+	if err != nil {
+		result = "error"
+	}
+
+	m.TestWorkflowTemplateUpdates.With(map[string]string{
+		"result": result,
+	}).Inc()
+}
+
+func (m Metrics) IncDeleteTestWorkflowTemplate(err error) {
+	result := "deleted"
+	if err != nil {
+		result = "error"
+	}
+
+	m.TestWorkflowTemplateDeletes.With(map[string]string{
 		"result": result,
 	}).Inc()
 }

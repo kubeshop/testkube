@@ -2,15 +2,21 @@ package common
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func hasGitParamsInCmd(cmd *cobra.Command) bool {
-	var fields = []string{"git-uri", "git-branch", "git-commit", "git-path", "git-username", "git-token",
+func hasGitParamsInCmd(cmd *cobra.Command, crdOnly bool) bool {
+	var fields = []string{"git-uri", "git-branch", "git-commit", "git-path",
 		"git-username-secret", "git-token-secret", "git-working-dir", "git-certificate-secret", "git-auth-type"}
+	if !crdOnly {
+		fields = append(fields, "git-username", "git-token")
+	}
+
 	for _, field := range fields {
 		if cmd.Flag(field).Changed {
 			return true
@@ -22,12 +28,30 @@ func hasGitParamsInCmd(cmd *cobra.Command) bool {
 
 // NewRepositoryFromFlags creates repository from command flags
 func NewRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository, err error) {
+	crdOnly, err := strconv.ParseBool(cmd.Flag("crd-only").Value.String())
+	if err != nil {
+		return nil, err
+	}
+
 	gitUri := cmd.Flag("git-uri").Value.String()
 	gitBranch := cmd.Flag("git-branch").Value.String()
 	gitCommit := cmd.Flag("git-commit").Value.String()
 	gitPath := cmd.Flag("git-path").Value.String()
-	gitUsername := cmd.Flag("git-username").Value.String()
-	gitToken := cmd.Flag("git-token").Value.String()
+
+	var gitUsername, gitToken string
+	if !crdOnly {
+		client, _, err := GetClient(cmd)
+		ui.ExitOnError("getting client", err)
+
+		info, err := client.GetServerInfo()
+		ui.ExitOnError("getting server info", err)
+
+		if !info.DisableSecretCreation {
+			gitUsername = cmd.Flag("git-username").Value.String()
+			gitToken = cmd.Flag("git-token").Value.String()
+		}
+	}
+
 	gitUsernameSecret, err := cmd.Flags().GetStringToString("git-username-secret")
 	if err != nil {
 		return nil, err
@@ -42,7 +66,7 @@ func NewRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository
 	gitCertificateSecret := cmd.Flag("git-certificate-secret").Value.String()
 	gitAuthType := cmd.Flag("git-auth-type").Value.String()
 
-	hasGitParams := hasGitParamsInCmd(cmd)
+	hasGitParams := hasGitParamsInCmd(cmd, crdOnly)
 	if !hasGitParams {
 		return nil, nil
 	}
@@ -102,14 +126,6 @@ func NewRepositoryUpdateFromFlags(cmd *cobra.Command) (repository *testkube.Repo
 			&repository.Path,
 		},
 		{
-			"git-username",
-			&repository.Username,
-		},
-		{
-			"git-token",
-			&repository.Token,
-		},
-		{
 			"git-working-dir",
 			&repository.WorkingDir,
 		},
@@ -121,6 +137,27 @@ func NewRepositoryUpdateFromFlags(cmd *cobra.Command) (repository *testkube.Repo
 			"git-auth-type",
 			&repository.AuthType,
 		},
+	}
+
+	client, _, err := GetClient(cmd)
+	ui.ExitOnError("getting client", err)
+
+	info, err := client.GetServerInfo()
+	ui.ExitOnError("getting server info", err)
+
+	if !info.DisableSecretCreation {
+		fields = append(fields, []struct {
+			name        string
+			destination **string
+		}{
+			{
+				"git-username",
+				&repository.Username,
+			},
+			{
+				"git-token",
+				&repository.Token,
+			}}...)
 	}
 
 	var nonEmpty bool
@@ -174,11 +211,29 @@ func NewRepositoryUpdateFromFlags(cmd *cobra.Command) (repository *testkube.Repo
 
 // ValidateUpsertOptions validates upsert options
 func ValidateUpsertOptions(cmd *cobra.Command, sourceName string) error {
+	crdOnly, err := strconv.ParseBool(cmd.Flag("crd-only").Value.String())
+	if err != nil {
+		return err
+	}
+
 	gitUri := cmd.Flag("git-uri").Value.String()
 	gitBranch := cmd.Flag("git-branch").Value.String()
 	gitCommit := cmd.Flag("git-commit").Value.String()
-	gitUsername := cmd.Flag("git-username").Value.String()
-	gitToken := cmd.Flag("git-token").Value.String()
+
+	var gitUsername, gitToken string
+	if !crdOnly {
+		client, _, err := GetClient(cmd)
+		ui.ExitOnError("getting client", err)
+
+		info, err := client.GetServerInfo()
+		ui.ExitOnError("getting server info", err)
+
+		if !info.DisableSecretCreation {
+			gitUsername = cmd.Flag("git-username").Value.String()
+			gitToken = cmd.Flag("git-token").Value.String()
+		}
+	}
+
 	gitUsernameSecret, err := cmd.Flags().GetStringToString("git-username-secret")
 	if err != nil {
 		return err
@@ -193,7 +248,7 @@ func ValidateUpsertOptions(cmd *cobra.Command, sourceName string) error {
 	file := cmd.Flag("file").Value.String()
 	uri := cmd.Flag("uri").Value.String()
 
-	hasGitParams := hasGitParamsInCmd(cmd)
+	hasGitParams := hasGitParamsInCmd(cmd, crdOnly)
 	if hasGitParams && uri != "" {
 		return fmt.Errorf("found git params and `--uri` flag, please use `--git-uri` for git based repo or `--uri` without git based params")
 	}

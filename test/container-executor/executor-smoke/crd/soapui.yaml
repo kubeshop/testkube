@@ -1,0 +1,28 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: container-executor-soapui-smoke
+  labels:
+    core-tests: executors
+spec:
+  type: container-executor-soapui-5.7/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: test/soapui/executor-smoke/soapui-smoke-test.xml
+  executionRequest:
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 256Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+    variables:
+      COMMAND_LINE:
+        name: COMMAND_LINE
+        value: "-r -f /reports -a -j /data/repo/test/soapui/executor-smoke/soapui-smoke-incorrect-name.xml"
+        type: basic
+    # artifactRequest: # TODO: temporary disabled - not working for some reason
+    #   storageClassName: standard
+    #   volumeMountPath: /artifacts
+    #   dirs:
+    #     - ./

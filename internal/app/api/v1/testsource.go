@@ -47,7 +47,7 @@ func (s TestkubeAPI) CreateTestSourceHandler() fiber.Handler {
 
 			testSource = testsourcesmapper.MapAPIToCRD(request)
 			testSource.Namespace = s.Namespace
-			if request.Repository != nil {
+			if request.Repository != nil && !s.disableSecretCreation {
 				secrets = createTestSecretsData(request.Repository.Username, request.Repository.Token)
 			}
 		}
@@ -104,7 +104,7 @@ func (s TestkubeAPI) UpdateTestSourceHandler() fiber.Handler {
 		if request.Repository != nil && (*request.Repository) != nil {
 			username := (*request.Repository).Username
 			token := (*request.Repository).Token
-			if username != nil || token != nil {
+			if (username != nil || token != nil) && !s.disableSecretCreation {
 				data, err := s.SecretClient.Get(secret.GetMetadataName(name, client.SecretSource))
 				if err != nil && !errors.IsNotFound(err) {
 					return s.Error(c, http.StatusBadGateway, err)
@@ -246,7 +246,7 @@ func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 		for name, item := range testSourceBatch {
 			testSource := testsourcesmapper.MapAPIToCRD(item)
 			var username, token string
-			if item.Repository != nil {
+			if item.Repository != nil && !s.disableSecretCreation {
 				username = item.Repository.Username
 				token = item.Repository.Token
 			}
