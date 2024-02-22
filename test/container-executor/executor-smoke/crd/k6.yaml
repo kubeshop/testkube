@@ -39,3 +39,34 @@ spec:
     args: ["run", "k6-smoke-test-without-envs.js"]
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 64Mi\n              cpu: 128m\n"
     activeDeadlineSeconds: 180
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: container-executor-k6-smoke-report
+  labels:
+    core-tests: executors
+spec:
+  type: container-executor-k6-0.49.0/test # 0.49.0 or higher is required for report
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: test/k6/executor-tests/k6-smoke-test-without-envs.js
+      workingDir: test/k6/executor-tests
+  executionRequest:
+    args: ["run", "k6-smoke-test-without-envs.js"]
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 64Mi\n              cpu: 128m\n"
+    activeDeadlineSeconds: 180
+    variables:
+      CYPRESS_CUSTOM_ENV:
+        name: K6_WEB_DASHBOARD_EXPORT
+        value: "/data/artifacts/k6-test-report.html"
+        type: basic
+    artifactRequest:
+      storageClassName: standard
+      volumeMountPath: /data/artifacts
+      dirs:
+        - ./
