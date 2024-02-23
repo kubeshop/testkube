@@ -11,6 +11,8 @@ package expressionstcl
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/kballard/go-shellquote"
 )
 
 type stdMachine struct{}
@@ -69,6 +71,13 @@ var stdFunctions = map[string]func(...StaticValue) (Expression, error){
 			return nil, fmt.Errorf(`"json" function had problem unmarshalling: %s`, err.Error())
 		}
 		return NewValue(v), nil
+	},
+	"shellquote": func(value ...StaticValue) (Expression, error) {
+		if len(value) != 1 {
+			return nil, fmt.Errorf(`"shellquote" function expects 1 argument, %d provided`, len(value))
+		}
+		str, _ := value[0].StringValue()
+		return NewValue(shellquote.Join(str)), nil
 	},
 }
 

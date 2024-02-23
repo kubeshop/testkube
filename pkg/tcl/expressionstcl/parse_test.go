@@ -172,6 +172,8 @@ func TestCompileStandardLib(t *testing.T) {
 	assert.Equal(t, `"{\"a\":500}"`, MustCompile(`tojson({"a": 500})`).String())
 	assert.Equal(t, `"500.8"`, MustCompile(`tojson(500.8)`).String())
 	assert.Equal(t, `"\"500.8\""`, MustCompile(`tojson("500.8")`).String())
+	assert.Equal(t, `"abc"`, MustCompile(`shellquote("abc")`).String())
+	assert.Equal(t, `"'a b c'"`, MustCompile(`shellquote("a b c")`).String())
 }
 
 func TestCompileDetectAccessors(t *testing.T) {
