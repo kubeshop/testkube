@@ -37,7 +37,7 @@ func NewGetTestWorkflowsCmd() *cobra.Command {
 				ui.ExitOnError("getting all test workflows in namespace "+namespace, err)
 
 				if crdOnly {
-					ui.PrintCRDs(workflows.MapListAPIToKube(workflows).Items, "TestWorkflow", testworkflowsv1.GroupVersion)
+					ui.PrintCRDs(testworkflows.MapListAPIToKube(workflows).Items, "TestWorkflow", testworkflowsv1.GroupVersion)
 				} else {
 					err = render.List(cmd, workflows, os.Stdout)
 					ui.PrintOnError("Rendering list", err)
