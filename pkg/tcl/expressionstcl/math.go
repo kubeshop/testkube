@@ -61,10 +61,10 @@ type math struct {
 
 func newMath(operator operator, left Expression, right Expression) Expression {
 	if left == nil {
-		left = NewNone()
+		left = None
 	}
 	if right == nil {
-		right = NewNone()
+		right = None
 	}
 	return &math{operator: operator, left: left, right: right}
 }

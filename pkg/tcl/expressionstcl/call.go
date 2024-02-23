@@ -20,6 +20,11 @@ type call struct {
 }
 
 func newCall(name string, args []Expression) Expression {
+	for i := range args {
+		if args[i] == nil {
+			args[i] = None
+		}
+	}
 	return &call{name: name, args: args}
 }
 

@@ -207,3 +207,8 @@ func TestCompileDetectFunctions(t *testing.T) {
 	assert.Equal(t, map[string]struct{}(nil), MustCompile(`something`).Functions())
 	assert.Equal(t, map[string]struct{}{"calling": {}, "something": {}, "string": {}, "a": {}}, MustCompile(`calling(something(), 45 + 2 + 10 + string(abc * a(c)))`).Functions())
 }
+
+func TestCompileImmutableNone(t *testing.T) {
+	assert.Same(t, None, NewValue(noneValue))
+	assert.Same(t, NewValue(noneValue), NewValue(noneValue))
+}

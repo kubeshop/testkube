@@ -17,17 +17,19 @@ type static struct {
 	value interface{}
 }
 
+var none *static
+var None StaticValue = none
+
 func NewValue(value interface{}) StaticValue {
+	if value == noneValue {
+		return None
+	}
 	return &static{value: value}
 }
 
 func NewStringValue(value interface{}) StaticValue {
 	v, _ := toString(value)
 	return NewValue(v)
-}
-
-func NewNone() StaticValue {
-	return NewValue(noneValue)
 }
 
 func (s *static) WillBeString() bool {
@@ -80,59 +82,62 @@ func (s *static) Static() StaticValue {
 }
 
 func (s *static) IsNone() bool {
-	return isNone(s.value)
+	return s == nil
 }
 
 func (s *static) IsString() bool {
-	return isString(s.value)
+	return !s.IsNone() && isString(s.value)
 }
 
 func (s *static) IsBool() bool {
-	return isBool(s.value)
+	return !s.IsNone() && isBool(s.value)
 }
 
 func (s *static) IsInt() bool {
-	return isInt(s.value)
+	return !s.IsNone() && isInt(s.value)
 }
 
 func (s *static) IsNumber() bool {
-	return isNumber(s.value)
+	return !s.IsNone() && isNumber(s.value)
 }
 
 func (s *static) IsMap() bool {
-	return isMap(s.value)
+	return !s.IsNone() && isMap(s.value)
 }
 
 func (s *static) IsSlice() bool {
-	return isSlice(s.value)
+	return !s.IsNone() && isSlice(s.value)
 }
 
 func (s *static) Value() interface{} {
+	if s.IsNone() {
+		return noneValue
+	}
 	return s.value
 }
 
 func (s *static) StringValue() (string, error) {
-	return toString(s.value)
+	return toString(s.Value())
 }
 
 func (s *static) BoolValue() (bool, error) {
-	return toBool(s.value)
+	return toBool(s.Value())
 }
 
 func (s *static) IntValue() (int64, error) {
-	return toInt(s.value)
+	return toInt(s.Value())
 }
 
 func (s *static) FloatValue() (float64, error) {
-	return toFloat(s.value)
+	return toFloat(s.Value())
 }
 
 func (s *static) MapValue() (map[string]interface{}, error) {
-	return toMap(s.value)
+	return toMap(s.Value())
 }
 
 func (s *static) SliceValue() ([]interface{}, error) {
-	return toSlice(s.value)
+	return toSlice(s.Value())
 }
 
 func (s *static) Accessors() map[string]struct{} {

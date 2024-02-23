@@ -19,7 +19,7 @@ type finalizer struct {
 func (f *finalizer) Get(name string) (Expression, bool, error) {
 	v, ok, err := f.machine.Get(name)
 	if !ok && err == nil {
-		return NewNone(), true, nil
+		return None, true, nil
 	}
 	return v, ok, err
 }

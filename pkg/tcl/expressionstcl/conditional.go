@@ -20,6 +20,15 @@ type conditional struct {
 }
 
 func newConditional(condition, truthy, falsy Expression) Expression {
+	if condition == nil {
+		condition = None
+	}
+	if truthy == nil {
+		truthy = None
+	}
+	if falsy == nil {
+		falsy = None
+	}
 	return &conditional{condition: condition, truthy: truthy, falsy: falsy}
 }
 

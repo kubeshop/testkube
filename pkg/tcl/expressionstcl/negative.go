@@ -15,6 +15,9 @@ type negative struct {
 }
 
 func newNegative(expr Expression) Expression {
+	if expr == nil {
+		expr = None
+	}
 	return &negative{expr: expr}
 }
 

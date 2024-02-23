@@ -237,20 +237,20 @@ func TestStaticSlice(t *testing.T) {
 
 func TestStaticNone(t *testing.T) {
 	// Types
-	assert.Equal(t, "null", NewNone().String())
-	assert.Equal(t, false, NewNone().IsBool())
-	assert.Equal(t, true, NewNone().IsNone())
-	assert.Equal(t, false, NewNone().IsInt())
-	assert.Equal(t, false, NewNone().IsNumber())
-	assert.Equal(t, false, NewNone().IsString())
-	assert.Equal(t, false, NewNone().IsMap())
-	assert.Equal(t, false, NewNone().IsSlice())
+	assert.Equal(t, "null", None.String())
+	assert.Equal(t, false, None.IsBool())
+	assert.Equal(t, true, None.IsNone())
+	assert.Equal(t, false, None.IsInt())
+	assert.Equal(t, false, None.IsNumber())
+	assert.Equal(t, false, None.IsString())
+	assert.Equal(t, false, None.IsMap())
+	assert.Equal(t, false, None.IsSlice())
 
 	// Conversion
-	assert.Equal(t, false, must(NewNone().BoolValue()))
-	assert.Equal(t, int64(0), must(NewNone().IntValue()))
-	assert.Equal(t, 0.0, must(NewNone().FloatValue()))
-	assert.Equal(t, "", must(NewNone().StringValue()))
-	assert.Equal(t, map[string]interface{}(nil), must(NewNone().MapValue()))
-	assert.Equal(t, []interface{}(nil), must(NewNone().SliceValue()))
+	assert.Equal(t, false, must(None.BoolValue()))
+	assert.Equal(t, int64(0), must(None.IntValue()))
+	assert.Equal(t, 0.0, must(None.FloatValue()))
+	assert.Equal(t, "", must(None.StringValue()))
+	assert.Equal(t, map[string]interface{}(nil), must(None.MapValue()))
+	assert.Equal(t, []interface{}(nil), must(None.SliceValue()))
 }

@@ -141,7 +141,7 @@ func getNextSegment(t []token) (e Expression, i int, err error) {
 
 func parse(t []token) (e Expression, err error) {
 	if len(t) == 0 {
-		return NewNone(), nil
+		return None, nil
 	}
 	e, l, err := parseNextExpression(t, -1)
 	if err != nil {
