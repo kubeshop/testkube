@@ -30,6 +30,48 @@ var stdFunctions = map[string]func(...StaticValue) (Expression, error){
 		}
 		return NewValue(str), nil
 	},
+	"list": func(value ...StaticValue) (Expression, error) {
+		v := make([]interface{}, len(value))
+		for i := range value {
+			v[i] = value[i].Value()
+		}
+		return NewValue(v), nil
+	},
+	"join": func(value ...StaticValue) (Expression, error) {
+		if len(value) == 0 || len(value) > 2 {
+			return nil, fmt.Errorf(`"join" function expects 1-2 arguments, %d provided`, len(value))
+		}
+		if value[0].IsNone() {
+			return value[0], nil
+		}
+		if !value[0].IsSlice() {
+			return nil, fmt.Errorf(`"join" function expects a slice as 1st argument: %v provided`, value[0].Value())
+		}
+		slice, err := value[0].SliceValue()
+		if err != nil {
+			return nil, fmt.Errorf(`"join" function error: reading slice: %s`, err.Error())
+		}
+		v := make([]string, len(slice))
+		for i := range slice {
+			v[i], _ = toString(slice[i])
+		}
+		separator := ","
+		if len(value) == 2 {
+			separator, _ = value[1].StringValue()
+		}
+		return NewValue(strings.Join(v, separator)), nil
+	},
+	"split": func(value ...StaticValue) (Expression, error) {
+		if len(value) == 0 || len(value) > 2 {
+			return nil, fmt.Errorf(`"split" function expects 1-2 arguments, %d provided`, len(value))
+		}
+		str, _ := value[0].StringValue()
+		separator := ","
+		if len(value) == 2 {
+			separator, _ = value[1].StringValue()
+		}
+		return NewValue(strings.Split(str, separator)), nil
+	},
 	"int": func(value ...StaticValue) (Expression, error) {
 		if len(value) != 1 {
 			return nil, fmt.Errorf(`"int" function expects 1 argument, %d provided`, len(value))

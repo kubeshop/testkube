@@ -200,6 +200,12 @@ func TestCompileStandardLib(t *testing.T) {
 	assert.Equal(t, `"abc"`, MustCompile(`yaml("\"abc\"")`).String())
 	assert.Equal(t, `{"foo":{"bar":"baz"}}`, MustCompile(`yaml("foo:\n  bar: 'baz'")`).String())
 	assert.Equal(t, `"foo:\n    bar: baz\n"`, MustCompile(`toyaml({"foo":{"bar":"baz"}})`).String())
+	assert.Equal(t, `["a",10,["a",4]]`, MustCompile(`list("a", 10, ["a", 4])`).String())
+	assert.Equal(t, `"a,10,a,4"`, MustCompile(`join(["a",10,["a",4]])`).String())
+	assert.Equal(t, `"a---10---a,4"`, MustCompile(`join(["a",10,["a",4]], "---")`).String())
+	assert.Equal(t, `[""]`, MustCompile(`split(null)`).String())
+	assert.Equal(t, `["a","b","c"]`, MustCompile(`split("a,b,c")`).String())
+	assert.Equal(t, `["a","b","c"]`, MustCompile(`split("a---b---c", "---")`).String())
 }
 
 func TestCompileDetectAccessors(t *testing.T) {
