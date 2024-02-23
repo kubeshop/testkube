@@ -100,6 +100,8 @@ func TestCompileTemplate(t *testing.T) {
 	assert.Equal(t, `"abc50"`, MustCompileTemplate(`abc{{ 5 + 45 }}`).String())
 	assert.Equal(t, `"abc50def"`, MustCompileTemplate(`abc{{ 5 + 45 }}def`).String())
 	assert.Equal(t, `"abc50def"+string(env.abc*5)+"20"`, MustCompileTemplate(`abc{{ 5 + 45 }}def{{env.abc * 5}}20`).String())
+
+	assert.Equal(t, `abc50def`, must(MustCompileTemplate(`abc{{ 5 + 45 }}def`).Static().StringValue()))
 }
 
 func TestCompilePartialResolution(t *testing.T) {
@@ -174,6 +176,8 @@ func TestCompileStandardLib(t *testing.T) {
 	assert.Equal(t, `"\"500.8\""`, MustCompile(`tojson("500.8")`).String())
 	assert.Equal(t, `"abc"`, MustCompile(`shellquote("abc")`).String())
 	assert.Equal(t, `"'a b c'"`, MustCompile(`shellquote("a b c")`).String())
+	assert.Equal(t, `"'a b c' 'd e f'"`, MustCompile(`shellquote("a b c", "d e f")`).String())
+	assert.Equal(t, `"''"`, MustCompile(`shellquote(null)`).String())
 }
 
 func TestCompileDetectAccessors(t *testing.T) {

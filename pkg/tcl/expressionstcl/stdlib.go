@@ -73,11 +73,11 @@ var stdFunctions = map[string]func(...StaticValue) (Expression, error){
 		return NewValue(v), nil
 	},
 	"shellquote": func(value ...StaticValue) (Expression, error) {
-		if len(value) != 1 {
-			return nil, fmt.Errorf(`"shellquote" function expects 1 argument, %d provided`, len(value))
+		args := make([]string, len(value))
+		for i := range value {
+			args[i], _ = value[i].StringValue()
 		}
-		str, _ := value[0].StringValue()
-		return NewValue(shellquote.Join(str)), nil
+		return NewValue(shellquote.Join(args...)), nil
 	},
 }
 
