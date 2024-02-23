@@ -546,7 +546,7 @@ func main() {
 		subscriptionChecker, err := checktcl.NewSubscriptionChecker(ctx, *proContext, grpcClient, grpcConn)
 		ui.WarnOnError("Creating subscription checker", err)
 
-		api.WithSubscriptionChecker(*subscriptionChecker)
+		api.WithSubscriptionChecker(subscriptionChecker)
 		sched.WithSubscriptionChecker(subscriptionChecker)
 
 		agentHandle, err := agent.NewAgent(

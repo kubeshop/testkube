@@ -242,7 +242,7 @@ func (s *Scheduler) createSecretsReferences(execution *testkube.Execution) (err 
 	return nil
 }
 
-func newExecutionFromExecutionOptions(subscriptionChecker *checktcl.SubscriptionChecker, options client.ExecuteOptions) (testkube.Execution, error) {
+func newExecutionFromExecutionOptions(subscriptionChecker checktcl.SubscriptionChecker, options client.ExecuteOptions) (testkube.Execution, error) {
 	execution := testkube.NewExecution(
 		options.Request.Id,
 		options.Namespace,

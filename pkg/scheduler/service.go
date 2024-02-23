@@ -43,7 +43,7 @@ type Scheduler struct {
 	dashboardURI              string
 	featureFlags              featureflags.FeatureFlags
 	logsStream                logsclient.Stream
-	subscriptionChecker       *checktcl.SubscriptionChecker
+	subscriptionChecker       checktcl.SubscriptionChecker
 }
 
 func NewScheduler(
@@ -92,7 +92,7 @@ func NewScheduler(
 
 // WithSubscriptionChecker sets subscription checker for the Scheduler
 // This is used to check if Pro/Enterprise subscription is valid
-func (s *Scheduler) WithSubscriptionChecker(subscriptionChecker *checktcl.SubscriptionChecker) *Scheduler {
+func (s *Scheduler) WithSubscriptionChecker(subscriptionChecker checktcl.SubscriptionChecker) *Scheduler {
 	s.subscriptionChecker = subscriptionChecker
 	return s
 }
