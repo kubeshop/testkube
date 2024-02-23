@@ -7,6 +7,7 @@ import (
 
 	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/tcl/testsuitestcl"
 	"github.com/kubeshop/testkube/pkg/types"
 )
 
@@ -198,6 +199,7 @@ func mapTestStepToCRD(step testkube.TestSuiteStep) (stepSpec testsuitesv3.TestSu
 		}
 	case testkube.TestSuiteStepTypeExecuteTest:
 		stepSpec.Test = step.Test
+		stepSpec.ExecutionRequest = testsuitestcl.MapTestStepExecutionRequestCRD(step.ExecutionRequest)
 	}
 
 	return stepSpec, nil

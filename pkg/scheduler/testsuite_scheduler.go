@@ -447,7 +447,7 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 			testTuples = append(testTuples, testTuple{
 				test:        testkube.Test{Name: executeTestStep, Namespace: testsuiteExecution.TestSuite.Namespace},
 				executionID: execution.Id,
-				stepRequest: step.TestSuiteStepExecutionRequest, //TODO make sure this is correct
+				stepRequest: step.ExecutionRequest, //TODO make sure this is correct
 			})
 		case testkube.TestSuiteStepTypeDelay:
 			if step.Delay == "" {

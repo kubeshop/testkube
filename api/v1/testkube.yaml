@@ -3634,7 +3634,7 @@ components:
           format: duration
           example: 1s
           description: delay duration in time units
-        testSuiteStepExecutionRequest:
+        executionRequest:
           $ref: "#/components/schemas/TestSuiteStepExecutionRequest"
           description: test suite step execution request parameters
 
