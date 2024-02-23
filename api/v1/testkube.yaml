@@ -3634,6 +3634,9 @@ components:
           format: duration
           example: 1s
           description: delay duration in time units
+        executionRequest:
+          $ref: "#/components/schemas/TestSuiteStepExecutionRequest"
+          description: test suite step execution request parameters
 
     TestSuiteStepV2:
       type: object
@@ -5008,6 +5011,87 @@ components:
         slavePodRequest:
           $ref: "#/components/schemas/PodRequest"
           description: configuration parameters for executed slave pods
+
+    TestSuiteStepExecutionRequest:
+      description: test step execution request body
+      type: object
+      readOnly: true
+      properties:
+        executionLabels:
+          type: object
+          description: "test execution labels"
+          additionalProperties:
+            type: string
+          example:
+            users: "3"
+            prefix: "some-"
+        variables:
+          $ref: "#/components/schemas/Variables"
+        command:
+          type: array
+          description: "executor image command"
+          items:
+            type: string
+          example:
+            - "curl"
+        args:
+          type: array
+          description: "additional executor binary arguments"
+          items:
+            type: string
+          example:
+            - "--repeats"
+            - "5"
+            - "--insecure"
+        args_mode:
+          type: string
+          description: usage mode for arguments
+          enum:
+            - append
+            - override
+            - replace
+        sync:
+          type: boolean
+          description: whether to start execution sync or async
+        httpProxy:
+          type: string
+          description: http proxy for executor containers
+          example: user:pass@my.proxy.server:8080
+        httpsProxy:
+          type: string
+          description: https proxy for executor containers
+          example: user:pass@my.proxy.server:8081
+        negativeTest:
+          type: boolean
+          description: whether to run test as negative test
+          example: false
+        jobTemplate:
+          type: string
+          description: job template extensions
+        jobTemplateReference:
+          type: string
+          description: name of the template resource
+        cronJobTemplate:
+          type: string
+          description: cron job template extensions
+        cronJobTemplateReference:
+          type: string
+          description: name of the template resource
+        scraperTemplate:
+          type: string
+          description: scraper template extensions
+        scraperTemplateReference:
+          type: string
+          description: name of the template resource
+        pvcTemplate:
+          type: string
+          description: pvc template extensions
+        pvcTemplateReference:
+          type: string
+          description: name of the template resource
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
+          description: running context for the test execution
 
     ExecutionUpdateRequest:
       description: test execution request update body

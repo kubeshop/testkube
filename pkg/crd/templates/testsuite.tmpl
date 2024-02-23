@@ -38,6 +38,104 @@ spec:
     {{- range .Execute }}
       {{- if .Test }}
     - test: {{ .Test }}
+      {{- if .ExecutionRequest }}
+      {{- if or (ne (len .ExecutionRequest.ExecutionLabels) 0) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (.ExecutionRequest.ArgsMode) (ne (len .ExecutionRequest.Command) 0) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.JobTemplateReference) (.ExecutionRequest.CronJobTemplate) (.ExecutionRequest.CronJobTemplateReference) (.ExecutionRequest.ScraperTemplate) (.ExecutionRequest.ScraperTemplateReference) (.ExecutionRequest.PvcTemplate) (.ExecutionRequest.PvcTemplateReference) (.ExecutionRequest.RunningContext)}}
+      executionRequest:
+        {{- if ne (len .ExecutionRequest.ExecutionLabels) 0 }}
+        executionLabels:
+        {{- range $key, $value := .ExecutionRequest.ExecutionLabels }}
+          {{ $key }}: {{ $value }}
+        {{- end }}
+        {{- end }}
+        {{- if ne (len .ExecutionRequest.Variables) 0 }}
+        variables:
+          {{- range $key, $value := .ExecutionRequest.Variables }}
+          {{ $key }}:
+            name: {{ $key }}
+            {{- if $value.Value }}
+            value: {{ $value.Value }}
+            {{- end }}
+            {{- if $value.Type_ }}
+            type: {{ $value.Type_ }}
+            {{- end }}
+            {{- if $value.SecretRef }}
+            valueFrom:
+              secretKeyRef:
+                {{- if $value.SecretRef.Name }}
+                name: {{ $value.SecretRef.Name }}
+                {{- end }}
+                {{- if $value.SecretRef.Key }}
+                key: {{ $value.SecretRef.Key }}
+               {{- end }}
+            {{- end }}
+            {{- if $value.ConfigMapRef }}
+            valueFrom:
+              configMapKeyRef:
+                {{- if $value.ConfigMapRef.Name }}
+                name: {{ $value.ConfigMapRef.Name }}
+                {{- end }}
+                {{- if $value.ConfigMapRef.Key }}
+                key: {{ $value.ConfigMapRef.Key }}
+                {{- end }}
+            {{- end }}
+          {{- end }}
+          {{- end }}
+        {{- if ne (len .ExecutionRequest.Args) 0 }}
+        args:
+        {{- range .ExecutionRequest.Args }}
+          - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .ExecutionRequest.ArgsMode }}
+        argsMode: {{ .ExecutionRequest.ArgsMode }}
+        {{- end }}
+        {{- if gt (len .ExecutionRequest.Command) 0 }}
+        command:
+        {{- range $cmd := .ExecutionRequest.Command }}
+        - {{ $cmd -}}
+        {{- end }}
+        {{- end -}}
+        {{- if .ExecutionRequest.Sync }}
+        sync: {{ .ExecutionRequest.Sync }}
+        {{- end }}
+        {{- if .ExecutionRequest.HttpProxy }}
+        httpProxy: {{ .ExecutionRequest.HttpProxy }}
+        {{- end }}
+        {{- if .ExecutionRequest.HttpsProxy }}
+        httpsProxy: {{ .ExecutionRequest.HttpsProxy }}
+        {{- end }}
+        {{- if .ExecutionRequest.NegativeTest }}
+        negativeTest: {{ .ExecutionRequest.NegativeTest }}
+        {{- end }}
+        {{- if .ExecutionRequest.JobTemplate }}
+        jobTemplate: {{ .ExecutionRequest.JobTemplate }}
+        {{- end }}
+        {{- if .ExecutionRequest.JobTemplateReference }}
+        jobTemplateReference: {{ .ExecutionRequest.JobTemplateReference }}
+        {{- end }}
+        {{- if .ExecutionRequest.CronJobTemplate }}
+        cronJobTemplate: {{ .ExecutionRequest.CronJobTemplate }}
+        {{- end }}
+        {{- if .ExecutionRequest.CronJobTemplateReference }}
+        cronJobTemplateReference: {{ .ExecutionRequest.CronJobTemplateReference }}
+        {{- end }}
+        {{- if .ExecutionRequest.ScraperTemplate }}
+        scraperTemplate: {{ .ExecutionRequest.ScraperTemplate }}
+        {{- end }}
+        {{- if .ExecutionRequest.ScraperTemplateReference }}
+        scraperTemplateReference: {{ .ExecutionRequest.ScraperTemplateReference }}
+        {{- end }}
+        {{- if .ExecutionRequest.PvcTemplate }}
+        pvcTemplate: {{ .ExecutionRequest.PvcTemplate }}
+        {{- end }}
+        {{- if .ExecutionRequest.PvcTemplateReference }}
+        pvcTemplateReference: {{ .ExecutionRequest.PvcTemplateReference }}
+        {{- end }}
+        {{- if .ExecutionRequest.RunningContext }}
+        runningContext: {{ .ExecutionRequest.RunningContext }}
+        {{- end }}
+      {{- end }}
+      {{- end }}
       {{- end }}
       {{- if .Delay }}
     - delay: {{ .Delay }}
@@ -71,6 +169,104 @@ spec:
     {{- range .Execute }}
       {{- if .Test }}
     - test: {{ .Test }}
+      {{- if .ExecutionRequest }}
+      {{- if or (ne (len .ExecutionRequest.ExecutionLabels) 0) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (.ExecutionRequest.ArgsMode) (ne (len .ExecutionRequest.Command) 0) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.JobTemplateReference) (.ExecutionRequest.CronJobTemplate) (.ExecutionRequest.CronJobTemplateReference) (.ExecutionRequest.ScraperTemplate) (.ExecutionRequest.ScraperTemplateReference) (.ExecutionRequest.PvcTemplate) (.ExecutionRequest.PvcTemplateReference) (.ExecutionRequest.RunningContext)}}
+      executionRequest:
+        {{- if ne (len .ExecutionRequest.ExecutionLabels) 0 }}
+        executionLabels:
+        {{- range $key, $value := .ExecutionRequest.ExecutionLabels }}
+          {{ $key }}: {{ $value }}
+        {{- end }}
+        {{- end }}
+        {{- if ne (len .ExecutionRequest.Variables) 0 }}
+        variables:
+          {{- range $key, $value := .ExecutionRequest.Variables }}
+          {{ $key }}:
+            name: {{ $key }}
+            {{- if $value.Value }}
+            value: {{ $value.Value }}
+            {{- end }}
+            {{- if $value.Type_ }}
+            type: {{ $value.Type_ }}
+            {{- end }}
+            {{- if $value.SecretRef }}
+            valueFrom:
+              secretKeyRef:
+                {{- if $value.SecretRef.Name }}
+                name: {{ $value.SecretRef.Name }}
+                {{- end }}
+                {{- if $value.SecretRef.Key }}
+                key: {{ $value.SecretRef.Key }}
+               {{- end }}
+            {{- end }}
+            {{- if $value.ConfigMapRef }}
+            valueFrom:
+              configMapKeyRef:
+                {{- if $value.ConfigMapRef.Name }}
+                name: {{ $value.ConfigMapRef.Name }}
+                {{- end }}
+                {{- if $value.ConfigMapRef.Key }}
+                key: {{ $value.ConfigMapRef.Key }}
+                {{- end }}
+            {{- end }}
+          {{- end }}
+          {{- end }}
+        {{- if ne (len .ExecutionRequest.Args) 0 }}
+        args:
+        {{- range .ExecutionRequest.Args }}
+          - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .ExecutionRequest.ArgsMode }}
+        argsMode: {{ .ExecutionRequest.ArgsMode }}
+        {{- end }}
+        {{- if gt (len .ExecutionRequest.Command) 0 }}
+        command:
+        {{- range $cmd := .ExecutionRequest.Command }}
+        - {{ $cmd -}}
+        {{- end }}
+        {{- end -}}
+        {{- if .ExecutionRequest.Sync }}
+        sync: {{ .ExecutionRequest.Sync }}
+        {{- end }}
+        {{- if .ExecutionRequest.HttpProxy }}
+        httpProxy: {{ .ExecutionRequest.HttpProxy }}
+        {{- end }}
+        {{- if .ExecutionRequest.HttpsProxy }}
+        httpsProxy: {{ .ExecutionRequest.HttpsProxy }}
+        {{- end }}
+        {{- if .ExecutionRequest.NegativeTest }}
+        negativeTest: {{ .ExecutionRequest.NegativeTest }}
+        {{- end }}
+        {{- if .ExecutionRequest.JobTemplate }}
+        jobTemplate: {{ .ExecutionRequest.JobTemplate }}
+        {{- end }}
+        {{- if .ExecutionRequest.JobTemplateReference }}
+        jobTemplateReference: {{ .ExecutionRequest.JobTemplateReference }}
+        {{- end }}
+        {{- if .ExecutionRequest.CronJobTemplate }}
+        cronJobTemplate: {{ .ExecutionRequest.CronJobTemplate }}
+        {{- end }}
+        {{- if .ExecutionRequest.CronJobTemplateReference }}
+        cronJobTemplateReference: {{ .ExecutionRequest.CronJobTemplateReference }}
+        {{- end }}
+        {{- if .ExecutionRequest.ScraperTemplate }}
+        scraperTemplate: {{ .ExecutionRequest.ScraperTemplate }}
+        {{- end }}
+        {{- if .ExecutionRequest.ScraperTemplateReference }}
+        scraperTemplateReference: {{ .ExecutionRequest.ScraperTemplateReference }}
+        {{- end }}
+        {{- if .ExecutionRequest.PvcTemplate }}
+        pvcTemplate: {{ .ExecutionRequest.PvcTemplate }}
+        {{- end }}
+        {{- if .ExecutionRequest.PvcTemplateReference }}
+        pvcTemplateReference: {{ .ExecutionRequest.PvcTemplateReference }}
+        {{- end }}
+        {{- if .ExecutionRequest.RunningContext }}
+        runningContext: {{ .ExecutionRequest.RunningContext }}
+        {{- end }}
+      {{- end }}
+      {{- end }}
       {{- end }}
       {{- if .Delay }}
     - delay: {{ .Delay }}
@@ -104,10 +300,108 @@ spec:
     {{- range .Execute }}
       {{- if .Test }}
     - test: {{ .Test }}
+      {{- if .ExecutionRequest }}
+      {{- if or (ne (len .ExecutionRequest.ExecutionLabels) 0) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (.ExecutionRequest.ArgsMode) (ne (len .ExecutionRequest.Command) 0) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.JobTemplateReference) (.ExecutionRequest.CronJobTemplate) (.ExecutionRequest.CronJobTemplateReference) (.ExecutionRequest.ScraperTemplate) (.ExecutionRequest.ScraperTemplateReference) (.ExecutionRequest.PvcTemplate) (.ExecutionRequest.PvcTemplateReference) (.ExecutionRequest.RunningContext)}}
+      executionRequest:
+        {{- if ne (len .ExecutionRequest.ExecutionLabels) 0 }}
+        executionLabels:
+        {{- range $key, $value := .ExecutionRequest.ExecutionLabels }}
+          {{ $key }}: {{ $value }}
+        {{- end }}
+        {{- end }}
+        {{- if ne (len .ExecutionRequest.Variables) 0 }}
+        variables:
+          {{- range $key, $value := .ExecutionRequest.Variables }}
+          {{ $key }}:
+            name: {{ $key }}
+            {{- if $value.Value }}
+            value: {{ $value.Value }}
+            {{- end }}
+            {{- if $value.Type_ }}
+            type: {{ $value.Type_ }}
+            {{- end }}
+            {{- if $value.SecretRef }}
+            valueFrom:
+              secretKeyRef:
+                {{- if $value.SecretRef.Name }}
+                name: {{ $value.SecretRef.Name }}
+                {{- end }}
+                {{- if $value.SecretRef.Key }}
+                key: {{ $value.SecretRef.Key }}
+               {{- end }}
+            {{- end }}
+            {{- if $value.ConfigMapRef }}
+            valueFrom:
+              configMapKeyRef:
+                {{- if $value.ConfigMapRef.Name }}
+                name: {{ $value.ConfigMapRef.Name }}
+                {{- end }}
+                {{- if $value.ConfigMapRef.Key }}
+                key: {{ $value.ConfigMapRef.Key }}
+                {{- end }}
+            {{- end }}
+          {{- end }}
+          {{- end }}
+        {{- if ne (len .ExecutionRequest.Args) 0 }}
+        args:
+        {{- range .ExecutionRequest.Args }}
+          - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .ExecutionRequest.ArgsMode }}
+        argsMode: {{ .ExecutionRequest.ArgsMode }}
+        {{- end }}
+        {{- if gt (len .ExecutionRequest.Command) 0 }}
+        command:
+        {{- range $cmd := .ExecutionRequest.Command }}
+        - {{ $cmd -}}
+        {{- end }}
+        {{- end -}}
+        {{- if .ExecutionRequest.Sync }}
+        sync: {{ .ExecutionRequest.Sync }}
+        {{- end }}
+        {{- if .ExecutionRequest.HttpProxy }}
+        httpProxy: {{ .ExecutionRequest.HttpProxy }}
+        {{- end }}
+        {{- if .ExecutionRequest.HttpsProxy }}
+        httpsProxy: {{ .ExecutionRequest.HttpsProxy }}
+        {{- end }}
+        {{- if .ExecutionRequest.NegativeTest }}
+        negativeTest: {{ .ExecutionRequest.NegativeTest }}
+        {{- end }}
+        {{- if .ExecutionRequest.JobTemplate }}
+        jobTemplate: {{ .ExecutionRequest.JobTemplate }}
+        {{- end }}
+        {{- if .ExecutionRequest.JobTemplateReference }}
+        jobTemplateReference: {{ .ExecutionRequest.JobTemplateReference }}
+        {{- end }}
+        {{- if .ExecutionRequest.CronJobTemplate }}
+        cronJobTemplate: {{ .ExecutionRequest.CronJobTemplate }}
+        {{- end }}
+        {{- if .ExecutionRequest.CronJobTemplateReference }}
+        cronJobTemplateReference: {{ .ExecutionRequest.CronJobTemplateReference }}
+        {{- end }}
+        {{- if .ExecutionRequest.ScraperTemplate }}
+        scraperTemplate: {{ .ExecutionRequest.ScraperTemplate }}
+        {{- end }}
+        {{- if .ExecutionRequest.ScraperTemplateReference }}
+        scraperTemplateReference: {{ .ExecutionRequest.ScraperTemplateReference }}
+        {{- end }}
+        {{- if .ExecutionRequest.PvcTemplate }}
+        pvcTemplate: {{ .ExecutionRequest.PvcTemplate }}
+        {{- end }}
+        {{- if .ExecutionRequest.PvcTemplateReference }}
+        pvcTemplateReference: {{ .ExecutionRequest.PvcTemplateReference }}
+        {{- end }}
+        {{- if .ExecutionRequest.RunningContext }}
+        runningContext: {{ .ExecutionRequest.RunningContext }}
+        {{- end }}
+      {{- end }}
+      {{- end }}
       {{- end }}
       {{- if .Delay }}
     - delay: {{ .Delay }}
-      {{- end }}
+      {{- end }}      
     {{- end }}
     {{- end }}
   {{- end }}
