@@ -61,24 +61,43 @@ func (mr *MockExpressionMockRecorder) Functions() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Functions", reflect.TypeOf((*MockExpression)(nil).Functions))
 }
 
-// SafeSimplify mocks base method.
-func (m *MockExpression) SafeSimplify(arg0 ...MachineCore) (Expression, bool, error) {
+// Resolve mocks base method.
+func (m *MockExpression) Resolve(arg0 ...MachineCore) (Expression, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{}
 	for _, a := range arg0 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "SafeSimplify", varargs...)
+	ret := m.ctrl.Call(m, "Resolve", varargs...)
+	ret0, _ := ret[0].(Expression)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Resolve indicates an expected call of Resolve.
+func (mr *MockExpressionMockRecorder) Resolve(arg0 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resolve", reflect.TypeOf((*MockExpression)(nil).Resolve), arg0...)
+}
+
+// SafeResolve mocks base method.
+func (m *MockExpression) SafeResolve(arg0 ...MachineCore) (Expression, bool, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SafeResolve", varargs...)
 	ret0, _ := ret[0].(Expression)
 	ret1, _ := ret[1].(bool)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
 }
 
-// SafeSimplify indicates an expected call of SafeSimplify.
-func (mr *MockExpressionMockRecorder) SafeSimplify(arg0 ...interface{}) *gomock.Call {
+// SafeResolve indicates an expected call of SafeResolve.
+func (mr *MockExpressionMockRecorder) SafeResolve(arg0 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SafeSimplify", reflect.TypeOf((*MockExpression)(nil).SafeSimplify), arg0...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SafeResolve", reflect.TypeOf((*MockExpression)(nil).SafeResolve), arg0...)
 }
 
 // SafeString mocks base method.
@@ -93,25 +112,6 @@ func (m *MockExpression) SafeString() string {
 func (mr *MockExpressionMockRecorder) SafeString() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SafeString", reflect.TypeOf((*MockExpression)(nil).SafeString))
-}
-
-// Simplify mocks base method.
-func (m *MockExpression) Simplify(arg0 ...MachineCore) (Expression, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range arg0 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "Simplify", varargs...)
-	ret0, _ := ret[0].(Expression)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Simplify indicates an expected call of Simplify.
-func (mr *MockExpressionMockRecorder) Simplify(arg0 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Simplify", reflect.TypeOf((*MockExpression)(nil).Simplify), arg0...)
 }
 
 // Static mocks base method.

@@ -30,8 +30,8 @@ func (s *negative) Template() string {
 	return "{{" + s.String() + "}}"
 }
 
-func (s *negative) SafeSimplify(m ...MachineCore) (v Expression, changed bool, err error) {
-	s.expr, changed, err = s.expr.SafeSimplify(m...)
+func (s *negative) SafeResolve(m ...MachineCore) (v Expression, changed bool, err error) {
+	s.expr, changed, err = s.expr.SafeResolve(m...)
 	if err != nil {
 		return nil, changed, err
 	}
@@ -47,8 +47,8 @@ func (s *negative) SafeSimplify(m ...MachineCore) (v Expression, changed bool, e
 	return NewValue(!vv), changed, nil
 }
 
-func (s *negative) Simplify(m ...MachineCore) (v Expression, err error) {
-	return deepSimplify(s, m...)
+func (s *negative) Resolve(m ...MachineCore) (v Expression, err error) {
+	return deepResolve(s, m...)
 }
 
 func (s *negative) Static() StaticValue {

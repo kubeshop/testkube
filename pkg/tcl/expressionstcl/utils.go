@@ -14,14 +14,14 @@ import (
 
 const maxCallStack = 10_000
 
-func deepSimplify(expr Expression, machines ...MachineCore) (Expression, error) {
+func deepResolve(expr Expression, machines ...MachineCore) (Expression, error) {
 	i := 1
-	expr, changed, err := expr.SafeSimplify(machines...)
+	expr, changed, err := expr.SafeResolve(machines...)
 	for changed && err == nil && expr.Static() == nil {
 		if i > maxCallStack {
 			return expr, fmt.Errorf("maximum call stack exceeded while resolving expression: %s", expr.String())
 		}
-		expr, changed, err = expr.SafeSimplify(machines...)
+		expr, changed, err = expr.SafeResolve(machines...)
 		i++
 	}
 	return expr, err

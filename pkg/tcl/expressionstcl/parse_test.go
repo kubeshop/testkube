@@ -128,10 +128,10 @@ func TestCompilePartialResolution(t *testing.T) {
 			return MustCompile(`env.apiUrl`), true, nil
 		})
 
-	assert.Equal(t, `555`, must(MustCompile(`someint`).Simplify(vm)).String())
-	assert.Equal(t, `"[placeholder:name]"`, must(MustCompile(`env.name`).Simplify(vm)).String())
-	assert.Equal(t, `secret(name)`, must(MustCompile(`secrets.name`).Simplify(vm)).String())
-	assert.Equal(t, `"[placeholder:apiUrl]"`, must(MustCompile(`mainEndpoint()`).Simplify(vm)).String())
+	assert.Equal(t, `555`, must(MustCompile(`someint`).Resolve(vm)).String())
+	assert.Equal(t, `"[placeholder:name]"`, must(MustCompile(`env.name`).Resolve(vm)).String())
+	assert.Equal(t, `secret(name)`, must(MustCompile(`secrets.name`).Resolve(vm)).String())
+	assert.Equal(t, `"[placeholder:apiUrl]"`, must(MustCompile(`mainEndpoint()`).Resolve(vm)).String())
 }
 
 func TestCompileResolution(t *testing.T) {
@@ -158,10 +158,10 @@ func TestCompileResolution(t *testing.T) {
 		}).
 		Finalizer()
 
-	assert.Equal(t, `555`, must(MustCompile(`someint`).Simplify(vm)).String())
-	assert.Equal(t, `"[placeholder:name]"`, must(MustCompile(`env.name`).Simplify(vm)).String())
-	assert.Error(t, errOnly(MustCompile(`secrets.name`).Simplify(vm)))
-	assert.Equal(t, `"[placeholder:apiUrl]"`, must(MustCompile(`mainEndpoint()`).Simplify(vm)).String())
+	assert.Equal(t, `555`, must(MustCompile(`someint`).Resolve(vm)).String())
+	assert.Equal(t, `"[placeholder:name]"`, must(MustCompile(`env.name`).Resolve(vm)).String())
+	assert.Error(t, errOnly(MustCompile(`secrets.name`).Resolve(vm)))
+	assert.Equal(t, `"[placeholder:apiUrl]"`, must(MustCompile(`mainEndpoint()`).Resolve(vm)).String())
 }
 
 func TestCircularResolution(t *testing.T) {
@@ -177,8 +177,8 @@ func TestCircularResolution(t *testing.T) {
 		}).
 		Finalizer()
 
-	assert.Contains(t, fmt.Sprintf("%v", errOnly(MustCompile(`one()`).Simplify(vm))), "call stack exceeded")
-	assert.Contains(t, fmt.Sprintf("%v", errOnly(MustCompile(`self()`).Simplify(vm))), "call stack exceeded")
+	assert.Contains(t, fmt.Sprintf("%v", errOnly(MustCompile(`one()`).Resolve(vm))), "call stack exceeded")
+	assert.Contains(t, fmt.Sprintf("%v", errOnly(MustCompile(`self()`).Resolve(vm))), "call stack exceeded")
 }
 
 func TestCompileStandardLib(t *testing.T) {

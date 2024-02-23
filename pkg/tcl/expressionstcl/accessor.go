@@ -32,7 +32,7 @@ func (s *accessor) Template() string {
 	return "{{" + s.String() + "}}"
 }
 
-func (s *accessor) SafeSimplify(m ...MachineCore) (v Expression, changed bool, err error) {
+func (s *accessor) SafeResolve(m ...MachineCore) (v Expression, changed bool, err error) {
 	if m == nil {
 		return s, false, nil
 	}
@@ -49,8 +49,8 @@ func (s *accessor) SafeSimplify(m ...MachineCore) (v Expression, changed bool, e
 	return s, false, nil
 }
 
-func (s *accessor) Simplify(m ...MachineCore) (v Expression, err error) {
-	return deepSimplify(s, m...)
+func (s *accessor) Resolve(m ...MachineCore) (v Expression, err error) {
+	return deepResolve(s, m...)
 }
 
 func (s *accessor) Static() StaticValue {

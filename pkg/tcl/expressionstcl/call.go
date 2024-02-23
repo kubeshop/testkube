@@ -67,10 +67,10 @@ func (s *call) resolvedArgs() []StaticValue {
 	return v
 }
 
-func (s *call) SafeSimplify(m ...MachineCore) (v Expression, changed bool, err error) {
+func (s *call) SafeResolve(m ...MachineCore) (v Expression, changed bool, err error) {
 	var ch bool
 	for i := range s.args {
-		s.args[i], ch, err = s.args[i].SafeSimplify(m...)
+		s.args[i], ch, err = s.args[i].SafeResolve(m...)
 		changed = changed || ch
 		if err != nil {
 			return nil, changed, err
@@ -98,8 +98,8 @@ func (s *call) SafeSimplify(m ...MachineCore) (v Expression, changed bool, err e
 	return s, changed, nil
 }
 
-func (s *call) Simplify(m ...MachineCore) (v Expression, err error) {
-	return deepSimplify(s, m...)
+func (s *call) Resolve(m ...MachineCore) (v Expression, err error) {
+	return deepResolve(s, m...)
 }
 
 func (s *call) Static() StaticValue {

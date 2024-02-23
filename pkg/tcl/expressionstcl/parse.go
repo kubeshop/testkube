@@ -162,7 +162,7 @@ func Compile(exp string) (Expression, error) {
 	if e != nil {
 		return nil, fmt.Errorf("parser error: %v", e)
 	}
-	return v.Simplify()
+	return v.Resolve()
 }
 
 func MustCompile(exp string) Expression {
@@ -200,7 +200,7 @@ func CompileTemplate(tpl string) (Expression, error) {
 		if err != nil {
 			return nil, fmt.Errorf("parser error: %v", e)
 		}
-		v, err = v.Simplify()
+		v, err = v.Resolve()
 		if err != nil {
 			return nil, fmt.Errorf("expression error: %v", e)
 		}
@@ -215,7 +215,7 @@ func CompileTemplate(tpl string) (Expression, error) {
 	if offset < len(tpl) {
 		e = newMath(operatorAdd, e, NewStringValue(tpl[offset:]))
 	}
-	return e.Simplify()
+	return e.Resolve()
 }
 
 func MustCompileTemplate(tpl string) Expression {

@@ -35,9 +35,9 @@ func (s *conditional) Template() string {
 	return "{{" + s.String() + "}}"
 }
 
-func (s *conditional) SafeSimplify(m ...MachineCore) (v Expression, changed bool, err error) {
+func (s *conditional) SafeResolve(m ...MachineCore) (v Expression, changed bool, err error) {
 	var ch bool
-	s.condition, ch, err = s.condition.SafeSimplify(m...)
+	s.condition, ch, err = s.condition.SafeResolve(m...)
 	changed = changed || ch
 	if err != nil {
 		return nil, changed, err
@@ -53,12 +53,12 @@ func (s *conditional) SafeSimplify(m ...MachineCore) (v Expression, changed bool
 		}
 		return s.falsy, true, err
 	}
-	s.truthy, ch, err = s.truthy.SafeSimplify(m...)
+	s.truthy, ch, err = s.truthy.SafeResolve(m...)
 	changed = changed || ch
 	if err != nil {
 		return nil, changed, err
 	}
-	s.falsy, ch, err = s.falsy.SafeSimplify(m...)
+	s.falsy, ch, err = s.falsy.SafeResolve(m...)
 	changed = changed || ch
 	if err != nil {
 		return nil, changed, err
@@ -66,8 +66,8 @@ func (s *conditional) SafeSimplify(m ...MachineCore) (v Expression, changed bool
 	return s, changed, nil
 }
 
-func (s *conditional) Simplify(m ...MachineCore) (v Expression, err error) {
-	return deepSimplify(s, m...)
+func (s *conditional) Resolve(m ...MachineCore) (v Expression, err error) {
+	return deepResolve(s, m...)
 }
 
 func (s *conditional) Static() StaticValue {

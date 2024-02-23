@@ -13,8 +13,8 @@ type Expression interface {
 	String() string
 	SafeString() string
 	Template() string
-	SafeSimplify(...MachineCore) (Expression, bool, error)
-	Simplify(...MachineCore) (Expression, error)
+	SafeResolve(...MachineCore) (Expression, bool, error)
+	Resolve(...MachineCore) (Expression, error)
 	Static() StaticValue
 	Accessors() map[string]struct{}
 	Functions() map[string]struct{}
