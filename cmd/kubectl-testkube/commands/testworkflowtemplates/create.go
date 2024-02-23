@@ -9,7 +9,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	common2 "github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/tcl/workflowstcl/mappers"
+	"github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -66,11 +66,11 @@ func NewCreateTestWorkflowTemplateCmd() *cobra.Command {
 				if !update {
 					ui.Failf("Test workflow template with name '%s' already exists in namespace %s, use --update flag for upsert", obj.Name, namespace)
 				}
-				_, err = client.UpdateTestWorkflowTemplate(mappers.MapTestWorkflowTemplateKubeToAPI(*obj))
+				_, err = client.UpdateTestWorkflowTemplate(testworkflows.MapTestWorkflowTemplateKubeToAPI(*obj))
 				ui.ExitOnError("updating test workflow template "+obj.Name+" in namespace "+obj.Namespace, err)
 				ui.Success("Test workflow template updated", namespace, "/", obj.Name)
 			} else {
-				_, err = client.CreateTestWorkflowTemplate(mappers.MapTestWorkflowTemplateKubeToAPI(*obj))
+				_, err = client.CreateTestWorkflowTemplate(testworkflows.MapTestWorkflowTemplateKubeToAPI(*obj))
 				ui.ExitOnError("creating test workflow "+obj.Name+" in namespace "+obj.Namespace, err)
 				ui.Success("Test workflow template created", namespace, "/", obj.Name)
 			}

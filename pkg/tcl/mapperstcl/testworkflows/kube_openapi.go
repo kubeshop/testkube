@@ -6,7 +6,7 @@
 //
 //	https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
 
-package mappers
+package testworkflows
 
 import (
 	corev1 "k8s.io/api/core/v1"
