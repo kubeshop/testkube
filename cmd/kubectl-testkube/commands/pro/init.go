@@ -7,6 +7,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
+	"fmt"
 )
 
 func NewInitCmd() *cobra.Command {
@@ -38,8 +39,11 @@ func NewInitCmd() *cobra.Command {
 				ui.NL()
 
 				currentContext, err := common.GetCurrentKubernetesContext()
+				
+				if err != nil {
 				sendErrTelemetry(cmd, cfg, "k8s_context", err)
 				ui.ExitOnError("getting current context", err)
+				}
 				ui.Alert("Current kubectl context:", currentContext)
 				ui.NL()
 
@@ -53,8 +57,10 @@ func NewInitCmd() *cobra.Command {
 
 			spinner := ui.NewSpinner("Installing Testkube")
 			err = common.HelmUpgradeOrInstallTestkubeCloud(options, cfg, false)
+			if err != nil {
 			sendErrTelemetry(cmd, cfg, "helm_install", err)
 			ui.ExitOnError("Installing Testkube", err)
+			}
 			spinner.Success()
 
 			ui.NL()
@@ -67,9 +73,10 @@ func NewInitCmd() *cobra.Command {
 				ui.ExitOnError("user login", err)
 			}
 			err = common.PopulateLoginDataToContext(options.Master.OrgId, options.Master.EnvId, token, refreshToken, options, cfg)
+			if err != nil {
 			sendErrTelemetry(cmd, cfg, "setting_context", err)
 			ui.ExitOnError("Setting Pro environment context", err)
-
+			}
 			ui.Info(" Happy Testing! 🚀")
 			ui.NL()
 		},
@@ -84,13 +91,16 @@ func NewInitCmd() *cobra.Command {
 	return cmd
 }
 
-func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType string, errorLogs string) {
+func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType string, errorLogs error) {
+	var errorStackTrace string
+	errorStackTrace = fmt.Sprintf("%+v", errorLogs)
 	if clientCfg.TelemetryEnabled {
 		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
-		out, err := telemetry.SendCmdErrorEvent(cmd, common.Version, errType, errorLogs)
+		out, err := telemetry.SendCmdErrorEvent(cmd, common.Version, errType, errorStackTrace)
 		if ui.Verbose && err != nil {
 			ui.Err(err)
 		}
+		
 		ui.Debug("telemetry send event response", out)
 	}
 }
