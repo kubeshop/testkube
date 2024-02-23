@@ -193,7 +193,10 @@ const sidebars = {
     {
       type: "category",
       label: "Testkube Enterprise",
-      items: ["testkube-enterprise/articles/usage-guide", "testkube-enterprise/articles/auth"],
+      items: [
+        "testkube-enterprise/articles/testkube-enterprise",
+        "testkube-enterprise/articles/usage-guide", 
+        "testkube-enterprise/articles/auth"],
     },
     "articles/testkube-oss",
     {
