@@ -6,6 +6,7 @@ import (
 	commonv1 "github.com/kubeshop/testkube-operator/api/common/v1"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/tcl/testsuitestcl"
 )
 
 // MapTestSuiteListKubeToAPI maps TestSuiteList CRD to list of OpenAPI spec TestSuite
