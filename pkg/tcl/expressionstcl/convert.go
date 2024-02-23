@@ -44,7 +44,7 @@ func toString(s interface{}) (string, error) {
 	}
 	b, err := json.Marshal(s)
 	if err != nil {
-		err = fmt.Errorf("error while converting '%v' map to JSON: %v", s, err)
+		return "", fmt.Errorf("error while converting '%v' map to JSON: %v", s, err)
 	}
 	r := string(b)
 	if isMap(s) && r == "null" {
