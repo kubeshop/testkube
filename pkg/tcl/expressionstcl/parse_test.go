@@ -189,6 +189,8 @@ def
 }
 
 func TestCompileStandardLib(t *testing.T) {
+	assert.Equal(t, `false`, MustCompile(`bool(0)`).String())
+	assert.Equal(t, `true`, MustCompile(`bool(500)`).String())
 	assert.Equal(t, `"500"`, MustCompile(`string(500)`).String())
 	assert.Equal(t, `500`, MustCompile(`int(500)`).String())
 	assert.Equal(t, `500`, MustCompile(`int(500.888)`).String())

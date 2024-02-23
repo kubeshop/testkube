@@ -82,6 +82,16 @@ var stdFunctions = map[string]func(...StaticValue) (Expression, error){
 		}
 		return NewValue(v), nil
 	},
+	"bool": func(value ...StaticValue) (Expression, error) {
+		if len(value) != 1 {
+			return nil, fmt.Errorf(`"bool" function expects 1 argument, %d provided`, len(value))
+		}
+		v, err := value[0].BoolValue()
+		if err != nil {
+			return nil, err
+		}
+		return NewValue(v), nil
+	},
 	"float": func(value ...StaticValue) (Expression, error) {
 		if len(value) != 1 {
 			return nil, fmt.Errorf(`"float" function expects 1 argument, %d provided`, len(value))
