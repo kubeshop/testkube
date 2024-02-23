@@ -76,9 +76,8 @@ func (c *SubscriptionChecker) IsOrgPlanPro() (bool, error) {
 
 // IsOrgPlanActive checks if organization plan is active
 func (c *SubscriptionChecker) IsOrgPlanActive() (bool, error) {
-	return true, nil
-	// if c.orgPlan == nil {
-	// return false, errors.New("organization plan is not set")
-	// }
-	// return c.orgPlan.PlanStatus == PlanStatusActive, nil
+	if c.orgPlan == nil {
+		return false, errors.New("organization plan is not set")
+	}
+	return c.orgPlan.PlanStatus == PlanStatusActive, nil
 }
