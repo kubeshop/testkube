@@ -19,7 +19,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	mappers2 "github.com/kubeshop/testkube/pkg/tcl/mapperstcl/mappers"
+	mappers2 "github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
 )
 
 func (s *apiTCL) ListTestWorkflowsHandler() fiber.Handler {
