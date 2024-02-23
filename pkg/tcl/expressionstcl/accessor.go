@@ -32,19 +32,25 @@ func (s *accessor) Template() string {
 	return "{{" + s.String() + "}}"
 }
 
-func (s *accessor) Simplify(m MachineCore) (v Expression, err error) {
+func (s *accessor) SafeSimplify(m ...MachineCore) (v Expression, changed bool, err error) {
 	if m == nil {
-		return s, nil
+		return s, false, nil
 	}
 
-	result, ok, err := m.Get(s.name)
-	if err != nil {
-		return nil, fmt.Errorf("error while accessing %s: %s", s.String(), err.Error())
+	for i := range m {
+		result, ok, err := m[i].Get(s.name)
+		if err != nil {
+			return nil, false, fmt.Errorf("error while accessing %s: %s", s.String(), err.Error())
+		}
+		if ok {
+			return result, true, nil
+		}
 	}
-	if ok {
-		return result, nil
-	}
-	return s, nil
+	return s, false, nil
+}
+
+func (s *accessor) Simplify(m ...MachineCore) (v Expression, err error) {
+	return deepSimplify(s, m...)
 }
 
 func (s *accessor) Static() StaticValue {

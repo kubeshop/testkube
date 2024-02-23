@@ -21,7 +21,6 @@ func (f *finalizer) Get(name string) (Expression, bool, error) {
 	if !ok && err == nil {
 		return NewNone(), true, nil
 	}
-	v, err = v.Simplify(f)
 	return v, ok, err
 }
 
@@ -30,6 +29,5 @@ func (f *finalizer) Call(name string, args ...StaticValue) (Expression, bool, er
 	if !ok && err == nil {
 		return nil, true, fmt.Errorf(`"%s" function not resolved`, name)
 	}
-	v, err = v.Simplify(f)
 	return v, ok, err
 }

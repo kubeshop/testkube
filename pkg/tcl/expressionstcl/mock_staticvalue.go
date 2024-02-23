@@ -219,6 +219,26 @@ func (mr *MockStaticValueMockRecorder) MapValue() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MapValue", reflect.TypeOf((*MockStaticValue)(nil).MapValue))
 }
 
+// SafeSimplify mocks base method.
+func (m *MockStaticValue) SafeSimplify(arg0 ...MachineCore) (Expression, bool, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SafeSimplify", varargs...)
+	ret0, _ := ret[0].(Expression)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// SafeSimplify indicates an expected call of SafeSimplify.
+func (mr *MockStaticValueMockRecorder) SafeSimplify(arg0 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SafeSimplify", reflect.TypeOf((*MockStaticValue)(nil).SafeSimplify), arg0...)
+}
+
 // SafeString mocks base method.
 func (m *MockStaticValue) SafeString() string {
 	m.ctrl.T.Helper()
@@ -234,18 +254,22 @@ func (mr *MockStaticValueMockRecorder) SafeString() *gomock.Call {
 }
 
 // Simplify mocks base method.
-func (m *MockStaticValue) Simplify(arg0 MachineCore) (Expression, error) {
+func (m *MockStaticValue) Simplify(arg0 ...MachineCore) (Expression, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Simplify", arg0)
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Simplify", varargs...)
 	ret0, _ := ret[0].(Expression)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Simplify indicates an expected call of Simplify.
-func (mr *MockStaticValueMockRecorder) Simplify(arg0 interface{}) *gomock.Call {
+func (mr *MockStaticValueMockRecorder) Simplify(arg0 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Simplify", reflect.TypeOf((*MockStaticValue)(nil).Simplify), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Simplify", reflect.TypeOf((*MockStaticValue)(nil).Simplify), arg0...)
 }
 
 // SliceValue mocks base method.

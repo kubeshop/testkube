@@ -35,31 +35,39 @@ func (s *conditional) Template() string {
 	return "{{" + s.String() + "}}"
 }
 
-func (s *conditional) Simplify(m MachineCore) (v Expression, err error) {
-	s.condition, err = s.condition.Simplify(m)
+func (s *conditional) SafeSimplify(m ...MachineCore) (v Expression, changed bool, err error) {
+	var ch bool
+	s.condition, ch, err = s.condition.SafeSimplify(m...)
+	changed = changed || ch
 	if err != nil {
-		return nil, err
+		return nil, changed, err
 	}
 	if s.condition.Static() != nil {
 		var b bool
 		b, err = s.condition.Static().BoolValue()
 		if err != nil {
-			return nil, err
+			return nil, true, err
 		}
 		if b {
-			return s.truthy.Simplify(m)
+			return s.truthy, true, err
 		}
-		return s.falsy.Simplify(m)
+		return s.falsy, true, err
 	}
-	s.truthy, err = s.truthy.Simplify(m)
+	s.truthy, ch, err = s.truthy.SafeSimplify(m...)
+	changed = changed || ch
 	if err != nil {
-		return nil, err
+		return nil, changed, err
 	}
-	s.falsy, err = s.falsy.Simplify(m)
+	s.falsy, ch, err = s.falsy.SafeSimplify(m...)
+	changed = changed || ch
 	if err != nil {
-		return nil, err
+		return nil, changed, err
 	}
-	return s, nil
+	return s, changed, nil
+}
+
+func (s *conditional) Simplify(m ...MachineCore) (v Expression, err error) {
+	return deepSimplify(s, m...)
 }
 
 func (s *conditional) Static() StaticValue {

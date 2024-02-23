@@ -67,11 +67,13 @@ func (s *call) resolvedArgs() []StaticValue {
 	return v
 }
 
-func (s *call) Simplify(m MachineCore) (v Expression, err error) {
-	for i, arg := range s.args {
-		s.args[i], err = arg.Simplify(m)
+func (s *call) SafeSimplify(m ...MachineCore) (v Expression, changed bool, err error) {
+	var ch bool
+	for i := range s.args {
+		s.args[i], ch, err = s.args[i].SafeSimplify(m...)
+		changed = changed || ch
 		if err != nil {
-			return nil, err
+			return nil, changed, err
 		}
 	}
 	if s.isResolved() {
@@ -79,21 +81,25 @@ func (s *call) Simplify(m MachineCore) (v Expression, err error) {
 		result, ok, err := StdLibMachine.Call(s.name, args...)
 		if ok {
 			if err != nil {
-				return nil, fmt.Errorf("error while calling %s: %s", s.String(), err.Error())
+				return nil, true, fmt.Errorf("error while calling %s: %s", s.String(), err.Error())
 			}
-			return result, nil
+			return result, true, nil
 		}
-		if m != nil {
-			result, ok, err = m.Call(s.name, args...)
+		for i := range m {
+			result, ok, err = m[i].Call(s.name, args...)
 			if err != nil {
-				return nil, fmt.Errorf("error while calling %s: %s", s.String(), err.Error())
+				return nil, true, fmt.Errorf("error while calling %s: %s", s.String(), err.Error())
 			}
 			if ok {
-				return result, nil
+				return result, true, nil
 			}
 		}
 	}
-	return s, nil
+	return s, changed, nil
+}
+
+func (s *call) Simplify(m ...MachineCore) (v Expression, err error) {
+	return deepSimplify(s, m...)
 }
 
 func (s *call) Static() StaticValue {

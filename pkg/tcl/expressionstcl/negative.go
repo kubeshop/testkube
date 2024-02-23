@@ -30,21 +30,25 @@ func (s *negative) Template() string {
 	return "{{" + s.String() + "}}"
 }
 
-func (s *negative) Simplify(m MachineCore) (v Expression, err error) {
-	s.expr, err = s.expr.Simplify(m)
+func (s *negative) SafeSimplify(m ...MachineCore) (v Expression, changed bool, err error) {
+	s.expr, changed, err = s.expr.SafeSimplify(m...)
 	if err != nil {
-		return nil, err
+		return nil, changed, err
 	}
 	st := s.expr.Static()
 	if st == nil {
-		return s, nil
+		return s, changed, nil
 	}
 
 	vv, err := st.BoolValue()
 	if err != nil {
-		return nil, err
+		return nil, changed, err
 	}
-	return NewValue(!vv), nil
+	return NewValue(!vv), changed, nil
+}
+
+func (s *negative) Simplify(m ...MachineCore) (v Expression, err error) {
+	return deepSimplify(s, m...)
 }
 
 func (s *negative) Static() StaticValue {

@@ -62,8 +62,7 @@ func (m *machine) Get(name string) (Expression, bool, error) {
 		r, ok := m.accessors[i](name)
 		if ok {
 			if v, ok := r.(Expression); ok {
-				v, err := v.Simplify(m)
-				return v, true, err
+				return v, true, nil
 			}
 			return NewValue(r), true, nil
 		}
@@ -81,8 +80,7 @@ func (m *machine) Call(name string, args ...StaticValue) (Expression, bool, erro
 		return nil, ok, err
 	}
 	if v, ok := r.(Expression); ok {
-		v, err = v.Simplify(m)
-		return v, true, err
+		return v, true, nil
 	}
 	return NewValue(r), true, nil
 }

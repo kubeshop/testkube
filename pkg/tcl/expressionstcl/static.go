@@ -67,7 +67,11 @@ func (s *static) Template() string {
 	return v
 }
 
-func (s *static) Simplify(_ MachineCore) (Expression, error) {
+func (s *static) SafeSimplify(_ ...MachineCore) (Expression, bool, error) {
+	return s, false, nil
+}
+
+func (s *static) Simplify(_ ...MachineCore) (Expression, error) {
 	return s, nil
 }
 

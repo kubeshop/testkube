@@ -61,6 +61,26 @@ func (mr *MockExpressionMockRecorder) Functions() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Functions", reflect.TypeOf((*MockExpression)(nil).Functions))
 }
 
+// SafeSimplify mocks base method.
+func (m *MockExpression) SafeSimplify(arg0 ...MachineCore) (Expression, bool, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SafeSimplify", varargs...)
+	ret0, _ := ret[0].(Expression)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// SafeSimplify indicates an expected call of SafeSimplify.
+func (mr *MockExpressionMockRecorder) SafeSimplify(arg0 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SafeSimplify", reflect.TypeOf((*MockExpression)(nil).SafeSimplify), arg0...)
+}
+
 // SafeString mocks base method.
 func (m *MockExpression) SafeString() string {
 	m.ctrl.T.Helper()
@@ -76,18 +96,22 @@ func (mr *MockExpressionMockRecorder) SafeString() *gomock.Call {
 }
 
 // Simplify mocks base method.
-func (m *MockExpression) Simplify(arg0 MachineCore) (Expression, error) {
+func (m *MockExpression) Simplify(arg0 ...MachineCore) (Expression, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Simplify", arg0)
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Simplify", varargs...)
 	ret0, _ := ret[0].(Expression)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Simplify indicates an expected call of Simplify.
-func (mr *MockExpressionMockRecorder) Simplify(arg0 interface{}) *gomock.Call {
+func (mr *MockExpressionMockRecorder) Simplify(arg0 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Simplify", reflect.TypeOf((*MockExpression)(nil).Simplify), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Simplify", reflect.TypeOf((*MockExpression)(nil).Simplify), arg0...)
 }
 
 // Static mocks base method.

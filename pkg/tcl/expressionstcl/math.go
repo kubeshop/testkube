@@ -226,8 +226,10 @@ func (s *math) Template() string {
 	return "{{" + s.String() + "}}"
 }
 
-func (s *math) Simplify(m MachineCore) (v Expression, err error) {
-	s.left, err = s.left.Simplify(m)
+func (s *math) SafeSimplify(m ...MachineCore) (v Expression, changed bool, err error) {
+	var ch bool
+	s.left, ch, err = s.left.SafeSimplify(m...)
+	changed = changed || ch
 	if err != nil {
 		return
 	}
@@ -237,28 +239,37 @@ func (s *math) Simplify(m MachineCore) (v Expression, err error) {
 		if s.operator == operatorAnd {
 			b, err := s.left.Static().BoolValue()
 			if err == nil && !b {
-				return s.left, nil
+				return s.left, true, nil
+			} else if err == nil {
+				return s.right, true, nil
 			}
 		} else if s.operator == operatorOr {
 			b, err := s.left.Static().BoolValue()
 			if err == nil && b {
-				return s.left, nil
+				return s.left, true, nil
+			} else if err == nil {
+				return s.right, true, nil
 			}
 		}
 	}
 
-	s.right, err = s.right.Simplify(m)
+	s.right, ch, err = s.right.SafeSimplify(m...)
+	changed = changed || ch
 	if err != nil {
 		return
 	}
 	if s.left.Static() != nil && s.right.Static() != nil {
 		res, err := s.performMath(s.left.Static(), s.right.Static())
 		if err != nil {
-			return nil, fmt.Errorf("error while performing math: %s: %s", s.String(), err)
+			return nil, changed, fmt.Errorf("error while performing math: %s: %s", s.String(), err)
 		}
-		return res, nil
+		return res, true, nil
 	}
-	return s, nil
+	return s, changed, nil
+}
+
+func (s *math) Simplify(m ...MachineCore) (v Expression, err error) {
+	return deepSimplify(s, m...)
 }
 
 func (s *math) Static() StaticValue {

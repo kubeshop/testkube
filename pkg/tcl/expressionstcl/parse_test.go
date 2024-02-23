@@ -10,6 +10,7 @@ package expressionstcl
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -161,6 +162,23 @@ func TestCompileResolution(t *testing.T) {
 	assert.Equal(t, `"[placeholder:name]"`, must(MustCompile(`env.name`).Simplify(vm)).String())
 	assert.Error(t, errOnly(MustCompile(`secrets.name`).Simplify(vm)))
 	assert.Equal(t, `"[placeholder:apiUrl]"`, must(MustCompile(`mainEndpoint()`).Simplify(vm)).String())
+}
+
+func TestCircularResolution(t *testing.T) {
+	vm := NewMachine().
+		RegisterFunction("one", func(values ...StaticValue) (interface{}, bool, error) {
+			return MustCompile("two()"), true, nil
+		}).
+		RegisterFunction("two", func(values ...StaticValue) (interface{}, bool, error) {
+			return MustCompile("one()"), true, nil
+		}).
+		RegisterFunction("self", func(values ...StaticValue) (interface{}, bool, error) {
+			return MustCompile("self()"), true, nil
+		}).
+		Finalizer()
+
+	assert.Contains(t, fmt.Sprintf("%v", errOnly(MustCompile(`one()`).Simplify(vm))), "call stack exceeded")
+	assert.Contains(t, fmt.Sprintf("%v", errOnly(MustCompile(`self()`).Simplify(vm))), "call stack exceeded")
 }
 
 func TestCompileStandardLib(t *testing.T) {
