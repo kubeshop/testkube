@@ -134,9 +134,7 @@ func MapTestStepExecutionRequestCRD(request *testkube.TestSuiteStepExecutionRequ
 	}
 
 	return &testsuitestclop.TestSuiteStepExecutionRequest{
-		Name:                     request.Name,
 		ExecutionLabels:          request.ExecutionLabels,
-		Namespace:                request.Namespace,
 		Variables:                variables,
 		Args:                     request.Args,
 		ArgsMode:                 testsuitestclop.ArgsModeType(request.ArgsMode),
@@ -186,9 +184,7 @@ func MapTestStepExecutionRequestCRDToAPI(request *testsuitestclop.TestSuiteStepE
 	}
 
 	return &testkube.TestSuiteStepExecutionRequest{
-		Name:                     request.Name,
 		ExecutionLabels:          request.ExecutionLabels,
-		Namespace:                request.Namespace,
 		Variables:                variables,
 		Command:                  request.Command,
 		Args:                     request.Args,

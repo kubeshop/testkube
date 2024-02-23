@@ -39,19 +39,13 @@ spec:
       {{- if .Test }}
     - test: {{ .Test }}
       {{- if .ExecutionRequest }}
-      {{- if or (.ExecutionRequest.Name) (ne (len .ExecutionRequest.ExecutionLabels) 0) (.ExecutionRequest.Namespace) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (.ExecutionRequest.ArgsMode) (ne (len .ExecutionRequest.Command) 0) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.JobTemplateReference) (.ExecutionRequest.CronJobTemplate) (.ExecutionRequest.CronJobTemplateReference) (.ExecutionRequest.ScraperTemplate) (.ExecutionRequest.ScraperTemplateReference) (.ExecutionRequest.PvcTemplate) (.ExecutionRequest.PvcTemplateReference) (.ExecutionRequest.RunningContext)}}
+      {{- if or (ne (len .ExecutionRequest.ExecutionLabels) 0) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (.ExecutionRequest.ArgsMode) (ne (len .ExecutionRequest.Command) 0) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.JobTemplateReference) (.ExecutionRequest.CronJobTemplate) (.ExecutionRequest.CronJobTemplateReference) (.ExecutionRequest.ScraperTemplate) (.ExecutionRequest.ScraperTemplateReference) (.ExecutionRequest.PvcTemplate) (.ExecutionRequest.PvcTemplateReference) (.ExecutionRequest.RunningContext)}}
       executionRequest:
-        {{- if .ExecutionRequest.Name }}
-        name: {{ .ExecutionRequest.Name }}
-        {{- end }}
         {{- if ne (len .ExecutionRequest.ExecutionLabels) 0 }}
         executionLabels:
         {{- range $key, $value := .ExecutionRequest.ExecutionLabels }}
           {{ $key }}: {{ $value }}
         {{- end }}
-        {{- end }}
-        {{- if .ExecutionRequest.Namespace }}
-        name: {{ .ExecutionRequest.Namespace }}
         {{- end }}
         {{- if ne (len .ExecutionRequest.Variables) 0 }}
         variables:
@@ -176,19 +170,13 @@ spec:
       {{- if .Test }}
     - test: {{ .Test }}
       {{- if .ExecutionRequest }}
-      {{- if or (.ExecutionRequest.Name) (ne (len .ExecutionRequest.ExecutionLabels) 0) (.ExecutionRequest.Namespace) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (.ExecutionRequest.ArgsMode) (ne (len .ExecutionRequest.Command) 0) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.JobTemplateReference) (.ExecutionRequest.CronJobTemplate) (.ExecutionRequest.CronJobTemplateReference) (.ExecutionRequest.ScraperTemplate) (.ExecutionRequest.ScraperTemplateReference) (.ExecutionRequest.PvcTemplate) (.ExecutionRequest.PvcTemplateReference) (.ExecutionRequest.RunningContext)}}
+      {{- if or (ne (len .ExecutionRequest.ExecutionLabels) 0) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (.ExecutionRequest.ArgsMode) (ne (len .ExecutionRequest.Command) 0) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.JobTemplateReference) (.ExecutionRequest.CronJobTemplate) (.ExecutionRequest.CronJobTemplateReference) (.ExecutionRequest.ScraperTemplate) (.ExecutionRequest.ScraperTemplateReference) (.ExecutionRequest.PvcTemplate) (.ExecutionRequest.PvcTemplateReference) (.ExecutionRequest.RunningContext)}}
       executionRequest:
-        {{- if .ExecutionRequest.Name }}
-        name: {{ .ExecutionRequest.Name }}
-        {{- end }}
         {{- if ne (len .ExecutionRequest.ExecutionLabels) 0 }}
         executionLabels:
         {{- range $key, $value := .ExecutionRequest.ExecutionLabels }}
           {{ $key }}: {{ $value }}
         {{- end }}
-        {{- end }}
-        {{- if .ExecutionRequest.Namespace }}
-        name: {{ .ExecutionRequest.Namespace }}
         {{- end }}
         {{- if ne (len .ExecutionRequest.Variables) 0 }}
         variables:
@@ -313,19 +301,13 @@ spec:
       {{- if .Test }}
     - test: {{ .Test }}
       {{- if .ExecutionRequest }}
-      {{- if or (.ExecutionRequest.Name) (ne (len .ExecutionRequest.ExecutionLabels) 0) (.ExecutionRequest.Namespace) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (.ExecutionRequest.ArgsMode) (ne (len .ExecutionRequest.Command) 0) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.JobTemplateReference) (.ExecutionRequest.CronJobTemplate) (.ExecutionRequest.CronJobTemplateReference) (.ExecutionRequest.ScraperTemplate) (.ExecutionRequest.ScraperTemplateReference) (.ExecutionRequest.PvcTemplate) (.ExecutionRequest.PvcTemplateReference) (.ExecutionRequest.RunningContext)}}
+      {{- if or (ne (len .ExecutionRequest.ExecutionLabels) 0) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (.ExecutionRequest.ArgsMode) (ne (len .ExecutionRequest.Command) 0) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.JobTemplateReference) (.ExecutionRequest.CronJobTemplate) (.ExecutionRequest.CronJobTemplateReference) (.ExecutionRequest.ScraperTemplate) (.ExecutionRequest.ScraperTemplateReference) (.ExecutionRequest.PvcTemplate) (.ExecutionRequest.PvcTemplateReference) (.ExecutionRequest.RunningContext)}}
       executionRequest:
-        {{- if .ExecutionRequest.Name }}
-        name: {{ .ExecutionRequest.Name }}
-        {{- end }}
         {{- if ne (len .ExecutionRequest.ExecutionLabels) 0 }}
         executionLabels:
         {{- range $key, $value := .ExecutionRequest.ExecutionLabels }}
           {{ $key }}: {{ $value }}
         {{- end }}
-        {{- end }}
-        {{- if .ExecutionRequest.Namespace }}
-        name: {{ .ExecutionRequest.Namespace }}
         {{- end }}
         {{- if ne (len .ExecutionRequest.Variables) 0 }}
         variables:

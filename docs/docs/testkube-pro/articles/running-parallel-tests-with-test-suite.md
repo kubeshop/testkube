@@ -41,11 +41,11 @@ For details on which parameters are available in the CRDs, please consult the ta
 
 | Parameter                          | Test | Test Suite | Test Step |
 | ---------------------------------- | ---- | ---------- | --------- |
-| name                               | ✓    | ✓          | ✓         |
+| name                               | ✓    | ✓          |           |
 | testSuiteName                      | ✓    |            |           |
 | number                             | ✓    |            |           |
 | executionLabels                    | ✓    | ✓          | ✓         |
-| namespace                          | ✓    | ✓          | ✓         |
+| namespace                          | ✓    | ✓          |           |
 | variablesFile                      | ✓    |            |           |
 | isVariablesFileUploaded            | ✓    |            |           |
 | variables                          | ✓    | ✓          |           |

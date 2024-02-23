@@ -30,7 +30,7 @@ func TestHasStepsExecutionRequest(t *testing.T) {
 							Execute: []testsuitesv3.TestSuiteStepSpec{
 								{
 									ExecutionRequest: &testsuitestclop.TestSuiteStepExecutionRequest{
-										Name: "execution request",
+										Args: []string{"arg1", "arg2"},
 									},
 								},
 							},
@@ -49,7 +49,7 @@ func TestHasStepsExecutionRequest(t *testing.T) {
 							Execute: []testsuitesv3.TestSuiteStepSpec{
 								{
 									ExecutionRequest: &testsuitestclop.TestSuiteStepExecutionRequest{
-										Name: "execution request",
+										Args: []string{"arg1", "arg2"},
 									},
 								},
 							},
@@ -68,7 +68,7 @@ func TestHasStepsExecutionRequest(t *testing.T) {
 							Execute: []testsuitesv3.TestSuiteStepSpec{
 								{
 									ExecutionRequest: &testsuitestclop.TestSuiteStepExecutionRequest{
-										Name: "execution request",
+										Args: []string{"arg1", "arg2"},
 									},
 								},
 							},

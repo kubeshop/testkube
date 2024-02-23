@@ -11,13 +11,9 @@ package testkube
 
 // test step execution request body
 type TestSuiteStepExecutionRequest struct {
-	// test execution custom name
-	Name string `json:"name,omitempty"`
 	// test execution labels
-	ExecutionLabels map[string]string `json:"executionLabels,omitempty"`
-	// test kubernetes namespace (\"testkube\" when not set)
-	Namespace string              `json:"namespace,omitempty"`
-	Variables map[string]Variable `json:"variables,omitempty"`
+	ExecutionLabels map[string]string   `json:"executionLabels,omitempty"`
+	Variables       map[string]Variable `json:"variables,omitempty"`
 	// executor image command
 	Command []string `json:"command,omitempty"`
 	// additional executor binary arguments
