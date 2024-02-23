@@ -3294,6 +3294,7 @@ paths:
       tags:
         - test-workflows
         - api
+        - pro
       parameters:
         - $ref: "#/components/parameters/Selector"
       summary: List test workflows
@@ -3339,6 +3340,7 @@ paths:
       tags:
         - test-workflows
         - api
+        - pro
       parameters:
         - $ref: "#/components/parameters/Selector"
       summary: Delete test workflows
@@ -3375,6 +3377,7 @@ paths:
       tags:
         - test-workflows
         - api
+        - pro
       summary: Create test workflow
       description: Create test workflow in the kubernetes cluster
       operationId: createTestWorkflow
@@ -3429,6 +3432,7 @@ paths:
       tags:
         - test-workflows
         - api
+        - pro
       parameters:
         - $ref: "#/components/parameters/ID"
       summary: Get test workflow details
@@ -3472,6 +3476,7 @@ paths:
       tags:
         - test-workflows
         - api
+        - pro
       parameters:
         - $ref: "#/components/parameters/ID"
       summary: Update test workflow details
@@ -3525,6 +3530,7 @@ paths:
       tags:
         - test-workflows
         - api
+        - pro
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/SkipDeleteExecutions"
@@ -3564,6 +3570,7 @@ paths:
       tags:
         - test-workflows
         - api
+        - pro
       parameters:
         - $ref: "#/components/parameters/Selector"
       summary: List test workflow templates
@@ -3609,6 +3616,7 @@ paths:
       tags:
         - test-workflows
         - api
+        - pro
       parameters:
         - $ref: "#/components/parameters/Selector"
       summary: Delete test workflow templates
@@ -3645,6 +3653,7 @@ paths:
       tags:
         - test-workflows
         - api
+        - pro
       summary: Create test workflow template
       description: Create test workflow template in the kubernetes cluster
       operationId: createTestWorkflowTemplate
@@ -3699,6 +3708,7 @@ paths:
       tags:
         - test-workflows
         - api
+        - pro
       parameters:
         - $ref: "#/components/parameters/ID"
       summary: Get test workflow template details
@@ -3742,11 +3752,12 @@ paths:
       tags:
         - test-workflows
         - api
+        - pro
       parameters:
         - $ref: "#/components/parameters/ID"
       summary: Update test workflow template details
       description: Update test workflow template details in the kubernetes cluster
-      operationId: updateTestWorkflow
+      operationId: updateTestWorkflowTemplate
       requestBody:
         description: test workflow template body
         required: true
@@ -3795,6 +3806,7 @@ paths:
       tags:
         - test-workflows
         - api
+        - pro
       parameters:
         - $ref: "#/components/parameters/ID"
       summary: Delete test workflow template
