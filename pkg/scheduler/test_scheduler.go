@@ -17,6 +17,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
+	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
@@ -270,7 +271,8 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution.DownloadArtifactTestNames = options.Request.DownloadArtifactTestNames
 	execution.SlavePodRequest = options.Request.SlavePodRequest
 
-	return execution
+	// Pro edition only (tcl protected code)
+	return schedulertcl.NewExecutionFromExecutionOptions(options, execution)
 }
 
 func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
@@ -397,6 +399,9 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 			s.logger.Infow("setting negative test from test definition", "test", test.Name, "negativeTest", test.ExecutionRequest.NegativeTest)
 			request.NegativeTest = test.ExecutionRequest.NegativeTest
 		}
+
+		// Pro edition only (tcl protected code)
+		request = schedulertcl.GetExecuteOptions(test.ExecutionRequest, request)
 	}
 
 	// get executor from kubernetes CRs
