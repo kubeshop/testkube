@@ -11,8 +11,10 @@ package expressionstcl
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/kballard/go-shellquote"
+	"gopkg.in/yaml.v3"
 )
 
 type stdMachine struct{}
@@ -54,7 +56,7 @@ var stdFunctions = map[string]func(...StaticValue) (Expression, error){
 		}
 		b, err := json.Marshal(value[0].Value())
 		if err != nil {
-			return nil, fmt.Errorf(`"tojson" function had problem unmarshalling: %s`, err.Error())
+			return nil, fmt.Errorf(`"tojson" function had problem marshalling: %s`, err.Error())
 		}
 		return NewValue(string(b)), nil
 	},
@@ -72,12 +74,46 @@ var stdFunctions = map[string]func(...StaticValue) (Expression, error){
 		}
 		return NewValue(v), nil
 	},
+	"toyaml": func(value ...StaticValue) (Expression, error) {
+		if len(value) != 1 {
+			return nil, fmt.Errorf(`"toyaml" function expects 1 argument, %d provided`, len(value))
+		}
+		b, err := yaml.Marshal(value[0].Value())
+		if err != nil {
+			return nil, fmt.Errorf(`"toyaml" function had problem marshalling: %s`, err.Error())
+		}
+		return NewValue(string(b)), nil
+	},
+	"yaml": func(value ...StaticValue) (Expression, error) {
+		if len(value) != 1 {
+			return nil, fmt.Errorf(`"yaml" function expects 1 argument, %d provided`, len(value))
+		}
+		if !value[0].IsString() {
+			return nil, fmt.Errorf(`"yaml" function argument should be a string`)
+		}
+		var v interface{}
+		err := yaml.Unmarshal([]byte(value[0].Value().(string)), &v)
+		if err != nil {
+			return nil, fmt.Errorf(`"yaml" function had problem unmarshalling: %s`, err.Error())
+		}
+		return NewValue(v), nil
+	},
 	"shellquote": func(value ...StaticValue) (Expression, error) {
 		args := make([]string, len(value))
 		for i := range value {
 			args[i], _ = value[i].StringValue()
 		}
 		return NewValue(shellquote.Join(args...)), nil
+	},
+	"trim": func(value ...StaticValue) (Expression, error) {
+		if len(value) != 1 {
+			return nil, fmt.Errorf(`"trim" function expects 1 argument, %d provided`, len(value))
+		}
+		if !value[0].IsString() {
+			return nil, fmt.Errorf(`"trim" function argument should be a string`)
+		}
+		str, _ := value[0].StringValue()
+		return NewValue(strings.TrimSpace(str)), nil
 	},
 }
 

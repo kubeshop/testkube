@@ -196,6 +196,10 @@ func TestCompileStandardLib(t *testing.T) {
 	assert.Equal(t, `"'a b c'"`, MustCompile(`shellquote("a b c")`).String())
 	assert.Equal(t, `"'a b c' 'd e f'"`, MustCompile(`shellquote("a b c", "d e f")`).String())
 	assert.Equal(t, `"''"`, MustCompile(`shellquote(null)`).String())
+	assert.Equal(t, `"abc  d"`, MustCompile(`trim("   abc  d  \n  ")`).String())
+	assert.Equal(t, `"abc"`, MustCompile(`yaml("\"abc\"")`).String())
+	assert.Equal(t, `{"foo":{"bar":"baz"}}`, MustCompile(`yaml("foo:\n  bar: 'baz'")`).String())
+	assert.Equal(t, `"foo:\n    bar: baz\n"`, MustCompile(`toyaml({"foo":{"bar":"baz"}})`).String())
 }
 
 func TestCompileDetectAccessors(t *testing.T) {
