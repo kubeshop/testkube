@@ -18,6 +18,9 @@ import (
 
 // MergeStepRequest inherits step request fields with execution request
 func MergeStepRequest(stepRequest *testkube.TestSuiteStepExecutionRequest, executionRequest testkube.ExecutionRequest) testkube.ExecutionRequest {
+	if stepRequest == nil {
+		return executionRequest
+	}
 	if stepRequest.ExecutionLabels != nil {
 		executionRequest.ExecutionLabels = stepRequest.ExecutionLabels
 	}
