@@ -46,14 +46,32 @@ func tokenizeNext(exp string, i int) (token, int, error) {
 		case noneRe.MatchString(exp[i:]):
 			return tokenJson(noneValue), i + 4, nil
 		case jsonValueRe.MatchString(exp[i:]):
-			// TODO: Optimize
+			// Allow multi-line string with literal \n
+			// TODO: Optimize, and allow deeper in the tree
+			appended := 0
+			if exp[i] == '"' {
+				inside := true
+				for index := i + 1; inside && index < len(exp); index++ {
+					if exp[index] == '\\' {
+						index++
+					} else if exp[index] == '"' {
+						inside = false
+					} else if exp[index] == '\n' {
+						exp = exp[0:index] + "\\n" + exp[index+1:]
+						appended++
+					} else if exp[index] == '\t' {
+						exp = exp[0:index] + "\\t" + exp[index+1:]
+						appended++
+					}
+				}
+			}
 			decoder := json.NewDecoder(bytes.NewBuffer([]byte(exp[i:])))
 			var val interface{}
 			err := decoder.Decode(&val)
 			if err != nil {
-				return token{}, i, fmt.Errorf("error while decoding JSON from index %d in expression: %s", i, exp)
+				return token{}, i, fmt.Errorf("error while decoding JSON from index %d in expression: %s: %s", i, exp, err.Error())
 			}
-			return tokenJson(val), i + int(decoder.InputOffset()), nil
+			return tokenJson(val), i + int(decoder.InputOffset()) - appended, nil
 		case accessorRe.MatchString(exp[i:]):
 			acc := accessorRe.FindString(exp[i:])
 			return tokenAccessor(acc), i + len(acc), nil

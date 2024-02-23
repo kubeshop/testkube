@@ -181,6 +181,13 @@ func TestCircularResolution(t *testing.T) {
 	assert.Contains(t, fmt.Sprintf("%v", errOnly(MustCompile(`self()`).Resolve(vm))), "call stack exceeded")
 }
 
+func TestCompileMultilineString(t *testing.T) {
+	assert.Equal(t, `"\nabc\ndef\n"`, MustCompile(`"
+abc
+def
+"`).String())
+}
+
 func TestCompileStandardLib(t *testing.T) {
 	assert.Equal(t, `"500"`, MustCompile(`string(500)`).String())
 	assert.Equal(t, `500`, MustCompile(`int(500)`).String())
@@ -200,6 +207,11 @@ func TestCompileStandardLib(t *testing.T) {
 	assert.Equal(t, `"abc"`, MustCompile(`yaml("\"abc\"")`).String())
 	assert.Equal(t, `{"foo":{"bar":"baz"}}`, MustCompile(`yaml("foo:\n  bar: 'baz'")`).String())
 	assert.Equal(t, `"foo:\n    bar: baz\n"`, MustCompile(`toyaml({"foo":{"bar":"baz"}})`).String())
+	assert.Equal(t, `{"a":["b","v"]}`, MustCompile(`yaml("
+a:
+- b
+- v
+")`).String())
 	assert.Equal(t, `["a",10,["a",4]]`, MustCompile(`list("a", 10, ["a", 4])`).String())
 	assert.Equal(t, `"a,10,a,4"`, MustCompile(`join(["a",10,["a",4]])`).String())
 	assert.Equal(t, `"a---10---a,4"`, MustCompile(`join(["a",10,["a",4]], "---")`).String())
