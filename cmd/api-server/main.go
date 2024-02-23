@@ -390,7 +390,6 @@ func main() {
 
 	executor, err := client.NewJobExecutor(
 		resultsRepository,
-		cfg.TestkubeNamespace,
 		images,
 		jobTemplates,
 		cfg.JobServiceAccountName,
@@ -435,7 +434,6 @@ func main() {
 
 	containerExecutor, err := containerexecutor.NewContainerExecutor(
 		resultsRepository,
-		cfg.TestkubeNamespace,
 		images,
 		containerTemplates,
 		inspector,
