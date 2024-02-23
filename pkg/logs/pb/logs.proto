@@ -41,6 +41,7 @@ service CloudLogsService {
 message CloudLogRequest {
   string environment_id = 1;
   string execution_id = 2;
+  string test_name = 3; 
 }
 
 
