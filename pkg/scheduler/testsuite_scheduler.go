@@ -510,6 +510,7 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 		for i := range testTuples {
 			req.Name = fmt.Sprintf("%s-%s", testSuiteName, testTuples[i].test.Name)
 			req.Id = testTuples[i].executionID
+			// Pro/Enterprise feature: step execution requests
 			req = testsuitestcl.MergeStepRequest(testTuples[i].stepRequest, req)
 			requests[i] = workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution]{
 				Object:  testTuples[i].test,

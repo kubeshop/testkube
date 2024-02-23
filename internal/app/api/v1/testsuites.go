@@ -44,6 +44,7 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 			if err := decoder.Decode(&testSuite); err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse yaml request: %w", errPrefix, err))
 			}
+			// Pro/Enterprise feature: step execution requests
 			if testsuitestcl.HasStepsExecutionRequest(testSuite) {
 				ok, err := s.SubscriptionChecker.IsOrgPlanActive()
 				if err != nil {
@@ -125,6 +126,7 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 			if err := decoder.Decode(&testSuite); err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse yaml request: %w", errPrefix, err))
 			}
+			// Pro/Enterprise feature: step execution requests
 			if testsuitestcl.HasStepsExecutionRequest(testSuite) {
 				ok, err := s.SubscriptionChecker.IsOrgPlanActive()
 				if err != nil {
@@ -581,6 +583,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 
 				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could get test suite: %w", errPrefix, err))
 			}
+			// Pro/Enterprise feature: step execution requests
 			if testsuitestcl.HasStepsExecutionRequest(*testSuite) {
 				ok, err := s.SubscriptionChecker.IsOrgPlanActive()
 				if err != nil {

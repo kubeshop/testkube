@@ -81,7 +81,8 @@ func mapCRStepToAPI(crstep testsuitesv3.TestSuiteStepSpec) (teststep testkube.Te
 	switch true {
 	case crstep.Test != "":
 		teststep = testkube.TestSuiteStep{
-			Test:             crstep.Test,
+			Test: crstep.Test,
+			// Pro/Enterprise feature: step execution requests
 			ExecutionRequest: testsuitestcl.MapTestStepExecutionRequestCRDToAPI(crstep.ExecutionRequest),
 		}
 

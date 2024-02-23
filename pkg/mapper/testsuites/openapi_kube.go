@@ -199,6 +199,7 @@ func mapTestStepToCRD(step testkube.TestSuiteStep) (stepSpec testsuitesv3.TestSu
 		}
 	case testkube.TestSuiteStepTypeExecuteTest:
 		stepSpec.Test = step.Test
+		// Pro/Enterprise feature: step execution requests
 		stepSpec.ExecutionRequest = testsuitestcl.MapTestStepExecutionRequestCRD(step.ExecutionRequest)
 	}
 

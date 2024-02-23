@@ -603,6 +603,7 @@ func (s *TestkubeAPI) WithProContext(proContext *config.ProContext) *TestkubeAPI
 }
 
 // WithSubscriptionChecker sets subscription checker for the API
+// This is used to check if Pro/Enterprise subscription is valid
 func (s *TestkubeAPI) WithSubscriptionChecker(subscriptionChecker checktcl.SubscriptionChecker) *TestkubeAPI {
 	s.SubscriptionChecker = subscriptionChecker
 	return s
