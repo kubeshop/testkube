@@ -541,10 +541,13 @@ func main() {
 		}
 
 		api.WithProContext(proContext)
+
 		// Check Pro/Enterprise subscription
 		subscriptionChecker, err := checktcl.NewSubscriptionChecker(ctx, *proContext, grpcClient, grpcConn)
 		ui.WarnOnError("Creating subscription checker", err)
+
 		api.WithSubscriptionChecker(*subscriptionChecker)
+		sched.WithSubscriptionChecker(subscriptionChecker)
 
 		agentHandle, err := agent.NewAgent(
 			log.DefaultLogger,

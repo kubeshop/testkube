@@ -10,12 +10,15 @@ package schedulertcl
 
 import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/executor/client"
 )
 
 // NewExecutionFromExecutionOptions creates new execution from execution options
-func NewExecutionFromExecutionOptions(options client.ExecuteOptions, execution testkube.Execution) testkube.Execution {
-	execution.ExecutionNamespace = options.Request.ExecutionNamespace
+func NewExecutionFromExecutionOptions(request testkube.ExecutionRequest, execution testkube.Execution) testkube.Execution {
+	execution.ExecutionNamespace = request.ExecutionNamespace
+	if execution.ExecutionNamespace != "" {
+		execution.TestNamespace = execution.ExecutionNamespace
+	}
+
 	return execution
 }
 
@@ -31,4 +34,9 @@ func GetExecuteOptions(sourceRequest *testkube.ExecutionRequest,
 	}
 
 	return destinationRequest
+}
+
+// HasExecutionNamespace checks whether execution has execution namespace
+func HasExecutionNamespace(request testkube.ExecutionRequest) bool {
+	return request.ExecutionNamespace != ""
 }
