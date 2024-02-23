@@ -18,15 +18,11 @@ import (
 
 // MergeStepRequest inherits step request fields with execution request
 func MergeStepRequest(stepRequest *testkube.TestSuiteStepExecutionRequest, executionRequest testkube.ExecutionRequest) testkube.ExecutionRequest {
-	executionRequest.Name = setStringField(executionRequest.Name, stepRequest.Name)
-	executionRequest.Namespace = setStringField(executionRequest.Namespace, stepRequest.Namespace)
-
 	if stepRequest.ExecutionLabels != nil {
 		executionRequest.ExecutionLabels = stepRequest.ExecutionLabels
 	}
 
 	if stepRequest.Variables != nil {
-		// TODO test this well with both direct, configmaps and secret vars
 		executionRequest.Variables = mergeVariables(executionRequest.Variables, stepRequest.Variables)
 	}
 
