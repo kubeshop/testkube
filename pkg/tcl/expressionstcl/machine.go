@@ -8,7 +8,7 @@
 
 package expressionstcl
 
-//go:generate mockgen -destination=./mock_machinecore.go -package=expressionstcl "github.com/kubeshop/testkube/pkg/tcl/expressionstcl" Machine
+//go:generate mockgen -destination=./mock_machinecore.go -package=expressionstcl "github.com/kubeshop/testkube/pkg/tcl/expressionstcl" MachineCore
 type MachineCore interface {
 	Get(name string) (Expression, bool, error)
 	Call(name string, args ...StaticValue) (Expression, bool, error)
@@ -65,7 +65,7 @@ func (m *machine) Get(name string) (Expression, bool, error) {
 				v, err := v.Simplify(m)
 				return v, true, err
 			}
-			return newStatic(r), true, nil
+			return NewValue(r), true, nil
 		}
 	}
 	return nil, false, nil
@@ -84,7 +84,7 @@ func (m *machine) Call(name string, args ...StaticValue) (Expression, bool, erro
 		v, err = v.Simplify(m)
 		return v, true, err
 	}
-	return newStatic(r), true, nil
+	return NewValue(r), true, nil
 }
 
 func (m *machine) Finalizer() MachineCore {

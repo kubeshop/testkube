@@ -87,7 +87,7 @@ func getNextSegment(t []token) (e Expression, i int, err error) {
 
 	// Static value - "abc", 444, {"a": 10}, true, [45, 3]
 	if t[0].Type == tokenTypeJson {
-		return newStatic(t[0].Value), 1, nil
+		return NewValue(t[0].Value), 1, nil
 	}
 
 	// Negation - !expr
@@ -141,7 +141,7 @@ func getNextSegment(t []token) (e Expression, i int, err error) {
 
 func parse(t []token) (e Expression, err error) {
 	if len(t) == 0 {
-		return newStatic(noneValue), nil
+		return NewNone(), nil
 	}
 	e, l, err := parseNextExpression(t, -1)
 	if err != nil {
@@ -181,7 +181,7 @@ func CompileTemplate(tpl string) (Expression, error) {
 	offset := 0
 	for index := strings.Index(tpl[offset:], "{{"); index != -1; index = strings.Index(tpl[offset:], "{{") {
 		if index != 0 {
-			e = newMath(operatorAdd, e, newStaticString(tpl[offset:offset+index]))
+			e = newMath(operatorAdd, e, NewStringValue(tpl[offset:offset+index]))
 		}
 		offset += index + 2
 		tokens, i, err := tokenize(tpl, offset)
@@ -207,13 +207,13 @@ func CompileTemplate(tpl string) (Expression, error) {
 		if vv, ok := v.(StringAwareExpression); ok && vv.WillBeString() {
 			e = newMath(operatorAdd, e, v)
 		} else if v.Static() != nil {
-			e = newMath(operatorAdd, e, newStaticString(v.Static().Value()))
+			e = newMath(operatorAdd, e, NewStringValue(v.Static().Value()))
 		} else {
 			e = newMath(operatorAdd, e, newCall("string", []Expression{v}))
 		}
 	}
 	if offset < len(tpl) {
-		e = newMath(operatorAdd, e, newStaticString(tpl[offset:]))
+		e = newMath(operatorAdd, e, NewStringValue(tpl[offset:]))
 	}
 	return e.Simplify(nil)
 }

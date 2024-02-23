@@ -17,13 +17,17 @@ type static struct {
 	value interface{}
 }
 
-func newStatic(value interface{}) StaticValue {
+func NewValue(value interface{}) StaticValue {
 	return &static{value: value}
 }
 
-func newStaticString(value interface{}) StaticValue {
+func NewStringValue(value interface{}) StaticValue {
 	v, _ := toString(value)
-	return newStatic(v)
+	return NewValue(v)
+}
+
+func NewNone() StaticValue {
+	return NewValue(noneValue)
 }
 
 func (s *static) WillBeString() bool {

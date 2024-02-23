@@ -44,7 +44,7 @@ func (s *negative) Simplify(m MachineCore) (v Expression, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return newStatic(!vv), nil
+	return NewValue(!vv), nil
 }
 
 func (s *negative) Static() StaticValue {

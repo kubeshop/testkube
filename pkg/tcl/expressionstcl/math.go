@@ -61,10 +61,10 @@ type math struct {
 
 func newMath(operator operator, left Expression, right Expression) Expression {
 	if left == nil {
-		left = newStatic(noneValue)
+		left = NewNone()
 	}
 	if right == nil {
-		right = newStatic(noneValue)
+		right = NewNone()
 	}
 	return &math{operator: operator, left: left, right: right}
 }
@@ -78,7 +78,7 @@ func runOp[T interface{}, U interface{}](v1 StaticValue, v2 StaticValue, mapper 
 	if err2 != nil {
 		return nil, err2
 	}
-	return newStatic(op(s1, s2)), nil
+	return NewValue(op(s1, s2)), nil
 }
 
 func staticString(v StaticValue) (string, error) {

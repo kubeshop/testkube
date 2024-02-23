@@ -24,7 +24,7 @@ var stdFunctions = map[string]func(...StaticValue) (Expression, error){
 			next, _ := value[i].StringValue()
 			str += next
 		}
-		return newStatic(str), nil
+		return NewValue(str), nil
 	},
 	"int": func(value ...StaticValue) (Expression, error) {
 		if len(value) != 1 {
@@ -34,7 +34,7 @@ var stdFunctions = map[string]func(...StaticValue) (Expression, error){
 		if err != nil {
 			return nil, err
 		}
-		return newStatic(v), nil
+		return NewValue(v), nil
 	},
 	"float": func(value ...StaticValue) (Expression, error) {
 		if len(value) != 1 {
@@ -44,7 +44,7 @@ var stdFunctions = map[string]func(...StaticValue) (Expression, error){
 		if err != nil {
 			return nil, err
 		}
-		return newStatic(v), nil
+		return NewValue(v), nil
 	},
 	"tojson": func(value ...StaticValue) (Expression, error) {
 		if len(value) != 1 {
@@ -54,7 +54,7 @@ var stdFunctions = map[string]func(...StaticValue) (Expression, error){
 		if err != nil {
 			return nil, fmt.Errorf(`"tojson" function had problem unmarshalling: %s`, err.Error())
 		}
-		return newStatic(string(b)), nil
+		return NewValue(string(b)), nil
 	},
 	"json": func(value ...StaticValue) (Expression, error) {
 		if len(value) != 1 {
@@ -68,7 +68,7 @@ var stdFunctions = map[string]func(...StaticValue) (Expression, error){
 		if err != nil {
 			return nil, fmt.Errorf(`"json" function had problem unmarshalling: %s`, err.Error())
 		}
-		return newStatic(v), nil
+		return NewValue(v), nil
 	},
 }
 
