@@ -33,6 +33,9 @@ func NewStringValue(value interface{}) StaticValue {
 }
 
 func (s *static) Type() Type {
+	if s == nil {
+		return TypeUnknown
+	}
 	switch s.value.(type) {
 	case int64:
 		return TypeInt64
