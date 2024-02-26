@@ -66,7 +66,7 @@ func TestExecuteSync(t *testing.T) {
 		executorsClient: FakeExecutorsClient{},
 	}
 
-	execution := &testkube.Execution{Id: "1"}
+	execution := &testkube.Execution{Id: "1", TestNamespace: "default"}
 	options := client.ExecuteOptions{
 		ImagePullSecretNames: []string{"secret-name1"},
 		Sync:                 true,
