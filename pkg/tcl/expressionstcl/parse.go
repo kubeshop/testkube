@@ -235,3 +235,7 @@ func CompileAndResolveTemplate(tpl string, m ...MachineCore) (Expression, error)
 	}
 	return e.Resolve(m...)
 }
+
+func IsTemplateStringWithoutExpressions(tpl string) bool {
+	return !strings.Contains(tpl, "{{")
+}

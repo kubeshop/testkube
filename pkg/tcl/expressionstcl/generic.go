@@ -138,7 +138,7 @@ func resolve(v reflect.Value, t tagData, m []MachineCore) (err error) {
 			} else {
 				ptr.Set(reflect.ValueOf(&vv))
 			}
-		} else if t.value == "template" {
+		} else if t.value == "template" && !IsTemplateStringWithoutExpressions(v.String()) {
 			var expr Expression
 			expr, err = CompileAndResolveTemplate(v.String(), m...)
 			if err != nil {
