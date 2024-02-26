@@ -1,6 +1,8 @@
 Source code in this repository is variously licensed under the Testkube 
 Community License (TCL) and the MIT license.
 
-A copy of each license can be found in the licenses directory. Source code 
-in a given file is licensed under the MIT and the copyright belongs to 
-Testkube Authors unless otherwise noted at the beginning of the file.
+Source code in a given file is licensed under the applicable license 
+for that source code. Source code is licensed under the MIT license 
+unless otherwise indicated in the header referenced at the beginning 
+of the file or specified by a LICENSE file in the same containing 
+folder as the file.
