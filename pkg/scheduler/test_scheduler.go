@@ -466,7 +466,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 			continue
 		}
 
-		data, err := s.configMapClient.Get(context.Background(), configMap.Reference.Name)
+		data, err := s.configMapClient.Get(context.Background(), configMap.Reference.Name, namespace)
 		if err != nil {
 			return options, errors.Errorf("can't get config map: %v", err)
 		}
@@ -486,7 +486,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 			continue
 		}
 
-		data, err := s.secretClient.Get(secret.Reference.Name)
+		data, err := s.secretClient.Get(secret.Reference.Name, namespace)
 		if err != nil {
 			return options, errors.Errorf("can't get secret: %v", err)
 		}

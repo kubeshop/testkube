@@ -609,8 +609,7 @@ func main() {
 			resultsRepository,
 			testResultsRepository,
 			executorsClient,
-			log.DefaultLogger,
-			cfg.TestkubeNamespace)
+			log.DefaultLogger)
 		g.Go(func() error {
 			return reconcilerClient.Run(ctx)
 		})
