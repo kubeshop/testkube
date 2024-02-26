@@ -14,6 +14,8 @@ import (
 	"strings"
 )
 
+const stringCastStdFn = "string"
+
 type call struct {
 	name string
 	args []Expression
@@ -28,8 +30,17 @@ func newCall(name string, args []Expression) Expression {
 	return &call{name: name, args: args}
 }
 
+func CastToString(v Expression) Expression {
+	if v.Static() != nil {
+		return NewStringValue(v.Static().Value())
+	} else if vv, ok := v.(StringAwareExpression); ok && vv.WillBeString() {
+		return v
+	}
+	return newCall(stringCastStdFn, []Expression{v})
+}
+
 func (s *call) WillBeString() bool {
-	return s.name == "string"
+	return isStdlibString(s.name)
 }
 
 func (s *call) String() string {
@@ -45,7 +56,7 @@ func (s *call) SafeString() string {
 }
 
 func (s *call) Template() string {
-	if s.name == "string" {
+	if s.name == stringCastStdFn {
 		args := make([]string, len(s.args))
 		for i, a := range s.args {
 			args[i] = a.Template()

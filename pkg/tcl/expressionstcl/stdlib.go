@@ -11,6 +11,7 @@ package expressionstcl
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/kballard/go-shellquote"
@@ -167,6 +168,12 @@ var stdFunctions = map[string]func(...StaticValue) (Expression, error){
 		str, _ := value[0].StringValue()
 		return NewValue(strings.TrimSpace(str)), nil
 	},
+}
+
+var knownStringStdFunctions = []string{"string", "join", "tojson", "toyaml", "shellquote", "trim"}
+
+func isStdlibString(fnName string) bool {
+	return slices.Contains(knownStringStdFunctions, fnName)
 }
 
 func (*stdMachine) Get(name string) (Expression, bool, error) {

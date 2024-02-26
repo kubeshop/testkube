@@ -204,13 +204,7 @@ func CompileTemplate(tpl string) (Expression, error) {
 		if err != nil {
 			return nil, fmt.Errorf("expression error: %v", e)
 		}
-		if vv, ok := v.(StringAwareExpression); ok && vv.WillBeString() {
-			e = newMath(operatorAdd, e, v)
-		} else if v.Static() != nil {
-			e = newMath(operatorAdd, e, NewStringValue(v.Static().Value()))
-		} else {
-			e = newMath(operatorAdd, e, newCall("string", []Expression{v}))
-		}
+		e = newMath(operatorAdd, e, CastToString(v))
 	}
 	if offset < len(tpl) {
 		e = newMath(operatorAdd, e, NewStringValue(tpl[offset:]))
