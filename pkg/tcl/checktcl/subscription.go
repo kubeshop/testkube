@@ -27,18 +27,18 @@ type SubscriptionChecker struct {
 }
 
 // NewSubscriptionChecker creates a new subscription checker using the agent token
-func NewSubscriptionChecker(ctx context.Context, proContext config.ProContext, cloudClient cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn) (*SubscriptionChecker, error) {
+func NewSubscriptionChecker(ctx context.Context, proContext config.ProContext, cloudClient cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn) (SubscriptionChecker, error) {
 	executor := executor.NewCloudGRPCExecutor(cloudClient, grpcConn, proContext.APIKey)
 
 	req := GetOrganizationPlanRequest{}
 	response, err := executor.Execute(ctx, cloudconfig.CmdConfigGetOrganizationPlan, req)
 	if err != nil {
-		return nil, err
+		return SubscriptionChecker{}, err
 	}
 
 	var commandResponse GetOrganizationPlanResponse
 	if err := json.Unmarshal(response, &commandResponse); err != nil {
-		return nil, err
+		return SubscriptionChecker{}, err
 	}
 
 	subscription := OrganizationPlan{
@@ -47,7 +47,7 @@ func NewSubscriptionChecker(ctx context.Context, proContext config.ProContext, c
 		PlanStatus:   PlanStatus(commandResponse.PlanStatus),
 	}
 
-	return &SubscriptionChecker{proContext: proContext, orgPlan: &subscription}, nil
+	return SubscriptionChecker{proContext: proContext, orgPlan: &subscription}, nil
 }
 
 // GetCurrentOrganizationPlan returns current organization plan

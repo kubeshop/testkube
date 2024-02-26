@@ -16,6 +16,7 @@ import (
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
+	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
@@ -522,9 +523,10 @@ func main() {
 		logGrpcClient,
 	)
 
+	var proContext *config.ProContext
 	if mode == common.ModeAgent {
 		log.DefaultLogger.Info("starting agent service")
-		proContext := config.ProContext{
+		proContext = &config.ProContext{
 			APIKey:               cfg.TestkubeProAPIKey,
 			URL:                  cfg.TestkubeProURL,
 			LogsPath:             cfg.TestkubeProLogsPath,
@@ -538,7 +540,11 @@ func main() {
 			ConnectionTimeout:    cfg.TestkubeProConnectionTimeout,
 		}
 
-		api.WithProContext(&proContext)
+		api.WithProContext(proContext)
+		// Check Pro/Enterprise subscription
+		subscriptionChecker, err := checktcl.NewSubscriptionChecker(ctx, *proContext, grpcClient, grpcConn)
+		ui.WarnOnError("Creating subscription checker", err)
+		api.WithSubscriptionChecker(subscriptionChecker)
 
 		agentHandle, err := agent.NewAgent(
 			log.DefaultLogger,
@@ -549,7 +555,7 @@ func main() {
 			cfg.TestkubeClusterName,
 			envs,
 			features,
-			proContext,
+			*proContext,
 		)
 		if err != nil {
 			ui.ExitOnError("Starting agent", err)

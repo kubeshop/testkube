@@ -6,6 +6,7 @@ import (
 	commonv1 "github.com/kubeshop/testkube-operator/api/common/v1"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/tcl/testsuitestcl"
 )
 
 // MapTestSuiteListKubeToAPI maps TestSuiteList CRD to list of OpenAPI spec TestSuite
@@ -81,6 +82,8 @@ func mapCRStepToAPI(crstep testsuitesv3.TestSuiteStepSpec) (teststep testkube.Te
 	case crstep.Test != "":
 		teststep = testkube.TestSuiteStep{
 			Test: crstep.Test,
+			// Pro/Enterprise feature: step execution requests
+			ExecutionRequest: testsuitestcl.MapTestStepExecutionRequestCRDToAPI(crstep.ExecutionRequest),
 		}
 
 	case crstep.Delay.Duration != 0:

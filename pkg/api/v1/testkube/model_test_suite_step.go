@@ -13,5 +13,6 @@ type TestSuiteStep struct {
 	// object name
 	Test string `json:"test,omitempty"`
 	// delay duration in time units
-	Delay string `json:"delay,omitempty"`
+	Delay            string                         `json:"delay,omitempty"`
+	ExecutionRequest *TestSuiteStepExecutionRequest `json:"executionRequest,omitempty"`
 }
