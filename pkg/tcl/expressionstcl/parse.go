@@ -219,3 +219,19 @@ func MustCompileTemplate(tpl string) Expression {
 	}
 	return v
 }
+
+func CompileAndResolve(exp string, m ...MachineCore) (Expression, error) {
+	e, err := Compile(exp)
+	if err != nil {
+		return e, err
+	}
+	return e.Resolve(m...)
+}
+
+func CompileAndResolveTemplate(tpl string, m ...MachineCore) (Expression, error) {
+	e, err := CompileTemplate(tpl)
+	if err != nil {
+		return e, err
+	}
+	return e.Resolve(m...)
+}
