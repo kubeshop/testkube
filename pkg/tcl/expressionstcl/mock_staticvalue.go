@@ -344,6 +344,20 @@ func (mr *MockStaticValueMockRecorder) Template() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockStaticValue)(nil).Template))
 }
 
+// Type mocks base method.
+func (m *MockStaticValue) Type() Type {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Type")
+	ret0, _ := ret[0].(Type)
+	return ret0
+}
+
+// Type indicates an expected call of Type.
+func (mr *MockStaticValueMockRecorder) Type() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Type", reflect.TypeOf((*MockStaticValue)(nil).Type))
+}
+
 // Value mocks base method.
 func (m *MockStaticValue) Value() interface{} {
 	m.ctrl.T.Helper()
@@ -356,18 +370,4 @@ func (m *MockStaticValue) Value() interface{} {
 func (mr *MockStaticValueMockRecorder) Value() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Value", reflect.TypeOf((*MockStaticValue)(nil).Value))
-}
-
-// WillBeString mocks base method.
-func (m *MockStaticValue) WillBeString() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WillBeString")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// WillBeString indicates an expected call of WillBeString.
-func (mr *MockStaticValueMockRecorder) WillBeString() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WillBeString", reflect.TypeOf((*MockStaticValue)(nil).WillBeString))
 }

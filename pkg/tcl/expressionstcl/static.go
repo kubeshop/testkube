@@ -32,8 +32,19 @@ func NewStringValue(value interface{}) StaticValue {
 	return NewValue(v)
 }
 
-func (s *static) WillBeString() bool {
-	return s.IsString()
+func (s *static) Type() Type {
+	switch s.value.(type) {
+	case int64:
+		return TypeInt64
+	case float64:
+		return TypeFloat64
+	case string:
+		return TypeString
+	case bool:
+		return TypeBool
+	default:
+		return TypeUnknown
+	}
 }
 
 func (s *static) String() string {

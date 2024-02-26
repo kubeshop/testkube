@@ -18,7 +18,7 @@ import (
 )
 
 type StdFunction struct {
-	ReturnType string
+	ReturnType Type
 	Handler    func(...StaticValue) (Expression, error)
 }
 
@@ -28,7 +28,7 @@ var StdLibMachine = &stdMachine{}
 
 var stdFunctions = map[string]StdFunction{
 	"string": {
-		ReturnType: "string",
+		ReturnType: TypeString,
 		Handler: func(value ...StaticValue) (Expression, error) {
 			str := ""
 			for i := range value {
@@ -48,7 +48,7 @@ var stdFunctions = map[string]StdFunction{
 		},
 	},
 	"join": {
-		ReturnType: "string",
+		ReturnType: TypeString,
 		Handler: func(value ...StaticValue) (Expression, error) {
 			if len(value) == 0 || len(value) > 2 {
 				return nil, fmt.Errorf(`"join" function expects 1-2 arguments, %d provided`, len(value))
@@ -88,7 +88,7 @@ var stdFunctions = map[string]StdFunction{
 		},
 	},
 	"int": {
-		ReturnType: "int64",
+		ReturnType: TypeInt64,
 		Handler: func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 {
 				return nil, fmt.Errorf(`"int" function expects 1 argument, %d provided`, len(value))
@@ -101,7 +101,7 @@ var stdFunctions = map[string]StdFunction{
 		},
 	},
 	"bool": {
-		ReturnType: "bool",
+		ReturnType: TypeBool,
 		Handler: func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 {
 				return nil, fmt.Errorf(`"bool" function expects 1 argument, %d provided`, len(value))
@@ -114,7 +114,7 @@ var stdFunctions = map[string]StdFunction{
 		},
 	},
 	"float": {
-		ReturnType: "float64",
+		ReturnType: TypeFloat64,
 		Handler: func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 {
 				return nil, fmt.Errorf(`"float" function expects 1 argument, %d provided`, len(value))
@@ -127,7 +127,7 @@ var stdFunctions = map[string]StdFunction{
 		},
 	},
 	"tojson": {
-		ReturnType: "string",
+		ReturnType: TypeString,
 		Handler: func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 {
 				return nil, fmt.Errorf(`"tojson" function expects 1 argument, %d provided`, len(value))
@@ -156,7 +156,7 @@ var stdFunctions = map[string]StdFunction{
 		},
 	},
 	"toyaml": {
-		ReturnType: "string",
+		ReturnType: TypeString,
 		Handler: func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 {
 				return nil, fmt.Errorf(`"toyaml" function expects 1 argument, %d provided`, len(value))
@@ -185,7 +185,7 @@ var stdFunctions = map[string]StdFunction{
 		},
 	},
 	"shellquote": {
-		ReturnType: "string",
+		ReturnType: TypeString,
 		Handler: func(value ...StaticValue) (Expression, error) {
 			args := make([]string, len(value))
 			for i := range value {
@@ -195,7 +195,7 @@ var stdFunctions = map[string]StdFunction{
 		},
 	},
 	"trim": {
-		ReturnType: "string",
+		ReturnType: TypeString,
 		Handler: func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 {
 				return nil, fmt.Errorf(`"trim" function expects 1 argument, %d provided`, len(value))
@@ -209,9 +209,13 @@ var stdFunctions = map[string]StdFunction{
 	},
 }
 
-func isStdlibString(fnName string) bool {
-	fn, ok := stdFunctions[fnName]
-	return ok && fn.ReturnType == "string"
+func IsStdFunction(name string) bool {
+	_, ok := stdFunctions[name]
+	return ok
+}
+
+func GetStdFunctionReturnType(name string) Type {
+	return stdFunctions[name].ReturnType
 }
 
 func (*stdMachine) Get(name string) (Expression, bool, error) {

@@ -32,6 +32,15 @@ func newConditional(condition, truthy, falsy Expression) Expression {
 	return &conditional{condition: condition, truthy: truthy, falsy: falsy}
 }
 
+func (s *conditional) Type() Type {
+	r1 := s.truthy.Type()
+	r2 := s.falsy.Type()
+	if r1 == r2 {
+		return r1
+	}
+	return TypeUnknown
+}
+
 func (s *conditional) String() string {
 	return fmt.Sprintf("%s ? %s : %s", s.condition.String(), s.truthy.String(), s.falsy.String())
 }

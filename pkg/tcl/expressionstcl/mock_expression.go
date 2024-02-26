@@ -155,3 +155,17 @@ func (mr *MockExpressionMockRecorder) Template() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockExpression)(nil).Template))
 }
+
+// Type mocks base method.
+func (m *MockExpression) Type() Type {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Type")
+	ret0, _ := ret[0].(Type)
+	return ret0
+}
+
+// Type indicates an expected call of Type.
+func (mr *MockExpressionMockRecorder) Type() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Type", reflect.TypeOf((*MockExpression)(nil).Type))
+}

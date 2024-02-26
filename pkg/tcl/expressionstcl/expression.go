@@ -13,6 +13,7 @@ type Expression interface {
 	String() string
 	SafeString() string
 	Template() string
+	Type() Type
 	SafeResolve(...MachineCore) (Expression, bool, error)
 	Resolve(...MachineCore) (Expression, error)
 	Static() StaticValue
@@ -20,14 +21,19 @@ type Expression interface {
 	Functions() map[string]struct{}
 }
 
-type StringAwareExpression interface {
-	WillBeString() bool
-}
+type Type string
+
+const (
+	TypeUnknown Type = ""
+	TypeBool    Type = "bool"
+	TypeString  Type = "string"
+	TypeFloat64 Type = "float64"
+	TypeInt64   Type = "int64"
+)
 
 //go:generate mockgen -destination=./mock_staticvalue.go -package=expressionstcl "github.com/kubeshop/testkube/pkg/tcl/expressionstcl" StaticValue
 type StaticValue interface {
 	Expression
-	StringAwareExpression
 	IsNone() bool
 	IsString() bool
 	IsBool() bool

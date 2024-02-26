@@ -185,18 +185,27 @@ func (s *math) performMath(v1 StaticValue, v2 StaticValue) (StaticValue, error) 
 	return nil, fmt.Errorf("unknown math operator: %s", s.operator)
 }
 
-func isStringExpression(expr Expression) bool {
-	if expr.Static() != nil {
-		return expr.Static().IsString()
+func (s *math) Type() Type {
+	l := s.left.Type()
+	r := s.right.Type()
+	switch s.operator {
+	case operatorAnd, operatorOr:
+		if l == r {
+			return l
+		}
+		return TypeUnknown
+	case operatorPower, operatorModulo, operatorSubtract, operatorMultiply, operatorDivide:
+		return TypeFloat64
+	case operatorAdd:
+		if l == TypeString || r == TypeString {
+			return TypeString
+		}
+		return TypeFloat64
+	case operatorEquals, operatorNotEquals, operatorEqualsAlias, operatorNotEqualsAlias, operatorGt, operatorLt, operatorGte, operatorLte:
+		return TypeBool
+	default:
+		return TypeUnknown
 	}
-	if v, ok := expr.(StringAwareExpression); ok {
-		return v.WillBeString()
-	}
-	return false
-}
-
-func (s *math) WillBeString() bool {
-	return isStringExpression(s.left) || isStringExpression(s.right)
 }
 
 func (s *math) itemString(v Expression) string {
@@ -218,10 +227,8 @@ func (s *math) SafeString() string {
 
 func (s *math) Template() string {
 	// Simplify the template when it is possible
-	if s.operator == operatorAdd {
-		if s.WillBeString() {
-			return s.left.Template() + s.right.Template()
-		}
+	if s.operator == operatorAdd && s.Type() == TypeString {
+		return s.left.Template() + s.right.Template()
 	}
 	return "{{" + s.String() + "}}"
 }

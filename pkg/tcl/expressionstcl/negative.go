@@ -21,6 +21,10 @@ func newNegative(expr Expression) Expression {
 	return &negative{expr: expr}
 }
 
+func (s *negative) Type() Type {
+	return TypeBool
+}
+
 func (s *negative) String() string {
 	return fmt.Sprintf("!%s", s.expr.SafeString())
 }

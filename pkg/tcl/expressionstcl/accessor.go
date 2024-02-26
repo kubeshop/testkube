@@ -20,6 +20,10 @@ func newAccessor(name string) Expression {
 	return &accessor{name: name}
 }
 
+func (s *accessor) Type() Type {
+	return TypeUnknown
+}
+
 func (s *accessor) String() string {
 	return s.name
 }

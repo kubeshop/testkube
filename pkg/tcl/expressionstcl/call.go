@@ -33,14 +33,17 @@ func newCall(name string, args []Expression) Expression {
 func CastToString(v Expression) Expression {
 	if v.Static() != nil {
 		return NewStringValue(v.Static().Value())
-	} else if vv, ok := v.(StringAwareExpression); ok && vv.WillBeString() {
+	} else if v.Type() == TypeString {
 		return v
 	}
 	return newCall(stringCastStdFn, []Expression{v})
 }
 
-func (s *call) WillBeString() bool {
-	return isStdlibString(s.name)
+func (s *call) Type() Type {
+	if IsStdFunction(s.name) {
+		return GetStdFunctionReturnType(s.name)
+	}
+	return TypeUnknown
 }
 
 func (s *call) String() string {
