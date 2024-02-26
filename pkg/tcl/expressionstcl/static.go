@@ -77,10 +77,7 @@ func (s *static) Template() string {
 		return ""
 	}
 	v, _ := s.StringValue()
-	if strings.Contains(v, "{{") {
-		return "{{" + s.String() + "}}"
-	}
-	return v
+	return strings.ReplaceAll(v, "{{", "{{\"{{\"}}")
 }
 
 func (s *static) SafeResolve(_ ...MachineCore) (Expression, bool, error) {
