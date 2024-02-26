@@ -158,7 +158,7 @@ func resolve(v reflect.Value, t tagData, m []MachineCore) (err error) {
 	return unrecognizedErr
 }
 
-func Resolve(t interface{}, m ...MachineCore) error {
+func SimplifyStruct(t interface{}, m ...MachineCore) error {
 	v := reflect.ValueOf(t)
 	if v.Kind() != reflect.Pointer {
 		return errors.New("pointer needs to be passed to Resolve function")
