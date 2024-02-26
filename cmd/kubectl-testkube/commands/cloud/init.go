@@ -2,7 +2,7 @@ package cloud
 
 import (
 	"fmt"
-	
+
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -46,8 +46,8 @@ func NewInitCmd() *cobra.Command {
 
 				currentContext, err := common.GetCurrentKubernetesContext()
 				if err != nil {
-				sendErrTelemetry(cmd, cfg, "k8s_context", err)
-				ui.ExitOnError("getting current context", err)
+					sendErrTelemetry(cmd, cfg, "k8s_context", err)
+					ui.ExitOnError("getting current context", err)
 				}
 				ui.Alert("Current kubectl context:", currentContext)
 				ui.NL()
@@ -63,8 +63,8 @@ func NewInitCmd() *cobra.Command {
 			spinner := ui.NewSpinner("Installing Testkube")
 			err = common.HelmUpgradeOrInstallTestkubeCloud(options, cfg, false)
 			if err != nil {
-			sendErrTelemetry(cmd, cfg, "helm_install", err)
-			ui.ExitOnError("Installing Testkube", err)
+				sendErrTelemetry(cmd, cfg, "helm_install", err)
+				ui.ExitOnError("Installing Testkube", err)
 			}
 			spinner.Success()
 
@@ -102,7 +102,7 @@ func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType string,
 		out, err := telemetry.SendCmdErrorEvent(cmd, common.Version, errType, errorStackTrace)
 		if ui.Verbose && err != nil {
 			ui.Err(err)
-		}	
+		}
 		ui.Debug("telemetry send event response", out)
 	}
 }
