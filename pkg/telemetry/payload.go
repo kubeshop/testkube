@@ -31,6 +31,7 @@ type Params struct {
 	ClusterType      string     `json:"cluster_type,omitempty"`
 	Error            string     `json:"error,omitempty"`
 	ErrorType        string     `json:"error_type,omitempty"`
+	ErrorStackTrace  string     `json:"error_stacktrace,omitempty"`
 }
 
 type Event struct {
