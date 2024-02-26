@@ -1,13 +1,15 @@
 package pro
 
 import (
+	"fmt"
+	
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"fmt"
+	
 )
 
 func NewInitCmd() *cobra.Command {
