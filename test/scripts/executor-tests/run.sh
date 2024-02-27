@@ -111,6 +111,39 @@ common_run() { # name, test_crd_file, testsuite_name, testsuite_file, custom_exe
   fi
 }
 
+common_workflow_run() { # name, workflow_crd_file, custom_workflow_template_crd_file
+  name=$1
+  workflow_crd_file=$2
+  custom_workflow_template_crd_file=$3
+
+  print_title "$name"
+
+  if [ "$delete" = true ] ; then
+    if [ ! -z "$custom_executor_crd_file" ] ; then
+      kubectl --namespace $namespace delete -f $custom_workflow_template_crd_file --ignore-not-found=true
+    fi
+    kubectl --namespace $namespace delete -f $workflow_crd_file --ignore-not-found=true
+  fi
+
+  if [ "$create" = true ] ; then
+    if [ ! -z "$custom_workflow_template_crd_file" ] ; then
+      # Workflow Template
+      kubectl --namespace $namespace apply -f $custom_workflow_template_crd_file
+    fi
+    
+    # Workflow
+    kubectl --namespace $namespace apply -f $workflow_crd_file
+  fi
+}
+
+workflow-cypress-smoke() {
+  name="artillery workflow"
+  workflow_crd_file="test/cypress/executor-tests/crd-workflow/smoke.yaml"
+  custom_workflow_template_crd_file="test/test-workflow-templates/cypress.yaml"
+  
+  common_workflow_run "$name" "$workflow_crd_file" "$custom_workflow_template_crd_file"
+}
+
 artillery-smoke() {
   name="artillery"
   test_crd_file="test/artillery/executor-smoke/crd/crd.yaml"
@@ -382,6 +415,64 @@ special-cases-jmeter() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
 }
 
+workflow-cypress-smoke() {
+  name="Test Workflow - Cypress"
+  workflow_crd_file="test/cypress/executor-tests/crd-workflow/smoke.yaml"
+  custom_workflow_template_crd_file="test/test-workflow-templates/cypress.yaml"
+  
+  common_workflow_run "$name" "$workflow_crd_file" "$custom_workflow_template_crd_file"
+}
+
+workflow-gradle-smoke() {
+  name="Test Workflow - Gradle"
+  workflow_crd_file="test/gradle/executor-smoke/crd-workflow/smoke.yaml"
+  
+  common_workflow_run "$name" "$workflow_crd_file"
+}
+
+workflow-jmeter-smoke() {
+  name="Test Workflow - JMeter"
+  workflow_crd_file="test/jmeter/executor-tests/crd-workflow/smoke.yaml"
+  
+  common_workflow_run "$name" "$workflow_crd_file"
+}
+
+workflow-k6-smoke() {
+  name="Test Workflow - k6"
+  workflow_crd_file="test/k6/executor-tests/crd-workflow/smoke.yaml"
+  custom_workflow_template_crd_file="test/test-workflow-templates/k6.yaml"
+  
+  common_workflow_run "$name" "$workflow_crd_file" "$custom_workflow_template_crd_file"
+}
+
+workflow-maven-smoke() {
+  name="Test Workflow - Maven"
+  workflow_crd_file="test/maven/executor-smoke/crd-workflow/smoke.yaml"
+  
+  common_workflow_run "$name" "$workflow_crd_file"
+}
+
+workflow-playwright-smoke() {
+  name="Test Workflow - Playwright"
+  workflow_crd_file="test/playwright/executor-tests/crd-workflow/smoke.yaml"
+  
+  common_workflow_run "$name" "$workflow_crd_file"
+}
+
+workflow-postman-smoke() {
+  name="Test Workflow - Postman"
+  workflow_crd_file="test/postman/executor-tests/crd-workflow/smoke.yaml"
+  
+  common_workflow_run "$name" "$workflow_crd_file"
+}
+
+workflow-soapui-smoke() {
+  name="Test Workflow - SoapUI"
+  workflow_crd_file="test/soapui/executor-smoke/crd-workflow/smoke.yaml"
+  
+  common_workflow_run "$name" "$workflow_crd_file"
+}
+
 main() {
   case $executor_type in
     all)
@@ -437,6 +528,16 @@ main() {
       special-cases-large-logs
       special-cases-large-artifacts
       special-cases-jmeter
+      ;;
+    workflow)
+      workflow-cypress-smoke
+      workflow-gradle-smoke
+      workflow-jmeter-smoke
+      workflow-k6-smoke
+      workflow-maven-smoke
+      workflow-playwright-smoke
+      workflow-postman-smoke
+      workflow-soapui-smoke
       ;;
     *)
       $executor_type
