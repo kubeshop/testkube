@@ -26,7 +26,7 @@ var (
 		WorkingDir:      common.Ptr("/wd"),
 		Image:           "some-image",
 		ImagePullPolicy: "IfNotPresent",
-		Env: []corev1.EnvVar{
+		Env: []testworkflowsv1.EnvVar{
 			{Name: "some-naaame", Value: "some-value"},
 			{Name: "some-naaame", ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
@@ -197,7 +197,7 @@ var (
 				WorkingDir:      common.Ptr("/abc"),
 				Image:           "im-g",
 				ImagePullPolicy: "IfNotPresent",
-				Env: []corev1.EnvVar{
+				Env: []testworkflowsv1.EnvVar{
 					{Name: "abc", Value: "230"},
 				},
 				EnvFrom: []corev1.EnvFromSource{
@@ -224,7 +224,7 @@ var (
 			WorkingDir:      common.Ptr("/aaaa"),
 			Image:           "ssss",
 			ImagePullPolicy: "Never",
-			Env:             []corev1.EnvVar{{Name: "xyz", Value: "bar"}},
+			Env:             []testworkflowsv1.EnvVar{{Name: "xyz", Value: "bar"}},
 			Command:         common.Ptr([]string{"ab"}),
 			Args:            common.Ptr([]string{"abrgs"}),
 			Resources: &testworkflowsv1.Resources{

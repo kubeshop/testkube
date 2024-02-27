@@ -209,6 +209,43 @@ var stdFunctions = map[string]StdFunction{
 	},
 }
 
+const (
+	stringCastStdFn = "string"
+	boolCastStdFn   = "bool"
+	intCastStdFn    = "int"
+	floatCastStdFn  = "float"
+)
+
+func CastToString(v Expression) Expression {
+	if v.Static() != nil {
+		return NewStringValue(v.Static().Value())
+	} else if v.Type() == TypeString {
+		return v
+	}
+	return newCall(stringCastStdFn, []Expression{v})
+}
+
+func CastToBool(v Expression) Expression {
+	if v.Type() == TypeBool {
+		return v
+	}
+	return newCall(boolCastStdFn, []Expression{v})
+}
+
+func CastToInt(v Expression) Expression {
+	if v.Type() == TypeInt64 {
+		return v
+	}
+	return newCall(intCastStdFn, []Expression{v})
+}
+
+func CastToFloat(v Expression) Expression {
+	if v.Type() == TypeFloat64 {
+		return v
+	}
+	return newCall(intCastStdFn, []Expression{v})
+}
+
 func IsStdFunction(name string) bool {
 	_, ok := stdFunctions[name]
 	return ok
