@@ -67,6 +67,26 @@ var (
 			},
 		},
 	}
+	tplStepsEnv = testworkflowsv1.TestWorkflowTemplate{
+		Spec: testworkflowsv1.TestWorkflowTemplateSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Container: &testworkflowsv1.ContainerConfig{
+					Env: []testworkflowsv1.EnvVar{
+						{Name: "test", Value: "the"},
+					},
+				},
+			},
+			Setup: []testworkflowsv1.IndependentStep{
+				{StepBase: testworkflowsv1.StepBase{Name: "setup-tpl-test"}},
+			},
+			Steps: []testworkflowsv1.IndependentStep{
+				{StepBase: testworkflowsv1.StepBase{Name: "steps-tpl-test"}},
+			},
+			After: []testworkflowsv1.IndependentStep{
+				{StepBase: testworkflowsv1.StepBase{Name: "after-tpl-test"}},
+			},
+		},
+	}
 	tplStepsConfig = testworkflowsv1.TestWorkflowTemplate{
 		Spec: testworkflowsv1.TestWorkflowTemplateSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
@@ -90,6 +110,7 @@ var (
 		"podConfig":   tplPodConfig,
 		"env":         tplEnv,
 		"steps":       tplSteps,
+		"stepsEnv":    tplStepsEnv,
 		"stepsConfig": tplStepsConfig,
 	}
 	tplPodRef       = testworkflowsv1.TemplateRef{Name: "pod"}
@@ -102,6 +123,7 @@ var (
 	tplPodConfigRefEmpty = testworkflowsv1.TemplateRef{Name: "podConfig"}
 	tplEnvRef            = testworkflowsv1.TemplateRef{Name: "env"}
 	tplStepsRef          = testworkflowsv1.TemplateRef{Name: "steps"}
+	tplStepsEnvRef       = testworkflowsv1.TemplateRef{Name: "stepsEnv"}
 	tplStepsConfigRef    = testworkflowsv1.TemplateRef{Name: "stepsConfig", Config: map[string]intstr.IntOrString{
 		"index": {Type: intstr.Int, IntVal: 20},
 	}}
@@ -358,11 +380,30 @@ func TestApplyTemplatesStepBasicIsolated(t *testing.T) {
 	s, err := applyTemplatesToStep(s, templates)
 
 	want := *basicStep.DeepCopy()
+	want.Steps = append([]testworkflowsv1.Step{
+		ConvertIndependentStepToStep(tplSteps.Spec.Setup[0]),
+		ConvertIndependentStepToStep(tplSteps.Spec.Steps[0]),
+		ConvertIndependentStepToStep(tplSteps.Spec.After[0]),
+	}, want.Steps...)
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, s)
+}
+
+func TestApplyTemplatesStepBasicIsolatedWrapped(t *testing.T) {
+	s := *basicStep.DeepCopy()
+	s.Template = &tplStepsEnvRef
+	s, err := applyTemplatesToStep(s, templates)
+
+	want := *basicStep.DeepCopy()
 	want.Steps = append([]testworkflowsv1.Step{{
+		StepBase: testworkflowsv1.StepBase{
+			Container: tplStepsEnv.Spec.Container,
+		},
 		Steps: []testworkflowsv1.Step{
-			ConvertIndependentStepToStep(tplSteps.Spec.Setup[0]),
-			ConvertIndependentStepToStep(tplSteps.Spec.Steps[0]),
-			ConvertIndependentStepToStep(tplSteps.Spec.After[0]),
+			ConvertIndependentStepToStep(tplStepsEnv.Spec.Setup[0]),
+			ConvertIndependentStepToStep(tplStepsEnv.Spec.Steps[0]),
+			ConvertIndependentStepToStep(tplStepsEnv.Spec.After[0]),
 		},
 	}}, want.Steps...)
 
@@ -416,11 +457,30 @@ func TestApplyTemplatesStepAdvancedIsolated(t *testing.T) {
 	s, err := applyTemplatesToStep(s, templates)
 
 	want := *advancedStep.DeepCopy()
+	want.Steps = append([]testworkflowsv1.Step{
+		ConvertIndependentStepToStep(tplSteps.Spec.Setup[0]),
+		ConvertIndependentStepToStep(tplSteps.Spec.Steps[0]),
+		ConvertIndependentStepToStep(tplSteps.Spec.After[0]),
+	}, want.Steps...)
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, s)
+}
+
+func TestApplyTemplatesStepAdvancedIsolatedWrapped(t *testing.T) {
+	s := *advancedStep.DeepCopy()
+	s.Template = &tplStepsEnvRef
+	s, err := applyTemplatesToStep(s, templates)
+
+	want := *advancedStep.DeepCopy()
 	want.Steps = append([]testworkflowsv1.Step{{
+		StepBase: testworkflowsv1.StepBase{
+			Container: tplStepsEnv.Spec.Container,
+		},
 		Steps: []testworkflowsv1.Step{
-			ConvertIndependentStepToStep(tplSteps.Spec.Setup[0]),
-			ConvertIndependentStepToStep(tplSteps.Spec.Steps[0]),
-			ConvertIndependentStepToStep(tplSteps.Spec.After[0]),
+			ConvertIndependentStepToStep(tplStepsEnv.Spec.Setup[0]),
+			ConvertIndependentStepToStep(tplStepsEnv.Spec.Steps[0]),
+			ConvertIndependentStepToStep(tplStepsEnv.Spec.After[0]),
 		},
 	}}, want.Steps...)
 

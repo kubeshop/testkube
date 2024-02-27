@@ -125,7 +125,11 @@ func applyTemplatesToStep(step testworkflowsv1.Step, templates map[string]testwo
 		if len(isolate.Steps) > 0 {
 			// Mark template steps as a template-sourced
 			// TODO: Add "group" to the CRD
-			step.Steps = append([]testworkflowsv1.Step{isolate}, step.Steps...)
+			if isolate.Container == nil && isolate.Content == nil && isolate.WorkingDir == nil {
+				step.Steps = append(isolate.Steps, step.Steps...)
+			} else {
+				step.Steps = append([]testworkflowsv1.Step{isolate}, step.Steps...)
+			}
 		}
 
 		step.Template = nil
