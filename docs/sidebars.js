@@ -246,6 +246,13 @@ const sidebars = {
         },
       ],
     },
+    {
+      type: "category",
+      label: "FAQs",
+      items: [
+        "articles/testkube-licensing-FAQ",
+      ],
+    },
   ],
 
   // But you can create a sidebar manually
