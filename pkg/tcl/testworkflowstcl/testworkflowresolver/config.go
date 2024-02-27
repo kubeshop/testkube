@@ -9,6 +9,8 @@
 package testworkflowresolver
 
 import (
+	"strconv"
+
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -18,18 +20,36 @@ import (
 
 var configFinalizer = expressionstcl.PrefixMachine("config.", expressionstcl.FinalizerFail)
 
-func createConfigMachine(cfg map[string]intstr.IntOrString) (expressionstcl.Machine, error) {
+func castParameter(value string, schema testworkflowsv1.ParameterSchema) (expressionstcl.Expression, error) {
+	expr, err := expressionstcl.CompileTemplate(value)
+	if err != nil {
+		return nil, err
+	}
+	switch schema.Type {
+	case testworkflowsv1.ParameterTypeBoolean:
+		return expressionstcl.CastToBool(expr).Resolve()
+	case testworkflowsv1.ParameterTypeInteger:
+		return expressionstcl.CastToInt(expr).Resolve()
+	case testworkflowsv1.ParameterTypeNumber:
+		return expressionstcl.CastToFloat(expr).Resolve()
+	}
+	return expressionstcl.CastToString(expr).Resolve()
+}
+
+func createConfigMachine(cfg map[string]intstr.IntOrString, schema map[string]testworkflowsv1.ParameterSchema) (expressionstcl.Machine, error) {
 	machine := expressionstcl.NewMachine()
 	for k, v := range cfg {
+		var vv string
 		if v.Type == intstr.String {
-			expr, err := expressionstcl.CompileTemplate(v.StrVal)
-			if err != nil {
-				return nil, errors.Wrap(err, "config."+k)
-			}
-			machine.Register("config."+k, expr)
+			vv = v.StrVal
 		} else {
-			machine.Register("config."+k, v.IntVal)
+			vv = strconv.Itoa(int(v.IntVal))
 		}
+		expr, err := castParameter(vv, schema[k])
+		if err != nil {
+			return nil, errors.Wrap(err, "config."+k)
+		}
+		machine.Register("config."+k, expr)
 	}
 	return machine, nil
 }
@@ -38,7 +58,7 @@ func ApplyWorkflowConfig(t *testworkflowsv1.TestWorkflow, cfg map[string]intstr.
 	if t == nil {
 		return t, nil
 	}
-	machine, err := createConfigMachine(cfg)
+	machine, err := createConfigMachine(cfg, t.Spec.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +70,7 @@ func ApplyWorkflowTemplateConfig(t *testworkflowsv1.TestWorkflowTemplate, cfg ma
 	if t == nil {
 		return t, nil
 	}
-	machine, err := createConfigMachine(cfg)
+	machine, err := createConfigMachine(cfg, t.Spec.Config)
 	if err != nil {
 		return nil, err
 	}
