@@ -102,6 +102,67 @@ func TestApplyMissingConfig(t *testing.T) {
 	assert.Contains(t, err.Error(), "error while accessing config.baz: unknown variable")
 }
 
+func TestApplyConfigDefaults(t *testing.T) {
+	cfg := map[string]intstr.IntOrString{
+		"foo":    {Type: intstr.Int, IntVal: 30},
+		"bar":    {Type: intstr.String, StrVal: "some value"},
+		"foobar": {Type: intstr.String, StrVal: "some {{ unknown(300) }} value"},
+	}
+	want := &testworkflowsv1.TestWorkflow{
+		Description: "{{some description here }}",
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Config: map[string]testworkflowsv1.ParameterSchema{
+					"baz": {Default: &intstr.IntOrString{Type: intstr.String, StrVal: "something"}},
+				},
+				Pod: &testworkflowsv1.PodConfig{
+					ServiceAccountName: "abra 30",
+					Labels: map[string]string{
+						"some value-key": "something",
+					},
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{
+					StepBase: testworkflowsv1.StepBase{
+						Container: &testworkflowsv1.ContainerConfig{
+							WorkingDir: common.Ptr("some {{unknown(300)}} value {{another(500)}}"),
+						},
+					},
+				},
+			},
+		},
+	}
+	got, err := ApplyWorkflowConfig(&testworkflowsv1.TestWorkflow{
+		Description: "{{some description here }}",
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Config: map[string]testworkflowsv1.ParameterSchema{
+					"baz": {Default: &intstr.IntOrString{Type: intstr.String, StrVal: "something"}},
+				},
+				Pod: &testworkflowsv1.PodConfig{
+					ServiceAccountName: "abra {{config.foo}}",
+					Labels: map[string]string{
+						"{{config.bar}}-key": "{{config.baz}}",
+					},
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{
+					StepBase: testworkflowsv1.StepBase{
+						Container: &testworkflowsv1.ContainerConfig{
+							WorkingDir: common.Ptr("{{config.foobar}} {{another(500)}}"),
+						},
+					},
+				},
+			},
+		},
+	}, cfg)
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, got)
+}
+
 func TestInvalidInteger(t *testing.T) {
 	cfg := map[string]intstr.IntOrString{
 		"foo": {Type: intstr.String, StrVal: "some value"},

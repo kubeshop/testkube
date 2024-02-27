@@ -20,8 +20,12 @@ import (
 
 var configFinalizer = expressionstcl.PrefixMachine("config.", expressionstcl.FinalizerFail)
 
-func castParameter(value string, schema testworkflowsv1.ParameterSchema) (expressionstcl.Expression, error) {
-	expr, err := expressionstcl.CompileTemplate(value)
+func castParameter(value intstr.IntOrString, schema testworkflowsv1.ParameterSchema) (expressionstcl.Expression, error) {
+	v := value.StrVal
+	if value.Type == intstr.Int {
+		v = strconv.Itoa(int(value.IntVal))
+	}
+	expr, err := expressionstcl.CompileTemplate(v)
 	if err != nil {
 		return nil, err
 	}
@@ -39,17 +43,20 @@ func castParameter(value string, schema testworkflowsv1.ParameterSchema) (expres
 func createConfigMachine(cfg map[string]intstr.IntOrString, schema map[string]testworkflowsv1.ParameterSchema) (expressionstcl.Machine, error) {
 	machine := expressionstcl.NewMachine()
 	for k, v := range cfg {
-		var vv string
-		if v.Type == intstr.String {
-			vv = v.StrVal
-		} else {
-			vv = strconv.Itoa(int(v.IntVal))
-		}
-		expr, err := castParameter(vv, schema[k])
+		expr, err := castParameter(v, schema[k])
 		if err != nil {
 			return nil, errors.Wrap(err, "config."+k)
 		}
 		machine.Register("config."+k, expr)
+	}
+	for k := range schema {
+		if schema[k].Default != nil {
+			expr, err := castParameter(*schema[k].Default, schema[k])
+			if err != nil {
+				return nil, errors.Wrap(err, "config."+k)
+			}
+			machine.Register("config."+k, expr)
+		}
 	}
 	return machine, nil
 }
