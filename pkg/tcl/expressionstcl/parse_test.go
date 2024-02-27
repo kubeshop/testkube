@@ -179,6 +179,10 @@ func TestCircularResolution(t *testing.T) {
 	assert.Contains(t, fmt.Sprintf("%v", errOnly(MustCompile(`self()`).Resolve(vm, FinalizerFail))), "call stack exceeded")
 }
 
+func TestMinusNumber(t *testing.T) {
+	assert.Equal(t, -4.0, must(MustCompile("-4").Static().FloatValue()))
+}
+
 func TestCompileMultilineString(t *testing.T) {
 	assert.Equal(t, `"\nabc\ndef\n"`, MustCompile(`"
 abc
