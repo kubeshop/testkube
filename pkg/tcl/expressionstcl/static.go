@@ -33,6 +33,9 @@ func NewStringValue(value interface{}) StaticValue {
 }
 
 func (s *static) Type() Type {
+	if s == nil {
+		return TypeUnknown
+	}
 	switch s.value.(type) {
 	case int64:
 		return TypeInt64
@@ -74,17 +77,14 @@ func (s *static) Template() string {
 		return ""
 	}
 	v, _ := s.StringValue()
-	if strings.Contains(v, "{{") {
-		return "{{" + s.String() + "}}"
-	}
-	return v
+	return strings.ReplaceAll(v, "{{", "{{\"{{\"}}")
 }
 
-func (s *static) SafeResolve(_ ...MachineCore) (Expression, bool, error) {
+func (s *static) SafeResolve(_ ...Machine) (Expression, bool, error) {
 	return s, false, nil
 }
 
-func (s *static) Resolve(_ ...MachineCore) (Expression, error) {
+func (s *static) Resolve(_ ...Machine) (Expression, error) {
 	return s, nil
 }
 

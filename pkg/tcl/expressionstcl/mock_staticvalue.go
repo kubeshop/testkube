@@ -220,7 +220,7 @@ func (mr *MockStaticValueMockRecorder) MapValue() *gomock.Call {
 }
 
 // Resolve mocks base method.
-func (m *MockStaticValue) Resolve(arg0 ...MachineCore) (Expression, error) {
+func (m *MockStaticValue) Resolve(arg0 ...Machine) (Expression, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{}
 	for _, a := range arg0 {
@@ -239,7 +239,7 @@ func (mr *MockStaticValueMockRecorder) Resolve(arg0 ...interface{}) *gomock.Call
 }
 
 // SafeResolve mocks base method.
-func (m *MockStaticValue) SafeResolve(arg0 ...MachineCore) (Expression, bool, error) {
+func (m *MockStaticValue) SafeResolve(arg0 ...Machine) (Expression, bool, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{}
 	for _, a := range arg0 {
