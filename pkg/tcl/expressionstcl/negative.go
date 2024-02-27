@@ -37,7 +37,7 @@ func (s *negative) Template() string {
 	return "{{" + s.String() + "}}"
 }
 
-func (s *negative) SafeResolve(m ...MachineCore) (v Expression, changed bool, err error) {
+func (s *negative) SafeResolve(m ...Machine) (v Expression, changed bool, err error) {
 	s.expr, changed, err = s.expr.SafeResolve(m...)
 	if err != nil {
 		return nil, changed, err
@@ -54,7 +54,7 @@ func (s *negative) SafeResolve(m ...MachineCore) (v Expression, changed bool, er
 	return NewValue(!vv), changed, nil
 }
 
-func (s *negative) Resolve(m ...MachineCore) (v Expression, err error) {
+func (s *negative) Resolve(m ...Machine) (v Expression, err error) {
 	return deepResolve(s, m...)
 }
 

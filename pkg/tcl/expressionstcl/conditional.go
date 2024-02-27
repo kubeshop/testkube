@@ -53,7 +53,7 @@ func (s *conditional) Template() string {
 	return "{{" + s.String() + "}}"
 }
 
-func (s *conditional) SafeResolve(m ...MachineCore) (v Expression, changed bool, err error) {
+func (s *conditional) SafeResolve(m ...Machine) (v Expression, changed bool, err error) {
 	var ch bool
 	s.condition, ch, err = s.condition.SafeResolve(m...)
 	changed = changed || ch
@@ -84,7 +84,7 @@ func (s *conditional) SafeResolve(m ...MachineCore) (v Expression, changed bool,
 	return s, changed, nil
 }
 
-func (s *conditional) Resolve(m ...MachineCore) (v Expression, err error) {
+func (s *conditional) Resolve(m ...Machine) (v Expression, err error) {
 	return deepResolve(s, m...)
 }
 

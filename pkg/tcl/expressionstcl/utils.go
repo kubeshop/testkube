@@ -14,7 +14,7 @@ import (
 
 const maxCallStack = 10_000
 
-func deepResolve(expr Expression, machines ...MachineCore) (Expression, error) {
+func deepResolve(expr Expression, machines ...Machine) (Expression, error) {
 	i := 1
 	expr, changed, err := expr.SafeResolve(machines...)
 	for changed && err == nil && expr.Static() == nil {
