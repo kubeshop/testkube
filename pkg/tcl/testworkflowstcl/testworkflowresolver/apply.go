@@ -10,6 +10,7 @@ package testworkflowresolver
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -149,6 +150,26 @@ func applyTemplatesToStep(step testworkflowsv1.Step, templates map[string]testwo
 	return step, nil
 }
 
+func FlattenStepList(steps []testworkflowsv1.Step) []testworkflowsv1.Step {
+	changed := false
+	result := make([]testworkflowsv1.Step, 0, len(steps))
+	for _, step := range steps {
+		sub := step.Steps
+		step.Steps = nil
+		if reflect.ValueOf(step).IsZero() {
+			changed = true
+			result = append(result, sub...)
+		} else {
+			step.Steps = sub
+			result = append(result, step)
+		}
+	}
+	if !changed {
+		return steps
+	}
+	return result
+}
+
 func ApplyTemplates(workflow *testworkflowsv1.TestWorkflow, templates map[string]testworkflowsv1.TestWorkflowTemplate) error {
 	if workflow == nil {
 		return nil
@@ -194,6 +215,11 @@ func ApplyTemplates(workflow *testworkflowsv1.TestWorkflow, templates map[string
 			return errors.Wrap(err, fmt.Sprintf("spec.after[%d]", i))
 		}
 	}
+
+	// Simplify the lists
+	workflow.Spec.Setup = FlattenStepList(workflow.Spec.Setup)
+	workflow.Spec.Steps = FlattenStepList(workflow.Spec.Steps)
+	workflow.Spec.After = FlattenStepList(workflow.Spec.After)
 
 	return nil
 }
