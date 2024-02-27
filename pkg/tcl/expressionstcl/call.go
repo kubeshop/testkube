@@ -86,7 +86,7 @@ func (s *call) resolvedArgs() []StaticValue {
 	return v
 }
 
-func (s *call) SafeResolve(m ...MachineCore) (v Expression, changed bool, err error) {
+func (s *call) SafeResolve(m ...Machine) (v Expression, changed bool, err error) {
 	var ch bool
 	for i := range s.args {
 		s.args[i], ch, err = s.args[i].SafeResolve(m...)
@@ -117,7 +117,7 @@ func (s *call) SafeResolve(m ...MachineCore) (v Expression, changed bool, err er
 	return s, changed, nil
 }
 
-func (s *call) Resolve(m ...MachineCore) (v Expression, err error) {
+func (s *call) Resolve(m ...Machine) (v Expression, err error) {
 	return deepResolve(s, m...)
 }
 

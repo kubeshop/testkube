@@ -233,7 +233,7 @@ func (s *math) Template() string {
 	return "{{" + s.String() + "}}"
 }
 
-func (s *math) SafeResolve(m ...MachineCore) (v Expression, changed bool, err error) {
+func (s *math) SafeResolve(m ...Machine) (v Expression, changed bool, err error) {
 	var ch bool
 	s.left, ch, err = s.left.SafeResolve(m...)
 	changed = changed || ch
@@ -275,7 +275,7 @@ func (s *math) SafeResolve(m ...MachineCore) (v Expression, changed bool, err er
 	return s, changed, nil
 }
 
-func (s *math) Resolve(m ...MachineCore) (v Expression, err error) {
+func (s *math) Resolve(m ...Machine) (v Expression, err error) {
 	return deepResolve(s, m...)
 }
 

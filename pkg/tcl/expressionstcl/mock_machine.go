@@ -54,20 +54,6 @@ func (mr *MockMachineMockRecorder) Call(arg0 interface{}, arg1 ...interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Call", reflect.TypeOf((*MockMachine)(nil).Call), varargs...)
 }
 
-// Finalizer mocks base method.
-func (m *MockMachine) Finalizer() MachineCore {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Finalizer")
-	ret0, _ := ret[0].(MachineCore)
-	return ret0
-}
-
-// Finalizer indicates an expected call of Finalizer.
-func (mr *MockMachineMockRecorder) Finalizer() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Finalizer", reflect.TypeOf((*MockMachine)(nil).Finalizer))
-}
-
 // Get mocks base method.
 func (m *MockMachine) Get(arg0 string) (Expression, bool, error) {
 	m.ctrl.T.Helper()
