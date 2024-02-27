@@ -1,0 +1,100 @@
+apiVersion: workflows.testkube.io/v1beta1
+kind: Workflow
+metadata:
+  name: cypress-workflow-smoke-13
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/executor-tests/cypress-13
+  resources:
+    requests:
+      cpu: 2
+      memory: 2Gi
+  workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/included:13.6.4
+      args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+  - name: Saving artifacts
+    workingDir: /data/artifacts
+    artifacts:
+      paths:
+      - '*'
+---
+apiVersion: workflows.testkube.io/v1beta1
+kind: Workflow
+metadata:
+  name: cypress-workflow-smoke-13-negative
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/executor-tests/cypress-13
+  resources:
+    requests:
+      cpu: 2
+      memory: 2Gi
+  workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/included:13.6.4
+      args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+    negative: true
+  - name: Saving artifacts
+    workingDir: /data/artifacts
+    artifacts:
+      paths:
+      - '**/*'
+---
+apiVersion: workflows.testkube.io/v1beta1
+kind: Workflow
+metadata:
+  name: cypress-workflow-smoke-13-preofficial-trait
+  labels:
+    core-tests: workflows
+spec:
+  resources:
+    requests:
+      cpu: 2
+      memory: 2Gi
+  workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+  env:
+  - name: CYPRESS_CUSTOM_ENV # currently only possible on this level
+    value: "CYPRESS_CUSTOM_ENV_value"
+  steps:
+  - name: Checkout
+    checkout:
+      git:
+        uri: https://github.com/kubeshop/testkube
+        revision: main
+        paths:
+        - test/cypress/executor-tests/cypress-13
+  - name: Run from trait
+    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+    trait:
+      name: pre-official/cypress
+      config:
+        version: 13.5.0
+        params: "--env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
