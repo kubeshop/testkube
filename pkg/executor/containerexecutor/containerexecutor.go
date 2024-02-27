@@ -6,8 +6,12 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/kubeshop/testkube/internal/featureflags"
+	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/repository/config"
+	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/utils"
 
 	"github.com/kubeshop/testkube/pkg/repository/result"
@@ -57,6 +61,7 @@ func NewContainerExecutor(
 	namespace string,
 	images executor.Images,
 	templates executor.Templates,
+	imageInspector imageinspector.Inspector,
 	serviceAccountName string,
 	metrics ExecutionCounter,
 	emiter EventEmitter,
@@ -87,6 +92,7 @@ func NewContainerExecutor(
 		namespace:            namespace,
 		images:               images,
 		templates:            templates,
+		imageInspector:       imageInspector,
 		configMap:            configMap,
 		serviceAccountName:   serviceAccountName,
 		metrics:              metrics,
@@ -119,6 +125,7 @@ type ContainerExecutor struct {
 	namespace            string
 	images               executor.Images
 	templates            executor.Templates
+	imageInspector       imageinspector.Inspector
 	metrics              ExecutionCounter
 	emitter              EventEmitter
 	configMap            config.Repository
@@ -285,8 +292,18 @@ func (c *ContainerExecutor) Execute(ctx context.Context, execution *testkube.Exe
 func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Execution, options client.ExecuteOptions) (*JobOptions, error) {
 	jobsClient := c.clientSet.BatchV1().Jobs(c.namespace)
 
-	jobOptions, err := NewJobOptions(c.log, c.templatesClient, c.images, c.templates, c.serviceAccountName,
-		c.registry, c.clusterID, c.apiURI, execution, options, c.natsURI, c.debug)
+	// Fallback to one-time inspector when non-default namespace is needed
+	inspector := c.imageInspector
+	if len(options.ImagePullSecretNames) > 0 && options.Namespace != "" && c.namespace != options.Namespace {
+		secretClient, err := secret.NewClient(options.Namespace)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to build secrets client")
+		}
+		inspector = imageinspector.NewInspector(c.registry, imageinspector.NewSkopeoFetcher(), imageinspector.NewSecretFetcher(secretClient))
+	}
+
+	jobOptions, err := NewJobOptions(c.log, c.templatesClient, c.images, c.templates, inspector,
+		c.serviceAccountName, c.registry, c.clusterID, c.apiURI, execution, options, c.natsURI, c.debug)
 	if err != nil {
 		return nil, err
 	}

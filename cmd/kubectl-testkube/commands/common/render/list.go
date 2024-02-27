@@ -3,6 +3,7 @@ package render
 import (
 	"fmt"
 	"io"
+	"reflect"
 
 	"github.com/spf13/cobra"
 
@@ -25,9 +26,13 @@ func List(cmd *cobra.Command, obj interface{}, w io.Writer) error {
 		return RenderJSON(obj, w)
 	case OutputGoTemplate:
 		tpl := cmd.Flag("go-template").Value.String()
-		list, ok := obj.([]interface{})
-		if !ok {
+		value := reflect.ValueOf(obj)
+		if value.Kind() != reflect.Slice {
 			return fmt.Errorf("can't render, need list type but got: %+v", obj)
+		}
+		list := make([]interface{}, value.Len())
+		for i := 0; i < value.Len(); i++ {
+			list[i] = value.Index(i).Interface()
 		}
 		return RenderGoTemplateList(list, w, tpl)
 	default:

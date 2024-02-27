@@ -26,6 +26,8 @@ type ServerInfo struct {
 	// helm chart version
 	HelmchartVersion string `json:"helmchartVersion,omitempty"`
 	// dashboard uri
-	DashboardUri string    `json:"dashboardUri,omitempty"`
-	Features     *Features `json:"features,omitempty"`
+	DashboardUri string `json:"dashboardUri,omitempty"`
+	// disable secret creation for tests and test sources
+	DisableSecretCreation bool      `json:"disableSecretCreation,omitempty"`
+	Features              *Features `json:"features,omitempty"`
 }

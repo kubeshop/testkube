@@ -363,7 +363,7 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 
 			test = testsmapper.MapUpsertToSpec(request)
 			test.Namespace = s.Namespace
-			if request.Content != nil && request.Content.Repository != nil {
+			if request.Content != nil && request.Content.Repository != nil && !s.disableSecretCreation {
 				secrets = createTestSecretsData(request.Content.Repository.Username, request.Content.Repository.Token)
 			}
 		}
@@ -439,7 +439,7 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 		if request.Content != nil && (*request.Content) != nil && (*request.Content).Repository != nil && *(*request.Content).Repository != nil {
 			username := (*(*request.Content).Repository).Username
 			token := (*(*request.Content).Repository).Token
-			if username != nil || token != nil {
+			if (username != nil || token != nil) && !s.disableSecretCreation {
 				data, err := s.SecretClient.Get(secret.GetMetadataName(name, client.SecretTest))
 				if err != nil && !errors.IsNotFound(err) {
 					return s.Error(c, http.StatusBadGateway, err)
