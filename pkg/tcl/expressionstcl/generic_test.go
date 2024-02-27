@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/kubeshop/testkube/internal/common"
@@ -46,6 +47,11 @@ type testObj struct {
 	DummyPtr        *string
 	DummyObj        testObj2
 	DummyObjPtr     *testObj2
+}
+
+type testObjNested struct {
+	Value corev1.Volume `expr:"force"`
+	Dummy corev1.Volume
 }
 
 var testMachine = NewMachine().
@@ -147,4 +153,72 @@ func TestGenericCompileError(t *testing.T) {
 	err := SimplifyStruct(&got)
 
 	assert.Contains(t, fmt.Sprintf("%v", err), "Tmpl: template error")
+}
+
+func TestGenericForceSimplify(t *testing.T) {
+	got := corev1.Volume{
+		Name: "{{ 3 + 2 }}{{ 5 }}",
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{Name: "{{ 4433 }}"},
+			},
+		},
+	}
+	err := SimplifyStructForce(&got)
+
+	want := corev1.Volume{
+		Name: "55",
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{Name: "4433"},
+			},
+		},
+	}
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, got)
+}
+
+func TestGenericForceSimplifyNested(t *testing.T) {
+	got := testObjNested{
+		Value: corev1.Volume{
+			Name: "{{ 3 + 2 }}{{ 5 }}",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: "{{ 4433 }}"},
+				},
+			},
+		},
+		Dummy: corev1.Volume{
+			Name: "{{ 3 + 2 }}{{ 5 }}",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: "{{ 4433 }}"},
+				},
+			},
+		},
+	}
+	err := SimplifyStruct(&got)
+
+	want := testObjNested{
+		Value: corev1.Volume{
+			Name: "55",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: "4433"},
+				},
+			},
+		},
+		Dummy: corev1.Volume{
+			Name: "{{ 3 + 2 }}{{ 5 }}",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: "{{ 4433 }}"},
+				},
+			},
+		},
+	}
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, got)
 }

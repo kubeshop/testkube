@@ -46,8 +46,11 @@ func clone(v reflect.Value) reflect.Value {
 	return v
 }
 
-func resolve(v reflect.Value, t tagData, m []Machine) (err error) {
-	if t.key == "" && t.value == "" {
+func resolve(v reflect.Value, t tagData, m []Machine, force bool) (err error) {
+	if t.value == "force" {
+		force = true
+	}
+	if t.key == "" && t.value == "" && !force {
 		return
 	}
 
@@ -70,15 +73,15 @@ func resolve(v reflect.Value, t tagData, m []Machine) (err error) {
 		vv, ok := v.Interface().(intstr.IntOrString)
 		if ok {
 			if vv.Type == intstr.String {
-				return resolve(v.FieldByName("StrVal"), t, m)
+				return resolve(v.FieldByName("StrVal"), t, m, force)
 			}
-		} else if t.value == "include" {
+		} else if t.value == "include" || force {
 			tt := v.Type()
 			for i := 0; i < tt.NumField(); i++ {
 				f := tt.Field(i)
 				tag := parseTag(f.Tag.Get("expr"))
 				value := v.FieldByName(f.Name)
-				err = resolve(value, tag, m)
+				err = resolve(value, tag, m, force)
 				if err != nil {
 					return errors.Wrap(err, f.Name)
 				}
@@ -90,7 +93,7 @@ func resolve(v reflect.Value, t tagData, m []Machine) (err error) {
 			return nil
 		}
 		for i := 0; i < v.Len(); i++ {
-			err := resolve(v.Index(i), t, m)
+			err := resolve(v.Index(i), t, m, force)
 			if err != nil {
 				return errors.Wrap(err, fmt.Sprintf("%d", i))
 			}
@@ -101,19 +104,19 @@ func resolve(v reflect.Value, t tagData, m []Machine) (err error) {
 			return nil
 		}
 		for _, k := range v.MapKeys() {
-			if t.value != "" {
+			if t.value != "" || force {
 				// It's not possible to get a pointer to map element,
 				// so we need to copy it and reassign
 				item := clone(v.MapIndex(k))
-				err = resolve(item, t, m)
+				err = resolve(item, t, m, force)
 				v.SetMapIndex(k, item)
 				if err != nil {
 					return errors.Wrap(err, k.String())
 				}
 			}
-			if t.key != "" {
+			if t.key != "" || force {
 				key := clone(k)
-				err = resolve(key, tagData{value: t.key}, m)
+				err = resolve(key, tagData{value: t.key}, m, force)
 				if !key.Equal(k) {
 					item := clone(v.MapIndex(k))
 					v.SetMapIndex(k, reflect.Value{})
@@ -138,7 +141,7 @@ func resolve(v reflect.Value, t tagData, m []Machine) (err error) {
 			} else {
 				ptr.Set(reflect.ValueOf(&vv))
 			}
-		} else if t.value == "template" && !IsTemplateStringWithoutExpressions(v.String()) {
+		} else if (t.value == "template" && !IsTemplateStringWithoutExpressions(v.String())) || force {
 			var expr Expression
 			expr, err = CompileAndResolveTemplate(v.String(), m...)
 			if err != nil {
@@ -161,7 +164,15 @@ func resolve(v reflect.Value, t tagData, m []Machine) (err error) {
 func SimplifyStruct(t interface{}, m ...Machine) error {
 	v := reflect.ValueOf(t)
 	if v.Kind() != reflect.Pointer {
-		return errors.New("pointer needs to be passed to Resolve function")
+		return errors.New("pointer needs to be passed to SimplifyStruct function")
 	}
-	return resolve(v, tagData{value: "include"}, m)
+	return resolve(v, tagData{value: "include"}, m, false)
+}
+
+func SimplifyStructForce(t interface{}, m ...Machine) error {
+	v := reflect.ValueOf(t)
+	if v.Kind() != reflect.Pointer {
+		return errors.New("pointer needs to be passed to SimplifyStructForce function")
+	}
+	return resolve(v, tagData{value: "include"}, m, true)
 }
