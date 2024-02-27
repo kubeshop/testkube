@@ -37,7 +37,7 @@ var (
 				},
 				Pod: &testworkflowsv1.PodConfig{
 					Labels: map[string]string{
-						"department": "{{ config.department }}",
+						"department": "{{config.department}}",
 					},
 				},
 			},
@@ -152,7 +152,7 @@ var (
 				},
 				Pod: &testworkflowsv1.PodConfig{
 					Labels: map[string]string{
-						"department": "{{ config.department }}",
+						"department": "{{config.department}}",
 					},
 				},
 			},
@@ -250,7 +250,7 @@ func TestApplyTemplatesNoConfigMismatchNoOverride(t *testing.T) {
 	err := ApplyTemplates(wf, templates)
 
 	want := workflowPodConfig.DeepCopy()
-	want.Spec.Pod.Labels["department"] = "{{ config.department }}"
+	want.Spec.Pod.Labels["department"] = "{{config.department}}"
 
 	assert.NoError(t, err)
 	assert.Equal(t, want, wf)
@@ -526,4 +526,21 @@ func TestApplyTemplatesStepAdvancedMultipleSteps(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, want, s)
+}
+
+func TestApplyTemplatesConfigOverflow(t *testing.T) {
+	wf := workflowPod.DeepCopy()
+	wf.Spec.Use = []testworkflowsv1.TemplateRef{{
+		Name: "podConfig",
+		Config: map[string]intstr.IntOrString{
+			"department": {Type: intstr.String, StrVal: "{{config.value}}"},
+		},
+	}}
+	err := ApplyTemplates(wf, templates)
+
+	want := workflowPod.DeepCopy()
+	want.Spec.Pod.Labels["department"] = "{{config.value}}"
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, wf)
 }
