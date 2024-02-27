@@ -63,3 +63,12 @@ func (m *combinedMachine) Call(name string, args ...StaticValue) (Expression, bo
 	}
 	return nil, false, nil
 }
+
+func ReplacePrefixMachine(from string, to string) Machine {
+	return NewMachine().RegisterAccessor(func(name string) (interface{}, bool) {
+		if strings.HasPrefix(name, from) {
+			return newAccessor(to + name[len(from):]), true
+		}
+		return nil, false
+	})
+}

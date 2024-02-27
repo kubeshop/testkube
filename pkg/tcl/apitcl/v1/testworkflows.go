@@ -20,6 +20,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	mappers2 "github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowresolver"
 )
 
 func (s *apiTCL) ListTestWorkflowsHandler() fiber.Handler {
@@ -175,6 +176,56 @@ func (s *apiTCL) UpdateTestWorkflowHandler() fiber.Handler {
 		s.Metrics.IncUpdateTestWorkflow(err)
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "client error", err)
+		}
+
+		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, mappers2.MapKubeToAPI, obj)
+		if err != nil {
+			return s.InternalError(c, errPrefix, "serialization problem", err)
+		}
+		return
+	}
+}
+
+func (s *apiTCL) PreviewTestWorkflowHandler() fiber.Handler {
+	errPrefix := "failed to resolve test workflow"
+	return func(c *fiber.Ctx) (err error) {
+		// Deserialize resource
+		obj := new(testworkflowsv1.TestWorkflow)
+		if HasYAML(c) {
+			err = common.DeserializeCRD(obj, c.Body())
+			if err != nil {
+				return s.BadRequest(c, errPrefix, "invalid body", err)
+			}
+		} else {
+			var v *testkube.TestWorkflow
+			err = c.BodyParser(&v)
+			if err != nil {
+				return s.BadRequest(c, errPrefix, "invalid body", err)
+			}
+			obj = mappers2.MapAPIToKube(v)
+		}
+
+		// Validate resource
+		if obj == nil {
+			return s.BadRequest(c, errPrefix, "invalid body", errors.New("name is required"))
+		}
+		obj.Namespace = s.Namespace
+
+		// Fetch the templates
+		tpls := testworkflowresolver.ListTemplates(obj)
+		tplsMap := make(map[string]testworkflowsv1.TestWorkflowTemplate, len(tpls))
+		for name := range tpls {
+			tpl, err := s.TestWorkflowTemplatesClient.Get(name)
+			if err != nil {
+				return s.BadRequest(c, errPrefix, "fetching error", err)
+			}
+			tplsMap[name] = *tpl
+		}
+
+		// Resolve the TestWorkflow
+		err = testworkflowresolver.ApplyTemplates(obj, tplsMap)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "resolving error", err)
 		}
 
 		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, mappers2.MapKubeToAPI, obj)
