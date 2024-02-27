@@ -99,6 +99,15 @@ func getNextSegment(t []token) (e Expression, i int, err error) {
 		return newNegative(e), i + 1, nil
 	}
 
+	// Negative numbers - -5
+	if t[0].Type == tokenTypeMath && operator(t[0].Value.(string)) == operatorSubtract {
+		e, i, err = parseNextExpression(t[1:], -1)
+		if err != nil {
+			return nil, 0, err
+		}
+		return newMath(operatorSubtract, NewValue(0), e), i + 1, nil
+	}
+
 	// Call - abc(a, b, c)
 	if t[0].Type == tokenTypeAccessor && len(t) > 1 && t[1].Type == tokenTypeOpen {
 		args := make([]Expression, 0)
@@ -208,6 +217,9 @@ func CompileTemplate(tpl string) (Expression, error) {
 	}
 	if offset < len(tpl) {
 		e = newMath(operatorAdd, e, NewStringValue(tpl[offset:]))
+	}
+	if e == nil {
+		return NewStringValue(""), nil
 	}
 	return e.Resolve()
 }

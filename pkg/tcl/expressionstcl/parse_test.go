@@ -96,6 +96,7 @@ func TestBuildTemplate(t *testing.T) {
 }
 
 func TestCompileTemplate(t *testing.T) {
+	assert.Equal(t, `""`, MustCompileTemplate(``).String())
 	assert.Equal(t, `"abc"`, MustCompileTemplate(`abc`).String())
 	assert.Equal(t, `"abcxyz5"`, MustCompileTemplate(`abc{{ "xyz" }}{{ 5 }}`).String())
 	assert.Equal(t, `"abc50"`, MustCompileTemplate(`abc{{ 5 + 45 }}`).String())
@@ -177,6 +178,10 @@ func TestCircularResolution(t *testing.T) {
 
 	assert.Contains(t, fmt.Sprintf("%v", errOnly(MustCompile(`one()`).Resolve(vm, FinalizerFail))), "call stack exceeded")
 	assert.Contains(t, fmt.Sprintf("%v", errOnly(MustCompile(`self()`).Resolve(vm, FinalizerFail))), "call stack exceeded")
+}
+
+func TestMinusNumber(t *testing.T) {
+	assert.Equal(t, -4.0, must(MustCompile("-4").Static().FloatValue()))
 }
 
 func TestCompileMultilineString(t *testing.T) {

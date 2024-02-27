@@ -14,8 +14,6 @@ import (
 	"strings"
 )
 
-const stringCastStdFn = "string"
-
 type call struct {
 	name string
 	args []Expression
@@ -28,15 +26,6 @@ func newCall(name string, args []Expression) Expression {
 		}
 	}
 	return &call{name: name, args: args}
-}
-
-func CastToString(v Expression) Expression {
-	if v.Static() != nil {
-		return NewStringValue(v.Static().Value())
-	} else if v.Type() == TypeString {
-		return v
-	}
-	return newCall(stringCastStdFn, []Expression{v})
 }
 
 func (s *call) Type() Type {
