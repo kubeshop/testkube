@@ -14,8 +14,8 @@ type Expression interface {
 	SafeString() string
 	Template() string
 	Type() Type
-	SafeResolve(...MachineCore) (Expression, bool, error)
-	Resolve(...MachineCore) (Expression, error)
+	SafeResolve(...Machine) (Expression, bool, error)
+	Resolve(...Machine) (Expression, error)
 	Static() StaticValue
 	Accessors() map[string]struct{}
 	Functions() map[string]struct{}

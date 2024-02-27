@@ -36,7 +36,7 @@ func (s *accessor) Template() string {
 	return "{{" + s.String() + "}}"
 }
 
-func (s *accessor) SafeResolve(m ...MachineCore) (v Expression, changed bool, err error) {
+func (s *accessor) SafeResolve(m ...Machine) (v Expression, changed bool, err error) {
 	if m == nil {
 		return s, false, nil
 	}
@@ -53,7 +53,7 @@ func (s *accessor) SafeResolve(m ...MachineCore) (v Expression, changed bool, er
 	return s, false, nil
 }
 
-func (s *accessor) Resolve(m ...MachineCore) (v Expression, err error) {
+func (s *accessor) Resolve(m ...Machine) (v Expression, err error) {
 	return deepResolve(s, m...)
 }
 

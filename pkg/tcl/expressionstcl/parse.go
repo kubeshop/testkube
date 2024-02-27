@@ -220,7 +220,7 @@ func MustCompileTemplate(tpl string) Expression {
 	return v
 }
 
-func CompileAndResolve(exp string, m ...MachineCore) (Expression, error) {
+func CompileAndResolve(exp string, m ...Machine) (Expression, error) {
 	e, err := Compile(exp)
 	if err != nil {
 		return e, err
@@ -228,7 +228,7 @@ func CompileAndResolve(exp string, m ...MachineCore) (Expression, error) {
 	return e.Resolve(m...)
 }
 
-func CompileAndResolveTemplate(tpl string, m ...MachineCore) (Expression, error) {
+func CompileAndResolveTemplate(tpl string, m ...Machine) (Expression, error) {
 	e, err := CompileTemplate(tpl)
 	if err != nil {
 		return e, err

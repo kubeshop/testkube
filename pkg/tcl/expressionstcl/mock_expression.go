@@ -62,7 +62,7 @@ func (mr *MockExpressionMockRecorder) Functions() *gomock.Call {
 }
 
 // Resolve mocks base method.
-func (m *MockExpression) Resolve(arg0 ...MachineCore) (Expression, error) {
+func (m *MockExpression) Resolve(arg0 ...Machine) (Expression, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{}
 	for _, a := range arg0 {
@@ -81,7 +81,7 @@ func (mr *MockExpressionMockRecorder) Resolve(arg0 ...interface{}) *gomock.Call 
 }
 
 // SafeResolve mocks base method.
-func (m *MockExpression) SafeResolve(arg0 ...MachineCore) (Expression, bool, error) {
+func (m *MockExpression) SafeResolve(arg0 ...Machine) (Expression, bool, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{}
 	for _, a := range arg0 {

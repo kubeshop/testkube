@@ -46,7 +46,7 @@ func clone(v reflect.Value) reflect.Value {
 	return v
 }
 
-func resolve(v reflect.Value, t tagData, m []MachineCore) (err error) {
+func resolve(v reflect.Value, t tagData, m []Machine) (err error) {
 	if t.key == "" && t.value == "" {
 		return
 	}
@@ -158,7 +158,7 @@ func resolve(v reflect.Value, t tagData, m []MachineCore) (err error) {
 	return unrecognizedErr
 }
 
-func SimplifyStruct(t interface{}, m ...MachineCore) error {
+func SimplifyStruct(t interface{}, m ...Machine) error {
 	v := reflect.ValueOf(t)
 	if v.Kind() != reflect.Pointer {
 		return errors.New("pointer needs to be passed to Resolve function")

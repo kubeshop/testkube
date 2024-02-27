@@ -155,13 +155,12 @@ func TestCompileResolution(t *testing.T) {
 				return nil, true, errors.New("the mainEndpoint should have no parameters")
 			}
 			return MustCompile(`env.apiUrl`), true, nil
-		}).
-		Finalizer()
+		})
 
-	assert.Equal(t, `555`, must(MustCompile(`someint`).Resolve(vm)).String())
-	assert.Equal(t, `"[placeholder:name]"`, must(MustCompile(`env.name`).Resolve(vm)).String())
-	assert.Error(t, errOnly(MustCompile(`secrets.name`).Resolve(vm)))
-	assert.Equal(t, `"[placeholder:apiUrl]"`, must(MustCompile(`mainEndpoint()`).Resolve(vm)).String())
+	assert.Equal(t, `555`, must(MustCompile(`someint`).Resolve(vm, FinalizerFail)).String())
+	assert.Equal(t, `"[placeholder:name]"`, must(MustCompile(`env.name`).Resolve(vm, FinalizerFail)).String())
+	assert.Error(t, errOnly(MustCompile(`secrets.name`).Resolve(vm, FinalizerFail)))
+	assert.Equal(t, `"[placeholder:apiUrl]"`, must(MustCompile(`mainEndpoint()`).Resolve(vm, FinalizerFail)).String())
 }
 
 func TestCircularResolution(t *testing.T) {
@@ -174,11 +173,10 @@ func TestCircularResolution(t *testing.T) {
 		}).
 		RegisterFunction("self", func(values ...StaticValue) (interface{}, bool, error) {
 			return MustCompile("self()"), true, nil
-		}).
-		Finalizer()
+		})
 
-	assert.Contains(t, fmt.Sprintf("%v", errOnly(MustCompile(`one()`).Resolve(vm))), "call stack exceeded")
-	assert.Contains(t, fmt.Sprintf("%v", errOnly(MustCompile(`self()`).Resolve(vm))), "call stack exceeded")
+	assert.Contains(t, fmt.Sprintf("%v", errOnly(MustCompile(`one()`).Resolve(vm, FinalizerFail))), "call stack exceeded")
+	assert.Contains(t, fmt.Sprintf("%v", errOnly(MustCompile(`self()`).Resolve(vm, FinalizerFail))), "call stack exceeded")
 }
 
 func TestCompileMultilineString(t *testing.T) {

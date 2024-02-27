@@ -9,25 +9,72 @@
 package expressionstcl
 
 import (
-	"fmt"
+	"errors"
 )
 
 type finalizer struct {
-	machine MachineCore
+	handler FinalizerFn
+}
+
+type finalizerItem struct {
+	function bool
+	name     string
+}
+
+type FinalizerItem interface {
+	Name() string
+	IsFunction() bool
+}
+
+type FinalizerResult int8
+
+const (
+	FinalizerResultFail     FinalizerResult = -1
+	FinalizerResultNone     FinalizerResult = 0
+	FinalizerResultPreserve FinalizerResult = 1
+)
+
+type FinalizerFn = func(item FinalizerItem) FinalizerResult
+
+func NewFinalizer(fn FinalizerFn) Machine {
+	return &finalizer{handler: fn}
 }
 
 func (f *finalizer) Get(name string) (Expression, bool, error) {
-	v, ok, err := f.machine.Get(name)
-	if !ok && err == nil {
+	result := f.handler(finalizerItem{name: name})
+	if result == FinalizerResultFail {
+		return nil, true, errors.New("unknown variable")
+	} else if result == FinalizerResultNone {
 		return None, true, nil
 	}
-	return v, ok, err
+	return nil, false, nil
 }
 
-func (f *finalizer) Call(name string, args ...StaticValue) (Expression, bool, error) {
-	v, ok, err := f.machine.Call(name, args...)
-	if !ok && err == nil {
-		return nil, true, fmt.Errorf(`"%s" function not resolved`, name)
+func (f *finalizer) Call(name string, _ ...StaticValue) (Expression, bool, error) {
+	result := f.handler(finalizerItem{function: true, name: name})
+	if result == FinalizerResultFail {
+		return nil, true, errors.New("unknown function")
+	} else if result == FinalizerResultNone {
+		return None, true, nil
 	}
-	return v, ok, err
+	return nil, false, nil
 }
+
+func (f finalizerItem) IsFunction() bool {
+	return f.function
+}
+
+func (f finalizerItem) Name() string {
+	return f.name
+}
+
+func FinalizerFailFn(_ FinalizerItem) FinalizerResult {
+	return FinalizerResultFail
+}
+
+func FinalizerNoneFn(_ FinalizerItem) FinalizerResult {
+	return FinalizerResultNone
+}
+
+var FinalizerFail = NewFinalizer(FinalizerFailFn)
+var FinalizerNone = NewFinalizer(FinalizerNoneFn)

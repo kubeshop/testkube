@@ -8,16 +8,10 @@
 
 package expressionstcl
 
-//go:generate mockgen -destination=./mock_machinecore.go -package=expressionstcl "github.com/kubeshop/testkube/pkg/tcl/expressionstcl" MachineCore
-type MachineCore interface {
-	Get(name string) (Expression, bool, error)
-	Call(name string, args ...StaticValue) (Expression, bool, error)
-}
-
 //go:generate mockgen -destination=./mock_machine.go -package=expressionstcl "github.com/kubeshop/testkube/pkg/tcl/expressionstcl" Machine
 type Machine interface {
-	MachineCore
-	Finalizer() MachineCore
+	Get(name string) (Expression, bool, error)
+	Call(name string, args ...StaticValue) (Expression, bool, error)
 }
 
 type MachineAccessorExt = func(name string) (interface{}, bool, error)
@@ -27,16 +21,13 @@ type MachineFn = func(values ...StaticValue) (interface{}, bool, error)
 type machine struct {
 	accessors []MachineAccessorExt
 	functions map[string]MachineFn
-	finalizer *finalizer
 }
 
 func NewMachine() *machine {
-	m := &machine{
+	return &machine{
 		accessors: make([]MachineAccessorExt, 0),
 		functions: make(map[string]MachineFn),
 	}
-	m.finalizer = &finalizer{machine: m}
-	return m
 }
 
 func (m *machine) Register(name string, value interface{}) *machine {
@@ -94,8 +85,4 @@ func (m *machine) Call(name string, args ...StaticValue) (Expression, bool, erro
 		return v, true, nil
 	}
 	return NewValue(r), true, nil
-}
-
-func (m *machine) Finalizer() MachineCore {
-	return m.finalizer
 }

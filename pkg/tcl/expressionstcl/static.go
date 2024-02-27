@@ -80,11 +80,11 @@ func (s *static) Template() string {
 	return strings.ReplaceAll(v, "{{", "{{\"{{\"}}")
 }
 
-func (s *static) SafeResolve(_ ...MachineCore) (Expression, bool, error) {
+func (s *static) SafeResolve(_ ...Machine) (Expression, bool, error) {
 	return s, false, nil
 }
 
-func (s *static) Resolve(_ ...MachineCore) (Expression, error) {
+func (s *static) Resolve(_ ...Machine) (Expression, error) {
 	return s, nil
 }
 
