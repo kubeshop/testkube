@@ -71,8 +71,8 @@ func MapBoxedIntegerToInt32(v *testkube.BoxedInteger) *int32 {
 	return &v.Value
 }
 
-func MapEnvVarAPIToKube(v testkube.EnvVar) corev1.EnvVar {
-	return corev1.EnvVar{
+func MapEnvVarAPIToKube(v testkube.EnvVar) testworkflowsv1.EnvVar {
+	return testworkflowsv1.EnvVar{
 		Name:      v.Name,
 		Value:     v.Value,
 		ValueFrom: common.MapPtr(v.ValueFrom, MapEnvVarSourceAPIToKube),
@@ -369,7 +369,7 @@ func MapStepArtifactsAPIToKube(v testkube.TestWorkflowStepArtifacts) testworkflo
 func MapRetryPolicyAPIToKube(v testkube.TestWorkflowRetryPolicy) testworkflowsv1.RetryPolicy {
 	return testworkflowsv1.RetryPolicy{
 		Count: v.Count,
-		Until: testworkflowsv1.Expression(v.Until),
+		Until: v.Until,
 	}
 }
 
@@ -377,7 +377,7 @@ func MapStepAPIToKube(v testkube.TestWorkflowStep) testworkflowsv1.Step {
 	return testworkflowsv1.Step{
 		StepBase: testworkflowsv1.StepBase{
 			Name:         v.Name,
-			Condition:    testworkflowsv1.Expression(v.Condition),
+			Condition:    v.Condition,
 			Negative:     v.Negative,
 			Optional:     v.Optional,
 			VirtualGroup: v.VirtualGroup,
@@ -402,7 +402,7 @@ func MapIndependentStepAPIToKube(v testkube.TestWorkflowIndependentStep) testwor
 	return testworkflowsv1.IndependentStep{
 		StepBase: testworkflowsv1.StepBase{
 			Name:         v.Name,
-			Condition:    testworkflowsv1.Expression(v.Condition),
+			Condition:    v.Condition,
 			Negative:     v.Negative,
 			Optional:     v.Optional,
 			VirtualGroup: v.VirtualGroup,

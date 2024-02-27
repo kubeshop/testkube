@@ -65,7 +65,7 @@ func MapInt32ToBoxedInteger(v *int32) *testkube.BoxedInteger {
 	return &testkube.BoxedInteger{Value: *v}
 }
 
-func MapEnvVarKubeToAPI(v corev1.EnvVar) testkube.EnvVar {
+func MapEnvVarKubeToAPI(v testworkflowsv1.EnvVar) testkube.EnvVar {
 	return testkube.EnvVar{
 		Name:      v.Name,
 		Value:     v.Value,
