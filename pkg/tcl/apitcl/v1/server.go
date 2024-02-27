@@ -136,6 +136,8 @@ func (s *apiTCL) AppendRoutes() {
 
 	root.Post("/preview-test-workflow", s.pro(s.PreviewTestWorkflowHandler()))
 
+	root.Post("/preview-test-workflow", s.pro(s.PreviewTestWorkflowHandler()))
+
 	testWorkflowTemplates := root.Group("/test-workflow-templates")
 	testWorkflowTemplates.Get("/", s.pro(s.ListTestWorkflowTemplatesHandler()))
 	testWorkflowTemplates.Post("/", s.pro(s.CreateTestWorkflowTemplateHandler()))

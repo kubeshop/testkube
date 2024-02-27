@@ -83,8 +83,8 @@ func MapBoxedIntegerToInt32(v *testkube.BoxedInteger) *int32 {
 	return &v.Value
 }
 
-func MapEnvVarAPIToKube(v testkube.EnvVar) corev1.EnvVar {
-	return corev1.EnvVar{
+func MapEnvVarAPIToKube(v testkube.EnvVar) testworkflowsv1.EnvVar {
+	return testworkflowsv1.EnvVar{
 		Name:      v.Name,
 		Value:     v.Value,
 		ValueFrom: common.MapPtr(v.ValueFrom, MapEnvVarSourceAPIToKube),
