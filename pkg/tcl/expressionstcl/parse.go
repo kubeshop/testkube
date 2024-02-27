@@ -218,6 +218,9 @@ func CompileTemplate(tpl string) (Expression, error) {
 	if offset < len(tpl) {
 		e = newMath(operatorAdd, e, NewStringValue(tpl[offset:]))
 	}
+	if e == nil {
+		return NewStringValue(""), nil
+	}
 	return e.Resolve()
 }
 

@@ -96,6 +96,7 @@ func TestBuildTemplate(t *testing.T) {
 }
 
 func TestCompileTemplate(t *testing.T) {
+	assert.Equal(t, `""`, MustCompileTemplate(``).String())
 	assert.Equal(t, `"abc"`, MustCompileTemplate(`abc`).String())
 	assert.Equal(t, `"abcxyz5"`, MustCompileTemplate(`abc{{ "xyz" }}{{ 5 }}`).String())
 	assert.Equal(t, `"abc50"`, MustCompileTemplate(`abc{{ 5 + 45 }}`).String())
