@@ -102,6 +102,29 @@ func TestApplyMissingConfig(t *testing.T) {
 	assert.Contains(t, err.Error(), "error while accessing config.baz: unknown variable")
 }
 
+func TestInvalidInteger(t *testing.T) {
+	cfg := map[string]intstr.IntOrString{
+		"foo": {Type: intstr.String, StrVal: "some value"},
+	}
+	_, err := ApplyWorkflowConfig(&testworkflowsv1.TestWorkflow{
+		Description: "{{some description here }}",
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Config: map[string]testworkflowsv1.ParameterSchema{
+					"foo": {Type: testworkflowsv1.ParameterTypeInteger},
+				},
+				Pod: &testworkflowsv1.PodConfig{
+					ServiceAccountName: "{{config.foo}}",
+				},
+			},
+		},
+	}, cfg)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "config.foo: error")
+	assert.Contains(t, err.Error(), "error while converting value to number")
+}
+
 func TestApplyConfigTestWorkflowTemplate(t *testing.T) {
 	cfg := map[string]intstr.IntOrString{
 		"foo":    {Type: intstr.Int, IntVal: 30},
