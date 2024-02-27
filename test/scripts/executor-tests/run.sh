@@ -136,14 +136,6 @@ common_workflow_run() { # name, workflow_crd_file, custom_workflow_template_crd_
   fi
 }
 
-workflow-cypress-smoke() {
-  name="artillery workflow"
-  workflow_crd_file="test/cypress/executor-tests/crd-workflow/smoke.yaml"
-  custom_workflow_template_crd_file="test/test-workflow-templates/cypress.yaml"
-  
-  common_workflow_run "$name" "$workflow_crd_file" "$custom_workflow_template_crd_file"
-}
-
 artillery-smoke() {
   name="artillery"
   test_crd_file="test/artillery/executor-smoke/crd/crd.yaml"
