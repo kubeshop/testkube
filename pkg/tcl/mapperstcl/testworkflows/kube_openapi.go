@@ -433,6 +433,7 @@ func MapTestWorkflowKubeToAPI(w testworkflowsv1.TestWorkflow) testkube.TestWorkf
 		Labels:      w.Labels,
 		Annotations: w.Annotations,
 		Created:     w.CreationTimestamp.Time,
+		Description: w.Description,
 		Spec:        common.Ptr(MapSpecKubeToAPI(w.Spec)),
 	}
 }
@@ -444,6 +445,7 @@ func MapTestWorkflowTemplateKubeToAPI(w testworkflowsv1.TestWorkflowTemplate) te
 		Labels:      w.Labels,
 		Annotations: w.Annotations,
 		Created:     w.CreationTimestamp.Time,
+		Description: w.Description,
 		Spec:        common.Ptr(MapTemplateSpecKubeToAPI(w.Spec)),
 	}
 }

@@ -465,7 +465,8 @@ func MapTestWorkflowAPIToKube(w testkube.TestWorkflow) testworkflowsv1.TestWorkf
 			Annotations:       w.Annotations,
 			CreationTimestamp: metav1.Time{Time: w.Created},
 		},
-		Spec: common.ResolvePtr(common.MapPtr(w.Spec, MapSpecAPIToKube), testworkflowsv1.TestWorkflowSpec{}),
+		Description: w.Description,
+		Spec:        common.ResolvePtr(common.MapPtr(w.Spec, MapSpecAPIToKube), testworkflowsv1.TestWorkflowSpec{}),
 	}
 }
 
@@ -482,7 +483,8 @@ func MapTestWorkflowTemplateAPIToKube(w testkube.TestWorkflowTemplate) testworkf
 			Annotations:       w.Annotations,
 			CreationTimestamp: metav1.Time{Time: w.Created},
 		},
-		Spec: common.ResolvePtr(common.MapPtr(w.Spec, MapTemplateSpecAPIToKube), testworkflowsv1.TestWorkflowTemplateSpec{}),
+		Description: w.Description,
+		Spec:        common.ResolvePtr(common.MapPtr(w.Spec, MapTemplateSpecAPIToKube), testworkflowsv1.TestWorkflowTemplateSpec{}),
 	}
 }
 
