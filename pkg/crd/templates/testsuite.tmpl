@@ -83,7 +83,7 @@ spec:
         {{- if ne (len .ExecutionRequest.Args) 0 }}
         args:
         {{- range .ExecutionRequest.Args }}
-          - "{{ . }}"
+          - {{ . }}
         {{- end }}
         {{- end }}
         {{- if .ExecutionRequest.ArgsMode }}
@@ -214,7 +214,7 @@ spec:
         {{- if ne (len .ExecutionRequest.Args) 0 }}
         args:
         {{- range .ExecutionRequest.Args }}
-          - "{{ . }}"
+          - {{ . }}
         {{- end }}
         {{- end }}
         {{- if .ExecutionRequest.ArgsMode }}
@@ -345,7 +345,7 @@ spec:
         {{- if ne (len .ExecutionRequest.Args) 0 }}
         args:
         {{- range .ExecutionRequest.Args }}
-          - "{{ . }}"
+          - {{ . }}
         {{- end }}
         {{- end }}
         {{- if .ExecutionRequest.ArgsMode }}

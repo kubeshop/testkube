@@ -541,7 +541,7 @@ spec:
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: jmeterd-executor-smoke-output-dir
+  name: jmeterd-executor-smoke-runner-artifacts-dir
   labels:
     core-tests: special-cases-jmeter
 spec:
@@ -575,7 +575,7 @@ spec:
           cpu: 500m
           memory: 512Mi
     variables:
-      OUTPUT_DIR:
-        name: OUTPUT_DIR
+      RUNNER_ARTIFACTS_DIR:
+        name: RUNNER_ARTIFACTS_DIR
         value: "/data/artifacts-custom"
         type: basic

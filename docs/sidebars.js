@@ -105,6 +105,7 @@ const sidebars = {
             "articles/gitlab",
             "articles/jenkins",
             "articles/jenkins-ui",
+            "articles/azure",
             "articles/circleci",
             "articles/run-tests-with-github-actions",
             "articles/testkube-cli-docker",
@@ -193,7 +194,10 @@ const sidebars = {
     {
       type: "category",
       label: "Testkube Enterprise",
-      items: ["testkube-enterprise/articles/usage-guide", "testkube-enterprise/articles/auth"],
+      items: [
+        "testkube-enterprise/articles/testkube-enterprise",
+        "testkube-enterprise/articles/usage-guide", 
+        "testkube-enterprise/articles/auth"],
     },
     "articles/testkube-oss",
     {
@@ -240,6 +244,13 @@ const sidebars = {
           },
           items: ["articles/crds"],
         },
+      ],
+    },
+    {
+      type: "category",
+      label: "FAQs",
+      items: [
+        "articles/testkube-licensing-FAQ",
       ],
     },
   ],

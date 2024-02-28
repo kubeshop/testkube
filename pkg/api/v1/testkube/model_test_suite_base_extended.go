@@ -79,4 +79,52 @@ func (t *TestSuite) QuoteTestSuiteTextFields() {
 			}
 		}
 	}
+	for i := range t.Before {
+		for j := range t.Before[i].Execute {
+			if t.Before[i].Execute[j].ExecutionRequest != nil {
+				t.Before[i].Execute[j].ExecutionRequest.QuoteTestSuiteStepExecutionRequestTextFields()
+			}
+		}
+	}
+	for i := range t.After {
+		for j := range t.After[i].Execute {
+			if t.After[i].Execute[j].ExecutionRequest != nil {
+				t.After[i].Execute[j].ExecutionRequest.QuoteTestSuiteStepExecutionRequestTextFields()
+			}
+		}
+	}
+	for i := range t.Steps {
+		for j := range t.Steps[i].Execute {
+			if t.Steps[i].Execute[j].ExecutionRequest != nil {
+				t.Steps[i].Execute[j].ExecutionRequest.QuoteTestSuiteStepExecutionRequestTextFields()
+			}
+		}
+	}
+}
+
+func (request *TestSuiteStepExecutionRequest) QuoteTestSuiteStepExecutionRequestTextFields() {
+	for i := range request.Args {
+		if request.Args[i] != "" {
+			request.Args[i] = fmt.Sprintf("%q", request.Args[i])
+		}
+	}
+
+	for i := range request.Command {
+		if request.Command[i] != "" {
+			request.Command[i] = fmt.Sprintf("%q", request.Command[i])
+		}
+	}
+
+	var fields = []*string{
+		&request.JobTemplate,
+		&request.CronJobTemplate,
+		&request.ScraperTemplate,
+		&request.PvcTemplate,
+	}
+
+	for _, field := range fields {
+		if *field != "" {
+			*field = fmt.Sprintf("%q", *field)
+		}
+	}
 }
