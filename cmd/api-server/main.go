@@ -488,6 +488,27 @@ func main() {
 		ui.ExitOnError("Creating slack loader", err)
 	}
 
+	proContext := config.ProContext{
+		APIKey:               cfg.TestkubeProAPIKey,
+		URL:                  cfg.TestkubeProURL,
+		LogsPath:             cfg.TestkubeProLogsPath,
+		TLSInsecure:          cfg.TestkubeProTLSInsecure,
+		WorkerCount:          cfg.TestkubeProWorkerCount,
+		LogStreamWorkerCount: cfg.TestkubeProLogStreamWorkerCount,
+		SkipVerify:           cfg.TestkubeProSkipVerify,
+		EnvID:                cfg.TestkubeProEnvID,
+		OrgID:                cfg.TestkubeProOrgID,
+		Migrate:              cfg.TestkubeProMigrate,
+		ConnectionTimeout:    cfg.TestkubeProConnectionTimeout,
+	}
+
+	// Check Pro/Enterprise subscription
+	var subscriptionChecker checktcl.SubscriptionChecker
+	if mode == common.ModeAgent {
+		subscriptionChecker, err = checktcl.NewSubscriptionChecker(ctx, proContext, grpcClient, grpcConn)
+		ui.ExitOnError("Failed creating subscription checker", err)
+	}
+
 	api := apiv1.NewTestkubeAPI(
 		cfg.TestkubeNamespace,
 		resultsRepository,
@@ -521,31 +542,12 @@ func main() {
 		features,
 		logsStream,
 		logGrpcClient,
+		subscriptionChecker,
 	)
 
-	var proContext *config.ProContext
 	if mode == common.ModeAgent {
 		log.DefaultLogger.Info("starting agent service")
-		proContext = &config.ProContext{
-			APIKey:               cfg.TestkubeProAPIKey,
-			URL:                  cfg.TestkubeProURL,
-			LogsPath:             cfg.TestkubeProLogsPath,
-			TLSInsecure:          cfg.TestkubeProTLSInsecure,
-			WorkerCount:          cfg.TestkubeProWorkerCount,
-			LogStreamWorkerCount: cfg.TestkubeProLogStreamWorkerCount,
-			SkipVerify:           cfg.TestkubeProSkipVerify,
-			EnvID:                cfg.TestkubeProEnvID,
-			OrgID:                cfg.TestkubeProOrgID,
-			Migrate:              cfg.TestkubeProMigrate,
-			ConnectionTimeout:    cfg.TestkubeProConnectionTimeout,
-		}
-
-		api.WithProContext(proContext)
-		// Check Pro/Enterprise subscription
-		subscriptionChecker, err := checktcl.NewSubscriptionChecker(ctx, *proContext, grpcClient, grpcConn)
-		ui.WarnOnError("Creating subscription checker", err)
-		api.WithSubscriptionChecker(subscriptionChecker)
-
+		api.WithProContext(&proContext)
 		agentHandle, err := agent.NewAgent(
 			log.DefaultLogger,
 			api.Mux.Handler(),
@@ -555,7 +557,7 @@ func main() {
 			cfg.TestkubeClusterName,
 			envs,
 			features,
-			*proContext,
+			proContext,
 		)
 		if err != nil {
 			ui.ExitOnError("Starting agent", err)
@@ -571,7 +573,6 @@ func main() {
 	}
 
 	api.InitEvents()
-
 	if !cfg.DisableTestTriggers {
 		triggerService := triggers.NewService(
 			sched,

@@ -23,7 +23,7 @@ import (
 
 type SubscriptionChecker struct {
 	proContext config.ProContext
-	orgPlan    *OrganizationPlan
+	orgPlan    OrganizationPlan
 }
 
 // NewSubscriptionChecker creates a new subscription checker using the agent token
@@ -47,37 +47,37 @@ func NewSubscriptionChecker(ctx context.Context, proContext config.ProContext, c
 		PlanStatus:   PlanStatus(commandResponse.PlanStatus),
 	}
 
-	return SubscriptionChecker{proContext: proContext, orgPlan: &subscription}, nil
+	return SubscriptionChecker{proContext: proContext, orgPlan: subscription}, nil
 }
 
 // GetCurrentOrganizationPlan returns current organization plan
-func (c *SubscriptionChecker) GetCurrentOrganizationPlan() (*OrganizationPlan, error) {
-	if c.orgPlan == nil {
-		return nil, errors.New("organization plan is not set")
+func (c *SubscriptionChecker) GetCurrentOrganizationPlan() (OrganizationPlan, error) {
+	if c.orgPlan.IsEmpty() {
+		return OrganizationPlan{}, errors.New("organization plan is not set")
 	}
 	return c.orgPlan, nil
 }
 
 // IsOrgPlanEnterprise checks if organization plan is enterprise
 func (c *SubscriptionChecker) IsOrgPlanEnterprise() (bool, error) {
-	if c.orgPlan == nil {
+	if c.orgPlan.IsEmpty() {
 		return false, errors.New("organization plan is not set")
 	}
-	return c.orgPlan.TestkubeMode == OrganizationPlanTestkubeModeEnterprise, nil
+	return c.orgPlan.IsEnterprise(), nil
 }
 
 // IsOrgPlanCloud checks if organization plan is cloud
 func (c *SubscriptionChecker) IsOrgPlanPro() (bool, error) {
-	if c.orgPlan == nil {
+	if c.orgPlan.IsEmpty() {
 		return false, errors.New("organization plan is not set")
 	}
-	return c.orgPlan.TestkubeMode == OrganizationPlanTestkubeModePro, nil
+	return c.orgPlan.IsPro(), nil
 }
 
 // IsOrgPlanActive checks if organization plan is active
 func (c *SubscriptionChecker) IsOrgPlanActive() (bool, error) {
-	if c.orgPlan == nil {
+	if c.orgPlan.IsEmpty() {
 		return false, errors.New("organization plan is not set")
 	}
-	return c.orgPlan.PlanStatus == PlanStatusActive, nil
+	return c.orgPlan.IsActive(), nil
 }

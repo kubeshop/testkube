@@ -42,6 +42,22 @@ type OrganizationPlan struct {
 	PlanStatus PlanStatus `json:"planStatus"`
 }
 
+func (p OrganizationPlan) IsEnterprise() bool {
+	return p.TestkubeMode == OrganizationPlanTestkubeModeEnterprise
+}
+
+func (p OrganizationPlan) IsPro() bool {
+	return p.TestkubeMode == OrganizationPlanTestkubeModePro
+}
+
+func (p OrganizationPlan) IsActive() bool {
+	return p.PlanStatus == PlanStatusActive
+}
+
+func (p OrganizationPlan) IsEmpty() bool {
+	return p.PlanStatus == "" && p.TestkubeMode == "" && !p.IsTrial
+}
+
 type GetOrganizationPlanRequest struct{}
 type GetOrganizationPlanResponse struct {
 	TestkubeMode string
