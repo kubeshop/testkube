@@ -45,7 +45,7 @@ const (
 var RunnerEnvVars = []corev1.EnvVar{
 	{
 		Name:  "DEBUG",
-		Value: os.Getenv("DEBUG"),
+		Value: getOr("DEBUG", "false"),
 	},
 	{
 		Name:  "RUNNER_ENDPOINT",
