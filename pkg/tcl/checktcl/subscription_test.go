@@ -16,8 +16,8 @@ import (
 func TestSubscriptionChecker_GetCurrentOrganizationPlan(t *testing.T) {
 	tests := []struct {
 		name    string
-		orgPlan *OrganizationPlan
-		want    *OrganizationPlan
+		orgPlan OrganizationPlan
+		want    OrganizationPlan
 		wantErr bool
 	}{
 		{
@@ -26,12 +26,12 @@ func TestSubscriptionChecker_GetCurrentOrganizationPlan(t *testing.T) {
 		},
 		{
 			name: "Org plan exists",
-			orgPlan: &OrganizationPlan{
+			orgPlan: OrganizationPlan{
 				TestkubeMode: OrganizationPlanTestkubeModeEnterprise,
 				IsTrial:      false,
 				PlanStatus:   PlanStatusActive,
 			},
-			want: &OrganizationPlan{
+			want: OrganizationPlan{
 				TestkubeMode: OrganizationPlanTestkubeModeEnterprise,
 				IsTrial:      false,
 				PlanStatus:   PlanStatusActive,
@@ -59,7 +59,7 @@ func TestSubscriptionChecker_GetCurrentOrganizationPlan(t *testing.T) {
 func TestSubscriptionChecker_IsOrgPlanEnterprise(t *testing.T) {
 	tests := []struct {
 		name    string
-		orgPlan *OrganizationPlan
+		orgPlan OrganizationPlan
 		want    bool
 		wantErr bool
 	}{
@@ -69,7 +69,7 @@ func TestSubscriptionChecker_IsOrgPlanEnterprise(t *testing.T) {
 		},
 		{
 			name: "enterprise org plan",
-			orgPlan: &OrganizationPlan{
+			orgPlan: OrganizationPlan{
 				TestkubeMode: OrganizationPlanTestkubeModeEnterprise,
 			},
 			want:    true,
@@ -77,7 +77,7 @@ func TestSubscriptionChecker_IsOrgPlanEnterprise(t *testing.T) {
 		},
 		{
 			name: "pro org plan",
-			orgPlan: &OrganizationPlan{
+			orgPlan: OrganizationPlan{
 				TestkubeMode: OrganizationPlanTestkubeModePro,
 			},
 			want:    false,
@@ -104,7 +104,7 @@ func TestSubscriptionChecker_IsOrgPlanEnterprise(t *testing.T) {
 func TestSubscriptionChecker_IsOrgPlanPro(t *testing.T) {
 	tests := []struct {
 		name    string
-		orgPlan *OrganizationPlan
+		orgPlan OrganizationPlan
 		want    bool
 		wantErr bool
 	}{
@@ -114,7 +114,7 @@ func TestSubscriptionChecker_IsOrgPlanPro(t *testing.T) {
 		},
 		{
 			name: "enterprise org plan",
-			orgPlan: &OrganizationPlan{
+			orgPlan: OrganizationPlan{
 				TestkubeMode: OrganizationPlanTestkubeModeEnterprise,
 			},
 			want:    false,
@@ -122,7 +122,7 @@ func TestSubscriptionChecker_IsOrgPlanPro(t *testing.T) {
 		},
 		{
 			name: "pro org plan",
-			orgPlan: &OrganizationPlan{
+			orgPlan: OrganizationPlan{
 				TestkubeMode: OrganizationPlanTestkubeModePro,
 			},
 			want:    true,
@@ -149,7 +149,7 @@ func TestSubscriptionChecker_IsOrgPlanPro(t *testing.T) {
 func TestSubscriptionChecker_IsOrgPlanActive(t *testing.T) {
 	tests := []struct {
 		name    string
-		orgPlan *OrganizationPlan
+		orgPlan OrganizationPlan
 		want    bool
 		wantErr bool
 	}{
@@ -159,7 +159,7 @@ func TestSubscriptionChecker_IsOrgPlanActive(t *testing.T) {
 		},
 		{
 			name: "active org plan",
-			orgPlan: &OrganizationPlan{
+			orgPlan: OrganizationPlan{
 				PlanStatus: PlanStatusActive,
 			},
 			want:    true,
@@ -167,7 +167,7 @@ func TestSubscriptionChecker_IsOrgPlanActive(t *testing.T) {
 		},
 		{
 			name: "inactive org plan",
-			orgPlan: &OrganizationPlan{
+			orgPlan: OrganizationPlan{
 				PlanStatus: PlanStatusUnpaid,
 			},
 			want:    false,
