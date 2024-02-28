@@ -53,7 +53,7 @@ func EvalExpression(str string, machines ...Machine) (StaticValue, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "resolving")
 	}
-	if expr.Static() != nil {
+	if expr.Static() == nil {
 		return nil, fmt.Errorf("expression should be static: %s", expr.String())
 	}
 	return expr.Static(), nil
