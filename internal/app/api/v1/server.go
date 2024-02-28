@@ -95,6 +95,7 @@ func NewTestkubeAPI(
 	logsStream logsclient.Stream,
 	logGrpcClient logsclient.StreamGetter,
 	disableSecretCreation bool,
+	subscriptionChecker checktcl.SubscriptionChecker,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -143,6 +144,7 @@ func NewTestkubeAPI(
 		logsStream:            logsStream,
 		logGrpcClient:         logGrpcClient,
 		disableSecretCreation: disableSecretCreation,
+		SubscriptionChecker:   subscriptionChecker,
 	}
 
 	// will be reused in websockets handler
