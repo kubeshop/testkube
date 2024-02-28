@@ -277,7 +277,7 @@ func newExecutionFromExecutionOptions(subscriptionChecker checktcl.SubscriptionC
 	execution.SlavePodRequest = options.Request.SlavePodRequest
 
 	// Pro edition only (tcl protected code)
-	if schedulertcl.HasExecutionNamespace(options.Request) {
+	if schedulertcl.HasExecutionNamespace(&options.Request) {
 		ok, err := subscriptionChecker.IsOrgPlanActive()
 		if err != nil {
 			return execution, fmt.Errorf("execution namespace is a pro feature: %w", err)
@@ -418,7 +418,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		}
 
 		// Pro edition only (tcl protected code)
-		if schedulertcl.HasExecutionNamespace(request) {
+		if schedulertcl.HasExecutionNamespace(test.ExecutionRequest) {
 			ok, err := s.subscriptionChecker.IsOrgPlanActive()
 			if err != nil {
 				return options, fmt.Errorf("execution namespace is a pro feature: %w", err)

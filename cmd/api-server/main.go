@@ -18,6 +18,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	apitclv1 "github.com/kubeshop/testkube/pkg/tcl/apitcl/v1"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
+	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
@@ -389,11 +390,28 @@ func main() {
 		ui.ExitOnError("Creating job templates", err)
 	}
 
+	serviceAccountNames := map[string]string{
+		cfg.TestkubeNamespace: cfg.JobServiceAccountName,
+	}
+
+	// Pro edition only (tcl protected code)
+	if cfg.TestkubeExecutionNamespaces != "" {
+		ok, err := subscriptionChecker.IsOrgPlanActive()
+		if err != nil {
+			ui.ExitOnError("execution namespace is a pro feature", err)
+		}
+		if !ok {
+			ui.ExitOnError("execution namespace is not available", fmt.Errorf("inactive subscription plan"))
+		}
+
+		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
+	}
+
 	executor, err := client.NewJobExecutor(
 		resultsRepository,
 		images,
 		jobTemplates,
-		cfg.JobServiceAccountName,
+		serviceAccountNames,
 		metrics,
 		eventsEmitter,
 		configMapConfig,
@@ -438,7 +456,7 @@ func main() {
 		images,
 		containerTemplates,
 		inspector,
-		cfg.JobServiceAccountName,
+		serviceAccountNames,
 		metrics,
 		eventsEmitter,
 		configMapConfig,

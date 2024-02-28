@@ -22,6 +22,7 @@ func ExecutionRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 		ui.Warn("Number:           ", fmt.Sprintf("%d", execution.Number))
 	}
 	ui.Warn("Test name:        ", execution.TestName)
+	ui.Warn("Test namespace:   ", execution.TestNamespace)
 	ui.Warn("Type:             ", execution.TestType)
 	if execution.ExecutionResult != nil && execution.ExecutionResult.Status != nil {
 		ui.Warn("Status:           ", string(*execution.ExecutionResult.Status))
