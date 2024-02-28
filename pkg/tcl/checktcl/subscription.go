@@ -11,6 +11,7 @@ package checktcl
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -80,4 +81,22 @@ func (c *SubscriptionChecker) IsOrgPlanActive() (bool, error) {
 		return false, errors.New("organization plan is not set")
 	}
 	return c.orgPlan.IsActive(), nil
+}
+
+// IsActiveOrgPlanEnterpriseForFeature checks if organization plan is active and enterprise for feature
+func (c *SubscriptionChecker) IsActiveOrgPlanEnterpriseForFeature(featureName string) error {
+	plan, err := c.GetCurrentOrganizationPlan()
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("%s is a commercial feature", featureName))
+	}
+
+	if !plan.IsActive() {
+		return errors.New(fmt.Sprintf("%s is not available: inactive subscription plan", featureName))
+	}
+
+	if !plan.IsEnterprise() {
+		return errors.New(fmt.Sprintf("%s is not allowed: wrong subscription plan", featureName))
+	}
+
+	return nil
 }

@@ -236,6 +236,7 @@ func (s *Scheduler) createSecretsReferences(execution *testkube.Execution) (err 
 			secretName,
 			labels,
 			secrets,
+			execution.TestNamespace,
 		)
 	}
 
@@ -278,12 +279,8 @@ func newExecutionFromExecutionOptions(subscriptionChecker checktcl.SubscriptionC
 
 	// Pro edition only (tcl protected code)
 	if schedulertcl.HasExecutionNamespace(&options.Request) {
-		ok, err := subscriptionChecker.IsOrgPlanActive()
-		if err != nil {
-			return execution, fmt.Errorf("execution namespace is a pro feature: %w", err)
-		}
-		if !ok {
-			return execution, fmt.Errorf("execution namespace is not available: inactive subscription plan")
+		if err := subscriptionChecker.IsActiveOrgPlanEnterpriseForFeature("execution namespace"); err != nil {
+			return execution, err
 		}
 
 		execution = schedulertcl.NewExecutionFromExecutionOptions(options.Request, execution)
@@ -419,12 +416,8 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 
 		// Pro edition only (tcl protected code)
 		if schedulertcl.HasExecutionNamespace(test.ExecutionRequest) {
-			ok, err := s.subscriptionChecker.IsOrgPlanActive()
-			if err != nil {
-				return options, fmt.Errorf("execution namespace is a pro feature: %w", err)
-			}
-			if !ok {
-				return options, fmt.Errorf("execution namespace is not available: inactive subscription plan")
+			if err = s.subscriptionChecker.IsActiveOrgPlanEnterpriseForFeature("execution namespace"); err != nil {
+				return options, err
 			}
 
 			request = schedulertcl.GetExecuteOptions(test.ExecutionRequest, request)
