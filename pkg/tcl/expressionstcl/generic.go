@@ -79,7 +79,14 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool) (err error) {
 			tt := v.Type()
 			for i := 0; i < tt.NumField(); i++ {
 				f := tt.Field(i)
-				tag := parseTag(f.Tag.Get("expr"))
+				tagStr := f.Tag.Get("expr")
+				tag := parseTag(tagStr)
+				if !f.IsExported() {
+					if tagStr != "" && tagStr != "-" {
+						return errors.New(f.Name + ": private property marked with `expr` clause")
+					}
+					continue
+				}
 				value := v.FieldByName(f.Name)
 				err = resolve(value, tag, m, force)
 				if err != nil {
