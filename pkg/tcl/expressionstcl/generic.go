@@ -46,7 +46,7 @@ func clone(v reflect.Value) reflect.Value {
 	return v
 }
 
-func resolve(v reflect.Value, t tagData, m []Machine, force bool) (err error) {
+func resolve(v reflect.Value, t tagData, m []Machine, force bool) (changed bool, err error) {
 	if t.value == "force" {
 		force = true
 	}
@@ -83,54 +83,69 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool) (err error) {
 				tag := parseTag(tagStr)
 				if !f.IsExported() {
 					if tagStr != "" && tagStr != "-" {
-						return errors.New(f.Name + ": private property marked with `expr` clause")
+						return changed, errors.New(f.Name + ": private property marked with `expr` clause")
 					}
 					continue
 				}
 				value := v.FieldByName(f.Name)
-				err = resolve(value, tag, m, force)
+				var ch bool
+				ch, err = resolve(value, tag, m, force)
+				if ch {
+					changed = true
+				}
 				if err != nil {
-					return errors.Wrap(err, f.Name)
+					return changed, errors.Wrap(err, f.Name)
 				}
 			}
 		}
 		return
 	case reflect.Slice:
 		if t.value == "" {
-			return nil
+			return changed, nil
 		}
 		for i := 0; i < v.Len(); i++ {
-			err := resolve(v.Index(i), t, m, force)
+			ch, err := resolve(v.Index(i), t, m, force)
+			if ch {
+				changed = true
+			}
 			if err != nil {
-				return errors.Wrap(err, fmt.Sprintf("%d", i))
+				return changed, errors.Wrap(err, fmt.Sprintf("%d", i))
 			}
 		}
 		return
 	case reflect.Map:
 		if t.value == "" && t.key == "" {
-			return nil
+			return changed, nil
 		}
 		for _, k := range v.MapKeys() {
 			if t.value != "" || force {
 				// It's not possible to get a pointer to map element,
 				// so we need to copy it and reassign
 				item := clone(v.MapIndex(k))
-				err = resolve(item, t, m, force)
+				var ch bool
+				ch, err = resolve(item, t, m, force)
+				if ch {
+					changed = true
+				}
 				v.SetMapIndex(k, item)
 				if err != nil {
-					return errors.Wrap(err, k.String())
+					return changed, errors.Wrap(err, k.String())
 				}
 			}
 			if t.key != "" || force {
 				key := clone(k)
-				err = resolve(key, tagData{value: t.key}, m, force)
+				var ch bool
+				ch, err = resolve(key, tagData{value: t.key}, m, force)
+				if ch {
+					changed = true
+				}
 				if !key.Equal(k) {
 					item := clone(v.MapIndex(k))
 					v.SetMapIndex(k, reflect.Value{})
 					v.SetMapIndex(key, item)
 				}
 				if err != nil {
-					return errors.Wrap(err, "key("+k.String()+")")
+					return changed, errors.Wrap(err, "key("+k.String()+")")
 				}
 			}
 		}
@@ -138,11 +153,13 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool) (err error) {
 	case reflect.String:
 		if t.value == "expression" {
 			var expr Expression
-			expr, err = CompileAndResolve(v.String(), m...)
+			str := v.String()
+			expr, err = CompileAndResolve(str, m...)
 			if err != nil {
-				return err
+				return changed, err
 			}
 			vv := expr.String()
+			changed = vv != str
 			if ptr.Kind() == reflect.String {
 				v.SetString(vv)
 			} else {
@@ -150,11 +167,13 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool) (err error) {
 			}
 		} else if (t.value == "template" && !IsTemplateStringWithoutExpressions(v.String())) || force {
 			var expr Expression
-			expr, err = CompileAndResolveTemplate(v.String(), m...)
+			str := v.String()
+			expr, err = CompileAndResolveTemplate(str, m...)
 			if err != nil {
-				return err
+				return changed, err
 			}
 			vv := expr.Template()
+			changed = vv != str
 			if ptr.Kind() == reflect.String {
 				v.SetString(vv)
 			} else {
@@ -165,21 +184,30 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool) (err error) {
 	}
 
 	// Fail for unrecognized values
-	return unrecognizedErr
+	return false, unrecognizedErr
 }
 
-func SimplifyStruct(t interface{}, m ...Machine) error {
+func simplifyStruct(t interface{}, tag tagData, m ...Machine) error {
 	v := reflect.ValueOf(t)
 	if v.Kind() != reflect.Pointer {
 		return errors.New("pointer needs to be passed to SimplifyStruct function")
 	}
-	return resolve(v, tagData{value: "include"}, m, false)
+	changed, err := resolve(v, tag, m, false)
+	i := 1
+	for changed && err == nil {
+		if i > maxCallStack {
+			return fmt.Errorf("maximum call stack exceeded while simplifying struct")
+		}
+		changed, err = resolve(v, tag, m, false)
+		i++
+	}
+	return err
+}
+
+func SimplifyStruct(t interface{}, m ...Machine) error {
+	return simplifyStruct(t, tagData{value: "include"}, m...)
 }
 
 func SimplifyStructForce(t interface{}, m ...Machine) error {
-	v := reflect.ValueOf(t)
-	if v.Kind() != reflect.Pointer {
-		return errors.New("pointer needs to be passed to SimplifyStructForce function")
-	}
-	return resolve(v, tagData{value: "include"}, m, true)
+	return simplifyStruct(t, tagData{value: "force"}, m...)
 }
