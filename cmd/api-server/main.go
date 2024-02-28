@@ -417,7 +417,7 @@ func main() {
 
 	// Pro edition only (tcl protected code)
 	if cfg.TestkubeExecutionNamespaces != "" {
-		err := subscriptionChecker.IsActiveOrgPlanEnterpriseForFeature("execution namespace")
+		err = subscriptionChecker.IsActiveOrgPlanEnterpriseForFeature("execution namespace")
 		ui.ExitOnError("Subscription checking", err)
 
 		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
