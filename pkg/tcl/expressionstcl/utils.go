@@ -38,10 +38,10 @@ func EvalTemplate(tpl string, machines ...Machine) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "resolving")
 	}
-	if expr.Static() != nil {
+	if expr.Static() == nil {
 		return "", fmt.Errorf("template should be static: %s", expr.Template())
 	}
-	return expr.String(), nil
+	return expr.Static().StringValue()
 }
 
 func EvalExpression(str string, machines ...Machine) (StaticValue, error) {
