@@ -94,6 +94,7 @@ func NewTestkubeAPI(
 	ff featureflags.FeatureFlags,
 	logsStream logsclient.Stream,
 	logGrpcClient logsclient.StreamGetter,
+	subscriptionChecker checktcl.SubscriptionChecker,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -141,6 +142,7 @@ func NewTestkubeAPI(
 		featureFlags:          ff,
 		logsStream:            logsStream,
 		logGrpcClient:         logGrpcClient,
+		SubscriptionChecker:   subscriptionChecker,
 	}
 
 	// will be reused in websockets handler
