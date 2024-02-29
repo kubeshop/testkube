@@ -44,6 +44,7 @@ func TestCompileNegation(t *testing.T) {
 	assert.Equal(t, "r1", MustCompile(`true && r1`).String())
 	assert.Equal(t, "r1", MustCompile(`!true || r1`).String())
 	assert.Equal(t, "true", MustCompile(`true || r1`).String())
+	assert.Equal(t, "11", MustCompile(`5 - -3 * 2`).String())
 }
 
 func TestCompileMathOperationsPrecedence(t *testing.T) {
