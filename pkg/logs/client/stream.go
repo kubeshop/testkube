@@ -120,8 +120,6 @@ func (c NatsLogStream) Get(ctx context.Context, id string) (chan events.LogRespo
 }
 
 func (c NatsLogStream) handleJetstreamMessage(log *zap.SugaredLogger, ch chan events.LogResponse, msg jetstream.Msg) (finish bool) {
-	log.Debugw("got message", "data", string(msg.Data()))
-
 	// deliver to subscriber
 	logChunk := events.Log{}
 	err := json.Unmarshal(msg.Data(), &logChunk)
