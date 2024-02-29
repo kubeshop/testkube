@@ -13,22 +13,22 @@ import (
 	"fmt"
 )
 
-func EmitReferenceFor(ref string, name string) {
-	fmt.Printf(";;%s;%s\n", ref, name)
-}
-
-func EmitReferenceDetailsFor(ref string, name string, value interface{}) {
+func EmitOutput(ref string, name string, value interface{}) {
 	j, err := json.Marshal(value)
 	if err != nil {
 		panic(fmt.Sprintf("error while marshalling reference: %v", err))
 	}
-	fmt.Printf(";;%s;%s;%s\n", ref, name, string(j))
+	fmt.Printf(";;%s;%s:%s;", ref, name, string(j))
 }
 
-func EmitReference(name string) {
-	EmitReferenceFor(Step.Ref, name)
+func EmitHint(ref string, name string) {
+	fmt.Printf(";;;%s;%s;", ref, name)
 }
 
-func EmitReferenceDetails(name string, value interface{}) {
-	EmitReferenceDetailsFor(Step.Ref, name, value)
+func EmitHintDetails(ref string, name string, value interface{}) {
+	j, err := json.Marshal(value)
+	if err != nil {
+		panic(fmt.Sprintf("error while marshalling reference: %v", err))
+	}
+	fmt.Printf(";;;%s;%s:%s;", ref, name, string(j))
 }

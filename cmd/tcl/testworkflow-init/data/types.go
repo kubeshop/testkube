@@ -54,7 +54,7 @@ func (s *StepInfo) Start(t time.Time) {
 	if s.StartTime.IsZero() {
 		s.StartTime = t
 		s.Iteration = 1
-		EmitReferenceFor(s.Ref, "start")
+		EmitHint(s.Ref, "start")
 	}
 }
 
@@ -63,7 +63,7 @@ func (s *StepInfo) Next() {
 		s.Start(time.Now())
 	} else {
 		s.Iteration++
-		EmitReferenceDetailsFor(s.Ref, "iteration", s.Iteration)
+		EmitHintDetails(s.Ref, "iteration", s.Iteration)
 	}
 }
 
@@ -97,9 +97,9 @@ func (s *StepInfo) SetStatus(status StepStatus) {
 		s.Status = status
 		s.HasStatus = true
 		if status == StepStatusPassed {
-			EmitReferenceDetailsFor(s.Ref, "status", "passed")
+			EmitHintDetails(s.Ref, "status", "passed")
 		} else {
-			EmitReferenceDetailsFor(s.Ref, "status", status)
+			EmitHintDetails(s.Ref, "status", status)
 		}
 	}
 }
