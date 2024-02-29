@@ -177,7 +177,7 @@ func TestGetExecuteOptions(t *testing.T) {
 		SlavePodRequest:   &testkube.PodRequest{},
 	}
 
-	got, err := sc.getExecuteOptions("namespace", "id", req)
+	got, err := sc.getExecuteOptions("id", req)
 	assert.NoError(t, err)
 
 	want := client.ExecuteOptions{
