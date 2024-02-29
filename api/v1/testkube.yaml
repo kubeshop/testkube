@@ -6901,9 +6901,6 @@ components:
         optional:
           type: boolean
           description: is the step optional, so the failure won't affect the TestWorkflow result
-        virtualGroup:
-          type: boolean
-          description: should not display it as a nested group
         retry:
           $ref: "#/components/schemas/TestWorkflowRetryPolicy"
         timeout:
@@ -6950,9 +6947,6 @@ components:
         optional:
           type: boolean
           description: is the step optional, so the failure won't affect the TestWorkflow result
-        virtualGroup:
-          type: boolean
-          description: should not display it as a nested group
         use:
           type: array
           description: list of TestWorkflowTemplates to use
