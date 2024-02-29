@@ -81,13 +81,13 @@ func readState(filePath string) {
 	b, err := os.ReadFile(filePath)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			panic(err.Error())
+			panic(err)
 		}
 		return
 	}
 	err = gob.NewDecoder(bytes.NewBuffer(b)).Decode(&State)
 	if err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 }
 
@@ -95,12 +95,12 @@ func persistState(filePath string) {
 	b := bytes.Buffer{}
 	err := gob.NewEncoder(&b).Encode(State)
 	if err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 
 	err = os.WriteFile(filePath, b.Bytes(), 0777)
 	if err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 }
 

@@ -9,9 +9,10 @@
 package data
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/output"
 )
 
 func getStr(config map[string]string, key string, defaultValue string) string {
@@ -29,7 +30,7 @@ func getInt(config map[string]string, key string, defaultValue int) int {
 	}
 	val, err := strconv.Atoi(str)
 	if err != nil {
-		panic(fmt.Errorf("invalid '%s' provided: '%s': %v", key, str, err))
+		output.Failf(output.CodeInputError, "invalid '%s' provided: '%s': %v", key, str, err)
 	}
 	return val
 }

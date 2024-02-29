@@ -20,13 +20,13 @@ import (
 	"github.com/kballard/go-shellquote"
 
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/output"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/run"
 )
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("missing ref!")
-		os.Exit(155)
+		output.Failf(output.CodeInputError, "missing step reference")
 	}
 	data.Step.Ref = os.Args[1]
 
@@ -89,8 +89,7 @@ func main() {
 		initial := os.Getenv(name)
 		value, err := data.Template(initial)
 		if err != nil {
-			fmt.Printf(`resolving "%s" environment variable: %s: %s\n`, name, initial, err.Error())
-			os.Exit(155)
+			output.Failf(output.CodeInputError, `resolving "%s" environment variable: %s: %s`, name, initial, err.Error())
 		}
 		_ = os.Setenv(name, value)
 	}
@@ -99,8 +98,7 @@ func main() {
 	for _, c := range conditions {
 		expr, err := data.Expression(c.Expr)
 		if err != nil {
-			fmt.Printf("broken condition for refs: %s: %s: %s\n", strings.Join(c.Refs, ", "), c.Expr, err.Error())
-			os.Exit(155)
+			output.Failf(output.CodeInputError, "broken condition for refs: %s: %s: %s", strings.Join(c.Refs, ", "), c.Expr, err.Error())
 		}
 		v, _ := expr.BoolValue()
 		if !v {
@@ -129,8 +127,7 @@ func main() {
 	for _, t := range timeouts {
 		err := data.State.GetStep(t.Ref).SetTimeoutDuration(now, t.Duration)
 		if err != nil {
-			fmt.Printf("broken timeout for ref: %s: %s: %s\n", t.Ref, t.Duration, err.Error())
-			os.Exit(155)
+			output.Failf(output.CodeInputError, "broken timeout for ref: %s: %s: %s", t.Ref, t.Duration, err.Error())
 		}
 	}
 
@@ -149,8 +146,7 @@ func main() {
 	for k, v := range config {
 		value, err := data.Template(v)
 		if err != nil {
-			fmt.Printf(`resolving "%s" param: %s: %s\n`, k, v, err.Error())
-			os.Exit(155)
+			output.Failf(output.CodeInputError, `resolving "%s" param: %s: %s`, k, v, err.Error())
 		}
 		data.LoadConfig(map[string]string{k: value})
 	}
@@ -161,15 +157,13 @@ func main() {
 	for i := range args {
 		args[i], err = data.Template(args[i])
 		if err != nil {
-			fmt.Printf(`resolving command: %s: %s\n`, shellquote.Join(original...), err.Error())
-			os.Exit(155)
+			output.Failf(output.CodeInputError, `resolving command: %s: %s`, shellquote.Join(original...), err.Error())
 		}
 	}
 
 	// Fail when there is nothing to run
 	if len(args) == 0 {
-		fmt.Println("missing command to run")
-		os.Exit(189)
+		output.Failf(output.CodeNoCommand, "missing command to run")
 	}
 
 	// Handle aborting
@@ -179,7 +173,7 @@ func main() {
 		<-stopSignal
 		fmt.Println("The task was aborted.")
 		data.Step.Status = data.StepStatusAborted
-		data.Step.ExitCode = 137
+		data.Step.ExitCode = output.CodeAborted
 		data.Finish()
 	}()
 
@@ -190,7 +184,7 @@ func main() {
 			fmt.Printf("Timed out.\n")
 			data.State.GetStep(ref).SetStatus(data.StepStatusTimeout)
 			data.Step.Status = data.StepStatusTimeout
-			data.Step.ExitCode = 124
+			data.Step.ExitCode = output.CodeTimeout
 			data.Finish()
 		}(t.Ref)
 	}
