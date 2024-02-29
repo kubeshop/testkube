@@ -58,3 +58,7 @@ func EvalExpression(str string, machines ...Machine) (StaticValue, error) {
 	}
 	return expr.Static(), nil
 }
+
+func Escape(str string) string {
+	return NewStringValue(str).Template()
+}
