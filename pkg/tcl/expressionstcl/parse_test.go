@@ -38,6 +38,14 @@ func TestCompileMath(t *testing.T) {
 	assert.Equal(t, false, must(MustCompile(`3 = 5`).Static().BoolValue()))
 }
 
+func TestCompileNegation(t *testing.T) {
+	assert.Equal(t, "true", MustCompile(`!(false && r1)`).String())
+	assert.Equal(t, "false", MustCompile(`!true && r1`).String())
+	assert.Equal(t, "r1", MustCompile(`true && r1`).String())
+	assert.Equal(t, "r1", MustCompile(`!true || r1`).String())
+	assert.Equal(t, "true", MustCompile(`true || r1`).String())
+}
+
 func TestCompileMathOperationsPrecedence(t *testing.T) {
 	assert.Equal(t, 7.0, must(MustCompile(`1 + 2 * 3`).Static().FloatValue()))
 	assert.Equal(t, 11.0, must(MustCompile(`1 + (2 * 3) + 4`).Static().FloatValue()))
