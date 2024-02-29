@@ -3,6 +3,8 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 - [Testkube Enterprise Helm Chart Installation and Usage Guide](#testkube-enterprise-helm-chart-installation-and-usage-guide)
+  - [Installation of Testkube Enterprise and an Agent in the same cluster](#installation-of-testkube-enterprise-and-an-agent-in-the-same-cluster)
+  - [Installation of Testkube Enterprise and an Agent in multiple clusters](#installation-of-testkube-enterprise-and-an-agent-in-multiple-clusters)
   - [Prerequisites](#prerequisites)
   - [Configuration](#configuration)
     - [Docker images](#docker-images)
@@ -34,6 +36,27 @@ Welcome to the Testkube Enterprise Helm chart installation and usage guide.
 This comprehensive guide provides step-by-step instructions for installing and utilizing the Testkube Enterprise Helm chart.
 Testkube Enterprise is a cutting-edge Kubernetes-native testing platform designed to optimize your testing and quality assurance processes with enterprise-grade features.
 
+## Installation of Testkube Enterprise and an Agent in the same cluster
+
+It is possible to deploy an instance of Testkube Enteprise and connect an Agent to it in the same k8s cluster without exposing endpoints to the outside world. 
+This way gives you a more customizable set-up and allows you to have a working environment in just a few minutes. It can be deployed locally or in any other k8s cluster.
+
+For this you will need a `kubectl` and a connection to a cluster. 
+Simply run ` bash <(curl -sSLf https://download.testkube.io)` and enter a license key, the script will do the rest. 
+
+:::note
+The script will do a port-forward to the following ports: `8080`, `8090`, `5556` in the background mode. Please make sure they are available.
+
+If you close a terminal you may do a port-forward with the following commands:
+kubectl port-forward svc/testkube-enterprise-ui 8080:8080 --namespace testkube-enterprise &
+kubectl port-forward svc/testkube-enterprise-api 8090:8088 --namespace testkube-enterprise &
+kubectl port-forward svc/testkube-enterprise-dex 5556:5556 --namespace testkube-enterprise &
+:::
+
+The installation will take about 4-5 min, once it is completed you will have Testkube Enterprise available at http://localhost:8080. We use Dex for authentication, so once you open the URL you will see a login page - use `admin@example.com` and `password` as a username and a password respectively.
+And Voila! Now you can create tests, testsuites and explore the power of Testkube!
+
+## Installation of Testkube Enterprise and an Agent in multiple clusters
 ## Prerequisites
 
 Before you proceed with the installation, please ensure that you have the following prerequisites in place:
