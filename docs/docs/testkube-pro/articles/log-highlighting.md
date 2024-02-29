@@ -28,7 +28,11 @@ By default, all the categories are active.
 
 ![log-highlighting-filtering.png](../../img/log-highlighting-filtering.png)
 
-There are 4 categories at the moment, represented with few keywords each:
+
+
+## Configuring Keyword Categories
+
+There are 4 default categories, represented with few keywords each:
 
 | Category                   | Keywords                                                            |
 |----------------------------|---------------------------------------------------------------------|
@@ -36,3 +40,22 @@ There are 4 categories at the moment, represented with few keywords each:
 | **Connection**             | Connection, Disconnect, Lost, Timeout, Refused, Handshake, Retrying |
 | **Resource Issues**        | OutOfMemory, MemoryLeak, ResourceExhausted, LimitExceeded, Quota    |
 | **Access & Authorization** | Denied, Unauthorized, Forbidden, Invalid, Invalid Token, Expired    |
+
+To configure keyword categories for highlighting:
+
+1. Navigate to the Environment settings -> Keyword handling.
+2. Add a new category by providing a color, a group name, and an array of keywords.
+3. Save the changes.
+
+## Example Configuration
+
+![keyword-highlights-configuration.png](../../img/keyword-highlights-configuration.png)
+
+In the example above, there are default categories along with a new one:
+
+- **Custom Category** (New):
+  - **Color**: Green
+  - **Group Name**: Custom Category
+  - **Keywords**: [CustomKeyword1, CustomKeyword2, CustomKeyword3]
+
+These keywords will be highlighted in logs when the custom category is active.
