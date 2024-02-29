@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 )
 
 func getStr(config map[string]string, key string, defaultValue string) string {
@@ -33,18 +32,6 @@ func getInt(config map[string]string, key string, defaultValue int) int {
 		panic(fmt.Errorf("invalid '%s' provided: '%s': %v", key, str, err))
 	}
 	return val
-}
-
-func getDuration(config map[string]string, key string) *time.Duration {
-	str := getStr(config, key, "")
-	if str == "" {
-		return nil
-	}
-	dur, err := time.ParseDuration(str)
-	if err != nil {
-		panic(fmt.Errorf("invalid '%s' provided: '%s': %v", key, str, err))
-	}
-	return &dur
 }
 
 func getBool(config map[string]string, key string, defaultValue bool) bool {
