@@ -124,7 +124,7 @@ func (c *Client) Create(id string, labels, stringData map[string]string, namespa
 	secretsClient := c.ClientSet.CoreV1().Secrets(ns)
 	ctx := context.Background()
 
-	secretSpec := NewSpec(id, c.Namespace, labels, stringData)
+	secretSpec := NewSpec(id, ns, labels, stringData)
 	if _, err := secretsClient.Create(ctx, secretSpec, metav1.CreateOptions{}); err != nil {
 		return err
 	}

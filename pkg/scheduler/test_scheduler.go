@@ -72,7 +72,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 
 	request.TestSecretUUID = secretUUID
 	// merge available data into execution options test spec, executor spec, request, test id
-	options, err := s.getExecuteOptions(test.Namespace, test.Name, request)
+	options, err := s.getExecuteOptions(test.Name, request)
 	if err != nil {
 		return s.handleExecutionError(ctx, execution, "can't get execute options: %w", err)
 	}
@@ -289,7 +289,7 @@ func newExecutionFromExecutionOptions(subscriptionChecker checktcl.SubscriptionC
 	return execution, nil
 }
 
-func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
+func (s *Scheduler) getExecuteOptions(id string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
 	// get test content from kubernetes CRs
 	testCR, err := s.testsClient.Get(id)
 	if err != nil {
@@ -459,7 +459,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 			continue
 		}
 
-		data, err := s.configMapClient.Get(context.Background(), configMap.Reference.Name, namespace)
+		data, err := s.configMapClient.Get(context.Background(), configMap.Reference.Name, request.Namespace)
 		if err != nil {
 			return options, errors.Errorf("can't get config map: %v", err)
 		}
@@ -479,7 +479,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 			continue
 		}
 
-		data, err := s.secretClient.Get(secret.Reference.Name, namespace)
+		data, err := s.secretClient.Get(secret.Reference.Name, request.Namespace)
 		if err != nil {
 			return options, errors.Errorf("can't get secret: %v", err)
 		}
@@ -513,7 +513,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 
 	return client.ExecuteOptions{
 		TestName:             id,
-		Namespace:            namespace,
+		Namespace:            request.Namespace,
 		TestSpec:             testCR.Spec,
 		ExecutorName:         executorCR.ObjectMeta.Name,
 		ExecutorSpec:         executorCR.Spec,
