@@ -1,5 +1,31 @@
 # Run Tests with GitHub Actions
-**If you need more control over your flow or to access a private cluster, use [Testkube Action](https://github.com/marketplace/actions/testkube-action) instead.**
+**The `kubeshop/testkube-run-action` has been deprecated and won't receive further updates. Use the [Testkube Action](https://github.com/marketplace/actions/testkube-action) instead.**
+
+# Migrate from testkube-run-action to setup-testkube
+
+1. Change the `uses` property from `kubeshop/testkube-run-action@v1` to `kubeshop/setuo-testkube@v1`.
+
+```yaml
+uses: kubeshop/setuo-testkube@v1
+```
+2. Remove any usage of Test or Test Suite args from the `with` block.
+3. Use shell scripts to run testkube CLI commands directly:
+```yaml
+steps:
+  # Setup Testkube
+  - uses: kubeshop/setup-testkube@v1
+  # Pro and Enterprise args are still available
+    with:
+      organization: ${{ secrets.TkOrganization }}
+      environment: ${{ secrets.TkEnvironment }}
+      token: ${{ secrets.TkToken }}
+  # Use CLI with a shell script
+  - run: |
+      # Run one or multiple testkube CLI commands, passing any arguments you need
+      testkube run test some-test-name -f
+```
+
+# Deprecated usage information:
 
 **Run on Testkube** is a GitHub Action for running tests on the Testkube platform.
 
