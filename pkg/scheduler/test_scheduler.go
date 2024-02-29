@@ -72,7 +72,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 
 	request.TestSecretUUID = secretUUID
 	// merge available data into execution options test spec, executor spec, request, test id
-	options, err := s.getExecuteOptions(test.Name, request)
+	options, err := s.getExecuteOptions(test.Namespace, test.Name, request)
 	if err != nil {
 		return s.handleExecutionError(ctx, execution, "can't get execute options: %w", err)
 	}
@@ -289,7 +289,7 @@ func newExecutionFromExecutionOptions(subscriptionChecker checktcl.SubscriptionC
 	return execution, nil
 }
 
-func (s *Scheduler) getExecuteOptions(id string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
+func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
 	// get test content from kubernetes CRs
 	testCR, err := s.testsClient.Get(id)
 	if err != nil {
@@ -315,6 +315,7 @@ func (s *Scheduler) getExecuteOptions(id string, request testkube.ExecutionReque
 
 	test := testsmapper.MapTestCRToAPI(*testCR)
 
+	request.Namespace = namespace
 	if test.ExecutionRequest != nil {
 		// Test variables lowest priority, then test suite, then test suite execution / test execution
 		request.Variables = mergeVariables(test.ExecutionRequest.Variables, request.Variables)
