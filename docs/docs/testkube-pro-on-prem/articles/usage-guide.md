@@ -53,7 +53,7 @@ kubectl port-forward svc/testkube-enterprise-api 8090:8088 --namespace testkube-
 kubectl port-forward svc/testkube-enterprise-dex 5556:5556 --namespace testkube-enterprise &
 :::
 
-The installation will take about 4-5 min, once it is completed you will have Testkube Enterprise available at http://localhost:8080. We use Dex for authentication, so once you open the URL you will see a login page - use `admin@example.com` and `password` as a username and a password respectively.
+The installation will take about 4-5 min, once it is completed you will have the Testkube Enterprise available at http://localhost:8080 in `testkube-enterprise` namespace and the Testkube Agent in `testkube` namespace. We use Dex for authentication, so once you open the URL you will see a login page - use `admin@example.com` and `password` as a username and a password respectively.
 And Voila! Now you can create tests, testsuites and explore the power of Testkube!
 
 ## Installation of Testkube Enterprise and an Agent in multiple clusters
