@@ -67,16 +67,16 @@ func (mr *MockExecutorMockRecorder) Execute(arg0, arg1, arg2 interface{}) *gomoc
 }
 
 // Logs mocks base method.
-func (m *MockExecutor) Logs(arg0 context.Context, arg1 string) (chan output.Output, error) {
+func (m *MockExecutor) Logs(arg0 context.Context, arg1, arg2 string) (chan output.Output, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Logs", arg0, arg1)
+	ret := m.ctrl.Call(m, "Logs", arg0, arg1, arg2)
 	ret0, _ := ret[0].(chan output.Output)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Logs indicates an expected call of Logs.
-func (mr *MockExecutorMockRecorder) Logs(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockExecutorMockRecorder) Logs(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logs", reflect.TypeOf((*MockExecutor)(nil).Logs), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logs", reflect.TypeOf((*MockExecutor)(nil).Logs), arg0, arg1, arg2)
 }

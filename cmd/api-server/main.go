@@ -16,6 +16,9 @@ import (
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
+	apitclv1 "github.com/kubeshop/testkube/pkg/tcl/apitcl/v1"
+	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
+	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
@@ -387,12 +390,44 @@ func main() {
 		ui.ExitOnError("Creating job templates", err)
 	}
 
+	proContext := config.ProContext{
+		APIKey:               cfg.TestkubeProAPIKey,
+		URL:                  cfg.TestkubeProURL,
+		LogsPath:             cfg.TestkubeProLogsPath,
+		TLSInsecure:          cfg.TestkubeProTLSInsecure,
+		WorkerCount:          cfg.TestkubeProWorkerCount,
+		LogStreamWorkerCount: cfg.TestkubeProLogStreamWorkerCount,
+		SkipVerify:           cfg.TestkubeProSkipVerify,
+		EnvID:                cfg.TestkubeProEnvID,
+		OrgID:                cfg.TestkubeProOrgID,
+		Migrate:              cfg.TestkubeProMigrate,
+		ConnectionTimeout:    cfg.TestkubeProConnectionTimeout,
+	}
+
+	// Check Pro/Enterprise subscription
+	var subscriptionChecker checktcl.SubscriptionChecker
+	if mode == common.ModeAgent {
+		subscriptionChecker, err = checktcl.NewSubscriptionChecker(ctx, proContext, grpcClient, grpcConn)
+		ui.ExitOnError("Failed creating subscription checker", err)
+	}
+
+	serviceAccountNames := map[string]string{
+		cfg.TestkubeNamespace: cfg.JobServiceAccountName,
+	}
+
+	// Pro edition only (tcl protected code)
+	if cfg.TestkubeExecutionNamespaces != "" {
+		err = subscriptionChecker.IsActiveOrgPlanEnterpriseForFeature("execution namespace")
+		ui.ExitOnError("Subscription checking", err)
+
+		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
+	}
+
 	executor, err := client.NewJobExecutor(
 		resultsRepository,
-		cfg.TestkubeNamespace,
 		images,
 		jobTemplates,
-		cfg.JobServiceAccountName,
+		serviceAccountNames,
 		metrics,
 		eventsEmitter,
 		configMapConfig,
@@ -434,11 +469,10 @@ func main() {
 
 	containerExecutor, err := containerexecutor.NewContainerExecutor(
 		resultsRepository,
-		cfg.TestkubeNamespace,
 		images,
 		containerTemplates,
 		inspector,
-		cfg.JobServiceAccountName,
+		serviceAccountNames,
 		metrics,
 		eventsEmitter,
 		configMapConfig,
@@ -480,6 +514,7 @@ func main() {
 		cfg.TestkubeDashboardURI,
 		features,
 		logsStream,
+		cfg.TestkubeNamespace,
 	)
 
 	slackLoader, err := newSlackLoader(cfg, envs)
@@ -520,25 +555,13 @@ func main() {
 		features,
 		logsStream,
 		logGrpcClient,
+		cfg.DisableSecretCreation,
+		subscriptionChecker,
 	)
 
 	if mode == common.ModeAgent {
 		log.DefaultLogger.Info("starting agent service")
-		proContext := config.ProContext{
-			APIKey:               cfg.TestkubeProAPIKey,
-			URL:                  cfg.TestkubeProURL,
-			LogsPath:             cfg.TestkubeProLogsPath,
-			TLSInsecure:          cfg.TestkubeProTLSInsecure,
-			WorkerCount:          cfg.TestkubeProWorkerCount,
-			LogStreamWorkerCount: cfg.TestkubeProLogStreamWorkerCount,
-			SkipVerify:           cfg.TestkubeProSkipVerify,
-			EnvID:                cfg.TestkubeProEnvID,
-			OrgID:                cfg.TestkubeProOrgID,
-			Migrate:              cfg.TestkubeProMigrate,
-		}
-
 		api.WithProContext(&proContext)
-
 		agentHandle, err := agent.NewAgent(
 			log.DefaultLogger,
 			api.Mux.Handler(),
@@ -563,8 +586,10 @@ func main() {
 		eventsEmitter.Loader.Register(agentHandle)
 	}
 
-	api.InitEvents()
+	// Apply Pro server enhancements
+	apitclv1.NewApiTCL(api, &proContext, kubeClient).AppendRoutes()
 
+	api.InitEvents()
 	if !cfg.DisableTestTriggers {
 		triggerService := triggers.NewService(
 			sched,
@@ -596,8 +621,7 @@ func main() {
 			resultsRepository,
 			testResultsRepository,
 			executorsClient,
-			log.DefaultLogger,
-			cfg.TestkubeNamespace)
+			log.DefaultLogger)
 		g.Go(func() error {
 			return reconcilerClient.Run(ctx)
 		})

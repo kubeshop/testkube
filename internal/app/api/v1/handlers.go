@@ -61,14 +61,15 @@ func (s *TestkubeAPI) InfoHandler() fiber.Handler {
 	}
 	return func(c *fiber.Ctx) error {
 		return c.JSON(testkube.ServerInfo{
-			Commit:           version.Commit,
-			Version:          version.Version,
-			Namespace:        s.Namespace,
-			Context:          apiContext,
-			EnvId:            envID,
-			OrgId:            orgID,
-			HelmchartVersion: s.helmchartVersion,
-			DashboardUri:     s.dashboardURI,
+			Commit:                version.Commit,
+			Version:               version.Version,
+			Namespace:             s.Namespace,
+			Context:               apiContext,
+			EnvId:                 envID,
+			OrgId:                 orgID,
+			HelmchartVersion:      s.helmchartVersion,
+			DashboardUri:          s.dashboardURI,
+			DisableSecretCreation: s.disableSecretCreation,
 			Features: &testkube.Features{
 				LogsV2: s.featureFlags.LogsV2,
 			},

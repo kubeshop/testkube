@@ -490,6 +490,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 	cronJobTemplateReference := cmd.Flag("cronjob-template-reference").Value.String()
 	scraperTemplateReference := cmd.Flag("scraper-template-reference").Value.String()
 	pvcTemplateReference := cmd.Flag("pvc-template-reference").Value.String()
+	executionNamespace := cmd.Flag("execution-namespace").Value.String()
 	executePostRunScriptBeforeScraping, err := cmd.Flags().GetBool("execute-postrun-script-before-scraping")
 	sourceScripts, err := cmd.Flags().GetBool("source-scripts")
 	if err != nil {
@@ -516,6 +517,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		NegativeTest:                       negativeTest,
 		ExecutePostRunScriptBeforeScraping: executePostRunScriptBeforeScraping,
 		SourceScripts:                      sourceScripts,
+		ExecutionNamespace:                 executionNamespace,
 	}
 
 	var fields = []struct {
@@ -910,6 +912,10 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 		{
 			"pvc-template-reference",
 			&request.PvcTemplateReference,
+		},
+		{
+			"execution-namespace",
+			&request.ExecutionNamespace,
 		},
 	}
 

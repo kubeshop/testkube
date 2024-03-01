@@ -21,6 +21,8 @@ type Client interface {
 	TestSourceAPI
 	CopyFileAPI
 	TemplateAPI
+	TestWorkflowAPI
+	TestWorkflowTemplateAPI
 }
 
 // TestAPI describes test api methods
@@ -126,6 +128,26 @@ type TestSourceAPI interface {
 	DeleteTestSources(selector string) (err error)
 }
 
+// TestWorkflowAPI describes test workflow api methods
+type TestWorkflowAPI interface {
+	GetTestWorkflow(id string) (testkube.TestWorkflow, error)
+	ListTestWorkflows(selector string) (testkube.TestWorkflows, error)
+	DeleteTestWorkflows(selector string) error
+	CreateTestWorkflow(workflow testkube.TestWorkflow) (testkube.TestWorkflow, error)
+	UpdateTestWorkflow(workflow testkube.TestWorkflow) (testkube.TestWorkflow, error)
+	DeleteTestWorkflow(name string) error
+}
+
+// TestWorkflowTemplateAPI describes test workflow api methods
+type TestWorkflowTemplateAPI interface {
+	GetTestWorkflowTemplate(id string) (testkube.TestWorkflowTemplate, error)
+	ListTestWorkflowTemplates(selector string) (testkube.TestWorkflowTemplates, error)
+	DeleteTestWorkflowTemplates(selector string) error
+	CreateTestWorkflowTemplate(workflow testkube.TestWorkflowTemplate) (testkube.TestWorkflowTemplate, error)
+	UpdateTestWorkflowTemplate(workflow testkube.TestWorkflowTemplate) (testkube.TestWorkflowTemplate, error)
+	DeleteTestWorkflowTemplate(name string) error
+}
+
 // CopyFileAPI describes methods to handle files in the object storage
 type CopyFileAPI interface {
 	UploadFile(parentName string, parentType TestingType, filePath string, fileContent []byte, timeout time.Duration) error
@@ -208,6 +230,7 @@ type ExecuteTestOptions struct {
 	EnvSecrets                         []testkube.EnvReference
 	RunningContext                     *testkube.RunningContext
 	SlavePodRequest                    *testkube.PodRequest
+	ExecutionNamespace                 string
 }
 
 // ExecuteTestSuiteOptions contains test suite run options
@@ -232,7 +255,8 @@ type Gettable interface {
 	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails |
 		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution | testkube.TestWithExecutionSummary |
 		testkube.TestSuiteWithExecutionSummary | testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo |
-		testkube.TestSource | testkube.Template
+		testkube.TestSource | testkube.Template |
+		testkube.TestWorkflow | testkube.TestWorkflowTemplate
 }
 
 // Executable is an interface of executable objects

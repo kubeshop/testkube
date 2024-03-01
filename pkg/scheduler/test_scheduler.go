@@ -11,17 +11,21 @@ import (
 
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	testsourcev1 "github.com/kubeshop/testkube-operator/api/testsource/v1"
+	"github.com/kubeshop/testkube-operator/pkg/secret"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
+	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
+	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
 const (
-	containerType = "container"
+	containerType       = "container"
+	gitCredentialPrefix = "git_credential_"
 )
 
 func (s *Scheduler) PrepareTestRequests(work []testsv3.Test, request testkube.ExecutionRequest) []workerpool.Request[
@@ -72,16 +76,20 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	// merge available data into execution options test spec, executor spec, request, test id
 	options, err := s.getExecuteOptions(test.Namespace, test.Name, request)
 	if err != nil {
-		return s.handleExecutionError(ctx, execution, "can't get current secret uuid: %w", err)
+		return s.handleExecutionError(ctx, execution, "can't get execute options: %w", err)
 	}
 
 	// store execution in storage, can be fetched from API now
-	execution = newExecutionFromExecutionOptions(options)
+	execution, err = newExecutionFromExecutionOptions(s.subscriptionChecker, options)
+	if err != nil {
+		return s.handleExecutionError(ctx, execution, "can't get new execution: %w", err)
+	}
+
 	options.ID = execution.Id
 
 	s.events.Notify(testkube.NewEventStartTest(&execution))
 
-	if err := s.createSecretsReferences(&execution); err != nil {
+	if err := s.createSecretsReferences(&execution, &options); err != nil {
 		return s.handleExecutionError(ctx, execution, "can't create secret variables `Secret` references: %w", err)
 	}
 
@@ -195,7 +203,7 @@ func (s *Scheduler) getNextExecutionNumber(testName string) int32 {
 }
 
 // createSecretsReferences strips secrets from text and store it inside model as reference to secret
-func (s *Scheduler) createSecretsReferences(execution *testkube.Execution) (err error) {
+func (s *Scheduler) createSecretsReferences(execution *testkube.Execution, options *client.ExecuteOptions) (err error) {
 	secrets := map[string]string{}
 	secretName := execution.Id + "-vars"
 
@@ -223,6 +231,32 @@ func (s *Scheduler) createSecretsReferences(execution *testkube.Execution) (err 
 		}
 	}
 
+	secretRefs := []*testkube.SecretRef{options.UsernameSecret, options.TokenSecret}
+	for _, secretRef := range secretRefs {
+		if secretRef == nil {
+			continue
+		}
+
+		if execution.TestNamespace == s.namespace || (secretRef.Name != secret.GetMetadataName(execution.TestName, client.SecretTest) &&
+			secretRef.Name != secret.GetMetadataName(execution.TestName, client.SecretSource)) {
+			continue
+		}
+
+		data, err := s.secretClient.Get(secretRef.Name)
+		if err != nil {
+			return err
+		}
+
+		value, ok := data[secretRef.Key]
+		if !ok {
+			return fmt.Errorf("secret key %s not found for secret %s", secretRef.Key, secretRef.Name)
+		}
+
+		secrets[gitCredentialPrefix+secretRef.Key] = value
+		secretRef.Name = secretName
+		secretRef.Key = gitCredentialPrefix + secretRef.Key
+	}
+
 	labels := map[string]string{"executionID": execution.Id, "testName": execution.TestName}
 
 	if len(secrets) > 0 {
@@ -230,13 +264,14 @@ func (s *Scheduler) createSecretsReferences(execution *testkube.Execution) (err 
 			secretName,
 			labels,
 			secrets,
+			execution.TestNamespace,
 		)
 	}
 
 	return nil
 }
 
-func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Execution {
+func newExecutionFromExecutionOptions(subscriptionChecker checktcl.SubscriptionChecker, options client.ExecuteOptions) (testkube.Execution, error) {
 	execution := testkube.NewExecution(
 		options.Request.Id,
 		options.Namespace,
@@ -271,7 +306,16 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution.DownloadArtifactTestNames = options.Request.DownloadArtifactTestNames
 	execution.SlavePodRequest = options.Request.SlavePodRequest
 
-	return execution
+	// Pro edition only (tcl protected code)
+	if schedulertcl.HasExecutionNamespace(&options.Request) {
+		if err := subscriptionChecker.IsActiveOrgPlanEnterpriseForFeature("execution namespace"); err != nil {
+			return execution, err
+		}
+
+		execution = schedulertcl.NewExecutionFromExecutionOptions(options.Request, execution)
+	}
+
+	return execution, nil
 }
 
 func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
@@ -300,6 +344,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 
 	test := testsmapper.MapTestCRToAPI(*testCR)
 
+	request.Namespace = namespace
 	if test.ExecutionRequest != nil {
 		// Test variables lowest priority, then test suite, then test suite execution / test execution
 		request.Variables = mergeVariables(test.ExecutionRequest.Variables, request.Variables)
@@ -402,6 +447,15 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 			s.logger.Infow("setting negative test from test definition", "test", test.Name, "negativeTest", test.ExecutionRequest.NegativeTest)
 			request.NegativeTest = test.ExecutionRequest.NegativeTest
 		}
+
+		// Pro edition only (tcl protected code)
+		if schedulertcl.HasExecutionNamespace(test.ExecutionRequest) {
+			if err = s.subscriptionChecker.IsActiveOrgPlanEnterpriseForFeature("execution namespace"); err != nil {
+				return options, err
+			}
+
+			request = schedulertcl.GetExecuteOptions(test.ExecutionRequest, request)
+		}
 	}
 
 	// get executor from kubernetes CRs
@@ -439,7 +493,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 			continue
 		}
 
-		data, err := s.configMapClient.Get(context.Background(), configMap.Reference.Name)
+		data, err := s.configMapClient.Get(context.Background(), configMap.Reference.Name, request.Namespace)
 		if err != nil {
 			return options, errors.Errorf("can't get config map: %v", err)
 		}
@@ -459,7 +513,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 			continue
 		}
 
-		data, err := s.secretClient.Get(secret.Reference.Name)
+		data, err := s.secretClient.Get(secret.Reference.Name, request.Namespace)
 		if err != nil {
 			return options, errors.Errorf("can't get secret: %v", err)
 		}
@@ -493,7 +547,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 
 	return client.ExecuteOptions{
 		TestName:             id,
-		Namespace:            namespace,
+		Namespace:            request.Namespace,
 		TestSpec:             testCR.Spec,
 		ExecutorName:         executorCR.ObjectMeta.Name,
 		ExecutorSpec:         executorCR.Spec,

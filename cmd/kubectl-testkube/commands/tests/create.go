@@ -68,6 +68,7 @@ type CreateCommonFlags struct {
 	SlavePodLimitsMemory               string
 	SlavePodTemplate                   string
 	SlavePodTemplateReference          string
+	ExecutionNamespace                 string
 }
 
 // NewCreateTestsCmd is a command tp create new Test Custom Resource
@@ -278,6 +279,7 @@ func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
 	cmd.Flags().StringVar(&flags.SlavePodLimitsMemory, "slave-pod-limits-memory", "", "slave pod resource limits memory")
 	cmd.Flags().StringVar(&flags.SlavePodTemplate, "slave-pod-template", "", "slave pod template file path for extensions to slave pod template")
 	cmd.Flags().StringVar(&flags.SlavePodTemplateReference, "slave-pod-template-reference", "", "reference to slave pod template to use for the test")
+	cmd.Flags().StringVar(&flags.ExecutionNamespace, "execution-namespace", "", "namespace for test execution (Pro edition only)")
 }
 
 func validateExecutorTypeAndContent(executorType, contentType string, executors testkube.ExecutorsDetails) error {

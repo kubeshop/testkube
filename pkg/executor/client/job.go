@@ -77,10 +77,9 @@ const (
 // NewJobExecutor creates new job executor
 func NewJobExecutor(
 	repo result.Repository,
-	namespace string,
 	images executor.Images,
 	templates executor.Templates,
-	serviceAccountName string,
+	serviceAccountNames map[string]string,
 	metrics ExecutionCounter,
 	emiter *event.Emitter,
 	configMap config.Repository,
@@ -98,14 +97,17 @@ func NewJobExecutor(
 	logsStream logsclient.Stream,
 	features featureflags.FeatureFlags,
 ) (client *JobExecutor, err error) {
+	if serviceAccountNames == nil {
+		serviceAccountNames = make(map[string]string)
+	}
+
 	return &JobExecutor{
 		ClientSet:            clientset,
 		Repository:           repo,
 		Log:                  log.DefaultLogger,
-		Namespace:            namespace,
 		images:               images,
 		templates:            templates,
-		serviceAccountName:   serviceAccountName,
+		serviceAccountNames:  serviceAccountNames,
 		metrics:              metrics,
 		Emitter:              emiter,
 		configMap:            configMap,
@@ -133,11 +135,10 @@ type JobExecutor struct {
 	Repository           result.Repository
 	Log                  *zap.SugaredLogger
 	ClientSet            kubernetes.Interface
-	Namespace            string
 	Cmd                  string
 	images               executor.Images
 	templates            executor.Templates
-	serviceAccountName   string
+	serviceAccountNames  map[string]string
 	metrics              ExecutionCounter
 	Emitter              *event.Emitter
 	configMap            config.Repository
@@ -196,7 +197,7 @@ type JobOptions struct {
 }
 
 // Logs returns job logs stream channel using kubernetes api
-func (c *JobExecutor) Logs(ctx context.Context, id string) (out chan output.Output, err error) {
+func (c *JobExecutor) Logs(ctx context.Context, id, namespace string) (out chan output.Output, err error) {
 	out = make(chan output.Output)
 	logs := make(chan []byte)
 
@@ -206,7 +207,7 @@ func (c *JobExecutor) Logs(ctx context.Context, id string) (out chan output.Outp
 			close(out)
 		}()
 
-		if err := c.TailJobLogs(ctx, id, logs); err != nil {
+		if err := c.TailJobLogs(ctx, id, namespace, logs); err != nil {
 			out <- output.NewOutputError(err)
 			return
 		}
@@ -237,10 +238,10 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 	c.streamLog(ctx, execution.Id, events.NewLog("created kubernetes job").WithSource(events.SourceJobExecutor))
 
 	if !options.Sync {
-		go c.MonitorJobForTimeout(ctx, execution.Id)
+		go c.MonitorJobForTimeout(ctx, execution.Id, execution.TestNamespace)
 	}
 
-	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
+	podsClient := c.ClientSet.CoreV1().Pods(execution.TestNamespace)
 	pods, err := executor.GetJobPods(ctx, podsClient, execution.Id, 1, 10)
 	if err != nil {
 		return result.Err(err), err
@@ -274,7 +275,7 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 	return result, nil
 }
 
-func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) {
+func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName, namespace string) {
 	ticker := time.NewTicker(pollJobStatus)
 	l := c.Log.With("jobName", jobName)
 	for {
@@ -283,7 +284,7 @@ func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) 
 			l.Infow("context done, stopping job timeout monitor")
 			return
 		case <-ticker.C:
-			jobs, err := c.ClientSet.BatchV1().Jobs(c.Namespace).List(ctx, metav1.ListOptions{LabelSelector: "job-name=" + jobName})
+			jobs, err := c.ClientSet.BatchV1().Jobs(namespace).List(ctx, metav1.ListOptions{LabelSelector: "job-name=" + jobName})
 			if err != nil {
 				l.Errorw("could not get jobs", "error", err)
 				return
@@ -321,9 +322,9 @@ func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName string) 
 
 // CreateJob creates new Kubernetes job based on execution and execute options
 func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
-	jobs := c.ClientSet.BatchV1().Jobs(c.Namespace)
+	jobs := c.ClientSet.BatchV1().Jobs(execution.TestNamespace)
 	jobOptions, err := NewJobOptions(c.Log, c.templatesClient, c.images, c.templates,
-		c.serviceAccountName, c.registry, c.clusterID, c.apiURI, execution, options, c.natsURI, c.debug)
+		c.serviceAccountNames, c.registry, c.clusterID, c.apiURI, execution, options, c.natsURI, c.debug)
 	if err != nil {
 		return err
 	}
@@ -331,7 +332,7 @@ func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Executio
 	if jobOptions.ArtifactRequest != nil &&
 		jobOptions.ArtifactRequest.StorageClassName != "" {
 		c.Log.Debug("creating persistent volume claim with options", "options", jobOptions)
-		pvcsClient := c.ClientSet.CoreV1().PersistentVolumeClaims(c.Namespace)
+		pvcsClient := c.ClientSet.CoreV1().PersistentVolumeClaims(execution.TestNamespace)
 		pvcSpec, err := NewPersistentVolumeClaimSpec(c.Log, NewPVCOptionsFromJobOptions(jobOptions))
 		if err != nil {
 			return err
@@ -366,14 +367,14 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	}()
 
 	// wait for pod to be loggable
-	if err = wait.PollUntilContextTimeout(ctx, pollInterval, c.podStartTimeout, true, executor.IsPodLoggable(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+	if err = wait.PollUntilContextTimeout(ctx, pollInterval, c.podStartTimeout, true, executor.IsPodLoggable(c.ClientSet, pod.Name, execution.TestNamespace)); err != nil {
 		c.streamLog(ctx, execution.Id, events.NewErrorLog(errors.Wrap(err, "can't start test job pod")))
 		l.Errorw("waiting for pod started error", "error", err)
 	}
 
 	l.Debug("poll immediate waiting for pod")
 	// wait for pod
-	if err = wait.PollUntilContextTimeout(ctx, pollInterval, pollTimeout, true, executor.IsPodReady(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+	if err = wait.PollUntilContextTimeout(ctx, pollInterval, pollTimeout, true, executor.IsPodReady(c.ClientSet, pod.Name, execution.TestNamespace)); err != nil {
 		// continue on poll err and try to get logs later
 		c.streamLog(ctx, execution.Id, events.NewErrorLog(errors.Wrap(err, "can't read data from pod, pod was not completed")))
 		l.Errorw("waiting for pod complete error", "error", err)
@@ -387,7 +388,7 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	c.streamLog(ctx, execution.Id, events.NewLog("analyzing test results and artfacts"))
 	if execution.ArtifactRequest != nil &&
 		execution.ArtifactRequest.StorageClassName != "" {
-		pvcsClient := c.ClientSet.CoreV1().PersistentVolumeClaims(c.Namespace)
+		pvcsClient := c.ClientSet.CoreV1().PersistentVolumeClaims(execution.TestNamespace)
 		err = pvcsClient.Delete(ctx, execution.Id+"-pvc", metav1.DeleteOptions{})
 		if err != nil {
 			return execution.ExecutionResult, err
@@ -395,7 +396,7 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	}
 
 	var logs []byte
-	logs, err = executor.GetPodLogs(ctx, c.ClientSet, c.Namespace, pod)
+	logs, err = executor.GetPodLogs(ctx, c.ClientSet, execution.TestNamespace, pod)
 	if err != nil {
 		l.Errorw("get pod logs error", "error", err)
 		c.streamLog(ctx, execution.Id, events.NewErrorLog(err))
@@ -627,9 +628,9 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 }
 
 // TailJobLogs - locates logs for job pod(s)
-func (c *JobExecutor) TailJobLogs(ctx context.Context, id string, logs chan []byte) (err error) {
+func (c *JobExecutor) TailJobLogs(ctx context.Context, id, namespace string, logs chan []byte) (err error) {
 
-	podsClient := c.ClientSet.CoreV1().Pods(c.Namespace)
+	podsClient := c.ClientSet.CoreV1().Pods(namespace)
 
 	pods, err := executor.GetJobPods(ctx, podsClient, id, 1, 10)
 	if err != nil {
@@ -655,7 +656,7 @@ func (c *JobExecutor) TailJobLogs(ctx context.Context, id string, logs chan []by
 
 			default:
 				l.Debugw("tailing job logs: waiting for pod to be ready")
-				if err = wait.PollUntilContextTimeout(ctx, pollInterval, c.podStartTimeout, true, executor.IsPodLoggable(c.ClientSet, pod.Name, c.Namespace)); err != nil {
+				if err = wait.PollUntilContextTimeout(ctx, pollInterval, c.podStartTimeout, true, executor.IsPodLoggable(c.ClientSet, pod.Name, namespace)); err != nil {
 					l.Errorw("poll immediate error when tailing logs", "error", err)
 					return err
 				}
@@ -692,7 +693,7 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 			}
 
 			podLogRequest := c.ClientSet.CoreV1().
-				Pods(c.Namespace).
+				Pods(pod.Namespace).
 				GetLogs(pod.Name, &podLogOptions)
 
 			stream, err := podLogRequest.Stream(ctx)
@@ -726,7 +727,7 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 // GetPodLogError returns last line as error
 func (c *JobExecutor) GetPodLogError(ctx context.Context, pod corev1.Pod) (logsBytes []byte, err error) {
 	// error line should be last one
-	return executor.GetPodLogs(ctx, c.ClientSet, c.Namespace, pod, 1)
+	return executor.GetPodLogs(ctx, c.ClientSet, pod.Namespace, pod, 1)
 }
 
 // GetLastLogLineError return error if last line is failed
@@ -752,7 +753,7 @@ func (c *JobExecutor) GetLastLogLineError(ctx context.Context, pod corev1.Pod) e
 // Abort aborts K8S by job name
 func (c *JobExecutor) Abort(ctx context.Context, execution *testkube.Execution) (result *testkube.ExecutionResult, err error) {
 	l := c.Log.With("execution", execution.Id)
-	result, err = executor.AbortJob(ctx, c.ClientSet, c.Namespace, execution.Id)
+	result, err = executor.AbortJob(ctx, c.ClientSet, execution.TestNamespace, execution.Id)
 	if err != nil {
 		l.Errorw("error aborting job", "execution", execution.Id, "error", err)
 	}
@@ -884,7 +885,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 }
 
 func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, images executor.Images,
-	templates executor.Templates, serviceAccountName, registry, clusterID, apiURI string,
+	templates executor.Templates, serviceAccountNames map[string]string, registry, clusterID, apiURI string,
 	execution testkube.Execution, options ExecuteOptions, natsURI string, debug bool) (jobOptions JobOptions, err error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
@@ -938,6 +939,11 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	}
 
 	jobOptions.Variables = execution.Variables
+	serviceAccountName, ok := serviceAccountNames[execution.TestNamespace]
+	if !ok {
+		return jobOptions, fmt.Errorf("not supported namespace %s", execution.TestNamespace)
+	}
+
 	jobOptions.ServiceAccountName = serviceAccountName
 	jobOptions.Registry = registry
 	jobOptions.ClusterID = clusterID

@@ -26,7 +26,7 @@ type Executor interface {
 	// Abort aborts pending execution, do nothing when there is no pending execution
 	Abort(ctx context.Context, execution *testkube.Execution) (result *testkube.ExecutionResult, err error)
 
-	Logs(ctx context.Context, id string) (logs chan output.Output, err error)
+	Logs(ctx context.Context, id, namespace string) (logs chan output.Output, err error)
 }
 
 // HTTPClient interface for getting REST based requests

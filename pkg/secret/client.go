@@ -18,10 +18,10 @@ const testkubeTestSecretLabel = "tests-secrets"
 
 //go:generate mockgen -destination=./mock_client.go -package=secret "github.com/kubeshop/testkube/pkg/secret" Interface
 type Interface interface {
-	Get(id string) (map[string]string, error)
+	Get(id string, namespace ...string) (map[string]string, error)
 	GetObject(id string) (*v1.Secret, error)
 	List(all bool) (map[string]map[string]string, error)
-	Create(id string, labels, stringData map[string]string) error
+	Create(id string, labels, stringData map[string]string, namespace ...string) error
 	Apply(id string, labels, stringData map[string]string) error
 	Update(id string, labels, stringData map[string]string) error
 	Delete(id string) error
@@ -50,8 +50,13 @@ func NewClient(namespace string) (*Client, error) {
 }
 
 // Get is a method to retrieve an existing secret
-func (c *Client) Get(id string) (map[string]string, error) {
-	secretsClient := c.ClientSet.CoreV1().Secrets(c.Namespace)
+func (c *Client) Get(id string, namespace ...string) (map[string]string, error) {
+	ns := c.Namespace
+	if len(namespace) != 0 {
+		ns = namespace[0]
+	}
+
+	secretsClient := c.ClientSet.CoreV1().Secrets(ns)
 	ctx := context.Background()
 
 	secretSpec, err := secretsClient.Get(ctx, id, metav1.GetOptions{})
@@ -110,11 +115,16 @@ func (c *Client) List(all bool) (map[string]map[string]string, error) {
 }
 
 // Create is a method to create new secret
-func (c *Client) Create(id string, labels, stringData map[string]string) error {
-	secretsClient := c.ClientSet.CoreV1().Secrets(c.Namespace)
+func (c *Client) Create(id string, labels, stringData map[string]string, namespace ...string) error {
+	ns := c.Namespace
+	if len(namespace) != 0 {
+		ns = namespace[0]
+	}
+
+	secretsClient := c.ClientSet.CoreV1().Secrets(ns)
 	ctx := context.Background()
 
-	secretSpec := NewSpec(id, c.Namespace, labels, stringData)
+	secretSpec := NewSpec(id, ns, labels, stringData)
 	if _, err := secretsClient.Create(ctx, secretSpec, metav1.CreateOptions{}); err != nil {
 		return err
 	}

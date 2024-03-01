@@ -62,7 +62,12 @@ func (l *CDEventListener) Metadata() map[string]string {
 
 func (l *CDEventListener) Notify(event testkube.Event) (result testkube.EventResult) {
 	// Create the base event
-	ev, err := cde.MapTestkubeEventToCDEvent(event, l.clusterID, l.defaultNamespace, l.dashboardURI)
+	namespace := l.defaultNamespace
+	if event.TestExecution != nil {
+		namespace = event.TestExecution.TestNamespace
+	}
+
+	ev, err := cde.MapTestkubeEventToCDEvent(event, l.clusterID, namespace, l.dashboardURI)
 	if err != nil {
 		return testkube.NewFailedEventResult(event.Id, err)
 	}

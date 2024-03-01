@@ -1,0 +1,27 @@
+kind: WorkflowTemplate
+apiVersion: workflows.testkube.io/v1beta1
+metadata:
+  name: pre-official--cypress
+spec:
+  config:
+    dependencies_command:
+      description: Command to install dependencies
+      type: string
+      default: npm install
+    version:
+      description: Cypress version to use
+      type: string
+      default: 13.6.4
+    params:
+      description: Additional params for the cypress run command
+      type: string
+      default: ""
+  steps:
+  - name: Install dependencies
+    run:
+      image: cypress/included:{{ config.version }}
+      shell: '{{ config.dependencies_command }}'
+  - name: Run Cypress tests
+    run:
+      image: cypress/included:{{ config.version }}
+      shell: npx cypress run {{ config.params }}

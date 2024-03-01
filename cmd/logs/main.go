@@ -88,9 +88,11 @@ func main() {
 	svc := logs.NewLogsService(nc, js, state, logStream).
 		WithHttpAddress(cfg.HttpAddress).
 		WithGrpcAddress(cfg.GrpcAddress).
-		WithLogsRepositoryFactory(repository.NewJsMinioFactory(minioClient, cfg.StorageBucket, logStream))
+		WithLogsRepositoryFactory(repository.NewJsMinioFactory(minioClient, cfg.StorageBucket, logStream)).
+		WithMessageTracing(cfg.TraceMessages)
 
-	if cfg.Debug {
+	// quite noisy in logs - will echo all messages incoming from logs
+	if cfg.AttachDebugAdapter {
 		svc.AddAdapter(adapter.NewDebugAdapter())
 	}
 
@@ -98,6 +100,8 @@ func main() {
 	if err != nil {
 		log.Fatalw("error getting tls credentials", "error", err)
 	}
+
+	log.Infow("starting logs service", "mode", mode)
 
 	// add given log adapter depends from mode
 	switch mode {
@@ -108,6 +112,7 @@ func main() {
 		defer grpcConn.Close()
 		grpcClient := pb.NewCloudLogsServiceClient(grpcConn)
 		cloudAdapter := adapter.NewCloudAdapter(grpcClient, cfg.TestkubeProAPIKey)
+		log.Infow("cloud adapter created", "endpoint", cfg.TestkubeProURL)
 		svc.AddAdapter(cloudAdapter)
 
 	case common.ModeStandalone:

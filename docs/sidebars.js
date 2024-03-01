@@ -101,12 +101,26 @@ const sidebars = {
             id: "articles/cicd-overview",
           },
           items: [
-            "articles/github-actions",
+            {
+              type: "category", 
+              label: "Github Actions", 
+              link: {
+                type: "doc",
+                id: "articles/github-actions"
+              },
+              items: [
+                {
+                  type: "doc",
+                  id: "articles/run-tests-with-github-actions",
+                  label: "Migrate from testkube-run-action"
+                }
+              ]
+            },
             "articles/gitlab",
             "articles/jenkins",
             "articles/jenkins-ui",
+            "articles/azure",
             "articles/circleci",
-            "articles/run-tests-with-github-actions",
             "articles/testkube-cli-docker",
             {
               type: "category",
@@ -193,7 +207,10 @@ const sidebars = {
     {
       type: "category",
       label: "Testkube Enterprise",
-      items: ["testkube-enterprise/articles/usage-guide", "testkube-enterprise/articles/auth"],
+      items: [
+        "testkube-enterprise/articles/testkube-enterprise",
+        "testkube-enterprise/articles/usage-guide", 
+        "testkube-enterprise/articles/auth"],
     },
     "articles/testkube-oss",
     {
@@ -240,6 +257,13 @@ const sidebars = {
           },
           items: ["articles/crds"],
         },
+      ],
+    },
+    {
+      type: "category",
+      label: "FAQs",
+      items: [
+        "articles/testkube-licensing-FAQ",
       ],
     },
   ],

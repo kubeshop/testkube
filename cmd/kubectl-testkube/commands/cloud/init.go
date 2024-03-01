@@ -1,6 +1,8 @@
 package cloud
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -43,23 +45,27 @@ func NewInitCmd() *cobra.Command {
 				ui.NL()
 
 				currentContext, err := common.GetCurrentKubernetesContext()
-				sendErrTelemetry(cmd, cfg, "k8s_context")
-				ui.ExitOnError("getting current context", err)
+				if err != nil {
+					sendErrTelemetry(cmd, cfg, "k8s_context", err)
+					ui.ExitOnError("getting current context", err)
+				}
 				ui.Alert("Current kubectl context:", currentContext)
 				ui.NL()
 
 				ok := ui.Confirm("Do you want to continue?")
 				if !ok {
 					ui.Errf("Testkube installation cancelled")
-					sendErrTelemetry(cmd, cfg, "user_cancel")
+					sendErrTelemetry(cmd, cfg, "user_cancel", err)
 					return
 				}
 			}
 
 			spinner := ui.NewSpinner("Installing Testkube")
 			err = common.HelmUpgradeOrInstallTestkubeCloud(options, cfg, false)
-			sendErrTelemetry(cmd, cfg, "helm_install")
-			ui.ExitOnError("Installing Testkube", err)
+			if err != nil {
+				sendErrTelemetry(cmd, cfg, "helm_install", err)
+				ui.ExitOnError("Installing Testkube", err)
+			}
 			spinner.Success()
 
 			ui.NL()
@@ -68,11 +74,11 @@ func NewInitCmd() *cobra.Command {
 			var token, refreshToken string
 			if !common.IsUserLoggedIn(cfg, options) {
 				token, refreshToken, err = common.LoginUser(options.Master.URIs.Auth)
-				sendErrTelemetry(cmd, cfg, "login")
+				sendErrTelemetry(cmd, cfg, "login", err)
 				ui.ExitOnError("user login", err)
 			}
 			err = common.PopulateLoginDataToContext(options.Master.OrgId, options.Master.EnvId, token, refreshToken, options, cfg)
-			sendErrTelemetry(cmd, cfg, "setting_context")
+			sendErrTelemetry(cmd, cfg, "setting_context", err)
 			ui.ExitOnError("Setting cloud environment context", err)
 
 			ui.Info(" Happy Testing! 🚀")
@@ -88,10 +94,12 @@ func NewInitCmd() *cobra.Command {
 	return cmd
 }
 
-func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType string) {
+func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType string, errorLogs error) {
+	var errorStackTrace string
+	errorStackTrace = fmt.Sprintf("%+v", errorLogs)
 	if clientCfg.TelemetryEnabled {
 		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
-		out, err := telemetry.SendCmdErrorEvent(cmd, common.Version, errType)
+		out, err := telemetry.SendCmdErrorEvent(cmd, common.Version, errType, errorStackTrace)
 		if ui.Verbose && err != nil {
 			ui.Err(err)
 		}

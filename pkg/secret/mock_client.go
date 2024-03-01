@@ -49,17 +49,22 @@ func (mr *MockInterfaceMockRecorder) Apply(arg0, arg1, arg2 interface{}) *gomock
 }
 
 // Create mocks base method.
-func (m *MockInterface) Create(arg0 string, arg1, arg2 map[string]string) error {
+func (m *MockInterface) Create(arg0 string, arg1, arg2 map[string]string, arg3 ...string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", arg0, arg1, arg2)
+	varargs := []interface{}{arg0, arg1, arg2}
+	for _, a := range arg3 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Create", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockInterfaceMockRecorder) Create(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Create(arg0, arg1, arg2 interface{}, arg3 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockInterface)(nil).Create), arg0, arg1, arg2)
+	varargs := append([]interface{}{arg0, arg1, arg2}, arg3...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockInterface)(nil).Create), varargs...)
 }
 
 // Delete mocks base method.
@@ -91,18 +96,23 @@ func (mr *MockInterfaceMockRecorder) DeleteAll(arg0 interface{}) *gomock.Call {
 }
 
 // Get mocks base method.
-func (m *MockInterface) Get(arg0 string) (map[string]string, error) {
+func (m *MockInterface) Get(arg0 string, arg1 ...string) (map[string]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0)
+	varargs := []interface{}{arg0}
+	for _, a := range arg1 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Get", varargs...)
 	ret0, _ := ret[0].(map[string]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockInterfaceMockRecorder) Get(arg0 interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Get(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInterface)(nil).Get), arg0)
+	varargs := append([]interface{}{arg0}, arg1...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInterface)(nil).Get), varargs...)
 }
 
 // GetObject mocks base method.

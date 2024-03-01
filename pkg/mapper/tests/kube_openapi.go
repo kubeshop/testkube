@@ -6,6 +6,7 @@ import (
 	commonv1 "github.com/kubeshop/testkube-operator/api/common/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	mappertcl "github.com/kubeshop/testkube/pkg/tcl/mappertcl/tests"
 )
 
 // MapTestListKubeToAPI maps CRD list data to OpenAPI spec tests list
@@ -153,7 +154,7 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 		podRequest.PodTemplateReference = specExecutionRequest.SlavePodRequest.PodTemplateReference
 	}
 
-	return &testkube.ExecutionRequest{
+	result := &testkube.ExecutionRequest{
 		Name:                               specExecutionRequest.Name,
 		TestSuiteName:                      specExecutionRequest.TestSuiteName,
 		Number:                             specExecutionRequest.Number,
@@ -193,6 +194,9 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 		EnvSecrets:                         MapEnvReferences(specExecutionRequest.EnvSecrets),
 		SlavePodRequest:                    podRequest,
 	}
+
+	// Pro edition only (tcl protected code)
+	return mappertcl.MapExecutionRequestFromSpec(specExecutionRequest, result)
 }
 
 // MapImagePullSecrets maps Kubernetes spec to testkube model
@@ -520,6 +524,9 @@ func MapSpecExecutionRequestToExecutionUpdateRequest(
 	executionRequest.EnvSecrets = &envSecrets
 	executionRequest.ExecutePostRunScriptBeforeScraping = &request.ExecutePostRunScriptBeforeScraping
 	executionRequest.SourceScripts = &request.SourceScripts
+
+	// Pro edition only (tcl protected code)
+	mappertcl.MapSpecExecutionRequestToExecutionUpdateRequest(request, executionRequest)
 
 	if request.ArtifactRequest != nil {
 		artifactRequest := &testkube.ArtifactUpdateRequest{

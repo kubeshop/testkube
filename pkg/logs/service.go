@@ -86,6 +86,9 @@ type LogsService struct {
 
 	// stop wait time for messages cool down
 	stopPauseInterval time.Duration
+
+	// trace incoming messages
+	traceMessages bool
 }
 
 // AddAdapter adds new adapter to logs service adapters will be configred based on given mode
@@ -161,6 +164,11 @@ func (ls *LogsService) Shutdown(ctx context.Context) (err error) {
 
 func (ls *LogsService) WithHttpAddress(address string) *LogsService {
 	ls.httpAddress = address
+	return ls
+}
+
+func (ls *LogsService) WithMessageTracing(enabled bool) *LogsService {
+	ls.traceMessages = enabled
 	return ls
 }
 

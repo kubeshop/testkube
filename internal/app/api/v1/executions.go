@@ -172,7 +172,7 @@ func (s *TestkubeAPI) GetLogsStream(ctx context.Context, executionID string) (ch
 		return nil, fmt.Errorf("can't get executor for test type %s: %w", execution.TestType, err)
 	}
 
-	logs, err := executor.Logs(ctx, executionID)
+	logs, err := executor.Logs(ctx, executionID, execution.TestNamespace)
 	if err != nil {
 		return nil, fmt.Errorf("can't get executor logs: %w", err)
 	}
@@ -279,7 +279,7 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 				return
 			}
 
-			s.streamLogsFromJob(ctx, executionID, execution.TestType, w)
+			s.streamLogsFromJob(ctx, executionID, execution.TestType, execution.TestNamespace, w)
 		})
 
 		return nil
@@ -583,7 +583,7 @@ func (s *TestkubeAPI) streamLogsFromResult(executionResult *testkube.ExecutionRe
 }
 
 // streamLogsFromJob streams logs in chunks to writer from the running execution
-func (s *TestkubeAPI) streamLogsFromJob(ctx context.Context, executionID, testType string, w *bufio.Writer) {
+func (s *TestkubeAPI) streamLogsFromJob(ctx context.Context, executionID, testType, namespace string, w *bufio.Writer) {
 	enc := json.NewEncoder(w)
 	s.Log.Infow("getting logs from Kubernetes job")
 
@@ -595,7 +595,7 @@ func (s *TestkubeAPI) streamLogsFromJob(ctx context.Context, executionID, testTy
 		return
 	}
 
-	logs, err := executor.Logs(ctx, executionID)
+	logs, err := executor.Logs(ctx, executionID, namespace)
 	s.Log.Debugw("waiting for jobs channel", "channelSize", len(logs))
 	if err != nil {
 		output.PrintError(os.Stdout, err)
@@ -697,7 +697,7 @@ func (s *TestkubeAPI) getExecutionLogs(ctx context.Context, execution testkube.E
 		return append(res, execution.ExecutionResult.Output), nil
 	}
 
-	logs, err := s.Executor.Logs(ctx, execution.Id)
+	logs, err := s.Executor.Logs(ctx, execution.Id, execution.TestNamespace)
 	if err != nil {
 		return []string{}, fmt.Errorf("could not get logs for execution %s: %w", execution.Id, err)
 	}

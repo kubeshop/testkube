@@ -297,7 +297,7 @@ func (e MockExecutor) Abort(ctx context.Context, execution *testkube.Execution) 
 	panic("not implemented")
 }
 
-func (e MockExecutor) Logs(ctx context.Context, id string) (chan output.Output, error) {
+func (e MockExecutor) Logs(ctx context.Context, id, namespace string) (chan output.Output, error) {
 	if e.LogsFn == nil {
 		panic("not implemented")
 	}

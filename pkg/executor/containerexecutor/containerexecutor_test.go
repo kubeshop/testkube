@@ -31,15 +31,15 @@ func TestExecuteAsync(t *testing.T) {
 	t.Parallel()
 
 	ce := ContainerExecutor{
-		clientSet:       getFakeClient("1"),
-		log:             logger(),
-		repository:      FakeResultRepository{},
-		metrics:         FakeMetricCounter{},
-		emitter:         FakeEmitter{},
-		namespace:       "default",
-		configMap:       FakeConfigRepository{},
-		testsClient:     FakeTestsClient{},
-		executorsClient: FakeExecutorsClient{},
+		clientSet:           getFakeClient("1"),
+		log:                 logger(),
+		repository:          FakeResultRepository{},
+		metrics:             FakeMetricCounter{},
+		emitter:             FakeEmitter{},
+		configMap:           FakeConfigRepository{},
+		testsClient:         FakeTestsClient{},
+		executorsClient:     FakeExecutorsClient{},
+		serviceAccountNames: map[string]string{"": ""},
 	}
 
 	execution := &testkube.Execution{Id: "1"}
@@ -57,18 +57,18 @@ func TestExecuteSync(t *testing.T) {
 	t.Parallel()
 
 	ce := ContainerExecutor{
-		clientSet:       getFakeClient("1"),
-		log:             logger(),
-		repository:      FakeResultRepository{},
-		metrics:         FakeMetricCounter{},
-		emitter:         FakeEmitter{},
-		namespace:       "default",
-		configMap:       FakeConfigRepository{},
-		testsClient:     FakeTestsClient{},
-		executorsClient: FakeExecutorsClient{},
+		clientSet:           getFakeClient("1"),
+		log:                 logger(),
+		repository:          FakeResultRepository{},
+		metrics:             FakeMetricCounter{},
+		emitter:             FakeEmitter{},
+		configMap:           FakeConfigRepository{},
+		testsClient:         FakeTestsClient{},
+		executorsClient:     FakeExecutorsClient{},
+		serviceAccountNames: map[string]string{"default": ""},
 	}
 
-	execution := &testkube.Execution{Id: "1"}
+	execution := &testkube.Execution{Id: "1", TestNamespace: "default"}
 	options := client.ExecuteOptions{
 		ImagePullSecretNames: []string{"secret-name1"},
 		Sync:                 true,
@@ -130,7 +130,7 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 	assert.NotNil(t, spec)
 
 	wantEnvs := []corev1.EnvVar{
-		{Name: "DEBUG", Value: ""},
+		{Name: "DEBUG", Value: "false"},
 		{Name: "RUNNER_ENDPOINT", Value: ""},
 		{Name: "RUNNER_ACCESSKEYID", Value: ""},
 		{Name: "RUNNER_SECRETACCESSKEY", Value: ""},
@@ -159,6 +159,7 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		{Name: "RUNNER_PRO_API_URL", Value: ""},
 		{Name: "RUNNER_PRO_API_TLS_INSECURE", Value: "false"},
 		{Name: "RUNNER_PRO_API_SKIP_VERIFY", Value: "false"},
+		{Name: "RUNNER_PRO_CONNECTION_TIMEOUT", Value: "10"},
 		{Name: "RUNNER_CLOUD_MODE", Value: "false"},             // DEPRECATED
 		{Name: "RUNNER_CLOUD_API_KEY", Value: ""},               // DEPRECATED
 		{Name: "RUNNER_CLOUD_API_URL", Value: ""},               // DEPRECATED
@@ -211,7 +212,7 @@ func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 		executor.Images{},
 		executor.Templates{},
 		mockInspector,
-		"",
+		map[string]string{},
 		"",
 		"",
 		"",
@@ -258,7 +259,7 @@ func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 		executor.Images{},
 		executor.Templates{},
 		mockInspector,
-		"",
+		map[string]string{},
 		"",
 		"",
 		"",
@@ -304,7 +305,7 @@ func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
 		executor.Images{},
 		executor.Templates{},
 		mockInspector,
-		"",
+		map[string]string{},
 		"",
 		"",
 		"",

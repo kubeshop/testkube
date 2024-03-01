@@ -45,7 +45,7 @@ const (
 var RunnerEnvVars = []corev1.EnvVar{
 	{
 		Name:  "DEBUG",
-		Value: os.Getenv("DEBUG"),
+		Value: getOr("DEBUG", "false"),
 	},
 	{
 		Name:  "RUNNER_ENDPOINT",
@@ -122,6 +122,10 @@ var RunnerEnvVars = []corev1.EnvVar{
 	{
 		Name:  "RUNNER_PRO_API_SKIP_VERIFY",
 		Value: getOr("TESTKUBE_PRO_SKIP_VERIFY", "false"),
+	},
+	{
+		Name:  "RUNNER_PRO_CONNECTION_TIMEOUT",
+		Value: getOr("TESTKUBE_PRO_CONNECTION_TIMEOUT", "10"),
 	},
 	{
 		Name:  "RUNNER_DASHBOARD_URI",
