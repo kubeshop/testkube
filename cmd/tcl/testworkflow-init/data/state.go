@@ -74,6 +74,9 @@ func (s *state) GetStatus() string {
 		return ""
 	}
 	str, _ := v.Static().StringValue()
+	if str == "" {
+		return string(s.Status)
+	}
 	return str
 }
 
