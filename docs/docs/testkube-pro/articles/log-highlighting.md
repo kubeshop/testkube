@@ -32,7 +32,7 @@ By default, all the categories are active.
 
 ## Configuring Keyword Categories
 
-There are 4 default categories, represented with few keywords each:
+There are 4 default categories, represented with a few keywords each:
 
 | Category                   | Keywords                                                            |
 |----------------------------|---------------------------------------------------------------------|
