@@ -112,10 +112,10 @@ func recomputeStatuses() {
 	State.GetStep(Step.Ref).SetStatus(status)
 
 	// Update expected failure statuses
-	for _, r := range Config.Resulting {
+	Iterate(Config.Resulting, func(r Rule) bool {
 		v, err := RefStatusExpression(r.Expr)
 		if err != nil {
-			continue
+			return false
 		}
 		vv, _ := v.Static().BoolValue()
 		if !vv {
@@ -127,7 +127,8 @@ func recomputeStatuses() {
 				}
 			}
 		}
-	}
+		return true
+	})
 }
 
 func persistStatus(filePath string) {

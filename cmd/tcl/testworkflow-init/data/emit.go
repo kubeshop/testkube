@@ -18,11 +18,11 @@ func EmitOutput(ref string, name string, value interface{}) {
 	if err != nil {
 		panic(fmt.Sprintf("error while marshalling reference: %v", err))
 	}
-	fmt.Printf(";;%s;%s:%s;", ref, name, string(j))
+	fmt.Printf("\n;;%s;%s:%s;\n", ref, name, string(j))
 }
 
 func EmitHint(ref string, name string) {
-	fmt.Printf(";;;%s;%s;", ref, name)
+	fmt.Printf("\n;;;%s;%s;\n", ref, name)
 }
 
 func EmitHintDetails(ref string, name string, value interface{}) {
@@ -30,5 +30,5 @@ func EmitHintDetails(ref string, name string, value interface{}) {
 	if err != nil {
 		panic(fmt.Sprintf("error while marshalling reference: %v", err))
 	}
-	fmt.Printf(";;;%s;%s:%s;", ref, name, string(j))
+	fmt.Printf("\n;;;%s;%s:%s;\n", ref, name, string(j))
 }

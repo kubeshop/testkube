@@ -94,17 +94,26 @@ func main() {
 		_ = os.Setenv(name, value)
 	}
 
-	// Compute conditional steps
-	for _, c := range conditions {
+	// Compute conditional steps - ignore errors initially, as the may be dependent on themselves
+	data.Iterate(conditions, func(c data.Rule) bool {
 		expr, err := data.Expression(c.Expr)
 		if err != nil {
-			output.Failf(output.CodeInputError, "broken condition for refs: %s: %s: %s", strings.Join(c.Refs, ", "), c.Expr, err.Error())
+			return false
 		}
 		v, _ := expr.BoolValue()
 		if !v {
 			for _, r := range c.Refs {
 				data.State.GetStep(r).Skip(now)
 			}
+		}
+		return true
+	})
+
+	// Fail invalid conditional steps
+	for _, c := range conditions {
+		_, err := data.Expression(c.Expr)
+		if err != nil {
+			output.Failf(output.CodeInputError, "broken condition for refs: %s: %s: %s", strings.Join(c.Refs, ", "), c.Expr, err.Error())
 		}
 	}
 

@@ -43,3 +43,19 @@ func getBool(config map[string]string, key string, defaultValue bool) bool {
 	}
 	return strings.ToLower(str) == "true" || str == "1"
 }
+
+// Iterate over all items, all the time, until no more is done
+func Iterate[T any](v []T, fn func(T) bool) {
+	result := v
+	for {
+		l := len(result)
+		for i := 0; i < len(result); i++ {
+			if fn(result[i]) {
+				result = append(result[0:i], result[i+1:]...)
+			}
+		}
+		if len(result) == l {
+			return
+		}
+	}
+}
