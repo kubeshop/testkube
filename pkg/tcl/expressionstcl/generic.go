@@ -44,7 +44,7 @@ func clone(v reflect.Value) reflect.Value {
 	return v
 }
 
-func resolve(v reflect.Value, t tagData, m []Machine, force bool) (changed bool, err error) {
+func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalizer Machine) (changed bool, err error) {
 	if t.value == "force" {
 		force = true
 	}
@@ -71,7 +71,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool) (changed bool,
 		vv, ok := v.Interface().(intstr.IntOrString)
 		if ok {
 			if vv.Type == intstr.String {
-				return resolve(v.FieldByName("StrVal"), t, m, force)
+				return resolve(v.FieldByName("StrVal"), t, m, force, finalizer)
 			}
 		} else if t.value == "include" || force {
 			tt := v.Type()
@@ -87,7 +87,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool) (changed bool,
 				}
 				value := v.FieldByName(f.Name)
 				var ch bool
-				ch, err = resolve(value, tag, m, force)
+				ch, err = resolve(value, tag, m, force, finalizer)
 				if ch {
 					changed = true
 				}
@@ -102,7 +102,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool) (changed bool,
 			return changed, nil
 		}
 		for i := 0; i < v.Len(); i++ {
-			ch, err := resolve(v.Index(i), t, m, force)
+			ch, err := resolve(v.Index(i), t, m, force, finalizer)
 			if ch {
 				changed = true
 			}
@@ -112,7 +112,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool) (changed bool,
 		}
 		return
 	case reflect.Map:
-		if t.value == "" && t.key == "" {
+		if t.value == "" && t.key == "" && !force {
 			return changed, nil
 		}
 		for _, k := range v.MapKeys() {
@@ -121,7 +121,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool) (changed bool,
 				// so we need to copy it and reassign
 				item := clone(v.MapIndex(k))
 				var ch bool
-				ch, err = resolve(item, t, m, force)
+				ch, err = resolve(item, t, m, force, finalizer)
 				if ch {
 					changed = true
 				}
@@ -133,7 +133,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool) (changed bool,
 			if t.key != "" || force {
 				key := clone(k)
 				var ch bool
-				ch, err = resolve(key, tagData{value: t.key}, m, force)
+				ch, err = resolve(key, tagData{value: t.key}, m, force, finalizer)
 				if ch {
 					changed = true
 				}
@@ -156,7 +156,16 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool) (changed bool,
 			if err != nil {
 				return changed, err
 			}
-			vv := expr.String()
+			var vv string
+			if finalizer != nil {
+				expr2, err := expr.Resolve(finalizer)
+				if err != nil {
+					vv = expr.String()
+				}
+				vv, _ = expr2.Static().StringValue()
+			} else {
+				vv = expr.String()
+			}
 			changed = vv != str
 			if ptr.Kind() == reflect.String {
 				v.SetString(vv)
@@ -170,7 +179,17 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool) (changed bool,
 			if err != nil {
 				return changed, err
 			}
-			vv := expr.Template()
+			var vv string
+			if finalizer != nil {
+				expr2, err := expr.Resolve(finalizer)
+				if err != nil {
+					vv = expr.String()
+				} else {
+					vv, _ = expr2.Static().StringValue()
+				}
+			} else {
+				vv = expr.Template()
+			}
 			changed = vv != str
 			if ptr.Kind() == reflect.String {
 				v.SetString(vv)
@@ -185,27 +204,35 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool) (changed bool,
 	return
 }
 
-func simplifyStruct(t interface{}, tag tagData, m ...Machine) error {
+func simplify(t interface{}, tag tagData, finalizer Machine, m ...Machine) error {
 	v := reflect.ValueOf(t)
 	if v.Kind() != reflect.Pointer {
-		return errors.New("pointer needs to be passed to SimplifyStruct function")
+		return errors.New("pointer needs to be passed to Simplify function")
 	}
-	changed, err := resolve(v, tag, m, false)
+	changed, err := resolve(v, tag, m, false, finalizer)
 	i := 1
 	for changed && err == nil {
 		if i > maxCallStack {
 			return fmt.Errorf("maximum call stack exceeded while simplifying struct")
 		}
-		changed, err = resolve(v, tag, m, false)
+		changed, err = resolve(v, tag, m, false, finalizer)
 		i++
 	}
 	return err
 }
 
-func SimplifyStruct(t interface{}, m ...Machine) error {
-	return simplifyStruct(t, tagData{value: "include"}, m...)
+func Simplify(t interface{}, m ...Machine) error {
+	return simplify(t, tagData{value: "include"}, nil, m...)
 }
 
-func SimplifyStructForce(t interface{}, m ...Machine) error {
-	return simplifyStruct(t, tagData{value: "force"}, m...)
+func SimplifyForce(t interface{}, m ...Machine) error {
+	return simplify(t, tagData{value: "force"}, nil, m...)
+}
+
+func Finalize(t interface{}, m ...Machine) error {
+	return simplify(t, tagData{value: "include"}, FinalizerNone, m...)
+}
+
+func FinalizeForce(t interface{}, m ...Machine) error {
+	return simplify(t, tagData{value: "force"}, FinalizerNone, m...)
 }

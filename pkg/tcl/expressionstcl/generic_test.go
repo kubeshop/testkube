@@ -67,7 +67,7 @@ func TestGenericString(t *testing.T) {
 		Dummy:    "5 + 3 + ten",
 		DummyPtr: common.Ptr("5 + 3 + ten"),
 	}
-	err := SimplifyStruct(&obj, testMachine)
+	err := Simplify(&obj, testMachine)
 	assert.NoError(t, err)
 	assert.Equal(t, "18", obj.Expr)
 	assert.Equal(t, "1310", obj.Tmpl)
@@ -84,7 +84,7 @@ func TestGenericIntOrString(t *testing.T) {
 		IntExprPtr: &intstr.IntOrString{Type: intstr.String, StrVal: "1 + 2 + ten"},
 		IntTmplPtr: &intstr.IntOrString{Type: intstr.String, StrVal: "{{ 4 + 3 }}{{ ten }}"},
 	}
-	err := SimplifyStruct(&obj, testMachine)
+	err := Simplify(&obj, testMachine)
 	assert.NoError(t, err)
 	assert.Equal(t, "18", obj.IntExpr.String())
 	assert.Equal(t, "1310", obj.IntTmpl.String())
@@ -98,7 +98,7 @@ func TestGenericSlice(t *testing.T) {
 		SliceExprStrPtr: &[]string{"200 + 100", "100 + 200", "ten", "abc"},
 		SliceExprObj:    []testObj2{{Expr: "10 + 5", Dummy: "3 + 2"}},
 	}
-	err := SimplifyStruct(&obj, testMachine)
+	err := Simplify(&obj, testMachine)
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"300", "300", "10", "abc"}, obj.SliceExprStr)
 	assert.Equal(t, &[]string{"300", "300", "10", "abc"}, obj.SliceExprStrPtr)
@@ -113,7 +113,7 @@ func TestGenericMap(t *testing.T) {
 		MapValIntTmpl: map[string]intstr.IntOrString{"{{ 10 + 3 }}2": {Type: intstr.String, StrVal: "{{ 3 + 5 }}"}},
 		MapTmplExpr:   map[string]string{"{{ 10 + 3 }}2": "3 + 5"},
 	}
-	err := SimplifyStruct(&obj, testMachine)
+	err := Simplify(&obj, testMachine)
 	assert.NoError(t, err)
 	assert.Equal(t, map[string]string{"132": "8"}, obj.MapKeyVal)
 	assert.Equal(t, map[string]string{"132": "{{ 3 + 5 }}"}, obj.MapKeyTmpl)
@@ -129,7 +129,7 @@ func TestNestedObject(t *testing.T) {
 		DummyObj:    testObj2{Expr: "10 + 8", Dummy: "333 + 2"},
 		DummyObjPtr: &testObj2{Expr: "10 + 8", Dummy: "3333 + 2"},
 	}
-	err := SimplifyStruct(&obj, testMachine)
+	err := Simplify(&obj, testMachine)
 	assert.NoError(t, err)
 	assert.Equal(t, testObj2{Expr: "15", Dummy: "3 + 2"}, obj.Obj)
 	assert.Equal(t, &testObj2{Expr: "18", Dummy: "33 + 2"}, obj.ObjPtr)
@@ -142,7 +142,7 @@ func TestGenericNotMutateStringPointer(t *testing.T) {
 	obj := testObj{
 		ExprPtr: ptr,
 	}
-	_ = SimplifyStruct(&obj, testMachine)
+	_ = Simplify(&obj, testMachine)
 	assert.Equal(t, common.Ptr("200 + 10"), ptr)
 }
 
@@ -150,7 +150,7 @@ func TestGenericCompileError(t *testing.T) {
 	got := testObj{
 		Tmpl: "{{ 1 + 2 }}{{ 3",
 	}
-	err := SimplifyStruct(&got)
+	err := Simplify(&got)
 
 	assert.Contains(t, fmt.Sprintf("%v", err), "Tmpl: template error")
 }
@@ -164,7 +164,7 @@ func TestGenericForceSimplify(t *testing.T) {
 			},
 		},
 	}
-	err := SimplifyStructForce(&got)
+	err := SimplifyForce(&got)
 
 	want := corev1.Volume{
 		Name: "55",
@@ -198,7 +198,7 @@ func TestGenericForceSimplifyNested(t *testing.T) {
 			},
 		},
 	}
-	err := SimplifyStruct(&got)
+	err := Simplify(&got)
 
 	want := testObjNested{
 		Value: corev1.Volume{
