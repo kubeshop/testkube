@@ -161,8 +161,9 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalizer Mach
 				expr2, err := expr.Resolve(finalizer)
 				if err != nil {
 					vv = expr.String()
+				} else {
+					vv, _ = expr2.Static().StringValue()
 				}
-				vv, _ = expr2.Static().StringValue()
 			} else {
 				vv = expr.String()
 			}
