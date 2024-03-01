@@ -628,11 +628,11 @@ You need to define execution namespaces in your helm chart values. It's possible
   executionNamespaces: []
        # -- Namespace for test execution  
   #  - namespace: default 
-       # -- Whether to genrate RBAC for testkube api server or use manually provided 
+       # -- Whether to generate RBAC for testkube api server or use manually provided 
   #    generateAPIServerRBAC: true
        # -- Job service account name for test jobs 
   #    jobServiceAccountName: tests-job-default
-       # -- Whether to genrate RBAC for test job or use manually provided 
+       # -- Whether to generate RBAC for test job or use manually provided 
   #    generateTestJobRBAC: true
 ```
 
