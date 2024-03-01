@@ -11,6 +11,7 @@ import (
 
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	testsourcev1 "github.com/kubeshop/testkube-operator/api/testsource/v1"
+	"github.com/kubeshop/testkube-operator/pkg/secret"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
@@ -23,7 +24,8 @@ import (
 )
 
 const (
-	containerType = "container"
+	containerType       = "container"
+	gitCredentialPrefix = "git_credential_"
 )
 
 func (s *Scheduler) PrepareTestRequests(work []testsv3.Test, request testkube.ExecutionRequest) []workerpool.Request[
@@ -87,7 +89,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 
 	s.events.Notify(testkube.NewEventStartTest(&execution))
 
-	if err := s.createSecretsReferences(&execution); err != nil {
+	if err := s.createSecretsReferences(&execution, &options); err != nil {
 		return s.handleExecutionError(ctx, execution, "can't create secret variables `Secret` references: %w", err)
 	}
 
@@ -201,7 +203,7 @@ func (s *Scheduler) getNextExecutionNumber(testName string) int32 {
 }
 
 // createSecretsReferences strips secrets from text and store it inside model as reference to secret
-func (s *Scheduler) createSecretsReferences(execution *testkube.Execution) (err error) {
+func (s *Scheduler) createSecretsReferences(execution *testkube.Execution, options *client.ExecuteOptions) (err error) {
 	secrets := map[string]string{}
 	secretName := execution.Id + "-vars"
 
@@ -227,6 +229,32 @@ func (s *Scheduler) createSecretsReferences(execution *testkube.Execution) (err 
 
 			execution.Variables[k] = obfuscated
 		}
+	}
+
+	secretRefs := []*testkube.SecretRef{options.UsernameSecret, options.TokenSecret}
+	for _, secretRef := range secretRefs {
+		if secretRef == nil {
+			continue
+		}
+
+		if execution.TestNamespace == s.namespace || (secretRef.Name != secret.GetMetadataName(execution.TestName, client.SecretTest) &&
+			secretRef.Name != secret.GetMetadataName(execution.TestName, client.SecretSource)) {
+			continue
+		}
+
+		data, err := s.secretClient.Get(secretRef.Name)
+		if err != nil {
+			return err
+		}
+
+		value, ok := data[secretRef.Key]
+		if !ok {
+			return fmt.Errorf("secret key %s not found for secret %s", secretRef.Key, secretRef.Name)
+		}
+
+		secrets[gitCredentialPrefix+secretRef.Key] = value
+		secretRef.Name = secretName
+		secretRef.Key = gitCredentialPrefix + secretRef.Key
 	}
 
 	labels := map[string]string{"executionID": execution.Id, "testName": execution.TestName}

@@ -44,6 +44,7 @@ type Scheduler struct {
 	featureFlags              featureflags.FeatureFlags
 	logsStream                logsclient.Stream
 	subscriptionChecker       checktcl.SubscriptionChecker
+	namespace                 string
 }
 
 func NewScheduler(
@@ -66,6 +67,7 @@ func NewScheduler(
 	dashboardURI string,
 	featureFlags featureflags.FeatureFlags,
 	logsStream logsclient.Stream,
+	namespace string,
 ) *Scheduler {
 	return &Scheduler{
 		metrics:                   metrics,
@@ -87,6 +89,7 @@ func NewScheduler(
 		dashboardURI:              dashboardURI,
 		featureFlags:              featureFlags,
 		logsStream:                logsStream,
+		namespace:                 namespace,
 	}
 }
 

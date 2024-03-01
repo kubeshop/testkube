@@ -514,6 +514,7 @@ func main() {
 		cfg.TestkubeDashboardURI,
 		features,
 		logsStream,
+		cfg.TestkubeNamespace,
 	)
 
 	slackLoader, err := newSlackLoader(cfg, envs)

@@ -939,7 +939,12 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	}
 
 	jobOptions.Variables = execution.Variables
-	jobOptions.ServiceAccountName = serviceAccountNames[execution.TestNamespace]
+	serviceAccountName, ok := serviceAccountNames[execution.TestNamespace]
+	if !ok {
+		return jobOptions, fmt.Errorf("not supported namespace %s", execution.TestNamespace)
+	}
+
+	jobOptions.ServiceAccountName = serviceAccountName
 	jobOptions.Registry = registry
 	jobOptions.ClusterID = clusterID
 
