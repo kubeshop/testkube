@@ -84,10 +84,15 @@ var EnvMachine = expressionstcl.NewMachine().
 		return nil, false
 	})
 
-var RefStatusMachine = expressionstcl.NewMachine().
+var RefSuccessMachine = expressionstcl.NewMachine().
 	RegisterAccessor(func(ref string) (interface{}, bool) {
 		s := State.GetStep(ref)
 		return s.Status == StepStatusPassed || s.Status == StepStatusSkipped, s.HasStatus
+	})
+
+var RefStatusMachine = expressionstcl.NewMachine().
+	RegisterAccessor(func(ref string) (interface{}, bool) {
+		return State.GetStep(ref).Status, true
 	})
 
 var FileMachine = expressionstcl.NewMachine().
@@ -114,6 +119,10 @@ func Template(tpl string, m ...expressionstcl.Machine) (string, error) {
 func Expression(expr string, m ...expressionstcl.Machine) (expressionstcl.StaticValue, error) {
 	m = append(m, AliasMachine, EnvMachine, StateMachine, FileMachine)
 	return expressionstcl.EvalExpression(expr, m...)
+}
+
+func RefSuccessExpression(expr string) (expressionstcl.StaticValue, error) {
+	return expressionstcl.EvalExpression(expr, RefSuccessMachine)
 }
 
 func RefStatusExpression(expr string) (expressionstcl.StaticValue, error) {

@@ -24,9 +24,9 @@ const (
 )
 
 type state struct {
-	Status TestWorkflowStatus
-	Steps  map[string]*StepInfo
-	Output map[string]string
+	Status TestWorkflowStatus   `json:"status"`
+	Steps  map[string]*StepInfo `json:"steps"`
+	Output map[string]string    `json:"output"`
 }
 
 var State = &state{
@@ -71,7 +71,7 @@ func (s *state) GetStatus() string {
 	}
 	v, err := RefStatusExpression(Step.InitStatus)
 	if err != nil {
-		return ""
+		return string(s.Status)
 	}
 	str, _ := v.Static().StringValue()
 	if str == "" {
@@ -86,6 +86,9 @@ func readState(filePath string) {
 		if !os.IsNotExist(err) {
 			panic(err)
 		}
+		return
+	}
+	if len(b) == 0 {
 		return
 	}
 	err = gob.NewDecoder(bytes.NewBuffer(b)).Decode(&State)
@@ -116,7 +119,7 @@ func recomputeStatuses() {
 
 	// Update expected failure statuses
 	Iterate(Config.Resulting, func(r Rule) bool {
-		v, err := RefStatusExpression(r.Expr)
+		v, err := RefSuccessExpression(r.Expr)
 		if err != nil {
 			return false
 		}

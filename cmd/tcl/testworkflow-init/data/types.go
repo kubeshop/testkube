@@ -42,12 +42,12 @@ type Timeout struct {
 }
 
 type StepInfo struct {
-	Ref       string
-	Status    StepStatus
-	HasStatus bool
-	StartTime time.Time
-	TimeoutAt time.Time
-	Iteration uint64
+	Ref       string     `json:"ref"`
+	Status    StepStatus `json:"status"`
+	HasStatus bool       `json:"hasStatus"`
+	StartTime time.Time  `json:"startTime"`
+	TimeoutAt time.Time  `json:"timeoutAt"`
+	Iteration uint64     `json:"iteration"`
 }
 
 func (s *StepInfo) Start(t time.Time) {
