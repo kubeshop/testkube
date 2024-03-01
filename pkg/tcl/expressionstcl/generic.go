@@ -30,8 +30,6 @@ func parseTag(tag string) tagData {
 	return tagData{value: s[0]}
 }
 
-var unrecognizedErr = errors.New("unsupported value passed for resolving expressions")
-
 func clone(v reflect.Value) reflect.Value {
 	if v.Kind() == reflect.String {
 		s := v.String()
@@ -46,8 +44,11 @@ func clone(v reflect.Value) reflect.Value {
 	return v
 }
 
-func resolve(v reflect.Value, t tagData, m []Machine) (err error) {
-	if t.key == "" && t.value == "" {
+func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalizer Machine) (changed bool, err error) {
+	if t.value == "force" {
+		force = true
+	}
+	if t.key == "" && t.value == "" && !force {
 		return
 	}
 
@@ -70,57 +71,79 @@ func resolve(v reflect.Value, t tagData, m []Machine) (err error) {
 		vv, ok := v.Interface().(intstr.IntOrString)
 		if ok {
 			if vv.Type == intstr.String {
-				return resolve(v.FieldByName("StrVal"), t, m)
+				return resolve(v.FieldByName("StrVal"), t, m, force, finalizer)
 			}
-		} else if t.value == "include" {
+		} else if t.value == "include" || force {
 			tt := v.Type()
 			for i := 0; i < tt.NumField(); i++ {
 				f := tt.Field(i)
-				tag := parseTag(f.Tag.Get("expr"))
+				tagStr := f.Tag.Get("expr")
+				tag := parseTag(tagStr)
+				if !f.IsExported() {
+					if tagStr != "" && tagStr != "-" {
+						return changed, errors.New(f.Name + ": private property marked with `expr` clause")
+					}
+					continue
+				}
 				value := v.FieldByName(f.Name)
-				err = resolve(value, tag, m)
+				var ch bool
+				ch, err = resolve(value, tag, m, force, finalizer)
+				if ch {
+					changed = true
+				}
 				if err != nil {
-					return errors.Wrap(err, f.Name)
+					return changed, errors.Wrap(err, f.Name)
 				}
 			}
 		}
 		return
 	case reflect.Slice:
-		if t.value == "" {
-			return nil
+		if t.value == "" && !force {
+			return changed, nil
 		}
 		for i := 0; i < v.Len(); i++ {
-			err := resolve(v.Index(i), t, m)
+			ch, err := resolve(v.Index(i), t, m, force, finalizer)
+			if ch {
+				changed = true
+			}
 			if err != nil {
-				return errors.Wrap(err, fmt.Sprintf("%d", i))
+				return changed, errors.Wrap(err, fmt.Sprintf("%d", i))
 			}
 		}
 		return
 	case reflect.Map:
-		if t.value == "" && t.key == "" {
-			return nil
+		if t.value == "" && t.key == "" && !force {
+			return changed, nil
 		}
 		for _, k := range v.MapKeys() {
-			if t.value != "" {
+			if t.value != "" || force {
 				// It's not possible to get a pointer to map element,
 				// so we need to copy it and reassign
 				item := clone(v.MapIndex(k))
-				err = resolve(item, t, m)
+				var ch bool
+				ch, err = resolve(item, t, m, force, finalizer)
+				if ch {
+					changed = true
+				}
 				v.SetMapIndex(k, item)
 				if err != nil {
-					return errors.Wrap(err, k.String())
+					return changed, errors.Wrap(err, k.String())
 				}
 			}
-			if t.key != "" {
+			if t.key != "" || force {
 				key := clone(k)
-				err = resolve(key, tagData{value: t.key}, m)
+				var ch bool
+				ch, err = resolve(key, tagData{value: t.key}, m, force, finalizer)
+				if ch {
+					changed = true
+				}
 				if !key.Equal(k) {
 					item := clone(v.MapIndex(k))
 					v.SetMapIndex(k, reflect.Value{})
 					v.SetMapIndex(key, item)
 				}
 				if err != nil {
-					return errors.Wrap(err, "key("+k.String()+")")
+					return changed, errors.Wrap(err, "key("+k.String()+")")
 				}
 			}
 		}
@@ -128,23 +151,47 @@ func resolve(v reflect.Value, t tagData, m []Machine) (err error) {
 	case reflect.String:
 		if t.value == "expression" {
 			var expr Expression
-			expr, err = CompileAndResolve(v.String(), m...)
+			str := v.String()
+			expr, err = CompileAndResolve(str, m...)
 			if err != nil {
-				return err
+				return changed, err
 			}
-			vv := expr.String()
+			var vv string
+			if finalizer != nil {
+				expr2, err := expr.Resolve(finalizer)
+				if err != nil {
+					vv = expr.String()
+				} else {
+					vv, _ = expr2.Static().StringValue()
+				}
+			} else {
+				vv = expr.String()
+			}
+			changed = vv != str
 			if ptr.Kind() == reflect.String {
 				v.SetString(vv)
 			} else {
 				ptr.Set(reflect.ValueOf(&vv))
 			}
-		} else if t.value == "template" && !IsTemplateStringWithoutExpressions(v.String()) {
+		} else if (t.value == "template" && !IsTemplateStringWithoutExpressions(v.String())) || force {
 			var expr Expression
-			expr, err = CompileAndResolveTemplate(v.String(), m...)
+			str := v.String()
+			expr, err = CompileAndResolveTemplate(str, m...)
 			if err != nil {
-				return err
+				return changed, err
 			}
-			vv := expr.Template()
+			var vv string
+			if finalizer != nil {
+				expr2, err := expr.Resolve(finalizer)
+				if err != nil {
+					vv = expr.String()
+				} else {
+					vv, _ = expr2.Static().StringValue()
+				}
+			} else {
+				vv = expr.Template()
+			}
+			changed = vv != str
 			if ptr.Kind() == reflect.String {
 				v.SetString(vv)
 			} else {
@@ -154,14 +201,39 @@ func resolve(v reflect.Value, t tagData, m []Machine) (err error) {
 		return
 	}
 
-	// Fail for unrecognized values
-	return unrecognizedErr
+	// Ignore unrecognized values
+	return
 }
 
-func SimplifyStruct(t interface{}, m ...Machine) error {
+func simplify(t interface{}, tag tagData, finalizer Machine, m ...Machine) error {
 	v := reflect.ValueOf(t)
 	if v.Kind() != reflect.Pointer {
-		return errors.New("pointer needs to be passed to Resolve function")
+		return errors.New("pointer needs to be passed to Simplify function")
 	}
-	return resolve(v, tagData{value: "include"}, m)
+	changed, err := resolve(v, tag, m, false, finalizer)
+	i := 1
+	for changed && err == nil {
+		if i > maxCallStack {
+			return fmt.Errorf("maximum call stack exceeded while simplifying struct")
+		}
+		changed, err = resolve(v, tag, m, false, finalizer)
+		i++
+	}
+	return err
+}
+
+func Simplify(t interface{}, m ...Machine) error {
+	return simplify(t, tagData{value: "include"}, nil, m...)
+}
+
+func SimplifyForce(t interface{}, m ...Machine) error {
+	return simplify(t, tagData{value: "force"}, nil, m...)
+}
+
+func Finalize(t interface{}, m ...Machine) error {
+	return simplify(t, tagData{value: "include"}, FinalizerNone, m...)
+}
+
+func FinalizeForce(t interface{}, m ...Machine) error {
+	return simplify(t, tagData{value: "force"}, FinalizerNone, m...)
 }
