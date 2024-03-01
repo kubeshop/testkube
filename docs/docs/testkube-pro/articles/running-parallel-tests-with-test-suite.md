@@ -35,7 +35,7 @@ Test Suite Steps can be of two types:
 1. Tests: tests to be run.
 2. Delays: time delays to wait in between tests.
 
-Similarly to running a Test, running a Test Suite Step based on a test allows for specific execution request parameters to be overwritten. Step level parameters overwrite Test Suite level parameters, which in turn overwrite Test level parameters. The Step level parameters are configurable only via CRDs at the moment.
+Similar to running a Test, running a Test Suite Step based on a test allows for specific execution request parameters to be overwritten. Step level parameters overwrite Test Suite level parameters, which in turn overwrite Test level parameters. The Step level parameters are configurable only via CRDs at the moment.
 
 For details on which parameters are available in the CRDs, please consult the table below:
 
@@ -81,7 +81,7 @@ For details on which parameters are available in the CRDs, please consult the ta
 | labels                             |      | ✓          |           |
 | timeout                            |      | ✓          |           |
 
-Similarly to Tests and Test Suites, Test Suite Steps can also have a field of type `executionRequest` like in the example below:
+Similar to Tests and Test Suites, Test Suite Steps can also have a field of type `executionRequest` like in the example below:
 
 ```bash
 apiVersion: tests.testkube.io/v3
