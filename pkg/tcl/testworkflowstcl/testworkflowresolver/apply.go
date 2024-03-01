@@ -172,11 +172,11 @@ func ApplyTemplates(workflow *testworkflowsv1.TestWorkflow, templates map[string
 
 	// Encapsulate TestWorkflow configuration to not pass it into templates accidentally
 	random := rand.String(10)
-	err := expressionstcl.SimplifyStruct(workflow, expressionstcl.ReplacePrefixMachine("config.", random+"."))
+	err := expressionstcl.Simplify(workflow, expressionstcl.ReplacePrefixMachine("config.", random+"."))
 	if err != nil {
 		return err
 	}
-	defer expressionstcl.SimplifyStruct(workflow, expressionstcl.ReplacePrefixMachine(random+".", "config."))
+	defer expressionstcl.Simplify(workflow, expressionstcl.ReplacePrefixMachine(random+".", "config."))
 
 	// Apply top-level templates
 	for i, ref := range workflow.Spec.Use {

@@ -35,6 +35,9 @@ func (c *configmapStorage) fetch(ctx context.Context) (map[string]string, error)
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return nil, errors.Wrap(err, "getting configmap cache")
 	}
+	if cache == nil {
+		cache = map[string]string{}
+	}
 	return cache, nil
 }
 

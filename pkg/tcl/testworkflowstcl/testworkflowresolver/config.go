@@ -69,7 +69,7 @@ func ApplyWorkflowConfig(t *testworkflowsv1.TestWorkflow, cfg map[string]intstr.
 	if err != nil {
 		return nil, err
 	}
-	err = expressionstcl.SimplifyStruct(&t, machine, configFinalizer)
+	err = expressionstcl.Simplify(&t, machine, configFinalizer)
 	return t, err
 }
 
@@ -81,6 +81,6 @@ func ApplyWorkflowTemplateConfig(t *testworkflowsv1.TestWorkflowTemplate, cfg ma
 	if err != nil {
 		return nil, err
 	}
-	err = expressionstcl.SimplifyStruct(&t, machine, configFinalizer)
+	err = expressionstcl.Simplify(&t, machine, configFinalizer)
 	return t, err
 }

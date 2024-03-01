@@ -4,14 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
 )
 
 type Hash string
 
-var hashKeyRe = regexp.MustCompile("[^a-zA-Z0-9-_/]")
+var hashKeyRe = regexp.MustCompile("[^a-zA-Z0-9-_]")
 
 func hash(registry, image string) Hash {
-	return Hash(hashKeyRe.ReplaceAllString(fmt.Sprintf("%s/%s", registry, image), "_-"))
+	return Hash(hashKeyRe.ReplaceAllString(strings.ReplaceAll(fmt.Sprintf("%s/%s", registry, image), "/", "."), "_-"))
 }
 
 func marshalInfo(v Info) (string, error) {
