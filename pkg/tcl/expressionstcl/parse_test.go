@@ -38,6 +38,22 @@ func TestCompileMath(t *testing.T) {
 	assert.Equal(t, false, must(MustCompile(`3 = 5`).Static().BoolValue()))
 }
 
+func TestCompileLogical(t *testing.T) {
+	assert.Equal(t, "true", MustCompile(`!(false && r1)`).String())
+	assert.Equal(t, "false", MustCompile(`!true && r1`).String())
+	assert.Equal(t, "r1", MustCompile(`true && r1`).String())
+	assert.Equal(t, "r1", MustCompile(`!true || r1`).String())
+	assert.Equal(t, "true", MustCompile(`true || r1`).String())
+	assert.Equal(t, "11", MustCompile(`5 - -3 * 2`).String())
+	assert.Equal(t, "r1&&false", MustCompile(`r1 && false`).String())
+	assert.Equal(t, "bool(r1)", MustCompile(`bool(r1) && true`).String())
+	assert.Equal(t, "false", MustCompile(`bool(r1) && false`).String())
+	assert.Equal(t, "r1||false", MustCompile(`r1 || false`).String())
+	assert.Equal(t, "bool(r1)", MustCompile(`bool(r1) || false`).String())
+	assert.Equal(t, "r1||true", MustCompile(`r1 || true`).String())
+	assert.Equal(t, "true", MustCompile(`bool(r1) || true`).String())
+}
+
 func TestCompileMathOperationsPrecedence(t *testing.T) {
 	assert.Equal(t, 7.0, must(MustCompile(`1 + 2 * 3`).Static().FloatValue()))
 	assert.Equal(t, 11.0, must(MustCompile(`1 + (2 * 3) + 4`).Static().FloatValue()))

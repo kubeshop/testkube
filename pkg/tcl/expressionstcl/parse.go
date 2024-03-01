@@ -11,6 +11,7 @@ package expressionstcl
 import (
 	"errors"
 	"fmt"
+	math2 "math"
 	"regexp"
 	"strings"
 )
@@ -92,7 +93,7 @@ func getNextSegment(t []token) (e Expression, i int, err error) {
 
 	// Negation - !expr
 	if t[0].Type == tokenTypeNot {
-		e, i, err = parseNextExpression(t[1:], -1)
+		e, i, err = parseNextExpression(t[1:], math2.MaxInt)
 		if err != nil {
 			return nil, 0, err
 		}
