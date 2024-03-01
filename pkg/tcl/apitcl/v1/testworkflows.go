@@ -9,17 +9,22 @@
 package v1
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/rand"
+	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	mappers2 "github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowresolver"
 )
 
@@ -231,6 +236,95 @@ func (s *apiTCL) PreviewTestWorkflowHandler() fiber.Handler {
 		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, mappers2.MapKubeToAPI, obj)
 		if err != nil {
 			return s.InternalError(c, errPrefix, "serialization problem", err)
+		}
+		return
+	}
+}
+
+func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
+	return func(c *fiber.Ctx) (err error) {
+		name := c.Params("id")
+		errPrefix := fmt.Sprintf("failed to execute test workflow '%s'", name)
+		workflow, err := s.TestWorkflowsClient.Get(name)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		// Load the execution request
+		var request testkube.TestWorkflowExecutionRequest
+		err = c.BodyParser(&request)
+		if err != nil && !errors.Is(err, fiber.ErrUnprocessableEntity) {
+			return s.BadRequest(c, errPrefix, "invalid body", err)
+		}
+
+		if request.Name == "" {
+			request.Name = rand.Name()
+		}
+
+		// Fetch the templates
+		tpls := testworkflowresolver.ListTemplates(workflow)
+		tplsMap := make(map[string]testworkflowsv1.TestWorkflowTemplate, len(tpls))
+		for tplName := range tpls {
+			tpl, err := s.TestWorkflowTemplatesClient.Get(tplName)
+			if err != nil {
+				return s.BadRequest(c, errPrefix, "fetching error", err)
+			}
+			tplsMap[tplName] = *tpl
+		}
+
+		// Apply the configuration
+		_, err = testworkflowresolver.ApplyWorkflowConfig(workflow, mappers2.MapConfigValueAPIToKube(request.Config))
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "configuration", err)
+		}
+
+		// Resolve the TestWorkflow
+		err = testworkflowresolver.ApplyTemplates(workflow, tplsMap)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "resolving error", err)
+		}
+
+		// Process the TestWorkflow
+		p := testworkflowprocessor.New()
+		scope, err := p.Process(workflow)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "processing error", err)
+		}
+
+		job, err := scope.Job(s.ImageInspector)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "building spec", err)
+		}
+
+		machine := expressionstcl.NewMachine().Register("execution.id", request.Name)
+
+		_ = expressionstcl.SimplifyForce(&scope, machine)
+		_ = expressionstcl.SimplifyForce(&job, machine)
+
+		// TODO: Rollback on failure
+		for _, item := range scope.Resources().Secrets() {
+			_ = expressionstcl.FinalizeForce(&item, machine)
+			testworkflowprocessor.AnnotateControlledBy(&item, request.Name)
+			_, err = s.Clientset.CoreV1().Secrets(s.Namespace).Create(context.Background(), &item, metav1.CreateOptions{})
+			if err != nil {
+				return s.BadRequest(c, errPrefix, "creating secret", err)
+			}
+		}
+		for _, item := range scope.Resources().ConfigMaps() {
+			_ = expressionstcl.FinalizeForce(&item, machine)
+			testworkflowprocessor.AnnotateControlledBy(&item, request.Name)
+			_, err = s.Clientset.CoreV1().ConfigMaps(s.Namespace).Create(context.Background(), &item, metav1.CreateOptions{})
+			if err != nil {
+				return s.BadRequest(c, errPrefix, "creating config map", err)
+			}
+		}
+
+		testworkflowprocessor.AnnotateControlledBy(&job, request.Name)
+		_, err = s.Clientset.BatchV1().Jobs(s.Namespace).Create(context.Background(), &job, metav1.CreateOptions{})
+		if err != nil {
+			if err != nil {
+				return s.BadRequest(c, errPrefix, "creating job", err)
+			}
 		}
 		return
 	}
