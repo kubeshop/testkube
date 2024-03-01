@@ -30,8 +30,6 @@ func parseTag(tag string) tagData {
 	return tagData{value: s[0]}
 }
 
-var unrecognizedErr = errors.New("unsupported value passed for resolving expressions")
-
 func clone(v reflect.Value) reflect.Value {
 	if v.Kind() == reflect.String {
 		s := v.String()
@@ -100,7 +98,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool) (changed bool,
 		}
 		return
 	case reflect.Slice:
-		if t.value == "" {
+		if t.value == "" && !force {
 			return changed, nil
 		}
 		for i := 0; i < v.Len(); i++ {
@@ -183,8 +181,8 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool) (changed bool,
 		return
 	}
 
-	// Fail for unrecognized values
-	return false, unrecognizedErr
+	// Ignore unrecognized values
+	return
 }
 
 func simplifyStruct(t interface{}, tag tagData, m ...Machine) error {

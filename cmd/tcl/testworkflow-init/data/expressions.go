@@ -92,7 +92,7 @@ var RefSuccessMachine = expressionstcl.NewMachine().
 
 var RefStatusMachine = expressionstcl.NewMachine().
 	RegisterAccessor(func(ref string) (interface{}, bool) {
-		return State.GetStep(ref).Status, true
+		return string(State.GetStep(ref).Status), true
 	})
 
 var FileMachine = expressionstcl.NewMachine().
