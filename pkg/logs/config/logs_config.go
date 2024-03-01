@@ -9,6 +9,10 @@ import (
 type Config struct {
 	Debug bool `envconfig:"DEBUG" default:"false"`
 
+	// Debug variables
+	AttachDebugAdapter bool `envconfig:"ATTACH_DEBUG_ADAPTER" default:"false"`
+	TraceMessages      bool `envconfig:"TRACE_MESSAGES" default:"false"`
+
 	TestkubeProAPIKey               string `envconfig:"TESTKUBE_PRO_API_KEY" default:""`
 	TestkubeProURL                  string `envconfig:"TESTKUBE_PRO_URL" default:""`
 	TestkubeProLogsPath             string `envconfig:"TESTKUBE_PRO_LOGS_PATH" default:"/logs"`

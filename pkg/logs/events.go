@@ -72,7 +72,9 @@ func (ls *LogsService) handleMessage(ctx context.Context, a adapter.Adapter, id 
 	log := ls.log.With("id", id, "adapter", a.Name())
 
 	return func(msg jetstream.Msg) {
-		log.Debugw("got message", "data", string(msg.Data()))
+		if ls.traceMessages {
+			log.Debugw("got message", "data", string(msg.Data()))
+		}
 
 		// deliver to subscriber
 		logChunk := events.Log{}
@@ -174,7 +176,7 @@ func (ls *LogsService) handleStop(ctx context.Context, group string) func(msg *n
 			event   = events.Trigger{}
 		)
 
-		ls.log.Debugw("got stop event")
+		ls.log.Debugw("got stop event", "data", string(msg.Data))
 
 		err := json.Unmarshal(msg.Data, &event)
 		if err != nil {
