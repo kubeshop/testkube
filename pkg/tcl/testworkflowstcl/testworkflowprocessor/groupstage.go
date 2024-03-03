@@ -13,6 +13,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 )
 
@@ -20,6 +21,7 @@ type groupStage struct {
 	stageMetadata  `expr:"include"`
 	stageLifecycle `expr:"include"`
 	children       []Stage `expr:"include"`
+	virtual        bool
 }
 
 type GroupStage interface {
@@ -29,9 +31,10 @@ type GroupStage interface {
 	Add(stages ...Stage) GroupStage
 }
 
-func NewGroupStage(ref string) GroupStage {
+func NewGroupStage(ref string, virtual bool) GroupStage {
 	return &groupStage{
 		stageMetadata: stageMetadata{ref: ref},
+		virtual:       virtual,
 	}
 }
 
@@ -110,6 +113,11 @@ func (s *groupStage) Flatten() []Stage {
 		return nil
 	}
 
+	// Flatten when it is completely virtual stage
+	if s.virtual {
+		return s.children
+	}
+
 	// Merge stage into single one below if possible
 	first := s.children[0]
 	if len(s.children) == 1 && (s.name == "" || first.Name() == "") {
@@ -129,9 +137,21 @@ func (s *groupStage) Flatten() []Stage {
 
 func (s *groupStage) Add(stages ...Stage) GroupStage {
 	for _, ch := range stages {
-		s.children = append(s.children, ch.Flatten()...)
+		if ch != nil {
+			s.children = append(s.children, ch.Flatten()...)
+		}
 	}
 	return s
+}
+
+func (s *groupStage) ApplyImages(images map[string]*imageinspector.Info) error {
+	for i := range s.children {
+		err := s.children[i].ApplyImages(images)
+		if err != nil {
+			return errors.Wrap(err, "applying image data")
+		}
+	}
+	return nil
 }
 
 func (s *groupStage) Resolve(m ...expressionstcl.Machine) error {

@@ -11,6 +11,7 @@ package testworkflowprocessor
 import (
 	"github.com/pkg/errors"
 
+	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 )
 
@@ -56,6 +57,10 @@ func (s *containerStage) GetImages() map[string]struct{} {
 
 func (s *containerStage) Flatten() []Stage {
 	return []Stage{s}
+}
+
+func (s *containerStage) ApplyImages(images map[string]*imageinspector.Info) error {
+	return s.container.ApplyImageData(images[s.container.Image()])
 }
 
 func (s *containerStage) Resolve(m ...expressionstcl.Machine) error {

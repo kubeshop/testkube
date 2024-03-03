@@ -17,12 +17,10 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 )
 
 type initProcess struct {
-	image      *imageinspector.Info
 	ref        string
 	init       []string
 	params     []string
@@ -52,11 +50,6 @@ func (p *initProcess) Error() error {
 
 func (p *initProcess) SetRef(ref string) *initProcess {
 	p.ref = ref
-	return p
-}
-
-func (p *initProcess) SetImageData(image *imageinspector.Info) *initProcess {
-	p.image = image
 	return p
 }
 
@@ -92,13 +85,9 @@ func (p *initProcess) Args() []string {
 	args := make([]string, 0)
 	if len(p.command) > 0 {
 		args = p.command
-	} else if p.image != nil {
-		args = p.image.Entrypoint
 	}
 	if len(p.command) > 0 || len(p.args) > 0 {
 		args = append(args, p.args...)
-	} else if p.image != nil {
-		args = append(args, p.image.Cmd...)
 	}
 	return args
 }
@@ -204,7 +193,6 @@ func (p *initProcess) AddRetryPolicy(policy testworkflowsv1.RetryPolicy, ref str
 func (p *initProcess) Children(ref string) *initProcess {
 	return &initProcess{
 		ref:        ref,
-		image:      p.image,
 		params:     p.params,
 		retry:      maps.Clone(p.retry),
 		command:    p.command,

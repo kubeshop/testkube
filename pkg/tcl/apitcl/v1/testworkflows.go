@@ -256,10 +256,12 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 		if err != nil && !errors.Is(err, fiber.ErrUnprocessableEntity) {
 			return s.BadRequest(c, errPrefix, "invalid body", err)
 		}
-
 		if request.Name == "" {
 			request.Name = rand.Name()
 		}
+
+		machine := expressionstcl.NewMachine().
+			Register("execution.id", request.Name)
 
 		// Fetch the templates
 		tpls := testworkflowresolver.ListTemplates(workflow)
@@ -285,47 +287,37 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 		}
 
 		// Process the TestWorkflow
-		p := testworkflowprocessor.New()
-		scope, err := p.Process(workflow)
+		bundle, err := testworkflowprocessor.New(s.ImageInspector).
+			Register(testworkflowprocessor.ProcessContentFiles).
+			Register(testworkflowprocessor.ProcessRunCommand).
+			Register(testworkflowprocessor.ProcessShellCommand).
+			Register(testworkflowprocessor.ProcessNestedSteps).
+			Bundle(c.Context(), workflow, machine)
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "processing error", err)
 		}
 
-		job, err := scope.Job(s.ImageInspector)
-		if err != nil {
-			return s.BadRequest(c, errPrefix, "building spec", err)
-		}
-
-		machine := expressionstcl.NewMachine().Register("execution.id", request.Name)
-
-		_ = expressionstcl.SimplifyForce(&scope, machine)
-		_ = expressionstcl.SimplifyForce(&job, machine)
-
-		// TODO: Rollback on failure
-		for _, item := range scope.Resources().Secrets() {
-			_ = expressionstcl.FinalizeForce(&item, machine)
-			testworkflowprocessor.AnnotateControlledBy(&item, request.Name)
+		// Deploy the resources
+		// TODO: rollback on failure
+		for _, item := range bundle.Secrets {
 			_, err = s.Clientset.CoreV1().Secrets(s.Namespace).Create(context.Background(), &item, metav1.CreateOptions{})
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "creating secret", err)
 			}
 		}
-		for _, item := range scope.Resources().ConfigMaps() {
-			_ = expressionstcl.FinalizeForce(&item, machine)
-			testworkflowprocessor.AnnotateControlledBy(&item, request.Name)
+		for _, item := range bundle.ConfigMaps {
 			_, err = s.Clientset.CoreV1().ConfigMaps(s.Namespace).Create(context.Background(), &item, metav1.CreateOptions{})
 			if err != nil {
-				return s.BadRequest(c, errPrefix, "creating config map", err)
+				return s.BadRequest(c, errPrefix, "creating configmap", err)
 			}
 		}
-
-		testworkflowprocessor.AnnotateControlledBy(&job, request.Name)
-		_, err = s.Clientset.BatchV1().Jobs(s.Namespace).Create(context.Background(), &job, metav1.CreateOptions{})
+		_, err = s.Clientset.BatchV1().Jobs(s.Namespace).Create(context.Background(), &bundle.Job, metav1.CreateOptions{})
 		if err != nil {
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "creating job", err)
 			}
 		}
+
 		return
 	}
 }

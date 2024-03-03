@@ -18,6 +18,7 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowresolver"
 )
@@ -68,6 +69,7 @@ type ContainerMutations[T any] interface {
 	SetSecurityContext(sc *corev1.SecurityContext) T
 
 	ApplyCR(cr *testworkflowsv1.ContainerConfig) T
+	ApplyImageData(image *imageinspector.Info) error
 }
 
 //go:generate mockgen -destination=./mock_container.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor" Container
@@ -340,6 +342,26 @@ func (c *container) ToKubernetesTemplate() corev1.Container {
 		WorkingDir:      workingDir,
 		SecurityContext: cr.SecurityContext,
 	}
+}
+
+func (c *container) ApplyImageData(image *imageinspector.Info) error {
+	if image == nil {
+		return nil
+	}
+	err := c.Resolve(expressionstcl.NewMachine().
+		Register("image.command", image.Entrypoint).
+		Register("image.args", image.Cmd).
+		Register("image.workingDir", image.WorkingDir))
+	if err != nil {
+		return err
+	}
+	if len(c.Command()) == 0 {
+		c.SetCommand(image.Entrypoint...)
+		if len(c.Args()) == 0 {
+			c.SetArgs(image.Cmd...)
+		}
+	}
+	return nil
 }
 
 func (c *container) Resolve(m ...expressionstcl.Machine) error {

@@ -9,32 +9,55 @@
 package testworkflowprocessor
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"maps"
 
 	"github.com/pkg/errors"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/imageinspector"
+	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 )
 
 //go:generate mockgen -destination=./mock_processor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor" Processor
 type Processor interface {
-	Process(resolvedWorkflow *testworkflowsv1.TestWorkflow) (Scope, error)
+	Register(operation Operation) Processor
+	Bundle(ctx context.Context, workflow *testworkflowsv1.TestWorkflow, machines ...expressionstcl.Machine) (*Bundle, error)
 }
+
+//go:generate mockgen -destination=./mock_internalprocessor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor" InternalProcessor
+type InternalProcessor interface {
+	Process(layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error)
+}
+
+type Operation = func(processor InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error)
 
 type processor struct {
+	inspector  imageinspector.Inspector
+	operations []Operation
 }
 
-func New() Processor {
-	return &processor{}
+func New(inspector imageinspector.Inspector) Processor {
+	return &processor{inspector: inspector}
 }
 
-func (p *processor) ProcessStep(s Scope, parent GroupStage, container Container, step testworkflowsv1.Step) error {
+func (p *processor) Register(operation Operation) Processor {
+	p.operations = append(p.operations, operation)
+	return p
+}
+
+func (p *processor) process(layer Intermediate, container Container, step testworkflowsv1.Step, ref string) (Stage, error) {
 	// Configure defaults
 	container.ApplyCR(step.Container)
 
 	// Build an initial group for the inner items
-	self := NewGroupStage(s.Resources().NextRef())
+	self := NewGroupStage(ref, false)
 	self.SetName(step.Name)
 	self.SetOptional(step.Optional).SetNegative(step.Negative)
 	if step.Condition != "" {
@@ -43,165 +66,212 @@ func (p *processor) ProcessStep(s Scope, parent GroupStage, container Container,
 		self.SetCondition("passed")
 	}
 
-	// Load files
-	if step.Content != nil {
-		for _, f := range step.Content.Files {
-			if f.ContentFrom != nil {
-				volRef := "{{execution.id}}-" + s.Resources().NextRef()
-
-				if f.ContentFrom.ConfigMapKeyRef != nil {
-					s.Resources().AddVolume(corev1.Volume{
-						Name: volRef,
-						VolumeSource: corev1.VolumeSource{
-							ConfigMap: &corev1.ConfigMapVolumeSource{
-								LocalObjectReference: f.ContentFrom.ConfigMapKeyRef.LocalObjectReference,
-								Items:                []corev1.KeyToPath{{Key: f.ContentFrom.ConfigMapKeyRef.Key, Path: "file"}},
-								DefaultMode:          f.Mode,
-								Optional:             f.ContentFrom.ConfigMapKeyRef.Optional,
-							},
-						},
-					})
-					container.AppendVolumeMounts(corev1.VolumeMount{
-						Name:      volRef,
-						ReadOnly:  true,
-						MountPath: f.Path,
-						SubPath:   "file",
-					})
-				} else if f.ContentFrom.SecretKeyRef != nil {
-					s.Resources().AddVolume(corev1.Volume{
-						Name: volRef,
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName:  f.ContentFrom.SecretKeyRef.Name,
-								Items:       []corev1.KeyToPath{{Key: f.ContentFrom.SecretKeyRef.Key, Path: "file"}},
-								DefaultMode: f.Mode,
-								Optional:    f.ContentFrom.SecretKeyRef.Optional,
-							},
-						},
-					})
-					container.AppendVolumeMounts(corev1.VolumeMount{
-						Name:      volRef,
-						ReadOnly:  true,
-						MountPath: f.Path,
-						SubPath:   "file",
-					})
-				} else if f.ContentFrom.FieldRef != nil || f.ContentFrom.ResourceFieldRef != nil {
-					s.Resources().AddVolume(corev1.Volume{
-						Name: volRef,
-						VolumeSource: corev1.VolumeSource{
-							Projected: &corev1.ProjectedVolumeSource{
-								Sources: []corev1.VolumeProjection{{
-									DownwardAPI: &corev1.DownwardAPIProjection{
-										Items: []corev1.DownwardAPIVolumeFile{{
-											Path:             "file",
-											FieldRef:         f.ContentFrom.FieldRef,
-											ResourceFieldRef: f.ContentFrom.ResourceFieldRef,
-											Mode:             f.Mode,
-										}},
-									},
-								}},
-								DefaultMode: f.Mode,
-							},
-						},
-					})
-					container.AppendVolumeMounts(corev1.VolumeMount{
-						Name:      volRef,
-						ReadOnly:  true,
-						MountPath: f.Path,
-						SubPath:   "file",
-					})
-				} else {
-					return fmt.Errorf("file %s: unrecognized ContentFrom provided for file", f.Path)
-				}
-			} else {
-				vm, err := s.Resources().AddTextFile(f.Content)
-				if err != nil {
-					return fmt.Errorf("file %s: could not append: %s", f.Path, err.Error())
-				}
-				vm.MountPath = f.Path
-				container.AppendVolumeMounts(vm)
-			}
-		}
-	}
-	// TODO: Load Git repository
-
-	// Resolve steps
-	if step.Shell != "" {
-		// TODO: Create Stage from Resources?
-		shell := container.CreateChild().SetCommand(defaultShell).SetArgs("-c", step.Shell)
-		stage := NewContainerStage(s.Resources().NextRef(), shell)
-		self.Add(stage)
-	}
-
-	if step.Run != nil {
-		run := container.CreateChild().ApplyCR(&step.Run.ContainerConfig)
-		stage := NewContainerStage(s.Resources().NextRef(), run)
-		self.Add(stage)
-	}
-
-	// Nested steps
-	for _, n := range step.Steps {
-		err := p.ProcessStep(s, self, container.CreateChild(), n)
+	// Run operations
+	for _, op := range p.operations {
+		stage, err := op(p, layer, container, step)
 		if err != nil {
-			return err
+			return nil, err
 		}
+		self.Add(stage)
 	}
 
-	// TODO: Other steps
-
-	// TODO: Artifacts steps
-
-	// Include the stage
-	parent.Add(self)
-
-	return nil
+	return self, nil
 }
 
-func (p *processor) Process(resolvedWorkflow *testworkflowsv1.TestWorkflow) (Scope, error) {
-	var err error
-	s := NewScope().
-		AppendPodConfig(resolvedWorkflow.Spec.Pod).
-		AppendJobConfig(resolvedWorkflow.Spec.Job)
+func (p *processor) Process(layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+	return p.process(layer, container, step, layer.NextRef())
+}
 
-	internalRef := s.Resources().NextRef()
-	dataRef := s.Resources().NextRef()
-
-	s.Resources().
-		AddVolume(corev1.Volume{Name: internalRef, VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}}).
-		AddVolume(corev1.Volume{Name: dataRef, VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}})
-
-	// Process container defaults
-	s.ContainerDefaults().
+func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWorkflow, machines ...expressionstcl.Machine) (bundle *Bundle, err error) {
+	// Initialize intermediate layer
+	layer := NewIntermediate().
+		AppendPodConfig(workflow.Spec.Pod).
+		AppendJobConfig(workflow.Spec.Job)
+	layer.ContainerDefaults().
 		ApplyCR(defaultContainerConfig.DeepCopy()).
-		ApplyCR(resolvedWorkflow.Spec.Container).
-		AppendVolumeMounts(corev1.VolumeMount{Name: internalRef, MountPath: defaultInternalPath}).
-		AppendVolumeMounts(corev1.VolumeMount{Name: dataRef, MountPath: defaultDataPath})
+		ApplyCR(workflow.Spec.Container).
+		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, defaultInternalPath)).
+		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, defaultDataPath))
 
 	// Process steps
-	for i := range resolvedWorkflow.Spec.Setup {
-		err = p.ProcessStep(s, s.RootStage(), s.ContainerDefaults().CreateChild(), resolvedWorkflow.Spec.Setup[i])
-		if err != nil {
-			return nil, errors.Wrap(err, "error processing `setup`")
-		}
+	rootStep := testworkflowsv1.Step{
+		StepBase: testworkflowsv1.StepBase{
+			Content:   workflow.Spec.Content,
+			Container: workflow.Spec.Container,
+		},
+		Steps: append(workflow.Spec.Setup, append(workflow.Spec.Steps, workflow.Spec.After...)...),
 	}
-	for i := range resolvedWorkflow.Spec.Steps {
-		err = p.ProcessStep(s, s.RootStage(), s.ContainerDefaults().CreateChild(), resolvedWorkflow.Spec.Steps[i])
-		if err != nil {
-			return nil, errors.Wrap(err, "error processing `steps`")
-		}
+	root, err := p.process(layer, layer.ContainerDefaults(), rootStep, "")
+	if err != nil {
+		return nil, errors.Wrap(err, "processing error")
 	}
-	for i := range resolvedWorkflow.Spec.After {
-		err = p.ProcessStep(s, s.RootStage(), s.ContainerDefaults().CreateChild(), resolvedWorkflow.Spec.After[i])
+
+	s := root.Signature()
+	v, _ := json.Marshal(s)
+	fmt.Println(string(v))
+
+	// Validate if there is anything to run
+	if root.Len() == 0 {
+		return nil, errors.New("test workflow has nothing to run")
+	}
+
+	// Finalize ConfigMaps
+	configMaps := layer.ConfigMaps()
+	for i := range configMaps {
+		AnnotateControlledBy(&configMaps[i], "{{execution.id}}")
+		err = expressionstcl.FinalizeForce(&configMaps[i], machines...)
 		if err != nil {
-			return nil, errors.Wrap(err, "error processing `after`")
+			return nil, errors.Wrap(err, "finalizing ConfigMap")
 		}
 	}
 
-	l := len(s.RootStage().Flatten())
-
-	if l == 0 {
-		return nil, errors.New("test workflow has no steps to run")
+	// Finalize Secrets
+	secrets := layer.Secrets()
+	for i := range secrets {
+		AnnotateControlledBy(&secrets[i], "{{execution.id}}")
+		err = expressionstcl.FinalizeForce(&secrets[i], machines...)
+		if err != nil {
+			return nil, errors.Wrap(err, "finalizing Secret")
+		}
 	}
 
-	return s, nil
+	// Finalize Volumes
+	volumes := layer.Volumes()
+	for i := range volumes {
+		err = expressionstcl.FinalizeForce(&volumes[i], machines...)
+		if err != nil {
+			return nil, errors.Wrap(err, "finalizing Volume")
+		}
+	}
+
+	// Resolve job & pod config
+	jobConfig, podConfig := layer.JobConfig(), layer.PodConfig()
+	err = expressionstcl.FinalizeForce(&jobConfig, machines...)
+	if err != nil {
+		return nil, errors.Wrap(err, "finalizing job config")
+	}
+	err = expressionstcl.FinalizeForce(&podConfig, machines...)
+	if err != nil {
+		return nil, errors.Wrap(err, "finalizing pod config")
+	}
+
+	// Build signature
+	sig := root.Signature().Children()
+
+	// Load the image pull secrets
+	pullSecretNames := make([]string, len(podConfig.ImagePullSecrets))
+	for i, v := range podConfig.ImagePullSecrets {
+		pullSecretNames[i] = v.Name
+	}
+
+	// Load the image details
+	imageNames := root.GetImages()
+	images := make(map[string]*imageinspector.Info)
+	for image := range imageNames {
+		info, err := p.inspector.Inspect(ctx, "", image, corev1.PullIfNotPresent, pullSecretNames)
+		if err != nil {
+			return nil, fmt.Errorf("resolving image error: %s: %s", image, err.Error())
+		}
+		images[image] = info
+	}
+	err = root.ApplyImages(images)
+	if err != nil {
+		return nil, errors.Wrap(err, "applying image data")
+	}
+
+	// Build list of the containers
+	containers, err := buildKubernetesContainers(root, NewInitProcess().SetRef(root.Ref()), images)
+	if err != nil {
+		return nil, errors.Wrap(err, "building Kubernetes containers")
+	}
+	for i := range containers {
+		err = expressionstcl.FinalizeForce(&containers[i].EnvFrom, machines...)
+		if err != nil {
+			return nil, errors.Wrap(err, "finalizing container's envFrom")
+		}
+		err = expressionstcl.FinalizeForce(&containers[i].VolumeMounts, machines...)
+		if err != nil {
+			return nil, errors.Wrap(err, "finalizing container's volumeMounts")
+		}
+		err = expressionstcl.FinalizeForce(&containers[i].Resources, machines...)
+		if err != nil {
+			return nil, errors.Wrap(err, "finalizing container's resources")
+		}
+	}
+
+	// Build pod template
+	podSpec := corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "{{execution.id}}-pod",
+			Annotations: podConfig.Annotations,
+			Labels:      podConfig.Labels,
+		},
+		Spec: corev1.PodSpec{
+			RestartPolicy:      corev1.RestartPolicyNever,
+			Volumes:            volumes,
+			ImagePullSecrets:   podConfig.ImagePullSecrets,
+			ServiceAccountName: podConfig.ServiceAccountName,
+			NodeSelector:       podConfig.NodeSelector,
+		},
+	}
+	AnnotateControlledBy(&podSpec, "{{execution.id}}")
+	err = expressionstcl.FinalizeForce(&podSpec, machines...)
+	if err != nil {
+		return nil, errors.Wrap(err, "finalizing pod template spec")
+	}
+	initContainer := corev1.Container{
+		// TODO: Resources, SecurityContext?
+		Name:            "copy-init",
+		Image:           defaultInitImage,
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command:         []string{"/bin/sh", "-c"},
+		Args:            []string{fmt.Sprintf("cp /init %s && touch %s && chmod 777 %s", defaultInitPath, defaultStatePath, defaultStatePath)},
+		VolumeMounts:    layer.ContainerDefaults().VolumeMounts(),
+	}
+	err = expressionstcl.FinalizeForce(&initContainer, machines...)
+	if err != nil {
+		return nil, errors.Wrap(err, "finalizing container's resources")
+	}
+	podSpec.Spec.InitContainers = append([]corev1.Container{initContainer}, containers[:len(containers)-1]...)
+	podSpec.Spec.Containers = containers[len(containers)-1:]
+
+	// Build job spec
+	jobSpec := batchv1.Job{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Job",
+			APIVersion: batchv1.SchemeGroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "{{execution.id}}",
+			Annotations: jobConfig.Annotations,
+			Labels:      jobConfig.Labels,
+		},
+		Spec: batchv1.JobSpec{
+			BackoffLimit: common.Ptr(int32(0)),
+		},
+	}
+	AnnotateControlledBy(&jobSpec, "{{execution.id}}")
+	err = expressionstcl.FinalizeForce(&jobSpec, machines...)
+	if err != nil {
+		return nil, errors.Wrap(err, "finalizing job spec")
+	}
+	jobSpec.Spec.Template = podSpec
+
+	// Build signature
+	sigSerialized, _ := json.Marshal(sig)
+	jobAnnotations := make(map[string]string)
+	maps.Copy(jobAnnotations, jobSpec.Annotations)
+	maps.Copy(jobAnnotations, map[string]string{
+		"testworkflows.testkube.io/signature": string(sigSerialized),
+	})
+	jobSpec.Annotations = jobAnnotations
+
+	// Build bundle
+	bundle = &Bundle{
+		ConfigMaps: configMaps,
+		Secrets:    secrets,
+		Job:        jobSpec,
+		Signature:  sig,
+	}
+	return bundle, nil
 }
