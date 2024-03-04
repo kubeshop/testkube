@@ -115,10 +115,6 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		return nil, errors.Wrap(err, "processing error")
 	}
 
-	s := root.Signature()
-	v, _ := json.Marshal(s)
-	fmt.Println(string(v))
-
 	// Validate if there is anything to run
 	if root.Len() == 0 {
 		return nil, errors.New("test workflow has nothing to run")
