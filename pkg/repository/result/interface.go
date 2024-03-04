@@ -35,6 +35,8 @@ type Repository interface {
 	Sequences
 	// Get gets execution result by id or name
 	Get(ctx context.Context, id string) (testkube.Execution, error)
+	// Get gets execution result without output
+	GetExecution(ctx context.Context, id string) (testkube.Execution, error)
 	// GetByNameAndTest gets execution result by name and test name
 	GetByNameAndTest(ctx context.Context, name, testName string) (testkube.Execution, error)
 	// GetLatestByTest gets latest execution result by test

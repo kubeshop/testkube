@@ -205,6 +205,13 @@ func (r MockExecutionResultsRepository) Get(ctx context.Context, id string) (tes
 	return r.GetFn(ctx, id)
 }
 
+func (r MockExecutionResultsRepository) GetExecution(ctx context.Context, id string) (testkube.Execution, error) {
+	if r.GetFn == nil {
+		panic("not implemented")
+	}
+	return r.GetFn(ctx, id)
+}
+
 func (r MockExecutionResultsRepository) GetByNameAndTest(ctx context.Context, name, testName string) (testkube.Execution, error) {
 	panic("not implemented")
 }
