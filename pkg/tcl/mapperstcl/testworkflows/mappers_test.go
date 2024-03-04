@@ -26,7 +26,7 @@ var (
 		WorkingDir:      common.Ptr("/wd"),
 		Image:           "some-image",
 		ImagePullPolicy: "IfNotPresent",
-		Env: []testworkflowsv1.EnvVar{
+		Env: []corev1.EnvVar{
 			{Name: "some-naaame", Value: "some-value"},
 			{Name: "some-naaame", ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
@@ -150,11 +150,10 @@ var (
 		},
 	}
 	stepBase = testworkflowsv1.StepBase{
-		Name:         "some-name",
-		Condition:    "some-condition",
-		Negative:     true,
-		Optional:     false,
-		VirtualGroup: false,
+		Name:      "some-name",
+		Condition: "some-condition",
+		Negative:  true,
+		Optional:  false,
 		Retry: &testworkflowsv1.RetryPolicy{
 			Count: 444,
 			Until: "abc",
@@ -197,7 +196,7 @@ var (
 				WorkingDir:      common.Ptr("/abc"),
 				Image:           "im-g",
 				ImagePullPolicy: "IfNotPresent",
-				Env: []testworkflowsv1.EnvVar{
+				Env: []corev1.EnvVar{
 					{Name: "abc", Value: "230"},
 				},
 				EnvFrom: []corev1.EnvFromSource{
@@ -224,7 +223,7 @@ var (
 			WorkingDir:      common.Ptr("/aaaa"),
 			Image:           "ssss",
 			ImagePullPolicy: "Never",
-			Env:             []testworkflowsv1.EnvVar{{Name: "xyz", Value: "bar"}},
+			Env:             []corev1.EnvVar{{Name: "xyz", Value: "bar"}},
 			Command:         common.Ptr([]string{"ab"}),
 			Args:            common.Ptr([]string{"abrgs"}),
 			Resources: &testworkflowsv1.Resources{

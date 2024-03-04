@@ -48,6 +48,35 @@ func MapSlice[T any, U any](s []T, fn func(T) U) []U {
 	return result
 }
 
+func FilterSlice[T any](s []T, fn func(T) bool) []T {
+	if len(s) == 0 {
+		return nil
+	}
+	result := make([]T, 0)
+	for i := range s {
+		if fn(s[i]) {
+			result = append(result, s[i])
+		}
+	}
+	return result
+}
+
+func UniqueSlice[T comparable](s []T) []T {
+	if len(s) == 0 {
+		return nil
+	}
+	result := make([]T, 0)
+	seen := map[T]struct{}{}
+	for i := range s {
+		_, ok := seen[s[i]]
+		if !ok {
+			seen[s[i]] = struct{}{}
+			result = append(result, s[i])
+		}
+	}
+	return result
+}
+
 func MapMap[T any, U any](m map[string]T, fn func(T) U) map[string]U {
 	if len(m) == 0 {
 		return nil
