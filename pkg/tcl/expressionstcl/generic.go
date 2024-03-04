@@ -44,7 +44,7 @@ func clone(v reflect.Value) reflect.Value {
 	return v
 }
 
-func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalizer Machine) (changed bool, err error) {
+func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool) (changed bool, err error) {
 	if t.value == "force" {
 		force = true
 	}
@@ -71,7 +71,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalizer Mach
 		vv, ok := v.Interface().(intstr.IntOrString)
 		if ok {
 			if vv.Type == intstr.String {
-				return resolve(v.FieldByName("StrVal"), t, m, force, finalizer)
+				return resolve(v.FieldByName("StrVal"), t, m, force, finalize)
 			}
 		} else if t.value == "include" || force {
 			tt := v.Type()
@@ -87,7 +87,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalizer Mach
 				}
 				value := v.FieldByName(f.Name)
 				var ch bool
-				ch, err = resolve(value, tag, m, force, finalizer)
+				ch, err = resolve(value, tag, m, force, finalize)
 				if ch {
 					changed = true
 				}
@@ -102,7 +102,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalizer Mach
 			return changed, nil
 		}
 		for i := 0; i < v.Len(); i++ {
-			ch, err := resolve(v.Index(i), t, m, force, finalizer)
+			ch, err := resolve(v.Index(i), t, m, force, finalize)
 			if ch {
 				changed = true
 			}
@@ -121,29 +121,29 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalizer Mach
 				// so we need to copy it and reassign
 				item := clone(v.MapIndex(k))
 				var ch bool
-				ch, err = resolve(item, t, m, force, finalizer)
+				ch, err = resolve(item, t, m, force, finalize)
 				if ch {
 					changed = true
 				}
-				v.SetMapIndex(k, item)
 				if err != nil {
 					return changed, errors.Wrap(err, k.String())
 				}
+				v.SetMapIndex(k, item)
 			}
 			if t.key != "" || force {
 				key := clone(k)
 				var ch bool
-				ch, err = resolve(key, tagData{value: t.key}, m, force, finalizer)
+				ch, err = resolve(key, tagData{value: t.key}, m, force, finalize)
 				if ch {
 					changed = true
+				}
+				if err != nil {
+					return changed, errors.Wrap(err, "key("+k.String()+")")
 				}
 				if !key.Equal(k) {
 					item := clone(v.MapIndex(k))
 					v.SetMapIndex(k, reflect.Value{})
 					v.SetMapIndex(key, item)
-				}
-				if err != nil {
-					return changed, errors.Wrap(err, "key("+k.String()+")")
 				}
 			}
 		}
@@ -157,13 +157,12 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalizer Mach
 				return changed, err
 			}
 			var vv string
-			if finalizer != nil {
-				expr2, err := expr.Resolve(finalizer)
+			if finalize {
+				expr2, err := expr.Resolve(FinalizerFail)
 				if err != nil {
-					vv = expr.String()
-				} else {
-					vv, _ = expr2.Static().StringValue()
+					return changed, errors.Wrap(err, "resolving the value")
 				}
+				vv, _ = expr2.Static().StringValue()
 			} else {
 				vv = expr.String()
 			}
@@ -181,13 +180,12 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalizer Mach
 				return changed, err
 			}
 			var vv string
-			if finalizer != nil {
-				expr2, err := expr.Resolve(finalizer)
+			if finalize {
+				expr2, err := expr.Resolve(FinalizerFail)
 				if err != nil {
-					vv = expr.String()
-				} else {
-					vv, _ = expr2.Static().StringValue()
+					return changed, errors.Wrap(err, "resolving the value")
 				}
+				vv, _ = expr2.Static().StringValue()
 			} else {
 				vv = expr.Template()
 			}
@@ -205,35 +203,44 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalizer Mach
 	return
 }
 
-func simplify(t interface{}, tag tagData, finalizer Machine, m ...Machine) error {
+func simplify(t interface{}, tag tagData, m ...Machine) error {
 	v := reflect.ValueOf(t)
 	if v.Kind() != reflect.Pointer {
 		return errors.New("pointer needs to be passed to Simplify function")
 	}
-	changed, err := resolve(v, tag, m, false, finalizer)
+	changed, err := resolve(v, tag, m, false, false)
 	i := 1
 	for changed && err == nil {
 		if i > maxCallStack {
 			return fmt.Errorf("maximum call stack exceeded while simplifying struct")
 		}
-		changed, err = resolve(v, tag, m, false, finalizer)
+		changed, err = resolve(v, tag, m, false, false)
 		i++
 	}
 	return err
 }
 
+func finalize(t interface{}, tag tagData, m ...Machine) error {
+	v := reflect.ValueOf(t)
+	if v.Kind() != reflect.Pointer {
+		return errors.New("pointer needs to be passed to Finalize function")
+	}
+	_, err := resolve(v, tag, m, false, true)
+	return err
+}
+
 func Simplify(t interface{}, m ...Machine) error {
-	return simplify(t, tagData{value: "include"}, nil, m...)
+	return simplify(t, tagData{value: "include"}, m...)
 }
 
 func SimplifyForce(t interface{}, m ...Machine) error {
-	return simplify(t, tagData{value: "force"}, nil, m...)
+	return simplify(t, tagData{value: "force"}, m...)
 }
 
 func Finalize(t interface{}, m ...Machine) error {
-	return simplify(t, tagData{value: "include"}, FinalizerNone, m...)
+	return finalize(t, tagData{value: "include"}, m...)
 }
 
 func FinalizeForce(t interface{}, m ...Machine) error {
-	return simplify(t, tagData{value: "force"}, FinalizerNone, m...)
+	return finalize(t, tagData{value: "force"}, m...)
 }

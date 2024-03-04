@@ -3427,6 +3427,58 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+  /test-workflows/:id/executions:
+    post:
+      tags:
+        - test-workflows
+        - api
+        - pro
+      summary: Execute test workflow
+      description: Execute test workflow in the kubernetes cluster
+      operationId: executeTestWorkflow
+      requestBody:
+        description: test workflow configuration
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestWorkflow"
+      responses:
+        200:
+          description: successful creation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestWorkflow"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with body parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
   /preview-test-workflow:
     post:
       tags:
@@ -6798,6 +6850,15 @@ components:
         spec:
           $ref: "#/components/schemas/TestWorkflowSpec"
 
+    TestWorkflowExecutionRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: custom execution name
+        config:
+          $ref: "#/components/schemas/TestWorkflowConfigValue"
+
     TestWorkflowTemplate:
       type: object
       properties:
@@ -6901,9 +6962,6 @@ components:
         optional:
           type: boolean
           description: is the step optional, so the failure won't affect the TestWorkflow result
-        virtualGroup:
-          type: boolean
-          description: should not display it as a nested group
         retry:
           $ref: "#/components/schemas/TestWorkflowRetryPolicy"
         timeout:
@@ -6950,9 +7008,6 @@ components:
         optional:
           type: boolean
           description: is the step optional, so the failure won't affect the TestWorkflow result
-        virtualGroup:
-          type: boolean
-          description: should not display it as a nested group
         use:
           type: array
           description: list of TestWorkflowTemplates to use

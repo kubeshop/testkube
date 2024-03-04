@@ -18,8 +18,6 @@ type TestWorkflowStep struct {
 	Negative bool `json:"negative,omitempty"`
 	// is the step optional, so the failure won't affect the TestWorkflow result
 	Optional bool `json:"optional,omitempty"`
-	// should not display it as a nested group
-	VirtualGroup bool `json:"virtualGroup,omitempty"`
 	// list of TestWorkflowTemplates to use
 	Use      []TestWorkflowTemplateRef `json:"use,omitempty"`
 	Template *TestWorkflowTemplateRef  `json:"template,omitempty"`

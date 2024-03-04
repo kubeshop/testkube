@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
@@ -47,7 +48,7 @@ var (
 		Spec: testworkflowsv1.TestWorkflowTemplateSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Container: &testworkflowsv1.ContainerConfig{
-					Env: []testworkflowsv1.EnvVar{
+					Env: []corev1.EnvVar{
 						{Name: "test", Value: "the"},
 					},
 				},
@@ -71,7 +72,7 @@ var (
 		Spec: testworkflowsv1.TestWorkflowTemplateSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Container: &testworkflowsv1.ContainerConfig{
-					Env: []testworkflowsv1.EnvVar{
+					Env: []corev1.EnvVar{
 						{Name: "test", Value: "the"},
 					},
 				},
@@ -176,7 +177,7 @@ var (
 			Name:  "basic",
 			Shell: "shell-command",
 			Container: &testworkflowsv1.ContainerConfig{
-				Env: []testworkflowsv1.EnvVar{
+				Env: []corev1.EnvVar{
 					{Name: "XYZ", Value: "some-value"},
 				},
 			},
@@ -189,7 +190,7 @@ var (
 			Delay:     "5s",
 			Shell:     "another-shell-command",
 			Container: &testworkflowsv1.ContainerConfig{
-				Env: []testworkflowsv1.EnvVar{
+				Env: []corev1.EnvVar{
 					{Name: "XYZ", Value: "some-value"},
 				},
 			},
