@@ -471,6 +471,10 @@ func (r FakeResultRepository) Count(ctx context.Context, filter result.Filter) (
 	panic("implement me")
 }
 
+func (FakeResultRepository) GetExecution(ctx context.Context, id string) (testkube.Execution, error) {
+	return testkube.Execution{}, nil
+}
+
 func (FakeResultRepository) Get(ctx context.Context, id string) (testkube.Execution, error) {
 	return testkube.Execution{}, nil
 }
