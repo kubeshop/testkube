@@ -17,10 +17,8 @@ type TestWorkflowIndependentStep struct {
 	// is the step expected to fail
 	Negative bool `json:"negative,omitempty"`
 	// is the step optional, so the failure won't affect the TestWorkflow result
-	Optional bool `json:"optional,omitempty"`
-	// should not display it as a nested group
-	VirtualGroup bool                     `json:"virtualGroup,omitempty"`
-	Retry        *TestWorkflowRetryPolicy `json:"retry,omitempty"`
+	Optional bool                     `json:"optional,omitempty"`
+	Retry    *TestWorkflowRetryPolicy `json:"retry,omitempty"`
 	// maximum time this step may take
 	Timeout string `json:"timeout,omitempty"`
 	// delay before the step

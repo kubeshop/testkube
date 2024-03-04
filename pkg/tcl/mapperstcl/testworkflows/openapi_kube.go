@@ -71,8 +71,8 @@ func MapBoxedIntegerToInt32(v *testkube.BoxedInteger) *int32 {
 	return &v.Value
 }
 
-func MapEnvVarAPIToKube(v testkube.EnvVar) testworkflowsv1.EnvVar {
-	return testworkflowsv1.EnvVar{
+func MapEnvVarAPIToKube(v testkube.EnvVar) corev1.EnvVar {
+	return corev1.EnvVar{
 		Name:      v.Name,
 		Value:     v.Value,
 		ValueFrom: common.MapPtr(v.ValueFrom, MapEnvVarSourceAPIToKube),
@@ -376,21 +376,20 @@ func MapRetryPolicyAPIToKube(v testkube.TestWorkflowRetryPolicy) testworkflowsv1
 func MapStepAPIToKube(v testkube.TestWorkflowStep) testworkflowsv1.Step {
 	return testworkflowsv1.Step{
 		StepBase: testworkflowsv1.StepBase{
-			Name:         v.Name,
-			Condition:    v.Condition,
-			Negative:     v.Negative,
-			Optional:     v.Optional,
-			VirtualGroup: v.VirtualGroup,
-			Retry:        common.MapPtr(v.Retry, MapRetryPolicyAPIToKube),
-			Timeout:      v.Timeout,
-			Delay:        v.Delay,
-			Content:      common.MapPtr(v.Content, MapContentAPIToKube),
-			Shell:        v.Shell,
-			Run:          common.MapPtr(v.Run, MapStepRunAPIToKube),
-			WorkingDir:   MapBoxedStringToString(v.WorkingDir),
-			Container:    common.MapPtr(v.Container, MapContainerConfigAPIToKube),
-			Execute:      common.MapPtr(v.Execute, MapStepExecuteAPIToKube),
-			Artifacts:    common.MapPtr(v.Artifacts, MapStepArtifactsAPIToKube),
+			Name:       v.Name,
+			Condition:  v.Condition,
+			Negative:   v.Negative,
+			Optional:   v.Optional,
+			Retry:      common.MapPtr(v.Retry, MapRetryPolicyAPIToKube),
+			Timeout:    v.Timeout,
+			Delay:      v.Delay,
+			Content:    common.MapPtr(v.Content, MapContentAPIToKube),
+			Shell:      v.Shell,
+			Run:        common.MapPtr(v.Run, MapStepRunAPIToKube),
+			WorkingDir: MapBoxedStringToString(v.WorkingDir),
+			Container:  common.MapPtr(v.Container, MapContainerConfigAPIToKube),
+			Execute:    common.MapPtr(v.Execute, MapStepExecuteAPIToKube),
+			Artifacts:  common.MapPtr(v.Artifacts, MapStepArtifactsAPIToKube),
 		},
 		Use:      common.MapSlice(v.Use, MapTemplateRefAPIToKube),
 		Template: common.MapPtr(v.Template, MapTemplateRefAPIToKube),
@@ -401,21 +400,20 @@ func MapStepAPIToKube(v testkube.TestWorkflowStep) testworkflowsv1.Step {
 func MapIndependentStepAPIToKube(v testkube.TestWorkflowIndependentStep) testworkflowsv1.IndependentStep {
 	return testworkflowsv1.IndependentStep{
 		StepBase: testworkflowsv1.StepBase{
-			Name:         v.Name,
-			Condition:    v.Condition,
-			Negative:     v.Negative,
-			Optional:     v.Optional,
-			VirtualGroup: v.VirtualGroup,
-			Retry:        common.MapPtr(v.Retry, MapRetryPolicyAPIToKube),
-			Timeout:      v.Timeout,
-			Delay:        v.Delay,
-			Content:      common.MapPtr(v.Content, MapContentAPIToKube),
-			Shell:        v.Shell,
-			Run:          common.MapPtr(v.Run, MapStepRunAPIToKube),
-			WorkingDir:   MapBoxedStringToString(v.WorkingDir),
-			Container:    common.MapPtr(v.Container, MapContainerConfigAPIToKube),
-			Execute:      common.MapPtr(v.Execute, MapStepExecuteAPIToKube),
-			Artifacts:    common.MapPtr(v.Artifacts, MapStepArtifactsAPIToKube),
+			Name:       v.Name,
+			Condition:  v.Condition,
+			Negative:   v.Negative,
+			Optional:   v.Optional,
+			Retry:      common.MapPtr(v.Retry, MapRetryPolicyAPIToKube),
+			Timeout:    v.Timeout,
+			Delay:      v.Delay,
+			Content:    common.MapPtr(v.Content, MapContentAPIToKube),
+			Shell:      v.Shell,
+			Run:        common.MapPtr(v.Run, MapStepRunAPIToKube),
+			WorkingDir: MapBoxedStringToString(v.WorkingDir),
+			Container:  common.MapPtr(v.Container, MapContainerConfigAPIToKube),
+			Execute:    common.MapPtr(v.Execute, MapStepExecuteAPIToKube),
+			Artifacts:  common.MapPtr(v.Artifacts, MapStepArtifactsAPIToKube),
 		},
 		Steps: common.MapSlice(v.Steps, MapIndependentStepAPIToKube),
 	}
