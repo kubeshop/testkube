@@ -68,6 +68,7 @@ func NewErrorLog(err error) *Log {
 		msg = err.Error()
 	}
 	return &Log{
+		Time:    time.Now(),
 		Error_:  true,
 		Content: msg,
 	}
