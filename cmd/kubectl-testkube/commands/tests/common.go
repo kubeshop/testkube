@@ -541,6 +541,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 	pvcTemplateReference := cmd.Flag("pvc-template-reference").Value.String()
 	executionNamespace := cmd.Flag("execution-namespace").Value.String()
 	executePostRunScriptBeforeScraping, err := cmd.Flags().GetBool("execute-postrun-script-before-scraping")
+	sourceScripts, err := cmd.Flags().GetBool("source-scripts")
 	if err != nil {
 		return nil, err
 	}
