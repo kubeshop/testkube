@@ -47,6 +47,15 @@ func New(inspector imageinspector.Inspector) Processor {
 	return &processor{inspector: inspector}
 }
 
+func NewFullFeatured(inspector imageinspector.Inspector) Processor {
+	return New(inspector).
+		Register(ProcessDelay).
+		Register(ProcessContentFiles).
+		Register(ProcessRunCommand).
+		Register(ProcessShellCommand).
+		Register(ProcessNestedSteps)
+}
+
 func (p *processor) Register(operation Operation) Processor {
 	p.operations = append(p.operations, operation)
 	return p

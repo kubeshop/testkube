@@ -32,12 +32,8 @@ func (*dummyInspector) Inspect(ctx context.Context, registry, image string, pull
 }
 
 var (
-	ins  = &dummyInspector{}
-	proc = New(ins).
-		Register(ProcessContentFiles).
-		Register(ProcessRunCommand).
-		Register(ProcessShellCommand).
-		Register(ProcessNestedSteps)
+	ins         = &dummyInspector{}
+	proc        = NewFullFeatured(ins)
 	execMachine = expressionstcl.NewMachine().
 			Register("execution.id", "dummy-id")
 )

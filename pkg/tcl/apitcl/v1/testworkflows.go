@@ -287,11 +287,7 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 		}
 
 		// Process the TestWorkflow
-		bundle, err := testworkflowprocessor.New(s.ImageInspector).
-			Register(testworkflowprocessor.ProcessContentFiles).
-			Register(testworkflowprocessor.ProcessRunCommand).
-			Register(testworkflowprocessor.ProcessShellCommand).
-			Register(testworkflowprocessor.ProcessNestedSteps).
+		bundle, err := testworkflowprocessor.NewFullFeatured(s.ImageInspector).
 			Bundle(c.Context(), workflow, machine)
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "processing error", err)
