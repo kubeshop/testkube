@@ -708,7 +708,7 @@ func TestProcessNegativeContainerStep(t *testing.T) {
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Ref(),
-					"--negative", "true",
+					"-n", "true",
 					"-c", fmt.Sprintf("%s=passed", sig[1].Ref()),
 					"-r", fmt.Sprintf("=%s&&%s", sig[0].Ref(), sig[1].Ref()),
 					"--",
