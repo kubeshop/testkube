@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 )
@@ -59,26 +60,26 @@ func (p *initProcess) Command() []string {
 	// TODO: Support nested retries
 	policy, ok := p.retry[p.ref]
 	if ok {
-		args = append(args, "--retryCount", strconv.Itoa(int(policy.Count)), "--retryUntil", expressionstcl.Escape(policy.Until))
+		args = append(args, constants.ArgRetryCount, strconv.Itoa(int(policy.Count)), constants.ArgRetryUntil, expressionstcl.Escape(policy.Until))
 	}
 	if p.negative {
-		args = append(args, "--negative", "true")
+		args = append(args, constants.ArgNegative, "true")
 	}
 	if len(p.init) > 0 {
-		args = append(args, "-i", strings.Join(p.init, "&&"))
+		args = append(args, constants.ArgInit, strings.Join(p.init, "&&"))
 	}
 	if len(p.envs) > 0 {
-		args = append(args, "-e", strings.Join(p.envs, ","))
+		args = append(args, constants.ArgComputeEnv, strings.Join(p.envs, ","))
 	}
 	if len(p.conditions) > 0 {
 		for k, v := range p.conditions {
-			args = append(args, "-c", fmt.Sprintf("%s=%s", strings.Join(common.UniqueSlice(v), ","), k))
+			args = append(args, constants.ArgCondition, fmt.Sprintf("%s=%s", strings.Join(common.UniqueSlice(v), ","), k))
 		}
 	}
 	for _, r := range p.results {
-		args = append(args, "-r", r)
+		args = append(args, constants.ArgResult, r)
 	}
-	return append([]string{defaultInitPath, p.ref}, append(args, "--")...)
+	return append([]string{defaultInitPath, p.ref}, append(args, constants.ArgSeparator)...)
 }
 
 func (p *initProcess) Args() []string {
@@ -120,7 +121,7 @@ func (p *initProcess) SetArgs(args ...string) *initProcess {
 }
 
 func (p *initProcess) AddTimeout(duration string, refs ...string) *initProcess {
-	return p.param("-t", fmt.Sprintf("%s=%s", strings.Join(refs, ","), duration))
+	return p.param(constants.ArgTimeout, fmt.Sprintf("%s=%s", strings.Join(refs, ","), duration))
 }
 
 func (p *initProcess) SetInitialStatus(expr ...string) *initProcess {

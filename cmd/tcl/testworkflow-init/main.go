@@ -19,6 +19,7 @@ import (
 
 	"github.com/kballard/go-shellquote"
 
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/output"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/run"
@@ -49,12 +50,12 @@ func main() {
 			break
 		}
 		switch os.Args[i] {
-		case "--":
+		case constants.ArgSeparator:
 			args = os.Args[i+1:]
 			i = len(os.Args)
-		case "-i", "--init":
+		case constants.ArgInit, constants.ArgInitLong:
 			data.Step.InitStatus = os.Args[i+1]
-		case "-c", "--cond":
+		case constants.ArgCondition, constants.ArgConditionLong:
 			v := strings.SplitN(os.Args[i+1], "=", 2)
 			refs := strings.Split(v[0], ",")
 			if len(v) == 2 {
@@ -62,7 +63,7 @@ func main() {
 			} else {
 				conditions = append(conditions, data.Rule{Expr: "true", Refs: refs})
 			}
-		case "-r", "--result":
+		case constants.ArgResult, constants.ArgResultLong:
 			v := strings.SplitN(os.Args[i+1], "=", 2)
 			refs := strings.Split(v[0], ",")
 			if len(v) == 2 {
@@ -70,17 +71,25 @@ func main() {
 			} else {
 				resulting = append(resulting, data.Rule{Expr: "true", Refs: refs})
 			}
-		case "-t", "--timeout":
+		case constants.ArgTimeout, constants.ArgTimeoutLong:
 			v := strings.SplitN(os.Args[i+1], "=", 2)
 			if len(v) == 2 {
 				timeouts = append(timeouts, data.Timeout{Ref: v[0], Duration: v[1]})
 			} else {
 				timeouts = append(timeouts, data.Timeout{Ref: v[0], Duration: ""})
 			}
-		case "-e", "--env":
+		case constants.ArgComputeEnv, constants.ArgComputeEnvLong:
 			computed = append(computed, strings.Split(os.Args[i+1], ",")...)
+		case constants.ArgNegative, constants.ArgNegativeLong:
+			config["negative"] = os.Args[i+1]
+		case constants.ArgRetryCount:
+			config["retryCount"] = os.Args[i+1]
+		case constants.ArgRetryUntil:
+			config["retryUntil"] = os.Args[i+1]
+		case constants.ArgDebug:
+			config["debug"] = os.Args[i+1]
 		default:
-			config[strings.TrimLeft(os.Args[i], "-")] = os.Args[i+1]
+			output.Failf(output.CodeInputError, "unknown parameter: %s", os.Args[i])
 		}
 	}
 
