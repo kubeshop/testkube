@@ -179,6 +179,21 @@ func (mr *MockRepositoryMockRecorder) GetByNameAndTest(arg0, arg1, arg2 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByNameAndTest", reflect.TypeOf((*MockRepository)(nil).GetByNameAndTest), arg0, arg1, arg2)
 }
 
+// GetExecution mocks base method.
+func (m *MockRepository) GetExecution(arg0 context.Context, arg1 string) (testkube.Execution, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExecution", arg0, arg1)
+	ret0, _ := ret[0].(testkube.Execution)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetExecution indicates an expected call of GetExecution.
+func (mr *MockRepositoryMockRecorder) GetExecution(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecution", reflect.TypeOf((*MockRepository)(nil).GetExecution), arg0, arg1)
+}
+
 // GetExecutionTotals mocks base method.
 func (m *MockRepository) GetExecutionTotals(arg0 context.Context, arg1 bool, arg2 ...Filter) (testkube.ExecutionsTotals, error) {
 	m.ctrl.T.Helper()

@@ -42,6 +42,19 @@ func (r *CloudRepository) GetNextExecutionNumber(ctx context.Context, testName s
 	return commandResponse.TestNumber, nil
 }
 
+func (r *CloudRepository) GetExecution(ctx context.Context, id string) (testkube.Execution, error) {
+	req := GetRequest{ID: id}
+	response, err := r.executor.Execute(ctx, CmdResultGet, req)
+	if err != nil {
+		return testkube.Execution{}, err
+	}
+	var commandResponse GetResponse
+	if err := json.Unmarshal(response, &commandResponse); err != nil {
+		return testkube.Execution{}, err
+	}
+	return commandResponse.Execution, nil
+}
+
 func (r *CloudRepository) Get(ctx context.Context, id string) (testkube.Execution, error) {
 	req := GetRequest{ID: id}
 	response, err := r.executor.Execute(ctx, CmdResultGet, req)
