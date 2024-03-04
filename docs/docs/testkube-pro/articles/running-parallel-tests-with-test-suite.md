@@ -69,6 +69,7 @@ For details on which parameters are available in the CRDs, please consult the ta
 | preRunScript                       | ✓    |            |           |
 | postRunScript                      | ✓    |            |           |
 | executePostRunScriptBeforeScraping | ✓    |            |           |
+| sourceScripts                      | ✓    |            |           |
 | scraperTemplate                    | ✓    | ✓          | ✓         |
 | scraperTemplateReference           | ✓    | ✓          | ✓         |
 | pvcTemplate                        | ✓    | ✓          | ✓         |

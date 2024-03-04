@@ -88,12 +88,20 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		postRunScript := shebang
 
 		if execution.PreRunScript != "" {
+			if execution.SourceScripts {
+				entrypoint += ". "
+			}
+
 			entrypoint += strconv.Quote(filepath.Join(r.Params.DataDir, preRunScriptName)) + "\n"
 			entrypoint += "prerun_exit_code=$?\nif [ $prerun_exit_code -ne 0 ]; then\n  exit $prerun_exit_code\nfi\n"
 			preRunScript += execution.PreRunScript
 		}
 
 		if len(execution.Command) != 0 {
+			if execution.SourceScripts {
+				entrypoint += ". "
+			}
+
 			entrypoint += strconv.Quote(filepath.Join(r.Params.DataDir, commandScriptName)) + " $@\n"
 			entrypoint += "command_exit_code=$?\n"
 			command += strings.Join(execution.Command, " ")
@@ -101,6 +109,10 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		}
 
 		if execution.PostRunScript != "" {
+			if execution.SourceScripts {
+				entrypoint += ". "
+			}
+
 			entrypoint += strconv.Quote(filepath.Join(r.Params.DataDir, postRunScriptName)) + "\n"
 			entrypoint += "postrun_exit_code=$?\n"
 			postRunScript += execution.PostRunScript

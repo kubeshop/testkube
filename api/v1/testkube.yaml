@@ -5004,6 +5004,9 @@ components:
         executePostRunScriptBeforeScraping:
           type: boolean
           description: execute post run script before scraping (prebuilt executor only)
+        sourceScripts:
+          type: boolean
+          description: run scripts using source command (container executor only)
         runningContext:
           $ref: "#/components/schemas/RunningContext"
           description: running context for the test execution
@@ -5634,6 +5637,9 @@ components:
         executePostRunScriptBeforeScraping:
           type: boolean
           description: execute post run script before scraping (prebuilt executor only)
+        sourceScripts:
+          type: boolean
+          description: run scripts using source command (container executor only)
         scraperTemplate:
           type: string
           description: scraper template extensions

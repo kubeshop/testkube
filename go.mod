@@ -27,7 +27,7 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kubepug/kubepug v1.7.1
-	github.com/kubeshop/testkube-operator v1.15.2-beta1.0.20240301224325-4909488f050d
+	github.com/kubeshop/testkube-operator v1.15.2-beta1.0.20240304172632-b7aaa27ca4d3
 	github.com/minio/minio-go/v7 v7.0.47
 	github.com/montanaflynn/stats v0.6.6
 	github.com/moogar0880/problems v0.1.1
@@ -188,7 +188,7 @@ require (
 	golang.org/x/time v0.3.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/protobuf v1.32.0
+	google.golang.org/protobuf v1.31.0
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1
