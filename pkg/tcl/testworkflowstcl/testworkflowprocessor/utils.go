@@ -25,7 +25,7 @@ func AnnotateControlledBy(obj metav1.Object, testWorkflowId string) {
 	if labels == nil {
 		labels = map[string]string{}
 	}
-	labels[executionIdLabelName] = testWorkflowId
+	labels[ExecutionIdLabelName] = testWorkflowId
 	obj.SetLabels(labels)
 
 	// Annotate Pod template in the Job
@@ -101,7 +101,10 @@ func buildKubernetesContainers(stage Stage, init *initProcess, images map[string
 		return nil, fmt.Errorf("%s: %s: resolving container: %s", stage.Ref(), stage.Name(), err.Error())
 	}
 
-	cr := c.Container().ToKubernetesTemplate()
+	cr, err := c.Container().ToKubernetesTemplate()
+	if err != nil {
+		return nil, fmt.Errorf("%s: %s: building container template: %s", stage.Ref(), stage.Name(), err.Error())
+	}
 	cr.Name = c.Ref()
 
 	if c.Optional() {

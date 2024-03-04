@@ -98,7 +98,6 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		AppendJobConfig(workflow.Spec.Job)
 	layer.ContainerDefaults().
 		ApplyCR(defaultContainerConfig.DeepCopy()).
-		ApplyCR(workflow.Spec.Container).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, defaultInternalPath)).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, defaultDataPath))
 
@@ -148,6 +147,13 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			return nil, errors.Wrap(err, "finalizing Volume")
 		}
 	}
+
+	// Append main label for the pod
+	layer.AppendPodConfig(&testworkflowsv1.PodConfig{
+		Labels: map[string]string{
+			ExecutionIdMainPodLabelName: "{{execution.id}}",
+		},
+	})
 
 	// Resolve job & pod config
 	jobConfig, podConfig := layer.JobConfig(), layer.PodConfig()
@@ -207,7 +213,6 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	// Build pod template
 	podSpec := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        "{{execution.id}}-pod",
 			Annotations: podConfig.Annotations,
 			Labels:      podConfig.Labels,
 		},

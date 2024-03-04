@@ -69,7 +69,7 @@ func TestProcessBasic(t *testing.T) {
 		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "dummy-id",
-			Labels: map[string]string{executionIdLabelName: "dummy-id"},
+			Labels: map[string]string{ExecutionIdLabelName: "dummy-id"},
 			Annotations: map[string]string{
 				"testworkflows.testkube.io/signature": string(sigSerialized),
 			},
@@ -78,8 +78,10 @@ func TestProcessBasic(t *testing.T) {
 			BackoffLimit: common.Ptr(int32(0)),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "dummy-id-pod",
-					Labels:      map[string]string{executionIdLabelName: "dummy-id"},
+					Labels: map[string]string{
+						ExecutionIdLabelName:        "dummy-id",
+						ExecutionIdMainPodLabelName: "dummy-id",
+					},
 					Annotations: map[string]string(nil),
 				},
 				Spec: corev1.PodSpec{

@@ -14,7 +14,9 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	quantity "k8s.io/apimachinery/pkg/api/resource"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -49,7 +51,7 @@ type ContainerAccessors interface {
 	WorkingDir() string
 
 	Detach() Container
-	ToKubernetesTemplate() corev1.Container
+	ToKubernetesTemplate() (corev1.Container, error)
 
 	Resources() testworkflowsv1.Resources
 	SecurityContext() *corev1.SecurityContext
@@ -317,7 +319,7 @@ func (c *container) Detach() Container {
 	return c
 }
 
-func (c *container) ToKubernetesTemplate() corev1.Container {
+func (c *container) ToKubernetesTemplate() (corev1.Container, error) {
 	cr := c.ToContainerConfig()
 	var command []string
 	if cr.Command != nil {
@@ -331,6 +333,29 @@ func (c *container) ToKubernetesTemplate() corev1.Container {
 	if cr.WorkingDir != nil {
 		workingDir = *cr.WorkingDir
 	}
+	resources := corev1.ResourceRequirements{}
+	if cr.Resources != nil {
+		if len(cr.Resources.Requests) > 0 {
+			resources.Requests = make(corev1.ResourceList)
+		}
+		if len(cr.Resources.Limits) > 0 {
+			resources.Limits = make(corev1.ResourceList)
+		}
+		for k, v := range cr.Resources.Requests {
+			var err error
+			resources.Requests[k], err = quantity.ParseQuantity(v.String())
+			if err != nil {
+				return corev1.Container{}, errors.Wrap(err, "parsing resources")
+			}
+		}
+		for k, v := range cr.Resources.Limits {
+			var err error
+			resources.Limits[k], err = quantity.ParseQuantity(v.String())
+			if err != nil {
+				return corev1.Container{}, errors.Wrap(err, "parsing resources")
+			}
+		}
+	}
 	return corev1.Container{
 		Image:           cr.Image,
 		ImagePullPolicy: cr.ImagePullPolicy,
@@ -339,9 +364,10 @@ func (c *container) ToKubernetesTemplate() corev1.Container {
 		Env:             cr.Env,
 		EnvFrom:         cr.EnvFrom,
 		VolumeMounts:    c.volumeMountsCopy(),
+		Resources:       resources,
 		WorkingDir:      workingDir,
 		SecurityContext: cr.SecurityContext,
-	}
+	}, nil
 }
 
 func (c *container) ApplyImageData(image *imageinspector.Info) error {
