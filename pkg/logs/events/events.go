@@ -51,6 +51,7 @@ type Log testkube.LogV2
 
 func NewFinishLog() *Log {
 	return &Log{
+		Time:    time.Now(),
 		Content: "processing logs finished",
 		Type_:   "finish",
 		Source:  "log-server",
