@@ -132,7 +132,7 @@ func (r *PlaywrightRunner) Run(ctx context.Context, execution testkube.Execution
 			runPath = r.Params.WorkingDir
 		}
 
-		if rerr = agent.RunScript(execution.PostRunScript, runPath, execution.SourceScripts); rerr != nil {
+		if rerr = agent.RunScript(execution.PostRunScript, runPath); rerr != nil {
 			output.PrintLogf("%s Failed to execute post run script %s", ui.IconWarning, rerr)
 		}
 	}

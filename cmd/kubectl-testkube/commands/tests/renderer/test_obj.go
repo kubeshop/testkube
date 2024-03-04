@@ -164,7 +164,7 @@ func TestRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 		}
 
 		if test.ExecutionRequest.SourceScripts {
-			ui.Warn("  Source scripts:                         ", fmt.Sprint(test.ExecutionRequest.SourceScripts))
+			ui.Warn("  Source scripts:              ", fmt.Sprint(test.ExecutionRequest.SourceScripts))
 		}
 
 		if test.ExecutionRequest.ScraperTemplate != "" {

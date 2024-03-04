@@ -70,7 +70,7 @@ type Execution struct {
 	PostRunScript string `json:"postRunScript,omitempty"`
 	// execute post run script before scraping (prebuilt executor only)
 	ExecutePostRunScriptBeforeScraping bool `json:"executePostRunScriptBeforeScraping,omitempty"`
-	// run scripts using source command
+	// run scripts using source command (container executor only)
 	SourceScripts  bool            `json:"sourceScripts,omitempty"`
 	RunningContext *RunningContext `json:"runningContext,omitempty"`
 	// shell used in container executor

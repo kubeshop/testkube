@@ -258,7 +258,7 @@ func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
 	cmd.Flags().StringVarP(&flags.PreRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	cmd.Flags().StringVarP(&flags.PostRunScript, "postrun-script", "", "", "path to script to be run after test execution")
 	cmd.Flags().BoolVarP(&flags.ExecutePostRunScriptBeforeScraping, "execute-postrun-script-before-scraping", "", false, "whether to execute postrun scipt before scraping or not (prebuilt executor only)")
-	cmd.Flags().BoolVarP(&flags.SourceScripts, "source-scripts", "", false, "run scripts using source command")
+	cmd.Flags().BoolVarP(&flags.SourceScripts, "source-scripts", "", false, "run scripts using source command (container executor only)")
 	cmd.Flags().StringVar(&flags.ScraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
 	cmd.Flags().StringVar(&flags.ScraperTemplateReference, "scraper-template-reference", "", "reference to scraper template to use for the test")
 	cmd.Flags().StringVar(&flags.PvcTemplate, "pvc-template", "", "pvc template file path for extensions to pvc template")
