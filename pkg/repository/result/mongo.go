@@ -154,6 +154,14 @@ func (r *MongoRepository) getOutputFromLogServer(ctx context.Context, result *te
 	return output, nil
 }
 
+func (r *MongoRepository) GetExecution(ctx context.Context, id string) (result testkube.Execution, err error) {
+	err = r.ResultsColl.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&result)
+	if err != nil {
+		return
+	}
+	return *result.UnscapeDots(), err
+}
+
 func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.Execution, err error) {
 	err = r.ResultsColl.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&result)
 	if err != nil {
