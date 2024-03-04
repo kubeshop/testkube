@@ -190,7 +190,16 @@ func main() {
 		mode = common.ModeAgent
 	}
 	if mode == common.ModeAgent {
-		grpcConn, err = agent.NewGRPCConnection(ctx, cfg.TestkubeProTLSInsecure, cfg.TestkubeProSkipVerify, cfg.TestkubeProURL, log.DefaultLogger)
+		grpcConn, err = agent.NewGRPCConnection(
+			ctx,
+			cfg.TestkubeProTLSInsecure,
+			cfg.TestkubeProSkipVerify,
+			cfg.TestkubeProURL,
+			cfg.TestkubeProCertFile,
+			cfg.TestkubeProKeyFile,
+			cfg.TestkubeProCAFile,
+			log.DefaultLogger,
+		)
 		ui.ExitOnError("error creating gRPC connection", err)
 		defer grpcConn.Close()
 
@@ -515,6 +524,7 @@ func main() {
 		features,
 		logsStream,
 		cfg.TestkubeNamespace,
+		cfg.TestkubeProTLSSecret,
 	)
 
 	slackLoader, err := newSlackLoader(cfg, envs)

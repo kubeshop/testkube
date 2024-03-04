@@ -107,7 +107,16 @@ func main() {
 	switch mode {
 
 	case common.ModeAgent:
-		grpcConn, err := agent.NewGRPCConnection(ctx, cfg.TestkubeProTLSInsecure, cfg.TestkubeProSkipVerify, cfg.TestkubeProURL+cfg.TestkubeProLogsPath, log)
+		grpcConn, err := agent.NewGRPCConnection(
+			ctx,
+			cfg.TestkubeProTLSInsecure,
+			cfg.TestkubeProSkipVerify,
+			cfg.TestkubeProURL+cfg.TestkubeProLogsPath,
+			cfg.TestkubeProCertFile,
+			cfg.TestkubeProKeyFile,
+			cfg.TestkubeProCAFile,
+			log,
+		)
 		ui.ExitOnError("error creating gRPC connection for logs service", err)
 		defer grpcConn.Close()
 		grpcClient := pb.NewCloudLogsServiceClient(grpcConn)
