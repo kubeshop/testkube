@@ -14,7 +14,6 @@ import (
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 )
@@ -27,14 +26,9 @@ func ProcessDelay(_ InternalProcessor, layer Intermediate, container Container, 
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("invalid duration: %s", step.Delay))
 	}
-	resources := map[corev1.ResourceName]intstr.IntOrString{
-		corev1.ResourceCPU:    {Type: intstr.String, StrVal: "50m"},
-		corev1.ResourceMemory: {Type: intstr.String, StrVal: "4Mi"},
-	}
 	shell := container.CreateChild().
 		SetCommand("sleep").
-		SetArgs(fmt.Sprintf("%g", t.Seconds())).
-		SetResources(testworkflowsv1.Resources{Requests: resources, Limits: resources})
+		SetArgs(fmt.Sprintf("%g", t.Seconds()))
 	stage := NewContainerStage(layer.NextRef(), shell)
 	stage.SetName(fmt.Sprintf("Delay: %s", step.Delay))
 	return stage, nil
