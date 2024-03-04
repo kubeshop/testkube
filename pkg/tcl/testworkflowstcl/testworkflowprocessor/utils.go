@@ -25,7 +25,7 @@ func AnnotateControlledBy(obj metav1.Object, testWorkflowId string) {
 	if labels == nil {
 		labels = map[string]string{}
 	}
-	labels["testworkflowid"] = testWorkflowId
+	labels[executionIdLabelName] = testWorkflowId
 	obj.SetLabels(labels)
 
 	// Annotate Pod template in the Job

@@ -69,7 +69,7 @@ func TestProcessBasic(t *testing.T) {
 		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "dummy-id",
-			Labels: map[string]string{"testworkflowid": "dummy-id"},
+			Labels: map[string]string{executionIdLabelName: "dummy-id"},
 			Annotations: map[string]string{
 				"testworkflows.testkube.io/signature": string(sigSerialized),
 			},
@@ -79,7 +79,7 @@ func TestProcessBasic(t *testing.T) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        "dummy-id-pod",
-					Labels:      map[string]string{"testworkflowid": "dummy-id"},
+					Labels:      map[string]string{executionIdLabelName: "dummy-id"},
 					Annotations: map[string]string(nil),
 				},
 				Spec: corev1.PodSpec{

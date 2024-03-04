@@ -20,10 +20,11 @@ import (
 )
 
 const (
-	defaultImage        = "busybox:1.36.1"
-	defaultShell        = "/bin/sh"
-	defaultInternalPath = "/.tktw"
-	defaultDataPath     = "/data"
+	defaultImage         = "busybox:1.36.1"
+	defaultShell         = "/bin/sh"
+	defaultInternalPath  = "/.tktw"
+	defaultDataPath      = "/data"
+	executionIdLabelName = "testworkflowid"
 )
 
 var (
