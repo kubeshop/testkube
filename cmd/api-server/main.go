@@ -587,7 +587,7 @@ func main() {
 	}
 
 	// Apply Pro server enhancements
-	apitclv1.NewApiTCL(api, &proContext, kubeClient).AppendRoutes()
+	apitclv1.NewApiTCL(api, &proContext, kubeClient, inspector).AppendRoutes()
 
 	api.InitEvents()
 	if !cfg.DisableTestTriggers {

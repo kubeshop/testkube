@@ -265,6 +265,27 @@ func (s *math) SafeResolve(m ...Machine) (v Expression, changed bool, err error)
 	if err != nil {
 		return
 	}
+
+	// Fast track for cutting dead paths
+	t := s.left.Type()
+	if s.left.Static() == nil && s.right.Static() != nil && t != TypeUnknown && t == s.right.Type() && t == TypeBool {
+		if s.operator == operatorAnd {
+			b, err := s.right.Static().BoolValue()
+			if err == nil && !b {
+				return s.right, true, nil
+			} else if err == nil {
+				return s.left, true, nil
+			}
+		} else if s.operator == operatorOr {
+			b, err := s.right.Static().BoolValue()
+			if err == nil && b {
+				return s.right, true, nil
+			} else if err == nil {
+				return s.left, true, nil
+			}
+		}
+	}
+
 	if s.left.Static() != nil && s.right.Static() != nil {
 		res, err := s.performMath(s.left.Static(), s.right.Static())
 		if err != nil {

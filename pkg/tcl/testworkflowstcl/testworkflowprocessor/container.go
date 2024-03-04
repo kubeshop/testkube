@@ -1,0 +1,387 @@
+// Copyright 2024 Testkube.
+//
+// Licensed as a Testkube Pro file under the Testkube Community
+// License (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
+//
+//	https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
+
+package testworkflowprocessor
+
+import (
+	"maps"
+	"path/filepath"
+	"slices"
+	"strings"
+
+	corev1 "k8s.io/api/core/v1"
+
+	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/imageinspector"
+	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowresolver"
+)
+
+type container struct {
+	parent   *container
+	Cr       testworkflowsv1.ContainerConfig `expr:"include"`
+	CrMounts []corev1.VolumeMount            `expr:"force"`
+}
+
+type ContainerComposition interface {
+	Root() Container
+	Parent() Container
+	CreateChild() Container
+
+	Resolve(m ...expressionstcl.Machine) error
+}
+
+type ContainerAccessors interface {
+	Env() []corev1.EnvVar
+	EnvFrom() []corev1.EnvFromSource
+	VolumeMounts() []corev1.VolumeMount
+
+	ImagePullPolicy() corev1.PullPolicy
+	Image() string
+	Command() []string
+	Args() []string
+	WorkingDir() string
+
+	Detach() Container
+	ToKubernetesTemplate() corev1.Container
+
+	Resources() testworkflowsv1.Resources
+	SecurityContext() *corev1.SecurityContext
+}
+
+type ContainerMutations[T any] interface {
+	AppendEnv(env ...corev1.EnvVar) T
+	AppendEnvMap(env map[string]string) T
+	AppendEnvFrom(envFrom ...corev1.EnvFromSource) T
+	AppendVolumeMounts(volumeMounts ...corev1.VolumeMount) T
+	SetImagePullPolicy(policy corev1.PullPolicy) T
+	SetImage(image string) T
+	SetCommand(command ...string) T
+	SetArgs(args ...string) T
+	SetWorkingDir(workingDir string) T // "" = default to the image
+	SetResources(resources testworkflowsv1.Resources) T
+	SetSecurityContext(sc *corev1.SecurityContext) T
+
+	ApplyCR(cr *testworkflowsv1.ContainerConfig) T
+	ApplyImageData(image *imageinspector.Info) error
+}
+
+//go:generate mockgen -destination=./mock_container.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor" Container
+type Container interface {
+	ContainerComposition
+	ContainerAccessors
+	ContainerMutations[Container]
+}
+
+func NewContainer() Container {
+	return &container{}
+}
+
+func sum[T any](s1 []T, s2 []T) []T {
+	if len(s1) == 0 {
+		return s2
+	}
+	if len(s2) == 0 {
+		return s1
+	}
+	return append(append(make([]T, 0, len(s1)+len(s2)), s1...), s2...)
+}
+
+// Composition
+
+func (c *container) Root() Container {
+	if c.parent == nil {
+		return c
+	}
+	return c.parent.Parent()
+}
+
+func (c *container) Parent() Container {
+	return c.parent
+}
+
+func (c *container) CreateChild() Container {
+	return &container{parent: c}
+}
+
+// Getters
+
+func (c *container) Env() []corev1.EnvVar {
+	if c.parent == nil {
+		return c.Cr.Env
+	}
+	return sum(c.parent.Env(), c.Cr.Env)
+}
+
+func (c *container) EnvFrom() []corev1.EnvFromSource {
+	if c.parent == nil {
+		return c.Cr.EnvFrom
+	}
+	return sum(c.parent.EnvFrom(), c.Cr.EnvFrom)
+}
+
+func (c *container) VolumeMounts() []corev1.VolumeMount {
+	if c.parent == nil {
+		return c.CrMounts
+	}
+	return sum(c.parent.VolumeMounts(), c.CrMounts)
+}
+
+func (c *container) ImagePullPolicy() corev1.PullPolicy {
+	if c.parent == nil || c.Cr.ImagePullPolicy != "" {
+		return c.Cr.ImagePullPolicy
+	}
+	return c.parent.ImagePullPolicy()
+}
+
+func (c *container) Image() string {
+	if c.parent == nil || c.Cr.Image != "" {
+		return c.Cr.Image
+	}
+	return c.parent.Image()
+}
+
+func (c *container) Command() []string {
+	// Do not inherit command, if the Image was replaced on this depth
+	if c.parent == nil || c.Cr.Command != nil || (c.Cr.Image != "" && c.Cr.Image != c.Image()) {
+		if c.Cr.Command == nil {
+			return nil
+		}
+		return *c.Cr.Command
+	}
+	return c.parent.Command()
+}
+
+func (c *container) Args() []string {
+	// Do not inherit args, if the Image or Command was replaced on this depth
+	if c.parent == nil || (c.Cr.Args != nil && len(*c.Cr.Args) > 0) || c.Cr.Command != nil || (c.Cr.Image != "" && c.Cr.Image != c.Image()) {
+		if c.Cr.Args == nil {
+			return nil
+		}
+		return *c.Cr.Args
+	}
+	return c.parent.Args()
+}
+
+func (c *container) WorkingDir() string {
+	path := ""
+	if c.Cr.WorkingDir != nil {
+		path = *c.Cr.WorkingDir
+	}
+	if c.parent == nil {
+		return path
+	}
+	if filepath.IsAbs(path) {
+		return path
+	}
+	parentPath := c.parent.WorkingDir()
+	if parentPath == "" {
+		return path
+	}
+	return filepath.Join(parentPath, path)
+}
+
+func (c *container) Resources() (r testworkflowsv1.Resources) {
+	if c.parent != nil {
+		r = *common.Ptr(c.parent.Resources()).DeepCopy()
+	}
+	if c.Cr.Resources == nil {
+		return
+	}
+	if len(c.Cr.Resources.Requests) > 0 {
+		r.Requests = c.Cr.Resources.Requests
+	}
+	if len(c.Cr.Resources.Limits) > 0 {
+		r.Limits = c.Cr.Resources.Limits
+	}
+	return
+}
+
+func (c *container) SecurityContext() *corev1.SecurityContext {
+	if c.Cr.SecurityContext != nil {
+		return c.Cr.SecurityContext
+	}
+	if c.parent == nil {
+		return nil
+	}
+	return c.parent.SecurityContext()
+}
+
+// Mutations
+
+func (c *container) AppendEnv(env ...corev1.EnvVar) Container {
+	c.Cr.Env = append(c.Cr.Env, env...)
+	return c
+}
+
+func (c *container) AppendEnvMap(env map[string]string) Container {
+	for k, v := range env {
+		c.Cr.Env = append(c.Cr.Env, corev1.EnvVar{Name: k, Value: v})
+	}
+	return c
+}
+
+func (c *container) AppendEnvFrom(envFrom ...corev1.EnvFromSource) Container {
+	c.Cr.EnvFrom = append(c.Cr.EnvFrom, envFrom...)
+	return c
+}
+
+func (c *container) AppendVolumeMounts(volumeMounts ...corev1.VolumeMount) Container {
+	c.CrMounts = append(c.CrMounts, volumeMounts...)
+	return c
+}
+
+func (c *container) SetImagePullPolicy(policy corev1.PullPolicy) Container {
+	c.Cr.ImagePullPolicy = policy
+	return c
+}
+
+func (c *container) SetImage(image string) Container {
+	c.Cr.Image = image
+	return c
+}
+
+func (c *container) SetCommand(command ...string) Container {
+	c.Cr.Command = &command
+	return c
+}
+
+func (c *container) SetArgs(args ...string) Container {
+	c.Cr.Args = &args
+	return c
+}
+
+func (c *container) SetWorkingDir(workingDir string) Container {
+	c.Cr.WorkingDir = &workingDir
+	return c
+}
+
+func (c *container) SetResources(resources testworkflowsv1.Resources) Container {
+	c.Cr.Resources = &resources
+	return c
+}
+
+func (c *container) SetSecurityContext(sc *corev1.SecurityContext) Container {
+	c.Cr.SecurityContext = sc
+	return c
+}
+
+func (c *container) ApplyCR(config *testworkflowsv1.ContainerConfig) Container {
+	c.Cr = *testworkflowresolver.MergeContainerConfig(&c.Cr, config)
+	return c
+}
+
+func (c *container) ToContainerConfig() testworkflowsv1.ContainerConfig {
+	env := slices.Clone(c.Env())
+	for i := range env {
+		env[i] = *env[i].DeepCopy()
+	}
+	envFrom := slices.Clone(c.EnvFrom())
+	for i := range envFrom {
+		envFrom[i] = *envFrom[i].DeepCopy()
+	}
+	return testworkflowsv1.ContainerConfig{
+		WorkingDir:      common.Ptr(c.WorkingDir()),
+		Image:           c.Image(),
+		ImagePullPolicy: c.ImagePullPolicy(),
+		Env:             env,
+		EnvFrom:         envFrom,
+		Command:         common.Ptr(slices.Clone(c.Command())),
+		Args:            common.Ptr(slices.Clone(c.Args())),
+		Resources: &testworkflowsv1.Resources{
+			Requests: maps.Clone(c.Resources().Requests),
+			Limits:   maps.Clone(c.Resources().Limits),
+		},
+		SecurityContext: c.SecurityContext().DeepCopy(),
+	}
+}
+
+func (c *container) volumeMountsCopy() []corev1.VolumeMount {
+	volumeMounts := make([]corev1.VolumeMount, len(c.VolumeMounts()))
+	for i, v := range c.VolumeMounts() {
+		volumeMounts[i] = *v.DeepCopy()
+	}
+	return volumeMounts
+}
+
+func (c *container) Detach() Container {
+	c.Cr = c.ToContainerConfig()
+	c.CrMounts = c.volumeMountsCopy()
+	c.parent = nil
+	return c
+}
+
+func (c *container) ToKubernetesTemplate() corev1.Container {
+	cr := c.ToContainerConfig()
+	var command []string
+	if cr.Command != nil {
+		command = *cr.Command
+	}
+	var args []string
+	if cr.Args != nil {
+		args = *cr.Args
+	}
+	workingDir := ""
+	if cr.WorkingDir != nil {
+		workingDir = *cr.WorkingDir
+	}
+	return corev1.Container{
+		Image:           cr.Image,
+		ImagePullPolicy: cr.ImagePullPolicy,
+		Command:         command,
+		Args:            args,
+		Env:             cr.Env,
+		EnvFrom:         cr.EnvFrom,
+		VolumeMounts:    c.volumeMountsCopy(),
+		WorkingDir:      workingDir,
+		SecurityContext: cr.SecurityContext,
+	}
+}
+
+func (c *container) ApplyImageData(image *imageinspector.Info) error {
+	if image == nil {
+		return nil
+	}
+	err := c.Resolve(expressionstcl.NewMachine().
+		Register("image.command", image.Entrypoint).
+		Register("image.args", image.Cmd).
+		Register("image.workingDir", image.WorkingDir))
+	if err != nil {
+		return err
+	}
+	if len(c.Command()) == 0 {
+		c.SetCommand(image.Entrypoint...)
+		if len(c.Args()) == 0 {
+			c.SetArgs(image.Cmd...)
+		}
+	}
+	return nil
+}
+
+func (c *container) Resolve(m ...expressionstcl.Machine) error {
+	base := expressionstcl.NewMachine().
+		RegisterAccessor(func(name string) (interface{}, bool) {
+			if !strings.HasPrefix(name, "env.") {
+				return nil, false
+			}
+			env := c.Env()
+			name = name[4:]
+			for i := range env {
+				if env[i].Name == name {
+					value, err := expressionstcl.EvalTemplate(env[i].Value)
+					if err == nil {
+						return value, true
+					}
+					break
+				}
+			}
+			return nil, false
+		})
+	return expressionstcl.Simplify(c, append([]expressionstcl.Machine{base}, m...)...)
+}

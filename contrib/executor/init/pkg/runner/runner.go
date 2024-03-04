@@ -81,7 +81,8 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 		}
 
 		shebang := "#!" + shell + "\nset -e\n"
-		entrypoint := shebang
+		// No set -e so that we can run the post-run script even if the command fails
+		entrypoint := "#!" + shell + "\n"
 		command := shebang
 		preRunScript := shebang
 		postRunScript := shebang
@@ -92,6 +93,7 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 			}
 
 			entrypoint += strconv.Quote(filepath.Join(r.Params.DataDir, preRunScriptName)) + "\n"
+			entrypoint += "prerun_exit_code=$?\nif [ $prerun_exit_code -ne 0 ]; then\n  exit $prerun_exit_code\nfi\n"
 			preRunScript += execution.PreRunScript
 		}
 
@@ -101,6 +103,7 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 			}
 
 			entrypoint += strconv.Quote(filepath.Join(r.Params.DataDir, commandScriptName)) + " $@\n"
+			entrypoint += "command_exit_code=$?\n"
 			command += strings.Join(execution.Command, " ")
 			command += " \"$@\"\n"
 		}
@@ -111,9 +114,17 @@ func (r *InitRunner) Run(ctx context.Context, execution testkube.Execution) (res
 			}
 
 			entrypoint += strconv.Quote(filepath.Join(r.Params.DataDir, postRunScriptName)) + "\n"
+			entrypoint += "postrun_exit_code=$?\n"
 			postRunScript += execution.PostRunScript
 		}
 
+		if len(execution.Command) != 0 {
+			entrypoint += "if [ $command_exit_code -ne 0 ]; then\n  exit $command_exit_code\nfi\n"
+		}
+
+		if execution.PostRunScript != "" {
+			entrypoint += "exit $postrun_exit_code\n"
+		}
 		var scripts = []struct {
 			dir     string
 			file    string

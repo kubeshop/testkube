@@ -19,11 +19,13 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/config"
+	"github.com/kubeshop/testkube/pkg/imageinspector"
 )
 
 type apiTCL struct {
 	apiv1.TestkubeAPI
 	ProContext                  *config.ProContext
+	ImageInspector              imageinspector.Inspector
 	TestWorkflowsClient         testworkflowsv1.Interface
 	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
 }
@@ -36,10 +38,12 @@ func NewApiTCL(
 	testkubeAPI apiv1.TestkubeAPI,
 	proContext *config.ProContext,
 	kubeClient kubeclient.Client,
+	imageInspector imageinspector.Inspector,
 ) ApiTCL {
 	return &apiTCL{
 		TestkubeAPI:                 testkubeAPI,
 		ProContext:                  proContext,
+		ImageInspector:              imageInspector,
 		TestWorkflowsClient:         testworkflowsv1.NewClient(kubeClient, testkubeAPI.Namespace),
 		TestWorkflowTemplatesClient: testworkflowsv1.NewTestWorkflowTemplatesClient(kubeClient, testkubeAPI.Namespace),
 	}
@@ -82,6 +86,9 @@ func (s *apiTCL) AppendRoutes() {
 	testWorkflows.Get("/:id", s.pro(s.GetTestWorkflowHandler()))
 	testWorkflows.Put("/:id", s.pro(s.UpdateTestWorkflowHandler()))
 	testWorkflows.Delete("/:id", s.pro(s.DeleteTestWorkflowHandler()))
+
+	testWorkflowExecutions := testWorkflows.Group("/:id/executions")
+	testWorkflowExecutions.Post("/", s.pro(s.ExecuteTestWorkflowHandler()))
 
 	root.Post("/preview-test-workflow", s.pro(s.PreviewTestWorkflowHandler()))
 
