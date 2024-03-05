@@ -68,6 +68,20 @@ func (mr *MockStageMockRecorder) ApplyImages(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyImages", reflect.TypeOf((*MockStage)(nil).ApplyImages), arg0)
 }
 
+// Category mocks base method.
+func (m *MockStage) Category() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Category")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Category indicates an expected call of Category.
+func (mr *MockStageMockRecorder) Category() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Category", reflect.TypeOf((*MockStage)(nil).Category))
+}
+
 // Condition mocks base method.
 func (m *MockStage) Condition() string {
 	m.ctrl.T.Helper()
@@ -226,6 +240,20 @@ func (mr *MockStageMockRecorder) RetryPolicy() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetryPolicy", reflect.TypeOf((*MockStage)(nil).RetryPolicy))
 }
 
+// SetCategory mocks base method.
+func (m *MockStage) SetCategory(arg0 string) StageMetadata {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetCategory", arg0)
+	ret0, _ := ret[0].(StageMetadata)
+	return ret0
+}
+
+// SetCategory indicates an expected call of SetCategory.
+func (mr *MockStageMockRecorder) SetCategory(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCategory", reflect.TypeOf((*MockStage)(nil).SetCategory), arg0)
+}
+
 // SetCondition mocks base method.
 func (m *MockStage) SetCondition(arg0 string) StageLifecycle {
 	m.ctrl.T.Helper()
@@ -241,22 +269,17 @@ func (mr *MockStageMockRecorder) SetCondition(arg0 interface{}) *gomock.Call {
 }
 
 // SetName mocks base method.
-func (m *MockStage) SetName(arg0 string, arg1 ...string) StageMetadata {
+func (m *MockStage) SetName(arg0 string) StageMetadata {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0}
-	for _, a := range arg1 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "SetName", varargs...)
+	ret := m.ctrl.Call(m, "SetName", arg0)
 	ret0, _ := ret[0].(StageMetadata)
 	return ret0
 }
 
 // SetName indicates an expected call of SetName.
-func (mr *MockStageMockRecorder) SetName(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+func (mr *MockStageMockRecorder) SetName(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0}, arg1...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetName", reflect.TypeOf((*MockStage)(nil).SetName), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetName", reflect.TypeOf((*MockStage)(nil).SetName), arg0)
 }
 
 // SetNegative mocks base method.

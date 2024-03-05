@@ -11,6 +11,7 @@ package testworkflowprocessor
 type Signature interface {
 	Ref() string
 	Name() string
+	Category() string
 	Optional() bool
 	Negative() bool
 	Children() []Signature
@@ -19,6 +20,7 @@ type Signature interface {
 type signature struct {
 	RefValue      string      `json:"ref"`
 	NameValue     string      `json:"name,omitempty"`
+	CategoryValue string      `json:"category,omitempty"`
 	OptionalValue bool        `json:"optional,omitempty"`
 	NegativeValue bool        `json:"negative,omitempty"`
 	ChildrenValue []Signature `json:"children,omitempty"`
@@ -30,6 +32,10 @@ func (s *signature) Ref() string {
 
 func (s *signature) Name() string {
 	return s.NameValue
+}
+
+func (s *signature) Category() string {
+	return s.CategoryValue
 }
 
 func (s *signature) Optional() bool {

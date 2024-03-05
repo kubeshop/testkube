@@ -11,13 +11,16 @@ package testworkflowprocessor
 type StageMetadata interface {
 	Ref() string
 	Name() string
+	Category() string
 
-	SetName(name string, fallbacks ...string) StageMetadata
+	SetName(name string) StageMetadata
+	SetCategory(category string) StageMetadata
 }
 
 type stageMetadata struct {
-	ref  string
-	name string `expr:"template"`
+	ref      string
+	name     string `expr:"template"`
+	category string `expr:"template"`
 }
 
 func NewStageMetadata(ref string) StageMetadata {
@@ -32,10 +35,16 @@ func (s *stageMetadata) Name() string {
 	return s.name
 }
 
-func (s *stageMetadata) SetName(name string, fallbacks ...string) StageMetadata {
+func (s *stageMetadata) Category() string {
+	return s.category
+}
+
+func (s *stageMetadata) SetName(name string) StageMetadata {
 	s.name = name
-	for i := 0; s.name == "" && i < len(fallbacks); i++ {
-		s.name = fallbacks[i]
-	}
+	return s
+}
+
+func (s *stageMetadata) SetCategory(category string) StageMetadata {
+	s.category = category
 	return s
 }
