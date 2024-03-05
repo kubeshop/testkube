@@ -34,11 +34,11 @@ func RootCAs(file ...string) Option {
 		for _, f := range file {
 			rootPEM, err := os.ReadFile(f)
 			if err != nil || rootPEM == nil {
-				return fmt.Errorf("nats: error loading or parsing rootCA file: %v", err)
+				return fmt.Errorf("minio: error loading or parsing rootCA file: %v", err)
 			}
 			ok := pool.AppendCertsFromPEM(rootPEM)
 			if !ok {
-				return fmt.Errorf("nats: failed to parse root certificate from %q", f)
+				return fmt.Errorf("minio: failed to parse root certificate from %q", f)
 			}
 		}
 		if o.TlsConfig == nil {
@@ -56,11 +56,11 @@ func ClientCert(certFile, keyFile string) Option {
 	return func(o *Connecter) error {
 		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 		if err != nil {
-			return fmt.Errorf("nats: error loading client certificate: %v", err)
+			return fmt.Errorf("minio: error loading client certificate: %v", err)
 		}
 		cert.Leaf, err = x509.ParseCertificate(cert.Certificate[0])
 		if err != nil {
-			return fmt.Errorf("nats: error parsing client certificate: %v", err)
+			return fmt.Errorf("minio: error parsing client certificate: %v", err)
 		}
 		if o.TlsConfig == nil {
 			o.TlsConfig = &tls.Config{MinVersion: tls.VersionTLS12}
