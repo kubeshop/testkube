@@ -20,10 +20,11 @@ type WatcherValue[T interface{}] struct {
 }
 
 type Watcher[T interface{}] interface {
-	Next() <-chan WatcherValue[T]
+	Next(ctx context.Context) <-chan WatcherValue[T]
+	Any(ctx context.Context) <-chan WatcherValue[T]
 	Done() <-chan struct{}
 	Listen(fn func(WatcherValue[T], bool)) func()
-	Stream() WatcherChannel[T]
+	Stream(ctx context.Context) WatcherChannel[T]
 	Close()
 }
 
@@ -72,13 +73,20 @@ func (w *watcher[T]) Resume() {
 	w.recomputeReader()
 }
 
-func (w *watcher[T]) Next() <-chan WatcherValue[T] {
+func (w *watcher[T]) Next(ctx context.Context) <-chan WatcherValue[T] {
 	ch := make(chan WatcherValue[T])
-	var cancel func()
+	var cancelListener func()
+	finalCtx, cancel := context.WithCancel(ctx)
 	var wg sync.WaitGroup
 	wg.Add(1)
-	cancel = w.Listen(func(w WatcherValue[T], ok bool) {
+	go func() {
+		wg.Wait()
+		<-finalCtx.Done()
+		cancelListener()
+	}()
+	cancelListener = w.Listen(func(w WatcherValue[T], ok bool) {
 		wg.Wait() // on finished channel, the listener may be called before the lock goes down
+		cancelListener()
 		cancel()
 		if ok {
 			ch <- w
@@ -86,6 +94,26 @@ func (w *watcher[T]) Next() <-chan WatcherValue[T] {
 		close(ch)
 	})
 	wg.Done()
+	return ch
+}
+
+func (w *watcher[T]) Any(ctx context.Context) <-chan WatcherValue[T] {
+	ch := make(chan WatcherValue[T])
+	go func() {
+		w.mu.Lock()
+		if len(w.cache) > 0 {
+			v := w.cache[len(w.cache)-1]
+			w.mu.Unlock()
+			ch <- v
+			close(ch)
+		}
+		w.mu.Unlock()
+		v, ok := <-w.Next(ctx)
+		if ok {
+			ch <- v
+		}
+		close(ch)
+	}()
 	return ch
 }
 
@@ -190,9 +218,9 @@ func (w *watcher[T]) recomputeReader() {
 						go func(fn func(WatcherValue[T], bool)) {
 							defer func() {
 								recover()
+								wg.Done()
 							}()
 							fn(value, ok)
-							wg.Done()
 						}(*l)
 					}
 					wg.Wait()
@@ -264,11 +292,18 @@ func (w *watcher[T]) getAndLock(index int) (WatcherValue[T], int, bool) {
 	return WatcherValue[T]{}, next, false
 }
 
-func (w *watcher[T]) Stream() WatcherChannel[T] {
+func (w *watcher[T]) Stream(ctx context.Context) WatcherChannel[T] {
 	// Create the channel
 	wCh := &watcherChannel[T]{
 		ch: make(chan WatcherValue[T]),
 	}
+
+	// Handle context
+	finalCtx, cancel := context.WithCancel(ctx)
+	go func() {
+		<-finalCtx.Done()
+		wCh.Stop()
+	}()
 
 	// Fast-track when there are no cached messages
 	w.mu.Lock()
@@ -282,6 +317,7 @@ func (w *watcher[T]) Stream() WatcherChannel[T] {
 				wCh.ch <- v
 			} else if wCh.ch != nil {
 				wCh.Stop()
+				cancel()
 			}
 		})
 		w.mu.Unlock()
@@ -297,17 +333,19 @@ func (w *watcher[T]) Stream() WatcherChannel[T] {
 		}()
 
 		if wCh.ch == nil {
+			cancel()
 			return
 		}
 
 		// Send cache data
-		wCh.cancel = func() {}
+		wCh.cancel = func() { cancel() }
 		var value WatcherValue[T]
 		var ok bool
 		index := 0
 		for value, index, ok = w.getAndLock(index); ok; value, index, ok = w.getAndLock(index) {
 			if wCh.ch == nil {
 				w.mu.Unlock()
+				cancel()
 				return
 			}
 			w.mu.Unlock()
@@ -316,6 +354,7 @@ func (w *watcher[T]) Stream() WatcherChannel[T] {
 
 		if wCh.ch == nil {
 			w.mu.Unlock()
+			cancel()
 			return
 		}
 
@@ -329,6 +368,7 @@ func (w *watcher[T]) Stream() WatcherChannel[T] {
 				wCh.ch <- v
 			} else if wCh.ch != nil {
 				wCh.Stop()
+				cancel()
 			}
 		})
 		w.mu.Unlock()
@@ -360,8 +400,10 @@ func (w *watcherChannel[T]) Stop() {
 	if w.cancel != nil {
 		w.cancel()
 		w.cancel = nil
-		ch := w.ch
-		w.ch = nil
-		close(ch)
+		if w.ch != nil {
+			ch := w.ch
+			w.ch = nil
+			close(ch)
+		}
 	}
 }

@@ -33,16 +33,17 @@ func queue(fn func()) {
 
 func TestWatcherSync(t *testing.T) {
 	w := newWatcher[test](context.Background(), 0)
+	defer w.Close()
 
 	go func() {
 		w.SendValue(test{value: "A"})
 		w.SendValue(test{value: "B"})
 		w.Close()
 	}()
-	a := <-w.Next()
-	b := <-w.Next()
-	c := <-w.Next()
-	_, ok := <-w.Next()
+	a := <-w.Next(context.Background())
+	b := <-w.Next(context.Background())
+	c := <-w.Next(context.Background())
+	_, ok := <-w.Next(context.Background())
 
 	assert.Equal(t, WatcherValue[test]{Value: test{value: "A"}}, a)
 	assert.Equal(t, WatcherValue[test]{Value: test{value: "B"}}, b)
@@ -52,6 +53,7 @@ func TestWatcherSync(t *testing.T) {
 
 func TestWatcherDistributed(t *testing.T) {
 	w := newWatcher[test](context.Background(), 0)
+	defer w.Close()
 
 	queue(func() {
 		w.SendValue(test{value: "A"})
@@ -60,12 +62,12 @@ func TestWatcherDistributed(t *testing.T) {
 	})
 
 	w.Pause()
-	aCh, bCh := w.Next(), w.Next()
+	aCh, bCh := w.Next(context.Background()), w.Next(context.Background())
 	w.Resume()
 	a, b := <-aCh, <-bCh
 
-	c := <-w.Next()
-	d := <-w.Next()
+	c := <-w.Next(context.Background())
+	d := <-w.Next(context.Background())
 
 	assert.Equal(t, WatcherValue[test]{Value: test{value: "A"}}, a)
 	assert.Equal(t, WatcherValue[test]{Value: test{value: "A"}}, b)
@@ -75,6 +77,7 @@ func TestWatcherDistributed(t *testing.T) {
 
 func TestWatcherSyncAdvanced(t *testing.T) {
 	w := newWatcher[test](context.Background(), 0)
+	defer w.Close()
 
 	go func() {
 		time.Sleep(500 * time.Microsecond)
@@ -83,10 +86,10 @@ func TestWatcherSyncAdvanced(t *testing.T) {
 		w.Close()
 	}()
 
-	aCh := w.Next()
+	aCh := w.Next(context.Background())
 	w.SendValue(test{value: "A"})
 	go w.SendValue(test{value: "B"})
-	bCh := w.Next()
+	bCh := w.Next(context.Background())
 	a, b := <-aCh, <-bCh
 
 	assert.Equal(t, WatcherValue[test]{Value: test{value: "A"}}, a)
@@ -95,13 +98,14 @@ func TestWatcherSyncAdvanced(t *testing.T) {
 
 func TestWatcherPause(t *testing.T) {
 	w := newWatcher[test](context.Background(), 0)
+	defer w.Close()
 
 	w.Pause()
-	aCh := w.Next()
+	aCh := w.Next(context.Background())
 	queue(func() {
 		w.SendValue(test{value: "A"})
 	})
-	bCh := w.Next()
+	bCh := w.Next(context.Background())
 	time.Sleep(500 * time.Microsecond)
 	var a, b WatcherValue[test]
 	select {
@@ -119,8 +123,9 @@ func TestWatcherPause(t *testing.T) {
 
 func TestWatcherCache(t *testing.T) {
 	w := newWatcher[test](context.Background(), 2)
+	defer w.Close()
 
-	a := w.Stream()
+	a := w.Stream(context.Background())
 	queue(func() {
 		w.SendValue(test{value: "A"})
 		w.SendValue(test{value: "B"})
@@ -134,7 +139,7 @@ func TestWatcherCache(t *testing.T) {
 	av3 := <-a.Channel()
 	a.Stop()
 
-	b := w.Stream()
+	b := w.Stream(context.Background())
 	bv1 := <-b.Channel()
 	bv2 := <-b.Channel()
 	bv3 := <-b.Channel()
