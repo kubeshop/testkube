@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 	batchv1 "k8s.io/api/batch/v1"
@@ -191,7 +192,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 
 	// Build list of the containers
-	containers, err := buildKubernetesContainers(root, NewInitProcess().SetRef(root.Ref()), images)
+	containers, err := buildKubernetesContainers(root, NewInitProcess().SetRef(root.Ref()))
 	if err != nil {
 		return nil, errors.Wrap(err, "building Kubernetes containers")
 	}
@@ -207,6 +208,17 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		err = expressionstcl.FinalizeForce(&containers[i].Resources, machines...)
 		if err != nil {
 			return nil, errors.Wrap(err, "finalizing container's resources")
+		}
+
+		// Resolve relative paths in the volumeMounts relatively to the working dir
+		workingDir := "/data"
+		if containers[i].WorkingDir != "" {
+			workingDir = containers[i].WorkingDir
+		}
+		for j := range containers[i].VolumeMounts {
+			if !filepath.IsAbs(containers[i].VolumeMounts[j].MountPath) {
+				containers[i].VolumeMounts[j].MountPath = filepath.Clean(filepath.Join(workingDir, containers[i].VolumeMounts[j].MountPath))
+			}
 		}
 	}
 
@@ -231,11 +243,11 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 	initContainer := corev1.Container{
 		// TODO: Resources, SecurityContext?
-		Name:            "copy-init",
+		Name:            "tktw-init",
 		Image:           defaultInitImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"/bin/sh", "-c"},
-		Args:            []string{fmt.Sprintf("cp /init %s && touch %s && chmod 777 %s", defaultInitPath, defaultStatePath, defaultStatePath)},
+		Args:            []string{fmt.Sprintf("cp /init %s && touch %s && chmod 777 %s && (echo -n ',0' > %s && exit 0) || (echo -n 'failed,1' > %s && exit 1)", defaultInitPath, defaultStatePath, defaultStatePath, "/dev/termination-log", "/dev/termination-log")},
 		VolumeMounts:    layer.ContainerDefaults().VolumeMounts(),
 	}
 	err = expressionstcl.FinalizeForce(&initContainer, machines...)

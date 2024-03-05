@@ -387,6 +387,9 @@ func (c *container) ApplyImageData(image *imageinspector.Info) error {
 			c.SetArgs(image.Cmd...)
 		}
 	}
+	if image.WorkingDir != "" && c.WorkingDir() == "" {
+		c.SetWorkingDir(image.WorkingDir)
+	}
 	return nil
 }
 

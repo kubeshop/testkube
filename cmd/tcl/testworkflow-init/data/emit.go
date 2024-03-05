@@ -13,16 +13,22 @@ import (
 	"fmt"
 )
 
+// TODO: Replace prefix with something less common
+const (
+	InstructionPrefix = ";;"
+	HintPrefix        = ";"
+)
+
 func EmitOutput(ref string, name string, value interface{}) {
 	j, err := json.Marshal(value)
 	if err != nil {
 		panic(fmt.Sprintf("error while marshalling reference: %v", err))
 	}
-	fmt.Printf("\n;;%s;%s:%s;\n", ref, name, string(j))
+	fmt.Printf("\n%s%s;%s:%s;\n", InstructionPrefix, ref, name, string(j))
 }
 
 func EmitHint(ref string, name string) {
-	fmt.Printf("\n;;;%s;%s;\n", ref, name)
+	fmt.Printf("\n%s%s%s;%s;\n", InstructionPrefix, HintPrefix, ref, name)
 }
 
 func EmitHintDetails(ref string, name string, value interface{}) {
@@ -30,5 +36,5 @@ func EmitHintDetails(ref string, name string, value interface{}) {
 	if err != nil {
 		panic(fmt.Sprintf("error while marshalling reference: %v", err))
 	}
-	fmt.Printf("\n;;;%s;%s:%s;\n", ref, name, string(j))
+	fmt.Printf("\n%s%s%s;%s:%s;\n", InstructionPrefix, HintPrefix, ref, name, string(j))
 }
