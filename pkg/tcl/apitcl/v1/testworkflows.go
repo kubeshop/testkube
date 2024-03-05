@@ -24,6 +24,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/rand"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	mappers2 "github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowresolver"
 )
@@ -294,22 +295,24 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 		}
 
 		// Deploy the resources
-		// TODO: rollback on failure
 		for _, item := range bundle.Secrets {
 			_, err = s.Clientset.CoreV1().Secrets(s.Namespace).Create(context.Background(), &item, metav1.CreateOptions{})
 			if err != nil {
+				go testworkflowcontroller.Cleanup(context.Background(), s.Clientset, s.Namespace, request.Name)
 				return s.BadRequest(c, errPrefix, "creating secret", err)
 			}
 		}
 		for _, item := range bundle.ConfigMaps {
 			_, err = s.Clientset.CoreV1().ConfigMaps(s.Namespace).Create(context.Background(), &item, metav1.CreateOptions{})
 			if err != nil {
+				go testworkflowcontroller.Cleanup(context.Background(), s.Clientset, s.Namespace, request.Name)
 				return s.BadRequest(c, errPrefix, "creating configmap", err)
 			}
 		}
 		_, err = s.Clientset.BatchV1().Jobs(s.Namespace).Create(context.Background(), &bundle.Job, metav1.CreateOptions{})
 		if err != nil {
 			if err != nil {
+				go testworkflowcontroller.Cleanup(context.Background(), s.Clientset, s.Namespace, request.Name)
 				return s.BadRequest(c, errPrefix, "creating job", err)
 			}
 		}
