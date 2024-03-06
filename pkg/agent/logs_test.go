@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/internal/config"
-	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/agent"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/executor/output"
+	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
 
