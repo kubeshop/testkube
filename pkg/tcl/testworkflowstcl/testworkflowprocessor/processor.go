@@ -211,7 +211,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		}
 
 		// Resolve relative paths in the volumeMounts relatively to the working dir
-		workingDir := "/data"
+		workingDir := defaultDataPath
 		if containers[i].WorkingDir != "" {
 			workingDir = containers[i].WorkingDir
 		}
