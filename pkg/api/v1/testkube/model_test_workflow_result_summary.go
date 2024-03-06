@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-type TestWorkflowResult struct {
+type TestWorkflowResultSummary struct {
 	Status          *TestWorkflowStatus `json:"status"`
 	PredictedStatus *TestWorkflowStatus `json:"predictedStatus"`
 	// when the pod was created
@@ -23,7 +23,5 @@ type TestWorkflowResult struct {
 	// when the pod has been completed
 	FinishedAt time.Time `json:"finishedAt,omitempty"`
 	// Go-formatted (human-readable) duration
-	Duration       string                            `json:"duration,omitempty"`
-	Initialization *TestWorkflowStepResult           `json:"initialization,omitempty"`
-	Steps          map[string]TestWorkflowStepResult `json:"steps,omitempty"`
+	Duration string `json:"duration,omitempty"`
 }

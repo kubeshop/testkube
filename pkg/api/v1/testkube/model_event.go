@@ -17,10 +17,11 @@ type Event struct {
 	StreamTopic string         `json:"streamTopic,omitempty"`
 	Resource    *EventResource `json:"resource"`
 	// ID of resource
-	ResourceId         string              `json:"resourceId"`
-	Type_              *EventType          `json:"type"`
-	TestExecution      *Execution          `json:"testExecution,omitempty"`
-	TestSuiteExecution *TestSuiteExecution `json:"testSuiteExecution,omitempty"`
+	ResourceId            string                 `json:"resourceId"`
+	Type_                 *EventType             `json:"type"`
+	TestExecution         *Execution             `json:"testExecution,omitempty"`
+	TestSuiteExecution    *TestSuiteExecution    `json:"testSuiteExecution,omitempty"`
+	TestWorkflowExecution *TestWorkflowExecution `json:"testWorkflowExecution,omitempty"`
 	// cluster name of event
 	ClusterName string `json:"clusterName,omitempty"`
 	// environment variables

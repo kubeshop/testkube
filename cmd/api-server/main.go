@@ -18,6 +18,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	apitclv1 "github.com/kubeshop/testkube/pkg/tcl/apitcl/v1"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
+	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -243,6 +244,7 @@ func main() {
 	// DI
 	var resultsRepository result.Repository
 	var testResultsRepository testresult.Repository
+	var testWorkflowResultsRepository testworkflow.Repository
 	var configRepository configrepository.Repository
 	var triggerLeaseBackend triggers.LeaseBackend
 	var artifactStorage domainstorage.ArtifactsStorage
@@ -261,6 +263,7 @@ func main() {
 		mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb, result.WithFeatureFlags(features), result.WithLogsClient(logGrpcClient))
 		resultsRepository = mongoResultsRepository
 		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb)
+		testWorkflowResultsRepository = testworkflow.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
 		configRepository = configrepository.NewMongoRepository(db)
 		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
 		minioClient := newStorageClient(cfg)
@@ -587,7 +590,7 @@ func main() {
 	}
 
 	// Apply Pro server enhancements
-	apitclv1.NewApiTCL(api, &proContext, kubeClient, inspector).AppendRoutes()
+	apitclv1.NewApiTCL(api, &proContext, kubeClient, inspector, testWorkflowResultsRepository).AppendRoutes()
 
 	api.InitEvents()
 	if !cfg.DisableTestTriggers {

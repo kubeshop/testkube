@@ -22,6 +22,7 @@ type Client interface {
 	CopyFileAPI
 	TemplateAPI
 	TestWorkflowAPI
+	TestWorkflowExecutionAPI
 	TestWorkflowTemplateAPI
 }
 
@@ -131,13 +132,23 @@ type TestSourceAPI interface {
 // TestWorkflowAPI describes test workflow api methods
 type TestWorkflowAPI interface {
 	GetTestWorkflow(id string) (testkube.TestWorkflow, error)
+	GetTestWorkflowWithExecution(id string) (testkube.TestWorkflowWithExecution, error)
 	ListTestWorkflows(selector string) (testkube.TestWorkflows, error)
+	ListTestWorkflowWithExecutions(selector string) (testkube.TestWorkflowWithExecutions, error)
 	DeleteTestWorkflows(selector string) error
 	CreateTestWorkflow(workflow testkube.TestWorkflow) (testkube.TestWorkflow, error)
 	UpdateTestWorkflow(workflow testkube.TestWorkflow) (testkube.TestWorkflow, error)
 	DeleteTestWorkflow(name string) error
 	ExecuteTestWorkflow(name string, request testkube.TestWorkflowExecutionRequest) (testkube.TestWorkflowExecution, error)
 	GetTestWorkflowExecutionNotifications(id string) (chan testkube.TestWorkflowExecutionNotification, error)
+}
+
+// TestWorkflowExecutionAPI describes test workflow api methods
+type TestWorkflowExecutionAPI interface {
+	GetTestWorkflowExecution(executionID string) (execution testkube.TestWorkflowExecution, err error)
+	ListTestWorkflowExecutions(id string, limit int, selector string) (executions testkube.TestWorkflowExecutionsResult, err error)
+	AbortTestWorkflowExecution(workflow string, id string) error
+	AbortTestWorkflowExecutions(workflow string) error
 }
 
 // TestWorkflowTemplateAPI describes test workflow api methods
@@ -258,13 +269,13 @@ type Gettable interface {
 		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution | testkube.TestWithExecutionSummary |
 		testkube.TestSuiteWithExecutionSummary | testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo |
 		testkube.TestSource | testkube.Template |
-		testkube.TestWorkflow | testkube.TestWorkflowTemplate | testkube.TestWorkflowExecution
+		testkube.TestWorkflow | testkube.TestWorkflowWithExecution | testkube.TestWorkflowTemplate | testkube.TestWorkflowExecution
 }
 
 // Executable is an interface of executable objects
 type Executable interface {
-	testkube.Execution | testkube.TestSuiteExecution |
-		testkube.ExecutionsResult | testkube.TestSuiteExecutionsResult | testkube.TestWorkflowExecution
+	testkube.Execution | testkube.TestSuiteExecution | testkube.TestWorkflowExecution |
+		testkube.ExecutionsResult | testkube.TestSuiteExecutionsResult | testkube.TestWorkflowExecutionsResult
 }
 
 // All is an interface of all objects

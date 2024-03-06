@@ -10,19 +10,26 @@ package v1
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
+	"math"
+	"net/http"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/datefilter"
+	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
 )
 
 func (s *apiTCL) StreamTestWorkflowExecutionNotificationsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
-		id := c.Params("id")
+		id := c.Params("executionID")
 		errPrefix := fmt.Sprintf("failed to stream test workflow execution notifications '%s'", id)
 
 		// TODO: Fetch execution from database
@@ -58,4 +65,203 @@ func (s *apiTCL) StreamTestWorkflowExecutionNotificationsHandler() fiber.Handler
 
 		return nil
 	}
+}
+
+func (s *apiTCL) ListTestWorkflowExecutionsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		errPrefix := "failed to list test workflow executions"
+
+		filter := getWorkflowExecutionsFilterFromRequest(c)
+
+		executions, err := s.TestWorkflowResults.GetExecutionsSummary(c.Context(), filter)
+		if err != nil {
+			return s.ClientError(c, errPrefix+": get execution results", err)
+		}
+
+		executionTotals, err := s.TestWorkflowResults.GetExecutionsTotals(c.Context(), testworkflow.NewExecutionsFilter().WithName(filter.Name()))
+		if err != nil {
+			return s.ClientError(c, errPrefix+": get totals", err)
+		}
+
+		filterTotals := *filter.(*testworkflow.FilterImpl)
+		filterTotals.WithPage(0).WithPageSize(math.MaxInt32)
+		filteredTotals, err := s.TestWorkflowResults.GetExecutionsTotals(c.Context(), filterTotals)
+		if err != nil {
+			return s.ClientError(c, errPrefix+": get filtered totals", err)
+		}
+
+		results := testkube.TestWorkflowExecutionsResult{
+			Totals:   &executionTotals,
+			Filtered: &filteredTotals,
+			Results:  executions,
+		}
+		return c.JSON(results)
+	}
+}
+
+func (s *apiTCL) GetTestWorkflowMetricsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		workflowName := c.Params("id")
+
+		const DefaultLimit = 0
+		limit, err := strconv.Atoi(c.Query("limit", strconv.Itoa(DefaultLimit)))
+		if err != nil {
+			limit = DefaultLimit
+		}
+
+		const DefaultLastDays = 7
+		last, err := strconv.Atoi(c.Query("last", strconv.Itoa(DefaultLastDays)))
+		if err != nil {
+			last = DefaultLastDays
+		}
+
+		metrics, err := s.TestWorkflowResults.GetTestWorkflowMetrics(c.Context(), workflowName, limit, last)
+		if err != nil {
+			return s.ClientError(c, "get metrics for workflow", err)
+		}
+
+		return c.JSON(metrics)
+	}
+}
+
+func (s *apiTCL) GetTestWorkflowExecutionHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		id := c.Params("id", "")
+		executionID := c.Params("executionID")
+
+		var execution testkube.TestWorkflowExecution
+		var err error
+		if id == "" {
+			execution, err = s.TestWorkflowResults.Get(ctx, executionID)
+		} else {
+			execution, err = s.TestWorkflowResults.GetByNameAndTestWorkflow(ctx, executionID, id)
+		}
+		if err != nil {
+			return s.ClientError(c, "get execution", err)
+		}
+
+		return c.JSON(execution)
+	}
+}
+
+func (s *apiTCL) AbortTestWorkflowExecutionHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		name := c.Params("id")
+		executionID := c.Params("executionID")
+		errPrefix := fmt.Sprintf("failed to abort test workflow execution '%s'", executionID)
+
+		// TODO: Fetch execution from database
+		execution, err := s.TestWorkflowResults.GetByNameAndTestWorkflow(ctx, executionID, name)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		if execution.Result != nil && execution.Result.IsFinished() {
+			return s.BadRequest(c, errPrefix, "checking execution", errors.New("execution already finished"))
+		}
+
+		// Obtain the controller
+		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, s.Namespace, execution.Id, execution.ScheduledAt)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "fetching job", err)
+		}
+
+		// Abort the execution
+		err = ctrl.Abort(context.Background())
+		if err != nil {
+			return s.ClientError(c, "aborting test workflow execution", err)
+		}
+
+		c.Status(http.StatusNoContent)
+
+		return nil
+	}
+}
+
+func (s *apiTCL) AbortAllTestWorkflowExecutionsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		name := c.Params("id")
+		errPrefix := fmt.Sprintf("failed to abort test workflow executions '%s'", name)
+
+		// Fetch executions
+		filter := testworkflow.NewExecutionsFilter().WithName(name).WithStatus(string(testkube.RUNNING_TestWorkflowStatus))
+		executions, err := s.TestWorkflowResults.GetExecutions(ctx, filter)
+		if err != nil {
+			if IsNotFound(err) {
+				c.Status(http.StatusNoContent)
+				return nil
+			}
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		for _, execution := range executions {
+			// Obtain the controller
+			ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, s.Namespace, execution.Id, execution.ScheduledAt)
+			if err != nil {
+				return s.BadRequest(c, errPrefix, "fetching job", err)
+			}
+
+			// Abort the execution
+			err = ctrl.Abort(context.Background())
+			if err != nil {
+				return s.ClientError(c, errPrefix, err)
+			}
+		}
+
+		c.Status(http.StatusNoContent)
+
+		return nil
+	}
+}
+
+func getWorkflowExecutionsFilterFromRequest(c *fiber.Ctx) testworkflow.Filter {
+	filter := testworkflow.NewExecutionsFilter()
+	name := c.Params("id", "")
+	if name != "" {
+		filter = filter.WithName(name)
+	}
+
+	textSearch := c.Query("textSearch", "")
+	if textSearch != "" {
+		filter = filter.WithTextSearch(textSearch)
+	}
+
+	page, err := strconv.Atoi(c.Query("page", ""))
+	if err == nil {
+		filter = filter.WithPage(page)
+	}
+
+	pageSize, err := strconv.Atoi(c.Query("pageSize", ""))
+	if err == nil && pageSize != 0 {
+		filter = filter.WithPageSize(pageSize)
+	}
+
+	status := c.Query("status", "")
+	if status != "" {
+		filter = filter.WithStatus(status)
+	}
+
+	last, err := strconv.Atoi(c.Query("last", "0"))
+	if err == nil && last != 0 {
+		filter = filter.WithLastNDays(last)
+	}
+
+	dFilter := datefilter.NewDateFilter(c.Query("startDate", ""), c.Query("endDate", ""))
+	if dFilter.IsStartValid {
+		filter = filter.WithStartDate(dFilter.Start)
+	}
+
+	if dFilter.IsEndValid {
+		filter = filter.WithEndDate(dFilter.End)
+	}
+
+	selector := c.Query("selector")
+	if selector != "" {
+		filter = filter.WithSelector(selector)
+	}
+
+	return filter
 }

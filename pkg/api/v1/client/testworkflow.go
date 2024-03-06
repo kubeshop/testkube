@@ -11,31 +11,50 @@ import (
 // NewTestWorkflowClient creates new TestWorkflow client
 func NewTestWorkflowClient(
 	testWorkflowTransport Transport[testkube.TestWorkflow],
+	testWorkflowWithExecutionTransport Transport[testkube.TestWorkflowWithExecution],
 	testWorkflowExecutionTransport Transport[testkube.TestWorkflowExecution],
+	testWorkflowExecutionsResultTransport Transport[testkube.TestWorkflowExecutionsResult],
 ) TestWorkflowClient {
 	return TestWorkflowClient{
-		testWorkflowTransport:          testWorkflowTransport,
-		testWorkflowExecutionTransport: testWorkflowExecutionTransport,
+		testWorkflowTransport:                 testWorkflowTransport,
+		testWorkflowWithExecutionTransport:    testWorkflowWithExecutionTransport,
+		testWorkflowExecutionTransport:        testWorkflowExecutionTransport,
+		testWorkflowExecutionsResultTransport: testWorkflowExecutionsResultTransport,
 	}
 }
 
-// TestWorkflowClient is a client for tests
+// TestWorkflowClient is a client for test workflows
 type TestWorkflowClient struct {
-	testWorkflowTransport          Transport[testkube.TestWorkflow]
-	testWorkflowExecutionTransport Transport[testkube.TestWorkflowExecution]
+	testWorkflowTransport                 Transport[testkube.TestWorkflow]
+	testWorkflowWithExecutionTransport    Transport[testkube.TestWorkflowWithExecution]
+	testWorkflowExecutionTransport        Transport[testkube.TestWorkflowExecution]
+	testWorkflowExecutionsResultTransport Transport[testkube.TestWorkflowExecutionsResult]
 }
 
-// GetTestWorkflow returns single test by id
+// GetTestWorkflow returns single test workflow by id
 func (c TestWorkflowClient) GetTestWorkflow(id string) (testkube.TestWorkflow, error) {
 	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s", id)
 	return c.testWorkflowTransport.Execute(http.MethodGet, uri, nil, nil)
 }
 
-// ListTestWorkflows list all tests
+// GetTestWorkflowWithExecution returns single test workflow with execution by id
+func (c TestWorkflowClient) GetTestWorkflowWithExecution(id string) (testkube.TestWorkflowWithExecution, error) {
+	uri := c.testWorkflowWithExecutionTransport.GetURI("/test-workflow-with-executions/%s", id)
+	return c.testWorkflowWithExecutionTransport.Execute(http.MethodGet, uri, nil, nil)
+}
+
+// ListTestWorkflows list all test workflows
 func (c TestWorkflowClient) ListTestWorkflows(selector string) (testkube.TestWorkflows, error) {
 	uri := c.testWorkflowTransport.GetURI("/test-workflows")
 	params := map[string]string{"selector": selector}
 	return c.testWorkflowTransport.ExecuteMultiple(http.MethodGet, uri, nil, params)
+}
+
+// ListTestWorkflowWithExecutions list all test workflows with their latest executions
+func (c TestWorkflowClient) ListTestWorkflowWithExecutions(selector string) (testkube.TestWorkflowWithExecutions, error) {
+	uri := c.testWorkflowWithExecutionTransport.GetURI("/test-workflow-with-executions")
+	params := map[string]string{"selector": selector}
+	return c.testWorkflowWithExecutionTransport.ExecuteMultiple(http.MethodGet, uri, nil, params)
 }
 
 // DeleteTestWorkflows deletes multiple test workflows by labels
@@ -104,4 +123,35 @@ func (c TestWorkflowClient) GetTestWorkflowExecutionNotifications(id string) (no
 	uri := c.testWorkflowTransport.GetURI("/test-workflow-executions/%s/notifications", id)
 	err = c.testWorkflowTransport.GetTestWorkflowExecutionNotifications(uri, notifications)
 	return notifications, err
+}
+
+// GetTestWorkflowExecution returns single test workflow execution by id
+func (c TestWorkflowClient) GetTestWorkflowExecution(id string) (testkube.TestWorkflowExecution, error) {
+	uri := c.testWorkflowExecutionTransport.GetURI("/test-workflow-executions/%s", id)
+	return c.testWorkflowExecutionTransport.Execute(http.MethodGet, uri, nil, nil)
+}
+
+// ListTestWorkflowExecutions list test workflow executions for selected workflow
+func (c TestWorkflowClient) ListTestWorkflowExecutions(id string, limit int, selector string) (testkube.TestWorkflowExecutionsResult, error) {
+	uri := c.testWorkflowExecutionsResultTransport.GetURI("/test-workflow-executions/")
+	if id != "" {
+		uri = c.testWorkflowExecutionsResultTransport.GetURI(fmt.Sprintf("/test-workflows/%s/executions", id))
+	}
+	params := map[string]string{
+		"selector": selector,
+		"pageSize": fmt.Sprintf("%d", limit),
+	}
+	return c.testWorkflowExecutionsResultTransport.Execute(http.MethodGet, uri, nil, params)
+}
+
+// AbortTestWorkflowExecution aborts selected execution
+func (c TestWorkflowClient) AbortTestWorkflowExecution(workflow, id string) error {
+	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/executions/%s/abort", workflow, id)
+	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, "", false)
+}
+
+// AbortTestWorkflowExecutions aborts all workflow executions
+func (c TestWorkflowClient) AbortTestWorkflowExecutions(workflow string) error {
+	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/abort", workflow)
+	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, "", false)
 }

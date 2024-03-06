@@ -40,7 +40,9 @@ func NewProxyAPIClient(client kubernetes.Interface, config APIConfig) APIClient 
 		TemplateClient:   NewTemplateClient(NewProxyClient[testkube.Template](client, config)),
 		TestWorkflowClient: NewTestWorkflowClient(
 			NewProxyClient[testkube.TestWorkflow](client, config),
+			NewProxyClient[testkube.TestWorkflowWithExecution](client, config),
 			NewProxyClient[testkube.TestWorkflowExecution](client, config),
+			NewProxyClient[testkube.TestWorkflowExecutionsResult](client, config),
 		),
 		TestWorkflowTemplateClient: NewTestWorkflowTemplateClient(NewProxyClient[testkube.TestWorkflowTemplate](client, config)),
 	}
@@ -75,7 +77,9 @@ func NewDirectAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI,
 		TemplateClient:   NewTemplateClient(NewDirectClient[testkube.Template](httpClient, apiURI, apiPathPrefix)),
 		TestWorkflowClient: NewTestWorkflowClient(
 			NewDirectClient[testkube.TestWorkflow](httpClient, apiURI, apiPathPrefix),
+			NewDirectClient[testkube.TestWorkflowWithExecution](httpClient, apiURI, apiPathPrefix),
 			NewDirectClient[testkube.TestWorkflowExecution](httpClient, apiURI, apiPathPrefix),
+			NewDirectClient[testkube.TestWorkflowExecutionsResult](httpClient, apiURI, apiPathPrefix),
 		),
 		TestWorkflowTemplateClient: NewTestWorkflowTemplateClient(NewDirectClient[testkube.TestWorkflowTemplate](httpClient, apiURI, apiPathPrefix)),
 	}
@@ -110,7 +114,9 @@ func NewCloudAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI, 
 		TemplateClient:   NewTemplateClient(NewCloudClient[testkube.Template](httpClient, apiURI, apiPathPrefix)),
 		TestWorkflowClient: NewTestWorkflowClient(
 			NewCloudClient[testkube.TestWorkflow](httpClient, apiURI, apiPathPrefix).WithSSEClient(sseClient),
+			NewCloudClient[testkube.TestWorkflowWithExecution](httpClient, apiURI, apiPathPrefix),
 			NewCloudClient[testkube.TestWorkflowExecution](httpClient, apiURI, apiPathPrefix),
+			NewCloudClient[testkube.TestWorkflowExecutionsResult](httpClient, apiURI, apiPathPrefix),
 		),
 		TestWorkflowTemplateClient: NewTestWorkflowTemplateClient(NewCloudClient[testkube.TestWorkflowTemplate](httpClient, apiURI, apiPathPrefix)),
 	}
