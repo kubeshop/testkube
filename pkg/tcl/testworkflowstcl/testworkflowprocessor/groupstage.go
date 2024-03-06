@@ -121,11 +121,14 @@ func (s *groupStage) Flatten() []Stage {
 
 	// Merge stage into single one below if possible
 	first := s.children[0]
-	if len(s.children) == 1 && (s.name == "" || first.Name() == "") {
+	if len(s.children) == 1 && (s.name == "" || first.Name() == "") && (s.timeout == "" || first.Timeout() == "") {
 		if first.Name() == "" {
 			first.SetName(s.name)
 		}
 		first.AppendConditions(s.condition)
+		if first.Timeout() == "" {
+			first.SetTimeout(s.timeout)
+		}
 		if s.negative {
 			first.SetNegative(!first.Negative())
 		}

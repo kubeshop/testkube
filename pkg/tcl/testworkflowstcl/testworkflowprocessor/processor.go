@@ -69,7 +69,7 @@ func (p *processor) process(layer Intermediate, container Container, step testwo
 	// Build an initial group for the inner items
 	self := NewGroupStage(ref, false)
 	self.SetName(step.Name)
-	self.SetOptional(step.Optional).SetNegative(step.Negative)
+	self.SetOptional(step.Optional).SetNegative(step.Negative).SetTimeout(step.Timeout)
 	if step.Condition != "" {
 		self.SetCondition(step.Condition)
 	} else {

@@ -60,7 +60,7 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 		}
 	case <-time.After(JobRetrievalTimeout):
 		ctxCancel()
-		return nil, ctx.Err()
+		return nil, errors.Wrap(err, "timeout retrieving job")
 	}
 
 	// Build accessible controller
