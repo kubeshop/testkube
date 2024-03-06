@@ -279,6 +279,7 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 				}
 				w.SendValue(Notification{
 					Timestamp: v.Value.CreationTimestamp.Time,
+					Ref:       container.Name,
 					Log:       fmt.Sprintf("%s (%s) %s\n", v.Value.CreationTimestamp.Time.Format(time.RFC3339Nano), v.Value.Reason, v.Value.Message),
 				})
 			}
@@ -327,7 +328,7 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 					}
 					continue
 				}
-				w.SendValue(Notification{Timestamp: v.Value.Time, Log: string(v.Value.Log)})
+				w.SendValue(Notification{Timestamp: v.Value.Time, Ref: container.Name, Log: string(v.Value.Log)})
 			}
 
 			// Watch container status

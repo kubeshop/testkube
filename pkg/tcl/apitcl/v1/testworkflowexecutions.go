@@ -13,6 +13,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"strconv"
@@ -177,6 +178,34 @@ func (s *apiTCL) GetTestWorkflowExecutionHandler() fiber.Handler {
 		}
 
 		return c.JSON(execution)
+	}
+}
+
+func (s *apiTCL) GetTestWorkflowExecutionLogsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		id := c.Params("id", "")
+		executionID := c.Params("executionID")
+
+		var execution testkube.TestWorkflowExecution
+		var err error
+		if id == "" {
+			execution, err = s.TestWorkflowResults.Get(ctx, executionID)
+		} else {
+			execution, err = s.TestWorkflowResults.GetByNameAndTestWorkflow(ctx, executionID, id)
+		}
+		if err != nil {
+			return s.ClientError(c, "get execution", err)
+		}
+
+		reader, err := s.TestWorkflowOutput.ReadLog(ctx, executionID, execution.Workflow.Name)
+		if err != nil {
+			return s.InternalError(c, "can't get log", executionID, err)
+		}
+
+		c.Context().SetContentType(mediaTypePlainText)
+		_, err = io.Copy(c.Response().BodyWriter(), reader)
+		return err
 	}
 }
 

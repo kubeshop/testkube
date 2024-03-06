@@ -10,6 +10,7 @@ package testworkflow
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -69,4 +70,18 @@ type Repository interface {
 	DeleteByTestWorkflows(ctx context.Context, workflowNames []string) (err error)
 	// GetTestWorkflowMetrics get metrics based on the TestWorkflow results
 	GetTestWorkflowMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error)
+}
+
+//go:generate mockgen -destination=./mock_output_repository.go -package=testworkflow "github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow" OutputRepository
+type OutputRepository interface {
+	// PresignSaveLog builds presigned storage URL to save the output in Minio
+	PresignSaveLog(ctx context.Context, id, workflowName string) (string, error)
+	// PresignReadLog builds presigned storage URL to read the output from Minio
+	PresignReadLog(ctx context.Context, id, workflowName string) (string, error)
+	// SaveLog streams the output from the workflow to Minio
+	SaveLog(ctx context.Context, id, workflowName string, reader io.Reader) error
+	// ReadLog streams the output from Minio
+	ReadLog(ctx context.Context, id, workflowName string) (io.Reader, error)
+	// HasLog checks if there is an output in Minio
+	HasLog(ctx context.Context, id, workflowName string) (bool, error)
 }

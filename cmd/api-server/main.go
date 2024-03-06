@@ -245,6 +245,7 @@ func main() {
 	var resultsRepository result.Repository
 	var testResultsRepository testresult.Repository
 	var testWorkflowResultsRepository testworkflow.Repository
+	var testWorkflowOutputRepository testworkflow.OutputRepository
 	var configRepository configrepository.Repository
 	var triggerLeaseBackend triggers.LeaseBackend
 	var artifactStorage domainstorage.ArtifactsStorage
@@ -274,6 +275,7 @@ func main() {
 			log.DefaultLogger.Errorw("Error setting expiration policy", "error", expErr)
 		}
 		storageClient = minioClient
+		testWorkflowOutputRepository = testworkflow.NewMinioOutputRepository(storageClient, cfg.LogsBucket)
 		artifactStorage = minio.NewMinIOArtifactClient(storageClient)
 		// init storage
 		isMinioStorage := cfg.LogsStorage == "minio"
@@ -590,7 +592,7 @@ func main() {
 	}
 
 	// Apply Pro server enhancements
-	apitclv1.NewApiTCL(api, &proContext, kubeClient, inspector, testWorkflowResultsRepository).AppendRoutes()
+	apitclv1.NewApiTCL(api, &proContext, kubeClient, inspector, testWorkflowResultsRepository, testWorkflowOutputRepository).AppendRoutes()
 
 	api.InitEvents()
 	if !cfg.DisableTestTriggers {

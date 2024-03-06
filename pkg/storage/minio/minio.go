@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -631,4 +632,34 @@ func (c *Client) IsConnectionPossible(ctx context.Context) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (c *Client) PresignDownloadFileFromBucket(ctx context.Context, bucket, bucketFolder, file string, expires time.Duration) (string, error) {
+	if err := c.Connect(); err != nil {
+		return "", err
+	}
+	if bucketFolder != "" {
+		file = strings.Trim(bucketFolder, "/") + "/" + file
+	}
+	c.Log.Debugw("presigning get object from minio", "file", file, "bucket", bucket)
+	url, err := c.minioClient.PresignedPutObject(ctx, bucket, file, expires)
+	if err != nil {
+		return "", err
+	}
+	return url.String(), nil
+}
+
+func (c *Client) PresignUploadFileToBucket(ctx context.Context, bucket, bucketFolder, filePath string, expires time.Duration) (string, error) {
+	if err := c.Connect(); err != nil {
+		return "", err
+	}
+	if bucketFolder != "" {
+		filePath = strings.Trim(bucketFolder, "/") + "/" + filePath
+	}
+	c.Log.Debugw("presigning put object in minio", "file", filePath, "bucket", bucket)
+	url, err := c.minioClient.PresignedPutObject(ctx, bucket, filePath, expires)
+	if err != nil {
+		return "", err
+	}
+	return url.String(), nil
 }

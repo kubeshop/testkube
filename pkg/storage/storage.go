@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"io"
+	"time"
 
 	"github.com/minio/minio-go/v7"
 
@@ -39,4 +40,6 @@ type ClientBucket interface {
 	UploadFileToBucket(ctx context.Context, bucket, bucketFolder, filePath string, reader io.Reader, objectSize int64) error
 	GetValidBucketName(parentType string, parentName string) string
 	DeleteFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) error
+	PresignDownloadFileFromBucket(ctx context.Context, bucket, bucketFolder, file string, expires time.Duration) (string, error)
+	PresignUploadFileToBucket(ctx context.Context, bucket, bucketFolder, filePath string, expires time.Duration) (string, error)
 }

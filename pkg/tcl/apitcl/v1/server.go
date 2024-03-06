@@ -21,6 +21,7 @@ import (
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowexecutor"
 )
 
 type apiTCL struct {
@@ -28,8 +29,10 @@ type apiTCL struct {
 	ProContext                  *config.ProContext
 	ImageInspector              imageinspector.Inspector
 	TestWorkflowResults         testworkflow.Repository
+	TestWorkflowOutput          testworkflow.OutputRepository
 	TestWorkflowsClient         testworkflowsv1.Interface
 	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
+	TestWorkflowExecutor        testworkflowexecutor.TestWorkflowExecutor
 }
 
 type ApiTCL interface {
@@ -42,14 +45,17 @@ func NewApiTCL(
 	kubeClient kubeclient.Client,
 	imageInspector imageinspector.Inspector,
 	testWorkflowResults testworkflow.Repository,
+	testWorkflowOutput testworkflow.OutputRepository,
 ) ApiTCL {
 	return &apiTCL{
 		TestkubeAPI:                 testkubeAPI,
 		ProContext:                  proContext,
 		ImageInspector:              imageInspector,
 		TestWorkflowResults:         testWorkflowResults,
+		TestWorkflowOutput:          testWorkflowOutput,
 		TestWorkflowsClient:         testworkflowsv1.NewClient(kubeClient, testkubeAPI.Namespace),
 		TestWorkflowTemplatesClient: testworkflowsv1.NewTestWorkflowTemplatesClient(kubeClient, testkubeAPI.Namespace),
+		TestWorkflowExecutor:        testworkflowexecutor.New(testkubeAPI.Events, testkubeAPI.Clientset, testWorkflowResults, testWorkflowOutput, testkubeAPI.Namespace),
 	}
 }
 
@@ -96,6 +102,7 @@ func (s *apiTCL) AppendRoutes() {
 	testWorkflows.Get("/:id/executions/:executionID", s.pro(s.GetTestWorkflowExecutionHandler()))
 	testWorkflows.Post("/:id/abort", s.pro(s.AbortAllTestWorkflowExecutionsHandler()))
 	testWorkflows.Post("/:id/executions/:executionID/abort", s.pro(s.AbortTestWorkflowExecutionHandler()))
+	testWorkflows.Get("/:id/executions/:executionID/logs", s.pro(s.GetTestWorkflowExecutionLogsHandler()))
 
 	testWorkflowExecutions := root.Group("/test-workflow-executions")
 	testWorkflowExecutions.Get("/", s.pro(s.ListTestWorkflowExecutionsHandler()))
@@ -103,6 +110,7 @@ func (s *apiTCL) AppendRoutes() {
 	testWorkflowExecutions.Get("/:executionID/notifications", s.pro(s.StreamTestWorkflowExecutionNotificationsHandler()))
 	testWorkflowExecutions.Get("/:executionID/notifications/stream", s.pro(s.StreamTestWorkflowExecutionNotificationsWebSocketHandler()))
 	testWorkflowExecutions.Post("/:executionID/abort", s.pro(s.AbortTestWorkflowExecutionHandler()))
+	testWorkflowExecutions.Get("/:executionID/logs", s.pro(s.GetTestWorkflowExecutionLogsHandler()))
 
 	testWorkflowWithExecutions := root.Group("/test-workflow-with-executions")
 	testWorkflowWithExecutions.Get("/", s.pro(s.ListTestWorkflowWithExecutionsHandler()))
