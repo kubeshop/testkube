@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/pkg/errors"
@@ -23,7 +24,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/rand"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
-	mappers2 "github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
+	testworkflowmappers "github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowresolver"
 )
@@ -35,7 +37,7 @@ func (s *apiTCL) ListTestWorkflowsHandler() fiber.Handler {
 		if err != nil {
 			return s.BadGateway(c, errPrefix, "client problem", err)
 		}
-		err = SendResourceList(c, "TestWorkflow", testworkflowsv1.GroupVersion, mappers2.MapTestWorkflowKubeToAPI, workflows.Items...)
+		err = SendResourceList(c, "TestWorkflow", testworkflowsv1.GroupVersion, testworkflowmappers.MapTestWorkflowKubeToAPI, workflows.Items...)
 		if err != nil {
 			return s.InternalError(c, errPrefix, "serialization problem", err)
 		}
@@ -51,7 +53,7 @@ func (s *apiTCL) GetTestWorkflowHandler() fiber.Handler {
 		if err != nil {
 			return s.ClientError(c, errPrefix, err)
 		}
-		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, mappers2.MapKubeToAPI, workflow)
+		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, testworkflowmappers.MapKubeToAPI, workflow)
 		if err != nil {
 			return s.InternalError(c, errPrefix, "serialization problem", err)
 		}
@@ -117,7 +119,7 @@ func (s *apiTCL) CreateTestWorkflowHandler() fiber.Handler {
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "invalid body", err)
 			}
-			obj = mappers2.MapAPIToKube(v)
+			obj = testworkflowmappers.MapAPIToKube(v)
 		}
 
 		// Validate resource
@@ -133,7 +135,7 @@ func (s *apiTCL) CreateTestWorkflowHandler() fiber.Handler {
 			return s.BadRequest(c, errPrefix, "client error", err)
 		}
 
-		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, mappers2.MapKubeToAPI, obj)
+		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, testworkflowmappers.MapKubeToAPI, obj)
 		if err != nil {
 			return s.InternalError(c, errPrefix, "serialization problem", err)
 		}
@@ -159,7 +161,7 @@ func (s *apiTCL) UpdateTestWorkflowHandler() fiber.Handler {
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "invalid body", err)
 			}
-			obj = mappers2.MapAPIToKube(v)
+			obj = testworkflowmappers.MapAPIToKube(v)
 		}
 
 		// Read existing resource
@@ -183,7 +185,7 @@ func (s *apiTCL) UpdateTestWorkflowHandler() fiber.Handler {
 			return s.BadRequest(c, errPrefix, "client error", err)
 		}
 
-		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, mappers2.MapKubeToAPI, obj)
+		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, testworkflowmappers.MapKubeToAPI, obj)
 		if err != nil {
 			return s.InternalError(c, errPrefix, "serialization problem", err)
 		}
@@ -207,7 +209,7 @@ func (s *apiTCL) PreviewTestWorkflowHandler() fiber.Handler {
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "invalid body", err)
 			}
-			obj = mappers2.MapAPIToKube(v)
+			obj = testworkflowmappers.MapAPIToKube(v)
 		}
 
 		// Validate resource
@@ -233,7 +235,7 @@ func (s *apiTCL) PreviewTestWorkflowHandler() fiber.Handler {
 			return s.BadRequest(c, errPrefix, "resolving error", err)
 		}
 
-		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, mappers2.MapKubeToAPI, obj)
+		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, testworkflowmappers.MapKubeToAPI, obj)
 		if err != nil {
 			return s.InternalError(c, errPrefix, "serialization problem", err)
 		}
@@ -241,6 +243,7 @@ func (s *apiTCL) PreviewTestWorkflowHandler() fiber.Handler {
 	}
 }
 
+// TODO: Add metrics
 func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 	return func(c *fiber.Ctx) (err error) {
 		name := c.Params("id")
@@ -249,6 +252,12 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 		if err != nil {
 			return s.ClientError(c, errPrefix, err)
 		}
+
+		// Delete unnecessary data
+		delete(workflow.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
+
+		// Preserve initial workflow
+		initialWorkflow := workflow.DeepCopy()
 
 		// Load the execution request
 		var request testkube.TestWorkflowExecutionRequest
@@ -261,7 +270,7 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 		}
 
 		machine := expressionstcl.NewMachine().
-			Register("execution.id", request.Name)
+			Register("execution.id", request.Name) // TODO(TKC-1652): replace with actual ID
 
 		// Fetch the templates
 		tpls := testworkflowresolver.ListTemplates(workflow)
@@ -275,7 +284,7 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 		}
 
 		// Apply the configuration
-		_, err = testworkflowresolver.ApplyWorkflowConfig(workflow, mappers2.MapConfigValueAPIToKube(request.Config))
+		_, err = testworkflowresolver.ApplyWorkflowConfig(workflow, testworkflowmappers.MapConfigValueAPIToKube(request.Config))
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "configuration", err)
 		}
@@ -286,6 +295,9 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 			return s.BadRequest(c, errPrefix, "resolving error", err)
 		}
 
+		// Preserve resolved TestWorkflow
+		resolvedWorkflow := workflow.DeepCopy()
+
 		// Process the TestWorkflow
 		bundle, err := testworkflowprocessor.NewFullFeatured(s.ImageInspector).
 			Bundle(c.Context(), workflow, machine)
@@ -293,28 +305,67 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 			return s.BadRequest(c, errPrefix, "processing error", err)
 		}
 
+		now := time.Now()
+		execution := testkube.TestWorkflowExecution{
+			Id:          "00000000",
+			Name:        request.Name,
+			Number:      0,
+			ScheduledAt: now,
+			StatusAt:    now,
+			Signature:   testworkflowprocessor.MapSignatureListToInternal(bundle.Signature),
+			Result: &testkube.TestWorkflowResult{
+				Status:          common.Ptr(testkube.QUEUED_TestWorkflowStatus),
+				PredictedStatus: common.Ptr(testkube.PASSED_TestWorkflowStatus),
+				Initialization: &testkube.TestWorkflowStepResult{
+					Status: common.Ptr(testkube.QUEUED_TestWorkflowStepStatus),
+				},
+				Steps: map[string]testkube.TestWorkflowStepResult{},
+			},
+			Output:           []testkube.TestWorkflowOutput{},
+			Workflow:         testworkflowmappers.MapKubeToAPI(initialWorkflow),
+			ResolvedWorkflow: testworkflowmappers.MapKubeToAPI(resolvedWorkflow),
+		}
+
 		// Deploy the resources
-		// TODO: rollback on failure
 		for _, item := range bundle.Secrets {
 			_, err = s.Clientset.CoreV1().Secrets(s.Namespace).Create(context.Background(), &item, metav1.CreateOptions{})
 			if err != nil {
+				// TODO: Set error message
+				go testworkflowcontroller.Cleanup(context.Background(), s.Clientset, s.Namespace, request.Name)
 				return s.BadRequest(c, errPrefix, "creating secret", err)
 			}
 		}
 		for _, item := range bundle.ConfigMaps {
 			_, err = s.Clientset.CoreV1().ConfigMaps(s.Namespace).Create(context.Background(), &item, metav1.CreateOptions{})
 			if err != nil {
+				// TODO: Set error message
+				go testworkflowcontroller.Cleanup(context.Background(), s.Clientset, s.Namespace, request.Name)
 				return s.BadRequest(c, errPrefix, "creating configmap", err)
 			}
 		}
 		_, err = s.Clientset.BatchV1().Jobs(s.Namespace).Create(context.Background(), &bundle.Job, metav1.CreateOptions{})
 		if err != nil {
-			if err != nil {
-				return s.BadRequest(c, errPrefix, "creating job", err)
-			}
+			// TODO: Set error message
+			go testworkflowcontroller.Cleanup(context.Background(), s.Clientset, s.Namespace, request.Name)
+			return s.BadRequest(c, errPrefix, "creating job", err)
 		}
 
-		return
+		// Start to control the results
+		// TODO: Move it outside of the API when persistence will be there
+		go func() {
+			ctrl, err := testworkflowcontroller.New(context.Background(), s.Clientset, s.Namespace, execution.Name, execution.ScheduledAt)
+			if err != nil {
+				// TODO: Set error message
+				testworkflowcontroller.Cleanup(context.Background(), s.Clientset, s.Namespace, execution.Name)
+				return
+			}
+			for range ctrl.Watch(context.Background()).Stream(context.Background()).Channel() {
+				// Process results
+			}
+			testworkflowcontroller.Cleanup(context.Background(), s.Clientset, s.Namespace, execution.Name)
+		}()
+
+		return c.JSON(execution)
 	}
 }
 

@@ -426,11 +426,12 @@ func (mr *MockContainerMockRecorder) SetWorkingDir(arg0 interface{}) *gomock.Cal
 }
 
 // ToKubernetesTemplate mocks base method.
-func (m *MockContainer) ToKubernetesTemplate() v10.Container {
+func (m *MockContainer) ToKubernetesTemplate() (v10.Container, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ToKubernetesTemplate")
 	ret0, _ := ret[0].(v10.Container)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // ToKubernetesTemplate indicates an expected call of ToKubernetesTemplate.

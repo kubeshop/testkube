@@ -69,17 +69,19 @@ func TestProcessBasic(t *testing.T) {
 		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "dummy-id",
-			Labels: map[string]string{executionIdLabelName: "dummy-id"},
+			Labels: map[string]string{ExecutionIdLabelName: "dummy-id"},
 			Annotations: map[string]string{
-				"testworkflows.testkube.io/signature": string(sigSerialized),
+				SignatureAnnotationName: string(sigSerialized),
 			},
 		},
 		Spec: batchv1.JobSpec{
 			BackoffLimit: common.Ptr(int32(0)),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "dummy-id-pod",
-					Labels:      map[string]string{executionIdLabelName: "dummy-id"},
+					Labels: map[string]string{
+						ExecutionIdLabelName:        "dummy-id",
+						ExecutionIdMainPodLabelName: "dummy-id",
+					},
 					Annotations: map[string]string(nil),
 				},
 				Spec: corev1.PodSpec{
@@ -87,11 +89,11 @@ func TestProcessBasic(t *testing.T) {
 					Volumes:       volumes,
 					InitContainers: []corev1.Container{
 						{
-							Name:            "copy-init",
+							Name:            "tktw-init",
 							Image:           defaultInitImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{"/bin/sh", "-c"},
-							Args:            []string{fmt.Sprintf("cp /init %s && touch %s && chmod 777 %s", defaultInitPath, defaultStatePath, defaultStatePath)},
+							Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
 							VolumeMounts:    volumeMounts,
 						},
 					},
@@ -162,11 +164,11 @@ func TestProcessBasicEnvReference(t *testing.T) {
 		Volumes:       volumes,
 		InitContainers: []corev1.Container{
 			{
-				Name:            "copy-init",
+				Name:            "tktw-init",
 				Image:           defaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{fmt.Sprintf("cp /init %s && touch %s && chmod 777 %s", defaultInitPath, defaultStatePath, defaultStatePath)},
+				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
 				VolumeMounts:    volumeMounts,
 			},
 		},
@@ -226,11 +228,11 @@ func TestProcessMultipleSteps(t *testing.T) {
 		Volumes:       volumes,
 		InitContainers: []corev1.Container{
 			{
-				Name:            "copy-init",
+				Name:            "tktw-init",
 				Image:           defaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{fmt.Sprintf("cp /init %s && touch %s && chmod 777 %s", defaultInitPath, defaultStatePath, defaultStatePath)},
+				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
 				VolumeMounts:    volumeMounts,
 			},
 			{
@@ -308,11 +310,11 @@ func TestProcessNestedSteps(t *testing.T) {
 		Volumes:       volumes,
 		InitContainers: []corev1.Container{
 			{
-				Name:            "copy-init",
+				Name:            "tktw-init",
 				Image:           defaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{fmt.Sprintf("cp /init %s && touch %s && chmod 777 %s", defaultInitPath, defaultStatePath, defaultStatePath)},
+				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
 				VolumeMounts:    volumeMounts,
 			},
 			{
@@ -432,11 +434,11 @@ func TestProcessOptionalSteps(t *testing.T) {
 		Volumes:       volumes,
 		InitContainers: []corev1.Container{
 			{
-				Name:            "copy-init",
+				Name:            "tktw-init",
 				Image:           defaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{fmt.Sprintf("cp /init %s && touch %s && chmod 777 %s", defaultInitPath, defaultStatePath, defaultStatePath)},
+				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
 				VolumeMounts:    volumeMounts,
 			},
 			{
@@ -554,11 +556,11 @@ func TestProcessNegativeSteps(t *testing.T) {
 		Volumes:       volumes,
 		InitContainers: []corev1.Container{
 			{
-				Name:            "copy-init",
+				Name:            "tktw-init",
 				Image:           defaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{fmt.Sprintf("cp /init %s && touch %s && chmod 777 %s", defaultInitPath, defaultStatePath, defaultStatePath)},
+				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
 				VolumeMounts:    volumeMounts,
 			},
 			{
@@ -673,11 +675,11 @@ func TestProcessNegativeContainerStep(t *testing.T) {
 		Volumes:       volumes,
 		InitContainers: []corev1.Container{
 			{
-				Name:            "copy-init",
+				Name:            "tktw-init",
 				Image:           defaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{fmt.Sprintf("cp /init %s && touch %s && chmod 777 %s", defaultInitPath, defaultStatePath, defaultStatePath)},
+				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
 				VolumeMounts:    volumeMounts,
 			},
 			{
@@ -749,11 +751,11 @@ func TestProcessOptionalContainerStep(t *testing.T) {
 		Volumes:       volumes,
 		InitContainers: []corev1.Container{
 			{
-				Name:            "copy-init",
+				Name:            "tktw-init",
 				Image:           defaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{fmt.Sprintf("cp /init %s && touch %s && chmod 777 %s", defaultInitPath, defaultStatePath, defaultStatePath)},
+				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
 				VolumeMounts:    volumeMounts,
 			},
 			{
@@ -834,11 +836,11 @@ func TestProcessLocalContent(t *testing.T) {
 		Volumes:       volumes,
 		InitContainers: []corev1.Container{
 			{
-				Name:            "copy-init",
+				Name:            "tktw-init",
 				Image:           defaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{fmt.Sprintf("cp /init %s && touch %s && chmod 777 %s", defaultInitPath, defaultStatePath, defaultStatePath)},
+				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
 				VolumeMounts:    volumeMounts,
 			},
 			{
@@ -926,11 +928,11 @@ func TestProcessGlobalContent(t *testing.T) {
 		Volumes:       volumes,
 		InitContainers: []corev1.Container{
 			{
-				Name:            "copy-init",
+				Name:            "tktw-init",
 				Image:           defaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{fmt.Sprintf("cp /init %s && touch %s && chmod 777 %s", defaultInitPath, defaultStatePath, defaultStatePath)},
+				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
 				VolumeMounts:    volumeMounts,
 			},
 			{

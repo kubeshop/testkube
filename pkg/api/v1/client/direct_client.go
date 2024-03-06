@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/oauth"
@@ -201,6 +202,29 @@ func (t DirectClient[A]) GetLogsV2(uri string, logs chan events.Log) error {
 		defer resp.Body.Close()
 
 		StreamToLogsChannelV2(resp.Body, logs)
+	}()
+
+	return nil
+}
+
+// GetTestWorkflowExecutionNotifications returns logs stream from job pods, based on job pods logs
+func (t DirectClient[A]) GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification) error {
+	req, err := http.NewRequest(http.MethodGet, uri, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Accept", "text/event-stream")
+	resp, err := t.sseClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		defer close(notifications)
+		defer resp.Body.Close()
+
+		StreamToTestWorkflowExecutionNotificationsChannel(resp.Body, notifications)
 	}()
 
 	return nil

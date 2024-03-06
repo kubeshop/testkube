@@ -14,6 +14,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/problem"
@@ -165,6 +166,26 @@ func (t ProxyClient[A]) GetLogsV2(uri string, logs chan events.Log) error {
 		defer resp.Close()
 
 		StreamToLogsChannelV2(resp, logs)
+	}()
+
+	return nil
+}
+
+// GetTestWorkflowExecutionNotifications returns logs stream from job pods, based on job pods logs
+func (t ProxyClient[A]) GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification) error {
+	resp, err := t.getProxy(http.MethodGet).
+		Suffix(uri).
+		SetHeader("Accept", "text/event-stream").
+		Stream(context.Background())
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		defer close(notifications)
+		defer resp.Close()
+
+		StreamToTestWorkflowExecutionNotificationsChannel(resp, notifications)
 	}()
 
 	return nil

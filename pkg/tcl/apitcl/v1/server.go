@@ -86,9 +86,10 @@ func (s *apiTCL) AppendRoutes() {
 	testWorkflows.Get("/:id", s.pro(s.GetTestWorkflowHandler()))
 	testWorkflows.Put("/:id", s.pro(s.UpdateTestWorkflowHandler()))
 	testWorkflows.Delete("/:id", s.pro(s.DeleteTestWorkflowHandler()))
+	testWorkflows.Post("/:id/executions", s.pro(s.ExecuteTestWorkflowHandler()))
 
-	testWorkflowExecutions := testWorkflows.Group("/:id/executions")
-	testWorkflowExecutions.Post("/", s.pro(s.ExecuteTestWorkflowHandler()))
+	testWorkflowExecutions := root.Group("/test-workflow-executions")
+	testWorkflowExecutions.Get("/:id/notifications", s.pro(s.StreamTestWorkflowExecutionNotificationsHandler()))
 
 	root.Post("/preview-test-workflow", s.pro(s.PreviewTestWorkflowHandler()))
 

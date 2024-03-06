@@ -136,6 +136,8 @@ type TestWorkflowAPI interface {
 	CreateTestWorkflow(workflow testkube.TestWorkflow) (testkube.TestWorkflow, error)
 	UpdateTestWorkflow(workflow testkube.TestWorkflow) (testkube.TestWorkflow, error)
 	DeleteTestWorkflow(name string) error
+	ExecuteTestWorkflow(name string, request testkube.TestWorkflowExecutionRequest) (testkube.TestWorkflowExecution, error)
+	GetTestWorkflowExecutionNotifications(id string) (chan testkube.TestWorkflowExecutionNotification, error)
 }
 
 // TestWorkflowTemplateAPI describes test workflow api methods
@@ -256,13 +258,13 @@ type Gettable interface {
 		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution | testkube.TestWithExecutionSummary |
 		testkube.TestSuiteWithExecutionSummary | testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo |
 		testkube.TestSource | testkube.Template |
-		testkube.TestWorkflow | testkube.TestWorkflowTemplate
+		testkube.TestWorkflow | testkube.TestWorkflowTemplate | testkube.TestWorkflowExecution
 }
 
 // Executable is an interface of executable objects
 type Executable interface {
 	testkube.Execution | testkube.TestSuiteExecution |
-		testkube.ExecutionsResult | testkube.TestSuiteExecutionsResult
+		testkube.ExecutionsResult | testkube.TestSuiteExecutionsResult | testkube.TestWorkflowExecution
 }
 
 // All is an interface of all objects
@@ -279,5 +281,6 @@ type Transport[A All] interface {
 	GetURI(pathTemplate string, params ...interface{}) string
 	GetLogs(uri string, logs chan output.Output) error
 	GetLogsV2(uri string, logs chan events.Log) error
+	GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification) error
 	GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error)
 }
