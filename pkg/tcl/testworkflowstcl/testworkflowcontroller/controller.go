@@ -60,7 +60,7 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 		}
 	case <-time.After(JobRetrievalTimeout):
 		ctxCancel()
-		return nil, errors.Wrap(err, "timeout retrieving job")
+		return nil, errors.New("timeout retrieving job")
 	}
 
 	// Build accessible controller
@@ -255,10 +255,14 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 			w.SendValue(Notification{Result: result.Clone()})
 
 			// Watch for the container events
+			lastEvTs := time.Time{}
 			for v := range WatchContainerPreEvents(ctx, c.podEvents, container.Name, 0).Stream(ctx).Channel() {
 				if v.Error != nil {
 					w.SendError(v.Error)
 					continue
+				}
+				if lastEvTs.Before(v.Value.CreationTimestamp.Time) {
+					lastEvTs = v.Value.CreationTimestamp.Time
 				}
 				if v.Value.Reason == "Created" {
 					stepResult = result.UpdateStepResult(sig, container.Name, testkube.TestWorkflowStepResult{
@@ -282,7 +286,7 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 			// Emit the next result
 			if stepResult.StartedAt.IsZero() {
 				w.SendError(errors.New("step container is in unknown state"))
-				return
+				break
 			}
 			w.SendValue(Notification{Result: result.Clone()})
 
@@ -330,7 +334,7 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 			status, err := GetFinalContainerResult(ctx, c.pod, container.Name)
 			if err != nil {
 				w.SendError(err)
-				return
+				break
 			}
 			stepResult = result.UpdateStepResult(sig, container.Name, testkube.TestWorkflowStepResult{
 				FinishedAt: status.FinishedAt.UTC(),

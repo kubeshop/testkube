@@ -90,7 +90,6 @@ func WatchJob(ctx context.Context, clientSet kubernetes.Interface, namespace, na
 						return
 					}
 				case watch.Deleted:
-					w.SendValue(nil)
 					return
 				}
 			}
@@ -173,7 +172,6 @@ func watchPod(ctx context.Context, clientSet kubernetes.Interface, namespace str
 						return
 					}
 				case watch.Deleted:
-					w.SendValue(nil)
 					return
 				}
 			}
@@ -277,14 +275,14 @@ func WatchPodEventsByPodWatcher(ctx context.Context, clientSet kubernetes.Interf
 	w := newWatcher[*corev1.Event](ctx, cacheSize)
 
 	go func() {
+		defer w.Close()
+
 		v, ok := <-pod.Any(ctx)
 		if v.Error != nil {
 			w.SendError(v.Error)
-			w.Close()
 			return
 		}
 		if !ok || v.Value == nil {
-			w.Close()
 			return
 		}
 		watchEvents(clientSet, namespace, ListOptions{

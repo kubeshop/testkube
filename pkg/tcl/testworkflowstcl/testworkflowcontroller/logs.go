@@ -178,6 +178,7 @@ func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, pod
 		err := WaitUntilContainerIsStarted(ctx, podEvents, containerName)
 		if err != nil {
 			w.SendError(err)
+			fmt.Println("waiting until started failed")
 			return
 		}
 
