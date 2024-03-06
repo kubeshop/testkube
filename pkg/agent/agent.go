@@ -24,9 +24,9 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	"github.com/kubeshop/testkube/internal/config"
-	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/featureflags"
 )
 
 const (
