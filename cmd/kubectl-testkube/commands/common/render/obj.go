@@ -10,7 +10,11 @@ import (
 )
 
 func Obj(cmd *cobra.Command, obj interface{}, w io.Writer, renderer ...CliObjRenderer) error {
-	outputType := OutputType(cmd.Flag("output").Value.String())
+	outputFlag := cmd.Flag("output")
+	outputType := OutputPretty
+	if outputFlag != nil {
+		outputType = OutputType(outputFlag.Value.String())
+	}
 
 	switch outputType {
 	case OutputPretty:

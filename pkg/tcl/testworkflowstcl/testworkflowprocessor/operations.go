@@ -30,7 +30,7 @@ func ProcessDelay(_ InternalProcessor, layer Intermediate, container Container, 
 		SetCommand("sleep").
 		SetArgs(fmt.Sprintf("%g", t.Seconds()))
 	stage := NewContainerStage(layer.NextRef(), shell)
-	stage.SetName(fmt.Sprintf("Delay: %s", step.Delay))
+	stage.SetCategory(fmt.Sprintf("Delay: %s", step.Delay))
 	return stage, nil
 }
 
@@ -39,7 +39,9 @@ func ProcessShellCommand(_ InternalProcessor, layer Intermediate, container Cont
 		return nil, nil
 	}
 	shell := container.CreateChild().SetCommand(defaultShell).SetArgs("-c", step.Shell)
-	return NewContainerStage(layer.NextRef(), shell), nil
+	stage := NewContainerStage(layer.NextRef(), shell)
+	stage.SetCategory("Run shell command")
+	return stage, nil
 }
 
 func ProcessRunCommand(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
@@ -47,7 +49,9 @@ func ProcessRunCommand(_ InternalProcessor, layer Intermediate, container Contai
 		return nil, nil
 	}
 	container = container.CreateChild().ApplyCR(&step.Run.ContainerConfig)
-	return NewContainerStage(layer.NextRef(), container), nil
+	stage := NewContainerStage(layer.NextRef(), container)
+	stage.SetCategory("Run")
+	return stage, nil
 }
 
 func ProcessNestedSteps(p InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {

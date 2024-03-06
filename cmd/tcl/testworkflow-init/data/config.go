@@ -27,7 +27,7 @@ var Config = &config{
 
 func LoadConfig(config map[string]string) {
 	Config.Debug = getBool(config, "debug", Config.Debug)
-	Config.RetryCount = getInt(config, "retryCount", 1)
+	Config.RetryCount = getInt(config, "retryCount", 0)
 	Config.RetryUntil = getStr(config, "retryUntil", "self.passed")
 	Config.Negative = getBool(config, "negative", false)
 }

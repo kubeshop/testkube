@@ -41,6 +41,7 @@ func (s *containerStage) Signature() Signature {
 	return &signature{
 		RefValue:      s.ref,
 		NameValue:     s.name,
+		CategoryValue: s.category,
 		OptionalValue: s.optional,
 		NegativeValue: s.negative,
 		ChildrenValue: nil,
