@@ -71,6 +71,9 @@ func (s *apiTCL) DeleteTestWorkflowHandler() fiber.Handler {
 		skipExecutions := c.Query("skipDeleteExecutions", "")
 		if skipExecutions != "true" {
 			err = s.TestWorkflowResults.DeleteByTestWorkflow(context.Background(), name)
+			if err != nil {
+				return s.ClientError(c, "deleting executions", err)
+			}
 		}
 		return c.SendStatus(http.StatusNoContent)
 	}
@@ -103,6 +106,9 @@ func (s *apiTCL) DeleteTestWorkflowsHandler() fiber.Handler {
 				return t.Name
 			})
 			err = s.TestWorkflowResults.DeleteByTestWorkflows(context.Background(), names)
+			if err != nil {
+				return s.ClientError(c, "deleting executions", err)
+			}
 		}
 
 		return c.SendStatus(http.StatusNoContent)

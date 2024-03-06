@@ -86,6 +86,9 @@ func (e *executor) Deploy(ctx context.Context, bundle *testworkflowprocessor.Bun
 func (e *executor) handleFatalError(execution testkube.TestWorkflowExecution, err error) {
 	execution.Result.Fatal(err)
 	err = e.repository.UpdateResult(context.Background(), execution.Id, execution.Result)
+	if err != nil {
+		log.DefaultLogger.Errorf("failed to save fatal error for execution %s: %v", execution.Id, err)
+	}
 	e.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution))
 	go testworkflowcontroller.Cleanup(context.Background(), e.clientSet, e.namespace, execution.Id)
 }

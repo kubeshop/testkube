@@ -45,7 +45,6 @@ type MongoRepository struct {
 	db           *mongo.Database
 	Coll         *mongo.Collection
 	allowDiskUse bool
-	isDocDb      bool
 }
 
 func WithMongoRepositoryCollection(collection *mongo.Collection) MongoRepositoryOpt {
