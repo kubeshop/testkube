@@ -101,6 +101,7 @@ func (s *apiTCL) AppendRoutes() {
 	testWorkflowExecutions.Get("/", s.pro(s.ListTestWorkflowExecutionsHandler()))
 	testWorkflowExecutions.Get("/:executionID", s.pro(s.GetTestWorkflowExecutionHandler()))
 	testWorkflowExecutions.Get("/:executionID/notifications", s.pro(s.StreamTestWorkflowExecutionNotificationsHandler()))
+	testWorkflowExecutions.Get("/:executionID/notifications/stream", s.pro(s.StreamTestWorkflowExecutionNotificationsWebSocketHandler()))
 	testWorkflowExecutions.Post("/:executionID/abort", s.pro(s.AbortTestWorkflowExecutionHandler()))
 
 	testWorkflowWithExecutions := root.Group("/test-workflow-with-executions")

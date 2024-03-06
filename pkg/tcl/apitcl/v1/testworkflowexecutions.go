@@ -18,6 +18,7 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/websocket/v2"
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -32,12 +33,13 @@ func (s *apiTCL) StreamTestWorkflowExecutionNotificationsHandler() fiber.Handler
 		id := c.Params("executionID")
 		errPrefix := fmt.Sprintf("failed to stream test workflow execution notifications '%s'", id)
 
-		// TODO: Fetch execution from database
-		execution := testkube.TestWorkflowExecution{
-			Id: id,
+		// Fetch execution from database
+		execution, err := s.TestWorkflowResults.Get(ctx, id)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
 		}
 
-		// Check for the logs TODO: Load from the database if possible
+		// Check for the logs
 		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, s.Namespace, execution.Id, execution.ScheduledAt)
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "fetching job", err)
@@ -65,6 +67,39 @@ func (s *apiTCL) StreamTestWorkflowExecutionNotificationsHandler() fiber.Handler
 
 		return nil
 	}
+}
+
+func (s *apiTCL) StreamTestWorkflowExecutionNotificationsWebSocketHandler() fiber.Handler {
+	return websocket.New(func(c *websocket.Conn) {
+		ctx, ctxCancel := context.WithCancel(context.Background())
+		id := c.Params("executionID")
+
+		// Stop reading when the WebSocket connection is already closed
+		originalClose := c.CloseHandler()
+		c.SetCloseHandler(func(code int, text string) error {
+			ctxCancel()
+			return originalClose(code, text)
+		})
+		defer c.Conn.Close()
+
+		// Fetch execution from database
+		execution, err := s.TestWorkflowResults.Get(ctx, id)
+		if err != nil {
+			return
+		}
+
+		// Check for the logs TODO: Load from the database if possible
+		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, s.Namespace, execution.Id, execution.ScheduledAt)
+		if err != nil {
+			return
+		}
+
+		for n := range ctrl.Watch(ctx).Stream(ctx).Channel() {
+			if n.Error == nil {
+				_ = c.WriteJSON(n.Value)
+			}
+		}
+	})
 }
 
 func (s *apiTCL) ListTestWorkflowExecutionsHandler() fiber.Handler {
