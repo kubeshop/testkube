@@ -5,9 +5,9 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	v1 "github.com/kubeshop/testkube-operator/api/common/v1"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/tcl/testsuitestcl"
 	"github.com/kubeshop/testkube/pkg/types"
 )
 
@@ -199,8 +199,7 @@ func mapTestStepToCRD(step testkube.TestSuiteStep) (stepSpec testsuitesv3.TestSu
 		}
 	case testkube.TestSuiteStepTypeExecuteTest:
 		stepSpec.Test = step.Test
-		// Pro/Enterprise feature: step execution requests
-		stepSpec.ExecutionRequest = testsuitestcl.MapTestStepExecutionRequestCRD(step.ExecutionRequest)
+		stepSpec.ExecutionRequest = MapTestStepExecutionRequestCRD(step.ExecutionRequest)
 	}
 
 	return stepSpec, nil
@@ -439,4 +438,48 @@ func MapExecutionToTestSuiteStatus(execution *testkube.TestSuiteExecution) (spec
 	specStatus.LatestExecution.EndTime.Time = execution.EndTime
 
 	return specStatus
+}
+
+func MapTestStepExecutionRequestCRD(request *testkube.TestSuiteStepExecutionRequest) *testsuitesv3.TestSuiteStepExecutionRequest {
+	if request == nil {
+		return nil
+	}
+
+	variables := map[string]testsuitesv3.Variable{}
+	for k, v := range request.Variables {
+		variables[k] = testsuitesv3.Variable{
+			Name:  v.Name,
+			Value: v.Value,
+			Type_: string(*v.Type_),
+		}
+	}
+
+	var runningContext *v1.RunningContext
+	if request.RunningContext != nil {
+		runningContext = &v1.RunningContext{
+			Type_:   v1.RunningContextType(request.RunningContext.Type_),
+			Context: request.RunningContext.Context,
+		}
+	}
+
+	return &testsuitesv3.TestSuiteStepExecutionRequest{
+		ExecutionLabels:          request.ExecutionLabels,
+		Variables:                variables,
+		Args:                     request.Args,
+		ArgsMode:                 testsuitesv3.ArgsModeType(request.ArgsMode),
+		Command:                  request.Command,
+		Sync:                     request.Sync,
+		HttpProxy:                request.HttpProxy,
+		HttpsProxy:               request.HttpsProxy,
+		NegativeTest:             request.NegativeTest,
+		JobTemplate:              request.JobTemplate,
+		JobTemplateReference:     request.JobTemplateReference,
+		CronJobTemplate:          request.CronJobTemplate,
+		CronJobTemplateReference: request.CronJobTemplateReference,
+		ScraperTemplate:          request.ScraperTemplate,
+		ScraperTemplateReference: request.ScraperTemplateReference,
+		PvcTemplate:              request.PvcTemplate,
+		PvcTemplateReference:     request.PvcTemplateReference,
+		RunningContext:           runningContext,
+	}
 }
