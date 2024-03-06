@@ -13,7 +13,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/kubeshop/testkube/internal/featureflags"
+	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 
 	"github.com/pkg/errors"
