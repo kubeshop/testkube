@@ -18,14 +18,12 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowresolver"
 )
@@ -355,7 +353,8 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 			return s.InternalError(c, errPrefix, "inserting execution to storage", err)
 		}
 
-		s.scheduleTestWorkflow(bundle, execution)
+		// Schedule the execution
+		s.TestWorkflowExecutor.Schedule(bundle, execution)
 
 		return c.JSON(execution)
 	}
@@ -378,79 +377,4 @@ func (s *apiTCL) getFilteredTestWorkflowList(c *fiber.Ctx) (*testworkflowsv1.Tes
 	}
 
 	return crWorkflows, nil
-}
-
-func (s *apiTCL) deployTestWorkflowResources(bundle *testworkflowprocessor.Bundle) (err error) {
-	for _, item := range bundle.Secrets {
-		_, err = s.Clientset.CoreV1().Secrets(s.Namespace).Create(context.Background(), &item, metav1.CreateOptions{})
-		if err != nil {
-			return
-		}
-	}
-	for _, item := range bundle.ConfigMaps {
-		_, err = s.Clientset.CoreV1().ConfigMaps(s.Namespace).Create(context.Background(), &item, metav1.CreateOptions{})
-		if err != nil {
-			return
-		}
-	}
-	_, err = s.Clientset.BatchV1().Jobs(s.Namespace).Create(context.Background(), &bundle.Job, metav1.CreateOptions{})
-	return
-}
-
-func (s *apiTCL) handleTestWorkflowFatalError(execution testkube.TestWorkflowExecution, err error) {
-	execution.Result.Fatal(err)
-	err = s.TestWorkflowResults.UpdateResult(context.Background(), execution.Id, execution.Result)
-	s.Events.Notify(testkube.NewEventEndTestWorkflowFailed(&execution))
-	go testworkflowcontroller.Cleanup(context.Background(), s.Clientset, s.Namespace, execution.Id)
-}
-
-func (s *apiTCL) scheduleTestWorkflow(bundle *testworkflowprocessor.Bundle, execution testkube.TestWorkflowExecution) {
-	// Inform about execution start
-	s.Events.Notify(testkube.NewEventQueueTestWorkflow(&execution))
-
-	// Deploy required resources
-	err := s.deployTestWorkflowResources(bundle)
-	if err != nil {
-		s.handleTestWorkflowFatalError(execution, err)
-		return
-	}
-
-	// Start to control the results
-	go s.controlTestWorkflow(context.Background(), execution)
-}
-
-func (s *apiTCL) controlTestWorkflow(ctx context.Context, execution testkube.TestWorkflowExecution) {
-	ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, s.Namespace, execution.Id, execution.ScheduledAt)
-	if err != nil {
-		s.handleTestWorkflowFatalError(execution, err)
-		return
-	}
-
-	for v := range ctrl.Watch(ctx).Stream(ctx).Channel() {
-		if v.Error != nil {
-			continue
-		}
-		if v.Value.Output != nil {
-			execution.Output = append(execution.Output, *v.Value.Output.ToInternal())
-		}
-		if v.Value.Result != nil {
-			execution.Result = v.Value.Result
-			if execution.Result.IsFinished() {
-				execution.StatusAt = execution.Result.FinishedAt
-			}
-			_ = s.TestWorkflowResults.UpdateResult(ctx, execution.Id, execution.Result)
-		}
-	}
-	// TODO: Consider AppendOutput ($push) instead
-	_ = s.TestWorkflowResults.UpdateOutput(ctx, execution.Id, execution.Output)
-	if execution.Result.IsFinished() {
-		if execution.Result.IsPassed() {
-			s.Events.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution))
-		} else if execution.Result.IsAborted() {
-			s.Events.Notify(testkube.NewEventEndTestWorkflowAborted(&execution))
-		} else {
-			s.Events.Notify(testkube.NewEventEndTestWorkflowFailed(&execution))
-		}
-	}
-	testworkflowcontroller.Cleanup(ctx, s.Clientset, s.Namespace, execution.Id)
 }
