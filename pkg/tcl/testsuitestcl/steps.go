@@ -9,9 +9,7 @@
 package testsuitestcl
 
 import (
-	v1 "github.com/kubeshop/testkube-operator/api/common/v1"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
-	testsuitestclop "github.com/kubeshop/testkube-operator/pkg/tcl/testsuitestcl"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -108,98 +106,4 @@ func mergeVariables(vars1 map[string]testkube.Variable, vars2 map[string]testkub
 	}
 
 	return variables
-}
-
-func MapTestStepExecutionRequestCRD(request *testkube.TestSuiteStepExecutionRequest) *testsuitestclop.TestSuiteStepExecutionRequest {
-	if request == nil {
-		return nil
-	}
-
-	variables := map[string]testsuitestclop.Variable{}
-	for k, v := range request.Variables {
-		variables[k] = testsuitestclop.Variable{
-			Name:  v.Name,
-			Value: v.Value,
-			Type_: string(*v.Type_),
-		}
-	}
-
-	var runningContext *v1.RunningContext
-	if request.RunningContext != nil {
-		runningContext = &v1.RunningContext{
-			Type_:   v1.RunningContextType(request.RunningContext.Type_),
-			Context: request.RunningContext.Context,
-		}
-	}
-
-	return &testsuitestclop.TestSuiteStepExecutionRequest{
-		ExecutionLabels:          request.ExecutionLabels,
-		Variables:                variables,
-		Args:                     request.Args,
-		ArgsMode:                 testsuitestclop.ArgsModeType(request.ArgsMode),
-		Command:                  request.Command,
-		Sync:                     request.Sync,
-		HttpProxy:                request.HttpProxy,
-		HttpsProxy:               request.HttpsProxy,
-		NegativeTest:             request.NegativeTest,
-		JobTemplate:              request.JobTemplate,
-		JobTemplateReference:     request.JobTemplateReference,
-		CronJobTemplate:          request.CronJobTemplate,
-		CronJobTemplateReference: request.CronJobTemplateReference,
-		ScraperTemplate:          request.ScraperTemplate,
-		ScraperTemplateReference: request.ScraperTemplateReference,
-		PvcTemplate:              request.PvcTemplate,
-		PvcTemplateReference:     request.PvcTemplateReference,
-		RunningContext:           runningContext,
-	}
-}
-
-func MapTestStepExecutionRequestCRDToAPI(request *testsuitestclop.TestSuiteStepExecutionRequest) *testkube.TestSuiteStepExecutionRequest {
-	if request == nil {
-		return nil
-	}
-	variables := map[string]testkube.Variable{}
-	for k, v := range request.Variables {
-		varType := testkube.VariableType(v.Type_)
-		variables[k] = testkube.Variable{
-			Name:  v.Name,
-			Value: v.Value,
-			Type_: &varType,
-		}
-	}
-
-	var runningContext *testkube.RunningContext
-
-	if request.RunningContext != nil {
-		runningContext = &testkube.RunningContext{
-			Type_:   string(request.RunningContext.Type_),
-			Context: request.RunningContext.Context,
-		}
-	}
-
-	argsMode := ""
-	if request.ArgsMode != "" {
-		argsMode = string(request.ArgsMode)
-	}
-
-	return &testkube.TestSuiteStepExecutionRequest{
-		ExecutionLabels:          request.ExecutionLabels,
-		Variables:                variables,
-		Command:                  request.Command,
-		Args:                     request.Args,
-		ArgsMode:                 argsMode,
-		Sync:                     request.Sync,
-		HttpProxy:                request.HttpProxy,
-		HttpsProxy:               request.HttpsProxy,
-		NegativeTest:             request.NegativeTest,
-		JobTemplate:              request.JobTemplate,
-		JobTemplateReference:     request.JobTemplateReference,
-		CronJobTemplate:          request.CronJobTemplate,
-		CronJobTemplateReference: request.CronJobTemplateReference,
-		ScraperTemplate:          request.ScraperTemplate,
-		ScraperTemplateReference: request.ScraperTemplateReference,
-		PvcTemplate:              request.PvcTemplate,
-		PvcTemplateReference:     request.PvcTemplateReference,
-		RunningContext:           runningContext,
-	}
 }

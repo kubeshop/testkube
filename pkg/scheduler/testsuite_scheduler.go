@@ -14,7 +14,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	testsuiteexecutionsmapper "github.com/kubeshop/testkube/pkg/mapper/testsuiteexecutions"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
-	"github.com/kubeshop/testkube/pkg/tcl/testsuitestcl"
 
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/version"
@@ -510,8 +509,7 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 		for i := range testTuples {
 			req.Name = fmt.Sprintf("%s-%s", testSuiteName, testTuples[i].test.Name)
 			req.Id = testTuples[i].executionID
-			// Pro/Enterprise feature: step execution requests
-			req = testsuitestcl.MergeStepRequest(testTuples[i].stepRequest, req)
+			req = MergeStepRequest(testTuples[i].stepRequest, req)
 			requests[i] = workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution]{
 				Object:  testTuples[i].test,
 				Options: req,
@@ -624,4 +622,59 @@ func (s *Scheduler) delayWithAbortionCheck(duration time.Duration, testSuiteId s
 			return
 		}
 	}
+}
+
+// MergeStepRequest inherits step request fields with execution request
+func MergeStepRequest(stepRequest *testkube.TestSuiteStepExecutionRequest, executionRequest testkube.ExecutionRequest) testkube.ExecutionRequest {
+	if stepRequest == nil {
+		return executionRequest
+	}
+	if stepRequest.ExecutionLabels != nil {
+		executionRequest.ExecutionLabels = stepRequest.ExecutionLabels
+	}
+
+	if stepRequest.Variables != nil {
+		executionRequest.Variables = mergeVariables(executionRequest.Variables, stepRequest.Variables)
+	}
+
+	if len(stepRequest.Args) != 0 {
+		if stepRequest.ArgsMode == string(testkube.ArgsModeTypeAppend) || stepRequest.ArgsMode == "" {
+			executionRequest.Args = append(executionRequest.Args, stepRequest.Args...)
+		}
+
+		if stepRequest.ArgsMode == string(testkube.ArgsModeTypeOverride) || stepRequest.ArgsMode == string(testkube.ArgsModeTypeReplace) {
+			executionRequest.Args = stepRequest.Args
+		}
+	}
+
+	if stepRequest.Command != nil {
+		executionRequest.Command = stepRequest.Command
+	}
+	executionRequest.Sync = stepRequest.Sync
+	executionRequest.HttpProxy = setStringField(executionRequest.HttpProxy, stepRequest.HttpProxy)
+	executionRequest.HttpsProxy = setStringField(executionRequest.HttpsProxy, stepRequest.HttpsProxy)
+	executionRequest.CronJobTemplate = setStringField(executionRequest.CronJobTemplate, stepRequest.CronJobTemplate)
+	executionRequest.CronJobTemplateReference = setStringField(executionRequest.CronJobTemplateReference, stepRequest.CronJobTemplateReference)
+	executionRequest.JobTemplate = setStringField(executionRequest.JobTemplate, stepRequest.JobTemplate)
+	executionRequest.JobTemplateReference = setStringField(executionRequest.JobTemplateReference, stepRequest.JobTemplateReference)
+	executionRequest.ScraperTemplate = setStringField(executionRequest.ScraperTemplate, stepRequest.ScraperTemplate)
+	executionRequest.ScraperTemplateReference = setStringField(executionRequest.ScraperTemplateReference, stepRequest.ScraperTemplateReference)
+	executionRequest.PvcTemplate = setStringField(executionRequest.PvcTemplate, stepRequest.PvcTemplate)
+	executionRequest.PvcTemplateReference = setStringField(executionRequest.PvcTemplate, stepRequest.PvcTemplateReference)
+
+	if stepRequest.RunningContext != nil {
+		executionRequest.RunningContext = &testkube.RunningContext{
+			Type_:   string(stepRequest.RunningContext.Type_),
+			Context: stepRequest.RunningContext.Context,
+		}
+	}
+
+	return executionRequest
+}
+
+func setStringField(oldValue string, newValue string) string {
+	if newValue != "" {
+		return newValue
+	}
+	return oldValue
 }
