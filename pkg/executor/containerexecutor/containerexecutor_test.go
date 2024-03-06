@@ -17,10 +17,10 @@ import (
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	templatesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
 	v3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
-	"github.com/kubeshop/testkube/internal/featureflags"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
+	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 )

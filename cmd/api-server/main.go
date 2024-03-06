@@ -42,8 +42,8 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	dbmigrations "github.com/kubeshop/testkube/internal/db-migrations"
-	"github.com/kubeshop/testkube/internal/featureflags"
 	parser "github.com/kubeshop/testkube/internal/template"
+	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/version"
 
 	"github.com/kubeshop/testkube/pkg/cloud"
