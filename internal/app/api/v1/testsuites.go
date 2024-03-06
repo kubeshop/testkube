@@ -27,7 +27,6 @@ import (
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/scheduler"
-	"github.com/kubeshop/testkube/pkg/tcl/testsuitestcl"
 	"github.com/kubeshop/testkube/pkg/types"
 	"github.com/kubeshop/testkube/pkg/utils"
 	"github.com/kubeshop/testkube/pkg/workerpool"
@@ -43,16 +42,6 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 			decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(testSuiteSpec), len(testSuiteSpec))
 			if err := decoder.Decode(&testSuite); err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse yaml request: %w", errPrefix, err))
-			}
-			// Pro/Enterprise feature: step execution requests
-			if testsuitestcl.HasStepsExecutionRequest(testSuite) {
-				ok, err := s.SubscriptionChecker.IsOrgPlanActive()
-				if err != nil {
-					return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: test suite step execution requests are a Pro feature: %w", errPrefix, err))
-				}
-				if !ok {
-					return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: test suite step execution requests are not available: inactive subscription plan", errPrefix))
-				}
 			}
 			errPrefix = errPrefix + " " + testSuite.Name
 		} else {
@@ -125,16 +114,6 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 			decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(testSuiteSpec), len(testSuiteSpec))
 			if err := decoder.Decode(&testSuite); err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse yaml request: %w", errPrefix, err))
-			}
-			// Pro/Enterprise feature: step execution requests
-			if testsuitestcl.HasStepsExecutionRequest(testSuite) {
-				ok, err := s.SubscriptionChecker.IsOrgPlanActive()
-				if err != nil {
-					return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: test suite step execution requests are a Pro feature: %w", errPrefix, err))
-				}
-				if !ok {
-					return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: test suite step execution requests are not available: inactive subscription plan", errPrefix))
-				}
 			}
 			request = testsuitesmapper.MapTestSuiteTestCRDToUpdateRequest(&testSuite)
 		} else {
@@ -583,16 +562,6 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 
 				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could get test suite: %w", errPrefix, err))
 			}
-			// Pro/Enterprise feature: step execution requests
-			if testsuitestcl.HasStepsExecutionRequest(*testSuite) {
-				ok, err := s.SubscriptionChecker.IsOrgPlanActive()
-				if err != nil {
-					return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: test suite step execution requests are a pro feature: %w", errPrefix, err))
-				}
-				if !ok {
-					return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: test suite step execution requests are not available: inactive subscription plan", errPrefix))
-				}
-			}
 			testSuites = append(testSuites, *testSuite)
 		} else {
 			testSuiteList, err := s.TestsSuitesClient.List(selector)
@@ -902,4 +871,72 @@ func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
 	}
 
 	return filter
+}
+
+// MergeStepRequest inherits step request fields with execution request
+func MergeStepRequest(stepRequest *testkube.TestSuiteStepExecutionRequest, executionRequest testkube.ExecutionRequest) testkube.ExecutionRequest {
+	if stepRequest == nil {
+		return executionRequest
+	}
+	if stepRequest.ExecutionLabels != nil {
+		executionRequest.ExecutionLabels = stepRequest.ExecutionLabels
+	}
+
+	if stepRequest.Variables != nil {
+		executionRequest.Variables = mergeVariables(executionRequest.Variables, stepRequest.Variables)
+	}
+
+	if len(stepRequest.Args) != 0 {
+		if stepRequest.ArgsMode == string(testkube.ArgsModeTypeAppend) || stepRequest.ArgsMode == "" {
+			executionRequest.Args = append(executionRequest.Args, stepRequest.Args...)
+		}
+
+		if stepRequest.ArgsMode == string(testkube.ArgsModeTypeOverride) || stepRequest.ArgsMode == string(testkube.ArgsModeTypeReplace) {
+			executionRequest.Args = stepRequest.Args
+		}
+	}
+
+	if stepRequest.Command != nil {
+		executionRequest.Command = stepRequest.Command
+	}
+	executionRequest.Sync = stepRequest.Sync
+	executionRequest.HttpProxy = setStringField(executionRequest.HttpProxy, stepRequest.HttpProxy)
+	executionRequest.HttpsProxy = setStringField(executionRequest.HttpsProxy, stepRequest.HttpsProxy)
+	executionRequest.CronJobTemplate = setStringField(executionRequest.CronJobTemplate, stepRequest.CronJobTemplate)
+	executionRequest.CronJobTemplateReference = setStringField(executionRequest.CronJobTemplateReference, stepRequest.CronJobTemplateReference)
+	executionRequest.JobTemplate = setStringField(executionRequest.JobTemplate, stepRequest.JobTemplate)
+	executionRequest.JobTemplateReference = setStringField(executionRequest.JobTemplateReference, stepRequest.JobTemplateReference)
+	executionRequest.ScraperTemplate = setStringField(executionRequest.ScraperTemplate, stepRequest.ScraperTemplate)
+	executionRequest.ScraperTemplateReference = setStringField(executionRequest.ScraperTemplateReference, stepRequest.ScraperTemplateReference)
+	executionRequest.PvcTemplate = setStringField(executionRequest.PvcTemplate, stepRequest.PvcTemplate)
+	executionRequest.PvcTemplateReference = setStringField(executionRequest.PvcTemplate, stepRequest.PvcTemplateReference)
+
+	if stepRequest.RunningContext != nil {
+		executionRequest.RunningContext = &testkube.RunningContext{
+			Type_:   string(stepRequest.RunningContext.Type_),
+			Context: stepRequest.RunningContext.Context,
+		}
+	}
+
+	return executionRequest
+}
+
+func setStringField(oldValue string, newValue string) string {
+	if newValue != "" {
+		return newValue
+	}
+	return oldValue
+}
+
+func mergeVariables(vars1 map[string]testkube.Variable, vars2 map[string]testkube.Variable) map[string]testkube.Variable {
+	variables := map[string]testkube.Variable{}
+	for k, v := range vars1 {
+		variables[k] = v
+	}
+
+	for k, v := range vars2 {
+		variables[k] = v
+	}
+
+	return variables
 }
