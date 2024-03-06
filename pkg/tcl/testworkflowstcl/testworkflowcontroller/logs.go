@@ -35,6 +35,21 @@ type Instruction struct {
 	Value interface{}
 }
 
+func (i *Instruction) ToInternal() *testkube.TestWorkflowOutput {
+	if i == nil {
+		return nil
+	}
+	value := &i.Value
+	if i.Value == nil {
+		value = nil
+	}
+	return &testkube.TestWorkflowOutput{
+		Ref:   i.Ref,
+		Name:  i.Name,
+		Value: value,
+	}
+}
+
 type Comment struct {
 	Time   time.Time
 	Hint   *Instruction

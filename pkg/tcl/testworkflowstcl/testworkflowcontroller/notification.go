@@ -21,3 +21,13 @@ type Notification struct {
 	Log       string                       `json:"log,omitempty"`
 	Output    *Instruction                 `json:"output,omitempty"`
 }
+
+func (n *Notification) ToInternal() testkube.TestWorkflowExecutionNotification {
+	return testkube.TestWorkflowExecutionNotification{
+		Ts:     n.Timestamp,
+		Result: n.Result,
+		Ref:    n.Ref,
+		Log:    n.Log,
+		Output: n.Output.ToInternal(),
+	}
+}

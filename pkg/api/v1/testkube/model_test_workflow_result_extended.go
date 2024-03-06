@@ -4,6 +4,37 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 )
 
+func (r *TestWorkflowResult) IsFinished() bool {
+	return !r.IsStatus(QUEUED_TestWorkflowStatus) && !r.IsStatus(RUNNING_TestWorkflowStatus)
+}
+
+func (r *TestWorkflowResult) IsStatus(s TestWorkflowStatus) bool {
+	if r.Status == nil {
+		return s == QUEUED_TestWorkflowStatus
+	}
+	return *r.Status == s
+}
+
+func (r *TestWorkflowResult) IsQueued() bool {
+	return r.IsStatus(QUEUED_TestWorkflowStatus)
+}
+
+func (r *TestWorkflowResult) IsFailed() bool {
+	return r.IsStatus(FAILED_TestWorkflowStatus)
+}
+
+func (r *TestWorkflowResult) IsAborted() bool {
+	return r.IsStatus(ABORTED_TestWorkflowStatus)
+}
+
+func (r *TestWorkflowResult) IsPassed() bool {
+	return r.IsStatus(PASSED_TestWorkflowStatus)
+}
+
+func (r *TestWorkflowResult) IsAnyError() bool {
+	return r.IsFinished() && !r.IsStatus(PASSED_TestWorkflowStatus)
+}
+
 func (r *TestWorkflowResult) Clone() *TestWorkflowResult {
 	if r == nil {
 		return nil

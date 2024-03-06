@@ -243,6 +243,7 @@ func (s *apiTCL) PreviewTestWorkflowHandler() fiber.Handler {
 	}
 }
 
+// TODO: Add metrics
 func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 	return func(c *fiber.Ctx) (err error) {
 		name := c.Params("id")
@@ -269,7 +270,7 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 		}
 
 		machine := expressionstcl.NewMachine().
-			Register("execution.id", request.Name)
+			Register("execution.id", request.Name) // TODO(TKC-1652): replace with actual ID
 
 		// Fetch the templates
 		tpls := testworkflowresolver.ListTemplates(workflow)

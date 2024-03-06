@@ -6900,6 +6900,24 @@ components:
         - name
         - workflow
 
+    TestWorkflowExecutionNotification:
+      type: object
+      properties:
+        ts:
+          type: string
+          format: date-time
+          description: timestamp for the notification if available
+        result:
+          $ref: "#/components/schemas/TestWorkflowResult"
+        ref:
+          type: string
+          description: step reference, if related to some specific step
+        log:
+          type: string
+          description: log content, if it's just a log. note, that it includes 30 chars timestamp + space
+        output:
+          $ref: "#/components/schemas/TestWorkflowOutput"
+
     TestWorkflowOutput:
       type: object
       properties:
