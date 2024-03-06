@@ -16,6 +16,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
+const (
+	LogTimestampLength = 30 // time.RFC3339Nano without 00:00 timezone
+)
+
 func NewRunTestWorkflowCmd() *cobra.Command {
 	var (
 		executionName string
@@ -161,10 +165,10 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 			continue
 		}
 
-		// Print log with stripping timestamps
+		// Strip timestamp + space for all new lines in the log
 		for len(l.Log) > 0 {
 			if isLineBeginning {
-				l.Log = l.Log[31:]
+				l.Log = l.Log[LogTimestampLength+1:]
 				isLineBeginning = false
 			}
 			newLineIndex := strings.Index(l.Log, "\n")

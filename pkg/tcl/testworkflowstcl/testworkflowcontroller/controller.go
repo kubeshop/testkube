@@ -23,6 +23,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 )
 
+const (
+	JobRetrievalTimeout = 3 * time.Second
+)
+
 type Controller interface {
 	Abort(ctx context.Context) error
 	Cleanup(ctx context.Context) error
@@ -30,8 +34,6 @@ type Controller interface {
 }
 
 func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, id string, scheduledAt time.Time) (Controller, error) {
-	timeout := 3 * time.Second
-
 	// Create local context for stopping all the processes
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 
@@ -56,7 +58,7 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 			ctxCancel()
 			return nil, errors.Wrap(err, "invalid job signature")
 		}
-	case <-time.After(timeout):
+	case <-time.After(JobRetrievalTimeout):
 		ctxCancel()
 		return nil, ctx.Err()
 	}
