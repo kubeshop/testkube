@@ -30,14 +30,30 @@ func parseTag(tag string) tagData {
 	return tagData{value: s[0]}
 }
 
+func hasUnexportedFields(v reflect.Value) bool {
+	if v.Kind() != reflect.Struct {
+		return false
+	}
+	t := v.Type()
+	for i := 0; i < t.NumField(); i++ {
+		if !t.Field(i).IsExported() {
+			return true
+		}
+	}
+	return false
+}
+
 func clone(v reflect.Value) reflect.Value {
 	if v.Kind() == reflect.String {
 		s := v.String()
 		return reflect.ValueOf(&s).Elem()
 	} else if v.Kind() == reflect.Struct {
 		r := reflect.New(v.Type()).Elem()
+		t := v.Type()
 		for i := 0; i < r.NumField(); i++ {
-			r.Field(i).Set(v.Field(i))
+			if t.Field(i).IsExported() {
+				r.Field(i).Set(v.Field(i))
+			}
 		}
 		return r
 	}
@@ -116,7 +132,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 			return changed, nil
 		}
 		for _, k := range v.MapKeys() {
-			if t.value != "" || force {
+			if (t.value != "" || force) && !hasUnexportedFields(v.MapIndex(k)) {
 				// It's not possible to get a pointer to map element,
 				// so we need to copy it and reassign
 				item := clone(v.MapIndex(k))
@@ -130,7 +146,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 				}
 				v.SetMapIndex(k, item)
 			}
-			if t.key != "" || force {
+			if (t.key != "" || force) && !hasUnexportedFields(k) && !hasUnexportedFields(v.MapIndex(k)) {
 				key := clone(k)
 				var ch bool
 				ch, err = resolve(key, tagData{value: t.key}, m, force, finalize)
@@ -143,7 +159,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 				if !key.Equal(k) {
 					item := clone(v.MapIndex(k))
 					v.SetMapIndex(k, reflect.Value{})
-					v.SetMapIndex(key, item)
+					v.SetMapIndex(key.Convert(k.Type()), item)
 				}
 			}
 		}

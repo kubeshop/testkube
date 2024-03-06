@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 	batchv1 "k8s.io/api/batch/v1"
@@ -98,7 +99,6 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		AppendJobConfig(workflow.Spec.Job)
 	layer.ContainerDefaults().
 		ApplyCR(defaultContainerConfig.DeepCopy()).
-		ApplyCR(workflow.Spec.Container).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, defaultInternalPath)).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, defaultDataPath))
 
@@ -149,6 +149,13 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		}
 	}
 
+	// Append main label for the pod
+	layer.AppendPodConfig(&testworkflowsv1.PodConfig{
+		Labels: map[string]string{
+			ExecutionIdMainPodLabelName: "{{execution.id}}",
+		},
+	})
+
 	// Resolve job & pod config
 	jobConfig, podConfig := layer.JobConfig(), layer.PodConfig()
 	err = expressionstcl.FinalizeForce(&jobConfig, machines...)
@@ -185,7 +192,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 
 	// Build list of the containers
-	containers, err := buildKubernetesContainers(root, NewInitProcess().SetRef(root.Ref()), images)
+	containers, err := buildKubernetesContainers(root, NewInitProcess().SetRef(root.Ref()))
 	if err != nil {
 		return nil, errors.Wrap(err, "building Kubernetes containers")
 	}
@@ -202,12 +209,22 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		if err != nil {
 			return nil, errors.Wrap(err, "finalizing container's resources")
 		}
+
+		// Resolve relative paths in the volumeMounts relatively to the working dir
+		workingDir := defaultDataPath
+		if containers[i].WorkingDir != "" {
+			workingDir = containers[i].WorkingDir
+		}
+		for j := range containers[i].VolumeMounts {
+			if !filepath.IsAbs(containers[i].VolumeMounts[j].MountPath) {
+				containers[i].VolumeMounts[j].MountPath = filepath.Clean(filepath.Join(workingDir, containers[i].VolumeMounts[j].MountPath))
+			}
+		}
 	}
 
 	// Build pod template
 	podSpec := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        "{{execution.id}}-pod",
 			Annotations: podConfig.Annotations,
 			Labels:      podConfig.Labels,
 		},
@@ -226,11 +243,11 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 	initContainer := corev1.Container{
 		// TODO: Resources, SecurityContext?
-		Name:            "copy-init",
+		Name:            "tktw-init",
 		Image:           defaultInitImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"/bin/sh", "-c"},
-		Args:            []string{fmt.Sprintf("cp /init %s && touch %s && chmod 777 %s", defaultInitPath, defaultStatePath, defaultStatePath)},
+		Args:            []string{fmt.Sprintf("cp /init %s && touch %s && chmod 777 %s && (echo -n ',0' > %s && exit 0) || (echo -n 'failed,1' > %s && exit 1)", defaultInitPath, defaultStatePath, defaultStatePath, "/dev/termination-log", "/dev/termination-log")},
 		VolumeMounts:    layer.ContainerDefaults().VolumeMounts(),
 	}
 	err = expressionstcl.FinalizeForce(&initContainer, machines...)
@@ -267,7 +284,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	jobAnnotations := make(map[string]string)
 	maps.Copy(jobAnnotations, jobSpec.Annotations)
 	maps.Copy(jobAnnotations, map[string]string{
-		"testworkflows.testkube.io/signature": string(sigSerialized),
+		SignatureAnnotationName: string(sigSerialized),
 	})
 	jobSpec.Annotations = jobAnnotations
 

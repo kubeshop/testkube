@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/utils"
@@ -88,6 +89,37 @@ func StreamToLogsChannelV2(resp io.Reader, logs chan events.Log) {
 		}
 
 		logs <- out
+	}
+}
+
+// StreamToTestWorkflowExecutionNotificationsChannel converts io.Reader with SSE data to channel of actual notifications
+func StreamToTestWorkflowExecutionNotificationsChannel(resp io.Reader, notifications chan testkube.TestWorkflowExecutionNotification) {
+	reader := bufio.NewReader(resp)
+
+	for {
+		b, err := utils.ReadLongLine(reader)
+		if err != nil {
+			if err != io.EOF {
+				fmt.Printf("Read long line error: %+v' \n", err)
+			}
+
+			break
+		}
+		chunk := trimDataChunk(b)
+
+		// ignore lines which are not JSON objects
+		if len(chunk) < 2 || chunk[0] != '{' {
+			continue
+		}
+
+		out := testkube.TestWorkflowExecutionNotification{}
+		err = json.Unmarshal(chunk, &out)
+		if err != nil {
+			fmt.Printf("Unmarshal chunk error: %+v, json:'%s' \n", err, chunk)
+			continue
+		}
+
+		notifications <- out
 	}
 }
 

@@ -11,15 +11,18 @@ import (
 // NewTestWorkflowClient creates new TestWorkflow client
 func NewTestWorkflowClient(
 	testWorkflowTransport Transport[testkube.TestWorkflow],
+	testWorkflowExecutionTransport Transport[testkube.TestWorkflowExecution],
 ) TestWorkflowClient {
 	return TestWorkflowClient{
-		testWorkflowTransport: testWorkflowTransport,
+		testWorkflowTransport:          testWorkflowTransport,
+		testWorkflowExecutionTransport: testWorkflowExecutionTransport,
 	}
 }
 
 // TestWorkflowClient is a client for tests
 type TestWorkflowClient struct {
-	testWorkflowTransport Transport[testkube.TestWorkflow]
+	testWorkflowTransport          Transport[testkube.TestWorkflow]
+	testWorkflowExecutionTransport Transport[testkube.TestWorkflowExecution]
 }
 
 // GetTestWorkflow returns single test by id
@@ -77,4 +80,28 @@ func (c TestWorkflowClient) DeleteTestWorkflow(name string) error {
 
 	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s", name)
 	return c.testWorkflowTransport.Delete(uri, "", true)
+}
+
+// ExecuteTestWorkflow starts new TestWorkflow execution
+func (c TestWorkflowClient) ExecuteTestWorkflow(name string, request testkube.TestWorkflowExecutionRequest) (result testkube.TestWorkflowExecution, err error) {
+	if name == "" {
+		return result, fmt.Errorf("test workflow name '%s' is not valid", name)
+	}
+
+	uri := c.testWorkflowExecutionTransport.GetURI("/test-workflows/%s/executions", name)
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return result, err
+	}
+
+	return c.testWorkflowExecutionTransport.Execute(http.MethodPost, uri, body, nil)
+}
+
+// GetTestWorkflowExecutionNotifications returns events stream from job pods, based on job pods logs
+func (c TestWorkflowClient) GetTestWorkflowExecutionNotifications(id string) (notifications chan testkube.TestWorkflowExecutionNotification, err error) {
+	notifications = make(chan testkube.TestWorkflowExecutionNotification)
+	uri := c.testWorkflowTransport.GetURI("/test-workflow-executions/%s/notifications", id)
+	err = c.testWorkflowTransport.GetTestWorkflowExecutionNotifications(uri, notifications)
+	return notifications, err
 }

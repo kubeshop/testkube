@@ -7,6 +7,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -15,7 +16,7 @@ func NewRunCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:         "run <resourceName>",
 		Aliases:     []string{"r", "start"},
-		Short:       "Runs tests or test suites",
+		Short:       "Runs tests, test suites or test workflows",
 		Annotations: map[string]string{cmdGroupAnnotation: cmdGroupCommands},
 		Run: func(cmd *cobra.Command, args []string) {
 			err := cmd.Help()
@@ -31,6 +32,7 @@ func NewRunCmd() *cobra.Command {
 
 	cmd.AddCommand(tests.NewRunTestCmd())
 	cmd.AddCommand(testsuites.NewRunTestSuiteCmd())
+	cmd.AddCommand(testworkflows.NewRunTestWorkflowCmd())
 
 	return cmd
 }

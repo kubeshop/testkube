@@ -62,6 +62,7 @@ func (s *groupStage) Signature() Signature {
 	return &signature{
 		RefValue:      s.ref,
 		NameValue:     s.name,
+		CategoryValue: s.category,
 		OptionalValue: s.optional,
 		NegativeValue: s.negative,
 		ChildrenValue: sig,
@@ -121,7 +122,9 @@ func (s *groupStage) Flatten() []Stage {
 	// Merge stage into single one below if possible
 	first := s.children[0]
 	if len(s.children) == 1 && (s.name == "" || first.Name() == "") {
-		first.SetName(first.Name(), s.name)
+		if first.Name() == "" {
+			first.SetName(s.name)
+		}
 		first.AppendConditions(s.condition)
 		if s.negative {
 			first.SetNegative(!first.Negative())
