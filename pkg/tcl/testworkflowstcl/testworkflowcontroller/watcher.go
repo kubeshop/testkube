@@ -106,6 +106,7 @@ func (w *watcher[T]) Any(ctx context.Context) <-chan WatcherValue[T] {
 			w.mu.Unlock()
 			ch <- v
 			close(ch)
+			return
 		}
 		w.mu.Unlock()
 		v, ok := <-w.Next(ctx)

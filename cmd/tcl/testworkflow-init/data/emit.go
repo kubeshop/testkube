@@ -11,30 +11,74 @@ package data
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
-// TODO: Replace prefix with something less common
 const (
-	InstructionPrefix = ";;"
-	HintPrefix        = ";"
+	InstructionPrefix         = "\u0001\u0005"
+	HintPrefix                = "\u0006"
+	InstructionSeparator      = "\u0003"
+	InstructionValueSeparator = "\u0004"
 )
 
-func EmitOutput(ref string, name string, value interface{}) {
+func SprintOutput(ref string, name string, value interface{}) string {
 	j, err := json.Marshal(value)
 	if err != nil {
 		panic(fmt.Sprintf("error while marshalling reference: %v", err))
 	}
-	fmt.Printf("\n%s%s;%s:%s;\n", InstructionPrefix, ref, name, string(j))
+	var sb strings.Builder
+	sb.WriteString("\n")
+	sb.WriteString(InstructionPrefix)
+	sb.WriteString(ref)
+	sb.WriteString(InstructionSeparator)
+	sb.WriteString(name)
+	sb.WriteString(InstructionValueSeparator)
+	sb.Write(j)
+	sb.WriteString(InstructionSeparator)
+	sb.WriteString("\n")
+	return sb.String()
 }
 
-func EmitHint(ref string, name string) {
-	fmt.Printf("\n%s%s%s;%s;\n", InstructionPrefix, HintPrefix, ref, name)
+func SprintHint(ref string, name string) string {
+	var sb strings.Builder
+	sb.WriteString("\n")
+	sb.WriteString(InstructionPrefix)
+	sb.WriteString(HintPrefix)
+	sb.WriteString(ref)
+	sb.WriteString(InstructionSeparator)
+	sb.WriteString(name)
+	sb.WriteString(InstructionSeparator)
+	sb.WriteString("\n")
+	return sb.String()
 }
 
-func EmitHintDetails(ref string, name string, value interface{}) {
+func SprintHintDetails(ref string, name string, value interface{}) string {
 	j, err := json.Marshal(value)
 	if err != nil {
 		panic(fmt.Sprintf("error while marshalling reference: %v", err))
 	}
-	fmt.Printf("\n%s%s%s;%s:%s;\n", InstructionPrefix, HintPrefix, ref, name, string(j))
+	var sb strings.Builder
+	sb.WriteString("\n")
+	sb.WriteString(InstructionPrefix)
+	sb.WriteString(HintPrefix)
+	sb.WriteString(ref)
+	sb.WriteString(InstructionSeparator)
+	sb.WriteString(name)
+	sb.WriteString(InstructionValueSeparator)
+	sb.Write(j)
+	sb.WriteString(InstructionSeparator)
+	sb.WriteString("\n")
+	return sb.String()
+}
+
+func PrintOutput(ref string, name string, value interface{}) {
+	fmt.Print(SprintOutput(ref, name, value))
+}
+
+func PrintHint(ref string, name string) {
+	fmt.Print(SprintHint(ref, name))
+}
+
+func PrintHintDetails(ref string, name string, value interface{}) {
+	fmt.Print(SprintHintDetails(ref, name, value))
 }

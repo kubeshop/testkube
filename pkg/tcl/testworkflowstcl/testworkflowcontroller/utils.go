@@ -62,6 +62,10 @@ func WatchJob(ctx context.Context, clientSet kubernetes.Interface, namespace, na
 			ResourceVersion: list.ResourceVersion,
 			FieldSelector:   selector,
 		})
+		if err != nil {
+			w.SendError(err)
+			return
+		}
 		defer jobs.Stop()
 		for {
 			// Prioritize checking for done
@@ -141,6 +145,10 @@ func watchPod(ctx context.Context, clientSet kubernetes.Interface, namespace str
 			FieldSelector:   options.FieldSelector,
 			LabelSelector:   options.LabelSelector,
 		})
+		if err != nil {
+			w.SendError(err)
+			return
+		}
 		defer pods.Stop()
 		for {
 			// Prioritize checking for done
@@ -329,6 +337,32 @@ func WatchJobEvents(ctx context.Context, clientSet kubernetes.Interface, namespa
 	})
 }
 
+func WatchJobPreEvents(ctx context.Context, jobEvents Watcher[*corev1.Event], cacheSize int) Watcher[*corev1.Event] {
+	w := newWatcher[*corev1.Event](ctx, cacheSize)
+	go func() {
+		defer w.Close()
+		stream := jobEvents.Stream(ctx)
+		defer stream.Stop()
+
+		for {
+			select {
+			case <-w.Done():
+				return
+			case v := <-stream.Channel():
+				if v.Error != nil {
+					w.SendError(v.Error)
+				} else {
+					w.SendValue(v.Value)
+					if v.Value.Reason == "SuccessfulCreate" {
+						return
+					}
+				}
+			}
+		}
+	}()
+	return w
+}
+
 func WatchEvents(ctx context.Context, clientSet kubernetes.Interface, namespace string, options ListOptions) Watcher[*corev1.Event] {
 	return watchEvents(clientSet, namespace, options, newWatcher[*corev1.Event](ctx, options.CacheSize))
 }
@@ -364,6 +398,10 @@ func watchEvents(clientSet kubernetes.Interface, namespace string, options ListO
 			LabelSelector:   options.LabelSelector,
 			TypeMeta:        options.TypeMeta,
 		})
+		if err != nil {
+			w.SendError(err)
+			return
+		}
 		defer events.Stop()
 		for {
 			// Prioritize checking for done

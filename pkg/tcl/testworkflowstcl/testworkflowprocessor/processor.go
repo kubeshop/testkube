@@ -284,7 +284,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	jobAnnotations := make(map[string]string)
 	maps.Copy(jobAnnotations, jobSpec.Annotations)
 	maps.Copy(jobAnnotations, map[string]string{
-		"testworkflows.testkube.io/signature": string(sigSerialized),
+		SignatureAnnotationName: string(sigSerialized),
 	})
 	jobSpec.Annotations = jobAnnotations
 

@@ -26,6 +26,7 @@ const (
 	defaultDataPath             = "/data"
 	ExecutionIdLabelName        = "testworkflowid"
 	ExecutionIdMainPodLabelName = "testworkflowid-main"
+	SignatureAnnotationName     = "testworkflows.testkube.io/signature"
 )
 
 var (

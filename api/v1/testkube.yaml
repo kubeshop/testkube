@@ -3437,24 +3437,21 @@ paths:
       description: Execute test workflow in the kubernetes cluster
       operationId: executeTestWorkflow
       requestBody:
-        description: test workflow configuration
+        description: test workflow execution request
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TestWorkflow"
+              $ref: "#/components/schemas/TestWorkflowExecutionRequest"
       responses:
         200:
-          description: successful creation
+          description: successful execution
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/TestWorkflow"
-            text/yaml:
-              schema:
-                type: string
+                  $ref: "#/components/schemas/TestWorkflowExecution"
         400:
           description: "problem with body parsing - probably some bad input occurs"
           content:
@@ -6858,6 +6855,157 @@ components:
           description: custom execution name
         config:
           $ref: "#/components/schemas/TestWorkflowConfigValue"
+
+    TestWorkflowExecution:
+      type: object
+      properties:
+        id:
+          type: string
+          description: unique execution identifier
+          format: bson objectId
+          example: "62f395e004109209b50edfc1"
+        name:
+          type: string
+          description: execution name
+          example: "some-workflow-name-1"
+        number:
+          type: integer
+          description: sequence number for the execution
+        scheduledAt:
+          type: string
+          format: date-time
+          description: when the execution has been scheduled to run
+        statusAt:
+          type: string
+          format: date-time
+          description: when the execution result's status has changed last time (queued, passed, failed)
+        signature:
+          type: array
+          description: structured tree of steps
+          items:
+            $ref: "#/components/schemas/TestWorkflowSignature"
+        result:
+          $ref: "#/components/schemas/TestWorkflowResult"
+        output:
+          type: array
+          description: additional information from the steps, like referenced executed tests or artifacts
+          items:
+            $ref: "#/components/schemas/TestWorkflowOutput"
+        workflow:
+          $ref: "#/components/schemas/TestWorkflow"
+        resolvedWorkflow:
+          $ref: "#/components/schemas/TestWorkflow"
+      required:
+        - id
+        - name
+        - workflow
+
+    TestWorkflowOutput:
+      type: object
+      properties:
+        ref:
+          type: string
+          description: step reference
+        name:
+          type: string
+          description: output kind name
+        value:
+          type: object
+          description: value returned
+
+    TestWorkflowResult:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/TestWorkflowStatus"
+        predictedStatus:
+          $ref: "#/components/schemas/TestWorkflowStatus"
+        queuedAt:
+          type: string
+          format: date-time
+          description: when the pod was created
+        startedAt:
+          type: string
+          format: date-time
+          description: when the pod has been successfully assigned
+        finishedAt:
+          type: string
+          format: date-time
+          description: when the pod has been completed
+        initialization:
+          $ref: "#/components/schemas/TestWorkflowStepResult"
+        steps:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/TestWorkflowStepResult"
+      required:
+        - status
+        - predictedStatus
+
+    TestWorkflowStepResult:
+      type: object
+      properties:
+        errorMessage:
+          type: string
+        status:
+          $ref: "#/components/schemas/TestWorkflowStepStatus"
+        exitCode:
+          type: number
+        queuedAt:
+          type: string
+          format: date-time
+          description: when the container was created
+        startedAt:
+          type: string
+          format: date-time
+          description: when the container was started
+        finishedAt:
+          type: string
+          format: date-time
+          description: when the container was finished
+
+    TestWorkflowSignature:
+      type: object
+      properties:
+        ref:
+          type: string
+          description: step reference
+        name:
+          type: string
+          description: step name
+        category:
+          type: string
+          description: step category, that may be used as name fallback
+        optional:
+          type: boolean
+          description: is the step/group meant to be optional
+        negative:
+          type: boolean
+          description: is the step/group meant to be negative
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestWorkflowSignature"
+
+    TestWorkflowStatus:
+      type: string
+      enum:
+        - queued
+        - running
+        - passed
+        - failed
+        - aborted
+
+    TestWorkflowStepStatus:
+      type: string
+      enum:
+        - queued
+        - running
+        - passed
+        - failed
+        - timeout
+        - skipped
+        - aborted
 
     TestWorkflowTemplate:
       type: object

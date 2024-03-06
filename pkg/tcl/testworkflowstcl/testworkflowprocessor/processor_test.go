@@ -71,7 +71,7 @@ func TestProcessBasic(t *testing.T) {
 			Name:   "dummy-id",
 			Labels: map[string]string{ExecutionIdLabelName: "dummy-id"},
 			Annotations: map[string]string{
-				"testworkflows.testkube.io/signature": string(sigSerialized),
+				SignatureAnnotationName: string(sigSerialized),
 			},
 		},
 		Spec: batchv1.JobSpec{

@@ -25,10 +25,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
-type Hint struct {
+type Instruction struct {
 	Ref   string
 	Name  string
 	Value interface{}
@@ -36,29 +37,50 @@ type Hint struct {
 
 type Comment struct {
 	Time   time.Time
-	Hint   *Hint
-	Output *Hint
+	Hint   *Instruction
+	Output *Instruction
 }
 
 type ContainerLog struct {
 	Time   time.Time
 	Log    []byte
-	Hint   *Hint
-	Output *Hint
+	Hint   *Instruction
+	Output *Instruction
 }
 
 type ContainerResult struct {
-	Status   string
-	ExitCode int
-	Took     time.Duration
+	Status     testkube.TestWorkflowStepStatus
+	ExitCode   int
+	FinishedAt time.Time
 }
 
 var UnknownContainerResult = ContainerResult{
-	Status:   "unknown",
+	Status:   testkube.ABORTED_TestWorkflowStepStatus,
 	ExitCode: -1,
 }
 
-func GetContainerResult(ctx context.Context, pod Watcher[*corev1.Pod], containerName string) (ContainerResult, error) {
+func GetContainerResult(c corev1.ContainerStatus) ContainerResult {
+	if c.State.Waiting != nil {
+		return ContainerResult{Status: testkube.QUEUED_TestWorkflowStepStatus, ExitCode: -1}
+	}
+	if c.State.Running != nil {
+		return ContainerResult{Status: testkube.RUNNING_TestWorkflowStepStatus, ExitCode: -1}
+	}
+	re := regexp.MustCompile(`^([^,]*),(0|[1-9]\d*)$`)
+	msg := c.State.Terminated.Message
+	match := re.FindStringSubmatch(msg)
+	if match == nil {
+		return ContainerResult{Status: testkube.ABORTED_TestWorkflowStepStatus, ExitCode: -1, FinishedAt: c.State.Terminated.FinishedAt.Time}
+	}
+	status := testkube.TestWorkflowStepStatus(match[1])
+	exitCode, _ := strconv.Atoi(match[2])
+	if status == "" {
+		status = testkube.PASSED_TestWorkflowStepStatus
+	}
+	return ContainerResult{Status: status, ExitCode: exitCode, FinishedAt: c.State.Terminated.FinishedAt.Time}
+}
+
+func GetFinalContainerResult(ctx context.Context, pod Watcher[*corev1.Pod], containerName string) (ContainerResult, error) {
 	w := WatchContainerStatus(ctx, pod, containerName, 0)
 	stream := w.Stream(ctx)
 	defer w.Close()
@@ -70,19 +92,7 @@ func GetContainerResult(ctx context.Context, pod Watcher[*corev1.Pod], container
 		if c.Value.State.Terminated == nil {
 			continue
 		}
-		re := regexp.MustCompile(`^([^,]*),(0|[1-9]\d*)$`)
-		msg := c.Value.State.Terminated.Message
-		match := re.FindStringSubmatch(msg)
-		if match == nil {
-			return UnknownContainerResult, fmt.Errorf("invalid termination message: %s", msg)
-		}
-		status := match[1]
-		exitCode, _ := strconv.Atoi(match[2])
-		if status == "" {
-			status = "passed"
-		}
-		took := c.Value.State.Terminated.FinishedAt.Sub(c.Value.State.Terminated.StartedAt.Time)
-		return ContainerResult{Status: status, ExitCode: exitCode, Took: took}, nil
+		return GetContainerResult(c.Value), nil
 	}
 	return UnknownContainerResult, nil
 }
@@ -102,6 +112,25 @@ func WatchContainerPreEvents(ctx context.Context, podEvents Watcher[*corev1.Even
 			} else {
 				w.SendValue(ev.Value)
 				if ev.Value.Reason == "Started" {
+					return
+				}
+			}
+		}
+	}()
+	return w
+}
+
+func WatchPodPreEvents(ctx context.Context, podEvents Watcher[*corev1.Event], cacheSize int) Watcher[*corev1.Event] {
+	w := newWatcher[*corev1.Event](ctx, cacheSize)
+	go func() {
+		defer w.Close()
+
+		for ev := range podEvents.Stream(w.ctx).Channel() {
+			if ev.Error != nil {
+				w.SendError(ev.Error)
+			} else {
+				w.SendValue(ev.Value)
+				if ev.Value.Reason == "Scheduled" {
 					return
 				}
 			}
@@ -180,7 +209,8 @@ func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, pod
 
 			// Check for the next part
 			line, err := utils.ReadLongLine(reader)
-			commentRe := regexp.MustCompile(fmt.Sprintf(`^%s(%s)?([^;]+);?([a-zA-Z0-9_]+)(?::(.+))?;$`, data.InstructionPrefix, data.HintPrefix))
+			commentRe := regexp.MustCompile(fmt.Sprintf(`^%s(%s)?([^%s]+)%s([a-zA-Z0-9_.]+)(?:%s(.+))?%s$`,
+				data.InstructionPrefix, data.HintPrefix, data.InstructionSeparator, data.InstructionSeparator, data.InstructionValueSeparator, data.InstructionSeparator))
 
 			// Process the received line
 			if len(line) > 0 {
@@ -192,7 +222,7 @@ func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, pod
 						isHint := string(v[1]) == data.HintPrefix
 						ref := string(v[2])
 						name := string(v[3])
-						result := Hint{Ref: ref, Name: name}
+						result := Instruction{Ref: ref, Name: name}
 						log := ContainerLog{Time: ts}
 						if isHint {
 							log.Hint = &result
@@ -254,26 +284,4 @@ func ReadTimestamp(reader *bufio.Reader) (time.Time, []byte, error) {
 		return time.Time{}, nil, errors2.Wrap(err, "parsing timestamp")
 	}
 	return ts, tsPrefix, nil
-}
-
-func ReadHintOrOutput(reader *bufio.Reader) *Comment {
-	// TODO: Read timestamp too
-	next, err := reader.Peek(1)
-	if err != nil || string(next) != ";" {
-		return nil
-	}
-	next, err = reader.Peek(2)
-	if err != nil || string(next) != ";;" {
-		return nil
-	}
-	next, err = reader.Peek(3)
-	if err != nil {
-		return nil
-	}
-
-	if string(next) == ";;;" {
-		// Could be hint
-	}
-
-	return nil
 }
