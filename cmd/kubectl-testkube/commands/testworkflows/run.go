@@ -98,7 +98,7 @@ func printResultDifference(res1 *testkube.TestWorkflowResult, res2 *testkube.Tes
 	if res1 == nil || res2 == nil {
 		return false
 	}
-	changed := true
+	changed := false
 	for i, s := range steps {
 		r1 := res1.Steps[s.Ref]
 		r2 := res2.Steps[s.Ref]
@@ -118,21 +118,22 @@ func printResultDifference(res1 *testkube.TestWorkflowResult, res2 *testkube.Tes
 			name = s.Name
 		}
 		took := r2.FinishedAt.Sub(r2.QueuedAt).Round(time.Millisecond)
+		changed = true
 
 		switch r2Status {
 		case testkube.RUNNING_TestWorkflowStepStatus:
-			fmt.Printf(ui.LightCyan("\n• (%d/%d) %s\n"), i+1, len(steps), name)
+			fmt.Print(ui.LightCyan(fmt.Sprintf("\n• (%d/%d) %s\n", i+1, len(steps), name)))
 		case testkube.SKIPPED_TestWorkflowStepStatus:
-			fmt.Printf(ui.LightGray("• skipped\n"))
+			fmt.Print(ui.LightGray("• skipped\n"))
 		case testkube.PASSED_TestWorkflowStepStatus:
-			fmt.Printf(ui.Green("\n• passed in %s\n"), took)
+			fmt.Print(ui.Green(fmt.Sprintf("\n• passed in %s\n", took)))
 		case testkube.ABORTED_TestWorkflowStepStatus:
-			fmt.Printf(ui.Red("\n• aborted\n"))
+			fmt.Print(ui.Red("\n• aborted\n"))
 		default:
 			if s.Optional {
-				fmt.Printf(ui.Yellow("\n• %s in %s (ignored)\n"), string(r2Status), took)
+				fmt.Print(ui.Yellow(fmt.Sprintf("\n• %s in %s (ignored)\n", string(r2Status), took)))
 			} else {
-				fmt.Printf(ui.Red("\n• %s in %s\n"), string(r2Status), took)
+				fmt.Print(ui.Red(fmt.Sprintf("\n• %s in %s\n", string(r2Status), took)))
 			}
 		}
 	}
