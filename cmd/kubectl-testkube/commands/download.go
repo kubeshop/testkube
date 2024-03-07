@@ -90,10 +90,22 @@ func NewDownloadSingleArtifactsCmd() *cobra.Command {
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
 
-			f, err := client.DownloadFile(executionID, filename, destination)
-			ui.ExitOnError("downloading file"+filename, err)
+			execution, err := client.GetExecution(executionID)
+			if err == nil && execution.Id != "" {
+				f, err := client.DownloadFile(executionID, filename, destination)
+				ui.ExitOnError("downloading file "+filename, err)
+				ui.Info(fmt.Sprintf("File %s downloaded.\n", f))
+				return
+			}
+			twExecution, err := client.GetTestWorkflowExecution(executionID)
+			if err == nil && twExecution.Id != "" {
+				f, err := client.DownloadTestWorkflowArtifact(executionID, filename, destination)
+				ui.ExitOnError("downloading file "+filename, err)
+				ui.Info(fmt.Sprintf("File %s downloaded.\n", f))
+				return
+			}
 
-			ui.Info(fmt.Sprintf("File %s downloaded.\n", f))
+			ui.ExitOnError("retrieving execution", err)
 		},
 	}
 
@@ -119,7 +131,16 @@ func NewDownloadAllArtifactsCmd() *cobra.Command {
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
 
-			tests.DownloadArtifacts(executionID, downloadDir, format, masks, client)
+			execution, err := client.GetExecution(executionID)
+			if err == nil && execution.Id != "" {
+				tests.DownloadTestArtifacts(executionID, downloadDir, format, masks, client)
+				return
+			}
+			twExecution, err := client.GetTestWorkflowExecution(executionID)
+			if err == nil && twExecution.Id != "" {
+				tests.DownloadTestWorkflowArtifacts(executionID, downloadDir, format, masks, client)
+				return
+			}
 		},
 	}
 

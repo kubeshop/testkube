@@ -1,7 +1,7 @@
 package artifact
 
 import (
-	context "context"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -25,11 +25,12 @@ func NewCloudArtifactsStorage(cloudClient cloud.TestKubeCloudAPIClient, grpcConn
 	return &CloudArtifactsStorage{executor: executor.NewCloudGRPCExecutor(cloudClient, grpcConn, apiKey)}
 }
 
-func (c *CloudArtifactsStorage) ListFiles(ctx context.Context, executionID, testName, testSuiteName string) ([]testkube.Artifact, error) {
+func (c *CloudArtifactsStorage) ListFiles(ctx context.Context, executionID, testName, testSuiteName, testWorkflowName string) ([]testkube.Artifact, error) {
 	req := ListFilesRequest{
-		ExecutionID:   executionID,
-		TestName:      testName,
-		TestSuiteName: testSuiteName,
+		ExecutionID:      executionID,
+		TestName:         testName,
+		TestSuiteName:    testSuiteName,
+		TestWorkflowName: testWorkflowName,
 	}
 	response, err := c.executor.Execute(ctx, CmdArtifactsListFiles, req)
 	if err != nil {
@@ -43,12 +44,13 @@ func (c *CloudArtifactsStorage) ListFiles(ctx context.Context, executionID, test
 	return commandResponse.Artifacts, nil
 }
 
-func (c *CloudArtifactsStorage) DownloadFile(ctx context.Context, file, executionID, testName, testSuiteName string) (io.Reader, error) {
+func (c *CloudArtifactsStorage) DownloadFile(ctx context.Context, file, executionID, testName, testSuiteName, testWorkflowName string) (io.Reader, error) {
 	req := DownloadFileRequest{
-		File:          file,
-		ExecutionID:   executionID,
-		TestName:      testName,
-		TestSuiteName: testSuiteName,
+		File:             file,
+		ExecutionID:      executionID,
+		TestName:         testName,
+		TestSuiteName:    testSuiteName,
+		TestWorkflowName: testWorkflowName,
 	}
 	response, err := c.executor.Execute(ctx, CmdArtifactsDownloadFile, req)
 	if err != nil {

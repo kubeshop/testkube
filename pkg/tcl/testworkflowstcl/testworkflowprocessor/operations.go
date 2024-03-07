@@ -89,13 +89,7 @@ func ProcessExecute(_ InternalProcessor, layer Intermediate, container Container
 		SetImage(defaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
 		SetCommand("/toolkit", "execute").
-		AppendEnvMap(map[string]string{
-			"TK_REF":     stage.Ref(),
-			"TK_NS":      "{{internal.namespace}}",
-			"TK_API_URL": "{{internal.api.url}}",
-			"TK_WF":      "{{workflow.name}}",
-			"TK_EX":      "{{execution.id}}",
-		})
+		EnableToolkit(stage.Ref())
 	args := make([]string, 0)
 	for _, t := range step.Execute.Tests {
 		args = append(args, "-t", t.Name)
@@ -219,13 +213,11 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container Contai
 	container.AppendVolumeMounts(volumeMount)
 
 	selfContainer.
+		SetWorkingDir("/").
 		SetImage(defaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
 		SetCommand("/toolkit", "clone", step.Content.Git.Uri).
-		AppendEnvMap(map[string]string{
-			"TK_REF": stage.Ref(),
-			"TK_NS":  "{{internal.namespace}}",
-		})
+		EnableToolkit(stage.Ref())
 
 	args := []string{mountPath}
 
@@ -262,6 +254,36 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container Contai
 		}
 	}
 
+	selfContainer.SetArgs(args...)
+
+	return stage, nil
+}
+
+func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+	if step.Artifacts == nil {
+		return nil, nil
+	}
+
+	if len(step.Artifacts.Paths) == 0 {
+		return nil, errors.New("there needs to be at least one path to scrap for artifacts")
+	}
+
+	selfContainer := container.CreateChild()
+	stage := NewContainerStage(layer.NextRef(), selfContainer)
+	stage.SetCondition("always")
+	stage.SetCategory("Upload artifacts")
+
+	selfContainer.
+		SetImage(defaultToolkitImage).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetCommand("/toolkit", "artifacts", "-m", defaultDataPath).
+		EnableToolkit(stage.Ref())
+
+	args := make([]string, 0)
+	if step.Artifacts.Compress != nil {
+		args = append(args, "--compress", step.Artifacts.Compress.Name)
+	}
+	args = append(args, step.Artifacts.Paths...)
 	selfContainer.SetArgs(args...)
 
 	return stage, nil

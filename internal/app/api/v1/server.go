@@ -133,7 +133,7 @@ func NewTestkubeAPI(
 		slackLoader:           slackLoader,
 		Storage:               storage,
 		graphqlPort:           graphqlPort,
-		artifactsStorage:      artifactsStorage,
+		ArtifactsStorage:      artifactsStorage,
 		TemplatesClient:       templatesClient,
 		dashboardURI:          dashboardURI,
 		helmchartVersion:      helmchartVersion,
@@ -194,7 +194,7 @@ type TestkubeAPI struct {
 	Clientset             kubernetes.Interface
 	slackLoader           *slack.SlackLoader
 	graphqlPort           string
-	artifactsStorage      storage.ArtifactsStorage
+	ArtifactsStorage      storage.ArtifactsStorage
 	TemplatesClient       *templatesclientv1.TemplatesClient
 	dashboardURI          string
 	helmchartVersion      string

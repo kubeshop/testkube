@@ -117,6 +117,9 @@ func (s *apiTCL) AppendRoutes() {
 	testWorkflowExecutions.Get("/:executionID/notifications/stream", s.pro(s.StreamTestWorkflowExecutionNotificationsWebSocketHandler()))
 	testWorkflowExecutions.Post("/:executionID/abort", s.pro(s.AbortTestWorkflowExecutionHandler()))
 	testWorkflowExecutions.Get("/:executionID/logs", s.pro(s.GetTestWorkflowExecutionLogsHandler()))
+	testWorkflowExecutions.Get("/:executionID/artifacts", s.pro(s.ListTestWorkflowExecutionArtifactsHandler()))
+	testWorkflowExecutions.Get("/:executionID/artifacts/:filename", s.pro(s.GetTestWorkflowArtifactHandler()))
+	testWorkflowExecutions.Get("/:executionID/artifact-archive", s.pro(s.GetTestWorkflowArtifactArchiveHandler()))
 
 	testWorkflowWithExecutions := root.Group("/test-workflow-with-executions")
 	testWorkflowWithExecutions.Get("/", s.pro(s.ListTestWorkflowWithExecutionsHandler()))

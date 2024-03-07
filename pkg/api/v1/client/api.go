@@ -43,6 +43,7 @@ func NewProxyAPIClient(client kubernetes.Interface, config APIConfig) APIClient 
 			NewProxyClient[testkube.TestWorkflowWithExecution](client, config),
 			NewProxyClient[testkube.TestWorkflowExecution](client, config),
 			NewProxyClient[testkube.TestWorkflowExecutionsResult](client, config),
+			NewProxyClient[testkube.Artifact](client, config),
 		),
 		TestWorkflowTemplateClient: NewTestWorkflowTemplateClient(NewProxyClient[testkube.TestWorkflowTemplate](client, config)),
 	}
@@ -80,6 +81,7 @@ func NewDirectAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI,
 			NewDirectClient[testkube.TestWorkflowWithExecution](httpClient, apiURI, apiPathPrefix),
 			NewDirectClient[testkube.TestWorkflowExecution](httpClient, apiURI, apiPathPrefix),
 			NewDirectClient[testkube.TestWorkflowExecutionsResult](httpClient, apiURI, apiPathPrefix),
+			NewDirectClient[testkube.Artifact](httpClient, apiURI, apiPathPrefix),
 		),
 		TestWorkflowTemplateClient: NewTestWorkflowTemplateClient(NewDirectClient[testkube.TestWorkflowTemplate](httpClient, apiURI, apiPathPrefix)),
 	}
@@ -117,6 +119,7 @@ func NewCloudAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI, 
 			NewCloudClient[testkube.TestWorkflowWithExecution](httpClient, apiURI, apiPathPrefix),
 			NewCloudClient[testkube.TestWorkflowExecution](httpClient, apiURI, apiPathPrefix),
 			NewCloudClient[testkube.TestWorkflowExecutionsResult](httpClient, apiURI, apiPathPrefix),
+			NewCloudClient[testkube.Artifact](httpClient, apiURI, apiPathPrefix),
 		),
 		TestWorkflowTemplateClient: NewTestWorkflowTemplateClient(NewCloudClient[testkube.TestWorkflowTemplate](httpClient, apiURI, apiPathPrefix)),
 	}

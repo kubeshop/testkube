@@ -7,10 +7,11 @@ const (
 )
 
 type PutObjectSignedURLRequest struct {
-	Object        string `json:"object"`
-	ExecutionID   string `json:"executionId"`
-	TestName      string `json:"testName"`
-	TestSuiteName string `json:"testSuiteName"`
+	Object           string `json:"object"`
+	ExecutionID      string `json:"executionId"`
+	TestName         string `json:"testName"`
+	TestSuiteName    string `json:"testSuiteName"`
+	TestWorkflowName string `json:"testWorkflowName"`
 }
 
 type PutObjectSignedURLResponse struct {

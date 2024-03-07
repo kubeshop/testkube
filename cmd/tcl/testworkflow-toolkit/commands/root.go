@@ -26,6 +26,7 @@ import (
 func init() {
 	RootCmd.AddCommand(NewCloneCmd())
 	RootCmd.AddCommand(NewExecuteCmd())
+	RootCmd.AddCommand(NewArtifactsCmd())
 }
 
 var RootCmd = &cobra.Command{
