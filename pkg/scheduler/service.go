@@ -20,6 +20,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/secret"
+	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 )
 
 type Scheduler struct {
@@ -42,6 +43,7 @@ type Scheduler struct {
 	dashboardURI              string
 	featureFlags              featureflags.FeatureFlags
 	logsStream                logsclient.Stream
+	subscriptionChecker       *checktcl.SubscriptionChecker
 }
 
 func NewScheduler(
@@ -86,4 +88,11 @@ func NewScheduler(
 		featureFlags:              featureFlags,
 		logsStream:                logsStream,
 	}
+}
+
+// WithSubscriptionChecker sets subscription checker for the Scheduler
+// This is used to check if Pro/Enterprise subscription is valid
+func (s *Scheduler) WithSubscriptionChecker(subscriptionChecker *checktcl.SubscriptionChecker) *Scheduler {
+	s.subscriptionChecker = subscriptionChecker
+	return s
 }

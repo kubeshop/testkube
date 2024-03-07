@@ -17,6 +17,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
+	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
+	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
@@ -72,11 +74,15 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	// merge available data into execution options test spec, executor spec, request, test id
 	options, err := s.getExecuteOptions(test.Namespace, test.Name, request)
 	if err != nil {
-		return s.handleExecutionError(ctx, execution, "can't get current secret uuid: %w", err)
+		return s.handleExecutionError(ctx, execution, "can't get execute options: %w", err)
 	}
 
 	// store execution in storage, can be fetched from API now
-	execution = newExecutionFromExecutionOptions(options)
+	execution, err = newExecutionFromExecutionOptions(s.subscriptionChecker, options)
+	if err != nil {
+		return s.handleExecutionError(ctx, execution, "can't get new execution: %w", err)
+	}
+
 	options.ID = execution.Id
 
 	s.events.Notify(testkube.NewEventStartTest(&execution))
@@ -236,7 +242,7 @@ func (s *Scheduler) createSecretsReferences(execution *testkube.Execution) (err 
 	return nil
 }
 
-func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Execution {
+func newExecutionFromExecutionOptions(subscriptionChecker *checktcl.SubscriptionChecker, options client.ExecuteOptions) (testkube.Execution, error) {
 	execution := testkube.NewExecution(
 		options.Request.Id,
 		options.Namespace,
@@ -270,7 +276,20 @@ func newExecutionFromExecutionOptions(options client.ExecuteOptions) testkube.Ex
 	execution.DownloadArtifactTestNames = options.Request.DownloadArtifactTestNames
 	execution.SlavePodRequest = options.Request.SlavePodRequest
 
-	return execution
+	// Pro edition only (tcl protected code)
+	if schedulertcl.HasExecutionNamespace(options.Request) {
+		ok, err := subscriptionChecker.IsOrgPlanActive()
+		if err != nil {
+			return execution, fmt.Errorf("execution namespace is a pro feature: %w", err)
+		}
+		if !ok {
+			return execution, fmt.Errorf("execution namespace is not available: inactive subscription plan")
+		}
+
+		execution = schedulertcl.NewExecutionFromExecutionOptions(options.Request, execution)
+	}
+
+	return execution, nil
 }
 
 func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
@@ -396,6 +415,19 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		if !request.IsNegativeTestChangedOnRun {
 			s.logger.Infow("setting negative test from test definition", "test", test.Name, "negativeTest", test.ExecutionRequest.NegativeTest)
 			request.NegativeTest = test.ExecutionRequest.NegativeTest
+		}
+
+		// Pro edition only (tcl protected code)
+		if schedulertcl.HasExecutionNamespace(request) {
+			ok, err := s.subscriptionChecker.IsOrgPlanActive()
+			if err != nil {
+				return options, fmt.Errorf("execution namespace is a pro feature: %w", err)
+			}
+			if !ok {
+				return options, fmt.Errorf("execution namespace is not available: inactive subscription plan")
+			}
+
+			request = schedulertcl.GetExecuteOptions(test.ExecutionRequest, request)
 		}
 	}
 
