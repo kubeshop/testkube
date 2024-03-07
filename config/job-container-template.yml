@@ -77,6 +77,11 @@ spec:
         - name: {{ .CertificateSecret }}
           mountPath: /etc/certs
         {{- end }}
+        {{- if .AgentAPITLSSecret }}
+        - mountPath: /tmp/agent-cert
+          readOnly: true
+          name: {{ .AgentAPITLSSecret }}
+        {{- end }}
         {{- if .ArtifactRequest }}
           {{- if and .ArtifactRequest.VolumeMountPath .ArtifactRequest.StorageClassName }}
         - name: artifact-volume
@@ -102,6 +107,11 @@ spec:
       - name: {{ .CertificateSecret }}
         secret:
           secretName: {{ .CertificateSecret }}
+      {{- end }}
+      {{- if .AgentAPITLSSecret }}
+      - name: { { .AgentAPITLSSecret } }
+        secret:
+          secretName: {{ .AgentAPITLSSecret }}
       {{- end }}
       {{- if .ArtifactRequest }}
         {{- if and .ArtifactRequest.VolumeMountPath .ArtifactRequest.StorageClassName }}

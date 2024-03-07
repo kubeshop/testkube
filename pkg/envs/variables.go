@@ -48,6 +48,9 @@ type Params struct {
 	ProAPIURL                 string `envconfig:"RUNNER_PRO_API_URL"`                           // RUNNER_PRO_API_URL
 	ProConnectionTimeoutSec   int    `envconfig:"RUNNER_PRO_CONNECTION_TIMEOUT" default:"10"`   // RUNNER_PRO_CONNECTION_TIMEOUT
 	ProAPISkipVerify          bool   `envconfig:"RUNNER_PRO_API_SKIP_VERIFY" default:"false"`   // RUNNER_PRO_API_SKIP_VERIFY
+	ProAPICertFile            string `envconfig:"RUNNER_PRO_API_CERT_FILE"`                     // RUNNER_PRO_API_CERT_FILE
+	ProAPIKeyFile             string `envconfig:"RUNNER_PRO_API_KEY_FILE"`                      // RUNNER_PRO_API_KEY_FILE
+	ProAPICAFile              string `envconfig:"RUNNER_PRO_API_CA_FILE"`                       // RUNNER_PRO_API_CA_FILE
 	SlavesConfigs             string `envconfig:"RUNNER_SLAVES_CONFIGS"`                        // RUNNER_SLAVES_CONFIGS
 }
 

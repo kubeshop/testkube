@@ -73,6 +73,10 @@ type Config struct {
 	TestkubeProOrgID                 string        `envconfig:"TESTKUBE_PRO_ORG_ID" default:""`
 	TestkubeProMigrate               string        `envconfig:"TESTKUBE_PRO_MIGRATE" default:"false"`
 	TestkubeProConnectionTimeout     int           `envconfig:"TESTKUBE_PRO_CONNECTION_TIMEOUT" default:"10"`
+	TestkubeProCertFile              string        `envconfig:"TESTKUBE_PRO_CERT_FILE" default:""`
+	TestkubeProKeyFile               string        `envconfig:"TESTKUBE_PRO_KEY_FILE" default:""`
+	TestkubeProCAFile                string        `envconfig:"TESTKUBE_PRO_CA_FILE" default:""`
+	TestkubeProTLSSecret             string        `envconfig:"TESTKUBE_PRO_TLS_SECRET" default:""`
 	TestkubeWatcherNamespaces        string        `envconfig:"TESTKUBE_WATCHER_NAMESPACES" default:""`
 	GraphqlPort                      string        `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
 	TestkubeRegistry                 string        `envconfig:"TESTKUBE_REGISTRY" default:""`

@@ -172,6 +172,7 @@ type JobOptions struct {
 	UsernameSecret        *testkube.SecretRef
 	TokenSecret           *testkube.SecretRef
 	CertificateSecret     string
+	AgentAPITLSSecret     string
 	Variables             map[string]testkube.Variable
 	ActiveDeadlineSeconds int64
 	ServiceAccountName    string
@@ -1020,6 +1021,9 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 			log.Warnw("Not matched template type", "template", options.Request.PvcTemplateReference)
 		}
 	}
+
+	// used for adding custom certificates for Agent (gRPC) API
+	jobOptions.AgentAPITLSSecret = options.AgentAPITLSSecret
 
 	return
 }
