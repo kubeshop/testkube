@@ -108,7 +108,9 @@ func ProcessExecute(_ InternalProcessor, layer Intermediate, container Container
 			args = append(args, "-w", fmt.Sprintf(`%s={"config":%s}`, w.Name, v))
 		}
 	}
-	// TODO: Support "async"
+	if step.Execute.Async {
+		args = append(args, "--async")
+	}
 	if step.Execute.Parallelism > 0 {
 		args = append(args, "-p", strconv.Itoa(int(step.Execute.Parallelism)))
 	}

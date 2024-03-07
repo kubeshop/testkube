@@ -44,7 +44,7 @@ type executionResult struct {
 	Status string `json:"status"`
 }
 
-func buildTestExecution(test string) (func() error, error) {
+func buildTestExecution(test string, async bool) (func() error, error) {
 	name, req, _ := strings.Cut(test, "=")
 	request := testkube.ExecutionRequest{}
 	if req != "" {
@@ -107,6 +107,10 @@ func buildTestExecution(test string) (func() error, error) {
 		})
 		fmt.Printf("%s • scheduled %s\n", ui.LightCyan(execName), ui.DarkGray("("+exec.Id+")"))
 
+		if async {
+			return
+		}
+
 	loop:
 		for {
 			time.Sleep(time.Second)
@@ -140,7 +144,7 @@ func buildTestExecution(test string) (func() error, error) {
 	}, nil
 }
 
-func buildWorkflowExecution(workflow string) (func() error, error) {
+func buildWorkflowExecution(workflow string, async bool) (func() error, error) {
 	name, req, _ := strings.Cut(workflow, "=")
 	request := testkube.TestWorkflowExecutionRequest{}
 	if req != "" {
@@ -166,6 +170,10 @@ func buildWorkflowExecution(workflow string) (func() error, error) {
 			TestWorkflowName: exec.Workflow.Name,
 		})
 		fmt.Printf("%s • scheduled %s\n", ui.LightCyan(execName), ui.DarkGray("("+exec.Id+")"))
+
+		if async {
+			return
+		}
 
 	loop:
 		for {
@@ -205,6 +213,7 @@ func NewExecuteCmd() *cobra.Command {
 		tests       []string
 		workflows   []string
 		parallelism int
+		async       bool
 	)
 
 	cmd := &cobra.Command{
@@ -221,14 +230,14 @@ func NewExecuteCmd() *cobra.Command {
 			// Build operations to run
 			operations := make([]func() error, 0)
 			for _, t := range tests {
-				fn, err := buildTestExecution(t)
+				fn, err := buildTestExecution(t, async)
 				if err != nil {
 					ui.Fail(err)
 				}
 				operations = append(operations, fn)
 			}
 			for _, w := range workflows {
-				fn, err := buildWorkflowExecution(w)
+				fn, err := buildWorkflowExecution(w, async)
 				if err != nil {
 					ui.Fail(err)
 				}
@@ -270,6 +279,7 @@ func NewExecuteCmd() *cobra.Command {
 	cmd.Flags().StringArrayVarP(&tests, "test", "t", nil, "tests to run; either test name, or test-name=json-execution-request")
 	cmd.Flags().StringArrayVarP(&workflows, "workflow", "w", nil, "workflows to run; either workflow name, or workflow-name=json-execution-request")
 	cmd.Flags().IntVarP(&parallelism, "parallelism", "p", 0, "how many items could be executed at once")
+	cmd.Flags().BoolVar(&async, "async", false, "should it wait for results")
 
 	return cmd
 }
