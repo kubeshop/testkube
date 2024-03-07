@@ -599,6 +599,43 @@ parameters when you create or run the test using the `--variable-configmap` and 
 testkube create test --file test/postman/LocalHealth.postman_collection.json --name var-test --type postman/collection --variable-configmap your_configmap --variable-secret your_secret
 ```
 
+### Run the Test in a Different Execution Namespace
+
+When you need to run the test in a namespace different from the Testkube installation one, you can use a special Test CRD field `executionNamespace`, for example: 
+
+```yaml
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: jmeter-smoke-test
+  namespace: testkube
+spec:
+  type: jmeter/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+  executionRequest:
+    executionNamespace: default
+```
+
+You need to define execution namespaces in your helm chart values. It's possible to generate all required RBAC or just manually supply them.
+
+```yaml
+  executionNamespaces: []
+       # -- Namespace for test execution  
+  #  - namespace: default 
+       # -- Whether to generate RBAC for testkube api server or use manually provided 
+  #    generateAPIServerRBAC: true
+       # -- Job service account name for test jobs 
+  #    jobServiceAccountName: tests-job-default
+       # -- Whether to generate RBAC for test job or use manually provided 
+  #    generateTestJobRBAC: true
+```
+
 ## Summary
 
 Tests are the main abstractions over test suites in Testkube, they can be created with different sources and used by executors to run on top of a particular test framework.
