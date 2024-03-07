@@ -80,7 +80,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	}
 
 	// store execution in storage, can be fetched from API now
-	execution, err = newExecutionFromExecutionOptions(s.subscriptionChecker, options)
+	execution, err = newExecutionFromExecutionOptions(&s.subscriptionChecker, options)
 	if err != nil {
 		return s.handleExecutionError(ctx, execution, "can't get new execution: %w", err)
 	}
