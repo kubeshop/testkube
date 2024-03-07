@@ -9,6 +9,8 @@
 package schedulertcl
 
 import (
+	"strings"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -37,6 +39,25 @@ func GetExecuteOptions(sourceRequest *testkube.ExecutionRequest,
 }
 
 // HasExecutionNamespace checks whether execution has execution namespace
-func HasExecutionNamespace(request testkube.ExecutionRequest) bool {
+func HasExecutionNamespace(request *testkube.ExecutionRequest) bool {
 	return request.ExecutionNamespace != ""
+}
+
+// GetServiceAccountNamesFromConfig returns service account names from config
+func GetServiceAccountNamesFromConfig(serviceAccountNames map[string]string, config string) map[string]string {
+	if serviceAccountNames == nil {
+		serviceAccountNames = make(map[string]string)
+	}
+
+	items := strings.Split(config, ",")
+	for _, item := range items {
+		elements := strings.Split(item, "=")
+		if len(elements) != 2 {
+			continue
+		}
+
+		serviceAccountNames[elements[0]] = elements[1]
+	}
+
+	return serviceAccountNames
 }

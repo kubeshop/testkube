@@ -97,6 +97,7 @@ type Config struct {
 	LogServerKeyFile                 string        `envconfig:"LOG_SERVER_KEY_FILE" default:""`
 	LogServerCAFile                  string        `envconfig:"LOG_SERVER_CA_FILE" default:""`
 	DisableSecretCreation            bool          `envconfig:"DISABLE_SECRET_CREATION" default:"false"`
+	TestkubeExecutionNamespaces      string        `envconfig:"TESTKUBE_EXECUTION_NAMESPACES" default:""`
 
 	// DEPRECATED: Use TestkubeProAPIKey instead
 	TestkubeCloudAPIKey string `envconfig:"TESTKUBE_CLOUD_API_KEY" default:""`

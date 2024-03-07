@@ -15,7 +15,7 @@ import (
 
 //go:generate mockgen -destination=./mock_client.go -package=configmap "github.com/kubeshop/testkube/pkg/configmap" Interface
 type Interface interface {
-	Get(ctx context.Context, id string) (map[string]string, error)
+	Get(ctx context.Context, id string, namespace ...string) (map[string]string, error)
 	Create(ctx context.Context, id string, stringData map[string]string) error
 	Apply(ctx context.Context, id string, stringData map[string]string) error
 	Update(ctx context.Context, id string, stringData map[string]string) error
@@ -55,8 +55,13 @@ func (c *Client) Create(ctx context.Context, id string, stringData map[string]st
 }
 
 // Get is a method to retrieve an existing configmap
-func (c *Client) Get(ctx context.Context, id string) (map[string]string, error) {
-	configMapsClient := c.ClientSet.CoreV1().ConfigMaps(c.Namespace)
+func (c *Client) Get(ctx context.Context, id string, namespace ...string) (map[string]string, error) {
+	ns := c.Namespace
+	if len(namespace) != 0 {
+		ns = namespace[0]
+	}
+
+	configMapsClient := c.ClientSet.CoreV1().ConfigMaps(ns)
 
 	configMapSpec, err := configMapsClient.Get(ctx, id, metav1.GetOptions{})
 	if err != nil {

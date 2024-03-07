@@ -30,6 +30,7 @@ testkube run test <testName> [flags]
       --download-dir string                        download dir (default "artifacts")
       --execute-postrun-script-before-scraping     whether to execute postrun scipt before scraping or not (prebuilt executor only)
       --execution-label stringToString             execution-label key value pair: --execution-label key1=value1 (default [])
+      --execution-namespace string                 namespace for test execution (Pro edition only)
       --format string                              data format for storing files, one of folder|archive (default "folder")
       --git-branch string                          if uri is git repository we can set additional branch parameter
       --git-commit string                          if uri is git repository we can use commit id (sha) parameter

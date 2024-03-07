@@ -112,7 +112,7 @@ func TestGetExecuteOptions(t *testing.T) {
 
 	mockTestsClient.EXPECT().Get("id").Return(&mockTest, nil).Times(1)
 	mockExecutorsClient.EXPECT().GetByType(mockExecutorTypes).Return(&mockExecutor, nil)
-	mockConfigMapClient.EXPECT().Get(gomock.Any(), "configmap").Times(1)
+	mockConfigMapClient.EXPECT().Get(gomock.Any(), "configmap", "namespace").Times(1)
 
 	req := testkube.ExecutionRequest{
 		Name:             "id-1",
