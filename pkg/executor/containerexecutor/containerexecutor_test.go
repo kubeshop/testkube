@@ -31,14 +31,15 @@ func TestExecuteAsync(t *testing.T) {
 	t.Parallel()
 
 	ce := ContainerExecutor{
-		clientSet:       getFakeClient("1"),
-		log:             logger(),
-		repository:      FakeResultRepository{},
-		metrics:         FakeMetricCounter{},
-		emitter:         FakeEmitter{},
-		configMap:       FakeConfigRepository{},
-		testsClient:     FakeTestsClient{},
-		executorsClient: FakeExecutorsClient{},
+		clientSet:           getFakeClient("1"),
+		log:                 logger(),
+		repository:          FakeResultRepository{},
+		metrics:             FakeMetricCounter{},
+		emitter:             FakeEmitter{},
+		configMap:           FakeConfigRepository{},
+		testsClient:         FakeTestsClient{},
+		executorsClient:     FakeExecutorsClient{},
+		serviceAccountNames: map[string]string{"": ""},
 	}
 
 	execution := &testkube.Execution{Id: "1"}
@@ -56,14 +57,15 @@ func TestExecuteSync(t *testing.T) {
 	t.Parallel()
 
 	ce := ContainerExecutor{
-		clientSet:       getFakeClient("1"),
-		log:             logger(),
-		repository:      FakeResultRepository{},
-		metrics:         FakeMetricCounter{},
-		emitter:         FakeEmitter{},
-		configMap:       FakeConfigRepository{},
-		testsClient:     FakeTestsClient{},
-		executorsClient: FakeExecutorsClient{},
+		clientSet:           getFakeClient("1"),
+		log:                 logger(),
+		repository:          FakeResultRepository{},
+		metrics:             FakeMetricCounter{},
+		emitter:             FakeEmitter{},
+		configMap:           FakeConfigRepository{},
+		testsClient:         FakeTestsClient{},
+		executorsClient:     FakeExecutorsClient{},
+		serviceAccountNames: map[string]string{"default": ""},
 	}
 
 	execution := &testkube.Execution{Id: "1", TestNamespace: "default"}
