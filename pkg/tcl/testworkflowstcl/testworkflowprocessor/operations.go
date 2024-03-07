@@ -11,6 +11,7 @@ package testworkflowprocessor
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -194,4 +195,72 @@ func ProcessContentFiles(_ InternalProcessor, layer Intermediate, container Cont
 		}
 	}
 	return nil, nil
+}
+
+func ProcessContentGit(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+	if step.Content == nil || step.Content.Git == nil {
+		return nil, nil
+	}
+
+	selfContainer := container.CreateChild()
+	stage := NewContainerStage(layer.NextRef(), selfContainer)
+	stage.SetCategory("Clone Git repository")
+
+	// Compute mount path
+	mountPath := step.Content.Git.MountPath
+	if mountPath == "" {
+		mountPath = filepath.Join(defaultDataPath, "repo")
+	}
+
+	// Build volume pair and share with all siblings
+	volumeMount := layer.AddEmptyDirVolume(nil, mountPath)
+	container.AppendVolumeMounts(volumeMount)
+
+	selfContainer.
+		SetImage(defaultToolkitImage).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetCommand("/toolkit", "clone", step.Content.Git.Uri).
+		AppendEnvMap(map[string]string{
+			"TK_REF": stage.Ref(),
+			"TK_NS":  "{{internal.namespace}}",
+		})
+
+	args := []string{mountPath}
+
+	// Provide Git username
+	if step.Content.Git.UsernameFrom != nil {
+		container.AppendEnv(corev1.EnvVar{Name: "TK_GIT_USERNAME", ValueFrom: step.Content.Git.UsernameFrom})
+		args = append(args, "-u", "{{env.TK_GIT_USERNAME}}")
+	} else if step.Content.Git.Username != "" {
+		args = append(args, "-u", step.Content.Git.Username)
+	}
+
+	// Provide Git token
+	if step.Content.Git.TokenFrom != nil {
+		container.AppendEnv(corev1.EnvVar{Name: "TK_GIT_TOKEN", ValueFrom: step.Content.Git.TokenFrom})
+		args = append(args, "-t", "{{env.TK_GIT_TOKEN}}")
+	} else if step.Content.Git.Token != "" {
+		args = append(args, "-t", step.Content.Git.Token)
+	}
+
+	// Provide auth type
+	if step.Content.Git.AuthType != "" {
+		args = append(args, "-a", string(step.Content.Git.AuthType))
+	}
+
+	// Provide revision
+	if step.Content.Git.Revision != "" {
+		args = append(args, "-r", step.Content.Git.Revision)
+	}
+
+	// Provide sparse paths
+	if len(step.Content.Git.Paths) > 0 {
+		for _, pattern := range step.Content.Git.Paths {
+			args = append(args, "-p", pattern)
+		}
+	}
+
+	selfContainer.SetArgs(args...)
+
+	return stage, nil
 }

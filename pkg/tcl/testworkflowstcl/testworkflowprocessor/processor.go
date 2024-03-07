@@ -52,6 +52,7 @@ func NewFullFeatured(inspector imageinspector.Inspector) Processor {
 	return New(inspector).
 		Register(ProcessDelay).
 		Register(ProcessContentFiles).
+		Register(ProcessContentGit).
 		Register(ProcessRunCommand).
 		Register(ProcessShellCommand).
 		Register(ProcessExecute).
@@ -65,6 +66,9 @@ func (p *processor) Register(operation Operation) Processor {
 
 func (p *processor) process(layer Intermediate, container Container, step testworkflowsv1.Step, ref string) (Stage, error) {
 	// Configure defaults
+	if step.WorkingDir != nil {
+		container.SetWorkingDir(*step.WorkingDir)
+	}
 	container.ApplyCR(step.Container)
 
 	// Build an initial group for the inner items

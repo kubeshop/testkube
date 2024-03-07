@@ -24,6 +24,7 @@ import (
 )
 
 func init() {
+	RootCmd.AddCommand(NewCloneCmd())
 	RootCmd.AddCommand(NewExecuteCmd())
 }
 
