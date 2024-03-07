@@ -6,6 +6,7 @@ import (
 
 	testsuiteexecutionv1 "github.com/kubeshop/testkube-operator/api/testsuiteexecution/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	mappertcl "github.com/kubeshop/testkube/pkg/tcl/mappertcl/testsuiteexecutions"
 )
 
 // MapCRDVariables maps variables between API and operator CRDs
@@ -218,7 +219,9 @@ func MapExecutionCRD(request *testkube.Execution) *testsuiteexecutionv1.Executio
 
 	result.StartTime.Time = request.StartTime
 	result.EndTime.Time = request.EndTime
-	return result
+
+	// Pro edition only (tcl protected code)
+	return mappertcl.MapExecutionCRD(request, result)
 }
 
 func MapTestSuiteStepV2ToCRD(request *testkube.TestSuiteStepV2) *testsuiteexecutionv1.TestSuiteStepV2 {

@@ -7,6 +7,7 @@ import (
 
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	mappertcl "github.com/kubeshop/testkube/pkg/tcl/mappertcl/tests"
 )
 
 // MapUpsertToSpec maps TestUpsertRequest to Test CRD spec
@@ -165,7 +166,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 		podRequest.PodTemplateReference = executionRequest.SlavePodRequest.PodTemplateReference
 	}
 
-	return &testsv3.ExecutionRequest{
+	result := &testsv3.ExecutionRequest{
 		Name:                               executionRequest.Name,
 		TestSuiteName:                      executionRequest.TestSuiteName,
 		Number:                             executionRequest.Number,
@@ -204,6 +205,9 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 		EnvSecrets:                         mapEnvReferences(executionRequest.EnvSecrets),
 		SlavePodRequest:                    podRequest,
 	}
+
+	// Pro edition only (tcl protected code)
+	return mappertcl.MapExecutionRequestToSpecExecutionRequest(executionRequest, result)
 }
 
 func mapImagePullSecrets(secrets []testkube.LocalObjectReference) (res []v1.LocalObjectReference) {
@@ -624,6 +628,11 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 
 	if executionRequest.ExecutePostRunScriptBeforeScraping != nil {
 		request.ExecutePostRunScriptBeforeScraping = *executionRequest.ExecutePostRunScriptBeforeScraping
+		emptyExecution = false
+	}
+
+	// Pro edition only (tcl protected code)
+	if !mappertcl.MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest, request) {
 		emptyExecution = false
 	}
 

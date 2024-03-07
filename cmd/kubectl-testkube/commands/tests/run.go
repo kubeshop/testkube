@@ -76,6 +76,7 @@ func NewRunTestCmd() *cobra.Command {
 		slavePodLimitsMemory               string
 		slavePodTemplate                   string
 		slavePodTemplateReference          string
+		executionNamespace                 string
 	)
 
 	cmd := &cobra.Command{
@@ -123,6 +124,7 @@ func NewRunTestCmd() *cobra.Command {
 					Context: runningContext,
 				},
 				ExecutePostRunScriptBeforeScraping: executePostRunScriptBeforeScraping,
+				ExecutionNamespace:                 executionNamespace,
 			}
 
 			var fields = []struct {
@@ -400,6 +402,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&slavePodLimitsMemory, "slave-pod-limits-memory", "", "slave pod resource limits memory")
 	cmd.Flags().StringVar(&slavePodTemplate, "slave-pod-template", "", "slave pod template file path for extensions to slave pod template")
 	cmd.Flags().StringVar(&slavePodTemplateReference, "slave-pod-template-reference", "", "reference to slave pod template to use for the test")
+	cmd.Flags().StringVar(&executionNamespace, "execution-namespace", "", "namespace for test execution (Pro edition only)")
 
 	return cmd
 }

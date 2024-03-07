@@ -4369,6 +4369,9 @@ components:
         slavePodRequest:
           $ref: "#/components/schemas/PodRequest"
           description: configuration parameters for executed slave pods
+        executionNamespace:
+          type: string
+          description: namespace for test execution (Pro edition only)
 
     Artifact:
       type: object
@@ -5014,6 +5017,9 @@ components:
         slavePodRequest:
           $ref: "#/components/schemas/PodRequest"
           description: configuration parameters for executed slave pods
+        executionNamespace:
+          type: string
+          description: namespace for test execution (Pro edition only) 
 
     TestSuiteStepExecutionRequest:
       description: test step execution request body
