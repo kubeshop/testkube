@@ -285,19 +285,19 @@ func WatchPodEventsByPodWatcher(ctx context.Context, clientSet kubernetes.Interf
 		if !ok || v.Value == nil {
 			return
 		}
-		watchEvents(clientSet, namespace, ListOptions{
+		_, wch := watchEvents(clientSet, namespace, ListOptions{
 			FieldSelector: "involvedObject.name=" + v.Value.Name,
 			TypeMeta:      metav1.TypeMeta{Kind: "Pod"},
 		}, w)
+
+		// Wait for all immediate events
+		<-wch
 
 		// Adds missing "Started" events.
 		// It may have duplicated "Started", but better than no events.
 		// @see {@link https://github.com/kubernetes/kubernetes/issues/122904#issuecomment-1944387021}
 		started := map[string]bool{}
 		for p := range pod.Stream(ctx).Channel() {
-			if p.Value == nil {
-				return
-			}
 			for i, s := range append(p.Value.Status.InitContainerStatuses, p.Value.Status.ContainerStatuses...) {
 				if !started[s.Name] && (s.State.Running != nil || s.State.Terminated != nil) {
 					ts := metav1.Time{Time: time.Now()}
@@ -362,10 +362,12 @@ func WatchJobPreEvents(ctx context.Context, jobEvents Watcher[*corev1.Event], ca
 }
 
 func WatchEvents(ctx context.Context, clientSet kubernetes.Interface, namespace string, options ListOptions) Watcher[*corev1.Event] {
-	return watchEvents(clientSet, namespace, options, newWatcher[*corev1.Event](ctx, options.CacheSize))
+	w, _ := watchEvents(clientSet, namespace, options, newWatcher[*corev1.Event](ctx, options.CacheSize))
+	return w
 }
 
-func watchEvents(clientSet kubernetes.Interface, namespace string, options ListOptions, w *watcher[*corev1.Event]) Watcher[*corev1.Event] {
+func watchEvents(clientSet kubernetes.Interface, namespace string, options ListOptions, w *watcher[*corev1.Event]) (Watcher[*corev1.Event], chan struct{}) {
+	initCh := make(chan struct{})
 	go func() {
 		defer w.Close()
 
@@ -379,15 +381,13 @@ func watchEvents(clientSet kubernetes.Interface, namespace string, options ListO
 		// Expose the initial value
 		if err != nil {
 			w.SendError(err)
+			close(initCh)
 			return
 		}
 		for _, event := range list.Items {
-			w.SendValue(&event)
+			w.SendValue(event.DeepCopy())
 		}
-		if len(list.Items) == 1 {
-			event := list.Items[0]
-			w.SendValue(&event)
-		}
+		close(initCh)
 
 		// Start watching for changes
 		events, err := clientSet.CoreV1().Events(namespace).Watch(w.ctx, metav1.ListOptions{
@@ -424,5 +424,5 @@ func watchEvents(clientSet kubernetes.Interface, namespace string, options ListO
 		}
 	}()
 
-	return w
+	return w, initCh
 }
