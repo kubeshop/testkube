@@ -9,8 +9,11 @@
 package checktcl
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSubscriptionChecker_GetCurrentOrganizationPlan(t *testing.T) {
@@ -186,6 +189,62 @@ func TestSubscriptionChecker_IsOrgPlanActive(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("SubscriptionChecker.IsOrgPlanActive() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSubscriptionChecker_IsActiveOrgPlanEnterpriseForFeature(t *testing.T) {
+	featureName := "feature"
+	tests := []struct {
+		name    string
+		orgPlan OrganizationPlan
+		err     error
+	}{
+		{
+			name: "enterprise active org plan",
+			orgPlan: OrganizationPlan{
+				TestkubeMode: OrganizationPlanTestkubeModeEnterprise,
+				IsTrial:      false,
+				PlanStatus:   PlanStatusActive,
+			},
+			err: nil,
+		},
+		{
+			name: "no org plan",
+			err:  fmt.Errorf("%s is a commercial feature: organization plan is not set", featureName),
+		},
+		{
+			name: "enterprise inactive org plan",
+			orgPlan: OrganizationPlan{
+				TestkubeMode: OrganizationPlanTestkubeModeEnterprise,
+				IsTrial:      false,
+				PlanStatus:   PlanStatusUnpaid,
+			},
+			err: fmt.Errorf("%s is not available: inactive subscription plan", featureName),
+		},
+		{
+			name: "non enterprise actibe org plan",
+			orgPlan: OrganizationPlan{
+				TestkubeMode: OrganizationPlanTestkubeModePro,
+				IsTrial:      false,
+				PlanStatus:   PlanStatusActive,
+			},
+			err: fmt.Errorf("%s is not allowed: wrong subscription plan", featureName),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &SubscriptionChecker{
+				orgPlan: tt.orgPlan,
+			}
+
+			err := c.IsActiveOrgPlanEnterpriseForFeature(featureName)
+			if tt.err != nil {
+				assert.EqualError(t, err, tt.err.Error())
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

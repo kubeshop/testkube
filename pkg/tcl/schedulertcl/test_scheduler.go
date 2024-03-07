@@ -17,9 +17,6 @@ import (
 // NewExecutionFromExecutionOptions creates new execution from execution options
 func NewExecutionFromExecutionOptions(request testkube.ExecutionRequest, execution testkube.Execution) testkube.Execution {
 	execution.ExecutionNamespace = request.ExecutionNamespace
-	if execution.ExecutionNamespace != "" {
-		execution.TestNamespace = execution.ExecutionNamespace
-	}
 
 	return execution
 }
@@ -33,6 +30,10 @@ func GetExecuteOptions(sourceRequest *testkube.ExecutionRequest,
 
 	if destinationRequest.ExecutionNamespace == "" && sourceRequest.ExecutionNamespace != "" {
 		destinationRequest.ExecutionNamespace = sourceRequest.ExecutionNamespace
+	}
+
+	if destinationRequest.ExecutionNamespace != "" {
+		destinationRequest.Namespace = destinationRequest.ExecutionNamespace
 	}
 
 	return destinationRequest
