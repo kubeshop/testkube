@@ -41,5 +41,7 @@ testkube get <resourceName> [flags]
 * [testkube get testsource](testkube_get_testsource.md)	 - Get test source details
 * [testkube get testsuite](testkube_get_testsuite.md)	 - Get test suite by name
 * [testkube get testsuiteexecution](testkube_get_testsuiteexecution.md)	 - Gets TestSuite Execution details
+* [testkube get testworkflow](testkube_get_testworkflow.md)	 - Get all available test workflows
+* [testkube get testworkflowtemplate](testkube_get_testworkflowtemplate.md)	 - Get all available test workflow templates
 * [testkube get webhook](testkube_get_webhook.md)	 - Get webhook details
 

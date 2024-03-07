@@ -61,7 +61,7 @@ func NewContainerExecutor(
 	images executor.Images,
 	templates executor.Templates,
 	imageInspector imageinspector.Inspector,
-	serviceAccountName string,
+	serviceAccountNames map[string]string,
 	metrics ExecutionCounter,
 	emiter EventEmitter,
 	configMap config.Repository,
@@ -84,6 +84,10 @@ func NewContainerExecutor(
 		return client, err
 	}
 
+	if serviceAccountNames == nil {
+		serviceAccountNames = make(map[string]string)
+	}
+
 	return &ContainerExecutor{
 		clientSet:            clientSet,
 		repository:           repo,
@@ -92,7 +96,7 @@ func NewContainerExecutor(
 		templates:            templates,
 		imageInspector:       imageInspector,
 		configMap:            configMap,
-		serviceAccountName:   serviceAccountName,
+		serviceAccountNames:  serviceAccountNames,
 		metrics:              metrics,
 		emitter:              emiter,
 		testsClient:          testsClient,
@@ -126,7 +130,7 @@ type ContainerExecutor struct {
 	metrics              ExecutionCounter
 	emitter              EventEmitter
 	configMap            config.Repository
-	serviceAccountName   string
+	serviceAccountNames  map[string]string
 	testsClient          testsv3.Interface
 	executorsClient      executorsclientv1.Interface
 	testExecutionsClient testexecutionsv1.Interface
@@ -300,7 +304,7 @@ func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Ex
 	}
 
 	jobOptions, err := NewJobOptions(c.log, c.templatesClient, c.images, c.templates, inspector,
-		c.serviceAccountName, c.registry, c.clusterID, c.apiURI, execution, options, c.natsURI, c.debug)
+		c.serviceAccountNames, c.registry, c.clusterID, c.apiURI, execution, options, c.natsURI, c.debug)
 	if err != nil {
 		return nil, err
 	}

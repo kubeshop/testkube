@@ -66,7 +66,7 @@ func TestExecuteSync(t *testing.T) {
 		executorsClient: FakeExecutorsClient{},
 	}
 
-	execution := &testkube.Execution{Id: "1"}
+	execution := &testkube.Execution{Id: "1", TestNamespace: "default"}
 	options := client.ExecuteOptions{
 		ImagePullSecretNames: []string{"secret-name1"},
 		Sync:                 true,
@@ -210,7 +210,7 @@ func TestNewExecutorJobSpecWithWorkingDirRelative(t *testing.T) {
 		executor.Images{},
 		executor.Templates{},
 		mockInspector,
-		"",
+		map[string]string{},
 		"",
 		"",
 		"",
@@ -257,7 +257,7 @@ func TestNewExecutorJobSpecWithWorkingDirAbsolute(t *testing.T) {
 		executor.Images{},
 		executor.Templates{},
 		mockInspector,
-		"",
+		map[string]string{},
 		"",
 		"",
 		"",
@@ -303,7 +303,7 @@ func TestNewExecutorJobSpecWithoutWorkingDir(t *testing.T) {
 		executor.Images{},
 		executor.Templates{},
 		mockInspector,
-		"",
+		map[string]string{},
 		"",
 		"",
 		"",

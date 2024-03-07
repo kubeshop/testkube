@@ -79,7 +79,7 @@ func NewJobExecutor(
 	repo result.Repository,
 	images executor.Images,
 	templates executor.Templates,
-	serviceAccountName string,
+	serviceAccountNames map[string]string,
 	metrics ExecutionCounter,
 	emiter *event.Emitter,
 	configMap config.Repository,
@@ -97,13 +97,17 @@ func NewJobExecutor(
 	logsStream logsclient.Stream,
 	features featureflags.FeatureFlags,
 ) (client *JobExecutor, err error) {
+	if serviceAccountNames == nil {
+		serviceAccountNames = make(map[string]string)
+	}
+
 	return &JobExecutor{
 		ClientSet:            clientset,
 		Repository:           repo,
 		Log:                  log.DefaultLogger,
 		images:               images,
 		templates:            templates,
-		serviceAccountName:   serviceAccountName,
+		serviceAccountNames:  serviceAccountNames,
 		metrics:              metrics,
 		Emitter:              emiter,
 		configMap:            configMap,
@@ -134,7 +138,7 @@ type JobExecutor struct {
 	Cmd                  string
 	images               executor.Images
 	templates            executor.Templates
-	serviceAccountName   string
+	serviceAccountNames  map[string]string
 	metrics              ExecutionCounter
 	Emitter              *event.Emitter
 	configMap            config.Repository
@@ -320,7 +324,7 @@ func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName, namespa
 func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(execution.TestNamespace)
 	jobOptions, err := NewJobOptions(c.Log, c.templatesClient, c.images, c.templates,
-		c.serviceAccountName, c.registry, c.clusterID, c.apiURI, execution, options, c.natsURI, c.debug)
+		c.serviceAccountNames, c.registry, c.clusterID, c.apiURI, execution, options, c.natsURI, c.debug)
 	if err != nil {
 		return err
 	}
@@ -881,7 +885,7 @@ func NewJobSpec(log *zap.SugaredLogger, options JobOptions) (*batchv1.Job, error
 }
 
 func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, images executor.Images,
-	templates executor.Templates, serviceAccountName, registry, clusterID, apiURI string,
+	templates executor.Templates, serviceAccountNames map[string]string, registry, clusterID, apiURI string,
 	execution testkube.Execution, options ExecuteOptions, natsURI string, debug bool) (jobOptions JobOptions, err error) {
 	jsn, err := json.Marshal(execution)
 	if err != nil {
@@ -935,7 +939,7 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	}
 
 	jobOptions.Variables = execution.Variables
-	jobOptions.ServiceAccountName = serviceAccountName
+	jobOptions.ServiceAccountName = serviceAccountNames[execution.TestNamespace]
 	jobOptions.Registry = registry
 	jobOptions.ClusterID = clusterID
 

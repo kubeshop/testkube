@@ -20,6 +20,9 @@ func MapAPIToCRD(sourceRequest *testkube.Execution,
 		return destinationRequest
 	}
 
-	destinationRequest.LatestExecution.ExecutionNamespace = sourceRequest.ExecutionNamespace
+	if destinationRequest.LatestExecution != nil {
+		destinationRequest.LatestExecution.ExecutionNamespace = sourceRequest.ExecutionNamespace
+	}
+
 	return destinationRequest
 }
