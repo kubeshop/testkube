@@ -469,7 +469,12 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	if executionResult != nil {
 		execution.ExecutionResult = executionResult
 	}
-	execution.ExecutionResult.Output = output
+
+	// don't attach logs if logs v2 is enabled - they will be streamed through the logs service
+	attachLogs := !c.features.LogsV2
+	if attachLogs {
+		execution.ExecutionResult.Output = output
+	}
 
 	if execution.ExecutionResult.IsFailed() {
 		errorMessage := execution.ExecutionResult.ErrorMessage

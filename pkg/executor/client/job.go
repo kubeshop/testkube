@@ -404,7 +404,7 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 		return execution.ExecutionResult, err
 	}
 
-	// attachLogs only for previous version of logs, they are not needed here as will be passed from other sources
+	// don't attach logs if logs v2 is enabled - they will be streamed through the logs service
 	attachLogs := !c.features.LogsV2
 	// parse job output log (JSON stream)
 	execution.ExecutionResult, err = output.ParseRunnerOutput(logs, attachLogs)
