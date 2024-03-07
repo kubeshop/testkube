@@ -306,7 +306,16 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 		id := primitive.NewObjectID().Hex()
 		now := time.Now()
 		machine := expressionstcl.NewMachine().
-			Register("execution.id", id)
+			RegisterStringMap("internal", map[string]string{
+				"api.url":   s.ApiUrl,
+				"namespace": s.Namespace,
+			}).
+			RegisterStringMap("workflow", map[string]string{
+				"name": workflow.Name,
+			}).
+			RegisterStringMap("execution", map[string]string{
+				"id": id,
+			})
 
 		// Preserve resolved TestWorkflow
 		resolvedWorkflow := workflow.DeepCopy()

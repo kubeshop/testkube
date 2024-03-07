@@ -9,13 +9,17 @@
 package testworkflowprocessor
 
 import (
+	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
 )
 
 func ProcessDelay(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
@@ -64,6 +68,62 @@ func ProcessNestedSteps(p InternalProcessor, layer Intermediate, container Conta
 		group.Add(stage)
 	}
 	return group, nil
+}
+
+func ProcessExecute(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+	if step.Execute == nil {
+		return nil, nil
+	}
+	container = container.CreateChild()
+	stage := NewContainerStage(layer.NextRef(), container)
+	hasWorkflows := len(step.Execute.Workflows) > 0
+	hasTests := len(step.Execute.Tests) > 0
+
+	// Fail if there is nothing to run
+	if !hasTests && !hasWorkflows {
+		return nil, errors.New("no test workflows and tests provided to the 'execute' step")
+	}
+
+	container.
+		SetImage(defaultToolkitImage).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetCommand("/toolkit", "execute").
+		AppendEnvMap(map[string]string{
+			"TK_REF":     stage.Ref(),
+			"TK_NS":      "{{internal.namespace}}",
+			"TK_API_URL": "{{internal.api.url}}",
+			"TK_WF":      "{{workflow.name}}",
+			"TK_EX":      "{{execution.id}}",
+		})
+	args := make([]string, 0)
+	for _, t := range step.Execute.Tests {
+		args = append(args, "-t", t.Name)
+	}
+	for _, w := range step.Execute.Workflows {
+		if len(w.Config) == 0 {
+			args = append(args, "-w", w.Name)
+		} else {
+			v, _ := json.Marshal(testworkflows.MapConfigValueKubeToAPI(w.Config))
+			args = append(args, "-w", fmt.Sprintf(`%s={"config":%s}`, w.Name, v))
+		}
+	}
+	// TODO: Support "async"
+	if step.Execute.Parallelism > 0 {
+		args = append(args, "-p", strconv.Itoa(int(step.Execute.Parallelism)))
+	}
+	container.SetArgs(args...)
+
+	// Add default label
+	types := make([]string, 0)
+	if hasWorkflows {
+		types = append(types, "test workflows")
+	}
+	if hasTests {
+		types = append(types, "tests")
+	}
+	stage.SetCategory("Execute " + strings.Join(types, " & "))
+
+	return stage, nil
 }
 
 func ProcessContentFiles(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {

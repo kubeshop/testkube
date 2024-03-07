@@ -34,6 +34,7 @@ type apiTCL struct {
 	TestWorkflowsClient         testworkflowsv1.Interface
 	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
 	TestWorkflowExecutor        testworkflowexecutor.TestWorkflowExecutor
+	ApiUrl                      string
 }
 
 type ApiTCL interface {
@@ -47,6 +48,7 @@ func NewApiTCL(
 	imageInspector imageinspector.Inspector,
 	testWorkflowResults testworkflow.Repository,
 	testWorkflowOutput testworkflow.OutputRepository,
+	apiUrl string,
 ) ApiTCL {
 	executor := testworkflowexecutor.New(testkubeAPI.Events, testkubeAPI.Clientset, testWorkflowResults, testWorkflowOutput, testkubeAPI.Namespace)
 	go executor.Recover(context.Background())
@@ -59,6 +61,7 @@ func NewApiTCL(
 		TestWorkflowsClient:         testworkflowsv1.NewClient(kubeClient, testkubeAPI.Namespace),
 		TestWorkflowTemplatesClient: testworkflowsv1.NewTestWorkflowTemplatesClient(kubeClient, testkubeAPI.Namespace),
 		TestWorkflowExecutor:        executor,
+		ApiUrl:                      apiUrl,
 	}
 }
 
