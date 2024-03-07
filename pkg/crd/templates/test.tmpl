@@ -82,7 +82,7 @@ spec:
   schedule: {{ .Schedule }}
   {{- end }}
   {{- if .ExecutionRequest }}
-  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.NegativeTest) (.ExecutionRequest.VariablesFile) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (ne (len .ExecutionRequest.Envs) 0) (ne (len .ExecutionRequest.SecretEnvs) 0) (.ExecutionRequest.Image) (ne (len .ExecutionRequest.Command) 0) (.ExecutionRequest.ArgsMode) (ne (len .ExecutionRequest.ImagePullSecrets) 0) (ne .ExecutionRequest.ActiveDeadlineSeconds 0) (.ExecutionRequest.ArtifactRequest) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.JobTemplateReference) (.ExecutionRequest.CronJobTemplate) (.ExecutionRequest.CronJobTemplateReference) (.ExecutionRequest.PreRunScript) (.ExecutionRequest.PostRunScript) (.ExecutionRequest.ExecutePostRunScriptBeforeScraping) (.ExecutionRequest.ScraperTemplate) (.ExecutionRequest.ScraperTemplateReference) (.ExecutionRequest.PvcTemplate) (.ExecutionRequest.PvcTemplateReference) (ne (len .ExecutionRequest.EnvConfigMaps) 0) (ne (len .ExecutionRequest.EnvSecrets) 0) (.ExecutionRequest.SlavePodRequest) (.ExecutionRequest.ExecutionNamespace)}}
+  {{- if or (.ExecutionRequest.Name) (.ExecutionRequest.NegativeTest) (.ExecutionRequest.VariablesFile) (.ExecutionRequest.HttpProxy) (.ExecutionRequest.HttpsProxy) (ne (len .ExecutionRequest.Variables) 0) (ne (len .ExecutionRequest.Args) 0) (ne (len .ExecutionRequest.Envs) 0) (ne (len .ExecutionRequest.SecretEnvs) 0) (.ExecutionRequest.Image) (ne (len .ExecutionRequest.Command) 0) (.ExecutionRequest.ArgsMode) (ne (len .ExecutionRequest.ImagePullSecrets) 0) (ne .ExecutionRequest.ActiveDeadlineSeconds 0) (.ExecutionRequest.ArtifactRequest) (.ExecutionRequest.JobTemplate) (.ExecutionRequest.JobTemplateReference) (.ExecutionRequest.CronJobTemplate) (.ExecutionRequest.CronJobTemplateReference) (.ExecutionRequest.PreRunScript) (.ExecutionRequest.PostRunScript) (.ExecutionRequest.ExecutePostRunScriptBeforeScraping) (.ExecutionRequest.SourceScripts) (.ExecutionRequest.ScraperTemplate) (.ExecutionRequest.ScraperTemplateReference) (.ExecutionRequest.PvcTemplate) (.ExecutionRequest.PvcTemplateReference) (ne (len .ExecutionRequest.EnvConfigMaps) 0) (ne (len .ExecutionRequest.EnvSecrets) 0) (.ExecutionRequest.SlavePodRequest) (.ExecutionRequest.ExecutionNamespace)}}
   executionRequest:
     {{- if .ExecutionRequest.Name }}
     name: {{ .ExecutionRequest.Name }}
@@ -222,7 +222,12 @@ spec:
     {{- if .ExecutionRequest.PostRunScript }}
     postRunScript: {{ .ExecutionRequest.PostRunScript }}
     {{- end }}
+    {{- if .ExecutionRequest.ExecutePostRunScriptBeforeScraping }}
     executePostRunScriptBeforeScraping: {{ .ExecutionRequest.ExecutePostRunScriptBeforeScraping }}
+    {{- end }}
+    {{- if .ExecutionRequest.SourceScripts }}
+    sourceScripts: {{ .ExecutionRequest.SourceScripts }}
+    {{- end }}
     {{- if .ExecutionRequest.ScraperTemplate }}
     scraperTemplate: {{ .ExecutionRequest.ScraperTemplate }}
     {{- end }}

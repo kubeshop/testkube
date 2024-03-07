@@ -299,6 +299,7 @@ func newExecutionFromExecutionOptions(subscriptionChecker *checktcl.Subscription
 	execution.PreRunScript = options.Request.PreRunScript
 	execution.PostRunScript = options.Request.PostRunScript
 	execution.ExecutePostRunScriptBeforeScraping = options.Request.ExecutePostRunScriptBeforeScraping
+	execution.SourceScripts = options.Request.SourceScripts
 	execution.RunningContext = options.Request.RunningContext
 	execution.TestExecutionName = options.Request.TestExecutionName
 	execution.DownloadArtifactExecutionIDs = options.Request.DownloadArtifactExecutionIDs
@@ -429,6 +430,10 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 
 		if !request.ExecutePostRunScriptBeforeScraping && test.ExecutionRequest.ExecutePostRunScriptBeforeScraping {
 			request.ExecutePostRunScriptBeforeScraping = test.ExecutionRequest.ExecutePostRunScriptBeforeScraping
+		}
+
+		if !request.SourceScripts && test.ExecutionRequest.SourceScripts {
+			request.SourceScripts = test.ExecutionRequest.SourceScripts
 		}
 
 		request.ArtifactRequest = mergeArtifacts(request.ArtifactRequest, test.ExecutionRequest.ArtifactRequest)

@@ -517,6 +517,8 @@ Provide the script when you create or run the test using `--prerun-script` and `
 testkube create test --file test/postman/LocalHealth.postman_collection.json --name script-test --type postman/collection --prerun-script pre_script.sh --postrun-script post_script.sh --secret-env SSL_CERT=your-k8s-secret
 ```
 
+For container executors you can define `--source-scripts` flag in order to run both scripts using `source` command in the same shell. 
+
 ### Adjusting Scraping Parameters
 
 For any executor type you can specify additional scraping parameters using CLI or CRD definition. For example, below we request to scrape report directories, use a custom bucket to store test artifacts and ask to avoid using separate artifact folders for each test execution

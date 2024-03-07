@@ -58,6 +58,7 @@ testkube generate tests-crds <manifestDirectory> [flags]
       --slave-pod-requests-memory string           slave pod resource requests memory
       --slave-pod-template string                  slave pod template file path for extensions to slave pod template
       --slave-pod-template-reference string        reference to slave pod template to use for the test
+      --source-scripts                             run scripts using source command (container executor only)
       --timeout int                                duration in seconds for test to timeout. 0 disables timeout.
   -t, --type string                                test type
       --upload-timeout string                      timeout to use when uploading files, example: 30s
