@@ -197,6 +197,7 @@ type ExecuteTestOptions struct {
 	PreRunScriptContent                string
 	PostRunScriptContent               string
 	ExecutePostRunScriptBeforeScraping bool
+	SourceScripts                      bool
 	ScraperTemplate                    string
 	ScraperTemplateReference           string
 	PvcTemplate                        string

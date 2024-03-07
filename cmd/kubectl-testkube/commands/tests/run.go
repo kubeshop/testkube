@@ -51,6 +51,7 @@ func NewRunTestCmd() *cobra.Command {
 		preRunScript                       string
 		postRunScript                      string
 		executePostRunScriptBeforeScraping bool
+		sourceScripts                      bool
 		scraperTemplate                    string
 		scraperTemplateReference           string
 		pvcTemplate                        string
@@ -124,6 +125,7 @@ func NewRunTestCmd() *cobra.Command {
 					Context: runningContext,
 				},
 				ExecutePostRunScriptBeforeScraping: executePostRunScriptBeforeScraping,
+				SourceScripts:                      sourceScripts,
 				ExecutionNamespace:                 executionNamespace,
 			}
 
@@ -377,6 +379,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&preRunScript, "prerun-script", "", "", "path to script to be run before test execution")
 	cmd.Flags().StringVarP(&postRunScript, "postrun-script", "", "", "path to script to be run after test execution")
 	cmd.Flags().BoolVarP(&executePostRunScriptBeforeScraping, "execute-postrun-script-before-scraping", "", false, "whether to execute postrun scipt before scraping or not (prebuilt executor only)")
+	cmd.Flags().BoolVarP(&sourceScripts, "source-scripts", "", false, "run scripts using source command (container executor only)")
 	cmd.Flags().StringVar(&scraperTemplate, "scraper-template", "", "scraper template file path for extensions to scraper template")
 	cmd.Flags().StringVar(&scraperTemplateReference, "scraper-template-reference", "", "reference to scraper template to use for the test")
 	cmd.Flags().StringVar(&pvcTemplate, "pvc-template", "", "pvc template file path for extensions to pvc template")
