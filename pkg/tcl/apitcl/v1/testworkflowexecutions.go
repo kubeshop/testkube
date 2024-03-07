@@ -358,6 +358,32 @@ func (s *apiTCL) GetTestWorkflowArtifactArchiveHandler() fiber.Handler {
 	}
 }
 
+func (s *apiTCL) GetTestWorkflowNotificationsStream(ctx context.Context, executionID string) (chan testkube.TestWorkflowExecutionNotification, error) {
+	// Load the execution
+	execution, err := s.TestWorkflowResults.Get(ctx, executionID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check for the logs
+	ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, s.Namespace, execution.Id, execution.ScheduledAt)
+	if err != nil {
+		return nil, err
+	}
+
+	// Stream the notifications
+	ch := make(chan testkube.TestWorkflowExecutionNotification)
+	go func() {
+		for n := range ctrl.Watch(ctx).Stream(ctx).Channel() {
+			if n.Error == nil {
+				ch <- n.Value.ToInternal()
+			}
+		}
+		close(ch)
+	}()
+	return ch, nil
+}
+
 func getWorkflowExecutionsFilterFromRequest(c *fiber.Ctx) testworkflow.Filter {
 	filter := testworkflow.NewExecutionsFilter()
 	name := c.Params("id", "")

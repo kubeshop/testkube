@@ -408,17 +408,18 @@ func main() {
 	}
 
 	proContext := config.ProContext{
-		APIKey:               cfg.TestkubeProAPIKey,
-		URL:                  cfg.TestkubeProURL,
-		LogsPath:             cfg.TestkubeProLogsPath,
-		TLSInsecure:          cfg.TestkubeProTLSInsecure,
-		WorkerCount:          cfg.TestkubeProWorkerCount,
-		LogStreamWorkerCount: cfg.TestkubeProLogStreamWorkerCount,
-		SkipVerify:           cfg.TestkubeProSkipVerify,
-		EnvID:                cfg.TestkubeProEnvID,
-		OrgID:                cfg.TestkubeProOrgID,
-		Migrate:              cfg.TestkubeProMigrate,
-		ConnectionTimeout:    cfg.TestkubeProConnectionTimeout,
+		APIKey:                           cfg.TestkubeProAPIKey,
+		URL:                              cfg.TestkubeProURL,
+		LogsPath:                         cfg.TestkubeProLogsPath,
+		TLSInsecure:                      cfg.TestkubeProTLSInsecure,
+		WorkerCount:                      cfg.TestkubeProWorkerCount,
+		LogStreamWorkerCount:             cfg.TestkubeProLogStreamWorkerCount,
+		WorkflowNotificationsWorkerCount: cfg.TestkubeProWorkflowNotificationsWorkerCount,
+		SkipVerify:                       cfg.TestkubeProSkipVerify,
+		EnvID:                            cfg.TestkubeProEnvID,
+		OrgID:                            cfg.TestkubeProOrgID,
+		Migrate:                          cfg.TestkubeProMigrate,
+		ConnectionTimeout:                cfg.TestkubeProConnectionTimeout,
 	}
 
 	// Check Pro/Enterprise subscription
@@ -577,6 +578,18 @@ func main() {
 		subscriptionChecker,
 	)
 
+	// Apply Pro server enhancements
+	apiPro := apitclv1.NewApiTCL(
+		api,
+		&proContext,
+		kubeClient,
+		inspector,
+		testWorkflowResultsRepository,
+		testWorkflowOutputRepository,
+		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
+	)
+	apiPro.AppendRoutes()
+
 	if mode == common.ModeAgent {
 		log.DefaultLogger.Info("starting agent service")
 		api.WithProContext(&proContext)
@@ -585,6 +598,7 @@ func main() {
 			api.Mux.Handler(),
 			grpcClient,
 			api.GetLogsStream,
+			apiPro.GetTestWorkflowNotificationsStream,
 			clusterId,
 			cfg.TestkubeClusterName,
 			envs,
@@ -603,17 +617,6 @@ func main() {
 		})
 		eventsEmitter.Loader.Register(agentHandle)
 	}
-
-	// Apply Pro server enhancements
-	apitclv1.NewApiTCL(
-		api,
-		&proContext,
-		kubeClient,
-		inspector,
-		testWorkflowResultsRepository,
-		testWorkflowOutputRepository,
-		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
-	).AppendRoutes()
 
 	api.InitEvents()
 	if !cfg.DisableTestTriggers {

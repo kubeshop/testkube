@@ -141,6 +141,11 @@ type Agent struct {
 	logStreamResponseBuffer chan *cloud.LogsStreamResponse
 	logStreamFunc           func(ctx context.Context, executionID string) (chan output.Output, error)
 
+	testWorkflowNotificationsWorkerCount    int
+	testWorkflowNotificationsRequestBuffer  chan *cloud.TestWorkflowNotificationsRequest
+	testWorkflowNotificationsResponseBuffer chan *cloud.TestWorkflowNotificationsResponse
+	testWorkflowNotificationsFunc           func(ctx context.Context, executionID string) (chan testkube.TestWorkflowExecutionNotification, error)
+
 	events              chan testkube.Event
 	sendTimeout         time.Duration
 	receiveTimeout      time.Duration
@@ -158,6 +163,7 @@ func NewAgent(logger *zap.SugaredLogger,
 	handler fasthttp.RequestHandler,
 	client cloud.TestKubeCloudAPIClient,
 	logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error),
+	workflowNotificationsFunc func(ctx context.Context, executionID string) (chan testkube.TestWorkflowExecutionNotification, error),
 	clusterID string,
 	clusterName string,
 	envs map[string]string,
@@ -165,26 +171,30 @@ func NewAgent(logger *zap.SugaredLogger,
 	proContext config.ProContext,
 ) (*Agent, error) {
 	return &Agent{
-		handler:                 handler,
-		logger:                  logger,
-		apiKey:                  proContext.APIKey,
-		client:                  client,
-		events:                  make(chan testkube.Event),
-		workerCount:             proContext.WorkerCount,
-		requestBuffer:           make(chan *cloud.ExecuteRequest, bufferSizePerWorker*proContext.WorkerCount),
-		responseBuffer:          make(chan *cloud.ExecuteResponse, bufferSizePerWorker*proContext.WorkerCount),
-		receiveTimeout:          5 * time.Minute,
-		sendTimeout:             30 * time.Second,
-		healthcheckInterval:     30 * time.Second,
-		logStreamWorkerCount:    proContext.LogStreamWorkerCount,
-		logStreamRequestBuffer:  make(chan *cloud.LogsStreamRequest, bufferSizePerWorker*proContext.LogStreamWorkerCount),
-		logStreamResponseBuffer: make(chan *cloud.LogsStreamResponse, bufferSizePerWorker*proContext.LogStreamWorkerCount),
-		logStreamFunc:           logStreamFunc,
-		clusterID:               clusterID,
-		clusterName:             clusterName,
-		envs:                    envs,
-		features:                features,
-		proContext:              proContext,
+		handler:                                 handler,
+		logger:                                  logger,
+		apiKey:                                  proContext.APIKey,
+		client:                                  client,
+		events:                                  make(chan testkube.Event),
+		workerCount:                             proContext.WorkerCount,
+		requestBuffer:                           make(chan *cloud.ExecuteRequest, bufferSizePerWorker*proContext.WorkerCount),
+		responseBuffer:                          make(chan *cloud.ExecuteResponse, bufferSizePerWorker*proContext.WorkerCount),
+		receiveTimeout:                          5 * time.Minute,
+		sendTimeout:                             30 * time.Second,
+		healthcheckInterval:                     30 * time.Second,
+		logStreamWorkerCount:                    proContext.LogStreamWorkerCount,
+		logStreamRequestBuffer:                  make(chan *cloud.LogsStreamRequest, bufferSizePerWorker*proContext.LogStreamWorkerCount),
+		logStreamResponseBuffer:                 make(chan *cloud.LogsStreamResponse, bufferSizePerWorker*proContext.LogStreamWorkerCount),
+		logStreamFunc:                           logStreamFunc,
+		testWorkflowNotificationsWorkerCount:    proContext.WorkflowNotificationsWorkerCount,
+		testWorkflowNotificationsRequestBuffer:  make(chan *cloud.TestWorkflowNotificationsRequest, bufferSizePerWorker*proContext.WorkflowNotificationsWorkerCount),
+		testWorkflowNotificationsResponseBuffer: make(chan *cloud.TestWorkflowNotificationsResponse, bufferSizePerWorker*proContext.WorkflowNotificationsWorkerCount),
+		testWorkflowNotificationsFunc:           workflowNotificationsFunc,
+		clusterID:                               clusterID,
+		clusterName:                             clusterName,
+		envs:                                    envs,
+		features:                                features,
+		proContext:                              proContext,
 	}, nil
 }
 

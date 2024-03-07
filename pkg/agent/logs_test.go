@@ -9,6 +9,7 @@ import (
 
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/agent"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/featureflags"
@@ -63,10 +64,11 @@ func TestLogStream(t *testing.T) {
 		msgCnt++
 		return ch, nil
 	}
+	var workflowNotificationsStreamFunc func(ctx context.Context, executionID string) (chan testkube.TestWorkflowExecutionNotification, error)
 
 	logger, _ := zap.NewDevelopment()
-	proContext := config.ProContext{APIKey: "api-key", WorkerCount: 5, LogStreamWorkerCount: 5}
-	agent, err := agent.NewAgent(logger.Sugar(), m, grpcClient, logStreamFunc, "", "", nil, featureflags.FeatureFlags{}, proContext)
+	proContext := config.ProContext{APIKey: "api-key", WorkerCount: 5, LogStreamWorkerCount: 5, WorkflowNotificationsWorkerCount: 5}
+	agent, err := agent.NewAgent(logger.Sugar(), m, grpcClient, logStreamFunc, workflowNotificationsStreamFunc, "", "", nil, featureflags.FeatureFlags{}, proContext)
 	if err != nil {
 		t.Fatal(err)
 	}
