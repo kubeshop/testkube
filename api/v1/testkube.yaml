@@ -3427,7 +3427,145 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
-  /test-workflows/:id/executions:
+  /test-workflow-with-executions:
+    get:
+      tags:
+        - test-workflows
+        - api
+        - pro
+      parameters:
+        - $ref: "#/components/parameters/Selector"
+      summary: List test workflows with latest execution
+      description: List test workflows from the kubernetes cluster with latest execution
+      operationId: listTestWorkflowWithExecutions
+      responses:
+        200:
+          description: successful list operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestWorkflowWithExecutionSummary"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with selector parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+  /test-workflow-with-executions/{id}:
+    get:
+      tags:
+        - test-workflows
+        - api
+        - pro
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      summary: Get test workflow details with latest execution
+      description: Get test workflow details from the kubernetes cluster with latest execution
+      operationId: getTestWorkflowWithExecution
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestWorkflowWithExecution"
+            text/yaml:
+              schema:
+                type: string
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "the resource has not been found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+  /test-workflows/{id}/executions:
+    get:
+      tags:
+        - test-workflows
+        - api
+        - pro
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      summary: List test workflow executions
+      description: List test workflow executions
+      operationId: listTestWorkflowExecutionsByTestWorkflow
+      responses:
+        200:
+          description: successful list operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestWorkflowExecutionsResult"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with selector parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
     post:
       tags:
         - test-workflows
@@ -3454,6 +3592,306 @@ paths:
                   $ref: "#/components/schemas/TestWorkflowExecution"
         400:
           description: "problem with body parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+  /test-workflows/{id}/metrics:
+    get:
+      tags:
+        - test-workflows
+        - api
+        - pro
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      summary: Get test workflow metrics
+      description: Get metrics of test workflow executions
+      operationId: getTestWorkflowMetrics
+      responses:
+        200:
+          description: successful list operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionsMetrics"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with selector parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+  /test-workflows/{id}/executions/{executionID}:
+    get:
+      tags:
+        - test-workflows
+        - api
+        - pro
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/executionID"
+      summary: Get test workflow execution
+      description: Get test workflow execution details
+      operationId: getTestWorkflowExecutionByTestWorkflow
+      responses:
+        200:
+          description: successful list operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestWorkflowExecution"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with selector parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+  /test-workflows/{id}/executions/{executionID}/abort:
+    post:
+      tags:
+        - test-workflows
+        - api
+        - pro
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/executionID"
+      summary: Abort test workflow execution
+      description: Abort test workflow execution
+      operationId: abortTestWorkflowExecutionByTestWorkflow
+      responses:
+        204:
+          description: "no content"
+        400:
+          description: "problem with selector parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+  /test-workflow-executions:
+    get:
+      tags:
+        - test-workflows
+        - api
+        - pro
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      summary: List test workflow executions
+      description: List test workflow executions
+      operationId: listTestWorkflowExecutions
+      responses:
+        200:
+          description: successful list operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestWorkflowExecutionsResult"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with selector parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+  /test-workflow-executions/{executionID}:
+    get:
+      tags:
+        - test-workflows
+        - api
+        - pro
+      parameters:
+        - $ref: "#/components/parameters/executionID"
+      summary: Get test workflow execution
+      description: Get test workflow execution details
+      operationId: getTestWorkflowExecution
+      responses:
+        200:
+          description: successful list operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestWorkflowExecution"
+            text/yaml:
+              schema:
+                type: string
+        400:
+          description: "problem with selector parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+  /test-workflow-executions/{executionID}/abort:
+    post:
+      tags:
+        - test-workflows
+        - api
+        - pro
+      parameters:
+        - $ref: "#/components/parameters/executionID"
+      summary: Abort test workflow execution
+      description: Abort test workflow execution
+      operationId: abortTestWorkflowExecution
+      responses:
+        204:
+          description: "no content"
+        400:
+          description: "problem with selector parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+  /test-workflows/{id}/abort:
+    post:
+      tags:
+        - test-workflows
+        - api
+        - pro
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      summary: Abort all test workflow executions
+      description: Abort all test workflow executions
+      operationId: abortAllTestWorkflowExecutions
+      responses:
+        204:
+          description: "no content"
+        400:
+          description: "problem with selector parsing - probably some bad input occurs"
           content:
             application/problem+json:
               schema:
@@ -6271,6 +6709,8 @@ components:
           $ref: "#/components/schemas/Execution"
         testSuiteExecution:
           $ref: "#/components/schemas/TestSuiteExecution"
+        testWorkflowExecution:
+          $ref: "#/components/schemas/TestWorkflowExecution"
         clusterName:
           type: string
           description: cluster name of event
@@ -6293,6 +6733,8 @@ components:
         - testexecution
         - testsuiteexecution
         - testsource
+        - testworkflow
+        - testworkflowexecution
 
     EventType:
       type: string
@@ -6307,6 +6749,11 @@ components:
         - end-testsuite-failed
         - end-testsuite-aborted
         - end-testsuite-timeout
+        - queue-testworkflow
+        - start-testworkflow
+        - end-testworkflow-success
+        - end-testworkflow-failed
+        - end-testworkflow-aborted
         - created
         - updated
         - deleted
@@ -6862,6 +7309,38 @@ components:
         config:
           $ref: "#/components/schemas/TestWorkflowConfigValue"
 
+    TestWorkflowWithExecution:
+      type: object
+      properties:
+        workflow:
+          $ref: "#/components/schemas/TestWorkflow"
+        latestExecution:
+          $ref: "#/components/schemas/TestWorkflowExecution"
+
+    TestWorkflowWithExecutionSummary:
+      type: object
+      properties:
+        workflow:
+          $ref: "#/components/schemas/TestWorkflow"
+        latestExecution:
+          $ref: "#/components/schemas/TestWorkflowExecutionSummary"
+
+    TestWorkflowExecutionsResult:
+      type: object
+      properties:
+        totals:
+          $ref: "#/components/schemas/ExecutionsTotals"
+        filtered:
+          $ref: "#/components/schemas/ExecutionsTotals"
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestWorkflowExecutionSummary"
+      required:
+        - totals
+        - filtered
+        - results
+
     TestWorkflowExecution:
       type: object
       properties:
@@ -6905,6 +7384,80 @@ components:
         - id
         - name
         - workflow
+
+    TestWorkflowExecutionSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          description: unique execution identifier
+          format: bson objectId
+          example: "62f395e004109209b50edfc1"
+        name:
+          type: string
+          description: execution name
+          example: "some-workflow-name-1"
+        number:
+          type: integer
+          description: sequence number for the execution
+        scheduledAt:
+          type: string
+          format: date-time
+          description: when the execution has been scheduled to run
+        statusAt:
+          type: string
+          format: date-time
+          description: when the execution result's status has changed last time (queued, passed, failed)
+        result:
+          $ref: "#/components/schemas/TestWorkflowResultSummary"
+        workflow:
+          $ref: "#/components/schemas/TestWorkflowSummary"
+      required:
+        - id
+        - name
+        - workflow
+
+    TestWorkflowSummary:
+      type: object
+      properties:
+        name:
+          type: string
+        namespace:
+          type: string
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+        annotations:
+          type: object
+          additionalProperties:
+            type: string
+
+    TestWorkflowResultSummary:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/TestWorkflowStatus"
+        predictedStatus:
+          $ref: "#/components/schemas/TestWorkflowStatus"
+        queuedAt:
+          type: string
+          format: date-time
+          description: when the pod was created
+        startedAt:
+          type: string
+          format: date-time
+          description: when the pod has been successfully assigned
+        finishedAt:
+          type: string
+          format: date-time
+          description: when the pod has been completed
+        duration:
+          type: string
+          description: Go-formatted (human-readable) duration
+      required:
+        - status
+        - predictedStatus
 
     TestWorkflowExecutionNotification:
       type: object
@@ -6956,6 +7509,9 @@ components:
           type: string
           format: date-time
           description: when the pod has been completed
+        duration:
+          type: string
+          description: Go-formatted (human-readable) duration
         initialization:
           $ref: "#/components/schemas/TestWorkflowStepResult"
         steps:
