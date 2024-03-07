@@ -192,7 +192,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 
 	// Build list of the containers
-	containers, err := buildKubernetesContainers(root, NewInitProcess().SetRef(root.Ref()))
+	containers, err := buildKubernetesContainers(root, NewInitProcess().SetRef(root.Ref()), machines...)
 	if err != nil {
 		return nil, errors.Wrap(err, "building Kubernetes containers")
 	}
