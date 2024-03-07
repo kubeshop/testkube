@@ -46,7 +46,7 @@ func TestArtifactClient(t *testing.T) {
 			t.Fatalf("unable to upload file: %v", err)
 		}
 		// Call ListFiles
-		files, err := artifactClient.ListFiles(ctx, "test-execution-id-1", "", "")
+		files, err := artifactClient.ListFiles(ctx, "test-execution-id-1", "", "", "")
 		assert.NoError(t, err)
 
 		assert.Lenf(t, files, 1, "expected 1 file to be returned")
@@ -63,7 +63,7 @@ func TestArtifactClient(t *testing.T) {
 			t.Fatalf("unable to upload file: %v", err)
 		}
 
-		reader, err := artifactClient.DownloadFile(ctx, "test-file", "test-execution-id-2", "", "")
+		reader, err := artifactClient.DownloadFile(ctx, "test-file", "test-execution-id-2", "", "", "")
 		if err != nil {
 			t.Fatalf("unable to download file: %v", err)
 		}

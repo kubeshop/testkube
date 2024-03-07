@@ -405,6 +405,7 @@ func (c *container) EnableToolkit(ref string) Container {
 		"TK_EX":                 "{{execution.id}}",
 		"TK_C_URL":              "{{internal.cloud.api.url}}",
 		"TK_C_KEY":              "{{internal.cloud.api.key}}",
+		"TK_C_TLS_INSECURE":     "{{internal.cloud.api.tlsInsecure}}",
 		"TK_C_SKIP_VERIFY":      "{{internal.cloud.api.skipVerify}}",
 		"TK_OS_ENDPOINT":        "{{internal.storage.url}}",
 		"TK_OS_ACCESSKEY":       "{{internal.storage.accessKey}}",

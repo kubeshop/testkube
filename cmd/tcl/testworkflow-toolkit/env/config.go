@@ -33,9 +33,10 @@ type envObjectStorageConfig struct {
 }
 
 type envCloudConfig struct {
-	Url        string `envconfig:"TK_C_URL"`
-	ApiKey     string `envconfig:"TK_C_KEY"`
-	SkipVerify bool   `envconfig:"TK_C_SKIP_VERIFY" default:"false"`
+	Url         string `envconfig:"TK_C_URL"`
+	ApiKey      string `envconfig:"TK_C_KEY"`
+	SkipVerify  bool   `envconfig:"TK_C_SKIP_VERIFY" default:"false"`
+	TlsInsecure bool   `envconfig:"TK_C_TLS_INSECURE" default:"false"`
 }
 
 type envExecutionConfig struct {

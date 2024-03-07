@@ -65,7 +65,7 @@ func ObjectStorageClient() (*minio.Client, error) {
 
 func Cloud(ctx context.Context) cloudexecutor.Executor {
 	cfg := Config().Cloud
-	grpcConn, err := agent.NewGRPCConnection(ctx, cfg.SkipVerify, cfg.SkipVerify, cfg.Url, log.DefaultLogger)
+	grpcConn, err := agent.NewGRPCConnection(ctx, cfg.TlsInsecure, cfg.SkipVerify, cfg.Url, "", "", "", log.DefaultLogger)
 	if err != nil {
 		ui.Fail(fmt.Errorf("failed to connect with Cloud: %w", err))
 	}
