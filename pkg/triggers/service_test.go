@@ -139,6 +139,7 @@ func TestService_Run(t *testing.T) {
 		"",
 		featureflags.FeatureFlags{},
 		mockLogsStream,
+		"",
 	)
 
 	mockLeaseBackend := NewMockLeaseBackend(mockCtrl)
