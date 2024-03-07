@@ -8,6 +8,8 @@
 
 package expressionstcl
 
+import "strings"
+
 //go:generate mockgen -destination=./mock_machine.go -package=expressionstcl "github.com/kubeshop/testkube/pkg/tcl/expressionstcl" Machine
 type Machine interface {
 	Get(name string) (Expression, bool, error)
@@ -36,6 +38,19 @@ func (m *machine) Register(name string, value interface{}) *machine {
 			return value, true
 		}
 		return nil, false
+	})
+}
+
+func (m *machine) RegisterStringMap(prefix string, value map[string]string) *machine {
+	if len(prefix) > 0 {
+		prefix += "."
+	}
+	return m.RegisterAccessor(func(n string) (interface{}, bool) {
+		if !strings.HasPrefix(n, prefix) {
+			return nil, false
+		}
+		v, ok := value[n[len(prefix):]]
+		return v, ok
 	})
 }
 

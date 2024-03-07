@@ -16,9 +16,9 @@ import (
 )
 
 type containerStage struct {
-	stageMetadata  `expr:"include"`
-	stageLifecycle `expr:"include"`
-	container      Container `expr:"include"`
+	stageMetadata
+	stageLifecycle
+	container Container
 }
 
 type ContainerStage interface {

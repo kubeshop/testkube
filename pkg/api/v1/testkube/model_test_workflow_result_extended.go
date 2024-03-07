@@ -1,6 +1,8 @@
 package testkube
 
 import (
+	"time"
+
 	"github.com/kubeshop/testkube/internal/common"
 )
 
@@ -35,6 +37,22 @@ func (r *TestWorkflowResult) IsAnyError() bool {
 	return r.IsFinished() && !r.IsStatus(PASSED_TestWorkflowStatus)
 }
 
+func (r *TestWorkflowResult) Fatal(err error) {
+	r.Initialization.ErrorMessage = err.Error()
+	r.Status = common.Ptr(FAILED_TestWorkflowStatus)
+	r.PredictedStatus = r.Status
+	if r.Initialization.Status == nil || (*r.Initialization.Status == QUEUED_TestWorkflowStepStatus) || (*r.Initialization.Status == RUNNING_TestWorkflowStepStatus) {
+		r.Initialization.Status = common.Ptr(FAILED_TestWorkflowStepStatus)
+	}
+	for i := range r.Steps {
+		if r.Steps[i].Status == nil || (*r.Steps[i].Status == QUEUED_TestWorkflowStepStatus) || (*r.Steps[i].Status == RUNNING_TestWorkflowStepStatus) {
+			s := r.Steps[i]
+			s.Status = common.Ptr(SKIPPED_TestWorkflowStepStatus)
+			r.Steps[i] = s
+		}
+	}
+}
+
 func (r *TestWorkflowResult) Clone() *TestWorkflowResult {
 	if r == nil {
 		return nil
@@ -49,6 +67,7 @@ func (r *TestWorkflowResult) Clone() *TestWorkflowResult {
 		QueuedAt:        r.QueuedAt,
 		StartedAt:       r.StartedAt,
 		FinishedAt:      r.FinishedAt,
+		Duration:        r.Duration,
 		Initialization:  r.Initialization.Clone(),
 		Steps:           steps,
 	}
@@ -75,7 +94,12 @@ func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature) {
 		r.RecomputeStep(ch)
 	}
 
-	// Build status on the internal failur
+	// Compute the duration
+	if !r.FinishedAt.IsZero() {
+		r.Duration = r.FinishedAt.Sub(r.QueuedAt).Round(time.Millisecond).String()
+	}
+
+	// Build status on the internal failure
 	if getTestWorkflowStepStatus(*r.Initialization) == ABORTED_TestWorkflowStepStatus {
 		r.Status = common.Ptr(ABORTED_TestWorkflowStatus)
 		r.PredictedStatus = r.Status
@@ -97,7 +121,7 @@ func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature) {
 		status = common.Ptr(PASSED_TestWorkflowStatus)
 	}
 	r.PredictedStatus = status
-	if !r.FinishedAt.IsZero() {
+	if !r.FinishedAt.IsZero() || *status == ABORTED_TestWorkflowStatus {
 		r.Status = r.PredictedStatus
 	}
 }

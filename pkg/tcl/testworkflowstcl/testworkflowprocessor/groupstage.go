@@ -18,10 +18,10 @@ import (
 )
 
 type groupStage struct {
-	stageMetadata  `expr:"include"`
-	stageLifecycle `expr:"include"`
-	children       []Stage `expr:"include"`
-	virtual        bool
+	stageMetadata
+	stageLifecycle
+	children []Stage
+	virtual  bool
 }
 
 type GroupStage interface {
@@ -121,11 +121,14 @@ func (s *groupStage) Flatten() []Stage {
 
 	// Merge stage into single one below if possible
 	first := s.children[0]
-	if len(s.children) == 1 && (s.name == "" || first.Name() == "") {
+	if len(s.children) == 1 && (s.name == "" || first.Name() == "") && (s.timeout == "" || first.Timeout() == "") {
 		if first.Name() == "" {
 			first.SetName(s.name)
 		}
 		first.AppendConditions(s.condition)
+		if first.Timeout() == "" {
+			first.SetTimeout(s.timeout)
+		}
 		if s.negative {
 			first.SetNegative(!first.Negative())
 		}
@@ -158,11 +161,11 @@ func (s *groupStage) ApplyImages(images map[string]*imageinspector.Info) error {
 }
 
 func (s *groupStage) Resolve(m ...expressionstcl.Machine) error {
-	for _, ch := range s.children {
-		err := ch.Resolve(m...)
+	for i := range s.children {
+		err := s.children[i].Resolve(m...)
 		if err != nil {
 			return errors.Wrap(err, "group stage container")
 		}
 	}
-	return expressionstcl.Simplify(s.stageMetadata, m...)
+	return expressionstcl.Simplify(&s.stageMetadata, m...)
 }

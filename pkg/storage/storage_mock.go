@@ -8,6 +8,7 @@ import (
 	context "context"
 	io "io"
 	reflect "reflect"
+	time "time"
 
 	gomock "github.com/golang/mock/gomock"
 	testkube "github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -225,6 +226,36 @@ func (m *MockClient) PlaceFiles(arg0 context.Context, arg1 []string, arg2 string
 func (mr *MockClientMockRecorder) PlaceFiles(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PlaceFiles", reflect.TypeOf((*MockClient)(nil).PlaceFiles), arg0, arg1, arg2)
+}
+
+// PresignDownloadFileFromBucket mocks base method.
+func (m *MockClient) PresignDownloadFileFromBucket(arg0 context.Context, arg1, arg2, arg3 string, arg4 time.Duration) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PresignDownloadFileFromBucket", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PresignDownloadFileFromBucket indicates an expected call of PresignDownloadFileFromBucket.
+func (mr *MockClientMockRecorder) PresignDownloadFileFromBucket(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PresignDownloadFileFromBucket", reflect.TypeOf((*MockClient)(nil).PresignDownloadFileFromBucket), arg0, arg1, arg2, arg3, arg4)
+}
+
+// PresignUploadFileToBucket mocks base method.
+func (m *MockClient) PresignUploadFileToBucket(arg0 context.Context, arg1, arg2, arg3 string, arg4 time.Duration) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PresignUploadFileToBucket", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PresignUploadFileToBucket indicates an expected call of PresignUploadFileToBucket.
+func (mr *MockClientMockRecorder) PresignUploadFileToBucket(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PresignUploadFileToBucket", reflect.TypeOf((*MockClient)(nil).PresignUploadFileToBucket), arg0, arg1, arg2, arg3, arg4)
 }
 
 // SaveFile mocks base method.

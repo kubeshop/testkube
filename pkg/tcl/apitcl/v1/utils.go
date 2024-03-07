@@ -21,8 +21,9 @@ import (
 )
 
 const (
-	mediaTypeJSON = "application/json"
-	mediaTypeYAML = "text/yaml"
+	mediaTypeJSON      = "application/json"
+	mediaTypeYAML      = "text/yaml"
+	mediaTypePlainText = "text/plain"
 )
 
 func ExpectsYAML(c *fiber.Ctx) bool {

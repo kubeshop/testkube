@@ -208,23 +208,34 @@ func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, pod
 
 		// Parse and return the logs
 		reader := bufio.NewReader(stream)
-		var tsPrefix []byte
+		var tsPrefix, tmpTsPrefix []byte
 		isNewLine := false
 		isStarted := false
-		var ts time.Time
+		var ts, tmpTs time.Time
 		for {
+			var prepend []byte
+
 			// Read next timestamp
-			ts, tsPrefix, err = ReadTimestamp(reader)
-			if err != nil {
-				if err != io.EOF {
-					w.SendError(err)
-				}
+			tmpTs, tmpTsPrefix, err = ReadTimestamp(reader)
+			if err == nil {
+				ts = tmpTs
+				tsPrefix = tmpTsPrefix
+			} else if err == io.EOF {
 				return
+			} else {
+				// Edge case: Kubernetes may send critical errors without timestamp (like ionotify)
+				if len(tmpTsPrefix) > 0 {
+					prepend = tmpTsPrefix
+				}
+				w.SendError(err)
 			}
 
 			// Check for the next part
 			line, err := utils.ReadLongLine(reader)
-			commentRe := regexp.MustCompile(fmt.Sprintf(`^%s(%s)?([^%s]+)%s([a-zA-Z0-9_.]+)(?:%s(.+))?%s$`,
+			if len(prepend) > 0 {
+				line = append(prepend, line...)
+			}
+			commentRe := regexp.MustCompile(fmt.Sprintf(`^%s(%s)?([^%s]+)%s([a-zA-Z0-9-_.]+)(?:%s([^\n]+))?%s$`,
 				data.InstructionPrefix, data.HintPrefix, data.InstructionSeparator, data.InstructionSeparator, data.InstructionValueSeparator, data.InstructionSeparator))
 
 			// Process the received line
@@ -270,6 +281,8 @@ func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, pod
 					w.SendValue(ContainerLog{Time: ts, Log: line})
 					isNewLine = true
 				}
+			} else if isStarted {
+				w.SendValue(ContainerLog{Time: ts, Log: append([]byte("\n"), tsPrefix...)})
 			}
 
 			// Handle the error
@@ -296,7 +309,7 @@ func ReadTimestamp(reader *bufio.Reader) (time.Time, []byte, error) {
 	}
 	ts, err := time.Parse(time.RFC3339Nano, string(tsPrefix[0:30]))
 	if err != nil {
-		return time.Time{}, nil, errors2.Wrap(err, "parsing timestamp")
+		return time.Time{}, tsPrefix, errors2.Wrap(err, "parsing timestamp")
 	}
 	return ts, tsPrefix, nil
 }

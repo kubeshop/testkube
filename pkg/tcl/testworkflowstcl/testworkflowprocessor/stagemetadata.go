@@ -19,8 +19,8 @@ type StageMetadata interface {
 
 type stageMetadata struct {
 	ref      string
-	name     string `expr:"template"`
-	category string `expr:"template"`
+	name     string
+	category string
 }
 
 func NewStageMetadata(ref string) StageMetadata {
