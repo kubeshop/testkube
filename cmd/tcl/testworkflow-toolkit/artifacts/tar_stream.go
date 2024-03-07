@@ -18,24 +18,24 @@ import (
 )
 
 type tarStream struct {
-	r  io.ReadCloser
-	w  io.WriteCloser
-	g  io.WriteCloser
-	t  *tar.Writer
-	mu *sync.Mutex
-	wg sync.WaitGroup
+	reader io.ReadCloser
+	writer io.WriteCloser
+	gzip   io.WriteCloser
+	tar    *tar.Writer
+	mu     *sync.Mutex
+	wg     sync.WaitGroup
 }
 
 func NewTarStream() *tarStream {
-	r, w := io.Pipe()
-	g := gzip.NewWriter(w)
-	t := tar.NewWriter(g)
+	reader, writer := io.Pipe()
+	gzip := gzip.NewWriter(writer)
+	tar := tar.NewWriter(gzip)
 	return &tarStream{
-		r:  r,
-		w:  w,
-		g:  g,
-		t:  t,
-		mu: &sync.Mutex{},
+		reader: reader,
+		writer: writer,
+		gzip:   gzip,
+		tar:    tar,
+		mu:     &sync.Mutex{},
 	}
 }
 
@@ -52,16 +52,16 @@ func (t *tarStream) Add(path string, file fs.File, stat fs.FileInfo) error {
 		return err
 	}
 	header.Name = path
-	err = t.t.WriteHeader(header)
+	err = t.tar.WriteHeader(header)
 	if err != nil {
 		return err
 	}
-	_, err = io.Copy(t.t, file)
+	_, err = io.Copy(t.tar, file)
 	return err
 }
 
 func (t *tarStream) Read(p []byte) (n int, err error) {
-	return t.r.Read(p)
+	return t.reader.Read(p)
 }
 
 func (t *tarStream) Done() chan struct{} {
@@ -74,18 +74,18 @@ func (t *tarStream) Done() chan struct{} {
 }
 
 func (t *tarStream) Close() (err error) {
-	err = t.t.Close()
+	err = t.tar.Close()
 	if err != nil {
-		_ = t.g.Close()
-		_ = t.w.Close()
+		_ = t.gzip.Close()
+		_ = t.writer.Close()
 		return fmt.Errorf("closing tar: tar: %v", err)
 	}
-	err = t.g.Close()
+	err = t.gzip.Close()
 	if err != nil {
-		_ = t.w.Close()
+		_ = t.writer.Close()
 		return fmt.Errorf("closing tar: gzip: %v", err)
 	}
-	err = t.w.Close()
+	err = t.writer.Close()
 	if err != nil {
 		return fmt.Errorf("closing tar: pipe: %v", err)
 	}
