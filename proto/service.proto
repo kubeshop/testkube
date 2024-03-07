@@ -77,7 +77,7 @@ message TestWorkflowNotificationsResponse {
   string timestamp = 3;
   string ref = 4;
   TestWorkflowNotificationType type = 5;
-  optional string message = 6; // based on type: log/error = inline, others = serialized to JSON
+  string message = 6; // based on type: log/error = inline, others = serialized to JSON
 }
 
 message HeaderValue {

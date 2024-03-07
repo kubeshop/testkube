@@ -12,7 +12,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
 
-	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 )
@@ -119,7 +118,7 @@ func (ag *Agent) executeWorkflowNotificationsRequest(ctx context.Context, req *c
 			StreamId: req.StreamId,
 			SeqNo:    0,
 			Type:     cloud.TestWorkflowNotificationType_WORKFLOW_STREAM_ERROR,
-			Message:  &message,
+			Message:  message,
 		}
 		return nil
 	}
@@ -141,12 +140,12 @@ func (ag *Agent) executeWorkflowNotificationsRequest(ctx context.Context, req *c
 			}
 			if n.Result != nil {
 				m, _ := json.Marshal(n.Result)
-				msg.Message = common.Ptr(string(m))
+				msg.Message = string(m)
 			} else if n.Output != nil {
 				m, _ := json.Marshal(n.Output)
-				msg.Message = common.Ptr(string(m))
+				msg.Message = string(m)
 			} else {
-				msg.Message = common.Ptr(n.Log)
+				msg.Message = n.Log
 			}
 			i++
 
