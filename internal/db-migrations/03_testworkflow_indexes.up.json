@@ -1,0 +1,35 @@
+[
+  {
+    "createIndexes": "workflowresults",
+    "indexes": [
+      {
+        "key": {"workflow.name": 1, "statusat": -1},
+        "name": "workflow.name_1_statusat-1"
+      },
+      {
+        "key": {"workflow.name": 1, "scheduledat": -1},
+        "name": "workflow.name_1_scheduledat-1"
+      },
+      {
+        "key": {"id": 1},
+        "name": "id_1"
+      },
+      {
+        "key": {"name": 1},
+        "name": "name_1"
+      },
+      {
+        "key": {"result.status": 1},
+        "name": "result.status_1"
+      },
+      {
+        "key": {"statusat": -1},
+        "name": "statusat_-1"
+      },
+      {
+        "key": {"scheduledat": -1},
+        "name": "scheduledat_-1"
+      }
+    ]
+  }
+]

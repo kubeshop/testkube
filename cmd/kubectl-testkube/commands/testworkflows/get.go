@@ -10,6 +10,8 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows/renderer"
+	common2 "github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -33,11 +35,13 @@ func NewGetTestWorkflowsCmd() *cobra.Command {
 			ui.ExitOnError("getting client", err)
 
 			if len(args) == 0 {
-				workflows, err := client.ListTestWorkflows(strings.Join(selectors, ","))
+				workflows, err := client.ListTestWorkflowWithExecutions(strings.Join(selectors, ","))
 				ui.ExitOnError("getting all test workflows in namespace "+namespace, err)
 
 				if crdOnly {
-					ui.PrintCRDs(testworkflows.MapListAPIToKube(workflows).Items, "TestWorkflow", testworkflowsv1.GroupVersion)
+					ui.PrintCRDs(common2.MapSlice(workflows, func(t testkube.TestWorkflowWithExecution) testworkflowsv1.TestWorkflow {
+						return *testworkflows.MapAPIToKube(t.Workflow)
+					}), "TestWorkflow", testworkflowsv1.GroupVersion)
 				} else {
 					err = render.List(cmd, workflows, os.Stdout)
 					ui.PrintOnError("Rendering list", err)
@@ -46,14 +50,20 @@ func NewGetTestWorkflowsCmd() *cobra.Command {
 			}
 
 			name := args[0]
-			workflow, err := client.GetTestWorkflow(name)
+			workflow, err := client.GetTestWorkflowWithExecution(name)
 			ui.ExitOnError("getting test workflow in namespace "+namespace, err)
 
 			if crdOnly {
-				ui.PrintCRD(testworkflows.MapTestWorkflowAPIToKube(workflow), "TestWorkflow", testworkflowsv1.GroupVersion)
+				ui.PrintCRD(testworkflows.MapTestWorkflowAPIToKube(*workflow.Workflow), "TestWorkflow", testworkflowsv1.GroupVersion)
 			} else {
-				err = render.Obj(cmd, workflow, os.Stdout, renderer.TestWorkflowRenderer)
+				err = render.Obj(cmd, *workflow.Workflow, os.Stdout, renderer.TestWorkflowRenderer)
 				ui.ExitOnError("rendering obj", err)
+
+				if workflow.LatestExecution != nil {
+					ui.NL()
+					err = render.Obj(cmd, *workflow.LatestExecution, os.Stdout, renderer.TestWorkflowExecutionRenderer)
+					ui.ExitOnError("rendering obj", err)
+				}
 			}
 		},
 	}

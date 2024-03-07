@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 )
 
 func AnnotateControlledBy(obj metav1.Object, testWorkflowId string) {
@@ -41,7 +42,7 @@ func isNotOptional(stage Stage) bool {
 	return !stage.Optional()
 }
 
-func buildKubernetesContainers(stage Stage, init *initProcess) (containers []corev1.Container, err error) {
+func buildKubernetesContainers(stage Stage, init *initProcess, machines ...expressionstcl.Machine) (containers []corev1.Container, err error) {
 	if stage.Timeout() != "" {
 		init.AddTimeout(stage.Timeout(), stage.Ref())
 	}
@@ -83,7 +84,7 @@ func buildKubernetesContainers(stage Stage, init *initProcess) (containers []cor
 				init.ResetCondition()
 			}
 			// Pass down to another group or container
-			sub, serr := buildKubernetesContainers(ch, init.Children(ch.Ref()))
+			sub, serr := buildKubernetesContainers(ch, init.Children(ch.Ref()), machines...)
 			if serr != nil {
 				return nil, fmt.Errorf("%s: %s: resolving children: %s", stage.Ref(), stage.Name(), serr.Error())
 			}
@@ -95,7 +96,7 @@ func buildKubernetesContainers(stage Stage, init *initProcess) (containers []cor
 	if !ok {
 		return nil, fmt.Errorf("%s: %s: stage that is neither container nor group", stage.Ref(), stage.Name())
 	}
-	err = c.Container().Detach().Resolve()
+	err = c.Container().Detach().Resolve(machines...)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %s: resolving container: %s", stage.Ref(), stage.Name(), err.Error())
 	}

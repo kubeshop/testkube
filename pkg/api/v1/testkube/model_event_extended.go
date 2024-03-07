@@ -119,6 +119,46 @@ func NewEventEndTestSuiteTimeout(execution *TestSuiteExecution) Event {
 	}
 }
 
+func NewEventQueueTestWorkflow(execution *TestWorkflowExecution) Event {
+	return Event{
+		Id:                    uuid.NewString(),
+		Type_:                 EventQueueTestWorkflow,
+		TestWorkflowExecution: execution,
+	}
+}
+
+func NewEventStartTestWorkflow(execution *TestWorkflowExecution) Event {
+	return Event{
+		Id:                    uuid.NewString(),
+		Type_:                 EventStartTestWorkflow,
+		TestWorkflowExecution: execution,
+	}
+}
+
+func NewEventEndTestWorkflowSuccess(execution *TestWorkflowExecution) Event {
+	return Event{
+		Id:                    uuid.NewString(),
+		Type_:                 EventEndTestWorkflowSuccess,
+		TestWorkflowExecution: execution,
+	}
+}
+
+func NewEventEndTestWorkflowFailed(execution *TestWorkflowExecution) Event {
+	return Event{
+		Id:                    uuid.NewString(),
+		Type_:                 EventEndTestWorkflowFailed,
+		TestWorkflowExecution: execution,
+	}
+}
+
+func NewEventEndTestWorkflowAborted(execution *TestWorkflowExecution) Event {
+	return Event{
+		Id:                    uuid.NewString(),
+		Type_:                 EventEndTestWorkflowAborted,
+		TestWorkflowExecution: execution,
+	}
+}
+
 func (e Event) Type() EventType {
 	if e.Type_ != nil {
 		return *e.Type_

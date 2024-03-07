@@ -13,12 +13,14 @@ type EventResource string
 
 // List of EventResource
 const (
-	TEST_EventResource               EventResource = "test"
-	TESTSUITE_EventResource          EventResource = "testsuite"
-	EXECUTOR_EventResource           EventResource = "executor"
-	TRIGGER_EventResource            EventResource = "trigger"
-	WEBHOOK_EventResource            EventResource = "webhook"
-	TESTEXECUTION_EventResource      EventResource = "testexecution"
-	TESTSUITEEXECUTION_EventResource EventResource = "testsuiteexecution"
-	TESTSOURCE_EventResource         EventResource = "testsource"
+	TEST_EventResource                  EventResource = "test"
+	TESTSUITE_EventResource             EventResource = "testsuite"
+	EXECUTOR_EventResource              EventResource = "executor"
+	TRIGGER_EventResource               EventResource = "trigger"
+	WEBHOOK_EventResource               EventResource = "webhook"
+	TESTEXECUTION_EventResource         EventResource = "testexecution"
+	TESTSUITEEXECUTION_EventResource    EventResource = "testsuiteexecution"
+	TESTSOURCE_EventResource            EventResource = "testsource"
+	TESTWORKFLOW_EventResource          EventResource = "testworkflow"
+	TESTWORKFLOWEXECUTION_EventResource EventResource = "testworkflowexecution"
 )

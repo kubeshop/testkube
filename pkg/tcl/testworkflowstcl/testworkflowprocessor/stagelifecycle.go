@@ -37,9 +37,9 @@ type StageLifecycle interface {
 type stageLifecycle struct {
 	negative  bool
 	optional  bool
-	condition string                      `exp:"expression"`
-	retry     testworkflowsv1.RetryPolicy `expr:"include"`
-	timeout   string                      `expr:"template"`
+	condition string
+	retry     testworkflowsv1.RetryPolicy
+	timeout   string
 }
 
 func NewStageLifecycle() StageLifecycle {
