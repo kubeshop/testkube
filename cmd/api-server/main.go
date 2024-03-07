@@ -543,6 +543,7 @@ func main() {
 		logsStream,
 		logGrpcClient,
 		subscriptionChecker,
+		cfg.DisableSecretCreation,
 	)
 
 	if mode == common.ModeAgent {

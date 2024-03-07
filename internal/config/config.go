@@ -96,6 +96,7 @@ type Config struct {
 	LogServerCertFile                string        `envconfig:"LOG_SERVER_CERT_FILE" default:""`
 	LogServerKeyFile                 string        `envconfig:"LOG_SERVER_KEY_FILE" default:""`
 	LogServerCAFile                  string        `envconfig:"LOG_SERVER_CA_FILE" default:""`
+	DisableSecretCreation            bool          `envconfig:"DISABLE_SECRET_CREATION" default:"false"`
 
 	// DEPRECATED: Use TestkubeProAPIKey instead
 	TestkubeCloudAPIKey string `envconfig:"TESTKUBE_CLOUD_API_KEY" default:""`
