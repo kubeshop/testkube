@@ -15,11 +15,24 @@ service TestKubeCloudAPI {
     rpc Call(CommandRequest)            returns (CommandResponse);
     rpc ExecuteAsync(stream ExecuteResponse) returns (stream ExecuteRequest);
     rpc GetLogsStream(stream LogsStreamResponse) returns (stream LogsStreamRequest);
+    rpc GetTestWorkflowNotificationsStream(stream TestWorkflowNotificationsResponse) returns (stream TestWorkflowNotificationsRequest);
 }
 
 enum LogsStreamRequestType {
   STREAM_LOG_MESSAGE = 0;
   STREAM_HEALTH_CHECK = 1;
+}
+
+enum TestWorkflowNotificationsRequestType {
+  WORKFLOW_STREAM_LOG_MESSAGE = 0;
+  WORKFLOW_STREAM_HEALTH_CHECK = 1;
+}
+
+enum TestWorkflowNotificationType {
+  WORKFLOW_STREAM_ERROR = 0;
+  WORKFLOW_STREAM_LOG = 1;
+  WORKFLOW_STREAM_RESULT = 2;
+  WORKFLOW_STREAM_OUTPUT = 3;
 }
 
 message LogsStreamRequest {
@@ -50,6 +63,21 @@ message ExecuteRequest {
     map<string, HeaderValue> headers = 3;
     bytes body                       = 4;
     string message_id                = 5;
+}
+
+message TestWorkflowNotificationsRequest {
+  string stream_id = 1;
+  string execution_id = 2;
+  TestWorkflowNotificationsRequestType request_type = 3;
+}
+
+message TestWorkflowNotificationsResponse {
+  string stream_id = 1;
+  uint32 seq_no = 2;
+  string timestamp = 3;
+  string ref = 4;
+  TestWorkflowNotificationType type = 5;
+  optional string message = 6; // based on type: log/error = inline, others = serialized to JSON
 }
 
 message HeaderValue {
