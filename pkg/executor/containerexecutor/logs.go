@@ -17,8 +17,8 @@ import (
 
 // TailJobLogs - locates logs for job pod(s)
 // These methods here are similar to Job executor, but they don't require the json structure.
-func (c *ContainerExecutor) TailJobLogs(ctx context.Context, id string, logs chan []byte) (err error) {
-	podsClient := c.clientSet.CoreV1().Pods(c.namespace)
+func (c *ContainerExecutor) TailJobLogs(ctx context.Context, id, namespace string, logs chan []byte) (err error) {
+	podsClient := c.clientSet.CoreV1().Pods(namespace)
 	pods, err := executor.GetJobPods(ctx, podsClient, id, 1, 10)
 	if err != nil {
 		close(logs)
@@ -34,7 +34,7 @@ func (c *ContainerExecutor) TailJobLogs(ctx context.Context, id string, logs cha
 
 			case corev1.PodRunning:
 				l.Debug("tailing pod logs: immediately")
-				return tailPodLogs(c.log, c.clientSet, c.namespace, pod, logs)
+				return tailPodLogs(c.log, c.clientSet, namespace, pod, logs)
 
 			case corev1.PodFailed:
 				err := fmt.Errorf("can't get pod logs, pod failed: %s/%s", pod.Namespace, pod.Name)
@@ -43,13 +43,13 @@ func (c *ContainerExecutor) TailJobLogs(ctx context.Context, id string, logs cha
 
 			default:
 				l.Debugw("tailing job logs: waiting for pod to be ready")
-				if err = wait.PollUntilContextTimeout(ctx, pollInterval, c.podStartTimeout, true, executor.IsPodLoggable(c.clientSet, pod.Name, c.namespace)); err != nil {
+				if err = wait.PollUntilContextTimeout(ctx, pollInterval, c.podStartTimeout, true, executor.IsPodLoggable(c.clientSet, pod.Name, namespace)); err != nil {
 					l.Errorw("poll immediate error when tailing logs", "error", err)
 					return err
 				}
 
 				l.Debug("tailing pod logs")
-				return tailPodLogs(c.log, c.clientSet, c.namespace, pod, logs)
+				return tailPodLogs(c.log, c.clientSet, namespace, pod, logs)
 			}
 		}
 	}
