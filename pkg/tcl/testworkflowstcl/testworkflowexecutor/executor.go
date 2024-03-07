@@ -31,6 +31,7 @@ import (
 type TestWorkflowExecutor interface {
 	Schedule(bundle *testworkflowprocessor.Bundle, execution testkube.TestWorkflowExecution)
 	Control(ctx context.Context, execution testkube.TestWorkflowExecution)
+	Recover(ctx context.Context)
 }
 
 type executor struct {
@@ -91,6 +92,16 @@ func (e *executor) handleFatalError(execution testkube.TestWorkflowExecution, er
 	}
 	e.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution))
 	go testworkflowcontroller.Cleanup(context.Background(), e.clientSet, e.namespace, execution.Id)
+}
+
+func (e *executor) Recover(ctx context.Context) {
+	list, err := e.repository.GetRunning(ctx)
+	if err != nil {
+		return
+	}
+	for _, execution := range list {
+		e.Control(context.Background(), execution)
+	}
 }
 
 func (e *executor) Control(ctx context.Context, execution testkube.TestWorkflowExecution) {

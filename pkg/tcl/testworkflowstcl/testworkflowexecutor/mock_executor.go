@@ -48,6 +48,18 @@ func (mr *MockTestWorkflowExecutorMockRecorder) Control(arg0, arg1 interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Control", reflect.TypeOf((*MockTestWorkflowExecutor)(nil).Control), arg0, arg1)
 }
 
+// Recover mocks base method.
+func (m *MockTestWorkflowExecutor) Recover(arg0 context.Context) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Recover", arg0)
+}
+
+// Recover indicates an expected call of Recover.
+func (mr *MockTestWorkflowExecutorMockRecorder) Recover(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recover", reflect.TypeOf((*MockTestWorkflowExecutor)(nil).Recover), arg0)
+}
+
 // Schedule mocks base method.
 func (m *MockTestWorkflowExecutor) Schedule(arg0 *testworkflowprocessor.Bundle, arg1 testkube.TestWorkflowExecution) {
 	m.ctrl.T.Helper()

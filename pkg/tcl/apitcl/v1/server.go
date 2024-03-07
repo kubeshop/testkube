@@ -47,6 +47,8 @@ func NewApiTCL(
 	testWorkflowResults testworkflow.Repository,
 	testWorkflowOutput testworkflow.OutputRepository,
 ) ApiTCL {
+	executor := testworkflowexecutor.New(testkubeAPI.Events, testkubeAPI.Clientset, testWorkflowResults, testWorkflowOutput, testkubeAPI.Namespace)
+	go executor.Recover(context.Background())
 	return &apiTCL{
 		TestkubeAPI:                 testkubeAPI,
 		ProContext:                  proContext,
@@ -55,7 +57,7 @@ func NewApiTCL(
 		TestWorkflowOutput:          testWorkflowOutput,
 		TestWorkflowsClient:         testworkflowsv1.NewClient(kubeClient, testkubeAPI.Namespace),
 		TestWorkflowTemplatesClient: testworkflowsv1.NewTestWorkflowTemplatesClient(kubeClient, testkubeAPI.Namespace),
-		TestWorkflowExecutor:        testworkflowexecutor.New(testkubeAPI.Events, testkubeAPI.Clientset, testWorkflowResults, testWorkflowOutput, testkubeAPI.Namespace),
+		TestWorkflowExecutor:        executor,
 	}
 }
 
