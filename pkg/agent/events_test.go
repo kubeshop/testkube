@@ -103,6 +103,12 @@ func (cws *CloudEventServer) GetLogsStream(srv cloud.TestKubeCloudAPI_GetLogsStr
 	return nil
 }
 
+func (cws *CloudEventServer) GetTestWorkflowNotificationsStream(srv cloud.TestKubeCloudAPI_GetTestWorkflowNotificationsStreamServer) error {
+	<-cws.ctx.Done()
+
+	return nil
+}
+
 func (cws *CloudEventServer) Send(srv cloud.TestKubeCloudAPI_SendServer) error {
 	md, ok := metadata.FromIncomingContext(srv.Context())
 	if !ok {

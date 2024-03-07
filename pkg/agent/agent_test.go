@@ -90,6 +90,12 @@ func (cs *CloudServer) GetLogsStream(srv cloud.TestKubeCloudAPI_GetLogsStreamSer
 	return nil
 }
 
+func (cs *CloudServer) GetTestWorkflowNotificationsStream(srv cloud.TestKubeCloudAPI_GetTestWorkflowNotificationsStreamServer) error {
+	<-cs.ctx.Done()
+
+	return nil
+}
+
 func (cs *CloudServer) ExecuteAsync(srv cloud.TestKubeCloudAPI_ExecuteAsyncServer) error {
 	md, ok := metadata.FromIncomingContext(srv.Context())
 	if !ok {
