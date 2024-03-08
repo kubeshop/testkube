@@ -39,9 +39,13 @@ func (i *Instruction) ToInternal() *testkube.TestWorkflowOutput {
 	if i == nil {
 		return nil
 	}
-	value := &i.Value
-	if i.Value == nil {
-		value = nil
+	value := map[string]interface{}(nil)
+	if i.Value != nil {
+		v, _ := json.Marshal(i.Value)
+		_ = json.Unmarshal(v, &value)
+	}
+	if v, ok := i.Value.(map[string]interface{}); ok {
+		value = v
 	}
 	return &testkube.TestWorkflowOutput{
 		Ref:   i.Ref,
