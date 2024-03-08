@@ -7597,6 +7597,9 @@ components:
         duration:
           type: string
           description: Go-formatted (human-readable) duration
+        durationMs:
+          type: integer
+          description: Duration in milliseconds
       required:
         - status
         - predictedStatus
@@ -7655,6 +7658,9 @@ components:
         duration:
           type: string
           description: Go-formatted (human-readable) duration
+        durationMs:
+          type: integer
+          description: Duration in milliseconds
         initialization:
           $ref: "#/components/schemas/TestWorkflowStepResult"
         steps:
