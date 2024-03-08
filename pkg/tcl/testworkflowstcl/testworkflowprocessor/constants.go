@@ -69,3 +69,15 @@ func getToolkitImage() string {
 	}
 	return img
 }
+
+func getToolkitImage() string {
+	img := os.Getenv("TESTKUBE_TW_TOOLKIT_IMAGE")
+	if img == "" {
+		version := common.Version
+		if version == "" || version == "dev" {
+			version = "latest"
+		}
+		img = fmt.Sprintf("kubeshop/testkube-tw-toolkit:%s", version)
+	}
+	return img
+}
