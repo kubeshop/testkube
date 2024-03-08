@@ -101,4 +101,4 @@ spec:
     trait:
       name: pre-official/postman
       config:
-        params: "ppostman-executor-smoke-without-envs.postman_collection.json"
+        params: "postman-executor-smoke-without-envs.postman_collection.json"
