@@ -9,6 +9,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"k8s.io/client-go/kubernetes"
@@ -81,7 +82,7 @@ func (c CopyFileDirectClient) UploadFile(parentName string, parentType TestingTy
 }
 
 func (c CopyFileDirectClient) getUri() string {
-	return c.apiPathPrefix + uri
+	return strings.Join([]string{c.apiPathPrefix, c.apiURI, "/", Version, uri}, "")
 }
 
 // UploadFile uploads a copy file to the API server
