@@ -15,5 +15,5 @@ type TestWorkflowOutput struct {
 	// output kind name
 	Name string `json:"name,omitempty"`
 	// value returned
-	Value *interface{} `json:"value,omitempty"`
+	Value map[string]interface{} `json:"value,omitempty"`
 }
