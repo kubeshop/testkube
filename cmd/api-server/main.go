@@ -18,6 +18,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	apitclv1 "github.com/kubeshop/testkube/pkg/tcl/apitcl/v1"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
+	cloudtestworkflow "github.com/kubeshop/testkube/pkg/tcl/cloudtcl/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 
@@ -263,6 +264,8 @@ func main() {
 		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		testWorkflowResultsRepository = cloudtestworkflow.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		testWorkflowOutputRepository = cloudtestworkflow.NewCloudOutputRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
 		artifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 	} else {
@@ -405,17 +408,18 @@ func main() {
 	}
 
 	proContext := config.ProContext{
-		APIKey:               cfg.TestkubeProAPIKey,
-		URL:                  cfg.TestkubeProURL,
-		LogsPath:             cfg.TestkubeProLogsPath,
-		TLSInsecure:          cfg.TestkubeProTLSInsecure,
-		WorkerCount:          cfg.TestkubeProWorkerCount,
-		LogStreamWorkerCount: cfg.TestkubeProLogStreamWorkerCount,
-		SkipVerify:           cfg.TestkubeProSkipVerify,
-		EnvID:                cfg.TestkubeProEnvID,
-		OrgID:                cfg.TestkubeProOrgID,
-		Migrate:              cfg.TestkubeProMigrate,
-		ConnectionTimeout:    cfg.TestkubeProConnectionTimeout,
+		APIKey:                           cfg.TestkubeProAPIKey,
+		URL:                              cfg.TestkubeProURL,
+		LogsPath:                         cfg.TestkubeProLogsPath,
+		TLSInsecure:                      cfg.TestkubeProTLSInsecure,
+		WorkerCount:                      cfg.TestkubeProWorkerCount,
+		LogStreamWorkerCount:             cfg.TestkubeProLogStreamWorkerCount,
+		WorkflowNotificationsWorkerCount: cfg.TestkubeProWorkflowNotificationsWorkerCount,
+		SkipVerify:                       cfg.TestkubeProSkipVerify,
+		EnvID:                            cfg.TestkubeProEnvID,
+		OrgID:                            cfg.TestkubeProOrgID,
+		Migrate:                          cfg.TestkubeProMigrate,
+		ConnectionTimeout:                cfg.TestkubeProConnectionTimeout,
 	}
 
 	// Check Pro/Enterprise subscription
@@ -574,6 +578,18 @@ func main() {
 		subscriptionChecker,
 	)
 
+	// Apply Pro server enhancements
+	apiPro := apitclv1.NewApiTCL(
+		api,
+		&proContext,
+		kubeClient,
+		inspector,
+		testWorkflowResultsRepository,
+		testWorkflowOutputRepository,
+		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
+	)
+	apiPro.AppendRoutes()
+
 	if mode == common.ModeAgent {
 		log.DefaultLogger.Info("starting agent service")
 		api.WithProContext(&proContext)
@@ -582,6 +598,7 @@ func main() {
 			api.Mux.Handler(),
 			grpcClient,
 			api.GetLogsStream,
+			apiPro.GetTestWorkflowNotificationsStream,
 			clusterId,
 			cfg.TestkubeClusterName,
 			envs,
@@ -600,17 +617,6 @@ func main() {
 		})
 		eventsEmitter.Loader.Register(agentHandle)
 	}
-
-	// Apply Pro server enhancements
-	apitclv1.NewApiTCL(
-		api,
-		&proContext,
-		kubeClient,
-		inspector,
-		testWorkflowResultsRepository,
-		testWorkflowOutputRepository,
-		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
-	).AppendRoutes()
 
 	api.InitEvents()
 	if !cfg.DisableTestTriggers {

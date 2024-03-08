@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -56,10 +57,11 @@ func TestCommandExecution(t *testing.T) {
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 
 	var logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error)
+	var workflowNotificationsStreamFunc func(ctx context.Context, executionID string) (chan testkube.TestWorkflowExecutionNotification, error)
 
 	logger, _ := zap.NewDevelopment()
-	proContext := config.ProContext{APIKey: "api-key", WorkerCount: 5, LogStreamWorkerCount: 5}
-	agent, err := agent.NewAgent(logger.Sugar(), m, grpcClient, logStreamFunc, "", "", nil, featureflags.FeatureFlags{}, proContext)
+	proContext := config.ProContext{APIKey: "api-key", WorkerCount: 5, LogStreamWorkerCount: 5, WorkflowNotificationsWorkerCount: 5}
+	agent, err := agent.NewAgent(logger.Sugar(), m, grpcClient, logStreamFunc, workflowNotificationsStreamFunc, "", "", nil, featureflags.FeatureFlags{}, proContext)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,6 +85,12 @@ type CloudServer struct {
 }
 
 func (cs *CloudServer) GetLogsStream(srv cloud.TestKubeCloudAPI_GetLogsStreamServer) error {
+	<-cs.ctx.Done()
+
+	return nil
+}
+
+func (cs *CloudServer) GetTestWorkflowNotificationsStream(srv cloud.TestKubeCloudAPI_GetTestWorkflowNotificationsStreamServer) error {
 	<-cs.ctx.Done()
 
 	return nil
