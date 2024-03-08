@@ -23,7 +23,9 @@ type TestWorkflowResult struct {
 	// when the pod has been completed
 	FinishedAt time.Time `json:"finishedAt,omitempty"`
 	// Go-formatted (human-readable) duration
-	Duration       string                            `json:"duration,omitempty"`
+	Duration string `json:"duration,omitempty"`
+	// Duration in milliseconds
+	DurationMs     int32                             `json:"durationMs,omitempty"`
 	Initialization *TestWorkflowStepResult           `json:"initialization,omitempty"`
 	Steps          map[string]TestWorkflowStepResult `json:"steps,omitempty"`
 }
