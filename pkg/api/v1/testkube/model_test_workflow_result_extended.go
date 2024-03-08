@@ -97,6 +97,7 @@ func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature) {
 	// Compute the duration
 	if !r.FinishedAt.IsZero() {
 		r.Duration = r.FinishedAt.Sub(r.QueuedAt).Round(time.Millisecond).String()
+		r.DurationMs = int32(r.FinishedAt.Sub(r.QueuedAt).Milliseconds())
 	}
 
 	// Build status on the internal failure
