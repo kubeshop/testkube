@@ -26,6 +26,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
@@ -39,9 +40,16 @@ func (i *Instruction) ToInternal() *testkube.TestWorkflowOutput {
 	if i == nil {
 		return nil
 	}
-	value := &i.Value
-	if i.Value == nil {
-		value = nil
+	value := map[string]interface{}(nil)
+	if i.Value != nil {
+		v, _ := json.Marshal(i.Value)
+		e := json.Unmarshal(v, &value)
+		if e != nil {
+			log.DefaultLogger.Warnf("invalid output passed from TestWorfklow - %v", i.Value)
+		}
+	}
+	if v, ok := i.Value.(map[string]interface{}); ok {
+		value = v
 	}
 	return &testkube.TestWorkflowOutput{
 		Ref:   i.Ref,

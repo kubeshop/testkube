@@ -7630,6 +7630,7 @@ components:
           description: output kind name
         value:
           type: object
+          additionalProperties: {}
           description: value returned
 
     TestWorkflowResult:
