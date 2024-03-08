@@ -34,6 +34,7 @@ type apiTCL struct {
 	TestWorkflowsClient         testworkflowsv1.Interface
 	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
 	TestWorkflowExecutor        testworkflowexecutor.TestWorkflowExecutor
+	ApiUrl                      string
 }
 
 type ApiTCL interface {
@@ -47,6 +48,7 @@ func NewApiTCL(
 	imageInspector imageinspector.Inspector,
 	testWorkflowResults testworkflow.Repository,
 	testWorkflowOutput testworkflow.OutputRepository,
+	apiUrl string,
 ) ApiTCL {
 	executor := testworkflowexecutor.New(testkubeAPI.Events, testkubeAPI.Clientset, testWorkflowResults, testWorkflowOutput, testkubeAPI.Namespace)
 	go executor.Recover(context.Background())
@@ -59,6 +61,7 @@ func NewApiTCL(
 		TestWorkflowsClient:         testworkflowsv1.NewClient(kubeClient, testkubeAPI.Namespace),
 		TestWorkflowTemplatesClient: testworkflowsv1.NewTestWorkflowTemplatesClient(kubeClient, testkubeAPI.Namespace),
 		TestWorkflowExecutor:        executor,
+		ApiUrl:                      apiUrl,
 	}
 }
 
@@ -114,6 +117,9 @@ func (s *apiTCL) AppendRoutes() {
 	testWorkflowExecutions.Get("/:executionID/notifications/stream", s.pro(s.StreamTestWorkflowExecutionNotificationsWebSocketHandler()))
 	testWorkflowExecutions.Post("/:executionID/abort", s.pro(s.AbortTestWorkflowExecutionHandler()))
 	testWorkflowExecutions.Get("/:executionID/logs", s.pro(s.GetTestWorkflowExecutionLogsHandler()))
+	testWorkflowExecutions.Get("/:executionID/artifacts", s.pro(s.ListTestWorkflowExecutionArtifactsHandler()))
+	testWorkflowExecutions.Get("/:executionID/artifacts/:filename", s.pro(s.GetTestWorkflowArtifactHandler()))
+	testWorkflowExecutions.Get("/:executionID/artifact-archive", s.pro(s.GetTestWorkflowArtifactArchiveHandler()))
 
 	testWorkflowWithExecutions := root.Group("/test-workflow-with-executions")
 	testWorkflowWithExecutions.Get("/", s.pro(s.ListTestWorkflowWithExecutionsHandler()))

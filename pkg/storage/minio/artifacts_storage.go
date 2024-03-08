@@ -18,12 +18,12 @@ func NewMinIOArtifactClient(client storage.Client) *ArtifactClient {
 }
 
 // ListFiles lists available files in the bucket from the config
-func (c *ArtifactClient) ListFiles(ctx context.Context, executionId, testName, testSuiteName string) ([]testkube.Artifact, error) {
+func (c *ArtifactClient) ListFiles(ctx context.Context, executionId, testName, testSuiteName, testWorkflowName string) ([]testkube.Artifact, error) {
 	return c.client.ListFiles(ctx, executionId)
 }
 
 // DownloadFile downloads file from bucket from the config
-func (c *ArtifactClient) DownloadFile(ctx context.Context, file, executionId, testName, testSuiteName string) (io.Reader, error) {
+func (c *ArtifactClient) DownloadFile(ctx context.Context, file, executionId, testName, testSuiteName, testWorkflowName string) (io.Reader, error) {
 	return c.client.DownloadFile(ctx, executionId, file)
 }
 

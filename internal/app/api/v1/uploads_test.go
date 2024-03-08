@@ -34,7 +34,7 @@ func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
 			Mux: app,
 			Log: log.DefaultLogger,
 		},
-		artifactsStorage: mockArtifactsStorage,
+		ArtifactsStorage: mockArtifactsStorage,
 	}
 	route := "/uploads"
 

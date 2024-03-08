@@ -95,3 +95,12 @@ func GetMapValue[T any, K comparable](m map[K]T, k K, def T) T {
 	}
 	return def
 }
+
+func GetOr(v ...string) string {
+	for i := range v {
+		if v[i] != "" {
+			return v[i]
+		}
+	}
+	return ""
+}

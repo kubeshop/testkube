@@ -3,9 +3,10 @@ package artifact
 import "github.com/kubeshop/testkube/pkg/api/v1/testkube"
 
 type ListFilesRequest struct {
-	ExecutionID   string
-	TestName      string
-	TestSuiteName string
+	ExecutionID      string
+	TestName         string
+	TestSuiteName    string
+	TestWorkflowName string
 }
 
 type ListFilesResponse struct {
@@ -13,10 +14,11 @@ type ListFilesResponse struct {
 }
 
 type DownloadFileRequest struct {
-	File          string
-	ExecutionID   string
-	TestName      string
-	TestSuiteName string
+	File             string
+	ExecutionID      string
+	TestName         string
+	TestSuiteName    string
+	TestWorkflowName string
 }
 
 type DownloadFileResponse struct {

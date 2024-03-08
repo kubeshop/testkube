@@ -698,7 +698,7 @@ func (s TestkubeAPI) ListTestSuiteArtifactsHandler() fiber.Handler {
 
 			var stepArtifacts []testkube.Artifact
 			var bucket string
-			artifactsStorage := s.artifactsStorage
+			artifactsStorage := s.ArtifactsStorage
 			folder := stepResult.Execution.Id
 			if stepResult.Execution.ArtifactRequest != nil {
 				bucket = stepResult.Execution.ArtifactRequest.StorageBucket
@@ -715,7 +715,7 @@ func (s TestkubeAPI) ListTestSuiteArtifactsHandler() fiber.Handler {
 				}
 			}
 
-			stepArtifacts, err = artifactsStorage.ListFiles(c.Context(), folder, stepResult.Execution.TestName, stepResult.Execution.TestSuiteName)
+			stepArtifacts, err = artifactsStorage.ListFiles(c.Context(), folder, stepResult.Execution.TestName, stepResult.Execution.TestSuiteName, "")
 			if err != nil {
 				s.Log.Warnw("can't list artifacts", "executionID", stepResult.Execution.Id, "error", err)
 				continue

@@ -52,18 +52,18 @@ func (mr *MockArtifactsStorageMockRecorder) DownloadArchive(arg0, arg1, arg2 int
 }
 
 // DownloadFile mocks base method.
-func (m *MockArtifactsStorage) DownloadFile(arg0 context.Context, arg1, arg2, arg3, arg4 string) (io.Reader, error) {
+func (m *MockArtifactsStorage) DownloadFile(arg0 context.Context, arg1, arg2, arg3, arg4, arg5 string) (io.Reader, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DownloadFile", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "DownloadFile", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].(io.Reader)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // DownloadFile indicates an expected call of DownloadFile.
-func (mr *MockArtifactsStorageMockRecorder) DownloadFile(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+func (mr *MockArtifactsStorageMockRecorder) DownloadFile(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DownloadFile", reflect.TypeOf((*MockArtifactsStorage)(nil).DownloadFile), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DownloadFile", reflect.TypeOf((*MockArtifactsStorage)(nil).DownloadFile), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
 // GetValidBucketName mocks base method.
@@ -81,18 +81,18 @@ func (mr *MockArtifactsStorageMockRecorder) GetValidBucketName(arg0, arg1 interf
 }
 
 // ListFiles mocks base method.
-func (m *MockArtifactsStorage) ListFiles(arg0 context.Context, arg1, arg2, arg3 string) ([]testkube.Artifact, error) {
+func (m *MockArtifactsStorage) ListFiles(arg0 context.Context, arg1, arg2, arg3, arg4 string) ([]testkube.Artifact, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListFiles", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "ListFiles", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].([]testkube.Artifact)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListFiles indicates an expected call of ListFiles.
-func (mr *MockArtifactsStorageMockRecorder) ListFiles(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockArtifactsStorageMockRecorder) ListFiles(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFiles", reflect.TypeOf((*MockArtifactsStorage)(nil).ListFiles), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFiles", reflect.TypeOf((*MockArtifactsStorage)(nil).ListFiles), arg0, arg1, arg2, arg3, arg4)
 }
 
 // PlaceFiles mocks base method.
