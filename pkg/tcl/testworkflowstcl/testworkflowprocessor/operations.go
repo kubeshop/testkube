@@ -277,7 +277,8 @@ func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container Contain
 		SetImage(defaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
 		SetCommand("/toolkit", "artifacts", "-m", defaultDataPath).
-		EnableToolkit(stage.Ref())
+		EnableToolkit(stage.Ref()).
+		RunAsRoot()
 
 	args := make([]string, 0)
 	if step.Artifacts.Compress != nil {
