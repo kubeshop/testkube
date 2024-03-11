@@ -1,0 +1,29 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: maven-workflow-smoke-jdk11
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - contrib/executor/maven/examples/hello-maven
+  container:
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
+    workingDir: /data/repo/contrib/executor/maven/examples/hello-maven
+  steps:
+  - name: Run tests
+    run:
+      image: maven:3.9.6-eclipse-temurin-11-focal
+      command:
+      - "mvn"
+      - "test"
+      env:
+      - name: TESTKUBE_MAVEN
+        value: "true"

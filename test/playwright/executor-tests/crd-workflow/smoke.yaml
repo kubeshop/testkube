@@ -1,0 +1,200 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: playwright-workflow-smoke-v1.32.3
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/playwright/executor-tests/playwright-project
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+  steps:
+  - name: Install dependencies
+    run:
+      image: mcr.microsoft.com/playwright:v1.32.3-focal
+      command:
+      - npm
+      args:
+      - ci
+  - name: Run tests
+    run:
+      image: mcr.microsoft.com/playwright:v1.32.3-focal
+      command:
+      - "npx"
+      args:
+      - "--yes"
+      - "playwright@1.32.3"
+      - "test"
+  - name: Save artifacts
+    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+    artifacts:
+      paths:
+      - playwright-report/**/*
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: playwright-workflow-smoke-v1.32.3-custom-report-dir
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/playwright/executor-tests/playwright-project
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+  steps:
+  - name: Install dependencies
+    run:
+      image: mcr.microsoft.com/playwright:v1.32.3-focal
+      command:
+      - npm
+      args:
+      - ci
+  - name: Run tests
+    run:
+      image: mcr.microsoft.com/playwright:v1.32.3-focal
+      command:
+      - "npx"
+      args:
+      - "--yes"
+      - "playwright@1.32.3"
+      - "test"
+      - "--output"
+      - "/data/artifacts"
+      env:
+      - name: PLAYWRIGHT_HTML_REPORT
+        value: /data/artifacts/playwright-report
+    steps:
+    - name: Save artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: playwright-workflow-smoke-v1.32.3-shell
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/playwright/executor-tests/playwright-project
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+  steps:
+  - name: Install dependencies
+    run:
+      image: mcr.microsoft.com/playwright:v1.32.3-focal
+      command:
+      - npm
+      args:
+      - ci
+  - name: Run tests
+    shell: "npx --yes playwright@1.32.3 test --output /data/artifacts && cd /data/artifacts && ls -lah"
+    container:
+      image: mcr.microsoft.com/playwright:v1.32.3-focal
+      env:
+      - name: PLAYWRIGHT_HTML_REPORT
+        value: /data/artifacts/playwright-report
+    steps:
+    - name: Save artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: playwright-workflow-smoke-artifacts-double-asterisk
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/playwright/executor-tests/playwright-project
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+  steps:
+  - name: Install dependencies
+    run:
+      image: mcr.microsoft.com/playwright:v1.32.3-focal
+      command:
+      - npm
+      args:
+      - ci
+  - name: Run tests
+    run:
+      image: mcr.microsoft.com/playwright:v1.32.3-focal
+      command:
+      - "npx"
+      args:
+      - "--yes"
+      - "playwright@1.32.3"
+      - "test"
+  - name: Save artifacts
+    artifacts:
+      paths:
+      - /data/repo/**/playwright-report/**/*
+---
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: playwright-workflow-smoke-official-trait
+  labels:
+    core-tests: workflows
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+  steps:
+  - name: Run from trait
+    content:
+      git:
+        uri: https://github.com/kubeshop/testkube
+        revision: main
+        paths:
+        - test/playwright/executor-tests/playwright-project
+    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+    template:
+      name: official/playwright
+      config:
+        # params: --workers 4
+        tag: v1.32.3-jammy

@@ -1,0 +1,25 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: soapui-workflow-smoke
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/soapui/executor-smoke/soapui-smoke-test.xml
+  container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 256Mi
+  steps:
+  - name: Run tests
+    run:
+      image: smartbear/soapuios-testrunner:5.7.2 # workingDir can't be used because of entrypoint script
+      env:
+      - name: COMMAND_LINE
+        value: "/data/repo/test/soapui/executor-smoke/soapui-smoke-test.xml"
