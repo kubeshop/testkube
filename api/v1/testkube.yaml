@@ -4062,6 +4062,8 @@ paths:
         - test-workflows
         - api
         - pro
+      parameters:
+        - $ref: "#/components/parameters/InlineTemplates"
       summary: Preview test workflow
       description: Preview test workflow after including templates inside
       operationId: previewTestWorkflow
@@ -8617,6 +8619,14 @@ components:
         type: string
       required: true
       description: test type of the executor
+    InlineTemplates:
+      in: query
+      name: inline
+      schema:
+        type: boolean
+        default: false
+      description: should inline templates in the resolved workflow
+      required: false
   requestBodies:
     UploadsBody:
       description: "Upload files request body data"
