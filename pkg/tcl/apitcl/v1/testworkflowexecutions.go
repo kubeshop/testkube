@@ -217,8 +217,13 @@ func (s *apiTCL) AbortTestWorkflowExecutionHandler() fiber.Handler {
 		executionID := c.Params("executionID")
 		errPrefix := fmt.Sprintf("failed to abort test workflow execution '%s'", executionID)
 
-		// TODO: Fetch execution from database
-		execution, err := s.TestWorkflowResults.GetByNameAndTestWorkflow(ctx, executionID, name)
+		var execution testkube.TestWorkflowExecution
+		var err error
+		if name == "" {
+			execution, err = s.TestWorkflowResults.Get(ctx, executionID)
+		} else {
+			execution, err = s.TestWorkflowResults.GetByNameAndTestWorkflow(ctx, executionID, name)
+		}
 		if err != nil {
 			return s.ClientError(c, errPrefix, err)
 		}
