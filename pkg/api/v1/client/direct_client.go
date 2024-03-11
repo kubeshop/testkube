@@ -197,6 +197,10 @@ func (t DirectClient[A]) GetLogsV2(uri string, logs chan events.Log) error {
 		return err
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		return errors.New("error getting logs, invalid status code: " + resp.Status)
+	}
+
 	go func() {
 		defer close(logs)
 		defer resp.Body.Close()

@@ -72,6 +72,9 @@ func RenderExecutionResult(client client.Client, execution *testkube.Execution, 
 		return nil
 	}
 
+	info, err := client.GetServerInfo()
+	ui.ExitOnError("getting server info", err)
+
 	ui.NL()
 	switch true {
 	case result.IsQueued():
@@ -82,16 +85,12 @@ func RenderExecutionResult(client client.Client, execution *testkube.Execution, 
 
 	case result.IsPassed():
 		if showLogs {
-			ui.Info(result.Output)
+			PrintLogs(client, info, *execution)
 		}
 
 		if !logsOnly {
 			duration := execution.EndTime.Sub(execution.StartTime)
 			ui.Success("Test execution completed with success in " + duration.String())
-
-			info, err := client.GetServerInfo()
-			ui.ExitOnError("getting server info", err)
-
 			PrintExecutionURIs(execution, info.DashboardUri)
 		}
 
@@ -108,15 +107,11 @@ func RenderExecutionResult(client client.Client, execution *testkube.Execution, 
 			ui.UseStderr()
 			ui.Warn("Test execution failed:\n")
 			ui.Errf(result.ErrorMessage)
-
-			info, err := client.GetServerInfo()
-			ui.ExitOnError("getting server info", err)
-
 			PrintExecutionURIs(execution, info.DashboardUri)
 		}
 
 		if showLogs {
-			ui.Info(result.Output)
+			PrintLogs(client, info, *execution)
 		}
 		return errors.New(result.ErrorMessage)
 
@@ -130,12 +125,40 @@ func RenderExecutionResult(client client.Client, execution *testkube.Execution, 
 		}
 
 		if showLogs {
-			ui.Info(result.Output)
+			PrintLogs(client, info, *execution)
 		}
 		return errors.New(result.ErrorMessage)
 	}
 
 	return nil
+}
+
+func PrintLogs(client client.Client, info testkube.ServerInfo, execution testkube.Execution) {
+	if !info.Features.LogsV2 {
+		// fallback to default logs
+		ui.Info(execution.ExecutionResult.Output)
+		return
+	}
+
+	logsCh, err := client.LogsV2(execution.Id)
+	ui.ExitOnError("getting logs", err)
+
+	ui.H1("Logs:")
+	lastSource := ""
+	for log := range logsCh {
+
+		if log.Source != lastSource {
+			ui.H2("source: " + log.Source)
+			ui.NL()
+			lastSource = log.Source
+		}
+
+		if ui.Verbose {
+			ui.Print(log.Time.Format("2006-01-02 15:04:05") + " " + log.Content)
+		} else {
+			ui.Print(log.Content)
+		}
+	}
 }
 
 func PrintExecutionURIs(execution *testkube.Execution, dashboardURI string) {
