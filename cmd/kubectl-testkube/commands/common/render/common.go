@@ -72,6 +72,9 @@ func RenderExecutionResult(client client.Client, execution *testkube.Execution, 
 		return nil
 	}
 
+	info, err := client.GetServerInfo()
+	ui.ExitOnError("getting server info", err)
+
 	ui.NL()
 	switch true {
 	case result.IsQueued():
@@ -82,16 +85,12 @@ func RenderExecutionResult(client client.Client, execution *testkube.Execution, 
 
 	case result.IsPassed():
 		if showLogs {
-			ui.Info(result.Output)
+			PrintLogs(client, info, *execution)
 		}
 
 		if !logsOnly {
 			duration := execution.EndTime.Sub(execution.StartTime)
 			ui.Success("Test execution completed with success in " + duration.String())
-
-			info, err := client.GetServerInfo()
-			ui.ExitOnError("getting server info", err)
-
 			PrintExecutionURIs(execution, info.DashboardUri)
 		}
 
@@ -108,15 +107,11 @@ func RenderExecutionResult(client client.Client, execution *testkube.Execution, 
 			ui.UseStderr()
 			ui.Warn("Test execution failed:\n")
 			ui.Errf(result.ErrorMessage)
-
-			info, err := client.GetServerInfo()
-			ui.ExitOnError("getting server info", err)
-
 			PrintExecutionURIs(execution, info.DashboardUri)
 		}
 
 		if showLogs {
-			ui.Info(result.Output)
+			PrintLogs(client, info, *execution)
 		}
 		return errors.New(result.ErrorMessage)
 
@@ -130,7 +125,7 @@ func RenderExecutionResult(client client.Client, execution *testkube.Execution, 
 		}
 
 		if showLogs {
-			ui.Info(result.Output)
+			PrintLogs(client, info, *execution)
 		}
 		return errors.New(result.ErrorMessage)
 	}
