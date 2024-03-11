@@ -201,7 +201,7 @@ func NewLogFromBytes(b []byte) *Log {
 	// new non-JSON format (just raw lines will be logged)
 	return &Log{
 		Time:    ts,
-		Content: string(b),
+		Content: string(content),
 		Version: string(LogVersionV2),
 	}
 }
