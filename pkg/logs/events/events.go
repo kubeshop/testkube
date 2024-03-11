@@ -51,6 +51,7 @@ type Log testkube.LogV2
 
 func NewFinishLog() *Log {
 	return &Log{
+		Time:    time.Now(),
 		Content: "processing logs finished",
 		Type_:   "finish",
 		Source:  "log-server",
@@ -67,6 +68,7 @@ func NewErrorLog(err error) *Log {
 		msg = err.Error()
 	}
 	return &Log{
+		Time:    time.Now(),
 		Error_:  true,
 		Content: msg,
 	}
