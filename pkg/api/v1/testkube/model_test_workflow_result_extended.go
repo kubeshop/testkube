@@ -68,6 +68,7 @@ func (r *TestWorkflowResult) Clone() *TestWorkflowResult {
 		StartedAt:       r.StartedAt,
 		FinishedAt:      r.FinishedAt,
 		Duration:        r.Duration,
+		DurationMs:      r.DurationMs,
 		Initialization:  r.Initialization.Clone(),
 		Steps:           steps,
 	}
