@@ -210,6 +210,9 @@ func (s *apiTCL) UpdateTestWorkflowHandler() fiber.Handler {
 func (s *apiTCL) PreviewTestWorkflowHandler() fiber.Handler {
 	errPrefix := "failed to resolve test workflow"
 	return func(c *fiber.Ctx) (err error) {
+		// Check if it should inline templates
+		inline, _ := strconv.ParseBool(c.Query("inline"))
+
 		// Deserialize resource
 		obj := new(testworkflowsv1.TestWorkflow)
 		if HasYAML(c) {
@@ -232,21 +235,23 @@ func (s *apiTCL) PreviewTestWorkflowHandler() fiber.Handler {
 		}
 		obj.Namespace = s.Namespace
 
-		// Fetch the templates
-		tpls := testworkflowresolver.ListTemplates(obj)
-		tplsMap := make(map[string]testworkflowsv1.TestWorkflowTemplate, len(tpls))
-		for name := range tpls {
-			tpl, err := s.TestWorkflowTemplatesClient.Get(name)
-			if err != nil {
-				return s.BadRequest(c, errPrefix, "fetching error", err)
+		if inline {
+			// Fetch the templates
+			tpls := testworkflowresolver.ListTemplates(obj)
+			tplsMap := make(map[string]testworkflowsv1.TestWorkflowTemplate, len(tpls))
+			for name := range tpls {
+				tpl, err := s.TestWorkflowTemplatesClient.Get(name)
+				if err != nil {
+					return s.BadRequest(c, errPrefix, "fetching error", err)
+				}
+				tplsMap[name] = *tpl
 			}
-			tplsMap[name] = *tpl
-		}
 
-		// Resolve the TestWorkflow
-		err = testworkflowresolver.ApplyTemplates(obj, tplsMap)
-		if err != nil {
-			return s.BadRequest(c, errPrefix, "resolving error", err)
+			// Resolve the TestWorkflow
+			err = testworkflowresolver.ApplyTemplates(obj, tplsMap)
+			if err != nil {
+				return s.BadRequest(c, errPrefix, "resolving error", err)
+			}
 		}
 
 		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, testworkflowmappers.MapKubeToAPI, obj)
