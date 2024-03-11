@@ -206,17 +206,17 @@ func TestMergeDuplicatedArgs(t *testing.T) {
 		{
 			name:         "Duplicated args",
 			args:         []string{"-e", "<envVars>", "-e"},
-			expectedArgs: []string{"<envVars>", "-e"},
+			expectedArgs: []string{"<envVars>", "-e", "-n"},
 		},
 		{
 			name:         "Multiple duplicated args",
 			args:         []string{"<envVars>", "-e", "-e", "-n", "-n", "-l"},
-			expectedArgs: []string{"<envVars>", "-e", "-n", "-l"},
+			expectedArgs: []string{"<envVars>", "-e", "-l", "-n"},
 		},
 		{
 			name:         "Non duplicated args",
 			args:         []string{"-e", "-n", "<envVars>", "-l"},
-			expectedArgs: []string{"-e", "-n", "<envVars>", "-l"},
+			expectedArgs: []string{"-e", "<envVars>", "-l", "-n"},
 		},
 	}
 

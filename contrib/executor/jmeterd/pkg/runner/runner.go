@@ -298,6 +298,8 @@ func removeDuplicatedArgs(args []string) []string {
 }
 
 func mergeDuplicatedArgs(args []string) []string {
+	// -n is mandatory regardless of args mode
+	args = append(args, "-n")
 	allowed := map[string]int{
 		"-e": 0,
 		"-n": 0,
