@@ -51,6 +51,7 @@ type Log testkube.LogV2
 
 func NewFinishLog() *Log {
 	return &Log{
+		Time:    time.Now(),
 		Content: "processing logs finished",
 		Type_:   "finish",
 		Source:  "log-server",
@@ -67,6 +68,7 @@ func NewErrorLog(err error) *Log {
 		msg = err.Error()
 	}
 	return &Log{
+		Time:    time.Now(),
 		Error_:  true,
 		Content: msg,
 	}
@@ -201,7 +203,7 @@ func NewLogFromBytes(b []byte) *Log {
 	// new non-JSON format (just raw lines will be logged)
 	return &Log{
 		Time:    ts,
-		Content: string(b),
+		Content: string(content),
 		Version: string(LogVersionV2),
 	}
 }

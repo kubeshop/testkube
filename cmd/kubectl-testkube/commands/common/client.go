@@ -80,10 +80,9 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 
 		token := cfg.CloudContext.ApiKey
 
-		if cfg.CloudContext.ApiKey != "" && cfg.CloudContext.RefreshToken != "" {
+		if cfg.CloudContext.ApiKey != "" && cfg.CloudContext.RefreshToken != "" && cfg.OAuth2Data.Enabled {
 			var refreshToken string
 			authURI := fmt.Sprintf("%s/idp", cfg.CloudContext.ApiUri)
-
 			token, refreshToken, err = cloudlogin.CheckAndRefreshToken(context.Background(), authURI, cfg.CloudContext.ApiKey, cfg.CloudContext.RefreshToken)
 			if err != nil {
 				// Error: failed refreshing, go thru login flow

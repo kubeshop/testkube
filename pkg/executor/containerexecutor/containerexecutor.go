@@ -168,6 +168,7 @@ type JobOptions struct {
 	UsernameSecret            *testkube.SecretRef
 	TokenSecret               *testkube.SecretRef
 	CertificateSecret         string
+	AgentAPITLSSecret         string
 	Variables                 map[string]testkube.Variable
 	ActiveDeadlineSeconds     int64
 	ArtifactRequest           *testkube.ArtifactRequest
@@ -658,6 +659,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		UsernameSecret:            options.UsernameSecret,
 		TokenSecret:               options.TokenSecret,
 		CertificateSecret:         options.CertificateSecret,
+		AgentAPITLSSecret:         options.AgentAPITLSSecret,
 		ActiveDeadlineSeconds:     options.Request.ActiveDeadlineSeconds,
 		ArtifactRequest:           artifactRequest,
 		DelaySeconds:              jobDelaySeconds,
