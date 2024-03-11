@@ -1,5 +1,5 @@
-apiVersion: workflows.testkube.io/v1beta1
-kind: Workflow
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: gradle-workflow-smoke-jdk11
   labels:
@@ -11,11 +11,12 @@ spec:
       revision: main
       paths:
       - contrib/executor/gradle/examples/hello-gradle
-  resources:
-    requests:
-      cpu: 512m
-      memory: 512Mi
-  workingDir: /data/repo/contrib/executor/gradle/examples/hello-gradle
+  container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 512Mi
+    workingDir: /data/repo/contrib/executor/gradle/examples/hello-gradle
   steps:
   - name: Run tests
     run:
@@ -28,8 +29,8 @@ spec:
       - name: TESTKUBE_GRADLE
         value: "true"
 ---
-apiVersion: workflows.testkube.io/v1beta1
-kind: Workflow
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: gradle-workflow-smoke-jdk11-default-command # TODO: recheck if it's fixed - the step passes without being executed
   labels:
@@ -41,11 +42,12 @@ spec:
       revision: main
       paths:
       - contrib/executor/gradle/examples/hello-gradle
-  resources:
-    requests:
-      cpu: 512m
-      memory: 512Mi
-  workingDir: /data/repo/contrib/executor/gradle/examples/hello-gradle
+  container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 512Mi
+    workingDir: /data/repo/contrib/executor/gradle/examples/hello-gradle
   steps:
   - name: Run tests
     run:

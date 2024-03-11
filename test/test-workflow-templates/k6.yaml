@@ -1,5 +1,5 @@
-kind: Trait
-apiVersion: workflows.testkube.io/v1beta1
+kind: TestWorkflowTemplate
+apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: pre-official--k6
 spec:
@@ -14,6 +14,6 @@ spec:
       default: ""
   steps:
   - name: Run k6 tests
-    run:
+    container:
       image: grafana/k6:{{ config.version }}
-      shell: k6 run {{ config.params }}
+    shell: k6 run {{ config.params }}

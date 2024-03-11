@@ -1,5 +1,5 @@
-apiVersion: workflows.testkube.io/v1beta1
-kind: Workflow
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: maven-workflow-smoke-jdk11
   labels:
@@ -11,11 +11,12 @@ spec:
       revision: main
       paths:
       - contrib/executor/maven/examples/hello-maven
-  resources:
-    requests:
-      cpu: 256m
-      memory: 256Mi
-  workingDir: /data/repo/contrib/executor/maven/examples/hello-maven
+  container:
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
+    workingDir: /data/repo/contrib/executor/maven/examples/hello-maven
   steps:
   - name: Run tests
     run:

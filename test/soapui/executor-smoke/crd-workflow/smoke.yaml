@@ -1,5 +1,5 @@
-apiVersion: workflows.testkube.io/v1beta1
-kind: Workflow
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: soapui-workflow-smoke
   labels:
@@ -11,10 +11,11 @@ spec:
       revision: main
       paths:
       - test/soapui/executor-smoke/soapui-smoke-test.xml
-  resources:
-    requests:
-      cpu: 512m
-      memory: 256Mi
+  container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 256Mi
   steps:
   - name: Run tests
     run:
