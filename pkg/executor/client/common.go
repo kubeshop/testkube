@@ -34,6 +34,7 @@ type ExecuteOptions struct {
 	Labels               map[string]string
 	UsernameSecret       *testkube.SecretRef
 	TokenSecret          *testkube.SecretRef
+	AgentAPITLSSecret    string
 	CertificateSecret    string
 	ImagePullSecretNames []string
 	Features             featureflags.FeatureFlags
