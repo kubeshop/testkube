@@ -20,8 +20,8 @@ import (
 type CreateCommonFlags struct {
 	ExecutorType                       string
 	Labels                             map[string]string
-	Variables                          map[string]string
-	SecretVariables                    map[string]string
+	Variables                          []string
+	SecretVariables                    []string
 	Schedule                           string
 	ExecutorArgs                       []string
 	ArgsMode                           string
@@ -230,8 +230,8 @@ func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
 	cmd.Flags().StringVarP(&flags.ExecutorType, "type", "t", "", "test type")
 
 	cmd.Flags().StringToStringVarP(&flags.Labels, "label", "l", nil, "label key value pair: --label key1=value1")
-	cmd.Flags().StringToStringVarP(&flags.Variables, "variable", "v", nil, "variable key value pair: --variable key1=value1")
-	cmd.Flags().StringToStringVarP(&flags.SecretVariables, "secret-variable", "s", nil, "secret variable key value pair: --secret-variable key1=value1")
+	cmd.Flags().StringArrayVarP(&flags.Variables, "variable", "v", nil, "variable key value pair: --variable key1=value1")
+	cmd.Flags().StringArrayVarP(&flags.SecretVariables, "secret-variable", "s", nil, "secret variable key value pair: --secret-variable key1=value1")
 	cmd.Flags().StringVarP(&flags.Schedule, "schedule", "", "", "test schedule in a cron job form: * * * * *")
 	cmd.Flags().StringArrayVar(&flags.Command, "command", []string{}, "command passed to image in executor")
 	cmd.Flags().StringArrayVarP(&flags.ExecutorArgs, "executor-args", "", []string{}, "executor binary additional arguments")
