@@ -56,14 +56,13 @@ spec:
         memory: 2Gi
     workingDir: /data/repo/test/playwright/executor-tests/playwright-project
   steps:
-  - name: Checkout
+  - name: Run from trait
     content:
       git:
         uri: https://github.com/kubeshop/testkube
         revision: main
         paths:
         - test/playwright/executor-tests/playwright-project
-  - name: Run from trait
     workingDir: /data/repo/test/playwright/executor-tests/playwright-project
     template:
       name: official/playwright
