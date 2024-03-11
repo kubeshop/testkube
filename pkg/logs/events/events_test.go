@@ -26,7 +26,7 @@ func TestNewLogFromBytes(t *testing.T) {
 		assert.Equal("Line", l.Content)
 	})
 
-	t.Run("log line without timestamp", func(t *testing.T) {
+	t.Run("old log line without timestamp", func(t *testing.T) {
 		b := []byte(`{"content":"Line"}`)
 
 		l := NewLogFromBytes(b)
