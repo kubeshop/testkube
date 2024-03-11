@@ -1,5 +1,5 @@
-apiVersion: workflows.testkube.io/v1beta1
-kind: Workflow
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: postman-workflow-smoke
   labels:
@@ -11,11 +11,12 @@ spec:
       revision: main
       paths:
       - test/postman/executor-tests/postman-executor-smoke.postman_collection.json
-  resources:
-    requests:
-      cpu: 256m
-      memory: 128Mi
-  workingDir: /data/repo/test/postman/executor-tests
+  container:
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
+    workingDir: /data/repo/test/postman/executor-tests
   steps:
   - name: Run test
     run:
@@ -26,8 +27,8 @@ spec:
       - "--env-var"
       - "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
 ---
-apiVersion: workflows.testkube.io/v1beta1
-kind: Workflow
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: postman-workflow-smoke-without-envs
   labels:
@@ -39,11 +40,12 @@ spec:
       revision: main
       paths:
       - test/postman/executor-tests/postman-executor-smoke-without-envs.postman_collection.json
-  resources:
-    requests:
-      cpu: 256m
-      memory: 128Mi
-  workingDir: /data/repo/test/postman/executor-tests
+  container:
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
+    workingDir: /data/repo/test/postman/executor-tests
   steps:
   - name: Run test
     run:
@@ -52,8 +54,8 @@ spec:
       - run
       - postman-executor-smoke-without-envs.postman_collection.json
 ---
-apiVersion: workflows.testkube.io/v1beta1
-kind: Workflow
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: postman-workflow-smoke-preofficial-trait
   labels:
@@ -65,21 +67,22 @@ spec:
       revision: main
       paths:
       - test/postman/executor-tests/postman-executor-smoke.postman_collection.json
-  resources:
-    requests:
-      cpu: 256m
-      memory: 128Mi
-  workingDir: /data/repo/test/postman/executor-tests
+  container:
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
+    workingDir: /data/repo/test/postman/executor-tests
   steps:
   - name: Run from trait
     workingDir: /data/repo/test/postman/executor-tests
-    trait:
+    template:
       name: pre-official/postman
       config:
         params: "postman-executor-smoke.postman_collection.json --env-var TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
 ---
-apiVersion: workflows.testkube.io/v1beta1
-kind: Workflow
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: postman-workflow-smoke-preofficial-trait-without-envs
   labels:
@@ -91,14 +94,15 @@ spec:
       revision: main
       paths:
       - test/postman/executor-tests/postman-executor-smoke-without-envs.postman_collection.json
-  resources:
-    requests:
-      cpu: 256m
-      memory: 128Mi
-  workingDir: /data/repo/test/postman/executor-tests
+  container:
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
+    workingDir: /data/repo/test/postman/executor-tests
   steps:
   - name: Run from trait
-    trait:
+    template:
       name: pre-official/postman
       config:
         params: "postman-executor-smoke-without-envs.postman_collection.json"
