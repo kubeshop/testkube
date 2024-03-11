@@ -119,6 +119,8 @@ func (e *executor) Control(ctx context.Context, execution testkube.TestWorkflowE
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
+		defer wg.Done()
+
 		for v := range ctrl.Watch(ctx).Stream(ctx).Channel() {
 			if v.Error != nil {
 				continue
