@@ -454,8 +454,9 @@ workflow-playwright-smoke() {
 workflow-postman-smoke() {
   name="Test Workflow - Postman"
   workflow_crd_file="test/postman/executor-tests/crd-workflow/smoke.yaml"
+  custom_workflow_template_crd_file="test/test-workflow-templates/postman.yaml"
   
-  common_workflow_run "$name" "$workflow_crd_file"
+  common_workflow_run "$name" "$workflow_crd_file" "$custom_workflow_template_crd_file"
 }
 
 workflow-soapui-smoke() {
