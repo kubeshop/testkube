@@ -1,5 +1,5 @@
-apiVersion: workflows.testkube.io/v1beta1
-kind: Workflow
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: k6-workflow-smoke
   labels:
@@ -11,11 +11,12 @@ spec:
       revision: main
       paths:
       - test/k6/executor-tests/k6-smoke-test.js
-  resources:
-    requests:
-      cpu: 128m
-      memory: 128Mi
-  workingDir: /data/repo/test/k6/executor-tests
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+    workingDir: /data/repo/test/k6/executor-tests
   steps:
   - name: Run test
     run:
@@ -29,24 +30,25 @@ spec:
       - name: K6_SYSTEM_ENV
         value: K6_SYSTEM_ENV_value
 ---
-apiVersion: workflows.testkube.io/v1beta1
-kind: Workflow
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: k6-workflow-smoke-preofficial-trait
   labels:
     core-tests: workflows
 spec:
-  resources:
-    requests:
-      cpu: 128m
-      memory: 128Mi
-  workingDir: /data/repo/test/k6/executor-tests
-  env:
-  - name: K6_SYSTEM_ENV # currently only possible on this level
-    value: K6_SYSTEM_ENV_value
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+    workingDir: /data/repo/test/k6/executor-tests
+    env:
+    - name: K6_SYSTEM_ENV # currently only possible on this level
+      value: K6_SYSTEM_ENV_value
   steps:
   - name: Checkout
-    checkout:
+    content:
       git:
         uri: https://github.com/kubeshop/testkube
         revision: main
@@ -54,14 +56,14 @@ spec:
         - test/k6/executor-tests/k6-smoke-test.js
   - name: Run from trait
     workingDir: /data/repo/test/k6/executor-tests
-    trait:
+    template:
       name: pre-official/k6
       config:
         version: 0.48.0
         params: "k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value"
 ---
-apiVersion: workflows.testkube.io/v1beta1
-kind: Workflow
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: k6-workflow-smoke-preofficial-trait-without-checkout-step
   labels:
@@ -73,18 +75,19 @@ spec:
       revision: main
       paths:
       - test/k6/executor-tests/k6-smoke-test.js
-  resources:
-    requests:
-      cpu: 128m
-      memory: 128Mi
-  workingDir: /data/repo/test/k6/executor-tests
-  env:
-  - name: K6_SYSTEM_ENV # currently only possible on this level
-    value: K6_SYSTEM_ENV_value
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+    workingDir: /data/repo/test/k6/executor-tests
+    env:
+    - name: K6_SYSTEM_ENV # currently only possible on this level
+      value: K6_SYSTEM_ENV_value
   steps:
   - name: Run from trait
     workingDir: /data/repo/test/k6/executor-tests
-    trait:
+    template:
       name: pre-official/k6
       config:
         version: 0.48.0

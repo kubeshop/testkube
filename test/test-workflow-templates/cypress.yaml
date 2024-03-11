@@ -1,5 +1,5 @@
-kind: WorkflowTemplate
-apiVersion: workflows.testkube.io/v1beta1
+kind: TestWorkflowTemplate
+apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: pre-official--cypress
 spec:
@@ -18,10 +18,12 @@ spec:
       default: ""
   steps:
   - name: Install dependencies
-    run:
+    container:
       image: cypress/included:{{ config.version }}
-      shell: '{{ config.dependencies_command }}'
+    shell: '{{ config.dependencies_command }}'
+
+      
   - name: Run Cypress tests
-    run:
+    container:
       image: cypress/included:{{ config.version }}
-      shell: npx cypress run {{ config.params }}
+    shell: npx cypress run {{ config.params }}

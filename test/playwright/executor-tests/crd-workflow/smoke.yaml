@@ -1,5 +1,5 @@
-apiVersion: workflows.testkube.io/v1beta1
-kind: Workflow
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: playwright-workflow-smoke-v1.32.3
   labels:
@@ -11,11 +11,12 @@ spec:
       revision: main
       paths:
       - test/playwright/executor-tests/playwright-project
-  resources:
-    requests:
-      cpu: 2
-      memory: 2Gi
-  workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
   steps:
   - name: Install dependencies
     run:
@@ -41,21 +42,22 @@ spec:
       paths:
       - '*'
 ---
-apiVersion: workflows.testkube.io/v1beta1
-kind: Workflow
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: playwright-workflow-smoke-official-trait
   labels:
     core-tests: workflows
 spec:
-  resources:
-    requests:
-      cpu: 2
-      memory: 2Gi
-  workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
   steps:
   - name: Checkout
-    checkout:
+    content:
       git:
         uri: https://github.com/kubeshop/testkube
         revision: main
@@ -63,7 +65,7 @@ spec:
         - test/playwright/executor-tests/playwright-project
   - name: Run from trait
     workingDir: /data/repo/test/playwright/executor-tests/playwright-project
-    trait:
+    template:
       name: official/playwright
       config:
         # params: --workers 4

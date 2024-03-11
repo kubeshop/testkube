@@ -1,5 +1,5 @@
-apiVersion: workflows.testkube.io/v1beta1
-kind: Workflow
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: cypress-workflow-smoke-13
   labels:
@@ -11,11 +11,12 @@ spec:
       revision: main
       paths:
       - test/cypress/executor-tests/cypress-13
-  resources:
-    requests:
-      cpu: 2
-      memory: 2Gi
-  workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
   steps:
   - name: Run tests
     run:
@@ -34,8 +35,8 @@ spec:
       paths:
       - '*'
 ---
-apiVersion: workflows.testkube.io/v1beta1
-kind: Workflow
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: cypress-workflow-smoke-13-negative
   labels:
@@ -47,11 +48,12 @@ spec:
       revision: main
       paths:
       - test/cypress/executor-tests/cypress-13
-  resources:
-    requests:
-      cpu: 2
-      memory: 2Gi
-  workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
   steps:
   - name: Run tests
     run:
@@ -68,24 +70,25 @@ spec:
       paths:
       - '**/*'
 ---
-apiVersion: workflows.testkube.io/v1beta1
-kind: Workflow
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
 metadata:
   name: cypress-workflow-smoke-13-preofficial-trait
   labels:
     core-tests: workflows
 spec:
-  resources:
-    requests:
-      cpu: 2
-      memory: 2Gi
-  workingDir: /data/repo/test/cypress/executor-tests/cypress-13
-  env:
-  - name: CYPRESS_CUSTOM_ENV # currently only possible on this level
-    value: "CYPRESS_CUSTOM_ENV_value"
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+    env:
+    - name: CYPRESS_CUSTOM_ENV # currently only possible on this level
+      value: "CYPRESS_CUSTOM_ENV_value"
   steps:
   - name: Checkout
-    checkout:
+    content:
       git:
         uri: https://github.com/kubeshop/testkube
         revision: main
@@ -93,7 +96,7 @@ spec:
         - test/cypress/executor-tests/cypress-13
   - name: Run from trait
     workingDir: /data/repo/test/cypress/executor-tests/cypress-13
-    trait:
+    template:
       name: pre-official/cypress
       config:
         version: 13.5.0
