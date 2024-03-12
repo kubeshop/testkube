@@ -401,8 +401,10 @@ func TestApplyTemplatesStepBasicIsolatedWrapped(t *testing.T) {
 		StepBase: testworkflowsv1.StepBase{
 			Container: tplStepsEnv.Spec.Container,
 		},
-		Steps: []testworkflowsv1.Step{
+		Setup: []testworkflowsv1.Step{
 			ConvertIndependentStepToStep(tplStepsEnv.Spec.Setup[0]),
+		},
+		Steps: []testworkflowsv1.Step{
 			ConvertIndependentStepToStep(tplStepsEnv.Spec.Steps[0]),
 			ConvertIndependentStepToStep(tplStepsEnv.Spec.After[0]),
 		},
@@ -418,8 +420,10 @@ func TestApplyTemplatesStepBasicSteps(t *testing.T) {
 	s, err := applyTemplatesToStep(s, templates)
 
 	want := *basicStep.DeepCopy()
-	want.Steps = append([]testworkflowsv1.Step{
+	want.Setup = []testworkflowsv1.Step{
 		ConvertIndependentStepToStep(tplSteps.Spec.Setup[0]),
+	}
+	want.Steps = append([]testworkflowsv1.Step{
 		ConvertIndependentStepToStep(tplSteps.Spec.Steps[0]),
 	}, append(want.Steps, []testworkflowsv1.Step{
 		ConvertIndependentStepToStep(tplSteps.Spec.After[0]),
@@ -435,18 +439,20 @@ func TestApplyTemplatesStepBasicMultipleSteps(t *testing.T) {
 	s, err := applyTemplatesToStep(s, templates)
 
 	want := *basicStep.DeepCopy()
-	want.Steps = append([]testworkflowsv1.Step{
+	want.Setup = []testworkflowsv1.Step{
 		ConvertIndependentStepToStep(tplStepsConfig.Spec.Setup[0]),
-		ConvertIndependentStepToStep(tplStepsConfig.Spec.Steps[0]),
 		ConvertIndependentStepToStep(tplSteps.Spec.Setup[0]),
+	}
+	want.Steps = append([]testworkflowsv1.Step{
+		ConvertIndependentStepToStep(tplStepsConfig.Spec.Steps[0]),
 		ConvertIndependentStepToStep(tplSteps.Spec.Steps[0]),
 	}, append(want.Steps, []testworkflowsv1.Step{
 		ConvertIndependentStepToStep(tplSteps.Spec.After[0]),
 		ConvertIndependentStepToStep(tplStepsConfig.Spec.After[0]),
 	}...)...)
-	want.Steps[0].Name = "setup-tpl-test-20"
-	want.Steps[1].Name = "steps-tpl-test-20"
-	want.Steps[5].Name = "after-tpl-test-20"
+	want.Setup[0].Name = "setup-tpl-test-20"
+	want.Steps[0].Name = "steps-tpl-test-20"
+	want.Steps[3].Name = "after-tpl-test-20"
 
 	assert.NoError(t, err)
 	assert.Equal(t, want, s)
@@ -478,8 +484,10 @@ func TestApplyTemplatesStepAdvancedIsolatedWrapped(t *testing.T) {
 		StepBase: testworkflowsv1.StepBase{
 			Container: tplStepsEnv.Spec.Container,
 		},
-		Steps: []testworkflowsv1.Step{
+		Setup: []testworkflowsv1.Step{
 			ConvertIndependentStepToStep(tplStepsEnv.Spec.Setup[0]),
+		},
+		Steps: []testworkflowsv1.Step{
 			ConvertIndependentStepToStep(tplStepsEnv.Spec.Steps[0]),
 			ConvertIndependentStepToStep(tplStepsEnv.Spec.After[0]),
 		},
@@ -495,8 +503,10 @@ func TestApplyTemplatesStepAdvancedSteps(t *testing.T) {
 	s, err := applyTemplatesToStep(s, templates)
 
 	want := *advancedStep.DeepCopy()
-	want.Steps = append([]testworkflowsv1.Step{
+	want.Setup = []testworkflowsv1.Step{
 		ConvertIndependentStepToStep(tplSteps.Spec.Setup[0]),
+	}
+	want.Steps = append([]testworkflowsv1.Step{
 		ConvertIndependentStepToStep(tplSteps.Spec.Steps[0]),
 	}, append(want.Steps, []testworkflowsv1.Step{
 		ConvertIndependentStepToStep(tplSteps.Spec.After[0]),
@@ -512,18 +522,20 @@ func TestApplyTemplatesStepAdvancedMultipleSteps(t *testing.T) {
 	s, err := applyTemplatesToStep(s, templates)
 
 	want := *advancedStep.DeepCopy()
-	want.Steps = append([]testworkflowsv1.Step{
+	want.Setup = []testworkflowsv1.Step{
 		ConvertIndependentStepToStep(tplStepsConfig.Spec.Setup[0]),
-		ConvertIndependentStepToStep(tplStepsConfig.Spec.Steps[0]),
 		ConvertIndependentStepToStep(tplSteps.Spec.Setup[0]),
+	}
+	want.Steps = append([]testworkflowsv1.Step{
+		ConvertIndependentStepToStep(tplStepsConfig.Spec.Steps[0]),
 		ConvertIndependentStepToStep(tplSteps.Spec.Steps[0]),
 	}, append(want.Steps, []testworkflowsv1.Step{
 		ConvertIndependentStepToStep(tplSteps.Spec.After[0]),
 		ConvertIndependentStepToStep(tplStepsConfig.Spec.After[0]),
 	}...)...)
-	want.Steps[0].Name = "setup-tpl-test-20"
-	want.Steps[1].Name = "steps-tpl-test-20"
-	want.Steps[6].Name = "after-tpl-test-20"
+	want.Setup[0].Name = "setup-tpl-test-20"
+	want.Steps[0].Name = "steps-tpl-test-20"
+	want.Steps[4].Name = "after-tpl-test-20"
 
 	assert.NoError(t, err)
 	assert.Equal(t, want, s)

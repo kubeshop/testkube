@@ -34,6 +34,8 @@ type TestWorkflowStep struct {
 	Container  *TestWorkflowContainerConfig `json:"container,omitempty"`
 	Execute    *TestWorkflowStepExecute     `json:"execute,omitempty"`
 	Artifacts  *TestWorkflowStepArtifacts   `json:"artifacts,omitempty"`
+	// nested setup steps to run
+	Setup []TestWorkflowStep `json:"setup,omitempty"`
 	// nested steps to run
 	Steps []TestWorkflowStep `json:"steps,omitempty"`
 }
