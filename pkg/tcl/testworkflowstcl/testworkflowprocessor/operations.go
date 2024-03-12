@@ -59,6 +59,18 @@ func ProcessRunCommand(_ InternalProcessor, layer Intermediate, container Contai
 	return stage, nil
 }
 
+func ProcessNestedSetupSteps(p InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+	group := NewGroupStage(layer.NextRef(), true)
+	for _, n := range step.Setup {
+		stage, err := p.Process(layer, container.CreateChild(), n)
+		if err != nil {
+			return nil, err
+		}
+		group.Add(stage)
+	}
+	return group, nil
+}
+
 func ProcessNestedSteps(p InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
 	group := NewGroupStage(layer.NextRef(), true)
 	for _, n := range step.Steps {
