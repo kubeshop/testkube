@@ -10,6 +10,7 @@ package testworkflows
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
@@ -35,6 +36,13 @@ func MapStringToBoxedString(v *string) *testkube.BoxedString {
 		return nil
 	}
 	return &testkube.BoxedString{Value: *v}
+}
+
+func MapStringTypeToBoxedString[T ~string](v *T) *testkube.BoxedString {
+	if v == nil {
+		return nil
+	}
+	return &testkube.BoxedString{Value: string(*v)}
 }
 
 func MapBoolToBoxedBoolean(v *bool) *testkube.BoxedBoolean {
@@ -63,6 +71,135 @@ func MapInt32ToBoxedInteger(v *int32) *testkube.BoxedInteger {
 		return nil
 	}
 	return &testkube.BoxedInteger{Value: *v}
+}
+
+func MapQuantityToBoxedString(v *resource.Quantity) *testkube.BoxedString {
+	if v == nil {
+		return nil
+	}
+	return &testkube.BoxedString{Value: v.String()}
+}
+
+func MapHostPathVolumeSourceKubeToAPI(v corev1.HostPathVolumeSource) testkube.HostPathVolumeSource {
+	return testkube.HostPathVolumeSource{
+		Path:  v.Path,
+		Type_: MapStringTypeToBoxedString[corev1.HostPathType](v.Type),
+	}
+}
+
+func MapEmptyDirVolumeSourceKubeToAPI(v corev1.EmptyDirVolumeSource) testkube.EmptyDirVolumeSource {
+	return testkube.EmptyDirVolumeSource{
+		Medium:    string(v.Medium),
+		SizeLimit: MapQuantityToBoxedString(v.SizeLimit),
+	}
+}
+
+func MapGCEPersistentDiskVolumeSourceKubeToAPI(v corev1.GCEPersistentDiskVolumeSource) testkube.GcePersistentDiskVolumeSource {
+	return testkube.GcePersistentDiskVolumeSource{
+		PdName:    v.PDName,
+		FsType:    v.FSType,
+		Partition: v.Partition,
+		ReadOnly:  v.ReadOnly,
+	}
+}
+
+func MapAWSElasticBlockStoreVolumeSourceKubeToAPI(v corev1.AWSElasticBlockStoreVolumeSource) testkube.AwsElasticBlockStoreVolumeSource {
+	return testkube.AwsElasticBlockStoreVolumeSource{
+		VolumeID:  v.VolumeID,
+		FsType:    v.FSType,
+		Partition: v.Partition,
+		ReadOnly:  v.ReadOnly,
+	}
+}
+
+func MapKeyToPathKubeToAPI(v corev1.KeyToPath) testkube.SecretVolumeSourceItems {
+	return testkube.SecretVolumeSourceItems{
+		Key:  v.Key,
+		Path: v.Path,
+		Mode: MapInt32ToBoxedInteger(v.Mode),
+	}
+}
+
+func MapSecretVolumeSourceKubeToAPI(v corev1.SecretVolumeSource) testkube.SecretVolumeSource {
+	return testkube.SecretVolumeSource{
+		SecretName:  v.SecretName,
+		Items:       common.MapSlice(v.Items, MapKeyToPathKubeToAPI),
+		DefaultMode: MapInt32ToBoxedInteger(v.DefaultMode),
+		Optional:    common.ResolvePtr(v.Optional, false),
+	}
+}
+
+func MapNFSVolumeSourceKubeToAPI(v corev1.NFSVolumeSource) testkube.NfsVolumeSource {
+	return testkube.NfsVolumeSource{
+		Server:   v.Server,
+		Path:     v.Path,
+		ReadOnly: v.ReadOnly,
+	}
+}
+
+func MapPersistentVolumeClaimVolumeSourceKubeToAPI(v corev1.PersistentVolumeClaimVolumeSource) testkube.PersistentVolumeClaimVolumeSource {
+	return testkube.PersistentVolumeClaimVolumeSource{
+		ClaimName: v.ClaimName,
+		ReadOnly:  v.ReadOnly,
+	}
+}
+
+func MapCephFSVolumeSourceKubeToAPI(v corev1.CephFSVolumeSource) testkube.CephFsVolumeSource {
+	return testkube.CephFsVolumeSource{
+		Monitors:   v.Monitors,
+		Path:       v.Path,
+		User:       v.User,
+		SecretFile: v.SecretFile,
+		SecretRef:  common.MapPtr(v.SecretRef, MapLocalObjectReferenceKubeToAPI),
+		ReadOnly:   v.ReadOnly,
+	}
+}
+
+func MapAzureFileVolumeSourceKubeToAPI(v corev1.AzureFileVolumeSource) testkube.AzureFileVolumeSource {
+	return testkube.AzureFileVolumeSource{
+		SecretName: v.SecretName,
+		ShareName:  v.ShareName,
+		ReadOnly:   v.ReadOnly,
+	}
+}
+
+func MapConfigMapVolumeSourceKubeToAPI(v corev1.ConfigMapVolumeSource) testkube.ConfigMapVolumeSource {
+	return testkube.ConfigMapVolumeSource{
+		Name:        v.Name,
+		Items:       common.MapSlice(v.Items, MapKeyToPathKubeToAPI),
+		DefaultMode: MapInt32ToBoxedInteger(v.DefaultMode),
+		Optional:    common.ResolvePtr(v.Optional, false),
+	}
+}
+
+func MapAzureDiskVolumeSourceKubeToAPI(v corev1.AzureDiskVolumeSource) testkube.AzureDiskVolumeSource {
+	return testkube.AzureDiskVolumeSource{
+		DiskName:    v.DiskName,
+		DiskURI:     v.DataDiskURI,
+		CachingMode: MapStringTypeToBoxedString[corev1.AzureDataDiskCachingMode](v.CachingMode),
+		FsType:      MapStringToBoxedString(v.FSType),
+		ReadOnly:    common.ResolvePtr(v.ReadOnly, false),
+		Kind:        MapStringTypeToBoxedString[corev1.AzureDataDiskKind](v.Kind),
+	}
+}
+
+func MapVolumeKubeToAPI(v corev1.Volume) testkube.Volume {
+	// TODO: Add rest of VolumeSource types in future,
+	//       so they will be recognized by JSON API and persisted with Execution.
+	return testkube.Volume{
+		Name:                  v.Name,
+		HostPath:              common.MapPtr(v.HostPath, MapHostPathVolumeSourceKubeToAPI),
+		EmptyDir:              common.MapPtr(v.EmptyDir, MapEmptyDirVolumeSourceKubeToAPI),
+		GcePersistentDisk:     common.MapPtr(v.GCEPersistentDisk, MapGCEPersistentDiskVolumeSourceKubeToAPI),
+		AwsElasticBlockStore:  common.MapPtr(v.AWSElasticBlockStore, MapAWSElasticBlockStoreVolumeSourceKubeToAPI),
+		Secret:                common.MapPtr(v.Secret, MapSecretVolumeSourceKubeToAPI),
+		Nfs:                   common.MapPtr(v.NFS, MapNFSVolumeSourceKubeToAPI),
+		PersistentVolumeClaim: common.MapPtr(v.PersistentVolumeClaim, MapPersistentVolumeClaimVolumeSourceKubeToAPI),
+		Cephfs:                common.MapPtr(v.CephFS, MapCephFSVolumeSourceKubeToAPI),
+		AzureFile:             common.MapPtr(v.AzureFile, MapAzureFileVolumeSourceKubeToAPI),
+		ConfigMap:             common.MapPtr(v.ConfigMap, MapConfigMapVolumeSourceKubeToAPI),
+		AzureDisk:             common.MapPtr(v.AzureDisk, MapAzureDiskVolumeSourceKubeToAPI),
+	}
 }
 
 func MapEnvVarKubeToAPI(v corev1.EnvVar) testkube.EnvVar {
@@ -292,6 +429,18 @@ func MapPodConfigKubeToAPI(v testworkflowsv1.PodConfig) testkube.TestWorkflowPod
 		NodeSelector:       v.NodeSelector,
 		Labels:             v.Labels,
 		Annotations:        v.Annotations,
+		Volumes:            common.MapSlice(v.Volumes, MapVolumeKubeToAPI),
+	}
+}
+
+func MapVolumeMountKubeToAPI(v corev1.VolumeMount) testkube.VolumeMount {
+	return testkube.VolumeMount{
+		Name:             v.Name,
+		ReadOnly:         v.ReadOnly,
+		MountPath:        v.MountPath,
+		SubPath:          v.SubPath,
+		MountPropagation: MapStringTypeToBoxedString[corev1.MountPropagationMode](v.MountPropagation),
+		SubPathExpr:      v.SubPathExpr,
 	}
 }
 
@@ -306,6 +455,7 @@ func MapContainerConfigKubeToAPI(v testworkflowsv1.ContainerConfig) testkube.Tes
 		Args:            MapStringSliceToBoxedStringList(v.Args),
 		Resources:       common.MapPtr(v.Resources, MapResourcesKubeToAPI),
 		SecurityContext: MapSecurityContextKubeToAPI(v.SecurityContext),
+		VolumeMounts:    common.MapSlice(v.VolumeMounts, MapVolumeMountKubeToAPI),
 	}
 }
 
@@ -351,14 +501,14 @@ func MapStepArtifactsKubeToAPI(v testworkflowsv1.StepArtifacts) testkube.TestWor
 func MapRetryPolicyKubeToAPI(v testworkflowsv1.RetryPolicy) testkube.TestWorkflowRetryPolicy {
 	return testkube.TestWorkflowRetryPolicy{
 		Count: v.Count,
-		Until: string(v.Until),
+		Until: v.Until,
 	}
 }
 
 func MapStepKubeToAPI(v testworkflowsv1.Step) testkube.TestWorkflowStep {
 	return testkube.TestWorkflowStep{
 		Name:       v.Name,
-		Condition:  string(v.Condition),
+		Condition:  v.Condition,
 		Negative:   v.Negative,
 		Optional:   v.Optional,
 		Use:        common.MapSlice(v.Use, MapTemplateRefKubeToAPI),
@@ -373,6 +523,7 @@ func MapStepKubeToAPI(v testworkflowsv1.Step) testkube.TestWorkflowStep {
 		Container:  common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
 		Execute:    common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
 		Artifacts:  common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
+		Setup:      common.MapSlice(v.Setup, MapStepKubeToAPI),
 		Steps:      common.MapSlice(v.Steps, MapStepKubeToAPI),
 	}
 }
@@ -380,7 +531,7 @@ func MapStepKubeToAPI(v testworkflowsv1.Step) testkube.TestWorkflowStep {
 func MapIndependentStepKubeToAPI(v testworkflowsv1.IndependentStep) testkube.TestWorkflowIndependentStep {
 	return testkube.TestWorkflowIndependentStep{
 		Name:       v.Name,
-		Condition:  string(v.Condition),
+		Condition:  v.Condition,
 		Negative:   v.Negative,
 		Optional:   v.Optional,
 		Retry:      common.MapPtr(v.Retry, MapRetryPolicyKubeToAPI),
@@ -393,6 +544,7 @@ func MapIndependentStepKubeToAPI(v testworkflowsv1.IndependentStep) testkube.Tes
 		Container:  common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
 		Execute:    common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
 		Artifacts:  common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
+		Setup:      common.MapSlice(v.Setup, MapIndependentStepKubeToAPI),
 		Steps:      common.MapSlice(v.Steps, MapIndependentStepKubeToAPI),
 	}
 }
