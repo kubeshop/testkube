@@ -6315,6 +6315,9 @@ components:
             - append
             - override
             - replace
+        sync:
+          type: boolean
+          description: whether to start execution sync or async
         httpProxy:
           type: string
           description: http proxy for executor containers
