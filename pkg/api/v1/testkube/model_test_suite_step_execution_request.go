@@ -20,8 +20,6 @@ type TestSuiteStepExecutionRequest struct {
 	Args []string `json:"args,omitempty"`
 	// usage mode for arguments
 	ArgsMode string `json:"args_mode,omitempty"`
-	// whether to start execution sync or async
-	Sync bool `json:"sync,omitempty"`
 	// http proxy for executor containers
 	HttpProxy string `json:"httpProxy,omitempty"`
 	// https proxy for executor containers

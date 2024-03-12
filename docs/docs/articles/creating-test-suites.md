@@ -137,7 +137,7 @@ For details on which parameters are available in the CRDs, please consult the ta
 | command                            | ✓    |            | ✓         |
 | image                              | ✓    |            |           |
 | imagePullSecrets                   | ✓    |            |           |
-| sync                               | ✓    | ✓          | ✓         |
+| sync                               | ✓    | ✓          |           |
 | httpProxy                          | ✓    | ✓          | ✓         |
 | httpsProxy                         | ✓    | ✓          | ✓         |
 | negativeTest                       | ✓    |            |           |
