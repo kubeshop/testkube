@@ -304,6 +304,7 @@ func (s *Service) checkExecutionPodStatus(ctx context.Context, executionID strin
 	if len(pods) > 0 && pods[0].Labels[testworkflowprocessor.ExecutionIdLabelName] != "" {
 		return nil
 	}
+
 	execution, err := s.resultRepository.Get(ctx, executionID)
 	if err != nil {
 		s.logger.Errorf("get execution returned an error %v while looking for execution id: %s", err, executionID)
