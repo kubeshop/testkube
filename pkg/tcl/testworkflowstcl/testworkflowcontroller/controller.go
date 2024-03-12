@@ -207,11 +207,15 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 		w.SendValue(Notification{Result: result.Clone()})
 
 		// Watch the initialization container logs
+		lastTs := result.Initialization.StartedAt
 		pod := (<-c.pod.Any(ctx)).Value
 		for v := range WatchContainerLogs(ctx, c.clientSet, c.podEvents, c.namespace, pod.Name, "tktw-init").Stream(ctx).Channel() {
 			if v.Error != nil {
 				w.SendError(v.Error)
 				continue
+			}
+			if v.Value.Time.After(lastTs) {
+				lastTs = v.Value.Time
 			}
 			// TODO: Calibrate clock with v.Value.Hint or just first/last timestamp here
 			w.SendValue(Notification{
@@ -227,6 +231,9 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 			return
 		}
 		result.Initialization.FinishedAt = status.FinishedAt
+		if lastTs.After(result.Initialization.FinishedAt) {
+			result.Initialization.FinishedAt = lastTs
+		}
 		result.Initialization.Status = common.Ptr(status.Status)
 		if status.Status != testkube.PASSED_TestWorkflowStepStatus {
 			result.Status = common.Ptr(testkube.FAILED_TestWorkflowStatus)
@@ -240,7 +247,7 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 		}
 
 		// Watch each of the containers
-		lastTs := result.Initialization.FinishedAt
+		lastTs = result.Initialization.FinishedAt
 		for _, container := range append(pod.Spec.InitContainers, pod.Spec.Containers...) {
 			// Ignore not-standard TestWorkflow containers
 			if _, ok := result.Steps[container.Name]; !ok {
@@ -292,7 +299,6 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 			w.SendValue(Notification{Result: result.Clone()})
 
 			// Watch for the container logs, outputs and statuses
-			// TODO: Calibrate clock with Hints
 			for v := range WatchContainerLogs(ctx, c.clientSet, c.podEvents, c.namespace, pod.Name, container.Name).Stream(ctx).Channel() {
 				if v.Error != nil {
 					w.SendError(v.Error)
@@ -337,15 +343,19 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 				w.SendError(err)
 				break
 			}
+			finishedAt := status.FinishedAt.UTC()
+			if !finishedAt.IsZero() && lastTs.After(finishedAt) {
+				finishedAt = lastTs.UTC()
+			}
 			stepResult = result.UpdateStepResult(sig, container.Name, testkube.TestWorkflowStepResult{
-				FinishedAt: status.FinishedAt.UTC(),
+				FinishedAt: finishedAt,
 				ExitCode:   float64(status.ExitCode),
 				Status:     common.Ptr(status.Status),
 			})
 			w.SendValue(Notification{Result: result.Clone()})
 
 			// Update the last timestamp
-			lastTs = status.FinishedAt
+			lastTs = finishedAt
 		}
 
 		// Read the pod finish time

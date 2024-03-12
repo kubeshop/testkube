@@ -161,6 +161,9 @@ func Finish() {
 		_ = Step.Cmd.Process.Kill()
 	}
 
+	// Emit end hint to allow exporting the timestamp
+	PrintHint(Step.Ref, "end")
+
 	// The init process needs to finish with zero exit code,
 	// to continue with the next container.
 	os.Exit(0)

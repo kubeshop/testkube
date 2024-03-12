@@ -112,6 +112,77 @@ func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature) {
 		return
 	}
 
+	// Calibrate the execution time initially
+	r.StartedAt = adjustMinimumTime(r.StartedAt, r.QueuedAt)
+	r.FinishedAt = adjustMinimumTime(r.FinishedAt, r.StartedAt)
+	initialDate := r.StartedAt
+	if initialDate.IsZero() {
+		initialDate = r.QueuedAt
+	}
+
+	// Calibrate the initialization step
+	if r.Initialization != nil {
+		r.Initialization.QueuedAt = adjustMinimumTime(r.Initialization.QueuedAt, initialDate)
+		r.Initialization.StartedAt = adjustMinimumTime(r.Initialization.StartedAt, r.Initialization.QueuedAt)
+		r.Initialization.FinishedAt = adjustMinimumTime(r.Initialization.FinishedAt, r.Initialization.StartedAt)
+		initialDate = getLastDate(*r.Initialization, initialDate)
+	}
+
+	// Prepare sequential list of container steps
+	type step struct {
+		ref    string
+		result TestWorkflowStepResult
+	}
+	seq := make([]step, 0)
+	walkSteps(sig, func(s TestWorkflowSignature) {
+		if len(s.Children) > 0 {
+			return
+		}
+		seq = append(seq, step{ref: s.Ref, result: r.Steps[s.Ref]})
+	})
+
+	// Calibrate the clock for container steps
+	for i := 0; i < len(seq); i++ {
+		if i != 0 {
+			initialDate = getLastDate(seq[i-1].result, initialDate)
+		}
+		seq[i].result.QueuedAt = adjustMinimumTime(seq[i].result.QueuedAt, initialDate)
+		seq[i].result.StartedAt = adjustMinimumTime(seq[i].result.StartedAt, seq[i].result.QueuedAt)
+		seq[i].result.FinishedAt = adjustMinimumTime(seq[i].result.FinishedAt, seq[i].result.StartedAt)
+	}
+	for _, s := range seq {
+		r.Steps[s.ref] = s.result
+	}
+
+	// Calibrate the clock for group steps
+	walkSteps(sig, func(s TestWorkflowSignature) {
+		if len(s.Children) == 0 {
+			return
+		}
+		first := getFirstContainer(s.Children)
+		last := getLastContainer(s.Children)
+		if first == nil || last == nil {
+			return
+		}
+		res := r.Steps[s.Ref]
+		res.QueuedAt = r.Steps[first.Ref].QueuedAt
+		res.StartedAt = r.Steps[first.Ref].StartedAt
+		res.FinishedAt = r.Steps[last.Ref].FinishedAt
+		r.Steps[s.Ref] = res
+	})
+
+	// Calibrate execution clock
+	if r.Initialization != nil {
+		if r.Initialization.QueuedAt.Before(r.QueuedAt) {
+			r.QueuedAt = r.Initialization.QueuedAt
+		}
+		if r.Initialization.StartedAt.Before(r.StartedAt) {
+			r.StartedAt = r.Initialization.StartedAt
+		}
+	}
+	last := r.Steps[sig[len(sig)-1].Ref]
+	r.FinishedAt = adjustMinimumTime(r.FinishedAt, last.FinishedAt)
+
 	// Recompute the TestWorkflow status
 	totalSig := TestWorkflowSignature{Children: sig}
 	result, _ := predictTestWorkflowStepStatus(TestWorkflowStepResult{}, totalSig, r)
@@ -147,6 +218,64 @@ func (r *TestWorkflowResult) RecomputeStep(sig TestWorkflowSignature) {
 
 	// Compute time
 	v = recomputeTestWorkflowStepResult(v, sig, r)
+}
+
+func walkSteps(sig []TestWorkflowSignature, fn func(signature TestWorkflowSignature)) {
+	for _, s := range sig {
+		fn(s)
+		walkSteps(s.Children, fn)
+	}
+}
+
+func getFirstContainer(sig []TestWorkflowSignature) *TestWorkflowSignature {
+	for i := 0; i < len(sig); i++ {
+		s := sig[i]
+		if len(s.Children) == 0 {
+			return &s
+		}
+		c := getFirstContainer(s.Children)
+		if c != nil {
+			return c
+		}
+	}
+	return nil
+}
+
+func getLastContainer(sig []TestWorkflowSignature) *TestWorkflowSignature {
+	for i := len(sig) - 1; i >= 0; i-- {
+		s := sig[i]
+		if len(s.Children) == 0 {
+			return &s
+		}
+		c := getLastContainer(s.Children)
+		if c != nil {
+			return c
+		}
+	}
+	return nil
+}
+
+func getLastDate(r TestWorkflowStepResult, def time.Time) time.Time {
+	if !r.FinishedAt.IsZero() {
+		return r.FinishedAt
+	}
+	if !r.StartedAt.IsZero() {
+		return r.StartedAt
+	}
+	if !r.QueuedAt.IsZero() {
+		return r.QueuedAt
+	}
+	return def
+}
+
+func adjustMinimumTime(dst, min time.Time) time.Time {
+	if dst.IsZero() {
+		return dst
+	}
+	if min.After(dst) {
+		return min
+	}
+	return dst
 }
 
 func predictTestWorkflowStepStatus(v TestWorkflowStepResult, sig TestWorkflowSignature, r *TestWorkflowResult) (TestWorkflowStepStatus, bool) {
