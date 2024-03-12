@@ -93,7 +93,7 @@ func TestProcessBasic(t *testing.T) {
 							Image:           defaultInitImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{"/bin/sh", "-c"},
-							Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+							Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
 							VolumeMounts:    volumeMounts,
 						},
 					},
@@ -168,7 +168,7 @@ func TestProcessBasicEnvReference(t *testing.T) {
 				Image:           defaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
 				VolumeMounts:    volumeMounts,
 			},
 		},
@@ -232,7 +232,7 @@ func TestProcessMultipleSteps(t *testing.T) {
 				Image:           defaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
 				VolumeMounts:    volumeMounts,
 			},
 			{
@@ -314,7 +314,7 @@ func TestProcessNestedSteps(t *testing.T) {
 				Image:           defaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
 				VolumeMounts:    volumeMounts,
 			},
 			{
@@ -438,7 +438,7 @@ func TestProcessOptionalSteps(t *testing.T) {
 				Image:           defaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
 				VolumeMounts:    volumeMounts,
 			},
 			{
@@ -560,7 +560,7 @@ func TestProcessNegativeSteps(t *testing.T) {
 				Image:           defaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
 				VolumeMounts:    volumeMounts,
 			},
 			{
@@ -679,7 +679,7 @@ func TestProcessNegativeContainerStep(t *testing.T) {
 				Image:           defaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
 				VolumeMounts:    volumeMounts,
 			},
 			{
@@ -755,7 +755,7 @@ func TestProcessOptionalContainerStep(t *testing.T) {
 				Image:           defaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
 				VolumeMounts:    volumeMounts,
 			},
 			{
@@ -840,7 +840,7 @@ func TestProcessLocalContent(t *testing.T) {
 				Image:           defaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
 				VolumeMounts:    volumeMounts,
 			},
 			{
@@ -932,7 +932,7 @@ func TestProcessGlobalContent(t *testing.T) {
 				Image:           defaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
 				VolumeMounts:    volumeMounts,
 			},
 			{
