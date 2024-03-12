@@ -22,4 +22,6 @@ type TestWorkflowContainerConfig struct {
 	Args            *BoxedStringList       `json:"args,omitempty"`
 	Resources       *TestWorkflowResources `json:"resources,omitempty"`
 	SecurityContext *SecurityContext       `json:"securityContext,omitempty"`
+	// volumes to mount to the container
+	VolumeMounts []VolumeMount `json:"volumeMounts,omitempty"`
 }

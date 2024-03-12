@@ -58,7 +58,6 @@ type intermediate struct {
 	Job testworkflowsv1.JobConfig `expr:"include"`
 
 	// Actual Kubernetes resources to use
-	Vols []corev1.Volume    `expr:"force"`
 	Secs []corev1.Secret    `expr:"force"`
 	Cfgs []corev1.ConfigMap `expr:"force"`
 
@@ -95,7 +94,7 @@ func (s *intermediate) Secrets() []corev1.Secret {
 }
 
 func (s *intermediate) Volumes() []corev1.Volume {
-	return s.Vols
+	return s.Pod.Volumes
 }
 
 func (s *intermediate) AppendJobConfig(cfg *testworkflowsv1.JobConfig) Intermediate {
@@ -109,7 +108,7 @@ func (s *intermediate) AppendPodConfig(cfg *testworkflowsv1.PodConfig) Intermedi
 }
 
 func (s *intermediate) AddVolume(volume corev1.Volume) Intermediate {
-	s.Vols = append(s.Vols, volume)
+	s.Pod.Volumes = append(s.Pod.Volumes, volume)
 	return s
 }
 
@@ -147,7 +146,7 @@ func (s *intermediate) getInternalConfigMapStorage(size int) *corev1.ConfigMap {
 			BinaryData: map[string][]byte{},
 		})
 		s.currentConfigMapStorage = &s.Cfgs[len(s.Cfgs)-1]
-		s.Vols = append(s.Vols, corev1.Volume{
+		s.Pod.Volumes = append(s.Pod.Volumes, corev1.Volume{
 			Name: s.currentConfigMapStorage.Name + "-vol",
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{

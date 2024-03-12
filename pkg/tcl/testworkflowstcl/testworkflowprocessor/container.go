@@ -26,9 +26,8 @@ import (
 )
 
 type container struct {
-	parent   *container
-	Cr       testworkflowsv1.ContainerConfig `expr:"include"`
-	CrMounts []corev1.VolumeMount            `expr:"force"`
+	parent *container
+	Cr     testworkflowsv1.ContainerConfig `expr:"include"`
 }
 
 type ContainerComposition interface {
@@ -132,9 +131,9 @@ func (c *container) EnvFrom() []corev1.EnvFromSource {
 
 func (c *container) VolumeMounts() []corev1.VolumeMount {
 	if c.parent == nil {
-		return c.CrMounts
+		return c.Cr.VolumeMounts
 	}
-	return sum(c.parent.VolumeMounts(), c.CrMounts)
+	return sum(c.parent.VolumeMounts(), c.Cr.VolumeMounts)
 }
 
 func (c *container) ImagePullPolicy() corev1.PullPolicy {
@@ -237,7 +236,7 @@ func (c *container) AppendEnvFrom(envFrom ...corev1.EnvFromSource) Container {
 }
 
 func (c *container) AppendVolumeMounts(volumeMounts ...corev1.VolumeMount) Container {
-	c.CrMounts = append(c.CrMounts, volumeMounts...)
+	c.Cr.VolumeMounts = append(c.Cr.VolumeMounts, volumeMounts...)
 	return c
 }
 
@@ -290,6 +289,10 @@ func (c *container) ToContainerConfig() testworkflowsv1.ContainerConfig {
 	for i := range envFrom {
 		envFrom[i] = *envFrom[i].DeepCopy()
 	}
+	volumeMounts := slices.Clone(c.VolumeMounts())
+	for i := range volumeMounts {
+		volumeMounts[i] = *volumeMounts[i].DeepCopy()
+	}
 	return testworkflowsv1.ContainerConfig{
 		WorkingDir:      common.Ptr(c.WorkingDir()),
 		Image:           c.Image(),
@@ -303,20 +306,12 @@ func (c *container) ToContainerConfig() testworkflowsv1.ContainerConfig {
 			Limits:   maps.Clone(c.Resources().Limits),
 		},
 		SecurityContext: c.SecurityContext().DeepCopy(),
+		VolumeMounts:    volumeMounts,
 	}
-}
-
-func (c *container) volumeMountsCopy() []corev1.VolumeMount {
-	volumeMounts := make([]corev1.VolumeMount, len(c.VolumeMounts()))
-	for i, v := range c.VolumeMounts() {
-		volumeMounts[i] = *v.DeepCopy()
-	}
-	return volumeMounts
 }
 
 func (c *container) Detach() Container {
 	c.Cr = c.ToContainerConfig()
-	c.CrMounts = c.volumeMountsCopy()
 	c.parent = nil
 	return c
 }
@@ -365,7 +360,7 @@ func (c *container) ToKubernetesTemplate() (corev1.Container, error) {
 		Args:            args,
 		Env:             cr.Env,
 		EnvFrom:         cr.EnvFrom,
-		VolumeMounts:    c.volumeMountsCopy(),
+		VolumeMounts:    cr.VolumeMounts,
 		Resources:       resources,
 		WorkingDir:      workingDir,
 		SecurityContext: cr.SecurityContext,

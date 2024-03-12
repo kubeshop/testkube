@@ -20,4 +20,6 @@ type TestWorkflowPodConfig struct {
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 	// label selector for node that the pod should land on
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	// volumes to append to the pod
+	Volumes []Volume `json:"volumes,omitempty"`
 }

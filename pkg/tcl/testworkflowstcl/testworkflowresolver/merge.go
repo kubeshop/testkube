@@ -36,6 +36,7 @@ func MergePodConfig(dst, include *testworkflowsv1.PodConfig) *testworkflowsv1.Po
 		dst.NodeSelector = map[string]string{}
 	}
 	maps.Copy(dst.NodeSelector, include.NodeSelector)
+	dst.Volumes = append(dst.Volumes, include.Volumes...)
 	dst.ImagePullSecrets = append(dst.ImagePullSecrets, include.ImagePullSecrets...)
 	if include.ServiceAccountName != "" {
 		dst.ServiceAccountName = include.ServiceAccountName
@@ -120,6 +121,7 @@ func MergeContainerConfig(dst, include *testworkflowsv1.ContainerConfig) *testwo
 	}
 	dst.Env = append(dst.Env, include.Env...)
 	dst.EnvFrom = append(dst.EnvFrom, include.EnvFrom...)
+	dst.VolumeMounts = append(dst.VolumeMounts, include.VolumeMounts...)
 	if include.Image != "" {
 		dst.Image = include.Image
 		dst.Command = include.Command
@@ -137,6 +139,7 @@ func MergeContainerConfig(dst, include *testworkflowsv1.ContainerConfig) *testwo
 
 func ConvertIndependentStepToStep(step testworkflowsv1.IndependentStep) (res testworkflowsv1.Step) {
 	res.StepBase = step.StepBase
+	res.Setup = common.MapSlice(step.Setup, ConvertIndependentStepToStep)
 	res.Steps = common.MapSlice(step.Steps, ConvertIndependentStepToStep)
 	return res
 }
