@@ -15,5 +15,5 @@ spec:
     - test: k6-loadtest
       executionRequest:
         args:
-          - -vu
+          - "-vu"
           - "2"
