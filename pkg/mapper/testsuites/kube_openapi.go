@@ -391,6 +391,7 @@ func MapTestStepExecutionRequestCRDToAPI(request *testsuitesv3.TestSuiteStepExec
 		Command:                  request.Command,
 		Args:                     request.Args,
 		ArgsMode:                 argsMode,
+		Sync:                     request.Sync,
 		HttpProxy:                request.HttpProxy,
 		HttpsProxy:               request.HttpsProxy,
 		NegativeTest:             request.NegativeTest,
