@@ -468,7 +468,6 @@ func MapTestStepExecutionRequestCRD(request *testkube.TestSuiteStepExecutionRequ
 		Args:                     request.Args,
 		ArgsMode:                 testsuitesv3.ArgsModeType(request.ArgsMode),
 		Command:                  request.Command,
-		Sync:                     request.Sync,
 		HttpProxy:                request.HttpProxy,
 		HttpsProxy:               request.HttpsProxy,
 		NegativeTest:             request.NegativeTest,
