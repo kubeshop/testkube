@@ -148,6 +148,26 @@ func (e *executor) Control(ctx context.Context, execution testkube.TestWorkflowE
 			}
 		}
 
+		// Try to gracefully handle abort
+		if execution.Result.FinishedAt.IsZero() {
+			ctrl, err = testworkflowcontroller.New(ctx, e.clientSet, e.namespace, execution.Id, execution.ScheduledAt)
+			if err == nil {
+				for v := range ctrl.Watch(ctx).Stream(ctx).Channel() {
+					if v.Error != nil || v.Value.Output == nil {
+						continue
+					}
+
+					execution.Result = v.Value.Result
+					if execution.Result.IsFinished() {
+						execution.StatusAt = execution.Result.FinishedAt
+					}
+					_ = e.repository.UpdateResult(ctx, execution.Id, execution.Result)
+				}
+			} else {
+				e.handleFatalError(execution, err)
+			}
+		}
+
 		err := writer.Close()
 		if err != nil {
 			log.DefaultLogger.Errorw("failed to close TestWorkflow log output stream", "id", execution.Id, "error", err)
