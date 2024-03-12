@@ -650,7 +650,6 @@ func MergeStepRequest(stepRequest *testkube.TestSuiteStepExecutionRequest, execu
 	if stepRequest.Command != nil {
 		executionRequest.Command = stepRequest.Command
 	}
-	executionRequest.Sync = stepRequest.Sync
 	executionRequest.HttpProxy = setStringField(executionRequest.HttpProxy, stepRequest.HttpProxy)
 	executionRequest.HttpsProxy = setStringField(executionRequest.HttpsProxy, stepRequest.HttpsProxy)
 	executionRequest.CronJobTemplate = setStringField(executionRequest.CronJobTemplate, stepRequest.CronJobTemplate)
