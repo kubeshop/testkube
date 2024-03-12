@@ -9,6 +9,7 @@
 package artifacts
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -57,13 +58,14 @@ func (d *cloudUploader) Start() (err error) {
 	return err
 }
 
-func (d *cloudUploader) getSignedURL(name string) (string, error) {
+func (d *cloudUploader) getSignedURL(name, contentType string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	response, err := d.client.Execute(ctx, artifact.CmdScraperPutObjectSignedURL, &artifact.PutObjectSignedURLRequest{
 		Object:           name,
 		ExecutionID:      env.ExecutionId(),
 		TestWorkflowName: env.WorkflowName(),
+		ContentType:      contentType,
 	})
 	if err != nil {
 		return "", err
@@ -73,6 +75,21 @@ func (d *cloudUploader) getSignedURL(name string) (string, error) {
 		return "", err
 	}
 	return commandResponse.URL, nil
+}
+
+func (d *cloudUploader) getContentType(path string, size int64) string {
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPut, "/", &bytes.Buffer{})
+	if err != nil {
+		return ""
+	}
+	for _, r := range d.reqEnhancers {
+		r(req, path, size)
+	}
+	contentType := req.Header.Get("Content-Type")
+	if contentType == "" {
+		return "application/octet-stream"
+	}
+	return contentType
 }
 
 func (d *cloudUploader) putObject(url string, path string, file io.Reader, size int64) error {
@@ -104,7 +121,7 @@ func (d *cloudUploader) putObject(url string, path string, file io.Reader, size 
 }
 
 func (d *cloudUploader) upload(path string, file io.Reader, size int64) {
-	url, err := d.getSignedURL(path)
+	url, err := d.getSignedURL(path, d.getContentType(path, size))
 	if err != nil {
 		d.error.Store(true)
 		ui.Errf("%s: failed: get signed URL: %s", path, err.Error())
