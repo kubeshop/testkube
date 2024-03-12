@@ -150,7 +150,7 @@ func (e *executor) Control(ctx context.Context, execution testkube.TestWorkflowE
 
 		err := writer.Close()
 		if err != nil {
-			log.DefaultLogger.Error(errors.Wrap(err, "saving log output - closing stream"))
+			log.DefaultLogger.Errorw("failed to close TestWorkflow log output stream", "id", execution.Id, "error", err)
 		}
 
 		// TODO: Consider AppendOutput ($push) instead
@@ -169,9 +169,13 @@ func (e *executor) Control(ctx context.Context, execution testkube.TestWorkflowE
 	// Stream the log into Minio
 	err = e.output.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, reader)
 	if err != nil {
-		log.DefaultLogger.Error(errors.Wrap(err, "saving log output"))
+		log.DefaultLogger.Errorw("failed to save TestWorkflow log output", "id", execution.Id, "error", err)
 	}
 
 	wg.Wait()
-	testworkflowcontroller.Cleanup(ctx, e.clientSet, e.namespace, execution.Id)
+
+	err = testworkflowcontroller.Cleanup(ctx, e.clientSet, e.namespace, execution.Id)
+	if err != nil {
+		log.DefaultLogger.Errorw("failed to cleanup TestWorkflow resources", "id", execution.Id, "error", err)
+	}
 }
