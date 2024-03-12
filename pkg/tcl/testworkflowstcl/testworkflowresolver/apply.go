@@ -89,7 +89,7 @@ func InjectStepTemplate(step *testworkflowsv1.Step, template testworkflowsv1.Tes
 
 	// Decouple sub-steps from the template
 	setup := common.MapSlice(template.Spec.Setup, ConvertIndependentStepToStep)
-	steps := common.MapSlice(append(template.Spec.Steps, template.Spec.Steps...), ConvertIndependentStepToStep)
+	steps := common.MapSlice(template.Spec.Steps, ConvertIndependentStepToStep)
 	after := common.MapSlice(template.Spec.After, ConvertIndependentStepToStep)
 
 	step.Setup = append(setup, step.Setup...)
@@ -124,9 +124,9 @@ func applyTemplatesToStep(step testworkflowsv1.Step, templates map[string]testwo
 			return step, errors.Wrap(err, ".template: injecting template")
 		}
 
-		if len(isolate.Steps) > 0 {
+		if len(isolate.Setup) > 0 || len(isolate.Steps) > 0 {
 			if isolate.Container == nil && isolate.Content == nil && isolate.WorkingDir == nil {
-				step.Steps = append(isolate.Steps, step.Steps...)
+				step.Steps = append(append(isolate.Setup, isolate.Steps...), step.Steps...)
 			} else {
 				step.Steps = append([]testworkflowsv1.Step{isolate}, step.Steps...)
 			}
@@ -137,6 +137,12 @@ func applyTemplatesToStep(step testworkflowsv1.Step, templates map[string]testwo
 
 	// Resolve templates in the sub-steps
 	var err error
+	for i := range step.Setup {
+		step.Setup[i], err = applyTemplatesToStep(step.Setup[i], templates)
+		if err != nil {
+			return step, errors.Wrap(err, fmt.Sprintf(".steps[%d]", i))
+		}
+	}
 	for i := range step.Steps {
 		step.Steps[i], err = applyTemplatesToStep(step.Steps[i], templates)
 		if err != nil {
@@ -151,12 +157,15 @@ func FlattenStepList(steps []testworkflowsv1.Step) []testworkflowsv1.Step {
 	changed := false
 	result := make([]testworkflowsv1.Step, 0, len(steps))
 	for _, step := range steps {
+		setup := step.Setup
 		sub := step.Steps
+		step.Setup = nil
 		step.Steps = nil
 		if reflect.ValueOf(step).IsZero() {
 			changed = true
-			result = append(result, sub...)
+			result = append(result, append(setup, sub...)...)
 		} else {
+			step.Setup = setup
 			step.Steps = sub
 			result = append(result, step)
 		}
