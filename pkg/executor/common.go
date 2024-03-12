@@ -128,6 +128,18 @@ var RunnerEnvVars = []corev1.EnvVar{
 		Value: getOr("TESTKUBE_PRO_CONNECTION_TIMEOUT", "10"),
 	},
 	{
+		Name:  "RUNNER_PRO_API_CERT_FILE",
+		Value: os.Getenv("TESTKUBE_PRO_CERT_FILE"),
+	},
+	{
+		Name:  "RUNNER_PRO_API_KEY_FILE",
+		Value: os.Getenv("TESTKUBE_PRO_KEY_FILE"),
+	},
+	{
+		Name:  "RUNNER_PRO_API_CA_FILE",
+		Value: os.Getenv("TESTKUBE_PRO_CA_FILE"),
+	},
+	{
 		Name:  "RUNNER_DASHBOARD_URI",
 		Value: os.Getenv("TESTKUBE_DASHBOARD_URI"),
 	},

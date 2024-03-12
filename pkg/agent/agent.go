@@ -3,8 +3,10 @@ package agent
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"math"
+	"os"
 	"time"
 
 	"google.golang.org/grpc/keepalive"
@@ -42,13 +44,32 @@ const (
 // buffer up to five messages per worker
 const bufferSizePerWorker = 5
 
-func NewGRPCConnection(ctx context.Context, isInsecure bool, skipVerify bool, server string, logger *zap.SugaredLogger) (*grpc.ClientConn, error) {
+func NewGRPCConnection(
+	ctx context.Context,
+	isInsecure bool,
+	skipVerify bool,
+	server string,
+	certFile, keyFile, caFile string,
+	logger *zap.SugaredLogger,
+) (*grpc.ClientConn, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	var tlsConfig *tls.Config
+	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
 	if skipVerify {
 		tlsConfig = &tls.Config{InsecureSkipVerify: true}
+	} else {
+		if certFile != "" && keyFile != "" {
+			if err := clientCert(tlsConfig, certFile, keyFile); err != nil {
+				return nil, err
+			}
+		}
+		if caFile != "" {
+			if err := rootCAs(tlsConfig, caFile); err != nil {
+				return nil, err
+			}
+		}
 	}
+
 	creds := credentials.NewTLS(tlsConfig)
 	if isInsecure {
 		creds = insecure.NewCredentials()
@@ -74,6 +95,35 @@ func NewGRPCConnection(ctx context.Context, isInsecure bool, skipVerify bool, se
 		grpc.WithTransportCredentials(creds),
 		grpc.WithKeepaliveParams(kacp),
 	)
+}
+
+func rootCAs(tlsConfig *tls.Config, file ...string) error {
+	pool := x509.NewCertPool()
+	for _, f := range file {
+		rootPEM, err := os.ReadFile(f)
+		if err != nil || rootPEM == nil {
+			return fmt.Errorf("agent: error loading or parsing rootCA file: %v", err)
+		}
+		ok := pool.AppendCertsFromPEM(rootPEM)
+		if !ok {
+			return fmt.Errorf("agent: failed to parse root certificate from %q", f)
+		}
+	}
+	tlsConfig.RootCAs = pool
+	return nil
+}
+
+func clientCert(tlsConfig *tls.Config, certFile, keyFile string) error {
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return fmt.Errorf("agent: error loading client certificate: %v", err)
+	}
+	cert.Leaf, err = x509.ParseCertificate(cert.Certificate[0])
+	if err != nil {
+		return fmt.Errorf("agent: error parsing client certificate: %v", err)
+	}
+	tlsConfig.Certificates = []tls.Certificate{cert}
+	return nil
 }
 
 type Agent struct {

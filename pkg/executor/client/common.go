@@ -23,19 +23,20 @@ const (
 )
 
 type ExecuteOptions struct {
-	ID                   string
-	TestName             string
-	Namespace            string
-	TestSpec             testsv3.TestSpec
-	ExecutorName         string
-	ExecutorSpec         executorv1.ExecutorSpec
-	Request              testkube.ExecutionRequest
-	Sync                 bool
-	Labels               map[string]string
-	UsernameSecret       *testkube.SecretRef
-	TokenSecret          *testkube.SecretRef
+	ID                string
+	TestName          string
+	Namespace         string
+	TestSpec          testsv3.TestSpec
+	ExecutorName      string
+	ExecutorSpec      executorv1.ExecutorSpec
+	Request           testkube.ExecutionRequest
+	Sync              bool
+	Labels            map[string]string
+	UsernameSecret    *testkube.SecretRef
+	TokenSecret       *testkube.SecretRef
+	CertificateSecret string
+	// AgentAPITLSSecret is a secret name that contains TLS certificate for Agent (gRPC) API
 	AgentAPITLSSecret    string
-	CertificateSecret    string
 	ImagePullSecretNames []string
 	Features             featureflags.FeatureFlags
 }

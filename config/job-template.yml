@@ -17,7 +17,7 @@ spec:
         image: {{ .InitImage }}
         {{- end }}
         imagePullPolicy: IfNotPresent
-        command: 
+        command:
           - "/bin/runner"
           - '{{ .Jsn }}'
         volumeMounts:
@@ -26,6 +26,11 @@ spec:
         {{- if .CertificateSecret }}
         - name: {{ .CertificateSecret }}
           mountPath: /etc/certs
+        {{- end }}
+        {{- if .AgentAPITLSSecret }}
+        - mountPath: /tmp/agent-cert
+          readOnly: true
+          name: {{ .AgentAPITLSSecret }}
         {{- end }}
         {{- if .ArtifactRequest }}
           {{- if and .ArtifactRequest.VolumeMountPath .ArtifactRequest.StorageClassName }}
@@ -46,7 +51,7 @@ spec:
         {{- end }}
         {{- end }}
       containers:
-      {{ if .Features.LogsV2 -}} 
+      {{ if .Features.LogsV2 -}}
       - name: "{{ .Name }}-logs"
         image: {{ .Registry }}/{{ .LogSidecarImage }}
         env:
@@ -66,7 +71,7 @@ spec:
         image: {{ .Image }}
         {{- end }}
         imagePullPolicy: IfNotPresent
-        command: 
+        command:
           - "/bin/runner"
           - '{{ .Jsn }}'
         volumeMounts:
@@ -75,6 +80,11 @@ spec:
         {{- if .CertificateSecret }}
         - name: {{ .CertificateSecret }}
           mountPath: /etc/certs
+        {{- end }}
+        {{- if .AgentAPITLSSecret }}
+        - mountPath: /tmp/agent-cert
+          readOnly: true
+          name: {{ .AgentAPITLSSecret }}
         {{- end }}
         {{- if .ArtifactRequest }}
           {{- if and .ArtifactRequest.VolumeMountPath .ArtifactRequest.StorageClassName }}
@@ -101,6 +111,11 @@ spec:
       - name: {{ .CertificateSecret }}
         secret:
           secretName: {{ .CertificateSecret }}
+      {{- end }}
+      {{- if .AgentAPITLSSecret }}
+      - name: {{ .AgentAPITLSSecret }}
+        secret:
+          secretName: {{ .AgentAPITLSSecret }}
       {{- end }}
       {{- if .ArtifactRequest }}
         {{- if and .ArtifactRequest.VolumeMountPath .ArtifactRequest.StorageClassName }}

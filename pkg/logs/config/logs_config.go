@@ -13,6 +13,9 @@ type Config struct {
 	TestkubeProURL                  string `envconfig:"TESTKUBE_PRO_URL" default:""`
 	TestkubeProLogsPath             string `envconfig:"TESTKUBE_PRO_LOGS_PATH" default:"/logs"`
 	TestkubeProTLSInsecure          bool   `envconfig:"TESTKUBE_PRO_TLS_INSECURE" default:"false"`
+	TestkubeProCertFile             string `envconfig:"TESTKUBE_PRO_CERT_FILE" default:""`
+	TestkubeProKeyFile              string `envconfig:"TESTKUBE_PRO_KEY_FILE" default:""`
+	TestkubeProCAFile               string `envconfig:"TESTKUBE_PRO_CA_FILE" default:""`
 	TestkubeProWorkerCount          int    `envconfig:"TESTKUBE_PRO_WORKER_COUNT" default:"50"`
 	TestkubeProLogStreamWorkerCount int    `envconfig:"TESTKUBE_PRO_LOG_STREAM_WORKER_COUNT" default:"25"`
 	TestkubeProSkipVerify           bool   `envconfig:"TESTKUBE_PRO_SKIP_VERIFY" default:"false"`
