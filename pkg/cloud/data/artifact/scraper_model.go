@@ -8,6 +8,7 @@ const (
 
 type PutObjectSignedURLRequest struct {
 	Object           string `json:"object"`
+	ContentType      string `json:"contentType,omitempty"`
 	ExecutionID      string `json:"executionId"`
 	TestName         string `json:"testName"`
 	TestSuiteName    string `json:"testSuiteName"`
