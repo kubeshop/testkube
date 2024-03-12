@@ -692,38 +692,26 @@ func (s TestkubeAPI) ListTestSuiteArtifactsHandler() fiber.Handler {
 
 		var artifacts []testkube.Artifact
 		for _, stepResult := range execution.StepResults {
-			if stepResult.Execution.Id == "" {
+			if stepResult.Execution == nil || stepResult.Execution.Id == "" {
 				continue
 			}
 
-			var stepArtifacts []testkube.Artifact
-			var bucket string
-			artifactsStorage := s.ArtifactsStorage
-			folder := stepResult.Execution.Id
-			if stepResult.Execution.ArtifactRequest != nil {
-				bucket = stepResult.Execution.ArtifactRequest.StorageBucket
-				if stepResult.Execution.ArtifactRequest.OmitFolderPerExecution {
-					folder = ""
-				}
+			artifacts, err = s.getExecutionArtfacts(c.Context(), stepResult.Execution, artifacts)
+			if err != nil {
+				continue
 			}
+		}
 
-			if bucket != "" {
-				artifactsStorage, err = s.getArtifactStorage(bucket)
-				if err != nil {
-					s.Log.Warnw("can't get artifact storage", "executionID", stepResult.Execution.Id, "error", err)
+		for _, stepResults := range execution.ExecuteStepResults {
+			for _, stepResult := range stepResults.Execute {
+				if stepResult.Execution == nil || stepResult.Execution.Id == "" {
 					continue
 				}
-			}
 
-			stepArtifacts, err = artifactsStorage.ListFiles(c.Context(), folder, stepResult.Execution.TestName, stepResult.Execution.TestSuiteName, "")
-			if err != nil {
-				s.Log.Warnw("can't list artifacts", "executionID", stepResult.Execution.Id, "error", err)
-				continue
-			}
-			s.Log.Debugw("listing artifacts for step", "executionID", stepResult.Execution.Id, "artifacts", stepArtifacts)
-			for i := range stepArtifacts {
-				stepArtifacts[i].ExecutionName = stepResult.Execution.Name
-				artifacts = append(artifacts, stepArtifacts[i])
+				artifacts, err = s.getExecutionArtfacts(c.Context(), stepResult.Execution, artifacts)
+				if err != nil {
+					continue
+				}
 			}
 		}
 
@@ -733,6 +721,44 @@ func (s TestkubeAPI) ListTestSuiteArtifactsHandler() fiber.Handler {
 
 		return c.JSON(artifacts)
 	}
+}
+
+func (s TestkubeAPI) getExecutionArtfacts(ctx context.Context, execution *testkube.Execution,
+	artifacts []testkube.Artifact) ([]testkube.Artifact, error) {
+	var stepArtifacts []testkube.Artifact
+	var bucket string
+
+	artifactsStorage := s.ArtifactsStorage
+	folder := execution.Id
+	if execution.ArtifactRequest != nil {
+		bucket = execution.ArtifactRequest.StorageBucket
+		if execution.ArtifactRequest.OmitFolderPerExecution {
+			folder = ""
+		}
+	}
+
+	var err error
+	if bucket != "" {
+		artifactsStorage, err = s.getArtifactStorage(bucket)
+		if err != nil {
+			s.Log.Warnw("can't get artifact storage", "executionID", execution.Id, "error", err)
+			return artifacts, err
+		}
+	}
+
+	stepArtifacts, err = artifactsStorage.ListFiles(ctx, folder, execution.TestName, execution.TestSuiteName, "")
+	if err != nil {
+		s.Log.Warnw("can't list artifacts", "executionID", execution.Id, "error", err)
+		return artifacts, err
+	}
+
+	s.Log.Debugw("listing artifacts for step", "executionID", execution.Id, "artifacts", stepArtifacts)
+	for i := range stepArtifacts {
+		stepArtifacts[i].ExecutionName = execution.Name
+		artifacts = append(artifacts, stepArtifacts[i])
+	}
+
+	return artifacts, nil
 }
 
 // AbortTestSuiteHandler for aborting a TestSuite with id
