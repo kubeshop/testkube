@@ -52,9 +52,9 @@ require (
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 	google.golang.org/grpc v1.60.0
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.28.4
-	k8s.io/apimachinery v0.28.4
-	k8s.io/client-go v0.28.4
+	k8s.io/api v0.29.2
+	k8s.io/apimachinery v0.29.2
+	k8s.io/client-go v0.29.2
 	sigs.k8s.io/kustomize/kyaml v0.15.0
 )
 
@@ -127,8 +127,8 @@ require (
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	github.com/yuin/goldmark v1.6.0 // indirect
 	github.com/yuin/goldmark-emoji v1.0.1 // indirect
-	golang.org/x/mod v0.13.0 // indirect
-	golang.org/x/tools v0.14.0 // indirect
+	golang.org/x/mod v0.14.0 // indirect
+	golang.org/x/tools v0.16.1 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231120223509-83a465c0220f // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
@@ -193,11 +193,11 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apiextensions-apiserver v0.28.3 // indirect
-	k8s.io/component-base v0.28.3 // indirect
-	k8s.io/klog/v2 v2.100.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20230918164632-68afd615200d // indirect
+	k8s.io/component-base v0.29.2 // indirect
+	k8s.io/klog/v2 v2.110.1 // indirect
+	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
 	sigs.k8s.io/controller-runtime v0.16.3
-	sigs.k8s.io/structured-merge-diff/v4 v4.3.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
