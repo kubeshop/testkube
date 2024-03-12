@@ -88,10 +88,12 @@ func InjectStepTemplate(step *testworkflowsv1.Step, template testworkflowsv1.Tes
 	}
 
 	// Decouple sub-steps from the template
-	setup := common.MapSlice(append(template.Spec.Setup, template.Spec.Steps...), ConvertIndependentStepToStep)
+	setup := common.MapSlice(template.Spec.Setup, ConvertIndependentStepToStep)
+	steps := common.MapSlice(append(template.Spec.Steps, template.Spec.Steps...), ConvertIndependentStepToStep)
 	after := common.MapSlice(template.Spec.After, ConvertIndependentStepToStep)
 
-	step.Steps = append(setup, append(step.Steps, after...)...)
+	step.Setup = append(setup, step.Setup...)
+	step.Steps = append(steps, append(step.Steps, after...)...)
 
 	return nil
 }

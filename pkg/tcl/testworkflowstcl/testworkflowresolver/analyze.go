@@ -31,6 +31,9 @@ func listStepTemplates(cr testworkflowsv1.Step) map[string]struct{} {
 	for i := range cr.Use {
 		v[GetInternalTemplateName(cr.Use[i].Name)] = struct{}{}
 	}
+	for i := range cr.Setup {
+		maps.Copy(v, listStepTemplates(cr.Setup[i]))
+	}
 	for i := range cr.Steps {
 		maps.Copy(v, listStepTemplates(cr.Steps[i]))
 	}
