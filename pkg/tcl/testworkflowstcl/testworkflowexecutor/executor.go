@@ -13,6 +13,7 @@ import (
 	"context"
 	"io"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -85,7 +86,18 @@ func (e *executor) Deploy(ctx context.Context, bundle *testworkflowprocessor.Bun
 }
 
 func (e *executor) handleFatalError(execution testkube.TestWorkflowExecution, err error) {
-	execution.Result.Fatal(err)
+	// Detect error type
+	isAborted := errors.Is(err, testworkflowcontroller.ErrJobAborted)
+	isTimeout := errors.Is(err, testworkflowcontroller.ErrJobTimeout)
+
+	// Build error timestamp, adjusting it for aborting job
+	ts := time.Now()
+	if isAborted || isTimeout {
+		ts = ts.Truncate(testworkflowcontroller.JobRetrievalTimeout)
+	}
+
+	// Apply the expected result
+	execution.Result.Fatal(err, isAborted, ts)
 	err = e.repository.UpdateResult(context.Background(), execution.Id, execution.Result)
 	if err != nil {
 		log.DefaultLogger.Errorf("failed to save fatal error for execution %s: %v", execution.Id, err)
