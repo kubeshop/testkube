@@ -84,7 +84,7 @@ func (c *client) Inspect(image string) (*DockerImage, error) {
 	}
 
 	if len(c.dockerAuthConfigs) != 0 {
-		i := 1 + rand.Intn(len(c.dockerAuthConfigs))
+		i := rand.Intn(len(c.dockerAuthConfigs))
 		args = append(args, "--creds", c.dockerAuthConfigs[i].Username+":"+c.dockerAuthConfigs[i].Password)
 	}
 
