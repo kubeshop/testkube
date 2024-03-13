@@ -1,10 +1,10 @@
 ## testkube dashboard
 
-Open testkube dashboard
+Open Testkube Pro/Enterprise dashboard
 
 ### Synopsis
 
-Open testkube dashboard
+Open Testkube Pro/Enterprise dashboard
 
 ```
 testkube dashboard [flags]
@@ -13,14 +13,13 @@ testkube dashboard [flags]
 ### Options
 
 ```
-  -h, --help                   help for dashboard
-      --use-global-dashboard   use global dashboard for viewing testkube results
+  -h, --help   help for dashboard
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -a, --api-uri string     api uri, default value read from config if set (default "https://demo.testkube.io/results")
+  -a, --api-uri string     api uri, default value read from config if set (default "http://localhost:8088")
   -c, --client string      client used for connecting to Testkube API one of proxy|direct (default "proxy")
       --insecure           insecure connection for direct client
       --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")
