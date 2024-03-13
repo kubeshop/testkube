@@ -57,6 +57,7 @@ func buildTestExecution(test string, async bool) (func() error, error) {
 		request.ExecutionLabels = map[string]string{}
 	}
 	request.ExecutionLabels[testworkflowprocessor.ExecutionIdLabelName] = env.ExecutionId()
+	request.ExecutionLabels[testworkflowprocessor.WorkflowLabelName] = env.WorkflowName()
 
 	return func() (err error) {
 		c := env.Testkube()

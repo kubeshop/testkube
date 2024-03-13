@@ -26,6 +26,7 @@ const (
 	defaultDataPath             = "/data"
 	defaultFsGroup              = int64(1001)
 	ExecutionIdLabelName        = "testworkflowid"
+	WorkflowLabelName           = "testworkflowname"
 	ExecutionIdMainPodLabelName = "testworkflowid-main"
 	SignatureAnnotationName     = "testworkflows.testkube.io/signature"
 )
