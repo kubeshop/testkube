@@ -23,7 +23,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -56,12 +55,15 @@ func buildTestExecution(test string, async bool) (func() error, error) {
 	if request.ExecutionLabels == nil {
 		request.ExecutionLabels = map[string]string{}
 	}
-	request.ExecutionLabels[testworkflowprocessor.ExecutionIdLabelName] = env.ExecutionId()
 
 	return func() (err error) {
 		c := env.Testkube()
 
 		exec, err := c.ExecuteTest(name, request.Name, client.ExecuteTestOptions{
+			RunningContext: &testkube.RunningContext{
+				Type_:   "testworkflow",
+				Context: fmt.Sprintf("%s/executions/%s", env.WorkflowName(), env.ExecutionId()),
+			},
 			IsVariablesFileUploaded:            request.IsVariablesFileUploaded,
 			ExecutionLabels:                    request.ExecutionLabels,
 			Command:                            request.Command,
@@ -90,7 +92,6 @@ func buildTestExecution(test string, async bool) (func() error, error) {
 			IsNegativeTestChangedOnRun:         request.IsNegativeTestChangedOnRun,
 			EnvConfigMaps:                      request.EnvConfigMaps,
 			EnvSecrets:                         request.EnvSecrets,
-			RunningContext:                     request.RunningContext,
 			SlavePodRequest:                    request.SlavePodRequest,
 			ExecutionNamespace:                 request.ExecutionNamespace,
 		})
