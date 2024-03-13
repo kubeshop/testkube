@@ -24,7 +24,13 @@ import (
 )
 
 const (
-	JobRetrievalTimeout = 3 * time.Second
+	JobRetrievalTimeout      = 1 * time.Second
+	JobEventRetrievalTimeout = 1 * time.Second
+)
+
+var (
+	ErrJobAborted = errors.New("job was aborted")
+	ErrJobTimeout = errors.New("timeout retrieving job")
 )
 
 type Controller interface {
@@ -59,8 +65,18 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 			return nil, errors.Wrap(err, "invalid job signature")
 		}
 	case <-time.After(JobRetrievalTimeout):
+		select {
+		case ev := <-jobEvents.Any(context.Background()):
+			if ev.Value != nil {
+				// Job was there, so it was aborted
+				err = ErrJobAborted
+			}
+		case <-time.After(JobEventRetrievalTimeout):
+			// The job is actually not found
+			err = ErrJobTimeout
+		}
 		ctxCancel()
-		return nil, errors.New("timeout retrieving job")
+		return nil, err
 	}
 
 	// Build accessible controller
@@ -141,7 +157,7 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 			}
 			w.SendValue(Notification{
 				Timestamp: v.Value.CreationTimestamp.Time,
-				Log:       fmt.Sprintf("%s (%s) %s\n", v.Value.CreationTimestamp.Time.Format(time.RFC3339Nano), v.Value.Reason, v.Value.Message),
+				Log:       fmt.Sprintf("%s (%s) %s\n", v.Value.CreationTimestamp.Time.Format(KubernetesLogTimeFormat), v.Value.Reason, v.Value.Message),
 			})
 		}
 
@@ -167,7 +183,7 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 			}
 			w.SendValue(Notification{
 				Timestamp: v.Value.CreationTimestamp.Time,
-				Log:       fmt.Sprintf("%s (%s) %s\n", v.Value.CreationTimestamp.Time.Format(time.RFC3339Nano), v.Value.Reason, v.Value.Message),
+				Log:       fmt.Sprintf("%s (%s) %s\n", v.Value.CreationTimestamp.Time.Format(KubernetesLogTimeFormat), v.Value.Reason, v.Value.Message),
 			})
 		}
 
@@ -179,7 +195,7 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 		w.SendValue(Notification{Result: result.Clone()})
 
 		// Wait for the initialization container
-		for v := range WatchContainerPreEvents(ctx, c.podEvents, "tktw-init", 0).Stream(ctx).Channel() {
+		for v := range WatchContainerPreEvents(ctx, c.podEvents, "tktw-init", 0, true).Stream(ctx).Channel() {
 			if v.Error != nil {
 				w.SendError(v.Error)
 				continue
@@ -195,7 +211,7 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 			}
 			w.SendValue(Notification{
 				Timestamp: v.Value.CreationTimestamp.Time,
-				Log:       fmt.Sprintf("%s (%s) %s\n", v.Value.CreationTimestamp.Time.Format(time.RFC3339Nano), v.Value.Reason, v.Value.Message),
+				Log:       fmt.Sprintf("%s (%s) %s\n", v.Value.CreationTimestamp.Time.Format(KubernetesLogTimeFormat), v.Value.Reason, v.Value.Message),
 			})
 		}
 
@@ -220,7 +236,7 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 			// TODO: Calibrate clock with v.Value.Hint or just first/last timestamp here
 			w.SendValue(Notification{
 				Timestamp: v.Value.Time,
-				Log:       fmt.Sprintf("%s %s\n", v.Value.Time.Format(time.RFC3339Nano), string(v.Value.Log)),
+				Log:       fmt.Sprintf("%s %s\n", v.Value.Time.Format(KubernetesLogTimeFormat), string(v.Value.Log)),
 			})
 		}
 
@@ -263,7 +279,7 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 
 			// Watch for the container events
 			lastEvTs := time.Time{}
-			for v := range WatchContainerPreEvents(ctx, c.podEvents, container.Name, 0).Stream(ctx).Channel() {
+			for v := range WatchContainerPreEvents(ctx, c.podEvents, container.Name, 0, false).Stream(ctx).Channel() {
 				if v.Error != nil {
 					w.SendError(v.Error)
 					continue
@@ -287,7 +303,7 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 				w.SendValue(Notification{
 					Timestamp: v.Value.CreationTimestamp.Time,
 					Ref:       container.Name,
-					Log:       fmt.Sprintf("%s (%s) %s\n", v.Value.CreationTimestamp.Time.Format(time.RFC3339Nano), v.Value.Reason, v.Value.Message),
+					Log:       fmt.Sprintf("%s (%s) %s\n", v.Value.CreationTimestamp.Time.Format(KubernetesLogTimeFormat), v.Value.Reason, v.Value.Message),
 				})
 			}
 

@@ -122,10 +122,10 @@ func GetFinalContainerResult(ctx context.Context, pod Watcher[*corev1.Pod], cont
 
 var ErrNoStartedEvent = errors.New("started event not received")
 
-func WatchContainerPreEvents(ctx context.Context, podEvents Watcher[*corev1.Event], containerName string, cacheSize int) Watcher[*corev1.Event] {
+func WatchContainerPreEvents(ctx context.Context, podEvents Watcher[*corev1.Event], containerName string, cacheSize int, includePodWarnings bool) Watcher[*corev1.Event] {
 	w := newWatcher[*corev1.Event](ctx, cacheSize)
 	go func() {
-		events := WatchContainerEvents(ctx, podEvents, containerName, 0)
+		events := WatchContainerEvents(ctx, podEvents, containerName, 0, includePodWarnings)
 		defer events.Close()
 		defer w.Close()
 
@@ -163,7 +163,7 @@ func WatchPodPreEvents(ctx context.Context, podEvents Watcher[*corev1.Event], ca
 }
 
 func WaitUntilContainerIsStarted(ctx context.Context, podEvents Watcher[*corev1.Event], containerName string) error {
-	events := WatchContainerPreEvents(ctx, podEvents, containerName, 0)
+	events := WatchContainerPreEvents(ctx, podEvents, containerName, 0, false)
 	defer events.Close()
 
 	for ev := range events.Stream(ctx).Channel() {
@@ -315,7 +315,7 @@ func ReadTimestamp(reader *bufio.Reader) (time.Time, []byte, error) {
 	if count < 31 {
 		return time.Time{}, nil, io.EOF
 	}
-	ts, err := time.Parse(time.RFC3339Nano, string(tsPrefix[0:30]))
+	ts, err := time.Parse(KubernetesLogTimeFormat, string(tsPrefix[0:30]))
 	if err != nil {
 		return time.Time{}, tsPrefix, errors2.Wrap(err, "parsing timestamp")
 	}

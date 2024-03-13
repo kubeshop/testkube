@@ -37,20 +37,38 @@ func (r *TestWorkflowResult) IsAnyError() bool {
 	return r.IsFinished() && !r.IsStatus(PASSED_TestWorkflowStatus)
 }
 
-func (r *TestWorkflowResult) Fatal(err error) {
+func (r *TestWorkflowResult) Fatal(err error, aborted bool, ts time.Time) {
 	r.Initialization.ErrorMessage = err.Error()
 	r.Status = common.Ptr(FAILED_TestWorkflowStatus)
 	r.PredictedStatus = r.Status
+	if aborted {
+		r.Status = common.Ptr(ABORTED_TestWorkflowStatus)
+	}
+	if r.FinishedAt.IsZero() {
+		r.FinishedAt = ts.UTC()
+	}
 	if r.Initialization.Status == nil || (*r.Initialization.Status == QUEUED_TestWorkflowStepStatus) || (*r.Initialization.Status == RUNNING_TestWorkflowStepStatus) {
 		r.Initialization.Status = common.Ptr(FAILED_TestWorkflowStepStatus)
+		if aborted {
+			r.Initialization.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
+		}
+		r.Initialization.FinishedAt = r.FinishedAt
 	}
 	for i := range r.Steps {
-		if r.Steps[i].Status == nil || (*r.Steps[i].Status == QUEUED_TestWorkflowStepStatus) || (*r.Steps[i].Status == RUNNING_TestWorkflowStepStatus) {
+		if r.Steps[i].Status == nil || (*r.Steps[i].Status == QUEUED_TestWorkflowStepStatus) {
 			s := r.Steps[i]
 			s.Status = common.Ptr(SKIPPED_TestWorkflowStepStatus)
 			r.Steps[i] = s
+		} else if *r.Steps[i].Status == RUNNING_TestWorkflowStepStatus {
+			s := r.Steps[i]
+			s.Status = common.Ptr(FAILED_TestWorkflowStepStatus)
+			if aborted {
+				s.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
+			}
+			r.Steps[i] = s
 		}
 	}
+	r.RecomputeDuration()
 }
 
 func (r *TestWorkflowResult) Clone() *TestWorkflowResult {
@@ -89,6 +107,13 @@ func (r *TestWorkflowResult) UpdateStepResult(sig []TestWorkflowSignature, ref s
 	return v
 }
 
+func (r *TestWorkflowResult) RecomputeDuration() {
+	if !r.FinishedAt.IsZero() {
+		r.Duration = r.FinishedAt.Sub(r.QueuedAt).Round(time.Millisecond).String()
+		r.DurationMs = int32(r.FinishedAt.Sub(r.QueuedAt).Milliseconds())
+	}
+}
+
 func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature, scheduledAt time.Time) {
 	// Recompute steps
 	for _, ch := range sig {
@@ -96,10 +121,7 @@ func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature, scheduledAt 
 	}
 
 	// Compute the duration
-	if !r.FinishedAt.IsZero() {
-		r.Duration = r.FinishedAt.Sub(r.QueuedAt).Round(time.Millisecond).String()
-		r.DurationMs = int32(r.FinishedAt.Sub(r.QueuedAt).Milliseconds())
-	}
+	r.RecomputeDuration()
 
 	// Build status on the internal failure
 	if getTestWorkflowStepStatus(*r.Initialization) == ABORTED_TestWorkflowStepStatus {
