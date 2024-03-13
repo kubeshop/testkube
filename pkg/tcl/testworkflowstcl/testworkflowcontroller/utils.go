@@ -24,6 +24,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 )
 
+const (
+	KubernetesLogTimeFormat = "2006-01-02T15:04:05.000000000Z"
+)
+
 func IsPodDone(pod *corev1.Pod) bool {
 	return pod.Status.Phase != corev1.PodPending && pod.Status.Phase != corev1.PodRunning
 }
@@ -198,7 +202,7 @@ func GetEventContainerName(event *corev1.Event) string {
 	return ""
 }
 
-func WatchContainerEvents(ctx context.Context, podEvents Watcher[*corev1.Event], name string, cacheSize int) Watcher[*corev1.Event] {
+func WatchContainerEvents(ctx context.Context, podEvents Watcher[*corev1.Event], name string, cacheSize int, includePodWarnings bool) Watcher[*corev1.Event] {
 	w := newWatcher[*corev1.Event](ctx, cacheSize)
 	go func() {
 		stream := podEvents.Stream(ctx)
@@ -213,6 +217,8 @@ func WatchContainerEvents(ctx context.Context, podEvents Watcher[*corev1.Event],
 					if v.Error != nil {
 						w.SendError(v.Error)
 					} else if GetEventContainerName(v.Value) == name {
+						w.SendValue(v.Value)
+					} else if includePodWarnings && v.Value.Type == "Warning" {
 						w.SendValue(v.Value)
 					}
 				} else {
