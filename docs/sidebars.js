@@ -210,7 +210,8 @@ const sidebars = {
       items: [
         "testkube-enterprise/articles/testkube-enterprise",
         "testkube-enterprise/articles/usage-guide", 
-        "testkube-enterprise/articles/auth"],
+        "testkube-enterprise/articles/auth",
+        "testkube-enterprise/articles/migrating-from-oss-to-pro"],
     },
     "articles/testkube-oss",
     {
