@@ -11,24 +11,35 @@ import (
 )
 
 func CreateVariables(cmd *cobra.Command, ignoreSecretVariable bool) (vars map[string]testkube.Variable, err error) {
-	basicParams, err := cmd.Flags().GetStringToString("variable")
+	basicParams, err := cmd.Flags().GetStringArray("variable")
 	if err != nil {
 		return vars, err
 	}
 
 	vars = map[string]testkube.Variable{}
 
-	for k, v := range basicParams {
-		vars[k] = testkube.NewBasicVariable(k, v)
+	for _, v := range basicParams {
+		values := strings.SplitN(v, "=", 2)
+		if len(values) != 2 {
+			return vars, errors.New("wrong number of variable params")
+		}
+
+		vars[values[0]] = testkube.NewBasicVariable(values[0], values[1])
 	}
 
 	if !ignoreSecretVariable {
-		secretParams, err := cmd.Flags().GetStringToString("secret-variable")
+		secretParams, err := cmd.Flags().GetStringArray("secret-variable")
 		if err != nil {
 			return vars, err
 		}
-		for k, v := range secretParams {
-			vars[k] = testkube.NewSecretVariable(k, v)
+
+		for _, v := range secretParams {
+			values := strings.SplitN(v, "=", 2)
+			if len(values) != 2 {
+				return vars, errors.New("wrong number of secret variable params")
+			}
+
+			vars[values[0]] = testkube.NewSecretVariable(values[0], values[1])
 		}
 	}
 
