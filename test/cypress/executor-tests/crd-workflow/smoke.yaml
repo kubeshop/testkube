@@ -336,7 +336,7 @@ spec:
       limits:
         cpu: 2
         memory: 50Mi
-    workingDir: /data/repo/test/cypress/
+    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
   steps:
   - name: Run tests
     run:
@@ -374,7 +374,7 @@ spec:
       limits:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/test/cypress/
+    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
   steps:
   - name: Run tests
     run:
