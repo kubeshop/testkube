@@ -1,5 +1,4 @@
-#How to Migrate from Testkube OSS to Testkube Enterprise
-
+# How to Migrate from Testkube OSS to Testkube Enterprise
 
 It is possible to deploy Testkube Enterprise within the same k8s cluster where Testkube OSS is already running. To achieve this, you should install Testkube Enterprise in a different namespace and connect Testkube OSS as an Agent.
 
