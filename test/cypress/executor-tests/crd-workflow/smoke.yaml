@@ -373,7 +373,7 @@ spec:
     resources:
       limits:
         cpu: 2
-        memory: 50Mi
+        memory: 2Gi
     workingDir: /data/repo/test/cypress/
   steps:
   - name: Run tests
