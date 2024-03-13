@@ -146,7 +146,7 @@ func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature) {
 		if i != 0 {
 			initialDate = getLastDate(seq[i-1].result, initialDate)
 		}
-		seq[i].result.QueuedAt = adjustMinimumTime(seq[i].result.QueuedAt, initialDate)
+		seq[i].result.QueuedAt = initialDate
 		seq[i].result.StartedAt = adjustMinimumTime(seq[i].result.StartedAt, seq[i].result.QueuedAt)
 		seq[i].result.FinishedAt = adjustMinimumTime(seq[i].result.FinishedAt, seq[i].result.StartedAt)
 	}
@@ -222,8 +222,8 @@ func (r *TestWorkflowResult) RecomputeStep(sig TestWorkflowSignature) {
 
 func walkSteps(sig []TestWorkflowSignature, fn func(signature TestWorkflowSignature)) {
 	for _, s := range sig {
-		fn(s)
 		walkSteps(s.Children, fn)
+		fn(s)
 	}
 }
 
