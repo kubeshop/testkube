@@ -513,13 +513,14 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context,
 			result.Status = testkube.ExecutionStatusFailed
 			result.Output = result.Output + "\nTest run was expected to fail, the result will be reversed"
 		}
-	}
-	err := c.repository.UpdateResult(ctx, execution.Id, *execution)
-	if err != nil {
-		c.log.Errorw("Update execution result error", "error", err)
+
+		err := c.repository.UpdateResult(ctx, execution.Id, *execution)
+		if err != nil {
+			c.log.Errorw("Update execution result error", "error", err)
+		}
 	}
 
-	err = c.repository.EndExecution(ctx, *execution)
+	err := c.repository.EndExecution(ctx, *execution)
 	if err != nil {
 		c.log.Errorw("Update execution result error", "error", err)
 	}
