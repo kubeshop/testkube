@@ -38,6 +38,7 @@ type DockerAuthConfig struct {
 // DockerImage contains definition of docker image
 type DockerImage struct {
 	Config struct {
+		User       string   `json:"User"`
 		Entrypoint []string `json:"Entrypoint"`
 		Cmd        []string `json:"Cmd"`
 		WorkingDir string   `json:"WorkingDir"`
