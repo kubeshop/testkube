@@ -746,7 +746,7 @@ func (s TestkubeAPI) getExecutionArtfacts(ctx context.Context, execution *testku
 		}
 	}
 
-	stepArtifacts, err = artifactsStorage.ListFiles(ctx, folder, execution.TestName, execution.TestSuiteName, "")
+	stepArtifacts, err = artifactsStorage.ListFiles(ctx, folder, execution.TestName, execution.TestSuiteName)
 	if err != nil {
 		s.Log.Warnw("can't list artifacts", "executionID", execution.Id, "error", err)
 		return artifacts, err
