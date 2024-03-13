@@ -76,6 +76,10 @@ run_follow_testsuite() { # testsuite_name
   kubectl testkube --namespace $namespace run testsuite $1 $follow_param $branch_overwrite_param
 }
 
+run_follow_workflow() { # workflow_name
+  ~/bin/kubectl-testkube --namespace $namespace run tw $1
+}
+
 common_run() { # name, test_crd_file, testsuite_name, testsuite_file, custom_executor_crd_file
   name=$1
   test_crd_file=$2
@@ -133,6 +137,10 @@ common_workflow_run() { # name, workflow_crd_file, custom_workflow_template_crd_
     
     # Workflow
     kubectl --namespace $namespace apply -f $workflow_crd_file
+  fi
+
+    if [ "$run" = true ]; then
+    run_follow_workflow $workflow_name
   fi
 }
 
