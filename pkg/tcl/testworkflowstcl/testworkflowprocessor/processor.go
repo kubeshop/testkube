@@ -252,7 +252,6 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		return nil, errors.Wrap(err, "finalizing pod template spec")
 	}
 	initContainer := corev1.Container{
-		// TODO: Resources, SecurityContext?
 		Name:            "tktw-init",
 		Image:           defaultInitImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
