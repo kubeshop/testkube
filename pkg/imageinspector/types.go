@@ -44,6 +44,8 @@ type Info struct {
 	Cmd        []string  `json:"c,omitempty"`
 	Shell      string    `json:"s,omitempty"`
 	WorkingDir string    `json:"w,omitempty"`
+	User       int64     `json:"u,omitempty"`
+	Group      int64     `json:"g,omitempty"`
 }
 
 type RequestBase struct {

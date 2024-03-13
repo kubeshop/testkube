@@ -2,6 +2,8 @@ package imageinspector
 
 import (
 	"context"
+	"strconv"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -25,11 +27,27 @@ func (s *skopeoFetcher) Fetch(ctx context.Context, registry, image string, pullS
 	if err != nil {
 		return nil, err
 	}
+	user, group := determineUserGroupPair(info.Config.User)
 	return &Info{
 		FetchedAt:  time.Now(),
 		Entrypoint: info.Config.Entrypoint,
 		Cmd:        info.Config.Cmd,
 		Shell:      info.Shell,
 		WorkingDir: info.Config.WorkingDir,
+		User:       user,
+		Group:      group,
 	}, nil
+}
+
+func determineUserGroupPair(userGroupStr string) (int64, int64) {
+	if userGroupStr == "" {
+		userGroupStr = "0"
+	}
+	userStr, groupStr, _ := strings.Cut(userGroupStr, ":")
+	if groupStr == "" {
+		groupStr = userStr
+	}
+	user, _ := strconv.Atoi(userStr)
+	group, _ := strconv.Atoi(groupStr)
+	return int64(user), int64(group)
 }

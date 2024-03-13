@@ -130,6 +130,14 @@ func buildKubernetesContainers(stage Stage, init *initProcess, machines ...expre
 	cr.Command = init.Command()
 	cr.Args = init.Args()
 
+	// Ensure the container will have proper access to FS
+	if cr.SecurityContext == nil {
+		cr.SecurityContext = &corev1.SecurityContext{}
+	}
+	if cr.SecurityContext.RunAsGroup == nil {
+		cr.SecurityContext.RunAsGroup = common.Ptr(defaultFsGroup)
+	}
+
 	containers = []corev1.Container{cr}
 	return
 }
