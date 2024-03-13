@@ -241,6 +241,9 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			ImagePullSecrets:   podConfig.ImagePullSecrets,
 			ServiceAccountName: podConfig.ServiceAccountName,
 			NodeSelector:       podConfig.NodeSelector,
+			SecurityContext: &corev1.PodSecurityContext{
+				FSGroup: common.Ptr(defaultFsGroup),
+			},
 		},
 	}
 	AnnotateControlledBy(&podSpec, "{{execution.id}}")
@@ -249,13 +252,15 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		return nil, errors.Wrap(err, "finalizing pod template spec")
 	}
 	initContainer := corev1.Container{
-		// TODO: Resources, SecurityContext?
 		Name:            "tktw-init",
 		Image:           defaultInitImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"/bin/sh", "-c"},
 		Args:            []string{fmt.Sprintf("cp /init %s && touch %s && chmod 777 %s && (echo -n ',0' > %s && echo 'Done' && exit 0) || (echo -n 'failed,1' > %s && exit 1)", defaultInitPath, defaultStatePath, defaultStatePath, "/dev/termination-log", "/dev/termination-log")},
 		VolumeMounts:    layer.ContainerDefaults().VolumeMounts(),
+		SecurityContext: &corev1.SecurityContext{
+			RunAsGroup: common.Ptr(defaultFsGroup),
+		},
 	}
 	err = expressionstcl.FinalizeForce(&initContainer, machines...)
 	if err != nil {

@@ -72,7 +72,6 @@ type ContainerMutations[T any] interface {
 	ApplyCR(cr *testworkflowsv1.ContainerConfig) T
 	ApplyImageData(image *imageinspector.Info) error
 	EnableToolkit(ref string) T
-	RunAsRoot() T
 }
 
 //go:generate mockgen -destination=./mock_container.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor" Container
@@ -414,13 +413,6 @@ func (c *container) EnableToolkit(ref string) Container {
 		"TK_OS_CERT_FILE":       "{{internal.storage.certFile}}",
 		"TK_OS_KEY_FILE":        "{{internal.storage.keyFile}}",
 		"TK_OS_CA_FILE":         "{{internal.storage.caFile}}",
-	})
-}
-
-func (c *container) RunAsRoot() Container {
-	return c.SetSecurityContext(&corev1.SecurityContext{
-		AllowPrivilegeEscalation: common.Ptr(false),
-		RunAsUser:                common.Ptr(int64(0)),
 	})
 }
 
