@@ -583,43 +583,7 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testku
 
 // NewJobOptionsFromExecutionOptions compose JobOptions based on ExecuteOptions
 func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOptions {
-	// for args, command and image, HTTP request takes priority, then test spec, then executor
-	var args []string
-	argsMode := options.Request.ArgsMode
-	if options.TestSpec.ExecutionRequest != nil && argsMode == "" {
-		argsMode = string(options.TestSpec.ExecutionRequest.ArgsMode)
-	}
-
-	if argsMode == string(testkube.ArgsModeTypeAppend) || argsMode == "" {
-		args = options.Request.Args
-		if options.TestSpec.ExecutionRequest != nil && len(args) == 0 {
-			args = options.TestSpec.ExecutionRequest.Args
-		}
-
-		args = append(options.ExecutorSpec.Args, args...)
-	}
-
-	if argsMode == string(testkube.ArgsModeTypeOverride) || argsMode == string(testkube.ArgsModeTypeReplace) {
-		args = options.Request.Args
-		if options.TestSpec.ExecutionRequest != nil && len(args) == 0 {
-			args = options.TestSpec.ExecutionRequest.Args
-		}
-	}
-
-	var command []string
-	if len(options.ExecutorSpec.Command) != 0 {
-		command = options.ExecutorSpec.Command
-	}
-
-	if options.TestSpec.ExecutionRequest != nil &&
-		len(options.TestSpec.ExecutionRequest.Command) != 0 {
-		command = options.TestSpec.ExecutionRequest.Command
-	}
-
-	if len(options.Request.Command) != 0 {
-		command = options.Request.Command
-	}
-
+	// for image, HTTP request takes priority, then test spec, then executor
 	var image string
 	if options.ExecutorSpec.Image != "" {
 		image = options.ExecutorSpec.Image
@@ -678,8 +642,8 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 	return &JobOptions{
 		Image:                     image,
 		ImagePullSecrets:          options.ImagePullSecretNames,
-		Args:                      args,
-		Command:                   command,
+		Args:                      options.Request.Args,
+		Command:                   options.Request.Command,
 		WorkingDir:                workingDir,
 		TestName:                  options.TestName,
 		Namespace:                 options.Namespace,
