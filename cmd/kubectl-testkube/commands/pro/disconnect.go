@@ -103,7 +103,6 @@ func NewDisconnectCmd() *cobra.Command {
 			ui.NL()
 			ui.Success("Disconnect finished successfully")
 			ui.NL()
-			ui.ShellCommand("You can now open your local Dashboard and validate the successfull disconnect", "testkube dashboard")
 		},
 	}
 
