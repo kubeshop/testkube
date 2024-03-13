@@ -81,15 +81,15 @@ func getTestWorkflowStepStatus(result TestWorkflowStepResult) TestWorkflowStepSt
 	return *result.Status
 }
 
-func (r *TestWorkflowResult) UpdateStepResult(sig []TestWorkflowSignature, ref string, result TestWorkflowStepResult) TestWorkflowStepResult {
+func (r *TestWorkflowResult) UpdateStepResult(sig []TestWorkflowSignature, ref string, result TestWorkflowStepResult, scheduledAt time.Time) TestWorkflowStepResult {
 	v := r.Steps[ref]
 	v.Merge(result)
 	r.Steps[ref] = v
-	r.Recompute(sig)
+	r.Recompute(sig, scheduledAt)
 	return v
 }
 
-func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature) {
+func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature, scheduledAt time.Time) {
 	// Recompute steps
 	for _, ch := range sig {
 		r.RecomputeStep(ch)
@@ -113,6 +113,7 @@ func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature) {
 	}
 
 	// Calibrate the execution time initially
+	r.QueuedAt = adjustMinimumTime(r.QueuedAt, scheduledAt)
 	r.StartedAt = adjustMinimumTime(r.StartedAt, r.QueuedAt)
 	r.FinishedAt = adjustMinimumTime(r.FinishedAt, r.StartedAt)
 	initialDate := r.StartedAt

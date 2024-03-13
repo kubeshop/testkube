@@ -258,7 +258,7 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 			stepResult := result.Steps[container.Name]
 			stepResult = result.UpdateStepResult(sig, container.Name, testkube.TestWorkflowStepResult{
 				QueuedAt: lastTs.UTC(),
-			})
+			}, c.scheduledAt)
 			w.SendValue(Notification{Result: result.Clone()})
 
 			// Watch for the container events
@@ -274,12 +274,12 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 				if v.Value.Reason == "Created" {
 					stepResult = result.UpdateStepResult(sig, container.Name, testkube.TestWorkflowStepResult{
 						QueuedAt: v.Value.CreationTimestamp.Time.UTC(),
-					})
+					}, c.scheduledAt)
 				} else if v.Value.Reason == "Started" {
 					stepResult = result.UpdateStepResult(sig, container.Name, testkube.TestWorkflowStepResult{
 						StartedAt: v.Value.CreationTimestamp.Time.UTC(),
 						Status:    common.Ptr(testkube.RUNNING_TestWorkflowStepStatus),
-					})
+					}, c.scheduledAt)
 				}
 				if v.Value.Type == "Normal" {
 					continue
@@ -309,7 +309,7 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 						if v.Value.Time.After(stepResult.StartedAt) {
 							stepResult = result.UpdateStepResult(sig, container.Name, testkube.TestWorkflowStepResult{
 								StartedAt: v.Value.Time.UTC(),
-							})
+							}, c.scheduledAt)
 						}
 					} else if v.Value.Hint.Name == "status" {
 						status := testkube.TestWorkflowStepStatus(v.Value.Hint.Value.(string))
@@ -319,7 +319,7 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 						if _, ok := result.Steps[v.Value.Hint.Ref]; ok {
 							stepResult = result.UpdateStepResult(sig, v.Value.Hint.Ref, testkube.TestWorkflowStepResult{
 								Status: &status,
-							})
+							}, c.scheduledAt)
 						}
 					}
 					continue
@@ -351,7 +351,7 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 				FinishedAt: finishedAt,
 				ExitCode:   float64(status.ExitCode),
 				Status:     common.Ptr(status.Status),
-			})
+			}, c.scheduledAt)
 			w.SendValue(Notification{Result: result.Clone()})
 
 			// Update the last timestamp
@@ -366,7 +366,7 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 		}
 
 		// Compute the TestWorkflow status and dates
-		result.Recompute(sig)
+		result.Recompute(sig, c.scheduledAt)
 		w.SendValue(Notification{Result: result.Clone()})
 	}()
 
