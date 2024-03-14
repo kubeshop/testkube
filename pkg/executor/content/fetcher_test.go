@@ -16,52 +16,28 @@ import (
 // this content is also saved in test repo
 // in https:///github.com/kubeshop/testkube-docker-action/blob/main/action.yaml
 // file with \n on end
-const fileContent = `action.yml
-name: 'Testkube CLI'
-description: 'Execute Testkube command'
-inputs:
-  command:
-    description: 'Command'
-    required: true
-    default: 'get'
-  resource:
-    description: 'Resource'
-    required: false
-    default: 'tests'
-  namespace:
-    description: 'Namespace'
-    required: false
-    default: 'testkube'
-  api-key:
-    description: 'API key'
-    required: false
-    default: ''
-  api-uri:
-    description: 'API uri'
-    required: false
-    default: ''
-  parameters:
-    description: 'Parameters'
-    required: false
-    default: ''
-  stdin:
-    description: 'Standard input'
-    required: false
-    default: ''
-outputs:
-  result:
-    description: 'The result of the command'
-runs:
-  using: 'docker'
-  image: 'Dockerfile'
-  args:
-    - ${{ inputs.command }}
-    - ${{ inputs.resource }}
-    - ${{ inputs.namespace }}
-    - ${{ inputs.api-key }}
-    - ${{ inputs.api-uri }}
-    - ${{ inputs.parameters }}
-    - ${{ inputs.stdin }}`
+const fileContent = `MIT License
+
+Copyright (c) 2022 kubeshop
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+`
 
 func TestFetcher_Integration(t *testing.T) {
 	test.IntegrationTest(t)
@@ -92,7 +68,7 @@ func TestFetcher_Integration(t *testing.T) {
 		content := &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeGitFile),
 			Repository: testkube.NewGitRepository("https://github.com/kubeshop/testkube-docker-action.git", "main").
-				WithPath("action.yaml"),
+				WithPath("LICENSE"),
 		}
 
 		path, err := f.Fetch(content)
