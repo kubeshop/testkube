@@ -16,7 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/pkg/version"
 )
 
 const (
@@ -49,11 +49,11 @@ var (
 func getInitImage() string {
 	img := os.Getenv("TESTKUBE_TW_INIT_IMAGE")
 	if img == "" {
-		version := common.Version
-		if version == "" || version == "dev" {
-			version = "latest"
+		ver := version.Version
+		if ver == "" || ver == "dev" {
+			ver = "latest"
 		}
-		img = fmt.Sprintf("kubeshop/testkube-tw-init:%s", version)
+		img = fmt.Sprintf("kubeshop/testkube-tw-init:%s", ver)
 	}
 	return img
 }
@@ -61,11 +61,11 @@ func getInitImage() string {
 func getToolkitImage() string {
 	img := os.Getenv("TESTKUBE_TW_TOOLKIT_IMAGE")
 	if img == "" {
-		version := common.Version
-		if version == "" || version == "dev" {
-			version = "latest"
+		ver := version.Version
+		if ver == "" || ver == "dev" {
+			ver = "latest"
 		}
-		img = fmt.Sprintf("kubeshop/testkube-tw-toolkit:%s", version)
+		img = fmt.Sprintf("kubeshop/testkube-tw-toolkit:%s", ver)
 	}
 	return img
 }
