@@ -14,7 +14,7 @@ For example, with TestWorkflow Templates you can easily
 ## How does it work?
 
 A TestWorkflowTemplate definition follows the same structure as a TestWorkflow, with the additional
-possibility to define configuration parameters that can be specified when the template is used.
+ability to define configuration parameters that can be specified when the template is used.
 
 TestWorkflowTemplates are "merged" into a referring TestWorkflow at run-time and the 
 resulting TestWorkflow is executed by Testkube.
