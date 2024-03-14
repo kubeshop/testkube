@@ -372,6 +372,8 @@ func (s *Scheduler) timeoutCheck(ctx context.Context, testsuiteExecution *testku
 				}
 				return
 			}
+		case <-ctx.Done():
+			return
 		}
 	}
 
