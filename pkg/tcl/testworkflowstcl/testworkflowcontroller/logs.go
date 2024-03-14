@@ -90,6 +90,13 @@ func GetContainerResult(c corev1.ContainerStatus) ContainerResult {
 		return ContainerResult{Status: testkube.RUNNING_TestWorkflowStepStatus, ExitCode: -1}
 	}
 	re := regexp.MustCompile(`^([^,]*),(0|[1-9]\d*)$`)
+
+	// Workaround - GKE sends SIGKILL after the container is already terminated,
+	// and the pod gets stuck then.
+	if c.State.Terminated.Reason != "Completed" {
+		return ContainerResult{Status: testkube.ABORTED_TestWorkflowStepStatus, ExitCode: -1, FinishedAt: c.State.Terminated.FinishedAt.Time}
+	}
+
 	msg := c.State.Terminated.Message
 	match := re.FindStringSubmatch(msg)
 	if match == nil {
