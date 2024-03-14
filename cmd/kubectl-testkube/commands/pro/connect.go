@@ -153,11 +153,6 @@ func NewConnectCmd() *cobra.Command {
 				common.KubectlScaleDeployment(opts.Namespace, "testkube-minio-testkube", opts.MinioReplicas)
 				spinner.Success()
 			}
-			if opts.DashboardReplicas == 0 {
-				spinner = ui.NewSpinner("Scaling down Dashbaord")
-				common.KubectlScaleDeployment(opts.Namespace, "testkube-dashboard", opts.DashboardReplicas)
-				spinner.Success()
-			}
 
 			ui.H2("Testkube Pro is connected to your Testkube instance, saving local configuration")
 
@@ -187,7 +182,6 @@ func NewConnectCmd() *cobra.Command {
 
 	cmd.Flags().IntVar(&opts.MinioReplicas, "minio-replicas", 0, "MinIO replicas")
 	cmd.Flags().IntVar(&opts.MongoReplicas, "mongo-replicas", 0, "MongoDB replicas")
-	cmd.Flags().IntVar(&opts.DashboardReplicas, "dashboard-replicas", 0, "Dashboard replicas")
 	return cmd
 }
 

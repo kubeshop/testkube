@@ -21,9 +21,9 @@ import (
 )
 
 type HelmOptions struct {
-	Name, Namespace, Chart, Values                  string
-	NoDashboard, NoMinio, NoMongo, NoConfirm        bool
-	MinioReplicas, MongoReplicas, DashboardReplicas int
+	Name, Namespace, Chart, Values           string
+	NoDashboard, NoMinio, NoMongo, NoConfirm bool
+	MinioReplicas, MongoReplicas             int
 
 	Master config.Master
 	// For debug
@@ -107,7 +107,6 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data, isM
 
 	args = append(args, "--set", fmt.Sprintf("testkube-api.minio.replicas=%d", options.MinioReplicas))
 	args = append(args, "--set", fmt.Sprintf("mongodb.replicas=%d", options.MongoReplicas))
-	args = append(args, "--set", fmt.Sprintf("testkube-dashboard.replicas=%d", options.DashboardReplicas))
 
 	args = append(args, options.Name, options.Chart)
 
