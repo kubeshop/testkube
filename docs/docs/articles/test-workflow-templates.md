@@ -8,7 +8,7 @@ For example, with TestWorkflow Templates you can easily
 - define a common Git Source for your tests.
 - define common setup or tearDown steps for your tests.
 - define specific commands or images to use for your tests, while still allowing a TestWorkflow to set
-  the version of the testing tool
+  the version of the testing tool.
 - etc.
 
 ## How does it work?
