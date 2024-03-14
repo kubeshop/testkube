@@ -60,7 +60,7 @@ func (e *executor) Schedule(bundle *testworkflowprocessor.Bundle, execution test
 	// Deploy required resources
 	err := e.Deploy(context.Background(), bundle)
 	if err != nil {
-		e.handleFatalError(execution, err)
+		e.handleFatalError(execution, err, time.Time{})
 		return
 	}
 
@@ -85,15 +85,17 @@ func (e *executor) Deploy(ctx context.Context, bundle *testworkflowprocessor.Bun
 	return
 }
 
-func (e *executor) handleFatalError(execution testkube.TestWorkflowExecution, err error) {
+func (e *executor) handleFatalError(execution testkube.TestWorkflowExecution, err error, ts time.Time) {
 	// Detect error type
 	isAborted := errors.Is(err, testworkflowcontroller.ErrJobAborted)
 	isTimeout := errors.Is(err, testworkflowcontroller.ErrJobTimeout)
 
 	// Build error timestamp, adjusting it for aborting job
-	ts := time.Now()
-	if isAborted || isTimeout {
-		ts = ts.Truncate(testworkflowcontroller.JobRetrievalTimeout)
+	if ts.IsZero() {
+		ts = time.Now()
+		if isAborted || isTimeout {
+			ts = ts.Truncate(testworkflowcontroller.JobRetrievalTimeout)
+		}
 	}
 
 	// Apply the expected result
@@ -119,7 +121,7 @@ func (e *executor) Recover(ctx context.Context) {
 func (e *executor) Control(ctx context.Context, execution testkube.TestWorkflowExecution) {
 	ctrl, err := testworkflowcontroller.New(ctx, e.clientSet, e.namespace, execution.Id, execution.ScheduledAt)
 	if err != nil {
-		e.handleFatalError(execution, err)
+		e.handleFatalError(execution, err, time.Time{})
 		return
 	}
 
@@ -144,7 +146,10 @@ func (e *executor) Control(ctx context.Context, execution testkube.TestWorkflowE
 				if execution.Result.IsFinished() {
 					execution.StatusAt = execution.Result.FinishedAt
 				}
-				_ = e.repository.UpdateResult(ctx, execution.Id, execution.Result)
+				err := e.repository.UpdateResult(ctx, execution.Id, execution.Result)
+				if err != nil {
+					log.DefaultLogger.Error(errors.Wrap(err, "error saving test workflow execution result"))
+				}
 			} else {
 				if ref != v.Value.Ref {
 					ref = v.Value.Ref
@@ -162,21 +167,37 @@ func (e *executor) Control(ctx context.Context, execution testkube.TestWorkflowE
 
 		// Try to gracefully handle abort
 		if execution.Result.FinishedAt.IsZero() {
-			ctrl, err = testworkflowcontroller.New(ctx, e.clientSet, e.namespace, execution.Id, execution.ScheduledAt)
-			if err == nil {
-				for v := range ctrl.Watch(ctx).Stream(ctx).Channel() {
-					if v.Error != nil || v.Value.Output == nil {
-						continue
-					}
-
-					execution.Result = v.Value.Result
-					if execution.Result.IsFinished() {
-						execution.StatusAt = execution.Result.FinishedAt
-					}
-					_ = e.repository.UpdateResult(ctx, execution.Id, execution.Result)
+			// Handle container failure
+			abortedAt := time.Time{}
+			for _, v := range execution.Result.Steps {
+				if v.Status != nil && *v.Status == testkube.ABORTED_TestWorkflowStepStatus {
+					abortedAt = v.FinishedAt
+					break
 				}
+			}
+			if !abortedAt.IsZero() {
+				e.handleFatalError(execution, testworkflowcontroller.ErrJobAborted, abortedAt)
 			} else {
-				e.handleFatalError(execution, err)
+				// Handle unknown state
+				ctrl, err = testworkflowcontroller.New(ctx, e.clientSet, e.namespace, execution.Id, execution.ScheduledAt)
+				if err == nil {
+					for v := range ctrl.Watch(ctx).Stream(ctx).Channel() {
+						if v.Error != nil || v.Value.Output == nil {
+							continue
+						}
+
+						execution.Result = v.Value.Result
+						if execution.Result.IsFinished() {
+							execution.StatusAt = execution.Result.FinishedAt
+						}
+						err := e.repository.UpdateResult(ctx, execution.Id, execution.Result)
+						if err != nil {
+							log.DefaultLogger.Error(errors.Wrap(err, "error saving test workflow execution result"))
+						}
+					}
+				} else {
+					e.handleFatalError(execution, err, time.Time{})
+				}
 			}
 		}
 
