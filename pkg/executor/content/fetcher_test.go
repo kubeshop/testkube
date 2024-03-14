@@ -47,8 +47,8 @@ func TestFetcher_Integration(t *testing.T) {
 
 		content := &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeGitFile),
-			Repository: testkube.NewGitRepository("https://github.com/kubeshop/testkube-examples.git", "main").
-				WithPath("example.json"),
+			Repository: testkube.NewGitRepository("https://github.com/kubeshop/testkube-docker-action.git", "main").
+				WithPath("action.yaml"),
 		}
 
 		path, err := f.Fetch(content)
@@ -65,15 +65,15 @@ func TestFetcher_Integration(t *testing.T) {
 
 		content := &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeGitDir),
-			Repository: testkube.NewGitRepository("https://github.com/kubeshop/testkube-examples.git", "main").
+			Repository: testkube.NewGitRepository("https://github.com/kubeshop/testkube-docker-action.git", "main").
 				WithPath(""),
 		}
 
 		path, err := f.Fetch(content)
 		assert.NoError(t, err)
-		assert.FileExists(t, filepath.Join(path, "example.json"))
+		assert.FileExists(t, filepath.Join(path, "action.yaml"))
 		assert.FileExists(t, filepath.Join(path, "README.md"))
-		assert.FileExists(t, filepath.Join(path, "subdir/example.json"))
+		assert.FileExists(t, filepath.Join(path, ".github/update-major-version.yml"))
 
 	})
 
@@ -82,14 +82,13 @@ func TestFetcher_Integration(t *testing.T) {
 
 		content := &testkube.TestContent{
 			Type_: string(testkube.TestContentTypeGitDir),
-			Repository: testkube.NewGitRepository("https://github.com/kubeshop/testkube-examples.git", "main").
-				WithPath("subdir"),
+			Repository: testkube.NewGitRepository("https://github.com/kubeshop/testkube-docker-action.git", "main").
+				WithPath(".github"),
 		}
 
 		path, err := f.Fetch(content)
 		assert.NoError(t, err)
-		assert.FileExists(t, filepath.Join(path, "example.json"))
-		assert.FileExists(t, filepath.Join(path, "example2.json"))
+		assert.FileExists(t, filepath.Join(path, "update-major-version.yml"))
 	})
 
 	t.Run("test fetch no content", func(t *testing.T) {
@@ -110,7 +109,7 @@ func TestFetcher_Integration(t *testing.T) {
 		t.Run("with file", func(t *testing.T) {
 			t.Parallel()
 
-			repo := testkube.NewGitRepository("https://github.com/kubeshop/testkube-examples.git", "main").WithPath("example.json")
+			repo := testkube.NewGitRepository("https://github.com/kubeshop/testkube-docker-action.git", "main").WithPath("action.yaml")
 
 			contentType, err := f.CalculateGitContentType(*repo)
 			assert.NoError(t, err)
@@ -120,7 +119,7 @@ func TestFetcher_Integration(t *testing.T) {
 		t.Run("with dir", func(t *testing.T) {
 			t.Parallel()
 
-			repo := testkube.NewGitRepository("https://github.com/kubeshop/testkube-examples.git", "main").WithPath("subdir")
+			repo := testkube.NewGitRepository("https://github.com/kubeshop/testkube-docker-action.git", "main").WithPath(".github")
 
 			contentType, err := f.CalculateGitContentType(*repo)
 			assert.NoError(t, err)
