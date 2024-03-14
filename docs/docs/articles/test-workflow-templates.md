@@ -44,7 +44,7 @@ spec:
     shell: k6 run {{ config.params }}
 ```
 
-The template can then be "used" in a corresponding from TestWorkflow step:
+The template can then be "used" in a corresponding TestWorkflow step:
 
 ```yaml
 steps:
