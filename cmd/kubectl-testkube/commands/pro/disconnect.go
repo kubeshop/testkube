@@ -78,7 +78,7 @@ func NewDisconnectCmd() *cobra.Command {
 
 			ui.NL(2)
 
-			spinner := ui.NewSpinner("Disonnecting from Testkube Pro")
+			spinner := ui.NewSpinner("Disconnecting from Testkube Pro")
 
 			err = common.HelmUpgradeOrInstalTestkube(opts)
 			ui.ExitOnError("Installing Testkube Pro", err)

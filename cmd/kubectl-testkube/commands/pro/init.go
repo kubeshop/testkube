@@ -13,9 +13,8 @@ import (
 
 func NewInitCmd() *cobra.Command {
 	options := common.HelmOptions{
-		NoMinio:     true,
-		NoMongo:     true,
-		NoDashboard: true,
+		NoMinio: true,
+		NoMongo: true,
 	}
 
 	cmd := &cobra.Command{
