@@ -339,7 +339,6 @@ Files in directories inside `working dir``
 Artifacts can also be configured for project directories (inside `/data/repo`):
 
 ```yaml
-steps:
 - name: Saving artifacts
   workingDir: /data/repo/test/cypress/executor-tests/cypress-13/cypress/videos
   artifacts:
@@ -348,17 +347,41 @@ steps:
 ```
 
 ### condition: always
-It's a common thing to save artifacts in case of failure. That's when setting `condition: always` may be needed - to execute artifacts saving step even if the previous ones failed.
+It's a common thing to save artifacts in case of failure. By default the `artifacts` have `condition: always` set if added directly on step. So, they will be always scraped - even if the step fails:
 
 ```yaml
-- name: Saving artifacts
-  condition: always # this step will be always executed
-  workingDir: /data/artifacts
+- name: Example step with artifacts
+  shell: example-command
   artifacts:
     paths:
-    - '*'
+    - '**/*'
 ```
 
+If artifacts are saved in a separate step, or in a sub-step, they won't be scraped by default in case of earlier failure. In that case, setting `condition: always` specifically would be needed.
+
+Separate step:
+
+```yaml
+- name: Step 1
+  shell: example-command
+- name: Step 2 - Saving artifacts
+  condition: always
+  artifacts:
+    paths:
+    - '**/*'
+```
+
+Sub-step:
+```yaml
+- name: Step 1
+  shell: example-command
+  steps:
+  - name: Sub-step - Saving artifacts
+    condition: always
+    artifacts:
+      paths:
+      - '**/*'
+```
 
 
 ### Example - Cypress project
