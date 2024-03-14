@@ -270,7 +270,7 @@ Or, for specific step:
 ```yaml
 steps:
 - name: Saving artifacts
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-13/cypress/videos
+  workingDir: /data/repo/test/cypress/executor-tests/cypress-13/cypress/videos
 ```
 
 or on the Step level:
@@ -279,19 +279,19 @@ or on the Step level:
 Files directly in `working dir`
 ```yaml
 - name: Saving artifacts
-    workingDir: /data/artifacts
-    artifacts:
-      paths:
-      - '*'
+  workingDir: /data/artifacts
+  artifacts:
+    paths:
+    - '*'
 ```
 
 Files in directories inside `working dir``
 ```yaml
 - name: Saving artifacts
-    workingDir: /data/artifacts
-    artifacts:
-      paths:
-      - '**/*'
+  workingDir: /data/artifacts
+  artifacts:
+    paths:
+    - '**/*'
 ```
 
 Artifacts can also be configured for project directories (inside `/data/repo`):
@@ -299,11 +299,25 @@ Artifacts can also be configured for project directories (inside `/data/repo`):
 ```yaml
 steps:
 - name: Saving artifacts
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-13/cypress/videos
-    artifacts:
-      paths:
-      - '**/*'
+  workingDir: /data/repo/test/cypress/executor-tests/cypress-13/cypress/videos
+  artifacts:
+    paths:
+    - '**/*'
 ```
+
+### condition: always
+It's a common thing to save artifacts in case of failure. That's when setting `condition: always` may be needed - to execute artifacts saving step even if the previous ones failed.
+
+```yaml
+- name: Saving artifacts
+  condition: always # this step will be always executed
+  workingDir: /data/artifacts
+  artifacts:
+    paths:
+    - '*'
+```
+
+
 
 ### Example - Cypress project
 Example Cypress project with artifacts (video recordings):
