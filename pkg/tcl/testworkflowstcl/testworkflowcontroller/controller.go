@@ -379,6 +379,16 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 			// so it will get stuck there.
 			if status.Status == testkube.ABORTED_TestWorkflowStepStatus {
 				result.Recompute(sig, c.scheduledAt)
+				abortTs := result.Steps[container.Name].FinishedAt
+				if status.Details == "" {
+					status.Details = "Manual"
+				}
+
+				w.SendValue(Notification{
+					Timestamp: abortTs,
+					Ref:       container.Name,
+					Log:       fmt.Sprintf("\n%s Aborted (%s)", abortTs.Format(KubernetesLogTimeFormat), status.Details),
+				})
 				w.SendValue(Notification{Result: result.Clone()})
 				return
 			}
