@@ -7965,6 +7965,8 @@ components:
     TestWorkflowStepArtifacts:
       type: object
       properties:
+        workingDir:
+          $ref: "#/components/schemas/BoxedString"
         compress:
           $ref: "#/components/schemas/TestWorkflowStepArtifactsCompression"
         paths:
