@@ -14,10 +14,54 @@ import (
 )
 
 // this content is also saved in test repo
-// in https://github.com/kubeshop/testkube-examples/blob/main/example.json
+// in https:///github.com/kubeshop/testkube-docker-action/blob/main/action.yaml
 // file with \n on end
-const fileContent = `{"some":"json","file":"with content"}
-`
+const fileContent = `action.yml
+name: 'Testkube CLI'
+description: 'Execute Testkube command'
+inputs:
+  command:
+    description: 'Command'
+    required: true
+    default: 'get'
+  resource:
+    description: 'Resource'
+    required: false
+    default: 'tests'
+  namespace:
+    description: 'Namespace'
+    required: false
+    default: 'testkube'
+  api-key:
+    description: 'API key'
+    required: false
+    default: ''
+  api-uri:
+    description: 'API uri'
+    required: false
+    default: ''
+  parameters:
+    description: 'Parameters'
+    required: false
+    default: ''
+  stdin:
+    description: 'Standard input'
+    required: false
+    default: ''
+outputs:
+  result:
+    description: 'The result of the command'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.command }}
+    - ${{ inputs.resource }}
+    - ${{ inputs.namespace }}
+    - ${{ inputs.api-key }}
+    - ${{ inputs.api-uri }}
+    - ${{ inputs.parameters }}
+    - ${{ inputs.stdin }}`
 
 func TestFetcher_Integration(t *testing.T) {
 	test.IntegrationTest(t)
