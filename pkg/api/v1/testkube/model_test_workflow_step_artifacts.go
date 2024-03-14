@@ -10,7 +10,8 @@
 package testkube
 
 type TestWorkflowStepArtifacts struct {
-	Compress *TestWorkflowStepArtifactsCompression `json:"compress,omitempty"`
+	WorkingDir *BoxedString                          `json:"workingDir,omitempty"`
+	Compress   *TestWorkflowStepArtifactsCompression `json:"compress,omitempty"`
 	// file paths to fetch from the container
 	Paths []string `json:"paths"`
 }
