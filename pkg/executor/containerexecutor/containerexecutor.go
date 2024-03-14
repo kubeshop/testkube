@@ -270,12 +270,12 @@ func (c *ContainerExecutor) Execute(ctx context.Context, execution *testkube.Exe
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != corev1.PodRunning && pod.Labels["job-name"] == execution.Id {
 			if options.Sync {
-				return c.updateResultsFromPod(ctx, pod, l, execution, jobOptions)
+				return c.updateResultsFromPod(ctx, pod, l, execution, jobOptions, options.Request.NegativeTest)
 			}
 
 			// async wait for complete status or error
 			go func(pod corev1.Pod) {
-				_, err := c.updateResultsFromPod(ctx, pod, l, execution, jobOptions)
+				_, err := c.updateResultsFromPod(ctx, pod, l, execution, jobOptions, options.Request.NegativeTest)
 				if err != nil {
 					l.Errorw("update results from jobs pod error", "error", err)
 				}
@@ -342,11 +342,12 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	l *zap.SugaredLogger,
 	execution *testkube.Execution,
 	jobOptions *JobOptions,
+	isNegativeTest bool,
 ) (*testkube.ExecutionResult, error) {
 	var err error
 
 	// save stop time and final state
-	defer c.stopExecution(ctx, execution, execution.ExecutionResult)
+	defer c.stopExecution(ctx, execution, execution.ExecutionResult, isNegativeTest)
 
 	// wait for pod
 	l.Debug("poll immediate waiting for executor pod")
@@ -492,9 +493,33 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	return execution.ExecutionResult, nil
 }
 
-func (c *ContainerExecutor) stopExecution(ctx context.Context, execution *testkube.Execution, result *testkube.ExecutionResult) {
-	c.log.Debug("stopping execution")
+func (c *ContainerExecutor) stopExecution(ctx context.Context,
+	execution *testkube.Execution,
+	result *testkube.ExecutionResult,
+	isNegativeTest bool,
+) {
+	c.log.Debugw("stopping execution", "isNegativeTest", isNegativeTest, "test", execution.TestName)
 	execution.Stop()
+
+	if isNegativeTest {
+		if result.IsFailed() {
+			c.log.Debugw("test run was expected to fail, and it failed as expected", "test", execution.TestName)
+			execution.ExecutionResult.Status = testkube.ExecutionStatusPassed
+			result.Status = testkube.ExecutionStatusPassed
+			result.Output = result.Output + "\nTest run was expected to fail, and it failed as expected"
+		} else {
+			c.log.Debugw("test run was expected to fail - the result will be reversed", "test", execution.TestName)
+			execution.ExecutionResult.Status = testkube.ExecutionStatusFailed
+			result.Status = testkube.ExecutionStatusFailed
+			result.Output = result.Output + "\nTest run was expected to fail, the result will be reversed"
+		}
+
+		err := c.repository.UpdateResult(ctx, execution.Id, *execution)
+		if err != nil {
+			c.log.Errorw("Update execution result error", "error", err)
+		}
+	}
+
 	err := c.repository.EndExecution(ctx, *execution)
 	if err != nil {
 		c.log.Errorw("Update execution result error", "error", err)
