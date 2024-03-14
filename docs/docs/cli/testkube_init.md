@@ -21,7 +21,6 @@ testkube init [flags]
       --name string           installation name (usually you don't need to change it) (default "testkube")
       --namespace string      namespace where to install (default "testkube")
       --no-confirm            don't ask for confirmation - unatended installation mode
-      --no-dashboard          don't install dashboard
       --no-minio              don't install MinIO
       --no-mongo              don't install MongoDB
       --org-id string         Testkube Cloud organization id [required for centralized mode]
