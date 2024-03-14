@@ -146,7 +146,10 @@ func (e *executor) Control(ctx context.Context, execution testkube.TestWorkflowE
 				if execution.Result.IsFinished() {
 					execution.StatusAt = execution.Result.FinishedAt
 				}
-				_ = e.repository.UpdateResult(ctx, execution.Id, execution.Result)
+				err := e.repository.UpdateResult(ctx, execution.Id, execution.Result)
+				if err != nil {
+					log.DefaultLogger.Error(errors.Wrap(err, "error saving test workflow execution result"))
+				}
 			} else {
 				if ref != v.Value.Ref {
 					ref = v.Value.Ref
@@ -187,7 +190,10 @@ func (e *executor) Control(ctx context.Context, execution testkube.TestWorkflowE
 						if execution.Result.IsFinished() {
 							execution.StatusAt = execution.Result.FinishedAt
 						}
-						_ = e.repository.UpdateResult(ctx, execution.Id, execution.Result)
+						err := e.repository.UpdateResult(ctx, execution.Id, execution.Result)
+						if err != nil {
+							log.DefaultLogger.Error(errors.Wrap(err, "error saving test workflow execution result"))
+						}
 					}
 				} else {
 					e.handleFatalError(execution, err, time.Time{})
