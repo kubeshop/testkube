@@ -44,7 +44,7 @@ require (
 	github.com/slack-go/slack v0.11.4
 	github.com/spf13/afero v1.11.0
 	github.com/spf13/cobra v1.7.0
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	github.com/valyala/fasthttp v1.50.0
 	github.com/vektah/gqlparser/v2 v2.5.2-0.20230422221642-25e09f9d292d
 	go.mongodb.org/mongo-driver v1.11.0
@@ -77,7 +77,7 @@ require (
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/dlclark/regexp2 v1.8.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.2 // indirect
-	github.com/evanphx/json-patch/v5 v5.7.0 // indirect
+	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-openapi/jsonpointer v0.20.0 // indirect
