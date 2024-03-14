@@ -10,7 +10,7 @@ problems that can occur with standard Tests, including:
 - Having more control over how your tests are executed, including resource consumption and setup/tearDown processes.
 - Being able to configure tool-specific commands and arguments.
 
-# Test Workflow structure
+## Test Workflow structure
 
 TestWorkflows are defined using a specific workflow language wrapped in a CRD. The high-level structure
 of a TestWorkflow is as follows:
