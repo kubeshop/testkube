@@ -25,7 +25,6 @@ This command will set up the following components in your Kubernetes cluster:
 - Create a Testkube namespace.
 - Deploy the Testkube API.
 - Use MongoDB for test results and Minio for artifact storage (optional; disable with --no-minio). 
-- Testkube Dashboard to visually and manage all your tests (optional; disable with --no-dashboard flag).
 - Testkube will listen and manage all the CRDs for Tests, TestSuites, Executors, etc… inside the Testkube namespace.
 
 
