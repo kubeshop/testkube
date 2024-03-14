@@ -280,7 +280,8 @@ func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container Contain
 		return nil, errors.New("there needs to be at least one path to scrap for artifacts")
 	}
 
-	selfContainer := container.CreateChild()
+	selfContainer := container.CreateChild().
+		ApplyCR(&testworkflowsv1.ContainerConfig{WorkingDir: step.Artifacts.WorkingDir})
 	stage := NewContainerStage(layer.NextRef(), selfContainer)
 	stage.SetCondition("always")
 	stage.SetCategory("Upload artifacts")
