@@ -6,6 +6,7 @@ require (
 	github.com/99designs/gqlgen v0.17.27
 	github.com/Masterminds/semver v1.5.0
 	github.com/adhocore/gronx v1.6.3
+	github.com/bmatcuk/doublestar/v4 v4.6.1
 	github.com/cdevents/sdk-go v0.3.0
 	github.com/cli/cli/v2 v2.20.2
 	github.com/cloudevents/sdk-go/v2 v2.14.0
@@ -23,6 +24,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/gookit/color v1.5.3
 	github.com/gorilla/websocket v1.5.0
+	github.com/h2non/filetype v1.1.3
 	github.com/joshdk/go-junit v1.0.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -68,7 +70,6 @@ require (
 	github.com/alecthomas/chroma v0.10.0 // indirect
 	github.com/aymanbagabas/go-osc52 v1.2.1 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
-	github.com/bmatcuk/doublestar/v4 v4.6.1 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/briandowns/spinner v1.19.0 // indirect
 	github.com/charmbracelet/glamour v0.6.0 // indirect
@@ -92,7 +93,6 @@ require (
 	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
-	github.com/h2non/filetype v1.1.3 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.1 // indirect
 	github.com/henvic/httpretty v0.1.0 // indirect
 	github.com/itchyny/gojq v0.12.14 // indirect
@@ -142,7 +142,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/dustin/go-humanize v1.0.1
 	github.com/evanphx/json-patch v5.7.0+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
