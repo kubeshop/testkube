@@ -64,7 +64,7 @@ spec:
 
 ```yaml
 spec:
-    content:
+  content:
     files:
     - path: k6.js # created in working dir
         content: |
