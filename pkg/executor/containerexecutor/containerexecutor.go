@@ -265,6 +265,10 @@ func (c *ContainerExecutor) Execute(ctx context.Context, execution *testkube.Exe
 	jobOptions, err := c.createJob(ctx, *execution, options)
 	if err != nil {
 		executionResult.Err(err)
+		if cErr := c.cleanPVCVolume(ctx, execution); cErr != nil {
+			c.log.Errorw("error cleaning pvc volume", "error", cErr)
+		}
+
 		return executionResult, err
 	}
 
@@ -272,6 +276,10 @@ func (c *ContainerExecutor) Execute(ctx context.Context, execution *testkube.Exe
 	pods, err := executor.GetJobPods(ctx, podsClient, execution.Id, 1, 10)
 	if err != nil {
 		executionResult.Err(err)
+		if cErr := c.cleanPVCVolume(ctx, execution); cErr != nil {
+			c.log.Errorw("error cleaning pvc volume", "error", cErr)
+		}
+
 		return executionResult, err
 	}
 
@@ -367,7 +375,13 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	isNegativeTest bool,
 ) (*testkube.ExecutionResult, error) {
 	// save stop time and final state
-	defer c.stopExecution(ctx, execution, execution.ExecutionResult, isNegativeTest)
+	defer func() {
+		c.stopExecution(ctx, execution, execution.ExecutionResult, isNegativeTest)
+
+		if err := c.cleanPVCVolume(ctx, execution); err != nil {
+			l.Errorw("error cleaning pvc volume", "error", err)
+		}
+	}()
 
 	// wait for pod
 	l.Debug("poll immediate waiting for executor pod")
