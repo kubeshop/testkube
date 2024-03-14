@@ -12,7 +12,6 @@ testkube install [flags]
       --chart string    chart name (default "kubeshop/testkube")
   -h, --help            help for install
       --name string     installation name (default "testkube")
-      --no-dashboard    don't install dashboard
       --no-minio        don't install MinIO
       --no-mongo        don't install MongoDB
       --values string   path to Helm values file

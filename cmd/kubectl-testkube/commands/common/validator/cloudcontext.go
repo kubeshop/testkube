@@ -12,11 +12,11 @@ func ValidateCloudContext(cfg config.Data) error {
 	}
 
 	if cfg.CloudContext.ApiUri == "" {
-		return errors.New("please provide Testkube Cloud URI")
+		return errors.New("please provide Testkube Pro URI")
 	}
 
 	if cfg.CloudContext.ApiKey == "" {
-		return errors.New("please provide Testkube Cloud API token")
+		return errors.New("please provide Testkube Pro API token")
 	}
 
 	if cfg.CloudContext.EnvironmentId == "" {
