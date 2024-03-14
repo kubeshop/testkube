@@ -4,7 +4,7 @@ TestWorkflow Templates allow you to define common properties/traits that you can
 consistently across your TestWorkflows. 
 
 For example, with TestWorkflow Templates you can easily 
-- define specific ENV variables to be passed to all containers
+- define specific ENV variables to be passed to all containers.
 - define a common Git Source for your tests
 - define common setup or tearDown steps for your tests
 - define specific commands or images to use for your tests, while still allowing a TestWorkflow to set
