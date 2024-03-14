@@ -5,48 +5,36 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
-
-	"github.com/kubeshop/testkube/pkg/data/set"
 )
 
 func (s TestkubeAPI) ListLabelsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		errPrefix := "failed to list labels"
-		testSuitesLabels, err := s.TestsSuitesClient.ListLabels()
-		if err != nil {
-			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client failed to list labels for test suites: %w", errPrefix, err))
-		}
+		labels := make(map[string][]string)
+		sources := append(*s.LabelSources, s.TestsClient, s.TestsSuitesClient)
 
-		labels, err := s.TestsClient.ListLabels()
-		if err != nil {
-			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client failed to list labels for tests: %w", errPrefix, err))
-		}
+		for _, source := range sources {
+			nextLabels, err := source.ListLabels()
+			if err != nil {
+				return s.Error(c, http.StatusBadGateway, fmt.Errorf("failed to list labels: %w", err))
+			}
 
-		for key, testValues := range testSuitesLabels {
-			if values, ok := labels[key]; !ok {
-				labels[key] = testValues
-			} else {
-				valuesMap := map[string]struct{}{}
-				for _, v := range values {
-					valuesMap[v] = struct{}{}
-				}
+			for key, testValues := range nextLabels {
+				if values, ok := labels[key]; !ok {
+					labels[key] = testValues
+				} else {
+					valuesMap := map[string]struct{}{}
+					for _, v := range values {
+						valuesMap[v] = struct{}{}
+					}
 
-				testValuesMap := map[string]struct{}{}
-				for _, v := range testValues {
-					testValuesMap[v] = struct{}{}
-				}
-
-				for k := range testValuesMap {
-					if _, ok := valuesMap[k]; !ok {
-						labels[key] = append(labels[key], k)
+					for _, label := range testValues {
+						if _, ok := valuesMap[label]; !ok {
+							labels[key] = append(labels[key], label)
+							valuesMap[label] = struct{}{}
+						}
 					}
 				}
 			}
-		}
-
-		// make labels unique
-		for key, list := range labels {
-			labels[key] = set.Of(list...).ToArray()
 		}
 
 		return c.JSON(labels)

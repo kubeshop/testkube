@@ -97,6 +97,9 @@ func (s *apiTCL) ClientError(c *fiber.Ctx, prefix string, err error) error {
 func (s *apiTCL) AppendRoutes() {
 	root := s.Routes
 
+	// Register TestWorkflows as additional source for labels
+	s.WithLabelSources(s.TestWorkflowsClient, s.TestWorkflowTemplatesClient)
+
 	testWorkflows := root.Group("/test-workflows")
 	testWorkflows.Get("/", s.pro(s.ListTestWorkflowsHandler()))
 	testWorkflows.Post("/", s.pro(s.CreateTestWorkflowHandler()))
