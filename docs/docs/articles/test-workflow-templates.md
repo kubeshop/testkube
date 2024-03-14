@@ -19,7 +19,7 @@ ability to define configuration parameters that can be specified when the templa
 TestWorkflowTemplates are "merged" into a referring TestWorkflow at run-time and the 
 resulting TestWorkflow is executed by Testkube.
 
-For example, the below template defines the basics for running a K6 test, with parameters for which
+For example, the template below defines the basics for running a k6 test, with parameters for which
 k6 version to use and which parameters to pass to k6:
 
 ```yaml
