@@ -1,5 +1,5 @@
 # Test Workflow Template
-Test Workflow Templates allows reusing Test Workflows.
+Test Workflow Templates allow reusing [Test Workflows](./test-workflows.md).
 
 ```yaml
 kind: TestWorkflowTemplate
