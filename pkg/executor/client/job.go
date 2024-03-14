@@ -236,6 +236,10 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 
 	err = c.CreateJob(ctx, *execution, options)
 	if err != nil {
+		if cErr := c.cleanPVCVolume(ctx, execution); cErr != nil {
+			c.Log.Errorw("error deleting pvc volume", "error", cErr)
+		}
+
 		return result.Err(err), err
 	}
 
@@ -248,6 +252,10 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 	podsClient := c.ClientSet.CoreV1().Pods(execution.TestNamespace)
 	pods, err := executor.GetJobPods(ctx, podsClient, execution.Id, 1, 10)
 	if err != nil {
+		if cErr := c.cleanPVCVolume(ctx, execution); cErr != nil {
+			c.Log.Errorw("error deleting pvc volume", "error", cErr)
+		}
+
 		return result.Err(err), err
 	}
 
@@ -380,6 +388,10 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 			c.streamLog(ctx, execution.Id, events.NewErrorLog(err))
 			l.Errorw("error stopping execution after updating results from pod", "error", err)
 		}
+
+		if err := c.cleanPVCVolume(ctx, execution); err != nil {
+			l.Errorw("error cleaning pvc volume", "error", err)
+		}
 	}()
 
 	// wait for pod to be loggable
@@ -402,14 +414,6 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	l.Debug("poll immediate end")
 
 	c.streamLog(ctx, execution.Id, events.NewLog("analyzing test results and artfacts"))
-	if execution.ArtifactRequest != nil &&
-		execution.ArtifactRequest.StorageClassName != "" {
-		pvcsClient := c.ClientSet.CoreV1().PersistentVolumeClaims(execution.TestNamespace)
-		err = pvcsClient.Delete(ctx, execution.Id+"-pvc", metav1.DeleteOptions{})
-		if err != nil {
-			return execution.ExecutionResult, err
-		}
-	}
 
 	logs, err := executor.GetPodLogs(ctx, c.ClientSet, execution.TestNamespace, pod)
 	if err != nil {
