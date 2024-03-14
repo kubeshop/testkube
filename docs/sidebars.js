@@ -35,6 +35,14 @@ const sidebars = {
       items: [
         {
           type: "category",
+          label: "Test Workflows (beta)",
+          items: [
+            "articles/test-workflows",
+            "articles/test-workflow-templates",
+          ],
+        },
+        {
+          type: "category",
           label: "Tests",
           items: [
             "articles/creating-tests",
