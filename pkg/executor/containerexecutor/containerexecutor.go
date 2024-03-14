@@ -255,6 +255,10 @@ func (c *ContainerExecutor) Execute(ctx context.Context, execution *testkube.Exe
 	jobOptions, err := c.createJob(ctx, *execution, options)
 	if err != nil {
 		executionResult.Err(err)
+		if cErr := c.cleanPVCVolume(ctx, execution); cErr != nil {
+			c.log.Errorw("error cleaning pvc volume", "error", cErr)
+		}
+
 		return executionResult, err
 	}
 
@@ -262,6 +266,10 @@ func (c *ContainerExecutor) Execute(ctx context.Context, execution *testkube.Exe
 	pods, err := executor.GetJobPods(ctx, podsClient, execution.Id, 1, 10)
 	if err != nil {
 		executionResult.Err(err)
+		if cErr := c.cleanPVCVolume(ctx, execution); cErr != nil {
+			c.log.Errorw("error cleaning pvc volume", "error", cErr)
+		}
+
 		return executionResult, err
 	}
 
@@ -335,6 +343,18 @@ func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Ex
 	return jobOptions, err
 }
 
+func (c *ContainerExecutor) cleanPVCVolume(ctx context.Context, execution *testkube.Execution) error {
+	if execution.ArtifactRequest != nil &&
+		execution.ArtifactRequest.StorageClassName != "" {
+		pvcsClient := c.clientSet.CoreV1().PersistentVolumeClaims(execution.TestNamespace)
+		if err := pvcsClient.Delete(ctx, execution.Id+"-pvc", metav1.DeleteOptions{}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // updateResultsFromPod watches logs and stores results if execution is finished
 func (c *ContainerExecutor) updateResultsFromPod(
 	ctx context.Context,
@@ -347,7 +367,13 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	var err error
 
 	// save stop time and final state
-	defer c.stopExecution(ctx, execution, execution.ExecutionResult, isNegativeTest)
+	defer func() {
+		c.stopExecution(ctx, execution, execution.ExecutionResult, isNegativeTest)
+
+		if err := c.cleanPVCVolume(ctx, execution); err != nil {
+			l.Errorw("error cleaning pvc volume", "error", err)
+		}
+	}()
 
 	// wait for pod
 	l.Debug("poll immediate waiting for executor pod")
@@ -403,12 +429,6 @@ func (c *ContainerExecutor) updateResultsFromPod(
 				l.Debug("poll scraper immediate end")
 
 				latestScraperPod, err := podsClient.Get(context.Background(), scraperPod.Name, metav1.GetOptions{})
-				if err != nil {
-					return execution.ExecutionResult, err
-				}
-
-				pvcsClient := c.clientSet.CoreV1().PersistentVolumeClaims(execution.TestNamespace)
-				err = pvcsClient.Delete(ctx, execution.Id+"-pvc", metav1.DeleteOptions{})
 				if err != nil {
 					return execution.ExecutionResult, err
 				}
