@@ -410,7 +410,6 @@ func main() {
 	proContext := config.ProContext{
 		APIKey:                           cfg.TestkubeProAPIKey,
 		URL:                              cfg.TestkubeProURL,
-		LogsPath:                         cfg.TestkubeProLogsPath,
 		TLSInsecure:                      cfg.TestkubeProTLSInsecure,
 		WorkerCount:                      cfg.TestkubeProWorkerCount,
 		LogStreamWorkerCount:             cfg.TestkubeProLogStreamWorkerCount,

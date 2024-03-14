@@ -111,7 +111,7 @@ func main() {
 			ctx,
 			cfg.TestkubeProTLSInsecure,
 			cfg.TestkubeProSkipVerify,
-			cfg.TestkubeProURL+cfg.TestkubeProLogsPath,
+			cfg.TestkubeProURL,
 			cfg.TestkubeProCertFile,
 			cfg.TestkubeProKeyFile,
 			cfg.TestkubeProCAFile,
@@ -189,6 +189,7 @@ func interrupt(logger *zap.SugaredLogger, ctx context.Context) error {
 	case s := <-c:
 		return errors.New("signal received" + s.String())
 	case <-ctx.Done():
+		logger.Info("stopping because of context done")
 		return context.Canceled
 	}
 }

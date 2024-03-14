@@ -247,6 +247,9 @@ func (ls *LogsService) stopConsumer(ctx context.Context, wg *sync.WaitGroup, con
 
 	l.Debugw("stopping consumer", "name", consumer.Name)
 
+	// stop nats consumer
+	defer consumer.Context.Stop()
+
 	for {
 		info, err = consumer.Instance.Info(ctx)
 		if err != nil {
@@ -261,8 +264,7 @@ func (ls *LogsService) stopConsumer(ctx context.Context, wg *sync.WaitGroup, con
 
 		// check if there was some messages processed
 		if nothingToProcess && messagesDelivered {
-			// stop nats consumer
-			consumer.Context.Stop()
+
 			// delete nats consumer instance from memory
 			ls.consumerInstances.Delete(consumer.Name)
 			l.Infow("stopping and removing consumer", "name", consumer.Name, "consumerSeq", info.Delivered.Consumer, "streamSeq", info.Delivered.Stream, "last", info.Delivered.Last)
