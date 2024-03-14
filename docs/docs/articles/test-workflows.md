@@ -1,6 +1,48 @@
 # Test Workflows
 
+## Introduction
+TestWorkflows are an easy and extremely powerful way to define and run your tests in 
+your Kubernetes clusters. Thanks to their flexibility, TestWorkflows solve many of the 
+problems that can occur with standard Tests, including:
+
+- Running Tests using different testing tool versions and dependencies.
+- Defining multiple steps for the execution of the tests.
+- Having more control over how your tests are executed, including resource consumption and setup/tearDown processes.
+- Being able to configure tool-specific commands and arguments.
+
 # Test Workflow structure
+
+TestWorkflows are defined using a specific workflow language wrapped in a CRD. The high-level structure
+of a TestWorkflow is as follows:
+
+```yaml title="testworkflows-outline.yaml"
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: ... # name of the Test Workflow
+spec:
+  content: # content specifies where to find the actual test definition(s) to run 
+    git: # checking out from git repository - see below
+      ...
+    files: # defines files to create containing the actual tests - see below
+      ...
+  container: # settings applied to all images used in the workflow, can be overridden
+    resources: # resource settings
+      requests: # resource requests
+        ...
+      limits: # resource limits
+        ...
+    workingDir: # default workingDir in the containers
+    env: # global env variables
+      ...
+  steps: # steps that will be executed by this Test Workflow, can be nested
+  - name: ... # name of step
+    run: # action to perform for this step - see below for possible values
+      ...
+```
+
+The different properties are described with examples and in more detail below.
+
 ## Example - Test Workflow for Postman
 Example Test Workflow for running Postman collection from Testkube repository: [/test/postman/executor-tests/postman-executor-smoke-without-envs.postman_collection.json](https://raw.githubusercontent.com/kubeshop/testkube/develop/test/postman/executor-tests/postman-executor-smoke-without-envs.postman_collection.json)
 

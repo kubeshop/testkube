@@ -1,5 +1,26 @@
 # Test Workflow Template
-Test Workflow Templates allow reusing [Test Workflows](./test-workflows.md).
+
+TestWorkflow Templates allow you to define common properties/traits that you can reuse 
+consistently across your TestWorkflows. 
+
+For example, with TestWorkflow Templates you can easily 
+- define specific ENV variables to be passed to all containers
+- define a common Git Source for your tests
+- define common setup or tearDown steps for your tests
+- define specific commands or images to use for your tests, while still allowing a TestWorkflow to set
+  the version of the testing tool
+- etc.
+
+## How does it work?
+
+A TestWorkflowTemplate definition follows the same structure as a TestWorkflow, with the additional
+possibility to define configuration parameters that can be specified when the template is used.
+
+TestWorkflowTemplates are "merged" into a referring TestWorkflow at run-time and the 
+resulting TestWorkflow is executed by Testkube.
+
+For example, the below template defines the basics for running a K6 test, with parameters for which
+k6 version to use and which parameters to pass to k6:
 
 ```yaml
 kind: TestWorkflowTemplate
@@ -23,7 +44,8 @@ spec:
     shell: k6 run {{ config.params }}
 ```
 
-The template can then be executed from Test Workflow step:
+The template can then be "used" in a corresponding from TestWorkflow step:
+
 ```yaml
 steps:
   - name: Run from template
