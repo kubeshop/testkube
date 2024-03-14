@@ -13,6 +13,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	repoConfig "github.com/kubeshop/testkube/pkg/repository/config"
@@ -145,6 +146,7 @@ func NewTestkubeAPI(
 		logGrpcClient:         logGrpcClient,
 		SubscriptionChecker:   subscriptionChecker,
 		disableSecretCreation: disableSecretCreation,
+		LabelSources:          common.Ptr(make([]LabelSource, 0)),
 	}
 
 	// will be reused in websockets handler
@@ -207,6 +209,7 @@ type TestkubeAPI struct {
 	proContext            *config.ProContext
 	SubscriptionChecker   checktcl.SubscriptionChecker
 	disableSecretCreation bool
+	LabelSources          *[]LabelSource
 }
 
 type storageParams struct {
@@ -233,6 +236,14 @@ type oauthParams struct {
 func (s *TestkubeAPI) WithFeatureFlags(ff featureflags.FeatureFlags) *TestkubeAPI {
 	s.featureFlags = ff
 	return s
+}
+
+type LabelSource interface {
+	ListLabels() (map[string][]string, error)
+}
+
+func (s *TestkubeAPI) WithLabelSources(l ...LabelSource) {
+	*s.LabelSources = append(*s.LabelSources, l...)
 }
 
 // SendTelemetryStartEvent sends anonymous start event to telemetry trackers
