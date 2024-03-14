@@ -1,6 +1,7 @@
 package pro
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/pterm/pterm"
@@ -65,8 +66,8 @@ func NewDisconnectCmd() *cobra.Command {
 				{ui.Separator, ""},
 
 				{"Testkube is connected to Pro organizations environment"},
-				{"Organization Id", info.OrgId},
-				{"Environment Id", info.EnvId},
+				{"Organization Id", cfg.CloudContext.OrganizationId},
+				{"Environment Id", cfg.CloudContext.EnvironmentId},
 			}
 
 			ui.Properties(summary)
@@ -92,6 +93,16 @@ func NewDisconnectCmd() *cobra.Command {
 			if opts.MinioReplicas > 0 {
 				spinner = ui.NewSpinner("Scaling up MinIO")
 				common.KubectlScaleDeployment(opts.Namespace, "testkube-minio-testkube", opts.MinioReplicas)
+				spinner.Success()
+			}
+
+			spinner = ui.NewSpinner("Resetting Testkube config.json")
+			cfg.ContextType = config.ContextTypeKubeconfig
+			cfg.CloudContext = config.CloudContext{}
+			if err = config.Save(cfg); err != nil {
+				spinner.Fail(fmt.Sprintf("Error updating local Testkube config file: %s", err))
+				ui.Warn("Please manually remove the fields contextType and cloudContext from your config file.")
+			} else {
 				spinner.Success()
 			}
 
