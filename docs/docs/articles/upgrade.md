@@ -1,6 +1,7 @@
 # Upgrade Testkube
 
-Upgrading Testkube will upgrade the cluster components. 
+Upgrading Testkube will upgrade the cluster components to the latest version. The following 
+applies both to Open Source and Commercial installations.
 
 There are two ways to upgrade Testkube: 
 
@@ -23,6 +24,12 @@ helm upgrade --namespace namespace_name my-testkube kubeshop/testkube
 
 ## Using Testkube's CLI
 
+You can use the `upgrade` command to upgrade your Testkube installation, see the 
+corresponding [CLI Documentation](../cli/testkube_upgrade.md) for all options.
+
+Simple usage: 
+
 ```bash
 testkube upgrade
 ```
+
