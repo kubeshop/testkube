@@ -161,17 +161,17 @@ func main() {
 	}
 
 	// Load the rest of the configuration
+	var err error
 	for k, v := range config {
-		value, err := data.Template(v)
+		config[k], err = data.Template(v)
 		if err != nil {
 			output.Failf(output.CodeInputError, `resolving "%s" param: %s: %s`, k, v, err.Error())
 		}
-		data.LoadConfig(map[string]string{k: value})
 	}
+	data.LoadConfig(config)
 
 	// Compute templates in the cmd/args
 	original := slices.Clone(args)
-	var err error
 	for i := range args {
 		args[i], err = data.Template(args[i])
 		if err != nil {

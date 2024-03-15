@@ -30,7 +30,7 @@ type StageLifecycle interface {
 	SetOptional(optional bool) StageLifecycle
 	SetCondition(expr string) StageLifecycle
 	AppendConditions(expr ...string) StageLifecycle
-	SetRetryPolicy(policy testworkflowsv1.RetryPolicy) StageLifecycle
+	SetRetryPolicy(policy *testworkflowsv1.RetryPolicy) StageLifecycle
 	SetTimeout(tpl string) StageLifecycle
 }
 
@@ -100,8 +100,11 @@ func (s *stageLifecycle) AppendConditions(expr ...string) StageLifecycle {
 	return s
 }
 
-func (s *stageLifecycle) SetRetryPolicy(policy testworkflowsv1.RetryPolicy) StageLifecycle {
-	s.retry = policy
+func (s *stageLifecycle) SetRetryPolicy(policy *testworkflowsv1.RetryPolicy) StageLifecycle {
+	if policy == nil {
+		policy = &testworkflowsv1.RetryPolicy{}
+	}
+	s.retry = *policy
 	return s
 }
 
