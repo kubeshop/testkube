@@ -159,6 +159,7 @@ const sidebars = {
         "articles/logging",
         "articles/install-cli",
         "articles/uninstall",
+        "articles/upgrade",       
       ],
     },
     {

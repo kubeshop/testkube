@@ -358,6 +358,10 @@ const redirects = [
     from: "/articles/operator-api-reference",
     to: "/articles/crds-reference",
   },
+  {
+    from: "/guides/upgrade",
+    to: "/articles/upgrade",
+  },  
 ];
 
 module.exports = redirects;
