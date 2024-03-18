@@ -51,6 +51,31 @@ spec:
     {{- end }}
     {{- end }}
   containers:
+  {{ if .Features.LogsV2 -}}
+  - name: "{{ .Name }}-logs"
+    {{- if .Registry }}
+    image: {{ .Registry }}/{{ .LogSidecarImage }}
+    {{- else }}
+    image: {{ .LogSidecarImage }}
+    {{- end }}
+    env:
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: DEBUG
+      value: {{ if .Debug }}"true"{{ else }}"false"{{ end }}
+    - name: NAMESPACE
+      value: {{ .Namespace }}
+    - name: NATS_URI
+      value: {{ .NatsUri }}
+    - name: ID
+      value: {{ .Name }}
+    - name: GROUP
+      value: test
+    - name: SOURCE
+      value: "test-slave-pod:{{ .Name }}-{{ .SlavePodNumber }}"
+  {{- end }}
   - name: main
     {{- if .Registry }}
     image: {{ .Registry }}/{{ .Image }}
