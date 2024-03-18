@@ -58,7 +58,7 @@ type PodOptions struct {
 	Resources             *testkube.PodResourcesRequest
 	ImagePullSecrets      []string
 	ArtifactRequest       *testkube.ArtifactRequest
-	Featurres             testkube.Features
+	Features              testkube.Features
 	Debug                 bool
 	NatsUri               string
 	LogSidecarrImage      string
@@ -285,7 +285,7 @@ func (c *Client) newPodOptions(runnerExecutionStr []byte, podName string, execut
 		Resources:        resources,
 		ImagePullSecrets: c.slavesConfigs.ImagePullSecrets,
 		ArtifactRequest:  artifactRequest,
-		Featurres:        c.slavesConfigs.Features,
+		Features:         c.slavesConfigs.Features,
 		Debug:            c.slavesConfigs.Debug,
 		NatsUri:          c.slavesConfigs.NatsUri,
 		LogSidecarrImage: c.slavesConfigs.LogSidecarImage,
