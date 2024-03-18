@@ -183,6 +183,10 @@ type SlavesConfigs struct {
 	EnvConfigMaps         []testkube.EnvReference `json:"envConfigMaps"`
 	EnvSecrets            []testkube.EnvReference `json:"envSecrets"`
 	ActiveDeadlineSeconds int                     `json:"activeDeadlineSeconds"`
+	Features              testkube.Features       `json:"features"`
+	Debug                 bool                    `json:"debug"`
+	NatsUri               string                  `json:"natsUri"`
+	LogSidecarImage       string                  `json:"logSidecarImage"`
 }
 
 type SlaveImages struct {
@@ -201,6 +205,10 @@ func GetSlavesConfigs(initImage string,
 	envConfigMaps []testkube.EnvReference,
 	envSecrets []testkube.EnvReference,
 	activeDeadlineSeconds int,
+	features testkube.Features,
+	debug bool,
+	natsUri string,
+	logSidecarImage string,
 ) SlavesConfigs {
 	return SlavesConfigs{
 		Images: SlaveImages{
@@ -215,6 +223,10 @@ func GetSlavesConfigs(initImage string,
 		EnvConfigMaps:         envConfigMaps,
 		EnvSecrets:            envSecrets,
 		ActiveDeadlineSeconds: activeDeadlineSeconds,
+		Features:              features,
+		Debug:                 debug,
+		NatsUri:               natsUri,
+		LogSidecarImage:       logSidecarImage,
 	}
 }
 
