@@ -148,6 +148,7 @@ func (s *apiTCL) CreateTestWorkflowHandler() fiber.Handler {
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "client error", err)
 		}
+		s.sendCreateWorkflowTelemetry(c.Context(), obj)
 
 		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, testworkflowmappers.MapKubeToAPI, obj)
 		if err != nil {
@@ -396,6 +397,7 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 
 		// Schedule the execution
 		s.TestWorkflowExecutor.Schedule(bundle, execution)
+		s.sendRunWorkflowTelemetry(c.Context(), workflow)
 
 		return c.JSON(execution)
 	}
