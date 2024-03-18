@@ -995,6 +995,10 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 			jobOptions.EnvConfigMaps,
 			jobOptions.EnvSecrets,
 			int(jobOptions.ActiveDeadlineSeconds),
+			testkube.Features(options.Features),
+			debug,
+			natsURI,
+			images.LogSidecar,
 		))
 
 		if err != nil {
