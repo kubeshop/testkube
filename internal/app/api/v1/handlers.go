@@ -65,6 +65,7 @@ func (s *TestkubeAPI) InfoHandler() fiber.Handler {
 			Version:               version.Version,
 			Namespace:             s.Namespace,
 			Context:               apiContext,
+			ClusterId:             s.Config.ClusterID,
 			EnvId:                 envID,
 			OrgId:                 orgID,
 			HelmchartVersion:      s.helmchartVersion,
