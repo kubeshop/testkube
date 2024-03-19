@@ -138,6 +138,34 @@ func RenderExecutionResult(client client.Client, execution *testkube.Execution, 
 	return nil
 }
 
+func PrintLogs(client client.Client, info testkube.ServerInfo, execution testkube.Execution) {
+	if info.Features == nil || !info.Features.LogsV2 {
+		// fallback to default logs
+		ui.Info(execution.ExecutionResult.Output)
+		return
+	}
+
+	logsCh, err := client.LogsV2(execution.Id)
+	ui.ExitOnError("getting logs", err)
+
+	ui.H1("Logs:")
+	lastSource := ""
+	for log := range logsCh {
+
+		if log.Source != lastSource {
+			ui.H2("source: " + log.Source)
+			ui.NL()
+			lastSource = log.Source
+		}
+
+		if ui.Verbose {
+			ui.Print(log.Time.Format("2006-01-02 15:04:05") + " " + log.Content)
+		} else {
+			ui.Print(log.Content)
+		}
+	}
+}
+
 func PrintExecutionURIs(execution *testkube.Execution, dashboardURI string) {
 	ui.NL()
 	ui.Link("Test URI:", fmt.Sprintf("%s/tests/%s", dashboardURI, execution.TestName))
