@@ -13,6 +13,7 @@ type tokenType uint8
 const (
 	// Primitives
 	tokenTypeAccessor tokenType = iota
+	tokenTypePropertyAccessor
 	tokenTypeJson
 
 	// Math
@@ -27,6 +28,7 @@ const (
 
 	// Functions
 	tokenTypeComma
+	tokenTypeSpread
 )
 
 type token struct {
@@ -41,6 +43,7 @@ var (
 	tokenTernary          = token{Type: tokenTypeTernary}
 	tokenTernarySeparator = token{Type: tokenTypeTernarySeparator}
 	tokenComma            = token{Type: tokenTypeComma}
+	tokenSpread           = token{Type: tokenTypeSpread}
 )
 
 func tokenMath(op string) token {
@@ -53,4 +56,8 @@ func tokenJson(value interface{}) token {
 
 func tokenAccessor(value interface{}) token {
 	return token{Type: tokenTypeAccessor, Value: value}
+}
+
+func tokenPropertyAccessor(value interface{}) token {
+	return token{Type: tokenTypePropertyAccessor, Value: value}
 }

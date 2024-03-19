@@ -113,7 +113,7 @@ func (s *static) IsNumber() bool {
 }
 
 func (s *static) IsMap() bool {
-	return !s.IsNone() && isMap(s.value)
+	return !s.IsNone() && (isMap(s.value) || isStruct(s.value))
 }
 
 func (s *static) IsSlice() bool {
