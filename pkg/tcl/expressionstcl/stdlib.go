@@ -207,6 +207,27 @@ var stdFunctions = map[string]StdFunction{
 			return NewValue(strings.TrimSpace(str)), nil
 		},
 	},
+	"len": {
+		ReturnType: TypeInt64,
+		Handler: func(value ...StaticValue) (Expression, error) {
+			if len(value) != 1 {
+				return nil, fmt.Errorf(`"len" function expects 1 argument, %d provided`, len(value))
+			}
+			if value[0].IsSlice() {
+				v, err := value[0].SliceValue()
+				return NewValue(int64(len(v))), err
+			}
+			if value[0].IsString() {
+				v, err := value[0].StringValue()
+				return NewValue(int64(len(v))), err
+			}
+			if value[0].IsMap() {
+				v, err := value[0].MapValue()
+				return NewValue(int64(len(v))), err
+			}
+			return nil, fmt.Errorf(`"len" function expects string, slice or map, %v provided`, value[0])
+		},
+	},
 }
 
 const (

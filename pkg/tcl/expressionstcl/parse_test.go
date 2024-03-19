@@ -243,6 +243,9 @@ a:
 	assert.Equal(t, `[""]`, MustCompile(`split(null)`).String())
 	assert.Equal(t, `["a","b","c"]`, MustCompile(`split("a,b,c")`).String())
 	assert.Equal(t, `["a","b","c"]`, MustCompile(`split("a---b---c", "---")`).String())
+	assert.Equal(t, `5`, MustCompile(`len("abcde")`).String())
+	assert.Equal(t, `2`, MustCompile(`len(["a", "b"])`).String())
+	assert.Equal(t, `2`, MustCompile(`len({"a": "b", "b": "c"})`).String())
 }
 
 func TestCompileDetectAccessors(t *testing.T) {
