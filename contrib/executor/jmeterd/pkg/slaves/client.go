@@ -61,7 +61,7 @@ type PodOptions struct {
 	Features              testkube.Features
 	Debug                 bool
 	NatsUri               string
-	LogSidecarrImage      string
+	LogSidecarImage       string
 	SlavePodNumber        int
 }
 
@@ -288,7 +288,7 @@ func (c *Client) newPodOptions(runnerExecutionStr []byte, podName string, execut
 		Features:         c.slavesConfigs.Features,
 		Debug:            c.slavesConfigs.Debug,
 		NatsUri:          c.slavesConfigs.NatsUri,
-		LogSidecarrImage: c.slavesConfigs.LogSidecarImage,
+		LogSidecarImage:  c.slavesConfigs.LogSidecarImage,
 		SlavePodNumber:   slavePodNumber,
 	}
 }
