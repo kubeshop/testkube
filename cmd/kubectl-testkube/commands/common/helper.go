@@ -87,6 +87,8 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data, isM
 		"--set", "testkube-api.cloud.url=" + options.Master.URIs.Agent,
 		"--set", "testkube-api.cloud.key=" + options.Master.AgentToken,
 		"--set", "testkube-api.cloud.uiURL=" + options.Master.URIs.Ui,
+		"--set", "testkube-logs.pro.url=" + options.Master.URIs.Logs,
+		"--set", "testkube-logs.pro.key=" + options.Master.AgentToken,
 	}
 	if isMigration {
 		args = append(args, "--set", "testkube-api.cloud.migrate=true")
@@ -94,10 +96,14 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data, isM
 
 	if options.Master.EnvId != "" {
 		args = append(args, "--set", fmt.Sprintf("testkube-api.cloud.envId=%s", options.Master.EnvId))
+		args = append(args, "--set", fmt.Sprintf("testkube-logs.pro.envId=%s", options.Master.EnvId))
 	}
 	if options.Master.OrgId != "" {
 		args = append(args, "--set", fmt.Sprintf("testkube-api.cloud.orgId=%s", options.Master.OrgId))
+		args = append(args, "--set", fmt.Sprintf("testkube-logs.pro.orgId=%s", options.Master.OrgId))
 	}
+
+	args = append(args, "--set", fmt.Sprintf("global.features.logsV2=%v", options.Master.Features.LogsV2))
 
 	args = append(args, "--set", fmt.Sprintf("testkube-api.multinamespace.enabled=%t", options.MultiNamespace))
 	args = append(args, "--set", fmt.Sprintf("testkube-operator.enabled=%t", !options.NoOperator))
@@ -152,6 +158,8 @@ func HelmUpgradeOrInstalTestkube(options HelmOptions) error {
 	} else {
 		args = append(args, "--set", "testkube-api.logs.storage=minio")
 	}
+
+	args = append(args, "--set", fmt.Sprintf("global.features.logsV2=%v", options.Master.Features.LogsV2))
 
 	args = append(args, options.Name, options.Chart)
 
