@@ -106,15 +106,27 @@ func SendHeartbeatEvent(host, version, clusterId string) (string, error) {
 	return sendData(senders, payload)
 }
 
-// SendCreateEvent will send API create event for Test, Test suite or Test workflow to GA
+// SendCreateEvent will send API create event for Test or Test suite to GA
 func SendCreateEvent(event string, params CreateParams) (string, error) {
 	payload := NewCreatePayload(event, GetClusterType(), params)
 	return sendData(senders, payload)
 }
 
-// SendRunEvent will send API run event for Test, Test suite or Test workflow to GA
+// SendRunEvent will send API run event for Test, or Test suite to GA
 func SendRunEvent(event string, params RunParams) (string, error) {
 	payload := NewRunPayload(event, GetClusterType(), params)
+	return sendData(senders, payload)
+}
+
+// SendCreateWorkflowEvent will send API create event for Test workflows to GA
+func SendCreateWorkflowEvent(event string, params CreateWorkflowParams) (string, error) {
+	payload := NewCreateWorkflowPayload(event, GetClusterType(), params)
+	return sendData(senders, payload)
+}
+
+// SendRunWorkflowEvent will send API run event for Test workflows to GA
+func SendRunWorkflowEvent(event string, params RunWorkflowParams) (string, error) {
+	payload := NewRunWorkflowPayload(event, GetClusterType(), params)
 	return sendData(senders, payload)
 }
 
