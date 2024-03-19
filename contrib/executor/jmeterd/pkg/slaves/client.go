@@ -59,10 +59,8 @@ type PodOptions struct {
 	ImagePullSecrets      []string
 	ArtifactRequest       *testkube.ArtifactRequest
 	Features              testkube.Features
-	Debug                 bool
 	NatsUri               string
 	LogSidecarImage       string
-	SlavePodNumber        int
 }
 
 // NewClient is a method to create new slave client
@@ -179,7 +177,7 @@ func (c *Client) createSlavePodObject(runnerExecutionStr []byte, podName string,
 	if executorJob == nil {
 		executorJob = &batchv1.Job{}
 	}
-	podOptions := c.newPodOptions(runnerExecutionStr, podName, *executorJob, slavePodNumber)
+	podOptions := c.newPodOptions(runnerExecutionStr, podName, *executorJob)
 	var buffer bytes.Buffer
 	podOptions.Jsn = strings.ReplaceAll(podOptions.Jsn, "'", "''")
 	if err = tmpl.ExecuteTemplate(&buffer, "pod", podOptions); err != nil {
@@ -248,7 +246,7 @@ func (c *Client) DeleteSlaves(ctx context.Context, meta SlaveMeta) error {
 	return nil
 }
 
-func (c *Client) newPodOptions(runnerExecutionStr []byte, podName string, executorJob batchv1.Job, slavePodNumber int) *PodOptions {
+func (c *Client) newPodOptions(runnerExecutionStr []byte, podName string, executorJob batchv1.Job) *PodOptions {
 	var resources *testkube.PodResourcesRequest
 	if c.execution.SlavePodRequest != nil {
 		resources = c.execution.SlavePodRequest.Resources
@@ -286,10 +284,8 @@ func (c *Client) newPodOptions(runnerExecutionStr []byte, podName string, execut
 		ImagePullSecrets: c.slavesConfigs.ImagePullSecrets,
 		ArtifactRequest:  artifactRequest,
 		Features:         c.slavesConfigs.Features,
-		Debug:            c.slavesConfigs.Debug,
 		NatsUri:          c.slavesConfigs.NatsUri,
 		LogSidecarImage:  c.slavesConfigs.LogSidecarImage,
-		SlavePodNumber:   slavePodNumber,
 	}
 }
 
