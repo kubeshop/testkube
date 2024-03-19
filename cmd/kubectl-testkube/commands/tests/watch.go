@@ -31,7 +31,7 @@ func NewWatchExecutionCmd() *cobra.Command {
 				info, err := client.GetServerInfo()
 				ui.ExitOnError("getting server info", err)
 
-				if info.Features.LogsV2 {
+				if info.Features != nil && info.Features.LogsV2 {
 					err = watchLogsV2(execution.Id, false, client)
 				} else {
 					err = watchLogs(execution.Id, false, client)
