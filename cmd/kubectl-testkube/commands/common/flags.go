@@ -90,6 +90,8 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions) {
 	cmd.Flags().StringVar(&opts.Master.AgentToken, "agent-token", "", "Testkube Cloud agent key [required for centralized mode]")
 	cmd.Flags().StringVar(&opts.Master.OrgId, "org-id", "", "Testkube Cloud organization id [required for centralized mode]")
 	cmd.Flags().StringVar(&opts.Master.EnvId, "env-id", "", "Testkube Cloud environment id [required for centralized mode]")
+
+	cmd.Flags().BoolVar(&opts.Master.Features.LogsV2, "feature-logs-v2", false, "Logs v2 feature flag")
 }
 
 func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data) {

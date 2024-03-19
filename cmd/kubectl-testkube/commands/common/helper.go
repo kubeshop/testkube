@@ -103,6 +103,8 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data, isM
 		args = append(args, "--set", fmt.Sprintf("testkube-logs.pro.orgId=%s", options.Master.OrgId))
 	}
 
+	args = append(args, "--set", fmt.Sprintf("global.features.logsV2=%v", options.Master.Features.LogsV2))
+
 	args = append(args, "--set", fmt.Sprintf("testkube-api.multinamespace.enabled=%t", options.MultiNamespace))
 	args = append(args, "--set", fmt.Sprintf("testkube-operator.enabled=%t", !options.NoOperator))
 	args = append(args, "--set", fmt.Sprintf("mongodb.enabled=%t", !options.NoMongo))
@@ -156,6 +158,8 @@ func HelmUpgradeOrInstalTestkube(options HelmOptions) error {
 	} else {
 		args = append(args, "--set", "testkube-api.logs.storage=minio")
 	}
+
+	args = append(args, "--set", fmt.Sprintf("global.features.logsV2=%v", options.Master.Features.LogsV2))
 
 	args = append(args, options.Name, options.Chart)
 
