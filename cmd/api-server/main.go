@@ -586,6 +586,7 @@ func main() {
 		testWorkflowResultsRepository,
 		testWorkflowOutputRepository,
 		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
+		configMapConfig,
 	)
 	apiPro.AppendRoutes()
 
