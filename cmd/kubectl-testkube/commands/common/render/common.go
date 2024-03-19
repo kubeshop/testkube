@@ -134,7 +134,7 @@ func RenderExecutionResult(client client.Client, execution *testkube.Execution, 
 }
 
 func PrintLogs(client client.Client, info testkube.ServerInfo, execution testkube.Execution) {
-	if !info.Features.LogsV2 {
+	if info.Features == nil || !info.Features.LogsV2 {
 		// fallback to default logs
 		ui.Info(execution.ExecutionResult.Output)
 		return
