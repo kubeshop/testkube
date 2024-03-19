@@ -106,13 +106,13 @@ func SendHeartbeatEvent(host, version, clusterId string) (string, error) {
 	return sendData(senders, payload)
 }
 
-// SendCreateEvent will send API create event for Test or Test suite to GA
+// SendCreateEvent will send API create event for Test, Test suite or Test workflow to GA
 func SendCreateEvent(event string, params CreateParams) (string, error) {
 	payload := NewCreatePayload(event, GetClusterType(), params)
 	return sendData(senders, payload)
 }
 
-// SendCreateEvent will send API run event for Test or Test suite to GA
+// SendRunEvent will send API run event for Test, Test suite or Test workflow to GA
 func SendRunEvent(event string, params RunParams) (string, error) {
 	payload := NewRunPayload(event, GetClusterType(), params)
 	return sendData(senders, payload)
