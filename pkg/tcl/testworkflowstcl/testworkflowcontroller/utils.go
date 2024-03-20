@@ -29,11 +29,11 @@ const (
 )
 
 func IsPodDone(pod *corev1.Pod) bool {
-	return pod.Status.Phase != corev1.PodPending && pod.Status.Phase != corev1.PodRunning
+	return (pod.Status.Phase != corev1.PodPending && pod.Status.Phase != corev1.PodRunning) || pod.ObjectMeta.DeletionTimestamp != nil
 }
 
 func IsJobDone(job *batchv1.Job) bool {
-	return job.Status.Active == 0 && (job.Status.Succeeded > 0 || job.Status.Failed > 0)
+	return (job.Status.Active == 0 && (job.Status.Succeeded > 0 || job.Status.Failed > 0)) || job.ObjectMeta.DeletionTimestamp != nil
 }
 
 func WatchJob(ctx context.Context, clientSet kubernetes.Interface, namespace, name string, cacheSize int) Watcher[*batchv1.Job] {
@@ -242,7 +242,10 @@ func WatchContainerStatus(ctx context.Context, pod Watcher[*corev1.Pod], contain
 			select {
 			case <-w.Done():
 				return
-			case p := <-stream.Channel():
+			case p, ok := <-stream.Channel():
+				if !ok {
+					return
+				}
 				if p.Error != nil {
 					w.SendError(p.Error)
 					continue
