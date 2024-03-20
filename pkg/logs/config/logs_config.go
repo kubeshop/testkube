@@ -15,7 +15,6 @@ type Config struct {
 
 	TestkubeProAPIKey               string `envconfig:"TESTKUBE_PRO_API_KEY" default:""`
 	TestkubeProURL                  string `envconfig:"TESTKUBE_PRO_URL" default:""`
-	TestkubeProLogsPath             string `envconfig:"TESTKUBE_PRO_LOGS_PATH" default:"/logs"`
 	TestkubeProTLSInsecure          bool   `envconfig:"TESTKUBE_PRO_TLS_INSECURE" default:"false"`
 	TestkubeProCertFile             string `envconfig:"TESTKUBE_PRO_CERT_FILE" default:""`
 	TestkubeProKeyFile              string `envconfig:"TESTKUBE_PRO_KEY_FILE" default:""`
@@ -34,6 +33,7 @@ type Config struct {
 
 	Namespace    string `envconfig:"NAMESPACE" default:"testkube"`
 	ExecutionId  string `envconfig:"ID" default:""`
+	Source       string `envconfig:"Source" default:""`
 	HttpAddress  string `envconfig:"HTTP_ADDRESS" default:":8080"`
 	GrpcAddress  string `envconfig:"GRPC_ADDRESS" default:":9090"`
 	KVBucketName string `envconfig:"KV_BUCKET_NAME" default:"logsState"`

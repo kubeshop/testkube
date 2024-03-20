@@ -493,8 +493,9 @@ func MapStepArtifactsCompressionKubeToAPI(v testworkflowsv1.ArtifactCompression)
 
 func MapStepArtifactsKubeToAPI(v testworkflowsv1.StepArtifacts) testkube.TestWorkflowStepArtifacts {
 	return testkube.TestWorkflowStepArtifacts{
-		Compress: common.MapPtr(v.Compress, MapStepArtifactsCompressionKubeToAPI),
-		Paths:    v.Paths,
+		WorkingDir: MapStringToBoxedString(v.WorkingDir),
+		Compress:   common.MapPtr(v.Compress, MapStepArtifactsCompressionKubeToAPI),
+		Paths:      v.Paths,
 	}
 }
 

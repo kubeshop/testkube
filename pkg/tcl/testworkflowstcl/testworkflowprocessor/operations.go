@@ -46,6 +46,7 @@ func ProcessShellCommand(_ InternalProcessor, layer Intermediate, container Cont
 	shell := container.CreateChild().SetCommand(defaultShell).SetArgs("-c", step.Shell)
 	stage := NewContainerStage(layer.NextRef(), shell)
 	stage.SetCategory("Run shell command")
+	stage.SetRetryPolicy(step.Retry)
 	return stage, nil
 }
 
@@ -55,6 +56,7 @@ func ProcessRunCommand(_ InternalProcessor, layer Intermediate, container Contai
 	}
 	container = container.CreateChild().ApplyCR(&step.Run.ContainerConfig)
 	stage := NewContainerStage(layer.NextRef(), container)
+	stage.SetRetryPolicy(step.Retry)
 	stage.SetCategory("Run")
 	return stage, nil
 }
@@ -89,6 +91,7 @@ func ProcessExecute(_ InternalProcessor, layer Intermediate, container Container
 	}
 	container = container.CreateChild()
 	stage := NewContainerStage(layer.NextRef(), container)
+	stage.SetRetryPolicy(step.Retry)
 	hasWorkflows := len(step.Execute.Workflows) > 0
 	hasTests := len(step.Execute.Tests) > 0
 
@@ -212,6 +215,7 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container Contai
 
 	selfContainer := container.CreateChild()
 	stage := NewContainerStage(layer.NextRef(), selfContainer)
+	stage.SetRetryPolicy(step.Retry)
 	stage.SetCategory("Clone Git repository")
 
 	// Compute mount path
@@ -280,8 +284,10 @@ func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container Contain
 		return nil, errors.New("there needs to be at least one path to scrap for artifacts")
 	}
 
-	selfContainer := container.CreateChild()
+	selfContainer := container.CreateChild().
+		ApplyCR(&testworkflowsv1.ContainerConfig{WorkingDir: step.Artifacts.WorkingDir})
 	stage := NewContainerStage(layer.NextRef(), selfContainer)
+	stage.SetRetryPolicy(step.Retry)
 	stage.SetCondition("always")
 	stage.SetCategory("Upload artifacts")
 

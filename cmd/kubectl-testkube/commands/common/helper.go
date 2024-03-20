@@ -21,9 +21,9 @@ import (
 )
 
 type HelmOptions struct {
-	Name, Namespace, Chart, Values                  string
-	NoDashboard, NoMinio, NoMongo, NoConfirm        bool
-	MinioReplicas, MongoReplicas, DashboardReplicas int
+	Name, Namespace, Chart, Values string
+	NoMinio, NoMongo, NoConfirm    bool
+	MinioReplicas, MongoReplicas   int
 
 	Master config.Master
 	// For debug
@@ -87,6 +87,8 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data, isM
 		"--set", "testkube-api.cloud.url=" + options.Master.URIs.Agent,
 		"--set", "testkube-api.cloud.key=" + options.Master.AgentToken,
 		"--set", "testkube-api.cloud.uiURL=" + options.Master.URIs.Ui,
+		"--set", "testkube-logs.pro.url=" + options.Master.URIs.Logs,
+		"--set", "testkube-logs.pro.key=" + options.Master.AgentToken,
 	}
 	if isMigration {
 		args = append(args, "--set", "testkube-api.cloud.migrate=true")
@@ -94,20 +96,22 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data, isM
 
 	if options.Master.EnvId != "" {
 		args = append(args, "--set", fmt.Sprintf("testkube-api.cloud.envId=%s", options.Master.EnvId))
+		args = append(args, "--set", fmt.Sprintf("testkube-logs.pro.envId=%s", options.Master.EnvId))
 	}
 	if options.Master.OrgId != "" {
 		args = append(args, "--set", fmt.Sprintf("testkube-api.cloud.orgId=%s", options.Master.OrgId))
+		args = append(args, "--set", fmt.Sprintf("testkube-logs.pro.orgId=%s", options.Master.OrgId))
 	}
+
+	args = append(args, "--set", fmt.Sprintf("global.features.logsV2=%v", options.Master.Features.LogsV2))
 
 	args = append(args, "--set", fmt.Sprintf("testkube-api.multinamespace.enabled=%t", options.MultiNamespace))
 	args = append(args, "--set", fmt.Sprintf("testkube-operator.enabled=%t", !options.NoOperator))
-	args = append(args, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !options.NoDashboard))
 	args = append(args, "--set", fmt.Sprintf("mongodb.enabled=%t", !options.NoMongo))
 	args = append(args, "--set", fmt.Sprintf("testkube-api.minio.enabled=%t", !options.NoMinio))
 
 	args = append(args, "--set", fmt.Sprintf("testkube-api.minio.replicas=%d", options.MinioReplicas))
 	args = append(args, "--set", fmt.Sprintf("mongodb.replicas=%d", options.MongoReplicas))
-	args = append(args, "--set", fmt.Sprintf("testkube-dashboard.replicas=%d", options.DashboardReplicas))
 
 	args = append(args, options.Name, options.Chart)
 
@@ -147,7 +151,6 @@ func HelmUpgradeOrInstalTestkube(options HelmOptions) error {
 	args = []string{"upgrade", "--install", "--create-namespace", "--namespace", options.Namespace}
 	args = append(args, "--set", fmt.Sprintf("testkube-api.multinamespace.enabled=%t", options.MultiNamespace))
 	args = append(args, "--set", fmt.Sprintf("testkube-operator.enabled=%t", !options.NoOperator))
-	args = append(args, "--set", fmt.Sprintf("testkube-dashboard.enabled=%t", !options.NoDashboard))
 	args = append(args, "--set", fmt.Sprintf("mongodb.enabled=%t", !options.NoMongo))
 	args = append(args, "--set", fmt.Sprintf("testkube-api.minio.enabled=%t", !options.NoMinio))
 	if options.NoMinio {
@@ -155,6 +158,8 @@ func HelmUpgradeOrInstalTestkube(options HelmOptions) error {
 	} else {
 		args = append(args, "--set", "testkube-api.logs.storage=minio")
 	}
+
+	args = append(args, "--set", fmt.Sprintf("global.features.logsV2=%v", options.Master.Features.LogsV2))
 
 	args = append(args, options.Name, options.Chart)
 
@@ -178,7 +183,6 @@ func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
 	cmd.Flags().StringVar(&options.Values, "values", "", "path to Helm values file")
 
 	cmd.Flags().BoolVar(&options.NoMinio, "no-minio", false, "don't install MinIO")
-	cmd.Flags().BoolVar(&options.NoDashboard, "no-dashboard", false, "don't install dashboard")
 	cmd.Flags().BoolVar(&options.NoMongo, "no-mongo", false, "don't install MongoDB")
 	cmd.Flags().BoolVar(&options.NoConfirm, "no-confirm", false, "don't ask for confirmation - unatended installation mode")
 	cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")

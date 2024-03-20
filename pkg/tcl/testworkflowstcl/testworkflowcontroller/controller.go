@@ -372,6 +372,26 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 
 			// Update the last timestamp
 			lastTs = finishedAt
+
+			// Break the function if the step has been aborted.
+			// Breaking only to the loop is not enough,
+			// because due to GKE bug, the Job is still pending,
+			// so it will get stuck there.
+			if status.Status == testkube.ABORTED_TestWorkflowStepStatus {
+				result.Recompute(sig, c.scheduledAt)
+				abortTs := result.Steps[container.Name].FinishedAt
+				if status.Details == "" {
+					status.Details = "Manual"
+				}
+
+				w.SendValue(Notification{
+					Timestamp: abortTs,
+					Ref:       container.Name,
+					Log:       fmt.Sprintf("\n%s Aborted (%s)", abortTs.Format(KubernetesLogTimeFormat), status.Details),
+				})
+				w.SendValue(Notification{Result: result.Clone()})
+				return
+			}
 		}
 
 		// Read the pod finish time

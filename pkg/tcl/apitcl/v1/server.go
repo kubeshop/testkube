@@ -22,6 +22,7 @@ import (
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
+	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowexecutor"
 )
@@ -36,6 +37,7 @@ type apiTCL struct {
 	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
 	TestWorkflowExecutor        testworkflowexecutor.TestWorkflowExecutor
 	ApiUrl                      string
+	configMap                   configRepo.Repository
 }
 
 type ApiTCL interface {
@@ -51,6 +53,7 @@ func NewApiTCL(
 	testWorkflowResults testworkflow.Repository,
 	testWorkflowOutput testworkflow.OutputRepository,
 	apiUrl string,
+	configMap configRepo.Repository,
 ) ApiTCL {
 	executor := testworkflowexecutor.New(testkubeAPI.Events, testkubeAPI.Clientset, testWorkflowResults, testWorkflowOutput, testkubeAPI.Namespace)
 	go executor.Recover(context.Background())
@@ -64,6 +67,7 @@ func NewApiTCL(
 		TestWorkflowTemplatesClient: testworkflowsv1.NewTestWorkflowTemplatesClient(kubeClient, testkubeAPI.Namespace),
 		TestWorkflowExecutor:        executor,
 		ApiUrl:                      apiUrl,
+		configMap:                   configMap,
 	}
 }
 
@@ -96,6 +100,9 @@ func (s *apiTCL) ClientError(c *fiber.Ctx, prefix string, err error) error {
 
 func (s *apiTCL) AppendRoutes() {
 	root := s.Routes
+
+	// Register TestWorkflows as additional source for labels
+	s.WithLabelSources(s.TestWorkflowsClient, s.TestWorkflowTemplatesClient)
 
 	testWorkflows := root.Group("/test-workflows")
 	testWorkflows.Get("/", s.pro(s.ListTestWorkflowsHandler()))

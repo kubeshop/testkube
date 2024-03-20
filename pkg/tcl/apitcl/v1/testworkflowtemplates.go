@@ -109,6 +109,7 @@ func (s *apiTCL) CreateTestWorkflowTemplateHandler() fiber.Handler {
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "client error", err)
 		}
+		s.sendCreateWorkflowTemplateTelemetry(c.Context(), obj)
 
 		err = SendResource(c, "TestWorkflowTemplate", testworkflowsv1.GroupVersion, mappers2.MapTemplateKubeToAPI, obj)
 		if err != nil {

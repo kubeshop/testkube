@@ -82,7 +82,7 @@ func NewGRPCConnection(
 	}
 
 	userAgent := version.Version + "/" + version.Commit
-	logger.Infow("initiating connection with agent api", "userAgent", userAgent)
+	logger.Infow("initiating connection with agent api", "userAgent", userAgent, "server", server, "insecure", isInsecure, "skipVerify", skipVerify, "certFile", certFile, "keyFile", keyFile, "caFile", caFile)
 	// WithBlock, WithReturnConnectionError and FailOnNonTempDialError are recommended not to be used by gRPC go docs
 	// but given that Agent will not work if gRPC connection cannot be established, it is ok to use them and assert issues at dial time
 	return grpc.DialContext(

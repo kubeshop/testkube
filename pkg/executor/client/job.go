@@ -233,6 +233,10 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 
 	err = c.CreateJob(ctx, *execution, options)
 	if err != nil {
+		if cErr := c.cleanPVCVolume(ctx, execution); cErr != nil {
+			c.Log.Errorw("error deleting pvc volume", "error", cErr)
+		}
+
 		return result.Err(err), err
 	}
 
@@ -245,6 +249,10 @@ func (c *JobExecutor) Execute(ctx context.Context, execution *testkube.Execution
 	podsClient := c.ClientSet.CoreV1().Pods(execution.TestNamespace)
 	pods, err := executor.GetJobPods(ctx, podsClient, execution.Id, 1, 10)
 	if err != nil {
+		if cErr := c.cleanPVCVolume(ctx, execution); cErr != nil {
+			c.Log.Errorw("error deleting pvc volume", "error", cErr)
+		}
+
 		return result.Err(err), err
 	}
 
@@ -355,6 +363,18 @@ func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Executio
 	return err
 }
 
+func (c *JobExecutor) cleanPVCVolume(ctx context.Context, execution *testkube.Execution) error {
+	if execution.ArtifactRequest != nil &&
+		execution.ArtifactRequest.StorageClassName != "" {
+		pvcsClient := c.ClientSet.CoreV1().PersistentVolumeClaims(execution.TestNamespace)
+		if err := pvcsClient.Delete(ctx, execution.Id+"-pvc", metav1.DeleteOptions{}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // updateResultsFromPod watches logs and stores results if execution is finished
 func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, l *zap.SugaredLogger, execution *testkube.Execution, isNegativeTest bool) (*testkube.ExecutionResult, error) {
 	var err error
@@ -364,6 +384,10 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 		if err := c.stopExecution(ctx, l, execution, execution.ExecutionResult, isNegativeTest, err); err != nil {
 			c.streamLog(ctx, execution.Id, events.NewErrorLog(err))
 			l.Errorw("error stopping execution after updating results from pod", "error", err)
+		}
+
+		if err := c.cleanPVCVolume(ctx, execution); err != nil {
+			l.Errorw("error cleaning pvc volume", "error", err)
 		}
 	}()
 
@@ -387,14 +411,6 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	l.Debug("poll immediate end")
 
 	c.streamLog(ctx, execution.Id, events.NewLog("analyzing test results and artfacts"))
-	if execution.ArtifactRequest != nil &&
-		execution.ArtifactRequest.StorageClassName != "" {
-		pvcsClient := c.ClientSet.CoreV1().PersistentVolumeClaims(execution.TestNamespace)
-		err = pvcsClient.Delete(ctx, execution.Id+"-pvc", metav1.DeleteOptions{})
-		if err != nil {
-			return execution.ExecutionResult, err
-		}
-	}
 
 	var logs []byte
 	logs, err = executor.GetPodLogs(ctx, c.ClientSet, execution.TestNamespace, pod)
@@ -995,6 +1011,9 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 			jobOptions.EnvConfigMaps,
 			jobOptions.EnvSecrets,
 			int(jobOptions.ActiveDeadlineSeconds),
+			testkube.Features(options.Features),
+			natsURI,
+			images.LogSidecar,
 		))
 
 		if err != nil {

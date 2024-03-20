@@ -5840,6 +5840,10 @@ components:
           type: string
           description: server installaton namespace
           example: "my-testkube"
+        clusterId:
+          type: string
+          description: cluster id
+          example: "my-cluster-id"
         context:
           type: string
           description: currently configured testkube API context
@@ -7965,6 +7969,8 @@ components:
     TestWorkflowStepArtifacts:
       type: object
       properties:
+        workingDir:
+          $ref: "#/components/schemas/BoxedString"
         compress:
           $ref: "#/components/schemas/TestWorkflowStepArtifactsCompression"
         paths:

@@ -10,6 +10,32 @@ spec:
   template:
     spec:
       containers:
+      {{ if .Features.LogsV2 -}}
+      - name: "{{ .Name }}-logs"
+        {{- if .Registry }}
+        image: {{ .Registry }}/{{ .LogSidecarImage }}
+        {{- else }}
+        image: {{ .LogSidecarImage }}
+        {{- end }}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: DEBUG
+          value: {{ if .Debug }}"true"{{ else }}"false"{{ end }}
+        - name: NAMESPACE
+          value: {{ .Namespace }}
+        - name: NATS_URI
+          value: {{ .NatsUri }}
+        - name: ID
+          value: {{ .Name }}
+        - name: GROUP
+          value: scraper
+        - name: SOURCE
+          value: "scraper-pod:{{ .Name }}"
+      {{- end }}
       - name: {{ .Name }}-scraper
         {{- if .Registry }}
         image: {{ .Registry }}/{{ .ScraperImage }}

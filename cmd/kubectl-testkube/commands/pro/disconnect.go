@@ -1,6 +1,7 @@
 package pro
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/pterm/pterm"
@@ -23,7 +24,7 @@ func NewDisconnectCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 
 			ui.H1("Disconnecting your Pro environment:")
-			ui.Paragraph("Rolling back to your clusters testkube OSS installation")
+			ui.Paragraph("Rolling back to your clusters Testkube OSS installation")
 			ui.Paragraph("If you need more details click into following link: " + docsUrl)
 			ui.H2("You can safely switch between connecting Pro and disconnecting without losing your data.")
 
@@ -39,7 +40,7 @@ func NewDisconnectCmd() *cobra.Command {
 			info, err := client.GetServerInfo()
 			firstInstall := err != nil && strings.Contains(err.Error(), "not found")
 			if err != nil && !firstInstall {
-				ui.Failf("Can't get testkube cluster information: %s", err.Error())
+				ui.Failf("Can't get Testkube cluster information: %s", err.Error())
 			}
 			var apiContext string
 			if actx, ok := contextDescription[info.Context]; ok {
@@ -49,7 +50,7 @@ func NewDisconnectCmd() *cobra.Command {
 			if cfg.ContextType == config.ContextTypeKubeconfig {
 				clusterContext, err = common.GetCurrentKubernetesContext()
 				if err != nil {
-					pterm.Error.Printfln("Failed to get current kubernetes context: %s", err.Error())
+					pterm.Error.Printfln("Failed to get current Kubernetes context: %s", err.Error())
 					return
 				}
 			}
@@ -65,8 +66,8 @@ func NewDisconnectCmd() *cobra.Command {
 				{ui.Separator, ""},
 
 				{"Testkube is connected to Pro organizations environment"},
-				{"Organization Id", info.OrgId},
-				{"Environment Id", info.EnvId},
+				{"Organization Id", cfg.CloudContext.OrganizationId},
+				{"Environment Id", cfg.CloudContext.EnvironmentId},
 			}
 
 			ui.Properties(summary)
@@ -77,7 +78,7 @@ func NewDisconnectCmd() *cobra.Command {
 
 			ui.NL(2)
 
-			spinner := ui.NewSpinner("Disonnecting from Testkube Pro")
+			spinner := ui.NewSpinner("Disconnecting from Testkube Pro")
 
 			err = common.HelmUpgradeOrInstalTestkube(opts)
 			ui.ExitOnError("Installing Testkube Pro", err)
@@ -94,16 +95,20 @@ func NewDisconnectCmd() *cobra.Command {
 				common.KubectlScaleDeployment(opts.Namespace, "testkube-minio-testkube", opts.MinioReplicas)
 				spinner.Success()
 			}
-			if opts.DashboardReplicas > 0 {
-				spinner = ui.NewSpinner("Scaling up Dashbaord")
-				common.KubectlScaleDeployment(opts.Namespace, "testkube-dashboard", opts.DashboardReplicas)
+
+			spinner = ui.NewSpinner("Resetting Testkube config.json")
+			cfg.ContextType = config.ContextTypeKubeconfig
+			cfg.CloudContext = config.CloudContext{}
+			if err = config.Save(cfg); err != nil {
+				spinner.Fail(fmt.Sprintf("Error updating local Testkube config file: %s", err))
+				ui.Warn("Please manually remove the fields contextType and cloudContext from your config file.")
+			} else {
 				spinner.Success()
 			}
 
 			ui.NL()
 			ui.Success("Disconnect finished successfully")
 			ui.NL()
-			ui.ShellCommand("You can now open your local Dashboard and validate the successfull disconnect", "testkube dashboard")
 		},
 	}
 
@@ -111,6 +116,5 @@ func NewDisconnectCmd() *cobra.Command {
 	common.PopulateHelmFlags(cmd, &opts)
 	cmd.Flags().IntVar(&opts.MinioReplicas, "minio-replicas", 1, "MinIO replicas")
 	cmd.Flags().IntVar(&opts.MongoReplicas, "mongo-replicas", 1, "MongoDB replicas")
-	cmd.Flags().IntVar(&opts.DashboardReplicas, "dashboard-replicas", 1, "Dashboard replicas")
 	return cmd
 }

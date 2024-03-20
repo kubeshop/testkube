@@ -35,6 +35,14 @@ const sidebars = {
       items: [
         {
           type: "category",
+          label: "Test Workflows (beta)",
+          items: [
+            "articles/test-workflows",
+            "articles/test-workflow-templates",
+          ],
+        },
+        {
+          type: "category",
           label: "Tests",
           items: [
             "articles/creating-tests",
@@ -151,6 +159,7 @@ const sidebars = {
         "articles/logging",
         "articles/install-cli",
         "articles/uninstall",
+        "articles/upgrade",       
       ],
     },
     {
@@ -210,7 +219,8 @@ const sidebars = {
       items: [
         "testkube-enterprise/articles/testkube-enterprise",
         "testkube-enterprise/articles/usage-guide", 
-        "testkube-enterprise/articles/auth"],
+        "testkube-enterprise/articles/auth",
+        "testkube-enterprise/articles/migrating-from-oss-to-pro"],
     },
     "articles/testkube-oss",
     {
