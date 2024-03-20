@@ -1,15 +1,19 @@
-## testkube run
+## testkube watch testworkflowexecution
 
-Runs tests, test suites or test workflows
+Watch output from test workflow execution
+
+### Synopsis
+
+Gets test workflow execution details, until it's in success/error state, blocks until gets complete state
 
 ```
-testkube run <resourceName> [flags]
+testkube watch testworkflowexecution <executionName> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for run
+  -h, --help   help for testworkflowexecution
 ```
 
 ### Options inherited from parent commands
@@ -25,8 +29,5 @@ testkube run <resourceName> [flags]
 
 ### SEE ALSO
 
-* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
-* [testkube run test](testkube_run_test.md)	 - Starts new test
-* [testkube run testsuite](testkube_run_testsuite.md)	 - Starts new test suite
-* [testkube run testworkflow](testkube_run_testworkflow.md)	 - Starts test workflow execution
+* [testkube watch](testkube_watch.md)	 - Watch tests or test suites
 

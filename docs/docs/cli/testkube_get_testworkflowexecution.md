@@ -1,16 +1,22 @@
-## testkube get artifact
+## testkube get testworkflowexecution
 
-List artifacts of the given test, test suite or test workflow execution name
+Gets TestWorkflow execution details
+
+### Synopsis
+
+Gets TestWorkflow execution details by ID, or list if id is not passed
 
 ```
-testkube get artifact <executionName> [flags]
+testkube get testworkflowexecution [executionID] [flags]
 ```
 
 ### Options
 
 ```
-  -e, --execution-id string   ID of the execution
-  -h, --help                  help for artifact
+  -h, --help                  help for testworkflowexecution
+  -l, --label strings         label key value pair: --label key1=value1
+      --limit int             max number of records to return (default 1000)
+  -w, --testworkflow string   test workflow name
 ```
 
 ### Options inherited from parent commands

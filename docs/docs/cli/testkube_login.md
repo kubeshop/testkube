@@ -14,7 +14,10 @@ testkube login [flags]
       --agent-uri string      Testkube Cloud agent URI [required for centralized mode]
       --api-prefix string     usually don't need to be changed [required for custom cloud mode] (default "api")
       --env-id string         Testkube Cloud environment id [required for centralized mode]
+      --feature-logs-v2       Logs v2 feature flag
   -h, --help                  help for login
+      --logs-prefix string    usually don't need to be changed [required for custom cloud mode] (default "logs")
+      --logs-uri string       Testkube Cloud logs URI [required for centralized mode]
       --master-insecure       should client connect in insecure mode (will use http instead of https)
       --org-id string         Testkube Cloud organization id [required for centralized mode]
       --root-domain string    usually don't need to be changed [required for custom cloud mode] (default "testkube.io")
@@ -24,7 +27,7 @@ testkube login [flags]
 ### Options inherited from parent commands
 
 ```
-  -a, --api-uri string     api uri, default value read from config if set (default "https://demo.testkube.io/results")
+  -a, --api-uri string     api uri, default value read from config if set (default "http://localhost:8088")
   -c, --client string      client used for connecting to Testkube API one of proxy|direct (default "proxy")
       --insecure           insecure connection for direct client
       --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")

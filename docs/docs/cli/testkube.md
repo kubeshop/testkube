@@ -9,7 +9,7 @@ testkube [flags]
 ### Options
 
 ```
-  -a, --api-uri string     api uri, default value read from config if set (default "https://demo.testkube.io/results")
+  -a, --api-uri string     api uri, default value read from config if set (default "http://localhost:8088")
   -c, --client string      client used for connecting to Testkube API one of proxy|direct (default "proxy")
   -h, --help               help for testkube
       --insecure           insecure connection for direct client
@@ -39,7 +39,7 @@ testkube [flags]
 * [testkube migrate](testkube_migrate.md)	 - manual migrate command
 * [testkube pro](testkube_pro.md)	 - Testkube Pro commands
 * [testkube purge](testkube_purge.md)	 - Uninstall Helm chart registry from current kubectl context
-* [testkube run](testkube_run.md)	 - Runs tests or test suites
+* [testkube run](testkube_run.md)	 - Runs tests, test suites or test workflows
 * [testkube set](testkube_set.md)	 - Set resources
 * [testkube status](testkube_status.md)	 - Show status of feature or resource
 * [testkube update](testkube_update.md)	 - Update resource

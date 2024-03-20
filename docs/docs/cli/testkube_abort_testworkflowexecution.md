@@ -1,15 +1,15 @@
-## testkube run
+## testkube abort testworkflowexecution
 
-Runs tests, test suites or test workflows
+Abort test workflow execution
 
 ```
-testkube run <resourceName> [flags]
+testkube abort testworkflowexecution <executionName> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for run
+  -h, --help   help for testworkflowexecution
 ```
 
 ### Options inherited from parent commands
@@ -25,8 +25,5 @@ testkube run <resourceName> [flags]
 
 ### SEE ALSO
 
-* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
-* [testkube run test](testkube_run_test.md)	 - Starts new test
-* [testkube run testsuite](testkube_run_testsuite.md)	 - Starts new test suite
-* [testkube run testworkflow](testkube_run_testworkflow.md)	 - Starts test workflow execution
+* [testkube abort](testkube_abort.md)	 - Abort tests or test suites
 

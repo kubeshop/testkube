@@ -29,16 +29,16 @@ testkube update testsuite [flags]
       --schedule string                            test suite schedule in a cron job form: * * * * *
       --scraper-template string                    scraper template file path for extensions to scraper template
       --scraper-template-reference string          reference to scraper template to use for the test
-  -s, --secret-variable stringToString             secret variable key value pair: --secret-variable key1=value1 (default [])
+  -s, --secret-variable stringArray                secret variable key value pair: --secret-variable key1=value1
       --secret-variable-reference stringToString   secret variable references in a form name1=secret_name1=secret_key1 (default [])
       --timeout int32                              duration in seconds for test suite to timeout. 0 disables timeout.
-  -v, --variable stringToString                    param key value pair: --variable key1=value1 (default [])
+  -v, --variable stringArray                       param key value pair: --variable key1=value1
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -a, --api-uri string     api uri, default value read from config if set (default "https://demo.testkube.io/results")
+  -a, --api-uri string     api uri, default value read from config if set (default "http://localhost:8088")
   -c, --client string      client used for connecting to Testkube API one of proxy|direct (default "proxy")
       --insecure           insecure connection for direct client
       --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")
