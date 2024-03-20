@@ -400,6 +400,13 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 				result.FinishedAt = v.Value.Status.CompletionTime.Time
 			}
 		}
+		if result.FinishedAt.IsZero() {
+			for v := range c.pod.Stream(ctx).Channel() {
+				if v.Value != nil && v.Value.ObjectMeta.DeletionTimestamp != nil {
+					result.FinishedAt = v.Value.ObjectMeta.DeletionTimestamp.Time
+				}
+			}
+		}
 
 		// Compute the TestWorkflow status and dates
 		result.Recompute(sig, c.scheduledAt)
