@@ -3,7 +3,7 @@ kind: TestWorkflow
 metadata:
   name: postman-workflow-suite
   labels:
-    core-tests: workflows
+    core-tests: workflows-suite
 spec:
   steps:
   - execute:
