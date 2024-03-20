@@ -3,6 +3,7 @@ package telemetry
 import (
 	"context"
 	"net/http"
+	"os"
 	"runtime"
 	"sync"
 
@@ -230,4 +231,66 @@ func GetClusterType() string {
 	}
 
 	return "others"
+}
+
+func GetCliRunContext() string {
+	if value, ok := os.LookupEnv("GITHUB_ACTIONS"); ok {
+		if value == "true" {
+			return "github-actions"
+		}
+	}
+
+	if _, ok := os.LookupEnv("TF_BUILD"); ok {
+		return "azure-pipelines"
+	}
+
+	if _, ok := os.LookupEnv("JENKINS_URL"); ok {
+		return "jenkins"
+	}
+
+	if _, ok := os.LookupEnv("JENKINS_HOME"); ok {
+		return "jenkins"
+	}
+
+	if _, ok := os.LookupEnv("CIRCLECI"); ok {
+		return "circleci"
+	}
+
+	if _, ok := os.LookupEnv("GITLAB_CI"); ok {
+		return "gitlab-ci"
+	}
+
+	if _, ok := os.LookupEnv("BUILDKITE"); ok {
+		return "buildkite"
+	}
+
+	if _, ok := os.LookupEnv("TRAVIS"); ok {
+		return "travis-ci"
+	}
+
+	if _, ok := os.LookupEnv("AIRFLOW_HOME"); ok {
+		return "airflow"
+	}
+
+	if _, ok := os.LookupEnv("TEAMCITY_VERSION"); ok {
+		return "teamcity"
+	}
+
+	if _, ok := os.LookupEnv("GO_PIPELINE_NAME"); ok {
+		return "gocd"
+	}
+
+	if _, ok := os.LookupEnv("SEMAPHORE"); ok {
+		return "semaphore-ci"
+	}
+
+	if _, ok := os.LookupEnv("BITBUCKET_BUILD_NUMBER"); ok {
+		return "bitbucket-pipelines"
+	}
+
+	if _, ok := os.LookupEnv("DRONE"); ok {
+		return "drone"
+	}
+
+	return "others|local"
 }
