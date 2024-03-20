@@ -52,7 +52,7 @@ type DockerImage struct {
 
 // Inspector is image inspector interface
 type Inspector interface {
-	Inspect(image string) (*DockerImage, error)
+	Inspect(registry, image string) (*DockerImage, error)
 }
 
 type client struct {
@@ -77,7 +77,7 @@ func NewClientFromSecrets(imageSecrets []corev1.Secret, registry string) (*clien
 }
 
 // Inspect inspect a docker image
-func (c *client) Inspect(image string) (*DockerImage, error) {
+func (c *client) Inspect(registry, image string) (*DockerImage, error) {
 	args := []string{
 		"--override-os",
 		"linux",
@@ -89,7 +89,12 @@ func (c *client) Inspect(image string) (*DockerImage, error) {
 		args = append(args, "--creds", c.dockerAuthConfigs[i].Username+":"+c.dockerAuthConfigs[i].Password)
 	}
 
-	args = append(args, "--config", "docker://"+image)
+	config := "docker://" + image
+	if registry != "" {
+		config = registry + "/" + image
+	}
+
+	args = append(args, "--config", config)
 	result, err := process.Execute("skopeo", args...)
 	if err != nil {
 		return nil, err
