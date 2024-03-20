@@ -40,7 +40,8 @@ func cleanupPods(ctx context.Context, clientSet kubernetes.Interface, namespace,
 
 func cleanupJobs(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
 	return clientSet.BatchV1().Jobs(namespace).DeleteCollection(ctx, metav1.DeleteOptions{
-		PropagationPolicy: common.Ptr(metav1.DeletePropagationBackground),
+		GracePeriodSeconds: common.Ptr(int64(0)),
+		PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
 	}, metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("%s=%s", testworkflowprocessor.ExecutionIdLabelName, id),
 	})
