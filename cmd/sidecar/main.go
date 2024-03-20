@@ -54,7 +54,7 @@ func main() {
 	}
 
 	// run Sidecar Logs Proxy - it will proxy logs from pod to nats
-	proxy := sidecar.NewProxy(clientset, podsClient, logsStream, js, log, cfg.Namespace, cfg.ExecutionId)
+	proxy := sidecar.NewProxy(clientset, podsClient, logsStream, js, log, cfg.Namespace, cfg.ExecutionId, cfg.Source)
 	if err := proxy.Run(ctx); err != nil {
 		log.Errorw("error proxying logs", "error", err)
 	}
