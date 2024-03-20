@@ -15,7 +15,6 @@ func NewSetContextCmd() *cobra.Command {
 		kubeconfig       bool
 		namespace        string
 		opts             common.HelmOptions
-		ffLogsV2         bool
 	)
 
 	cmd := &cobra.Command{
