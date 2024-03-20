@@ -74,7 +74,6 @@ type RunContext struct {
 }
 
 func NewCLIPayload(context RunContext, id, name, version, category, clusterType string) Payload {
-	machineID := GetMachineID()
 	return Payload{
 		ClientID: id,
 		UserID:   id,
@@ -86,7 +85,7 @@ func NewCLIPayload(context RunContext, id, name, version, category, clusterType 
 					EventCategory:   category,
 					AppVersion:      version,
 					AppName:         "kubectl-testkube",
-					MachineID:       machineID,
+					MachineID:       GetMachineID(),
 					OperatingSystem: runtime.GOOS,
 					Architecture:    runtime.GOARCH,
 					Context:         context,

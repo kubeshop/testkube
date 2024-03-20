@@ -5840,6 +5840,10 @@ components:
           type: string
           description: server installaton namespace
           example: "my-testkube"
+        clusterId:
+          type: string
+          description: cluster id
+          example: "my-cluster-id"
         context:
           type: string
           description: currently configured testkube API context

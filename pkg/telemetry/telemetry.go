@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	httpclient "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
@@ -42,7 +43,7 @@ func SendCmdEvent(cmd *cobra.Command, version string) (string, error) {
 		command = "root"
 	}
 
-	payload := NewCLIPayload(getCurrentContext(), GetMachineID(), command, version, "cli_command_execution", GetClusterType())
+	payload := NewCLIPayload(getCurrentContext(), getUserID(cmd), command, version, "cli_command_execution", GetClusterType())
 	return sendData(senders, payload)
 }
 
@@ -89,13 +90,13 @@ func SendCmdAttemptEvent(cmd *cobra.Command, version string) (string, error) {
 
 	command += "_attempt"
 	// TODO pass error
-	payload := NewCLIPayload(getCurrentContext(), GetMachineID(), command, version, "cli_command_execution", GetClusterType())
+	payload := NewCLIPayload(getCurrentContext(), getUserID(cmd), command, version, "cli_command_execution", GetClusterType())
 	return sendData(senders, payload)
 }
 
 // SendCmdInitEvent will send CLI event to GA
 func SendCmdInitEvent(cmd *cobra.Command, version string) (string, error) {
-	payload := NewCLIPayload(getCurrentContext(), GetMachineID(), "init", version, "cli_command_execution", GetClusterType())
+	payload := NewCLIPayload(getCurrentContext(), getUserID(cmd), "init", version, "cli_command_execution", GetClusterType())
 	return sendData(senders, payload)
 }
 
@@ -150,6 +151,22 @@ func getCurrentContext() RunContext {
 		OrganizationId: data.CloudContext.OrganizationId,
 		EnvironmentId:  data.CloudContext.EnvironmentId,
 	}
+}
+
+func getUserID(cmd *cobra.Command) string {
+	id := "command-cli-user"
+	client, _, err := common.GetClient(cmd)
+	if err == nil && client != nil {
+		info, err := client.GetServerInfo()
+		if err == nil && info.ClusterId != "" {
+			id = info.ClusterId
+		}
+	}
+	data, err := config.Load()
+	if err != nil || data.CloudContext.EnvironmentId == "" {
+		return id
+	}
+	return data.CloudContext.EnvironmentId
 }
 
 func GetClusterType() string {
