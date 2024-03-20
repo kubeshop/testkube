@@ -26,7 +26,7 @@ testkube [flags]
 * [testkube config](testkube_config.md)	 - Set feature configuration value
 * [testkube create](testkube_create.md)	 - Create resource
 * [testkube create-ticket](testkube_create-ticket.md)	 - Create bug ticket
-* [testkube dashboard](testkube_dashboard.md)	 - Open Testkube Pro/Enterprise dashboard
+* [testkube dashboard](testkube_dashboard.md)	 - Open Testkube Pro dashboard
 * [testkube debug](testkube_debug.md)	 - Print environment information for debugging
 * [testkube delete](testkube_delete.md)	 - Delete resources
 * [testkube disable](testkube_disable.md)	 - Disable feature

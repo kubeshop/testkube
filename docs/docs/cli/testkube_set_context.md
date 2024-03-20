@@ -10,19 +10,19 @@ testkube set context <value> [flags]
 
 ```
       --agent-prefix string   usually don't need to be changed [required for custom cloud mode] (default "agent")
-      --agent-token string    Testkube Cloud agent key [required for centralized mode]
-      --agent-uri string      Testkube Cloud agent URI [required for centralized mode]
-  -k, --api-key string        API Key for Testkube Cloud
+      --agent-token string    Testkube Pro agent key [required for centralized mode]
+      --agent-uri string      Testkube Pro agent URI [required for centralized mode]
+  -k, --api-key string        API Key for Testkube Pro
       --api-prefix string     usually don't need to be changed [required for custom cloud mode] (default "api")
-      --env-id string         Testkube Cloud environment id [required for centralized mode]
+      --env-id string         Testkube Pro environment id [required for centralized mode]
       --feature-logs-v2       Logs v2 feature flag
   -h, --help                  help for context
       --kubeconfig            reset context mode for CLI to default kubeconfig based
       --logs-prefix string    usually don't need to be changed [required for custom cloud mode] (default "logs")
-      --logs-uri string       Testkube Cloud logs URI [required for centralized mode]
+      --logs-uri string       Testkube Pro logs URI [required for centralized mode]
       --master-insecure       should client connect in insecure mode (will use http instead of https)
   -n, --namespace string      Testkube namespace to use for CLI commands
-      --org-id string         Testkube Cloud organization id [required for centralized mode]
+      --org-id string         Testkube Pro organization id [required for centralized mode]
       --root-domain string    usually don't need to be changed [required for custom cloud mode] (default "testkube.io")
       --ui-prefix string      usually don't need to be changed [required for custom cloud mode] (default "app")
 ```
