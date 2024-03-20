@@ -112,9 +112,21 @@ func SendCreateEvent(event string, params CreateParams) (string, error) {
 	return sendData(senders, payload)
 }
 
-// SendCreateEvent will send API run event for Test or Test suite to GA
+// SendRunEvent will send API run event for Test, or Test suite to GA
 func SendRunEvent(event string, params RunParams) (string, error) {
 	payload := NewRunPayload(event, GetClusterType(), params)
+	return sendData(senders, payload)
+}
+
+// SendCreateWorkflowEvent will send API create event for Test workflows to GA
+func SendCreateWorkflowEvent(event string, params CreateWorkflowParams) (string, error) {
+	payload := NewCreateWorkflowPayload(event, GetClusterType(), params)
+	return sendData(senders, payload)
+}
+
+// SendRunWorkflowEvent will send API run event for Test workflows to GA
+func SendRunWorkflowEvent(event string, params RunWorkflowParams) (string, error) {
+	payload := NewRunWorkflowPayload(event, GetClusterType(), params)
 	return sendData(senders, payload)
 }
 
