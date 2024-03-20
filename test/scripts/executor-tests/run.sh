@@ -499,6 +499,15 @@ workflow-soapui-smoke() {
   common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 
+workflow-special-cases-failures() {
+  name="Test Workflow - special cases - expected failures"
+  workflow_crd_file="test/special-cases/test-workflows/edge-cases-expected-fails.yaml"
+  workflow_suite_name="edge-cases-expected-failure-suite"
+  workflow_suite_file="test/suites/special-cases/test-workflows/edge-cases-expected-fails.yaml"
+  
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
+}
+
 main() {
   case $executor_type in
     all)
@@ -566,7 +575,7 @@ main() {
       workflow-soapui-smoke
       ;;
     workflow-special)
-      # TODO: workflow special cases
+      workflow-special-cases-failures
       ;;
     *)
       $executor_type
