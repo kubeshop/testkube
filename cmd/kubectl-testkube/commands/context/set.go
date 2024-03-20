@@ -35,10 +35,6 @@ func NewSetContextCmd() *cobra.Command {
 				opts.Master.EnvId = env
 			}
 
-			if cmd.Flags().Changed("flag-logsv2") {
-				opts.Master.Features.LogsV2 = ffLogsV2
-			}
-
 			if kubeconfig {
 				cfg.ContextType = config.ContextTypeKubeconfig
 			} else {
@@ -85,9 +81,6 @@ func NewSetContextCmd() *cobra.Command {
 	cmd.Flags().MarkDeprecated("env", "use --env-id instead")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "Testkube namespace to use for CLI commands")
 	cmd.Flags().StringVarP(&apiKey, "api-key", "k", "", "API Key for Testkube Cloud")
-
-	// feature flags
-	cmd.Flags().BoolVarP(&ffLogsV2, "feature-logs-v2", "", false, "use new logs v2")
 
 	common.PopulateMasterFlags(cmd, &opts)
 	return cmd
