@@ -11,6 +11,7 @@ package data
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -20,6 +21,15 @@ const (
 	InstructionSeparator      = "\u0003"
 	InstructionValueSeparator = "\u0004"
 )
+
+var instructionRe = regexp.MustCompile(fmt.Sprintf(`^%s(%s)?([^%s]+)%s([a-zA-Z0-9-_.]+)(?:%s([^\n]+))?%s$`,
+	InstructionPrefix, HintPrefix, InstructionSeparator, InstructionSeparator, InstructionValueSeparator, InstructionSeparator))
+
+type Instruction struct {
+	Ref   string
+	Name  string
+	Value interface{}
+}
 
 func SprintOutput(ref string, name string, value interface{}) string {
 	j, err := json.Marshal(value)
@@ -81,4 +91,28 @@ func PrintHint(ref string, name string) {
 
 func PrintHintDetails(ref string, name string, value interface{}) {
 	fmt.Print(SprintHintDetails(ref, name, value))
+}
+
+func DetectInstruction(line []byte) (*Instruction, bool, error) {
+	// Fast check to avoid regexes
+	if len(line) < 4 || string(line[0:len(InstructionPrefix)]) != InstructionPrefix || string(line[:len(InstructionPrefix)]) != InstructionPrefix {
+		return nil, false, nil
+	}
+	// Parse the line
+	v := instructionRe.FindSubmatch(line)
+	if v == nil {
+		return nil, false, nil
+	}
+	isHint := string(v[1]) == HintPrefix
+	instruction := &Instruction{
+		Ref:  string(v[2]),
+		Name: string(v[3]),
+	}
+	if len(v) > 4 && v[4] != nil {
+		err := json.Unmarshal(v[4], &instruction.Value)
+		if err != nil {
+			return instruction, isHint, err
+		}
+	}
+	return instruction, isHint, nil
 }
