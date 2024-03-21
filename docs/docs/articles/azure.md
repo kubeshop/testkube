@@ -1,7 +1,7 @@
 # Testkube Azure DevOps Pipelines
 
 Testkube's integration with Azure DevOps streamlines the installation of Testkube, enabling the execution of any [Testkube CLI](https://docs.testkube.io/cli/testkube) command within Azure DevOps pipelines. This integration can be effortlessly integrated into your Azure DevOps setup, enhancing your continuous integration and delivery processes.
-The Azure DevOps integration offers a versatile solution for managing your pipeline workflows and is compatible with Testkube Pro, Testkube Enterprise, and the open-source Testkube platform. It allows Azure DevOps users to effectively utilize Testkube's capabilities within their CI/CD pipelines, providing a robust and flexible framework for test execution and automation.
+The Azure DevOps integration offers a versatile solution for managing your pipeline workflows and is compatible with Testkube Pro and the open-source Testkube platform. It allows Azure DevOps users to effectively utilize Testkube's capabilities within their CI/CD pipelines, providing a robust and flexible framework for test execution and automation.
 
 ### Azure DevOps Extension
 

@@ -1,7 +1,7 @@
 # Testkube Jenkins Pipelines
 
 The Testkube Jenkins integration streamlines the installation of Testkube, enabling the execution of any [Testkube CLI](https://docs.testkube.io/cli/testkube) command within Jenkins pipelines. This integration can be effortlessly integrated into your Jenkins setup, enhancing your continuous integration and delivery processes.
-This Jenkins integration offers a versatile solution for managing your pipeline workflows and is compatible with Testkube Pro, Testkube Enterprise, and the open-source Testkube platform. It allows Jenkins users to effectively utilize Testkube's capabilities within their CI/CD pipelines, providing a robust and flexible framework for test execution and automation.
+This Jenkins integration offers a versatile solution for managing your pipeline workflows and is compatible with Testkube Pro and the open-source Testkube platform. It allows Jenkins users to effectively utilize Testkube's capabilities within their CI/CD pipelines, providing a robust and flexible framework for test execution and automation.
 
 ### Testkube CLI Jenkins Plugin
 

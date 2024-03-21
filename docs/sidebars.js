@@ -215,12 +215,12 @@ const sidebars = {
     },
     {
       type: "category",
-      label: "Testkube Enterprise",
+      label: "Testkube Pro On-Prem",
       items: [
-        "testkube-enterprise/articles/testkube-enterprise",
-        "testkube-enterprise/articles/usage-guide", 
-        "testkube-enterprise/articles/auth",
-        "testkube-enterprise/articles/migrating-from-oss-to-pro"],
+        "testkube-pro-on-prem/articles/testkube-pro-on-prem",
+        "testkube-pro-on-prem/articles/usage-guide", 
+        "testkube-pro-on-prem/articles/auth",
+        "testkube-pro-on-prem/articles/migrating-from-oss-to-pro"],
     },
     "articles/testkube-oss",
     {
