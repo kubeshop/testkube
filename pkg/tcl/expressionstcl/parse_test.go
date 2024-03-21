@@ -246,6 +246,11 @@ a:
 	assert.Equal(t, `5`, MustCompile(`len("abcde")`).String())
 	assert.Equal(t, `2`, MustCompile(`len(["a", "b"])`).String())
 	assert.Equal(t, `2`, MustCompile(`len({"a": "b", "b": "c"})`).String())
+	assert.Equal(t, `2`, MustCompile(`floor(2.6)`).String())
+	assert.Equal(t, `2`, MustCompile(`ceil(1.6)`).String())
+	assert.Equal(t, `2`, MustCompile(`round(1.6)`).String())
+	assert.Equal(t, `2`, MustCompile(`round(1.5)`).String())
+	assert.Equal(t, `1`, MustCompile(`round(1.4)`).String())
 }
 
 func TestCompileDetectAccessors(t *testing.T) {

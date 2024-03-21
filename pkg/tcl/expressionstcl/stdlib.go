@@ -11,6 +11,7 @@ package expressionstcl
 import (
 	"encoding/json"
 	"fmt"
+	math2 "math"
 	"strings"
 
 	"github.com/kballard/go-shellquote"
@@ -226,6 +227,45 @@ var stdFunctions = map[string]StdFunction{
 				return NewValue(int64(len(v))), err
 			}
 			return nil, fmt.Errorf(`"len" function expects string, slice or map, %v provided`, value[0])
+		},
+	},
+	"floor": {
+		ReturnType: TypeInt64,
+		Handler: func(value ...StaticValue) (Expression, error) {
+			if len(value) != 1 {
+				return nil, fmt.Errorf(`"floor" function expects 1 argument, %d provided`, len(value))
+			}
+			f, err := value[0].FloatValue()
+			if err != nil {
+				return nil, fmt.Errorf(`"floor" function expects a number, %s provided: %v`, value[0], err)
+			}
+			return NewValue(int64(math2.Floor(f))), nil
+		},
+	},
+	"ceil": {
+		ReturnType: TypeInt64,
+		Handler: func(value ...StaticValue) (Expression, error) {
+			if len(value) != 1 {
+				return nil, fmt.Errorf(`"ceil" function expects 1 argument, %d provided`, len(value))
+			}
+			f, err := value[0].FloatValue()
+			if err != nil {
+				return nil, fmt.Errorf(`"ceil" function expects a number, %s provided: %v`, value[0], err)
+			}
+			return NewValue(int64(math2.Ceil(f))), nil
+		},
+	},
+	"round": {
+		ReturnType: TypeInt64,
+		Handler: func(value ...StaticValue) (Expression, error) {
+			if len(value) != 1 {
+				return nil, fmt.Errorf(`"round" function expects 1 argument, %d provided`, len(value))
+			}
+			f, err := value[0].FloatValue()
+			if err != nil {
+				return nil, fmt.Errorf(`"round" function expects a number, %s provided: %v`, value[0], err)
+			}
+			return NewValue(int64(math2.Round(f))), nil
 		},
 	},
 }
