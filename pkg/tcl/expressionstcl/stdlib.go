@@ -268,6 +268,34 @@ var stdFunctions = map[string]StdFunction{
 			return NewValue(int64(math2.Round(f))), nil
 		},
 	},
+	"chunk": {
+		Handler: func(value ...StaticValue) (Expression, error) {
+			if len(value) != 2 {
+				return nil, fmt.Errorf(`"chunk" function expects 2 arguments, %d provided`, len(value))
+			}
+			list, err := value[0].SliceValue()
+			if err != nil {
+				return nil, fmt.Errorf(`"chunk" function expects 1st argument to be a list, %s provided: %v`, value[0], err)
+			}
+			size, err := value[1].IntValue()
+			if err != nil {
+				return nil, fmt.Errorf(`"chunk" function expects 2nd argument to be integer, %s provided: %v`, value[1], err)
+			}
+			if size <= 0 {
+				return nil, fmt.Errorf(`"chunk" function expects 2nd argument to be >= 1, %s provided: %v`, value[1], err)
+			}
+			chunks := make([][]interface{}, 0)
+			l := int64(len(list))
+			for i := int64(0); i < l; i += size {
+				end := i + size
+				if end > l {
+					end = l
+				}
+				chunks = append(chunks, list[i:end])
+			}
+			return NewValue(chunks), nil
+		},
+	},
 }
 
 const (

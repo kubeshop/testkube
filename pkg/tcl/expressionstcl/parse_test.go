@@ -251,6 +251,7 @@ a:
 	assert.Equal(t, `2`, MustCompile(`round(1.6)`).String())
 	assert.Equal(t, `2`, MustCompile(`round(1.5)`).String())
 	assert.Equal(t, `1`, MustCompile(`round(1.4)`).String())
+	assert.Equal(t, `[[1,2],[3,4],[5]]`, MustCompile(`chunk([1,2,3,4,5], 2)`).String())
 }
 
 func TestCompileDetectAccessors(t *testing.T) {
