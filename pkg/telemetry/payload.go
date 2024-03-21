@@ -29,6 +29,7 @@ type Params struct {
 	TestSuiteSteps             int32      `json:"test_suite_steps,omitempty"`
 	Context                    RunContext `json:"context,omitempty"`
 	ClusterType                string     `json:"cluster_type,omitempty"`
+	CliContext                 string     `json:"cli_context,omitempty"`
 	Error                      string     `json:"error,omitempty"`
 	ErrorType                  string     `json:"error_type,omitempty"`
 	ErrorStackTrace            string     `json:"error_stacktrace,omitempty"`
@@ -113,6 +114,7 @@ func NewCLIPayload(context RunContext, id, name, version, category, clusterType 
 					Architecture:    runtime.GOARCH,
 					Context:         context,
 					ClusterType:     clusterType,
+					CliContext:      GetCliRunContext(),
 				},
 			}},
 	}
