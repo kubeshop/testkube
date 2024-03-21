@@ -263,6 +263,9 @@ a:
 	assert.Equal(t, `5`, MustCompile(`at([1,2,3,4,5], 4)`).String())
 	assert.Equal(t, `"value"`, MustCompile(`at({"x": "value"}, "x")`).String())
 	assert.Equal(t, `null`, MustCompile(`at({"x": "value"}, "unknown-key")`).String())
+	assert.Equal(t, `"abc"`, MustCompile(`eval("\"abc\"")`).String())
+	assert.Equal(t, `50`, MustCompile(`eval("5 * 10")`).String())
+	assert.Equal(t, `50*something`, MustCompile(`eval("5 * 10 * something")`).String())
 }
 
 func TestCompileDetectAccessors(t *testing.T) {

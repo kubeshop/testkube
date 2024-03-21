@@ -401,6 +401,19 @@ var stdFunctions = map[string]StdFunction{
 			return NewValue(result), nil
 		},
 	},
+	"eval": {
+		Handler: func(value ...StaticValue) (Expression, error) {
+			if len(value) != 1 {
+				return nil, fmt.Errorf(`"eval" function expects 1 argument, %d provided`, len(value))
+			}
+			exprStr, _ := value[0].StringValue()
+			expr, err := Compile(exprStr)
+			if err != nil {
+				return nil, fmt.Errorf(`"eval" function: %s: error: %v`, value[0], err)
+			}
+			return expr, nil
+		},
+	},
 	"jq": {
 		Handler: func(value ...StaticValue) (Expression, error) {
 			if len(value) != 2 {
