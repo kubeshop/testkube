@@ -74,6 +74,7 @@ type Service struct {
 	metrics                       metrics.Metrics
 	testkubeNamespace             string
 	watcherNamespaces             []string
+	disableSecretCreation         bool
 }
 
 type Option func(*Service)
@@ -199,6 +200,12 @@ func WithWatcherNamespaces(namespaces string) Option {
 	}
 }
 
+func WithDisableSecretCreation(disableSecretCreation bool) Option {
+	return func(s *Service) {
+		s.disableSecretCreation = disableSecretCreation
+	}
+}
+
 func (s *Service) Run(ctx context.Context) {
 	leaseChan := make(chan bool)
 
@@ -280,7 +287,7 @@ func (s *Service) addTest(test *testsv3.Test) {
 		s.logger.Debugw("can't get executor spec", "error", err)
 	}
 
-	if _, err = s.testsClient.Update(test); err != nil {
+	if _, err = s.testsClient.Update(test, s.disableSecretCreation); err != nil {
 		s.logger.Debugw("can't update test spec", "error", err)
 	}
 }
@@ -308,7 +315,7 @@ func (s *Service) updateTest(test *testsv3.Test) {
 	}
 
 	if changed {
-		if _, err = s.testsClient.Update(test); err != nil {
+		if _, err = s.testsClient.Update(test, s.disableSecretCreation); err != nil {
 			s.logger.Debugw("can't update test spec", "error", err)
 		}
 	}

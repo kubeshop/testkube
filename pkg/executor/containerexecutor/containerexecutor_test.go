@@ -519,11 +519,11 @@ func (FakeTestsClient) Get(name string) (*testsv3.Test, error) {
 	return &testsv3.Test{}, nil
 }
 
-func (FakeTestsClient) Create(test *testsv3.Test, options ...v3.Option) (*testsv3.Test, error) {
+func (FakeTestsClient) Create(test *testsv3.Test, disableSecretCreation bool, options ...v3.Option) (*testsv3.Test, error) {
 	return &testsv3.Test{}, nil
 }
 
-func (FakeTestsClient) Update(test *testsv3.Test, options ...v3.Option) (*testsv3.Test, error) {
+func (FakeTestsClient) Update(test *testsv3.Test, disableSecretCreation bool, options ...v3.Option) (*testsv3.Test, error) {
 	return &testsv3.Test{}, nil
 }
 
@@ -535,11 +535,11 @@ func (FakeTestsClient) DeleteAll() error {
 	return nil
 }
 
-func (FakeTestsClient) CreateTestSecrets(test *testsv3.Test) error {
+func (FakeTestsClient) CreateTestSecrets(test *testsv3.Test, disableSecretCreation bool) error {
 	return nil
 }
 
-func (FakeTestsClient) UpdateTestSecrets(test *testsv3.Test) error {
+func (FakeTestsClient) UpdateTestSecrets(test *testsv3.Test, disableSecretCreation bool) error {
 	return nil
 }
 
