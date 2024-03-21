@@ -19,7 +19,8 @@ import (
 var mathOperatorRe = regexp.MustCompile(`^(?:!=|<>|==|>=|<=|&&|\*\*|\|\||[+\-*/><=%])`)
 var noneRe = regexp.MustCompile(`^null(?:[^a-zA-Z\d_.]|$)`)
 var jsonValueRe = regexp.MustCompile(`^(?:["{\[\d]|((?:true|false)(?:[^a-zA-Z\d_.]|$)))`)
-var accessorRe = regexp.MustCompile(`^[a-zA-Z\d_](?:[a-zA-Z\d_.]*[a-zA-Z\d_])?`)
+var accessorRe = regexp.MustCompile(`^[a-zA-Z\d_]+(?:\s*\.\s*([a-zA-Z\d_]+|\*))*`)
+var propertyAccessorRe = regexp.MustCompile(`^\.\s*([a-zA-Z\d_]+|\*)`)
 var spaceRe = regexp.MustCompile(`^\s+`)
 
 func tokenizeNext(exp string, i int) (token, int, error) {
@@ -75,6 +76,9 @@ func tokenizeNext(exp string, i int) (token, int, error) {
 		case accessorRe.MatchString(exp[i:]):
 			acc := accessorRe.FindString(exp[i:])
 			return tokenAccessor(acc), i + len(acc), nil
+		case propertyAccessorRe.MatchString(exp[i:]):
+			acc := propertyAccessorRe.FindString(exp[i:])
+			return tokenPropertyAccessor(acc[1:]), i + len(acc), nil
 		default:
 			return token{}, i, fmt.Errorf("unknown character at index %d in expression: %s", i, exp)
 		}

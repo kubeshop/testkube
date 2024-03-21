@@ -268,6 +268,56 @@ a:
 	assert.Equal(t, `50*something`, MustCompile(`eval("5 * 10 * something")`).String())
 }
 
+func TestCompileWildcard_Unknown(t *testing.T) {
+	assert.Equal(t, `map(a.b.c,"_.value.d.e")`, MustCompile("a.b.c.*.d.e").String())
+	assert.Equal(t, `map(map(a.b.c,"_.value"),"_.value.d.e")`, MustCompile("a.b.c.*.*.d.e").String())
+}
+
+func TestCompileWildcard_Map(t *testing.T) {
+	vm := NewMachine().Register("a.b.c", []map[string]interface{}{
+		{"d": map[string]string{"e": "v1"}},
+		{"d": map[string]string{"e": "v2"}},
+	})
+	assert.Equal(t, `["v1","v2"]`, must(MustCompile("a.b.c.*.d.e").Resolve(vm)).String())
+}
+
+func TestCompileWildcard_Struct(t *testing.T) {
+	type S1 struct {
+		Else string `json:"e"`
+	}
+	type S2 struct {
+		Something S1 `json:"d"`
+	}
+	vm := NewMachine().Register("a.b.c", []S2{
+		{Something: S1{Else: "v1"}},
+		{Something: S1{Else: "v2"}},
+	})
+	assert.Equal(t, `["v1","v2"]`, must(MustCompile("a.b.c.*.d.e").Resolve(vm)).String())
+}
+
+func TestCompileWildcard_Inner(t *testing.T) {
+	type S1 struct {
+		Else string `json:"e"`
+	}
+	type S2 struct {
+		Something S1 `json:"d"`
+	}
+	vm := NewMachine().Register("a.b", map[string]interface{}{
+		"c": []S2{
+			{Something: S1{Else: "v1"}},
+			{Something: S1{Else: "v2"}},
+		},
+	})
+	assert.Equal(t, `["v1","v2"]`, must(MustCompile("a.b.c.*.d.e").Resolve(vm)).String())
+}
+
+func TestCompileInnerPath(t *testing.T) {
+	assert.Equal(t, `"v1"`, MustCompile(`["v1", "v2"].0`).String())
+	assert.Equal(t, `"v1abc"`, must(MustCompile(`map(["v1", "v2"], "_.value + \"abc\"").0`).Resolve()).String())
+	assert.Equal(t, `"v"`, must(MustCompile(`{"k": "v", "k2":"v2"}.k`).Resolve()).String())
+	assert.Equal(t, `"v"`, must(MustCompile(`{"k": {"a": "v"}, "k2":"v2"}.k.a`).Resolve()).String())
+}
+
 func TestCompileDetectAccessors(t *testing.T) {
 	assert.Equal(t, map[string]struct{}{"something": {}}, MustCompile(`something`).Accessors())
 	assert.Equal(t, map[string]struct{}{"something": {}, "other": {}, "another": {}}, MustCompile(`calling(something, 5 * (other + 3), !another)`).Accessors())

@@ -62,6 +62,9 @@ func parseNextExpression(t []token, priority int) (e Expression, i int, err erro
 				return nil, i, nerr
 			}
 			e = newMath(op, e, ne)
+		case tokenTypePropertyAccessor:
+			e = newPropertyAccessor(e, t[i].Value.(string))
+			i += 1
 		default:
 			return e, i, err
 		}

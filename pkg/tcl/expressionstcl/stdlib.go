@@ -356,7 +356,7 @@ var stdFunctions = map[string]StdFunction{
 			result := make([]string, len(list))
 			for i := 0; i < len(list); i++ {
 				ex, _ := Compile(expr.String())
-				v, err := ex.Resolve(NewMachine().Register("_.value", list[i]).Register("_.index", i))
+				v, err := ex.Resolve(NewMachine().Register("_.value", list[i]).Register("_.index", i).Register("_.key", i))
 				if err != nil {
 					return nil, fmt.Errorf(`"map" function: error while mapping %d index (%v): %v`, i, list[i], err)
 				}
@@ -382,7 +382,7 @@ var stdFunctions = map[string]StdFunction{
 			result := make([]interface{}, 0)
 			for i := 0; i < len(list); i++ {
 				ex, _ := Compile(expr.String())
-				v, err := ex.Resolve(NewMachine().Register("_.value", list[i]).Register("_.index", i))
+				v, err := ex.Resolve(NewMachine().Register("_.value", list[i]).Register("_.index", i).Register("_.key", i))
 				if err != nil {
 					return nil, fmt.Errorf(`"filter" function: error while filtering %d index (%v): %v`, i, list[i], err)
 				}
@@ -497,6 +497,24 @@ func IsStdFunction(name string) bool {
 
 func GetStdFunctionReturnType(name string) Type {
 	return stdFunctions[name].ReturnType
+}
+
+func CallStdFunction(name string, value ...interface{}) (Expression, error) {
+	fn, ok := stdFunctions[name]
+	if !ok {
+		return nil, fmt.Errorf("function '%s' doesn't exists in standard library", name)
+	}
+	r := make([]StaticValue, 0, len(value))
+	for i := 0; i < len(value); i++ {
+		if v, ok := value[i].(StaticValue); ok {
+			r = append(r, v)
+		} else if v, ok := value[i].(Expression); ok {
+			return nil, fmt.Errorf("expression functions can be called only with static values: %s provided", v)
+		} else {
+			r = append(r, NewValue(value[i]))
+		}
+	}
+	return fn.Handler(r...)
 }
 
 func (*stdMachine) Get(name string) (Expression, bool, error) {
