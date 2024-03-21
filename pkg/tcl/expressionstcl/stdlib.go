@@ -9,12 +9,16 @@
 package expressionstcl
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	math2 "math"
 	"strings"
+	"time"
 
+	"github.com/itchyny/gojq"
 	"github.com/kballard/go-shellquote"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -354,6 +358,43 @@ var stdFunctions = map[string]StdFunction{
 				if b {
 					result = append(result, list[i])
 				}
+			}
+			return NewValue(result), nil
+		},
+	},
+	"jq": {
+		Handler: func(value ...StaticValue) (Expression, error) {
+			if len(value) != 2 {
+				return nil, fmt.Errorf(`"jq" function expects 2 arguments, %d provided`, len(value))
+			}
+			queryStr, _ := value[1].StringValue()
+			query, err := gojq.Parse(queryStr)
+			if err != nil {
+				return nil, fmt.Errorf(`"jq" error: could not parse the query: %s: %v`, queryStr, err)
+			}
+
+			// Marshal data to basic types
+			bytes, err := json.Marshal(value[0].Value())
+			if err != nil {
+				return nil, fmt.Errorf(`"jq" error: could not marshal the value: %v: %v`, value[0].Value(), err)
+			}
+			var v interface{}
+			_ = json.Unmarshal(bytes, &v)
+
+			// Run query against the value
+			ctx, ctxCancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer ctxCancel()
+			iter := query.RunWithContext(ctx, v)
+			result := make([]interface{}, 0)
+			for {
+				v, ok := iter.Next()
+				if !ok {
+					break
+				}
+				if err, ok := v.(error); ok {
+					return nil, errors.Wrap(err, `"jq" error: executing: %v`)
+				}
+				result = append(result, v)
 			}
 			return NewValue(result), nil
 		},
