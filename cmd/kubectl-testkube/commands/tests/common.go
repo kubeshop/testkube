@@ -457,7 +457,27 @@ func newEnvReferencesFromFlags(cmd *cobra.Command) (envConfigMaps, envSecrets []
 }
 
 func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.ExecutionRequest, err error) {
-	variables, err := common.CreateVariables(cmd, false)
+	crdOnly, err := cmd.Flags().GetBool("crd-only")
+	if err != nil {
+		return nil, err
+	}
+
+	disableSecretCreation := false
+	if !crdOnly {
+		client, _, err := common.GetClient(cmd)
+		if err != nil {
+			return nil, err
+		}
+
+		info, err := client.GetServerInfo()
+		if err != nil {
+			return nil, err
+		}
+
+		disableSecretCreation = info.DisableSecretCreation
+	}
+
+	variables, err := common.CreateVariables(cmd, disableSecretCreation)
 	if err != nil {
 		return nil, err
 	}
@@ -961,7 +981,17 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 	}
 
 	if cmd.Flag("variable").Changed || cmd.Flag("secret-variable").Changed || cmd.Flag("secret-variable-reference").Changed {
-		variables, err := common.CreateVariables(cmd, false)
+		client, _, err := common.GetClient(cmd)
+		if err != nil {
+			return nil, err
+		}
+
+		info, err := client.GetServerInfo()
+		if err != nil {
+			return nil, err
+		}
+
+		variables, err := common.CreateVariables(cmd, info.DisableSecretCreation)
 		if err != nil {
 			return nil, err
 		}
