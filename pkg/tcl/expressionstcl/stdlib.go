@@ -300,6 +300,45 @@ var stdFunctions = map[string]StdFunction{
 			return NewValue(chunks), nil
 		},
 	},
+	"at": {
+		Handler: func(value ...StaticValue) (Expression, error) {
+			if len(value) != 2 {
+				return nil, fmt.Errorf(`"at" function expects 2 arguments, %d provided`, len(value))
+			}
+			if value[0].IsSlice() {
+				v, _ := value[0].SliceValue()
+				k, err := value[1].IntValue()
+				if err != nil {
+					return nil, fmt.Errorf(`"at" function expects 2nd argument to be number for list, %s provided`, value[1])
+				}
+				if k >= 0 && k < int64(len(v)) {
+					return NewValue(v[int(k)]), nil
+				}
+				return nil, fmt.Errorf(`"at" function: error: out of bounds (length=%d, index=%d)`, len(v), k)
+			}
+			if value[0].IsMap() {
+				v, _ := value[0].MapValue()
+				k, _ := value[1].StringValue()
+				item, ok := v[k]
+				if ok {
+					return NewValue(item), nil
+				}
+				return None, nil
+			}
+			if value[0].IsString() {
+				v, _ := value[0].StringValue()
+				k, err := value[1].IntValue()
+				if err != nil {
+					return nil, fmt.Errorf(`"at" function expects 2nd argument to be number for string, %s provided`, value[1])
+				}
+				if k >= 0 && k < int64(len(v)) {
+					return NewValue(v[int(k)]), nil
+				}
+				return nil, fmt.Errorf(`"at" function: error: out of bounds (length=%d, index=%d)`, len(v), k)
+			}
+			return nil, fmt.Errorf(`"at" function can be performed only on lists, maps and strings: %s provided`, value[0])
+		},
+	},
 	"map": {
 		Handler: func(value ...StaticValue) (Expression, error) {
 			if len(value) != 2 {

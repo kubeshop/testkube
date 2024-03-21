@@ -260,6 +260,9 @@ a:
 	assert.Equal(t, `[5]`, MustCompile(`jq([1,2,3,4,5], ". | max")`).String())
 	assert.Equal(t, `[{"b":{"v":2}}]`, MustCompile(`jq([{"a":{"v": 1}},{"b":{"v": 2}}], ". | max_by(.v)")`).String())
 	assert.Equal(t, `[[3,4,5]]`, MustCompile(`jq([1,2,3,4,5], "map(select(. > 2))")`).String())
+	assert.Equal(t, `5`, MustCompile(`at([1,2,3,4,5], 4)`).String())
+	assert.Equal(t, `"value"`, MustCompile(`at({"x": "value"}, "x")`).String())
+	assert.Equal(t, `null`, MustCompile(`at({"x": "value"}, "unknown-key")`).String())
 }
 
 func TestCompileDetectAccessors(t *testing.T) {
