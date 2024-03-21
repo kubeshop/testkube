@@ -11,6 +11,7 @@ package data
 import (
 	"bytes"
 	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -49,6 +50,18 @@ func (s *state) GetOutput(name string) (expressionstcl.Expression, bool, error) 
 	}
 	expr, err := expressionstcl.Compile(v)
 	return expr, true, err
+}
+
+func (s *state) SetOutput(ref, name string, value interface{}) {
+	if s.Output == nil {
+		s.Output = make(map[string]string)
+	}
+	v, err := json.Marshal(value)
+	if err == nil {
+		s.Output[name] = string(v)
+	} else {
+		fmt.Printf("Warning: couldn't save '%s' (%s) output: %s\n", name, ref, err.Error())
+	}
 }
 
 func (s *state) GetSelfStatus() string {
