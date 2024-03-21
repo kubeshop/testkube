@@ -254,6 +254,9 @@ a:
 	assert.Equal(t, `[[1,2],[3,4],[5]]`, MustCompile(`chunk([1,2,3,4,5], 2)`).String())
 	assert.Equal(t, `[2,4,6,8,10]`, MustCompile(`map([1,2,3,4,5], "_.value * 2")`).String())
 	assert.Equal(t, `[0,2,4,6,8]`, MustCompile(`map([10,20,30,40,50], "_.index * 2")`).String())
+	assert.Equal(t, `[2,4,6,8,10]`, MustCompile(`map([1,2,3,4,5], "_.value * 2")`).String())
+	assert.Equal(t, `[0,2,4,6,8]`, MustCompile(`map([10,20,30,40,50], "_.index * 2")`).String())
+	assert.Equal(t, `[3,4,5]`, MustCompile(`filter([1,2,3,4,5], "_.value > 2")`).String())
 }
 
 func TestCompileDetectAccessors(t *testing.T) {

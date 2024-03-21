@@ -322,6 +322,42 @@ var stdFunctions = map[string]StdFunction{
 			return Compile(fmt.Sprintf("list(%s)", strings.Join(result, ",")))
 		},
 	},
+	"filter": {
+		Handler: func(value ...StaticValue) (Expression, error) {
+			if len(value) != 2 {
+				return nil, fmt.Errorf(`"filter" function expects 2 arguments, %d provided`, len(value))
+			}
+			list, err := value[0].SliceValue()
+			if err != nil {
+				return nil, fmt.Errorf(`"filter" function expects 1st argument to be a list, %s provided: %v`, value[0], err)
+			}
+			exprStr, _ := value[1].StringValue()
+			expr, err := Compile(exprStr)
+			if err != nil {
+				return nil, fmt.Errorf(`"filter" function expects 2nd argument to be valid expression, '%s' provided: %v`, value[1], err)
+			}
+			result := make([]interface{}, 0)
+			for i := 0; i < len(list); i++ {
+				ex, _ := Compile(expr.String())
+				v, err := ex.Resolve(NewMachine().Register("_.value", list[i]).Register("_.index", i))
+				if err != nil {
+					return nil, fmt.Errorf(`"filter" function: error while filtering %d index (%v): %v`, i, list[i], err)
+				}
+				if v.Static() == nil {
+					// TODO: It shouldn't fail then
+					return nil, fmt.Errorf(`"filter" function: could not resolve filter for %d index (%v): %s`, i, list[i], v)
+				}
+				b, err := v.Static().BoolValue()
+				if err != nil {
+					return nil, fmt.Errorf(`"filter" function: could not resolve filter for %d index (%v) as boolean: %s`, i, list[i], err)
+				}
+				if b {
+					result = append(result, list[i])
+				}
+			}
+			return NewValue(result), nil
+		},
+	},
 }
 
 const (
