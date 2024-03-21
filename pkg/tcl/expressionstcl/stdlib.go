@@ -296,6 +296,32 @@ var stdFunctions = map[string]StdFunction{
 			return NewValue(chunks), nil
 		},
 	},
+	"map": {
+		Handler: func(value ...StaticValue) (Expression, error) {
+			if len(value) != 2 {
+				return nil, fmt.Errorf(`"map" function expects 2 arguments, %d provided`, len(value))
+			}
+			list, err := value[0].SliceValue()
+			if err != nil {
+				return nil, fmt.Errorf(`"map" function expects 1st argument to be a list, %s provided: %v`, value[0], err)
+			}
+			exprStr, _ := value[1].StringValue()
+			expr, err := Compile(exprStr)
+			if err != nil {
+				return nil, fmt.Errorf(`"map" function expects 2nd argument to be valid expression, '%s' provided: %v`, value[1], err)
+			}
+			result := make([]string, len(list))
+			for i := 0; i < len(list); i++ {
+				ex, _ := Compile(expr.String())
+				v, err := ex.Resolve(NewMachine().Register("_.value", list[i]).Register("_.index", i))
+				if err != nil {
+					return nil, fmt.Errorf(`"map" function: error while mapping %d index (%v): %v`, i, list[i], err)
+				}
+				result[i] = v.String()
+			}
+			return Compile(fmt.Sprintf("list(%s)", strings.Join(result, ",")))
+		},
+	},
 }
 
 const (
