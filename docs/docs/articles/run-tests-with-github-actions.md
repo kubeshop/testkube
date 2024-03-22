@@ -6,7 +6,7 @@
 1. Change the `uses` property from `kubeshop/testkube-run-action@v1` to `kubeshop/setuo-testkube@v1`.
 
 ```yaml
-uses: kubeshop/setuo-testkube@v1
+uses: kubeshop/setup-testkube@v1
 ```
 2. Remove any usage of Test or Test Suite args from the `with` block.
 3. Use shell scripts to run testkube CLI commands directly:

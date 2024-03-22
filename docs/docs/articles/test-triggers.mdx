@@ -32,11 +32,17 @@ Input the action that will be the result of the trigger condition happening and 
 
 Get all the details in the video below!
 
-## Video Tutorial 
+## Video Tutorial
 
-<iframe width="100%" height="350px" src="https://www.youtube.com/embed/t4V6E9rQ5W4" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-
-
+<iframe
+  width="100%"
+  height="350px"
+  src="https://www.youtube.com/embed/t4V6E9rQ5W4"
+  title="YouTube video player"
+  frameborder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+  allowfullscreen
+></iframe>
 
 </TabItem>
 
@@ -51,6 +57,7 @@ In generic terms, a _Trigger_ defines an _action_ which will be executed for a g
 Watch our [video guide](#video-tutorial) on using Testkube Test Triggers to perform **Asynchronous Testing in Kubernetes**.
 
 ## Custom Resource Definition Model
+
 ### Selectors
 
 The `resourceSelector` and `testSelector` fields support selecting resources either by name or using
@@ -94,9 +101,9 @@ Resource Conditions allows triggers to be defined based on the status conditions
 
 ```yaml
 conditionSpec:
-    timeout: duration in seconds the test trigger waits for conditions, until its stopped
-    delay: duration in seconds the test trigger waits between condition checks      
-    conditions:
+  timeout: duration in seconds the test trigger waits for conditions, until its stopped
+  delay: duration in seconds the test trigger waits between condition checks
+  conditions:
     - type: test trigger condition type
       status: test trigger condition status, supported values - True, False, Unknown
       reason: test trigger condition reason
@@ -109,9 +116,9 @@ Resource Probes allows triggers to be defined based on the probe status.
 
 ```yaml
 probeSpec:
-    timeout: duration in seconds the test trigger waits for probes, until its stopped
-    delay: duration in seconds the test trigger waits between probes
-    probes:
+  timeout: duration in seconds the test trigger waits for probes, until its stopped
+  delay: duration in seconds the test trigger waits between probes
+  probes:
     - scheme: test trigger condition probe scheme to connect to host, default is http
       host: test trigger condition probe host, default is pod ip or service name
       path: test trigger condition probe path to check, default is /
@@ -120,17 +127,16 @@ probeSpec:
 ```
 
 ### Supported Values
-* **Resource**          - pod, deployment, statefulset, daemonset, service, ingress, event, configmap
-* **Action**            - run
-* **Event**             - created, modified, deleted
-* **Execution**         - test, testsuite
-* **ConcurrencyPolicy** - allow, forbid, replace
 
-**NOTE**: All resources support the above-mentioned events, a list of finer-grained events is in the works, stay tuned...
+- **Resource** - pod, deployment, statefulset, daemonset, service, ingress, event, configmap
+- **Action** - run
+- **Event** - created, modified, deleted
+- **Execution** - test, testsuite
+- **ConcurrencyPolicy** - allow, forbid, replace
 
 ## Example
 
-Here is an example for a **Test Trigger** *default/testtrigger-example* which runs the **TestSuite** *frontend/sanity-test*
+Here is an example for a **Test Trigger** _default/testtrigger-example_ which runs the **TestSuite** _frontend/sanity-test_
 when a **deployment** containing the label **testkube.io/tier: backend** gets **modified** and also has the conditions **Progressing: True: NewReplicaSetAvailable** and **Available: True**.
 
 ```yaml
@@ -150,24 +156,24 @@ spec:
     timeout: 100
     delay: 2
     conditions:
-    - type: Progressing
-      status: "True"
-      reason: "NewReplicaSetAvailable"
-      ttl: 60
-    - type: Available
-      status: "True"
+      - type: Progressing
+        status: "True"
+        reason: "NewReplicaSetAvailable"
+        ttl: 60
+      - type: Available
+        status: "True"
   probeSpec:
     timeout: 50
     delay: 1
     probes:
-    - scheme: http
-      host: testkube-api-server
-      path: /health
-      port: 8088
-      headers:
-        X-Token: "12345"
-    - host: testkube-dashboard
-      port: 8080     
+      - scheme: http
+        host: testkube-api-server
+        path: /health
+        port: 8088
+        headers:
+          X-Token: "12345"
+      - host: testkube-dashboard
+        port: 8080
   action: run
   execution: testsuite
   concurrencyPolicy: allow
@@ -192,14 +198,22 @@ Testkube exposes CRUD operations on test triggers in the REST API. Check out the
 
 The following environment variables are automatically injected into each triggered test pod:
 
-WATCHER_EVENT_RESOURCE:   resource type
-WATCHER_EVENT_NAME:       resource name
-WATCHER_EVENT_NAMESPACE:  resource namespace
+WATCHER_EVENT_RESOURCE: resource type  
+WATCHER_EVENT_NAME: resource name  
+WATCHER_EVENT_NAMESPACE: resource namespace  
 WATCHER_EVENT_EVENT_TYPE: event type
 
-## Video Tutorial 
+## Video Tutorial
 
-<iframe width="100%" height="350px" src="https://www.youtube.com/embed/t4V6E9rQ5W4" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+<iframe
+  width="100%"
+  height="350px"
+  src="https://www.youtube.com/embed/t4V6E9rQ5W4"
+  title="YouTube video player"
+  frameborder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+  allowfullscreen
+></iframe>
 
 </TabItem>
 </Tabs>

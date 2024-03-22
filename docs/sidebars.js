@@ -71,7 +71,6 @@ const sidebars = {
           items: [
             "articles/testkube-dashboard-explore",
             "articles/testkube-dashboard-general-settings",
-            "articles/testkube-dashboard-api-endpoint",
           ],
         },
         "articles/adding-tests-secrets",
@@ -94,9 +93,8 @@ const sidebars = {
             {
               type: "category",
               label: "Authentication",
-              items: ["articles/oauth-cli", "articles/oauth-dashboard"],
+              items: ["articles/oauth-cli"],
             },
-            "articles/exposing-testkube-with-ingress-nginx",
             "articles/deploying-in-aws",
             "articles/deploying-from-private-registries",
           ],
