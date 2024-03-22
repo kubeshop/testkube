@@ -43,7 +43,7 @@ func ProcessShellCommand(_ InternalProcessor, layer Intermediate, container Cont
 	if step.Shell == "" {
 		return nil, nil
 	}
-	shell := container.CreateChild().SetCommand(defaultShell).SetArgs("-c", step.Shell)
+	shell := container.CreateChild().SetCommand(defaultShell).SetArgs("-c", "set -e\n"+step.Shell)
 	stage := NewContainerStage(layer.NextRef(), shell)
 	stage.SetCategory("Run shell command")
 	stage.SetRetryPolicy(step.Retry)
