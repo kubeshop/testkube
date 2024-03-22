@@ -59,6 +59,16 @@ func (s *TestkubeAPI) InfoHandler() fiber.Handler {
 		envID = s.proContext.EnvID
 		orgID = s.proContext.OrgID
 	}
+
+	var executionNamespaces []string
+	for namespace := range s.serviceAccountNames {
+		if namespace == s.Namespace {
+			continue
+		}
+
+		executionNamespaces = append(executionNamespaces, namespace)
+	}
+
 	return func(c *fiber.Ctx) error {
 		return c.JSON(testkube.ServerInfo{
 			Commit:                version.Commit,
@@ -74,6 +84,7 @@ func (s *TestkubeAPI) InfoHandler() fiber.Handler {
 			Features: &testkube.Features{
 				LogsV2: s.featureFlags.LogsV2,
 			},
+			ExecutionNamespaces: executionNamespaces,
 		})
 	}
 }
