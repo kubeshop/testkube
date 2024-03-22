@@ -3,6 +3,7 @@ package v1
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 
@@ -14,7 +15,12 @@ func (s TestkubeAPI) ListSecretsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to list secrets"
 
-		list, err := s.SecretClient.List(true)
+		all, err := strconv.ParseBool(c.Query("all", "false"))
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse all parameter: %s", errPrefix, err))
+		}
+
+		list, err := s.SecretClient.List(all, c.Query("namespace"))
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not list secrets: %s", errPrefix, err))
 		}
