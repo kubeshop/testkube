@@ -214,7 +214,7 @@ The following environment variables are automatically injected into each execute
 
 DEBUG:                           if debug mode is on  
 RUNNER_ENDPOINT:                 MinIO endpoint  
-RUNNER_ACCESSKEYID:              minio access key id  
+RUNNER_ACCESSKEYID:              MinIO access key id  
 RUNNER_SECRETACCESSKEY:          MinIO secret access key  
 RUNNER_REGION:                   MinIO region  
 RUNNER_TOKEN:                    MinIO token  
