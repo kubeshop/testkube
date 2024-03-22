@@ -576,6 +576,7 @@ func main() {
 		logGrpcClient,
 		subscriptionChecker,
 		cfg.DisableSecretCreation,
+		serviceAccountNames,
 	)
 
 	// Apply Pro server enhancements

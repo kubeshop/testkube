@@ -97,6 +97,7 @@ func NewTestkubeAPI(
 	logGrpcClient logsclient.StreamGetter,
 	subscriptionChecker checktcl.SubscriptionChecker,
 	disableSecretCreation bool,
+	serviceAccountNames map[string]string,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -147,6 +148,7 @@ func NewTestkubeAPI(
 		SubscriptionChecker:   subscriptionChecker,
 		disableSecretCreation: disableSecretCreation,
 		LabelSources:          common.Ptr(make([]LabelSource, 0)),
+		serviceAccountNames:   serviceAccountNames,
 	}
 
 	// will be reused in websockets handler
@@ -210,6 +212,7 @@ type TestkubeAPI struct {
 	SubscriptionChecker   checktcl.SubscriptionChecker
 	disableSecretCreation bool
 	LabelSources          *[]LabelSource
+	serviceAccountNames   map[string]string
 }
 
 type storageParams struct {
