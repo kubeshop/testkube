@@ -20,7 +20,7 @@ Please mind that is it necessary to install [EBS CSI driver](https://docs.aws.am
 
 ## Ingress and Service Resources Configuration
 
-To deploy and expose Testkube to the outside world, you will need to create an ingress for Testkube's API Server. In this tutorial, we will be updating `values.yaml` that later will be passed to the `helm install` command.
+To deploy and expose Testkube to the outside world, you will need to create an ingress for Testkube's API server. In this tutorial, we will be updating `values.yaml` that later will be passed to the `helm install` command.
 
 In order to use the AWS Load Balancer Controller we need to create a `values.yaml` file and add the following annotation to the Ingress resources:
 
@@ -29,7 +29,7 @@ annotations:
   kubernetes.io/ingress.class: alb
 ```
 
-Once this annotation is added, Controller creates an ALBs and the necessary supporting AWS resources.
+Once this annotation is added, Controller creates an ALB and the necessary supporting AWS resources.
 
 The example configuration using HTTPS protocol might look like the following:
 

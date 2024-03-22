@@ -160,7 +160,7 @@ There are different inputs available for tests and test suites, as well as for P
 |     ✗	   | namespace       | Set namespace to run test suite in.
 ```
 
-### Pro
+### Pro and Pro On-Prem
 
 ```sh
 | Required | Name	      | Description
