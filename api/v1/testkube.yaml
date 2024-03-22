@@ -3268,6 +3268,9 @@ paths:
       tags:
         - secrets
         - api
+      parameters:
+        - $ref: "#/components/parameters/All"
+        - $ref: "#/components/parameters/Namespace"        
       summary: "List secrets"
       description: "List secrets available in cluster"
       operationId: listSecrets
@@ -9048,6 +9051,14 @@ components:
         default: false
       description: should inline templates in the resolved workflow
       required: false
+    All:
+      in: query
+      name: all
+      schema:
+        type: boolean
+        default: false
+      description: flag to request all resources
+      required: false      
   requestBodies:
     UploadsBody:
       description: "Upload files request body data"
