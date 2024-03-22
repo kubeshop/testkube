@@ -146,7 +146,7 @@ Do not forget to add `apiServerEndpoint` to the values.yaml for `testkube-dashbo
 
 :::
 
-This way we will have 1 Load Balancer with a listener rule pointing on the corresponding path:
+This way we will have 1 Load Balancer with a listener rule pointing to the corresponding path:
 
 ![One Load Balancer](../img/one-load-balancer.png)
 
