@@ -21,6 +21,7 @@ var noneRe = regexp.MustCompile(`^null(?:[^a-zA-Z\d_.]|$)`)
 var jsonValueRe = regexp.MustCompile(`^(?:["{\[\d]|((?:true|false)(?:[^a-zA-Z\d_.]|$)))`)
 var accessorRe = regexp.MustCompile(`^[a-zA-Z\d_]+(?:\s*\.\s*([a-zA-Z\d_]+|\*))*`)
 var propertyAccessorRe = regexp.MustCompile(`^\.\s*([a-zA-Z\d_]+|\*)`)
+var spreadRe = regexp.MustCompile(`^\.\.\.`)
 var spaceRe = regexp.MustCompile(`^\s+`)
 
 func tokenizeNext(exp string, i int) (token, int, error) {
@@ -46,6 +47,8 @@ func tokenizeNext(exp string, i int) (token, int, error) {
 			i += len(space)
 		case noneRe.MatchString(exp[i:]):
 			return tokenJson(noneValue), i + 4, nil
+		case spreadRe.MatchString(exp[i:]):
+			return tokenSpread, i + 3, nil
 		case jsonValueRe.MatchString(exp[i:]):
 			// Allow multi-line string with literal \n
 			// TODO: Optimize, and allow deeper in the tree

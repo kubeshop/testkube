@@ -466,28 +466,28 @@ func CastToString(v Expression) Expression {
 	} else if v.Type() == TypeString {
 		return v
 	}
-	return newCall(stringCastStdFn, []Expression{v})
+	return newCall(stringCastStdFn, []callArgument{{expr: v}})
 }
 
 func CastToBool(v Expression) Expression {
 	if v.Type() == TypeBool {
 		return v
 	}
-	return newCall(boolCastStdFn, []Expression{v})
+	return newCall(boolCastStdFn, []callArgument{{expr: v}})
 }
 
 func CastToInt(v Expression) Expression {
 	if v.Type() == TypeInt64 {
 		return v
 	}
-	return newCall(intCastStdFn, []Expression{v})
+	return newCall(intCastStdFn, []callArgument{{expr: v}})
 }
 
 func CastToFloat(v Expression) Expression {
 	if v.Type() == TypeFloat64 {
 		return v
 	}
-	return newCall(intCastStdFn, []Expression{v})
+	return newCall(intCastStdFn, []callArgument{{expr: v}})
 }
 
 func IsStdFunction(name string) bool {

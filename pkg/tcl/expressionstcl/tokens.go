@@ -28,6 +28,7 @@ const (
 
 	// Functions
 	tokenTypeComma
+	tokenTypeSpread
 )
 
 type token struct {
@@ -42,6 +43,7 @@ var (
 	tokenTernary          = token{Type: tokenTypeTernary}
 	tokenTernarySeparator = token{Type: tokenTypeTernarySeparator}
 	tokenComma            = token{Type: tokenTypeComma}
+	tokenSpread           = token{Type: tokenTypeSpread}
 )
 
 func tokenMath(op string) token {

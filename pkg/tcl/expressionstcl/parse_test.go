@@ -273,6 +273,11 @@ func TestCompileWildcard_Unknown(t *testing.T) {
 	assert.Equal(t, `map(map(a.b.c,"_.value"),"_.value.d.e")`, MustCompile("a.b.c.*.*.d.e").String())
 }
 
+func TestCompileSpread(t *testing.T) {
+	assert.Equal(t, `"a b c 'a b c'"`, MustCompile(`shellquote(["a", "b", "c", "a b c"]...)`).String())
+	assert.Equal(t, `"axb"`, MustCompile(`join([["a", "b"], "x"]...)`).String())
+}
+
 func TestCompileWildcard_Map(t *testing.T) {
 	vm := NewMachine().Register("a.b.c", []map[string]interface{}{
 		{"d": map[string]string{"e": "v1"}},

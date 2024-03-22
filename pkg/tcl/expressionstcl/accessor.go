@@ -22,9 +22,9 @@ func newAccessor(name string) Expression {
 	// Map values based on wildcard
 	segments := strings.Split(name, ".*")
 	if len(segments) > 1 {
-		return newCall("map", []Expression{
-			newAccessor(strings.Join(segments[0:len(segments)-1], ".*")),
-			NewStringValue("_.value" + segments[len(segments)-1]),
+		return newCall("map", []callArgument{
+			{expr: newAccessor(strings.Join(segments[0:len(segments)-1], ".*"))},
+			{expr: NewStringValue("_.value" + segments[len(segments)-1])},
 		})
 	}
 

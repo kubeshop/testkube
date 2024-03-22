@@ -114,7 +114,7 @@ func getNextSegment(t []token) (e Expression, i int, err error) {
 
 	// Call - abc(a, b, c)
 	if t[0].Type == tokenTypeAccessor && len(t) > 1 && t[1].Type == tokenTypeOpen {
-		args := make([]Expression, 0)
+		args := make([]callArgument, 0)
 		index := 2
 		for {
 			// Ensure there is another token (for call close or next argument)
@@ -139,7 +139,12 @@ func getNextSegment(t []token) (e Expression, i int, err error) {
 			if err != nil {
 				return nil, index, err
 			}
-			args = append(args, next)
+			if len(t) > index && t[index].Type == tokenTypeSpread {
+				args = append(args, callArgument{expr: next, spread: true})
+				index++
+			} else {
+				args = append(args, callArgument{expr: next})
+			}
 		}
 		return newCall(t[0].Value.(string), args), index + 1, nil
 	}
