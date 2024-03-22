@@ -96,7 +96,7 @@ func (c *Client) List(all bool, namespace string) (map[string]map[string]string,
 
 	selector := ""
 	if !all {
-		selector = fmt.Sprintf("testkube=%s", testkubeTestSecretLabel)
+		selector = fmt.Sprintf("createdBy=testkube")
 	}
 
 	secretList, err := secretsClient.List(ctx, metav1.ListOptions{
