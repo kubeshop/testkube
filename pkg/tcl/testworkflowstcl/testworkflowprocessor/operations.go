@@ -43,7 +43,7 @@ func ProcessShellCommand(_ InternalProcessor, layer Intermediate, container Cont
 	if step.Shell == "" {
 		return nil, nil
 	}
-	shell := container.CreateChild().SetCommand(defaultShell).SetArgs("-c", step.Shell)
+	shell := container.CreateChild().SetCommand(defaultShell).SetArgs("-c", "set -e\n"+step.Shell)
 	stage := NewContainerStage(layer.NextRef(), shell)
 	stage.SetCategory("Run shell command")
 	stage.SetRetryPolicy(step.Retry)
@@ -303,6 +303,59 @@ func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container Contain
 	}
 	args = append(args, step.Artifacts.Paths...)
 	selfContainer.SetArgs(args...)
+
+	return stage, nil
+}
+
+func ProcessSpawnStart(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+	if len(step.Spawn) == 0 {
+		return nil, nil
+	}
+
+	podsRef := layer.NextRef()
+	container.AppendEnv(corev1.EnvVar{Name: "TK_SPAWN_REF", Value: podsRef})
+
+	stage := NewContainerStage(layer.NextRef(), container.CreateChild())
+	stage.SetCategory("Start assisting pods")
+
+	stage.Container().
+		SetImage(defaultToolkitImage).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetCommand("/toolkit", "spawn", "{{env.TK_SPAWN_REF}}").
+		EnableToolkit(stage.Ref())
+
+	args := make([]string, 0)
+	for k, s := range step.Spawn {
+		instruction := s.DeepCopy()
+		if s.Container != nil {
+			instruction.Pod.Spec.Containers = append(instruction.Pod.Spec.Containers, *s.Container)
+		}
+		b, err := json.Marshal(instruction.SpawnInstructionBase)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("spawn[%s]: marshaling error", k))
+		}
+		args = append(args, "-i", fmt.Sprintf("%s=%s", k, string(b)))
+	}
+	stage.Container().SetArgs(args...)
+
+	return stage, nil
+}
+
+func ProcessSpawnStop(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+	if len(step.Spawn) == 0 {
+		return nil, nil
+	}
+
+	stage := NewContainerStage(layer.NextRef(), container.CreateChild())
+	stage.SetCondition("always") // FIXME: actually, do it if "init" is not skipped
+	stage.SetRetryPolicy(step.Retry)
+	stage.SetCategory("Cleanup assisting pods")
+
+	stage.Container().
+		SetImage(defaultToolkitImage).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetCommand("/toolkit", "kill", "{{env.TK_SPAWN_REF}}").
+		EnableToolkit(stage.Ref())
 
 	return stage, nil
 }
