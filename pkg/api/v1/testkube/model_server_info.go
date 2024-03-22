@@ -32,4 +32,5 @@ type ServerInfo struct {
 	// disable secret creation for tests and test sources
 	DisableSecretCreation bool      `json:"disableSecretCreation,omitempty"`
 	Features              *Features `json:"features,omitempty"`
+	ExecutionNamespaces   []string  `json:"executionNamespaces,omitempty"`
 }

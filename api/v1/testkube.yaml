@@ -5872,6 +5872,12 @@ components:
           description: disable secret creation for tests and test sources
         features:
           $ref: "#/components/schemas/Features"
+        executionNamespaces:
+          type: array
+          descritpion: execution namespaces
+          items:
+            type: string
+            example: my-namespace
 
     Repository:
       description: repository representation for tests in git repositories
