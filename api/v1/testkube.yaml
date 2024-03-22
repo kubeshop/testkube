@@ -5874,7 +5874,7 @@ components:
           $ref: "#/components/schemas/Features"
         executionNamespaces:
           type: array
-          descritpion: execution namespaces
+          description: execution namespaces
           items:
             type: string
             example: my-namespace
