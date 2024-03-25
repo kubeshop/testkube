@@ -34,7 +34,7 @@ func TestExecuteAsync(t *testing.T) {
 		clientSet:           getFakeClient("1"),
 		log:                 logger(),
 		repository:          FakeResultRepository{},
-		metrics:             FakeMetricCounter{},
+		metrics:             FakeExecutionMetric{},
 		emitter:             FakeEmitter{},
 		configMap:           FakeConfigRepository{},
 		testsClient:         FakeTestsClient{},
@@ -60,7 +60,7 @@ func TestExecuteSync(t *testing.T) {
 		clientSet:           getFakeClient("1"),
 		log:                 logger(),
 		repository:          FakeResultRepository{},
-		metrics:             FakeMetricCounter{},
+		metrics:             FakeExecutionMetric{},
 		emitter:             FakeEmitter{},
 		configMap:           FakeConfigRepository{},
 		testsClient:         FakeTestsClient{},
@@ -371,10 +371,10 @@ func getFakeClient(executionID string) *fake.Clientset {
 	return fakeClient
 }
 
-type FakeMetricCounter struct {
+type FakeExecutionMetric struct {
 }
 
-func (FakeMetricCounter) IncExecuteTest(execution testkube.Execution, dashboardURI string) {
+func (FakeExecutionMetric) IncAndObserveExecuteTest(execution testkube.Execution, dashboardURI string) {
 }
 
 type FakeEmitter struct {

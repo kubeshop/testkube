@@ -80,7 +80,7 @@ func NewJobExecutor(
 	images executor.Images,
 	templates executor.Templates,
 	serviceAccountNames map[string]string,
-	metrics ExecutionCounter,
+	metrics ExecutionMetric,
 	emiter *event.Emitter,
 	configMap config.Repository,
 	testsClient testsv3.Interface,
@@ -126,8 +126,8 @@ func NewJobExecutor(
 	}, nil
 }
 
-type ExecutionCounter interface {
-	IncExecuteTest(execution testkube.Execution, dashboardURI string)
+type ExecutionMetric interface {
+	IncAndObserveExecuteTest(execution testkube.Execution, dashboardURI string)
 }
 
 // JobExecutor is container for managing job executor dependencies
@@ -139,7 +139,7 @@ type JobExecutor struct {
 	images               executor.Images
 	templates            executor.Templates
 	serviceAccountNames  map[string]string
-	metrics              ExecutionCounter
+	metrics              ExecutionMetric
 	Emitter              *event.Emitter
 	configMap            config.Repository
 	testsClient          testsv3.Interface
@@ -536,7 +536,7 @@ func (c *JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, e
 		}
 	}
 
-	c.metrics.IncExecuteTest(*execution, c.dashboardURI)
+	c.metrics.IncAndObserveExecuteTest(*execution, c.dashboardURI)
 	c.Emitter.Notify(eventToSend)
 
 	telemetryEnabled, err := c.configMap.GetTelemetryEnabled(ctx)
