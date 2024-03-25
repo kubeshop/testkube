@@ -21,7 +21,7 @@ testkube download artifacts <executionName> [flags]
 ### Options inherited from parent commands
 
 ```
-  -a, --api-uri string     api uri, default value read from config if set (default "https://demo.testkube.io/results")
+  -a, --api-uri string     api uri, default value read from config if set (default "http://localhost:8088")
       --insecure           insecure connection for direct client
       --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")
       --oauth-enabled      enable oauth

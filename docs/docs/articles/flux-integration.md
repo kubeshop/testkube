@@ -134,7 +134,7 @@ testkube get test
 Now that you have deployed your tests in a GitOps fashion to the cluster, you can use Testkube to run the tests for you through multiple ways:
 
 - Using the Testkube CLI.
-- Using the Testkube Dashboard.
+- Using the Testkube Pro Dashboard.
 - Running Testkube CLI from a CI/CD pipeline.
 
 We'll use the Testkube CLI for brevity. Run the following command to run the recently created test:

@@ -63,7 +63,6 @@ const sidebars = {
           items: [
             "articles/testkube-dashboard-explore",
             "articles/testkube-dashboard-general-settings",
-            "articles/testkube-dashboard-api-endpoint",
           ],
         },
         "articles/adding-tests-secrets",
@@ -86,9 +85,8 @@ const sidebars = {
             {
               type: "category",
               label: "Authentication",
-              items: ["articles/oauth-cli", "articles/oauth-dashboard"],
+              items: ["articles/oauth-cli"],
             },
-            "articles/exposing-testkube-with-ingress-nginx",
             "articles/deploying-in-aws",
             "articles/deploying-from-private-registries",
           ],
@@ -193,8 +191,12 @@ const sidebars = {
     },
     {
       type: "category",
-      label: "Testkube Enterprise",
-      items: ["testkube-enterprise/articles/usage-guide", "testkube-enterprise/articles/auth"],
+      label: "Testkube Pro On-Prem",
+      items: [
+        "testkube-pro-on-prem/articles/testkube-pro-on-prem",
+        "testkube-pro-on-prem/articles/usage-guide", 
+        "testkube-pro-on-prem/articles/auth",
+        "testkube-pro-on-prem/articles/migrating-from-oss-to-pro"],
     },
     "articles/testkube-oss",
     {

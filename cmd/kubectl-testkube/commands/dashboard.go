@@ -15,8 +15,8 @@ func NewDashboardCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "dashboard",
 		Aliases: []string{"d", "open-dashboard"},
-		Short:   "Open Testkube Pro/Enterprise dashboard",
-		Long:    `Open Testkube Pro/Enterprise dashboard`,
+		Short:   "Open Testkube Pro dashboard",
+		Long:    `Open Testkube Pro dashboard`,
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config file", err)
