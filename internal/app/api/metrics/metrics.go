@@ -11,14 +11,24 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-var testExecutionCount = promauto.NewCounterVec(prometheus.CounterOpts{
+var testExecutionsCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_test_executions_count",
 	Help: "The total number of test executions",
 }, []string{"type", "name", "result", "labels", "test_uri"})
 
-var testSuiteExecutionCount = promauto.NewCounterVec(prometheus.CounterOpts{
+var testExecutionsDurationMs = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	Name: "testkube_test_executions_duration_ms",
+	Help: "The duration of test executions",
+}, []string{"type", "name", "result", "labels", "test_uri"})
+
+var testSuiteExecutionsCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_testsuite_executions_count",
 	Help: "The total number of test suite executions",
+}, []string{"name", "result", "labels", "testsuite_uri"})
+
+var testSuiteExecutionsDurationMs = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	Name: "testkube_testsuite_executions_duration_ms",
+	Help: "The duration of test suite executions",
 }, []string{"name", "result", "labels", "testsuite_uri"})
 
 var testCreationCount = promauto.NewCounterVec(prometheus.CounterOpts{
@@ -103,8 +113,10 @@ var testWorkflowTemplateDeletesCount = promauto.NewCounterVec(prometheus.Counter
 
 func NewMetrics() Metrics {
 	return Metrics{
-		TestExecutions:                testExecutionCount,
-		TestSuiteExecutions:           testSuiteExecutionCount,
+		TestExecutionsCount:           testExecutionsCount,
+		TestExecutionsDurationMs:      testExecutionsDurationMs,
+		TestSuiteExecutionsCount:      testSuiteExecutionsCount,
+		TestSuiteExecutionsDurationMs: testSuiteExecutionsDurationMs,
 		TestCreations:                 testCreationCount,
 		TestSuiteCreations:            testSuiteCreationCount,
 		TestUpdates:                   testUpdatesCount,
@@ -125,8 +137,10 @@ func NewMetrics() Metrics {
 }
 
 type Metrics struct {
-	TestExecutions                *prometheus.CounterVec
-	TestSuiteExecutions           *prometheus.CounterVec
+	TestExecutionsCount           *prometheus.CounterVec
+	TestExecutionsDurationMs      *prometheus.HistogramVec
+	TestSuiteExecutionsCount      *prometheus.CounterVec
+	TestSuiteExecutionsDurationMs *prometheus.HistogramVec
 	TestCreations                 *prometheus.CounterVec
 	TestSuiteCreations            *prometheus.CounterVec
 	TestUpdates                   *prometheus.CounterVec
@@ -157,13 +171,21 @@ func (m Metrics) IncExecuteTest(execution testkube.Execution, dashboardURI strin
 	}
 
 	slices.Sort(labels)
-	m.TestExecutions.With(map[string]string{
+	m.TestExecutionsCount.With(map[string]string{
 		"type":     execution.TestType,
 		"name":     execution.TestName,
 		"result":   status,
 		"labels":   strings.Join(labels, ","),
 		"test_uri": fmt.Sprintf("%s/tests/%s", dashboardURI, execution.TestName),
 	}).Inc()
+
+	m.TestExecutionsDurationMs.With(map[string]string{
+		"type":     execution.TestType,
+		"name":     execution.TestName,
+		"result":   status,
+		"labels":   strings.Join(labels, ","),
+		"test_uri": fmt.Sprintf("%s/tests/%s", dashboardURI, execution.TestName),
+	}).Observe(float64(execution.DurationMs))
 }
 
 func (m Metrics) IncExecuteTestSuite(execution testkube.TestSuiteExecution, dashboardURI string) {
@@ -188,12 +210,19 @@ func (m Metrics) IncExecuteTestSuite(execution testkube.TestSuiteExecution, dash
 		testSuiteName = execution.TestSuite.Name
 	}
 
-	m.TestSuiteExecutions.With(map[string]string{
+	m.TestSuiteExecutionsCount.With(map[string]string{
 		"name":          name,
 		"result":        status,
 		"labels":        strings.Join(labels, ","),
 		"testsuite_uri": fmt.Sprintf("%s/test-suites/%s", dashboardURI, testSuiteName),
 	}).Inc()
+
+	m.TestSuiteExecutionsDurationMs.With(map[string]string{
+		"name":          name,
+		"result":        status,
+		"labels":        strings.Join(labels, ","),
+		"testsuite_uri": fmt.Sprintf("%s/test-suites/%s", dashboardURI, testSuiteName),
+	}).Observe(float64(execution.DurationMs))
 }
 
 func (m Metrics) IncUpdateTest(testType string, err error) {
