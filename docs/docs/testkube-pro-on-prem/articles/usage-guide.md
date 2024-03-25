@@ -2,7 +2,7 @@
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-- [Testkube Enterprise Helm Chart Installation and Usage Guide](#testkube-enterprise-helm-chart-installation-and-usage-guide)
+- [Testkube Pro On-Prem Helm Chart Installation and Usage Guide](#testkube-enterprise-helm-chart-installation-and-usage-guide)
   - [Installation of Testkube Enterprise and an Agent in the same cluster](#installation-of-testkube-enterprise-and-an-agent-in-the-same-cluster)
   - [Installation of Testkube Enterprise and an Agent in multiple clusters](#installation-of-testkube-enterprise-and-an-agent-in-multiple-clusters)
   - [Prerequisites](#prerequisites)

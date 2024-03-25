@@ -5,9 +5,10 @@ import TabItem from "@theme/TabItem";
 
 Templates allow you to store templates for other resources used in Testkube. We support a list of templates job | container | cronjob | scraper | pvc | webhook | pod. To define templates in Testkube, you'll need to provide a template body (in Golang template format) and a type of the template.
 
-TestKube provides access to the [Sprig](http://masterminds.github.io/sprig/) functions library in templates.
+Testkube provides access to the [Sprig](http://masterminds.github.io/sprig/) functions library in templates.
 
 ## Creating a Template
+
 The template can be created using the API, CLI, or a Custom Resource.
 
 <Tabs>
@@ -25,8 +26,8 @@ Templates can be created with the Testkube CLI using the `create template` comma
 kubectl testkube create template --name job-template --template-type job --body job-template.yaml
 ```
 
-`--name` - Your template name (in this case `job-template`).
-`--template-type` - Your template type (in this case `job` for prebuilt executors).
+`--name` - Your template name (in this case `job-template`).  
+`--template-type` - Your template type (in this case `job` for prebuilt executors).  
 `--body` - A path to the file with job template content
 
 </TabItem>
@@ -57,6 +58,7 @@ kubectl apply -f template.yaml
 </Tabs>
 
 ### Using Templates
+
 You will need to refer to a template in the corresponding reference field of the resource.
 
 <Tabs>
@@ -75,12 +77,12 @@ Templates can be created with the Testkube CLI using the `create template` comma
 kubectl testkube create test --name template-test --type k6/script --job-template-reference=job-template --test-content-type git --git-uri  "https://github.com/kubeshop/testkube.git" --git-branch main --git-path test/k6/executor-tests/k6-smoke-test.js
 ```
 
-`--name` - Your test name (in this case `template-test`).
-`--type` - Your test type (in this case `k6/script`).
-`--job-template-reference` - Job template reference (in this case `job-template`).
-`--test-content-type` - Test content type (in this case `git`).
-`--git-uri` - Git uri to repository (in this case `https://github.com/kubeshop/testkube.git`).
-`--git-branch` - Git branch to use (in this case `main`).
+`--name` - Your test name (in this case `template-test`).  
+`--type` - Your test type (in this case `k6/script`).  
+`--job-template-reference` - Job template reference (in this case `job-template`).  
+`--test-content-type` - Test content type (in this case `git`).  
+`--git-uri` - Git URI to repository (in this case `https://github.com/kubeshop/testkube.git`).  
+`--git-branch` - Git branch to use (in this case `main`).  
 `--git-path` - Git path to the test (in this case `test/k6/executor-tests/k6-smoke-test.js`).
 
 </TabItem>
@@ -109,4 +111,3 @@ spec:
 
 </TabItem>
 </Tabs>
-
