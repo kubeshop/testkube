@@ -65,7 +65,7 @@ func NewContainerExecutor(
 	templates executor.Templates,
 	imageInspector imageinspector.Inspector,
 	serviceAccountNames map[string]string,
-	metrics ExecutionCounter,
+	metrics ExecutionMetric,
 	emiter EventEmitter,
 	configMap config.Repository,
 	executorsClient executorsclientv1.Interface,
@@ -118,8 +118,8 @@ func NewContainerExecutor(
 	}, nil
 }
 
-type ExecutionCounter interface {
-	IncExecuteTest(execution testkube.Execution, dashboardURI string)
+type ExecutionMetric interface {
+	IncAndObserveExecuteTest(execution testkube.Execution, dashboardURI string)
 }
 
 // ContainerExecutor is container for managing job executor dependencies
@@ -130,7 +130,7 @@ type ContainerExecutor struct {
 	images               executor.Images
 	templates            executor.Templates
 	imageInspector       imageinspector.Inspector
-	metrics              ExecutionCounter
+	metrics              ExecutionMetric
 	emitter              EventEmitter
 	configMap            config.Repository
 	serviceAccountNames  map[string]string
@@ -532,7 +532,7 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context,
 
 	// metrics increase
 	execution.ExecutionResult = result
-	c.metrics.IncExecuteTest(*execution, c.dashboardURI)
+	c.metrics.IncAndObserveExecuteTest(*execution, c.dashboardURI)
 
 	test, err := c.testsClient.Get(execution.TestName)
 	if err != nil {
