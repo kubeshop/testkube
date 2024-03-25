@@ -1,10 +1,10 @@
 ## testkube dashboard
 
-Open Testkube Pro/Enterprise dashboard
+Open Testkube Pro dashboard
 
 ### Synopsis
 
-Open Testkube Pro/Enterprise dashboard
+Open Testkube Pro dashboard
 
 ```
 testkube dashboard [flags]

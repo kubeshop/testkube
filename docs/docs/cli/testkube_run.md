@@ -1,6 +1,6 @@
 ## testkube run
 
-Runs tests or test suites
+Runs tests, test suites or test workflows
 
 ```
 testkube run <resourceName> [flags]
@@ -15,7 +15,7 @@ testkube run <resourceName> [flags]
 ### Options inherited from parent commands
 
 ```
-  -a, --api-uri string     api uri, default value read from config if set (default "https://demo.testkube.io/results")
+  -a, --api-uri string     api uri, default value read from config if set (default "http://localhost:8088")
   -c, --client string      client used for connecting to Testkube API one of proxy|direct (default "proxy")
       --insecure           insecure connection for direct client
       --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")
@@ -28,4 +28,5 @@ testkube run <resourceName> [flags]
 * [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
 * [testkube run test](testkube_run_test.md)	 - Starts new test
 * [testkube run testsuite](testkube_run_testsuite.md)	 - Starts new test suite
+* [testkube run testworkflow](testkube_run_testworkflow.md)	 - Starts test workflow execution
 

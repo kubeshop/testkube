@@ -1,5 +1,31 @@
 # Run Tests with GitHub Actions
-**If you need more control over your flow or to access a private cluster, use [Testkube Action](https://github.com/marketplace/actions/testkube-action) instead.**
+**The `kubeshop/testkube-run-action` has been deprecated and won't receive further updates. Use the [Testkube Action](https://github.com/marketplace/actions/testkube-action) instead.**
+
+# Migrate from testkube-run-action to setup-testkube
+
+1. Change the `uses` property from `kubeshop/testkube-run-action@v1` to `kubeshop/setuo-testkube@v1`.
+
+```yaml
+uses: kubeshop/setup-testkube@v1
+```
+2. Remove any usage of Test or Test Suite args from the `with` block.
+3. Use shell scripts to run testkube CLI commands directly:
+```yaml
+steps:
+  # Setup Testkube
+  - uses: kubeshop/setup-testkube@v1
+  # Pro args are still available
+    with:
+      organization: ${{ secrets.TkOrganization }}
+      environment: ${{ secrets.TkEnvironment }}
+      token: ${{ secrets.TkToken }}
+  # Use CLI with a shell script
+  - run: |
+      # Run one or multiple testkube CLI commands, passing any arguments you need
+      testkube run test some-test-name -f
+```
+
+# Deprecated usage information:
 
 **Run on Testkube** is a GitHub Action for running tests on the Testkube platform.
 
@@ -134,24 +160,23 @@ There are different inputs available for tests and test suites, as well as for P
 |     ✗	   | namespace       | Set namespace to run test suite in.
 ```
 
-### Pro and Enterprise
+### Pro and Pro On-Prem
 
 ```sh
 | Required | Name	      | Description
 +----------+--------------+------------------------------------------------------------------------------------------------------------------------------
-|     ✓    | organization |	The organization ID from Testkube Pro or Enterprise - it starts with tkc_org, you may find it i.e. in the dashboard's URL.
-|     ✓	   | environment  | The environment ID from Testkube Pro or Enterprise - it starts with tkc_env, you may find it i.e. in the dashboard's URL.
-|     ✓	   | token        |	API token that has at least a permission to run specific test or test suite. Read more about creating API token in Testkube Pro or Enterprise.
-|     ✗    | url          | URL of the Testkube Enterprise instance, if applicable.
-|     ✗    | dashboardUrl | URL of the Testkube Enterprise dashboard, if applicable, to display links for the execution.
+|     ✓    | organization |	The organization ID from Testkube Pro - it starts with tkc_org, you may find it i.e. in the dashboard's URL.
+|     ✓	   | environment  | The environment ID from Testkube Pro - it starts with tkc_env, you may find it i.e. in the dashboard's URL.
+|     ✓	   | token        |	API token that has at least a permission to run specific test or test suite. Read more about creating API token in Testkube Pro.
+|     ✗    | url          | URL of the Testkube Pro instance, if applicable.
+|     ✗    | dashboardUrl | URL of the Testkube Pro dashboard, if applicable, to display links for the execution.
 ```
 
-### Own Instance
+### OSS
 
 ```sh
 | Required | Name         |	Description
 +----------+--------------+----------------------------------------------------------------------------------------
 |     ✓    | url          | URL for the API of the own Testkube instance.
 |     ✗    | ws           | Override WebSocket API URL of the own Testkube instance (use it only if auto-detection doesn't work).
-|     ✗    | dashboardUrl | URL for the Dashboard of the own Testkube instance, to display links for the execution.
 ```

@@ -212,40 +212,40 @@ By default, there is a 10 second timeout limit on all requests on the client sid
 
 The following environment variables are automatically injected into each executed test pod:
 
-DEBUG:                           if debug mode is on
-RUNNER_ENDPOINT:                 minio endpoint
-RUNNER_ACCESSKEYID:              minio access key id
-RUNNER_SECRETACCESSKEY:          minio secret access key
-RUNNER_REGION:                   minio region
-RUNNER_TOKEN:                    minio token
-RUNNER_SSL:                      if minio ssl is on
-RUNNER_SCRAPPERENABLED:          if scraping is on
-RUNNER_DATADIR:                  data directory
-RUNNER_CDEVENTS_TARGET:          cd events target endpoint
-RUNNER_COMPRESSARTIFACTS:        if artfifacts should be compressed
-RUNNER_PRO_MODE:                 pro mode
-RUNNER_PRO_API_KEY:              pro api key
-RUNNER_PRO_API_TLS_INSECURE:     if pro connection is insecure
-RUNNER_PRO_API_URL:              pro api url
-RUNNER_PRO_CONNECTION_TIMEOUT:   pro connection timeout limit
-RUNNER_PRO_API_SKIP_VERIFY:      if pro connection tls verification is off
-RUNNER_CLOUD_MODE:               DEPRECATED: please use RUNNER_PRO_MODE instead
-RUNNER_CLOUD_API_KEY:            DEPRECATED: please use RUNNER_PRO_API_KEY instead
-RUNNER_CLOUD_API_TLS_INSECURE:   DEPRECATED: please use RUNNER_PRO_API_TLS_INSECURE instead
-RUNNER_CLOUD_API_URL:            DEPRECATED: please use RUNNER_PRO_API_URL instead
-RUNNER_CLOUD_CONNECTION_TIMEOUT: DEPRECATED: please use RUNNER_PRO_CONNECTION_TIMEOUT instead
-RUNNER_CLOUD_API_SKIP_VERIFY:    DEPRECATED: please use RUNNER_PRO_API_SKIP_VERITY instead
-RUNNER_DASHBOARD_URI:            dashboard uri
-CI:                              ci flag
-RUNNER_CLUSTERID:                cluster id
-RUNNER_BUCKET:                   minio bucket
-RUNNER_WORKINGDIR:               working directory
-RUNNER_EXECUTIONID:              test execution id
-RUNNER_TESTNAME:                 test name
-RUNNER_EXECUTIONNUMBER:          test execution number
-RUNNER_CONTEXTTYPE:              running context type
-RUNNER_CONTEXTDATA:              running context data
-RUNNER_APIURI:                   api uri
+DEBUG:                           if debug mode is on  
+RUNNER_ENDPOINT:                 MinIO endpoint  
+RUNNER_ACCESSKEYID:              MinIO access key id  
+RUNNER_SECRETACCESSKEY:          MinIO secret access key  
+RUNNER_REGION:                   MinIO region  
+RUNNER_TOKEN:                    MinIO token  
+RUNNER_SSL:                      if MinIO SSL is on  
+RUNNER_SCRAPPERENABLED:          if scraping is on  
+RUNNER_DATADIR:                  data directory  
+RUNNER_CDEVENTS_TARGET:          CDEvents target endpoint  
+RUNNER_COMPRESSARTIFACTS:        if artfifacts should be compressed  
+RUNNER_PRO_MODE:                 pro mode  
+RUNNER_PRO_API_KEY:              pro API key  
+RUNNER_PRO_API_TLS_INSECURE:     if pro connection is insecure  
+RUNNER_PRO_API_URL:              pro API URL 
+RUNNER_PRO_CONNECTION_TIMEOUT:   pro connection timeout limit  
+RUNNER_PRO_API_SKIP_VERIFY:      if pro connection TLS verification is off  
+RUNNER_CLOUD_MODE:               DEPRECATED: please use RUNNER_PRO_MODE instead  
+RUNNER_CLOUD_API_KEY:            DEPRECATED: please use RUNNER_PRO_API_KEY instead  
+RUNNER_CLOUD_API_TLS_INSECURE:   DEPRECATED: please use RUNNER_PRO_API_TLS_INSECURE instead  
+RUNNER_CLOUD_API_URL:            DEPRECATED: please use RUNNER_PRO_API_URL instead  
+RUNNER_CLOUD_CONNECTION_TIMEOUT: DEPRECATED: please use RUNNER_PRO_CONNECTION_TIMEOUT instead  
+RUNNER_CLOUD_API_SKIP_VERIFY:    DEPRECATED: please use RUNNER_PRO_API_SKIP_VERITY instead  
+RUNNER_DASHBOARD_URI:            dashboard URI  
+CI:                              CI flag  
+RUNNER_CLUSTERID:                cluster id  
+RUNNER_BUCKET:                   MinIO bucket  
+RUNNER_WORKINGDIR:               working directory  
+RUNNER_EXECUTIONID:              test execution ID  
+RUNNER_TESTNAME:                 test name  
+RUNNER_EXECUTIONNUMBER:          test execution number  
+RUNNER_CONTEXTTYPE:              running context type  
+RUNNER_CONTEXTDATA:              running context data  
+RUNNER_APIURI:                   API URI   
 
 ## Summary
 

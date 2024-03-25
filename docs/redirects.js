@@ -210,15 +210,17 @@ const redirects = [
     from: [
       "/guides/going-to-production/exposing-testkube/overview",
       "/guides/exposing-testkube/overview",
+      "/articles/exposing-testkube",
     ],
-    to: "/articles/exposing-testkube",
+    to: "/articles/testkube-dashboard",
   },
   {
     from: [
       "/guides/going-to-production/exposing-testkube/ingress-nginx",
       "/guides/exposing-testkube/ingress-nginx",
+      "/articles/exposing-testkube-with-ingress-nginx",
     ],
-    to: "/articles/exposing-testkube-with-ingress-nginx",
+    to: "/articles/testkube-dashboard",
   },
   {
     from: [
@@ -228,8 +230,8 @@ const redirects = [
     to: "/articles/oauth-cli",
   },
   {
-    from: "/guides/going-to-production/authentication/oauth-ui",
-    to: "/articles/oauth-dashboard",
+    from: ["/guides/going-to-production/authentication/oauth-ui","/articles/oauth-dashboard"],
+    to: "/articles/testkube-dashboard",
   },
   {
     from: "/guides/going-to-production/aws",
