@@ -159,7 +159,7 @@ type Metrics struct {
 	TestWorkflowTemplateDeletes   *prometheus.CounterVec
 }
 
-func (m Metrics) IncExecuteTest(execution testkube.Execution, dashboardURI string) {
+func (m Metrics) IncAndObserveExecuteTest(execution testkube.Execution, dashboardURI string) {
 	status := ""
 	if execution.ExecutionResult != nil && execution.ExecutionResult.Status != nil {
 		status = string(*execution.ExecutionResult.Status)
@@ -188,7 +188,7 @@ func (m Metrics) IncExecuteTest(execution testkube.Execution, dashboardURI strin
 	}).Observe(float64(execution.DurationMs))
 }
 
-func (m Metrics) IncExecuteTestSuite(execution testkube.TestSuiteExecution, dashboardURI string) {
+func (m Metrics) IncAndObserveExecuteTestSuite(execution testkube.TestSuiteExecution, dashboardURI string) {
 	name := ""
 	status := ""
 	if execution.TestSuite != nil {
