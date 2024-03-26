@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - develop
-      - vsukhin/feature/incluster-client-config
     paths-ignore:
       - 'docs/**'
 env:
