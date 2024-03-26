@@ -16,9 +16,10 @@ var testExecutionsCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Help: "The total number of test executions",
 }, []string{"type", "name", "result", "labels", "test_uri"})
 
-var testExecutionsDurationMs = promauto.NewHistogramVec(prometheus.HistogramOpts{
-	Name: "testkube_test_executions_duration_ms",
-	Help: "The duration of test executions",
+var testExecutionsDurationMs = promauto.NewSummaryVec(prometheus.SummaryOpts{
+	Name:       "testkube_test_executions_duration_ms",
+	Help:       "The duration of test executions",
+	Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.95: 0.005, 0.99: 0.001},
 }, []string{"type", "name", "result", "labels", "test_uri"})
 
 var testSuiteExecutionsCount = promauto.NewCounterVec(prometheus.CounterOpts{
@@ -26,9 +27,10 @@ var testSuiteExecutionsCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Help: "The total number of test suite executions",
 }, []string{"name", "result", "labels", "testsuite_uri"})
 
-var testSuiteExecutionsDurationMs = promauto.NewHistogramVec(prometheus.HistogramOpts{
-	Name: "testkube_testsuite_executions_duration_ms",
-	Help: "The duration of test suite executions",
+var testSuiteExecutionsDurationMs = promauto.NewSummaryVec(prometheus.SummaryOpts{
+	Name:       "testkube_testsuite_executions_duration_ms",
+	Help:       "The duration of test suite executions",
+	Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.95: 0.005, 0.99: 0.001},
 }, []string{"name", "result", "labels", "testsuite_uri"})
 
 var testCreationCount = promauto.NewCounterVec(prometheus.CounterOpts{
@@ -138,9 +140,9 @@ func NewMetrics() Metrics {
 
 type Metrics struct {
 	TestExecutionsCount           *prometheus.CounterVec
-	TestExecutionsDurationMs      *prometheus.HistogramVec
+	TestExecutionsDurationMs      *prometheus.SummaryVec
 	TestSuiteExecutionsCount      *prometheus.CounterVec
-	TestSuiteExecutionsDurationMs *prometheus.HistogramVec
+	TestSuiteExecutionsDurationMs *prometheus.SummaryVec
 	TestCreations                 *prometheus.CounterVec
 	TestSuiteCreations            *prometheus.CounterVec
 	TestUpdates                   *prometheus.CounterVec
