@@ -22,21 +22,29 @@ import (
 
 // GetClientSet configures Kube client set, can override host with local proxy
 func GetClientSet(overrideHost string) (clientset kubernetes.Interface, err error) {
-	clcfg, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
-	if err != nil {
-		return clientset, errors.Wrap(err, "failed to get clientset config")
+	// creates the in-cluster config
+	restcfg, err := rest.InClusterConfig()
+	if err != nil && err != rest.ErrNotInCluster {
+		return clientset, errors.Wrap(err, "failed to get in cluster config")
 	}
 
-	restcfg, err := clientcmd.NewNonInteractiveClientConfig(
-		*clcfg, "", &clientcmd.ConfigOverrides{}, nil).ClientConfig()
 	if err != nil {
-		return clientset, errors.Wrap(err, "failed to get non-interactive client config")
-	}
+		clcfg, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
+		if err != nil {
+			return clientset, errors.Wrap(err, "failed to get clientset config")
+		}
 
-	// override host is needed to override kubeconfig kubernetes proxy host name
-	// to local proxy passed to API server run local proxy first by `make api-proxy`
-	if overrideHost != "" {
-		restcfg.Host = overrideHost
+		restcfg, err = clientcmd.NewNonInteractiveClientConfig(
+			*clcfg, "", &clientcmd.ConfigOverrides{}, nil).ClientConfig()
+		if err != nil {
+			return clientset, errors.Wrap(err, "failed to get non-interactive client config")
+		}
+
+		// override host is needed to override kubeconfig kubernetes proxy host name
+		// to local proxy passed to API server run local proxy first by `make api-proxy`
+		if overrideHost != "" {
+			restcfg.Host = overrideHost
+		}
 	}
 
 	return kubernetes.NewForConfig(restcfg)
