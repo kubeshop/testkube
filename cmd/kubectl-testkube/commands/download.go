@@ -68,7 +68,7 @@ func NewListArtifactsCmd() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
+	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct|cluster")
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "should I show additional debug messages")
 
 	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the execution")
@@ -109,7 +109,7 @@ func NewDownloadSingleArtifactsCmd() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
+	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct|cluster")
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "should I show additional debug messages")
 
 	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the execution")
@@ -144,7 +144,7 @@ func NewDownloadAllArtifactsCmd() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
+	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct|cluster")
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "should I show additional debug messages")
 
 	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the execution")
@@ -170,7 +170,7 @@ func NewDownloadTestSuiteArtifactsCmd() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
+	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct|cluster")
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "should I show additional debug messages")
 
 	cmd.PersistentFlags().StringVarP(&executionID, "execution-id", "e", "", "ID of the test suite execution")
