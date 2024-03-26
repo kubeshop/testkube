@@ -21,14 +21,16 @@ import (
 )
 
 // GetClientSet configures Kube client set, can override host with local proxy
-func GetClientSet(overrideHost string) (clientset kubernetes.Interface, err error) {
-	// creates the in-cluster config
-	restcfg, err := rest.InClusterConfig()
-	if err != nil && err != rest.ErrNotInCluster {
-		return clientset, errors.Wrap(err, "failed to get in cluster config")
-	}
+func GetClientSet(overrideHost string, clientType ClientType) (clientset kubernetes.Interface, err error) {
+	var restcfg *rest.Config
 
-	if err != nil {
+	switch clientType {
+	case ClientCluster:
+		restcfg, err = rest.InClusterConfig()
+		if err != nil {
+			return clientset, errors.Wrap(err, "failed to get in cluster config")
+		}
+	case ClientProxy:
 		clcfg, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
 		if err != nil {
 			return clientset, errors.Wrap(err, "failed to get clientset config")
@@ -45,6 +47,8 @@ func GetClientSet(overrideHost string) (clientset kubernetes.Interface, err erro
 		if overrideHost != "" {
 			restcfg.Host = overrideHost
 		}
+	default:
+		return clientset, fmt.Errorf("unsupported client type %v", clientType)
 	}
 
 	return kubernetes.NewForConfig(restcfg)
