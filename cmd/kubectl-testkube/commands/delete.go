@@ -35,7 +35,7 @@ func NewDeleteCmd() *cobra.Command {
 			validator.PersistentPreRunVersionCheck(cmd, common.Version)
 		}}
 
-	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct")
+	cmd.PersistentFlags().StringVarP(&client, "client", "c", "proxy", "Client used for connecting to testkube API one of proxy|direct|cluster")
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "should I show additional debug messages")
 
 	cmd.AddCommand(tests.NewDeleteTestsCmd())

@@ -12,9 +12,10 @@ import (
 type ClientType string
 
 const (
-	ClientDirect ClientType = "direct"
-	ClientCloud  ClientType = "cloud"
-	ClientProxy  ClientType = "proxy"
+	ClientDirect  ClientType = "direct"
+	ClientCloud   ClientType = "cloud"
+	ClientProxy   ClientType = "proxy"
+	ClientCluster ClientType = "cluster"
 )
 
 // Options contains client options
@@ -63,8 +64,8 @@ func GetClient(clientType ClientType, options Options) (client Client, err error
 		ConfigureClient(sseClient, token, "")
 		client = NewDirectAPIClient(httpClient, sseClient, options.ApiUri, "")
 
-	case ClientProxy:
-		clientset, err := GetClientSet("")
+	case ClientProxy, ClientCluster:
+		clientset, err := GetClientSet("", clientType)
 		if err != nil {
 			return client, err
 		}
