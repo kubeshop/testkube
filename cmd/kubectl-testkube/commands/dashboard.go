@@ -22,7 +22,7 @@ func NewDashboardCmd() *cobra.Command {
 			ui.ExitOnError("loading config file", err)
 
 			if cfg.ContextType != config.ContextTypeCloud {
-				ui.Warn("As of 1.17 the dashboard is no longer included with Testkube OSS - please refer to https://bit.ly/tk-dashboard for more info")
+				ui.Warn("As of 1.17 the dashboard is no longer included with Testkube Core OSS - please refer to https://bit.ly/tk-dashboard for more info")
 			} else {
 				openCloudDashboard(cfg)
 			}

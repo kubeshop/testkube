@@ -43,7 +43,7 @@ stages:
         displayName: Run Testkube Test
 ```
 
-## Testkube OSS
+## Testkube Core OSS
 
 ### How to configure the Testkube CLI action for TK OSS and run a test
 
