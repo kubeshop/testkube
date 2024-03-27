@@ -1,0 +1,14 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: postman-workflow-suite
+  labels:
+    core-tests: workflows-suite
+spec:
+  steps:
+  - execute:
+      workflows:
+      - name: postman-workflow-smoke
+      - name: postman-workflow-smoke-without-envs
+      - name: postman-workflow-smoke-preofficial-trait
+      - name: postman-workflow-smoke-preofficial-trait-without-envs
