@@ -1,0 +1,15 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: playwright-workflow-suite
+  labels:
+    core-tests: workflows-suite
+spec:
+  steps:
+  - execute:
+      workflows:
+      - name: playwright-workflow-smoke-v1.32.3
+      - name: playwright-workflow-smoke-v1.32.3-custom-report-dir
+      - name: playwright-workflow-smoke-v1.32.3-shell
+      - name: playwright-workflow-smoke-artifacts-double-asterisk
+      - name: playwright-workflow-smoke-official-trait

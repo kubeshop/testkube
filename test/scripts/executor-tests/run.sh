@@ -76,6 +76,10 @@ run_follow_testsuite() { # testsuite_name
   kubectl testkube --namespace $namespace run testsuite $1 $follow_param $branch_overwrite_param
 }
 
+run_follow_workflow() { # workflow_name
+  kubectl testkube --namespace $namespace run tw $1
+}
+
 common_run() { # name, test_crd_file, testsuite_name, testsuite_file, custom_executor_crd_file
   name=$1
   test_crd_file=$2
@@ -111,10 +115,12 @@ common_run() { # name, test_crd_file, testsuite_name, testsuite_file, custom_exe
   fi
 }
 
-common_workflow_run() { # name, workflow_crd_file, custom_workflow_template_crd_file
+common_workflow_run() { # name, workflow_crd_file, workflow_suite_file, custom_workflow_template_crd_file
   name=$1
   workflow_crd_file=$2
-  custom_workflow_template_crd_file=$3
+  workflow_suite_name=$3
+  workflow_suite_file=$4
+  custom_workflow_template_crd_file=$5
 
   print_title "$name"
 
@@ -123,6 +129,7 @@ common_workflow_run() { # name, workflow_crd_file, custom_workflow_template_crd_
       kubectl --namespace $namespace delete -f $custom_workflow_template_crd_file --ignore-not-found=true
     fi
     kubectl --namespace $namespace delete -f $workflow_crd_file --ignore-not-found=true
+    kubectl --namespace $namespace delete -f $workflow_suite_file --ignore-not-found=true
   fi
 
   if [ "$create" = true ] ; then
@@ -133,6 +140,13 @@ common_workflow_run() { # name, workflow_crd_file, custom_workflow_template_crd_
     
     # Workflow
     kubectl --namespace $namespace apply -f $workflow_crd_file
+
+    # Workflow suite
+    kubectl --namespace $namespace apply -f $workflow_suite_file
+  fi
+
+  if [ "$run" = true ]; then
+    run_follow_workflow $workflow_suite_name
   fi
 }
 
@@ -410,60 +424,88 @@ special-cases-jmeter() {
 workflow-cypress-smoke() {
   name="Test Workflow - Cypress"
   workflow_crd_file="test/cypress/executor-tests/crd-workflow/smoke.yaml"
+  workflow_suite_name="cypress-workflow-suite"
+  workflow_suite_file="test/suites/test-workflows/cypress-workflow.yaml"
+
   custom_workflow_template_crd_file="test/test-workflow-templates/cypress.yaml"
   
-  common_workflow_run "$name" "$workflow_crd_file" "$custom_workflow_template_crd_file"
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file" "$custom_workflow_template_crd_file"
 }
 
 workflow-gradle-smoke() {
   name="Test Workflow - Gradle"
   workflow_crd_file="test/gradle/executor-smoke/crd-workflow/smoke.yaml"
+  workflow_suite_name="gradle-workflow-suite"
+  workflow_suite_file="test/suites/test-workflows/gradle-workflow.yaml"
   
-  common_workflow_run "$name" "$workflow_crd_file"
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 
 workflow-jmeter-smoke() {
   name="Test Workflow - JMeter"
   workflow_crd_file="test/jmeter/executor-tests/crd-workflow/smoke.yaml"
+  workflow_suite_name="jmeter-workflow-suite"
+  workflow_suite_file="test/suites/test-workflows/jmeter-workflow.yaml"
   
-  common_workflow_run "$name" "$workflow_crd_file"
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 
 workflow-k6-smoke() {
   name="Test Workflow - k6"
   workflow_crd_file="test/k6/executor-tests/crd-workflow/smoke.yaml"
+  workflow_suite_name="k6-workflow-suite"
+  workflow_suite_file="test/suites/test-workflows/k6-workflow.yaml"
+
   custom_workflow_template_crd_file="test/test-workflow-templates/k6.yaml"
   
-  common_workflow_run "$name" "$workflow_crd_file" "$custom_workflow_template_crd_file"
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file" "$custom_workflow_template_crd_file"
 }
 
 workflow-maven-smoke() {
   name="Test Workflow - Maven"
   workflow_crd_file="test/maven/executor-smoke/crd-workflow/smoke.yaml"
+  workflow_suite_name="maven-workflow-suite"
+  workflow_suite_file="test/suites/test-workflows/maven-workflow.yaml"
   
-  common_workflow_run "$name" "$workflow_crd_file"
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 
 workflow-playwright-smoke() {
   name="Test Workflow - Playwright"
   workflow_crd_file="test/playwright/executor-tests/crd-workflow/smoke.yaml"
+  workflow_suite_name="playwright-workflow-suite"
+  workflow_suite_file="test/suites/test-workflows/playwright-workflow.yaml"
   
-  common_workflow_run "$name" "$workflow_crd_file"
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 
 workflow-postman-smoke() {
   name="Test Workflow - Postman"
   workflow_crd_file="test/postman/executor-tests/crd-workflow/smoke.yaml"
+  workflow_suite_name="postman-workflow-suite"
+  workflow_suite_file="test/suites/test-workflows/postman-workflow.yaml"
+
   custom_workflow_template_crd_file="test/test-workflow-templates/postman.yaml"
   
-  common_workflow_run "$name" "$workflow_crd_file" "$custom_workflow_template_crd_file"
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file" "$custom_workflow_template_crd_file"
 }
 
 workflow-soapui-smoke() {
   name="Test Workflow - SoapUI"
   workflow_crd_file="test/soapui/executor-smoke/crd-workflow/smoke.yaml"
+  workflow_suite_name="soapui-workflow-suite"
+  workflow_suite_file="test/suites/test-workflows/soapui-workflow.yaml"
   
-  common_workflow_run "$name" "$workflow_crd_file"
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
+}
+
+workflow-special-cases-failures() {
+  name="Test Workflow - special cases - expected failures"
+  workflow_crd_file="test/special-cases/test-workflows/edge-cases-expected-fails.yaml"
+  workflow_suite_name="edge-cases-expected-failure-suite"
+  workflow_suite_file="test/suites/special-cases/test-workflows/edge-cases-expected-fails.yaml"
+  
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 
 main() {
@@ -531,6 +573,9 @@ main() {
       workflow-playwright-smoke
       workflow-postman-smoke
       workflow-soapui-smoke
+      ;;
+    workflow-special)
+      workflow-special-cases-failures
       ;;
     *)
       $executor_type
