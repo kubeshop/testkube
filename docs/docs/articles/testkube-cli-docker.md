@@ -55,6 +55,7 @@ There are multiple *client types* you can set for the Testkube CLI:
 * direct - for connecting to a remotely deployed environment
 * proxy - for connecting to local environments, not relevant in the case of a Docker container
 * cloud - for connecting to Testkube Cloud
+* cluster - for connecting to current Kubernetes cluster environment (when running inside the cluster pod, make sure pod service account can access `services/proxy` resource)
 
 You can also use your existing `kubectl` configuration file as a volume:
 
