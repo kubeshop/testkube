@@ -249,10 +249,10 @@ func (t ProxyClient[A]) GetFile(uri, fileName, destination string, params map[st
 func (t ProxyClient[A]) getProxy(requestType string) *rest.Request {
 	return t.client.CoreV1().RESTClient().Verb(requestType).
 		Namespace(t.config.Namespace).
-		Resource("services").
+		//		Resource("services").
 		SetHeader("Content-Type", "application/json").
-		Name(fmt.Sprintf("%s:%d", t.config.ServiceName, t.config.ServicePort)).
-		SubResource("proxy")
+		Name(fmt.Sprintf("%s:%d", t.config.ServiceName, t.config.ServicePort))
+	// SubResource("proxy")
 }
 
 func (t ProxyClient[A]) getFromResponse(resp rest.Result) (result A, err error) {
