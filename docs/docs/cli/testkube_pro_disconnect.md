@@ -1,6 +1,6 @@
 ## testkube pro disconnect
 
-Switch back to Testkube OSS mode, based on active .kube/config file
+Switch back to Testkube Core OSS mode, based on active .kube/config file
 
 ```
 testkube pro disconnect [flags]

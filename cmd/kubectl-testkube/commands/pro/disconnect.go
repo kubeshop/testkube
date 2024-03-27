@@ -20,11 +20,11 @@ func NewDisconnectCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "disconnect",
 		Aliases: []string{"d"},
-		Short:   "Switch back to Testkube OSS mode, based on active .kube/config file",
+		Short:   "Switch back to Testkube Core OSS mode, based on active .kube/config file",
 		Run: func(cmd *cobra.Command, args []string) {
 
 			ui.H1("Disconnecting your Pro environment:")
-			ui.Paragraph("Rolling back to your clusters Testkube OSS installation")
+			ui.Paragraph("Rolling back to your clusters Testkube Core OSS installation")
 			ui.Paragraph("If you need more details click into following link: " + docsUrl)
 			ui.H2("You can safely switch between connecting Pro and disconnecting without losing your data.")
 

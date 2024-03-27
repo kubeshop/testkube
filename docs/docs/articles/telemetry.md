@@ -15,7 +15,7 @@ The webui dashboard collects user consent and then sends telemetry to the follow
 
 ## API-server telemetry
 
-Api server Telemetry collects and scrambles information about the host when the API server is bootstrapped for the first time. 
+API server Telemetry collects and scrambles information about the host when the API server is bootstrapped for the first time.
 
 The collected data looks like this.
 
@@ -48,7 +48,12 @@ The telemetry data we use in our metrics is limited to:
  - The number of installations to a cluster.
  - The number of unique active cluster installations.
  - The number of people who disable telemetry.
- - The number of unique sessions in the Testkube Dashboard.
+ - The number of created test suites and the number of steps.
+ - The number of tests, their types and their sources.
+ - The number of test suite runs and their durations.
+ - The number of workflows created and run.
+ - The number of workflow templates created and used.
+ - Error details resulting from CLI commands.
 
 It is sent to https://analytics.testkube.io and https://www.google-analytics.com
 

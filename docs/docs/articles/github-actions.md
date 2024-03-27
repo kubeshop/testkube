@@ -38,9 +38,9 @@ steps:
       testkube run test test-name -f 
 
  ```
-## Testkube OSS
+## Testkube Core OSS
 
-### How to Configure Testkube CLI Actions for Testkube OSS and Run a Test
+### How to Configure Testkube CLI Actions for Testkube Core OSS and Run a Test
 
 To connect to the self-hosted instance, you need to have **kubectl** configured for accessing your Kubernetes cluster, and simply passing optional namespace, if Testkube is not deployed in the default **testkube** namespace. 
 
@@ -59,7 +59,7 @@ steps:
 
 Steps to connect to your Kubernetes cluster differ for each provider. You should check the docs of your Cloud provider on how to connect to the Kubernetes cluster from GitHub Action, or check examples in this documentation for selected providers.
 
-### How to Configure Testkube CLI Actions for Testkube OSS and Run a Test
+### How to Configure Testkube CLI Actions for Testkube Core OSS and Run a Test
 
 This workflow establishes a connection to EKS cluster and creates and runs a test using Testkube CLI. In this example, we also use GitHub secrets not to reveal sensitive data. Please make sure that the following points are satisfied:
 - The **_AwsAccessKeyId_**, **_AwsSecretAccessKeyId_** secrets should contain your AWS IAM keys with proper permissions to connect to EKS cluster.
