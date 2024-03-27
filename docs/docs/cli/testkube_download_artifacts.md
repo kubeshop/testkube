@@ -9,7 +9,7 @@ testkube download artifacts <executionName> [flags]
 ### Options
 
 ```
-  -c, --client string         Client used for connecting to testkube API one of proxy|direct (default "proxy")
+  -c, --client string         Client used for connecting to testkube API one of proxy|direct|cluster (default "proxy")
       --download-dir string   download dir (default "artifacts")
   -e, --execution-id string   ID of the execution
       --format string         data format for storing files, one of folder|archive (default "folder")
