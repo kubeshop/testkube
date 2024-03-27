@@ -1,0 +1,11 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: soapui-workflow-suite
+  labels:
+    core-tests: workflows-suite
+spec:
+  steps:
+  - execute:
+      workflows:
+      - name: soapui-workflow-smoke
