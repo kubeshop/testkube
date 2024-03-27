@@ -9,7 +9,7 @@ testkube delete <resourceName> [flags]
 ### Options
 
 ```
-  -c, --client string   Client used for connecting to testkube API one of proxy|direct (default "proxy")
+  -c, --client string   Client used for connecting to testkube API one of proxy|direct|cluster (default "proxy")
   -h, --help            help for delete
       --verbose         should I show additional debug messages
 ```
