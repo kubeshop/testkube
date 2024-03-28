@@ -20,14 +20,16 @@ import (
 )
 
 const (
-	defaultImage                = "busybox:1.36.1"
-	defaultShell                = "/bin/sh"
-	defaultInternalPath         = "/.tktw"
-	defaultDataPath             = "/data"
-	defaultFsGroup              = int64(1001)
-	ExecutionIdLabelName        = "testworkflowid"
-	ExecutionIdMainPodLabelName = "testworkflowid-main"
-	SignatureAnnotationName     = "testworkflows.testkube.io/signature"
+	defaultImage                 = "busybox:1.36.1"
+	defaultShell                 = "/bin/sh"
+	defaultInternalPath          = "/.tktw"
+	defaultDataPath              = "/data"
+	defaultFsGroup               = int64(1001)
+	ExecutionIdLabelName         = "testworkflowid"
+	ExecutionAssistingPodRefName = "testworkflowassistref"
+	AssistingPodServiceName      = "tkassist"
+	ExecutionIdMainPodLabelName  = "testworkflowid-main"
+	SignatureAnnotationName      = "testworkflows.testkube.io/signature"
 )
 
 var (

@@ -53,12 +53,14 @@ func NewFullFeatured(inspector imageinspector.Inspector) Processor {
 		Register(ProcessDelay).
 		Register(ProcessContentFiles).
 		Register(ProcessContentGit).
+		Register(ProcessSpawnStart).
 		Register(ProcessNestedSetupSteps).
 		Register(ProcessRunCommand).
 		Register(ProcessShellCommand).
 		Register(ProcessExecute).
 		Register(ProcessNestedSteps).
-		Register(ProcessArtifacts)
+		Register(ProcessArtifacts).
+		Register(ProcessSpawnStop)
 }
 
 func (p *processor) Register(operation Operation) Processor {
@@ -114,8 +116,13 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		StepBase: testworkflowsv1.StepBase{
 			Content:   workflow.Spec.Content,
 			Container: workflow.Spec.Container,
+			Spawn:     workflow.Spec.Spawn,
 		},
 		Steps: append(workflow.Spec.Setup, append(workflow.Spec.Steps, workflow.Spec.After...)...),
+	}
+	err = expressionstcl.Simplify(&workflow, machines...)
+	if err != nil {
+		return nil, errors.Wrap(err, "error while simplifying workflow instructions")
 	}
 	root, err := p.process(layer, layer.ContainerDefaults(), rootStep, "")
 	if err != nil {
