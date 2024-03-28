@@ -74,12 +74,12 @@ func NewSetContextCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&kubeconfig, "kubeconfig", "", false, "reset context mode for CLI to default kubeconfig based")
-	cmd.Flags().StringVarP(&org, "org", "o", "", "Testkube Cloud Organization ID")
+	cmd.Flags().StringVarP(&org, "org", "o", "", "Testkube Pro Organization ID")
 	cmd.Flags().MarkDeprecated("org", "use --org-id instead")
-	cmd.Flags().StringVarP(&env, "env", "e", "", "Testkube Cloud Environment ID")
+	cmd.Flags().StringVarP(&env, "env", "e", "", "Testkube Pro Environment ID")
 	cmd.Flags().MarkDeprecated("env", "use --env-id instead")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "Testkube namespace to use for CLI commands")
-	cmd.Flags().StringVarP(&apiKey, "api-key", "k", "", "API Key for Testkube Cloud")
+	cmd.Flags().StringVarP(&apiKey, "api-key", "k", "", "API Key for Testkube Pro")
 
 	common.PopulateMasterFlags(cmd, &opts)
 	return cmd

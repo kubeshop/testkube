@@ -58,6 +58,9 @@ type PodOptions struct {
 	Resources             *testkube.PodResourcesRequest
 	ImagePullSecrets      []string
 	ArtifactRequest       *testkube.ArtifactRequest
+	Features              testkube.Features
+	NatsUri               string
+	LogSidecarImage       string
 }
 
 // NewClient is a method to create new slave client
@@ -110,8 +113,8 @@ func (c *Client) CreateSlaves(ctx context.Context, count int) (SlaveMeta, error)
 
 // createSlavePod creates a slave pod and sends its IP address on the podIPAddressChan
 // channel when the pod is in the ready state.
-func (c *Client) createSlavePod(ctx context.Context, currentSlavesCount int, podIPAddressChan chan<- map[string]string, errorChan chan<- error) {
-	slavePod, err := c.getSlavePodConfiguration(ctx, currentSlavesCount)
+func (c *Client) createSlavePod(ctx context.Context, slavesPodNumber int, podIPAddressChan chan<- map[string]string, errorChan chan<- error) {
+	slavePod, err := c.getSlavePodConfiguration(ctx, slavesPodNumber)
 	if err != nil {
 		errorChan <- err
 		return
@@ -142,13 +145,13 @@ func (c *Client) createSlavePod(ctx context.Context, currentSlavesCount int, pod
 	podIPAddressChan <- podNameIPMap
 }
 
-func (c *Client) getSlavePodConfiguration(ctx context.Context, currentSlavesCount int) (*v1.Pod, error) {
+func (c *Client) getSlavePodConfiguration(ctx context.Context, SlavePodNumber int) (*v1.Pod, error) {
 	runnerExecutionStr, err := json.Marshal(c.execution)
 	if err != nil {
 		return nil, errors.Wrap(err, "error marshalling runner execution")
 	}
 
-	podName := validateAndGetSlavePodName(c.execution.Name, c.execution.Id, currentSlavesCount)
+	podName := validateAndGetSlavePodName(c.execution.Name, c.execution.Id, SlavePodNumber)
 	if err != nil {
 		return nil, errors.Wrap(err, "error validating slave pod name")
 	}
@@ -158,10 +161,10 @@ func (c *Client) getSlavePodConfiguration(ctx context.Context, currentSlavesCoun
 		output.PrintLogf("%s Failed to fetch Test Job info: %v", ui.IconWarning, err.Error())
 	}
 
-	return c.createSlavePodObject(runnerExecutionStr, podName, executorJob, currentSlavesCount)
+	return c.createSlavePodObject(runnerExecutionStr, podName, executorJob, SlavePodNumber)
 }
 
-func (c *Client) createSlavePodObject(runnerExecutionStr []byte, podName string, executorJob *batchv1.Job, currentSlavesCount int) (*v1.Pod, error) {
+func (c *Client) createSlavePodObject(runnerExecutionStr []byte, podName string, executorJob *batchv1.Job, slavePodNumber int) (*v1.Pod, error) {
 	tmpl, err := utils.
 		NewTemplate("pod").
 		Funcs(template.FuncMap{"vartypeptrtostring": testkube.VariableTypeString}).
@@ -224,7 +227,7 @@ func (c *Client) createSlavePodObject(runnerExecutionStr []byte, podName string,
 	}
 
 	for i := range pod.Spec.Containers {
-		pod.Spec.Containers[i].Env = append(pod.Spec.Containers[i].Env, getSlaveConfigurationEnv(c.envVariables, currentSlavesCount)...)
+		pod.Spec.Containers[i].Env = append(pod.Spec.Containers[i].Env, getSlaveConfigurationEnv(c.envVariables, slavePodNumber)...)
 	}
 
 	return &pod, nil
@@ -280,6 +283,9 @@ func (c *Client) newPodOptions(runnerExecutionStr []byte, podName string, execut
 		Resources:        resources,
 		ImagePullSecrets: c.slavesConfigs.ImagePullSecrets,
 		ArtifactRequest:  artifactRequest,
+		Features:         c.slavesConfigs.Features,
+		NatsUri:          c.slavesConfigs.NatsUri,
+		LogSidecarImage:  c.slavesConfigs.LogSidecarImage,
 	}
 }
 

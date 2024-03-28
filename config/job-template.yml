@@ -53,17 +53,29 @@ spec:
       containers:
       {{ if .Features.LogsV2 -}}
       - name: "{{ .Name }}-logs"
+        {{- if .Registry }}
         image: {{ .Registry }}/{{ .LogSidecarImage }}
+        {{- else }}
+        image: {{ .LogSidecarImage }}
+        {{- end }}
+        imagePullPolicy: IfNotPresent
         env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
         - name: DEBUG
-          value: "true"
+          value: {{ if .Debug }}"true"{{ else }}"false"{{ end }}
         - name: NAMESPACE
           value: {{ .Namespace }}
         - name: NATS_URI
-          value: "{{ .NatsUri }}"
+          value: {{ .NatsUri }}
         - name: ID
-          value: "{{ .Name }}"
-      {{- end }}
+          value: {{ .Name }}
+        - name: GROUP
+          value: test
+        - name: SOURCE
+          value: "job-pod:{{ .Name }}"
       - name: "{{ .Name }}"
         {{- if .Registry }}
         image: {{ .Registry }}/{{ .Image }}

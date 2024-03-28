@@ -281,7 +281,7 @@ $ testkube get execution EXECUTION_ID
 
 ![Viewing Executed Tests](../img/cli-tests-results.png)
 
-### 10. See test results in the Testkube dashboard.
+### 10. See test results in the Testkube Pro dashboard.
 
 You can also see the results of your tests in a nice dashboard. Open the Testkube dashboard with the following command:
 

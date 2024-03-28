@@ -149,7 +149,27 @@ func NewTestSuiteUpsertOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 	options.Namespace = cmd.Flag("namespace").Value.String()
 	options.Labels = labels
 
-	variables, err := common.CreateVariables(cmd, false)
+	crdOnly, err := cmd.Flags().GetBool("crd-only")
+	if err != nil {
+		return options, err
+	}
+
+	disableSecretCreation := false
+	if !crdOnly {
+		client, _, err := common.GetClient(cmd)
+		if err != nil {
+			return options, err
+		}
+
+		info, err := client.GetServerInfo()
+		if err != nil {
+			return options, err
+		}
+
+		disableSecretCreation = info.DisableSecretCreation
+	}
+
+	variables, err := common.CreateVariables(cmd, disableSecretCreation)
 	if err != nil {
 		return options, fmt.Errorf("invalid variables %w", err)
 	}
@@ -294,7 +314,17 @@ func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 	var executionRequest testkube.TestSuiteExecutionUpdateRequest
 	var nonEmpty bool
 	if cmd.Flag("variable").Changed || cmd.Flag("secret-variable").Changed || cmd.Flag("secret-variable-reference").Changed {
-		variables, err := common.CreateVariables(cmd, false)
+		client, _, err := common.GetClient(cmd)
+		if err != nil {
+			return options, err
+		}
+
+		info, err := client.GetServerInfo()
+		if err != nil {
+			return options, err
+		}
+
+		variables, err := common.CreateVariables(cmd, info.DisableSecretCreation)
 		if err != nil {
 			return options, fmt.Errorf("invalid variables %w", err)
 		}

@@ -89,7 +89,13 @@ func NewRunTestCmd() *cobra.Command {
 			envs, err := cmd.Flags().GetStringToString("env")
 			ui.WarnOnError("getting envs", err)
 
-			variables, err := common.CreateVariables(cmd, false)
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
+			info, err := client.GetServerInfo()
+			ui.ExitOnError("getting server info", err)
+
+			variables, err := common.CreateVariables(cmd, info.DisableSecretCreation)
 			ui.WarnOnError("getting variables", err)
 
 			executorArgs, err := testkube.PrepareExecutorArgs(binaryArgs)

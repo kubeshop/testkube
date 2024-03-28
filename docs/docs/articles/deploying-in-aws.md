@@ -20,7 +20,7 @@ Please mind that is it necessary to install [EBS CSI driver](https://docs.aws.am
 
 ## Ingress and Service Resources Configuration
 
-To deploy and expose Testkube to the outside world, you will need to create two ingresses - Testkube's API and Testkube's Dashboard. In this tutorial, we will be updating `values.yaml` that later will be passed to the `helm install` command.
+To deploy and expose Testkube to the outside world, you will need to create an ingress for Testkube's API server. In this tutorial, we will be updating `values.yaml` that later will be passed to the `helm install` command.
 
 In order to use the AWS Load Balancer Controller we need to create a `values.yaml` file and add the following annotation to the Ingress resources:
 
@@ -29,7 +29,7 @@ annotations:
   kubernetes.io/ingress.class: alb
 ```
 
-Once this annotation is added, Controller creates two ALBs and the necessary supporting AWS resources.
+Once this annotation is added, Controller creates an ALB and the necessary supporting AWS resources.
 
 The example configuration using HTTPS protocol might look like the following:
 
@@ -53,33 +53,6 @@ uiIngress:
   hosts:
     - test-api.aws.testkube.io
 ```
-
-**Testkube Dashboard Ingress:**
-
-```yaml
-ingress:
-   enabled: true
-   annotations:
-      kubernetes.io/ingress.class: alb
-      alb.ingress.kubernetes.io/load-balancer-name: testkube-dashboard
-      alb.ingress.kubernetes.io/target-type: ip
-      alb.ingress.kubernetes.io/backend-protocol: HTTP
-      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80},{"HTTPS": 443}]'
-      alb.ingress.kubernetes.io/scheme: internet-facing
-      alb.ingress.kubernetes.io/healthcheck-path: "/"
-      alb.ingress.kubernetes.io/healthcheck-port: "8080"
-      alb.ingress.kubernetes.io/ssl-redirect: '443'
-      alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:us-east-1:****:*****"
-path: /
-   hosts:
-     - test-dash.aws.testkube.io
-```
-
-:::caution
-
-Do not forget to add `apiServerEndpoint` to the `values.yaml` for `testkube-dashboard`, e.g.: `apiServerEndpoint: "test-api.aws.testkube.io/results/v1"`.
-
-:::
 
 Once we are ready with the `values.yaml` file, we can deploy Testkube into our cluster:
 
@@ -173,7 +146,7 @@ Do not forget to add `apiServerEndpoint` to the values.yaml for `testkube-dashbo
 
 :::
 
-This way we will have 1 Load Balancer with two listener rules pointing on corresponding paths:
+This way we will have 1 Load Balancer with a listener rule pointing to the corresponding path:
 
 ![One Load Balancer](../img/one-load-balancer.png)
 

@@ -36,7 +36,8 @@ const (
 	logsBuffer      = 1000
 )
 
-func NewProxy(clientset kubernetes.Interface, podsClient tcorev1.PodInterface, logsStream client.Stream, js jetstream.JetStream, log *zap.SugaredLogger, namespace, executionId string) *Proxy {
+func NewProxy(clientset kubernetes.Interface, podsClient tcorev1.PodInterface, logsStream client.Stream, js jetstream.JetStream, log *zap.SugaredLogger,
+	namespace, executionId, source string) *Proxy {
 	return &Proxy{
 		log:         log.With("service", "logs-proxy", "namespace", namespace, "executionId", executionId),
 		js:          js,
@@ -45,6 +46,7 @@ func NewProxy(clientset kubernetes.Interface, podsClient tcorev1.PodInterface, l
 		executionId: executionId,
 		podsClient:  podsClient,
 		logsStream:  logsStream,
+		source:      source,
 	}
 }
 
@@ -54,6 +56,7 @@ type Proxy struct {
 	clientset   kubernetes.Interface
 	namespace   string
 	executionId string
+	source      string
 	podsClient  tcorev1.PodInterface
 	logsStream  client.InitializedStreamPusher
 }
@@ -183,8 +186,13 @@ func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan *events.Log) (err er
 			}
 
 			// parse log line - also handle old (output.Output) and new format (just unstructured []byte)
+			source := events.SourceJobPod
+			if p.source != "" {
+				source = p.source
+			}
+
 			logs <- events.NewLogFromBytes(b).
-				WithSource(events.SourceJobPod)
+				WithSource(source)
 		}
 
 		if err != nil {

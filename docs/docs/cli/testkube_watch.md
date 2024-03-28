@@ -15,7 +15,7 @@ testkube watch <resourceName> [flags]
 ### Options inherited from parent commands
 
 ```
-  -a, --api-uri string     api uri, default value read from config if set (default "https://demo.testkube.io/results")
+  -a, --api-uri string     api uri, default value read from config if set (default "http://localhost:8088")
   -c, --client string      client used for connecting to Testkube API one of proxy|direct (default "proxy")
       --insecure           insecure connection for direct client
       --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")
@@ -28,4 +28,5 @@ testkube watch <resourceName> [flags]
 * [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
 * [testkube watch execution](testkube_watch_execution.md)	 - Watch logs output from executor pod
 * [testkube watch testsuiteexecution](testkube_watch_testsuiteexecution.md)	 - Watch test suite
+* [testkube watch testworkflowexecution](testkube_watch_testworkflowexecution.md)	 - Watch output from test workflow execution
 

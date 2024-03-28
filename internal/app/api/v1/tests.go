@@ -368,7 +368,7 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 			}
 		}
 
-		createdTest, err := s.TestsClient.Create(test, tests.Option{Secrets: secrets})
+		createdTest, err := s.TestsClient.Create(test, s.disableSecretCreation, tests.Option{Secrets: secrets})
 
 		s.Metrics.IncCreateTest(test.Spec.Type_, err)
 
@@ -455,9 +455,9 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 
 		var updatedTest *testsv3.Test
 		if option != nil {
-			updatedTest, err = s.TestsClient.Update(testSpec, *option)
+			updatedTest, err = s.TestsClient.Update(testSpec, s.disableSecretCreation, *option)
 		} else {
-			updatedTest, err = s.TestsClient.Update(testSpec)
+			updatedTest, err = s.TestsClient.Update(testSpec, s.disableSecretCreation)
 		}
 
 		s.Metrics.IncUpdateTest(testSpec.Spec.Type_, err)

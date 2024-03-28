@@ -9,7 +9,7 @@ This is easily done with Testkube. Each team can run their tests against cluster
 
 `Test Suites` stands for the orchestration of different test steps, which can run sequentially and/or in parallel.
 On each batch step you can define either one or multiple steps such as test execution, delay, or other (future) steps.
-By default the concurrency level for parallel tests is set to 10, you can redefine it using `--concurency` option for CLI command.
+By default the concurrency level for parallel tests is set to 10, you can redefine it using `--concurrency` option for CLI command.
 
 ## Passing Test Suite Artifacts between Steps
 

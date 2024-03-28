@@ -98,7 +98,7 @@ func (m *Version_0_9_2) Migrate() error {
 			}
 		}
 
-		if _, err = m.testsClientV3.Create(test); err != nil {
+		if _, err = m.testsClientV3.Create(test, false); err != nil {
 			return err
 		}
 

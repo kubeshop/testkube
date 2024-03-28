@@ -576,6 +576,7 @@ func main() {
 		logGrpcClient,
 		subscriptionChecker,
 		cfg.DisableSecretCreation,
+		serviceAccountNames,
 	)
 
 	// Apply Pro server enhancements
@@ -639,6 +640,7 @@ func main() {
 			triggers.WithHostnameIdentifier(),
 			triggers.WithTestkubeNamespace(cfg.TestkubeNamespace),
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
+			triggers.WithDisableSecretCreation(cfg.DisableSecretCreation),
 		)
 		log.DefaultLogger.Info("starting trigger service")
 		triggerService.Run(ctx)

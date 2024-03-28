@@ -55,7 +55,7 @@ testkube run test <testName> [flags]
       --pvc-template-reference string              reference to pvc template to use for the test
       --scraper-template string                    scraper template file path for extensions to scraper template
       --scraper-template-reference string          reference to scraper template to use for the test
-  -s, --secret-variable stringToString             execution secret variable passed to executor (default [])
+  -s, --secret-variable stringArray                execution secret variable passed to executor
       --secret-variable-reference stringToString   secret variable references in a form name1=secret_name1=secret_key1 (default [])
       --silent                                     don't print intermediate test execution
       --slave-pod-limits-cpu string                slave pod resource limits cpu
@@ -66,7 +66,7 @@ testkube run test <testName> [flags]
       --slave-pod-template-reference string        reference to slave pod template to use for the test
       --source-scripts                             run scripts using source command (container executor only)
       --upload-timeout string                      timeout to use when uploading files, example: 30s
-  -v, --variable stringToString                    execution variable passed to executor (default [])
+  -v, --variable stringArray                       execution variable passed to executor
       --variable-configmap stringArray             config map name used to map all keys to basis variables
       --variable-secret stringArray                secret name used to map all keys to secret variables
       --variables-file string                      variables file path, e.g. postman env file - will be passed to executor if supported
@@ -76,7 +76,7 @@ testkube run test <testName> [flags]
 ### Options inherited from parent commands
 
 ```
-  -a, --api-uri string     api uri, default value read from config if set (default "https://demo.testkube.io/results")
+  -a, --api-uri string     api uri, default value read from config if set (default "http://localhost:8088")
   -c, --client string      client used for connecting to Testkube API one of proxy|direct (default "proxy")
       --insecure           insecure connection for direct client
       --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")
@@ -86,5 +86,5 @@ testkube run test <testName> [flags]
 
 ### SEE ALSO
 
-* [testkube run](testkube_run.md)	 - Runs tests or test suites
+* [testkube run](testkube_run.md)	 - Runs tests, test suites or test workflows
 

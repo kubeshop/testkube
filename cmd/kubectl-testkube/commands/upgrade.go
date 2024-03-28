@@ -57,13 +57,13 @@ func NewUpgradeCmd() *cobra.Command {
 			}
 
 			if cfg.ContextType == config.ContextTypeCloud {
-				ui.Info("Testkube Cloud agent upgrade started")
+				ui.Info("Testkube Pro agent upgrade started")
 				err = common.HelmUpgradeOrInstallTestkubeCloud(options, cfg, false)
-				ui.ExitOnError("Upgrading Testkube Cloud Agent", err)
+				ui.ExitOnError("Upgrading Testkube Pro Agent", err)
 				err = common.PopulateAgentDataToContext(options, cfg)
 				ui.ExitOnError("Storing agent data in context", err)
 			} else {
-				ui.Info("Updating testkube")
+				ui.Info("Updating Testkube")
 				hasMigrations, err := common.RunMigrations(cmd)
 				ui.ExitOnError("Running migrations", err)
 				if hasMigrations {

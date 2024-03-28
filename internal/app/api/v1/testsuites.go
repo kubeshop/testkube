@@ -90,7 +90,7 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 
 		s.Log.Infow("creating test suite", "testSuite", testSuite)
 
-		created, err := s.TestsSuitesClient.Create(&testSuite)
+		created, err := s.TestsSuitesClient.Create(&testSuite, s.disableSecretCreation)
 
 		s.Metrics.IncCreateTestSuite(err)
 
@@ -169,7 +169,7 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		updatedTestSuite, err := s.TestsSuitesClient.Update(testSuiteSpec)
+		updatedTestSuite, err := s.TestsSuitesClient.Update(testSuiteSpec, s.disableSecretCreation)
 
 		s.Metrics.IncUpdateTestSuite(err)
 

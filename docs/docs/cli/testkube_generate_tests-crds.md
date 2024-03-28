@@ -50,7 +50,7 @@ testkube generate tests-crds <manifestDirectory> [flags]
       --scraper-template string                    scraper template file path for extensions to scraper template
       --scraper-template-reference string          reference to scraper template to use for the test
       --secret-env stringToString                  secret envs in a form of secret_key1=secret_name1 passed to executor (default [])
-  -s, --secret-variable stringToString             secret variable key value pair: --secret-variable key1=value1 (default [])
+  -s, --secret-variable stringArray                secret variable key value pair: --secret-variable key1=value1
       --secret-variable-reference stringToString   secret variable references in a form name1=secret_name1=secret_key1 (default [])
       --slave-pod-limits-cpu string                slave pod resource limits cpu
       --slave-pod-limits-memory string             slave pod resource limits memory
@@ -62,7 +62,7 @@ testkube generate tests-crds <manifestDirectory> [flags]
       --timeout int                                duration in seconds for test to timeout. 0 disables timeout.
   -t, --type string                                test type
       --upload-timeout string                      timeout to use when uploading files, example: 30s
-  -v, --variable stringToString                    variable key value pair: --variable key1=value1 (default [])
+  -v, --variable stringArray                       variable key value pair: --variable key1=value1
       --variable-configmap stringArray             config map name used to map all keys to basis variables
       --variable-secret stringArray                secret name used to map all keys to secret variables
       --variables-file string                      variables file path, e.g. postman env file - will be passed to executor if supported
@@ -71,7 +71,7 @@ testkube generate tests-crds <manifestDirectory> [flags]
 ### Options inherited from parent commands
 
 ```
-  -a, --api-uri string     api uri, default value read from config if set (default "https://demo.testkube.io/results")
+  -a, --api-uri string     api uri, default value read from config if set (default "http://localhost:8088")
   -c, --client string      client used for connecting to Testkube API one of proxy|direct (default "proxy")
       --insecure           insecure connection for direct client
       --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")

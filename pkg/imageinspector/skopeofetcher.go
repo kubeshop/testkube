@@ -23,7 +23,7 @@ func (s *skopeoFetcher) Fetch(ctx context.Context, registry, image string, pullS
 	if err != nil {
 		return nil, err
 	}
-	info, err := client.Inspect(image) // TODO: Support passing context
+	info, err := client.Inspect(registry, image) // TODO: Support passing context
 	if err != nil {
 		return nil, err
 	}
