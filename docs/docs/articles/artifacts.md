@@ -87,7 +87,7 @@ Just keep in mind that all values need to be set:
       storageClassName: standard-rwx
       volumeMountPath: /data
 ```
-And storageClassName should be one which can support `ReadWriteMany` access mode, like NFS or similar one.
+`storageClassName` should be one which can support `ReadWriteMany` access mode, like NFS or similar one.
 
 
 
