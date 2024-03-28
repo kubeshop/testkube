@@ -79,7 +79,7 @@ spec:
   type: cypress/project
 ```
 
-If you set `volumeMountPath` to the `/data` Testkube will set one volume it as main volume for all pods 
+If you set the `volumeMountPath` to the `/data` Testkube will set one volume as main for all pods 
 
 Just keep in mind that all values need to be set: 
 ```yaml
@@ -89,6 +89,7 @@ Just keep in mind that all values need to be set:
 ```
 `storageClassName` should be one which can support `ReadWriteMany` access mode, like NFS or similar one.
 Consider checking your Kubernetes provider documentation for more information about which storage classes supports it.
+Keep in mind that the NFS based volumes can be significantly slower than local storage.
 
 
 
