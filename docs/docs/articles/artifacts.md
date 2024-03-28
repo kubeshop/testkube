@@ -53,6 +53,46 @@ Alternatively, these values can be read from Kubernetes secrets and set:
 
 For executors that produce files during test execution, Testkube supports collecting (scraping) these artifacts and storing them in our S3 compatible file storage. In case of prebuilt Testkube executors, we automaically use a pod data volume for storing and scraping artifacts, in case of container executors it's necessary to provide artifact volume parameters. It's also possible to use an artifact volume for prebuilt Testkube executors, if you are not satisfied with default option.
 
+
+You can override the default volume mount path and directory for storing artifacts in the executor definition:
+
+```yaml
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: test
+  namespace: testkube
+spec:
+  content:
+    repository:
+      authType: basic
+      branch: main
+      path: path/to/test/files
+      type: git
+      uri: https://git.repo.path.io/repo
+    type: git-dir
+  executionRequest:
+    artifactRequest:
+      sharedBetweenPods: true
+      storageClassName: standard-rwx
+      volumeMountPath: /data
+  type: cypress/project
+```
+
+If you set `volumeMountPath` to the `/data` Testkube will set one volume it as main volume for all pods 
+
+Just keep in mind that all values need to be set: 
+```yaml
+      sharedBetweenPods: true
+      storageClassName: standard-rwx
+      volumeMountPath: /data
+```
+
+
+
+
+
+
 You need to save test related files into specified directories on the dynamically created volume. They will be uploaded from there to Testkube file storage and available later for downloading using standard Testkube CLI or Testkube Dashboard commands. For example:
 
 ```yaml
