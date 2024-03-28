@@ -15,6 +15,8 @@ type TestWorkflowTemplateSpec struct {
 	Container *TestWorkflowContainerConfig           `json:"container,omitempty"`
 	Job       *TestWorkflowJobConfig                 `json:"job,omitempty"`
 	Pod       *TestWorkflowPodConfig                 `json:"pod,omitempty"`
+	// map of pods to spawn
+	Spawn map[string]TestWorkflowSpawnInstruction    `json:"spawn,omitempty"`
 	Setup     []TestWorkflowIndependentStep          `json:"setup,omitempty"`
 	Steps     []TestWorkflowIndependentStep          `json:"steps,omitempty"`
 	After     []TestWorkflowIndependentStep          `json:"after,omitempty"`

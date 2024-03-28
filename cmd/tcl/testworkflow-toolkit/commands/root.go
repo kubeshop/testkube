@@ -28,6 +28,8 @@ func init() {
 	RootCmd.AddCommand(NewTarballCmd())
 	RootCmd.AddCommand(NewExecuteCmd())
 	RootCmd.AddCommand(NewArtifactsCmd())
+	RootCmd.AddCommand(NewSpawnCmd())
+	RootCmd.AddCommand(NewKillCmd())
 }
 
 var RootCmd = &cobra.Command{

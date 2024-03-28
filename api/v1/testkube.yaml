@@ -7806,6 +7806,11 @@ components:
           $ref: "#/components/schemas/TestWorkflowJobConfig"
         pod:
           $ref: "#/components/schemas/TestWorkflowPodConfig"
+        spawn:
+          type: object
+          description: "map of pods to spawn"
+          additionalProperties:
+            $ref: "#/components/schemas/TestWorkflowSpawnInstruction"
         setup:
           type: array
           items:
@@ -7834,6 +7839,11 @@ components:
           $ref: "#/components/schemas/TestWorkflowContainerConfig"
         job:
           $ref: "#/components/schemas/TestWorkflowJobConfig"
+        spawn:
+          type: object
+          description: "map of pods to spawn"
+          additionalProperties:
+            $ref: "#/components/schemas/TestWorkflowSpawnInstruction"
         pod:
           $ref: "#/components/schemas/TestWorkflowPodConfig"
         setup:
@@ -7868,6 +7878,11 @@ components:
         optional:
           type: boolean
           description: is the step optional, so the failure won't affect the TestWorkflow result
+        spawn:
+          type: object
+          description: "map of pods to spawn"
+          additionalProperties:
+            $ref: "#/components/schemas/TestWorkflowSpawnInstruction"
         retry:
           $ref: "#/components/schemas/TestWorkflowRetryPolicy"
         timeout:
@@ -7926,6 +7941,11 @@ components:
             $ref: "#/components/schemas/TestWorkflowTemplateRef"
         template:
           $ref: "#/components/schemas/TestWorkflowTemplateRef"
+        spawn:
+          type: object
+          description: "map of pods to spawn"
+          additionalProperties:
+            $ref: "#/components/schemas/TestWorkflowSpawnInstruction"
         retry:
           $ref: "#/components/schemas/TestWorkflowRetryPolicy"
         timeout:
@@ -8257,6 +8277,14 @@ components:
           items:
             $ref: "#/components/schemas/TestWorkflowContentTarball"
 
+    TestWorkflowSpawnContent:
+      type: object
+      properties:
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestWorkflowContentFile"
+
     TestWorkflowContentGit:
       type: object
       properties:
@@ -8318,6 +8346,60 @@ components:
       required:
       - url
       - path
+
+    TestWorkflowSpawnInstruction:
+      type: object
+      properties:
+        count:
+          $ref: "#/components/schemas/BoxedString"
+        maxCount:
+          $ref: "#/components/schemas/BoxedString"
+        parallelism:
+          $ref: "#/components/schemas/BoxedString"
+        ready:
+          type: string
+          description: "expression that determines if the pod initialization has completed successfully"
+        error:
+          type: string
+          description: "expression that determines if the pod initialization has failed"
+        timeout:
+          type: string
+          pattern: "^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$"
+          description: how long we should wait for successful initialization
+        matrix:
+          type: object
+          description: "matrix of parameters to spawn instances (static)"
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        matrixExpressions:
+          type: object
+          description: "matrix of parameters to spawn instances (expressions)"
+          additionalProperties:
+            type: string
+        shards:
+          type: object
+          description: "parameters that should be distributed across sharded instances (static)"
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        shardExpressions:
+          type: object
+          description: "parameters that should be distributed across sharded instances (expressions)"
+          additionalProperties:
+            type: string
+        content:
+          $ref: "#/components/schemas/TestWorkflowSpawnContent"
+        pod:
+          type: object
+          description: "pod template to spawn"
+          additionalProperties: {}
+        container:
+          type: object
+          description: "container definition for simplicity"
+          additionalProperties: {}
 
     TestWorkflowRef:
       type: object

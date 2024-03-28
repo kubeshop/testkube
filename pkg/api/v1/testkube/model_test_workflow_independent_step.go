@@ -17,8 +17,10 @@ type TestWorkflowIndependentStep struct {
 	// is the step expected to fail
 	Negative bool `json:"negative,omitempty"`
 	// is the step optional, so the failure won't affect the TestWorkflow result
-	Optional bool                     `json:"optional,omitempty"`
-	Retry    *TestWorkflowRetryPolicy `json:"retry,omitempty"`
+	Optional bool `json:"optional,omitempty"`
+	// map of pods to spawn
+	Spawn map[string]TestWorkflowSpawnInstruction `json:"spawn,omitempty"`
+	Retry *TestWorkflowRetryPolicy                `json:"retry,omitempty"`
 	// maximum time this step may take
 	Timeout string `json:"timeout,omitempty"`
 	// delay before the step

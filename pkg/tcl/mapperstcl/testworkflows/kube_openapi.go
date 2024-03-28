@@ -9,6 +9,8 @@
 package testworkflows
 
 import (
+	"encoding/json"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -78,6 +80,24 @@ func MapInt32ToBoxedInteger(v *int32) *testkube.BoxedInteger {
 		return nil
 	}
 	return &testkube.BoxedInteger{Value: *v}
+}
+
+func MapIntOrStringToBoxedString(v *intstr.IntOrString) *testkube.BoxedString {
+	if v == nil {
+		return nil
+	}
+	return MapStringToBoxedString(common.Ptr(v.String()))
+}
+
+func MapIntOrStringSliceMapToStringSliceMap(v map[string][]intstr.IntOrString) map[string][]string {
+	if v == nil {
+		return nil
+	}
+	m := make(map[string][]string, len(v))
+	for k, vv := range v {
+		m[k] = common.MapSlice(vv, MapIntOrStringToString)
+	}
+	return m
 }
 
 func MapQuantityToBoxedString(v *resource.Quantity) *testkube.BoxedString {
@@ -674,6 +694,54 @@ func MapRetryPolicyKubeToAPI(v testworkflowsv1.RetryPolicy) testkube.TestWorkflo
 	}
 }
 
+func MapSpawnContentKubeToAPI(v testworkflowsv1.SpawnContent) testkube.TestWorkflowSpawnContent {
+	return testkube.TestWorkflowSpawnContent{
+		Files: common.MapSlice(v.Files, MapContentFileKubeToAPI),
+	}
+}
+
+func MapSpawnInstructionKubeToAPI(v testworkflowsv1.SpawnInstruction) testkube.TestWorkflowSpawnInstruction {
+	// Convert PodTemplateSpec and Container to map[string]interface{}
+	var pod, container map[string]interface{}
+	vv, err := json.Marshal(v.Pod)
+	if err == nil {
+		_ = json.Unmarshal(vv, &pod)
+	}
+	if v.Container != nil {
+		vv, err = json.Marshal(v.Container)
+		if err == nil {
+			_ = json.Unmarshal(vv, &container)
+		}
+	}
+
+	return testkube.TestWorkflowSpawnInstruction{
+		Count:             MapIntOrStringToBoxedString(v.Count),
+		MaxCount:          MapIntOrStringToBoxedString(v.MaxCount),
+		Parallelism:       MapIntOrStringToBoxedString(v.Parallelism),
+		Ready:             v.Ready,
+		Error_:            v.Error,
+		Timeout:           v.Timeout,
+		Matrix:            MapIntOrStringSliceMapToStringSliceMap(v.Matrix),
+		MatrixExpressions: v.MatrixExpressions,
+		Shards:            MapIntOrStringSliceMapToStringSliceMap(v.Shards),
+		ShardExpressions:  v.ShardExpressions,
+		Content:           common.MapPtr(v.Content, MapSpawnContentKubeToAPI),
+		Pod:               pod,
+		Container:         container,
+	}
+}
+
+func MapSpawnKubeToAPI(v map[string]testworkflowsv1.SpawnInstruction) map[string]testkube.TestWorkflowSpawnInstruction {
+	if v == nil {
+		return nil
+	}
+	r := make(map[string]testkube.TestWorkflowSpawnInstruction, len(v))
+	for k, vv := range v {
+		r[k] = MapSpawnInstructionKubeToAPI(vv)
+	}
+	return r
+}
+
 func MapStepKubeToAPI(v testworkflowsv1.Step) testkube.TestWorkflowStep {
 	return testkube.TestWorkflowStep{
 		Name:       v.Name,
@@ -686,6 +754,7 @@ func MapStepKubeToAPI(v testworkflowsv1.Step) testkube.TestWorkflowStep {
 		Timeout:    v.Timeout,
 		Delay:      v.Delay,
 		Content:    common.MapPtr(v.Content, MapContentKubeToAPI),
+		Spawn:      MapSpawnKubeToAPI(v.Spawn),
 		Shell:      v.Shell,
 		Run:        common.MapPtr(v.Run, MapStepRunKubeToAPI),
 		WorkingDir: MapStringToBoxedString(v.WorkingDir),
@@ -707,6 +776,7 @@ func MapIndependentStepKubeToAPI(v testworkflowsv1.IndependentStep) testkube.Tes
 		Timeout:    v.Timeout,
 		Delay:      v.Delay,
 		Content:    common.MapPtr(v.Content, MapContentKubeToAPI),
+		Spawn:      MapSpawnKubeToAPI(v.Spawn),
 		Shell:      v.Shell,
 		Run:        common.MapPtr(v.Run, MapStepRunKubeToAPI),
 		WorkingDir: MapStringToBoxedString(v.WorkingDir),
@@ -726,6 +796,7 @@ func MapSpecKubeToAPI(v testworkflowsv1.TestWorkflowSpec) testkube.TestWorkflowS
 		Container: common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
 		Job:       common.MapPtr(v.Job, MapJobConfigKubeToAPI),
 		Pod:       common.MapPtr(v.Pod, MapPodConfigKubeToAPI),
+		Spawn:     MapSpawnKubeToAPI(v.Spawn),
 		Setup:     common.MapSlice(v.Setup, MapStepKubeToAPI),
 		Steps:     common.MapSlice(v.Steps, MapStepKubeToAPI),
 		After:     common.MapSlice(v.After, MapStepKubeToAPI),
@@ -740,6 +811,7 @@ func MapTemplateSpecKubeToAPI(v testworkflowsv1.TestWorkflowTemplateSpec) testku
 		Container: common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
 		Job:       common.MapPtr(v.Job, MapJobConfigKubeToAPI),
 		Pod:       common.MapPtr(v.Pod, MapPodConfigKubeToAPI),
+		Spawn:     MapSpawnKubeToAPI(v.Spawn),
 		Setup:     common.MapSlice(v.Setup, MapIndependentStepKubeToAPI),
 		Steps:     common.MapSlice(v.Steps, MapIndependentStepKubeToAPI),
 		After:     common.MapSlice(v.After, MapIndependentStepKubeToAPI),
