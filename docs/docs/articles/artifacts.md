@@ -88,6 +88,7 @@ Just keep in mind that all values need to be set:
       volumeMountPath: /data
 ```
 `storageClassName` should be one which can support `ReadWriteMany` access mode, like NFS or similar one.
+Consider checking your Kubernetes provider documentation for more information about which storage classes supports it.
 
 
 
