@@ -711,6 +711,12 @@ func MapSpawnInstructionKubeToAPI(v testworkflowsv1.SpawnInstruction) testkube.T
 		vv, err = json.Marshal(v.Container)
 		if err == nil {
 			_ = json.Unmarshal(vv, &container)
+			if v.Container.Name == "" {
+				delete(container, "name")
+			}
+			if v.Container.Resources.Requests == nil && v.Container.Resources.Limits == nil {
+				delete(container, "resources")
+			}
 		}
 	}
 
