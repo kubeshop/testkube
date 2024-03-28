@@ -29,6 +29,12 @@ func TestTokenizeSimple(t *testing.T) {
 	assert.Equal(t, []token{tokenAccessor("a"), tokenOpen, tokenAccessor("b"), tokenComma, tokenJson(true), tokenClose}, mustTokenize(`a(b, true)`))
 	assert.Equal(t, []token{tokenJson(noneValue)}, mustTokenize("null"))
 	assert.Equal(t, []token{tokenJson(noneValue), tokenMath("+"), tokenJson(4.0)}, mustTokenize("null + 4"))
+	assert.Equal(t, []token{tokenJson([]interface{}{1.0}), tokenPropertyAccessor("0")}, mustTokenize("[1].0"))
+}
+
+func TestTokenizeWildcard(t *testing.T) {
+	assert.Equal(t, []token{tokenAccessor("a.b.c.*.d.e")}, mustTokenize(`a.b.c.*.d.e`))
+	assert.Equal(t, []token{tokenAccessor("a.b.c.0.d.e")}, mustTokenize(`a.b.c.0.d.e`))
 }
 
 func TestTokenizeJson(t *testing.T) {

@@ -117,6 +117,16 @@ func toMap(s interface{}) (map[string]interface{}, error) {
 		return nil, nil
 	}
 	// Convert
+	if isStruct(s) {
+		v, err := json.Marshal(s)
+		if err != nil {
+			return nil, fmt.Errorf("error while marshaling value: %v: %v", s, err)
+		}
+		err = json.Unmarshal(v, &s)
+		if err != nil {
+			return nil, fmt.Errorf("error while unmarshaling value: %v: %v", s, err)
+		}
+	}
 	if isMap(s) {
 		value := reflect.ValueOf(s)
 		res := make(map[string]interface{}, value.Len())
