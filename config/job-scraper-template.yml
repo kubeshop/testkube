@@ -54,7 +54,7 @@ spec:
           {{- end }}
         {{- end }}
       {{- if .ArtifactRequest }}
-        {{- if and .ArtifactRequest.VolumeMountPath .ArtifactRequest.StorageClassName }}
+        {{- if and .ArtifactRequest.VolumeMountPath (or .ArtifactRequest.StorageClassName .ArtifactRequest.UseDefaultStorageClassName) }}
       volumes:
         - name: artifact-volume
           persistentVolumeClaim:

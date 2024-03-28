@@ -29,7 +29,7 @@ spec:
           mountPath: /etc/certs
         {{- end }}
         {{- if .ArtifactRequest }}
-          {{- if and .ArtifactRequest.VolumeMountPath  .ArtifactRequest.StorageClassName }}
+          {{- if and .ArtifactRequest.VolumeMountPath (or .ArtifactRequest.StorageClassName .ArtifactRequest.UseDefaultStorageClassName) }}
         - name: artifact-volume
           mountPath: {{ .ArtifactRequest.VolumeMountPath }}
           {{- end }}
@@ -109,7 +109,7 @@ spec:
           name: {{ .AgentAPITLSSecret }}
         {{- end }}
         {{- if .ArtifactRequest }}
-          {{- if and .ArtifactRequest.VolumeMountPath .ArtifactRequest.StorageClassName }}
+          {{- if and .ArtifactRequest.VolumeMountPath (or .ArtifactRequest.StorageClassName .ArtifactRequest.UseDefaultStorageClassName) }}
         - name: artifact-volume
           mountPath: {{ .ArtifactRequest.VolumeMountPath }}
           {{- end }}
@@ -140,7 +140,7 @@ spec:
           secretName: {{ .AgentAPITLSSecret }}
       {{- end }}
       {{- if .ArtifactRequest }}
-        {{- if and .ArtifactRequest.VolumeMountPath .ArtifactRequest.StorageClassName }}
+        {{- if and .ArtifactRequest.VolumeMountPath (or .ArtifactRequest.StorageClassName .ArtifactRequest.UseDefaultStorageClassName) }}
       - name: artifact-volume
         persistentVolumeClaim:
           claimName: {{ .Name }}-pvc

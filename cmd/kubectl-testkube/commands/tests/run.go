@@ -70,6 +70,7 @@ func NewRunTestCmd() *cobra.Command {
 		artifactStorageBucket              string
 		artifactOmitFolderPerExecution     bool
 		artifactSharedBetweenPods          bool
+		artifactUseDefaultStorageClassName bool
 		silentMode                         bool
 		slavePodRequestsCpu                string
 		slavePodRequestsMemory             string
@@ -180,13 +181,14 @@ func NewRunTestCmd() *cobra.Command {
 			ui.ExitOnError("getting client", err)
 
 			if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(artifactDirs) != 0 ||
-				artifactStorageBucket != "" || artifactOmitFolderPerExecution {
+				artifactStorageBucket != "" || artifactOmitFolderPerExecution || artifactUseDefaultStorageClassName {
 				options.ArtifactRequest = &testkube.ArtifactRequest{
-					StorageClassName:       artifactStorageClassName,
-					VolumeMountPath:        artifactVolumeMountPath,
-					Dirs:                   artifactDirs,
-					StorageBucket:          artifactStorageBucket,
-					OmitFolderPerExecution: artifactOmitFolderPerExecution,
+					StorageClassName:           artifactStorageClassName,
+					VolumeMountPath:            artifactVolumeMountPath,
+					Dirs:                       artifactDirs,
+					StorageBucket:              artifactStorageBucket,
+					OmitFolderPerExecution:     artifactOmitFolderPerExecution,
+					UseDefaultStorageClassName: artifactUseDefaultStorageClassName,
 				}
 			}
 
@@ -404,6 +406,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&artifactStorageBucket, "artifact-storage-bucket", "", "artifact storage bucket")
 	cmd.Flags().BoolVarP(&artifactOmitFolderPerExecution, "artifact-omit-folder-per-execution", "", false, "don't store artifacts in execution folder")
 	cmd.Flags().BoolVarP(&artifactSharedBetweenPods, "artifact-shared-between-pods", "", false, "whether to share volume between pods")
+	cmd.Flags().BoolVarP(&artifactUseDefaultStorageClassName, "artifact-use-default-storage-class-name", "", false, "whether to use default storage class name")
 	cmd.Flags().BoolVarP(&silentMode, "silent", "", false, "don't print intermediate test execution")
 	cmd.Flags().StringVar(&slavePodRequestsCpu, "slave-pod-requests-cpu", "", "slave pod resource requests cpu")
 	cmd.Flags().StringVar(&slavePodRequestsMemory, "slave-pod-requests-memory", "", "slave pod resource requests memory")
