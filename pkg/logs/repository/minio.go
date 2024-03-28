@@ -41,7 +41,7 @@ type MinioLogsRepository struct {
 func (r MinioLogsRepository) Get(ctx context.Context, id string) (chan events.LogResponse, error) {
 	file, info, err := r.storageClient.DownloadFileFromBucket(ctx, r.bucket, "", id)
 	if err != nil {
-		r.log.Errorw("error downloading log file from bucket", "error", err)
+		r.log.Errorw("error downloading log file from bucket", "error", err, "bucket", r.bucket, "id", id)
 		return nil, err
 	}
 
