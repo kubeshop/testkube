@@ -87,8 +87,7 @@ Just keep in mind that all values need to be set:
       storageClassName: standard-rwx
       volumeMountPath: /data
 ```
-
-
+And storageClassName should be one which can support `ReadWriteMany` access mode, like NFS or similar one.
 
 
 
@@ -117,7 +116,7 @@ spec:
 You have to define the storage class name, volume mount path and directories in this volume with test artifacts.
 Default volume mount path is `/data/artifacts` and directory is `.` .
 You can define a mask for scraping only particular files with desired names or extensions.
-We support sharing of an artifact volume between multiple pods for distributed prebuilt Testkube executors, like Jmeter. Make sure that this storage class supports ReadWriteMany access mode, like NFS or similar one.
+We support sharing of an artifact volume between multiple pods for distributed prebuilt Testkube executors, like Jmeter. Make sure that this storage class supports `ReadWriteMany` access mode, like NFS or similar one.
 Make sure your container executor definition has `artifacts` feature. For example:
 
 ```yaml
