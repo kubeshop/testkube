@@ -54,7 +54,7 @@ Alternatively, these values can be read from Kubernetes secrets and set:
 For executors that produce files during test execution, Testkube supports collecting (scraping) these artifacts and storing them in our S3 compatible file storage. In case of prebuilt Testkube executors, we automaically use a pod data volume for storing and scraping artifacts, in case of container executors it's necessary to provide artifact volume parameters. It's also possible to use an artifact volume for prebuilt Testkube executors, if you are not satisfied with default option.
 
 
-You can override the default volume mount path and directory for storing artifacts in the executor definition:
+You can override the default volume mount path in the `Test` definition:
 
 ```yaml
 apiVersion: tests.testkube.io/v3
