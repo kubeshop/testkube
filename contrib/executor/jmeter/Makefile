@@ -33,7 +33,7 @@ test:
 
 .PHONY: integration-test
 integration-test:
-	INTEGRATION=y gotestsum --format short-verbose -- -run _Integration -cover ./...
+	INTEGRATION=y gotestsum --format pkgname -- -run _Integration -cover ./...
 
 .PHONY: cover
 cover:

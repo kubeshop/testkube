@@ -20,20 +20,13 @@ const DefaultDataDir = "/data"
 
 var _ Adapter = &MinioV2Adapter{}
 
-type ErrMinioV2AdapterDisconnected struct {
-}
-
-func (e ErrMinioV2AdapterDisconnected) Error() string {
-	return "minio consumer disconnected"
-}
-
 // NewMinioV2Adapter creates new MinioV2Adapter which will send data to local MinIO bucket
 func NewMinioV2Adapter(endpoint, accessKeyID, secretAccessKey, region, token, bucket string, ssl, skipVerify bool, certFile, keyFile, caFile string) (*MinioV2Adapter, error) {
 	ctx := context.Background()
 	opts := minioconnecter.GetTLSOptions(ssl, skipVerify, certFile, keyFile, caFile)
 	c := &MinioV2Adapter{
 		minioConnecter: minioconnecter.NewConnecter(endpoint, accessKeyID, secretAccessKey, region, token, bucket, log.DefaultLogger, opts...),
-		Log:            log.DefaultLogger,
+		log:            log.DefaultLogger,
 		bucket:         bucket,
 		region:         region,
 		files:          make(map[string]*os.File),
@@ -41,14 +34,14 @@ func NewMinioV2Adapter(endpoint, accessKeyID, secretAccessKey, region, token, bu
 	}
 	minioClient, err := c.minioConnecter.GetClient()
 	if err != nil {
-		c.Log.Errorw("error connecting to minio", "err", err)
+		c.log.Errorw("error connecting to minio", "err", err)
 		return c, err
 	}
 
 	c.minioClient = minioClient
 	exists, err := c.minioClient.BucketExists(ctx, c.bucket)
 	if err != nil {
-		c.Log.Errorw("error checking if bucket exists", "err", err)
+		c.log.Errorw("error checking if bucket exists", "err", err)
 		return c, err
 	}
 
@@ -56,7 +49,7 @@ func NewMinioV2Adapter(endpoint, accessKeyID, secretAccessKey, region, token, bu
 		err = c.minioClient.MakeBucket(ctx, c.bucket,
 			minio.MakeBucketOptions{Region: c.region})
 		if err != nil {
-			c.Log.Errorw("error creating bucket", "err", err)
+			c.log.Errorw("error creating bucket", "err", err)
 			return c, err
 		}
 	}
@@ -68,7 +61,7 @@ type MinioV2Adapter struct {
 	minioClient    *minio.Client
 	bucket         string
 	region         string
-	Log            *zap.SugaredLogger
+	log            *zap.SugaredLogger
 	traceMessages  bool
 	lock           sync.RWMutex
 	path           string
@@ -122,7 +115,7 @@ func (s *MinioV2Adapter) WithPath(path string) {
 
 func (s *MinioV2Adapter) Notify(ctx context.Context, id string, e events.Log) error {
 	if s.traceMessages {
-		s.Log.Debugw("minio consumer notify", "id", id, "event", e)
+		s.log.Debugw("minio consumer notify", "id", id, "event", e)
 	}
 
 	chunk, err := json.Marshal(e)
@@ -141,7 +134,7 @@ func (s *MinioV2Adapter) Notify(ctx context.Context, id string, e events.Log) er
 }
 
 func (s *MinioV2Adapter) Stop(ctx context.Context, id string) error {
-	s.Log.Debugw("minio consumer stop", "id", id)
+	s.log.Debugw("minio consumer stop", "id", id)
 
 	file, err := s.getFile(id)
 	if err != nil {
@@ -161,10 +154,10 @@ func (s *MinioV2Adapter) Stop(ctx context.Context, id string) error {
 
 	info, err := s.minioClient.PutObject(ctx, s.bucket, id, file, stat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
-		s.Log.Errorw("error putting object", "err", err)
+		s.log.Errorw("error putting object", "err", err)
 		return err
 	}
-	s.Log.Debugw("put object successfully", "id", id, "s.bucket", s.bucket, "uploadInfo", info)
+	s.log.Debugw("put object successfully", "id", id, "s.bucket", s.bucket, "uploadInfo", info)
 
 	// clean memory
 	err = file.Close()
