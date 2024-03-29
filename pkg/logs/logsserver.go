@@ -1,6 +1,8 @@
 package logs
 
 import (
+	"fmt"
+
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/pkg/log"
@@ -19,13 +21,16 @@ func NewLogsServer(repo repository.Factory, state state.Interface) *LogsServer {
 
 type LogsServer struct {
 	pb.UnimplementedLogsServiceServer
-	repoFactory repository.Factory
-	state       state.Interface
-	log         *zap.SugaredLogger
+	repoFactory   repository.Factory
+	state         state.Interface
+	log           *zap.SugaredLogger
+	traceMessages bool
 }
 
 func (s LogsServer) Logs(req *pb.LogRequest, stream pb.LogsService_LogsServer) error {
 	ctx := stream.Context()
+
+	log := s.log.With("execution_id", req.ExecutionId)
 
 	// get state of current log stream (pending or finished)
 	st, err := s.state.Get(ctx, req.ExecutionId)
@@ -33,15 +38,13 @@ func (s LogsServer) Logs(req *pb.LogRequest, stream pb.LogsService_LogsServer) e
 		return err
 	}
 
-	s.log.Debugw("state for execution", "id", req.ExecutionId, "state", st)
-
 	// get valid repository based on state
 	repo, err := s.repoFactory.GetRepository(st)
 	if err != nil {
 		return err
 	}
 
-	s.log.Debugw("starting sending stream", "repo", repo)
+	log.Debugw("starting sending log stream", "repo", fmt.Sprintf("%T", repo), "state", st)
 
 	// stream logs from repository through GRPC channel
 	ch, err := repo.Get(ctx, req.ExecutionId)
@@ -50,13 +53,20 @@ func (s LogsServer) Logs(req *pb.LogRequest, stream pb.LogsService_LogsServer) e
 	}
 
 	for l := range ch {
-		s.log.Debug("sending log chunk", "log", l)
+		if s.traceMessages {
+			log.Debugw("sending log chunk", "log", l)
+		}
 		if err := stream.Send(pb.MapResponseToPB(l)); err != nil {
 			return err
 		}
 	}
 
-	s.log.Debugw("stream finished", "id", req.ExecutionId)
+	log.Debugw("log stream finished")
 
 	return nil
+}
+
+func (s *LogsServer) WithMessageTracing(enabled bool) *LogsServer {
+	s.traceMessages = enabled
+	return s
 }

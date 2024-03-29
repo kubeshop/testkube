@@ -22,6 +22,7 @@ const (
 	SourceScheduler         = "test-scheduler"
 	SourceContainerExecutor = "container-executor"
 	SourceJobExecutor       = "job-executor"
+	SourceLogsProxy         = "logs-proxy"
 )
 
 // check if trigger implements model generic event type
