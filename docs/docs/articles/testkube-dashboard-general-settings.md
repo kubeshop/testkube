@@ -30,7 +30,7 @@ In the Execution section of the Settings tab, you can set up a command or a scri
 
 ![Variable Tab](../img/variable-tab-1.14.png)
 
-Visit [Using Test Variables](./adding-tests-variables.md) for a description of adding Variables and Secrets.
+Visit [Using Test Variables](./adding-tests-variables.mdx) for a description of adding Variables and Secrets.
 
 ## Scheduling
 

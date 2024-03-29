@@ -1,0 +1,15 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: edge-cases-expected-failure-suite
+  labels:
+    core-tests: expected-fail
+spec:
+  steps:
+  - execute:
+      workflows:
+      - name: expected-fail-cypress-incorrect-repo-path
+      - name: expected-fail-cypress-incorrect-workingdir
+      - name: expected-fail-cypress-resource-limits
+      - name: expected-fail-cypress-artifacts-condition-always-with-artifacts
+      - name: expected-fail-k6-test-report-condition-always-no-artifacts

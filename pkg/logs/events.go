@@ -93,6 +93,7 @@ func (ls *LogsService) handleMessage(ctx context.Context, a adapter.Adapter, id 
 				log.Errorw("error nacking message", "error", err)
 				return
 			}
+			log.Errorw("error notifying adapter", "error", err)
 			return
 		}
 
@@ -176,7 +177,9 @@ func (ls *LogsService) handleStop(ctx context.Context, group string) func(msg *n
 			event   = events.Trigger{}
 		)
 
-		ls.log.Debugw("got stop event", "data", string(msg.Data))
+		if ls.traceMessages {
+			ls.log.Debugw("got stop event", "data", string(msg.Data))
+		}
 
 		err := json.Unmarshal(msg.Data, &event)
 		if err != nil {

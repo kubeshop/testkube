@@ -125,7 +125,7 @@ func main() {
 		svc.AddAdapter(cloudAdapter)
 
 	case common.ModeStandalone:
-		minioAdapter, err := adapter.NewMinioAdapter(cfg.StorageEndpoint,
+		minioAdapter, err := adapter.NewMinioV2Adapter(cfg.StorageEndpoint,
 			cfg.StorageAccessKeyID,
 			cfg.StorageSecretAccessKey,
 			cfg.StorageRegion,
@@ -136,6 +136,10 @@ func main() {
 			cfg.StorageCertFile,
 			cfg.StorageKeyFile,
 			cfg.StorageCAFile)
+
+		minioAdapter.
+			WithTraceMessages(cfg.TraceMessages).
+			WithPath(cfg.StorageFilePath)
 
 		if err != nil {
 			log.Errorw("error creating minio adapter", "error", err)

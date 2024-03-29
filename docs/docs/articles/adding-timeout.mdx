@@ -6,7 +6,7 @@ import TabItem from "@theme/TabItem";
 <Tabs>
 <TabItem value="dashboard" label="Dashboard" default>
 
-Click on a *Test > Settings > General > Timout*:
+Click on a _Test > Settings > General > Timeout_:
 
 ![How to setup Test Timeout in Dashboard](../img/dashboard-timeout.png)
 
@@ -14,13 +14,13 @@ Click on a *Test > Settings > General > Timout*:
 
 <TabItem value="cli" label="CLI">
 
-You can use the <code>--timemout</code> with the number of second in all commands related to a test.
+You can use the <code>--timeout</code> with the number of second in all commands related to a test.
 
 ```
 testkube update test --name my-test --timeout 10
 ```
 
-``` title="Expected output:"
+```title="Expected output:"
 Test updated testkube / curl 🥇
 ```
 
@@ -36,7 +36,7 @@ executionRequest:
 
 A full CRD example here:
 
-``` yaml
+```yaml
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
