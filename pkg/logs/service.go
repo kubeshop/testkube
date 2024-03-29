@@ -98,11 +98,10 @@ func (ls *LogsService) AddAdapter(a adapter.Adapter) {
 }
 
 func (ls *LogsService) Run(ctx context.Context) (err error) {
-	ls.log.Infow("starting logs service")
-
 	// Handle start and stop events from nats
 	// assuming after start event something is pushing data to the stream
 	// it can be our handler or some other service
+	go ls.metrics()
 
 	// For start event we must build stream for given execution id and start consuming it
 	// this one will must follow a queue group each pod will get it's own bunch of executions to handle
@@ -127,6 +126,18 @@ func (ls *LogsService) Run(ctx context.Context) (err error) {
 	return nil
 }
 
+func (ls *LogsService) metrics() {
+	for {
+		count := 0
+		ls.consumerInstances.Range(func(_, _ interface{}) bool {
+			count++
+			return true
+		})
+		ls.log.Infow("metrics", "consumers", count)
+		time.Sleep(1 * time.Minute)
+	}
+}
+
 // TODO handle TLS
 func (ls *LogsService) RunGRPCServer(ctx context.Context, creds credentials.TransportCredentials) error {
 	lis, err := net.Listen("tcp", ls.grpcAddress)
@@ -141,7 +152,8 @@ func (ls *LogsService) RunGRPCServer(ctx context.Context, creds credentials.Tran
 
 	ls.grpcServer = grpc.NewServer(opts...)
 
-	pb.RegisterLogsServiceServer(ls.grpcServer, NewLogsServer(ls.logsRepositoryFactory, ls.state))
+	logsServer := NewLogsServer(ls.logsRepositoryFactory, ls.state).WithMessageTracing(ls.traceMessages)
+	pb.RegisterLogsServiceServer(ls.grpcServer, logsServer)
 
 	ls.log.Infow("starting grpc server", "address", ls.grpcAddress)
 	return ls.grpcServer.Serve(lis)
