@@ -98,8 +98,6 @@ func (ls *LogsService) AddAdapter(a adapter.Adapter) {
 }
 
 func (ls *LogsService) Run(ctx context.Context) (err error) {
-	ls.log.Infow("starting logs service")
-
 	// Handle start and stop events from nats
 	// assuming after start event something is pushing data to the stream
 	// it can be our handler or some other service
