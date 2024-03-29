@@ -20,5 +20,4 @@ func TestLogsService_AddAdapter(t *testing.T) {
 
 		assert.Equal(t, 4, len(svc.adapters))
 	})
-
 }
