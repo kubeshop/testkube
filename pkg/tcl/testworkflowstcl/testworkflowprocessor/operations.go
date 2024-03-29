@@ -364,16 +364,13 @@ func ProcessDistribute(_ InternalProcessor, layer Intermediate, container Contai
 		return nil, nil
 	}
 
-	podsRef := layer.NextRef()
-	container.AppendEnv(corev1.EnvVar{Name: "TK_SRV_REF", Value: podsRef})
-
 	stage := NewContainerStage(layer.NextRef(), container.CreateChild())
 	stage.SetCategory("Run distributed pods")
 
 	stage.Container().
 		SetImage(defaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
-		SetCommand("/toolkit", "spawn", "{{env.TK_SRV_REF}}").
+		SetCommand("/toolkit", "spawn", layer.NextRef()).
 		EnableToolkit(stage.Ref())
 
 	args := make([]string, 0)

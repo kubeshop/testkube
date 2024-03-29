@@ -29,9 +29,12 @@ func NewKillCmd() *cobra.Command {
 
 		Run: func(cmd *cobra.Command, args []string) {
 			podsRef := args[0]
+			failed := false
 
 			// Initialize Kubernetes client
 			clientSet := env.Kubernetes()
+
+			// Delete pods
 			err := clientSet.CoreV1().Pods(env.Namespace()).DeleteCollection(context.Background(), metav1.DeleteOptions{
 				GracePeriodSeconds: common.Ptr(int64(0)),
 				PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
@@ -42,6 +45,24 @@ func NewKillCmd() *cobra.Command {
 			})
 			if err != nil {
 				fmt.Printf("failed to delete assisting pods: %s\n", err.Error())
+				failed = true
+			}
+
+			// Delete config maps
+			err = clientSet.CoreV1().ConfigMaps(env.Namespace()).DeleteCollection(context.Background(), metav1.DeleteOptions{
+				GracePeriodSeconds: common.Ptr(int64(0)),
+				PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
+			}, metav1.ListOptions{
+				LabelSelector: fmt.Sprintf("%s=%s,%s=%s",
+					testworkflowprocessor.ExecutionIdLabelName, env.ExecutionId(),
+					testworkflowprocessor.ExecutionAssistingPodRefName, podsRef),
+			})
+			if err != nil {
+				fmt.Printf("failed to delete configmaps of assisting pods: %s\n", err.Error())
+				failed = true
+			}
+
+			if failed {
 				os.Exit(1)
 			}
 			fmt.Printf("deleted assisting pods successfully\n")

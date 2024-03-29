@@ -10,10 +10,12 @@ package commands
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"math"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -35,6 +37,7 @@ import (
 )
 
 const MaxParallelism = 5000
+const maxConfigMapFileSize = 950 * 1024
 
 type Service struct {
 	Name        string
@@ -45,7 +48,125 @@ type Service struct {
 	Shards      map[string][]interface{}
 	Ready       string
 	Error       string
-	Pod         corev1.PodTemplateSpec
+	Content     *testworkflowsv1.SpawnContent
+	PodTemplate corev1.PodTemplateSpec
+}
+
+func (svc *Service) ShardIndexAt(index int64) int64 {
+	return index % svc.Count
+}
+
+func (svc *Service) CombinationIndexAt(index int64) int64 {
+	return (index - svc.ShardIndexAt(index)) / svc.Count
+}
+
+func (svc *Service) Combinations() int64 {
+	return countCombinations(svc.Matrix)
+}
+
+func (svc *Service) MatrixAt(index int64) map[string]interface{} {
+	return getMatrixValues(svc.Matrix, svc.CombinationIndexAt(index))
+}
+
+func (svc *Service) ShardsAt(index int64) map[string][]interface{} {
+	return getShardValues(svc.Matrix, svc.ShardIndexAt(index), svc.Count)
+}
+
+func (svc *Service) MachineAt(index int64) expressionstcl.Machine {
+	// Get basic indices
+	combinations := svc.Combinations()
+	shardIndex := svc.ShardIndexAt(index)
+	combinationIndex := svc.CombinationIndexAt(index)
+
+	// Compute values for this instance
+	matrixValues := svc.MatrixAt(combinationIndex)
+	shardValues := getShardValues(svc.Shards, shardIndex, svc.Count)
+
+	return expressionstcl.NewMachine().
+		Register("index", index).
+		Register("count", combinations*svc.Count).
+		Register("matrixIndex", combinationIndex).
+		Register("matrixCount", combinations).
+		Register("matrix", matrixValues).
+		Register("shardIndex", shardIndex).
+		Register("shardsCount", svc.Count).
+		Register("shard", shardValues)
+}
+
+func (svc *Service) Pod(ref string, longRunning bool, index int64, globalMachine expressionstcl.Machine) (*corev1.Pod, error) {
+	// Get details for current position
+	combinations := svc.Combinations()
+	machine := svc.MachineAt(index)
+
+	// Build a pod
+	spec := svc.PodTemplate.DeepCopy()
+	err := expressionstcl.FinalizeForce(&spec, machine, globalMachine)
+	if err != nil {
+		return nil, fmt.Errorf("[%d/%d] %s: error while resolving pod schema: %s", index+1, combinations*svc.Count, svc.Name, err.Error())
+	}
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-%s-%s-%d", env.ExecutionId(), ref, svc.Name, index),
+			Namespace: env.Namespace(),
+			Labels: map[string]string{
+				testworkflowprocessor.ExecutionIdLabelName:         env.ExecutionId(),
+				testworkflowprocessor.ExecutionAssistingPodRefName: ref,
+				testworkflowprocessor.AssistingPodServiceName:      "true",
+			},
+			Annotations: spec.Annotations,
+		},
+		Spec: spec.Spec,
+	}
+	if !longRunning && pod.Spec.RestartPolicy == "" {
+		pod.Spec.RestartPolicy = corev1.RestartPolicyNever
+	}
+	if pod.Labels == nil {
+		pod.Labels = map[string]string{}
+	}
+	pod.Labels[testworkflowprocessor.ExecutionIdLabelName] = env.ExecutionId()
+	pod.Labels[testworkflowprocessor.ExecutionAssistingPodRefName] = ref
+	pod.Labels[testworkflowprocessor.AssistingPodServiceName] = "true"
+	if pod.Spec.Subdomain == "" {
+		pod.Spec.Subdomain = testworkflowprocessor.AssistingPodServiceName
+	}
+	if pod.Spec.Hostname == "" {
+		pod.Spec.Hostname = fmt.Sprintf("%s-%s-%d", env.ExecutionId(), svc.Name, index)
+	}
+	// Append random names to pod containers
+	for i := range pod.Spec.InitContainers {
+		if pod.Spec.InitContainers[i].Name == "" {
+			pod.Spec.InitContainers[i].Name = fmt.Sprintf("c%s-%d", rand.String(5), i)
+		}
+	}
+	for i := range pod.Spec.Containers {
+		if pod.Spec.Containers[i].Name == "" {
+			pod.Spec.Containers[i].Name = fmt.Sprintf("c%s-%d", rand.String(5), len(pod.Spec.InitContainers)+i)
+		}
+	}
+
+	return pod, nil
+}
+
+func (svc *Service) Files(index int64, globalMachine expressionstcl.Machine) (map[string]string, error) {
+	// Ignore when there are no files expected
+	if svc.Content == nil || len(svc.Content.Files) == 0 {
+		return nil, nil
+	}
+
+	// Prepare data for computation
+	combinations := svc.Combinations()
+	machine := svc.MachineAt(index)
+	files := make(map[string]string, len(svc.Content.Files))
+
+	// Compute all files
+	var err error
+	for fileIndex, file := range svc.Content.Files {
+		files[file.Path], err = expressionstcl.EvalTemplate(file.Content, machine, globalMachine)
+		if err != nil {
+			return nil, fmt.Errorf("[%d/%d] %s: error while resolving %s (%d): %s", index+1, combinations*svc.Count, svc.Name, file.Path, fileIndex, err.Error())
+		}
+	}
+	return files, nil
 }
 
 type ServiceState struct {
@@ -178,6 +299,10 @@ func NewSpawnCmd() *cobra.Command {
 
 		Run: func(cmd *cobra.Command, args []string) {
 			podsRef := args[0]
+
+			// Initialize internal machine TODO: Think if it is fine
+			data.LoadState()
+			internalMachine := expressionstcl.CombinedMachines(data.EnvMachine, data.StateMachine, data.FileMachine)
 
 			// Initialize state
 			states := make(map[string][]ServiceState)
@@ -324,13 +449,14 @@ func NewSpawnCmd() *cobra.Command {
 					Shards:      shards,
 					Ready:       instructions[k].Ready,
 					Error:       instructions[k].Error,
-					Pod:         instructions[k].Pod,
+					PodTemplate: instructions[k].Pod,
+					Content:     instructions[k].Content,
 				}
 
 				// Define the default success/error clauses
 				if svc.Ready == "" {
 					if longRunning {
-						svc.Ready = "containerStarted"
+						svc.Ready = "ready && containerStarted"
 					} else {
 						svc.Ready = "success"
 					}
@@ -356,7 +482,7 @@ func NewSpawnCmd() *cobra.Command {
 
 			// Ensure the services are valid
 			for i := range services {
-				if len(services[i].Pod.Spec.Containers) == 0 {
+				if len(services[i].PodTemplate.Spec.Containers) == 0 {
 					fail("[%s].pod.spec.containers: no containers provided", services[i].Name)
 				}
 			}
@@ -370,6 +496,99 @@ func NewSpawnCmd() *cobra.Command {
 
 			// Initialize Kubernetes client
 			clientSet := env.Kubernetes()
+
+			// Initialize list of pods to schedule
+			// TODO: Reduce number of config maps (not one per file)
+			// TODO: Dedupe files
+			schedulablePods := make([][]*corev1.Pod, len(services))
+			fileMounts := make(map[string]corev1.VolumeMount)
+			fileVolumes := make(map[string]corev1.Volume)
+			configMaps := make([]*corev1.ConfigMap, 0)
+
+			for svcIndex, svc := range services {
+				combinations := countCombinations(svc.Matrix)
+				schedulablePods[svcIndex] = make([]*corev1.Pod, svc.Count*combinations)
+				for i := int64(0); i < svc.Count*combinations; i++ {
+					pod, err := svc.Pod(podsRef, longRunning, i, internalMachine)
+					if err != nil {
+						fail(err.Error())
+					}
+					files, err := svc.Files(i, internalMachine)
+					if err != nil {
+						fail(err.Error())
+					}
+					for path, content := range files {
+						hash := fmt.Sprintf("%x", sha256.Sum256([]byte(content)))
+
+						// Detect or create volume/mount
+						mount, ok := fileMounts[hash]
+						if !ok {
+							var cfgMap *corev1.ConfigMap
+							// Find config map which has enough space for this file
+							for _, cfg := range configMaps {
+								size := 0
+								for _, v := range cfg.Data {
+									size += len(v)
+								}
+								if size+len(content) < maxConfigMapFileSize {
+									cfgMap = cfg
+									break
+								}
+							}
+							// Create new config map if needed
+							if cfgMap == nil {
+								cfgName := fmt.Sprintf("%s-%s-vol-%d", env.ExecutionId(), podsRef, len(configMaps))
+								cfgMap = &corev1.ConfigMap{
+									ObjectMeta: metav1.ObjectMeta{
+										Name: cfgName,
+										Labels: map[string]string{
+											testworkflowprocessor.ExecutionIdLabelName:         env.ExecutionId(),
+											testworkflowprocessor.ExecutionAssistingPodRefName: podsRef,
+										},
+									},
+									Data:      map[string]string{},
+									Immutable: common.Ptr(true),
+								}
+								configMaps = append(configMaps, cfgMap)
+								fileVolumes[cfgName] = corev1.Volume{
+									Name: cfgName,
+									VolumeSource: corev1.VolumeSource{
+										ConfigMap: &corev1.ConfigMapVolumeSource{
+											LocalObjectReference: corev1.LocalObjectReference{Name: cfgName},
+										},
+									},
+								}
+							}
+							key := fmt.Sprintf("%d", len(cfgMap.Data))
+							cfgMap.Data[key] = content
+							mount = corev1.VolumeMount{
+								Name:     cfgMap.Name,
+								ReadOnly: true,
+								SubPath:  key,
+							}
+							fileMounts[hash] = mount
+						}
+
+						// Append the volume mount
+						mount.MountPath = path
+						for i := range pod.Spec.InitContainers {
+							pod.Spec.InitContainers[i].VolumeMounts = append(pod.Spec.InitContainers[i].VolumeMounts, mount)
+						}
+						for i := range pod.Spec.Containers {
+							pod.Spec.Containers[i].VolumeMounts = append(pod.Spec.Containers[i].VolumeMounts, mount)
+						}
+
+						// Append the volume if it's not yet added
+						if !slices.ContainsFunc(pod.Spec.Volumes, func(v corev1.Volume) bool {
+							return v.Name == mount.Name
+						}) {
+							pod.Spec.Volumes = append(pod.Spec.Volumes, fileVolumes[mount.Name])
+						}
+					}
+
+					schedulablePods[svcIndex][i] = pod
+				}
+			}
 
 			// Watch events for all Pod modifications
 			podWatch, err := clientSet.CoreV1().Pods(env.Namespace()).Watch(context.Background(), metav1.ListOptions{
@@ -414,7 +633,7 @@ func NewSpawnCmd() *cobra.Command {
 								}
 							}
 							for _, cond := range pod.Status.Conditions {
-								if cond.Type == "Ready" {
+								if cond.Type == "Ready" && cond.Status == "True" {
 									s.Ready = true
 								}
 							}
@@ -469,6 +688,19 @@ func NewSpawnCmd() *cobra.Command {
 				}
 			}()
 
+			// Create required config maps
+			if len(configMaps) > 0 {
+				fmt.Printf("Creating %d ConfigMaps for %d unique files.\n", len(configMaps), len(fileMounts))
+			}
+			for _, cfg := range configMaps {
+				_, err := clientSet.CoreV1().ConfigMaps(env.Namespace()).
+					Create(context.Background(), cfg, metav1.CreateOptions{})
+				if err != nil {
+					// TODO: Cleanup the rest of config maps
+					fail("creating ConfigMap: %s", err.Error())
+				}
+			}
+
 			// Prepare wait group to wait for all services
 			var wg sync.WaitGroup
 			wg.Add(len(services))
@@ -478,104 +710,42 @@ func NewSpawnCmd() *cobra.Command {
 			// TODO: Decouple
 			for i, v := range services {
 				go func(svc Service, svcIndex int) {
-					combinations := countCombinations(svc.Matrix)
+					combinations := svc.Combinations()
 
 					var swg sync.WaitGroup
 					swg.Add(int(combinations * svc.Count))
 					sema := make(chan struct{}, svc.Parallelism)
 
-					for combinationIndex := int64(0); combinationIndex < combinations; combinationIndex++ {
-						for shardIndex := int64(0); shardIndex < svc.Count; shardIndex++ {
-							sema <- struct{}{}
-							go func(combinationIndex int64, shardIndex int64) {
-								defer func() {
-									<-sema
-									swg.Done()
-								}()
+					for index, pod := range schedulablePods[svcIndex] {
+						sema <- struct{}{}
+						go func(index int64, pod *corev1.Pod) {
+							defer func() {
+								<-sema
+								swg.Done()
+							}()
 
-								// Compute values for this instance
-								index := combinationIndex*svc.Count + shardIndex
-								matrixValues := getMatrixValues(svc.Matrix, combinationIndex)
-								shardValues := getShardValues(svc.Shards, shardIndex, svc.Count)
-								machine := expressionstcl.NewMachine().
-									Register("index", index).
-									Register("count", combinations*svc.Count).
-									Register("matrixIndex", combinationIndex).
-									Register("matrixCount", combinations).
-									Register("matrix", matrixValues).
-									Register("shardIndex", shardIndex).
-									Register("shardsCount", svc.Count).
-									Register("shard", shardValues)
+							// Create the pod
+							pod, err = clientSet.CoreV1().Pods(env.Namespace()).
+								Create(context.Background(), pod, metav1.CreateOptions{})
+							if err != nil {
+								fail("[%d/%d] %s: error while creating pod: %s", index+1, combinations*svc.Count, svc.Name, err.Error())
+							}
 
-								// Build a pod
-								spec := svc.Pod.DeepCopy()
-								err := expressionstcl.FinalizeForce(&spec, machine)
-								if err != nil {
-									fail("[%d/%d] %s: error while resolving pod schema: %s", index+1, combinations*svc.Count, svc.Name, err.Error())
-								}
-								pod := &corev1.Pod{
-									ObjectMeta: metav1.ObjectMeta{
-										Name:      fmt.Sprintf("%s-%s-%s-%d", env.ExecutionId(), podsRef, svc.Name, index),
-										Namespace: env.Namespace(),
-										Labels: map[string]string{
-											testworkflowprocessor.ExecutionIdLabelName:         env.ExecutionId(),
-											testworkflowprocessor.ExecutionAssistingPodRefName: podsRef,
-											testworkflowprocessor.AssistingPodServiceName:      "true",
-										},
-										Annotations: spec.Annotations,
-									},
-									Spec: spec.Spec,
-								}
-								if !longRunning && pod.Spec.RestartPolicy == "" {
-									pod.Spec.RestartPolicy = corev1.RestartPolicyNever
-								}
-								if pod.Labels == nil {
-									pod.Labels = map[string]string{}
-								}
-								pod.Labels[testworkflowprocessor.ExecutionIdLabelName] = env.ExecutionId()
-								pod.Labels[testworkflowprocessor.ExecutionAssistingPodRefName] = podsRef
-								pod.Labels[testworkflowprocessor.AssistingPodServiceName] = "true"
-								if pod.Spec.Subdomain == "" {
-									pod.Spec.Subdomain = testworkflowprocessor.AssistingPodServiceName
-								}
-								if pod.Spec.Hostname == "" {
-									pod.Spec.Hostname = fmt.Sprintf("%s-%s-%d", env.ExecutionId(), svc.Name, index)
-								}
-								// Append random names to pod containers
-								for i := range pod.Spec.InitContainers {
-									if pod.Spec.InitContainers[i].Name == "" {
-										pod.Spec.InitContainers[i].Name = fmt.Sprintf("c%s-%d", rand.String(5), i)
-									}
-								}
-								for i := range pod.Spec.Containers {
-									if pod.Spec.Containers[i].Name == "" {
-										pod.Spec.Containers[i].Name = fmt.Sprintf("c%s-%d", rand.String(5), len(pod.Spec.InitContainers)+i)
-									}
-								}
+							// Inform about the pod creation
+							fmt.Printf("[%d/%d] %s: created pod\n", index+1, combinations*svc.Count, svc.Name)
 
-								// Create the pod
-								pod, err = clientSet.CoreV1().Pods(env.Namespace()).
-									Create(context.Background(), pod, metav1.CreateOptions{})
-								if err != nil {
-									fail("[%d/%d] %s: error while creating pod: %s", index+1, combinations*svc.Count, svc.Name, err.Error())
-								}
+							// Update the initial data
+							updateState(svc.Name, index, func(s ServiceState) ServiceState {
+								s.Name = pod.Name
+								s.Host = fmt.Sprintf("%s.%s.%s.svc.cluster.local", pod.Spec.Hostname, pod.Spec.Subdomain, pod.Namespace)
+								return s
+							})
 
-								// Inform about the pod creation
-								fmt.Printf("[%d/%d] %s: created pod\n", index+1, combinations*svc.Count, svc.Name)
+							// TODO: Support the timeout
 
-								// Update the initial data
-								updateState(svc.Name, index, func(s ServiceState) ServiceState {
-									s.Name = pod.Name
-									s.Host = fmt.Sprintf("%s.%s.%s.svc.cluster.local", pod.Spec.Hostname, pod.Spec.Subdomain, pod.Namespace)
-									return s
-								})
-
-								// TODO: Support the timeout
-
-								// Wait until it's ready
-								serviceLocks[svcIndex][index].Lock()
-							}(combinationIndex, shardIndex)
-						}
+							// Wait until it's ready
+							serviceLocks[svcIndex][index].Lock()
+						}(int64(index), pod)
 					}
 
 					swg.Wait()
