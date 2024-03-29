@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 ARG ALPINE_IMAGE
 FROM ${ALPINE_IMAGE}
-RUN apk --no-cache add ca-certificates libssl1.1 
+RUN apk --no-cache add ca-certificates 
 WORKDIR /root/
 COPY testkube-logs-sidecar /bin/app
 USER 1001
