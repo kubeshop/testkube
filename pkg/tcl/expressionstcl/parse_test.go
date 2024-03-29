@@ -24,6 +24,10 @@ func TestCompileBasic(t *testing.T) {
 func TestCompileTernary(t *testing.T) {
 	assert.Equal(t, "value", must(MustCompile(`true ? "value" : "another"`).Static().StringValue()))
 	assert.Equal(t, "another", must(MustCompile(`false ? "value" : "another"`).Static().StringValue()))
+	assert.Equal(t, "another", must(MustCompile(`5 == 3 ? "value" : "another"`).Static().StringValue()))
+	assert.Equal(t, "another", must(MustCompile(`5 == 3 && 2 == 4 ? "value" : "another"`).Static().StringValue()))
+	assert.Equal(t, "another", must(MustCompile(`5 == 3 || 2 == 4 ? "value" : "another"`).Static().StringValue()))
+	assert.Equal(t, "value", must(MustCompile(`3 == 3 || 2 == 4 ? "value" : "another"`).Static().StringValue()))
 	assert.Equal(t, "xyz", must(MustCompile(`false ? "value" : true ? "xyz" :"another"`).Static().StringValue()))
 	assert.Equal(t, "xyz", must(MustCompile(`false ? "value" : (true ? "xyz" :"another")`).Static().StringValue()))
 	assert.Equal(t, 5.78, must(MustCompile(`false ? 3 : (true ? 5.78 : 2)`).Static().FloatValue()))

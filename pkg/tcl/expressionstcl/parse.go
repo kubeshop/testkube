@@ -30,6 +30,9 @@ func parseNextExpression(t []token, priority int) (e Expression, i int, err erro
 
 		switch t[i].Type {
 		case tokenTypeTernary:
+			if priority >= 0 {
+				return e, i, nil
+			}
 			i += 1
 			te, ti, terr := parseNextExpression(t[i:], 0)
 			i += ti
