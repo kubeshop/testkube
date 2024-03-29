@@ -342,7 +342,7 @@ func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Executio
 	}
 
 	if jobOptions.ArtifactRequest != nil &&
-		(jobOptions.ArtifactRequest.StorageClassName != "" && jobOptions.ArtifactRequest.UseDefaultStorageClassName) {
+		(jobOptions.ArtifactRequest.StorageClassName != "" || jobOptions.ArtifactRequest.UseDefaultStorageClassName) {
 		c.Log.Debug("creating persistent volume claim with options", "options", jobOptions)
 		pvcsClient := c.ClientSet.CoreV1().PersistentVolumeClaims(execution.TestNamespace)
 		pvcSpec, err := NewPersistentVolumeClaimSpec(c.Log, NewPVCOptionsFromJobOptions(jobOptions, c.defaultStorageClassName))
