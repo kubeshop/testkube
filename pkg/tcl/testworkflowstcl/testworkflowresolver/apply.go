@@ -62,7 +62,7 @@ func InjectTemplate(workflow *testworkflowsv1.TestWorkflow, template testworkflo
 	// Apply basic configuration
 	workflow.Spec.Content = MergeContent(template.Spec.Content, workflow.Spec.Content)
 	workflow.Spec.Container = MergeContainerConfig(template.Spec.Container, workflow.Spec.Container)
-	workflow.Spec.Spawn = MergeMap(workflow.Spec.Spawn, template.Spec.Spawn)
+	workflow.Spec.Services = MergeMap(workflow.Spec.Services, template.Spec.Services)
 
 	// Include the steps from the template
 	setup := common.MapSlice(template.Spec.Setup, ConvertIndependentStepToStep)
@@ -82,7 +82,7 @@ func InjectStepTemplate(step *testworkflowsv1.Step, template testworkflowsv1.Tes
 	// Apply basic configuration
 	step.Content = MergeContent(template.Spec.Content, step.Content)
 	step.Container = MergeContainerConfig(template.Spec.Container, step.Container)
-	step.Spawn = MergeMap(step.Spawn, template.Spec.Spawn)
+	step.Services = MergeMap(step.Services, template.Spec.Services)
 
 	// Fast-track when the template doesn't contain any steps to run
 	if len(template.Spec.Setup) == 0 && len(template.Spec.Steps) == 0 && len(template.Spec.After) == 0 {

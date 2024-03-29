@@ -359,25 +359,25 @@ func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container Contain
 	return stage, nil
 }
 
-func ProcessSpawnStart(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
-	if len(step.Spawn) == 0 {
+func ProcessDistribute(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+	if len(step.Distribute) == 0 {
 		return nil, nil
 	}
 
 	podsRef := layer.NextRef()
-	container.AppendEnv(corev1.EnvVar{Name: "TK_SPAWN_REF", Value: podsRef})
+	container.AppendEnv(corev1.EnvVar{Name: "TK_SRV_REF", Value: podsRef})
 
 	stage := NewContainerStage(layer.NextRef(), container.CreateChild())
-	stage.SetCategory("Start assisting pods")
+	stage.SetCategory("Run distributed pods")
 
 	stage.Container().
 		SetImage(defaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
-		SetCommand("/toolkit", "spawn", "{{env.TK_SPAWN_REF}}").
+		SetCommand("/toolkit", "spawn", "{{env.TK_SRV_REF}}").
 		EnableToolkit(stage.Ref())
 
 	args := make([]string, 0)
-	for k, s := range step.Spawn {
+	for k, s := range step.Distribute {
 		instruction := s.DeepCopy()
 		if s.Container != nil {
 			instruction.Pod.Spec.Containers = append(instruction.Pod.Spec.Containers, *s.Container)
@@ -393,13 +393,47 @@ func ProcessSpawnStart(_ InternalProcessor, layer Intermediate, container Contai
 	return stage, nil
 }
 
-func ProcessSpawnStop(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
-	if len(step.Spawn) == 0 {
+func ProcessServicesStart(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+	if len(step.Services) == 0 {
+		return nil, nil
+	}
+
+	podsRef := layer.NextRef()
+	container.AppendEnv(corev1.EnvVar{Name: "TK_SRV_REF", Value: podsRef})
+
+	stage := NewContainerStage(layer.NextRef(), container.CreateChild())
+	stage.SetCategory("Start assisting pods")
+
+	stage.Container().
+		SetImage(defaultToolkitImage).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetCommand("/toolkit", "spawn", "{{env.TK_SRV_REF}}").
+		EnableToolkit(stage.Ref())
+
+	args := []string{"--services"}
+	for k, s := range step.Services {
+		instruction := s.DeepCopy()
+		if s.Container != nil {
+			instruction.Pod.Spec.Containers = append(instruction.Pod.Spec.Containers, *s.Container)
+		}
+		b, err := json.Marshal(instruction.SpawnInstructionBase)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("spawn[%s]: marshaling error", k))
+		}
+		args = append(args, "-i", fmt.Sprintf("%s=%s", k, expressionstcl.NewStringValue(string(b)).Template()))
+	}
+	stage.Container().SetArgs(args...)
+
+	return stage, nil
+}
+
+func ProcessServicesStop(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+	if len(step.Services) == 0 {
 		return nil, nil
 	}
 
 	stage := NewContainerStage(layer.NextRef(), container.CreateChild())
-	stage.SetCondition("always") // FIXME: actually, do it if "init" is not skipped
+	stage.SetCondition("always") // TODO: actually, it's enough to do it when ServicesInit is not skipped
 	stage.SetOptional(true)
 	stage.SetRetryPolicy(step.Retry)
 	stage.SetCategory("Cleanup assisting pods")
@@ -407,7 +441,7 @@ func ProcessSpawnStop(_ InternalProcessor, layer Intermediate, container Contain
 	stage.Container().
 		SetImage(defaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
-		SetCommand("/toolkit", "kill", "{{env.TK_SPAWN_REF}}").
+		SetCommand("/toolkit", "kill", "{{env.TK_SRV_REF}}").
 		EnableToolkit(stage.Ref())
 
 	return stage, nil

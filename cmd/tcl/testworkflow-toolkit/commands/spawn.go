@@ -168,6 +168,7 @@ func getShardValues(values map[string][]interface{}, index int64, count int64) m
 func NewSpawnCmd() *cobra.Command {
 	var (
 		instructionsStr []string
+		longRunning     bool
 	)
 
 	cmd := &cobra.Command{
@@ -182,8 +183,10 @@ func NewSpawnCmd() *cobra.Command {
 			states := make(map[string][]ServiceState)
 			var statesMu sync.Mutex
 			saveState := func() {
-				for k := range states {
-					data.PrintHintDetails(env.Ref(), fmt.Sprintf("spawn.%s", k), states[k])
+				if longRunning {
+					for k := range states {
+						data.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", k), states[k])
+					}
 				}
 			}
 			getState := func(name string, index int64) ServiceState {
@@ -234,11 +237,11 @@ func NewSpawnCmd() *cobra.Command {
 				// Resolve the shards and matrices
 				shards, err := readParams(instructions[k].Shards, instructions[k].ShardExpressions)
 				if err != nil {
-					fail("spawn[%s]: shards: %s", k, err)
+					fail("[%s]: shards: %s", k, err)
 				}
 				matrix, err := readParams(instructions[k].Matrix, instructions[k].MatrixExpressions)
 				if err != nil {
-					fail("spawn[%s]: shards: %s", k, err)
+					fail("[%s]: shards: %s", k, err)
 				}
 				minShards := int64(math.MaxInt64)
 				for key := range shards {
@@ -255,14 +258,14 @@ func NewSpawnCmd() *cobra.Command {
 				if instructions[k].Count != nil {
 					countVal, err := readCount(*instructions[k].Count)
 					if err != nil {
-						fail("spawn[%s].count: %s", k, err)
+						fail("[%s].count: %s", k, err)
 					}
 					count = &countVal
 				}
 				if instructions[k].MaxCount != nil {
 					countVal, err := readCount(*instructions[k].MaxCount)
 					if err != nil {
-						fail("spawn[%s].maxCount: %s\n", k, err)
+						fail("[%s].maxCount: %s\n", k, err)
 					}
 					maxCount = &countVal
 				}
@@ -296,7 +299,7 @@ func NewSpawnCmd() *cobra.Command {
 				if instructions[k].Parallelism != nil {
 					parallelismVal, err := readCount(*instructions[k].Parallelism)
 					if err != nil {
-						fail("spawn[%s].parallelism: %s", k, err)
+						fail("[%s].parallelism: %s", k, err)
 					}
 					parallelism = &parallelismVal
 				}
@@ -326,7 +329,11 @@ func NewSpawnCmd() *cobra.Command {
 
 				// Define the default success/error clauses
 				if svc.Ready == "" {
-					svc.Ready = "containerStarted"
+					if longRunning {
+						svc.Ready = "containerStarted"
+					} else {
+						svc.Ready = "success"
+					}
 				}
 				if svc.Error == "" {
 					svc.Error = "deleted || failed"
@@ -350,7 +357,7 @@ func NewSpawnCmd() *cobra.Command {
 			// Ensure the services are valid
 			for i := range services {
 				if len(services[i].Pod.Spec.Containers) == 0 {
-					fail("spawn[%s].pod.spec.containers: no containers provided", services[i].Name)
+					fail("[%s].pod.spec.containers: no containers provided", services[i].Name)
 				}
 			}
 
@@ -519,6 +526,9 @@ func NewSpawnCmd() *cobra.Command {
 									},
 									Spec: spec.Spec,
 								}
+								if !longRunning && pod.Spec.RestartPolicy == "" {
+									pod.Spec.RestartPolicy = corev1.RestartPolicyNever
+								}
 								if pod.Labels == nil {
 									pod.Labels = map[string]string{}
 								}
@@ -588,6 +598,7 @@ func NewSpawnCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringArrayVarP(&instructionsStr, "instructions", "i", nil, "pod instructions to start")
+	cmd.Flags().BoolVarP(&longRunning, "services", "s", false, "are these long-running services")
 
 	return cmd
 }

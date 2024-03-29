@@ -74,8 +74,8 @@ var StateMachine = expressionstcl.NewMachine().
 		return nil, false, nil
 	}).
 	RegisterAccessorExt(func(name string) (interface{}, bool, error) {
-		if strings.HasPrefix(name, "spawn.") {
-			return State.GetOutput("output." + name)
+		if strings.HasPrefix(name, "services.") {
+			return State.GetOutput(name)
 		}
 		return nil, false, nil
 	})

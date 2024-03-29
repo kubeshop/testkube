@@ -7806,9 +7806,9 @@ components:
           $ref: "#/components/schemas/TestWorkflowJobConfig"
         pod:
           $ref: "#/components/schemas/TestWorkflowPodConfig"
-        spawn:
+        services:
           type: object
-          description: "map of pods to spawn"
+          description: "map of long-running pods to spawn, like database"
           additionalProperties:
             $ref: "#/components/schemas/TestWorkflowSpawnInstruction"
         setup:
@@ -7839,9 +7839,9 @@ components:
           $ref: "#/components/schemas/TestWorkflowContainerConfig"
         job:
           $ref: "#/components/schemas/TestWorkflowJobConfig"
-        spawn:
+        services:
           type: object
-          description: "map of pods to spawn"
+          description: "map of long-running pods to spawn, like database"
           additionalProperties:
             $ref: "#/components/schemas/TestWorkflowSpawnInstruction"
         pod:
@@ -7878,9 +7878,14 @@ components:
         optional:
           type: boolean
           description: is the step optional, so the failure won't affect the TestWorkflow result
-        spawn:
+        services:
           type: object
-          description: "map of pods to spawn"
+          description: "map of long-running pods to spawn, like database"
+          additionalProperties:
+            $ref: "#/components/schemas/TestWorkflowSpawnInstruction"
+        distribute:
+          type: object
+          description: "map of pods to run for distributing the tests"
           additionalProperties:
             $ref: "#/components/schemas/TestWorkflowSpawnInstruction"
         retry:
@@ -7941,9 +7946,14 @@ components:
             $ref: "#/components/schemas/TestWorkflowTemplateRef"
         template:
           $ref: "#/components/schemas/TestWorkflowTemplateRef"
-        spawn:
+        services:
           type: object
-          description: "map of pods to spawn"
+          description: "map of long-running pods to spawn, like database"
+          additionalProperties:
+            $ref: "#/components/schemas/TestWorkflowSpawnInstruction"
+        distribute:
+          type: object
+          description: "map of pods to run for distributing the tests"
           additionalProperties:
             $ref: "#/components/schemas/TestWorkflowSpawnInstruction"
         retry:
