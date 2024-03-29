@@ -87,6 +87,12 @@ func (s *MinioV2Adapter) putFile(id string, f *os.File) {
 	s.files[id] = f
 }
 
+func (s *MinioV2Adapter) countFiles() int {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	return len(s.files)
+}
+
 func (s *MinioV2Adapter) getFile(id string) (f *os.File, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
@@ -134,7 +140,9 @@ func (s *MinioV2Adapter) Notify(ctx context.Context, id string, e events.Log) er
 }
 
 func (s *MinioV2Adapter) Stop(ctx context.Context, id string) error {
-	s.log.Debugw("minio consumer stop", "id", id)
+	log := s.log.With("id", id)
+
+	log.Debugw("stopping minio consumer")
 
 	file, err := s.getFile(id)
 	if err != nil {
@@ -154,10 +162,11 @@ func (s *MinioV2Adapter) Stop(ctx context.Context, id string) error {
 
 	info, err := s.minioClient.PutObject(ctx, s.bucket, id, file, stat.Size(), minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
-		s.log.Errorw("error putting object", "err", err)
+		log.Errorw("error putting object", "err", err)
 		return err
 	}
-	s.log.Debugw("put object successfully", "id", id, "s.bucket", s.bucket, "uploadInfo", info)
+
+	log.Debugw("put object successfully", "id", id, "s.bucket", s.bucket, "uploadInfo", info)
 
 	// clean memory
 	err = file.Close()
@@ -172,6 +181,8 @@ func (s *MinioV2Adapter) Stop(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
+
+	log.Debugw("minio consumer stopped, tmp file removed", "filesInUse", s.countFiles())
 
 	return nil
 }
