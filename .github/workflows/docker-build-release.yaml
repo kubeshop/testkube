@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - release/**
-      - ci/add-logs-service
     paths-ignore:
       - 'docs/**'
 env:
@@ -184,7 +183,6 @@ jobs:
           docker push kubeshop/testkube-tw-toolkit:${{ steps.commit.outputs.short }}
 
   logs_sidecar:
-    name: Pre-build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -245,7 +243,6 @@ jobs:
           docker manifest push -p kubeshop/testkube-logs-sidecar:${{ steps.commit.outputs.short }}
 
   logs_server:
-    name: Pre-build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
