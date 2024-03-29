@@ -78,6 +78,7 @@ func NewContainerExecutor(
 	debug bool,
 	logsStream logsclient.Stream,
 	features featureflags.FeatureFlags,
+	defaultStorageClassName string,
 ) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -89,29 +90,30 @@ func NewContainerExecutor(
 	}
 
 	return &ContainerExecutor{
-		clientSet:            clientSet,
-		repository:           repo,
-		log:                  log.DefaultLogger,
-		images:               images,
-		templates:            templates,
-		imageInspector:       imageInspector,
-		configMap:            configMap,
-		serviceAccountNames:  serviceAccountNames,
-		metrics:              metrics,
-		emitter:              emiter,
-		testsClient:          testsClient,
-		executorsClient:      executorsClient,
-		testExecutionsClient: testExecutionsClient,
-		templatesClient:      templatesClient,
-		registry:             registry,
-		podStartTimeout:      podStartTimeout,
-		clusterID:            clusterID,
-		dashboardURI:         dashboardURI,
-		apiURI:               apiURI,
-		natsURI:              natsUri,
-		debug:                debug,
-		logsStream:           logsStream,
-		features:             features,
+		clientSet:               clientSet,
+		repository:              repo,
+		log:                     log.DefaultLogger,
+		images:                  images,
+		templates:               templates,
+		imageInspector:          imageInspector,
+		configMap:               configMap,
+		serviceAccountNames:     serviceAccountNames,
+		metrics:                 metrics,
+		emitter:                 emiter,
+		testsClient:             testsClient,
+		executorsClient:         executorsClient,
+		testExecutionsClient:    testExecutionsClient,
+		templatesClient:         templatesClient,
+		registry:                registry,
+		podStartTimeout:         podStartTimeout,
+		clusterID:               clusterID,
+		dashboardURI:            dashboardURI,
+		apiURI:                  apiURI,
+		natsURI:                 natsUri,
+		debug:                   debug,
+		logsStream:              logsStream,
+		features:                features,
+		defaultStorageClassName: defaultStorageClassName,
 	}, nil
 }
 
@@ -225,7 +227,7 @@ func (c *ContainerExecutor) Logs(ctx context.Context, id, namespace string) (out
 
 		ids := []string{id}
 		if supportArtifacts && execution.ArtifactRequest != nil &&
-			(execution.ArtifactRequest.StorageClassName != "" || c.defaultStorageClassName != "") {
+			(execution.ArtifactRequest.StorageClassName != "" || execution.ArtifactRequest.UseDefaultStorageClassName) {
 			ids = append(ids, id+"-scraper")
 		}
 
@@ -314,16 +316,16 @@ func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Ex
 	}
 
 	jobOptions, err := NewJobOptions(c.log, c.templatesClient, c.images, c.templates, inspector,
-		c.serviceAccountNames, c.registry, c.clusterID, c.apiURI, c.defaultStorageClassName, execution, options, c.natsURI, c.debug)
+		c.serviceAccountNames, c.registry, c.clusterID, c.apiURI, execution, options, c.natsURI, c.debug)
 	if err != nil {
 		return nil, err
 	}
 
 	if jobOptions.ArtifactRequest != nil &&
-		(jobOptions.ArtifactRequest.StorageClassName != "" || c.defaultStorageClassName != "") {
+		(jobOptions.ArtifactRequest.StorageClassName != "" || jobOptions.ArtifactRequest.UseDefaultStorageClassName) {
 		c.log.Debug("creating persistent volume claim with options", "options", jobOptions)
 		pvcsClient := c.clientSet.CoreV1().PersistentVolumeClaims(execution.TestNamespace)
-		pvcSpec, err := client.NewPersistentVolumeClaimSpec(c.log, NewPVCOptionsFromJobOptions(*jobOptions))
+		pvcSpec, err := client.NewPersistentVolumeClaimSpec(c.log, NewPVCOptionsFromJobOptions(*jobOptions, c.defaultStorageClassName))
 		if err != nil {
 			return nil, err
 		}
@@ -346,7 +348,7 @@ func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Ex
 
 func (c *ContainerExecutor) cleanPVCVolume(ctx context.Context, execution *testkube.Execution) error {
 	if execution.ArtifactRequest != nil &&
-		(execution.ArtifactRequest.StorageClassName != "" || c.defaultStorageClassName != "") {
+		(execution.ArtifactRequest.StorageClassName != "" || execution.ArtifactRequest.UseDefaultStorageClassName) {
 		pvcsClient := c.clientSet.CoreV1().PersistentVolumeClaims(execution.TestNamespace)
 		if err := pvcsClient.Delete(ctx, execution.Id+"-pvc", metav1.DeleteOptions{}); err != nil {
 			return err
@@ -398,7 +400,7 @@ func (c *ContainerExecutor) updateResultsFromPod(
 
 	var scraperLogs []byte
 	if jobOptions.ArtifactRequest != nil &&
-		(jobOptions.ArtifactRequest.StorageClassName != "" || c.defaultStorageClassName != "") {
+		(jobOptions.ArtifactRequest.StorageClassName != "" || execution.ArtifactRequest.UseDefaultStorageClassName) {
 		c.log.Debug("creating scraper job with options", "options", jobOptions)
 		jobsClient := c.clientSet.BatchV1().Jobs(execution.TestNamespace)
 		scraperSpec, err := NewScraperJobSpec(c.log, jobOptions)
@@ -728,13 +730,14 @@ func (c *ContainerExecutor) Abort(ctx context.Context, execution *testkube.Execu
 	return executor.AbortJob(ctx, c.clientSet, execution.TestNamespace, execution.Id)
 }
 
-func NewPVCOptionsFromJobOptions(options JobOptions) client.PVCOptions {
+func NewPVCOptionsFromJobOptions(options JobOptions, defaultStorageClassName string) client.PVCOptions {
 	result := client.PVCOptions{
-		Name:                  options.Name,
-		Namespace:             options.Namespace,
-		PvcTemplate:           options.PvcTemplate,
-		PvcTemplateExtensions: options.PvcTemplateExtensions,
-		ArtifactRequest:       options.ArtifactRequest,
+		Name:                    options.Name,
+		Namespace:               options.Namespace,
+		PvcTemplate:             options.PvcTemplate,
+		PvcTemplateExtensions:   options.PvcTemplateExtensions,
+		ArtifactRequest:         options.ArtifactRequest,
+		DefaultStorageClassName: defaultStorageClassName,
 	}
 
 	return result

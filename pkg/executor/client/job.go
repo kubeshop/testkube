@@ -96,33 +96,35 @@ func NewJobExecutor(
 	debug bool,
 	logsStream logsclient.Stream,
 	features featureflags.FeatureFlags,
+	defaultStorageClassName string,
 ) (client *JobExecutor, err error) {
 	if serviceAccountNames == nil {
 		serviceAccountNames = make(map[string]string)
 	}
 
 	return &JobExecutor{
-		ClientSet:            clientset,
-		Repository:           repo,
-		Log:                  log.DefaultLogger,
-		images:               images,
-		templates:            templates,
-		serviceAccountNames:  serviceAccountNames,
-		metrics:              metrics,
-		Emitter:              emiter,
-		configMap:            configMap,
-		testsClient:          testsClient,
-		testExecutionsClient: testExecutionsClient,
-		templatesClient:      templatesClient,
-		registry:             registry,
-		podStartTimeout:      podStartTimeout,
-		clusterID:            clusterID,
-		dashboardURI:         dashboardURI,
-		apiURI:               apiURI,
-		natsURI:              natsURI,
-		debug:                debug,
-		logsStream:           logsStream,
-		features:             features,
+		ClientSet:               clientset,
+		Repository:              repo,
+		Log:                     log.DefaultLogger,
+		images:                  images,
+		templates:               templates,
+		serviceAccountNames:     serviceAccountNames,
+		metrics:                 metrics,
+		Emitter:                 emiter,
+		configMap:               configMap,
+		testsClient:             testsClient,
+		testExecutionsClient:    testExecutionsClient,
+		templatesClient:         templatesClient,
+		registry:                registry,
+		podStartTimeout:         podStartTimeout,
+		clusterID:               clusterID,
+		dashboardURI:            dashboardURI,
+		apiURI:                  apiURI,
+		natsURI:                 natsURI,
+		debug:                   debug,
+		logsStream:              logsStream,
+		features:                features,
+		defaultStorageClassName: defaultStorageClassName,
 	}, nil
 }
 
@@ -132,28 +134,29 @@ type ExecutionMetric interface {
 
 // JobExecutor is container for managing job executor dependencies
 type JobExecutor struct {
-	Repository           result.Repository
-	Log                  *zap.SugaredLogger
-	ClientSet            kubernetes.Interface
-	Cmd                  string
-	images               executor.Images
-	templates            executor.Templates
-	serviceAccountNames  map[string]string
-	metrics              ExecutionMetric
-	Emitter              *event.Emitter
-	configMap            config.Repository
-	testsClient          testsv3.Interface
-	testExecutionsClient testexecutionsv1.Interface
-	templatesClient      templatesv1.Interface
-	registry             string
-	podStartTimeout      time.Duration
-	clusterID            string
-	dashboardURI         string
-	apiURI               string
-	natsURI              string
-	debug                bool
-	logsStream           logsclient.Stream
-	features             featureflags.FeatureFlags
+	Repository              result.Repository
+	Log                     *zap.SugaredLogger
+	ClientSet               kubernetes.Interface
+	Cmd                     string
+	images                  executor.Images
+	templates               executor.Templates
+	serviceAccountNames     map[string]string
+	metrics                 ExecutionMetric
+	Emitter                 *event.Emitter
+	configMap               config.Repository
+	testsClient             testsv3.Interface
+	testExecutionsClient    testexecutionsv1.Interface
+	templatesClient         templatesv1.Interface
+	registry                string
+	podStartTimeout         time.Duration
+	clusterID               string
+	dashboardURI            string
+	apiURI                  string
+	natsURI                 string
+	debug                   bool
+	logsStream              logsclient.Stream
+	features                featureflags.FeatureFlags
+	defaultStorageClassName string
 }
 
 type JobOptions struct {
@@ -339,10 +342,10 @@ func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Executio
 	}
 
 	if jobOptions.ArtifactRequest != nil &&
-		jobOptions.ArtifactRequest.StorageClassName != "" {
+		(jobOptions.ArtifactRequest.StorageClassName != "" && jobOptions.ArtifactRequest.UseDefaultStorageClassName) {
 		c.Log.Debug("creating persistent volume claim with options", "options", jobOptions)
 		pvcsClient := c.ClientSet.CoreV1().PersistentVolumeClaims(execution.TestNamespace)
-		pvcSpec, err := NewPersistentVolumeClaimSpec(c.Log, NewPVCOptionsFromJobOptions(jobOptions))
+		pvcSpec, err := NewPersistentVolumeClaimSpec(c.Log, NewPVCOptionsFromJobOptions(jobOptions, c.defaultStorageClassName))
 		if err != nil {
 			return err
 		}
@@ -365,7 +368,7 @@ func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Executio
 
 func (c *JobExecutor) cleanPVCVolume(ctx context.Context, execution *testkube.Execution) error {
 	if execution.ArtifactRequest != nil &&
-		execution.ArtifactRequest.StorageClassName != "" {
+		(execution.ArtifactRequest.StorageClassName != "" || execution.ArtifactRequest.UseDefaultStorageClassName) {
 		pvcsClient := c.ClientSet.CoreV1().PersistentVolumeClaims(execution.TestNamespace)
 		if err := pvcsClient.Delete(ctx, execution.Id+"-pvc", metav1.DeleteOptions{}); err != nil {
 			return err
@@ -1047,12 +1050,13 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	return
 }
 
-func NewPVCOptionsFromJobOptions(options JobOptions) PVCOptions {
+func NewPVCOptionsFromJobOptions(options JobOptions, defaultStorageClassName string) PVCOptions {
 	return PVCOptions{
-		Name:                  options.Name,
-		Namespace:             options.Namespace,
-		PvcTemplate:           options.PvcTemplate,
-		PvcTemplateExtensions: options.PvcTemplateExtensions,
-		ArtifactRequest:       options.ArtifactRequest,
+		Name:                    options.Name,
+		Namespace:               options.Namespace,
+		PvcTemplate:             options.PvcTemplate,
+		PvcTemplateExtensions:   options.PvcTemplateExtensions,
+		ArtifactRequest:         options.ArtifactRequest,
+		DefaultStorageClassName: defaultStorageClassName,
 	}
 }
