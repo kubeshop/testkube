@@ -108,7 +108,9 @@ func (s *MinioAdapter) WithTraceMessages(enabled bool) {
 }
 
 func (s *MinioAdapter) Notify(ctx context.Context, id string, e events.Log) error {
-	s.Log.Debugw("minio consumer notify", "id", id, "event", e)
+	if s.traceMessages {
+		s.Log.Debugw("minio consumer notify", "id", id, "event", e)
+	}
 	if s.disconnected {
 		s.Log.Debugw("minio consumer disconnected", "id", id)
 		return ErrMinioAdapterDisconnected{}
