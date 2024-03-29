@@ -237,10 +237,12 @@ func (s *MinioAdapter) UpdateBuffInfo(id string, buffInfo BufferInfo) {
 	s.mapLock.Lock()
 	defer s.mapLock.Unlock()
 	s.buffInfos[id] = buffInfo
+	s.Log.Debugw("minioAdapter: updated buff info", "id", id, "bufInfosCount", len(s.buffInfos))
 }
 
 func (s *MinioAdapter) DeleteBuffInfo(id string) {
 	s.mapLock.Lock()
 	defer s.mapLock.Unlock()
 	delete(s.buffInfos, id)
+	s.Log.Debugw("minioAdapter: deleted buff info", "id", id, "bufInfosCount", len(s.buffInfos))
 }
