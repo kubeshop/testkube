@@ -250,7 +250,7 @@ func (p *Proxy) getPodContainerStatuses(pod corev1.Pod) (status string) {
 func (p *Proxy) handleError(err error, title string) {
 	if err != nil {
 		p.log.Errorw(title, "error", err)
-		err = p.logsStream.Push(context.Background(), p.executionId, events.NewErrorLog(err))
+		err = p.logsStream.Push(context.Background(), p.executionId, events.NewErrorLog(err).WithSource("logs-proxy"))
 		if err != nil {
 			p.log.Errorw("error pushing error to stream", "title", title, "error", err)
 		}

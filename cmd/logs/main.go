@@ -137,6 +137,8 @@ func main() {
 			cfg.StorageKeyFile,
 			cfg.StorageCAFile)
 
+		minioAdapter.WithTraceMessages(cfg.TraceMessages)
+
 		if err != nil {
 			log.Errorw("error creating minio adapter", "error", err)
 		}
