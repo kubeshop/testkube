@@ -6,7 +6,7 @@ metadata:
 spec:
   {{- if .ArtifactRequest.StorageClassName }}
   storageClassName: {{ .ArtifactRequest.StorageClassName }}
-  {{- else }}
+  {{- else if .ArtifactRequest.UseDefaultStorageClassName }}
   storageClassName: {{ .DefaultStorageClassName }}
   {{- end }}
   accessModes:
