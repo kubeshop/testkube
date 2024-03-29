@@ -1,7 +1,8 @@
-# syntax=docker/dockerfile:1
 ARG ALPINE_IMAGE
-FROM ${ALPINE_IMAGE}
-RUN apk --no-cache add ca-certificates libssl1.1 git skopeo
+FROM ${ALPINE_IMAGE} as certs
+# hadolint ignore=DL3018
+RUN apk --no-cache --update add ca-certificates && (rm -rf /var/cache/apk/* || 0)
+
 WORKDIR /root/
 
 RUN mkdir /data
