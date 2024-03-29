@@ -156,11 +156,11 @@ $(PROTOC_GEN_GO_GRPC):
 
 .PHONY: unit-tests
 unit-tests:
-	gotestsum --format short-verbose -- -cover ./...
+	gotestsum --format pkgname -- -cover ./...
 
 .PHONY: integration-tests
 integration-tests:
-	INTEGRATION="true" gotestsum --format short-verbose -- -tags=integration -cover ./...
+	INTEGRATION="true" gotestsum --format pkgname -- -tags=integration -cover ./...
 
 test-e2e:
 	go test --tags=e2e -v ./test/e2e

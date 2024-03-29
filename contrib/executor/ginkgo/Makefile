@@ -23,7 +23,7 @@ test:
 
 .PHONY: integration-test
 integration-test:
-	INTEGRATION=y gotestsum --format short-verbose -- -run _Integration -cover ./...
+	INTEGRATION=y gotestsum --format pkgname -- -run _Integration -cover ./...
 
 test-e2e:
 	go test --tags=e2e -v ./test/e2e
