@@ -128,7 +128,7 @@ func (s *MinioV2Adapter) Notify(ctx context.Context, id string, e events.Log) er
 		return err
 	}
 
-	_, err = file.Write(chunk)
+	_, err = file.Write(append(chunk, []byte("\n")...))
 
 	return err
 }

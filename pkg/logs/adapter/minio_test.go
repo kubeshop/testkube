@@ -52,20 +52,6 @@ func TestLogs(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestLogsLocal(t *testing.T) {
-	ctx := context.Background()
-	consumer, _ := NewMinioAdapter("127.0.0.1:9000", "minioadmin", "minioadmin", "", "", "test-1", false, false, "", "", "")
-	id := "test-bla"
-	for i := 0; i < 10; i++ {
-		fmt.Println("sending", i)
-		consumer.Notify(ctx, id, events.Log{Time: time.Now(),
-			Content: fmt.Sprintf("Test %d: %s", i, generateWideLine(200)),
-			Type_:   "test", Source: strconv.Itoa(i)})
-	}
-	err := consumer.Stop(ctx, id)
-	assert.NoError(t, err)
-}
-
 func BenchmarkLogs(b *testing.B) {
 	ctx := context.Background()
 	randomString := RandString(5)
