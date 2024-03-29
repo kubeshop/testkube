@@ -163,13 +163,18 @@ func (r *MongoRepository) GetExecution(ctx context.Context, id string) (result t
 }
 
 func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.Execution, err error) {
+	n := time.Now()
 	err = r.ResultsColl.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&result)
 	if err != nil {
 		return
 	}
+
+	r.log.Debugw("Get execution timing", "duration", time.Since(n).String(), "id", id)
+
 	if len(result.ExecutionResult.Output) == 0 {
 		if r.features.LogsV2 {
 			result.ExecutionResult.Output, err = r.getOutputFromLogServer(ctx, &result)
+			r.log.Debugw("Get logs output timing", "duration", time.Since(n).String(), "id", id)
 		} else {
 			result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
 			if err == mongo.ErrNoDocuments {
