@@ -93,6 +93,7 @@ func (ls *LogsService) handleMessage(ctx context.Context, a adapter.Adapter, id 
 				log.Errorw("error nacking message", "error", err)
 				return
 			}
+			log.Errorw("error notifying adapter", "error", err)
 			return
 		}
 
