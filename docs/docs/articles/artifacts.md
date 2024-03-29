@@ -53,6 +53,47 @@ Alternatively, these values can be read from Kubernetes secrets and set:
 
 For executors that produce files during test execution, Testkube supports collecting (scraping) these artifacts and storing them in our S3 compatible file storage. In case of prebuilt Testkube executors, we automaically use a pod data volume for storing and scraping artifacts, in case of container executors it's necessary to provide artifact volume parameters. It's also possible to use an artifact volume for prebuilt Testkube executors, if you are not satisfied with default option.
 
+
+You can override the default volume mount path in the `Test` definition:
+
+```yaml
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: test
+  namespace: testkube
+spec:
+  content:
+    repository:
+      authType: basic
+      branch: main
+      path: path/to/test/files
+      type: git
+      uri: https://git.repo.path.io/repo
+    type: git-dir
+  executionRequest:
+    artifactRequest:
+      sharedBetweenPods: true
+      storageClassName: standard-rwx
+      volumeMountPath: /data
+  type: cypress/project
+```
+
+If you set the `volumeMountPath` to the `/data` Testkube will set one volume as main for all pods 
+
+Just keep in mind that all values need to be set: 
+```yaml
+      sharedBetweenPods: true
+      storageClassName: standard-rwx
+      volumeMountPath: /data
+```
+`storageClassName` should be one which can support `ReadWriteMany` access mode, like NFS or similar one.
+Consider checking your Kubernetes provider documentation for more information about which storage classes supports it.
+Keep in mind that the NFS based volumes can be significantly slower than local storage.
+
+
+
+
 You need to save test related files into specified directories on the dynamically created volume. They will be uploaded from there to Testkube file storage and available later for downloading using standard Testkube CLI or Testkube Dashboard commands. For example:
 
 ```yaml
@@ -77,7 +118,7 @@ spec:
 You have to define the storage class name, volume mount path and directories in this volume with test artifacts.
 Default volume mount path is `/data/artifacts` and directory is `.` .
 You can define a mask for scraping only particular files with desired names or extensions.
-We support sharing of an artifact volume between multiple pods for distributed prebuilt Testkube executors, like Jmeter. Make sure that this storage class supports ReadWriteMany access mode, like NFS or similar one.
+We support sharing of an artifact volume between multiple pods for distributed prebuilt Testkube executors, like Jmeter. Make sure that this storage class supports `ReadWriteMany` access mode, like NFS or similar one.
 Make sure your container executor definition has `artifacts` feature. For example:
 
 ```yaml
