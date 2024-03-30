@@ -725,7 +725,7 @@ func NewSpawnCmd() *cobra.Command {
 							}()
 
 							// Create the pod
-							pod, err = clientSet.CoreV1().Pods(env.Namespace()).
+							pod, err := clientSet.CoreV1().Pods(env.Namespace()).
 								Create(context.Background(), pod, metav1.CreateOptions{})
 							if err != nil {
 								fail("[%d/%d] %s: error while creating pod: %s", index+1, combinations*svc.Count, svc.Name, err.Error())
