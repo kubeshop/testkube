@@ -534,6 +534,9 @@ func main() {
 		cfg.TestkubeNamespace,
 		cfg.TestkubeProTLSSecret,
 	)
+	if mode == common.ModeAgent {
+		sched.WithSubscriptionChecker(subscriptionChecker)
+	}
 
 	slackLoader, err := newSlackLoader(cfg, envs)
 	if err != nil {
