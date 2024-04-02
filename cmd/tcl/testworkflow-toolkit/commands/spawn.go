@@ -104,12 +104,12 @@ func NewSpawnCmd() *cobra.Command {
 				if longRunning && instruction.Ready == "" {
 					instruction.Ready = "ready && containerStarted"
 				}
-				if longRunning && instruction.Pod.Spec.RestartPolicy == "" {
+				if !longRunning && instruction.Pod.Spec.RestartPolicy == "" {
 					instruction.Pod.Spec.RestartPolicy = corev1.RestartPolicyNever
 				}
 
 				// Build the service
-				svc, err := spawn.FromInstruction(k, instructions[k])
+				svc, err := spawn.FromInstruction(k, instruction)
 				svcCombinations := svc.Combinations()
 				svcTotal := svc.Total()
 				if err != nil {
