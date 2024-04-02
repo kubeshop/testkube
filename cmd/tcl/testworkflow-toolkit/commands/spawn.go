@@ -106,13 +106,6 @@ func NewSpawnCmd() *cobra.Command {
 				}
 			}
 
-			// Ensure all instructions have a container
-			for k := range instructions {
-				if len(instructions[k].Pod.Spec.Containers) == 0 {
-					fail("Problem processing the assisting pod '%s': spec.containers: pod needs to have any containers specified", k)
-				}
-			}
-
 			// Initialize list of services
 			total := int64(0)
 			success := atomic.Int64{}
