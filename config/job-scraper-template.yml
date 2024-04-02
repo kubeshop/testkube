@@ -46,16 +46,33 @@ spec:
         command:
           - "/bin/runner"
           - '{{ .Jsn }}'
+        {{- if .RunnerCustomCASecret }}
+        env:
+          - name: SSL_CERT_DIR
+            value: /etc/testkube/certs
+        {{- end }}
+        volumeMounts:
+        {{- if .RunnerCustomCASecret }}
+        - name: {{ .RunnerCustomCASecret }}
+          mountPath: /etc/testkube/certs/testkube-custom-ca.pem
+          readOnly: true
+          subPath: ca.crt
+        {{- end }}
         {{- if .ArtifactRequest }}
           {{- if .ArtifactRequest.VolumeMountPath }}
-        volumeMounts:
           - name: artifact-volume
             mountPath: {{ .ArtifactRequest.VolumeMountPath }}
           {{- end }}
         {{- end }}
+      volumes:
+      {{- if .RunnerCustomCASecret }}
+      - name: {{ .RunnerCustomCASecret }}
+        secret:
+          secretName: {{ .RunnerCustomCASecret }}
+          defaultMode: 420
+      {{- end }}
       {{- if .ArtifactRequest }}
         {{- if and .ArtifactRequest.VolumeMountPath .ArtifactRequest.StorageClassName }}
-      volumes:
         - name: artifact-volume
           persistentVolumeClaim:
             claimName: {{ .Name }}-pvc
