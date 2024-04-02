@@ -13,7 +13,6 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"math"
 	"os"
 	"slices"
 	"strconv"
@@ -22,15 +21,14 @@ import (
 	"sync/atomic"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/maps"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/util/rand"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
@@ -38,154 +36,6 @@ import (
 
 const MaxParallelism = 5000
 const maxConfigMapFileSize = 950 * 1024
-
-type Service struct {
-	Name        string
-	Count       int64
-	Parallelism int64
-	Timeout     string
-	Matrix      map[string][]interface{}
-	Shards      map[string][]interface{}
-	Ready       string
-	Error       string
-	Content     *testworkflowsv1.SpawnContent
-	PodTemplate corev1.PodTemplateSpec
-}
-
-func (svc *Service) ShardIndexAt(index int64) int64 {
-	return index % svc.Count
-}
-
-func (svc *Service) CombinationIndexAt(index int64) int64 {
-	return (index - svc.ShardIndexAt(index)) / svc.Count
-}
-
-func (svc *Service) Combinations() int64 {
-	return countCombinations(svc.Matrix)
-}
-
-func (svc *Service) MatrixAt(index int64) map[string]interface{} {
-	return getMatrixValues(svc.Matrix, svc.CombinationIndexAt(index))
-}
-
-func (svc *Service) ShardsAt(index int64) map[string][]interface{} {
-	return getShardValues(svc.Matrix, svc.ShardIndexAt(index), svc.Count)
-}
-
-func (svc *Service) MachineAt(index int64) expressionstcl.Machine {
-	// Get basic indices
-	combinations := svc.Combinations()
-	shardIndex := svc.ShardIndexAt(index)
-	combinationIndex := svc.CombinationIndexAt(index)
-
-	// Compute values for this instance
-	matrixValues := svc.MatrixAt(combinationIndex)
-	shardValues := getShardValues(svc.Shards, shardIndex, svc.Count)
-
-	return expressionstcl.NewMachine().
-		Register("index", index).
-		Register("count", combinations*svc.Count).
-		Register("matrixIndex", combinationIndex).
-		Register("matrixCount", combinations).
-		Register("matrix", matrixValues).
-		Register("shardIndex", shardIndex).
-		Register("shardsCount", svc.Count).
-		Register("shard", shardValues)
-}
-
-func (svc *Service) Pod(ref string, longRunning bool, index int64, globalMachine expressionstcl.Machine) (*corev1.Pod, error) {
-	// Get details for current position
-	combinations := svc.Combinations()
-	machine := svc.MachineAt(index)
-
-	// Build a pod
-	spec := svc.PodTemplate.DeepCopy()
-	err := expressionstcl.FinalizeForce(&spec, machine, globalMachine)
-	if err != nil {
-		return nil, fmt.Errorf("[%d/%d] %s: error while resolving pod schema: %s", index+1, combinations*svc.Count, svc.Name, err.Error())
-	}
-	pod := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s-%s-%d", env.ExecutionId(), ref, svc.Name, index),
-			Namespace: env.Namespace(),
-			Labels: map[string]string{
-				testworkflowprocessor.ExecutionIdLabelName:         env.ExecutionId(),
-				testworkflowprocessor.ExecutionAssistingPodRefName: ref,
-				testworkflowprocessor.AssistingPodServiceName:      "true",
-			},
-			Annotations: spec.Annotations,
-		},
-		Spec: spec.Spec,
-	}
-	if !longRunning && pod.Spec.RestartPolicy == "" {
-		pod.Spec.RestartPolicy = corev1.RestartPolicyNever
-	}
-	if pod.Labels == nil {
-		pod.Labels = map[string]string{}
-	}
-	pod.Labels[testworkflowprocessor.ExecutionIdLabelName] = env.ExecutionId()
-	pod.Labels[testworkflowprocessor.ExecutionAssistingPodRefName] = ref
-	pod.Labels[testworkflowprocessor.AssistingPodServiceName] = "true"
-	if pod.Spec.Subdomain == "" {
-		pod.Spec.Subdomain = testworkflowprocessor.AssistingPodServiceName
-	}
-	if pod.Spec.Hostname == "" {
-		pod.Spec.Hostname = fmt.Sprintf("%s-%s-%d", env.ExecutionId(), svc.Name, index)
-	}
-	if pod.Spec.SecurityContext == nil {
-		pod.Spec.SecurityContext = &corev1.PodSecurityContext{}
-	}
-	if pod.Spec.SecurityContext.FSGroup == nil {
-		pod.Spec.SecurityContext.FSGroup = common.Ptr(testworkflowprocessor.DefaultFsGroup)
-	}
-	// Append random names to pod containers
-	for i := range pod.Spec.InitContainers {
-		if pod.Spec.InitContainers[i].Name == "" {
-			pod.Spec.InitContainers[i].Name = fmt.Sprintf("c%s-%d", rand.String(5), i)
-		}
-		if pod.Spec.InitContainers[i].SecurityContext == nil {
-			pod.Spec.InitContainers[i].SecurityContext = &corev1.SecurityContext{}
-		}
-		if pod.Spec.InitContainers[i].SecurityContext.RunAsGroup == nil {
-			pod.Spec.InitContainers[i].SecurityContext.RunAsGroup = common.Ptr(testworkflowprocessor.DefaultFsGroup)
-		}
-	}
-	for i := range pod.Spec.Containers {
-		if pod.Spec.Containers[i].Name == "" {
-			pod.Spec.Containers[i].Name = fmt.Sprintf("c%s-%d", rand.String(5), len(pod.Spec.InitContainers)+i)
-		}
-		if pod.Spec.Containers[i].SecurityContext == nil {
-			pod.Spec.Containers[i].SecurityContext = &corev1.SecurityContext{}
-		}
-		if pod.Spec.Containers[i].SecurityContext.RunAsGroup == nil {
-			pod.Spec.Containers[i].SecurityContext.RunAsGroup = common.Ptr(testworkflowprocessor.DefaultFsGroup)
-		}
-	}
-
-	return pod, nil
-}
-
-func (svc *Service) Files(index int64, globalMachine expressionstcl.Machine) (map[string]string, error) {
-	// Ignore when there are no files expected
-	if svc.Content == nil || len(svc.Content.Files) == 0 {
-		return nil, nil
-	}
-
-	// Prepare data for computation
-	combinations := svc.Combinations()
-	machine := svc.MachineAt(index)
-	files := make(map[string]string, len(svc.Content.Files))
-
-	// Compute all files
-	var err error
-	for fileIndex, file := range svc.Content.Files {
-		files[file.Path], err = expressionstcl.EvalTemplate(file.Content, machine, globalMachine)
-		if err != nil {
-			return nil, fmt.Errorf("[%d/%d] %s: error while resolving %s (%d): %s", index+1, combinations*svc.Count, svc.Name, file.Path, fileIndex, err.Error())
-		}
-	}
-	return files, nil
-}
 
 type ServiceState struct {
 	Name             string     `json:"name"`
@@ -250,58 +100,6 @@ func readParams(base map[string][]intstr.IntOrString, expressions map[string]str
 		}
 	}
 	return result, nil
-}
-
-func countCombinations(matrix map[string][]interface{}) int64 {
-	combinations := int64(1)
-	for k := range matrix {
-		combinations *= int64(len(matrix[k]))
-	}
-	return combinations
-}
-
-func getMatrixValues(matrix map[string][]interface{}, index int64) map[string]interface{} {
-	// Compute modulo for each matrix parameter
-	keys := maps.Keys(matrix)
-	modulo := map[string]int64{}
-	floor := map[string]int64{}
-	for i, k := range keys {
-		modulo[k] = int64(len(matrix[k]))
-		floor[k] = 1
-		for j := i + 1; j < len(keys); j++ {
-			floor[k] *= int64(len(matrix[keys[j]]))
-		}
-	}
-
-	// Compute values for selected index
-	result := make(map[string]interface{})
-	for _, k := range keys {
-		kIdx := (index / floor[k]) % modulo[k]
-		result[k] = matrix[k][kIdx]
-	}
-	return result
-}
-
-func getShardValues(values map[string][]interface{}, index int64, count int64) map[string][]interface{} {
-	result := make(map[string][]interface{})
-	for k := range values {
-		if index > int64(len(values[k])) {
-			result[k] = []interface{}{}
-			continue
-		}
-		size := count / int64(len(values[k]))
-		if size == 0 {
-			size = 1
-		}
-		start := index * size
-		end := start + size
-		if end > int64(len(values[k])) {
-			result[k] = values[k][start:]
-		} else {
-			result[k] = values[k][start:end]
-		}
-	}
-	return result
 }
 
 func NewSpawnCmd() *cobra.Command {
@@ -370,122 +168,52 @@ func NewSpawnCmd() *cobra.Command {
 			// Initialize list of services
 			total := int64(0)
 			success := atomic.Int64{}
-			services := make([]Service, 0)
-			servicesMap := make(map[string]Service)
+			services := make([]spawn.Service, 0)
+			servicesMap := make(map[string]spawn.Service)
 			serviceLocks := make([][]sync.Mutex, 0)
 			serviceLocksMap := make(map[string]*[]sync.Mutex)
 
 			// Resolve the instructions
-			for k := range instructions {
-				// Resolve the shards and matrices
-				shards, err := readParams(instructions[k].Shards, instructions[k].ShardExpressions)
-				if err != nil {
-					fail("[%s]: shards: %s", k, err)
+			for k, instruction := range instructions {
+				// Apply defaults
+				if longRunning && instruction.Ready == "" {
+					instruction.Ready = "ready && containerStarted"
 				}
-				matrix, err := readParams(instructions[k].Matrix, instructions[k].MatrixExpressions)
-				if err != nil {
-					fail("[%s]: shards: %s", k, err)
-				}
-				minShards := int64(math.MaxInt64)
-				for key := range shards {
-					if int64(len(shards[key])) < minShards {
-						minShards = int64(len(shards[key]))
-					}
-				}
-
-				// Calculate number of matrix combinations
-				combinations := countCombinations(matrix)
-
-				// Resolve the count
-				var count, maxCount *int64
-				if instructions[k].Count != nil {
-					countVal, err := readCount(*instructions[k].Count)
-					if err != nil {
-						fail("[%s].count: %s", k, err)
-					}
-					count = &countVal
-				}
-				if instructions[k].MaxCount != nil {
-					countVal, err := readCount(*instructions[k].MaxCount)
-					if err != nil {
-						fail("[%s].maxCount: %s\n", k, err)
-					}
-					maxCount = &countVal
-				}
-				if count == nil && maxCount == nil {
-					count = common.Ptr(int64(1))
-				}
-				if count != nil && maxCount != nil && *maxCount < *count {
-					count = maxCount
-					maxCount = nil
-				}
-				if maxCount != nil && *maxCount < minShards {
-					count = &minShards
-					maxCount = nil
-				} else if maxCount != nil {
-					count = maxCount
-					maxCount = nil
-				}
-				total += *count * combinations
-
-				// Initialize the service state
-				states[k] = make([]ServiceState, total)
-
-				// Skip service if it has no instances requested
-				if *count == 0 {
-					fmt.Printf("[%s] 0 instances requested (combinations=%d, count=%d), skipping\n", k, combinations, *count)
-					continue
-				}
-
-				// Compute parallelism
-				var parallelism *int64
-				if instructions[k].Parallelism != nil {
-					parallelismVal, err := readCount(*instructions[k].Parallelism)
-					if err != nil {
-						fail("[%s].parallelism: %s", k, err)
-					}
-					parallelism = &parallelismVal
-				}
-				if parallelism == nil {
-					parallelism = common.Ptr(int64(math.MaxInt64))
-				}
-				if *parallelism > *count*combinations {
-					parallelism = common.Ptr(*count * combinations)
-				}
-				if *parallelism > MaxParallelism {
-					parallelism = common.Ptr(int64(MaxParallelism))
-					fmt.Printf("   limited parallelism to %d for stability\n", MaxParallelism)
+				if longRunning && instruction.Pod.Spec.RestartPolicy == "" {
+					instruction.Pod.Spec.RestartPolicy = corev1.RestartPolicyNever
 				}
 
 				// Build the service
-				svc := Service{
-					Name:        k,
-					Count:       *count,
-					Parallelism: *parallelism,
-					Timeout:     instructions[k].Timeout,
-					Matrix:      matrix,
-					Shards:      shards,
-					Ready:       instructions[k].Ready,
-					Error:       instructions[k].Error,
-					PodTemplate: instructions[k].Pod,
-					Content:     instructions[k].Content,
+				svc, err := spawn.FromInstruction(k, instructions[k])
+				svcTotal := svc.Total()
+				if err != nil {
+					fail("%s: %w", k, err)
 				}
 
-				// Define the default success/error clauses
-				if svc.Ready == "" {
-					if longRunning {
-						svc.Ready = "ready && containerStarted"
-					} else {
-						svc.Ready = "success"
-					}
+				// Apply empty state
+				states[k] = make([]ServiceState, svcTotal)
+
+				// Skip when empty
+				if svcTotal == 0 {
+					fmt.Printf("[%s] 0 instances requested (combinations=%d, count=%d), skipping\n", k, svc.Combinations(), svc.Count)
+					continue
 				}
-				if svc.Error == "" {
-					svc.Error = "deleted || failed"
+
+				// Print information
+				fmt.Printf("[%s] %d instances requested: %d combinations, sharded %d times (parallelism: %d)\n", k, svcTotal, svc.Combinations(), svc.Count, svc.Parallelism)
+
+				// Limit parallelism
+				if svc.Parallelism > MaxParallelism {
+					svc.Parallelism = int64(MaxParallelism)
+					fmt.Printf("   limited parallelism to %d for stability\n", MaxParallelism)
 				}
+
+				// Apply to the state
+				total += svcTotal
 
 				// Prepare locks for all instances
-				locks := make([]sync.Mutex, combinations*svc.Count)
-				for i := int64(0); i < combinations*svc.Count; i++ {
+				locks := make([]sync.Mutex, svcTotal)
+				for i := int64(0); i < svcTotal; i++ {
 					locks[i] = sync.Mutex{}
 					locks[i].Lock()
 				}
@@ -495,14 +223,6 @@ func NewSpawnCmd() *cobra.Command {
 				servicesMap[svc.Name] = svc
 				serviceLocks = append(serviceLocks, locks)
 				serviceLocksMap[svc.Name] = &serviceLocks[len(serviceLocks)-1]
-				fmt.Printf("[%s] %d instances requested: %d combinations, sharded %d times (parallelism: %d)\n", k, svc.Count*combinations, combinations, svc.Count, svc.Parallelism)
-			}
-
-			// Ensure the services are valid
-			for i := range services {
-				if len(services[i].PodTemplate.Spec.Containers) == 0 {
-					fail("[%s].pod.spec.containers: no containers provided", services[i].Name)
-				}
 			}
 
 			// Fast-track when nothing is requested
@@ -524,10 +244,10 @@ func NewSpawnCmd() *cobra.Command {
 			configMaps := make([]*corev1.ConfigMap, 0)
 
 			for svcIndex, svc := range services {
-				combinations := countCombinations(svc.Matrix)
+				combinations := spawn.CountCombinations(svc.Matrix)
 				schedulablePods[svcIndex] = make([]*corev1.Pod, svc.Count*combinations)
 				for i := int64(0); i < svc.Count*combinations; i++ {
-					pod, err := svc.Pod(podsRef, longRunning, i, internalMachine)
+					pod, err := svc.Pod(podsRef, i, internalMachine)
 					if err != nil {
 						fail(err.Error())
 					}
@@ -727,7 +447,7 @@ func NewSpawnCmd() *cobra.Command {
 			// TODO: Consider dry-run as well
 			// TODO: Decouple
 			for i, v := range services {
-				go func(svc Service, svcIndex int) {
+				go func(svc spawn.Service, svcIndex int) {
 					combinations := svc.Combinations()
 
 					var swg sync.WaitGroup
