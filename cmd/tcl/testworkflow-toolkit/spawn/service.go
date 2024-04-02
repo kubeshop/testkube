@@ -154,6 +154,27 @@ func (svc *Service) Files(index int64, machines ...expressionstcl.Machine) (map[
 	return files, nil
 }
 
+func (svc *Service) Eval(expr string, state ServiceState, index int64, machines ...expressionstcl.Machine) (*bool, error) {
+	machines = append([]expressionstcl.Machine{state.Machine(), svc.MachineAt(index)}, machines...)
+	ex, err := expressionstcl.EvalExpressionPartial(expr, machines...)
+	if err != nil {
+		return nil, err
+	}
+	if ex.Static() == nil {
+		return nil, nil
+	}
+	v, _ := ex.Static().BoolValue()
+	return &v, nil
+}
+
+func (svc *Service) EvalReady(state ServiceState, index int64, machines ...expressionstcl.Machine) (*bool, error) {
+	return svc.Eval(svc.Ready, state, index, machines...)
+}
+
+func (svc *Service) EvalError(state ServiceState, index int64, machines ...expressionstcl.Machine) (*bool, error) {
+	return svc.Eval(svc.Error, state, index, machines...)
+}
+
 func applyContainerDefaults(container *corev1.Container, index int) {
 	if container.Name == "" {
 		container.Name = fmt.Sprintf("c%d-%s", index, rand.String(5))

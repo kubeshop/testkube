@@ -256,35 +256,27 @@ func NewSpawnCmd() *cobra.Command {
 						// Check the conditions
 						state := getState(name, index)
 						svc := servicesMap[name]
-						machine := state.Machine(index)
 
-						successExpr, err := expressionstcl.EvalExpressionPartial(svc.Ready, machine)
+						podSuccess, err := svc.EvalReady(state, index)
 						if err != nil {
-							fmt.Printf("Warning: %s: parsing success condition: %s\n", pod.Name, err.Error())
+							fmt.Printf("Warning: %s: parsing 'success' condition: %s\n", pod.Name, err.Error())
 							continue
 						}
-						failedExpr, err := expressionstcl.EvalExpressionPartial(svc.Error, machine)
+						podError, err := svc.EvalError(state, index)
 						if err != nil {
-							fmt.Printf("Warning: %s: parsing failed condition: %s\n", pod.Name, err.Error())
+							fmt.Printf("Warning: %s: parsing 'error' condition: %s\n", pod.Name, err.Error())
 							continue
 						}
 
-						if failedExpr.Static() != nil {
-							v, _ := failedExpr.Static().BoolValue()
-							if v {
-								fmt.Printf("%s: pod %s (%d) failed\n", svc.Name, pod.Name, index+1)
-								initialized[pod.Name] = struct{}{}
-								(*serviceLocksMap[svc.Name])[index].Unlock()
-							}
-						}
-						if successExpr.Static() != nil {
-							v, _ := successExpr.Static().BoolValue()
-							if v {
-								fmt.Printf("%s: pod %s (%d) initialized successfully on %s\n", svc.Name, pod.Name, index+1, pod.Spec.NodeName)
-								success.Add(1)
-								initialized[pod.Name] = struct{}{}
-								(*serviceLocksMap[svc.Name])[index].Unlock()
-							}
+						if podError != nil && *podError {
+							fmt.Printf("%s: pod %s (%d) failed\n", svc.Name, pod.Name, index+1)
+							initialized[pod.Name] = struct{}{}
+							(*serviceLocksMap[svc.Name])[index].Unlock()
+						} else if podSuccess != nil && *podSuccess {
+							fmt.Printf("%s: pod %s (%d) initialized successfully on %s\n", svc.Name, pod.Name, index+1, pod.Spec.NodeName)
+							success.Add(1)
+							initialized[pod.Name] = struct{}{}
+							(*serviceLocksMap[svc.Name])[index].Unlock()
 						}
 					}
 				}

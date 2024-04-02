@@ -62,7 +62,7 @@ func (s *ServiceState) Update(pod *corev1.Pod) {
 	}
 }
 
-func (s *ServiceState) Machine(index int64) expressionstcl.Machine {
+func (s *ServiceState) Machine() expressionstcl.Machine {
 	return expressionstcl.NewMachine().
 		Register("started", s.Started).
 		Register("containerStarted", s.ContainerStarted).
@@ -73,6 +73,5 @@ func (s *ServiceState) Machine(index int64) expressionstcl.Machine {
 		Register("ready", s.Ready).
 		Register("ip", s.Ip).
 		Register("host", s.Host).
-		Register("pod", s.Pod).
-		Register("index", index)
+		Register("pod", s.Pod)
 }
