@@ -556,6 +556,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		Labels:               testCR.Labels,
 		UsernameSecret:       usernameSecret,
 		TokenSecret:          tokenSecret,
+		RunnerCustomCASecret: s.runnerCustomCASecret,
 		CertificateSecret:    certificateSecret,
 		AgentAPITLSSecret:    s.agentAPITLSSecret,
 		ImagePullSecretNames: imagePullSecrets,

@@ -511,6 +511,7 @@ func main() {
 		ui.ExitOnError("Creating container executor", err)
 	}
 
+	// TODO(emil): the scheduler is created here
 	sched := scheduler.NewScheduler(
 		metrics,
 		executor,
@@ -533,6 +534,7 @@ func main() {
 		logsStream,
 		cfg.TestkubeNamespace,
 		cfg.TestkubeProTLSSecret,
+		cfg.TestkubeProRunnerCustomCASecret,
 	)
 	if mode == common.ModeAgent {
 		sched.WithSubscriptionChecker(subscriptionChecker)
