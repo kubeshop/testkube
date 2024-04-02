@@ -28,7 +28,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 )
 
@@ -48,9 +47,8 @@ func NewSpawnCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			podsRef := args[0]
 
-			// Initialize internal machine TODO: Think if it is fine
-			data.LoadState()
-			internalMachine := expressionstcl.CombinedMachines(data.EnvMachine, data.StateMachine, data.FileMachine)
+			// Initialize internal machine
+			baseMachine := data.GetBaseTestWorkflowMachine()
 
 			// Initialize state
 			states := make(map[string][]spawn.ServiceState)
@@ -186,11 +184,11 @@ func NewSpawnCmd() *cobra.Command {
 				combinations := spawn.CountCombinations(svc.Matrix)
 				schedulablePods[svcIndex] = make([]*corev1.Pod, svc.Count*combinations)
 				for i := int64(0); i < svc.Count*combinations; i++ {
-					pod, err := svc.Pod(podsRef, i, internalMachine)
+					pod, err := svc.Pod(podsRef, i, baseMachine)
 					if err != nil {
 						fail(err.Error())
 					}
-					files, err := svc.Files(i, internalMachine)
+					files, err := svc.Files(i, baseMachine)
 					if err != nil {
 						fail(err.Error())
 					}
