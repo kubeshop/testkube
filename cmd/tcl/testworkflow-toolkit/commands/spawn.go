@@ -132,15 +132,33 @@ func (svc *Service) Pod(ref string, longRunning bool, index int64, globalMachine
 	if pod.Spec.Hostname == "" {
 		pod.Spec.Hostname = fmt.Sprintf("%s-%s-%d", env.ExecutionId(), svc.Name, index)
 	}
+	if pod.Spec.SecurityContext == nil {
+		pod.Spec.SecurityContext = &corev1.PodSecurityContext{}
+	}
+	if pod.Spec.SecurityContext.FSGroup == nil {
+		pod.Spec.SecurityContext.FSGroup = common.Ptr(testworkflowprocessor.DefaultFsGroup)
+	}
 	// Append random names to pod containers
 	for i := range pod.Spec.InitContainers {
 		if pod.Spec.InitContainers[i].Name == "" {
 			pod.Spec.InitContainers[i].Name = fmt.Sprintf("c%s-%d", rand.String(5), i)
 		}
+		if pod.Spec.InitContainers[i].SecurityContext == nil {
+			pod.Spec.InitContainers[i].SecurityContext = &corev1.SecurityContext{}
+		}
+		if pod.Spec.InitContainers[i].SecurityContext.RunAsGroup == nil {
+			pod.Spec.InitContainers[i].SecurityContext.RunAsGroup = common.Ptr(testworkflowprocessor.DefaultFsGroup)
+		}
 	}
 	for i := range pod.Spec.Containers {
 		if pod.Spec.Containers[i].Name == "" {
 			pod.Spec.Containers[i].Name = fmt.Sprintf("c%s-%d", rand.String(5), len(pod.Spec.InitContainers)+i)
+		}
+		if pod.Spec.Containers[i].SecurityContext == nil {
+			pod.Spec.Containers[i].SecurityContext = &corev1.SecurityContext{}
+		}
+		if pod.Spec.Containers[i].SecurityContext.RunAsGroup == nil {
+			pod.Spec.Containers[i].SecurityContext.RunAsGroup = common.Ptr(testworkflowprocessor.DefaultFsGroup)
 		}
 	}
 

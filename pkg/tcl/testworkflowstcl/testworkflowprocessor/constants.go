@@ -24,7 +24,7 @@ const (
 	defaultShell                 = "/bin/sh"
 	defaultInternalPath          = "/.tktw"
 	defaultDataPath              = "/data"
-	defaultFsGroup               = int64(1001)
+	DefaultFsGroup               = int64(1001)
 	ExecutionIdLabelName         = "testworkflowid"
 	ExecutionAssistingPodRefName = "testworkflowassistref"
 	AssistingPodServiceName      = "tkassist"
