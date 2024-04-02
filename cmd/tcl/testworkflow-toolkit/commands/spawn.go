@@ -33,7 +33,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 )
 
-const MaxParallelism = 5000
+const MaxParallelism = 1000
 const maxConfigMapFileSize = 950 * 1024
 
 type ServiceState struct {
@@ -126,6 +126,7 @@ func NewSpawnCmd() *cobra.Command {
 
 				// Build the service
 				svc, err := spawn.FromInstruction(k, instructions[k])
+				svcCombinations := svc.Combinations()
 				svcTotal := svc.Total()
 				if err != nil {
 					fail("%s: %w", k, err)
@@ -136,12 +137,22 @@ func NewSpawnCmd() *cobra.Command {
 
 				// Skip when empty
 				if svcTotal == 0 {
-					fmt.Printf("[%s] 0 instances requested (combinations=%d, count=%d), skipping\n", k, svc.Combinations(), svc.Count)
+					fmt.Printf("[%s] 0 instances requested (combinations=%d, count=%d), skipping\n", k, svcCombinations, svc.Count)
 					continue
 				}
 
 				// Print information
-				fmt.Printf("[%s] %d instances requested: %d combinations, sharded %d times (parallelism: %d)\n", k, svcTotal, svc.Combinations(), svc.Count, svc.Parallelism)
+				infos := make([]string, 0)
+				if svcCombinations > 1 {
+					infos = append(infos, fmt.Sprintf("%d combinations", svcCombinations))
+				}
+				if svc.Count > 1 {
+					infos = append(infos, fmt.Sprintf("sharded %d times", svc.Count))
+				}
+				if svc.Parallelism < svc.Count {
+					infos = append(infos, fmt.Sprintf("parallelism: %d", svc.Parallelism))
+				}
+				fmt.Printf("[%s] %d instances requested: %s\n", k, svcTotal, strings.Join(infos, ", "))
 
 				// Limit parallelism
 				if svc.Parallelism > MaxParallelism {
