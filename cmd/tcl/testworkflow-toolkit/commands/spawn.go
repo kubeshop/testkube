@@ -33,21 +33,6 @@ import (
 )
 
 const MaxParallelism = 1000
-const maxConfigMapFileSize = 950 * 1024
-
-type ServiceState struct {
-	Name             string     `json:"name"`
-	Host             string     `json:"host"`
-	Ip               string     `json:"ip"`
-	Started          bool       `json:"started"`
-	ContainerStarted bool       `json:"containerStarted"`
-	Ready            bool       `json:"ready"`
-	Deleted          bool       `json:"deleted"`
-	Success          bool       `json:"success"`
-	Failed           bool       `json:"failed"`
-	Finished         bool       `json:"finished"`
-	Pod              corev1.Pod `json:"pod"`
-}
 
 func NewSpawnCmd() *cobra.Command {
 	var (
@@ -68,7 +53,7 @@ func NewSpawnCmd() *cobra.Command {
 			internalMachine := expressionstcl.CombinedMachines(data.EnvMachine, data.StateMachine, data.FileMachine)
 
 			// Initialize state
-			states := make(map[string][]ServiceState)
+			states := make(map[string][]spawn.ServiceState)
 			var statesMu sync.Mutex
 			saveState := func() {
 				if longRunning {
@@ -77,15 +62,17 @@ func NewSpawnCmd() *cobra.Command {
 					}
 				}
 			}
-			getState := func(name string, index int64) ServiceState {
+			getState := func(name string, index int64) spawn.ServiceState {
 				defer statesMu.Unlock()
 				statesMu.Lock()
 				return states[name][index]
 			}
-			updateState := func(name string, index int64, fn func(s ServiceState) ServiceState) {
+			updateState := func(name string, index int64, pod *corev1.Pod) {
 				defer statesMu.Unlock()
 				statesMu.Lock()
-				states[name][index] = fn(states[name][index])
+				state := states[name][index]
+				state.Update(pod)
+				states[name][index] = state
 			}
 			fail := func(format string, a ...any) {
 				saveState()
@@ -132,7 +119,7 @@ func NewSpawnCmd() *cobra.Command {
 				}
 
 				// Apply empty state
-				states[k] = make([]ServiceState, svcTotal)
+				states[k] = make([]spawn.ServiceState, svcTotal)
 
 				// Skip when empty
 				if svcTotal == 0 {
@@ -264,43 +251,13 @@ func NewSpawnCmd() *cobra.Command {
 							// Already initialized
 							continue
 						}
-						updateState(name, index, func(s ServiceState) ServiceState {
-							s.Pod = *pod
-							s.Started = pod.Status.StartTime != nil
-							s.Deleted = pod.DeletionTimestamp != nil
-							s.Success = pod.Status.Phase == "Succeeded"
-							s.Failed = pod.Status.Phase == "Failed"
-							s.Finished = s.Deleted || s.Success || s.Failed
-							s.Ip = pod.Status.PodIP
-							for _, c := range pod.Status.ContainerStatuses {
-								if c.State.Running != nil || c.State.Terminated != nil {
-									s.ContainerStarted = true
-								}
-							}
-							for _, cond := range pod.Status.Conditions {
-								if cond.Type == "Ready" && cond.Status == "True" {
-									s.Ready = true
-								}
-							}
-							return s
-						})
+						updateState(name, index, pod)
 
 						// Check the conditions
 						state := getState(name, index)
 						svc := servicesMap[name]
-						machine := expressionstcl.NewMachine().
-							Register("started", state.Started).
-							Register("containerStarted", state.ContainerStarted).
-							Register("deleted", state.Deleted).
-							Register("success", state.Success).
-							Register("failed", state.Failed).
-							Register("finished", state.Finished).
-							Register("ready", state.Ready).
-							Register("ip", state.Ip).
-							Register("host", state.Host).
-							Register("pod", state.Pod).
-							Register("index", index)
-						// TODO: ignore "should be static" error
+						machine := state.Machine(index)
+
 						successExpr, err := expressionstcl.EvalExpressionPartial(svc.Ready, machine)
 						if err != nil {
 							fmt.Printf("Warning: %s: parsing success condition: %s\n", pod.Name, err.Error())
@@ -380,11 +337,7 @@ func NewSpawnCmd() *cobra.Command {
 							fmt.Printf("[%d/%d] %s: created pod\n", index+1, combinations*svc.Count, svc.Name)
 
 							// Update the initial data
-							updateState(svc.Name, index, func(s ServiceState) ServiceState {
-								s.Name = pod.Name
-								s.Host = fmt.Sprintf("%s.%s.%s.svc.cluster.local", pod.Spec.Hostname, pod.Spec.Subdomain, pod.Namespace)
-								return s
-							})
+							updateState(svc.Name, index, pod)
 
 							// TODO: Support the timeout
 
