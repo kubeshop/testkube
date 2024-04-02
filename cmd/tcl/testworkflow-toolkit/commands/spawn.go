@@ -10,7 +10,6 @@ package commands
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -20,6 +19,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,7 +28,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
-	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 )
@@ -129,7 +128,7 @@ func NewSpawnCmd() *cobra.Command {
 				svcCombinations := svc.Combinations()
 				svcTotal := svc.Total()
 				if err != nil {
-					fail("%s: %w", k, err)
+					fail("%s: %s", k, err.Error())
 				}
 
 				// Apply empty state
@@ -191,9 +190,10 @@ func NewSpawnCmd() *cobra.Command {
 			// TODO: Reduce number of config maps (not one per file)
 			// TODO: Dedupe files
 			schedulablePods := make([][]*corev1.Pod, len(services))
-			fileMounts := make(map[string]corev1.VolumeMount)
-			fileVolumes := make(map[string]corev1.Volume)
-			configMaps := make([]*corev1.ConfigMap, 0)
+			storage := testworkflowprocessor.NewConfigMapFiles(fmt.Sprintf("%s-%s-vol", env.ExecutionId(), podsRef), map[string]string{
+				testworkflowprocessor.ExecutionIdLabelName:         env.ExecutionId(),
+				testworkflowprocessor.ExecutionAssistingPodRefName: podsRef,
+			})
 
 			for svcIndex, svc := range services {
 				combinations := spawn.CountCombinations(svc.Matrix)
@@ -208,55 +208,10 @@ func NewSpawnCmd() *cobra.Command {
 						fail(err.Error())
 					}
 					for path, content := range files {
-						hash := fmt.Sprintf("%x", sha256.Sum256([]byte(content)))
-
-						// Detect or create volume/mount
-						mount, ok := fileMounts[hash]
-						if !ok {
-							var cfgMap *corev1.ConfigMap
-							// Find config map which has enough space for this file
-							for _, cfg := range configMaps {
-								size := 0
-								for _, v := range cfg.Data {
-									size += len(v)
-								}
-								if size+len(content) < maxConfigMapFileSize {
-									cfgMap = cfg
-									break
-								}
-							}
-							// Create new config map if needed
-							if cfgMap == nil {
-								cfgName := fmt.Sprintf("%s-%s-vol-%d", env.ExecutionId(), podsRef, len(configMaps))
-								cfgMap = &corev1.ConfigMap{
-									ObjectMeta: metav1.ObjectMeta{
-										Name: cfgName,
-										Labels: map[string]string{
-											testworkflowprocessor.ExecutionIdLabelName:         env.ExecutionId(),
-											testworkflowprocessor.ExecutionAssistingPodRefName: podsRef,
-										},
-									},
-									Data:      map[string]string{},
-									Immutable: common.Ptr(true),
-								}
-								configMaps = append(configMaps, cfgMap)
-								fileVolumes[cfgName] = corev1.Volume{
-									Name: cfgName,
-									VolumeSource: corev1.VolumeSource{
-										ConfigMap: &corev1.ConfigMapVolumeSource{
-											LocalObjectReference: corev1.LocalObjectReference{Name: cfgName},
-										},
-									},
-								}
-							}
-							key := fmt.Sprintf("%d", len(cfgMap.Data))
-							cfgMap.Data[key] = content
-							mount = corev1.VolumeMount{
-								Name:     cfgMap.Name,
-								ReadOnly: true,
-								SubPath:  key,
-							}
-							fileMounts[hash] = mount
+						// Apply file
+						mount, volume, err := storage.AddTextFile(content)
+						if err != nil {
+							fail("%s: %s instance: file %s: %s", svc.Name, humanize.Ordinal(int(i)), path, err.Error())
 						}
 
 						// Append the volume mount
@@ -272,7 +227,7 @@ func NewSpawnCmd() *cobra.Command {
 						if !slices.ContainsFunc(pod.Spec.Volumes, func(v corev1.Volume) bool {
 							return v.Name == mount.Name
 						}) {
-							pod.Spec.Volumes = append(pod.Spec.Volumes, fileVolumes[mount.Name])
+							pod.Spec.Volumes = append(pod.Spec.Volumes, volume)
 						}
 					}
 
@@ -379,12 +334,12 @@ func NewSpawnCmd() *cobra.Command {
 			}()
 
 			// Create required config maps
-			if len(configMaps) > 0 {
-				fmt.Printf("Creating %d ConfigMaps for %d unique files.\n", len(configMaps), len(fileMounts))
+			if len(storage.ConfigMaps()) > 0 {
+				fmt.Printf("Creating %d ConfigMaps for %d unique files.\n", len(storage.ConfigMaps()), storage.FilesCount())
 			}
-			for _, cfg := range configMaps {
+			for _, cfg := range storage.ConfigMaps() {
 				_, err := clientSet.CoreV1().ConfigMaps(env.Namespace()).
-					Create(context.Background(), cfg, metav1.CreateOptions{})
+					Create(context.Background(), &cfg, metav1.CreateOptions{})
 				if err != nil {
 					// TODO: Cleanup the rest of config maps
 					fail("creating ConfigMap: %s", err.Error())
