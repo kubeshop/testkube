@@ -23,7 +23,6 @@ import (
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
@@ -49,57 +48,6 @@ type ServiceState struct {
 	Failed           bool       `json:"failed"`
 	Finished         bool       `json:"finished"`
 	Pod              corev1.Pod `json:"pod"`
-}
-
-func readCount(s intstr.IntOrString) (int64, error) {
-	countExpr, err := expressionstcl.Compile(s.String())
-	if err != nil {
-		return 0, fmt.Errorf("%s: invalid: %s", s.String(), err)
-	}
-	if countExpr.Static() == nil {
-		return 0, fmt.Errorf("%s: could not resolve: %s", s.String(), err)
-	}
-	countVal, err := countExpr.Static().IntValue()
-	if err != nil {
-		return 0, fmt.Errorf("%s: could not convert to int: %s", s.String(), err)
-	}
-	if countVal < 0 {
-		return 0, fmt.Errorf("%s: should not be lower than zero", s.String())
-	}
-	return countVal, nil
-}
-
-func readParams(base map[string][]intstr.IntOrString, expressions map[string]string) (map[string][]interface{}, error) {
-	result := make(map[string][]interface{})
-	for key, list := range base {
-		result[key] = make([]interface{}, len(list))
-		for i := range list {
-			result[key][i] = list[i].String()
-		}
-	}
-	for key, exprStr := range expressions {
-		if _, ok := result[key]; !ok {
-			result[key] = make([]interface{}, 0)
-		}
-		expr, err := expressionstcl.Compile(exprStr)
-		if err != nil {
-			return nil, fmt.Errorf("%s: %s: %s\n", key, exprStr, err)
-		}
-		if expr.Static() == nil {
-			return nil, fmt.Errorf("%s: %s: could not resolve\n", key, exprStr)
-		}
-		list, err := expr.Static().SliceValue()
-		if err != nil {
-			return nil, fmt.Errorf("%s: %s: could not parse as list: %s\n", key, exprStr, err)
-		}
-		result[key] = append(result[key], list...)
-	}
-	for key := range expressions {
-		if len(expressions[key]) == 0 {
-			delete(expressions, key)
-		}
-	}
-	return result, nil
 }
 
 func NewSpawnCmd() *cobra.Command {
