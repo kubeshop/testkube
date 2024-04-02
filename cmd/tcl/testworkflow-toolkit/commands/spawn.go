@@ -172,8 +172,6 @@ func NewSpawnCmd() *cobra.Command {
 			clientSet := env.Kubernetes()
 
 			// Initialize list of pods to schedule
-			// TODO: Reduce number of config maps (not one per file)
-			// TODO: Dedupe files
 			schedulablePods := make([][]*corev1.Pod, len(services))
 			storage := testworkflowprocessor.NewConfigMapFiles(fmt.Sprintf("%s-%s-vol", env.ExecutionId(), podsRef), map[string]string{
 				testworkflowprocessor.ExecutionIdLabelName:         env.ExecutionId(),
