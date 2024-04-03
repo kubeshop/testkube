@@ -533,6 +533,7 @@ func main() {
 		logsStream,
 		cfg.TestkubeNamespace,
 		cfg.TestkubeProTLSSecret,
+		cfg.TestkubeProRunnerCustomCASecret,
 	)
 	if mode == common.ModeAgent {
 		sched.WithSubscriptionChecker(subscriptionChecker)

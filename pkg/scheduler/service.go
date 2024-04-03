@@ -46,6 +46,7 @@ type Scheduler struct {
 	subscriptionChecker       checktcl.SubscriptionChecker
 	namespace                 string
 	agentAPITLSSecret         string
+	runnerCustomCASecret      string
 }
 
 func NewScheduler(
@@ -70,6 +71,7 @@ func NewScheduler(
 	logsStream logsclient.Stream,
 	namespace string,
 	agentAPITLSSecret string,
+	runnerCustomCASecret string,
 ) *Scheduler {
 	return &Scheduler{
 		metrics:                   metrics,
@@ -93,6 +95,7 @@ func NewScheduler(
 		logsStream:                logsStream,
 		namespace:                 namespace,
 		agentAPITLSSecret:         agentAPITLSSecret,
+		runnerCustomCASecret:      runnerCustomCASecret,
 	}
 }
 
