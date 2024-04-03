@@ -124,7 +124,7 @@ type Config struct {
 	// TestkubeProCAFile is meant to provide a custom CA when making a TLS connection to
 	// the agent API.
 	//
-	// Deprecated: Instead mount a file into directory and specify the diretory
+	// Deprecated: Instead mount a CA file into a directory and specify the diretory
 	// path with the SSL_CERT_DIR environment variable.
 	TestkubeProCAFile string `envconfig:"TESTKUBE_PRO_CA_FILE" default:""`
 }
