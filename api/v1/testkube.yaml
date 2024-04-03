@@ -7884,10 +7884,7 @@ components:
           additionalProperties:
             $ref: "#/components/schemas/TestWorkflowSpawnInstruction"
         distribute:
-          type: object
-          description: "map of pods to run for distributing the tests"
-          additionalProperties:
-            $ref: "#/components/schemas/TestWorkflowSpawnInstruction"
+          $ref: "#/components/schemas/TestWorkflowSpawnInstruction"
         retry:
           $ref: "#/components/schemas/TestWorkflowRetryPolicy"
         timeout:
@@ -7952,10 +7949,7 @@ components:
           additionalProperties:
             $ref: "#/components/schemas/TestWorkflowSpawnInstruction"
         distribute:
-          type: object
-          description: "map of pods to run for distributing the tests"
-          additionalProperties:
-            $ref: "#/components/schemas/TestWorkflowSpawnInstruction"
+          $ref: "#/components/schemas/TestWorkflowSpawnInstruction"
         retry:
           $ref: "#/components/schemas/TestWorkflowRetryPolicy"
         timeout:

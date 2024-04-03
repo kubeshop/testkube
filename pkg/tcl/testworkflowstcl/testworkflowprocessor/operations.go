@@ -360,7 +360,7 @@ func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container Contain
 }
 
 func ProcessDistribute(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
-	if len(step.Distribute) == 0 {
+	if step.Distribute == nil {
 		return nil, nil
 	}
 
@@ -373,19 +373,15 @@ func ProcessDistribute(_ InternalProcessor, layer Intermediate, container Contai
 		SetCommand("/toolkit", "spawn", layer.NextRef()).
 		EnableToolkit(stage.Ref())
 
-	args := make([]string, 0)
-	for k, s := range step.Distribute {
-		instruction := s.DeepCopy()
-		if s.Container != nil {
-			instruction.Pod.Spec.Containers = append(instruction.Pod.Spec.Containers, *s.Container)
-		}
-		b, err := json.Marshal(instruction.SpawnInstructionBase)
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("spawn[%s]: marshaling error", k))
-		}
-		args = append(args, "-i", fmt.Sprintf("%s=%s", k, expressionstcl.NewStringValue(string(b)).Template()))
+	instruction := step.Distribute.DeepCopy()
+	if instruction.Container != nil {
+		instruction.Pod.Spec.Containers = append(instruction.Pod.Spec.Containers, *instruction.Container)
 	}
-	stage.Container().SetArgs(args...)
+	b, err := json.Marshal(instruction.SpawnInstructionBase)
+	if err != nil {
+		return nil, errors.Wrap(err, "distribute: marshaling error")
+	}
+	stage.Container().SetArgs("-i", fmt.Sprintf("operation=%s", expressionstcl.NewStringValue(string(b)).Template()))
 
 	return stage, nil
 }

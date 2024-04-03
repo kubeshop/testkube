@@ -19,9 +19,8 @@ type TestWorkflowIndependentStep struct {
 	// is the step optional, so the failure won't affect the TestWorkflow result
 	Optional bool `json:"optional,omitempty"`
 	// map of long-running pods to spawn, like database
-	Services map[string]TestWorkflowSpawnInstruction `json:"services,omitempty"`
-	// map of pods to run for distributing the tests
-	Distribute map[string]TestWorkflowSpawnInstruction `json:"distribute,omitempty"`
+	Services   map[string]TestWorkflowSpawnInstruction `json:"services,omitempty"`
+	Distribute *TestWorkflowSpawnInstruction           `json:"distribute,omitempty"`
 	Retry      *TestWorkflowRetryPolicy                `json:"retry,omitempty"`
 	// maximum time this step may take
 	Timeout string `json:"timeout,omitempty"`
