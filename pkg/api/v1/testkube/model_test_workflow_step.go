@@ -29,7 +29,7 @@ type TestWorkflowStep struct {
 	Content *TestWorkflowContent `json:"content,omitempty"`
 	// script to run in a default shell for the container
 	Shell      string                       `json:"shell,omitempty"`
-	Run        *TestWorkflowContainerConfig `json:"run,omitempty"`
+	Run        *TestWorkflowStepRun         `json:"run,omitempty"`
 	WorkingDir *BoxedString                 `json:"workingDir,omitempty"`
 	Container  *TestWorkflowContainerConfig `json:"container,omitempty"`
 	Execute    *TestWorkflowStepExecute     `json:"execute,omitempty"`

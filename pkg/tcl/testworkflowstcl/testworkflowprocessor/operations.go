@@ -58,6 +58,13 @@ func ProcessRunCommand(_ InternalProcessor, layer Intermediate, container Contai
 	stage := NewContainerStage(layer.NextRef(), container)
 	stage.SetRetryPolicy(step.Retry)
 	stage.SetCategory("Run")
+	if step.Run.Shell != nil {
+		if step.Run.ContainerConfig.Command != nil || step.Run.ContainerConfig.Args != nil {
+			return nil, errors.New("run.shell should not be used in conjunction with run.command or run.args")
+		}
+		stage.SetCategory("Run shell command")
+		stage.Container().SetCommand(defaultShell).SetArgs("-c", *step.Run.Shell)
+	}
 	return stage, nil
 }
 
