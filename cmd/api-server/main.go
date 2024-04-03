@@ -511,7 +511,6 @@ func main() {
 		ui.ExitOnError("Creating container executor", err)
 	}
 
-	// TODO(emil): the scheduler is created here
 	sched := scheduler.NewScheduler(
 		metrics,
 		executor,
