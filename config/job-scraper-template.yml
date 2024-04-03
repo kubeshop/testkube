@@ -53,10 +53,10 @@ spec:
         {{- end }}
         volumeMounts:
         {{- if .RunnerCustomCASecret }}
-        - name: {{ .RunnerCustomCASecret }}
-          mountPath: /etc/testkube/certs/testkube-custom-ca.pem
-          readOnly: true
-          subPath: ca.crt
+          - name: {{ .RunnerCustomCASecret }}
+            mountPath: /etc/testkube/certs/testkube-custom-ca.pem
+            readOnly: true
+            subPath: ca.crt
         {{- end }}
         {{- if .ArtifactRequest }}
           {{- if .ArtifactRequest.VolumeMountPath }}
@@ -66,10 +66,10 @@ spec:
         {{- end }}
       volumes:
       {{- if .RunnerCustomCASecret }}
-      - name: {{ .RunnerCustomCASecret }}
-        secret:
-          secretName: {{ .RunnerCustomCASecret }}
-          defaultMode: 420
+        - name: {{ .RunnerCustomCASecret }}
+          secret:
+            secretName: {{ .RunnerCustomCASecret }}
+            defaultMode: 420
       {{- end }}
       {{- if .ArtifactRequest }}
         {{- if and .ArtifactRequest.VolumeMountPath .ArtifactRequest.StorageClassName }}
