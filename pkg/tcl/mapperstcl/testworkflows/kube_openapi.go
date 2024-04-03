@@ -459,8 +459,20 @@ func MapContainerConfigKubeToAPI(v testworkflowsv1.ContainerConfig) testkube.Tes
 	}
 }
 
-func MapStepRunKubeToAPI(v testworkflowsv1.StepRun) testkube.TestWorkflowContainerConfig {
-	return MapContainerConfigKubeToAPI(v.ContainerConfig)
+func MapStepRunKubeToAPI(v testworkflowsv1.StepRun) testkube.TestWorkflowStepRun {
+	return testkube.TestWorkflowStepRun{
+		WorkingDir:      MapStringToBoxedString(v.WorkingDir),
+		Image:           v.Image,
+		ImagePullPolicy: MapImagePullPolicyKubeToAPI(v.ImagePullPolicy),
+		Env:             common.MapSlice(v.Env, MapEnvVarKubeToAPI),
+		EnvFrom:         common.MapSlice(v.EnvFrom, MapEnvFromSourceKubeToAPI),
+		Command:         MapStringSliceToBoxedStringList(v.Command),
+		Args:            MapStringSliceToBoxedStringList(v.Args),
+		Shell:           MapStringToBoxedString(v.Shell),
+		Resources:       common.MapPtr(v.Resources, MapResourcesKubeToAPI),
+		SecurityContext: MapSecurityContextKubeToAPI(v.SecurityContext),
+		VolumeMounts:    common.MapSlice(v.VolumeMounts, MapVolumeMountKubeToAPI),
+	}
 }
 
 func MapStepExecuteTestKubeToAPI(v testworkflowsv1.StepExecuteTest) testkube.TestWorkflowStepExecuteTestRef {
