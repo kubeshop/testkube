@@ -1095,3 +1095,97 @@ func TestProcessGlobalContent(t *testing.T) {
 	assert.Equal(t, volumes[2].ConfigMap.Name, res.ConfigMaps[0].Name)
 	assert.Equal(t, "some-{{content", res.ConfigMaps[0].Data[volumeMounts[2].SubPath])
 }
+
+func TestProcessRunShell(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{StepBase: testworkflowsv1.StepBase{Run: &testworkflowsv1.StepRun{Shell: common.Ptr("shell-test")}}},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, execMachine)
+	assert.NoError(t, err)
+
+	sig := res.Signature
+	sigSerialized, _ := json.Marshal(sig)
+
+	volumes := res.Job.Spec.Template.Spec.Volumes
+	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
+
+	want := batchv1.Job{
+		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "dummy-id",
+			Labels: map[string]string{ExecutionIdLabelName: "dummy-id"},
+			Annotations: map[string]string{
+				SignatureAnnotationName: string(sigSerialized),
+			},
+		},
+		Spec: batchv1.JobSpec{
+			BackoffLimit: common.Ptr(int32(0)),
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						ExecutionIdLabelName:        "dummy-id",
+						ExecutionIdMainPodLabelName: "dummy-id",
+					},
+					Annotations: map[string]string(nil),
+				},
+				Spec: corev1.PodSpec{
+					RestartPolicy: corev1.RestartPolicyNever,
+					Volumes:       volumes,
+					InitContainers: []corev1.Container{
+						{
+							Name:            "tktw-init",
+							Image:           defaultInitImage,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command:         []string{"/bin/sh", "-c"},
+							Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+							VolumeMounts:    volumeMounts,
+							SecurityContext: &corev1.SecurityContext{
+								RunAsGroup: common.Ptr(defaultFsGroup),
+							},
+						},
+					},
+					Containers: []corev1.Container{
+						{
+							Name:            sig[0].Ref(),
+							ImagePullPolicy: "",
+							Image:           defaultImage,
+							Command: []string{
+								"/.tktw/init",
+								sig[0].Ref(),
+								"-c", fmt.Sprintf("%s=passed", sig[0].Ref()),
+								"-r", fmt.Sprintf("=%s", sig[0].Ref()),
+								"--",
+							},
+							Args:         []string{defaultShell, "-c", "shell-test"},
+							WorkingDir:   "",
+							EnvFrom:      []corev1.EnvFromSource(nil),
+							Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
+							Resources:    corev1.ResourceRequirements{},
+							VolumeMounts: volumeMounts,
+							SecurityContext: &corev1.SecurityContext{
+								RunAsGroup: common.Ptr(defaultFsGroup),
+							},
+						},
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+						FSGroup: common.Ptr(defaultFsGroup),
+					},
+				},
+			},
+		},
+	}
+
+	assert.Equal(t, want, res.Job)
+
+	assert.Equal(t, 2, len(volumeMounts))
+	assert.Equal(t, 2, len(volumes))
+	assert.Equal(t, defaultInternalPath, volumeMounts[0].MountPath)
+	assert.Equal(t, defaultDataPath, volumeMounts[1].MountPath)
+	assert.True(t, volumeMounts[0].Name == volumes[0].Name)
+	assert.True(t, volumeMounts[1].Name == volumes[1].Name)
+}
