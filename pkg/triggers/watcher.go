@@ -18,7 +18,7 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	testsourcev1 "github.com/kubeshop/testkube-operator/api/testsource/v1"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 
@@ -301,7 +301,7 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 }
 
 func (s *Service) checkExecutionPodStatus(ctx context.Context, executionID string, pods []*corev1.Pod) error {
-	if len(pods) > 0 && pods[0].Labels[testworkflowprocessor.ExecutionIdLabelName] != "" {
+	if len(pods) > 0 && pods[0].Labels[constants.ExecutionIdLabelName] != "" {
 		return nil
 	}
 

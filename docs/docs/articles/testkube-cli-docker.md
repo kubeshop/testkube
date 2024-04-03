@@ -37,7 +37,7 @@ git clone https://github.com/kubeshop/testkube.git
 2. Build the Docker image:
 
 ```bash
-make docker-build-cli DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-cli:latest ALPINE_IMAGE=alpine:3.18.0 DOCKER_IMAGE_TAG=local ANALYTICS_TRACKING_ID="" ANALYTICS_API_KEY=""
+make docker-build-cli DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-cli:latest ALPINE_IMAGE=alpine:3.18.0 BUSYBOX_IMAGE=busybox:1.36.1-musl DOCKER_IMAGE_TAG=local ANALYTICS_TRACKING_ID="" ANALYTICS_API_KEY=""
 ```
 
 ## Running the Testkube CLI Docker Image
