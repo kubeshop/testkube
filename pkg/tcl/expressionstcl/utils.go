@@ -44,7 +44,7 @@ func EvalTemplate(tpl string, machines ...Machine) (string, error) {
 	return expr.Static().StringValue()
 }
 
-func EvalExpression(str string, machines ...Machine) (StaticValue, error) {
+func EvalExpressionPartial(str string, machines ...Machine) (Expression, error) {
 	expr, err := Compile(str)
 	if err != nil {
 		return nil, errors.Wrap(err, "compiling")
@@ -52,6 +52,14 @@ func EvalExpression(str string, machines ...Machine) (StaticValue, error) {
 	expr, err = expr.Resolve(machines...)
 	if err != nil {
 		return nil, errors.Wrap(err, "resolving")
+	}
+	return expr, err
+}
+
+func EvalExpression(str string, machines ...Machine) (StaticValue, error) {
+	expr, err := EvalExpressionPartial(str, machines...)
+	if err != nil {
+		return nil, err
 	}
 	if expr.Static() == nil {
 		return nil, fmt.Errorf("expression should be static: %s", expr.String())
