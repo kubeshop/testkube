@@ -694,12 +694,6 @@ func MapRetryPolicyKubeToAPI(v testworkflowsv1.RetryPolicy) testkube.TestWorkflo
 	}
 }
 
-func MapSpawnContentKubeToAPI(v testworkflowsv1.SpawnContent) testkube.TestWorkflowSpawnContent {
-	return testkube.TestWorkflowSpawnContent{
-		Files: common.MapSlice(v.Files, MapContentFileKubeToAPI),
-	}
-}
-
 func MapSpawnInstructionKubeToAPI(v testworkflowsv1.SpawnInstruction) testkube.TestWorkflowSpawnInstruction {
 	// Convert PodTemplateSpec and Container to map[string]interface{}
 	var pod, container map[string]interface{}
@@ -731,7 +725,7 @@ func MapSpawnInstructionKubeToAPI(v testworkflowsv1.SpawnInstruction) testkube.T
 		MatrixExpressions: v.MatrixExpressions,
 		Shards:            MapIntOrStringSliceMapToStringSliceMap(v.Shards),
 		ShardExpressions:  v.ShardExpressions,
-		Content:           common.MapPtr(v.Content, MapSpawnContentKubeToAPI),
+		Files:             common.MapSlice(v.Files, MapContentFileKubeToAPI),
 		Pod:               pod,
 		Container:         container,
 	}

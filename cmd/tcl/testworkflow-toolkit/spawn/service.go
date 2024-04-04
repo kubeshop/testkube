@@ -32,7 +32,7 @@ type Service struct {
 	Shards      map[string][]interface{}
 	Ready       string
 	Error       string
-	Content     *testworkflowsv1.SpawnContent
+	Files       []testworkflowsv1.ContentFile
 	PodTemplate corev1.PodTemplateSpec
 }
 
@@ -133,19 +133,19 @@ func (svc *Service) Pod(ref string, index int64, machines ...expressionstcl.Mach
 	return pod, nil
 }
 
-func (svc *Service) Files(index int64, machines ...expressionstcl.Machine) (map[string]string, error) {
+func (svc *Service) FilesMap(index int64, machines ...expressionstcl.Machine) (map[string]string, error) {
 	// Ignore when there are no files expected
-	if svc.Content == nil || len(svc.Content.Files) == 0 {
+	if len(svc.Files) == 0 {
 		return nil, nil
 	}
 
 	// Prepare data for computation
-	files := make(map[string]string, len(svc.Content.Files))
+	files := make(map[string]string, len(svc.Files))
 	machines = append(machines, svc.MachineAt(index))
 
 	// Compute all files
 	var err error
-	for fileIndex, file := range svc.Content.Files {
+	for fileIndex, file := range svc.Files {
 		files[file.Path], err = expressionstcl.EvalTemplate(file.Content, machines...)
 		if err != nil {
 			return nil, fmt.Errorf("resolving %s file (%s): %w", humanize.Ordinal(fileIndex), file.Path, err)

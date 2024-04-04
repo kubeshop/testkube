@@ -27,7 +27,7 @@ type TestWorkflowSpawnInstruction struct {
 	Shards map[string][]string `json:"shards,omitempty"`
 	// parameters that should be distributed across sharded instances (expressions)
 	ShardExpressions map[string]string         `json:"shardExpressions,omitempty"`
-	Content          *TestWorkflowSpawnContent `json:"content,omitempty"`
+	Files            []TestWorkflowContentFile `json:"files,omitempty"`
 	// pod template to spawn
 	Pod map[string]interface{} `json:"pod,omitempty"`
 	// container definition for simplicity

@@ -103,7 +103,7 @@ func FromInstruction(name string, instruction testworkflowsv1.SpawnInstructionBa
 		Ready:       instruction.Ready,
 		Error:       instruction.Error,
 		PodTemplate: instruction.Pod,
-		Content:     instruction.Content,
+		Files:       instruction.Files,
 	}
 
 	// Define the default success/error clauses

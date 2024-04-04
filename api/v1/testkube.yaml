@@ -8281,14 +8281,6 @@ components:
           items:
             $ref: "#/components/schemas/TestWorkflowContentTarball"
 
-    TestWorkflowSpawnContent:
-      type: object
-      properties:
-        files:
-          type: array
-          items:
-            $ref: "#/components/schemas/TestWorkflowContentFile"
-
     TestWorkflowContentGit:
       type: object
       properties:
@@ -8394,8 +8386,10 @@ components:
           description: "parameters that should be distributed across sharded instances (expressions)"
           additionalProperties:
             type: string
-        content:
-          $ref: "#/components/schemas/TestWorkflowSpawnContent"
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestWorkflowContentFile"
         pod:
           type: object
           description: "pod template to spawn"

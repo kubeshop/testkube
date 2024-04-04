@@ -347,12 +347,6 @@ func MapContentFileAPIToKube(v testkube.TestWorkflowContentFile) testworkflowsv1
 	}
 }
 
-func MapSpawnContentAPIToKube(v testkube.TestWorkflowSpawnContent) testworkflowsv1.SpawnContent {
-	return testworkflowsv1.SpawnContent{
-		Files: common.MapSlice(v.Files, MapContentFileAPIToKube),
-	}
-}
-
 func MapSpawnInstructionAPIToKube(v testkube.TestWorkflowSpawnInstruction) testworkflowsv1.SpawnInstruction {
 	// Convert Pod's interface{} to PodTemplateSpec
 	var pod corev1.PodTemplateSpec
@@ -385,7 +379,7 @@ func MapSpawnInstructionAPIToKube(v testkube.TestWorkflowSpawnInstruction) testw
 			MatrixExpressions: v.MatrixExpressions,
 			Shards:            MapStringSliceMapToIntOrStringSliceMap(v.Shards),
 			ShardExpressions:  v.ShardExpressions,
-			Content:           common.MapPtr(v.Content, MapSpawnContentAPIToKube),
+			Files:             common.MapSlice(v.Files, MapContentFileAPIToKube),
 			Pod:               pod,
 		},
 		SpawnInstructionAliases: testworkflowsv1.SpawnInstructionAliases{

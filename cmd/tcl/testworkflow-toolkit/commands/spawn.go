@@ -187,7 +187,7 @@ func NewSpawnCmd() *cobra.Command {
 					if err != nil {
 						fail(err.Error())
 					}
-					files, err := svc.Files(i, baseMachine)
+					files, err := svc.FilesMap(i, baseMachine)
 					if err != nil {
 						fail(err.Error())
 					}
