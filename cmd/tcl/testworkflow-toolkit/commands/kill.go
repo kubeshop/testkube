@@ -18,7 +18,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
 func NewKillCmd() *cobra.Command {
@@ -40,8 +40,8 @@ func NewKillCmd() *cobra.Command {
 				PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
 			}, metav1.ListOptions{
 				LabelSelector: fmt.Sprintf("%s=%s,%s=%s",
-					testworkflowprocessor.ExecutionIdLabelName, env.ExecutionId(),
-					testworkflowprocessor.ExecutionAssistingPodRefName, podsRef),
+					constants.ExecutionIdLabelName, env.ExecutionId(),
+					constants.ExecutionAssistingPodRefName, podsRef),
 			})
 			if err != nil {
 				fmt.Printf("failed to delete assisting pods: %s\n", err.Error())
@@ -54,8 +54,8 @@ func NewKillCmd() *cobra.Command {
 				PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
 			}, metav1.ListOptions{
 				LabelSelector: fmt.Sprintf("%s=%s,%s=%s",
-					testworkflowprocessor.ExecutionIdLabelName, env.ExecutionId(),
-					testworkflowprocessor.ExecutionAssistingPodRefName, podsRef),
+					constants.ExecutionIdLabelName, env.ExecutionId(),
+					constants.ExecutionAssistingPodRefName, podsRef),
 			})
 			if err != nil {
 				fmt.Printf("failed to delete configmaps of assisting pods: %s\n", err.Error())

@@ -20,7 +20,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
 type Service struct {
@@ -103,7 +103,7 @@ func (svc *Service) Pod(ref string, index int64, machines ...expressionstcl.Mach
 		pod.Spec.SecurityContext = &corev1.PodSecurityContext{}
 	}
 	if pod.Spec.SecurityContext.FSGroup == nil {
-		pod.Spec.SecurityContext.FSGroup = common.Ptr(testworkflowprocessor.DefaultFsGroup)
+		pod.Spec.SecurityContext.FSGroup = common.Ptr(constants.DefaultFsGroup)
 	}
 
 	// Append defaults for the pod containers
@@ -118,13 +118,13 @@ func (svc *Service) Pod(ref string, index int64, machines ...expressionstcl.Mach
 	if pod.Labels == nil {
 		pod.Labels = map[string]string{}
 	}
-	pod.Labels[testworkflowprocessor.ExecutionIdLabelName] = env.ExecutionId()
-	pod.Labels[testworkflowprocessor.ExecutionAssistingPodRefName] = ref
+	pod.Labels[constants.ExecutionIdLabelName] = env.ExecutionId()
+	pod.Labels[constants.ExecutionAssistingPodRefName] = ref
 
 	// Configure the default headless service
-	pod.Labels[testworkflowprocessor.AssistingPodServiceName] = "true"
+	pod.Labels[constants.AssistingPodServiceName] = "true"
 	if pod.Spec.Subdomain == "" {
-		pod.Spec.Subdomain = testworkflowprocessor.AssistingPodServiceName
+		pod.Spec.Subdomain = constants.AssistingPodServiceName
 	}
 	if pod.Spec.Hostname == "" {
 		pod.Spec.Hostname = fmt.Sprintf("%s-%s-%d", env.ExecutionId(), svc.Name, index)
@@ -183,6 +183,6 @@ func applyContainerDefaults(container *corev1.Container, index int) {
 		container.SecurityContext = &corev1.SecurityContext{}
 	}
 	if container.SecurityContext.RunAsGroup == nil {
-		container.SecurityContext.RunAsGroup = common.Ptr(testworkflowprocessor.DefaultFsGroup)
+		container.SecurityContext.RunAsGroup = common.Ptr(constants.DefaultFsGroup)
 	}
 }

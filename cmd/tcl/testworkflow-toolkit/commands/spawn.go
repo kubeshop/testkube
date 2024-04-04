@@ -29,6 +29,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
 const MaxParallelism = 1000
@@ -174,8 +175,8 @@ func NewSpawnCmd() *cobra.Command {
 			// Initialize list of pods to schedule
 			schedulablePods := make([][]*corev1.Pod, len(services))
 			storage := testworkflowprocessor.NewConfigMapFiles(fmt.Sprintf("%s-%s-vol", env.ExecutionId(), podsRef), map[string]string{
-				testworkflowprocessor.ExecutionIdLabelName:         env.ExecutionId(),
-				testworkflowprocessor.ExecutionAssistingPodRefName: podsRef,
+				constants.ExecutionIdLabelName:         env.ExecutionId(),
+				constants.ExecutionAssistingPodRefName: podsRef,
 			})
 
 			for svcIndex, svc := range services {
@@ -221,7 +222,7 @@ func NewSpawnCmd() *cobra.Command {
 			// Watch events for all Pod modifications
 			podWatch, err := clientSet.CoreV1().Pods(env.Namespace()).Watch(context.Background(), metav1.ListOptions{
 				TypeMeta:      metav1.TypeMeta{Kind: "Pod"},
-				LabelSelector: fmt.Sprintf("%s=%s", testworkflowprocessor.ExecutionAssistingPodRefName, podsRef),
+				LabelSelector: fmt.Sprintf("%s=%s", constants.ExecutionAssistingPodRefName, podsRef),
 			})
 			if err != nil {
 				fail("Couldn't watch Kubernetes for pod changes: %s", err.Error())

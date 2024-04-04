@@ -368,7 +368,7 @@ func ProcessDistribute(_ InternalProcessor, layer Intermediate, container Contai
 	stage.SetCategory("Run distributed pods")
 
 	stage.Container().
-		SetImage(defaultToolkitImage).
+		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
 		SetCommand("/toolkit", "spawn", layer.NextRef()).
 		EnableToolkit(stage.Ref())
@@ -398,7 +398,7 @@ func ProcessServicesStart(_ InternalProcessor, layer Intermediate, container Con
 	stage.SetCategory("Start assisting pods")
 
 	stage.Container().
-		SetImage(defaultToolkitImage).
+		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
 		SetCommand("/toolkit", "spawn", "{{env.TK_SRV_REF}}").
 		EnableToolkit(stage.Ref())
@@ -432,7 +432,7 @@ func ProcessServicesStop(_ InternalProcessor, layer Intermediate, container Cont
 	stage.SetCategory("Cleanup assisting pods")
 
 	stage.Container().
-		SetImage(defaultToolkitImage).
+		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
 		SetCommand("/toolkit", "kill", "{{env.TK_SRV_REF}}").
 		EnableToolkit(stage.Ref())
