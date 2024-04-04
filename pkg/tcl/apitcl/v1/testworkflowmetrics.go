@@ -35,10 +35,12 @@ func (s *apiTCL) sendCreateWorkflowTelemetry(ctx context.Context, workflow *test
 	}
 
 	var dataSource string
-	if len(workflow.Spec.Content.Files) != 0 {
-		dataSource = "files"
-	} else if workflow.Spec.Content.Git != nil {
-		dataSource = "git"
+	if workflow.Spec.Content != nil {
+		if len(workflow.Spec.Content.Files) != 0 {
+			dataSource = "files"
+		} else if workflow.Spec.Content.Git != nil {
+			dataSource = "git"
+		}
 	}
 
 	hasArtifacts := false
@@ -107,10 +109,12 @@ func (s *apiTCL) sendCreateWorkflowTemplateTelemetry(ctx context.Context, templa
 	}
 
 	var dataSource string
-	if template.Spec.Content != nil && len(template.Spec.Content.Files) != 0 {
-		dataSource = "files"
-	} else if template.Spec.Content.Git != nil {
-		dataSource = "git"
+	if template.Spec.Content != nil {
+		if len(template.Spec.Content.Files) != 0 {
+			dataSource = "files"
+		} else if template.Spec.Content.Git != nil {
+			dataSource = "git"
+		}
 	}
 
 	hasArtifacts := false
@@ -178,10 +182,12 @@ func (s *apiTCL) sendRunWorkflowTelemetry(ctx context.Context, workflow *testwor
 	}
 
 	var dataSource string
-	if len(workflow.Spec.Content.Files) != 0 {
-		dataSource = "files"
-	} else if workflow.Spec.Content.Git != nil {
-		dataSource = "git"
+	if workflow.Spec.Content != nil {
+		if len(workflow.Spec.Content.Files) != 0 {
+			dataSource = "files"
+		} else if workflow.Spec.Content.Git != nil {
+			dataSource = "git"
+		}
 	}
 
 	hasArtifacts := false
