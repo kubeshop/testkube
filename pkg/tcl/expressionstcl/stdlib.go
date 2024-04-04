@@ -199,6 +199,16 @@ var stdFunctions = map[string]StdFunction{
 			return NewValue(shellquote.Join(args...)), nil
 		},
 	},
+	"shellargs": {
+		Handler: func(value ...StaticValue) (Expression, error) {
+			if len(value) != 1 {
+				return nil, fmt.Errorf(`"shellargs" function expects 1 arguments, %d provided`, len(value))
+			}
+			v, _ := value[0].StringValue()
+			words, err := shellquote.Split(v)
+			return NewValue(words), err
+		},
+	},
 	"trim": {
 		ReturnType: TypeString,
 		Handler: func(value ...StaticValue) (Expression, error) {
