@@ -24,6 +24,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
 //go:generate mockgen -destination=./mock_processor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor" Processor
@@ -105,9 +106,9 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		AppendPodConfig(workflow.Spec.Pod).
 		AppendJobConfig(workflow.Spec.Job)
 	layer.ContainerDefaults().
-		ApplyCR(defaultContainerConfig.DeepCopy()).
-		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, defaultInternalPath)).
-		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, defaultDataPath))
+		ApplyCR(constants.DefaultContainerConfig.DeepCopy()).
+		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultInternalPath)).
+		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultDataPath))
 
 	// Process steps
 	rootStep := testworkflowsv1.Step{
@@ -159,7 +160,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	// Append main label for the pod
 	layer.AppendPodConfig(&testworkflowsv1.PodConfig{
 		Labels: map[string]string{
-			ExecutionIdMainPodLabelName: "{{execution.id}}",
+			constants.ExecutionIdMainPodLabelName: "{{execution.id}}",
 		},
 	})
 
@@ -218,7 +219,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		}
 
 		// Resolve relative paths in the volumeMounts relatively to the working dir
-		workingDir := defaultDataPath
+		workingDir := constants.DefaultDataPath
 		if containers[i].WorkingDir != "" {
 			workingDir = containers[i].WorkingDir
 		}
@@ -242,7 +243,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			ServiceAccountName: podConfig.ServiceAccountName,
 			NodeSelector:       podConfig.NodeSelector,
 			SecurityContext: &corev1.PodSecurityContext{
-				FSGroup: common.Ptr(defaultFsGroup),
+				FSGroup: common.Ptr(constants.DefaultFsGroup),
 			},
 		},
 	}
@@ -253,13 +254,13 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 	initContainer := corev1.Container{
 		Name:            "tktw-init",
-		Image:           defaultInitImage,
+		Image:           constants.DefaultInitImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"/bin/sh", "-c"},
-		Args:            []string{fmt.Sprintf("cp /init %s && touch %s && chmod 777 %s && (echo -n ',0' > %s && echo 'Done' && exit 0) || (echo -n 'failed,1' > %s && exit 1)", defaultInitPath, defaultStatePath, defaultStatePath, "/dev/termination-log", "/dev/termination-log")},
+		Args:            []string{constants.InitScript},
 		VolumeMounts:    layer.ContainerDefaults().VolumeMounts(),
 		SecurityContext: &corev1.SecurityContext{
-			RunAsGroup: common.Ptr(defaultFsGroup),
+			RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 		},
 	}
 	err = expressionstcl.FinalizeForce(&initContainer, machines...)
@@ -296,7 +297,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	jobAnnotations := make(map[string]string)
 	maps.Copy(jobAnnotations, jobSpec.Annotations)
 	maps.Copy(jobAnnotations, map[string]string{
-		SignatureAnnotationName: string(sigSerialized),
+		constants.SignatureAnnotationName: string(sigSerialized),
 	})
 	jobSpec.Annotations = jobAnnotations
 

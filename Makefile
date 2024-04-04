@@ -18,6 +18,7 @@ LD_FLAGS += -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID
 LD_FLAGS += -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET)
 LD_FLAGS += -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)
 LD_FLAGS += -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY)
+LD_FLAGS += -X github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants.DefaultImage=$(BUSYBOX_IMAGE)
 LD_FLAGS += -X github.com/kubeshop/testkube/internal/pkg/api.Version=$(VERSION)
 LD_FLAGS += -X github.com/kubeshop/testkube/internal/pkg/api.Commit=$(COMMIT)
 
@@ -72,7 +73,8 @@ build-testkube-bin:
 			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) \
 			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET) \
 			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)  \
-			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY)" \
+			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY) \
+			-X github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants.DefaultImage=$(BUSYBOX_IMAGE)" \
 		-o "$(BIN_DIR)/kubectl-testkube" \
 		cmd/kubectl-testkube/main.go
 
@@ -86,7 +88,8 @@ build-testkube-bin-intel:
 			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$(SLACK_BOT_CLIENT_ID) \
 			-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET) \
 			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)  \
-			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY)" \
+			-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=$(ANALYTICS_API_KEY) \
+			-X github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants.DefaultImage=$(BUSYBOX_IMAGE)" \
 		-o "$(BIN_DIR)/kubectl-testkube" \
 		cmd/kubectl-testkube/main.go
 

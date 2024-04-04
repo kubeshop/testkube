@@ -21,7 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
 const (
@@ -105,7 +105,7 @@ func WatchJob(ctx context.Context, clientSet kubernetes.Interface, namespace, na
 
 func WatchMainPod(ctx context.Context, clientSet kubernetes.Interface, namespace, name string, cacheSize int) Watcher[*corev1.Pod] {
 	return watchPod(ctx, clientSet, namespace, ListOptions{
-		LabelSelector: testworkflowprocessor.ExecutionIdMainPodLabelName + "=" + name,
+		LabelSelector: constants.ExecutionIdMainPodLabelName + "=" + name,
 		CacheSize:     cacheSize,
 	})
 }

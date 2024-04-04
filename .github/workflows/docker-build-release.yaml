@@ -8,6 +8,7 @@ on:
       - 'docs/**'
 env:
   ALPINE_IMAGE: alpine:3.19.0
+  BUSYBOX_IMAGE: busybox:1.36.1-musl
   GO_VERSION: 1.21.5
 
 jobs:
@@ -62,6 +63,7 @@ jobs:
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
           IMAGE_TAG_SHA: true
 
       - name: Push Docker images
@@ -119,6 +121,7 @@ jobs:
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
           IMAGE_TAG_SHA: true
 
       - name: Push Docker images
@@ -176,6 +179,7 @@ jobs:
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
           IMAGE_TAG_SHA: true
 
       - name: Push Docker images
@@ -232,6 +236,7 @@ jobs:
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
           DOCKER_IMAGE_TAG: ${{ steps.commit.outputs.short }}
 
       - name: Push Docker images
@@ -292,6 +297,7 @@ jobs:
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
           DOCKER_IMAGE_TAG: ${{ steps.commit.outputs.short }}
 
       - name: Push Docker images
@@ -354,6 +360,7 @@ jobs:
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
           IMAGE_TAG_SHA: true
 
       - name: Push Docker images

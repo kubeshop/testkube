@@ -17,24 +17,24 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
 func cleanupConfigMaps(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
 	return clientSet.CoreV1().ConfigMaps(namespace).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", testworkflowprocessor.ExecutionIdLabelName, id),
+		LabelSelector: fmt.Sprintf("%s=%s", constants.ExecutionIdLabelName, id),
 	})
 }
 
 func cleanupSecrets(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
 	return clientSet.CoreV1().Secrets(namespace).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", testworkflowprocessor.ExecutionIdLabelName, id),
+		LabelSelector: fmt.Sprintf("%s=%s", constants.ExecutionIdLabelName, id),
 	})
 }
 
 func cleanupPods(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
 	return clientSet.CoreV1().Pods(namespace).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", testworkflowprocessor.ExecutionIdLabelName, id),
+		LabelSelector: fmt.Sprintf("%s=%s", constants.ExecutionIdLabelName, id),
 	})
 }
 
@@ -43,7 +43,7 @@ func cleanupJobs(ctx context.Context, clientSet kubernetes.Interface, namespace,
 		GracePeriodSeconds: common.Ptr(int64(0)),
 		PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
 	}, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", testworkflowprocessor.ExecutionIdLabelName, id),
+		LabelSelector: fmt.Sprintf("%s=%s", constants.ExecutionIdLabelName, id),
 	})
 }
 
