@@ -9,13 +9,11 @@
 package data
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
-	"github.com/pkg/errors"
-
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl/libs"
 )
 
 var aliases = map[string]string{
@@ -95,21 +93,8 @@ var RefStatusMachine = expressionstcl.NewMachine().
 		return string(State.GetStep(ref).Status), true
 	})
 
-var FileMachine = expressionstcl.NewMachine().
-	RegisterFunction("file", func(values ...expressionstcl.StaticValue) (interface{}, bool, error) {
-		if len(values) != 1 {
-			return nil, true, errors.New("file() function takes a single argument")
-		}
-		if !values[0].IsString() {
-			return nil, true, fmt.Errorf("file() function expects a string argument, provided: %v", values[0].String())
-		}
-		filePath, _ := values[0].StringValue()
-		file, err := os.ReadFile(filePath)
-		if err != nil {
-			return nil, true, fmt.Errorf("reading file(%s): %s", filePath, err.Error())
-		}
-		return string(file), true, nil
-	})
+var wd, _ = os.Getwd()
+var FileMachine = libs.NewFsMachine(os.DirFS("/"), wd)
 
 func Template(tpl string, m ...expressionstcl.Machine) (string, error) {
 	m = append(m, AliasMachine, baseTestWorkflowMachine)
