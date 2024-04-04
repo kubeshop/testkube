@@ -13,13 +13,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 
-	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,7 +26,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
@@ -173,50 +170,9 @@ func NewSpawnCmd() *cobra.Command {
 			clientSet := env.Kubernetes()
 
 			// Initialize list of pods to schedule
-			schedulablePods := make([][]*corev1.Pod, len(services))
-			storage := testworkflowprocessor.NewConfigMapFiles(fmt.Sprintf("%s-%s-vol", env.ExecutionId(), podsRef), map[string]string{
-				constants.ExecutionIdLabelName:         env.ExecutionId(),
-				constants.ExecutionAssistingPodRefName: podsRef,
-			})
-
-			for svcIndex, svc := range services {
-				combinations := spawn.CountCombinations(svc.Matrix)
-				schedulablePods[svcIndex] = make([]*corev1.Pod, svc.Count*combinations)
-				for i := int64(0); i < svc.Count*combinations; i++ {
-					pod, err := svc.Pod(podsRef, i, baseMachine)
-					if err != nil {
-						fail(err.Error())
-					}
-					files, err := svc.FilesMap(i, baseMachine)
-					if err != nil {
-						fail(err.Error())
-					}
-					for path, content := range files {
-						// Apply file
-						mount, volume, err := storage.AddTextFile(content)
-						if err != nil {
-							fail("%s: %s instance: file %s: %s", svc.Name, humanize.Ordinal(int(i)), path, err.Error())
-						}
-
-						// Append the volume mount
-						mount.MountPath = path
-						for i := range pod.Spec.InitContainers {
-							pod.Spec.InitContainers[i].VolumeMounts = append(pod.Spec.InitContainers[i].VolumeMounts, mount)
-						}
-						for i := range pod.Spec.Containers {
-							pod.Spec.Containers[i].VolumeMounts = append(pod.Spec.Containers[i].VolumeMounts, mount)
-						}
-
-						// Append the volume if it's not yet added
-						if !slices.ContainsFunc(pod.Spec.Volumes, func(v corev1.Volume) bool {
-							return v.Name == mount.Name
-						}) {
-							pod.Spec.Volumes = append(pod.Spec.Volumes, volume)
-						}
-					}
-
-					schedulablePods[svcIndex][i] = pod
-				}
+			schedulablePods, storage, err := spawn.BuildResources(services, podsRef, baseMachine)
+			if err != nil {
+				fail(err.Error())
 			}
 
 			// Watch events for all Pod modifications
