@@ -35,11 +35,15 @@ func (s *apiTCL) sendCreateWorkflowTelemetry(ctx context.Context, workflow *test
 	}
 
 	var dataSource string
+	isKubeshopGitURI := false
 	if workflow.Spec.Content != nil {
 		if len(workflow.Spec.Content.Files) != 0 {
 			dataSource = "files"
 		} else if workflow.Spec.Content.Git != nil {
 			dataSource = "git"
+			if strings.Contains(workflow.Spec.Content.Git.Uri, "kubeshop") {
+				isKubeshopGitURI = true
+			}
 		}
 	}
 
@@ -54,13 +58,6 @@ func (s *apiTCL) sendCreateWorkflowTelemetry(ctx context.Context, workflow *test
 	image := ""
 	if workflow.Spec.Container != nil {
 		image = workflow.Spec.Container.Image
-	}
-
-	isKubeshopGitURI := false
-	if workflow.Spec.Content != nil && workflow.Spec.Content.Git != nil {
-		if strings.Contains(workflow.Spec.Content.Git.Uri, "kubeshop") {
-			isKubeshopGitURI = true
-		}
 	}
 
 	out, err := telemetry.SendCreateWorkflowEvent("testkube_api_create_test_workflow", telemetry.CreateWorkflowParams{
@@ -109,11 +106,15 @@ func (s *apiTCL) sendCreateWorkflowTemplateTelemetry(ctx context.Context, templa
 	}
 
 	var dataSource string
+	isKubeshopGitURI := false
 	if template.Spec.Content != nil {
 		if len(template.Spec.Content.Files) != 0 {
 			dataSource = "files"
 		} else if template.Spec.Content.Git != nil {
 			dataSource = "git"
+			if strings.Contains(template.Spec.Content.Git.Uri, "kubeshop") {
+				isKubeshopGitURI = true
+			}
 		}
 	}
 
@@ -128,13 +129,6 @@ func (s *apiTCL) sendCreateWorkflowTemplateTelemetry(ctx context.Context, templa
 	image := ""
 	if template.Spec.Container != nil {
 		image = template.Spec.Container.Image
-	}
-
-	isKubeshopGitURI := false
-	if template.Spec.Content != nil && template.Spec.Content.Git != nil {
-		if strings.Contains(template.Spec.Content.Git.Uri, "kubeshop") {
-			isKubeshopGitURI = true
-		}
 	}
 
 	out, err := telemetry.SendCreateWorkflowEvent("testkube_api_create_test_workflow_template", telemetry.CreateWorkflowParams{
@@ -182,11 +176,15 @@ func (s *apiTCL) sendRunWorkflowTelemetry(ctx context.Context, workflow *testwor
 	}
 
 	var dataSource string
+	isKubeshopGitURI := false
 	if workflow.Spec.Content != nil {
 		if len(workflow.Spec.Content.Files) != 0 {
 			dataSource = "files"
 		} else if workflow.Spec.Content.Git != nil {
 			dataSource = "git"
+			if strings.Contains(workflow.Spec.Content.Git.Uri, "kubeshop") {
+				isKubeshopGitURI = true
+			}
 		}
 	}
 
@@ -201,12 +199,6 @@ func (s *apiTCL) sendRunWorkflowTelemetry(ctx context.Context, workflow *testwor
 	image := ""
 	if workflow.Spec.Container != nil {
 		image = workflow.Spec.Container.Image
-	}
-	isKubeshopGitURI := false
-	if workflow.Spec.Content != nil && workflow.Spec.Content.Git != nil {
-		if strings.Contains(workflow.Spec.Content.Git.Uri, "kubeshop") {
-			isKubeshopGitURI = true
-		}
 	}
 
 	out, err := telemetry.SendRunWorkflowEvent("testkube_api_run_test_workflow", telemetry.RunWorkflowParams{
