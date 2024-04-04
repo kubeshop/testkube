@@ -21,6 +21,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
 const (
@@ -59,7 +60,7 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 			ctxCancel()
 			return nil, j.Error
 		}
-		sig, err = testworkflowprocessor.GetSignatureFromJSON([]byte(j.Value.Annotations[testworkflowprocessor.SignatureAnnotationName]))
+		sig, err = testworkflowprocessor.GetSignatureFromJSON([]byte(j.Value.Annotations[constants.SignatureAnnotationName]))
 		if err != nil {
 			ctxCancel()
 			return nil, errors.Wrap(err, "invalid job signature")

@@ -43,6 +43,7 @@ dockers:
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
       - "--build-arg=TOKEN={{ .Env.GITHUB_TOKEN }}"
       - "--build-arg=ALPINE_IMAGE={{ .Env.ALPINE_IMAGE }}"
+      - "--build-arg=BUSYBOX_IMAGE={{ .Env.BUSYBOX_IMAGE }}"
 
   - dockerfile: "./contrib/executor/{{ .Env.EXECUTOR }}/build/agent/Dockerfile"
     use: buildx
@@ -61,6 +62,7 @@ dockers:
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
       - "--build-arg=TOKEN={{ .Env.GITHUB_TOKEN }}"
       - "--build-arg=ALPINE_IMAGE={{ .Env.ALPINE_IMAGE }}"
+      - "--build-arg=BUSYBOX_IMAGE={{ .Env.BUSYBOX_IMAGE }}"
 
 docker_manifests:
   - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.EXECUTOR }}-executor:{{ .Version }}{{ end }}"

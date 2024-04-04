@@ -18,6 +18,7 @@ import (
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
 func AnnotateControlledBy(obj metav1.Object, testWorkflowId string) {
@@ -25,7 +26,7 @@ func AnnotateControlledBy(obj metav1.Object, testWorkflowId string) {
 	if labels == nil {
 		labels = map[string]string{}
 	}
-	labels[ExecutionIdLabelName] = testWorkflowId
+	labels[constants.ExecutionIdLabelName] = testWorkflowId
 	obj.SetLabels(labels)
 
 	// Annotate Pod template in the Job
@@ -135,7 +136,7 @@ func buildKubernetesContainers(stage Stage, init *initProcess, machines ...expre
 		cr.SecurityContext = &corev1.SecurityContext{}
 	}
 	if cr.SecurityContext.RunAsGroup == nil {
-		cr.SecurityContext.RunAsGroup = common.Ptr(defaultFsGroup)
+		cr.SecurityContext.RunAsGroup = common.Ptr(constants.DefaultFsGroup)
 	}
 
 	containers = []corev1.Container{cr}

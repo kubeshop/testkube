@@ -19,6 +19,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	constants2 "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
 type initProcess struct {
@@ -79,7 +80,7 @@ func (p *initProcess) Command() []string {
 	for _, r := range p.results {
 		args = append(args, constants.ArgResult, r)
 	}
-	return append([]string{defaultInitPath, p.ref}, append(args, constants.ArgSeparator)...)
+	return append([]string{constants2.DefaultInitPath, p.ref}, append(args, constants.ArgSeparator)...)
 }
 
 func (p *initProcess) Args() []string {

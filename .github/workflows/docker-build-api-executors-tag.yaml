@@ -6,6 +6,7 @@ on:
 
 env:
   ALPINE_IMAGE: alpine:3.19.0
+  BUSYBOX_IMAGE: busybox:1.36.1-musl
   GO_VERSION: 1.21.5
 
 permissions:
@@ -77,6 +78,7 @@ jobs:
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
 
   testworkflow-init:
     runs-on: ubuntu-latest
@@ -132,6 +134,7 @@ jobs:
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
 
   testworkflow-toolkit:
     runs-on: ubuntu-latest
@@ -187,6 +190,7 @@ jobs:
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
 
   single_executor:
     strategy:
@@ -269,6 +273,7 @@ jobs:
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
 
   executor_jmeter:
     runs-on: ubuntu-latest
