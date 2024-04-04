@@ -27,9 +27,13 @@ func mapSlice[T any, U any](s []T, fn func(T) U) []U {
 
 func deduplicateRoots(paths []string) []string {
 	result := make([]string, 0)
+	unique := make(map[string]struct{})
+	for _, p := range paths {
+		unique[p] = struct{}{}
+	}
 loop:
-	for _, path := range paths {
-		for _, path2 := range paths {
+	for path := range unique {
+		for path2 := range unique {
 			if strings.HasPrefix(path, path2+"/") {
 				continue loop
 			}
@@ -176,6 +180,7 @@ func (w *walker) Patterns() []string {
 	return w.patterns
 }
 
+// TODO: Support negative patterns
 func (w *walker) matches(filePath string) bool {
 	for _, p := range w.patterns {
 		v, _ := doublestar.PathMatch(p, filePath)

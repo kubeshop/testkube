@@ -10,14 +10,36 @@ package expressionstcl
 
 import (
 	"fmt"
+	"strings"
 )
 
 type accessor struct {
-	name string
+	name     string
+	fallback *Expression
 }
 
 func newAccessor(name string) Expression {
-	return &accessor{name: name}
+	// Map values based on wildcard
+	segments := strings.Split(name, ".*")
+	if len(segments) > 1 {
+		return newCall("map", []callArgument{
+			{expr: newAccessor(strings.Join(segments[0:len(segments)-1], ".*"))},
+			{expr: NewStringValue("_.value" + segments[len(segments)-1])},
+		})
+	}
+
+	// Prepare fallback based on the segments
+	segments = strings.Split(name, ".")
+	var fallback *Expression
+	if len(segments) > 1 {
+		f := newPropertyAccessor(
+			newAccessor(strings.Join(segments[0:len(segments)-1], ".")),
+			segments[len(segments)-1],
+		)
+		fallback = &f
+	}
+
+	return &accessor{name: name, fallback: fallback}
 }
 
 func (s *accessor) Type() Type {
@@ -43,11 +65,18 @@ func (s *accessor) SafeResolve(m ...Machine) (v Expression, changed bool, err er
 
 	for i := range m {
 		result, ok, err := m[i].Get(s.name)
+		if ok && err == nil {
+			return result, true, nil
+		}
+		if s.fallback != nil {
+			var err2 error
+			result, ok, err2 = (*s.fallback).SafeResolve(m...)
+			if ok && err2 == nil {
+				return result, true, nil
+			}
+		}
 		if err != nil {
 			return nil, false, fmt.Errorf("error while accessing %s: %s", s.String(), err.Error())
-		}
-		if ok {
-			return result, true, nil
 		}
 	}
 	return s, false, nil
