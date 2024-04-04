@@ -248,56 +248,27 @@ func NewSpawnCmd() *cobra.Command {
 				}
 			}
 
-			// Prepare wait group to wait for all services
-			var wg sync.WaitGroup
-			wg.Add(len(services))
-
 			// Initialize all the services
 			// TODO: Consider dry-run as well
-			// TODO: Decouple
-			for i, v := range services {
-				go func(svc spawn.Service, svcIndex int) {
-					combinations := svc.Combinations()
+			spawn.EachService(services, schedulablePods, func(svc spawn.Service, svcIndex int, pod *corev1.Pod, index int64, combinations int64) {
+				// Create the pod
+				pod, err := clientSet.CoreV1().Pods(env.Namespace()).
+					Create(context.Background(), pod, metav1.CreateOptions{})
+				if err != nil {
+					fail("[%d/%d] %s: error while creating pod: %s", index+1, combinations*svc.Count, svc.Name, err.Error())
+				}
 
-					var swg sync.WaitGroup
-					swg.Add(int(combinations * svc.Count))
-					sema := make(chan struct{}, svc.Parallelism)
+				// Inform about the pod creation
+				fmt.Printf("[%d/%d] %s: created pod\n", index+1, combinations*svc.Count, svc.Name)
 
-					for index, pod := range schedulablePods[svcIndex] {
-						sema <- struct{}{}
-						go func(index int64, pod *corev1.Pod) {
-							defer func() {
-								<-sema
-								swg.Done()
-							}()
+				// Update the initial data
+				updateState(svc.Name, index, pod)
 
-							// Create the pod
-							pod, err := clientSet.CoreV1().Pods(env.Namespace()).
-								Create(context.Background(), pod, metav1.CreateOptions{})
-							if err != nil {
-								fail("[%d/%d] %s: error while creating pod: %s", index+1, combinations*svc.Count, svc.Name, err.Error())
-							}
+				// TODO: Support the timeout
 
-							// Inform about the pod creation
-							fmt.Printf("[%d/%d] %s: created pod\n", index+1, combinations*svc.Count, svc.Name)
-
-							// Update the initial data
-							updateState(svc.Name, index, pod)
-
-							// TODO: Support the timeout
-
-							// Wait until it's ready
-							serviceLocks[svcIndex][index].Lock()
-						}(int64(index), pod)
-					}
-
-					swg.Wait()
-					wg.Done()
-				}(v, i)
-			}
-
-			// Wait until all pods will be ready to continue
-			wg.Wait()
+				// Wait until it's ready
+				serviceLocks[svcIndex][index].Lock()
+			})
 
 			saveState()
 
