@@ -16,6 +16,10 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 )
 
+const (
+	defaultBinPath = "/.tktw/bin"
+)
+
 func getProcessStatus(err error) (bool, uint8) {
 	if err == nil {
 		return true, 0
@@ -63,6 +67,13 @@ func execute(cmd string, args ...string) {
 }
 
 func Run(cmd string, args []string) {
+	// Ensure the built-in binaries are available
+	if os.Getenv("PATH") == "" {
+		_ = os.Setenv("PATH", defaultBinPath)
+	} else {
+		_ = os.Setenv("PATH", fmt.Sprintf("%s:%s", os.Getenv("PATH"), defaultBinPath))
+	}
+
 	// Instantiate the command and run
 	execute(cmd, args...)
 

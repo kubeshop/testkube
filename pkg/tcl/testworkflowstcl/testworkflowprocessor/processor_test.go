@@ -23,6 +23,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
 type dummyInspector struct{}
@@ -69,9 +70,9 @@ func TestProcessBasic(t *testing.T) {
 		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "dummy-id",
-			Labels: map[string]string{ExecutionIdLabelName: "dummy-id"},
+			Labels: map[string]string{constants.ExecutionIdLabelName: "dummy-id"},
 			Annotations: map[string]string{
-				SignatureAnnotationName: string(sigSerialized),
+				constants.SignatureAnnotationName: string(sigSerialized),
 			},
 		},
 		Spec: batchv1.JobSpec{
@@ -79,8 +80,8 @@ func TestProcessBasic(t *testing.T) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						ExecutionIdLabelName:        "dummy-id",
-						ExecutionIdMainPodLabelName: "dummy-id",
+						constants.ExecutionIdLabelName:        "dummy-id",
+						constants.ExecutionIdMainPodLabelName: "dummy-id",
 					},
 					Annotations: map[string]string(nil),
 				},
@@ -90,13 +91,13 @@ func TestProcessBasic(t *testing.T) {
 					InitContainers: []corev1.Container{
 						{
 							Name:            "tktw-init",
-							Image:           defaultInitImage,
+							Image:           constants.DefaultInitImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{"/bin/sh", "-c"},
-							Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+							Args:            []string{constants.InitScript},
 							VolumeMounts:    volumeMounts,
 							SecurityContext: &corev1.SecurityContext{
-								RunAsGroup: common.Ptr(defaultFsGroup),
+								RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 							},
 						},
 					},
@@ -104,7 +105,7 @@ func TestProcessBasic(t *testing.T) {
 						{
 							Name:            sig[0].Ref(),
 							ImagePullPolicy: "",
-							Image:           defaultImage,
+							Image:           constants.DefaultImage,
 							Command: []string{
 								"/.tktw/init",
 								sig[0].Ref(),
@@ -112,19 +113,19 @@ func TestProcessBasic(t *testing.T) {
 								"-r", fmt.Sprintf("=%s", sig[0].Ref()),
 								"--",
 							},
-							Args:         []string{defaultShell, "-c", "set -e\nshell-test"},
+							Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test"},
 							WorkingDir:   "",
 							EnvFrom:      []corev1.EnvFromSource(nil),
 							Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 							Resources:    corev1.ResourceRequirements{},
 							VolumeMounts: volumeMounts,
 							SecurityContext: &corev1.SecurityContext{
-								RunAsGroup: common.Ptr(defaultFsGroup),
+								RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 							},
 						},
 					},
 					SecurityContext: &corev1.PodSecurityContext{
-						FSGroup: common.Ptr(defaultFsGroup),
+						FSGroup: common.Ptr(constants.DefaultFsGroup),
 					},
 				},
 			},
@@ -135,8 +136,8 @@ func TestProcessBasic(t *testing.T) {
 
 	assert.Equal(t, 2, len(volumeMounts))
 	assert.Equal(t, 2, len(volumes))
-	assert.Equal(t, defaultInternalPath, volumeMounts[0].MountPath)
-	assert.Equal(t, defaultDataPath, volumeMounts[1].MountPath)
+	assert.Equal(t, constants.DefaultInternalPath, volumeMounts[0].MountPath)
+	assert.Equal(t, constants.DefaultDataPath, volumeMounts[1].MountPath)
 	assert.True(t, volumeMounts[0].Name == volumes[0].Name)
 	assert.True(t, volumeMounts[1].Name == volumes[1].Name)
 }
@@ -173,13 +174,13 @@ func TestProcessBasicEnvReference(t *testing.T) {
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
-				Image:           defaultInitImage,
+				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+				Args:            []string{constants.InitScript},
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 		},
@@ -187,7 +188,7 @@ func TestProcessBasicEnvReference(t *testing.T) {
 			{
 				Name:            sig[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[0].Ref(),
@@ -196,7 +197,7 @@ func TestProcessBasicEnvReference(t *testing.T) {
 					"-r", fmt.Sprintf("=%s", sig[0].Ref()),
 					"--",
 				},
-				Args:       []string{defaultShell, "-c", "set -e\nshell-test"},
+				Args:       []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test"},
 				WorkingDir: "",
 				EnvFrom:    []corev1.EnvFromSource(nil),
 				Env: []corev1.EnvVar{
@@ -210,12 +211,12 @@ func TestProcessBasicEnvReference(t *testing.T) {
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 		},
 		SecurityContext: &corev1.PodSecurityContext{
-			FSGroup: common.Ptr(defaultFsGroup),
+			FSGroup: common.Ptr(constants.DefaultFsGroup),
 		},
 	}
 
@@ -245,19 +246,19 @@ func TestProcessMultipleSteps(t *testing.T) {
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
-				Image:           defaultInitImage,
+				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+				Args:            []string{constants.InitScript},
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 			{
 				Name:            sig[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[0].Ref(),
@@ -265,14 +266,14 @@ func TestProcessMultipleSteps(t *testing.T) {
 					"-r", fmt.Sprintf("=%s&&%s", sig[0].Ref(), sig[1].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 		},
@@ -280,7 +281,7 @@ func TestProcessMultipleSteps(t *testing.T) {
 			{
 				Name:            sig[1].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Ref(),
@@ -288,19 +289,19 @@ func TestProcessMultipleSteps(t *testing.T) {
 					"-r", fmt.Sprintf("=%s&&%s", sig[0].Ref(), sig[1].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test-2"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test-2"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 		},
 		SecurityContext: &corev1.PodSecurityContext{
-			FSGroup: common.Ptr(defaultFsGroup),
+			FSGroup: common.Ptr(constants.DefaultFsGroup),
 		},
 	}
 
@@ -337,19 +338,19 @@ func TestProcessNestedSteps(t *testing.T) {
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
-				Image:           defaultInitImage,
+				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+				Args:            []string{constants.InitScript},
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 			{
 				Name:            sig[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[0].Ref(),
@@ -357,20 +358,20 @@ func TestProcessNestedSteps(t *testing.T) {
 					"-r", fmt.Sprintf("=%s&&%s&&%s", sig[0].Ref(), sig[1].Ref(), sig[2].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 			{
 				Name:            sig[1].Children()[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Children()[0].Ref(),
@@ -380,20 +381,20 @@ func TestProcessNestedSteps(t *testing.T) {
 					"-r", fmt.Sprintf("%s=%s&&%s", sig[1].Ref(), sig[1].Children()[0].Ref(), sig[1].Children()[1].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test-2"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test-2"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 			{
 				Name:            sig[1].Children()[1].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Children()[1].Ref(),
@@ -403,14 +404,14 @@ func TestProcessNestedSteps(t *testing.T) {
 					"-r", fmt.Sprintf("%s=%s&&%s", sig[1].Ref(), sig[1].Children()[0].Ref(), sig[1].Children()[1].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test-3"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test-3"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 		},
@@ -418,7 +419,7 @@ func TestProcessNestedSteps(t *testing.T) {
 			{
 				Name:            sig[2].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[2].Ref(),
@@ -426,19 +427,19 @@ func TestProcessNestedSteps(t *testing.T) {
 					"-r", fmt.Sprintf("=%s&&%s&&%s", sig[0].Ref(), sig[1].Ref(), sig[2].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test-4"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test-4"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 		},
 		SecurityContext: &corev1.PodSecurityContext{
-			FSGroup: common.Ptr(defaultFsGroup),
+			FSGroup: common.Ptr(constants.DefaultFsGroup),
 		},
 	}
 
@@ -475,19 +476,19 @@ func TestProcessOptionalSteps(t *testing.T) {
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
-				Image:           defaultInitImage,
+				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+				Args:            []string{constants.InitScript},
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 			{
 				Name:            sig[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[0].Ref(),
@@ -495,20 +496,20 @@ func TestProcessOptionalSteps(t *testing.T) {
 					"-r", fmt.Sprintf("=%s&&%s", sig[0].Ref(), sig[2].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 			{
 				Name:            sig[1].Children()[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Children()[0].Ref(),
@@ -517,20 +518,20 @@ func TestProcessOptionalSteps(t *testing.T) {
 					"-r", fmt.Sprintf("%s=%s&&%s", sig[1].Ref(), sig[1].Children()[0].Ref(), sig[1].Children()[1].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test-2"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test-2"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 			{
 				Name:            sig[1].Children()[1].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Children()[1].Ref(),
@@ -539,14 +540,14 @@ func TestProcessOptionalSteps(t *testing.T) {
 					"-r", fmt.Sprintf("%s=%s&&%s", sig[1].Ref(), sig[1].Children()[0].Ref(), sig[1].Children()[1].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test-3"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test-3"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 		},
@@ -554,7 +555,7 @@ func TestProcessOptionalSteps(t *testing.T) {
 			{
 				Name:            sig[2].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[2].Ref(),
@@ -562,19 +563,19 @@ func TestProcessOptionalSteps(t *testing.T) {
 					"-r", fmt.Sprintf("=%s&&%s", sig[0].Ref(), sig[2].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test-4"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test-4"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 		},
 		SecurityContext: &corev1.PodSecurityContext{
-			FSGroup: common.Ptr(defaultFsGroup),
+			FSGroup: common.Ptr(constants.DefaultFsGroup),
 		},
 	}
 
@@ -611,19 +612,19 @@ func TestProcessNegativeSteps(t *testing.T) {
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
-				Image:           defaultInitImage,
+				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+				Args:            []string{constants.InitScript},
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 			{
 				Name:            sig[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[0].Ref(),
@@ -631,20 +632,20 @@ func TestProcessNegativeSteps(t *testing.T) {
 					"-r", fmt.Sprintf("=%s&&%s&&%s", sig[0].Ref(), sig[1].Ref(), sig[2].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 			{
 				Name:            sig[1].Children()[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Children()[0].Ref(),
@@ -655,20 +656,20 @@ func TestProcessNegativeSteps(t *testing.T) {
 					"-r", fmt.Sprintf("%s.v=%s&&%s", sig[1].Ref(), sig[1].Children()[0].Ref(), sig[1].Children()[1].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test-2"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test-2"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 			{
 				Name:            sig[1].Children()[1].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Children()[1].Ref(),
@@ -679,14 +680,14 @@ func TestProcessNegativeSteps(t *testing.T) {
 					"-r", fmt.Sprintf("%s.v=%s&&%s", sig[1].Ref(), sig[1].Children()[0].Ref(), sig[1].Children()[1].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test-3"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test-3"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 		},
@@ -694,7 +695,7 @@ func TestProcessNegativeSteps(t *testing.T) {
 			{
 				Name:            sig[2].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[2].Ref(),
@@ -702,19 +703,19 @@ func TestProcessNegativeSteps(t *testing.T) {
 					"-r", fmt.Sprintf("=%s&&%s&&%s", sig[0].Ref(), sig[1].Ref(), sig[2].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test-4"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test-4"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 		},
 		SecurityContext: &corev1.PodSecurityContext{
-			FSGroup: common.Ptr(defaultFsGroup),
+			FSGroup: common.Ptr(constants.DefaultFsGroup),
 		},
 	}
 
@@ -744,19 +745,19 @@ func TestProcessNegativeContainerStep(t *testing.T) {
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
-				Image:           defaultInitImage,
+				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+				Args:            []string{constants.InitScript},
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 			{
 				Name:            sig[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[0].Ref(),
@@ -764,14 +765,14 @@ func TestProcessNegativeContainerStep(t *testing.T) {
 					"-r", fmt.Sprintf("=%s&&%s", sig[0].Ref(), sig[1].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 		},
@@ -779,7 +780,7 @@ func TestProcessNegativeContainerStep(t *testing.T) {
 			{
 				Name:            sig[1].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Ref(),
@@ -788,20 +789,20 @@ func TestProcessNegativeContainerStep(t *testing.T) {
 					"-r", fmt.Sprintf("=%s&&%s", sig[0].Ref(), sig[1].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test-2"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test-2"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 		},
 
 		SecurityContext: &corev1.PodSecurityContext{
-			FSGroup: common.Ptr(defaultFsGroup),
+			FSGroup: common.Ptr(constants.DefaultFsGroup),
 		},
 	}
 
@@ -831,19 +832,19 @@ func TestProcessOptionalContainerStep(t *testing.T) {
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
-				Image:           defaultInitImage,
+				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+				Args:            []string{constants.InitScript},
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 			{
 				Name:            sig[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[0].Ref(),
@@ -851,14 +852,14 @@ func TestProcessOptionalContainerStep(t *testing.T) {
 					"-r", fmt.Sprintf("=%s", sig[0].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 		},
@@ -866,26 +867,26 @@ func TestProcessOptionalContainerStep(t *testing.T) {
 			{
 				Name:            sig[1].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Ref(),
 					"-c", fmt.Sprintf("%s=passed", sig[1].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test-2"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test-2"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 		},
 		SecurityContext: &corev1.PodSecurityContext{
-			FSGroup: common.Ptr(defaultFsGroup),
+			FSGroup: common.Ptr(constants.DefaultFsGroup),
 		},
 	}
 
@@ -926,19 +927,19 @@ func TestProcessLocalContent(t *testing.T) {
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
-				Image:           defaultInitImage,
+				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+				Args:            []string{constants.InitScript},
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 			{
 				Name:            sig[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[0].Ref(),
@@ -946,14 +947,14 @@ func TestProcessLocalContent(t *testing.T) {
 					"-r", fmt.Sprintf("=%s&&%s", sig[0].Ref(), sig[1].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMountsWithContent,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 		},
@@ -961,7 +962,7 @@ func TestProcessLocalContent(t *testing.T) {
 			{
 				Name:            sig[1].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Ref(),
@@ -969,19 +970,19 @@ func TestProcessLocalContent(t *testing.T) {
 					"-r", fmt.Sprintf("=%s&&%s", sig[0].Ref(), sig[1].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test-2"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test-2"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 		},
 		SecurityContext: &corev1.PodSecurityContext{
-			FSGroup: common.Ptr(defaultFsGroup),
+			FSGroup: common.Ptr(constants.DefaultFsGroup),
 		},
 	}
 
@@ -1028,19 +1029,19 @@ func TestProcessGlobalContent(t *testing.T) {
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
-				Image:           defaultInitImage,
+				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+				Args:            []string{constants.InitScript},
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 			{
 				Name:            sig[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[0].Ref(),
@@ -1048,14 +1049,14 @@ func TestProcessGlobalContent(t *testing.T) {
 					"-r", fmt.Sprintf("=%s&&%s", sig[0].Ref(), sig[1].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 		},
@@ -1063,7 +1064,7 @@ func TestProcessGlobalContent(t *testing.T) {
 			{
 				Name:            sig[1].Ref(),
 				ImagePullPolicy: "",
-				Image:           defaultImage,
+				Image:           constants.DefaultImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Ref(),
@@ -1071,19 +1072,19 @@ func TestProcessGlobalContent(t *testing.T) {
 					"-r", fmt.Sprintf("=%s&&%s", sig[0].Ref(), sig[1].Ref()),
 					"--",
 				},
-				Args:         []string{defaultShell, "-c", "set -e\nshell-test-2"},
+				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test-2"},
 				WorkingDir:   "",
 				EnvFrom:      []corev1.EnvFromSource(nil),
 				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 				Resources:    corev1.ResourceRequirements{},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(defaultFsGroup),
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
 		},
 		SecurityContext: &corev1.PodSecurityContext{
-			FSGroup: common.Ptr(defaultFsGroup),
+			FSGroup: common.Ptr(constants.DefaultFsGroup),
 		},
 	}
 
@@ -1118,9 +1119,9 @@ func TestProcessRunShell(t *testing.T) {
 		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "dummy-id",
-			Labels: map[string]string{ExecutionIdLabelName: "dummy-id"},
+			Labels: map[string]string{constants.ExecutionIdLabelName: "dummy-id"},
 			Annotations: map[string]string{
-				SignatureAnnotationName: string(sigSerialized),
+				constants.SignatureAnnotationName: string(sigSerialized),
 			},
 		},
 		Spec: batchv1.JobSpec{
@@ -1128,8 +1129,8 @@ func TestProcessRunShell(t *testing.T) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						ExecutionIdLabelName:        "dummy-id",
-						ExecutionIdMainPodLabelName: "dummy-id",
+						constants.ExecutionIdLabelName:        "dummy-id",
+						constants.ExecutionIdMainPodLabelName: "dummy-id",
 					},
 					Annotations: map[string]string(nil),
 				},
@@ -1139,13 +1140,13 @@ func TestProcessRunShell(t *testing.T) {
 					InitContainers: []corev1.Container{
 						{
 							Name:            "tktw-init",
-							Image:           defaultInitImage,
+							Image:           constants.DefaultInitImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{"/bin/sh", "-c"},
-							Args:            []string{"cp /init /.tktw/init && touch /.tktw/state && chmod 777 /.tktw/state && (echo -n ',0' > /dev/termination-log && echo 'Done' && exit 0) || (echo -n 'failed,1' > /dev/termination-log && exit 1)"},
+							Args:            []string{constants.InitScript},
 							VolumeMounts:    volumeMounts,
 							SecurityContext: &corev1.SecurityContext{
-								RunAsGroup: common.Ptr(defaultFsGroup),
+								RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 							},
 						},
 					},
@@ -1153,7 +1154,7 @@ func TestProcessRunShell(t *testing.T) {
 						{
 							Name:            sig[0].Ref(),
 							ImagePullPolicy: "",
-							Image:           defaultImage,
+							Image:           constants.DefaultImage,
 							Command: []string{
 								"/.tktw/init",
 								sig[0].Ref(),
@@ -1161,19 +1162,19 @@ func TestProcessRunShell(t *testing.T) {
 								"-r", fmt.Sprintf("=%s", sig[0].Ref()),
 								"--",
 							},
-							Args:         []string{defaultShell, "-c", "shell-test"},
+							Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test"},
 							WorkingDir:   "",
 							EnvFrom:      []corev1.EnvFromSource(nil),
 							Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
 							Resources:    corev1.ResourceRequirements{},
 							VolumeMounts: volumeMounts,
 							SecurityContext: &corev1.SecurityContext{
-								RunAsGroup: common.Ptr(defaultFsGroup),
+								RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 							},
 						},
 					},
 					SecurityContext: &corev1.PodSecurityContext{
-						FSGroup: common.Ptr(defaultFsGroup),
+						FSGroup: common.Ptr(constants.DefaultFsGroup),
 					},
 				},
 			},
@@ -1184,8 +1185,8 @@ func TestProcessRunShell(t *testing.T) {
 
 	assert.Equal(t, 2, len(volumeMounts))
 	assert.Equal(t, 2, len(volumes))
-	assert.Equal(t, defaultInternalPath, volumeMounts[0].MountPath)
-	assert.Equal(t, defaultDataPath, volumeMounts[1].MountPath)
+	assert.Equal(t, constants.DefaultInternalPath, volumeMounts[0].MountPath)
+	assert.Equal(t, constants.DefaultDataPath, volumeMounts[1].MountPath)
 	assert.True(t, volumeMounts[0].Name == volumes[0].Name)
 	assert.True(t, volumeMounts[1].Name == volumes[1].Name)
 }

@@ -21,6 +21,7 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
 func ProcessDelay(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
@@ -43,7 +44,7 @@ func ProcessShellCommand(_ InternalProcessor, layer Intermediate, container Cont
 	if step.Shell == "" {
 		return nil, nil
 	}
-	shell := container.CreateChild().SetCommand(defaultShell).SetArgs("-c", "set -e\n"+step.Shell)
+	shell := container.CreateChild().SetCommand(constants.DefaultShellPath).SetArgs("-c", constants.DefaultShellHeader+step.Shell)
 	stage := NewContainerStage(layer.NextRef(), shell)
 	stage.SetCategory("Run shell command")
 	stage.SetRetryPolicy(step.Retry)
@@ -63,7 +64,7 @@ func ProcessRunCommand(_ InternalProcessor, layer Intermediate, container Contai
 			return nil, errors.New("run.shell should not be used in conjunction with run.command or run.args")
 		}
 		stage.SetCategory("Run shell command")
-		stage.Container().SetCommand(defaultShell).SetArgs("-c", *step.Run.Shell)
+		stage.Container().SetCommand(constants.DefaultShellPath).SetArgs("-c", constants.DefaultShellHeader+*step.Run.Shell)
 	}
 	return stage, nil
 }
@@ -108,7 +109,7 @@ func ProcessExecute(_ InternalProcessor, layer Intermediate, container Container
 	}
 
 	container.
-		SetImage(defaultToolkitImage).
+		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
 		SetCommand("/toolkit", "execute").
 		EnableToolkit(stage.Ref())
@@ -228,7 +229,7 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container Contai
 	// Compute mount path
 	mountPath := step.Content.Git.MountPath
 	if mountPath == "" {
-		mountPath = filepath.Join(defaultDataPath, "repo")
+		mountPath = filepath.Join(constants.DefaultDataPath, "repo")
 	}
 
 	// Build volume pair and share with all siblings
@@ -237,7 +238,7 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container Contai
 
 	selfContainer.
 		SetWorkingDir("/").
-		SetImage(defaultToolkitImage).
+		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
 		SetCommand("/toolkit", "clone", step.Content.Git.Uri).
 		EnableToolkit(stage.Ref())
@@ -299,9 +300,9 @@ func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container Contain
 	stage.SetCategory("Upload artifacts")
 
 	selfContainer.
-		SetImage(defaultToolkitImage).
+		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
-		SetCommand("/toolkit", "artifacts", "-m", defaultDataPath).
+		SetCommand("/toolkit", "artifacts", "-m", constants.DefaultDataPath).
 		EnableToolkit(stage.Ref())
 
 	args := make([]string, 0)

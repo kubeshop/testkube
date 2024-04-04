@@ -31,10 +31,12 @@ builds:
       -X github.com/kubeshop/testkube/pkg/version.Commit={{ .FullCommit }}
       -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID={{ .Env.SLACK_BOT_CLIENT_ID}}
       -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret={{ .Env.SLACK_BOT_CLIENT_SECRET }}
+      -X github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants.DefaultImage={{ .Env.BUSYBOX_IMAGE }}
       -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID={{ .Env.ANALYTICS_TRACKING_ID }}
       -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret={{ .Env.ANALYTICS_API_KEY }}
       -X github.com/kubeshop/testkube/pkg/telemetry.SegmentioKey={{ .Env.SEGMENTIO_KEY }}
       -X github.com/kubeshop/testkube/pkg/telemetry.CloudSegmentioKey={{ .Env.CLOUD_SEGMENTIO_KEY }}
+      -X github.com/kubeshop/testkube/pkg/telemetry.CloudSegmentioKey={{ .Env.BUSYBOX_IMAGE }}
 dockers:
   - dockerfile: ./build/api-server/Dockerfile
     use: buildx
@@ -53,6 +55,7 @@ dockers:
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
       - "--build-arg=ALPINE_IMAGE={{ .Env.ALPINE_IMAGE }}"
+      - "--build-arg=BUSYBOX_IMAGE={{ .Env.BUSYBOX_IMAGE }}"
 
   - dockerfile: ./build/api-server/Dockerfile
     use: buildx
@@ -70,6 +73,7 @@ dockers:
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
       - "--build-arg=ALPINE_IMAGE={{ .Env.ALPINE_IMAGE }}"
+      - "--build-arg=BUSYBOX_IMAGE={{ .Env.BUSYBOX_IMAGE }}"
 
 docker_manifests:
   - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-api-server:{{ .Version }}{{ end }}"
