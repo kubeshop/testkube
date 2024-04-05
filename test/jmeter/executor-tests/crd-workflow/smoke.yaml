@@ -85,6 +85,7 @@ spec:
     slave:
       count: 5
       timeout: 30s # initialization timeout
+      logs: true
       container:
         image: justb4/jmeter:5.5
         command:
@@ -151,6 +152,7 @@ spec:
     slave:
       count: 5
       timeout: 30s # initialization timeout
+      logs: true
       container:
         image: justb4/jmeter:5.5
         command:

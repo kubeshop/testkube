@@ -8358,6 +8358,9 @@ components:
         error:
           type: string
           description: "expression that determines if the pod initialization has failed"
+        logs:
+          type: boolean
+          description: "should it fetch logs as artifact"
         timeout:
           type: string
           pattern: "^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$"

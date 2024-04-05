@@ -12,6 +12,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -27,6 +28,9 @@ import (
 )
 
 func NewKillCmd() *cobra.Command {
+	var (
+		logsRequest []string
+	)
 	cmd := &cobra.Command{
 		Use:   "kill",
 		Short: "Kill assisting pods",
@@ -59,7 +63,7 @@ func NewKillCmd() *cobra.Command {
 					index, err := strconv.ParseInt(segments[3], 10, 64)
 					svc := spawn.Service{Name: name}
 
-					if err == nil {
+					if err == nil && slices.Contains(logsRequest, name) {
 						// Fetch logs and save as artifact
 						logs, err := spawn.FetchLogs(context.Background(), clientSet, svc, &pod)
 						if err != nil {
@@ -107,6 +111,8 @@ func NewKillCmd() *cobra.Command {
 			}
 		},
 	}
+
+	cmd.Flags().StringArrayVarP(&logsRequest, "logs", "l", nil, "service names to fetch logs for")
 
 	return cmd
 }

@@ -30,6 +30,7 @@ type Service struct {
 	Name        string
 	Count       int64
 	Parallelism int64
+	Logs        bool
 	Timeout     string
 	Matrix      map[string][]interface{}
 	Shards      map[string][]interface{}
@@ -102,7 +103,6 @@ func (svc *Service) TimeoutDuration(index int64, machines ...expressionstcl.Mach
 }
 
 func (svc *Service) Pod(ref string, index int64, machines ...expressionstcl.Machine) (*corev1.Pod, error) {
-
 	// Compute timeout duration
 	timeout, err := svc.TimeoutDuration(index, machines...)
 	if err != nil {

@@ -166,6 +166,7 @@ spec:
       distribute:
         count: 10
         timeout: 10m # execution timeout
+        logs: true
         files:
           - path: /k6-smoke-test.js
             content: '{{ file("./k6-smoke-test.js") }}'

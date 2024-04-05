@@ -212,13 +212,15 @@ func NewSpawnCmd() *cobra.Command {
 				// Delete when it is no longer needed
 				if !longRunning && ((podError != nil && *podError) || (podSuccess != nil && *podSuccess)) && pod.DeletionTimestamp == nil {
 					// Fetch logs and save as artifact
-					logs, err := spawn.FetchLogs(context.Background(), clientSet, svc, pod)
-					if err != nil {
-						fmt.Printf("%s: warning: failed to fetch logs from finished pod: %s\n", InstanceLabel(svc.Name, index, svc.Total()), err.Error())
-					} else {
-						err = artifacts.SaveStream(fmt.Sprintf("logs/%s/%d.log", svc.Name, index), logs)
+					if svc.Logs {
+						logs, err := spawn.FetchLogs(context.Background(), clientSet, svc, pod)
 						if err != nil {
-							fmt.Printf("%s: warning: error while saving logs: %s\n", InstanceLabel(svc.Name, index, svc.Total()), err.Error())
+							fmt.Printf("%s: warning: failed to fetch logs from finished pod: %s\n", InstanceLabel(svc.Name, index, svc.Total()), err.Error())
+						} else {
+							err = artifacts.SaveStream(fmt.Sprintf("logs/%s/%d.log", svc.Name, index), logs)
+							if err != nil {
+								fmt.Printf("%s: warning: error while saving logs: %s\n", InstanceLabel(svc.Name, index, svc.Total()), err.Error())
+							}
 						}
 					}
 

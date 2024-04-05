@@ -375,6 +375,7 @@ func MapSpawnInstructionAPIToKube(v testkube.TestWorkflowSpawnInstruction) testw
 			Ready:             v.Ready,
 			Error:             v.Error_,
 			Timeout:           v.Timeout,
+			Logs:              common.PtrOrNil(v.Logs),
 			Matrix:            MapStringSliceMapToIntOrStringSliceMap(v.Matrix),
 			MatrixExpressions: v.MatrixExpressions,
 			Shards:            MapStringSliceMapToIntOrStringSliceMap(v.Shards),

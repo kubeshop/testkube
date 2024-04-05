@@ -437,5 +437,13 @@ func ProcessServicesStop(_ InternalProcessor, layer Intermediate, container Cont
 		SetCommand("/toolkit", "kill", "{{env.TK_SRV_REF}}").
 		EnableToolkit(stage.Ref())
 
+	args := make([]string, 0)
+	for name, v := range step.Services {
+		if v.Logs != nil && *v.Logs {
+			args = append(args, "-l", name)
+		}
+	}
+	stage.Container().SetArgs(args...)
+
 	return stage, nil
 }

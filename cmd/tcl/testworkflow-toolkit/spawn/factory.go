@@ -97,6 +97,7 @@ func FromInstruction(name string, instruction testworkflowsv1.SpawnInstructionBa
 		Name:        name,
 		Count:       *count,
 		Parallelism: *parallelism,
+		Logs:        common.ResolvePtr(instruction.Logs, false),
 		Timeout:     instruction.Timeout,
 		Matrix:      matrix,
 		Shards:      shards,

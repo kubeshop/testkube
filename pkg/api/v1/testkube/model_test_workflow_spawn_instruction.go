@@ -17,6 +17,8 @@ type TestWorkflowSpawnInstruction struct {
 	Ready string `json:"ready,omitempty"`
 	// expression that determines if the pod initialization has failed
 	Error_ string `json:"error,omitempty"`
+	// should it fetch logs as artifact
+	Logs bool `json:"logs,omitempty"`
 	// how long we should wait for successful initialization
 	Timeout string `json:"timeout,omitempty"`
 	// matrix of parameters to spawn instances (static)
