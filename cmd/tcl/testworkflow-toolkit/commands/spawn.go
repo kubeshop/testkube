@@ -19,12 +19,14 @@ import (
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
+	"github.com/kubeshop/testkube/internal/common"
 )
 
 const MaxParallelism = 1000
@@ -193,12 +195,27 @@ func NewSpawnCmd() *cobra.Command {
 					return
 				}
 
+				// Delete when it is no longer needed
+				if !longRunning && ((podError != nil && *podError) || (podSuccess != nil && *podSuccess)) && pod.DeletionTimestamp == nil {
+					err := clientSet.CoreV1().Pods(env.Namespace()).Delete(context.Background(), pod.Name, metav1.DeleteOptions{
+						GracePeriodSeconds: common.Ptr(int64(0)),
+						PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
+					})
+					if err != nil && !errors.IsNotFound(err) {
+						fmt.Printf("Warning: %s: failed to delete obsolete pod: %s\n", pod.Name, err.Error())
+					}
+				}
+
 				if podError != nil && *podError {
 					fmt.Printf("%s: pod %s (%d) failed\n", svc.Name, pod.Name, index+1)
 					initialized[pod.Name] = struct{}{}
 					(*serviceLocksMap[svc.Name])[index].Unlock()
 				} else if podSuccess != nil && *podSuccess {
-					fmt.Printf("%s: pod %s (%d) initialized successfully on %s\n", svc.Name, pod.Name, index+1, pod.Spec.NodeName)
+					if longRunning {
+						fmt.Printf("%s: pod %s (%d) initialized successfully on %s\n", svc.Name, pod.Name, index+1, pod.Spec.NodeName)
+					} else {
+						fmt.Printf("%s: pod %s (%d) finished successfully on %s\n", svc.Name, pod.Name, index+1, pod.Spec.NodeName)
+					}
 					success.Add(1)
 					initialized[pod.Name] = struct{}{}
 					(*serviceLocksMap[svc.Name])[index].Unlock()
