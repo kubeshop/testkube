@@ -126,12 +126,6 @@ func (svc *Service) Pod(ref string, index int64, machines ...expressionstcl.Mach
 		},
 		Spec: spec.Spec,
 	}
-	if pod.Spec.SecurityContext == nil {
-		pod.Spec.SecurityContext = &corev1.PodSecurityContext{}
-	}
-	if pod.Spec.SecurityContext.FSGroup == nil {
-		pod.Spec.SecurityContext.FSGroup = common.Ptr(constants.DefaultFsGroup)
-	}
 
 	if timeout != nil && (pod.Spec.ActiveDeadlineSeconds == nil || float64(*pod.Spec.ActiveDeadlineSeconds) > timeout.Seconds()) {
 		pod.Spec.ActiveDeadlineSeconds = common.Ptr(int64(math.Ceil(timeout.Seconds())))
@@ -209,11 +203,5 @@ func (svc *Service) EvalError(state ServiceState, index int64, machines ...expre
 func applyContainerDefaults(container *corev1.Container, index int) {
 	if container.Name == "" {
 		container.Name = fmt.Sprintf("c%d-%s", index, rand.String(5))
-	}
-	if container.SecurityContext == nil {
-		container.SecurityContext = &corev1.SecurityContext{}
-	}
-	if container.SecurityContext.RunAsGroup == nil {
-		container.SecurityContext.RunAsGroup = common.Ptr(constants.DefaultFsGroup)
 	}
 }
