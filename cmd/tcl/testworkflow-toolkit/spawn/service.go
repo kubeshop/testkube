@@ -10,8 +10,11 @@ package spawn
 
 import (
 	"fmt"
+	"math"
+	"time"
 
 	"github.com/dustin/go-humanize"
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
@@ -81,13 +84,37 @@ func (svc *Service) MachineAt(index int64) expressionstcl.Machine {
 		Register("shard", shardValues)
 }
 
+func (svc *Service) TimeoutDuration(index int64, machines ...expressionstcl.Machine) (*time.Duration, error) {
+	if svc.Timeout == "" {
+		return nil, nil
+	}
+	// Get details for current position
+	machines = append(machines, svc.MachineAt(index))
+	durationStr, err := expressionstcl.EvalTemplate(svc.Timeout, machines...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to resolve duration template: %s", svc.Timeout)
+	}
+	duration, err := time.ParseDuration(durationStr)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse duration: %s: %s", svc.Timeout, durationStr)
+	}
+	return &duration, nil
+}
+
 func (svc *Service) Pod(ref string, index int64, machines ...expressionstcl.Machine) (*corev1.Pod, error) {
+
+	// Compute timeout duration
+	timeout, err := svc.TimeoutDuration(index, machines...)
+	if err != nil {
+		return nil, errors.Wrap(err, "reading timeout")
+	}
+
 	// Get details for current position
 	machines = append(machines, svc.MachineAt(index))
 
 	// Build a pod
 	spec := svc.PodTemplate.DeepCopy()
-	err := expressionstcl.FinalizeForce(&spec, machines...)
+	err = expressionstcl.FinalizeForce(&spec, machines...)
 	if err != nil {
 		return nil, fmt.Errorf("resolving pod schema: %w", err)
 	}
@@ -104,6 +131,10 @@ func (svc *Service) Pod(ref string, index int64, machines ...expressionstcl.Mach
 	}
 	if pod.Spec.SecurityContext.FSGroup == nil {
 		pod.Spec.SecurityContext.FSGroup = common.Ptr(constants.DefaultFsGroup)
+	}
+
+	if timeout != nil && (pod.Spec.ActiveDeadlineSeconds == nil || float64(*pod.Spec.ActiveDeadlineSeconds) > timeout.Seconds()) {
+		pod.Spec.ActiveDeadlineSeconds = common.Ptr(int64(math.Ceil(timeout.Seconds())))
 	}
 
 	// Append defaults for the pod containers

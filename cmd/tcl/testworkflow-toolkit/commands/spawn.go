@@ -19,14 +19,12 @@ import (
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
-	"github.com/kubeshop/testkube/internal/common"
 )
 
 const MaxParallelism = 1000
@@ -197,17 +195,18 @@ func NewSpawnCmd() *cobra.Command {
 
 				// Delete when it is no longer needed
 				if !longRunning && ((podError != nil && *podError) || (podSuccess != nil && *podSuccess)) && pod.DeletionTimestamp == nil {
-					err := clientSet.CoreV1().Pods(env.Namespace()).Delete(context.Background(), pod.Name, metav1.DeleteOptions{
-						GracePeriodSeconds: common.Ptr(int64(0)),
-						PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
-					})
-					if err != nil && !errors.IsNotFound(err) {
+					err := spawn.DeletePod(context.Background(), clientSet, svc, podsRef, index)
+					if err != nil {
 						fmt.Printf("Warning: %s: failed to delete obsolete pod: %s\n", pod.Name, err.Error())
 					}
 				}
 
 				if podError != nil && *podError {
-					fmt.Printf("%s: pod %s (%d) failed\n", svc.Name, pod.Name, index+1)
+					if pod.Status.Reason == "DeadlineExceeded" {
+						fmt.Printf("%s: pod %s (%d) timed out\n", svc.Name, pod.Name, index+1)
+					} else {
+						fmt.Printf("%s: pod %s (%d) failed\n", svc.Name, pod.Name, index+1)
+					}
 					initialized[pod.Name] = struct{}{}
 					(*serviceLocksMap[svc.Name])[index].Unlock()
 				} else if podSuccess != nil && *podSuccess {
@@ -216,8 +215,8 @@ func NewSpawnCmd() *cobra.Command {
 					} else {
 						fmt.Printf("%s: pod %s (%d) finished successfully on %s\n", svc.Name, pod.Name, index+1, pod.Spec.NodeName)
 					}
-					success.Add(1)
 					initialized[pod.Name] = struct{}{}
+					success.Add(1)
 					(*serviceLocksMap[svc.Name])[index].Unlock()
 				}
 			})
@@ -241,7 +240,7 @@ func NewSpawnCmd() *cobra.Command {
 			// TODO: Consider dry-run as well
 			spawn.EachService(services, schedulablePods, func(svc spawn.Service, svcIndex int, pod *corev1.Pod, index int64, combinations int64) {
 				// Create the pod
-				pod, err := clientSet.CoreV1().Pods(env.Namespace()).
+				pod, err = clientSet.CoreV1().Pods(env.Namespace()).
 					Create(context.Background(), pod, metav1.CreateOptions{})
 				if err != nil {
 					fail("[%d/%d] %s: error while creating pod: %s", index+1, combinations*svc.Count, svc.Name, err.Error())
@@ -253,19 +252,26 @@ func NewSpawnCmd() *cobra.Command {
 				// Update the initial data
 				updateState(svc.Name, index, pod)
 
-				// TODO: Support the timeout
-
 				// Wait until it's ready
 				serviceLocks[svcIndex][index].Lock()
 			})
 
 			saveState()
 
-			if success.Load() == total {
-				fmt.Printf("Successfully started %d pods.\n", total)
+			if longRunning {
+				if success.Load() == total {
+					fmt.Printf("Successfully started %d pods.\n", total)
+				} else {
+					fmt.Printf("Failed to initialize %d out of %d expected pods.\n", total-success.Load(), total)
+					os.Exit(1)
+				}
 			} else {
-				fmt.Printf("Failed to initialize %d out of %d expected pods.\n", total-success.Load(), total)
-				os.Exit(1)
+				if success.Load() == total {
+					fmt.Printf("Successfully finished %d pods.\n", total)
+				} else {
+					fmt.Printf("Failed to finish %d out of %d expected pods.\n", total-success.Load(), total)
+					os.Exit(1)
+				}
 			}
 		},
 	}
