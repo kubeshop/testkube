@@ -12,11 +12,16 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
@@ -33,12 +38,10 @@ func NewKillCmd() *cobra.Command {
 
 			// Initialize Kubernetes client
 			clientSet := env.Kubernetes()
+			artifacts := artifacts.NewInternalArtifactStorage()
 
-			// Delete pods
-			err := clientSet.CoreV1().Pods(env.Namespace()).DeleteCollection(context.Background(), metav1.DeleteOptions{
-				GracePeriodSeconds: common.Ptr(int64(0)),
-				PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
-			}, metav1.ListOptions{
+			// Find all pods to kill
+			pods, err := clientSet.CoreV1().Pods(env.Namespace()).List(context.Background(), metav1.ListOptions{
 				LabelSelector: fmt.Sprintf("%s=%s,%s=%s",
 					constants.ExecutionIdLabelName, env.ExecutionId(),
 					constants.ExecutionAssistingPodRefName, podsRef),
@@ -46,6 +49,43 @@ func NewKillCmd() *cobra.Command {
 			if err != nil {
 				fmt.Printf("failed to delete assisting pods: %s\n", err.Error())
 				failed = true
+			}
+
+			// Process and delete pods
+			if err == nil {
+				for _, pod := range pods.Items {
+					segments := strings.Split(pod.Name, "-")
+					name := segments[2]
+					index, err := strconv.ParseInt(segments[3], 10, 64)
+					svc := spawn.Service{Name: name}
+
+					if err == nil {
+						// Fetch logs and save as artifact
+						logs, err := spawn.FetchLogs(context.Background(), clientSet, svc, &pod)
+						if err != nil {
+							fmt.Printf("%s: warning: failed to fetch logs from finished pod: %s\n", InstanceLabel(svc.Name, index, svc.Total()), err.Error())
+						} else {
+							err = artifacts.SaveStream(fmt.Sprintf("logs/%s/%d.log", svc.Name, index), logs)
+							if err != nil {
+								fmt.Printf("%s: warning: error while saving logs: %s\n", InstanceLabel(svc.Name, index, svc.Total()), err.Error())
+							}
+						}
+					}
+
+					err = clientSet.CoreV1().Pods(pod.Namespace).Delete(context.Background(), pod.Name, metav1.DeleteOptions{
+						GracePeriodSeconds: common.Ptr(int64(0)),
+						PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
+					})
+					if err != nil && errors.IsNotFound(err) {
+						err = nil
+					}
+					if err == nil {
+						fmt.Printf("%s: deleted pod successfully\n", InstanceLabel(name, index, index))
+					} else {
+						fmt.Printf("%s: failed to delete pod: %s: %s\n", InstanceLabel(name, index, index), pod.Name, err.Error())
+						failed = true
+					}
+				}
 			}
 
 			// Delete config maps
@@ -65,7 +105,6 @@ func NewKillCmd() *cobra.Command {
 			if failed {
 				os.Exit(1)
 			}
-			fmt.Printf("deleted assisting pods successfully\n")
 		},
 	}
 
