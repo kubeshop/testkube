@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/internal/common"
@@ -164,13 +165,21 @@ func DeletePod(ctx context.Context, clientSet kubernetes.Interface, pod *corev1.
 	return err
 }
 
-func DeletePodAndSaveLogs(ctx context.Context, clientSet kubernetes.Interface, storage artifacts.InternalArtifactStorage, svc Service, pod *corev1.Pod, ref string, index int64) error {
+func DeletePodAndSaveLogs(ctx context.Context, clientSet kubernetes.Interface, storage artifacts.InternalArtifactStorage, svc Service, pod *corev1.Pod, index int64, success bool) error {
 	logs, err := FetchLogs(context.Background(), clientSet, svc, pod)
 	if err != nil {
 		fmt.Printf("%s: warning: failed to fetch logs from finished pod: %s\n", InstanceLabel(svc.Name, index, svc.Total()), err.Error())
 	} else {
-		err = storage.SaveStream(fmt.Sprintf("logs/%s/%d.log", svc.Name, index), logs)
-		if err != nil {
+		filePath := fmt.Sprintf("logs/%s/%d.log", svc.Name, index)
+		err = storage.SaveStream(filePath, logs)
+		if err == nil {
+			data.PrintOutput(env.Ref(), "service-logs", ServiceLogs{
+				Name:     svc.Name,
+				Index:    index,
+				Artifact: storage.FullPath(filePath),
+				Success:  success,
+			})
+		} else {
 			fmt.Printf("%s: warning: error while saving logs: %s\n", InstanceLabel(svc.Name, index, svc.Total()), err.Error())
 		}
 	}

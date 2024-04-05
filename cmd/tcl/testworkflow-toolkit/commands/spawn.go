@@ -200,11 +200,15 @@ func NewSpawnCmd() *cobra.Command {
 					return
 				}
 
+				// Get status
+				failed := podError != nil && *podError
+				succeed := podSuccess != nil && *podSuccess
+
 				// Delete when it is no longer needed
-				if !longRunning && ((podError != nil && *podError) || (podSuccess != nil && *podSuccess)) && pod.DeletionTimestamp == nil {
+				if !longRunning && (failed || succeed) && pod.DeletionTimestamp == nil {
 					var err error
 					if svc.Logs {
-						err = spawn.DeletePodAndSaveLogs(context.Background(), clientSet, artifacts, svc, pod, podsRef, index)
+						err = spawn.DeletePodAndSaveLogs(context.Background(), clientSet, artifacts, svc, pod, index, succeed)
 					} else {
 						err = spawn.DeletePod(context.Background(), clientSet, pod)
 					}
@@ -213,7 +217,7 @@ func NewSpawnCmd() *cobra.Command {
 					}
 				}
 
-				if podError != nil && *podError {
+				if failed {
 					if pod.Status.Reason == "DeadlineExceeded" {
 						fmt.Printf("%s: timed out\n", spawn.InstanceLabel(svc.Name, index, svc.Total()))
 					} else {
@@ -221,7 +225,7 @@ func NewSpawnCmd() *cobra.Command {
 					}
 					initialized[pod.Name] = struct{}{}
 					(*serviceLocksMap[svc.Name])[index].Unlock()
-				} else if podSuccess != nil && *podSuccess {
+				} else if succeed {
 					if longRunning {
 						fmt.Printf("%s: initialized successfully on %s\n", spawn.InstanceLabel(svc.Name, index, svc.Total()), pod.Spec.NodeName)
 					} else {
