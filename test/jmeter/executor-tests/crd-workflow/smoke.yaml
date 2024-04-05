@@ -58,3 +58,135 @@ spec:
       artifacts:
         paths:
         - '**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: jmeter-workflow-distributed-smoke
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+        - test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+  container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 512Mi
+    workingDir: /data/repo/test/jmeter/executor-tests
+
+  pod:
+    serviceAccountName: testkube-api-server
+  services:
+    slave:
+      count: 5
+      timeout: 30s # initialization timeout
+      container:
+        image: justb4/jmeter:5.5
+        command:
+          - jmeter-server
+          - -Dserver.rmi.localport=60000
+          - -Dserver_port=1099
+          - -Jserver.rmi.ssl.disable=true
+        resources:
+          requests:
+            cpu: 512m
+            memory: 512Mi
+        readinessProbe:
+          tcpSocket:
+            port: 1099
+          periodSeconds: 1
+      pod:
+        metadata:
+          labels:
+            jmeter-slave: "{{execution.id}}"
+        spec:
+          topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: kubernetes.io/hostname
+              whenUnsatisfiable: ScheduleAnyway
+              labelSelector:
+                matchLabels:
+                  jmeter-slave: "{{execution.id}}"
+
+  steps:
+    - name: Run tests
+      run:
+        image: justb4/jmeter:5.5
+        command:
+          - jmeter
+        args:
+          - -n
+          - -X
+          - -Jserver.rmi.ssl.disable=true
+          - -Jclient.rmi.localport=7000
+          - -R
+          - '{{services.slave.*.ip}}'
+          - -t
+          - jmeter-executor-smoke.jmx
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: jmeter-workflow-smoke-shell-artifacts
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+        - test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+  container:
+    workingDir: /data/repo/test/jmeter/executor-tests
+
+  pod:
+    serviceAccountName: testkube-api-server
+  services:
+    slave:
+      count: 5
+      timeout: 30s # initialization timeout
+      container:
+        image: justb4/jmeter:5.5
+        command:
+          - jmeter-server
+          - -Dserver.rmi.localport=60000
+          - -Dserver_port=1099
+          - -Jserver.rmi.ssl.disable=true
+        resources:
+          requests:
+            cpu: 512m
+            memory: 512Mi
+        readinessProbe:
+          tcpSocket:
+            port: 1099
+          periodSeconds: 1
+      pod:
+        metadata:
+          labels:
+            jmeter-slave: "{{execution.id}}"
+        spec:
+          topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: kubernetes.io/hostname
+              whenUnsatisfiable: ScheduleAnyway
+              labelSelector:
+                matchLabels:
+                  jmeter-slave: "{{execution.id}}"
+
+  steps:
+    - name: Run tests
+      run:
+        image: justb4/jmeter:5.5
+        shell: jmeter -n -X -Jserver.rmi.ssl.disable=true -Jclient.rmi.localport=7000 -R {{services.slave.*.ip}} -t jmeter-executor-smoke.jmx -j /data/artifacts/jmeter.log -o /data/artifacts/report -l /data/artifacts/jtl-report.jtl -e
+      steps:
+        - name: Save artifacts
+          workingDir: /data/artifacts
+          artifacts:
+            paths:
+              - '**/*'

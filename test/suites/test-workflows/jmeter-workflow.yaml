@@ -10,3 +10,5 @@ spec:
       workflows:
       - name: jmeter-workflow-smoke
       - name: jmeter-workflow-smoke-shell-artifacts
+      - name: jmeter-distributed-workflow-smoke
+      - name: jmeter-distributed-workflow-smoke-shell-artifacts
