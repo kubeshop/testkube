@@ -12,3 +12,4 @@ spec:
       - name: k6-workflow-smoke-preofficial-trait
       - name: k6-workflow-smoke-preofficial-trait-without-checkout-step
       - name: k6-workflow-smoke-artifacts
+      - name: k6-workflow-distributed-smoke

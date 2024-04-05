@@ -137,3 +137,57 @@ spec:
         artifacts:
           paths:
           - '*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: k6-workflow-distributed-smoke
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+        - test/k6/executor-tests/k6-smoke-test.js
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+    workingDir: /data/repo/test/k6/executor-tests
+
+  pod:
+    serviceAccountName: testkube-api-server
+
+  steps:
+    - name: Run test
+      distribute:
+        count: 10
+        timeout: 10m # execution timeout
+        files:
+          - path: /k6-smoke-test.js
+            content: '{{ file("./k6-smoke-test.js") }}'
+        pod:
+          metadata:
+            labels:
+              skew: "{{ execution.id }}-k6"
+            spec:
+              topologySpreadConstraints:
+                - maxSkew: 1
+                  topologyKey: kubernetes.io/hostname
+                  whenUnsatisfiable: ScheduleAnyway
+                  labelSelector:
+                    matchLabels:
+                      skew: "{{ execution.id }}-k6"
+        container:
+          image: grafana/k6:0.43.1
+          args:
+            - run
+            - /k6-smoke-test.js
+            - -e
+            - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+          env:
+            - name: K6_SYSTEM_ENV
+              value: K6_SYSTEM_ENV_value
