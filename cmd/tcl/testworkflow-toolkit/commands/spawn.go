@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -26,7 +25,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
 const MaxParallelism = 1000
@@ -176,64 +174,39 @@ func NewSpawnCmd() *cobra.Command {
 			}
 
 			// Watch events for all Pod modifications
-			podWatch, err := clientSet.CoreV1().Pods(env.Namespace()).Watch(context.Background(), metav1.ListOptions{
-				TypeMeta:      metav1.TypeMeta{Kind: "Pod"},
-				LabelSelector: fmt.Sprintf("%s=%s", constants.ExecutionAssistingPodRefName, podsRef),
+			initialized := make(map[string]struct{})
+			err = spawn.WatchPods(context.Background(), clientSet, podsRef, servicesMap, func(svc spawn.Service, index int64, pod *corev1.Pod) {
+				updateState(svc.Name, index, pod)
+				state := getState(svc.Name, index)
+				if _, ok := initialized[pod.Name]; ok {
+					return
+				}
+
+				podSuccess, err := svc.EvalReady(state, index, baseMachine)
+				if err != nil {
+					fmt.Printf("Warning: %s: parsing 'success' condition: %s\n", pod.Name, err.Error())
+					return
+				}
+				podError, err := svc.EvalError(state, index, baseMachine)
+				if err != nil {
+					fmt.Printf("Warning: %s: parsing 'error' condition: %s\n", pod.Name, err.Error())
+					return
+				}
+
+				if podError != nil && *podError {
+					fmt.Printf("%s: pod %s (%d) failed\n", svc.Name, pod.Name, index+1)
+					initialized[pod.Name] = struct{}{}
+					(*serviceLocksMap[svc.Name])[index].Unlock()
+				} else if podSuccess != nil && *podSuccess {
+					fmt.Printf("%s: pod %s (%d) initialized successfully on %s\n", svc.Name, pod.Name, index+1, pod.Spec.NodeName)
+					success.Add(1)
+					initialized[pod.Name] = struct{}{}
+					(*serviceLocksMap[svc.Name])[index].Unlock()
+				}
 			})
 			if err != nil {
 				fail("Couldn't watch Kubernetes for pod changes: %s", err.Error())
 			}
-			initialized := make(map[string]struct{})
-			go func() {
-				defer podWatch.Stop()
-
-				for ev := range podWatch.ResultChan() {
-					if pod, ok := ev.Object.(*corev1.Pod); ok {
-						segments := strings.Split(pod.Name, "-")
-						name := segments[2]
-						index, err := strconv.ParseInt(segments[3], 10, 64)
-						if err != nil {
-							// Unknown shard
-							continue
-						}
-						if _, ok := servicesMap[name]; !ok {
-							// Unknown service
-							continue
-						}
-						if _, ok := initialized[pod.Name]; ok {
-							// Already initialized
-							continue
-						}
-						updateState(name, index, pod)
-
-						// Check the conditions
-						state := getState(name, index)
-						svc := servicesMap[name]
-
-						podSuccess, err := svc.EvalReady(state, index)
-						if err != nil {
-							fmt.Printf("Warning: %s: parsing 'success' condition: %s\n", pod.Name, err.Error())
-							continue
-						}
-						podError, err := svc.EvalError(state, index)
-						if err != nil {
-							fmt.Printf("Warning: %s: parsing 'error' condition: %s\n", pod.Name, err.Error())
-							continue
-						}
-
-						if podError != nil && *podError {
-							fmt.Printf("%s: pod %s (%d) failed\n", svc.Name, pod.Name, index+1)
-							initialized[pod.Name] = struct{}{}
-							(*serviceLocksMap[svc.Name])[index].Unlock()
-						} else if podSuccess != nil && *podSuccess {
-							fmt.Printf("%s: pod %s (%d) initialized successfully on %s\n", svc.Name, pod.Name, index+1, pod.Spec.NodeName)
-							success.Add(1)
-							initialized[pod.Name] = struct{}{}
-							(*serviceLocksMap[svc.Name])[index].Unlock()
-						}
-					}
-				}
-			}()
 
 			// Create required config maps
 			if len(storage.ConfigMaps()) > 0 {
@@ -243,7 +216,6 @@ func NewSpawnCmd() *cobra.Command {
 				_, err := clientSet.CoreV1().ConfigMaps(env.Namespace()).
 					Create(context.Background(), &cfg, metav1.CreateOptions{})
 				if err != nil {
-					// TODO: Cleanup the rest of config maps
 					fail("creating ConfigMap: %s", err.Error())
 				}
 			}

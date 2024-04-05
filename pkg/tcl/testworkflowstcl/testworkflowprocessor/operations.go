@@ -381,7 +381,7 @@ func ProcessDistribute(_ InternalProcessor, layer Intermediate, container Contai
 	if err != nil {
 		return nil, errors.Wrap(err, "distribute: marshaling error")
 	}
-	stage.Container().SetArgs("-i", fmt.Sprintf("operation=%s", expressionstcl.NewStringValue(string(b)).Template()))
+	stage.Container().SetArgs("-i", fmt.Sprintf("worker=%s", expressionstcl.NewStringValue(string(b)).Template()))
 
 	return stage, nil
 }
