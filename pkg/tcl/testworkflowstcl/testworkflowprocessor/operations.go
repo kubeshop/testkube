@@ -395,7 +395,7 @@ func ProcessServicesStart(_ InternalProcessor, layer Intermediate, container Con
 	container.AppendEnv(corev1.EnvVar{Name: "TK_SRV_REF", Value: podsRef})
 
 	stage := NewContainerStage(layer.NextRef(), container.CreateChild())
-	stage.SetCategory("Start assisting pods")
+	stage.SetCategory("Start services")
 
 	stage.Container().
 		SetImage(constants.DefaultToolkitImage).
@@ -429,7 +429,7 @@ func ProcessServicesStop(_ InternalProcessor, layer Intermediate, container Cont
 	stage.SetCondition("always") // TODO: actually, it's enough to do it when ServicesInit is not skipped
 	stage.SetOptional(true)
 	stage.SetRetryPolicy(step.Retry)
-	stage.SetCategory("Cleanup assisting pods")
+	stage.SetCategory("Stop services")
 
 	stage.Container().
 		SetImage(constants.DefaultToolkitImage).
