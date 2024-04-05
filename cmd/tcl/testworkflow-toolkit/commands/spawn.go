@@ -23,11 +23,22 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 const MaxParallelism = 1000
+
+func ServiceLabel(name string) string {
+	return ui.LightCyan(name)
+}
+
+func InstanceLabel(name string, index int64, total int64) string {
+	zeros := strings.Repeat("0", len(fmt.Sprintf("%d", total))-len(fmt.Sprintf("%d", index+1)))
+	return ServiceLabel(name) + ui.Cyan(fmt.Sprintf("/%s%d", zeros, index+1))
+}
 
 func NewSpawnCmd() *cobra.Command {
 	var (
@@ -109,7 +120,7 @@ func NewSpawnCmd() *cobra.Command {
 				svcCombinations := svc.Combinations()
 				svcTotal := svc.Total()
 				if err != nil {
-					fail("%s: %s", k, err.Error())
+					fail("%s: %s", ServiceLabel(k), err.Error())
 				}
 
 				// Apply empty state
@@ -117,7 +128,7 @@ func NewSpawnCmd() *cobra.Command {
 
 				// Skip when empty
 				if svcTotal == 0 {
-					fmt.Printf("[%s] 0 instances requested (combinations=%d, count=%d), skipping\n", k, svcCombinations, svc.Count)
+					fmt.Printf("%s: 0 instances requested (combinations=%d, count=%d), skipping\n", ServiceLabel(k), svcCombinations, svc.Count)
 					continue
 				}
 
@@ -132,7 +143,11 @@ func NewSpawnCmd() *cobra.Command {
 				if svc.Parallelism < svc.Count {
 					infos = append(infos, fmt.Sprintf("parallelism: %d", svc.Parallelism))
 				}
-				fmt.Printf("[%s] %d instances requested: %s\n", k, svcTotal, strings.Join(infos, ", "))
+				if svcTotal == 1 {
+					fmt.Printf("%s: 1 instance requested\n", ServiceLabel(k))
+				} else {
+					fmt.Printf("%s: %d instances requested: %s\n", ServiceLabel(k), svcTotal, strings.Join(infos, ", "))
+				}
 
 				// Limit parallelism
 				if svc.Parallelism > MaxParallelism {
@@ -166,6 +181,7 @@ func NewSpawnCmd() *cobra.Command {
 
 			// Initialize Kubernetes client
 			clientSet := env.Kubernetes()
+			artifacts := artifacts.NewInternalArtifactStorage()
 
 			// Initialize list of pods to schedule
 			schedulablePods, storage, err := spawn.BuildResources(services, podsRef, baseMachine)
@@ -184,36 +200,48 @@ func NewSpawnCmd() *cobra.Command {
 
 				podSuccess, err := svc.EvalReady(state, index, baseMachine)
 				if err != nil {
-					fmt.Printf("Warning: %s: parsing 'success' condition: %s\n", pod.Name, err.Error())
+					fmt.Printf("%s: warning: parsing 'success' condition: %s\n", InstanceLabel(svc.Name, index, svc.Total()), err.Error())
 					return
 				}
 				podError, err := svc.EvalError(state, index, baseMachine)
 				if err != nil {
-					fmt.Printf("Warning: %s: parsing 'error' condition: %s\n", pod.Name, err.Error())
+					fmt.Printf("%s: warning: parsing 'error' condition: %s\n", InstanceLabel(svc.Name, index, svc.Total()), err.Error())
 					return
 				}
 
 				// Delete when it is no longer needed
 				if !longRunning && ((podError != nil && *podError) || (podSuccess != nil && *podSuccess)) && pod.DeletionTimestamp == nil {
-					err := spawn.DeletePod(context.Background(), clientSet, svc, podsRef, index)
+					// Fetch logs and save as artifact
+					logs, err := spawn.FetchLogs(context.Background(), clientSet, svc, pod)
 					if err != nil {
-						fmt.Printf("Warning: %s: failed to delete obsolete pod: %s\n", pod.Name, err.Error())
+						fmt.Printf("%s: warning: failed to fetch logs from finished pod: %s\n", InstanceLabel(svc.Name, index, svc.Total()), err.Error())
+					} else {
+						err = artifacts.SaveStream(fmt.Sprintf("logs/%s/%d.log", svc.Name, index), logs)
+						if err != nil {
+							fmt.Printf("%s: warning: error while saving logs: %s\n", InstanceLabel(svc.Name, index, svc.Total()), err.Error())
+						}
+					}
+
+					// Clean up
+					err = spawn.DeletePod(context.Background(), clientSet, svc, podsRef, index)
+					if err != nil {
+						fmt.Printf("%s: warning: failed to delete obsolete pod: %s\n", InstanceLabel(svc.Name, index, svc.Total()), err.Error())
 					}
 				}
 
 				if podError != nil && *podError {
 					if pod.Status.Reason == "DeadlineExceeded" {
-						fmt.Printf("%s: pod %s (%d) timed out\n", svc.Name, pod.Name, index+1)
+						fmt.Printf("%s: timed out\n", InstanceLabel(svc.Name, index, svc.Total()))
 					} else {
-						fmt.Printf("%s: pod %s (%d) failed\n", svc.Name, pod.Name, index+1)
+						fmt.Printf("%s: failed\n", InstanceLabel(svc.Name, index, svc.Total()))
 					}
 					initialized[pod.Name] = struct{}{}
 					(*serviceLocksMap[svc.Name])[index].Unlock()
 				} else if podSuccess != nil && *podSuccess {
 					if longRunning {
-						fmt.Printf("%s: pod %s (%d) initialized successfully on %s\n", svc.Name, pod.Name, index+1, pod.Spec.NodeName)
+						fmt.Printf("%s: initialized successfully on %s\n", InstanceLabel(svc.Name, index, svc.Total()), pod.Spec.NodeName)
 					} else {
-						fmt.Printf("%s: pod %s (%d) finished successfully on %s\n", svc.Name, pod.Name, index+1, pod.Spec.NodeName)
+						fmt.Printf("%s: finished successfully on %s\n", InstanceLabel(svc.Name, index, svc.Total()), pod.Spec.NodeName)
 					}
 					initialized[pod.Name] = struct{}{}
 					success.Add(1)
@@ -236,6 +264,9 @@ func NewSpawnCmd() *cobra.Command {
 				}
 			}
 
+			// Make spacing
+			fmt.Println()
+
 			// Initialize all the services
 			// TODO: Consider dry-run as well
 			spawn.EachService(services, schedulablePods, func(svc spawn.Service, svcIndex int, pod *corev1.Pod, index int64, combinations int64) {
@@ -243,11 +274,11 @@ func NewSpawnCmd() *cobra.Command {
 				pod, err = clientSet.CoreV1().Pods(env.Namespace()).
 					Create(context.Background(), pod, metav1.CreateOptions{})
 				if err != nil {
-					fail("[%d/%d] %s: error while creating pod: %s", index+1, combinations*svc.Count, svc.Name, err.Error())
+					fail("%s: error while creating pod: %s", InstanceLabel(svc.Name, index, svc.Total()), err.Error())
 				}
 
 				// Inform about the pod creation
-				fmt.Printf("[%d/%d] %s: created pod\n", index+1, combinations*svc.Count, svc.Name)
+				fmt.Printf("%s: created pod %s\n", InstanceLabel(svc.Name, index, svc.Total()), ui.DarkGray("("+pod.Name+")"))
 
 				// Update the initial data
 				updateState(svc.Name, index, pod)
@@ -255,6 +286,9 @@ func NewSpawnCmd() *cobra.Command {
 				// Wait until it's ready
 				serviceLocks[svcIndex][index].Lock()
 			})
+
+			// Make spacing
+			fmt.Println()
 
 			saveState()
 

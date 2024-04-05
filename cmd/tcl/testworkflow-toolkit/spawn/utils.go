@@ -9,16 +9,22 @@
 package spawn
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"slices"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
@@ -107,4 +113,28 @@ func EachService(services []Service, pods [][]*corev1.Pod, fn func(svc Service, 
 
 	// Wait until all processes will be finished
 	wg.Wait()
+}
+
+func FetchLogs(ctx context.Context, clientSet kubernetes.Interface, svc Service, pod *corev1.Pod) (io.Reader, error) {
+	reader, writer := io.Pipe()
+	go func() {
+		defer writer.Close()
+		for _, container := range append(pod.Spec.InitContainers, pod.Spec.Containers...) {
+			req := clientSet.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &corev1.PodLogOptions{
+				Timestamps: true,
+				Container:  container.Name,
+			})
+			stream, err := req.Stream(ctx)
+			if err == nil {
+				_, err = io.Copy(writer, stream)
+				if err != nil && !errors.Is(err, io.EOF) {
+					writer.Write([]byte(fmt.Sprintf("\n%s error: cannot read '%s' container logs further: %s", time.Time{}.Format(testworkflowcontroller.KubernetesLogTimeFormat), container.Name, strings.ReplaceAll(err.Error(), "\n", " "))))
+				}
+			} else {
+				writer.Write([]byte(fmt.Sprintf("%s error: cannot read '%s' container logs: %s", time.Time{}.Format(testworkflowcontroller.KubernetesLogTimeFormat), container.Name, strings.ReplaceAll(err.Error(), "\n", " "))))
+			}
+			writer.Write([]byte("\n"))
+		}
+	}()
+	return reader, nil
 }
