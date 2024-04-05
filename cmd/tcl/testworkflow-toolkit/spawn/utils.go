@@ -20,14 +20,28 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	errors2 "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
+
+func ServiceLabel(name string) string {
+	return ui.LightCyan(name)
+}
+
+func InstanceLabel(name string, index int64, total int64) string {
+	zeros := strings.Repeat("0", len(fmt.Sprintf("%d", total))-len(fmt.Sprintf("%d", index+1)))
+	return ServiceLabel(name) + ui.Cyan(fmt.Sprintf("/%s%d", zeros, index+1))
+}
 
 func BuildResources(services []Service, ref string, machines ...expressionstcl.Machine) ([][]*corev1.Pod, testworkflowprocessor.ConfigMapFiles, error) {
 	// Initialize list of pods to schedule
@@ -137,4 +151,28 @@ func FetchLogs(ctx context.Context, clientSet kubernetes.Interface, svc Service,
 		}
 	}()
 	return reader, nil
+}
+
+func DeletePod(ctx context.Context, clientSet kubernetes.Interface, pod *corev1.Pod) error {
+	err := clientSet.CoreV1().Pods(env.Namespace()).Delete(ctx, pod.Name, metav1.DeleteOptions{
+		GracePeriodSeconds: common.Ptr(int64(0)),
+		PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
+	})
+	if err != nil && errors2.IsNotFound(err) {
+		err = nil
+	}
+	return err
+}
+
+func DeletePodAndSaveLogs(ctx context.Context, clientSet kubernetes.Interface, storage artifacts.InternalArtifactStorage, svc Service, pod *corev1.Pod, ref string, index int64) error {
+	logs, err := FetchLogs(context.Background(), clientSet, svc, pod)
+	if err != nil {
+		fmt.Printf("%s: warning: failed to fetch logs from finished pod: %s\n", InstanceLabel(svc.Name, index, svc.Total()), err.Error())
+	} else {
+		err = storage.SaveStream(fmt.Sprintf("logs/%s/%d.log", svc.Name, index), logs)
+		if err != nil {
+			fmt.Printf("%s: warning: error while saving logs: %s\n", InstanceLabel(svc.Name, index, svc.Total()), err.Error())
+		}
+	}
+	return DeletePod(ctx, clientSet, pod)
 }

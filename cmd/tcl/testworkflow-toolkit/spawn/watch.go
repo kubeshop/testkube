@@ -15,12 +15,10 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
-	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
@@ -81,16 +79,4 @@ func WatchPods(ctx context.Context, clientSet kubernetes.Interface, ref string, 
 	}()
 
 	return nil
-}
-
-func DeletePod(ctx context.Context, clientSet kubernetes.Interface, svc Service, ref string, index int64) error {
-	podName := fmt.Sprintf("%s-%s-%s-%d", env.ExecutionId(), ref, svc.Name, index)
-	err := clientSet.CoreV1().Pods(env.Namespace()).Delete(ctx, podName, metav1.DeleteOptions{
-		GracePeriodSeconds: common.Ptr(int64(0)),
-		PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
-	})
-	if err != nil && errors.IsNotFound(err) {
-		err = nil
-	}
-	return err
 }

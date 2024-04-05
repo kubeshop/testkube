@@ -17,7 +17,6 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/artifacts"
@@ -64,29 +63,15 @@ func NewKillCmd() *cobra.Command {
 					svc := spawn.Service{Name: name}
 
 					if err == nil && slices.Contains(logsRequest, name) {
-						// Fetch logs and save as artifact
-						logs, err := spawn.FetchLogs(context.Background(), clientSet, svc, &pod)
-						if err != nil {
-							fmt.Printf("%s: warning: failed to fetch logs from finished pod: %s\n", InstanceLabel(svc.Name, index, svc.Total()), err.Error())
-						} else {
-							err = artifacts.SaveStream(fmt.Sprintf("logs/%s/%d.log", svc.Name, index), logs)
-							if err != nil {
-								fmt.Printf("%s: warning: error while saving logs: %s\n", InstanceLabel(svc.Name, index, svc.Total()), err.Error())
-							}
-						}
+						err = spawn.DeletePodAndSaveLogs(context.Background(), clientSet, artifacts, svc, &pod, podsRef, index)
+					} else {
+						err = spawn.DeletePod(context.Background(), clientSet, &pod)
 					}
 
-					err = clientSet.CoreV1().Pods(pod.Namespace).Delete(context.Background(), pod.Name, metav1.DeleteOptions{
-						GracePeriodSeconds: common.Ptr(int64(0)),
-						PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
-					})
-					if err != nil && errors.IsNotFound(err) {
-						err = nil
-					}
 					if err == nil {
-						fmt.Printf("%s: deleted pod successfully\n", InstanceLabel(name, index, index))
+						fmt.Printf("%s: deleted pod successfully\n", spawn.InstanceLabel(name, index, index))
 					} else {
-						fmt.Printf("%s: failed to delete pod: %s: %s\n", InstanceLabel(name, index, index), pod.Name, err.Error())
+						fmt.Printf("%s: failed to delete pod: %s: %s\n", spawn.InstanceLabel(name, index, index), pod.Name, err.Error())
 						failed = true
 					}
 				}
