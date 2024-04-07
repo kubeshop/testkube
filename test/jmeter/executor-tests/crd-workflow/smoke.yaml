@@ -91,8 +91,8 @@ spec:
           - -Jserver.rmi.ssl.disable=true
         resources:
           requests:
-            cpu: 512m
-            memory: 512Mi
+            cpu: 128m
+            memory: 128Mi
         readinessProbe:
           tcpSocket:
             port: 1099
@@ -100,7 +100,7 @@ spec:
       pod:
         metadata:
           labels:
-            jmeter-slave: "{{execution.id}}"
+            skew: "{{execution.id}}-jm"
         spec:
           topologySpreadConstraints:
             - maxSkew: 1
@@ -108,7 +108,7 @@ spec:
               whenUnsatisfiable: ScheduleAnyway
               labelSelector:
                 matchLabels:
-                  jmeter-slave: "{{execution.id}}"
+                  skew: "{{execution.id}}-jm"
 
   steps:
     - name: Run tests
@@ -158,8 +158,8 @@ spec:
           - -Jserver.rmi.ssl.disable=true
         resources:
           requests:
-            cpu: 512m
-            memory: 512Mi
+            cpu: 128m
+            memory: 128Mi
         readinessProbe:
           tcpSocket:
             port: 1099
@@ -167,7 +167,7 @@ spec:
       pod:
         metadata:
           labels:
-            jmeter-slave: "{{execution.id}}"
+            skew: "{{execution.id}}-jm"
         spec:
           topologySpreadConstraints:
             - maxSkew: 1
@@ -175,7 +175,7 @@ spec:
               whenUnsatisfiable: ScheduleAnyway
               labelSelector:
                 matchLabels:
-                  jmeter-slave: "{{execution.id}}"
+                  skew: "{{execution.id}}-jm"
 
   steps:
     - name: Run tests
