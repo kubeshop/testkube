@@ -10,7 +10,6 @@ package spawn
 
 import (
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -21,7 +20,6 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
-	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
@@ -110,32 +108,22 @@ func (svc *Service) TimeoutDuration(index int64, machines ...expressionstcl.Mach
 }
 
 func (svc *Service) Pod(ref string, index int64, machines ...expressionstcl.Machine) (*corev1.Pod, error) {
-	// Compute timeout duration
-	timeout, err := svc.TimeoutDuration(index, machines...)
-	if err != nil {
-		return nil, errors.Wrap(err, "reading timeout")
-	}
-
 	// Get details for current position
 	machines = append(machines, svc.MachineAt(index))
 
 	// Build a pod
 	spec := svc.PodTemplate.DeepCopy()
-	err = expressionstcl.FinalizeForce(&spec, machines...)
+	err := expressionstcl.FinalizeForce(&spec, machines...)
 	if err != nil {
 		return nil, fmt.Errorf("resolving pod schema: %w", err)
 	}
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        fmt.Sprintf("%s-%s-%s-%d", env.ExecutionId(), ref, svc.Name, index),
+			Name:        PodName(ref, svc.Name, index),
 			Namespace:   env.Namespace(),
 			Annotations: spec.Annotations,
 		},
 		Spec: spec.Spec,
-	}
-
-	if timeout != nil && (pod.Spec.ActiveDeadlineSeconds == nil || float64(*pod.Spec.ActiveDeadlineSeconds) > timeout.Seconds()) {
-		pod.Spec.ActiveDeadlineSeconds = common.Ptr(int64(math.Ceil(timeout.Seconds())))
 	}
 
 	// Append defaults for the pod containers

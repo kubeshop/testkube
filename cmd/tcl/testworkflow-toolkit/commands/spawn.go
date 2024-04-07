@@ -12,10 +12,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -26,6 +28,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -182,6 +185,7 @@ func NewSpawnCmd() *cobra.Command {
 
 			// Watch events for all Pod modifications
 			initialized := make(map[string]struct{})
+			timedOut := make(map[string]struct{})
 			err = spawn.WatchPods(context.Background(), clientSet, podsRef, servicesMap, func(svc spawn.Service, index int64, pod *corev1.Pod) {
 				updateState(svc.Name, index, pod)
 				state := getState(svc.Name, index)
@@ -201,7 +205,8 @@ func NewSpawnCmd() *cobra.Command {
 				}
 
 				// Get status
-				failed := podError != nil && *podError
+				_, timeout := timedOut[pod.Name]
+				failed := (podError != nil && *podError) || timeout
 				succeed := podSuccess != nil && *podSuccess
 
 				// Delete when it is no longer needed
@@ -218,7 +223,7 @@ func NewSpawnCmd() *cobra.Command {
 				}
 
 				if failed {
-					if pod.Status.Reason == "DeadlineExceeded" {
+					if timeout || pod.Status.Reason == "DeadlineExceeded" {
 						fmt.Printf("%s: timed out\n", spawn.InstanceLabel(svc.Name, index, svc.Total()))
 					} else {
 						fmt.Printf("%s: failed\n", spawn.InstanceLabel(svc.Name, index, svc.Total()))
@@ -258,6 +263,18 @@ func NewSpawnCmd() *cobra.Command {
 			// Initialize all the services
 			// TODO: Consider dry-run as well
 			spawn.EachService(services, schedulablePods, func(svc spawn.Service, svcIndex int, pod *corev1.Pod, index int64, combinations int64) {
+				// Compute timeout duration
+				timeout, err := svc.TimeoutDuration(index, baseMachine)
+				if err != nil {
+					fail("%s: error while reading timeout: %s", spawn.InstanceLabel(svc.Name, index, svc.Total()), err.Error())
+				}
+				isTimeoutApplicable := timeout != nil && (pod.Spec.ActiveDeadlineSeconds == nil || float64(*pod.Spec.ActiveDeadlineSeconds) > timeout.Seconds())
+
+				// Apply timeout for workers
+				if !longRunning && isTimeoutApplicable {
+					pod.Spec.ActiveDeadlineSeconds = common.Ptr(int64(math.Ceil(timeout.Seconds())))
+				}
+
 				// Create the pod
 				pod, err = clientSet.CoreV1().Pods(env.Namespace()).
 					Create(context.Background(), pod, metav1.CreateOptions{})
@@ -270,6 +287,19 @@ func NewSpawnCmd() *cobra.Command {
 
 				// Update the initial data
 				updateState(svc.Name, index, pod)
+
+				// Apply timeout for long-running services
+				if longRunning && isTimeoutApplicable {
+					go func() {
+						time.Sleep(*timeout)
+						if _, ok := initialized[pod.Name]; ok {
+							return
+						}
+						timedOut[pod.Name] = struct{}{}
+						fmt.Printf("%s: takes longer than expected %s\n", spawn.InstanceLabel(svc.Name, index, svc.Total()), timeout.String())
+						_ = spawn.DeletePod(context.Background(), clientSet, pod)
+					}()
+				}
 
 				// Wait until it's ready
 				serviceLocks[svcIndex][index].Lock()

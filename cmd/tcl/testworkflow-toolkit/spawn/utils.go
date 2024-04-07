@@ -44,6 +44,10 @@ func InstanceLabel(name string, index int64, total int64) string {
 	return ServiceLabel(name) + ui.Cyan(fmt.Sprintf("/%s%d", zeros, index+1))
 }
 
+func PodName(ref, svcName string, index int64) string {
+	return fmt.Sprintf("%s-%s-%s-%d", env.ExecutionId(), ref, svcName, index)
+}
+
 func BuildResources(services []Service, ref string, machines ...expressionstcl.Machine) ([][]*corev1.Pod, testworkflowprocessor.ConfigMapFiles, error) {
 	// Initialize list of pods to schedule
 	pods := make([][]*corev1.Pod, len(services))
