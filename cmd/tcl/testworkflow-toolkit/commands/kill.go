@@ -63,7 +63,7 @@ func NewKillCmd() *cobra.Command {
 					svc := spawn.Service{Name: name}
 
 					if err == nil && slices.Contains(logsRequest, name) {
-						err = spawn.DeletePodAndSaveLogs(context.Background(), clientSet, artifacts, svc, &pod, index, true)
+						err = spawn.DeletePodAndSaveLogs(context.Background(), clientSet, artifacts, svc, &pod, index)
 					} else {
 						err = spawn.DeletePod(context.Background(), clientSet, &pod)
 					}

@@ -169,7 +169,7 @@ func DeletePod(ctx context.Context, clientSet kubernetes.Interface, pod *corev1.
 	return err
 }
 
-func DeletePodAndSaveLogs(ctx context.Context, clientSet kubernetes.Interface, storage artifacts.InternalArtifactStorage, svc Service, pod *corev1.Pod, index int64, success bool) error {
+func DeletePodAndSaveLogs(ctx context.Context, clientSet kubernetes.Interface, storage artifacts.InternalArtifactStorage, svc Service, pod *corev1.Pod, index int64) error {
 	logs, err := FetchLogs(context.Background(), clientSet, svc, pod)
 	if err != nil {
 		fmt.Printf("%s: warning: failed to fetch logs from finished pod: %s\n", InstanceLabel(svc.Name, index, svc.Total()), err.Error())
@@ -177,11 +177,10 @@ func DeletePodAndSaveLogs(ctx context.Context, clientSet kubernetes.Interface, s
 		filePath := fmt.Sprintf("logs/%s/%d.log", svc.Name, index)
 		err = storage.SaveStream(filePath, logs)
 		if err == nil {
-			data.PrintOutput(env.Ref(), "service-logs", ServiceLogs{
-				Name:     svc.Name,
-				Index:    index,
-				Artifact: storage.FullPath(filePath),
-				Success:  success,
+			data.PrintOutput(env.Ref(), "service-status", ServiceStatus{
+				Name:  svc.Name,
+				Index: index,
+				Logs:  storage.FullPath(filePath),
 			})
 		} else {
 			fmt.Printf("%s: warning: error while saving logs: %s\n", InstanceLabel(svc.Name, index, svc.Total()), err.Error())

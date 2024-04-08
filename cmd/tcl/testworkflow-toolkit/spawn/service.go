@@ -24,11 +24,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
-type ServiceLogs struct {
-	Name     string `json:"name"`
-	Index    int64  `json:"index"`
-	Artifact string `json:"artifact"`
-	Success  bool   `json:"success"`
+type ServiceStatus struct {
+	Name   string `json:"name"`
+	Index  int64  `json:"index"`
+	Logs   string `json:"logs"`
+	Status string `json:"status"`
 }
 
 type Service struct {

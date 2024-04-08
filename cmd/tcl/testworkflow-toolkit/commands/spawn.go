@@ -209,11 +209,24 @@ func NewSpawnCmd() *cobra.Command {
 				failed := (podError != nil && *podError) || timeout
 				succeed := podSuccess != nil && *podSuccess
 
+				// Inform about status
+				if failed || succeed {
+					status := "failed"
+					if !failed {
+						status = "success"
+					}
+					data.PrintOutput(env.Ref(), "service-status", spawn.ServiceStatus{
+						Name:   svc.Name,
+						Index:  index,
+						Status: status,
+					})
+				}
+
 				// Delete when it is no longer needed
 				if !longRunning && (failed || succeed) && pod.DeletionTimestamp == nil {
 					var err error
 					if svc.Logs {
-						err = spawn.DeletePodAndSaveLogs(context.Background(), clientSet, artifacts, svc, pod, index, succeed)
+						err = spawn.DeletePodAndSaveLogs(context.Background(), clientSet, artifacts, svc, pod, index)
 					} else {
 						err = spawn.DeletePod(context.Background(), clientSet, pod)
 					}
@@ -284,6 +297,11 @@ func NewSpawnCmd() *cobra.Command {
 
 				// Inform about the pod creation
 				fmt.Printf("%s: created pod %s\n", spawn.InstanceLabel(svc.Name, index, svc.Total()), ui.DarkGray("("+pod.Name+")"))
+				data.PrintOutput(env.Ref(), "service-status", spawn.ServiceStatus{
+					Name:   svc.Name,
+					Index:  index,
+					Status: "running",
+				})
 
 				// Update the initial data
 				updateState(svc.Name, index, pod)
