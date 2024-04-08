@@ -418,7 +418,6 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	if err != nil {
 		l.Errorw("get pod logs error", "error", err)
 		c.streamLog(ctx, execution.Id, events.NewErrorLog(err))
-		return execution.ExecutionResult, err
 	}
 
 	// don't attach logs if logs v2 is enabled - they will be streamed through the logs service

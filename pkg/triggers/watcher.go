@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -33,6 +34,7 @@ import (
 	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
+	cexecutor "github.com/kubeshop/testkube/pkg/executor/containerexecutor"
 )
 
 type k8sInformers struct {
@@ -277,6 +279,7 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 			}
 			if oldPod.Namespace == s.testkubeNamespace && oldPod.Labels["job-name"] != "" && oldPod.Labels[testkube.TestLabelTestName] != "" &&
 				newPod.Namespace == s.testkubeNamespace && newPod.Labels["job-name"] != "" && newPod.Labels[testkube.TestLabelTestName] != "" &&
+				!(strings.HasSuffix(oldPod.Name, cexecutor.ScraperPodSuffix) || strings.HasSuffix(newPod.Name, cexecutor.ScraperPodSuffix)) &&
 				oldPod.Labels["job-name"] == newPod.Labels["job-name"] {
 				s.checkExecutionPodStatus(ctx, oldPod.Labels["job-name"], []*corev1.Pod{oldPod, newPod})
 			}
@@ -288,7 +291,8 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 				return
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: pod %s/%s deleted", pod.Namespace, pod.Name)
-			if pod.Namespace == s.testkubeNamespace && pod.Labels["job-name"] != "" && pod.Labels[testkube.TestLabelTestName] != "" {
+			if pod.Namespace == s.testkubeNamespace && pod.Labels["job-name"] != "" && !strings.HasSuffix(pod.Name, cexecutor.ScraperPodSuffix) &&
+				pod.Labels[testkube.TestLabelTestName] != "" {
 				s.checkExecutionPodStatus(ctx, pod.Labels["job-name"], []*corev1.Pod{pod})
 			}
 			event := newWatcherEvent(testtrigger.EventDeleted, pod, testtrigger.ResourcePod,
