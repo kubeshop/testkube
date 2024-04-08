@@ -10,7 +10,7 @@ problems that can occur with standard Tests, including:
 - Having more control over how your tests are executed, including resource consumption and setup/tearDown processes.
 - Being able to configure tool-specific commands and arguments.
 
-## Test Workflow structure
+## Test Workflow Structure
 
 TestWorkflows are defined using a specific workflow language wrapped in a CRD. The high-level structure
 of a TestWorkflow is as follows:
@@ -44,7 +44,7 @@ spec:
 The different properties are described with examples and in more detail below.
 
 ## Example - Test Workflow for Postman
-Example Test Workflow for running Postman collection from Testkube repository: [/test/postman/executor-tests/postman-executor-smoke-without-envs.postman_collection.json](https://raw.githubusercontent.com/kubeshop/testkube/develop/test/postman/executor-tests/postman-executor-smoke-without-envs.postman_collection.json)
+Example Test Workflow for running Postman collection from Testkube repository: [/test/postman/executor-tests/postman-executor-smoke-without-envs.postman_collection.json](https://raw.githubusercontent.com/kubeshop/testkube/develop/test/postman/executor-tests/postman-executor-smoke-without-envs.postman_collection.json).
 
 ```yaml title="postman-example.yaml"
 apiVersion: testworkflows.testkube.io/v1
@@ -128,7 +128,7 @@ spec:
         image: grafana/k6:latest
 ```
 ## steps
-Steps are the main building blocks in Test Workflows. They describe actions, that should be executed in specific order.
+Steps are the main building blocks in Test Workflows. They describe actions that should be executed in specific order.
 ```yaml
 spec:
   ...
@@ -237,7 +237,7 @@ spec:
 ```
 
 #### shell
-`shell` provides an ability to run command, or multiple commands inside the shell.
+`shell` provides an ability to run a command, or multiple commands inside the shell.
 
 ```yaml
 steps:
@@ -264,7 +264,7 @@ steps:
 `container` defines container-related settings.
 
 ### image
-`container.image`` defines an image which will be used for executing steps.
+`container.image` defines an image which will be used for executing steps.
 
 ```yaml
 steps:
@@ -275,7 +275,7 @@ steps:
 ```
 
 ### resources
-Resources can be configured for specific container.
+Resources can be configured for a specific container.
 
 #### resource requests
 ```yaml
@@ -298,9 +298,9 @@ spec:
         memory: 4Gi
 ```
 ## workingDir
-By default, everything will be executed in the context of working dir from specific container.
+By default, everything will be executed in the context of `workingDir` from specific container.
 
-Working dir can be set globally:
+`workingDir` can be set globally:
 ```yaml
 spec:
   ...
@@ -308,17 +308,17 @@ spec:
     workingDir: /data/repo/test/cypress/executor-tests/cypress-13
 ```
 
-Or, for specific step:
+Or, for a specific step:
 ```yaml
 steps:
 - name: Saving artifacts
   workingDir: /data/repo/test/cypress/executor-tests/cypress-13/cypress/videos
 ```
 
-or on the Step level:
+Or on the Step level:
 
 ## artifacts
-Files directly in `working dir`
+Files directly in `workingDir`
 ```yaml
 - name: Saving artifacts
   workingDir: /data/artifacts
@@ -327,7 +327,7 @@ Files directly in `working dir`
     - '*'
 ```
 
-Files in directories inside `working dir``
+Files in directories inside `workingDir`
 ```yaml
 - name: Saving artifacts
   workingDir: /data/artifacts
@@ -347,7 +347,7 @@ Artifacts can also be configured for project directories (inside `/data/repo`):
 ```
 
 ### condition: always
-It's a common thing to save artifacts in case of failure. By default the `artifacts` have `condition: always` set if added directly on step. So, they will be always scraped - even if the step fails:
+It is common to save artifacts in case of failure. By default the `artifacts` have `condition: always` set if added directly on a step. They will be always scraped - even if the step fails:
 
 ```yaml
 - name: Example step with artifacts
@@ -357,7 +357,7 @@ It's a common thing to save artifacts in case of failure. By default the `artifa
     - '**/*'
 ```
 
-If artifacts are saved in a separate step, or in a sub-step, they won't be scraped by default in case of earlier failure. In that case, setting `condition: always` specifically would be needed.
+If artifacts are saved in a separate step, or in a sub-step, they won't be scraped by default in the event of an earlier failure. In that case, setting `condition: always` specifically would be needed.
 
 Separate step:
 
@@ -384,7 +384,7 @@ Sub-step:
 ```
 
 
-### Example - Cypress project
+### Example - Cypress Project
 Example Cypress project with artifacts (video recordings):
 
 ```yaml
@@ -426,8 +426,8 @@ spec:
         paths:
         - '**/*'
 ```
-## `template` - executing from Test Workflow Template
-`template` allows to execute from - [Test Workflow Template](./test-workflow-templates.md):
+## `template` - Executing from a Test Workflow Template
+`template` allows executing from - [Test Workflow Template](./test-workflow-templates.md):
 ```yaml
   steps:
   - name: Run from template
@@ -439,76 +439,3 @@ spec:
         params: "--env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
 ```
 
-# Creating Test Workflow
-## CLI
-Testkube CLI allows managing Test Workflows in the similar way as Test, and TestSuites.
-
-### Create
-`testkube create testworkflow -f EXAMPLE_FILE.yaml`
-
-#### kubectl apply
-Alternatively, the `kubectl apply` can be used:
-`kubectl apply -f EXAMPLE_FILE.yaml`
-
-### Get
-The Test Workflow details can be displayed using `testkube get testworkflow` command using Test Workflow name:
-`testkube get testworkflow TEST_WORKFLOW_NAME`
-
-#### Filtering by labels
-Test Workflows can also be filtered using labels with `--label`:
-`testkube get testworkflow --label example=label`
-
-### Run
-The Test Workflow can be run using `testkube run testworkflow` command using Test Workflow name:
-`testkube run testworkflow TEST_WORKFLOW_NAME`
-
-Optionally, the follow option can be used to watch execution, and get log summary directly:
-`testkube run testworkflow TEST_WORKFLOW_NAME -f`
-
-### Delete
-The Test Workflow can be deleted using `testkube delete testworkflow` command using Test Workflow name:
-`testkube delete testworkflow TEST_WORKFLOW_NAME`
-
-### Alias
-`tw` alias can be used instead of `testworkflow` - for example:
-`testkube get tw`
-
-## Testkube Pro UI (Dashboard)
-If you prefer to use the Dashboard, just go to Test Workflows:
-
-![menu test workflow icon](../img/dashboard-menu-workflows.png)
-
-and click the `Add a new test workflow` button.
-
-### Creation options
-Currently, the Test Workflow can be created using example, or by importing YML.
-
-![create test workflow selection](../img/dashboard-create-workflow-selection.png)
-
-#### Example
-You can choose one of the predefined examples, and adjust it.
-
-![create test workflow from example](../img/dashboard-create-workflow-from-example.png)
-
-#### YML
-You can also paste the complete TestWorkflow definition
-![create test workflow from yaml](../img/dashboard-create-workflow-from-yaml.png)
-
-# Additional Test Workflow examples
-Additional Test Workflow examples can be found in the Testkube repository.
-
-- [Cypress](https://github.com/kubeshop/testkube/blob/develop/test/cypress/executor-tests/crd-workflow/smoke.yaml)
-
-- [Gradle](https://github.com/kubeshop/testkube/blob/develop/test/gradle/executor-smoke/crd-workflow/smoke.yaml)
-
-- [JMeter](https://github.com/kubeshop/testkube/blob/develop/test/jmeter/executor-tests/crd-workflow/smoke.yaml)
-
-- [k6](https://github.com/kubeshop/testkube/blob/develop/test/k6/executor-tests/crd-workflow/smoke.yaml)
-
-- [Maven](https://github.com/kubeshop/testkube/blob/develop/test/maven/executor-smoke/crd-workflow/smoke.yaml)
-
-- [Playwright](https://github.com/kubeshop/testkube/blob/develop/test/playwright/executor-tests/crd-workflow/smoke.yaml)
-
-- [Postman](https://github.com/kubeshop/testkube/blob/develop/test/postman/executor-tests/crd-workflow/smoke.yaml)
-
-- [SoapUI](https://github.com/kubeshop/testkube/blob/develop/test/soapui/executor-smoke/crd-workflow/smoke.yaml)
