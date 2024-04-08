@@ -25,3 +25,30 @@ spec:
       - run
       - artillery-smoke-test.yaml
 ---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: artillery-workflow-smoke-preofficial-trait
+  labels:
+    core-tests: workflows
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 256Mi
+    workingDir: /data/repo/test/artillery/executor-smoke
+  steps:
+  - name: Run from trait
+    content:
+      git:
+        uri: https://github.com/kubeshop/testkube
+        revision: main
+        paths:
+        - test/artillery/executor-smoke/artillery-smoke-test.yaml
+    workingDir: /data/repo/test/artillery/executor-smoke
+    template:
+      name: pre-official/artillery
+      config:
+        version: 2.0.9
+        params: "artillery-smoke-test.yaml"

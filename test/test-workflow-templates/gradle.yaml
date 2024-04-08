@@ -1,0 +1,19 @@
+kind: TestWorkflowTemplate
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: pre-official--gradle
+spec:
+  config:
+    version:
+      description: Gradle version to use
+      type: string
+      default: 8.7.0-jdk21-alpine
+    params:
+      description: Additional params for the Gradle command
+      type: string
+      default: "test"
+  steps:
+  - name: Run Gradle command
+    container:
+      image: gradle:{{ config.version }}
+    shell: gradle --no-daemon {{ config.params }}

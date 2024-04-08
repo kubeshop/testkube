@@ -20,9 +20,7 @@ spec:
   - name: Install dependencies
     container:
       image: cypress/included:{{ config.version }}
-    shell: '{{ config.dependencies_command }}'
-
-      
+    shell: "{{ config.dependencies_command }}"
   - name: Run Cypress tests
     container:
       image: cypress/included:{{ config.version }}

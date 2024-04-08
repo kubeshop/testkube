@@ -1,0 +1,23 @@
+kind: TestWorkflowTemplate
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: pre-official--artillery
+spec:
+  config:
+    version:
+      description: Artillery version to use
+      type: string
+      default: 2.0.9
+    params:
+      description: Additional params for the artillery run command
+      type: string
+      default: ""
+    artillery_binary:
+      description: Artillery binary path
+      type: string
+      default: "/home/node/artillery/bin/run" # "run", or "artillery" (for older images)
+  steps:
+  - name: Run Artillery tests
+    container:
+      image: artilleryio/artillery:{{ config.version }}
+    shell: "{{ config.artillery_binary }} run {{ config.params }}"

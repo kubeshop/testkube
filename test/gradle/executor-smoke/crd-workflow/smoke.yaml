@@ -32,7 +32,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: gradle-workflow-smoke-jdk11-default-command # TODO: recheck if it's fixed - the step passes without being executed
+  name: gradle-workflow-smoke-jdk11-default-command
   labels:
     core-tests: workflows
 spec:
@@ -55,3 +55,33 @@ spec:
       env:
       - name: TESTKUBE_GRADLE
         value: "true"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: gradle-workflow-smoke-jdk11-from-trait
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - contrib/executor/gradle/examples/hello-gradle
+  container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 512Mi
+    workingDir: /data/repo/contrib/executor/gradle/examples/hello-gradle
+    env:
+      - name: TESTKUBE_GRADLE
+        value: "true"
+  steps:
+  - name: Run from trait
+    template:
+      name: pre-official/gradle
+      config:
+        version: 8.5.0-jdk11
+        params: "test"
