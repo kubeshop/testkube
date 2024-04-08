@@ -5867,6 +5867,9 @@ components:
           type: string
           description: dashboard uri
           example: "http://localhost:8080"
+        enableSecretEndpoint:
+          type: boolean
+          description: enable secret endpoint to list secrets in namespace
         disableSecretCreation:
           type: boolean
           description: disable secret creation for tests and test sources
