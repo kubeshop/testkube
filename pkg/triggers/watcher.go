@@ -332,6 +332,18 @@ func (s *Service) checkExecutionPodStatus(ctx context.Context, executionID strin
 			}
 
 			execution.ExecutionResult.ErrorMessage += errorMessage
+			test, err := s.testsClient.Get(execution.TestName)
+			if err != nil {
+				s.logger.Errorf("get test returned an error %v while looking for test name: %s", err, execution.TestName)
+				return err
+			}
+
+			if test.Spec.ExecutionRequest != nil && test.Spec.ExecutionRequest.NegativeTest {
+				s.logger.Debugw("test run was expected to fail, and it failed as expected", "test", execution.TestName)
+				execution.ExecutionResult.Status = testkube.ExecutionStatusPassed
+				execution.ExecutionResult.Output += "\nTest run was expected to fail, and it failed as expected"
+			}
+
 			err = s.resultRepository.UpdateResult(ctx, executionID, execution)
 			if err != nil {
 				s.logger.Errorf("update execution result returned an error %v while storing for execution id: %s", err, executionID)
