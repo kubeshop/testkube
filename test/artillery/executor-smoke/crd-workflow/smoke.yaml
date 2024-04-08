@@ -1,0 +1,27 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: artillery-workflow-smoke
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/artillery/executor-smoke/artillery-smoke-test.yaml
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 256Mi
+    workingDir: /data/repo/test/artillery/executor-smoke
+  steps:
+  - name: Run test
+    run:
+      image: artilleryio/artillery:2.0.9
+      args:
+      - run
+      - artillery-smoke-test.yaml
+---
