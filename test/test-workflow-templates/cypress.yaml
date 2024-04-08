@@ -2,6 +2,13 @@ kind: TestWorkflowTemplate
 apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: pre-official--cypress
+  labels:
+    testkube.io/name: Cypress
+    testkube.io/wizard: enabled
+  annotations:
+    testkube.io/categories: Load
+    testkube.io/description: Run Cypress tests
+    testkube.io/icon: cypress
 spec:
   config:
     dependencies_command:

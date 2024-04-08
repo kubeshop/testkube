@@ -2,6 +2,13 @@ kind: TestWorkflowTemplate
 apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: pre-official--maven
+  labels:
+    testkube.io/name: Maven
+    testkube.io/wizard: enabled
+  annotations:
+    testkube.io/categories: Other
+    testkube.io/description: Maven
+    testkube.io/icon: maven
 spec:
   config:
     version:

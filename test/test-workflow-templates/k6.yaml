@@ -2,6 +2,13 @@ kind: TestWorkflowTemplate
 apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: pre-official--k6
+  labels:
+    testkube.io/name: k6
+    testkube.io/wizard: enabled
+  annotations:
+    testkube.io/categories: Load
+    testkube.io/description: Run k6 tests
+    testkube.io/icon: k6
 spec:
   config:
     version:

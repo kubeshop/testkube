@@ -2,6 +2,13 @@ kind: TestWorkflowTemplate
 apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: pre-official--postman
+  labels:
+    testkube.io/name: Postman
+    testkube.io/wizard: enabled
+  annotations:
+    testkube.io/categories: API
+    testkube.io/description: Run Postman tests
+    testkube.io/icon: postman
 spec:
   config:
     version:

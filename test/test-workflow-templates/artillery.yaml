@@ -2,6 +2,13 @@ kind: TestWorkflowTemplate
 apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: pre-official--artillery
+  labels:
+    testkube.io/name: Artillery
+    testkube.io/wizard: enabled
+  annotations:
+    testkube.io/categories: Load
+    testkube.io/description: Run Artillery tests
+    testkube.io/icon: artillery
 spec:
   config:
     version:
