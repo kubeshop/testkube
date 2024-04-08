@@ -448,8 +448,10 @@ workflow-gradle-smoke() {
   workflow_crd_file="test/gradle/executor-smoke/crd-workflow/smoke.yaml"
   workflow_suite_name="gradle-workflow-suite"
   workflow_suite_file="test/suites/test-workflows/gradle-workflow.yaml"
+
+  custom_workflow_template_crd_file="test/test-workflow-templates/gradle.yaml"
   
-  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file" "$custom_workflow_template_crd_file"
 }
 
 workflow-jmeter-smoke() {
@@ -457,8 +459,10 @@ workflow-jmeter-smoke() {
   workflow_crd_file="test/jmeter/executor-tests/crd-workflow/smoke.yaml"
   workflow_suite_name="jmeter-workflow-suite"
   workflow_suite_file="test/suites/test-workflows/jmeter-workflow.yaml"
+
+  custom_workflow_template_crd_file="test/test-workflow-templates/jmeter.yaml"
   
-  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file" "$custom_workflow_template_crd_file"
 }
 
 workflow-k6-smoke() {
@@ -477,8 +481,10 @@ workflow-maven-smoke() {
   workflow_crd_file="test/maven/executor-smoke/crd-workflow/smoke.yaml"
   workflow_suite_name="maven-workflow-suite"
   workflow_suite_file="test/suites/test-workflows/maven-workflow.yaml"
+
+  custom_workflow_template_crd_file="test/test-workflow-templates/maven.yaml"
   
-  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file" "$custom_workflow_template_crd_file"
 }
 
 workflow-playwright-smoke() {
