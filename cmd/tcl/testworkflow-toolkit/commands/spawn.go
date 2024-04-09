@@ -185,12 +185,30 @@ func NewSpawnCmd() *cobra.Command {
 
 			// Watch events for all Pod modifications
 			initialized := make(map[string]struct{})
+			started := make(map[string]struct{})
 			timedOut := make(map[string]struct{})
 			err = spawn.WatchPods(context.Background(), clientSet, podsRef, servicesMap, func(svc spawn.Service, index int64, pod *corev1.Pod) {
 				updateState(svc.Name, index, pod)
 				state := getState(svc.Name, index)
 				if _, ok := initialized[pod.Name]; ok {
 					return
+				}
+
+				var firstContainer corev1.ContainerStatus
+				if len(pod.Status.InitContainerStatuses) > 0 {
+					firstContainer = pod.Status.InitContainerStatuses[0]
+				} else if len(pod.Status.ContainerStatuses) > 0 {
+					firstContainer = pod.Status.ContainerStatuses[0]
+				}
+				if firstContainer.State.Running != nil || firstContainer.State.Terminated != nil {
+					if _, ok := started[pod.Name]; !ok {
+						started[pod.Name] = struct{}{}
+						data.PrintOutput(env.Ref(), "service-status", spawn.ServiceStatus{
+							Name:      svc.Name,
+							Index:     index,
+							StartedAt: common.Ptr(time.Now()),
+						})
+					}
 				}
 
 				podSuccess, err := svc.EvalReady(state, index, baseMachine)
@@ -216,9 +234,10 @@ func NewSpawnCmd() *cobra.Command {
 						status = "success"
 					}
 					data.PrintOutput(env.Ref(), "service-status", spawn.ServiceStatus{
-						Name:   svc.Name,
-						Index:  index,
-						Status: status,
+						Name:       svc.Name,
+						Index:      index,
+						Status:     status,
+						FinishedAt: common.Ptr(time.Now()),
 					})
 				}
 
@@ -307,6 +326,7 @@ func NewSpawnCmd() *cobra.Command {
 					Name:        svc.Name,
 					Description: description,
 					Index:       index,
+					CreatedAt:   common.Ptr(time.Now()),
 					Status:      "running",
 				})
 

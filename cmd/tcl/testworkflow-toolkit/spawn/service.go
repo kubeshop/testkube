@@ -25,11 +25,14 @@ import (
 )
 
 type ServiceStatus struct {
-	Name        string `json:"name"`
-	Index       int64  `json:"index"`
-	Description string `json:"description,omitempty"`
-	Logs        string `json:"logs,omitempty"`
-	Status      string `json:"status,omitempty"`
+	Name        string     `json:"name"`
+	Index       int64      `json:"index"`
+	Description string     `json:"description,omitempty"`
+	Logs        string     `json:"logs,omitempty"`
+	Status      string     `json:"status,omitempty"`
+	CreatedAt   *time.Time `json:"createdAt,omitempty"`
+	StartedAt   *time.Time `json:"startedAt,omitempty"`
+	FinishedAt  *time.Time `json:"finishedAt,omitempty"`
 }
 
 type Service struct {
