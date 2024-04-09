@@ -375,6 +375,9 @@ func ProcessDistribute(_ InternalProcessor, layer Intermediate, container Contai
 
 	instruction := step.Distribute.DeepCopy()
 	if instruction.Container != nil {
+		if instruction.Pod == nil {
+			instruction.Pod = &corev1.PodTemplateSpec{}
+		}
 		instruction.Pod.Spec.Containers = append(instruction.Pod.Spec.Containers, *instruction.Container)
 	}
 	b, err := json.Marshal(instruction.SpawnInstructionBase)
@@ -407,6 +410,9 @@ func ProcessServicesStart(_ InternalProcessor, layer Intermediate, container Con
 	for k, s := range step.Services {
 		instruction := s.DeepCopy()
 		if s.Container != nil {
+			if instruction.Pod == nil {
+				instruction.Pod = &corev1.PodTemplateSpec{}
+			}
 			instruction.Pod.Spec.Containers = append(instruction.Pod.Spec.Containers, *s.Container)
 		}
 		b, err := json.Marshal(instruction.SpawnInstructionBase)
