@@ -53,6 +53,10 @@ func isMap(s interface{}) bool {
 	return reflect.ValueOf(s).Kind() == reflect.Map
 }
 
+func isStruct(s interface{}) bool {
+	return reflect.ValueOf(s).Kind() == reflect.Struct
+}
+
 func isSlice(s interface{}) bool {
 	return reflect.ValueOf(s).Kind() == reflect.Slice
 }

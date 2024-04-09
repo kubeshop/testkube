@@ -5867,6 +5867,9 @@ components:
           type: string
           description: dashboard uri
           example: "http://localhost:8080"
+        enableSecretEndpoint:
+          type: boolean
+          description: enable secret endpoint to list secrets in namespace
         disableSecretCreation:
           type: boolean
           description: disable secret creation for tests and test sources
@@ -7873,7 +7876,7 @@ components:
           type: string
           description: script to run in a default shell for the container
         run:
-          $ref: "#/components/schemas/TestWorkflowContainerConfig"
+          $ref: "#/components/schemas/TestWorkflowStepRun"
         workingDir:
           $ref: "#/components/schemas/BoxedString"
         container:
@@ -7931,7 +7934,7 @@ components:
           type: string
           description: script to run in a default shell for the container
         run:
-          $ref: "#/components/schemas/TestWorkflowContainerConfig"
+          $ref: "#/components/schemas/TestWorkflowStepRun"
         workingDir:
           $ref: "#/components/schemas/BoxedString"
         container:
@@ -8164,6 +8167,42 @@ components:
           $ref: "#/components/schemas/BoxedStringList"
         args:
           $ref: "#/components/schemas/BoxedStringList"
+        resources:
+          $ref: "#/components/schemas/TestWorkflowResources"
+        securityContext:
+          $ref: "#/components/schemas/SecurityContext"
+        volumeMounts:
+          type: array
+          description: volumes to mount to the container
+          items:
+            $ref: "#/components/schemas/VolumeMount"
+
+    TestWorkflowStepRun:
+      type: object
+      properties:
+        workingDir:
+          $ref: "#/components/schemas/BoxedString"
+        image:
+          type: string
+          description: image to be used for the container
+        imagePullPolicy:
+          $ref: "#/components/schemas/ImagePullPolicy"
+        env:
+          type: array
+          description: environment variables to append to the container
+          items:
+            $ref: "#/components/schemas/EnvVar"
+        envFrom:
+          type: array
+          description: external environment variables to append to the container
+          items:
+            $ref: "#/components/schemas/EnvFromSource"
+        command:
+          $ref: "#/components/schemas/BoxedStringList"
+        args:
+          $ref: "#/components/schemas/BoxedStringList"
+        shell:
+          $ref: "#/components/schemas/BoxedString"
         resources:
           $ref: "#/components/schemas/TestWorkflowResources"
         securityContext:

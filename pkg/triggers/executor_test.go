@@ -128,6 +128,7 @@ func TestExecute(t *testing.T) {
 		mockLogsStream,
 		"",
 		"",
+		"",
 	)
 	s := &Service{
 		triggerStatus:    make(map[statusKey]*triggerStatus),

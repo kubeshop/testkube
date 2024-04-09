@@ -364,6 +364,22 @@ const redirects = [
     from: "/guides/upgrade",
     to: "/articles/upgrade",
   },  
+  {
+    from: "/testkube-enterprise/articles/testkube-enterprise",
+    to: "/testkube-pro-on-prem/articles/testkube-pro-on-prem",
+  },  
+  {
+    from: "/testkube-enterprise/articles/usage-guide",
+    to: "/testkube-pro-on-prem/articles/usage-guide",
+  },  
+  {
+    from: "/testkube-enterprise/articles/auth",
+    to: "/testkube-pro-on-prem/articles/auth",
+  },  
+  {
+    from: "/testkube-enterprise/articles/migrating-from-oss-to-pro",
+    to: "/testkube-pro-on-prem/articles/migrating-from-oss-to-pro",
+  },  
 ];
 
 module.exports = redirects;

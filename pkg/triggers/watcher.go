@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -18,7 +19,7 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	testsourcev1 "github.com/kubeshop/testkube-operator/api/testsource/v1"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 
@@ -33,6 +34,7 @@ import (
 	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
+	cexecutor "github.com/kubeshop/testkube/pkg/executor/containerexecutor"
 )
 
 type k8sInformers struct {
@@ -277,6 +279,7 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 			}
 			if oldPod.Namespace == s.testkubeNamespace && oldPod.Labels["job-name"] != "" && oldPod.Labels[testkube.TestLabelTestName] != "" &&
 				newPod.Namespace == s.testkubeNamespace && newPod.Labels["job-name"] != "" && newPod.Labels[testkube.TestLabelTestName] != "" &&
+				!(strings.HasSuffix(oldPod.Name, cexecutor.ScraperPodSuffix) || strings.HasSuffix(newPod.Name, cexecutor.ScraperPodSuffix)) &&
 				oldPod.Labels["job-name"] == newPod.Labels["job-name"] {
 				s.checkExecutionPodStatus(ctx, oldPod.Labels["job-name"], []*corev1.Pod{oldPod, newPod})
 			}
@@ -288,7 +291,8 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 				return
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: pod %s/%s deleted", pod.Namespace, pod.Name)
-			if pod.Namespace == s.testkubeNamespace && pod.Labels["job-name"] != "" && pod.Labels[testkube.TestLabelTestName] != "" {
+			if pod.Namespace == s.testkubeNamespace && pod.Labels["job-name"] != "" && !strings.HasSuffix(pod.Name, cexecutor.ScraperPodSuffix) &&
+				pod.Labels[testkube.TestLabelTestName] != "" {
 				s.checkExecutionPodStatus(ctx, pod.Labels["job-name"], []*corev1.Pod{pod})
 			}
 			event := newWatcherEvent(testtrigger.EventDeleted, pod, testtrigger.ResourcePod,
@@ -301,7 +305,7 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 }
 
 func (s *Service) checkExecutionPodStatus(ctx context.Context, executionID string, pods []*corev1.Pod) error {
-	if len(pods) > 0 && pods[0].Labels[testworkflowprocessor.ExecutionIdLabelName] != "" {
+	if len(pods) > 0 && pods[0].Labels[constants.ExecutionIdLabelName] != "" {
 		return nil
 	}
 
@@ -328,6 +332,17 @@ func (s *Service) checkExecutionPodStatus(ctx context.Context, executionID strin
 			}
 
 			execution.ExecutionResult.ErrorMessage += errorMessage
+			test, err := s.testsClient.Get(execution.TestName)
+			if err != nil {
+				s.logger.Errorf("get test returned an error %v while looking for test name: %s", err, execution.TestName)
+				return err
+			}
+
+			if test.Spec.ExecutionRequest != nil && test.Spec.ExecutionRequest.NegativeTest {
+				s.logger.Debugw("test run was expected to fail, and it failed as expected", "test", execution.TestName)
+				execution.ExecutionResult.Status = testkube.ExecutionStatusPassed
+			}
+
 			err = s.resultRepository.UpdateResult(ctx, executionID, execution)
 			if err != nil {
 				s.logger.Errorf("update execution result returned an error %v while storing for execution id: %s", err, executionID)

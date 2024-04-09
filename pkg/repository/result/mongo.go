@@ -167,15 +167,10 @@ func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.E
 	if err != nil {
 		return
 	}
-	if len(result.ExecutionResult.Output) == 0 {
-		if r.features.LogsV2 {
-			result.ExecutionResult.Output, err = r.getOutputFromLogServer(ctx, &result)
-		} else {
-			result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
-			if err == mongo.ErrNoDocuments {
-				err = nil
-			}
-		}
+
+	err = r.attachOutput(ctx, &result)
+	if err != nil {
+		return
 	}
 	return *result.UnscapeDots(), err
 }
@@ -185,17 +180,22 @@ func (r *MongoRepository) GetByNameAndTest(ctx context.Context, name, testName s
 	if err != nil {
 		return
 	}
-	if len(result.ExecutionResult.Output) == 0 {
-		if r.features.LogsV2 {
-			result.ExecutionResult.Output, err = r.getOutputFromLogServer(ctx, &result)
-		} else {
-			result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
-			if err == mongo.ErrNoDocuments {
-				err = nil
-			}
+	err = r.attachOutput(ctx, &result)
+	if err != nil {
+		return
+	}
+
+	return *result.UnscapeDots(), err
+}
+
+func (r *MongoRepository) attachOutput(ctx context.Context, result *testkube.Execution) (err error) {
+	if len(result.ExecutionResult.Output) == 0 && !r.features.LogsV2 {
+		result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
+		if err == mongo.ErrNoDocuments {
+			err = nil
 		}
 	}
-	return *result.UnscapeDots(), err
+	return err
 }
 
 func (r *MongoRepository) GetLatestTestNumber(ctx context.Context, testName string) (num int32, err error) {
@@ -242,15 +242,10 @@ func (r *MongoRepository) slowGetLatestByTest(ctx context.Context, testName stri
 		return nil, mongo.ErrNoDocuments
 	}
 	result := (&items[0]).UnscapeDots()
-	if len(result.ExecutionResult.Output) == 0 {
-		if r.features.LogsV2 {
-			result.ExecutionResult.Output, err = r.getOutputFromLogServer(ctx, result)
-		} else {
-			result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
-			if err == mongo.ErrNoDocuments {
-				err = nil
-			}
-		}
+
+	err = r.attachOutput(ctx, result)
+	if err != nil {
+		return result, err
 	}
 	return result, err
 }
@@ -304,16 +299,12 @@ func (r *MongoRepository) GetLatestByTest(ctx context.Context, testName string) 
 		return nil, mongo.ErrNoDocuments
 	}
 	result := (&items[0]).UnscapeDots()
-	if len(result.ExecutionResult.Output) == 0 {
-		if r.features.LogsV2 {
-			result.ExecutionResult.Output, err = r.getOutputFromLogServer(ctx, result)
-		} else {
-			result.ExecutionResult.Output, err = r.OutputRepository.GetOutput(ctx, result.Id, result.TestName, result.TestSuiteName)
-			if err == mongo.ErrNoDocuments {
-				err = nil
-			}
-		}
+
+	err = r.attachOutput(ctx, result)
+	if err != nil {
+		return result, err
 	}
+
 	return result, err
 }
 

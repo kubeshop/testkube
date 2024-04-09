@@ -75,8 +75,8 @@ type Config struct {
 	TestkubeProConnectionTimeout                int           `envconfig:"TESTKUBE_PRO_CONNECTION_TIMEOUT" default:"10"`
 	TestkubeProCertFile                         string        `envconfig:"TESTKUBE_PRO_CERT_FILE" default:""`
 	TestkubeProKeyFile                          string        `envconfig:"TESTKUBE_PRO_KEY_FILE" default:""`
-	TestkubeProCAFile                           string        `envconfig:"TESTKUBE_PRO_CA_FILE" default:""`
 	TestkubeProTLSSecret                        string        `envconfig:"TESTKUBE_PRO_TLS_SECRET" default:""`
+	TestkubeProRunnerCustomCASecret             string        `envconfig:"TESTKUBE_PRO_RUNNER_CUSTOM_CA_SECRET" default:""`
 	TestkubeWatcherNamespaces                   string        `envconfig:"TESTKUBE_WATCHER_NAMESPACES" default:""`
 	GraphqlPort                                 string        `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
 	TestkubeRegistry                            string        `envconfig:"TESTKUBE_REGISTRY" default:""`
@@ -120,6 +120,13 @@ type Config struct {
 	TestkubeCloudOrgID string `envconfig:"TESTKUBE_CLOUD_ORG_ID" default:""`
 	// DEPRECATED: Use TestkubeProMigrate instead
 	TestkubeCloudMigrate string `envconfig:"TESTKUBE_CLOUD_MIGRATE" default:"false"`
+
+	// TestkubeProCAFile is meant to provide a custom CA when making a TLS connection to
+	// the agent API.
+	//
+	// Deprecated: Instead mount a CA file into a directory and specify the diretory
+	// path with the SSL_CERT_DIR environment variable.
+	TestkubeProCAFile string `envconfig:"TESTKUBE_PRO_CA_FILE" default:""`
 }
 
 func Get() (*Config, error) {

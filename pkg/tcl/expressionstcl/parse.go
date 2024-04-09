@@ -30,6 +30,9 @@ func parseNextExpression(t []token, priority int) (e Expression, i int, err erro
 
 		switch t[i].Type {
 		case tokenTypeTernary:
+			if priority >= 0 {
+				return e, i, nil
+			}
 			i += 1
 			te, ti, terr := parseNextExpression(t[i:], 0)
 			i += ti
@@ -62,6 +65,9 @@ func parseNextExpression(t []token, priority int) (e Expression, i int, err erro
 				return nil, i, nerr
 			}
 			e = newMath(op, e, ne)
+		case tokenTypePropertyAccessor:
+			e = newPropertyAccessor(e, t[i].Value.(string))
+			i += 1
 		default:
 			return e, i, err
 		}
@@ -111,7 +117,7 @@ func getNextSegment(t []token) (e Expression, i int, err error) {
 
 	// Call - abc(a, b, c)
 	if t[0].Type == tokenTypeAccessor && len(t) > 1 && t[1].Type == tokenTypeOpen {
-		args := make([]Expression, 0)
+		args := make([]callArgument, 0)
 		index := 2
 		for {
 			// Ensure there is another token (for call close or next argument)
@@ -136,7 +142,12 @@ func getNextSegment(t []token) (e Expression, i int, err error) {
 			if err != nil {
 				return nil, index, err
 			}
-			args = append(args, next)
+			if len(t) > index && t[index].Type == tokenTypeSpread {
+				args = append(args, callArgument{expr: next, spread: true})
+				index++
+			} else {
+				args = append(args, callArgument{expr: next})
+			}
 		}
 		return newCall(t[0].Value.(string), args), index + 1, nil
 	}

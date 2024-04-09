@@ -474,9 +474,21 @@ func MapContainerConfigAPIToKube(v testkube.TestWorkflowContainerConfig) testwor
 	}
 }
 
-func MapStepRunAPIToKube(v testkube.TestWorkflowContainerConfig) testworkflowsv1.StepRun {
+func MapStepRunAPIToKube(v testkube.TestWorkflowStepRun) testworkflowsv1.StepRun {
 	return testworkflowsv1.StepRun{
-		ContainerConfig: MapContainerConfigAPIToKube(v),
+		ContainerConfig: testworkflowsv1.ContainerConfig{
+			WorkingDir:      MapBoxedStringToString(v.WorkingDir),
+			Image:           v.Image,
+			ImagePullPolicy: MapImagePullPolicyAPIToKube(v.ImagePullPolicy),
+			Env:             common.MapSlice(v.Env, MapEnvVarAPIToKube),
+			EnvFrom:         common.MapSlice(v.EnvFrom, MapEnvFromSourceAPIToKube),
+			Command:         MapBoxedStringListToStringSlice(v.Command),
+			Args:            MapBoxedStringListToStringSlice(v.Args),
+			Resources:       common.MapPtr(v.Resources, MapResourcesAPIToKube),
+			SecurityContext: MapSecurityContextAPIToKube(v.SecurityContext),
+			VolumeMounts:    common.MapSlice(v.VolumeMounts, MapVolumeMountAPIToKube),
+		},
+		Shell: MapBoxedStringToString(v.Shell),
 	}
 }
 

@@ -174,6 +174,7 @@ type JobOptions struct {
 	HTTPSProxy            string
 	UsernameSecret        *testkube.SecretRef
 	TokenSecret           *testkube.SecretRef
+	RunnerCustomCASecret  string
 	CertificateSecret     string
 	AgentAPITLSSecret     string
 	Variables             map[string]testkube.Variable
@@ -420,7 +421,6 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	if err != nil {
 		l.Errorw("get pod logs error", "error", err)
 		c.streamLog(ctx, execution.Id, events.NewErrorLog(err))
-		return execution.ExecutionResult, err
 	}
 
 	// don't attach logs if logs v2 is enabled - they will be streamed through the logs service
@@ -633,6 +633,7 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		HTTPSProxy:            options.Request.HttpsProxy,
 		UsernameSecret:        options.UsernameSecret,
 		TokenSecret:           options.TokenSecret,
+		RunnerCustomCASecret:  options.RunnerCustomCASecret,
 		CertificateSecret:     options.CertificateSecret,
 		ActiveDeadlineSeconds: options.Request.ActiveDeadlineSeconds,
 		JobTemplateExtensions: options.Request.JobTemplate,

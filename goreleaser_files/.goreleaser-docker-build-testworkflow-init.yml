@@ -48,6 +48,7 @@ dockers:
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
       - "--build-arg=ALPINE_IMAGE={{ .Env.ALPINE_IMAGE }}"
+      - "--build-arg=BUSYBOX_IMAGE={{ .Env.BUSYBOX_IMAGE }}"
 
   - dockerfile: ./build/testworkflow-init/Dockerfile
     use: buildx
@@ -65,6 +66,7 @@ dockers:
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
       - "--build-arg=ALPINE_IMAGE={{ .Env.ALPINE_IMAGE }}"
+      - "--build-arg=BUSYBOX_IMAGE={{ .Env.BUSYBOX_IMAGE }}"
 
 docker_manifests:
   - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-tw-init:{{ .Version }}{{ end }}"
