@@ -38,6 +38,7 @@ const sidebars = {
           label: "Test Workflows (beta)",
           items: [
             "articles/test-workflows",
+            "articles/test-workflows-creating",
             "articles/test-workflow-templates",
           ],
         },
