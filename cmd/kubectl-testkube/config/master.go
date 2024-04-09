@@ -30,25 +30,25 @@ type MasterURIs struct {
 }
 
 // WithApi sets whole api URI
-func (m *MasterURIs) WithApiURI(api string) *MasterURIs {
-	m.Api = api
+func (m *MasterURIs) WithApiURI(uri string) *MasterURIs {
+	m.Api = uri
 	return m
 }
 
 // WithAgent sets whole agent URI
-func (m *MasterURIs) WithAgentURI(agent string) *MasterURIs {
-	m.Agent = agent
+func (m *MasterURIs) WithAgentURI(uri string) *MasterURIs {
+	m.Agent = uri
 	return m
 }
 
 // WithLogs sets whole logs URI
-func (m *MasterURIs) WithLogsURI(logs string) *MasterURIs {
-	m.Logs = logs
+func (m *MasterURIs) WithLogsURI(uri string) *MasterURIs {
+	m.Logs = uri
 	return m
 }
 
 // WithUi sets whole ui URI
-func (m *MasterURIs) WithUiURI(ui string) *MasterURIs {
-	m.Ui = ui
+func (m *MasterURIs) WithUiURI(uri string) *MasterURIs {
+	m.Ui = uri
 	return m
 }
