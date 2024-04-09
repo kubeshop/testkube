@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
@@ -69,8 +70,18 @@ func NewKillCmd() *cobra.Command {
 					}
 
 					if err == nil {
+						data.PrintOutput(env.Ref(), "service-status", spawn.ServiceStatus{
+							Name:   svc.Name,
+							Index:  index,
+							Status: "success",
+						})
 						fmt.Printf("%s: deleted pod successfully\n", spawn.InstanceLabel(name, index, index))
 					} else {
+						data.PrintOutput(env.Ref(), "service-status", spawn.ServiceStatus{
+							Name:   svc.Name,
+							Index:  index,
+							Status: "failed",
+						})
 						fmt.Printf("%s: failed to delete pod: %s: %s\n", spawn.InstanceLabel(name, index, index), pod.Name, err.Error())
 						failed = true
 					}
