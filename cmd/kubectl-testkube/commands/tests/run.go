@@ -24,7 +24,7 @@ func NewRunTestCmd() *cobra.Command {
 		image                              string
 		iterations                         int
 		watchEnabled                       bool
-		binaryArgs                         []string
+		executorArgs                       []string
 		variables                          []string
 		secretVariables                    []string
 		variablesFile                      string
@@ -97,9 +97,6 @@ func NewRunTestCmd() *cobra.Command {
 
 			variables, err := common.CreateVariables(cmd, info.DisableSecretCreation)
 			ui.WarnOnError("getting variables", err)
-
-			executorArgs, err := testkube.PrepareExecutorArgs(binaryArgs)
-			ui.ExitOnError("getting args", err)
 
 			envConfigMaps, envSecrets, err := newEnvReferencesFromFlags(cmd)
 			ui.WarnOnError("getting env config maps and secrets", err)
@@ -357,7 +354,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringArrayVarP(&variables, "variable", "v", []string{}, "execution variable passed to executor")
 	cmd.Flags().StringArrayVarP(&secretVariables, "secret-variable", "s", []string{}, "execution secret variable passed to executor")
 	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in executor")
-	cmd.Flags().StringArrayVarP(&binaryArgs, "args", "", []string{}, "executor binary additional arguments")
+	cmd.Flags().StringArrayVarP(&executorArgs, "args", "", []string{}, "executor binary additional arguments")
 	cmd.Flags().StringVarP(&argsMode, "args-mode", "", "append", "usage mode for argumnets. one of append|override|replace")
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
