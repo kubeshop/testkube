@@ -223,6 +223,7 @@ spec:
       distribute:
         matrix:
           distribution: ["0/5:5/10", "5/10:6/10", "6/10:10/10"]
+        description: '{{ round(100 * (eval(split(matrix.distribution, ":").1) - eval(split(matrix.distribution, ":").0))) }}% of load'
         timeout: 10m # execution timeout
         logs: true
         files:
