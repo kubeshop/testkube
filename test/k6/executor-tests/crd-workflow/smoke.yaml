@@ -170,14 +170,14 @@ spec:
           metadata:
             labels:
               skew: "{{ execution.id }}-k6"
-            spec:
-              topologySpreadConstraints:
-                - maxSkew: 1
-                  topologyKey: kubernetes.io/hostname
-                  whenUnsatisfiable: ScheduleAnyway
-                  labelSelector:
-                    matchLabels:
-                      skew: "{{ execution.id }}-k6"
+          spec:
+            topologySpreadConstraints:
+              - maxSkew: 1
+                topologyKey: kubernetes.io/hostname
+                whenUnsatisfiable: ScheduleAnyway
+                labelSelector:
+                  matchLabels:
+                    skew: "{{ execution.id }}-k6"
         container:
           image: grafana/k6:0.43.1
           args:
@@ -233,14 +233,14 @@ spec:
           metadata:
             labels:
               skew: "{{ execution.id }}-k6"
-            spec:
-              topologySpreadConstraints:
-                - maxSkew: 1
-                  topologyKey: kubernetes.io/hostname
-                  whenUnsatisfiable: ScheduleAnyway
-                  labelSelector:
-                    matchLabels:
-                      skew: "{{ execution.id }}-k6"
+          spec:
+            topologySpreadConstraints:
+              - maxSkew: 1
+                topologyKey: kubernetes.io/hostname
+                whenUnsatisfiable: ScheduleAnyway
+                labelSelector:
+                  matchLabels:
+                    skew: "{{ execution.id }}-k6"
         container:
           image: grafana/k6:0.43.1
           args:
