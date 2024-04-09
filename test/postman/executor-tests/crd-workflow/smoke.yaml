@@ -105,4 +105,4 @@ spec:
     template:
       name: pre-official/postman
       config:
-        params: "postman-executor-smoke-without-envs.postman_collection.json"
+        run: "newman run postman-executor-smoke-without-envs.postman_collection.json"

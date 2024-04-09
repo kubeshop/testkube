@@ -84,4 +84,3 @@ spec:
       name: pre-official/gradle
       config:
         version: 8.5.0-jdk11
-        params: "test"

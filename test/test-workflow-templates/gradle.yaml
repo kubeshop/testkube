@@ -15,12 +15,12 @@ spec:
       description: Gradle version to use
       type: string
       default: 8.7.0-jdk21-alpine
-    params:
-      description: Additional params for the Gradle command
+    run:
+      description: Run command
       type: string
-      default: "test"
+      default: "gradle --no-daemon test"
   steps:
   - name: Run Gradle command
     container:
       image: gradle:{{ config.version }}
-    shell: gradle --no-daemon {{ config.params }}
+    shell: "{{ config.run }}"

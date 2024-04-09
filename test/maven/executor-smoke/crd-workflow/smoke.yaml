@@ -56,4 +56,3 @@ spec:
       name: pre-official/maven
       config:
         version: 3.9.6-eclipse-temurin-11-focal
-        params: "test"

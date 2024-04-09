@@ -51,4 +51,4 @@ spec:
       name: pre-official/artillery
       config:
         version: 2.0.9
-        params: "artillery-smoke-test.yaml"
+        run: "artillery run artillery-smoke-test.yaml"

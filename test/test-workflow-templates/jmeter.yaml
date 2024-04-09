@@ -15,12 +15,12 @@ spec:
       description: JMeter version to use
       type: string
       default: "5.5"
-    params:
-      description: Additional params for the k6 run command
+    run:
+      description: Run command
       type: string
-      default: ""
+      default: "jmeter -n"
   steps:
   - name: Run k6 tests
     container:
       image: justb4/jmeter:{{ config.version }}
-    shell: jmeter -n {{ config.params }}
+    shell: "{{ config.run }}"

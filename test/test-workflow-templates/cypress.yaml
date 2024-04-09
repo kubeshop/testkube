@@ -19,6 +19,10 @@ spec:
       description: Cypress version to use
       type: string
       default: 13.6.4
+    run:
+      description: Run command
+      type: string
+      default: "npx cypress run"
     params:
       description: Additional params for the cypress run command
       type: string
@@ -31,4 +35,4 @@ spec:
   - name: Run Cypress tests
     container:
       image: cypress/included:{{ config.version }}
-    shell: npx cypress run {{ config.params }}
+    shell: "{{ config.run }}"

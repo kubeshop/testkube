@@ -60,7 +60,7 @@ spec:
       name: pre-official/k6
       config:
         version: 0.48.0
-        params: "k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value"
+        run: "k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -91,7 +91,7 @@ spec:
       name: pre-official/k6
       config:
         version: 0.48.0
-        params: "k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value"
+        run: "k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow

@@ -83,7 +83,7 @@ spec:
     template:
       name: pre-official/jmeter
       config:
-        params: "-t jmeter-executor-smoke.jmx -j /data/artifacts/jmeter.log -o /data/artifacts/report -l /data/artifacts/jtl-report.jtl -e"
+        params: "jmeter -n -t jmeter-executor-smoke.jmx -j /data/artifacts/jmeter.log -o /data/artifacts/report -l /data/artifacts/jtl-report.jtl -e"
     steps:
     - name: Save artifacts
       workingDir: /data/artifacts

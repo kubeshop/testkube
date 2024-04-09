@@ -138,7 +138,7 @@ spec:
       name: pre-official/cypress
       config:
         version: 13.5.0
-        params: "--env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
+        run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -169,7 +169,7 @@ spec:
       name: pre-official/cypress
       config:
         version: 13.5.0
-        params: "--env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
+        run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow

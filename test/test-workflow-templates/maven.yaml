@@ -15,12 +15,12 @@ spec:
       description: Maven version to use
       type: string
       default: 3.9.6-eclipse-temurin-22-alpine
-    params:
-      description: Additional params for the Maven command
+    run:
+      description: Run command
       type: string
-      default: "test"
+      default: "mvn test"
   steps:
   - name: Run Maven command
     container:
       image: maven:{{ config.version }}
-    shell: mvn {{ config.params }}
+    shell: "{{ config.run }}"

@@ -15,12 +15,12 @@ spec:
       description: k6 version to use
       type: string
       default: 0.49.0
-    params:
-      description: Additional params for the k6 run command
+    run:
+      description: Run command
       type: string
-      default: ""
+      default: "k6 run"
   steps:
   - name: Run k6 tests
     container:
       image: grafana/k6:{{ config.version }}
-    shell: k6 run {{ config.params }}
+    shell: "{{ config.run }}"
