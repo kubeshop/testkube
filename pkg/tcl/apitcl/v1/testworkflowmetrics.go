@@ -178,12 +178,10 @@ func (s *apiTCL) sendRunWorkflowTelemetry(ctx context.Context, workflow *testwor
 	}
 
 	var dataSource string
-	if workflow.Spec.Content != nil {
-		if len(workflow.Spec.Content.Files) != 0 {
-			dataSource = "files"
-		} else if workflow.Spec.Content.Git != nil {
-			dataSource = "git"
-		}
+	if len(workflow.Spec.Content.Files) != 0 {
+		dataSource = "files"
+	} else if workflow.Spec.Content.Git != nil {
+		dataSource = "git"
 	}
 
 	hasArtifacts := false
