@@ -1,8 +1,6 @@
 package context
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -27,7 +25,6 @@ func NewSetContextCmd() *cobra.Command {
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config file", err)
 			common.ProcessMasterFlags(cmd, &opts, &cfg)
-			fmt.Printf("%+v\n", opts.Master)
 
 			if cmd.Flags().Changed("org") {
 				opts.Master.OrgId = org
