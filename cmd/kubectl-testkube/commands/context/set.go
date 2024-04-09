@@ -1,6 +1,8 @@
 package context
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -25,6 +27,7 @@ func NewSetContextCmd() *cobra.Command {
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config file", err)
 			common.ProcessMasterFlags(cmd, &opts, &cfg)
+			fmt.Printf("%+v\n", opts.Master)
 
 			if cmd.Flags().Changed("org") {
 				opts.Master.OrgId = org
@@ -80,6 +83,12 @@ func NewSetContextCmd() *cobra.Command {
 	cmd.Flags().MarkDeprecated("env", "use --env-id instead")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "Testkube namespace to use for CLI commands")
 	cmd.Flags().StringVarP(&apiKey, "api-key", "k", "", "API Key for Testkube Pro")
+
+	// allow to override default values of all URIs
+	cmd.Flags().String("api-uri-override", "", "api uri override")
+	cmd.Flags().String("ui-uri-override", "", "ui uri override")
+	cmd.Flags().String("agent-uri-override", "", "agnet uri override")
+	cmd.Flags().String("logs-uri-override", "", "logs service uri override")
 
 	common.PopulateMasterFlags(cmd, &opts)
 	return cmd
