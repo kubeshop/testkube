@@ -25,9 +25,9 @@ import (
 )
 
 type ServiceStatus struct {
-	Name        string `json:"name,omitempty"`
+	Name        string `json:"name"`
+	Index       int64  `json:"index"`
 	Description string `json:"description,omitempty"`
-	Index       int64  `json:"index,omitempty"`
 	Logs        string `json:"logs,omitempty"`
 	Status      string `json:"status,omitempty"`
 }
