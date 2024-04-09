@@ -35,6 +35,7 @@ type ServiceStatus struct {
 type Service struct {
 	Name        string
 	Description string
+	Strategy    testworkflowsv1.SpawnStrategy
 	Count       int64
 	Parallelism int64
 	Logs        bool
@@ -109,12 +110,30 @@ func (svc *Service) TimeoutDuration(index int64, machines ...expressionstcl.Mach
 	return &duration, nil
 }
 
+func (svc *Service) StrategyAt(index int64, machines ...expressionstcl.Machine) (testworkflowsv1.SpawnStrategy, error) {
+	if svc.Strategy == "" {
+		return "", nil
+	}
+	// Get details for current position
+	machines = append(machines, svc.MachineAt(index))
+	text, err := expressionstcl.EvalTemplate(string(svc.Strategy), machines...)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to resolve strategy template: %s", svc.Strategy)
+	}
+	if text != "" && text != string(testworkflowsv1.SpawnStrategyEven) {
+		return "", errors.Wrapf(err, "unknown distribution strategy: %s", text)
+	}
+	return testworkflowsv1.SpawnStrategy(text), nil
+}
+
 func (svc *Service) Pod(ref string, index int64, machines ...expressionstcl.Machine) (*corev1.Pod, error) {
 	// Get details for current position
 	machines = append(machines, svc.MachineAt(index))
 
-	// Build a pod
+	// Copy a pod
 	spec := svc.PodTemplate.DeepCopy()
+
+	// Resolve pod
 	err := expressionstcl.FinalizeForce(&spec, machines...)
 	if err != nil {
 		return nil, fmt.Errorf("resolving pod schema: %w", err)
@@ -150,6 +169,26 @@ func (svc *Service) Pod(ref string, index int64, machines ...expressionstcl.Mach
 	}
 	if pod.Spec.Hostname == "" {
 		pod.Spec.Hostname = fmt.Sprintf("%s-%s-%d", env.ExecutionId(), svc.Name, index)
+	}
+
+	// Apply strategy
+	strategy, err := svc.StrategyAt(index, machines...)
+	if err != nil {
+		return nil, err
+	}
+	if strategy == testworkflowsv1.SpawnStrategyEven {
+		topology := rand.String(5)
+		label := fmt.Sprintf("skew%s", topology)
+		value := fmt.Sprintf("%s-%s", env.ExecutionId(), topology)
+		pod.Labels[label] = value
+		spec.Spec.TopologySpreadConstraints = append(spec.Spec.TopologySpreadConstraints, corev1.TopologySpreadConstraint{
+			MaxSkew:           1,
+			TopologyKey:       "kubernetes.io/hostname",
+			WhenUnsatisfiable: corev1.ScheduleAnyway,
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{label: value},
+			},
+		})
 	}
 
 	return pod, nil

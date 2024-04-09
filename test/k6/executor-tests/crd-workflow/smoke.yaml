@@ -162,22 +162,11 @@ spec:
       distribute:
         count: 10
         timeout: 10m # execution timeout
+        strategy: even
         logs: true
         files:
           - path: /k6-smoke-test.js
             content: '{{ file("./k6-smoke-test.js") }}'
-        pod:
-          metadata:
-            labels:
-              skew: "{{ execution.id }}-k6"
-          spec:
-            topologySpreadConstraints:
-              - maxSkew: 1
-                topologyKey: kubernetes.io/hostname
-                whenUnsatisfiable: ScheduleAnyway
-                labelSelector:
-                  matchLabels:
-                    skew: "{{ execution.id }}-k6"
         container:
           image: grafana/k6:0.43.1
           args:
@@ -224,23 +213,12 @@ spec:
         matrix:
           distribution: ["0/5:5/10", "5/10:6/10", "6/10:10/10"]
         description: '{{ round(100 * (eval(split(matrix.distribution, ":").1) - eval(split(matrix.distribution, ":").0))) }}% of load'
+        strategy: even
         timeout: 10m # execution timeout
         logs: true
         files:
           - path: /k6-smoke-test.js
             content: '{{ file("./k6-smoke-test.js") }}'
-        pod:
-          metadata:
-            labels:
-              skew: "{{ execution.id }}-k6"
-          spec:
-            topologySpreadConstraints:
-              - maxSkew: 1
-                topologyKey: kubernetes.io/hostname
-                whenUnsatisfiable: ScheduleAnyway
-                labelSelector:
-                  matchLabels:
-                    skew: "{{ execution.id }}-k6"
         container:
           image: grafana/k6:0.43.1
           args:

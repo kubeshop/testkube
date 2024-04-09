@@ -96,6 +96,7 @@ func FromInstruction(name string, instruction testworkflowsv1.SpawnInstructionBa
 	svc := Service{
 		Name:        name,
 		Description: instruction.Description,
+		Strategy:    instruction.Strategy,
 		Count:       *count,
 		Parallelism: *parallelism,
 		Logs:        common.ResolvePtr(instruction.Logs, false),

@@ -79,6 +79,7 @@ spec:
     serviceAccountName: testkube-api-server
   services:
     slave:
+      strategy: even
       count: 5
       timeout: 30s # initialization timeout
       logs: true
@@ -97,18 +98,6 @@ spec:
           tcpSocket:
             port: 1099
           periodSeconds: 1
-      pod:
-        metadata:
-          labels:
-            skew: "{{execution.id}}-jm"
-        spec:
-          topologySpreadConstraints:
-            - maxSkew: 1
-              topologyKey: kubernetes.io/hostname
-              whenUnsatisfiable: ScheduleAnyway
-              labelSelector:
-                matchLabels:
-                  skew: "{{execution.id}}-jm"
 
   steps:
     - name: Run tests
@@ -146,6 +135,7 @@ spec:
     serviceAccountName: testkube-api-server
   services:
     slave:
+      strategy: even
       count: 5
       timeout: 30s # initialization timeout
       logs: true
@@ -164,18 +154,6 @@ spec:
           tcpSocket:
             port: 1099
           periodSeconds: 1
-      pod:
-        metadata:
-          labels:
-            skew: "{{execution.id}}-jm"
-        spec:
-          topologySpreadConstraints:
-            - maxSkew: 1
-              topologyKey: kubernetes.io/hostname
-              whenUnsatisfiable: ScheduleAnyway
-              labelSelector:
-                matchLabels:
-                  skew: "{{execution.id}}-jm"
 
   steps:
     - name: Run tests

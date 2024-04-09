@@ -8349,6 +8349,8 @@ components:
         description:
           type: string
           description: "custom name to display in the interface"
+        strategy:
+          $ref: "#/components/schemas/TestWorkflowSpawnStrategy"
         count:
           $ref: "#/components/schemas/BoxedString"
         maxCount:
@@ -8623,6 +8625,12 @@ components:
           $ref: "#/components/schemas/BoxedInteger"
       required:
         - type
+
+    TestWorkflowSpawnStrategy:
+      type: string
+      description: configure common distribution strategy
+      enum:
+        - even
 
     TestWorkflowParameterType:
       type: string

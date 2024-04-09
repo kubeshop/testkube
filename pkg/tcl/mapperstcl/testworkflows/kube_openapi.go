@@ -716,6 +716,7 @@ func MapSpawnInstructionKubeToAPI(v testworkflowsv1.SpawnInstruction) testkube.T
 
 	return testkube.TestWorkflowSpawnInstruction{
 		Description:       v.Description,
+		Strategy:          common.Ptr(testkube.TestWorkflowSpawnStrategy(v.Strategy)),
 		Count:             MapIntOrStringToBoxedString(v.Count),
 		MaxCount:          MapIntOrStringToBoxedString(v.MaxCount),
 		Parallelism:       MapIntOrStringToBoxedString(v.Parallelism),

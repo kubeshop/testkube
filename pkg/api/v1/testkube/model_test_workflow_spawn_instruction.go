@@ -11,10 +11,11 @@ package testkube
 
 type TestWorkflowSpawnInstruction struct {
 	// custom name to display in the interface
-	Description string       `json:"description,omitempty"`
-	Count       *BoxedString `json:"count,omitempty"`
-	MaxCount    *BoxedString `json:"maxCount,omitempty"`
-	Parallelism *BoxedString `json:"parallelism,omitempty"`
+	Description string                     `json:"description,omitempty"`
+	Strategy    *TestWorkflowSpawnStrategy `json:"strategy,omitempty"`
+	Count       *BoxedString               `json:"count,omitempty"`
+	MaxCount    *BoxedString               `json:"maxCount,omitempty"`
+	Parallelism *BoxedString               `json:"parallelism,omitempty"`
 	// expression that determines if the pod initialization has completed successfully
 	Ready string `json:"ready,omitempty"`
 	// expression that determines if the pod initialization has failed
