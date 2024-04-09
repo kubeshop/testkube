@@ -383,7 +383,7 @@ func MapSpawnInstructionAPIToKube(v testkube.TestWorkflowSpawnInstruction) testw
 			Shards:            MapStringSliceMapToIntOrStringSliceMap(v.Shards),
 			ShardExpressions:  v.ShardExpressions,
 			Files:             common.MapSlice(v.Files, MapContentFileAPIToKube),
-			Pod:               pod,
+			Pod:               common.PtrOrNil(pod),
 		},
 		SpawnInstructionAliases: testworkflowsv1.SpawnInstructionAliases{
 			Container: container,

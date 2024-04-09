@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"math"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
@@ -93,6 +94,10 @@ func FromInstruction(name string, instruction testworkflowsv1.SpawnInstructionBa
 	}
 
 	// Build the service
+	var pod corev1.PodTemplateSpec
+	if instruction.Pod != nil {
+		pod = *instruction.Pod
+	}
 	svc := Service{
 		Name:        name,
 		Description: instruction.Description,
@@ -105,7 +110,7 @@ func FromInstruction(name string, instruction testworkflowsv1.SpawnInstructionBa
 		Shards:      shards,
 		Ready:       instruction.Ready,
 		Error:       instruction.Error,
-		PodTemplate: instruction.Pod,
+		PodTemplate: pod,
 		Files:       instruction.Files,
 	}
 
