@@ -8346,6 +8346,9 @@ components:
     TestWorkflowSpawnInstruction:
       type: object
       properties:
+        description:
+          type: string
+          description: "custom name to display in the interface"
         count:
           $ref: "#/components/schemas/BoxedString"
         maxCount:

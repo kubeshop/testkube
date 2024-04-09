@@ -25,14 +25,16 @@ import (
 )
 
 type ServiceStatus struct {
-	Name   string `json:"name"`
-	Index  int64  `json:"index"`
-	Logs   string `json:"logs"`
-	Status string `json:"status"`
+	Name        string `json:"name,omitempty"`
+	Description string `json:"description,omitempty"`
+	Index       int64  `json:"index,omitempty"`
+	Logs        string `json:"logs,omitempty"`
+	Status      string `json:"status,omitempty"`
 }
 
 type Service struct {
 	Name        string
+	Description string
 	Count       int64
 	Parallelism int64
 	Logs        bool
@@ -151,6 +153,19 @@ func (svc *Service) Pod(ref string, index int64, machines ...expressionstcl.Mach
 	}
 
 	return pod, nil
+}
+
+func (svc *Service) DescriptionAt(index int64, machines ...expressionstcl.Machine) (string, error) {
+	if svc.Description == "" {
+		return svc.Description, nil
+	}
+	// Get details for current position
+	machines = append(machines, svc.MachineAt(index))
+	description, err := expressionstcl.EvalTemplate(svc.Description, machines...)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to resolve description template: %s", svc.Description)
+	}
+	return description, nil
 }
 
 func (svc *Service) FilesMap(index int64, machines ...expressionstcl.Machine) (map[string]string, error) {

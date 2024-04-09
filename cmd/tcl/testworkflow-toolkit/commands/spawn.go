@@ -288,6 +288,12 @@ func NewSpawnCmd() *cobra.Command {
 					pod.Spec.ActiveDeadlineSeconds = common.Ptr(int64(math.Ceil(timeout.Seconds())))
 				}
 
+				// Build service instance description
+				description, err := svc.DescriptionAt(index, baseMachine)
+				if err != nil {
+					fail("%s: error while reading service description: %s", spawn.InstanceLabel(svc.Name, index, svc.Total()), err.Error())
+				}
+
 				// Create the pod
 				pod, err = clientSet.CoreV1().Pods(env.Namespace()).
 					Create(context.Background(), pod, metav1.CreateOptions{})
@@ -298,9 +304,10 @@ func NewSpawnCmd() *cobra.Command {
 				// Inform about the pod creation
 				fmt.Printf("%s: created pod %s\n", spawn.InstanceLabel(svc.Name, index, svc.Total()), ui.DarkGray("("+pod.Name+")"))
 				data.PrintOutput(env.Ref(), "service-status", spawn.ServiceStatus{
-					Name:   svc.Name,
-					Index:  index,
-					Status: "running",
+					Name:        svc.Name,
+					Description: description,
+					Index:       index,
+					Status:      "running",
 				})
 
 				// Update the initial data

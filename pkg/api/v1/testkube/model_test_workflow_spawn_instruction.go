@@ -10,6 +10,8 @@
 package testkube
 
 type TestWorkflowSpawnInstruction struct {
+	// custom name to display in the interface
+	Description string       `json:"description,omitempty"`
 	Count       *BoxedString `json:"count,omitempty"`
 	MaxCount    *BoxedString `json:"maxCount,omitempty"`
 	Parallelism *BoxedString `json:"parallelism,omitempty"`
