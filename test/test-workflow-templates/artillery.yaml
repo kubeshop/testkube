@@ -6,7 +6,7 @@ metadata:
     testkube.io/name: Artillery
     testkube.io/wizard: enabled
   annotations:
-    testkube.io/categories: Load
+    testkube.io/categories: Load & Performance
     testkube.io/description: Run Artillery tests
     testkube.io/icon: artillery
 spec:

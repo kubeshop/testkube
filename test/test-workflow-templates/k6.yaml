@@ -6,7 +6,7 @@ metadata:
     testkube.io/name: k6
     testkube.io/wizard: enabled
   annotations:
-    testkube.io/categories: Load
+    testkube.io/categories: Load & Performance
     testkube.io/description: Run k6 tests
     testkube.io/icon: k6
 spec:

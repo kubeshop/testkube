@@ -6,7 +6,7 @@ metadata:
     testkube.io/name: JMeter
     testkube.io/wizard: enabled
   annotations:
-    testkube.io/categories: Load
+    testkube.io/categories: Load & Performance
     testkube.io/description: Run JMeter Plan
     testkube.io/icon: jmeter
 spec:
