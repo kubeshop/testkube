@@ -1,3 +1,11 @@
+// Copyright 2024 Testkube.
+//
+// Licensed as a Testkube Pro file under the Testkube Community
+// License (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
+//
+//	https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
+
 package v1
 
 import (
@@ -144,7 +152,7 @@ func Test_hasArtifacts(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := hasArtifacts(tt.args.steps); got != tt.want {
+			if got := hasStepLike(tt.args.steps, hasArtifacts); got != tt.want {
 				t.Errorf("hasArtifacts() = %v, want %v", got, tt.want)
 			}
 		})
@@ -247,7 +255,7 @@ func Test_hasTemplateArtifacts(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := hasTemplateArtifacts(tt.args.steps); got != tt.want {
+			if got := hasIndependentStepLike(tt.args.steps, hasTemplateArtifacts); got != tt.want {
 				t.Errorf("hasArtifacts() = %v, want %v", got, tt.want)
 			}
 		})
@@ -319,7 +327,7 @@ func Test_hasKubeshopGitURI(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := hasKubeshopGitURI(tt.args.spec); got != tt.want {
+			if got := isKubeshopGitURI(tt.args.spec.Content) || hasWorkflowStepLike(tt.args.spec, hasKubeshopGitURI); got != tt.want {
 				t.Errorf("hasKubeshopGitURI() = %v, want %v", got, tt.want)
 			}
 		})

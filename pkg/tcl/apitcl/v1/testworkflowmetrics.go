@@ -1,3 +1,11 @@
+// Copyright 2024 Testkube.
+//
+// Licensed as a Testkube Pro file under the Testkube Community
+// License (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
+//
+//	https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
+
 package v1
 
 import (
@@ -24,9 +32,6 @@ func (s *apiTCL) sendCreateWorkflowTelemetry(ctx context.Context, workflow *test
 		return
 	}
 
-	allSteps := append(workflow.Spec.Steps, workflow.Spec.Setup...)
-	allSteps = append(allSteps, workflow.Spec.After...)
-
 	out, err := telemetry.SendCreateWorkflowEvent("testkube_api_create_test_workflow", telemetry.CreateWorkflowParams{
 		CreateParams: telemetry.CreateParams{
 			AppVersion: version.Version,
@@ -35,11 +40,11 @@ func (s *apiTCL) sendCreateWorkflowTelemetry(ctx context.Context, workflow *test
 			ClusterID:  s.getClusterID(ctx),
 		},
 		WorkflowParams: telemetry.WorkflowParams{
-			TestWorkflowSteps:          int32(len(allSteps)),
+			TestWorkflowSteps:          int32(len(workflow.Spec.Setup) + len(workflow.Spec.Steps) + len(workflow.Spec.After)),
 			TestWorkflowTemplateUsed:   len(workflow.Spec.Use) != 0,
 			TestWorkflowImage:          getImage(workflow.Spec.Container),
-			TestWorkflowArtifactUsed:   hasArtifacts(allSteps),
-			TestWorkflowKubeshopGitURI: hasKubeshopGitURI(workflow.Spec),
+			TestWorkflowArtifactUsed:   hasWorkflowStepLike(workflow.Spec, hasArtifacts),
+			TestWorkflowKubeshopGitURI: isKubeshopGitURI(workflow.Spec.Content) || hasWorkflowStepLike(workflow.Spec, hasKubeshopGitURI),
 		},
 	})
 	if err != nil {
@@ -62,9 +67,6 @@ func (s *apiTCL) sendCreateWorkflowTemplateTelemetry(ctx context.Context, templa
 		return
 	}
 
-	allSteps := append(template.Spec.Steps, template.Spec.Setup...)
-	allSteps = append(allSteps, template.Spec.After...)
-
 	out, err := telemetry.SendCreateWorkflowEvent("testkube_api_create_test_workflow_template", telemetry.CreateWorkflowParams{
 		CreateParams: telemetry.CreateParams{
 			AppVersion: version.Version,
@@ -73,10 +75,10 @@ func (s *apiTCL) sendCreateWorkflowTemplateTelemetry(ctx context.Context, templa
 			ClusterID:  s.getClusterID(ctx),
 		},
 		WorkflowParams: telemetry.WorkflowParams{
-			TestWorkflowSteps:          int32(len(allSteps)),
+			TestWorkflowSteps:          int32(len(template.Spec.Setup) + len(template.Spec.Steps) + len(template.Spec.After)),
 			TestWorkflowImage:          getImage(template.Spec.Container),
-			TestWorkflowArtifactUsed:   hasTemplateArtifacts(template.Spec.Steps),
-			TestWorkflowKubeshopGitURI: hasTemplateKubeshopGitURI(template.Spec),
+			TestWorkflowArtifactUsed:   hasTemplateStepLike(template.Spec, hasTemplateArtifacts),
+			TestWorkflowKubeshopGitURI: isKubeshopGitURI(template.Spec.Content) || hasTemplateStepLike(template.Spec, hasTemplateKubeshopGitURI),
 		},
 	})
 	if err != nil {
@@ -98,8 +100,6 @@ func (s *apiTCL) sendRunWorkflowTelemetry(ctx context.Context, workflow *testwor
 	if !telemetryEnabled {
 		return
 	}
-	allSteps := append(workflow.Spec.Steps, workflow.Spec.Setup...)
-	allSteps = append(allSteps, workflow.Spec.After...)
 
 	out, err := telemetry.SendRunWorkflowEvent("testkube_api_run_test_workflow", telemetry.RunWorkflowParams{
 		RunParams: telemetry.RunParams{
@@ -109,10 +109,10 @@ func (s *apiTCL) sendRunWorkflowTelemetry(ctx context.Context, workflow *testwor
 			ClusterID:  s.getClusterID(ctx),
 		},
 		WorkflowParams: telemetry.WorkflowParams{
-			TestWorkflowSteps:          int32(len(allSteps)),
+			TestWorkflowSteps:          int32(len(workflow.Spec.Setup) + len(workflow.Spec.Steps) + len(workflow.Spec.After)),
 			TestWorkflowImage:          getImage(workflow.Spec.Container),
-			TestWorkflowArtifactUsed:   hasArtifacts(allSteps),
-			TestWorkflowKubeshopGitURI: hasKubeshopGitURI(workflow.Spec),
+			TestWorkflowArtifactUsed:   hasWorkflowStepLike(workflow.Spec, hasArtifacts),
+			TestWorkflowKubeshopGitURI: isKubeshopGitURI(workflow.Spec.Content) || hasWorkflowStepLike(workflow.Spec, hasKubeshopGitURI),
 		},
 	})
 
@@ -141,155 +141,67 @@ func getImage(container *testworkflowsv1.ContainerConfig) string {
 	return ""
 }
 
-// hasArtifacts checks if the test workflow steps have artifacts
-func hasArtifacts(steps []testworkflowsv1.Step) bool {
+func hasWorkflowStepLike(spec testworkflowsv1.TestWorkflowSpec, fn func(step testworkflowsv1.Step) bool) bool {
+	return hasStepLike(spec.Setup, fn) || hasStepLike(spec.Steps, fn) || hasStepLike(spec.After, fn)
+}
+
+func hasTemplateStepLike(spec testworkflowsv1.TestWorkflowTemplateSpec, fn func(step testworkflowsv1.IndependentStep) bool) bool {
+	return hasIndependentStepLike(spec.Setup, fn) || hasIndependentStepLike(spec.Steps, fn) || hasIndependentStepLike(spec.After, fn)
+}
+
+func hasStepLike(steps []testworkflowsv1.Step, fn func(step testworkflowsv1.Step) bool) bool {
 	for _, step := range steps {
-		if step.Artifacts != nil {
-			return true
-		}
-		if hasArtifacts(step.Setup) {
-			return true
-		}
-		if hasArtifacts(step.Steps) {
+		if fn(step) || hasStepLike(step.Setup, fn) || hasStepLike(step.Steps, fn) {
 			return true
 		}
 	}
 	return false
+}
+
+func hasIndependentStepLike(steps []testworkflowsv1.IndependentStep, fn func(step testworkflowsv1.IndependentStep) bool) bool {
+	for _, step := range steps {
+		if fn(step) || hasIndependentStepLike(step.Setup, fn) || hasIndependentStepLike(step.Steps, fn) {
+			return true
+		}
+	}
+	return false
+}
+
+// hasArtifacts checks if the test workflow steps have artifacts
+func hasArtifacts(step testworkflowsv1.Step) bool {
+	return step.Artifacts != nil
 }
 
 // hasTemplateArtifacts checks if the test workflow steps have artifacts
-func hasTemplateArtifacts(steps []testworkflowsv1.IndependentStep) bool {
-	for _, step := range steps {
-		if step.Artifacts != nil {
-			return true
-		}
-		if hasTemplateArtifacts(step.Setup) {
-			return true
-		}
-		if hasTemplateArtifacts(step.Steps) {
-			return true
-		}
-	}
-	return false
+func hasTemplateArtifacts(step testworkflowsv1.IndependentStep) bool {
+	return step.Artifacts != nil
 }
 
 // hasKubeshopGitURI checks if the test workflow spec has a git URI that contains "kubeshop"
-func hasKubeshopGitURI(spec testworkflowsv1.TestWorkflowSpec) bool {
-	if isKubeshopGitURI(spec.Content) {
-		return true
-	}
-
-	for _, step := range spec.Steps {
-		if hasStepKubeshopGitURI(step) {
-			return true
-		}
-	}
-	for _, step := range spec.Setup {
-		if hasStepKubeshopGitURI(step) {
-			return true
-		}
-	}
-	for _, step := range spec.After {
-		if hasStepKubeshopGitURI(step) {
-			return true
-		}
-	}
-
-	return false
+func hasKubeshopGitURI(step testworkflowsv1.Step) bool {
+	return isKubeshopGitURI(step.Content)
 }
 
 // hasTemplateKubeshopGitURI checks if the test workflow spec has a git URI that contains "kubeshop"
-func hasTemplateKubeshopGitURI(spec testworkflowsv1.TestWorkflowTemplateSpec) bool {
-	if isKubeshopGitURI(spec.Content) {
-		return true
-	}
-
-	for _, step := range spec.Steps {
-		if hasTemplateStepKubeshopGitURI(step) {
-			return true
-		}
-	}
-	for _, step := range spec.Setup {
-		if hasTemplateStepKubeshopGitURI(step) {
-			return true
-		}
-	}
-	for _, step := range spec.After {
-		if hasTemplateStepKubeshopGitURI(step) {
-			return true
-		}
-	}
-
-	return false
-}
-
-// hasTemplateStepKubeshopGitURI checks if the step has a git URI that contains "kubeshop"
-func hasTemplateStepKubeshopGitURI(step testworkflowsv1.IndependentStep) bool {
-	for _, step := range step.Setup {
-		if isKubeshopGitURI(step.Content) {
-			return true
-		}
-		if hasTemplateStepKubeshopGitURI(step) {
-			return true
-		}
-	}
-	for _, step := range step.Steps {
-		if isKubeshopGitURI(step.Content) {
-			return true
-		}
-		if hasTemplateStepKubeshopGitURI(step) {
-			return true
-		}
-	}
-	return false
-}
-
-// hasStepKubeshopGitURI checks if the step has a git URI that contains "kubeshop"
-func hasStepKubeshopGitURI(step testworkflowsv1.Step) bool {
-	for _, step := range step.Setup {
-		if isKubeshopGitURI(step.Content) {
-			return true
-		}
-		if hasStepKubeshopGitURI(step) {
-			return true
-		}
-	}
-	for _, step := range step.Steps {
-		if isKubeshopGitURI(step.Content) {
-			return true
-		}
-		if hasStepKubeshopGitURI(step) {
-			return true
-		}
-	}
-	return false
+func hasTemplateKubeshopGitURI(step testworkflowsv1.IndependentStep) bool {
+	return isKubeshopGitURI(step.Content)
 }
 
 // isKubeshopGitURI checks if the content has a git URI that contains "kubeshop"
 func isKubeshopGitURI(content *testworkflowsv1.Content) bool {
-	switch {
-	case content == nil:
-		return false
-	case content.Git == nil:
-		return false
-	case strings.Contains(content.Git.Uri, "kubeshop"):
-		return true
-	default:
-		return false
-	}
+	return content != nil && content.Git != nil && strings.Contains(content.Git.Uri, "kubeshop")
 }
 
 // getDataSource returns the data source of the content
 func getDataSource(content *testworkflowsv1.Content) string {
-	var dataSource string
 	if content != nil {
-		if len(content.Files) != 0 {
-			dataSource = "files"
-		} else if content.Git != nil {
-			dataSource = "git"
+		if content.Git != nil {
+			return "git"
+		} else if len(content.Files) != 0 {
+			return "files"
 		}
 	}
-	return dataSource
+	return ""
 }
 
 // getHostname returns the hostname
