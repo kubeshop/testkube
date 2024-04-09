@@ -342,13 +342,6 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 			}
 
 			errPrefix = errPrefix + " " + request.Name
-			if request.ExecutionRequest != nil && request.ExecutionRequest.Args != nil {
-				request.ExecutionRequest.Args, err = testkube.PrepareExecutorArgs(request.ExecutionRequest.Args)
-				if err != nil {
-					return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not prepare executor args: %w", errPrefix, err))
-				}
-			}
-
 			if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 				request.QuoteTestTextFields()
 				data, err := crd.GenerateYAML(crd.TemplateTest, []testkube.TestUpsertRequest{request})
@@ -421,13 +414,6 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 			}
 
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get test: %w", errPrefix, err))
-		}
-
-		if request.ExecutionRequest != nil && *request.ExecutionRequest != nil && (*request.ExecutionRequest).Args != nil {
-			*(*request.ExecutionRequest).Args, err = testkube.PrepareExecutorArgs(*(*request.ExecutionRequest).Args)
-			if err != nil {
-				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not prepare executor arguments: %w", errPrefix, err))
-			}
 		}
 
 		// map update test but load spec only to not override metadata.ResourceVersion
