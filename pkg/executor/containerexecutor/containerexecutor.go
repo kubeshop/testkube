@@ -42,6 +42,9 @@ import (
 )
 
 const (
+	// ScraperPodSuffix contains scraper pod suffix
+	ScraperPodSuffix = "-scraper"
+
 	pollTimeout             = 24 * time.Hour
 	pollInterval            = 200 * time.Millisecond
 	jobDefaultDelaySeconds  = 180
@@ -226,7 +229,7 @@ func (c *ContainerExecutor) Logs(ctx context.Context, id, namespace string) (out
 		ids := []string{id}
 		if supportArtifacts && execution.ArtifactRequest != nil &&
 			execution.ArtifactRequest.StorageClassName != "" {
-			ids = append(ids, id+"-scraper")
+			ids = append(ids, id+ScraperPodSuffix)
 		}
 
 		for _, podName := range ids {
@@ -424,7 +427,6 @@ func (c *ContainerExecutor) updateResultsFromPod(
 				scraperLogs, err = executor.GetPodLogs(ctx, c.clientSet, execution.TestNamespace, *latestScraperPod)
 				if err != nil {
 					l.Errorw("get scraper pod logs error", "error", err)
-					return execution.ExecutionResult, err
 				}
 
 				break
@@ -444,12 +446,6 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	executorLogs, err := executor.GetPodLogs(ctx, c.clientSet, execution.TestNamespace, *latestExecutorPod)
 	if err != nil {
 		l.Errorw("get executor pod logs error", "error", err)
-		execution.ExecutionResult.Err(err)
-		err = c.repository.UpdateResult(ctx, execution.Id, *execution)
-		if err != nil {
-			l.Infow("Update result", "error", err)
-		}
-		return execution.ExecutionResult, err
 	}
 
 	executorLogs = append(executorLogs, scraperLogs...)

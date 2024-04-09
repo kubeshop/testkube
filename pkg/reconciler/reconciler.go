@@ -14,6 +14,7 @@ import (
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
+	cexecutor "github.com/kubeshop/testkube/pkg/executor/containerexecutor"
 	"github.com/kubeshop/testkube/pkg/mapper/tests"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
@@ -117,7 +118,7 @@ OuterLoop:
 				}
 
 				if supportArtifacts && execution.ArtifactRequest != nil && execution.ArtifactRequest.StorageClassName != "" {
-					id = execution.Id + "-scraper"
+					id = execution.Id + cexecutor.ScraperPodSuffix
 					pods, err = executor.GetJobPods(ctx, client.k8sclient.CoreV1().Pods(execution.TestNamespace), id, 1, 10)
 					if err == nil {
 					ScraperLoop:
