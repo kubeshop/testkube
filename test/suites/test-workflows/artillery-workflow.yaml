@@ -1,7 +1,7 @@
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: k6-workflow-suite
+  name: artillery-workflow-suite
   labels:
     core-tests: workflows-suite
 spec:
