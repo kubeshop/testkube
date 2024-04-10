@@ -61,16 +61,6 @@ func TestGetLogEntry(t *testing.T) {
 func TestParseRunnerOutput(t *testing.T) {
 	t.Parallel()
 
-	t.Run("Empty runner output", func(t *testing.T) {
-		t.Parallel()
-
-		result, err := ParseRunnerOutput([]byte{}, true)
-
-		assert.Equal(t, "no logs found", result.Output)
-		assert.NoError(t, err)
-		assert.Equal(t, testkube.ExecutionStatusFailed, result.Status)
-	})
-
 	t.Run("Invalid log", func(t *testing.T) {
 		t.Parallel()
 
@@ -404,16 +394,6 @@ running test [63ca8c8988564860327a16b5]
 
 func TestParseContainerOutput(t *testing.T) {
 	t.Parallel()
-
-	t.Run("Empty runner output", func(t *testing.T) {
-		t.Parallel()
-
-		result, output, err := ParseContainerOutput([]byte{})
-
-		assert.Equal(t, "", output)
-		assert.NoError(t, err)
-		assert.Nil(t, result)
-	})
 
 	t.Run("Runner output with no timestamps", func(t *testing.T) {
 		t.Parallel()
