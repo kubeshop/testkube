@@ -59,7 +59,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: gradle-workflow-smoke-jdk11-from-trait
+  name: gradle-workflow-smoke-jdk11-from-template
   labels:
     core-tests: workflows
 spec:
@@ -79,7 +79,7 @@ spec:
       - name: TESTKUBE_GRADLE
         value: "true"
   steps:
-  - name: Run from trait
+  - name: Run from template
     template:
       name: pre-official/gradle
       config:

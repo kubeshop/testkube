@@ -33,7 +33,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: k6-workflow-smoke-preofficial-trait
+  name: k6-workflow-smoke-preofficial-template
   labels:
     core-tests: workflows
 spec:
@@ -54,7 +54,7 @@ spec:
         revision: main
         paths:
         - test/k6/executor-tests/k6-smoke-test.js
-  - name: Run from trait
+  - name: Run from template
     workingDir: /data/repo/test/k6/executor-tests
     template:
       name: pre-official/k6
@@ -65,7 +65,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: k6-workflow-smoke-preofficial-trait-without-checkout-step
+  name: k6-workflow-smoke-preofficial-template-without-checkout-step
   labels:
     core-tests: workflows
 spec:
@@ -85,7 +85,7 @@ spec:
     - name: K6_SYSTEM_ENV # currently only possible on this level
       value: K6_SYSTEM_ENV_value
   steps:
-  - name: Run from trait
+  - name: Run from template
     workingDir: /data/repo/test/k6/executor-tests
     template:
       name: pre-official/k6

@@ -174,7 +174,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: playwright-workflow-smoke-official-trait
+  name: playwright-workflow-smoke-official-template
   labels:
     core-tests: workflows
 spec:
@@ -185,7 +185,7 @@ spec:
         memory: 2Gi
     workingDir: /data/repo/test/playwright/executor-tests/playwright-project
   steps:
-  - name: Run from trait
+  - name: Run from template
     content:
       git:
         uri: https://github.com/kubeshop/testkube

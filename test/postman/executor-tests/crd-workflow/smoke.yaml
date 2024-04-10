@@ -57,7 +57,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: postman-workflow-smoke-preofficial-trait
+  name: postman-workflow-smoke-preofficial-template
   labels:
     core-tests: workflows
 spec:
@@ -74,7 +74,7 @@ spec:
         memory: 128Mi
     workingDir: /data/repo/test/postman/executor-tests
   steps:
-  - name: Run from trait
+  - name: Run from template
     workingDir: /data/repo/test/postman/executor-tests
     template:
       name: pre-official/postman
@@ -84,7 +84,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: postman-workflow-smoke-preofficial-trait-without-envs
+  name: postman-workflow-smoke-preofficial-template-without-envs
   labels:
     core-tests: workflows
 spec:
@@ -101,7 +101,7 @@ spec:
         memory: 128Mi
     workingDir: /data/repo/test/postman/executor-tests
   steps:
-  - name: Run from trait
+  - name: Run from template
     template:
       name: pre-official/postman
       config:

@@ -9,4 +9,4 @@ spec:
   - execute:
       workflows:
       - name: artillery-workflow-smoke
-      - name: artillery-workflow-smoke-preofficial-trait
+      - name: artillery-workflow-smoke-preofficial-template

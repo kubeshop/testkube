@@ -62,7 +62,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: jmeter-workflow-smoke-from-trait
+  name: jmeter-workflow-smoke-from-template
   labels:
     core-tests: workflows
 spec:
@@ -79,11 +79,11 @@ spec:
         memory: 512Mi
     workingDir: /data/repo/test/jmeter/executor-tests
   steps:
-  - name: Run from trait
+  - name: Run from template
     template:
       name: pre-official/jmeter
       config:
-        params: "jmeter -n -t jmeter-executor-smoke.jmx -j /data/artifacts/jmeter.log -o /data/artifacts/report -l /data/artifacts/jtl-report.jtl -e"
+        run: "jmeter -n -t jmeter-executor-smoke.jmx -j /data/artifacts/jmeter.log -o /data/artifacts/report -l /data/artifacts/jtl-report.jtl -e"
     steps:
     - name: Save artifacts
       workingDir: /data/artifacts

@@ -10,5 +10,5 @@ spec:
       workflows:
       - name: postman-workflow-smoke
       - name: postman-workflow-smoke-without-envs
-      - name: postman-workflow-smoke-preofficial-trait
-      - name: postman-workflow-smoke-preofficial-trait-without-envs
+      - name: postman-workflow-smoke-preofficial-template
+      - name: postman-workflow-smoke-preofficial-template-without-envs

@@ -9,6 +9,6 @@ spec:
   - execute:
       workflows:
       - name: k6-workflow-smoke
-      - name: k6-workflow-smoke-preofficial-trait
-      - name: k6-workflow-smoke-preofficial-trait-without-checkout-step
+      - name: k6-workflow-smoke-preofficial-template
+      - name: k6-workflow-smoke-preofficial-template-without-checkout-step
       - name: k6-workflow-smoke-artifacts

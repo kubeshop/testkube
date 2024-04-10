@@ -31,7 +31,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: maven-workflow-smoke-jdk11-from-trait
+  name: maven-workflow-smoke-jdk11-from-template
   labels:
     core-tests: workflows
 spec:
@@ -51,7 +51,7 @@ spec:
     - name: TESTKUBE_MAVEN
       value: "true"
   steps:
-  - name: Run from trait
+  - name: Run from template
     template:
       name: pre-official/maven
       config:

@@ -112,7 +112,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: cypress-workflow-smoke-13-preofficial-trait
+  name: cypress-workflow-smoke-13-preofficial-template
   labels:
     core-tests: workflows
 spec:
@@ -132,7 +132,7 @@ spec:
       paths:
       - test/cypress/executor-tests/cypress-13
   steps:
-  - name: Run from trait
+  - name: Run from template
     workingDir: /data/repo/test/cypress/executor-tests/cypress-13
     template:
       name: pre-official/cypress
@@ -143,7 +143,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: cypress-workflow-smoke-13-preofficial-trait-checkout-on-step
+  name: cypress-workflow-smoke-13-preofficial-template-checkout-on-step
   labels:
     core-tests: workflows
 spec:
@@ -157,7 +157,7 @@ spec:
     - name: CYPRESS_CUSTOM_ENV # currently only possible on this level
       value: "CYPRESS_CUSTOM_ENV_value"
   steps:
-  - name: Run from trait
+  - name: Run from template
     content:
       git:
         uri: https://github.com/kubeshop/testkube
@@ -174,7 +174,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: cypress-workflow-smoke-13-preofficial-trait-sub-step
+  name: cypress-workflow-smoke-13-preofficial-template-sub-step
   labels:
     core-tests: workflows
 spec:
@@ -196,7 +196,7 @@ spec:
         paths:
         - test/cypress/executor-tests/cypress-13
     steps:
-    - name: Run from trait
+    - name: Run from template
       workingDir: /data/repo/test/cypress/executor-tests/cypress-13
       template:
         name: pre-official/cypress
