@@ -416,12 +416,6 @@ func (c *ContainerExecutor) updateResultsFromPod(
 					return execution.ExecutionResult, nil
 				}
 
-				pvcsClient := c.clientSet.CoreV1().PersistentVolumeClaims(execution.TestNamespace)
-				err = pvcsClient.Delete(ctx, execution.Id+"-pvc", metav1.DeleteOptions{})
-				if err != nil {
-					return execution.ExecutionResult, err
-				}
-
 				switch latestScraperPod.Status.Phase {
 				case corev1.PodSucceeded:
 					execution.ExecutionResult.Success()
