@@ -38,13 +38,6 @@ func GetLogEntry(b []byte) (out Output, err error) {
 // {"type": "result", "result": {"id": "2323", "output": "-----"}, "time": "..."}
 func ParseRunnerOutput(b []byte, attachLogs bool) (*testkube.ExecutionResult, error) {
 	result := &testkube.ExecutionResult{}
-	if len(b) == 0 {
-		errMessage := "no logs found"
-		if attachLogs {
-			result.Output = errMessage
-		}
-		return result.Err(errors.New(errMessage)), nil
-	}
 	logs, err := parseLogs(b)
 	if err != nil {
 		err := fmt.Errorf("could not parse logs \"%s\": %v", b, err.Error())
@@ -85,10 +78,6 @@ func ParseRunnerOutput(b []byte, attachLogs bool) (*testkube.ExecutionResult, er
 // {"type": "result", "result": {"id": "2323", "output": "-----"}, "time": "..."}
 func ParseContainerOutput(b []byte) (*testkube.ExecutionResult, string, error) {
 	result := &testkube.ExecutionResult{}
-	if len(b) == 0 {
-		return nil, "", nil
-	}
-
 	logs, err := parseContainerLogs(b)
 	if err != nil {
 		err = fmt.Errorf("could not parse logs \"%s\": %v", b, err.Error())
