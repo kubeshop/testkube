@@ -396,7 +396,8 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	podsClient := c.clientSet.CoreV1().Pods(execution.TestNamespace)
 	latestExecutorPod, err := podsClient.Get(context.Background(), executorPod.Name, metav1.GetOptions{})
 	if err != nil {
-		return execution.ExecutionResult, err
+		execution.ExecutionResult.Err(err)
+		return execution.ExecutionResult, nil
 	}
 
 	var scraperLogs []byte
@@ -430,11 +431,15 @@ func (c *ContainerExecutor) updateResultsFromPod(
 					// continue on poll err and try to get logs later
 					l.Errorw("waiting for scraper pod complete error", "error", err)
 				}
+				if err != nil {
+					execution.ExecutionResult.Err(err)
+				}
 				l.Debug("poll scraper immediate end")
 
 				latestScraperPod, err := podsClient.Get(context.Background(), scraperPod.Name, metav1.GetOptions{})
 				if err != nil {
-					return execution.ExecutionResult, err
+					execution.ExecutionResult.Err(err)
+					return execution.ExecutionResult, nil
 				}
 
 				switch latestScraperPod.Status.Phase {
