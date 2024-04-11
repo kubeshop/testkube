@@ -140,6 +140,10 @@ func ParseSecretData(imageSecrets []corev1.Secret, registry string) ([]DockerAut
 			return nil, fmt.Errorf("imagePullSecret %s contains neither .dockercfg nor .dockerconfigjson", imageSecret.Name)
 		}
 
+		// If registry is not provided, extract it from the image name
+		if registry == "" {
+			registry = extractRegistry(imageSecret.Name)
+		}
 		// Determine if there is a secret for the specified registry
 		if creds, ok := auths.Auths[registry]; ok {
 			username, password, err := extractRegistryCredentials(creds)
@@ -154,6 +158,22 @@ func ParseSecretData(imageSecrets []corev1.Secret, registry string) ([]DockerAut
 	}
 
 	return results, nil
+}
+
+// extractRegistry takes a container image string and returns the registry part.
+// It defaults to "docker.io" if no registry is specified.
+func extractRegistry(image string) string {
+	defaultRegistry := "https://index.docker.io/v1/"
+	parts := strings.Split(image, "/")
+	// If the image is just a name, return the default registry.
+	if len(parts) == 1 {
+		return defaultRegistry
+	}
+	// If the first part contains '.' or ':', it's likely a registry.
+	if strings.Contains(parts[0], ".") || strings.Contains(parts[0], ":") {
+		return parts[0]
+	}
+	return defaultRegistry
 }
 
 func extractRegistryCredentials(creds DockerAuthConfig) (username, password string, err error) {

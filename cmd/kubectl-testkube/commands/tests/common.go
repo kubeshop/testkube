@@ -488,12 +488,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		return nil, err
 	}
 
-	binaryArgs, err := cmd.Flags().GetStringArray("executor-args")
-	if err != nil {
-		return nil, err
-	}
-
-	executorArgs, err := testkube.PrepareExecutorArgs(binaryArgs)
+	executorArgs, err := cmd.Flags().GetStringArray("executor-args")
 	if err != nil {
 		return nil, err
 	}
@@ -1007,12 +1002,7 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 	}
 
 	if cmd.Flag("executor-args").Changed {
-		binaryArgs, err := cmd.Flags().GetStringArray("executor-args")
-		if err != nil {
-			return nil, err
-		}
-
-		executorArgs, err := testkube.PrepareExecutorArgs(binaryArgs)
+		executorArgs, err := cmd.Flags().GetStringArray("executor-args")
 		if err != nil {
 			return nil, err
 		}

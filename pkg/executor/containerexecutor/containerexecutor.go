@@ -371,8 +371,6 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	jobOptions *JobOptions,
 	isNegativeTest bool,
 ) (*testkube.ExecutionResult, error) {
-	var err error
-
 	// save stop time and final state
 	defer func() {
 		c.stopExecution(ctx, execution, execution.ExecutionResult, isNegativeTest)
@@ -384,6 +382,8 @@ func (c *ContainerExecutor) updateResultsFromPod(
 
 	// wait for pod
 	l.Debug("poll immediate waiting for executor pod")
+
+	var err error
 	if err = wait.PollUntilContextTimeout(ctx, pollInterval, c.podStartTimeout, true, executor.IsPodLoggable(c.clientSet, executorPod.Name, execution.TestNamespace)); err != nil {
 		l.Errorw("waiting for executor pod started error", "error", err)
 	} else if err = wait.PollUntilContextTimeout(ctx, pollInterval, pollTimeout, true, executor.IsPodReady(c.clientSet, executorPod.Name, execution.TestNamespace)); err != nil {
@@ -399,7 +399,8 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	podsClient := c.clientSet.CoreV1().Pods(execution.TestNamespace)
 	latestExecutorPod, err := podsClient.Get(context.Background(), executorPod.Name, metav1.GetOptions{})
 	if err != nil {
-		return execution.ExecutionResult, err
+		execution.ExecutionResult.Err(err)
+		return execution.ExecutionResult, nil
 	}
 
 	var scraperLogs []byte
@@ -417,7 +418,7 @@ func (c *ContainerExecutor) updateResultsFromPod(
 			return execution.ExecutionResult, err
 		}
 
-		scraperPodName := execution.Id + "-scraper"
+		scraperPodName := execution.Id + ScraperPodSuffix
 		scraperPods, err := executor.GetJobPods(ctx, podsClient, scraperPodName, 1, 10)
 		if err != nil {
 			return execution.ExecutionResult, err
@@ -433,11 +434,15 @@ func (c *ContainerExecutor) updateResultsFromPod(
 					// continue on poll err and try to get logs later
 					l.Errorw("waiting for scraper pod complete error", "error", err)
 				}
+				if err != nil {
+					execution.ExecutionResult.Err(err)
+				}
 				l.Debug("poll scraper immediate end")
 
 				latestScraperPod, err := podsClient.Get(context.Background(), scraperPod.Name, metav1.GetOptions{})
 				if err != nil {
-					return execution.ExecutionResult, err
+					execution.ExecutionResult.Err(err)
+					return execution.ExecutionResult, nil
 				}
 
 				switch latestScraperPod.Status.Phase {
@@ -472,28 +477,29 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	}
 
 	executorLogs = append(executorLogs, scraperLogs...)
-
-	// parse container output log (mixed JSON and plain text stream)
-	executionResult, output, err := output.ParseContainerOutput(executorLogs)
-	if err != nil {
-		l.Errorw("parse output error", "error", err)
-		execution.ExecutionResult.Output = output
-		execution.ExecutionResult.Err(err)
-		err = c.repository.UpdateResult(ctx, execution.Id, *execution)
+	if len(executorLogs) != 0 {
+		// parse container output log (mixed JSON and plain text stream)
+		executionResult, output, err := output.ParseContainerOutput(executorLogs)
 		if err != nil {
-			l.Infow("Update result", "error", err)
+			l.Errorw("parse output error", "error", err)
+			execution.ExecutionResult.Output = output
+			execution.ExecutionResult.Err(err)
+			err = c.repository.UpdateResult(ctx, execution.Id, *execution)
+			if err != nil {
+				l.Infow("Update result", "error", err)
+			}
+			return execution.ExecutionResult, err
 		}
-		return execution.ExecutionResult, err
-	}
 
-	if executionResult != nil {
-		execution.ExecutionResult = executionResult
-	}
+		if executionResult != nil {
+			execution.ExecutionResult = executionResult
+		}
 
-	// don't attach logs if logs v2 is enabled - they will be streamed through the logs service
-	attachLogs := !c.features.LogsV2
-	if attachLogs {
-		execution.ExecutionResult.Output = output
+		// don't attach logs if logs v2 is enabled - they will be streamed through the logs service
+		attachLogs := !c.features.LogsV2
+		if attachLogs {
+			execution.ExecutionResult.Output = output
+		}
 	}
 
 	if execution.ExecutionResult.IsFailed() {
@@ -525,15 +531,17 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context,
 		if result.IsFailed() {
 			c.log.Debugw("test run was expected to fail, and it failed as expected", "test", execution.TestName)
 			execution.ExecutionResult.Status = testkube.ExecutionStatusPassed
-			result.Status = testkube.ExecutionStatusPassed
+			execution.ExecutionResult.ErrorMessage = ""
 			result.Output = result.Output + "\nTest run was expected to fail, and it failed as expected"
 		} else {
 			c.log.Debugw("test run was expected to fail - the result will be reversed", "test", execution.TestName)
 			execution.ExecutionResult.Status = testkube.ExecutionStatusFailed
-			result.Status = testkube.ExecutionStatusFailed
+			execution.ExecutionResult.ErrorMessage = "negative test error"
 			result.Output = result.Output + "\nTest run was expected to fail, the result will be reversed"
 		}
 
+		result.Status = execution.ExecutionResult.Status
+		result.ErrorMessage = execution.ExecutionResult.ErrorMessage
 		err := c.repository.UpdateResult(ctx, execution.Id, *execution)
 		if err != nil {
 			c.log.Errorw("Update execution result error", "error", err)

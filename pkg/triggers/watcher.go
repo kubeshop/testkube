@@ -341,6 +341,7 @@ func (s *Service) checkExecutionPodStatus(ctx context.Context, executionID strin
 			if test.Spec.ExecutionRequest != nil && test.Spec.ExecutionRequest.NegativeTest {
 				s.logger.Debugw("test run was expected to fail, and it failed as expected", "test", execution.TestName)
 				execution.ExecutionResult.Status = testkube.ExecutionStatusPassed
+				execution.ExecutionResult.ErrorMessage = ""
 			}
 
 			err = s.resultRepository.UpdateResult(ctx, executionID, execution)
