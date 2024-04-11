@@ -206,8 +206,8 @@ func NewScraperJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.Jo
 // TODO extract JobOptions for both container and job executor to common package in separate PR
 // NewJobOptions provides job options for templates
 func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface, images executor.Images,
-	templates executor.Templates, inspector imageinspector.Inspector, serviceAccountNames map[string]string, registry, clusterID, apiURI string,
-	execution testkube.Execution, options client.ExecuteOptions, natsUri string, debug bool) (*JobOptions, error) {
+	templates executor.Templates, inspector imageinspector.Inspector, serviceAccountNames map[string]string,
+	registry, clusterID, apiURI string, execution testkube.Execution, options client.ExecuteOptions, natsUri string, debug bool) (*JobOptions, error) {
 	jobOptions := NewJobOptionsFromExecutionOptions(options)
 	if execution.PreRunScript != "" || execution.PostRunScript != "" {
 		jobOptions.Command = []string{filepath.Join(executor.VolumeDir, EntrypointScriptName)}
@@ -315,5 +315,6 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 	jobOptions.Registry = registry
 	jobOptions.ClusterID = clusterID
 	jobOptions.APIURI = apiURI
+
 	return jobOptions, nil
 }

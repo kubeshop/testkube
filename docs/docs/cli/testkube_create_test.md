@@ -20,6 +20,7 @@ testkube create test [flags]
       --artifact-shared-between-pods               whether to share volume between pods
       --artifact-storage-bucket string             artifact storage bucket
       --artifact-storage-class-name string         artifact storage class name for container executor
+      --artifact-use-default-storage-class-name    whether to use default storage class name
       --artifact-volume-mount-path string          artifact volume mount path for container executor
       --command stringArray                        command passed to image in executor
       --copy-files stringArray                     file path mappings from host to pod of form source:destination

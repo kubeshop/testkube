@@ -49,7 +49,7 @@ func (r *ScraperRunner) Run(ctx context.Context, execution testkube.Execution) (
 		return *result.Err(errors.Errorf("executor only support artifact based tests")), nil
 	}
 
-	if execution.ArtifactRequest.StorageClassName == "" {
+	if execution.ArtifactRequest.StorageClassName == "" && !execution.ArtifactRequest.UseDefaultStorageClassName {
 		return *result.Err(errors.Errorf("artifact request should have not empty storage class name")), nil
 	}
 

@@ -713,6 +713,10 @@ func mergeArtifacts(artifactBase *testkube.ArtifactRequest, artifactAdjust *test
 			artifactBase.SharedBetweenPods = artifactAdjust.SharedBetweenPods
 		}
 
+		if !artifactBase.UseDefaultStorageClassName && artifactAdjust.UseDefaultStorageClassName {
+			artifactBase.UseDefaultStorageClassName = artifactAdjust.UseDefaultStorageClassName
+		}
+
 		var fields = []struct {
 			source      string
 			destination *string

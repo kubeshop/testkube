@@ -312,16 +312,22 @@ func newArtifactRequestFromFlags(cmd *cobra.Command) (request *testkube.Artifact
 		return nil, err
 	}
 
+	artifactUseDefaultStorageClassName, err := cmd.Flags().GetBool("artifact-use-default-storage-class-name")
+	if err != nil {
+		return nil, err
+	}
+
 	if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(dirs) != 0 || len(masks) != 0 ||
-		artifactStorageBucket != "" || artifactOmitFolderPerExecution || artifactSharedBetweenPods {
+		artifactStorageBucket != "" || artifactOmitFolderPerExecution || artifactSharedBetweenPods || artifactUseDefaultStorageClassName {
 		request = &testkube.ArtifactRequest{
-			StorageClassName:       artifactStorageClassName,
-			VolumeMountPath:        artifactVolumeMountPath,
-			Dirs:                   dirs,
-			Masks:                  masks,
-			StorageBucket:          artifactStorageBucket,
-			OmitFolderPerExecution: artifactOmitFolderPerExecution,
-			SharedBetweenPods:      artifactSharedBetweenPods,
+			StorageClassName:           artifactStorageClassName,
+			VolumeMountPath:            artifactVolumeMountPath,
+			Dirs:                       dirs,
+			Masks:                      masks,
+			StorageBucket:              artifactStorageBucket,
+			OmitFolderPerExecution:     artifactOmitFolderPerExecution,
+			SharedBetweenPods:          artifactSharedBetweenPods,
+			UseDefaultStorageClassName: artifactUseDefaultStorageClassName,
 		}
 	}
 
@@ -1274,6 +1280,16 @@ func newArtifactUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.Ar
 		}
 
 		request.SharedBetweenPods = &value
+		nonEmpty = true
+	}
+
+	if cmd.Flag("artifact-use-default-storage-class-name").Changed {
+		value, err := cmd.Flags().GetBool("artifact-use-default-storage-class-name")
+		if err != nil {
+			return nil, err
+		}
+
+		request.UseDefaultStorageClassName = &value
 		nonEmpty = true
 	}
 

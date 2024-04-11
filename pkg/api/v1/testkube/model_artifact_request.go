@@ -25,4 +25,6 @@ type ArtifactRequest struct {
 	OmitFolderPerExecution bool `json:"omitFolderPerExecution,omitempty"`
 	// whether to share volume between pods
 	SharedBetweenPods bool `json:"sharedBetweenPods,omitempty"`
+	// whether to use default storage class name
+	UseDefaultStorageClassName bool `json:"useDefaultStorageClassName,omitempty"`
 }
