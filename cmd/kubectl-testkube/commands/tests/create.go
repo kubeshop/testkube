@@ -61,6 +61,7 @@ type CreateCommonFlags struct {
 	ArtifactStorageBucket              string
 	ArtifactOmitFolderPerExecution     bool
 	ArtifactSharedBetweenPods          bool
+	ArtifactUseDefaultStorageClassName bool
 	Description                        string
 	SlavePodRequestsCpu                string
 	SlavePodRequestsMemory             string
@@ -272,6 +273,7 @@ func AddCreateFlags(cmd *cobra.Command, flags *CreateCommonFlags) {
 	cmd.Flags().StringVar(&flags.ArtifactStorageBucket, "artifact-storage-bucket", "", "artifact storage bucket")
 	cmd.Flags().BoolVarP(&flags.ArtifactOmitFolderPerExecution, "artifact-omit-folder-per-execution", "", false, "don't store artifacts in execution folder")
 	cmd.Flags().BoolVarP(&flags.ArtifactSharedBetweenPods, "artifact-shared-between-pods", "", false, "whether to share volume between pods")
+	cmd.Flags().BoolVarP(&flags.ArtifactUseDefaultStorageClassName, "artifact-use-default-storage-class-name", "", false, "whether to use default storage class name")
 	cmd.Flags().StringVarP(&flags.Description, "description", "", "", "test description")
 	cmd.Flags().StringVar(&flags.SlavePodRequestsCpu, "slave-pod-requests-cpu", "", "slave pod resource requests cpu")
 	cmd.Flags().StringVar(&flags.SlavePodRequestsMemory, "slave-pod-requests-memory", "", "slave pod resource requests memory")

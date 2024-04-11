@@ -461,6 +461,7 @@ func main() {
 		cfg.Debug,
 		logsStream,
 		features,
+		cfg.TestkubeDefaultStorageClassName,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating executor client", err)
@@ -506,6 +507,7 @@ func main() {
 		cfg.Debug,
 		logsStream,
 		features,
+		cfg.TestkubeDefaultStorageClassName,
 	)
 	if err != nil {
 		ui.ExitOnError("Creating container executor", err)

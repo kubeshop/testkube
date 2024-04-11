@@ -6000,6 +6000,9 @@ components:
         sharedBetweenPods:
           type: boolean
           description: whether to share volume between pods
+        useDefaultStorageClassName:
+          type: boolean
+          description: whether to use default storage class name     
 
     ArtifactUpdateRequest:
       description: artifact request update body

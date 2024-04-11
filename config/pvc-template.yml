@@ -4,7 +4,11 @@ metadata:
   name: {{ .Name }}-pvc
   namespace: {{ .Namespace }}
 spec:
+  {{- if .ArtifactRequest.StorageClassName }}
   storageClassName: {{ .ArtifactRequest.StorageClassName }}
+  {{- else if .ArtifactRequest.UseDefaultStorageClassName }}
+  storageClassName: {{ .DefaultStorageClassName }}
+  {{- end }}
   accessModes:
   {{- if .ArtifactRequest.SharedBetweenPods }}
     - ReadWriteMany
