@@ -2,8 +2,6 @@
 
 If your company has security and compliance requirements and the capacity to manage your own Kubernetes deployments, visit https://testkube.io/get-started and click **Download** to sign up for Testkube Pro On-Prem.
 
-![Download Testkube Pro On-Prem](../../img/enterprise-download.png)
-
 Enter your information in the form and click **Download**.
 
 ![Download Testkube Pro On-Prem](../../img/enterprise-download-form.png)
