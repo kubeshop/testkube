@@ -117,7 +117,8 @@ OuterLoop:
 					}
 				}
 
-				if supportArtifacts && execution.ArtifactRequest != nil && execution.ArtifactRequest.StorageClassName != "" {
+				if supportArtifacts && execution.ArtifactRequest != nil &&
+					(execution.ArtifactRequest.StorageClassName != "" || execution.ArtifactRequest.UseDefaultStorageClassName) {
 					id = execution.Id + cexecutor.ScraperPodSuffix
 					pods, err = executor.GetJobPods(ctx, client.k8sclient.CoreV1().Pods(execution.TestNamespace), id, 1, 10)
 					if err == nil {

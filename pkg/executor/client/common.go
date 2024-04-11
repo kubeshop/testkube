@@ -43,11 +43,12 @@ type ExecuteOptions struct {
 }
 
 type PVCOptions struct {
-	Name                  string
-	Namespace             string
-	PvcTemplate           string
-	PvcTemplateExtensions string
-	ArtifactRequest       *testkube.ArtifactRequest
+	Name                    string
+	Namespace               string
+	PvcTemplate             string
+	PvcTemplateExtensions   string
+	ArtifactRequest         *testkube.ArtifactRequest
+	DefaultStorageClassName string
 }
 
 // NewPersistentVolumeClaimSpec is a method to create new persistent volume claim spec

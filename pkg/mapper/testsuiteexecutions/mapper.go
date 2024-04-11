@@ -143,13 +143,14 @@ func MapExecutionCRD(request *testkube.Execution) *testsuiteexecutionv1.Executio
 	var artifactRequest *testsuiteexecutionv1.ArtifactRequest
 	if request.ArtifactRequest != nil {
 		artifactRequest = &testsuiteexecutionv1.ArtifactRequest{
-			StorageClassName:       request.ArtifactRequest.StorageClassName,
-			VolumeMountPath:        request.ArtifactRequest.VolumeMountPath,
-			Dirs:                   request.ArtifactRequest.Dirs,
-			Masks:                  request.ArtifactRequest.Masks,
-			StorageBucket:          request.ArtifactRequest.StorageBucket,
-			OmitFolderPerExecution: request.ArtifactRequest.OmitFolderPerExecution,
-			SharedBetweenPods:      request.ArtifactRequest.SharedBetweenPods,
+			StorageClassName:           request.ArtifactRequest.StorageClassName,
+			VolumeMountPath:            request.ArtifactRequest.VolumeMountPath,
+			Dirs:                       request.ArtifactRequest.Dirs,
+			Masks:                      request.ArtifactRequest.Masks,
+			StorageBucket:              request.ArtifactRequest.StorageBucket,
+			OmitFolderPerExecution:     request.ArtifactRequest.OmitFolderPerExecution,
+			SharedBetweenPods:          request.ArtifactRequest.SharedBetweenPods,
+			UseDefaultStorageClassName: request.ArtifactRequest.UseDefaultStorageClassName,
 		}
 	}
 

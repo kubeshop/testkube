@@ -120,6 +120,7 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.disableMongoMigrations    | yes         | false                                |
 | testkube-api.enabledExecutors          | yes         | ""                                   |
 | testkube-api.disableSecretCreation     | yes         | false                                |
+| testkube-api.defaultStorageClassName   | yes         | ""                                   |
 
 >For more configuration parameters of a `MongoDB` chart please visit: 
 <https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>

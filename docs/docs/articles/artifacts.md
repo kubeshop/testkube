@@ -91,8 +91,11 @@ Just keep in mind that all values need to be set:
 Consider checking your Kubernetes provider documentation for more information about which storage classes supports it.
 Keep in mind that the NFS based volumes can be significantly slower than local storage.
 
-
-
+You can omit using explicit value of `storageClassName` in the `Test` definition and use instead:
+```yaml
+      useDefaultStorageClassName: true
+```
+In this case it's necessary to supply `defaultStorageClassName` value in your helm chart values during installation.
 
 You need to save test related files into specified directories on the dynamically created volume. They will be uploaded from there to Testkube file storage and available later for downloading using standard Testkube CLI or Testkube Dashboard commands. For example:
 

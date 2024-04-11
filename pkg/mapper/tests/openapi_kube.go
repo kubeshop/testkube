@@ -132,13 +132,14 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 	var artifactRequest *testsv3.ArtifactRequest
 	if executionRequest.ArtifactRequest != nil {
 		artifactRequest = &testsv3.ArtifactRequest{
-			StorageClassName:       executionRequest.ArtifactRequest.StorageClassName,
-			VolumeMountPath:        executionRequest.ArtifactRequest.VolumeMountPath,
-			Dirs:                   executionRequest.ArtifactRequest.Dirs,
-			Masks:                  executionRequest.ArtifactRequest.Masks,
-			StorageBucket:          executionRequest.ArtifactRequest.StorageBucket,
-			OmitFolderPerExecution: executionRequest.ArtifactRequest.OmitFolderPerExecution,
-			SharedBetweenPods:      executionRequest.ArtifactRequest.SharedBetweenPods,
+			StorageClassName:           executionRequest.ArtifactRequest.StorageClassName,
+			VolumeMountPath:            executionRequest.ArtifactRequest.VolumeMountPath,
+			Dirs:                       executionRequest.ArtifactRequest.Dirs,
+			Masks:                      executionRequest.ArtifactRequest.Masks,
+			StorageBucket:              executionRequest.ArtifactRequest.StorageBucket,
+			OmitFolderPerExecution:     executionRequest.ArtifactRequest.OmitFolderPerExecution,
+			SharedBetweenPods:          executionRequest.ArtifactRequest.SharedBetweenPods,
+			UseDefaultStorageClassName: executionRequest.ArtifactRequest.UseDefaultStorageClassName,
 		}
 	}
 
@@ -683,6 +684,10 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 				emptyArtifact = false
 			}
 
+			if (*executionRequest.ArtifactRequest).UseDefaultStorageClassName != nil {
+				request.ArtifactRequest.UseDefaultStorageClassName = *(*executionRequest.ArtifactRequest).UseDefaultStorageClassName
+				emptyArtifact = false
+			}
 		}
 
 		if emptyArtifact {

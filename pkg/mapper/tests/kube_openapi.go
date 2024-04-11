@@ -120,13 +120,14 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 	var artifactRequest *testkube.ArtifactRequest
 	if specExecutionRequest.ArtifactRequest != nil {
 		artifactRequest = &testkube.ArtifactRequest{
-			StorageClassName:       specExecutionRequest.ArtifactRequest.StorageClassName,
-			VolumeMountPath:        specExecutionRequest.ArtifactRequest.VolumeMountPath,
-			Dirs:                   specExecutionRequest.ArtifactRequest.Dirs,
-			Masks:                  specExecutionRequest.ArtifactRequest.Masks,
-			StorageBucket:          specExecutionRequest.ArtifactRequest.StorageBucket,
-			OmitFolderPerExecution: specExecutionRequest.ArtifactRequest.OmitFolderPerExecution,
-			SharedBetweenPods:      specExecutionRequest.ArtifactRequest.SharedBetweenPods,
+			StorageClassName:           specExecutionRequest.ArtifactRequest.StorageClassName,
+			VolumeMountPath:            specExecutionRequest.ArtifactRequest.VolumeMountPath,
+			Dirs:                       specExecutionRequest.ArtifactRequest.Dirs,
+			Masks:                      specExecutionRequest.ArtifactRequest.Masks,
+			StorageBucket:              specExecutionRequest.ArtifactRequest.StorageBucket,
+			OmitFolderPerExecution:     specExecutionRequest.ArtifactRequest.OmitFolderPerExecution,
+			SharedBetweenPods:          specExecutionRequest.ArtifactRequest.SharedBetweenPods,
+			UseDefaultStorageClassName: specExecutionRequest.ArtifactRequest.UseDefaultStorageClassName,
 		}
 	}
 
@@ -530,13 +531,14 @@ func MapSpecExecutionRequestToExecutionUpdateRequest(
 
 	if request.ArtifactRequest != nil {
 		artifactRequest := &testkube.ArtifactUpdateRequest{
-			StorageClassName:       &request.ArtifactRequest.StorageClassName,
-			VolumeMountPath:        &request.ArtifactRequest.VolumeMountPath,
-			Dirs:                   &request.ArtifactRequest.Dirs,
-			Masks:                  &request.ArtifactRequest.Masks,
-			StorageBucket:          &request.ArtifactRequest.StorageBucket,
-			OmitFolderPerExecution: &request.ArtifactRequest.OmitFolderPerExecution,
-			SharedBetweenPods:      &request.ArtifactRequest.SharedBetweenPods,
+			StorageClassName:           &request.ArtifactRequest.StorageClassName,
+			VolumeMountPath:            &request.ArtifactRequest.VolumeMountPath,
+			Dirs:                       &request.ArtifactRequest.Dirs,
+			Masks:                      &request.ArtifactRequest.Masks,
+			StorageBucket:              &request.ArtifactRequest.StorageBucket,
+			OmitFolderPerExecution:     &request.ArtifactRequest.OmitFolderPerExecution,
+			SharedBetweenPods:          &request.ArtifactRequest.SharedBetweenPods,
+			UseDefaultStorageClassName: &request.ArtifactRequest.UseDefaultStorageClassName,
 		}
 
 		executionRequest.ArtifactRequest = &artifactRequest
