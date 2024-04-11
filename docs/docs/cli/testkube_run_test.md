@@ -21,6 +21,7 @@ testkube run test <testName> [flags]
       --artifact-shared-between-pods               whether to share volume between pods
       --artifact-storage-bucket string             artifact storage bucket
       --artifact-storage-class-name string         artifact storage class name for container executor
+      --artifact-use-default-storage-class-name    whether to use default storage class name
       --artifact-volume-mount-path string          artifact volume mount path for container executor
       --command stringArray                        command passed to image in executor
       --concurrency int                            concurrency level for multiple test execution (default 10)
