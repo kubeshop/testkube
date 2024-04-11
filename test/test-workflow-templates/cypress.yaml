@@ -6,7 +6,7 @@ metadata:
     testkube.io/name: Cypress
     testkube.io/wizard: enabled
   annotations:
-    testkube.io/categories: Load
+    testkube.io/categories: E2E
     testkube.io/description: Run Cypress tests
     testkube.io/icon: cypress
 spec:
@@ -23,10 +23,6 @@ spec:
       description: Run command
       type: string
       default: "npx cypress run"
-    params:
-      description: Additional params for the cypress run command
-      type: string
-      default: ""
   steps:
   - name: Install dependencies
     container:
