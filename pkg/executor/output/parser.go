@@ -15,9 +15,24 @@ import (
 )
 
 func GetLogEntry(b []byte) (out Output) {
-	r := bytes.NewReader(b)
-	dec := json.NewDecoder(r)
-	err := dec.Decode(&out)
+	if len(b) == 0 {
+		return Output{
+			Type_:   TypeUnknown,
+			Content: "",
+			Time:    time.Now(),
+		}
+	}
+
+	// not json
+	if b[0] != byte('{') {
+		return Output{
+			Type_:   TypeLogLine,
+			Content: string(b),
+			Time:    time.Now(),
+		}
+	}
+
+	err := json.Unmarshal(b, &out)
 	if err != nil {
 		return Output{
 			Type_:   TypeLogLine,
@@ -25,9 +40,16 @@ func GetLogEntry(b []byte) (out Output) {
 			Time:    time.Now(),
 		}
 	}
+
 	if out.Type_ == "" {
 		out.Type_ = TypeUnknown
 	}
+
+	// fallback to raw content if no content in the parsed log
+	if out.Content == "" {
+		out.Content = string(b)
+	}
+
 	return out
 }
 
@@ -166,6 +188,7 @@ func parseContainerLogs(b []byte) ([]Output, error) {
 
 	for {
 		b, err := utils.ReadLongLine(reader)
+
 		if err != nil {
 			if err == io.EOF {
 				err = nil
@@ -176,6 +199,8 @@ func parseContainerLogs(b []byte) ([]Output, error) {
 		}
 
 		log := GetLogEntry(b)
+
+		fmt.Printf("LOG: %s => '%+v'\n", b, log.Content)
 
 		if log.Type_ == TypeResult &&
 			log.Result != nil && log.Result.Status != nil {

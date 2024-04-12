@@ -173,13 +173,7 @@ func NewLogFromBytes(b []byte) *Log {
 	// .Result
 
 	if bytes.HasPrefix(content, []byte("{")) {
-		o, err := output.GetLogEntry(content)
-		if err != nil {
-			// try to read in case of some lines which we couldn't parse
-			// sometimes we're not able to control all stdout messages from libs
-			return newErrorLog(err, content)
-		}
-
+		o := output.GetLogEntry(content)
 		// pass parsed results for v1
 		// for new executor it'll be omitted in logs (as looks like we're not using it already)
 		if o.Type_ == output.TypeResult {
@@ -219,11 +213,7 @@ func ReadLogLine(b []byte) *Log {
 
 	switch true {
 	case bytes.HasPrefix(b, logsV1Prefix):
-		o, err := output.GetLogEntry(b)
-		if err != nil {
-			return newErrorLog(err, b)
-		}
-		return mapLogV1toV2(o)
+		return mapLogV1toV2(output.GetLogEntry(b))
 
 	case bytes.HasPrefix(b, logsV2Prefix):
 		var o Log

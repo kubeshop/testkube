@@ -218,11 +218,7 @@ func (c *JobExecutor) Logs(ctx context.Context, id, namespace string) (out chan 
 		}
 
 		for l := range logs {
-			entry, err := output.GetLogEntry(l)
-			if err != nil {
-				c.Log.Errorw("error parsing log entry", "error", err)
-			}
-			out <- entry
+			out <- output.GetLogEntry(l)
 		}
 	}()
 
@@ -767,12 +763,7 @@ func (c *JobExecutor) GetLastLogLineError(ctx context.Context, pod corev1.Pod) e
 	}
 
 	l.Debugw("log", "got last log bytes", string(errorLog)) // in case distorted log bytes
-	entry, err := output.GetLogEntry(errorLog)
-	if err != nil {
-		l.Errorw("GetLogEntry error", "error", err, "input", string(errorLog), "pod", pod)
-		return errors.Errorf("GetLogEntry error: %v", err)
-	}
-
+	entry := output.GetLogEntry(errorLog)
 	l.Infow("got last log entry", "log", entry.String())
 	return errors.Errorf("error from last log entry: %s", entry.String())
 }
