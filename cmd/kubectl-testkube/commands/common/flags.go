@@ -139,7 +139,23 @@ func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data)
 		}
 	}
 
-	opts.Master.URIs = NewMasterUris(opts.Master.ApiUrlPrefix,
+	if cmd.Flag("insecure") != nil && cmd.Flag("insecure").Value.String() == "true" {
+		opts.Master.Insecure = true
+	}
+
+	if cmd.Flag("api-prefix") != nil && cmd.Flags().Changed("api-prefix") {
+		opts.Master.ApiUrlPrefix = cmd.Flag("api-prefix").Value.String()
+	}
+
+	if cmd.Flag("ui-prefix") != nil && cmd.Flags().Changed("ui-prefix") {
+		opts.Master.ApiUrlPrefix = cmd.Flag("api-prefix").Value.String()
+	}
+
+	if cmd.Flag("logs-prefix") != nil && cmd.Flags().Changed("logs-prefix") {
+		opts.Master.ApiUrlPrefix = cmd.Flag("api-prefix").Value.String()
+	}
+
+	uris := NewMasterUris(opts.Master.ApiUrlPrefix,
 		opts.Master.UiUrlPrefix,
 		opts.Master.AgentUrlPrefix,
 		opts.Master.LogsUrlPrefix,
@@ -147,4 +163,24 @@ func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data)
 		opts.Master.URIs.Logs,
 		opts.Master.RootDomain,
 		opts.Master.Insecure)
+
+	// override whole URIs usually composed from prefix - host parts
+	if cmd.Flag("agent-uri-override") != nil && cmd.Flags().Changed("agent-uri-override") {
+		uris.WithAgentURI(cmd.Flag("agent-uri-override").Value.String())
+	}
+
+	if cmd.Flag("logs-uri-override") != nil && cmd.Flags().Changed("logs-uri-override") {
+		uris.WithLogsURI(cmd.Flag("logs-uri-override").Value.String())
+	}
+
+	if cmd.Flag("api-uri-override") != nil && cmd.Flags().Changed("api-uri-override") {
+		uris.WithApiURI(cmd.Flag("api-uri-override").Value.String())
+	}
+
+	if cmd.Flag("ui-uri-override") != nil && cmd.Flags().Changed("ui-uri-override") {
+		uris.WithUiURI(cmd.Flag("ui-uri-override").Value.String())
+	}
+
+	opts.Master.URIs = uris
+
 }
