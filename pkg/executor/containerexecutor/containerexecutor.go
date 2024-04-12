@@ -50,6 +50,8 @@ const (
 	jobDefaultDelaySeconds  = 180
 	jobArtifactDelaySeconds = 90
 	repoPath                = "/data/repo"
+
+	logsChannelBuffer = 1000
 )
 
 type EventEmitter interface {
@@ -201,7 +203,7 @@ type JobOptions struct {
 
 // Logs returns job logs stream channel using kubernetes api
 func (c *ContainerExecutor) Logs(ctx context.Context, id, namespace string) (out chan output.Output, err error) {
-	out = make(chan output.Output)
+	out = make(chan output.Output, logsChannelBuffer)
 
 	go func() {
 		defer func() {
@@ -236,7 +238,7 @@ func (c *ContainerExecutor) Logs(ctx context.Context, id, namespace string) (out
 		}
 
 		for _, podName := range ids {
-			logs := make(chan []byte)
+			logs := make(chan []byte, logsChannelBuffer)
 
 			if err := c.TailJobLogs(ctx, podName, namespace, logs); err != nil {
 				out <- output.NewOutputError(err)
@@ -246,6 +248,7 @@ func (c *ContainerExecutor) Logs(ctx context.Context, id, namespace string) (out
 			for l := range logs {
 				entry := output.NewOutputLine(l)
 				out <- entry
+				c.log.Debugw("passing log line output", "line", string(l))
 			}
 		}
 	}()

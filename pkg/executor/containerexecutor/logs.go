@@ -5,11 +5,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sync"
 
-	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/utils"
@@ -34,7 +33,7 @@ func (c *ContainerExecutor) TailJobLogs(ctx context.Context, id, namespace strin
 
 			case corev1.PodRunning:
 				l.Debug("tailing pod logs: immediately")
-				return tailPodLogs(c.log, c.clientSet, namespace, pod, logs)
+				return c.TailPodLogs(namespace, pod, logs)
 
 			case corev1.PodFailed:
 				err := fmt.Errorf("can't get pod logs, pod failed: %s/%s", pod.Namespace, pod.Name)
@@ -49,16 +48,14 @@ func (c *ContainerExecutor) TailJobLogs(ctx context.Context, id, namespace strin
 				}
 
 				l.Debug("tailing pod logs")
-				return tailPodLogs(c.log, c.clientSet, namespace, pod, logs)
+				return c.TailPodLogs(namespace, pod, logs)
 			}
 		}
 	}
 	return
 }
 
-func tailPodLogs(log *zap.SugaredLogger, c kubernetes.Interface, namespace string, pod corev1.Pod, logs chan []byte) (err error) {
-	count := int64(1)
-
+func (c *ContainerExecutor) TailPodLogs(namespace string, pod corev1.Pod, logs chan []byte) (err error) {
 	var containers []string
 	for _, container := range pod.Spec.InitContainers {
 		containers = append(containers, container.Name)
@@ -68,24 +65,29 @@ func tailPodLogs(log *zap.SugaredLogger, c kubernetes.Interface, namespace strin
 		containers = append(containers, container.Name)
 	}
 
-	go func() {
-		defer close(logs)
+	l := c.log.With("method", "tailPodLogs", "containers", len(containers))
 
-		for _, container := range containers {
+	wg := sync.WaitGroup{}
+
+	wg.Add(len(containers))
+	ctx := context.Background()
+
+	for _, container := range containers {
+		go func(container string) {
+			defer wg.Done()
 			podLogOptions := corev1.PodLogOptions{
 				Follow:    true,
-				TailLines: &count,
 				Container: container,
 			}
 
-			podLogRequest := c.CoreV1().
+			podLogRequest := c.clientSet.CoreV1().
 				Pods(namespace).
 				GetLogs(pod.Name, &podLogOptions)
 
-			stream, err := podLogRequest.Stream(context.Background())
+			stream, err := podLogRequest.Stream(ctx)
 			if err != nil {
-				log.Errorw("stream error", "error", err)
-				continue
+				l.Errorw("stream error", "error", err)
+				return
 			}
 
 			reader := bufio.NewReader(stream)
@@ -95,17 +97,23 @@ func tailPodLogs(log *zap.SugaredLogger, c kubernetes.Interface, namespace strin
 				if err != nil {
 					if err == io.EOF {
 						err = nil
+					} else {
+						l.Errorw("scanner error", "error", err)
 					}
 					break
 				}
-				log.Debugw("TailPodLogs stream scan", "out", b, "pod", pod.Name)
 				logs <- b
+				l.Debugw("log chunk pushed", "out", string(b), "pod", pod.Name)
 			}
+		}(container)
+	}
 
-			if err != nil {
-				log.Errorw("scanner error", "error", err)
-			}
-		}
+	go func() {
+		defer close(logs)
+		l.Debugw("log stream - waiting for all containers to finish", "containers", containers)
+		wg.Wait()
+		l.Debugw("log stream - finished")
 	}()
+
 	return
 }

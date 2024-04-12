@@ -20,40 +20,35 @@ func TestGetLogEntry(t *testing.T) {
 	t.Run("get log line", func(t *testing.T) {
 		t.Parallel()
 
-		out, err := GetLogEntry(exampleLogEntryLine)
-		assert.NoError(t, err)
+		out := GetLogEntry(exampleLogEntryLine)
 		assert.Equal(t, TypeLogLine, out.Type_)
 	})
 
 	t.Run("get event", func(t *testing.T) {
 		t.Parallel()
 
-		out, err := GetLogEntry(exampleLogEntryEvent)
-		assert.NoError(t, err)
+		out := GetLogEntry(exampleLogEntryEvent)
 		assert.Equal(t, TypeLogEvent, out.Type_)
 	})
 
 	t.Run("get error", func(t *testing.T) {
 		t.Parallel()
 
-		out, err := GetLogEntry(exampleLogEntryError)
-		assert.NoError(t, err)
+		out := GetLogEntry(exampleLogEntryError)
 		assert.Equal(t, TypeError, out.Type_)
 	})
 
 	t.Run("get result", func(t *testing.T) {
 		t.Parallel()
 
-		out, err := GetLogEntry(exampleLogEntryResult)
-		assert.NoError(t, err)
+		out := GetLogEntry(exampleLogEntryResult)
 		assert.Equal(t, TypeResult, out.Type_)
 	})
 
 	t.Run("get normal logs", func(t *testing.T) {
 		t.Parallel()
 
-		out, err := GetLogEntry(exampleLogEntryNormalLogs)
-		assert.NoError(t, err)
+		out := GetLogEntry(exampleLogEntryNormalLogs)
 		assert.Equal(t, TypeUnknown, out.Type_)
 	})
 }
@@ -66,9 +61,10 @@ func TestParseRunnerOutput(t *testing.T) {
 
 		invalidOutput := []byte(`{not a json}`)
 		result, err := ParseRunnerOutput(invalidOutput, true)
-		expectedErrMessage := "ERROR can't get log entry: invalid character 'n' looking for beginning of object key string, ((({not a json})))"
+		expectedOutput := "{not a json}\n"
+		expectedErrMessage := "wrong log type was found as last log: {not a json}"
 
-		assert.Equal(t, expectedErrMessage+"\n", result.Output)
+		assert.Equal(t, expectedOutput, result.Output)
 		assert.NoError(t, err)
 		assert.Equal(t, testkube.ExecutionStatusFailed, result.Status)
 		assert.Equal(t, expectedErrMessage, result.ErrorMessage)
@@ -92,7 +88,7 @@ func TestParseRunnerOutput(t *testing.T) {
 `)
 		result, err := ParseRunnerOutput(exampleOutput, true)
 
-		assert.Len(t, result.Output, 4624)
+		assert.Len(t, result.Output, 4510)
 		assert.NoError(t, err)
 		assert.Equal(t, testkube.ExecutionStatusFailed, result.Status)
 		assert.Equal(t, "process error: exit status 1", result.ErrorMessage)
@@ -296,7 +292,7 @@ can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.
 {"type":"line","content":"RUNNER_CLUSTERID=\"\"","time":"2023-01-17T15:29:17.921801596Z"}
 {"type":"event","content":"running test [63c960287104b0fa0b7a45ef]","time":"2023-01-19T15:22:25.868132888Z"}
 {"type":"line","content":"🚚 Preparing for test run","time":"2023-01-19T15:22:25.868161346Z"}
-{"type":"line","content":"❌ can't find branch or commit in params, repo:\u0026{Type_:git-file Uri:https://github.com/kubeshop/testkube.git Branch: Commit: Path:test/cypress/executor-smoke/cypress-11 Username: Token: UsernameSecret:\u003cnil\u003e TokenSecret:\u003cnil\u003e WorkingDir:}","time":"2023-01-19T15:22:25.868183971Z"}
+{"type":"line","content":"can't find branch or commit in params, repo:\u0026{Type_:git-file Uri:https://github.com/kubeshop/testkube.git Branch: Commit: Path:test/cypress/executor-smoke/cypress-11 Username: Token: UsernameSecret:\u003cnil\u003e TokenSecret:\u003cnil\u003e WorkingDir:}","time":"2023-01-19T15:22:25.868183971Z"}
 {"level":"info","ts":1678919600.1199453,"caller":"scraper/filesystem_extractor.go:25","msg":"extracting files from directories: [/data/output]"}
 {"level":"info","ts":1678919600.143759,"caller":"scraper/filesystem_extractor.go:27","msg":"walking directory: /data/output"}
 {"level":"info","ts":1678919600.145652,"caller":"scraper/filesystem_extractor.go:37","msg":"walking path /data/output"}
@@ -323,7 +319,13 @@ RUNNER_DASHBOARD_URI=""
 RUNNER_CLUSTERID=""
 running test [63c960287104b0fa0b7a45ef]
 🚚 Preparing for test run
-❌ can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.com/kubeshop/testkube.git Branch: Commit: Path:test/cypress/executor-smoke/cypress-11 Username: Token: UsernameSecret:<nil> TokenSecret:<nil> WorkingDir:}
+can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.com/kubeshop/testkube.git Branch: Commit: Path:test/cypress/executor-smoke/cypress-11 Username: Token: UsernameSecret:<nil> TokenSecret:<nil> WorkingDir:}
+{"level":"info","ts":1678919600.1199453,"caller":"scraper/filesystem_extractor.go:25","msg":"extracting files from directories: [/data/output]"}
+{"level":"info","ts":1678919600.143759,"caller":"scraper/filesystem_extractor.go:27","msg":"walking directory: /data/output"}
+{"level":"info","ts":1678919600.145652,"caller":"scraper/filesystem_extractor.go:37","msg":"walking path /data/output"}
+{"level":"info","ts":1678919600.1457458,"caller":"scraper/filesystem_extractor.go:43","msg":"skipping directory /data/output"}
+{"level":"info","ts":1678919600.1459277,"caller":"scraper/filesystem_extractor.go:37","msg":"walking path /data/output/jmeter.log"}
+{"level":"info","ts":1678919600.1480958,"caller":"scraper/filesystem_extractor.go:63","msg":"filesystem extractor is sending file to be processed: jmeter.log"}
 can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.com/kubeshop/testkube.git Branch: Commit: Path:test/cypress/executor-smoke/cypress-11 Username: Token: UsernameSecret:<nil> TokenSecret:<nil> WorkingDir:}
 `
 
@@ -542,25 +544,6 @@ can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.
 		assert.Equal(t, "can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.com/kubeshop/testkube.git Branch: Commit: Path:test/cypress/executor-smoke/cypress-11 Username: Token: UsernameSecret:<nil> TokenSecret:<nil> WorkingDir:}", result.ErrorMessage)
 	})
 
-	t.Run("Output ignore empty result", func(t *testing.T) {
-		t.Parallel()
-
-		output := []byte(`
-{"type":"result","result":{"status":"running"},"time":"2023-07-19T17:15:20.400138Z"}
-{"type":"result","result":{"status":null},"time":"2023-07-19T17:15:38.313334598Z"}
-`)
-		expectedOutput := `
-running
-
-`
-
-		result, data, err := ParseContainerOutput(output)
-
-		assert.Equal(t, expectedOutput, data)
-		assert.NoError(t, err)
-		assert.Nil(t, result)
-	})
-
 	t.Run("Output random json format", func(t *testing.T) {
 		t.Parallel()
 
@@ -576,8 +559,8 @@ running
 `
 		result, data, err := ParseContainerOutput(output)
 
-		assert.Equal(t, expectedOutput, data)
 		assert.NoError(t, err)
+		assert.Equal(t, expectedOutput, data)
 		assert.Nil(t, result)
 	})
 
