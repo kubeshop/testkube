@@ -245,6 +245,7 @@ func (c *ContainerExecutor) Logs(ctx context.Context, id, namespace string) (out
 			for l := range logs {
 				entry := output.NewOutputLine(l)
 				out <- entry
+				c.log.Debugw("passing log line output", "line", string(l))
 			}
 		}
 	}()

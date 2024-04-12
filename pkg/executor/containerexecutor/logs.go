@@ -120,9 +120,11 @@ func tailPodLogs(l *zap.SugaredLogger, c kubernetes.Interface, namespace string,
 		}(container)
 	}
 
-	l.Debugw("waiting for all containers to finish", "containers", containers)
-	wg.Wait()
-	l.Infow("log stream finished")
+	go func() {
+		l.Debugw("waiting for all containers to finish", "containers", containers)
+		wg.Wait()
+		l.Infow("log stream finished")
+	}()
 
 	return
 }

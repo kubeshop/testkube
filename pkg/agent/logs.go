@@ -93,6 +93,8 @@ func (ag *Agent) runLogStreamWorker(ctx context.Context, numWorkers int) error {
 func (ag *Agent) executeLogStreamRequest(ctx context.Context, req *cloud.LogsStreamRequest) error {
 	ag.logger.Info("start sending logs stream")
 	logCh, err := ag.logStreamFunc(ctx, req.ExecutionId)
+	ag.logger.Info("got channel")
+
 	for i := 0; i < logStreamRetryCount; i++ {
 		if err != nil {
 			// We have a race condition here

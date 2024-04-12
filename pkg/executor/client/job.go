@@ -746,9 +746,11 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 		}(container)
 	}
 
-	l.Debugw("waiting for all containers to finish", "containers", containers)
-	wg.Wait()
-	l.Infow("log stream finished")
+	go func() {
+		l.Debugw("waiting for all containers to finish", "containers", containers)
+		wg.Wait()
+		l.Infow("log stream finished")
+	}()
 
 	return
 }

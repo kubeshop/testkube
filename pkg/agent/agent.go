@@ -172,7 +172,7 @@ func NewAgent(logger *zap.SugaredLogger,
 ) (*Agent, error) {
 	return &Agent{
 		handler:                                 handler,
-		logger:                                  logger.With("service", "Agent", "name", clusterName),
+		logger:                                  logger.With("service", "Agent", "environmentId", proContext.EnvID),
 		apiKey:                                  proContext.APIKey,
 		client:                                  client,
 		events:                                  make(chan testkube.Event),
