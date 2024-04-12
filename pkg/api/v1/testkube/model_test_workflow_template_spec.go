@@ -18,4 +18,5 @@ type TestWorkflowTemplateSpec struct {
 	Setup     []TestWorkflowIndependentStep          `json:"setup,omitempty"`
 	Steps     []TestWorkflowIndependentStep          `json:"steps,omitempty"`
 	After     []TestWorkflowIndependentStep          `json:"after,omitempty"`
+	Events    []TestWorkflowEvent                    `json:"events,omitempty"`
 }
