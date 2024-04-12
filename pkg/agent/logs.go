@@ -104,7 +104,9 @@ func (ag *Agent) executeLogStreamRequest(ctx context.Context, req *cloud.LogsStr
 			time.Sleep(100 * time.Millisecond)
 			logCh, err = ag.logStreamFunc(ctx, req.ExecutionId)
 			if err != nil {
-				ag.logger.Warn("retrying log stream", "retry", i, "error", err.Error())
+				ag.logger.Warnw("retrying log stream error", "retry", i, "error", err.Error())
+			} else {
+				ag.logger.Debugw("retrying log stream", "retry", i, "error", err.Error())
 			}
 		}
 	}
