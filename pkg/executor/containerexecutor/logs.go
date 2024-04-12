@@ -8,10 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/utils"
@@ -40,7 +38,7 @@ func (c *ContainerExecutor) TailJobLogs(ctx context.Context, id, namespace strin
 
 			case corev1.PodRunning:
 				l.Debug("tailing pod logs: immediately")
-				return tailPodLogs(c.log, c.clientSet, namespace, pod, logs)
+				return c.TailPodLogs(namespace, pod, logs)
 
 			case corev1.PodFailed:
 				err := fmt.Errorf("can't get pod logs, pod failed: %s/%s", pod.Namespace, pod.Name)
@@ -55,14 +53,14 @@ func (c *ContainerExecutor) TailJobLogs(ctx context.Context, id, namespace strin
 				}
 
 				l.Debug("tailing pod logs")
-				return tailPodLogs(c.log, c.clientSet, namespace, pod, logs)
+				return c.TailPodLogs(namespace, pod, logs)
 			}
 		}
 	}
 	return
 }
 
-func tailPodLogs(l *zap.SugaredLogger, c kubernetes.Interface, namespace string, pod corev1.Pod, logs chan []byte) (err error) {
+func (c *ContainerExecutor) TailPodLogs(namespace string, pod corev1.Pod, logs chan []byte) (err error) {
 	var containers []string
 	for _, container := range pod.Spec.InitContainers {
 		containers = append(containers, container.Name)
@@ -72,10 +70,9 @@ func tailPodLogs(l *zap.SugaredLogger, c kubernetes.Interface, namespace string,
 		containers = append(containers, container.Name)
 	}
 
-	l = l.With("method", "tailPodLogs", "containers", len(containers))
+	l := c.log.With("method", "tailPodLogs", "containers", len(containers))
 
 	wg := sync.WaitGroup{}
-	defer close(logs)
 
 	wg.Add(len(containers))
 	ctx := context.Background()
@@ -91,7 +88,7 @@ func tailPodLogs(l *zap.SugaredLogger, c kubernetes.Interface, namespace string,
 				Container: container,
 			}
 
-			podLogRequest := c.CoreV1().
+			podLogRequest := c.clientSet.CoreV1().
 				Pods(namespace).
 				GetLogs(pod.Name, &podLogOptions)
 
@@ -120,9 +117,10 @@ func tailPodLogs(l *zap.SugaredLogger, c kubernetes.Interface, namespace string,
 	}
 
 	go func() {
-		l.Debugw("waiting for all containers to finish", "containers", containers)
+		defer close(logs)
+		l.Debugw("log stream - waiting for all containers to finish", "containers", containers)
 		wg.Wait()
-		l.Infow("log stream finished")
+		l.Debugw("log stream - finished")
 	}()
 
 	return

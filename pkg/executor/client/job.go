@@ -708,8 +708,6 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 
 	var count int64 = 1
 
-	defer close(logs)
-
 	for _, container := range containers {
 		go func(container string) {
 			defer wg.Done()
@@ -747,6 +745,7 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 	}
 
 	go func() {
+		defer close(logs)
 		l.Debugw("waiting for all containers to finish", "containers", containers)
 		wg.Wait()
 		l.Infow("log stream finished")
