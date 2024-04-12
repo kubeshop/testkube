@@ -492,8 +492,10 @@ workflow-playwright-smoke() {
   workflow_crd_file="test/playwright/executor-tests/crd-workflow/smoke.yaml"
   workflow_suite_name="playwright-workflow-suite"
   workflow_suite_file="test/suites/test-workflows/playwright-workflow.yaml"
+
+  custom_workflow_template_crd_file="test/test-workflow-templates/playwright.yaml"
   
-  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file" "$custom_workflow_template_crd_file"
 }
 
 workflow-postman-smoke() {

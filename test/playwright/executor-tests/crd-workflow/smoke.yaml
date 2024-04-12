@@ -170,11 +170,11 @@ spec:
       paths:
       - /data/repo/**/playwright-report/**/*
 ---
----
+
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: playwright-workflow-smoke-official-template
+  name: playwright-workflow-smoke-preofficial-template
   labels:
     core-tests: workflows
 spec:
@@ -194,7 +194,6 @@ spec:
         - test/playwright/executor-tests/playwright-project
     workingDir: /data/repo/test/playwright/executor-tests/playwright-project
     template:
-      name: official/playwright
+      name: pre-official/playwright
       config:
-        # params: --workers 4
-        tag: v1.32.3-jammy
+        version: 1.32.3
