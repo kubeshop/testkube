@@ -63,8 +63,6 @@ func (c *ContainerExecutor) TailJobLogs(ctx context.Context, id, namespace strin
 }
 
 func tailPodLogs(log *zap.SugaredLogger, c kubernetes.Interface, namespace string, pod corev1.Pod, logs chan []byte) (err error) {
-	count := int64(1)
-
 	var containers []string
 	for _, container := range pod.Spec.InitContainers {
 		containers = append(containers, container.Name)
@@ -86,7 +84,6 @@ func tailPodLogs(log *zap.SugaredLogger, c kubernetes.Interface, namespace strin
 			defer wg.Done()
 			podLogOptions := corev1.PodLogOptions{
 				Follow:    true,
-				TailLines: &count,
 				Container: container,
 			}
 
@@ -117,6 +114,8 @@ func tailPodLogs(log *zap.SugaredLogger, c kubernetes.Interface, namespace strin
 			}
 		}(container)
 	}
+
+	wg.Wait()
 
 	return
 }
