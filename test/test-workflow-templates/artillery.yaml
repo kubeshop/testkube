@@ -9,6 +9,17 @@ metadata:
     testkube.io/categories: Load & Performance
     testkube.io/description: Run Artillery tests
     testkube.io/icon: artillery
+    testkube.io/example: |
+      config:
+        target: "https://testkube.kubeshop.io/"
+        phases:
+        - duration: 1
+            arrivalRate: 1
+      scenarios:
+      - flow:
+          - get:
+              url: "/"
+          - think: 0.1
 spec:
   config:
     version:

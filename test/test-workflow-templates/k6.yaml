@@ -9,6 +9,13 @@ metadata:
     testkube.io/categories: Load & Performance
     testkube.io/description: Run k6 tests
     testkube.io/icon: k6
+    testkube.io/example: |
+      import http from 'k6/http';
+      import { sleep } from 'k6';
+      export default function () {
+          http.get('https://test.k6.io');
+          sleep(1);
+      };
 spec:
   config:
     version:
