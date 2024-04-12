@@ -123,11 +123,11 @@ func (ag *Agent) executeLogStreamRequest(ctx context.Context, req *cloud.LogsStr
 	for {
 		select {
 		case logOutput, ok := <-logCh:
-			ag.logger.Debugw("start sending log output", "content", logOutput.Content)
 			if !ok {
 				ag.logger.Debugw("channel closed")
 				return nil
 			}
+			ag.logger.Debugw("start sending log output", "content", logOutput.Content)
 
 			msg := &cloud.LogsStreamResponse{
 				StreamId:   req.StreamId,
