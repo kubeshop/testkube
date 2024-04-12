@@ -72,13 +72,10 @@ func (c *ContainerExecutor) TailPodLogs(namespace string, pod corev1.Pod, logs c
 	wg.Add(len(containers))
 	ctx := context.Background()
 
-	// var count int64 = 1
-
 	for _, container := range containers {
 		go func(container string) {
 			defer wg.Done()
 			podLogOptions := corev1.PodLogOptions{
-				// TailLines: &count,
 				Follow:    true,
 				Container: container,
 			}

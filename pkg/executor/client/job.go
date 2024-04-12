@@ -706,14 +706,11 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 	wg := sync.WaitGroup{}
 	wg.Add(len(containers))
 
-	var count int64 = 1
-
 	for _, container := range containers {
 		go func(container string) {
 			defer wg.Done()
 
 			podLogOptions := corev1.PodLogOptions{
-				TailLines: &count,
 				Follow:    true,
 				Container: container,
 			}
