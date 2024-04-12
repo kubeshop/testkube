@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
@@ -72,6 +73,8 @@ const (
 	pollJobStatus = 1 * time.Second
 	// timeoutIndicator is string that is added to job logs when timeout occurs
 	timeoutIndicator = "DeadlineExceeded"
+
+	logsStreamBuffer = 1000
 )
 
 // NewJobExecutor creates new job executor
@@ -203,8 +206,8 @@ type JobOptions struct {
 
 // Logs returns job logs stream channel using kubernetes api
 func (c *JobExecutor) Logs(ctx context.Context, id, namespace string) (out chan output.Output, err error) {
-	out = make(chan output.Output)
-	logs := make(chan []byte)
+	out = make(chan output.Output, logsStreamBuffer)
+	logs := make(chan []byte, logsStreamBuffer)
 
 	go func() {
 		defer func() {
@@ -218,11 +221,7 @@ func (c *JobExecutor) Logs(ctx context.Context, id, namespace string) (out chan 
 		}
 
 		for l := range logs {
-			entry, err := output.GetLogEntry(l)
-			if err != nil {
-				c.Log.Errorw("error parsing log entry", "error", err)
-			}
-			out <- entry
+			out <- output.GetLogEntry(l)
 		}
 	}()
 
@@ -688,8 +687,6 @@ func (c *JobExecutor) TailJobLogs(ctx context.Context, id, namespace string, log
 }
 
 func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan []byte) (err error) {
-	count := int64(1)
-
 	var containers []string
 	for _, container := range pod.Spec.InitContainers {
 		containers = append(containers, container.Name)
@@ -699,13 +696,17 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 		containers = append(containers, container.Name)
 	}
 
-	go func() {
-		defer close(logs)
+	l := c.Log.With("method", "TailPodLogs", "pod", pod.Name, "namespace", pod.Namespace, "containersCount", len(containers))
 
-		for _, container := range containers {
+	wg := sync.WaitGroup{}
+	wg.Add(len(containers))
+
+	for _, container := range containers {
+		go func(container string) {
+			defer wg.Done()
+
 			podLogOptions := corev1.PodLogOptions{
 				Follow:    true,
-				TailLines: &count,
 				Container: container,
 			}
 
@@ -715,29 +716,33 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 
 			stream, err := podLogRequest.Stream(ctx)
 			if err != nil {
-				c.Log.Errorw("stream error", "error", err)
-				continue
+				l.Errorw("stream error", "error", err)
+				return
 			}
 
 			reader := bufio.NewReader(stream)
 
 			for {
 				b, err := utils.ReadLongLine(reader)
-				if err != nil {
-					if err == io.EOF {
-						err = nil
-					}
-					break
+				if err == io.EOF {
+					return
+				} else if err != nil {
+					l.Errorw("scanner error", "error", err)
+					return
 				}
-				c.Log.Debug("TailPodLogs stream scan", "out", b, "pod", pod.Name)
+				l.Debugw("log chunk pushed", "out", string(b), "pod", pod.Name)
 				logs <- b
 			}
+		}(container)
+	}
 
-			if err != nil {
-				c.Log.Errorw("scanner error", "error", err)
-			}
-		}
+	go func() {
+		defer close(logs)
+		l.Debugw("waiting for all containers to finish", "containers", containers)
+		wg.Wait()
+		l.Infow("log stream finished")
 	}()
+
 	return
 }
 
@@ -757,12 +762,7 @@ func (c *JobExecutor) GetLastLogLineError(ctx context.Context, pod corev1.Pod) e
 	}
 
 	l.Debugw("log", "got last log bytes", string(errorLog)) // in case distorted log bytes
-	entry, err := output.GetLogEntry(errorLog)
-	if err != nil {
-		l.Errorw("GetLogEntry error", "error", err, "input", string(errorLog), "pod", pod)
-		return errors.Errorf("GetLogEntry error: %v", err)
-	}
-
+	entry := output.GetLogEntry(errorLog)
 	l.Infow("got last log entry", "log", entry.String())
 	return errors.Errorf("error from last log entry: %s", entry.String())
 }
