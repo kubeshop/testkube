@@ -316,6 +316,15 @@ var (
 			Labels:             map[string]string{"some-key-4": "some-value"},
 			Annotations:        map[string]string{"some-key=5": "some-value-2"},
 		},
+		Events: []testworkflowsv1.Event{
+			{
+				Cronjob: &testworkflowsv1.CronJobConfig{
+					Cron:        "* * * * *",
+					Labels:      map[string]string{"some-key": "some-value"},
+					Annotations: map[string]string{"some-key=2": "some-value-2"},
+				},
+			},
+		},
 	}
 )
 

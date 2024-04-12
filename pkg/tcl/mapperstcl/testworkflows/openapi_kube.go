@@ -313,6 +313,19 @@ func MapJobConfigAPIToKube(v testkube.TestWorkflowJobConfig) testworkflowsv1.Job
 	}
 }
 
+func MapEventAPIToKube(v testkube.TestWorkflowEvent) testworkflowsv1.Event {
+	return testworkflowsv1.Event{
+		Cronjob: common.MapPtr(v.Cronjob, MapCronJobConfigAPIToKube),
+	}
+}
+
+func MapCronJobConfigAPIToKube(v testkube.TestWorkflowCronJobConfig) testworkflowsv1.CronJobConfig {
+	return testworkflowsv1.CronJobConfig{
+		Cron:        v.Cron,
+		Labels:      v.Labels,
+		Annotations: v.Annotations,
+	}
+}
 func MapHostPathVolumeSourceAPIToKube(v testkube.HostPathVolumeSource) corev1.HostPathVolumeSource {
 	return corev1.HostPathVolumeSource{
 		Path: v.Path,
@@ -591,6 +604,7 @@ func MapSpecAPIToKube(v testkube.TestWorkflowSpec) testworkflowsv1.TestWorkflowS
 			Container: common.MapPtr(v.Container, MapContainerConfigAPIToKube),
 			Job:       common.MapPtr(v.Job, MapJobConfigAPIToKube),
 			Pod:       common.MapPtr(v.Pod, MapPodConfigAPIToKube),
+			Events:    common.MapSlice(v.Events, MapEventAPIToKube),
 		},
 		Use:   common.MapSlice(v.Use, MapTemplateRefAPIToKube),
 		Setup: common.MapSlice(v.Setup, MapStepAPIToKube),
@@ -607,6 +621,7 @@ func MapTemplateSpecAPIToKube(v testkube.TestWorkflowTemplateSpec) testworkflows
 			Container: common.MapPtr(v.Container, MapContainerConfigAPIToKube),
 			Job:       common.MapPtr(v.Job, MapJobConfigAPIToKube),
 			Pod:       common.MapPtr(v.Pod, MapPodConfigAPIToKube),
+			Events:    common.MapSlice(v.Events, MapEventAPIToKube),
 		},
 		Setup: common.MapSlice(v.Setup, MapIndependentStepAPIToKube),
 		Steps: common.MapSlice(v.Steps, MapIndependentStepAPIToKube),
