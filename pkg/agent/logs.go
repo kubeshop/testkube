@@ -123,9 +123,9 @@ func (ag *Agent) executeLogStreamRequest(ctx context.Context, req *cloud.LogsStr
 	for {
 		select {
 		case logOutput, ok := <-logCh:
-			ag.logger.Debugw("sending log output", "content", logOutput.String())
+			ag.logger.Debugw("start sending log output", "content", logOutput.Content)
 			if !ok {
-				ag.logger.Errorw("error getting logCh", "error", err.Error())
+				ag.logger.Debugw("channel closed")
 				return nil
 			}
 
@@ -141,7 +141,7 @@ func (ag *Agent) executeLogStreamRequest(ctx context.Context, req *cloud.LogsStr
 			case <-ctx.Done():
 				return ctx.Err()
 			}
-			ag.logger.Debugw("sending log output", "content", logOutput.String())
+			ag.logger.Debugw("log output sent", "content", logOutput.Content)
 
 		case <-ctx.Done():
 			return ctx.Err()
