@@ -692,8 +692,6 @@ func (c *JobExecutor) TailJobLogs(ctx context.Context, id, namespace string, log
 }
 
 func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan []byte) (err error) {
-	count := int64(1)
-
 	var containers []string
 	for _, container := range pod.Spec.InitContainers {
 		containers = append(containers, container.Name)
@@ -714,7 +712,6 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 
 			podLogOptions := corev1.PodLogOptions{
 				Follow:    true,
-				TailLines: &count,
 				Container: container,
 			}
 
