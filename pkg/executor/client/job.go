@@ -729,18 +729,14 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 
 			for {
 				b, err := utils.ReadLongLine(reader)
-				if err != nil {
-					if err == io.EOF {
-						err = nil
-					}
-					break
+				if err == io.EOF {
+					return
+				} else if err != nil {
+					c.Log.Errorw("scanner error", "error", err)
+					return
 				}
 				c.Log.Debug("TailPodLogs stream scan", "out", b, "pod", pod.Name)
 				logs <- b
-			}
-
-			if err != nil {
-				c.Log.Errorw("scanner error", "error", err)
 			}
 		}(container)
 	}
