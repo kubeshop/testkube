@@ -28,3 +28,27 @@ type MasterURIs struct {
 	Ui         string `json:"ui,omitempty"`
 	Auth       string `json:"auth,omitempty"`
 }
+
+// WithApi sets whole api URI
+func (m *MasterURIs) WithApiURI(uri string) *MasterURIs {
+	m.Api = uri
+	return m
+}
+
+// WithAgent sets whole agent URI
+func (m *MasterURIs) WithAgentURI(uri string) *MasterURIs {
+	m.Agent = uri
+	return m
+}
+
+// WithLogs sets whole logs URI
+func (m *MasterURIs) WithLogsURI(uri string) *MasterURIs {
+	m.Logs = uri
+	return m
+}
+
+// WithUi sets whole ui URI
+func (m *MasterURIs) WithUiURI(uri string) *MasterURIs {
+	m.Ui = uri
+	return m
+}
