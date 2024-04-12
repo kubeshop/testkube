@@ -40,7 +40,7 @@ func (c *ContainerExecutor) TailJobLogs(ctx context.Context, id, namespace strin
 
 			case corev1.PodRunning:
 				l.Debug("tailing pod logs: immediately")
-				return tailPodLogs(l, c.clientSet, namespace, pod, logs)
+				return tailPodLogs(c.log, c.clientSet, namespace, pod, logs)
 
 			case corev1.PodFailed:
 				err := fmt.Errorf("can't get pod logs, pod failed: %s/%s", pod.Namespace, pod.Name)
@@ -55,7 +55,7 @@ func (c *ContainerExecutor) TailJobLogs(ctx context.Context, id, namespace strin
 				}
 
 				l.Debug("tailing pod logs")
-				return tailPodLogs(l, c.clientSet, namespace, pod, logs)
+				return tailPodLogs(c.log, c.clientSet, namespace, pod, logs)
 			}
 		}
 	}
@@ -81,10 +81,13 @@ func tailPodLogs(l *zap.SugaredLogger, c kubernetes.Interface, namespace string,
 	ctx, cancel := context.WithTimeout(context.Background(), logsStereamTimeout)
 	defer cancel()
 
+	var count int64 = 1
+
 	for _, container := range containers {
 		go func(container string) {
 			defer wg.Done()
 			podLogOptions := corev1.PodLogOptions{
+				TailLines: &count,
 				Follow:    true,
 				Container: container,
 			}
@@ -111,8 +114,8 @@ func tailPodLogs(l *zap.SugaredLogger, c kubernetes.Interface, namespace string,
 					}
 					break
 				}
-				l.Debugw("stream scan", "out", b, "pod", pod.Name)
 				logs <- b
+				l.Debugw("log chunk pushed", "out", string(b), "pod", pod.Name)
 			}
 		}(container)
 	}

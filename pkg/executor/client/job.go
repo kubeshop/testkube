@@ -706,6 +706,8 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 	wg := sync.WaitGroup{}
 	wg.Add(len(containers))
 
+	var count int64 = 1
+
 	defer close(logs)
 
 	for _, container := range containers {
@@ -713,6 +715,7 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 			defer wg.Done()
 
 			podLogOptions := corev1.PodLogOptions{
+				TailLines: &count,
 				Follow:    true,
 				Container: container,
 			}
@@ -737,7 +740,7 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 					l.Errorw("scanner error", "error", err)
 					return
 				}
-				l.Debugw("stream scan", "out", string(b), "pod", pod.Name)
+				l.Debugw("log chunk pushed", "out", string(b), "pod", pod.Name)
 				logs <- b
 			}
 		}(container)
