@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sync"
+	"time"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -13,6 +15,10 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/utils"
+)
+
+const (
+	logsStereamTimeout = 30 * time.Minute
 )
 
 // TailJobLogs - locates logs for job pod(s)
@@ -68,10 +74,16 @@ func tailPodLogs(log *zap.SugaredLogger, c kubernetes.Interface, namespace strin
 		containers = append(containers, container.Name)
 	}
 
-	go func() {
-		defer close(logs)
+	wg := sync.WaitGroup{}
+	defer close(logs)
 
-		for _, container := range containers {
+	wg.Add(len(containers))
+	ctx, cancel := context.WithTimeout(context.Background(), logsStereamTimeout)
+	defer cancel()
+
+	for _, container := range containers {
+		go func(container string) {
+			defer wg.Done()
 			podLogOptions := corev1.PodLogOptions{
 				Follow:    true,
 				TailLines: &count,
@@ -82,10 +94,10 @@ func tailPodLogs(log *zap.SugaredLogger, c kubernetes.Interface, namespace strin
 				Pods(namespace).
 				GetLogs(pod.Name, &podLogOptions)
 
-			stream, err := podLogRequest.Stream(context.Background())
+			stream, err := podLogRequest.Stream(ctx)
 			if err != nil {
 				log.Errorw("stream error", "error", err)
-				continue
+				return
 			}
 
 			reader := bufio.NewReader(stream)
@@ -95,17 +107,16 @@ func tailPodLogs(log *zap.SugaredLogger, c kubernetes.Interface, namespace strin
 				if err != nil {
 					if err == io.EOF {
 						err = nil
+					} else {
+						log.Errorw("scanner error", "error", err)
 					}
 					break
 				}
 				log.Debugw("TailPodLogs stream scan", "out", b, "pod", pod.Name)
 				logs <- b
 			}
+		}(container)
+	}
 
-			if err != nil {
-				log.Errorw("scanner error", "error", err)
-			}
-		}
-	}()
 	return
 }
