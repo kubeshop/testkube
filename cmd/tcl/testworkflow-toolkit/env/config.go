@@ -46,10 +46,11 @@ type envExecutionConfig struct {
 }
 
 type envSystemConfig struct {
-	Debug     string `envconfig:"DEBUG"`
-	Ref       string `envconfig:"TK_REF"`
-	Namespace string `envconfig:"TK_NS"`
-	Ip        string `envconfig:"TK_IP"`
+	Debug        string `envconfig:"DEBUG"`
+	Ref          string `envconfig:"TK_REF"`
+	Namespace    string `envconfig:"TK_NS"`
+	Ip           string `envconfig:"TK_IP"`
+	ToolkitImage string `envconfig:"TK_TOOLKIT_IMAGE"`
 }
 
 type envImagesConfig struct {

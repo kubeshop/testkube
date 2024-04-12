@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
+	"github.com/kballard/go-shellquote"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	errors2 "k8s.io/apimachinery/pkg/api/errors"
@@ -27,6 +28,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
@@ -48,8 +50,9 @@ func PodName(ref, svcName string, index int64) string {
 	return fmt.Sprintf("%s-%s-%s-%d", env.ExecutionId(), ref, svcName, index)
 }
 
-func BuildResources(services []Service, ref string, machines ...expressionstcl.Machine) ([][]*corev1.Pod, testworkflowprocessor.ConfigMapFiles, error) {
-	// Initialize list of pods to schedule
+func BuildResources(services []Service, ref string, machines ...expressionstcl.Machine) ([][]*corev1.Pod, testworkflowprocessor.ConfigMapFiles, transfer.Server, error) {
+	// Initialize state
+	srv := transfer.NewServer(constants.DefaultTransferDirPath)
 	pods := make([][]*corev1.Pod, len(services))
 	storage := testworkflowprocessor.NewConfigMapFiles(fmt.Sprintf("%s-%s-vol", env.ExecutionId(), ref), map[string]string{
 		constants.ExecutionIdLabelName:         env.ExecutionId(),
@@ -62,17 +65,21 @@ func BuildResources(services []Service, ref string, machines ...expressionstcl.M
 		for i := int64(0); i < svc.Count*combinations; i++ {
 			pod, err := svc.Pod(ref, i, machines...)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			files, err := svc.FilesMap(i, machines...)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
+			}
+			transfer, err := svc.ComputedTransfer(i, machines...)
+			if err != nil {
+				return nil, nil, nil, err
 			}
 			for path, content := range files {
 				// Apply file
 				mount, volume, err := storage.AddTextFile(content)
 				if err != nil {
-					return nil, nil, errors.Wrapf(err, "%s: %s instance: file %s", svc.Name, humanize.Ordinal(int(i)), path)
+					return nil, nil, nil, errors.Wrapf(err, "%s: %s instance: file %s", svc.Name, humanize.Ordinal(int(i+1)), path)
 				}
 
 				// Append the volume mount
@@ -92,11 +99,54 @@ func BuildResources(services []Service, ref string, machines ...expressionstcl.M
 				}
 			}
 
+			transferArgs := make([]string, len(transfer))
+			transferVolumeMounts := make([]corev1.VolumeMount, len(transfer))
+			for transferIndex, v := range transfer {
+				volumeName := fmt.Sprintf("%s-t%d", ref, transferIndex)
+				id, err := srv.Include(v.From, v.Files)
+				if err != nil {
+					return nil, nil, nil, errors.Wrapf(err, "%s: %s instance: transfer.%d", svc.Name, humanize.Ordinal(int(i+1)), transferIndex)
+				}
+				transferArgs[transferIndex] = shellquote.Join(fmt.Sprintf("%s=%s", v.MountPath, id))
+				transferVolumeMounts[transferIndex] = corev1.VolumeMount{Name: volumeName, MountPath: v.MountPath}
+				pod.Spec.Volumes = append(pod.Spec.Volumes, corev1.Volume{
+					Name:         volumeName,
+					VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
+				})
+			}
+
+			if len(transfer) > 0 {
+				init := corev1.Container{
+					Name:            fmt.Sprintf("%s-tktw-init", ref),
+					Image:           env.Config().System.ToolkitImage,
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Command:         []string{"/toolkit", "transfer", "--addr", fmt.Sprintf("%s:9999", env.IP())},
+					Args:            transferArgs,
+					Env: []corev1.EnvVar{
+						{Name: "TK_NS", Value: env.Namespace()},
+						{Name: "TK_REF", Value: fmt.Sprintf("%s-%d", ref, i)},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						RunAsGroup: common.Ptr(constants.DefaultFsGroup),
+					},
+				}
+				applyContainerDefaults(&init, 0)
+				pod.Spec.InitContainers = append([]corev1.Container{init}, pod.Spec.InitContainers...)
+			}
+
+			for i := range pod.Spec.InitContainers {
+				pod.Spec.InitContainers[i].VolumeMounts = append(pod.Spec.InitContainers[i].VolumeMounts, transferVolumeMounts...)
+			}
+
+			for i := range pod.Spec.Containers {
+				pod.Spec.Containers[i].VolumeMounts = append(pod.Spec.Containers[i].VolumeMounts, transferVolumeMounts...)
+			}
+
 			pods[svcIndex][i] = pod
 		}
 	}
 
-	return pods, storage, nil
+	return pods, storage, srv, nil
 }
 
 func EachService(services []Service, pods [][]*corev1.Pod, fn func(svc Service, svcIndex int, pod *corev1.Pod, index int64, combinations int64)) {

@@ -21,18 +21,18 @@ import (
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 )
 
-func FromInstruction(name string, instruction testworkflowsv1.SpawnInstructionBase) (Service, error) {
+func FromInstruction(name string, instruction testworkflowsv1.SpawnInstructionBase, machines ...expressionstcl.Machine) (Service, error) {
 	// Validate the instruction
 	if len(instruction.Pod.Spec.Containers) == 0 {
 		return Service{}, errors.New("pod.spec.containers: no containers provided")
 	}
 
 	// Resolve the shards and matrix
-	shards, err := readParams(instruction.Shards, instruction.ShardExpressions)
+	shards, err := readParams(instruction.Shards, instruction.ShardExpressions, machines...)
 	if err != nil {
 		return Service{}, fmt.Errorf("shards: %w", err)
 	}
-	matrix, err := readParams(instruction.Matrix, instruction.MatrixExpressions)
+	matrix, err := readParams(instruction.Matrix, instruction.MatrixExpressions, machines...)
 	if err != nil {
 		return Service{}, fmt.Errorf("matrix: %w", err)
 	}
@@ -49,14 +49,14 @@ func FromInstruction(name string, instruction testworkflowsv1.SpawnInstructionBa
 	// Resolve the count
 	var count, maxCount *int64
 	if instruction.Count != nil {
-		countVal, err := readCount(*instruction.Count)
+		countVal, err := readCount(*instruction.Count, machines...)
 		if err != nil {
 			return Service{}, fmt.Errorf("count: %w", err)
 		}
 		count = &countVal
 	}
 	if instruction.MaxCount != nil {
-		countVal, err := readCount(*instruction.MaxCount)
+		countVal, err := readCount(*instruction.MaxCount, machines...)
 		if err != nil {
 			return Service{}, fmt.Errorf("maxCount: %w", err)
 		}
@@ -69,7 +69,7 @@ func FromInstruction(name string, instruction testworkflowsv1.SpawnInstructionBa
 		count = maxCount
 		maxCount = nil
 	}
-	if maxCount != nil && *maxCount < minShards {
+	if maxCount != nil && *maxCount > minShards {
 		count = &minShards
 		maxCount = nil
 	} else if maxCount != nil {
@@ -80,7 +80,7 @@ func FromInstruction(name string, instruction testworkflowsv1.SpawnInstructionBa
 	// Compute parallelism
 	var parallelism *int64
 	if instruction.Parallelism != nil {
-		parallelismVal, err := readCount(*instruction.Parallelism)
+		parallelismVal, err := readCount(*instruction.Parallelism, machines...)
 		if err != nil {
 			return Service{}, fmt.Errorf("parallelism: %w", err)
 		}
@@ -112,6 +112,7 @@ func FromInstruction(name string, instruction testworkflowsv1.SpawnInstructionBa
 		Error:       instruction.Error,
 		PodTemplate: pod,
 		Files:       instruction.Files,
+		Transfer:    instruction.Transfer,
 	}
 
 	// Define the default success/error clauses
@@ -126,8 +127,8 @@ func FromInstruction(name string, instruction testworkflowsv1.SpawnInstructionBa
 	return svc, nil
 }
 
-func readCount(s intstr.IntOrString) (int64, error) {
-	countExpr, err := expressionstcl.Compile(s.String())
+func readCount(s intstr.IntOrString, machines ...expressionstcl.Machine) (int64, error) {
+	countExpr, err := expressionstcl.CompileAndResolve(s.String(), machines...)
 	if err != nil {
 		return 0, fmt.Errorf("%s: invalid: %s", s.String(), err)
 	}
@@ -144,7 +145,7 @@ func readCount(s intstr.IntOrString) (int64, error) {
 	return countVal, nil
 }
 
-func readParams(base map[string][]intstr.IntOrString, expressions map[string]string) (map[string][]interface{}, error) {
+func readParams(base map[string][]intstr.IntOrString, expressions map[string]string, machines ...expressionstcl.Machine) (map[string][]interface{}, error) {
 	result := make(map[string][]interface{})
 	for key, list := range base {
 		result[key] = make([]interface{}, len(list))
@@ -156,7 +157,7 @@ func readParams(base map[string][]intstr.IntOrString, expressions map[string]str
 		if _, ok := result[key]; !ok {
 			result[key] = make([]interface{}, 0)
 		}
-		expr, err := expressionstcl.Compile(exprStr)
+		expr, err := expressionstcl.CompileAndResolve(exprStr, machines...)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %s: %s\n", key, exprStr, err)
 		}

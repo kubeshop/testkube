@@ -110,7 +110,7 @@ func NewSpawnCmd() *cobra.Command {
 				}
 
 				// Build the service
-				svc, err := spawn.FromInstruction(k, instruction)
+				svc, err := spawn.FromInstruction(k, instruction, baseMachine)
 				svcCombinations := svc.Combinations()
 				svcTotal := svc.Total()
 				if err != nil {
@@ -178,9 +178,20 @@ func NewSpawnCmd() *cobra.Command {
 			artifacts := artifacts.NewInternalArtifactStorage()
 
 			// Initialize list of pods to schedule
-			schedulablePods, storage, err := spawn.BuildResources(services, podsRef, baseMachine)
+			fmt.Println("Computing and packaging resources...")
+			schedulablePods, storage, transferServer, err := spawn.BuildResources(services, podsRef, baseMachine)
 			if err != nil {
 				fail(err.Error())
+			}
+			fmt.Println("Resources ready.")
+
+			// Start transferring server when needed
+			if transferServer.Count() > 0 {
+				_, err = transferServer.Listen("tcp", ":9999")
+				if err != nil {
+					fail("failed to start transfer server")
+				}
+				fmt.Println("Initialized files transfer server.")
 			}
 
 			// Watch events for all Pod modifications

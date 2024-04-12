@@ -371,7 +371,8 @@ func ProcessDistribute(_ InternalProcessor, layer Intermediate, container Contai
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
 		SetCommand("/toolkit", "spawn", layer.NextRef()).
-		EnableToolkit(stage.Ref())
+		EnableToolkit(stage.Ref()).
+		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
 
 	instruction := step.Distribute.DeepCopy()
 	if instruction.Container != nil {
@@ -404,7 +405,8 @@ func ProcessServicesStart(_ InternalProcessor, layer Intermediate, container Con
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
 		SetCommand("/toolkit", "spawn", "{{env.TK_SRV_REF}}").
-		EnableToolkit(stage.Ref())
+		EnableToolkit(stage.Ref()).
+		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
 
 	args := []string{"--services"}
 	for k, s := range step.Services {

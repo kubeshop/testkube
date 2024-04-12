@@ -30,6 +30,7 @@ func init() {
 	RootCmd.AddCommand(NewArtifactsCmd())
 	RootCmd.AddCommand(NewSpawnCmd())
 	RootCmd.AddCommand(NewKillCmd())
+	RootCmd.AddCommand(NewTransferCmd())
 }
 
 var RootCmd = &cobra.Command{

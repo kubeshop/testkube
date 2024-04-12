@@ -10,6 +10,7 @@ package spawn
 
 import (
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -20,6 +21,7 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
@@ -48,6 +50,7 @@ type Service struct {
 	Ready       string
 	Error       string
 	Files       []testworkflowsv1.ContentFile
+	Transfer    []testworkflowsv1.ContentTransfer
 	PodTemplate corev1.PodTemplateSpec
 }
 
@@ -72,7 +75,7 @@ func (svc *Service) MatrixAt(index int64) map[string]interface{} {
 }
 
 func (svc *Service) ShardsAt(index int64) map[string][]interface{} {
-	return GetShardValues(svc.Matrix, svc.ShardIndexAt(index), svc.Count)
+	return GetShardValues(svc.Shards, svc.ShardIndexAt(index), svc.Count)
 }
 
 func (svc *Service) MachineAt(index int64) expressionstcl.Machine {
@@ -150,12 +153,20 @@ func (svc *Service) Pod(ref string, index int64, machines ...expressionstcl.Mach
 		Spec: spec.Spec,
 	}
 
+	// Apply security rules
+	if pod.Spec.SecurityContext == nil {
+		pod.Spec.SecurityContext = &corev1.PodSecurityContext{}
+	}
+	if pod.Spec.SecurityContext.FSGroup == nil {
+		pod.Spec.SecurityContext.FSGroup = common.Ptr(constants.DefaultFsGroup)
+	}
+
 	// Append defaults for the pod containers
 	for i := range pod.Spec.InitContainers {
 		applyContainerDefaults(&pod.Spec.InitContainers[i], i)
 	}
 	for i := range pod.Spec.Containers {
-		applyContainerDefaults(&pod.Spec.Containers[i], i)
+		applyContainerDefaults(&pod.Spec.Containers[i], len(pod.Spec.InitContainers)+i)
 	}
 
 	// Apply control labels
@@ -225,10 +236,39 @@ func (svc *Service) FilesMap(index int64, machines ...expressionstcl.Machine) (m
 	for fileIndex, file := range svc.Files {
 		files[file.Path], err = expressionstcl.EvalTemplate(file.Content, machines...)
 		if err != nil {
-			return nil, fmt.Errorf("resolving %s file (%s): %w", humanize.Ordinal(fileIndex), file.Path, err)
+			return nil, fmt.Errorf("resolving %s file (%s): %w", humanize.Ordinal(fileIndex+1), file.Path, err)
 		}
 	}
 	return files, nil
+}
+
+func (svc *Service) ComputedTransfer(index int64, machines ...expressionstcl.Machine) ([]testworkflowsv1.ContentTransfer, error) {
+	// Ignore when there are no files expected for transfer
+	if len(svc.Transfer) == 0 {
+		return nil, nil
+	}
+
+	// Prepare data for computation
+	transfer := make([]testworkflowsv1.ContentTransfer, len(svc.Transfer))
+	machines = append(machines, svc.MachineAt(index))
+
+	// Compute
+	for i, content := range svc.Transfer {
+		err := expressionstcl.Finalize(&content, machines...)
+		if err != nil {
+			return nil, fmt.Errorf("resolving %s transfer (%s -> %s): %w", humanize.Ordinal(i+1), content.From, content.MountPath, err)
+		}
+		if len(content.Files) == 0 {
+			content.Files = []string{"**/*"}
+		}
+		for i := range content.Files {
+			if !filepath.IsAbs(content.Files[i]) {
+				content.Files[i] = filepath.Join(content.From, content.Files[i])
+			}
+		}
+		transfer[i] = content
+	}
+	return transfer, nil
 }
 
 func (svc *Service) Eval(expr string, state ServiceState, index int64, machines ...expressionstcl.Machine) (*bool, error) {
@@ -255,5 +295,11 @@ func (svc *Service) EvalError(state ServiceState, index int64, machines ...expre
 func applyContainerDefaults(container *corev1.Container, index int) {
 	if container.Name == "" {
 		container.Name = fmt.Sprintf("c%d-%s", index, rand.String(5))
+	}
+	if container.SecurityContext == nil {
+		container.SecurityContext = &corev1.SecurityContext{}
+	}
+	if container.SecurityContext.RunAsGroup == nil {
+		container.SecurityContext.RunAsGroup = common.Ptr(constants.DefaultFsGroup)
 	}
 }

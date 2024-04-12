@@ -8,7 +8,11 @@
 
 package spawn
 
-import "golang.org/x/exp/maps"
+import (
+	"math"
+
+	"golang.org/x/exp/maps"
+)
 
 func CountCombinations(matrix map[string][]interface{}) int64 {
 	combinations := int64(1)
@@ -47,13 +51,13 @@ func GetShardValues(values map[string][]interface{}, index int64, count int64) m
 			result[k] = []interface{}{}
 			continue
 		}
-		size := count / int64(len(values[k]))
+		size := int64(math.Ceil(float64(len(values[k])) / float64(count)))
 		if size == 0 {
 			size = 1
 		}
 		start := index * size
 		end := start + size
-		if end > int64(len(values[k])) {
+		if end >= int64(len(values[k])) {
 			result[k] = values[k][start:]
 		} else {
 			result[k] = values[k][start:end]
