@@ -91,7 +91,10 @@ func (ag *Agent) runLogStreamWorker(ctx context.Context, numWorkers int) error {
 }
 
 func (ag *Agent) executeLogStreamRequest(ctx context.Context, req *cloud.LogsStreamRequest) error {
+	ag.logger.Info("start sending logs stream")
 	logCh, err := ag.logStreamFunc(ctx, req.ExecutionId)
+	ag.logger.Info("got channel")
+
 	for i := 0; i < logStreamRetryCount; i++ {
 		if err != nil {
 			// We have a race condition here
@@ -100,25 +103,34 @@ func (ag *Agent) executeLogStreamRequest(ctx context.Context, req *cloud.LogsStr
 			// so we retry up to logStreamRetryCount times.
 			time.Sleep(100 * time.Millisecond)
 			logCh, err = ag.logStreamFunc(ctx, req.ExecutionId)
+			if err != nil {
+				ag.logger.Warnw("retrying log stream error", "retry", i, "error", err.Error())
+			} else {
+				ag.logger.Debugw("retrying log stream", "retry", i)
+			}
 		}
 	}
 	if err != nil {
 		ag.logStreamResponseBuffer <- &cloud.LogsStreamResponse{
 			StreamId:   req.StreamId,
 			SeqNo:      0,
-			LogMessage: fmt.Sprintf("cannot get pod logs: %s", err.Error()),
+			LogMessage: fmt.Sprintf("error when calling logStreamFunc: %s", err.Error()),
 			IsError:    true,
 		}
+		ag.logger.Errorw("error when calling logStreamFunc", "error", err.Error())
 		return nil
 	}
 
+	var i int64
 	for {
-		var i int64
 		select {
 		case logOutput, ok := <-logCh:
 			if !ok {
+				ag.logger.Debugw("channel closed")
 				return nil
 			}
+			ag.logger.Debugw("start sending log output", "content", logOutput.Content)
+
 			msg := &cloud.LogsStreamResponse{
 				StreamId:   req.StreamId,
 				SeqNo:      i,
@@ -131,6 +143,8 @@ func (ag *Agent) executeLogStreamRequest(ctx context.Context, req *cloud.LogsStr
 			case <-ctx.Done():
 				return ctx.Err()
 			}
+			ag.logger.Debugw("log output sent", "content", logOutput.Content)
+
 		case <-ctx.Done():
 			return ctx.Err()
 		}
