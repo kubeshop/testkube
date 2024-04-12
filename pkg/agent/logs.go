@@ -91,6 +91,7 @@ func (ag *Agent) runLogStreamWorker(ctx context.Context, numWorkers int) error {
 }
 
 func (ag *Agent) executeLogStreamRequest(ctx context.Context, req *cloud.LogsStreamRequest) error {
+	ag.logger.Info("start sending logs stream")
 	logCh, err := ag.logStreamFunc(ctx, req.ExecutionId)
 	for i := 0; i < logStreamRetryCount; i++ {
 		if err != nil {
@@ -100,25 +101,32 @@ func (ag *Agent) executeLogStreamRequest(ctx context.Context, req *cloud.LogsStr
 			// so we retry up to logStreamRetryCount times.
 			time.Sleep(100 * time.Millisecond)
 			logCh, err = ag.logStreamFunc(ctx, req.ExecutionId)
+			if err != nil {
+				ag.logger.Warn("retrying log stream", "retry", i, "error", err.Error())
+			}
 		}
 	}
 	if err != nil {
 		ag.logStreamResponseBuffer <- &cloud.LogsStreamResponse{
 			StreamId:   req.StreamId,
 			SeqNo:      0,
-			LogMessage: fmt.Sprintf("cannot get pod logs: %s", err.Error()),
+			LogMessage: fmt.Sprintf("error when calling logStreamFunc: %s", err.Error()),
 			IsError:    true,
 		}
+		ag.logger.Errorw("error when calling logStreamFunc", "error", err.Error())
 		return nil
 	}
 
+	var i int64
 	for {
-		var i int64
 		select {
 		case logOutput, ok := <-logCh:
+			ag.logger.Debugw("sending log output", "content", logOutput.String())
 			if !ok {
+				ag.logger.Errorw("error getting logCh", "error", err.Error())
 				return nil
 			}
+
 			msg := &cloud.LogsStreamResponse{
 				StreamId:   req.StreamId,
 				SeqNo:      i,
@@ -131,6 +139,8 @@ func (ag *Agent) executeLogStreamRequest(ctx context.Context, req *cloud.LogsStr
 			case <-ctx.Done():
 				return ctx.Err()
 			}
+			ag.logger.Debugw("sending log output", "content", logOutput.String())
+
 		case <-ctx.Done():
 			return ctx.Err()
 		}
