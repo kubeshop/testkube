@@ -6,17 +6,12 @@ import (
 	"fmt"
 	"io"
 	"sync"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/utils"
-)
-
-const (
-	logsStereamTimeout = 30 * time.Minute
 )
 
 // TailJobLogs - locates logs for job pod(s)
