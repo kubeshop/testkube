@@ -56,6 +56,10 @@ func GetCurrentKubernetesContext() (string, error) {
 }
 
 func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data, isMigration bool) error {
+	// disable mongo and minio for cloud
+	options.NoMinio = true
+	options.NoMongo = true
+
 	// use config if set
 	if cfg.CloudContext.AgentKey != "" && options.Master.AgentToken == "" {
 		options.Master.AgentToken = cfg.CloudContext.AgentKey
