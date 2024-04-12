@@ -40,7 +40,7 @@ func (c *ContainerExecutor) TailJobLogs(ctx context.Context, id, namespace strin
 
 			case corev1.PodRunning:
 				l.Debug("tailing pod logs: immediately")
-				return tailPodLogs(c.log, c.clientSet, namespace, pod, logs)
+				return tailPodLogs(l, c.clientSet, namespace, pod, logs)
 
 			case corev1.PodFailed:
 				err := fmt.Errorf("can't get pod logs, pod failed: %s/%s", pod.Namespace, pod.Name)
@@ -55,14 +55,14 @@ func (c *ContainerExecutor) TailJobLogs(ctx context.Context, id, namespace strin
 				}
 
 				l.Debug("tailing pod logs")
-				return tailPodLogs(c.log, c.clientSet, namespace, pod, logs)
+				return tailPodLogs(l, c.clientSet, namespace, pod, logs)
 			}
 		}
 	}
 	return
 }
 
-func tailPodLogs(log *zap.SugaredLogger, c kubernetes.Interface, namespace string, pod corev1.Pod, logs chan []byte) (err error) {
+func tailPodLogs(l *zap.SugaredLogger, c kubernetes.Interface, namespace string, pod corev1.Pod, logs chan []byte) (err error) {
 	var containers []string
 	for _, container := range pod.Spec.InitContainers {
 		containers = append(containers, container.Name)
@@ -71,6 +71,8 @@ func tailPodLogs(log *zap.SugaredLogger, c kubernetes.Interface, namespace strin
 	for _, container := range pod.Spec.Containers {
 		containers = append(containers, container.Name)
 	}
+
+	l = l.With("method", "tailPodLogs", "containers", len(containers))
 
 	wg := sync.WaitGroup{}
 	defer close(logs)
@@ -93,7 +95,7 @@ func tailPodLogs(log *zap.SugaredLogger, c kubernetes.Interface, namespace strin
 
 			stream, err := podLogRequest.Stream(ctx)
 			if err != nil {
-				log.Errorw("stream error", "error", err)
+				l.Errorw("stream error", "error", err)
 				return
 			}
 
@@ -105,17 +107,19 @@ func tailPodLogs(log *zap.SugaredLogger, c kubernetes.Interface, namespace strin
 					if err == io.EOF {
 						err = nil
 					} else {
-						log.Errorw("scanner error", "error", err)
+						l.Errorw("scanner error", "error", err)
 					}
 					break
 				}
-				log.Debugw("TailPodLogs stream scan", "out", b, "pod", pod.Name)
+				l.Debugw("stream scan", "out", b, "pod", pod.Name)
 				logs <- b
 			}
 		}(container)
 	}
 
+	l.Debugw("waiting for all containers to finish", "containers", containers)
 	wg.Wait()
+	l.Infow("log stream finished")
 
 	return
 }

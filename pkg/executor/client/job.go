@@ -701,6 +701,8 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 		containers = append(containers, container.Name)
 	}
 
+	l := c.Log.With("method", "TailPodLogs", "pod", pod.Name, "namespace", pod.Namespace, "containersCount", len(containers))
+
 	wg := sync.WaitGroup{}
 	wg.Add(len(containers))
 
@@ -721,7 +723,7 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 
 			stream, err := podLogRequest.Stream(ctx)
 			if err != nil {
-				c.Log.Errorw("stream error", "error", err)
+				l.Errorw("stream error", "error", err)
 				return
 			}
 
@@ -732,16 +734,18 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 				if err == io.EOF {
 					return
 				} else if err != nil {
-					c.Log.Errorw("scanner error", "error", err)
+					l.Errorw("scanner error", "error", err)
 					return
 				}
-				c.Log.Debug("TailPodLogs stream scan", "out", b, "pod", pod.Name)
+				l.Debugw("stream scan", "out", string(b), "pod", pod.Name)
 				logs <- b
 			}
 		}(container)
 	}
 
+	l.Debugw("waiting for all containers to finish", "containers", containers)
 	wg.Wait()
+	l.Infow("log stream finished")
 
 	return
 }
