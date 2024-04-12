@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
@@ -72,6 +73,8 @@ const (
 	pollJobStatus = 1 * time.Second
 	// timeoutIndicator is string that is added to job logs when timeout occurs
 	timeoutIndicator = "DeadlineExceeded"
+
+	logsStreamBuffer = 1000
 )
 
 // NewJobExecutor creates new job executor
@@ -200,8 +203,8 @@ type JobOptions struct {
 
 // Logs returns job logs stream channel using kubernetes api
 func (c *JobExecutor) Logs(ctx context.Context, id, namespace string) (out chan output.Output, err error) {
-	out = make(chan output.Output)
-	logs := make(chan []byte)
+	out = make(chan output.Output, logsStreamBuffer)
+	logs := make(chan []byte, logsStreamBuffer)
 
 	go func() {
 		defer func() {
@@ -700,10 +703,15 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 		containers = append(containers, container.Name)
 	}
 
-	go func() {
-		defer close(logs)
+	wg := sync.WaitGroup{}
+	wg.Add(len(containers))
 
-		for _, container := range containers {
+	defer close(logs)
+
+	for _, container := range containers {
+		go func(container string) {
+			defer wg.Done()
+
 			podLogOptions := corev1.PodLogOptions{
 				Follow:    true,
 				TailLines: &count,
@@ -717,7 +725,7 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 			stream, err := podLogRequest.Stream(ctx)
 			if err != nil {
 				c.Log.Errorw("stream error", "error", err)
-				continue
+				return
 			}
 
 			reader := bufio.NewReader(stream)
@@ -737,8 +745,11 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 			if err != nil {
 				c.Log.Errorw("scanner error", "error", err)
 			}
-		}
-	}()
+		}(container)
+	}
+
+	wg.Wait()
+
 	return
 }
 
