@@ -78,8 +78,7 @@ func tailPodLogs(l *zap.SugaredLogger, c kubernetes.Interface, namespace string,
 	defer close(logs)
 
 	wg.Add(len(containers))
-	ctx, cancel := context.WithTimeout(context.Background(), logsStereamTimeout)
-	defer cancel()
+	ctx := context.Background()
 
 	var count int64 = 1
 
