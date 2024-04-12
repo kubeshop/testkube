@@ -72,7 +72,7 @@ func (c *client) Fetch(id string, mountPath string) error {
 			if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
 				return errors.Wrapf(err, "failed to create directory tree for: %s", filePath)
 			}
-			outFile, err := os.Create(filePath)
+			outFile, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, os.FileMode(header.Mode))
 			if err != nil {
 				return errors.Wrapf(err, "failed to create file: %s", filePath)
 			}
