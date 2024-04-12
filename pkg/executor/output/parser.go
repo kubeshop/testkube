@@ -14,21 +14,21 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
-func GetLogEntry(b []byte) (out Output, err error) {
+func GetLogEntry(b []byte) (out Output) {
 	r := bytes.NewReader(b)
 	dec := json.NewDecoder(r)
-	err = dec.Decode(&out)
+	err := dec.Decode(&out)
 	if err != nil {
 		return Output{
-			Type_:   TypeParsingError,
-			Content: fmt.Sprintf("ERROR can't get log entry: %s, (((%s)))", err, string(b)),
+			Type_:   TypeLogLine,
+			Content: string(b),
 			Time:    time.Now(),
-		}, nil
+		}
 	}
 	if out.Type_ == "" {
 		out.Type_ = TypeUnknown
 	}
-	return out, err
+	return out
 }
 
 // ParseRunnerOutput goes over the raw logs in b and parses possible runner output
@@ -129,16 +129,9 @@ func parseLogs(b []byte) ([]Output, error) {
 			// empty or non json line
 			continue
 		}
-		log, err := GetLogEntry(b)
-		if err != nil {
-			// try to read in case of some lines which we couldn't parse
-			// sometimes we're not able to control all stdout messages from libs
-			logs = append(logs, Output{
-				Type_:   TypeError,
-				Content: fmt.Sprintf("ERROR can't get log entry: %s, (((%s)))", err, string(b)),
-			})
-			continue
-		}
+
+		log := GetLogEntry(b)
+
 		if log.Type_ == TypeResult {
 			if log.Result == nil {
 				logs = append(logs, Output{
@@ -182,17 +175,7 @@ func parseContainerLogs(b []byte) ([]Output, error) {
 			return logs, fmt.Errorf("could not read line: %w", err)
 		}
 
-		log, err := GetLogEntry(b)
-		if log.Type_ == TypeParsingError || log.Type_ == TypeUnknown || err != nil {
-			// try to read in case of some lines which we couldn't parse
-			// sometimes we're not able to control all stdout messages from libs
-			logs = append(logs, Output{
-				Type_:   TypeLogLine,
-				Content: string(b),
-			})
-
-			continue
-		}
+		log := GetLogEntry(b)
 
 		if log.Type_ == TypeResult &&
 			log.Result != nil && log.Result.Status != nil {
