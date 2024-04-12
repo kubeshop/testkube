@@ -9,7 +9,6 @@
  */
 package testkube
 
-// event responsible for triggering a test workflow
 type TestWorkflowEvent struct {
 	Cronjob *TestWorkflowCronJobConfig `json:"cronjob,omitempty"`
 }

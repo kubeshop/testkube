@@ -8313,7 +8313,6 @@ components:
 
     TestWorkflowEvent:
       type: object
-      description: event responsible for triggering a test workflow
       properties:
         cronjob:
           $ref: "#/components/schemas/TestWorkflowCronJobConfig"
