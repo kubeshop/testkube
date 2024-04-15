@@ -39,9 +39,9 @@ func newArtifactUploader() Uploader {
 	return NewDirectUploader(WithParallelism(30), DirectDetectMimetype)
 }
 
-func NewInternalArtifactStorage(prefix string) InternalArtifactStorage {
+func InternalStorage() InternalArtifactStorage {
 	return &internalArtifactStorage{
-		prefix:   prefix,
+		prefix:   filepath.Join(".testkube", env.Ref()),
 		uploader: newArtifactUploader(),
 	}
 }

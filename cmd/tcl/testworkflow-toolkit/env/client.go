@@ -11,13 +11,11 @@ package env
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/pkg/agent"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -56,10 +54,6 @@ func Testkube() client.Client {
 	httpClient := phttp.NewClient(true)
 	sseClient := phttp.NewSSEClient(true)
 	return client.NewDirectAPIClient(httpClient, sseClient, fmt.Sprintf("http://%s:%d", config.APIServerName, config.APIServerPort), "")
-}
-
-func InternalArtifacts() artifacts.InternalArtifactStorage {
-	return artifacts.NewInternalArtifactStorage(filepath.Join(".testkube", Ref()))
 }
 
 func ObjectStorageClient() (*minio.Client, error) {
