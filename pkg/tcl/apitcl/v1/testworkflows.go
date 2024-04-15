@@ -27,6 +27,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowresolver"
 )
 
@@ -336,6 +337,9 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 				"dashboard.url": os.Getenv("TESTKUBE_DASHBOARD_URI"),
 				"api.url":       s.ApiUrl,
 				"namespace":     s.Namespace,
+
+				"images.init":    constants.DefaultInitImage,
+				"images.toolkit": constants.DefaultToolkitImage,
 			}).
 			RegisterStringMap("workflow", map[string]string{
 				"name": workflow.Name,
