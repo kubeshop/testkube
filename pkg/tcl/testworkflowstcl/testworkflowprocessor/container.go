@@ -393,27 +393,34 @@ func (c *container) ApplyImageData(image *imageinspector.Info) error {
 }
 
 func (c *container) EnableToolkit(ref string) Container {
-	return c.AppendEnvMap(map[string]string{
-		"TK_REF":                ref,
-		"TK_NS":                 "{{internal.namespace}}",
-		"TK_WF":                 "{{workflow.name}}",
-		"TK_EX":                 "{{execution.id}}",
-		"TK_C_URL":              "{{internal.cloud.api.url}}",
-		"TK_C_KEY":              "{{internal.cloud.api.key}}",
-		"TK_C_TLS_INSECURE":     "{{internal.cloud.api.tlsInsecure}}",
-		"TK_C_SKIP_VERIFY":      "{{internal.cloud.api.skipVerify}}",
-		"TK_OS_ENDPOINT":        "{{internal.storage.url}}",
-		"TK_OS_ACCESSKEY":       "{{internal.storage.accessKey}}",
-		"TK_OS_SECRETKEY":       "{{internal.storage.secretKey}}",
-		"TK_OS_REGION":          "{{internal.storage.region}}",
-		"TK_OS_TOKEN":           "{{internal.storage.token}}",
-		"TK_OS_BUCKET":          "{{internal.storage.bucket}}",
-		"TK_OS_SSL":             "{{internal.storage.ssl}}",
-		"TK_OS_SSL_SKIP_VERIFY": "{{internal.storage.skipVerify}}",
-		"TK_OS_CERT_FILE":       "{{internal.storage.certFile}}",
-		"TK_OS_KEY_FILE":        "{{internal.storage.keyFile}}",
-		"TK_OS_CA_FILE":         "{{internal.storage.caFile}}",
-	})
+	return c.
+		AppendEnv(corev1.EnvVar{
+			Name:      "TK_IP",
+			ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}},
+		}).
+		AppendEnvMap(map[string]string{
+			"TK_REF":                ref,
+			"TK_NS":                 "{{internal.namespace}}",
+			"TK_WF":                 "{{workflow.name}}",
+			"TK_EX":                 "{{execution.id}}",
+			"TK_C_URL":              "{{internal.cloud.api.url}}",
+			"TK_C_KEY":              "{{internal.cloud.api.key}}",
+			"TK_C_TLS_INSECURE":     "{{internal.cloud.api.tlsInsecure}}",
+			"TK_C_SKIP_VERIFY":      "{{internal.cloud.api.skipVerify}}",
+			"TK_OS_ENDPOINT":        "{{internal.storage.url}}",
+			"TK_OS_ACCESSKEY":       "{{internal.storage.accessKey}}",
+			"TK_OS_SECRETKEY":       "{{internal.storage.secretKey}}",
+			"TK_OS_REGION":          "{{internal.storage.region}}",
+			"TK_OS_TOKEN":           "{{internal.storage.token}}",
+			"TK_OS_BUCKET":          "{{internal.storage.bucket}}",
+			"TK_OS_SSL":             "{{internal.storage.ssl}}",
+			"TK_OS_SSL_SKIP_VERIFY": "{{internal.storage.skipVerify}}",
+			"TK_OS_CERT_FILE":       "{{internal.storage.certFile}}",
+			"TK_OS_KEY_FILE":        "{{internal.storage.keyFile}}",
+			"TK_OS_CA_FILE":         "{{internal.storage.caFile}}",
+			"TK_IMG_TOOLKIT":        "{{internal.images.toolkit}}",
+			"TK_IMG_INIT":           "{{internal.images.init}}",
+		})
 }
 
 func (c *container) Resolve(m ...expressionstcl.Machine) error {
