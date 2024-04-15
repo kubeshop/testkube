@@ -135,12 +135,14 @@ func (d *cloudUploader) upload(path string, file io.Reader, size int64) {
 	}
 }
 
-func (d *cloudUploader) Add(path string, file io.ReadCloser, size int64) error {
+func (d *cloudUploader) Add(path string, file io.Reader, size int64) error {
 	d.wg.Add(1)
 	d.sema <- struct{}{}
 	go func() {
 		d.upload(path, file, size)
-		_ = file.Close()
+		if f, ok := file.(io.Closer); ok {
+			_ = f.Close()
+		}
 		d.wg.Done()
 		<-d.sema
 	}()

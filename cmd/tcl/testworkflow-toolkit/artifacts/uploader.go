@@ -14,6 +14,6 @@ import (
 
 type Uploader interface {
 	Start() error
-	Add(path string, file io.ReadCloser, size int64) error
+	Add(path string, file io.Reader, size int64) error
 	End() error
 }
