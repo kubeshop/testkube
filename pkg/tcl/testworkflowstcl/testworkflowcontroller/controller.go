@@ -237,7 +237,7 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 			// TODO: Calibrate clock with v.Value.Hint or just first/last timestamp here
 			w.SendValue(Notification{
 				Timestamp: v.Value.Time,
-				Log:       fmt.Sprintf("%s %s\n", v.Value.Time.Format(KubernetesLogTimeFormat), string(v.Value.Log)),
+				Log:       string(v.Value.Log),
 			})
 		}
 
