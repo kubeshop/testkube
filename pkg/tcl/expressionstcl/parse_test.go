@@ -40,6 +40,8 @@ func TestCompileMath(t *testing.T) {
 	assert.Equal(t, true, must(MustCompile(`3 != 5`).Static().BoolValue()))
 	assert.Equal(t, false, must(MustCompile(`3 == 5`).Static().BoolValue()))
 	assert.Equal(t, false, must(MustCompile(`3 = 5`).Static().BoolValue()))
+	assert.Equal(t, `"3/5:"+(a+b)+"/"+5`, MustCompile(`3 + "/" + 5 + ":" + (a + b) + "/" + 5`).String())
+	assert.Equal(t, `(a+"/")+b+":"+(a+1)+"/"+b`, MustCompile(`a + "/" + b + ":" + (a + 1) + "/" + b`).String())
 }
 
 func TestCompileLogical(t *testing.T) {
@@ -97,7 +99,7 @@ func TestCompileMathOperationsPrecedence(t *testing.T) {
 	assert.Equal(t, true, must(MustCompile(`!0 && 500`).Static().BoolValue()))
 	assert.Equal(t, false, must(MustCompile(`!5 && 500`).Static().BoolValue()))
 
-	assert.Equal(t, "A+B*(C+D)/E*F+G<>H**I*J**K", MustCompile(`A + B * (C + D) / E * F + G <> H ** I * J ** K`).String())
+	assert.Equal(t, "(A+B*(C+D)/E*F)+G<>H**I*J**K", MustCompile(`A + B * (C + D) / E * F + G <> H ** I * J ** K`).String())
 }
 
 func TestBuildTemplate(t *testing.T) {
