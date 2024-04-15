@@ -24,15 +24,11 @@ type TestWorkflowSpawnInstruction struct {
 	Logs bool `json:"logs,omitempty"`
 	// how long we should wait for successful initialization
 	Timeout string `json:"timeout,omitempty"`
-	// matrix of parameters to spawn instances (static)
-	Matrix map[string][]string `json:"matrix,omitempty"`
-	// matrix of parameters to spawn instances (expressions)
-	MatrixExpressions map[string]string `json:"matrixExpressions,omitempty"`
-	// parameters that should be distributed across sharded instances (static)
-	Shards map[string][]string `json:"shards,omitempty"`
-	// parameters that should be distributed across sharded instances (expressions)
-	ShardExpressions map[string]string         `json:"shardExpressions,omitempty"`
-	Files            []TestWorkflowContentFile `json:"files,omitempty"`
+	// matrix of parameters to spawn instances
+	Matrix map[string]interface{} `json:"matrix,omitempty"`
+	// parameters that should be distributed across sharded instances
+	Shards map[string]interface{}    `json:"shards,omitempty"`
+	Files  []TestWorkflowContentFile `json:"files,omitempty"`
 	// pod template to spawn
 	Pod map[string]interface{} `json:"pod,omitempty"`
 	// container definition for simplicity

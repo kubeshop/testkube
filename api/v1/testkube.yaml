@@ -8372,28 +8372,24 @@ components:
           description: how long we should wait for successful initialization
         matrix:
           type: object
-          description: "matrix of parameters to spawn instances (static)"
+          description: "matrix of parameters to spawn instances"
           additionalProperties:
-            type: array
-            items:
-              type: string
-        matrixExpressions:
-          type: object
-          description: "matrix of parameters to spawn instances (expressions)"
-          additionalProperties:
-            type: string
+            description: "dynamic expression or static list of values"
+            oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
         shards:
           type: object
-          description: "parameters that should be distributed across sharded instances (static)"
+          description: "parameters that should be distributed across sharded instances"
           additionalProperties:
-            type: array
-            items:
-              type: string
-        shardExpressions:
-          type: object
-          description: "parameters that should be distributed across sharded instances (expressions)"
-          additionalProperties:
-            type: string
+            description: "dynamic expression or static list of values"
+            oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
         files:
           type: array
           items:

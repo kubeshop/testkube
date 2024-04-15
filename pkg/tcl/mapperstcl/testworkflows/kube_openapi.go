@@ -694,6 +694,18 @@ func MapRetryPolicyKubeToAPI(v testworkflowsv1.RetryPolicy) testkube.TestWorkflo
 	}
 }
 
+func MapDynamicStringSliceMapKubeToAPI(v map[string]testworkflowsv1.StringSlice) map[string]interface{} {
+	result := make(map[string]interface{}, len(v))
+	for k := range v {
+		if v[k].Dynamic {
+			result[k] = v[k].Dynamic
+		} else {
+			result[k] = v[k].Static
+		}
+	}
+	return result
+}
+
 func MapSpawnInstructionKubeToAPI(v testworkflowsv1.SpawnInstruction) testkube.TestWorkflowSpawnInstruction {
 	// Convert PodTemplateSpec and Container to map[string]interface{}
 	var pod, container map[string]interface{}
@@ -715,22 +727,20 @@ func MapSpawnInstructionKubeToAPI(v testworkflowsv1.SpawnInstruction) testkube.T
 	}
 
 	return testkube.TestWorkflowSpawnInstruction{
-		Description:       v.Description,
-		Strategy:          common.Ptr(testkube.TestWorkflowSpawnStrategy(v.Strategy)),
-		Count:             MapIntOrStringToBoxedString(v.Count),
-		MaxCount:          MapIntOrStringToBoxedString(v.MaxCount),
-		Parallelism:       MapIntOrStringToBoxedString(v.Parallelism),
-		Ready:             v.Ready,
-		Error_:            v.Error,
-		Timeout:           v.Timeout,
-		Logs:              common.ResolvePtr(v.Logs, false),
-		Matrix:            MapIntOrStringSliceMapToStringSliceMap(v.Matrix),
-		MatrixExpressions: v.MatrixExpressions,
-		Shards:            MapIntOrStringSliceMapToStringSliceMap(v.Shards),
-		ShardExpressions:  v.ShardExpressions,
-		Files:             common.MapSlice(v.Files, MapContentFileKubeToAPI),
-		Pod:               pod,
-		Container:         container,
+		Description: v.Description,
+		Strategy:    common.Ptr(testkube.TestWorkflowSpawnStrategy(v.Strategy)),
+		Count:       MapIntOrStringToBoxedString(v.Count),
+		MaxCount:    MapIntOrStringToBoxedString(v.MaxCount),
+		Parallelism: MapIntOrStringToBoxedString(v.Parallelism),
+		Ready:       v.Ready,
+		Error_:      v.Error,
+		Timeout:     v.Timeout,
+		Logs:        common.ResolvePtr(v.Logs, false),
+		Matrix:      MapDynamicStringSliceMapKubeToAPI(v.Matrix),
+		Shards:      MapDynamicStringSliceMapKubeToAPI(v.Shards),
+		Files:       common.MapSlice(v.Files, MapContentFileKubeToAPI),
+		Pod:         pod,
+		Container:   container,
 	}
 }
 

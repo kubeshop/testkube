@@ -347,6 +347,21 @@ func MapContentFileAPIToKube(v testkube.TestWorkflowContentFile) testworkflowsv1
 	}
 }
 
+func MapDynamicStringSliceAPIToKube(v map[string]interface{}) map[string]testworkflowsv1.StringSlice {
+	result := make(map[string]testworkflowsv1.StringSlice, len(v))
+	for k := range v {
+		var item testworkflowsv1.StringSlice
+		b, err := json.Marshal(v[k])
+		if err == nil {
+			err = json.Unmarshal(b, &item)
+			if err == nil {
+				result[k] = item
+			}
+		}
+	}
+	return result
+}
+
 func MapSpawnInstructionAPIToKube(v testkube.TestWorkflowSpawnInstruction) testworkflowsv1.SpawnInstruction {
 	// Convert Pod's interface{} to PodTemplateSpec
 	var pod corev1.PodTemplateSpec
@@ -369,21 +384,19 @@ func MapSpawnInstructionAPIToKube(v testkube.TestWorkflowSpawnInstruction) testw
 	// Return the instruction
 	return testworkflowsv1.SpawnInstruction{
 		SpawnInstructionBase: testworkflowsv1.SpawnInstructionBase{
-			Description:       v.Description,
-			Strategy:          testworkflowsv1.SpawnStrategy(common.ResolvePtr(v.Strategy, "")),
-			Count:             MapBoxedStringToIntOrString(v.Count),
-			MaxCount:          MapBoxedStringToIntOrString(v.MaxCount),
-			Parallelism:       MapBoxedStringToIntOrString(v.Parallelism),
-			Ready:             v.Ready,
-			Error:             v.Error_,
-			Timeout:           v.Timeout,
-			Logs:              common.PtrOrNil(v.Logs),
-			Matrix:            MapStringSliceMapToIntOrStringSliceMap(v.Matrix),
-			MatrixExpressions: v.MatrixExpressions,
-			Shards:            MapStringSliceMapToIntOrStringSliceMap(v.Shards),
-			ShardExpressions:  v.ShardExpressions,
-			Files:             common.MapSlice(v.Files, MapContentFileAPIToKube),
-			Pod:               common.PtrOrNil(pod),
+			Description: v.Description,
+			Strategy:    testworkflowsv1.SpawnStrategy(common.ResolvePtr(v.Strategy, "")),
+			Count:       MapBoxedStringToIntOrString(v.Count),
+			MaxCount:    MapBoxedStringToIntOrString(v.MaxCount),
+			Parallelism: MapBoxedStringToIntOrString(v.Parallelism),
+			Ready:       v.Ready,
+			Error:       v.Error_,
+			Timeout:     v.Timeout,
+			Logs:        common.PtrOrNil(v.Logs),
+			Matrix:      MapDynamicStringSliceAPIToKube(v.Matrix),
+			Shards:      MapDynamicStringSliceAPIToKube(v.Shards),
+			Files:       common.MapSlice(v.Files, MapContentFileAPIToKube),
+			Pod:         common.PtrOrNil(pod),
 		},
 		SpawnInstructionAliases: testworkflowsv1.SpawnInstructionAliases{
 			Container: container,

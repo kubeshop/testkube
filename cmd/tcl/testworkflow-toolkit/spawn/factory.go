@@ -9,6 +9,7 @@
 package spawn
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -28,11 +29,11 @@ func FromInstruction(name string, instruction testworkflowsv1.SpawnInstructionBa
 	}
 
 	// Resolve the shards and matrix
-	shards, err := readParams(instruction.Shards, instruction.ShardExpressions, machines...)
+	shards, err := readParams(instruction.Shards, machines...)
 	if err != nil {
 		return Service{}, fmt.Errorf("shards: %w", err)
 	}
-	matrix, err := readParams(instruction.Matrix, instruction.MatrixExpressions, machines...)
+	matrix, err := readParams(instruction.Matrix, machines...)
 	if err != nil {
 		return Service{}, fmt.Errorf("matrix: %w", err)
 	}
@@ -145,34 +146,33 @@ func readCount(s intstr.IntOrString, machines ...expressionstcl.Machine) (int64,
 	return countVal, nil
 }
 
-func readParams(base map[string][]intstr.IntOrString, expressions map[string]string, machines ...expressionstcl.Machine) (map[string][]interface{}, error) {
+func readParams(base map[string]testworkflowsv1.StringSlice, machines ...expressionstcl.Machine) (map[string][]interface{}, error) {
 	result := make(map[string][]interface{})
-	for key, list := range base {
-		result[key] = make([]interface{}, len(list))
-		for i := range list {
-			result[key][i] = list[i].String()
-		}
-	}
-	for key, exprStr := range expressions {
-		if _, ok := result[key]; !ok {
-			result[key] = make([]interface{}, 0)
+	for key, items := range base {
+		exprStr := items.Expression
+		if !items.Dynamic {
+			b, err := json.Marshal(items.Static)
+			if err != nil {
+				return nil, fmt.Errorf("%s: could not parse list of values: %s\n", key, err)
+			}
+			exprStr = string(b)
 		}
 		expr, err := expressionstcl.CompileAndResolve(exprStr, machines...)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %s: %s\n", key, exprStr, err)
+			return nil, fmt.Errorf("%s: %s: %s", key, exprStr, err)
 		}
 		if expr.Static() == nil {
-			return nil, fmt.Errorf("%s: %s: could not resolve\n", key, exprStr)
+			return nil, fmt.Errorf("%s: %s: could not resolve", key, exprStr)
 		}
 		list, err := expr.Static().SliceValue()
 		if err != nil {
-			return nil, fmt.Errorf("%s: %s: could not parse as list: %s\n", key, exprStr, err)
+			return nil, fmt.Errorf("%s: %s: could not parse as list: %s", key, exprStr, err)
 		}
-		result[key] = append(result[key], list...)
+		result[key] = list
 	}
-	for key := range expressions {
-		if len(expressions[key]) == 0 {
-			delete(expressions, key)
+	for key := range result {
+		if len(result[key]) == 0 {
+			delete(result, key)
 		}
 	}
 	return result, nil
