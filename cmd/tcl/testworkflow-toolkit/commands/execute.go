@@ -112,6 +112,7 @@ func buildTestExecution(test string, async bool) (func() error, error) {
 			return
 		}
 
+		prevStatus := testkube.QUEUED_ExecutionStatus
 	loop:
 		for {
 			time.Sleep(time.Second)
@@ -124,10 +125,14 @@ func buildTestExecution(test string, async bool) (func() error, error) {
 				status := *exec.ExecutionResult.Status
 				switch status {
 				case testkube.QUEUED_ExecutionStatus, testkube.RUNNING_ExecutionStatus:
-					continue
+					break
 				default:
 					break loop
 				}
+				if prevStatus != status {
+					data.PrintOutput(env.Ref(), "test-status", &executionResult{Id: exec.Id, Status: string(status)})
+				}
+				prevStatus = status
 			}
 		}
 
@@ -176,6 +181,7 @@ func buildWorkflowExecution(workflow string, async bool) (func() error, error) {
 			return
 		}
 
+		prevStatus := testkube.QUEUED_TestWorkflowStatus
 	loop:
 		for {
 			time.Sleep(100 * time.Millisecond)
@@ -188,10 +194,14 @@ func buildWorkflowExecution(workflow string, async bool) (func() error, error) {
 				status := *exec.Result.Status
 				switch status {
 				case testkube.QUEUED_TestWorkflowStatus, testkube.RUNNING_TestWorkflowStatus:
-					continue
+					break
 				default:
 					break loop
 				}
+				if prevStatus != status {
+					data.PrintOutput(env.Ref(), "testworkflow-status", &executionResult{Id: exec.Id, Status: string(status)})
+				}
+				prevStatus = status
 			}
 		}
 
