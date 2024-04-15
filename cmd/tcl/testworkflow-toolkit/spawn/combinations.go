@@ -51,15 +51,20 @@ func GetShardValues(values map[string][]interface{}, index int64, count int64) m
 			result[k] = []interface{}{}
 			continue
 		}
-		size := int64(math.Ceil(float64(len(values[k])) / float64(count)))
-		if size == 0 {
-			size = 1
+		shards := int64(len(values[k]))
+		size := int64(math.Floor(float64(shards) / float64(count)))
+		if index >= shards {
+			result[k] = make([]interface{}, 0)
+			continue
 		}
-		start := index * size
-		end := start + size
-		if end >= int64(len(values[k])) {
-			result[k] = values[k][start:]
+		sizeMatchPoint := shards - size*count
+		if sizeMatchPoint > index {
+			start := index * (size + 1)
+			end := start + (size + 1)
+			result[k] = values[k][start:end]
 		} else {
+			start := sizeMatchPoint + index*size
+			end := start + size
 			result[k] = values[k][start:end]
 		}
 	}
