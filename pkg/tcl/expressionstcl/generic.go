@@ -209,7 +209,9 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 			if ptr.Kind() == reflect.String {
 				v.SetString(vv)
 			} else {
-				ptr.Set(reflect.ValueOf(&vv))
+				instance := reflect.New(v.Type())
+				instance.Elem().SetString(vv)
+				ptr.Set(instance)
 			}
 		}
 		return

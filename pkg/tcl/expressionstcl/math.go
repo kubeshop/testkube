@@ -210,7 +210,7 @@ func (s *math) Type() Type {
 
 func (s *math) itemString(v Expression) string {
 	if vv, ok := v.(*math); ok {
-		if getOperatorPriority(vv.operator) >= getOperatorPriority(s.operator) {
+		if getOperatorPriority(vv.operator) >= getOperatorPriority(s.operator) && (vv.operator != operatorAdd || v.Type() == vv.left.Type()) {
 			return v.String()
 		}
 	}
