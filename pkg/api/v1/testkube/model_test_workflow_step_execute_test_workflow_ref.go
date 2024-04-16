@@ -9,12 +9,12 @@
  */
 package testkube
 
-type TestWorkflowStepExecuteTestRef struct {
-	// test name to schedule
-	Name             string                                       `json:"name,omitempty"`
-	Count            *BoxedString                                 `json:"count,omitempty"`
-	MaxCount         *BoxedString                                 `json:"maxCount,omitempty"`
-	ExecutionRequest *TestWorkflowStepExecuteTestExecutionRequest `json:"executionRequest,omitempty"`
+type TestWorkflowStepExecuteTestWorkflowRef struct {
+	// TestWorkflow name to include
+	Name     string            `json:"name,omitempty"`
+	Config   map[string]string `json:"config,omitempty"`
+	Count    *BoxedString      `json:"count,omitempty"`
+	MaxCount *BoxedString      `json:"maxCount,omitempty"`
 	// matrix of parameters to spawn instances
 	Matrix map[string]interface{} `json:"matrix,omitempty"`
 	// parameters that should be distributed across sharded instances
