@@ -7980,6 +7980,9 @@ components:
         name:
           type: string
           description: TestWorkflow name to include
+        description:
+          type: string
+          description: TestWorkflow execution description to display
         executionName:
           type: string
           description: TestWorkflow execution name override
@@ -8016,6 +8019,9 @@ components:
         name:
           type: string
           description: test name to schedule
+        description:
+          type: string
+          description: test execution description to display
         count:
           $ref: "#/components/schemas/BoxedString"
         maxCount:

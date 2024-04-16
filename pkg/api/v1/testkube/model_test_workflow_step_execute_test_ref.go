@@ -11,7 +11,9 @@ package testkube
 
 type TestWorkflowStepExecuteTestRef struct {
 	// test name to schedule
-	Name             string                                       `json:"name,omitempty"`
+	Name string `json:"name,omitempty"`
+	// test execution description to display
+	Description      string                                       `json:"description,omitempty"`
 	Count            *BoxedString                                 `json:"count,omitempty"`
 	MaxCount         *BoxedString                                 `json:"maxCount,omitempty"`
 	ExecutionRequest *TestWorkflowStepExecuteTestExecutionRequest `json:"executionRequest,omitempty"`

@@ -12,6 +12,8 @@ package testkube
 type TestWorkflowStepExecuteTestWorkflowRef struct {
 	// TestWorkflow name to include
 	Name string `json:"name,omitempty"`
+	// TestWorkflow execution description to display
+	Description string `json:"description,omitempty"`
 	// TestWorkflow execution name override
 	ExecutionName string            `json:"executionName,omitempty"`
 	Config        map[string]string `json:"config,omitempty"`

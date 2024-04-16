@@ -597,6 +597,7 @@ func MapStepExecuteTestExecutionRequestAPIToKube(v testkube.TestWorkflowStepExec
 func MapStepExecuteTestAPIToKube(v testkube.TestWorkflowStepExecuteTestRef) testworkflowsv1.StepExecuteTest {
 	return testworkflowsv1.StepExecuteTest{
 		Name:             v.Name,
+		Description:      v.Description,
 		ExecutionRequest: common.MapPtr(v.ExecutionRequest, MapStepExecuteTestExecutionRequestAPIToKube),
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
 			Count:    MapBoxedStringToIntOrString(v.Count),
@@ -610,6 +611,7 @@ func MapStepExecuteTestAPIToKube(v testkube.TestWorkflowStepExecuteTestRef) test
 func MapStepExecuteTestWorkflowAPIToKube(v testkube.TestWorkflowStepExecuteTestWorkflowRef) testworkflowsv1.StepExecuteWorkflow {
 	return testworkflowsv1.StepExecuteWorkflow{
 		Name:          v.Name,
+		Description:   v.Description,
 		ExecutionName: v.ExecutionName,
 		Config:        MapConfigValueAPIToKube(v.Config),
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
