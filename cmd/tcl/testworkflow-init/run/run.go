@@ -14,6 +14,7 @@ import (
 	"os/exec"
 
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/utils"
 )
 
 const (
@@ -37,6 +38,8 @@ func getProcessStatus(err error) (bool, uint8) {
 // TODO: Obfuscate Stdout/Stderr streams
 func createCommand(cmd string, args ...string) (c *exec.Cmd) {
 	c = exec.Command(cmd, args...)
+	out := utils.NewOutputProcessor(data.Step.Ref, os.Stdout)
+	c.Stdout = out
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	c.Stdin = os.Stdin

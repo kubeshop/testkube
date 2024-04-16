@@ -118,6 +118,10 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		},
 		Steps: append(workflow.Spec.Setup, append(workflow.Spec.Steps, workflow.Spec.After...)...),
 	}
+	err = expressionstcl.Simplify(&workflow, machines...)
+	if err != nil {
+		return nil, errors.Wrap(err, "error while simplifying workflow instructions")
+	}
 	root, err := p.process(layer, layer.ContainerDefaults(), rootStep, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "processing error")
