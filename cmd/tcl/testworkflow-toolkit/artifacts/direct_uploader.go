@@ -60,7 +60,7 @@ func (d *directUploader) buildOptions(path string, size int64) (options minio2.P
 	return options
 }
 
-func (d *directUploader) upload(path string, file io.ReadCloser, size int64) {
+func (d *directUploader) upload(path string, file io.Reader, size int64) {
 	ns := env.ExecutionId()
 	opts := d.buildOptions(path, size)
 	err := d.client.SaveFileDirect(context.Background(), ns, path, file, size, opts)
@@ -72,12 +72,14 @@ func (d *directUploader) upload(path string, file io.ReadCloser, size int64) {
 	}
 }
 
-func (d *directUploader) Add(path string, file io.ReadCloser, size int64) error {
+func (d *directUploader) Add(path string, file io.Reader, size int64) error {
 	d.wg.Add(1)
 	d.sema <- struct{}{}
 	go func() {
 		d.upload(path, file, size)
-		_ = file.Close()
+		if f, ok := file.(io.Closer); ok {
+			_ = f.Close()
+		}
 		d.wg.Done()
 		<-d.sema
 	}()
