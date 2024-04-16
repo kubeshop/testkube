@@ -584,12 +584,13 @@ func MapStepExecuteTestKubeToAPI(v testworkflowsv1.StepExecuteTest) testkube.Tes
 
 func MapStepExecuteTestWorkflowKubeToAPI(v testworkflowsv1.StepExecuteWorkflow) testkube.TestWorkflowStepExecuteTestWorkflowRef {
 	return testkube.TestWorkflowStepExecuteTestWorkflowRef{
-		Name:     v.Name,
-		Config:   MapConfigValueKubeToAPI(v.Config),
-		Count:    MapIntOrStringToBoxedString(v.Count),
-		MaxCount: MapIntOrStringToBoxedString(v.MaxCount),
-		Matrix:   MapDynamicListMapKubeToAPI(v.Matrix),
-		Shards:   MapDynamicListMapKubeToAPI(v.Shards),
+		Name:          v.Name,
+		ExecutionName: v.ExecutionName,
+		Config:        MapConfigValueKubeToAPI(v.Config),
+		Count:         MapIntOrStringToBoxedString(v.Count),
+		MaxCount:      MapIntOrStringToBoxedString(v.MaxCount),
+		Matrix:        MapDynamicListMapKubeToAPI(v.Matrix),
+		Shards:        MapDynamicListMapKubeToAPI(v.Shards),
 	}
 }
 

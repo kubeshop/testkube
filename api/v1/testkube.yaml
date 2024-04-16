@@ -7980,6 +7980,9 @@ components:
         name:
           type: string
           description: TestWorkflow name to include
+        executionName:
+          type: string
+          description: TestWorkflow execution name override
         config:
           $ref: "#/components/schemas/TestWorkflowConfigValue"
         count:

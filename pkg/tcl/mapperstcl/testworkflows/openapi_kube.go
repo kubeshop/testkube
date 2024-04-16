@@ -609,8 +609,9 @@ func MapStepExecuteTestAPIToKube(v testkube.TestWorkflowStepExecuteTestRef) test
 
 func MapStepExecuteTestWorkflowAPIToKube(v testkube.TestWorkflowStepExecuteTestWorkflowRef) testworkflowsv1.StepExecuteWorkflow {
 	return testworkflowsv1.StepExecuteWorkflow{
-		Name:   v.Name,
-		Config: MapConfigValueAPIToKube(v.Config),
+		Name:          v.Name,
+		ExecutionName: v.ExecutionName,
+		Config:        MapConfigValueAPIToKube(v.Config),
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
 			Count:    MapBoxedStringToIntOrString(v.Count),
 			MaxCount: MapBoxedStringToIntOrString(v.MaxCount),
