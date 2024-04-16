@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 )
@@ -146,8 +147,16 @@ func persistStatus(filePath string) {
 	}
 }
 
+var loadStateMu sync.Mutex
+var loadedState bool
+
 func LoadState() {
-	readState(filepath.Join(defaultInternalPath, "state"))
+	defer loadStateMu.Unlock()
+	loadStateMu.Lock()
+	if !loadedState {
+		readState(filepath.Join(defaultInternalPath, "state"))
+		loadedState = true
+	}
 }
 
 func Finish() {
