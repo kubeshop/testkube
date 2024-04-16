@@ -11,9 +11,7 @@ package testworkflowcontroller
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"regexp"
 	"strconv"
@@ -26,49 +24,20 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
-type Instruction struct {
-	Ref   string
-	Name  string
-	Value interface{}
-}
-
-func (i *Instruction) ToInternal() *testkube.TestWorkflowOutput {
-	if i == nil {
-		return nil
-	}
-	value := map[string]interface{}(nil)
-	if i.Value != nil {
-		v, _ := json.Marshal(i.Value)
-		e := json.Unmarshal(v, &value)
-		if e != nil {
-			log.DefaultLogger.Warnf("invalid output passed from TestWorfklow - %v", i.Value)
-		}
-	}
-	if v, ok := i.Value.(map[string]interface{}); ok {
-		value = v
-	}
-	return &testkube.TestWorkflowOutput{
-		Ref:   i.Ref,
-		Name:  i.Name,
-		Value: value,
-	}
-}
-
 type Comment struct {
 	Time   time.Time
-	Hint   *Instruction
-	Output *Instruction
+	Hint   *data.Instruction
+	Output *data.Instruction
 }
 
 type ContainerLog struct {
 	Time   time.Time
 	Log    []byte
-	Hint   *Instruction
-	Output *Instruction
+	Hint   *data.Instruction
+	Output *data.Instruction
 }
 
 type ContainerResult struct {
@@ -251,39 +220,21 @@ func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, pod
 			if len(prepend) > 0 {
 				line = append(prepend, line...)
 			}
-			commentRe := regexp.MustCompile(fmt.Sprintf(`^%s(%s)?([^%s]+)%s([a-zA-Z0-9-_.]+)(?:%s([^\n]+))?%s$`,
-				data.InstructionPrefix, data.HintPrefix, data.InstructionSeparator, data.InstructionSeparator, data.InstructionValueSeparator, data.InstructionSeparator))
 
 			// Process the received line
 			if len(line) > 0 {
 				hadComment := false
-				// Fast check to avoid regexes
-				if len(line) >= 4 && string(line[:len(data.InstructionPrefix)]) == data.InstructionPrefix {
-					v := commentRe.FindSubmatch(line)
-					if v != nil {
-						isHint := string(v[1]) == data.HintPrefix
-						ref := string(v[2])
-						name := string(v[3])
-						result := Instruction{Ref: ref, Name: name}
-						log := ContainerLog{Time: ts}
-						if isHint {
-							log.Hint = &result
-						} else {
-							log.Output = &result
-						}
-						if len(v) > 4 && v[4] != nil {
-							err := json.Unmarshal(v[4], &result.Value)
-							if err == nil {
-								isNewLine = false
-								hadComment = true
-								w.SendValue(log)
-							}
-						} else {
-							isNewLine = false
-							hadComment = true
-							w.SendValue(log)
-						}
+				instruction, isHint, err := data.DetectInstruction(line)
+				if err == nil && instruction != nil {
+					isNewLine = false
+					hadComment = true
+					log := ContainerLog{Time: ts}
+					if isHint {
+						log.Hint = instruction
+					} else {
+						log.Output = instruction
 					}
+					w.SendValue(log)
 				}
 
 				// Append as regular log if expected
