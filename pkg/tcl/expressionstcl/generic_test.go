@@ -54,6 +54,18 @@ type testObjNested struct {
 	Dummy corev1.Volume
 }
 
+type testEnum string
+
+type testObjWithStringEnums struct {
+	Value testEnum `expr:"force"`
+	Dummy testEnum
+}
+
+type testObjWithStringEnumPointers struct {
+	Value *testEnum `expr:"force"`
+	Dummy *testEnum
+}
+
 var testMachine = NewMachine().
 	Register("dummy", "test").
 	Register("ten", 10)
@@ -217,6 +229,38 @@ func TestGenericForceSimplifyNested(t *testing.T) {
 				},
 			},
 		},
+	}
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, got)
+}
+
+func TestGenericSimplifyWithStringEnums(t *testing.T) {
+	got := testObjWithStringEnums{
+		Value: "{{ 3 + 2 }}{{ 5 }}",
+		Dummy: "{{ 4433 }}",
+	}
+	err := Simplify(&got)
+
+	want := testObjWithStringEnums{
+		Value: "55",
+		Dummy: "{{ 4433 }}",
+	}
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, got)
+}
+
+func TestGenericSimplifyWithStringEnumPointers(t *testing.T) {
+	got := testObjWithStringEnumPointers{
+		Value: common.Ptr[testEnum]("{{ 3 + 2 }}{{ 5 }}"),
+		Dummy: common.Ptr[testEnum]("{{ 4433 }}"),
+	}
+	err := Simplify(&got)
+
+	want := testObjWithStringEnumPointers{
+		Value: common.Ptr[testEnum]("55"),
+		Dummy: common.Ptr[testEnum]("{{ 4433 }}"),
 	}
 
 	assert.NoError(t, err)
