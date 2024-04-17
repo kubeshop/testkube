@@ -82,24 +82,6 @@ func MapInt32ToBoxedInteger(v *int32) *testkube.BoxedInteger {
 	return &testkube.BoxedInteger{Value: *v}
 }
 
-func MapIntOrStringToBoxedString(v *intstr.IntOrString) *testkube.BoxedString {
-	if v == nil {
-		return nil
-	}
-	return MapStringToBoxedString(common.Ptr(v.String()))
-}
-
-func MapIntOrStringSliceMapToStringSliceMap(v map[string][]intstr.IntOrString) map[string][]string {
-	if v == nil {
-		return nil
-	}
-	m := make(map[string][]string, len(v))
-	for k, vv := range v {
-		m[k] = common.MapSlice(vv, MapIntOrStringToString)
-	}
-	return m
-}
-
 func MapQuantityToBoxedString(v *resource.Quantity) *testkube.BoxedString {
 	if v == nil {
 		return nil
@@ -694,18 +676,6 @@ func MapRetryPolicyKubeToAPI(v testworkflowsv1.RetryPolicy) testkube.TestWorkflo
 	}
 }
 
-func MapDynamicStringSliceMapKubeToAPI(v map[string]testworkflowsv1.StringSlice) map[string]interface{} {
-	result := make(map[string]interface{}, len(v))
-	for k := range v {
-		if v[k].Dynamic {
-			result[k] = v[k].Dynamic
-		} else {
-			result[k] = v[k].Static
-		}
-	}
-	return result
-}
-
 func MapSpawnInstructionKubeToAPI(v testworkflowsv1.SpawnInstruction) testkube.TestWorkflowSpawnInstruction {
 	// Convert PodTemplateSpec and Container to map[string]interface{}
 	var pod, container map[string]interface{}
@@ -736,8 +706,8 @@ func MapSpawnInstructionKubeToAPI(v testworkflowsv1.SpawnInstruction) testkube.T
 		Error_:      v.Error,
 		Timeout:     v.Timeout,
 		Logs:        common.ResolvePtr(v.Logs, false),
-		Matrix:      MapDynamicStringSliceMapKubeToAPI(v.Matrix),
-		Shards:      MapDynamicStringSliceMapKubeToAPI(v.Shards),
+		Matrix:      MapDynamicListMapKubeToAPI(v.Matrix),
+		Shards:      MapDynamicListMapKubeToAPI(v.Shards),
 		Files:       common.MapSlice(v.Files, MapContentFileKubeToAPI),
 		Pod:         pod,
 		Container:   container,

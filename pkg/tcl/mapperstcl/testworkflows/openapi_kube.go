@@ -54,27 +54,6 @@ func MapBoxedStringToString(v *testkube.BoxedString) *string {
 	return &v.Value
 }
 
-func MapBoxedStringToIntOrString(v *testkube.BoxedString) *intstr.IntOrString {
-	if v == nil {
-		return nil
-	}
-	if vv, err := strconv.ParseInt(v.Value, 10, 32); err == nil {
-		return &intstr.IntOrString{Type: intstr.Int, IntVal: int32(vv)}
-	}
-	return &intstr.IntOrString{Type: intstr.String, StrVal: v.Value}
-}
-
-func MapStringSliceMapToIntOrStringSliceMap(v map[string][]string) map[string][]intstr.IntOrString {
-	if v == nil {
-		return nil
-	}
-	m := make(map[string][]intstr.IntOrString, len(v))
-	for k, vv := range v {
-		m[k] = common.MapSlice(vv, MapStringToIntOrString)
-	}
-	return m
-}
-
 func MapBoxedStringToType[T ~string](v *testkube.BoxedString) *T {
 	if v == nil {
 		return nil
@@ -347,21 +326,6 @@ func MapContentFileAPIToKube(v testkube.TestWorkflowContentFile) testworkflowsv1
 	}
 }
 
-func MapDynamicStringSliceAPIToKube(v map[string]interface{}) map[string]testworkflowsv1.StringSlice {
-	result := make(map[string]testworkflowsv1.StringSlice, len(v))
-	for k := range v {
-		var item testworkflowsv1.StringSlice
-		b, err := json.Marshal(v[k])
-		if err == nil {
-			err = json.Unmarshal(b, &item)
-			if err == nil {
-				result[k] = item
-			}
-		}
-	}
-	return result
-}
-
 func MapSpawnInstructionAPIToKube(v testkube.TestWorkflowSpawnInstruction) testworkflowsv1.SpawnInstruction {
 	// Convert Pod's interface{} to PodTemplateSpec
 	var pod corev1.PodTemplateSpec
@@ -393,8 +357,8 @@ func MapSpawnInstructionAPIToKube(v testkube.TestWorkflowSpawnInstruction) testw
 			Error:       v.Error_,
 			Timeout:     v.Timeout,
 			Logs:        common.PtrOrNil(v.Logs),
-			Matrix:      MapDynamicStringSliceAPIToKube(v.Matrix),
-			Shards:      MapDynamicStringSliceAPIToKube(v.Shards),
+			Matrix:      MapDynamicListMapAPIToKube(v.Matrix),
+			Shards:      MapDynamicListMapAPIToKube(v.Shards),
 			Files:       common.MapSlice(v.Files, MapContentFileAPIToKube),
 			Pod:         common.PtrOrNil(pod),
 		},
