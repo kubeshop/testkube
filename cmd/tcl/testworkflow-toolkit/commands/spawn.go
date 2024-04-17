@@ -175,7 +175,7 @@ func NewSpawnCmd() *cobra.Command {
 
 			// Initialize Kubernetes client
 			clientSet := env.Kubernetes()
-			artifacts := artifacts.NewInternalArtifactStorage()
+			artifacts := artifacts.InternalStorage()
 
 			// Initialize list of pods to schedule
 			fmt.Println("Computing and packaging resources...")

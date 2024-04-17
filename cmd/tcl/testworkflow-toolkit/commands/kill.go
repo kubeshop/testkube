@@ -42,7 +42,7 @@ func NewKillCmd() *cobra.Command {
 
 			// Initialize Kubernetes client
 			clientSet := env.Kubernetes()
-			artifacts := artifacts.NewInternalArtifactStorage()
+			artifacts := artifacts.InternalStorage()
 
 			// Find all pods to kill
 			pods, err := clientSet.CoreV1().Pods(env.Namespace()).List(context.Background(), metav1.ListOptions{

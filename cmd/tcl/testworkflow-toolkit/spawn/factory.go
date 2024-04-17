@@ -9,7 +9,6 @@
 package spawn
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -18,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	common2 "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 )
@@ -29,53 +29,9 @@ func FromInstruction(name string, instruction testworkflowsv1.SpawnInstructionBa
 	}
 
 	// Resolve the shards and matrix
-	shards, err := readParams(instruction.Shards, machines...)
+	params, err := common2.GetParamsSpec(instruction.Matrix, instruction.Shards, instruction.Count, instruction.MaxCount, machines...)
 	if err != nil {
-		return Service{}, fmt.Errorf("shards: %w", err)
-	}
-	matrix, err := readParams(instruction.Matrix, machines...)
-	if err != nil {
-		return Service{}, fmt.Errorf("matrix: %w", err)
-	}
-	minShards := int64(math.MaxInt64)
-	for key := range shards {
-		if int64(len(shards[key])) < minShards {
-			minShards = int64(len(shards[key]))
-		}
-	}
-
-	// Calculate number of matrix combinations
-	combinations := CountCombinations(matrix)
-
-	// Resolve the count
-	var count, maxCount *int64
-	if instruction.Count != nil {
-		countVal, err := readCount(*instruction.Count, machines...)
-		if err != nil {
-			return Service{}, fmt.Errorf("count: %w", err)
-		}
-		count = &countVal
-	}
-	if instruction.MaxCount != nil {
-		countVal, err := readCount(*instruction.MaxCount, machines...)
-		if err != nil {
-			return Service{}, fmt.Errorf("maxCount: %w", err)
-		}
-		maxCount = &countVal
-	}
-	if count == nil && maxCount == nil {
-		count = common.Ptr(int64(1))
-	}
-	if count != nil && maxCount != nil && *maxCount < *count {
-		count = maxCount
-		maxCount = nil
-	}
-	if maxCount != nil && *maxCount > minShards {
-		count = &minShards
-		maxCount = nil
-	} else if maxCount != nil {
-		count = maxCount
-		maxCount = nil
+		return Service{}, fmt.Errorf("parsing spec: %w", err)
 	}
 
 	// Compute parallelism
@@ -90,8 +46,8 @@ func FromInstruction(name string, instruction testworkflowsv1.SpawnInstructionBa
 	if parallelism == nil {
 		parallelism = common.Ptr(int64(math.MaxInt64))
 	}
-	if *parallelism > *count*combinations {
-		parallelism = common.Ptr(*count * combinations)
+	if *parallelism > params.Count {
+		parallelism = common.Ptr(params.Count)
 	}
 
 	// Build the service
@@ -103,12 +59,12 @@ func FromInstruction(name string, instruction testworkflowsv1.SpawnInstructionBa
 		Name:        name,
 		Description: instruction.Description,
 		Strategy:    instruction.Strategy,
-		Count:       *count,
+		Count:       params.ShardCount,
 		Parallelism: *parallelism,
 		Logs:        common.ResolvePtr(instruction.Logs, false),
 		Timeout:     instruction.Timeout,
-		Matrix:      matrix,
-		Shards:      shards,
+		Matrix:      params.Matrix,
+		Shards:      params.Shards,
 		Ready:       instruction.Ready,
 		Error:       instruction.Error,
 		PodTemplate: pod,
@@ -144,36 +100,4 @@ func readCount(s intstr.IntOrString, machines ...expressionstcl.Machine) (int64,
 		return 0, fmt.Errorf("%s: should not be lower than zero", s.String())
 	}
 	return countVal, nil
-}
-
-func readParams(base map[string]testworkflowsv1.StringSlice, machines ...expressionstcl.Machine) (map[string][]interface{}, error) {
-	result := make(map[string][]interface{})
-	for key, items := range base {
-		exprStr := items.Expression
-		if !items.Dynamic {
-			b, err := json.Marshal(items.Static)
-			if err != nil {
-				return nil, fmt.Errorf("%s: could not parse list of values: %s\n", key, err)
-			}
-			exprStr = string(b)
-		}
-		expr, err := expressionstcl.CompileAndResolve(exprStr, machines...)
-		if err != nil {
-			return nil, fmt.Errorf("%s: %s: %s", key, exprStr, err)
-		}
-		if expr.Static() == nil {
-			return nil, fmt.Errorf("%s: %s: could not resolve", key, exprStr)
-		}
-		list, err := expr.Static().SliceValue()
-		if err != nil {
-			return nil, fmt.Errorf("%s: %s: could not parse as list: %s", key, exprStr, err)
-		}
-		result[key] = list
-	}
-	for key := range result {
-		if len(result[key]) == 0 {
-			delete(result, key)
-		}
-	}
-	return result, nil
 }

@@ -118,7 +118,7 @@ func BuildResources(services []Service, ref string, machines ...expressionstcl.M
 			if len(transfer) > 0 {
 				init := corev1.Container{
 					Name:            fmt.Sprintf("%s-tktw-init", ref),
-					Image:           env.Config().System.ToolkitImage,
+					Image:           env.Config().Images.Toolkit,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Command:         []string{"/toolkit", "transfer", "--addr", fmt.Sprintf("%s:9999", env.IP())},
 					Args:            transferArgs,
