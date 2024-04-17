@@ -237,7 +237,7 @@ func NewExecuteCmd() *cobra.Command {
 				}
 
 				// Resolve the params
-				params, err := common2.GetParamsSpec(t.Matrix, t.Shards, t.Count, t.MaxCount)
+				params, err := common2.GetParamsSpec(t.Matrix, t.Shards, t.Count, t.MaxCount, baseMachine)
 				if err != nil {
 					ui.Fail(errors.Wrap(err, "matrix and sharding"))
 				}
@@ -265,7 +265,7 @@ func NewExecuteCmd() *cobra.Command {
 				}
 
 				// Resolve the params
-				params, err := common2.GetParamsSpec(w.Matrix, w.Shards, w.Count, w.MaxCount)
+				params, err := common2.GetParamsSpec(w.Matrix, w.Shards, w.Count, w.MaxCount, baseMachine)
 				if err != nil {
 					ui.Fail(errors.Wrap(err, "matrix and sharding"))
 				}
