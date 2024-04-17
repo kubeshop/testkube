@@ -140,7 +140,7 @@ func (e *executor) Control(ctx context.Context, execution testkube.TestWorkflowE
 				continue
 			}
 			if v.Value.Output != nil {
-				execution.Output = append(execution.Output, *v.Value.Output.ToInternal())
+				execution.Output = append(execution.Output, *testworkflowcontroller.InstructionToInternal(v.Value.Output))
 			} else if v.Value.Result != nil {
 				execution.Result = v.Value.Result
 				if execution.Result.IsFinished() {

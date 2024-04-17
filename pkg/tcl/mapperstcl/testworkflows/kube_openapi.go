@@ -31,6 +31,13 @@ func MapIntOrStringPtrToStringPtr(i *intstr.IntOrString) *string {
 	return common.Ptr(MapIntOrStringToString(*i))
 }
 
+func MapIntOrStringToBoxedString(v *intstr.IntOrString) *testkube.BoxedString {
+	if v == nil {
+		return nil
+	}
+	return MapStringToBoxedString(common.Ptr(v.String()))
+}
+
 func MapStringToBoxedString(v *string) *testkube.BoxedString {
 	if v == nil {
 		return nil
@@ -78,6 +85,21 @@ func MapQuantityToBoxedString(v *resource.Quantity) *testkube.BoxedString {
 		return nil
 	}
 	return &testkube.BoxedString{Value: v.String()}
+}
+
+func MapDynamicListMapKubeToAPI(v map[string]testworkflowsv1.DynamicList) map[string]interface{} {
+	if len(v) == 0 {
+		return nil
+	}
+	result := make(map[string]interface{}, len(v))
+	for k := range v {
+		if v[k].Dynamic {
+			result[k] = v[k].Dynamic
+		} else {
+			result[k] = v[k].Static
+		}
+	}
+	return result
 }
 
 func MapHostPathVolumeSourceKubeToAPI(v corev1.HostPathVolumeSource) testkube.HostPathVolumeSource {
@@ -489,16 +511,105 @@ func MapStepRunKubeToAPI(v testworkflowsv1.StepRun) testkube.TestWorkflowStepRun
 	}
 }
 
-func MapStepExecuteTestKubeToAPI(v testworkflowsv1.StepExecuteTest) testkube.TestWorkflowStepExecuteTestRef {
-	return testkube.TestWorkflowStepExecuteTestRef{
-		Name: v.Name,
+func MapTestVariableKubeToAPI(v testsv3.Variable) testkube.Variable {
+	var configMapRef *testkube.ConfigMapRef
+	if v.ValueFrom.ConfigMapKeyRef != nil {
+		configMapRef = &testkube.ConfigMapRef{
+			Name: v.ValueFrom.ConfigMapKeyRef.Name,
+			Key:  v.ValueFrom.ConfigMapKeyRef.Key,
+		}
+	}
+	var secretRef *testkube.SecretRef
+	if v.ValueFrom.SecretKeyRef != nil {
+		secretRef = &testkube.SecretRef{
+			Name: v.ValueFrom.SecretKeyRef.Name,
+			Key:  v.ValueFrom.SecretKeyRef.Key,
+		}
+	}
+	return testkube.Variable{
+		Type_:        common.PtrOrNil(testkube.VariableType(v.Type_)),
+		Name:         v.Name,
+		Value:        v.Value,
+		SecretRef:    secretRef,
+		ConfigMapRef: configMapRef,
 	}
 }
 
-func MapTestWorkflowRefKubeToAPI(v testworkflowsv1.StepExecuteWorkflow) testkube.TestWorkflowRef {
-	return testkube.TestWorkflowRef{
-		Name:   v.Name,
-		Config: MapConfigValueKubeToAPI(v.Config),
+func MapTestArtifactRequestKubeToAPI(v testsv3.ArtifactRequest) testkube.ArtifactRequest {
+	return testkube.ArtifactRequest{
+		StorageClassName:           v.StorageClassName,
+		VolumeMountPath:            v.VolumeMountPath,
+		Dirs:                       v.Dirs,
+		Masks:                      v.Masks,
+		StorageBucket:              v.StorageBucket,
+		OmitFolderPerExecution:     v.OmitFolderPerExecution,
+		SharedBetweenPods:          v.SharedBetweenPods,
+		UseDefaultStorageClassName: v.UseDefaultStorageClassName,
+	}
+}
+
+func MapTestEnvReferenceKubeToAPI(v testsv3.EnvReference) testkube.EnvReference {
+	return testkube.EnvReference{
+		Reference:      common.PtrOrNil(testkube.LocalObjectReference{Name: v.Name}),
+		Mount:          v.Mount,
+		MountPath:      v.MountPath,
+		MapToVariables: v.MapToVariables,
+	}
+}
+
+func MapStepExecuteTestExecutionRequestKubeToAPI(v testworkflowsv1.TestExecutionRequest) testkube.TestWorkflowStepExecuteTestExecutionRequest {
+	return testkube.TestWorkflowStepExecuteTestExecutionRequest{
+		Name:                               v.Name,
+		ExecutionLabels:                    v.ExecutionLabels,
+		VariablesFile:                      v.VariablesFile,
+		IsVariablesFileUploaded:            v.IsVariablesFileUploaded,
+		Variables:                          common.MapMap(v.Variables, MapTestVariableKubeToAPI),
+		TestSecretUUID:                     v.TestSecretUUID,
+		Args:                               v.Args,
+		ArgsMode:                           string(v.ArgsMode),
+		Command:                            v.Command,
+		Image:                              v.Image,
+		ImagePullSecrets:                   common.MapSlice(v.ImagePullSecrets, MapLocalObjectReferenceKubeToAPI),
+		Sync:                               v.Sync,
+		HttpProxy:                          v.HttpProxy,
+		HttpsProxy:                         v.HttpsProxy,
+		NegativeTest:                       v.NegativeTest,
+		ActiveDeadlineSeconds:              v.ActiveDeadlineSeconds,
+		ArtifactRequest:                    common.MapPtr(v.ArtifactRequest, MapTestArtifactRequestKubeToAPI),
+		JobTemplate:                        v.JobTemplate,
+		CronJobTemplate:                    v.CronJobTemplate,
+		PreRunScript:                       v.PreRunScript,
+		PostRunScript:                      v.PostRunScript,
+		ExecutePostRunScriptBeforeScraping: v.ExecutePostRunScriptBeforeScraping,
+		SourceScripts:                      v.SourceScripts,
+		ScraperTemplate:                    v.ScraperTemplate,
+		EnvConfigMaps:                      common.MapSlice(v.EnvConfigMaps, MapTestEnvReferenceKubeToAPI),
+		EnvSecrets:                         common.MapSlice(v.EnvSecrets, MapTestEnvReferenceKubeToAPI),
+		ExecutionNamespace:                 v.ExecutionNamespace,
+	}
+}
+func MapStepExecuteTestKubeToAPI(v testworkflowsv1.StepExecuteTest) testkube.TestWorkflowStepExecuteTestRef {
+	return testkube.TestWorkflowStepExecuteTestRef{
+		Name:             v.Name,
+		Description:      v.Description,
+		ExecutionRequest: common.MapPtr(v.ExecutionRequest, MapStepExecuteTestExecutionRequestKubeToAPI),
+		Count:            MapIntOrStringToBoxedString(v.Count),
+		MaxCount:         MapIntOrStringToBoxedString(v.MaxCount),
+		Matrix:           MapDynamicListMapKubeToAPI(v.Matrix),
+		Shards:           MapDynamicListMapKubeToAPI(v.Shards),
+	}
+}
+
+func MapStepExecuteTestWorkflowKubeToAPI(v testworkflowsv1.StepExecuteWorkflow) testkube.TestWorkflowStepExecuteTestWorkflowRef {
+	return testkube.TestWorkflowStepExecuteTestWorkflowRef{
+		Name:          v.Name,
+		Description:   v.Description,
+		ExecutionName: v.ExecutionName,
+		Config:        MapConfigValueKubeToAPI(v.Config),
+		Count:         MapIntOrStringToBoxedString(v.Count),
+		MaxCount:      MapIntOrStringToBoxedString(v.MaxCount),
+		Matrix:        MapDynamicListMapKubeToAPI(v.Matrix),
+		Shards:        MapDynamicListMapKubeToAPI(v.Shards),
 	}
 }
 
@@ -507,7 +618,7 @@ func MapStepExecuteKubeToAPI(v testworkflowsv1.StepExecute) testkube.TestWorkflo
 		Parallelism: v.Parallelism,
 		Async:       v.Async,
 		Tests:       common.MapSlice(v.Tests, MapStepExecuteTestKubeToAPI),
-		Workflows:   common.MapSlice(v.Workflows, MapTestWorkflowRefKubeToAPI),
+		Workflows:   common.MapSlice(v.Workflows, MapStepExecuteTestWorkflowKubeToAPI),
 	}
 }
 

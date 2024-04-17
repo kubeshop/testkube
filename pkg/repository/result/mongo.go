@@ -127,33 +127,6 @@ func WithMongoRepositorySequenceCollection(collection *mongo.Collection) MongoRe
 	}
 }
 
-func (r *MongoRepository) getOutputFromLogServer(ctx context.Context, result *testkube.Execution) (string, error) {
-	if r.logGrpcClient == nil {
-		return "", nil
-	}
-
-	if result.ExecutionResult == nil || !result.ExecutionResult.IsCompleted() {
-		return "", nil
-	}
-
-	logs, err := r.logGrpcClient.Get(ctx, result.Id)
-	if err != nil {
-		return "", err
-	}
-
-	output := ""
-	for log := range logs {
-		if log.Error != nil {
-			r.log.Errorw("can't get log line", "error", log.Error)
-			continue
-		}
-
-		output += log.Log.Content + "\n"
-	}
-
-	return output, nil
-}
-
 func (r *MongoRepository) GetExecution(ctx context.Context, id string) (result testkube.Execution, err error) {
 	err = r.ResultsColl.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&result)
 	if err != nil {

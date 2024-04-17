@@ -6,14 +6,13 @@
 //
 //	https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
 
-package artifacts
+package data
 
-import (
-	"io"
-)
+import "github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 
-type Uploader interface {
-	Start() error
-	Add(path string, file io.Reader, size int64) error
-	End() error
+var baseTestWorkflowMachine = expressionstcl.CombinedMachines(EnvMachine, StateMachine, FileMachine)
+
+func GetBaseTestWorkflowMachine() expressionstcl.Machine {
+	LoadState()
+	return baseTestWorkflowMachine
 }

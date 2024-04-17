@@ -34,12 +34,6 @@ var directDisableMultipart = artifacts.WithMinioOptionsEnhancer(func(options *mi
 	options.DisableMultipart = true
 })
 
-var directDetectMimetype = artifacts.WithMinioOptionsEnhancer(func(options *minio.PutObjectOptions, path string, size int64) {
-	if options.ContentType == "" {
-		options.ContentType = artifacts.DetectMimetype(path)
-	}
-})
-
 var directUnpack = artifacts.WithMinioOptionsEnhancer(func(options *minio.PutObjectOptions, path string, size int64) {
 	options.UserMetadata = map[string]string{
 		"X-Amz-Meta-Snowball-Auto-Extract": "true",
@@ -54,18 +48,6 @@ var cloudAddGzipEncoding = artifacts.WithRequestEnhancerCloud(func(req *http.Req
 
 var cloudUnpack = artifacts.WithRequestEnhancerCloud(func(req *http.Request, path string, size int64) {
 	req.Header.Set("X-Amz-Meta-Snowball-Auto-Extract", "true")
-})
-
-var cloudDetectMimetype = artifacts.WithRequestEnhancerCloud(func(req *http.Request, path string, size int64) {
-	if req.Header.Get("Content-Type") == "" {
-		contentType := artifacts.DetectMimetype(path)
-		if contentType != "" {
-			req.Header.Set("Content-Type", contentType)
-		}
-		if contentType == "application/gzip" && req.Header.Get("Content-Encoding") == "" {
-			req.Header.Set("Content-Encoding", "gzip")
-		}
-	}
 })
 
 func NewArtifactsCmd() *cobra.Command {
@@ -123,7 +105,7 @@ func NewArtifactsCmd() *cobra.Command {
 					uploader = artifacts.NewCloudUploader(opts...)
 				} else {
 					processor = artifacts.NewDirectProcessor()
-					uploader = artifacts.NewCloudUploader(artifacts.WithParallelismCloud(30), cloudDetectMimetype)
+					uploader = artifacts.NewCloudUploader(artifacts.WithParallelismCloud(30), artifacts.CloudDetectMimetype)
 				}
 			} else if compress != "" && unpack {
 				processor = artifacts.NewTarCachedProcessor(compress, compressCachePath)
@@ -136,7 +118,7 @@ func NewArtifactsCmd() *cobra.Command {
 				uploader = artifacts.NewDirectUploader(directAddGzipEncoding)
 			} else {
 				processor = artifacts.NewDirectProcessor()
-				uploader = artifacts.NewDirectUploader(artifacts.WithParallelism(30), directDetectMimetype)
+				uploader = artifacts.NewDirectUploader(artifacts.WithParallelism(30), artifacts.DirectDetectMimetype)
 			}
 
 			handler := artifacts.NewHandler(uploader, processor)

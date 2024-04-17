@@ -9,17 +9,13 @@
 package testworkflowprocessor
 
 import (
-	"errors"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowresolver"
 )
-
-const maxConfigMapFileSize = 950 * 1024
 
 //go:generate mockgen -destination=./mock_intermediate.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor" Intermediate
 type Intermediate interface {
@@ -47,7 +43,7 @@ type Intermediate interface {
 }
 
 type intermediate struct {
-	refCounter
+	RefCounter
 
 	// Routine
 	Root      GroupStage `expr:"include"`
@@ -62,15 +58,16 @@ type intermediate struct {
 	Cfgs []corev1.ConfigMap `expr:"force"`
 
 	// Storing files
-	currentConfigMapStorage   *corev1.ConfigMap
-	estimatedConfigMapStorage int
+	Files ConfigMapFiles `expr:"include"`
 }
 
 func NewIntermediate() Intermediate {
+	ref := NewRefCounter()
 	return &intermediate{
-		Root:      NewGroupStage("", true),
-		Container: NewContainer(),
-	}
+		RefCounter: ref,
+		Root:       NewGroupStage("", true),
+		Container:  NewContainer(),
+		Files:      NewConfigMapFiles(fmt.Sprintf("{{execution.id}}-%s", ref.NextRef()), nil)}
 }
 
 func (s *intermediate) ContainerDefaults() Container {
@@ -86,7 +83,7 @@ func (s *intermediate) PodConfig() testworkflowsv1.PodConfig {
 }
 
 func (s *intermediate) ConfigMaps() []corev1.ConfigMap {
-	return s.Cfgs
+	return append(s.Cfgs, s.Files.ConfigMaps()...)
 }
 
 func (s *intermediate) Secrets() []corev1.Secret {
@@ -94,7 +91,7 @@ func (s *intermediate) Secrets() []corev1.Secret {
 }
 
 func (s *intermediate) Volumes() []corev1.Volume {
-	return s.Pod.Volumes
+	return append(s.Pod.Volumes, s.Files.Volumes()...)
 }
 
 func (s *intermediate) AppendJobConfig(cfg *testworkflowsv1.JobConfig) Intermediate {
@@ -133,57 +130,12 @@ func (s *intermediate) AddEmptyDirVolume(source *corev1.EmptyDirVolumeSource, mo
 
 // Handling files
 
-func (s *intermediate) getInternalConfigMapStorage(size int) *corev1.ConfigMap {
-	if size > maxConfigMapFileSize {
-		return nil
-	}
-	if size+s.estimatedConfigMapStorage > maxConfigMapFileSize || s.currentConfigMapStorage == nil {
-		ref := s.NextRef()
-		s.Cfgs = append(s.Cfgs, corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{Name: "{{execution.id}}-" + ref},
-			Immutable:  common.Ptr(true),
-			Data:       map[string]string{},
-			BinaryData: map[string][]byte{},
-		})
-		s.currentConfigMapStorage = &s.Cfgs[len(s.Cfgs)-1]
-		s.Pod.Volumes = append(s.Pod.Volumes, corev1.Volume{
-			Name: s.currentConfigMapStorage.Name + "-vol",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: s.currentConfigMapStorage.Name},
-				},
-			},
-		})
-	}
-	return s.currentConfigMapStorage
-}
-
 func (s *intermediate) AddTextFile(file string) (corev1.VolumeMount, error) {
-	cfg := s.getInternalConfigMapStorage(len(file))
-	if cfg == nil {
-		return corev1.VolumeMount{}, errors.New("the maximum file size is 950KiB")
-	}
-	s.estimatedConfigMapStorage += len(file)
-	ref := s.NextRef()
-	cfg.Data[ref] = file
-	return corev1.VolumeMount{
-		Name:     cfg.Name + "-vol",
-		ReadOnly: true,
-		SubPath:  ref,
-	}, nil
+	mount, _, err := s.Files.AddTextFile(file)
+	return mount, err
 }
 
 func (s *intermediate) AddBinaryFile(file []byte) (corev1.VolumeMount, error) {
-	cfg := s.getInternalConfigMapStorage(len(file))
-	if cfg == nil {
-		return corev1.VolumeMount{}, errors.New("the maximum file size is 950KiB")
-	}
-	s.estimatedConfigMapStorage += len(file)
-	ref := s.NextRef()
-	cfg.BinaryData[ref] = file
-	return corev1.VolumeMount{
-		Name:     cfg.Name + "-vol",
-		ReadOnly: true,
-		SubPath:  ref,
-	}, nil
+	mount, _, err := s.Files.AddFile(file)
+	return mount, err
 }

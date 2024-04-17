@@ -97,12 +97,12 @@ var wd, _ = os.Getwd()
 var FileMachine = libs.NewFsMachine(os.DirFS("/"), wd)
 
 func Template(tpl string, m ...expressionstcl.Machine) (string, error) {
-	m = append(m, AliasMachine, EnvMachine, StateMachine, FileMachine)
+	m = append(m, AliasMachine, baseTestWorkflowMachine)
 	return expressionstcl.EvalTemplate(tpl, m...)
 }
 
 func Expression(expr string, m ...expressionstcl.Machine) (expressionstcl.StaticValue, error) {
-	m = append(m, AliasMachine, EnvMachine, StateMachine, FileMachine)
+	m = append(m, AliasMachine, baseTestWorkflowMachine)
 	return expressionstcl.EvalExpression(expr, m...)
 }
 

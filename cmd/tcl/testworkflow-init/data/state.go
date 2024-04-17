@@ -11,9 +11,11 @@ package data
 import (
 	"bytes"
 	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 )
@@ -49,6 +51,18 @@ func (s *state) GetOutput(name string) (expressionstcl.Expression, bool, error) 
 	}
 	expr, err := expressionstcl.Compile(v)
 	return expr, true, err
+}
+
+func (s *state) SetOutput(ref, name string, value interface{}) {
+	if s.Output == nil {
+		s.Output = make(map[string]string)
+	}
+	v, err := json.Marshal(value)
+	if err == nil {
+		s.Output[name] = string(v)
+	} else {
+		fmt.Printf("Warning: couldn't save '%s' (%s) output: %s\n", name, ref, err.Error())
+	}
 }
 
 func (s *state) GetSelfStatus() string {
@@ -146,8 +160,16 @@ func persistStatus(filePath string) {
 	}
 }
 
+var loadStateMu sync.Mutex
+var loadedState bool
+
 func LoadState() {
-	readState(filepath.Join(defaultInternalPath, "state"))
+	defer loadStateMu.Unlock()
+	loadStateMu.Lock()
+	if !loadedState {
+		readState(filepath.Join(defaultInternalPath, "state"))
+		loadedState = true
+	}
 }
 
 func Finish() {

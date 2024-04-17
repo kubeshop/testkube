@@ -199,10 +199,10 @@ var stdFunctions = map[string]StdFunction{
 			return NewValue(shellquote.Join(args...)), nil
 		},
 	},
-	"shellargs": {
+	"shellparse": {
 		Handler: func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 {
-				return nil, fmt.Errorf(`"shellargs" function expects 1 arguments, %d provided`, len(value))
+				return nil, fmt.Errorf(`"shellparse" function expects 1 arguments, %d provided`, len(value))
 			}
 			v, _ := value[0].StringValue()
 			words, err := shellquote.Split(v)

@@ -48,6 +48,12 @@ type envSystemConfig struct {
 	Debug     string `envconfig:"DEBUG"`
 	Ref       string `envconfig:"TK_REF"`
 	Namespace string `envconfig:"TK_NS"`
+	Ip        string `envconfig:"TK_IP"`
+}
+
+type envImagesConfig struct {
+	Init    string `envconfig:"TK_IMG_INIT"`
+	Toolkit string `envconfig:"TK_IMG_TOOLKIT"`
 }
 
 type envConfig struct {
@@ -55,6 +61,7 @@ type envConfig struct {
 	ObjectStorage envObjectStorageConfig
 	Cloud         envCloudConfig
 	Execution     envExecutionConfig
+	Images        envImagesConfig
 }
 
 var cfg envConfig
@@ -69,6 +76,8 @@ func Config() *envConfig {
 		err = envconfig.Process("", &cfg.Cloud)
 		ui.ExitOnError("configuring environment", err)
 		err = envconfig.Process("", &cfg.Execution)
+		ui.ExitOnError("configuring environment", err)
+		err = envconfig.Process("", &cfg.Images)
 		ui.ExitOnError("configuring environment", err)
 	}
 	cfgLoaded = true
@@ -93,6 +102,10 @@ func Ref() string {
 
 func Namespace() string {
 	return Config().System.Namespace
+}
+
+func IP() string {
+	return Config().System.Ip
 }
 
 func WorkflowName() string {
