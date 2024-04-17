@@ -7818,6 +7818,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestWorkflowStep"
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestWorkflowEvent"
 
     TestWorkflowTemplateSpec:
       type: object
@@ -7844,6 +7848,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestWorkflowIndependentStep"
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestWorkflowEvent"
 
     TestWorkflowIndependentStep:
       type: object
@@ -8266,6 +8274,33 @@ components:
         - integer
         - number
         - boolean
+
+    TestWorkflowEvent:
+      type: object
+      properties:
+        cronjob:
+          $ref: "#/components/schemas/TestWorkflowCronJobConfig"
+
+    TestWorkflowCronJobConfig:
+      type: object
+      description: cron job configuration
+      required:
+        - cron
+      properties:
+        cron:
+          type: string
+          description: cron schedule to run a test workflow
+          example: "* * * * *"
+        labels:
+          type: object
+          description: labels to attach to the cron job
+          additionalProperties:
+            type: string
+        annotations:
+          type: object
+          description: annotations to attach to the cron job
+          additionalProperties:
+            type: string
 
     ContentGitAuthType:
       type: string

@@ -422,6 +422,20 @@ func MapJobConfigKubeToAPI(v testworkflowsv1.JobConfig) testkube.TestWorkflowJob
 	}
 }
 
+func MapEventKubeToAPI(v testworkflowsv1.Event) testkube.TestWorkflowEvent {
+	return testkube.TestWorkflowEvent{
+		Cronjob: common.MapPtr(v.Cronjob, MapCronJobConfigKubeToAPI),
+	}
+}
+
+func MapCronJobConfigKubeToAPI(v testworkflowsv1.CronJobConfig) testkube.TestWorkflowCronJobConfig {
+	return testkube.TestWorkflowCronJobConfig{
+		Cron:        v.Cron,
+		Labels:      v.Labels,
+		Annotations: v.Annotations,
+	}
+}
+
 func MapPodConfigKubeToAPI(v testworkflowsv1.PodConfig) testkube.TestWorkflowPodConfig {
 	return testkube.TestWorkflowPodConfig{
 		ServiceAccountName: v.ServiceAccountName,
@@ -561,6 +575,7 @@ func MapSpecKubeToAPI(v testworkflowsv1.TestWorkflowSpec) testkube.TestWorkflowS
 		Setup:     common.MapSlice(v.Setup, MapStepKubeToAPI),
 		Steps:     common.MapSlice(v.Steps, MapStepKubeToAPI),
 		After:     common.MapSlice(v.After, MapStepKubeToAPI),
+		Events:    common.MapSlice(v.Events, MapEventKubeToAPI),
 	}
 }
 
@@ -574,6 +589,7 @@ func MapTemplateSpecKubeToAPI(v testworkflowsv1.TestWorkflowTemplateSpec) testku
 		Setup:     common.MapSlice(v.Setup, MapIndependentStepKubeToAPI),
 		Steps:     common.MapSlice(v.Steps, MapIndependentStepKubeToAPI),
 		After:     common.MapSlice(v.After, MapIndependentStepKubeToAPI),
+		Events:    common.MapSlice(v.Events, MapEventKubeToAPI),
 	}
 }
 
