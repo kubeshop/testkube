@@ -111,8 +111,8 @@ func NewSpawnCmd() *cobra.Command {
 
 				// Build the service
 				svc, err := spawn.FromInstruction(k, instruction, baseMachine)
-				svcCombinations := svc.Combinations()
-				svcTotal := svc.Total()
+				svcCombinations := svc.Params.MatrixCount
+				svcTotal := svc.Params.Count
 				if err != nil {
 					fail("%s: %s", spawn.ServiceLabel(k), err.Error())
 				}
@@ -122,7 +122,7 @@ func NewSpawnCmd() *cobra.Command {
 
 				// Skip when empty
 				if svcTotal == 0 {
-					fmt.Printf("%s: 0 instances requested (combinations=%d, count=%d), skipping\n", spawn.ServiceLabel(k), svcCombinations, svc.Count)
+					fmt.Printf("%s: 0 instances requested (combinations=%d, count=%d), skipping\n", spawn.ServiceLabel(k), svcCombinations, svc.Params.ShardCount)
 					continue
 				}
 
@@ -131,10 +131,10 @@ func NewSpawnCmd() *cobra.Command {
 				if svcCombinations > 1 {
 					infos = append(infos, fmt.Sprintf("%d combinations", svcCombinations))
 				}
-				if svc.Count > 1 {
-					infos = append(infos, fmt.Sprintf("sharded %d times", svc.Count))
+				if svc.Params.ShardCount > 1 {
+					infos = append(infos, fmt.Sprintf("sharded %d times", svc.Params.ShardCount))
 				}
-				if svc.Parallelism < svc.Count {
+				if svc.Parallelism < svc.Params.ShardCount {
 					infos = append(infos, fmt.Sprintf("parallelism: %d", svc.Parallelism))
 				}
 				if svcTotal == 1 {
@@ -224,12 +224,12 @@ func NewSpawnCmd() *cobra.Command {
 
 				podSuccess, err := svc.EvalReady(state, index, baseMachine)
 				if err != nil {
-					fmt.Printf("%s: warning: parsing 'success' condition: %s\n", spawn.InstanceLabel(svc.Name, index, svc.Total()), err.Error())
+					fmt.Printf("%s: warning: parsing 'success' condition: %s\n", spawn.InstanceLabel(svc.Name, index, svc.Params.Count), err.Error())
 					return
 				}
 				podError, err := svc.EvalError(state, index, baseMachine)
 				if err != nil {
-					fmt.Printf("%s: warning: parsing 'error' condition: %s\n", spawn.InstanceLabel(svc.Name, index, svc.Total()), err.Error())
+					fmt.Printf("%s: warning: parsing 'error' condition: %s\n", spawn.InstanceLabel(svc.Name, index, svc.Params.Count), err.Error())
 					return
 				}
 
@@ -261,23 +261,23 @@ func NewSpawnCmd() *cobra.Command {
 						err = spawn.DeletePod(context.Background(), clientSet, pod)
 					}
 					if err != nil {
-						fmt.Printf("%s: warning: failed to delete obsolete pod: %s\n", spawn.InstanceLabel(svc.Name, index, svc.Total()), err.Error())
+						fmt.Printf("%s: warning: failed to delete obsolete pod: %s\n", spawn.InstanceLabel(svc.Name, index, svc.Params.Count), err.Error())
 					}
 				}
 
 				if failed {
 					if timeout || pod.Status.Reason == "DeadlineExceeded" {
-						fmt.Printf("%s: timed out\n", spawn.InstanceLabel(svc.Name, index, svc.Total()))
+						fmt.Printf("%s: timed out\n", spawn.InstanceLabel(svc.Name, index, svc.Params.Count))
 					} else {
-						fmt.Printf("%s: failed\n", spawn.InstanceLabel(svc.Name, index, svc.Total()))
+						fmt.Printf("%s: failed\n", spawn.InstanceLabel(svc.Name, index, svc.Params.Count))
 					}
 					initialized[pod.Name] = struct{}{}
 					(*serviceLocksMap[svc.Name])[index].Unlock()
 				} else if succeed {
 					if longRunning {
-						fmt.Printf("%s: initialized successfully on %s\n", spawn.InstanceLabel(svc.Name, index, svc.Total()), pod.Spec.NodeName)
+						fmt.Printf("%s: initialized successfully on %s\n", spawn.InstanceLabel(svc.Name, index, svc.Params.Count), pod.Spec.NodeName)
 					} else {
-						fmt.Printf("%s: finished successfully on %s\n", spawn.InstanceLabel(svc.Name, index, svc.Total()), pod.Spec.NodeName)
+						fmt.Printf("%s: finished successfully on %s\n", spawn.InstanceLabel(svc.Name, index, svc.Params.Count), pod.Spec.NodeName)
 					}
 					initialized[pod.Name] = struct{}{}
 					success.Add(1)
@@ -309,7 +309,7 @@ func NewSpawnCmd() *cobra.Command {
 				// Compute timeout duration
 				timeout, err := svc.TimeoutDuration(index, baseMachine)
 				if err != nil {
-					fail("%s: error while reading timeout: %s", spawn.InstanceLabel(svc.Name, index, svc.Total()), err.Error())
+					fail("%s: error while reading timeout: %s", spawn.InstanceLabel(svc.Name, index, svc.Params.Count), err.Error())
 				}
 				isTimeoutApplicable := timeout != nil && (pod.Spec.ActiveDeadlineSeconds == nil || float64(*pod.Spec.ActiveDeadlineSeconds) > timeout.Seconds())
 
@@ -321,18 +321,18 @@ func NewSpawnCmd() *cobra.Command {
 				// Build service instance description
 				description, err := svc.DescriptionAt(index, baseMachine)
 				if err != nil {
-					fail("%s: error while reading service description: %s", spawn.InstanceLabel(svc.Name, index, svc.Total()), err.Error())
+					fail("%s: error while reading service description: %s", spawn.InstanceLabel(svc.Name, index, svc.Params.Count), err.Error())
 				}
 
 				// Create the pod
 				pod, err = clientSet.CoreV1().Pods(env.Namespace()).
 					Create(context.Background(), pod, metav1.CreateOptions{})
 				if err != nil {
-					fail("%s: error while creating pod: %s", spawn.InstanceLabel(svc.Name, index, svc.Total()), err.Error())
+					fail("%s: error while creating pod: %s", spawn.InstanceLabel(svc.Name, index, svc.Params.Count), err.Error())
 				}
 
 				// Inform about the pod creation
-				fmt.Printf("%s: created pod %s\n", spawn.InstanceLabel(svc.Name, index, svc.Total()), ui.DarkGray("("+pod.Name+")"))
+				fmt.Printf("%s: created pod %s\n", spawn.InstanceLabel(svc.Name, index, svc.Params.Count), ui.DarkGray("("+pod.Name+")"))
 				data.PrintOutput(env.Ref(), "service-status", spawn.ServiceStatus{
 					Name:        svc.Name,
 					Description: description,
@@ -352,7 +352,7 @@ func NewSpawnCmd() *cobra.Command {
 							return
 						}
 						timedOut[pod.Name] = struct{}{}
-						fmt.Printf("%s: takes longer than expected %s\n", spawn.InstanceLabel(svc.Name, index, svc.Total()), timeout.String())
+						fmt.Printf("%s: takes longer than expected %s\n", spawn.InstanceLabel(svc.Name, index, svc.Params.Count), timeout.String())
 						_ = spawn.DeletePod(context.Background(), clientSet, pod)
 					}()
 				}

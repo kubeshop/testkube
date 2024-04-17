@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/rand"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	common2 "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
@@ -41,12 +42,10 @@ type Service struct {
 	Name        string
 	Description string
 	Strategy    testworkflowsv1.SpawnStrategy
-	Count       int64
+	Params      *common2.ParamsSpec
 	Parallelism int64
 	Logs        bool
 	Timeout     string
-	Matrix      map[string][]interface{}
-	Shards      map[string][]interface{}
 	Ready       string
 	Error       string
 	Files       []testworkflowsv1.ContentFile
@@ -54,57 +53,12 @@ type Service struct {
 	PodTemplate corev1.PodTemplateSpec
 }
 
-func (svc *Service) ShardIndexAt(index int64) int64 {
-	return index % svc.Count
-}
-
-func (svc *Service) CombinationIndexAt(index int64) int64 {
-	return (index - svc.ShardIndexAt(index)) / svc.Count
-}
-
-func (svc *Service) Combinations() int64 {
-	return CountCombinations(svc.Matrix)
-}
-
-func (svc *Service) Total() int64 {
-	return svc.Count * svc.Combinations()
-}
-
-func (svc *Service) MatrixAt(index int64) map[string]interface{} {
-	return GetMatrixValues(svc.Matrix, svc.CombinationIndexAt(index))
-}
-
-func (svc *Service) ShardsAt(index int64) map[string][]interface{} {
-	return GetShardValues(svc.Shards, svc.ShardIndexAt(index), svc.Count)
-}
-
-func (svc *Service) MachineAt(index int64) expressionstcl.Machine {
-	// Get basic indices
-	combinations := svc.Combinations()
-	shardIndex := svc.ShardIndexAt(index)
-	combinationIndex := svc.CombinationIndexAt(index)
-
-	// Compute values for this instance
-	matrixValues := svc.MatrixAt(index)
-	shardValues := svc.ShardsAt(index)
-
-	return expressionstcl.NewMachine().
-		Register("index", index).
-		Register("count", combinations*svc.Count).
-		Register("matrixIndex", combinationIndex).
-		Register("matrixCount", combinations).
-		Register("matrix", matrixValues).
-		Register("shardIndex", shardIndex).
-		Register("shardsCount", svc.Count).
-		Register("shard", shardValues)
-}
-
 func (svc *Service) TimeoutDuration(index int64, machines ...expressionstcl.Machine) (*time.Duration, error) {
 	if svc.Timeout == "" {
 		return nil, nil
 	}
 	// Get details for current position
-	machines = append(machines, svc.MachineAt(index))
+	machines = append(machines, svc.Params.MachineAt(index))
 	durationStr, err := expressionstcl.EvalTemplate(svc.Timeout, machines...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to resolve duration template: %s", svc.Timeout)
@@ -121,7 +75,7 @@ func (svc *Service) StrategyAt(index int64, machines ...expressionstcl.Machine) 
 		return "", nil
 	}
 	// Get details for current position
-	machines = append(machines, svc.MachineAt(index))
+	machines = append(machines, svc.Params.MachineAt(index))
 	text, err := expressionstcl.EvalTemplate(string(svc.Strategy), machines...)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to resolve strategy template: %s", svc.Strategy)
@@ -134,7 +88,7 @@ func (svc *Service) StrategyAt(index int64, machines ...expressionstcl.Machine) 
 
 func (svc *Service) Pod(ref string, index int64, machines ...expressionstcl.Machine) (*corev1.Pod, error) {
 	// Get details for current position
-	machines = append(machines, svc.MachineAt(index))
+	machines = append(machines, svc.Params.MachineAt(index))
 
 	// Copy a pod
 	spec := svc.PodTemplate.DeepCopy()
@@ -213,7 +167,7 @@ func (svc *Service) DescriptionAt(index int64, machines ...expressionstcl.Machin
 		return svc.Description, nil
 	}
 	// Get details for current position
-	machines = append(machines, svc.MachineAt(index))
+	machines = append(machines, svc.Params.MachineAt(index))
 	description, err := expressionstcl.EvalTemplate(svc.Description, machines...)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to resolve description template: %s", svc.Description)
@@ -229,7 +183,7 @@ func (svc *Service) FilesMap(index int64, machines ...expressionstcl.Machine) (m
 
 	// Prepare data for computation
 	files := make(map[string]string, len(svc.Files))
-	machines = append(machines, svc.MachineAt(index))
+	machines = append(machines, svc.Params.MachineAt(index))
 
 	// Compute all files
 	var err error
@@ -250,7 +204,7 @@ func (svc *Service) ComputedTransfer(index int64, machines ...expressionstcl.Mac
 
 	// Prepare data for computation
 	transfer := make([]testworkflowsv1.ContentTransfer, len(svc.Transfer))
-	machines = append(machines, svc.MachineAt(index))
+	machines = append(machines, svc.Params.MachineAt(index))
 
 	// Compute
 	for i, content := range svc.Transfer {
@@ -272,7 +226,7 @@ func (svc *Service) ComputedTransfer(index int64, machines ...expressionstcl.Mac
 }
 
 func (svc *Service) Eval(expr string, state ServiceState, index int64, machines ...expressionstcl.Machine) (*bool, error) {
-	machines = append([]expressionstcl.Machine{state.Machine(), svc.MachineAt(index)}, machines...)
+	machines = append([]expressionstcl.Machine{state.Machine(), svc.Params.MachineAt(index)}, machines...)
 	ex, err := expressionstcl.EvalExpressionPartial(expr, machines...)
 	if err != nil {
 		return nil, err

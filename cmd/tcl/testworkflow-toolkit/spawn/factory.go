@@ -14,7 +14,6 @@ import (
 	"math"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	common2 "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
@@ -37,7 +36,7 @@ func FromInstruction(name string, instruction testworkflowsv1.SpawnInstructionBa
 	// Compute parallelism
 	var parallelism *int64
 	if instruction.Parallelism != nil {
-		parallelismVal, err := readCount(*instruction.Parallelism, machines...)
+		parallelismVal, err := common2.ReadCount(*instruction.Parallelism, machines...)
 		if err != nil {
 			return Service{}, fmt.Errorf("parallelism: %w", err)
 		}
@@ -59,12 +58,10 @@ func FromInstruction(name string, instruction testworkflowsv1.SpawnInstructionBa
 		Name:        name,
 		Description: instruction.Description,
 		Strategy:    instruction.Strategy,
-		Count:       params.ShardCount,
+		Params:      params,
 		Parallelism: *parallelism,
 		Logs:        common.ResolvePtr(instruction.Logs, false),
 		Timeout:     instruction.Timeout,
-		Matrix:      params.Matrix,
-		Shards:      params.Shards,
 		Ready:       instruction.Ready,
 		Error:       instruction.Error,
 		PodTemplate: pod,
@@ -82,22 +79,4 @@ func FromInstruction(name string, instruction testworkflowsv1.SpawnInstructionBa
 
 	// Save the service
 	return svc, nil
-}
-
-func readCount(s intstr.IntOrString, machines ...expressionstcl.Machine) (int64, error) {
-	countExpr, err := expressionstcl.CompileAndResolve(s.String(), machines...)
-	if err != nil {
-		return 0, fmt.Errorf("%s: invalid: %s", s.String(), err)
-	}
-	if countExpr.Static() == nil {
-		return 0, fmt.Errorf("%s: could not resolve: %s", s.String(), err)
-	}
-	countVal, err := countExpr.Static().IntValue()
-	if err != nil {
-		return 0, fmt.Errorf("%s: could not convert to int: %s", s.String(), err)
-	}
-	if countVal < 0 {
-		return 0, fmt.Errorf("%s: should not be lower than zero", s.String())
-	}
-	return countVal, nil
 }

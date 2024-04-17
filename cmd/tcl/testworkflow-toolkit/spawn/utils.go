@@ -60,9 +60,8 @@ func BuildResources(services []Service, ref string, machines ...expressionstcl.M
 	})
 
 	for svcIndex, svc := range services {
-		combinations := CountCombinations(svc.Matrix)
-		pods[svcIndex] = make([]*corev1.Pod, svc.Count*combinations)
-		for i := int64(0); i < svc.Count*combinations; i++ {
+		pods[svcIndex] = make([]*corev1.Pod, svc.Params.Count)
+		for i := int64(0); i < svc.Params.Count; i++ {
 			pod, err := svc.Pod(ref, i, machines...)
 			if err != nil {
 				return nil, nil, nil, err
@@ -157,10 +156,10 @@ func EachService(services []Service, pods [][]*corev1.Pod, fn func(svc Service, 
 	// Initialize all the services
 	for i, v := range services {
 		go func(svc Service, svcIndex int) {
-			combinations := svc.Combinations()
+			combinations := svc.Params.MatrixCount
 
 			var swg sync.WaitGroup
-			swg.Add(int(combinations * svc.Count))
+			swg.Add(int(combinations * svc.Params.ShardCount))
 			sema := make(chan struct{}, svc.Parallelism)
 
 			for index, pod := range pods[svcIndex] {
@@ -222,7 +221,7 @@ func DeletePod(ctx context.Context, clientSet kubernetes.Interface, pod *corev1.
 func DeletePodAndSaveLogs(ctx context.Context, clientSet kubernetes.Interface, storage artifacts.InternalArtifactStorage, svc Service, pod *corev1.Pod, index int64) error {
 	logs, err := FetchLogs(context.Background(), clientSet, svc, pod)
 	if err != nil {
-		fmt.Printf("%s: warning: failed to fetch logs from finished pod: %s\n", InstanceLabel(svc.Name, index, svc.Total()), err.Error())
+		fmt.Printf("%s: warning: failed to fetch logs from finished pod: %s\n", InstanceLabel(svc.Name, index, svc.Params.Count), err.Error())
 	} else {
 		filePath := fmt.Sprintf("logs/%s/%d.log", svc.Name, index)
 		err = storage.SaveStream(filePath, logs)
@@ -233,7 +232,7 @@ func DeletePodAndSaveLogs(ctx context.Context, clientSet kubernetes.Interface, s
 				Logs:  storage.FullPath(filePath),
 			})
 		} else {
-			fmt.Printf("%s: warning: error while saving logs: %s\n", InstanceLabel(svc.Name, index, svc.Total()), err.Error())
+			fmt.Printf("%s: warning: error while saving logs: %s\n", InstanceLabel(svc.Name, index, svc.Params.Count), err.Error())
 		}
 	}
 	return DeletePod(ctx, clientSet, pod)

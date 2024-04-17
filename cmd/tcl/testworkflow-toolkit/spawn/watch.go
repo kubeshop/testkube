@@ -34,7 +34,7 @@ func WatchPods(ctx context.Context, clientSet kubernetes.Interface, ref string, 
 	// Prepare semaphores for each service instance
 	sema := make(map[string][]chan struct{}, len(servicesMap))
 	for _, svc := range servicesMap {
-		arr := make([]chan struct{}, svc.Total())
+		arr := make([]chan struct{}, svc.Params.Count)
 		for i := range arr {
 			arr[i] = make(chan struct{}, 1)
 		}
