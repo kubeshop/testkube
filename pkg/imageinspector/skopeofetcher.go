@@ -45,7 +45,7 @@ func determineUserGroupPair(userGroupStr string) (int64, int64) {
 	}
 	userStr, groupStr, _ := strings.Cut(userGroupStr, ":")
 	if groupStr == "" {
-		groupStr = userStr
+		groupStr = "0"
 	}
 	user, _ := strconv.Atoi(userStr)
 	group, _ := strconv.Atoi(groupStr)
