@@ -6,6 +6,7 @@ var (
 	White        = color.FgWhite.Render
 	Blue         = color.FgBlue.Render
 	Green        = color.FgGreen.Render
+	Cyan         = color.FgCyan.Render
 	Yellow       = color.FgYellow.Render
 	Red          = color.FgRed.Render
 	LightYellow  = color.FgLightYellow.Render
