@@ -1,7 +1,7 @@
 kind: TestWorkflowTemplate
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: pre-official--artillery
+  name: official--artillery--beta
   labels:
     testkube.io/name: Artillery
     testkube.io/wizard: enabled

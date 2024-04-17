@@ -1,7 +1,7 @@
 kind: TestWorkflowTemplate
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: pre-official--playwright
+  name: official--playwright--beta
   labels:
     testkube.io/name: Playwright
     testkube.io/wizard: enabled

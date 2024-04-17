@@ -1,7 +1,7 @@
 kind: TestWorkflowTemplate
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: pre-official--cypress
+  name: official--cypress--beta
   labels:
     testkube.io/name: Cypress
     testkube.io/wizard: enabled

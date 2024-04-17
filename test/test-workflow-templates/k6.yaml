@@ -1,7 +1,7 @@
 kind: TestWorkflowTemplate
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: pre-official--k6
+  name: official--k6--beta
   labels:
     testkube.io/name: k6
     testkube.io/wizard: enabled
