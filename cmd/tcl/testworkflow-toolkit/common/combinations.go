@@ -52,7 +52,7 @@ func GetMatrixValues(matrix map[string][]interface{}, index int64) map[string]in
 	return result
 }
 
-func readCount(s intstr.IntOrString, machines ...expressionstcl.Machine) (int64, error) {
+func ReadCount(s intstr.IntOrString, machines ...expressionstcl.Machine) (int64, error) {
 	countExpr, err := expressionstcl.CompileAndResolve(s.String(), machines...)
 	if err != nil {
 		return 0, fmt.Errorf("%s: invalid: %s", s.String(), err)
@@ -174,7 +174,6 @@ func (p *ParamsSpec) MachineAt(index int64) expressionstcl.Machine {
 }
 
 func (p *ParamsSpec) Humanize() string {
-
 	// Print information
 	infos := make([]string, 0)
 	if p.MatrixCount > 1 {
@@ -215,14 +214,14 @@ func GetParamsSpec(origMatrix map[string]testworkflowsv1.DynamicList, origShards
 	// Resolve the count
 	var count, maxCount *int64
 	if origCount != nil {
-		countVal, err := readCount(*origCount, machines...)
+		countVal, err := ReadCount(*origCount, machines...)
 		if err != nil {
 			return nil, fmt.Errorf("count: %w", err)
 		}
 		count = &countVal
 	}
 	if origMaxCount != nil {
-		countVal, err := readCount(*origMaxCount, machines...)
+		countVal, err := ReadCount(*origMaxCount, machines...)
 		if err != nil {
 			return nil, fmt.Errorf("maxCount: %w", err)
 		}
