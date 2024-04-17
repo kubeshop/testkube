@@ -94,7 +94,11 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async bool) (func(
 			TestName:    exec.TestName,
 			Description: test.Description,
 		})
-		fmt.Printf("%s • scheduled %s\n", ui.LightCyan(execName), ui.DarkGray("("+exec.Id+")"))
+		description := ""
+		if test.Description != "" {
+			description = fmt.Sprintf(": %s", test.Description)
+		}
+		fmt.Printf("%s%s • scheduled %s\n", ui.LightCyan(execName), description, ui.DarkGray("("+exec.Id+")"))
 
 		if async {
 			return
@@ -158,7 +162,11 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 			TestWorkflowName: exec.Workflow.Name,
 			Description:      workflow.Description,
 		})
-		fmt.Printf("%s • scheduled %s\n", ui.LightCyan(execName), ui.DarkGray("("+exec.Id+")"))
+		description := ""
+		if workflow.Description != "" {
+			description = fmt.Sprintf(": %s", workflow.Description)
+		}
+		fmt.Printf("%s%s • scheduled %s\n", ui.LightCyan(execName), description, ui.DarkGray("("+exec.Id+")"))
 
 		if async {
 			return
