@@ -24,6 +24,10 @@ func TestCompileBasic(t *testing.T) {
 func TestCompileTernary(t *testing.T) {
 	assert.Equal(t, "value", must(MustCompile(`true ? "value" : "another"`).Static().StringValue()))
 	assert.Equal(t, "another", must(MustCompile(`false ? "value" : "another"`).Static().StringValue()))
+	assert.Equal(t, "another", must(MustCompile(`5 == 3 ? "value" : "another"`).Static().StringValue()))
+	assert.Equal(t, "another", must(MustCompile(`5 == 3 && 2 == 4 ? "value" : "another"`).Static().StringValue()))
+	assert.Equal(t, "another", must(MustCompile(`5 == 3 || 2 == 4 ? "value" : "another"`).Static().StringValue()))
+	assert.Equal(t, "value", must(MustCompile(`3 == 3 || 2 == 4 ? "value" : "another"`).Static().StringValue()))
 	assert.Equal(t, "xyz", must(MustCompile(`false ? "value" : true ? "xyz" :"another"`).Static().StringValue()))
 	assert.Equal(t, "xyz", must(MustCompile(`false ? "value" : (true ? "xyz" :"another")`).Static().StringValue()))
 	assert.Equal(t, 5.78, must(MustCompile(`false ? 3 : (true ? 5.78 : 2)`).Static().FloatValue()))
@@ -230,6 +234,7 @@ func TestCompileStandardLib(t *testing.T) {
 	assert.Equal(t, `"'a b c'"`, MustCompile(`shellquote("a b c")`).String())
 	assert.Equal(t, `"'a b c' 'd e f'"`, MustCompile(`shellquote("a b c", "d e f")`).String())
 	assert.Equal(t, `"''"`, MustCompile(`shellquote(null)`).String())
+	assert.Equal(t, `["a","b","c","a b c"]`, MustCompile(`shellparse("a b c 'a b c'")`).String())
 	assert.Equal(t, `"abc  d"`, MustCompile(`trim("   abc  d  \n  ")`).String())
 	assert.Equal(t, `"abc"`, MustCompile(`yaml("\"abc\"")`).String())
 	assert.Equal(t, `{"foo":{"bar":"baz"}}`, MustCompile(`yaml("foo:\n  bar: 'baz'")`).String())
@@ -245,6 +250,85 @@ a:
 	assert.Equal(t, `[""]`, MustCompile(`split(null)`).String())
 	assert.Equal(t, `["a","b","c"]`, MustCompile(`split("a,b,c")`).String())
 	assert.Equal(t, `["a","b","c"]`, MustCompile(`split("a---b---c", "---")`).String())
+	assert.Equal(t, `5`, MustCompile(`len("abcde")`).String())
+	assert.Equal(t, `2`, MustCompile(`len(["a", "b"])`).String())
+	assert.Equal(t, `2`, MustCompile(`len({"a": "b", "b": "c"})`).String())
+	assert.Equal(t, `2`, MustCompile(`floor(2.6)`).String())
+	assert.Equal(t, `2`, MustCompile(`ceil(1.6)`).String())
+	assert.Equal(t, `2`, MustCompile(`round(1.6)`).String())
+	assert.Equal(t, `2`, MustCompile(`round(1.5)`).String())
+	assert.Equal(t, `1`, MustCompile(`round(1.4)`).String())
+	assert.Equal(t, `[[1,2],[3,4],[5]]`, MustCompile(`chunk([1,2,3,4,5], 2)`).String())
+	assert.Equal(t, `[2,4,6,8,10]`, MustCompile(`map([1,2,3,4,5], "_.value * 2")`).String())
+	assert.Equal(t, `[0,2,4,6,8]`, MustCompile(`map([10,20,30,40,50], "_.index * 2")`).String())
+	assert.Equal(t, `[2,4,6,8,10]`, MustCompile(`map([1,2,3,4,5], "_.value * 2")`).String())
+	assert.Equal(t, `[0,2,4,6,8]`, MustCompile(`map([10,20,30,40,50], "_.index * 2")`).String())
+	assert.Equal(t, `[3,4,5]`, MustCompile(`filter([1,2,3,4,5], "_.value > 2")`).String())
+	assert.Equal(t, `[5]`, MustCompile(`jq([1,2,3,4,5], ". | max")`).String())
+	assert.Equal(t, `[{"b":{"v":2}}]`, MustCompile(`jq([{"a":{"v": 1}},{"b":{"v": 2}}], ". | max_by(.v)")`).String())
+	assert.Equal(t, `[[3,4,5]]`, MustCompile(`jq([1,2,3,4,5], "map(select(. > 2))")`).String())
+	assert.Equal(t, `5`, MustCompile(`at([1,2,3,4,5], 4)`).String())
+	assert.Equal(t, `"value"`, MustCompile(`at({"x": "value"}, "x")`).String())
+	assert.Equal(t, `null`, MustCompile(`at({"x": "value"}, "unknown-key")`).String())
+	assert.Equal(t, `"abc"`, MustCompile(`eval("\"abc\"")`).String())
+	assert.Equal(t, `50`, MustCompile(`eval("5 * 10")`).String())
+	assert.Equal(t, `50*something`, MustCompile(`eval("5 * 10 * something")`).String())
+}
+
+func TestCompileWildcard_Unknown(t *testing.T) {
+	assert.Equal(t, `map(a.b.c,"_.value.d.e")`, MustCompile("a.b.c.*.d.e").String())
+	assert.Equal(t, `map(map(a.b.c,"_.value"),"_.value.d.e")`, MustCompile("a.b.c.*.*.d.e").String())
+}
+
+func TestCompileSpread(t *testing.T) {
+	assert.Equal(t, `"a b c 'a b c'"`, MustCompile(`shellquote(["a", "b", "c", "a b c"]...)`).String())
+	assert.Equal(t, `"a b c 'a b c'"`, MustCompile("shellquote(shellparse(\"a b c\n'a b c'\")...)").String())
+	assert.Equal(t, `"axb"`, MustCompile(`join([["a", "b"], "x"]...)`).String())
+}
+
+func TestCompileWildcard_Map(t *testing.T) {
+	vm := NewMachine().Register("a.b.c", []map[string]interface{}{
+		{"d": map[string]string{"e": "v1"}},
+		{"d": map[string]string{"e": "v2"}},
+	})
+	assert.Equal(t, `["v1","v2"]`, must(MustCompile("a.b.c.*.d.e").Resolve(vm)).String())
+}
+
+func TestCompileWildcard_Struct(t *testing.T) {
+	type S1 struct {
+		Else string `json:"e"`
+	}
+	type S2 struct {
+		Something S1 `json:"d"`
+	}
+	vm := NewMachine().Register("a.b.c", []S2{
+		{Something: S1{Else: "v1"}},
+		{Something: S1{Else: "v2"}},
+	})
+	assert.Equal(t, `["v1","v2"]`, must(MustCompile("a.b.c.*.d.e").Resolve(vm)).String())
+}
+
+func TestCompileWildcard_Inner(t *testing.T) {
+	type S1 struct {
+		Else string `json:"e"`
+	}
+	type S2 struct {
+		Something S1 `json:"d"`
+	}
+	vm := NewMachine().Register("a.b", map[string]interface{}{
+		"c": []S2{
+			{Something: S1{Else: "v1"}},
+			{Something: S1{Else: "v2"}},
+		},
+	})
+	assert.Equal(t, `["v1","v2"]`, must(MustCompile("a.b.c.*.d.e").Resolve(vm)).String())
+}
+
+func TestCompileInnerPath(t *testing.T) {
+	assert.Equal(t, `"v1"`, MustCompile(`["v1", "v2"].0`).String())
+	assert.Equal(t, `"v1abc"`, must(MustCompile(`map(["v1", "v2"], "_.value + \"abc\"").0`).Resolve()).String())
+	assert.Equal(t, `"v"`, must(MustCompile(`{"k": "v", "k2":"v2"}.k`).Resolve()).String())
+	assert.Equal(t, `"v"`, must(MustCompile(`{"k": {"a": "v"}, "k2":"v2"}.k.a`).Resolve()).String())
 }
 
 func TestCompileDetectAccessors(t *testing.T) {
