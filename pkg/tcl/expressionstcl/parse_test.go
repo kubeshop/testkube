@@ -234,7 +234,7 @@ func TestCompileStandardLib(t *testing.T) {
 	assert.Equal(t, `"'a b c'"`, MustCompile(`shellquote("a b c")`).String())
 	assert.Equal(t, `"'a b c' 'd e f'"`, MustCompile(`shellquote("a b c", "d e f")`).String())
 	assert.Equal(t, `"''"`, MustCompile(`shellquote(null)`).String())
-	assert.Equal(t, `["a","b","c","a b c"]`, MustCompile(`shellargs("a b c 'a b c'")`).String())
+	assert.Equal(t, `["a","b","c","a b c"]`, MustCompile(`shellparse("a b c 'a b c'")`).String())
 	assert.Equal(t, `"abc  d"`, MustCompile(`trim("   abc  d  \n  ")`).String())
 	assert.Equal(t, `"abc"`, MustCompile(`yaml("\"abc\"")`).String())
 	assert.Equal(t, `{"foo":{"bar":"baz"}}`, MustCompile(`yaml("foo:\n  bar: 'baz'")`).String())
@@ -282,7 +282,7 @@ func TestCompileWildcard_Unknown(t *testing.T) {
 
 func TestCompileSpread(t *testing.T) {
 	assert.Equal(t, `"a b c 'a b c'"`, MustCompile(`shellquote(["a", "b", "c", "a b c"]...)`).String())
-	assert.Equal(t, `"a b c 'a b c'"`, MustCompile("shellquote(shellargs(\"a b c\n'a b c'\")...)").String())
+	assert.Equal(t, `"a b c 'a b c'"`, MustCompile("shellquote(shellparse(\"a b c\n'a b c'\")...)").String())
 	assert.Equal(t, `"axb"`, MustCompile(`join([["a", "b"], "x"]...)`).String())
 }
 
