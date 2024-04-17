@@ -20,7 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	"github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
+	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
@@ -115,15 +115,18 @@ func ProcessExecute(_ InternalProcessor, layer Intermediate, container Container
 		EnableToolkit(stage.Ref())
 	args := make([]string, 0)
 	for _, t := range step.Execute.Tests {
-		args = append(args, "-t", t.Name)
+		b, err := json.Marshal(t)
+		if err != nil {
+			return nil, errors.Wrap(err, "execute: serializing Test")
+		}
+		args = append(args, "-t", expressionstcl.NewStringValue(string(b)).Template())
 	}
 	for _, w := range step.Execute.Workflows {
-		if len(w.Config) == 0 {
-			args = append(args, "-w", w.Name)
-		} else {
-			v, _ := json.Marshal(testworkflows.MapConfigValueKubeToAPI(w.Config))
-			args = append(args, "-w", fmt.Sprintf(`%s={"config":%s}`, w.Name, v))
+		b, err := json.Marshal(w)
+		if err != nil {
+			return nil, errors.Wrap(err, "execute: serializing TestWorkflow")
 		}
+		args = append(args, "-w", expressionstcl.NewStringValue(string(b)).Template())
 	}
 	if step.Execute.Async {
 		args = append(args, "--async")
