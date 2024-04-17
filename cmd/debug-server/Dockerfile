@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
-FROM golang:1.21
+FROM golang:1.22
 WORKDIR /build
 COPY . .
-ENV CGO_ENABLED=0 
+ENV CGO_ENABLED=0
 ENV GOOS=linux
 
 RUN go build -o /app main.go
