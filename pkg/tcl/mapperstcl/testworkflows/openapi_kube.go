@@ -95,6 +95,9 @@ func MapBoxedIntegerToInt32(v *testkube.BoxedInteger) *int32 {
 }
 
 func MapDynamicListMapAPIToKube(v map[string]interface{}) map[string]testworkflowsv1.DynamicList {
+	if len(v) == 0 {
+		return nil
+	}
 	result := make(map[string]testworkflowsv1.DynamicList, len(v))
 	for k := range v {
 		var item testworkflowsv1.DynamicList

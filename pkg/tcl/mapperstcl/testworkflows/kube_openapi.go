@@ -88,6 +88,9 @@ func MapQuantityToBoxedString(v *resource.Quantity) *testkube.BoxedString {
 }
 
 func MapDynamicListMapKubeToAPI(v map[string]testworkflowsv1.DynamicList) map[string]interface{} {
+	if len(v) == 0 {
+		return nil
+	}
 	result := make(map[string]interface{}, len(v))
 	for k := range v {
 		if v[k].Dynamic {
