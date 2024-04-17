@@ -1,5 +1,7 @@
 package common
 
+import "reflect"
+
 // MergeMaps merges multiple maps into one, the later ones takes precedence over the first ones
 func MergeMaps(ms ...map[string]string) map[string]string {
 	res := map[string]string{}
@@ -22,9 +24,8 @@ func MapPtr[T any, U any](v *T, fn func(T) U) *U {
 	return Ptr(fn(*v))
 }
 
-func PtrOrNil[T comparable](v T) *T {
-	var zero T
-	if zero == v {
+func PtrOrNil[T any](v T) *T {
+	if reflect.ValueOf(v).IsZero() {
 		return nil
 	}
 	return &v
