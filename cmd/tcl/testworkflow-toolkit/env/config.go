@@ -77,6 +77,8 @@ func Config() *envConfig {
 		ui.ExitOnError("configuring environment", err)
 		err = envconfig.Process("", &cfg.Execution)
 		ui.ExitOnError("configuring environment", err)
+		err = envconfig.Process("", &cfg.Images)
+		ui.ExitOnError("configuring environment", err)
 	}
 	cfgLoaded = true
 	return &cfg

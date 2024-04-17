@@ -12,7 +12,6 @@ import (
 	"maps"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -24,18 +23,9 @@ func MergePodConfig(dst, include *testworkflowsv1.PodConfig) *testworkflowsv1.Po
 	} else if include == nil {
 		return dst
 	}
-	if len(include.Labels) > 0 && dst.Labels == nil {
-		dst.Labels = map[string]string{}
-	}
-	maps.Copy(dst.Labels, include.Labels)
-	if len(include.Annotations) > 0 && dst.Annotations == nil {
-		dst.Annotations = map[string]string{}
-	}
-	maps.Copy(dst.Annotations, include.Annotations)
-	if len(include.NodeSelector) > 0 && dst.NodeSelector == nil {
-		dst.NodeSelector = map[string]string{}
-	}
-	maps.Copy(dst.NodeSelector, include.NodeSelector)
+	dst.Labels = MergeMap(dst.Labels, include.Labels)
+	dst.Annotations = MergeMap(dst.Annotations, include.Annotations)
+	dst.NodeSelector = MergeMap(dst.NodeSelector, include.NodeSelector)
 	dst.Volumes = append(dst.Volumes, include.Volumes...)
 	dst.ImagePullSecrets = append(dst.ImagePullSecrets, include.ImagePullSecrets...)
 	if include.ServiceAccountName != "" {
@@ -50,14 +40,8 @@ func MergeJobConfig(dst, include *testworkflowsv1.JobConfig) *testworkflowsv1.Jo
 	} else if include == nil {
 		return dst
 	}
-	if len(include.Labels) > 0 && dst.Labels == nil {
-		dst.Labels = map[string]string{}
-	}
-	maps.Copy(dst.Labels, include.Labels)
-	if len(include.Annotations) > 0 && dst.Annotations == nil {
-		dst.Annotations = map[string]string{}
-	}
-	maps.Copy(dst.Annotations, include.Annotations)
+	dst.Labels = MergeMap(dst.Labels, include.Labels)
+	dst.Annotations = MergeMap(dst.Annotations, include.Annotations)
 	return dst
 }
 
@@ -96,14 +80,8 @@ func MergeResources(dst, include *testworkflowsv1.Resources) *testworkflowsv1.Re
 	} else if include == nil {
 		return dst
 	}
-	if dst.Requests == nil && len(include.Requests) > 0 {
-		dst.Requests = map[corev1.ResourceName]intstr.IntOrString{}
-	}
-	if dst.Limits == nil && len(include.Limits) > 0 {
-		dst.Limits = map[corev1.ResourceName]intstr.IntOrString{}
-	}
-	maps.Copy(dst.Requests, include.Requests)
-	maps.Copy(dst.Limits, include.Limits)
+	dst.Requests = MergeMap(dst.Requests, include.Requests)
+	dst.Limits = MergeMap(dst.Limits, include.Limits)
 	return dst
 }
 
@@ -134,6 +112,16 @@ func MergeContainerConfig(dst, include *testworkflowsv1.ContainerConfig) *testwo
 	}
 	dst.Resources = MergeResources(dst.Resources, include.Resources)
 	dst.SecurityContext = MergeSecurityContext(dst.SecurityContext, include.SecurityContext)
+	return dst
+}
+
+func MergeMap[T comparable, U any](dst, include map[T]U) map[T]U {
+	if include == nil {
+		return dst
+	} else if dst == nil {
+		return include
+	}
+	maps.Copy(dst, include)
 	return dst
 }
 
