@@ -12,30 +12,36 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
+	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
+	common2 "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 type testExecutionDetails struct {
-	Id       string `json:"id"`
-	Name     string `json:"name"`
-	TestName string `json:"testName"`
+	Id          string `json:"id"`
+	Name        string `json:"name"`
+	TestName    string `json:"testName"`
+	Description string `json:"description,omitempty"`
 }
 
 type testWorkflowExecutionDetails struct {
 	Id               string `json:"id"`
 	Name             string `json:"name"`
 	TestWorkflowName string `json:"testWorkflowName"`
+	Description      string `json:"description,omitempty"`
 }
 
 type executionResult struct {
@@ -43,68 +49,50 @@ type executionResult struct {
 	Status string `json:"status"`
 }
 
-func buildTestExecution(test string, async bool) (func() error, error) {
-	name, req, _ := strings.Cut(test, "=")
-	request := testkube.ExecutionRequest{}
-	if req != "" {
-		err := json.Unmarshal([]byte(req), &request)
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("failed to unmarshal execution request: %s: %s", name, req))
-		}
-	}
-	if request.ExecutionLabels == nil {
-		request.ExecutionLabels = map[string]string{}
-	}
-
+func buildTestExecution(test testworkflowsv1.StepExecuteTest, async bool) (func() error, error) {
 	return func() (err error) {
 		c := env.Testkube()
 
-		exec, err := c.ExecuteTest(name, request.Name, client.ExecuteTestOptions{
+		if test.ExecutionRequest == nil {
+			test.ExecutionRequest = &testworkflowsv1.TestExecutionRequest{}
+		}
+
+		exec, err := c.ExecuteTest(test.Name, test.ExecutionRequest.Name, client.ExecuteTestOptions{
 			RunningContext: &testkube.RunningContext{
 				Type_:   "testworkflow",
 				Context: fmt.Sprintf("%s/executions/%s", env.WorkflowName(), env.ExecutionId()),
 			},
-			IsVariablesFileUploaded:            request.IsVariablesFileUploaded,
-			ExecutionLabels:                    request.ExecutionLabels,
-			Command:                            request.Command,
-			Args:                               request.Args,
-			ArgsMode:                           request.ArgsMode,
-			Envs:                               request.Envs,
-			SecretEnvs:                         request.SecretEnvs,
-			HTTPProxy:                          request.HttpProxy,
-			HTTPSProxy:                         request.HttpsProxy,
-			Image:                              request.Image,
-			Uploads:                            request.Uploads,
-			BucketName:                         request.BucketName,
-			ArtifactRequest:                    request.ArtifactRequest,
-			JobTemplate:                        request.JobTemplate,
-			JobTemplateReference:               request.JobTemplateReference,
-			ContentRequest:                     request.ContentRequest,
-			PreRunScriptContent:                request.PreRunScript,
-			PostRunScriptContent:               request.PostRunScript,
-			ExecutePostRunScriptBeforeScraping: request.ExecutePostRunScriptBeforeScraping,
-			SourceScripts:                      request.SourceScripts,
-			ScraperTemplate:                    request.ScraperTemplate,
-			ScraperTemplateReference:           request.ScraperTemplateReference,
-			PvcTemplate:                        request.PvcTemplate,
-			PvcTemplateReference:               request.PvcTemplateReference,
-			NegativeTest:                       request.NegativeTest,
-			IsNegativeTestChangedOnRun:         request.IsNegativeTestChangedOnRun,
-			EnvConfigMaps:                      request.EnvConfigMaps,
-			EnvSecrets:                         request.EnvSecrets,
-			SlavePodRequest:                    request.SlavePodRequest,
-			ExecutionNamespace:                 request.ExecutionNamespace,
+			IsVariablesFileUploaded:            test.ExecutionRequest.IsVariablesFileUploaded,
+			ExecutionLabels:                    test.ExecutionRequest.ExecutionLabels,
+			Command:                            test.ExecutionRequest.Command,
+			Args:                               test.ExecutionRequest.Args,
+			ArgsMode:                           string(test.ExecutionRequest.ArgsMode),
+			HTTPProxy:                          test.ExecutionRequest.HttpProxy,
+			HTTPSProxy:                         test.ExecutionRequest.HttpsProxy,
+			Image:                              test.ExecutionRequest.Image,
+			ArtifactRequest:                    common.MapPtr(test.ExecutionRequest.ArtifactRequest, testworkflows.MapTestArtifactRequestKubeToAPI),
+			JobTemplate:                        test.ExecutionRequest.JobTemplate,
+			PreRunScriptContent:                test.ExecutionRequest.PreRunScript,
+			PostRunScriptContent:               test.ExecutionRequest.PostRunScript,
+			ExecutePostRunScriptBeforeScraping: test.ExecutionRequest.ExecutePostRunScriptBeforeScraping,
+			SourceScripts:                      test.ExecutionRequest.SourceScripts,
+			ScraperTemplate:                    test.ExecutionRequest.ScraperTemplate,
+			NegativeTest:                       test.ExecutionRequest.NegativeTest,
+			EnvConfigMaps:                      common.MapSlice(test.ExecutionRequest.EnvConfigMaps, testworkflows.MapTestEnvReferenceKubeToAPI),
+			EnvSecrets:                         common.MapSlice(test.ExecutionRequest.EnvSecrets, testworkflows.MapTestEnvReferenceKubeToAPI),
+			ExecutionNamespace:                 test.ExecutionRequest.ExecutionNamespace,
 		})
 		execName := exec.Name
 		if err != nil {
-			ui.Errf("failed to execute test: %s: %s", name, err)
+			ui.Errf("failed to execute test: %s: %s", test.Name, err)
 			return
 		}
 
 		data.PrintOutput(env.Ref(), "test-start", &testExecutionDetails{
-			Id:       exec.Id,
-			Name:     exec.Name,
-			TestName: exec.TestName,
+			Id:          exec.Id,
+			Name:        exec.Name,
+			TestName:    exec.TestName,
+			Description: test.Description,
 		})
 		fmt.Printf("%s • scheduled %s\n", ui.LightCyan(execName), ui.DarkGray("("+exec.Id+")"))
 
@@ -150,23 +138,17 @@ func buildTestExecution(test string, async bool) (func() error, error) {
 	}, nil
 }
 
-func buildWorkflowExecution(workflow string, async bool) (func() error, error) {
-	name, req, _ := strings.Cut(workflow, "=")
-	request := testkube.TestWorkflowExecutionRequest{}
-	if req != "" {
-		err := json.Unmarshal([]byte(req), &request)
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("failed to unmarshal execution request: %s: %s", name, req))
-		}
-	}
-
+func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async bool) (func() error, error) {
 	return func() (err error) {
 		c := env.Testkube()
 
-		exec, err := c.ExecuteTestWorkflow(name, request)
+		exec, err := c.ExecuteTestWorkflow(workflow.Name, testkube.TestWorkflowExecutionRequest{
+			Name:   workflow.ExecutionName,
+			Config: testworkflows.MapConfigValueKubeToAPI(workflow.Config),
+		})
 		execName := exec.Name
 		if err != nil {
-			ui.Errf("failed to execute test workflow: %s: %s", name, err.Error())
+			ui.Errf("failed to execute test workflow: %s: %s", workflow.Name, err.Error())
 			return
 		}
 
@@ -174,6 +156,7 @@ func buildWorkflowExecution(workflow string, async bool) (func() error, error) {
 			Id:               exec.Id,
 			Name:             exec.Name,
 			TestWorkflowName: exec.Workflow.Name,
+			Description:      workflow.Description,
 		})
 		fmt.Printf("%s • scheduled %s\n", ui.LightCyan(execName), ui.DarkGray("("+exec.Id+")"))
 
@@ -233,32 +216,82 @@ func NewExecuteCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(0),
 
 		Run: func(cmd *cobra.Command, _ []string) {
-			// Calculate parallelism
-			if parallelism <= 0 {
-				parallelism = 20
-			}
+			// Initialize internal machine
+			baseMachine := data.GetBaseTestWorkflowMachine()
 
 			// Build operations to run
 			operations := make([]func() error, 0)
-			for _, t := range tests {
-				fn, err := buildTestExecution(t, async)
+			for _, s := range tests {
+				var t testworkflowsv1.StepExecuteTest
+				err := json.Unmarshal([]byte(s), &t)
 				if err != nil {
-					ui.Fail(err)
+					ui.Fail(errors.Wrap(err, "unmarshal test definition"))
 				}
-				operations = append(operations, fn)
+
+				// Resolve the params
+				params, err := common2.GetParamsSpec(t.Matrix, t.Shards, t.Count, t.MaxCount)
+				if err != nil {
+					ui.Fail(errors.Wrap(err, "matrix and sharding"))
+				}
+				fmt.Printf("%s: %s\n", common2.ServiceLabel(t.Name), params.Humanize())
+
+				// Create operations for each expected execution
+				for i := int64(0); i < params.Count; i++ {
+					spec := t.DeepCopy()
+					err := expressionstcl.Finalize(&spec, baseMachine, params.MachineAt(i))
+					if err != nil {
+						ui.Fail(errors.Wrapf(err, "'%s' test: computing execution", spec.Name))
+					}
+					fn, err := buildTestExecution(*spec, async)
+					if err != nil {
+						ui.Fail(err)
+					}
+					operations = append(operations, fn)
+				}
 			}
-			for _, w := range workflows {
-				fn, err := buildWorkflowExecution(w, async)
+			for _, s := range workflows {
+				var w testworkflowsv1.StepExecuteWorkflow
+				err := json.Unmarshal([]byte(s), &w)
 				if err != nil {
-					ui.Fail(err)
+					ui.Fail(errors.Wrap(err, "unmarshal workflow definition"))
 				}
-				operations = append(operations, fn)
+
+				// Resolve the params
+				params, err := common2.GetParamsSpec(w.Matrix, w.Shards, w.Count, w.MaxCount)
+				if err != nil {
+					ui.Fail(errors.Wrap(err, "matrix and sharding"))
+				}
+				fmt.Printf("%s: %s\n", common2.ServiceLabel(w.Name), params.Humanize())
+
+				// Create operations for each expected execution
+				for i := int64(0); i < params.Count; i++ {
+					spec := w.DeepCopy()
+					err := expressionstcl.Finalize(&spec, baseMachine, params.MachineAt(i))
+					if err != nil {
+						ui.Fail(errors.Wrapf(err, "'%s' workflow: computing execution", spec.Name))
+					}
+					fn, err := buildWorkflowExecution(*spec, async)
+					if err != nil {
+						ui.Fail(err)
+					}
+					operations = append(operations, fn)
+				}
 			}
 
 			// Validate if there is anything to run
 			if len(operations) == 0 {
 				fmt.Printf("nothing to run\n")
 				os.Exit(0)
+			}
+
+			// Calculate parallelism
+			if parallelism <= 0 {
+				parallelism = 100
+			}
+			if parallelism < len(operations) {
+				fmt.Printf("Total: %d executions, %d parallel\n", len(operations), parallelism)
+			} else {
+				fmt.Printf("Total: %d executions, all in parallel\n", len(operations))
 			}
 
 			// Create channel for execution
@@ -287,8 +320,8 @@ func NewExecuteCmd() *cobra.Command {
 	}
 
 	// TODO: Support test suites too
-	cmd.Flags().StringArrayVarP(&tests, "test", "t", nil, "tests to run; either test name, or test-name=json-execution-request")
-	cmd.Flags().StringArrayVarP(&workflows, "workflow", "w", nil, "workflows to run; either workflow name, or workflow-name=json-execution-request")
+	cmd.Flags().StringArrayVarP(&tests, "test", "t", nil, "tests to run")
+	cmd.Flags().StringArrayVarP(&workflows, "workflow", "w", nil, "workflows to run")
 	cmd.Flags().IntVarP(&parallelism, "parallelism", "p", 0, "how many items could be executed at once")
 	cmd.Flags().BoolVar(&async, "async", false, "should it wait for results")
 
