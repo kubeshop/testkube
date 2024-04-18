@@ -311,7 +311,7 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 				if err != nil && !IsNotFound(err) {
 					return s.BadRequest(c, errPrefix, "global template error", err)
 				} else if err == nil {
-					tplsMap[s.GlobalTemplateName] = *globalTemplatePtr
+					tplsMap[internalName] = *globalTemplatePtr
 				}
 			}
 			if _, ok := tplsMap[internalName]; ok {
