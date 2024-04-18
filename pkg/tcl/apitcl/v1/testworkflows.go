@@ -303,17 +303,28 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 		// Fetch the global template
 		globalTemplateStr := ""
 		if s.GlobalTemplateName != "" {
-			globalTemplate, err := s.TestWorkflowTemplatesClient.Get(testworkflowresolver.GetInternalTemplateName(s.GlobalTemplateName))
-			if err != nil && !IsNotFound(err) {
-				return s.BadRequest(c, errPrefix, "global template error", err)
-			} else if err == nil {
-				tplsMap[s.GlobalTemplateName] = *globalTemplate
-				workflow.Spec.Use = append([]testworkflowsv1.TemplateRef{{Name: testworkflowresolver.GetDisplayTemplateName(globalTemplate.Name)}}, workflow.Spec.Use...)
-			}
-			if globalTemplate != nil {
-				b, err := yaml.Marshal(globalTemplate.Spec)
+			internalName := testworkflowresolver.GetInternalTemplateName(s.GlobalTemplateName)
+			displayName := testworkflowresolver.GetDisplayTemplateName(s.GlobalTemplateName)
+			_, isGlobalTemplateLoaded := tplsMap[internalName]
+			if isGlobalTemplateLoaded {
+				workflow.Spec.Use = append([]testworkflowsv1.TemplateRef{{Name: displayName}}, workflow.Spec.Use...)
+				b, err := yaml.Marshal(tplsMap[internalName])
 				if err == nil {
 					globalTemplateStr = string(b)
+				}
+			} else {
+				globalTemplate, err := s.TestWorkflowTemplatesClient.Get(internalName)
+				if err != nil && !IsNotFound(err) {
+					return s.BadRequest(c, errPrefix, "global template error", err)
+				} else if err == nil {
+					tplsMap[s.GlobalTemplateName] = *globalTemplate
+					workflow.Spec.Use = append([]testworkflowsv1.TemplateRef{{Name: displayName}}, workflow.Spec.Use...)
+				}
+				if globalTemplate != nil {
+					b, err := yaml.Marshal(globalTemplate.Spec)
+					if err == nil {
+						globalTemplateStr = string(b)
+					}
 				}
 			}
 		}
