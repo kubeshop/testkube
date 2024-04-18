@@ -31,11 +31,12 @@ const (
 )
 
 var (
-	InternalBinPath  = filepath.Join(DefaultInternalPath, "bin")
-	DefaultShellPath = filepath.Join(InternalBinPath, "sh")
-	DefaultInitPath  = filepath.Join(DefaultInternalPath, "init")
-	DefaultStatePath = filepath.Join(DefaultInternalPath, "state")
-	InitScript       = strings.TrimSpace(strings.NewReplacer(
+	InternalBinPath        = filepath.Join(DefaultInternalPath, "bin")
+	DefaultShellPath       = filepath.Join(InternalBinPath, "sh")
+	DefaultInitPath        = filepath.Join(DefaultInternalPath, "init")
+	DefaultStatePath       = filepath.Join(DefaultInternalPath, "state")
+	DefaultTransferDirPath = filepath.Join(DefaultInternalPath, "transfer")
+	InitScript             = strings.TrimSpace(strings.NewReplacer(
 		"<bin>", InternalBinPath,
 		"<init>", DefaultInitPath,
 		"<state>", DefaultStatePath,
