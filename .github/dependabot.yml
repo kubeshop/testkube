@@ -16,7 +16,11 @@ updates:
       - "exu"
       - "vsukhin"
       - "nicufk"
-      - "vLia" 
+      - "vLia"
       - "povilasv"
       - "dejanzele"
-    
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
