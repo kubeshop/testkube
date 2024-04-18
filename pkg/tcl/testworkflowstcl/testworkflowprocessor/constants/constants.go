@@ -31,8 +31,6 @@ const (
 )
 
 var (
-	DefaultImage = getInitImage()
-
 	InternalBinPath  = filepath.Join(DefaultInternalPath, "bin")
 	DefaultShellPath = filepath.Join(InternalBinPath, "sh")
 	DefaultInitPath  = filepath.Join(DefaultInternalPath, "init")
@@ -55,7 +53,7 @@ echo -n ',0' > <terminationLog> && echo 'Done.' && exit 0
 	`))
 	DefaultShellHeader     = "set -e\n"
 	DefaultContainerConfig = testworkflowsv1.ContainerConfig{
-		Image: DefaultImage,
+		Image: DefaultInitImage,
 		Env: []corev1.EnvVar{
 			{Name: "CI", Value: "1"},
 		},
