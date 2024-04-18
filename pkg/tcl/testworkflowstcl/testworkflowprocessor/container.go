@@ -401,6 +401,7 @@ func (c *container) EnableToolkit(ref string) Container {
 		AppendEnvMap(map[string]string{
 			"TK_REF":                ref,
 			"TK_NS":                 "{{internal.namespace}}",
+			"TK_TMPL":               "{{internal.globalTemplate}}",
 			"TK_WF":                 "{{workflow.name}}",
 			"TK_EX":                 "{{execution.id}}",
 			"TK_C_URL":              "{{internal.cloud.api.url}}",

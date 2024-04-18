@@ -103,6 +103,7 @@ type Config struct {
 	DisableSecretCreation                       bool          `envconfig:"DISABLE_SECRET_CREATION" default:"false"`
 	TestkubeExecutionNamespaces                 string        `envconfig:"TESTKUBE_EXECUTION_NAMESPACES" default:""`
 	TestkubeDefaultStorageClassName             string        `envconfig:"TESTKUBE_DEFAULT_STORAGE_CLASS_NAME" default:""`
+	GlobalWorkflowTemplateName                  string        `envconfig:"TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_NAME" default:""`
 
 	// DEPRECATED: Use TestkubeProAPIKey instead
 	TestkubeCloudAPIKey string `envconfig:"TESTKUBE_CLOUD_API_KEY" default:""`
