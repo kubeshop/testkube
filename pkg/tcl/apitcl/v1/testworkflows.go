@@ -20,6 +20,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"sigs.k8s.io/kustomize/kyaml/yaml"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -299,6 +300,24 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 			tplsMap[tplName] = *tpl
 		}
 
+		// Fetch the global template
+		globalTemplateStr := ""
+		if s.GlobalTemplateName != "" {
+			globalTemplate, err := s.TestWorkflowTemplatesClient.Get(testworkflowresolver.GetInternalTemplateName(s.GlobalTemplateName))
+			if err != nil && !IsNotFound(err) {
+				return s.BadRequest(c, errPrefix, "global template error", err)
+			} else if err == nil {
+				tplsMap[s.GlobalTemplateName] = *globalTemplate
+				workflow.Spec.Use = append([]testworkflowsv1.TemplateRef{{Name: testworkflowresolver.GetDisplayTemplateName(globalTemplate.Name)}}, workflow.Spec.Use...)
+			}
+			if globalTemplate != nil {
+				b, err := yaml.Marshal(globalTemplate.Spec)
+				if err == nil {
+					globalTemplateStr = string(b)
+				}
+			}
+		}
+
 		// Apply the configuration
 		_, err = testworkflowresolver.ApplyWorkflowConfig(workflow, testworkflowmappers.MapConfigValueAPIToKube(request.Config))
 		if err != nil {
@@ -334,9 +353,10 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 				"cloud.api.skipVerify":  common.GetOr(os.Getenv("TESTKUBE_PRO_SKIP_VERIFY"), os.Getenv("TESTKUBE_CLOUD_SKIP_VERIFY"), "false"),
 				"cloud.api.url":         common.GetOr(os.Getenv("TESTKUBE_PRO_URL"), os.Getenv("TESTKUBE_CLOUD_URL")),
 
-				"dashboard.url": os.Getenv("TESTKUBE_DASHBOARD_URI"),
-				"api.url":       s.ApiUrl,
-				"namespace":     s.Namespace,
+				"dashboard.url":  os.Getenv("TESTKUBE_DASHBOARD_URI"),
+				"api.url":        s.ApiUrl,
+				"namespace":      s.Namespace,
+				"globalTemplate": globalTemplateStr,
 
 				"images.init":    constants.DefaultInitImage,
 				"images.toolkit": constants.DefaultToolkitImage,
