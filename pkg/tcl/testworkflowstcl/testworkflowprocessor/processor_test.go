@@ -105,7 +105,7 @@ func TestProcessBasic(t *testing.T) {
 						{
 							Name:            sig[0].Ref(),
 							ImagePullPolicy: "",
-							Image:           constants.DefaultImage,
+							Image:           constants.DefaultInitImage,
 							Command: []string{
 								"/.tktw/init",
 								sig[0].Ref(),
@@ -188,7 +188,7 @@ func TestProcessBasicEnvReference(t *testing.T) {
 			{
 				Name:            sig[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[0].Ref(),
@@ -258,7 +258,7 @@ func TestProcessMultipleSteps(t *testing.T) {
 			{
 				Name:            sig[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[0].Ref(),
@@ -281,7 +281,7 @@ func TestProcessMultipleSteps(t *testing.T) {
 			{
 				Name:            sig[1].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Ref(),
@@ -350,7 +350,7 @@ func TestProcessNestedSteps(t *testing.T) {
 			{
 				Name:            sig[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[0].Ref(),
@@ -371,7 +371,7 @@ func TestProcessNestedSteps(t *testing.T) {
 			{
 				Name:            sig[1].Children()[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Children()[0].Ref(),
@@ -394,7 +394,7 @@ func TestProcessNestedSteps(t *testing.T) {
 			{
 				Name:            sig[1].Children()[1].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Children()[1].Ref(),
@@ -419,7 +419,7 @@ func TestProcessNestedSteps(t *testing.T) {
 			{
 				Name:            sig[2].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[2].Ref(),
@@ -488,7 +488,7 @@ func TestProcessOptionalSteps(t *testing.T) {
 			{
 				Name:            sig[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[0].Ref(),
@@ -509,7 +509,7 @@ func TestProcessOptionalSteps(t *testing.T) {
 			{
 				Name:            sig[1].Children()[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Children()[0].Ref(),
@@ -531,7 +531,7 @@ func TestProcessOptionalSteps(t *testing.T) {
 			{
 				Name:            sig[1].Children()[1].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Children()[1].Ref(),
@@ -555,7 +555,7 @@ func TestProcessOptionalSteps(t *testing.T) {
 			{
 				Name:            sig[2].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[2].Ref(),
@@ -624,7 +624,7 @@ func TestProcessNegativeSteps(t *testing.T) {
 			{
 				Name:            sig[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[0].Ref(),
@@ -645,7 +645,7 @@ func TestProcessNegativeSteps(t *testing.T) {
 			{
 				Name:            sig[1].Children()[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Children()[0].Ref(),
@@ -669,7 +669,7 @@ func TestProcessNegativeSteps(t *testing.T) {
 			{
 				Name:            sig[1].Children()[1].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Children()[1].Ref(),
@@ -695,7 +695,7 @@ func TestProcessNegativeSteps(t *testing.T) {
 			{
 				Name:            sig[2].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[2].Ref(),
@@ -757,7 +757,7 @@ func TestProcessNegativeContainerStep(t *testing.T) {
 			{
 				Name:            sig[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[0].Ref(),
@@ -780,7 +780,7 @@ func TestProcessNegativeContainerStep(t *testing.T) {
 			{
 				Name:            sig[1].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Ref(),
@@ -844,7 +844,7 @@ func TestProcessOptionalContainerStep(t *testing.T) {
 			{
 				Name:            sig[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[0].Ref(),
@@ -867,7 +867,7 @@ func TestProcessOptionalContainerStep(t *testing.T) {
 			{
 				Name:            sig[1].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Ref(),
@@ -939,7 +939,7 @@ func TestProcessLocalContent(t *testing.T) {
 			{
 				Name:            sig[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[0].Ref(),
@@ -962,7 +962,7 @@ func TestProcessLocalContent(t *testing.T) {
 			{
 				Name:            sig[1].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Ref(),
@@ -1041,7 +1041,7 @@ func TestProcessGlobalContent(t *testing.T) {
 			{
 				Name:            sig[0].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[0].Ref(),
@@ -1064,7 +1064,7 @@ func TestProcessGlobalContent(t *testing.T) {
 			{
 				Name:            sig[1].Ref(),
 				ImagePullPolicy: "",
-				Image:           constants.DefaultImage,
+				Image:           constants.DefaultInitImage,
 				Command: []string{
 					"/.tktw/init",
 					sig[1].Ref(),
@@ -1154,7 +1154,7 @@ func TestProcessRunShell(t *testing.T) {
 						{
 							Name:            sig[0].Ref(),
 							ImagePullPolicy: "",
-							Image:           constants.DefaultImage,
+							Image:           constants.DefaultInitImage,
 							Command: []string{
 								"/.tktw/init",
 								sig[0].Ref(),
