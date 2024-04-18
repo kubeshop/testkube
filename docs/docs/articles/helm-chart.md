@@ -89,8 +89,8 @@ helm install testkube1 kubeshop/testkube --namespace testkube1 --set testkube-ap
 
 The following Helm defaults are used in the `testkube` chart:
 
-| Parameter                              | Is optional | Default                              | Additional details |
-| -------------------------------------- | ----------- | ------------------------------------ | ------------------ |
+| Parameter                              | Is optional | Default                              | Additional details                          |
+| -------------------------------------- | ----------- | ------------------------------------ | ------------------------------------------- |
 | mongodb.auth.enabled                   | yes         | false                                |
 | mongodb.service.port                   | yes         | "27017"                              |
 | mongodb.service.portName               | yes         | "mongodb"                            |
@@ -120,10 +120,10 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.dashboardUri              | yes         | ""                                   |
 | testkube-api.clusterName               | yes         | ""                                   |
 | testkube-api.storage.compressArtifacts | yes         | true                                 |
-| testkube-api.enableSecretsEndpoint     | yes         | false                                | [Learn more]()     |
+| testkube-api.enableSecretsEndpoint     | yes         | false                                | [Learn more](./secrets-enable-endpoint.md)  |
 | testkube-api.disableMongoMigrations    | yes         | false                                |
 | testkube-api.enabledExecutors          | yes         | ""                                   |
-| testkube-api.disableSecretCreation     | yes         | false                                | [Learn more]()     |
+| testkube-api.disableSecretCreation     | yes         | false                                | [Learn more](./secrets-disable-creation.md) |
 | testkube-api.defaultStorageClassName   | yes         | ""                                   |
 
 > For more configuration parameters of a `MongoDB` chart please visit:
