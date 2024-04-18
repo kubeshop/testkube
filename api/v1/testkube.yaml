@@ -8252,6 +8252,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestWorkflowContentFile"
+        tarball:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestWorkflowContentTarball"
 
     TestWorkflowContentGit:
       type: object
@@ -8299,6 +8303,21 @@ components:
           $ref: "#/components/schemas/BoxedInteger"
       required:
         - path
+
+    TestWorkflowContentTarball:
+      type: object
+      properties:
+        url:
+          type: string
+          description: url for the tarball to extract
+        path:
+          type: string
+          description: path where the tarball should be extracted
+        mount:
+          $ref: "#/components/schemas/BoxedBoolean"
+      required:
+      - url
+      - path
 
     TestWorkflowRef:
       type: object

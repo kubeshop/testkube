@@ -301,10 +301,19 @@ func MapContentGitAPIToKube(v testkube.TestWorkflowContentGit) testworkflowsv1.C
 	}
 }
 
+func MapContentTarballAPIToKube(v testkube.TestWorkflowContentTarball) testworkflowsv1.ContentTarball {
+	return testworkflowsv1.ContentTarball{
+		Url:   v.Url,
+		Path:  v.Path,
+		Mount: MapBoxedBooleanToBool(v.Mount),
+	}
+}
+
 func MapContentAPIToKube(v testkube.TestWorkflowContent) testworkflowsv1.Content {
 	return testworkflowsv1.Content{
-		Git:   common.MapPtr(v.Git, MapContentGitAPIToKube),
-		Files: common.MapSlice(v.Files, MapContentFileAPIToKube),
+		Git:     common.MapPtr(v.Git, MapContentGitAPIToKube),
+		Files:   common.MapSlice(v.Files, MapContentFileAPIToKube),
+		Tarball: common.MapSlice(v.Tarball, MapContentTarballAPIToKube),
 	}
 }
 
