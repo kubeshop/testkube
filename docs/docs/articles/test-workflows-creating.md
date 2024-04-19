@@ -49,7 +49,7 @@ Currently, the Test Workflow can be created from scratch, with the help of the w
 The wizard consists of three steps:
 
 ##### Name & Type
-To define a test, specify its name and choose from available templates. Each template may come with predefined configuration values, which can be modified as needed.
+To define a test, specify its name and choose from the available templates. Each template may come with predefined configuration values, which can be modified as needed.
 
 ![create test workflow from wizard - name & type step](../img/dashboard-create-workflow-from-wizard-name-type-step.png)
 
