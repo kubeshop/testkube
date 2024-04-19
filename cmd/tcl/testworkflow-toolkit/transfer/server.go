@@ -33,8 +33,13 @@ type server struct {
 type Server interface {
 	Count() int
 	Has(dirPath string, files []string) bool
-	Include(dirPath string, files []string) (string, error)
+	Include(dirPath string, files []string) (Entry, error)
 	Listen(port int) (func(), error)
+}
+
+type Entry struct {
+	Id  string `json:"id"`
+	Url string `json:"url"`
 }
 
 func NewServer(storagePath string, host string, port int) Server {
@@ -59,18 +64,18 @@ func (t *server) GetUrl(id string) string {
 	return fmt.Sprintf("http://%s:%d/%s", t.host, t.port, id)
 }
 
-func (t *server) Include(dirPath string, files []string) (string, error) {
+func (t *server) Include(dirPath string, files []string) (Entry, error) {
 	id := SourceID(dirPath, files)
 
 	// Ensure that is not prepared already
 	if _, ok := t.files[id]; ok {
-		return t.GetUrl(id), nil
+		return Entry{Id: id, Url: t.GetUrl(id)}, nil
 	}
 
 	// Access the file on the disk
 	fileStream, err := os.Create(filepath.Join(t.storagePath, fmt.Sprintf("%s.tar.gz", id)))
 	if err != nil {
-		return "", err
+		return Entry{}, err
 	}
 	defer fileStream.Close()
 
@@ -83,7 +88,7 @@ func (t *server) Include(dirPath string, files []string) (string, error) {
 	// Append all the files
 	walker, err := artifacts.CreateWalker(files, []string{dirPath}, dirPath)
 	if err != nil {
-		return "", err
+		return Entry{}, err
 	}
 	err = walker.Walk(os.DirFS("/"), func(path string, file fs.File, err error) error {
 		if err != nil {
@@ -111,11 +116,11 @@ func (t *server) Include(dirPath string, files []string) (string, error) {
 		return err
 	})
 	if err != nil {
-		return "", err
+		return Entry{}, err
 	}
 
 	t.files[id] = struct{}{}
-	return t.GetUrl(id), nil
+	return Entry{Id: id, Url: t.GetUrl(id)}, nil
 }
 
 func (t *server) Listen(port int) (func(), error) {
