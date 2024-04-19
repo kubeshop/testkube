@@ -20,6 +20,7 @@
     - [Invitations](#invitations)
       - [Invitations via email](#invitations-via-email)
       - [Auto-accept invitations](#auto-accept-invitations)
+    - [Organization and Environment Management](#organization-and-environment-management)
   - [Bring Your Own Infra](#bring-your-own-infra)
     - [MongoDB](#mongodb)
     - [NATS](#nats)
@@ -284,6 +285,55 @@ Organizations and Environments when they get invited.
 ```helm
 testkube-cloud-api:
   inviteMode: auto-accept
+```
+
+### Organization and Environment Management
+
+Testkube Pro On-Prem allows you to manage organizations and environments using configuration.
+
+```helm
+testkube-cloud-api:
+  api:
+    features:
+      bootstrapConfig:
+        enabled: true
+        config:
+          organizations:
+            - name: prod_organization
+              environments:
+                - name: production_1
+                - name: production_2
+```
+
+On startup, it will create the `prod_organization` organization with two environments, `production_1` and `production_2`.
+
+Next, you can enhance the configuration to automatically add new users to organizations and environments with predefined roles. For example, the following config makes new users join `prod_organization` as a member role and use `production_1` environment as a run role:
+
+```helm
+      bootstrapConfig:
+        enabled: true
+        config:
+          default_organizations:
+            - prod_organization
+          organizations:
+            - name: prod_organization
+              default_role: member
+              default_environments:
+                - production_1
+              environments:
+                - name: production_1
+                  default_role: run
+                - name: production_2
+```
+Note: the default organization and environment mapping only apply on first sign in. After you can remove users from environments or change roles thru Testkube UI.
+
+Additionally, by default, Testkube Pro creates a personal organization for every new user. When using default organization and environment configuration, you can turn off personal organizations using the following config:
+
+```helm
+testkube-cloud-api:
+  api:
+    features:
+      disablePersonalOrgs: true
 ```
 
 ## Bring Your Own Infra
