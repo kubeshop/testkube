@@ -89,6 +89,9 @@ func WatchJob(ctx context.Context, clientSet kubernetes.Interface, namespace, na
 				switch event.Type {
 				case watch.Added, watch.Modified:
 					job := event.Object.(*batchv1.Job)
+					if job == nil {
+						continue
+					}
 					w.SendValue(job)
 					if IsJobDone(job) {
 						return
@@ -171,6 +174,9 @@ func watchPod(ctx context.Context, clientSet kubernetes.Interface, namespace str
 				switch event.Type {
 				case watch.Added, watch.Modified:
 					pod := event.Object.(*corev1.Pod)
+					if pod == nil {
+						continue
+					}
 					w.SendValue(pod)
 					if IsPodDone(pod) {
 						return
@@ -430,7 +436,10 @@ func watchEvents(clientSet kubernetes.Interface, namespace string, options ListO
 				}
 				switch event.Type {
 				case watch.Added, watch.Modified:
-					w.SendValue(event.Object.(*corev1.Event))
+					v := event.Object.(*corev1.Event)
+					if v != nil {
+						w.SendValue(v)
+					}
 				}
 			}
 		}
