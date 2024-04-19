@@ -357,7 +357,7 @@ testkube-cloud-api:
                 - name: production_2
 ```
 
-On startup, it will create the `prod_organization` organization with two environments, `production_1` and `production_2`.
+On startup, the `prod_organization` organization with two environments, `production_1` and `production_2` will be created.
 
 Next, you can enhance the configuration to automatically add new users to organizations and environments with predefined roles. For example, the following config makes new users join `prod_organization` as a member role and use `production_1` environment as a run role:
 
@@ -377,7 +377,7 @@ Next, you can enhance the configuration to automatically add new users to organi
                   default_role: run
                 - name: production_2
 ```
-Note: the default organization and environment mapping only apply on first sign in. After you can remove users from environments or change roles thru Testkube UI.
+Note: The default organization and environment mapping only apply on first sign in. After, you can remove users from environments or change roles thru Testkube UI.
 
 Additionally, by default, Testkube Pro creates a personal organization for every new user. When using default organization and environment configuration, you can turn off personal organizations using the following config:
 
