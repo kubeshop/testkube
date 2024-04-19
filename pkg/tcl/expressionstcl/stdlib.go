@@ -13,6 +13,8 @@ import (
 	"encoding/json"
 	"fmt"
 	math2 "math"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -459,6 +461,61 @@ var stdFunctions = map[string]StdFunction{
 				result = append(result, v)
 			}
 			return NewValue(result), nil
+		},
+	},
+	"relpath": {
+		ReturnType: TypeString,
+		Handler: func(value ...StaticValue) (Expression, error) {
+			if len(value) != 1 && len(value) != 2 {
+				return nil, fmt.Errorf(`"relpath" function expects 1-2 arguments, %d provided`, len(value))
+			}
+			destinationPath, _ := value[0].StringValue()
+			sourcePath := "/"
+			if len(value) == 2 {
+				sourcePath, _ = value[1].StringValue()
+			} else {
+				cwd, err := os.Getwd()
+				if err == nil {
+					sourcePath = cwd
+				}
+			}
+			destinationPath, err := filepath.Abs(destinationPath)
+			if err != nil {
+				return nil, err
+			}
+			sourcePath, err = filepath.Abs(sourcePath)
+			if err != nil {
+				return nil, err
+			}
+			v, err := filepath.Rel(sourcePath, destinationPath)
+			return NewValue(v), err
+		},
+	},
+	"abspath": {
+		ReturnType: TypeString,
+		Handler: func(value ...StaticValue) (Expression, error) {
+			if len(value) != 1 && len(value) != 2 {
+				return nil, fmt.Errorf(`"relpath" function expects 1-2 arguments, %d provided`, len(value))
+			}
+			destinationPath, _ := value[0].StringValue()
+			if filepath.IsAbs(destinationPath) {
+				return NewValue(filepath.Clean(destinationPath)), nil
+			}
+
+			sourcePath := "/"
+			if len(value) == 2 {
+				sourcePath, _ = value[1].StringValue()
+			} else {
+				cwd, err := os.Getwd()
+				if err == nil {
+					sourcePath = cwd
+				}
+			}
+			sourcePath, err := filepath.Abs(sourcePath)
+			if err != nil {
+				return nil, err
+			}
+			return NewValue(filepath.Join(sourcePath, destinationPath)), err
 		},
 	},
 }

@@ -273,6 +273,17 @@ a:
 	assert.Equal(t, `"abc"`, MustCompile(`eval("\"abc\"")`).String())
 	assert.Equal(t, `50`, MustCompile(`eval("5 * 10")`).String())
 	assert.Equal(t, `50*something`, MustCompile(`eval("5 * 10 * something")`).String())
+	assert.Equal(t, `"abc"`, MustCompile(`relpath("xyz/abc", "xyz")`).String())
+	assert.Equal(t, `"abc"`, MustCompile(`relpath("/xyz/../xyz/abc", "/xyz")`).String())
+	assert.Equal(t, `"."`, MustCompile(`relpath("/xyz", "/xyz")`).String())
+	assert.Equal(t, `"../abc"`, MustCompile(`relpath("/abc", "/xyz")`).String())
+	assert.Equal(t, `"abc/def"`, MustCompile(`relpath("/data/abc/def", "/data")`).String())
+	assert.Equal(t, `".."`, MustCompile(`relpath("/data/abc/def", "/data/abc/def/xyz")`).String())
+	assert.Equal(t, `"../ccc"`, MustCompile(`relpath("/data/abc/def/ccc", "/data/abc/def/xyz")`).String())
+	assert.Equal(t, `"/data/abc/def/ccc"`, MustCompile(`abspath("/data/abc/def/ccc", "/data")`).String())
+	assert.Equal(t, `"/data/abc/def/ccc"`, MustCompile(`abspath("/data/abc/def/ccc", "/abc")`).String())
+	assert.Equal(t, `"/data/abc/def/ccc"`, MustCompile(`abspath("def/ccc", "/data/abc")`).String())
+	assert.Equal(t, `"/data"`, MustCompile(`abspath("..", "/data/abc")`).String())
 }
 
 func TestCompileWildcard_Unknown(t *testing.T) {
