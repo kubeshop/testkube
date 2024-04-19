@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
@@ -838,6 +839,8 @@ func newProContext(cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) 
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	md := metadata.Pairs("api-key", cfg.TestkubeProAPIKey)
+	ctx = metadata.NewOutgoingContext(ctx, md)
 	defer cancel()
 	getProContext, err := grpcClient.GetProContext(ctx, &emptypb.Empty{})
 	if err != nil {
