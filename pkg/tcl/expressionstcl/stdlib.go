@@ -518,6 +518,39 @@ var stdFunctions = map[string]StdFunction{
 			return NewValue(filepath.Join(sourcePath, destinationPath)), err
 		},
 	},
+	"range": {
+		Handler: func(value ...StaticValue) (Expression, error) {
+			if len(value) != 1 && len(value) != 2 {
+				return nil, fmt.Errorf(`"range" function expects 1-2 arguments, %d provided`, len(value))
+			}
+
+			// Compute start value
+			start, err := value[0].IntValue()
+			if err != nil {
+				return nil, fmt.Errorf(`"range" function expects integer arguments, %s provided`, value[0].String())
+			}
+
+			// Compute end value
+			var end int64
+			if len(value) == 1 {
+				end = start
+				start = 0
+			} else {
+				end, err = value[1].IntValue()
+				if err != nil {
+					return nil, fmt.Errorf(`"range" function expects integer arguments, %s provided`, value[1].String())
+				}
+			}
+
+			// Build a range (inclusive start, exclusive end)
+			items := int64(math2.Max(0, float64(end-start)))
+			result := make([]int64, items)
+			for i := int64(0); i < items; i++ {
+				result[i] = start + i
+			}
+			return NewValue(result), nil
+		},
+	},
 }
 
 const (

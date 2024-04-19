@@ -284,6 +284,12 @@ a:
 	assert.Equal(t, `"/data/abc/def/ccc"`, MustCompile(`abspath("/data/abc/def/ccc", "/abc")`).String())
 	assert.Equal(t, `"/data/abc/def/ccc"`, MustCompile(`abspath("def/ccc", "/data/abc")`).String())
 	assert.Equal(t, `"/data"`, MustCompile(`abspath("..", "/data/abc")`).String())
+	assert.Equal(t, `[]`, MustCompile(`range(0, 0)`).String())
+	assert.Equal(t, `[]`, MustCompile(`range(0)`).String())
+	assert.Equal(t, `[]`, MustCompile(`range(0, -3)`).String())
+	assert.Equal(t, `[]`, MustCompile(`range(5, 3)`).String())
+	assert.Equal(t, `[0,1,2,3,4]`, MustCompile(`range(5)`).String())
+	assert.Equal(t, `[5,6,7]`, MustCompile(`range(5, 8)`).String())
 }
 
 func TestCompileWildcard_Unknown(t *testing.T) {
