@@ -238,3 +238,11 @@ func (ui *UI) Link(message string, subMessages ...string) {
 	}
 	fmt.Fprintln(ui.Writer)
 }
+
+func (ui *UI) ExecutionLink(message string, subMessages ...string) {
+	fmt.Fprintf(ui.Writer, "%s", LightBlue(message))
+	for _, sub := range subMessages {
+		fmt.Fprintf(ui.Writer, " %s", LightBlue(sub))
+	}
+	fmt.Fprintln(ui.Writer)
+}
