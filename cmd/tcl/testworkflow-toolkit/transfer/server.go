@@ -34,7 +34,7 @@ type Server interface {
 	Count() int
 	Has(dirPath string, files []string) bool
 	Include(dirPath string, files []string) (Entry, error)
-	Listen(port int) (func(), error)
+	Listen() (func(), error)
 }
 
 type Entry struct {
@@ -123,9 +123,9 @@ func (t *server) Include(dirPath string, files []string) (Entry, error) {
 	return Entry{Id: id, Url: t.GetUrl(id)}, nil
 }
 
-func (t *server) Listen(port int) (func(), error) {
+func (t *server) Listen() (func(), error) {
 	handler := http.FileServer(http.Dir(t.storagePath))
-	addr := fmt.Sprintf(":%d", port)
+	addr := fmt.Sprintf(":%d", t.port)
 	srv := http.Server{Addr: addr, Handler: handler}
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {

@@ -112,7 +112,8 @@ func ProcessExecute(_ InternalProcessor, layer Intermediate, container Container
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
 		SetCommand("/toolkit", "execute").
-		EnableToolkit(stage.Ref())
+		EnableToolkit(stage.Ref()).
+		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
 	args := make([]string, 0)
 	for _, t := range step.Execute.Tests {
 		b, err := json.Marshal(t)
