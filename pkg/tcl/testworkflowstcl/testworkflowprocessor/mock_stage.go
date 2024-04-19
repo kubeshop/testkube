@@ -311,7 +311,7 @@ func (mr *MockStageMockRecorder) SetOptional(arg0 interface{}) *gomock.Call {
 }
 
 // SetRetryPolicy mocks base method.
-func (m *MockStage) SetRetryPolicy(arg0 v1.RetryPolicy) StageLifecycle {
+func (m *MockStage) SetRetryPolicy(arg0 *v1.RetryPolicy) StageLifecycle {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SetRetryPolicy", arg0)
 	ret0, _ := ret[0].(StageLifecycle)

@@ -90,12 +90,7 @@ func (t *server) Include(dirPath string, files []string) (Entry, error) {
 	if err != nil {
 		return Entry{}, err
 	}
-	err = walker.Walk(os.DirFS("/"), func(path string, file fs.File, err error) error {
-		if err != nil {
-			fmt.Printf("Warning: '%s' has been ignored, as there was a problem reading it: %s\n", path, err.Error())
-			return nil
-		}
-		stat, err := file.Stat()
+	err = walker.Walk(os.DirFS("/"), func(path string, file fs.File, stat fs.FileInfo, err error) error {
 		if err != nil {
 			fmt.Printf("Warning: '%s' has been ignored, as there was a problem reading it: %s\n", path, err.Error())
 			return nil
@@ -103,7 +98,18 @@ func (t *server) Include(dirPath string, files []string) (Entry, error) {
 
 		// Append the file to the archive
 		name := stat.Name()
-		header, err := tar.FileInfoHeader(stat, name)
+		link := name
+		isSymlink := stat.Mode()&fs.ModeSymlink != 0
+		if isSymlink {
+			link, err = os.Readlink(filepath.Join(dirPath, path))
+			if err != nil {
+				fmt.Printf("Warning: '%s' has been ignored, as there was a problem reading link: %s\n", path, err.Error())
+				return nil
+			}
+		}
+
+		// Build the data
+		header, err := tar.FileInfoHeader(stat, link)
 		if err != nil {
 			return err
 		}
@@ -112,7 +118,12 @@ func (t *server) Include(dirPath string, files []string) (Entry, error) {
 		if err != nil {
 			return err
 		}
-		_, err = io.Copy(tarStream, file)
+
+		// Copy the contents for regular files
+		if !isSymlink {
+			_, err = io.Copy(tarStream, file)
+		}
+
 		return err
 	})
 	if err != nil {

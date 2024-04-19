@@ -219,8 +219,10 @@ func registerTransfer(transferSrv transfer.Server, request map[string]testworkfl
 	}
 	tarballs := make(map[string]transfer.Entry, len(request))
 	for k, t := range request {
-		patterns := t.Files.Static
-		if t.Files.Dynamic {
+		patterns := []string{"**/*"}
+		if t.Files != nil && !t.Files.Dynamic {
+			patterns = t.Files.Static
+		} else if t.Files != nil && t.Files.Dynamic {
 			patternsExpr, err := expressionstcl.EvalExpression(t.Files.Expression, machines...)
 			if err != nil {
 				return nil, errors.Wrapf(err, "computing tarball: %s", k)

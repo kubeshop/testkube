@@ -54,6 +54,8 @@ type ContainerAccessors interface {
 
 	Resources() testworkflowsv1.Resources
 	SecurityContext() *corev1.SecurityContext
+
+	HasVolumeAt(path string) bool
 }
 
 type ContainerMutations[T any] interface {
@@ -213,6 +215,20 @@ func (c *container) SecurityContext() *corev1.SecurityContext {
 		return nil
 	}
 	return c.parent.SecurityContext()
+}
+
+func (c *container) HasVolumeAt(path string) bool {
+	absPath := path
+	if !filepath.IsAbs(path) {
+		absPath = filepath.Join(c.WorkingDir(), path)
+	}
+	mounts := c.VolumeMounts()
+	for _, mount := range mounts {
+		if strings.HasPrefix(filepath.Clean(absPath), filepath.Clean(mount.MountPath)+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 // Mutations

@@ -287,6 +287,45 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container Contai
 	return stage, nil
 }
 
+func ProcessContentTarball(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+	if step.Content == nil || len(step.Content.Tarball) == 0 {
+		return nil, nil
+	}
+
+	selfContainer := container.CreateChild()
+	stage := NewContainerStage(layer.NextRef(), selfContainer)
+	stage.SetRetryPolicy(step.Retry)
+	stage.SetCategory("Download tarball")
+
+	selfContainer.
+		SetImage(constants.DefaultToolkitImage).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetCommand("/toolkit", "tarball").
+		EnableToolkit(stage.Ref())
+
+	// Build volume pair and share with all siblings
+	args := make([]string, len(step.Content.Tarball))
+	for i, t := range step.Content.Tarball {
+		args[i] = fmt.Sprintf("%s=%s", t.Path, t.Url)
+		needsMount := t.Mount != nil && *t.Mount
+		if !needsMount {
+			needsMount = selfContainer.HasVolumeAt(t.Path)
+		}
+
+		if needsMount && t.Mount != nil && !*t.Mount {
+			return nil, fmt.Errorf("content.tarball[%d]: %s: is not part of any volume: should be mounted", i, t.Path)
+		}
+
+		if (needsMount && t.Mount == nil) || (t.Mount == nil && *t.Mount) {
+			volumeMount := layer.AddEmptyDirVolume(nil, t.Path)
+			container.AppendVolumeMounts(volumeMount)
+		}
+	}
+	selfContainer.SetArgs(args...)
+
+	return stage, nil
+}
+
 func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
 	if step.Artifacts == nil {
 		return nil, nil
