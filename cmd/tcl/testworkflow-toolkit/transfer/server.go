@@ -61,7 +61,7 @@ func (t *server) Has(dirPath string, files []string) bool {
 }
 
 func (t *server) GetUrl(id string) string {
-	return fmt.Sprintf("http://%s:%d/%s", t.host, t.port, id)
+	return fmt.Sprintf("http://%s:%d/%s.tar.gz", t.host, t.port, id)
 }
 
 func (t *server) Include(dirPath string, files []string) (Entry, error) {
