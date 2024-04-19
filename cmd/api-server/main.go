@@ -844,6 +844,7 @@ func newProContext(cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) 
 	defer cancel()
 	getProContext, err := grpcClient.GetProContext(ctx, &emptypb.Empty{})
 	if err != nil {
+		ui.WarnOnError("cannot fetch pro-context from cloud: %s", err)
 		return proContext
 	}
 
