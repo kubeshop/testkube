@@ -138,6 +138,20 @@ func (mr *MockStageMockRecorder) GetImages() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImages", reflect.TypeOf((*MockStage)(nil).GetImages))
 }
 
+// HasPause mocks base method.
+func (m *MockStage) HasPause() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasPause")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasPause indicates an expected call of HasPause.
+func (mr *MockStageMockRecorder) HasPause() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasPause", reflect.TypeOf((*MockStage)(nil).HasPause))
+}
+
 // Len mocks base method.
 func (m *MockStage) Len() int {
 	m.ctrl.T.Helper()
@@ -192,6 +206,20 @@ func (m *MockStage) Optional() bool {
 func (mr *MockStageMockRecorder) Optional() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Optional", reflect.TypeOf((*MockStage)(nil).Optional))
+}
+
+// Pause mocks base method.
+func (m *MockStage) Pause() *v1.PauseConfig {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Pause")
+	ret0, _ := ret[0].(*v1.PauseConfig)
+	return ret0
+}
+
+// Pause indicates an expected call of Pause.
+func (mr *MockStageMockRecorder) Pause() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pause", reflect.TypeOf((*MockStage)(nil).Pause))
 }
 
 // Ref mocks base method.
@@ -308,6 +336,20 @@ func (m *MockStage) SetOptional(arg0 bool) StageLifecycle {
 func (mr *MockStageMockRecorder) SetOptional(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetOptional", reflect.TypeOf((*MockStage)(nil).SetOptional), arg0)
+}
+
+// SetPause mocks base method.
+func (m *MockStage) SetPause(arg0 *v1.PauseConfig) StageLifecycle {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetPause", arg0)
+	ret0, _ := ret[0].(StageLifecycle)
+	return ret0
+}
+
+// SetPause indicates an expected call of SetPause.
+func (mr *MockStageMockRecorder) SetPause(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetPause", reflect.TypeOf((*MockStage)(nil).SetPause), arg0)
 }
 
 // SetRetryPolicy mocks base method.

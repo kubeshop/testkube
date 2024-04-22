@@ -42,6 +42,8 @@ func main() {
 	conditions := []data.Rule(nil)
 	resulting := []data.Rule(nil)
 	timeouts := []data.Timeout(nil)
+	pause := ""
+	pauseTimeout := ""
 	args := []string(nil)
 
 	// Read arguments into the base data
@@ -80,6 +82,10 @@ func main() {
 			}
 		case constants.ArgComputeEnv, constants.ArgComputeEnvLong:
 			computed = append(computed, strings.Split(os.Args[i+1], ",")...)
+		case constants.ArgPause, constants.ArgPauseLong:
+			pause = os.Args[i+1]
+		case constants.ArgPauseTimeout, constants.ArgPauseTimeoutLong:
+			pauseTimeout = os.Args[i+1]
 		case constants.ArgNegative, constants.ArgNegativeLong:
 			config["negative"] = os.Args[i+1]
 		case constants.ArgRetryCount:
@@ -126,6 +132,7 @@ func main() {
 		}
 	}
 
+	// TODO: Don't start steps yet if paused and not skipped
 	// Start all acknowledged steps
 	for _, f := range resulting {
 		for _, r := range f.Refs {
@@ -158,6 +165,21 @@ func main() {
 			fmt.Printf("Skipped.\n")
 		}
 		data.Finish()
+	}
+
+	// Handle pausing
+	if pause != "" {
+		// TODO: Compute the pause
+		paused := false
+		if paused {
+			if pauseTimeout != "" {
+				// TODO: Handle pause timeout
+			}
+
+			// TODO: Start waiting server
+			// TODO: Wait for call
+			// TODO: Stop pause timeout
+		}
 	}
 
 	// Load the rest of the configuration

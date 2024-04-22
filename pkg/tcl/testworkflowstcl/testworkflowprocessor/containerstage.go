@@ -75,3 +75,7 @@ func (s *containerStage) Resolve(m ...expressionstcl.Machine) error {
 func (s *containerStage) Container() Container {
 	return s.container
 }
+
+func (s *containerStage) HasPause() bool {
+	return false
+}
