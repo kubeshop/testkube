@@ -101,6 +101,10 @@ func RenderExecutionResult(client client.Client, execution *testkube.Execution, 
 		ui.Warn("Test execution timeout")
 
 	case result.IsFailed():
+		if showLogs {
+			PrintLogs(client, info, *execution)
+		}
+
 		if logsOnly {
 			ui.Info(result.ErrorMessage)
 		} else {
@@ -110,9 +114,6 @@ func RenderExecutionResult(client client.Client, execution *testkube.Execution, 
 			PrintExecutionURIs(execution, info.DashboardUri)
 		}
 
-		if showLogs {
-			PrintLogs(client, info, *execution)
-		}
 		return errors.New(result.ErrorMessage)
 
 	default:
@@ -163,8 +164,8 @@ func PrintLogs(client client.Client, info testkube.ServerInfo, execution testkub
 
 func PrintExecutionURIs(execution *testkube.Execution, dashboardURI string) {
 	ui.NL()
-	ui.Link("Test URI:", fmt.Sprintf("%s/tests/%s", dashboardURI, execution.TestName))
-	ui.Link("Test Execution URI:", fmt.Sprintf("%s/tests/%s/executions/%s", dashboardURI,
+	ui.ExecutionLink("Test URI:", fmt.Sprintf("%s/tests/%s", dashboardURI, execution.TestName))
+	ui.ExecutionLink("Test Execution URI:", fmt.Sprintf("%s/tests/%s/executions/%s", dashboardURI,
 		execution.TestName, execution.Id))
 	ui.NL()
 }
@@ -176,8 +177,8 @@ func PrintTestSuiteExecutionURIs(execution *testkube.TestSuiteExecution, dashboa
 		testSuiteName = execution.TestSuite.Name
 	}
 
-	ui.Link("Test Suite URI:", fmt.Sprintf("%s/test-suites/%s", dashboardURI, testSuiteName))
-	ui.Link("Test Suite Execution URI:", fmt.Sprintf("%s/test-suites/%s/executions/%s", dashboardURI,
+	ui.ExecutionLink("Test Suite URI:", fmt.Sprintf("%s/test-suites/%s", dashboardURI, testSuiteName))
+	ui.ExecutionLink("Test Suite Execution URI:", fmt.Sprintf("%s/test-suites/%s/executions/%s", dashboardURI,
 		testSuiteName, execution.Id))
 	ui.NL()
 }

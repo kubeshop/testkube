@@ -31,6 +31,7 @@ type TestKubeCloudAPIClient interface {
 	ExecuteAsync(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_ExecuteAsyncClient, error)
 	GetLogsStream(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetLogsStreamClient, error)
 	GetTestWorkflowNotificationsStream(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetTestWorkflowNotificationsStreamClient, error)
+	GetProContext(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ProContextResponse, error)
 }
 
 type testKubeCloudAPIClient struct {
@@ -208,6 +209,15 @@ func (x *testKubeCloudAPIGetTestWorkflowNotificationsStreamClient) Recv() (*Test
 	return m, nil
 }
 
+func (c *testKubeCloudAPIClient) GetProContext(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ProContextResponse, error) {
+	out := new(ProContextResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/GetProContext", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TestKubeCloudAPIServer is the server API for TestKubeCloudAPI service.
 // All implementations must embed UnimplementedTestKubeCloudAPIServer
 // for forward compatibility
@@ -220,6 +230,7 @@ type TestKubeCloudAPIServer interface {
 	ExecuteAsync(TestKubeCloudAPI_ExecuteAsyncServer) error
 	GetLogsStream(TestKubeCloudAPI_GetLogsStreamServer) error
 	GetTestWorkflowNotificationsStream(TestKubeCloudAPI_GetTestWorkflowNotificationsStreamServer) error
+	GetProContext(context.Context, *emptypb.Empty) (*ProContextResponse, error)
 	mustEmbedUnimplementedTestKubeCloudAPIServer()
 }
 
@@ -244,6 +255,9 @@ func (UnimplementedTestKubeCloudAPIServer) GetLogsStream(TestKubeCloudAPI_GetLog
 }
 func (UnimplementedTestKubeCloudAPIServer) GetTestWorkflowNotificationsStream(TestKubeCloudAPI_GetTestWorkflowNotificationsStreamServer) error {
 	return status.Errorf(codes.Unimplemented, "method GetTestWorkflowNotificationsStream not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) GetProContext(context.Context, *emptypb.Empty) (*ProContextResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetProContext not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) mustEmbedUnimplementedTestKubeCloudAPIServer() {}
 
@@ -406,6 +420,24 @@ func (x *testKubeCloudAPIGetTestWorkflowNotificationsStreamServer) Recv() (*Test
 	return m, nil
 }
 
+func _TestKubeCloudAPI_GetProContext_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).GetProContext(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/GetProContext",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).GetProContext(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TestKubeCloudAPI_ServiceDesc is the grpc.ServiceDesc for TestKubeCloudAPI service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -416,6 +448,10 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Call",
 			Handler:    _TestKubeCloudAPI_Call_Handler,
+		},
+		{
+			MethodName: "GetProContext",
+			Handler:    _TestKubeCloudAPI_GetProContext_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

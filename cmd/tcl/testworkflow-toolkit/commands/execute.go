@@ -22,11 +22,13 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 	common2 "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -210,6 +212,46 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 	}, nil
 }
 
+func registerTransfer(transferSrv transfer.Server, request map[string]testworkflowsv1.TarballRequest, machines ...expressionstcl.Machine) (expressionstcl.Machine, error) {
+	err := expressionstcl.Finalize(&request, machines...)
+	if err != nil {
+		return nil, errors.Wrap(err, "computing tarball")
+	}
+	tarballs := make(map[string]transfer.Entry, len(request))
+	for k, t := range request {
+		patterns := []string{"**/*"}
+		if t.Files != nil && !t.Files.Dynamic {
+			patterns = t.Files.Static
+		} else if t.Files != nil && t.Files.Dynamic {
+			patternsExpr, err := expressionstcl.EvalExpression(t.Files.Expression, machines...)
+			if err != nil {
+				return nil, errors.Wrapf(err, "computing tarball: %s", k)
+			}
+			patternsList, err := patternsExpr.Static().SliceValue()
+			if err != nil {
+				return nil, errors.Wrapf(err, "computing tarball: %s", k)
+			}
+			patterns = make([]string, len(patternsList))
+			for i, p := range patternsList {
+				if s, ok := p.(string); ok {
+					patterns[i] = s
+				} else {
+					p, err := json.Marshal(s)
+					if err != nil {
+						return nil, errors.Wrapf(err, "computing tarball: %s", k)
+					}
+					patterns[i] = string(p)
+				}
+			}
+		}
+		tarballs[k], err = transferSrv.Include(t.From, patterns)
+		if err != nil {
+			return nil, errors.Wrapf(err, "computing tarball: %s", k)
+		}
+	}
+	return expressionstcl.NewMachine().Register("tarball", tarballs), nil
+}
+
 func NewExecuteCmd() *cobra.Command {
 	var (
 		tests       []string
@@ -226,6 +268,9 @@ func NewExecuteCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, _ []string) {
 			// Initialize internal machine
 			baseMachine := data.GetBaseTestWorkflowMachine()
+
+			// Initialize transfer server
+			transferSrv := transfer.NewServer(constants.DefaultTransferDirPath, env.IP(), constants.DefaultTransferPort)
 
 			// Build operations to run
 			operations := make([]func() error, 0)
@@ -245,8 +290,18 @@ func NewExecuteCmd() *cobra.Command {
 
 				// Create operations for each expected execution
 				for i := int64(0); i < params.Count; i++ {
+					// Clone the spec
 					spec := t.DeepCopy()
-					err := expressionstcl.Finalize(&spec, baseMachine, params.MachineAt(i))
+
+					// Build files for transfer
+					tarballMachine, err := registerTransfer(transferSrv, spec.Tarball, baseMachine, params.MachineAt(i))
+					if err != nil {
+						ui.Fail(errors.Wrapf(err, "'%s' workflow", spec.Name))
+					}
+					spec.Tarball = nil
+
+					// Prepare the operation to run
+					err = expressionstcl.Finalize(&spec, baseMachine, tarballMachine, params.MachineAt(i))
 					if err != nil {
 						ui.Fail(errors.Wrapf(err, "'%s' test: computing execution", spec.Name))
 					}
@@ -273,8 +328,18 @@ func NewExecuteCmd() *cobra.Command {
 
 				// Create operations for each expected execution
 				for i := int64(0); i < params.Count; i++ {
+					// Clone the spec
 					spec := w.DeepCopy()
-					err := expressionstcl.Finalize(&spec, baseMachine, params.MachineAt(i))
+
+					// Build files for transfer
+					tarballMachine, err := registerTransfer(transferSrv, spec.Tarball, baseMachine, params.MachineAt(i))
+					if err != nil {
+						ui.Fail(errors.Wrapf(err, "'%s' workflow", spec.Name))
+					}
+					spec.Tarball = nil
+
+					// Prepare the operation to run
+					err = expressionstcl.Finalize(&spec, baseMachine, tarballMachine, params.MachineAt(i))
 					if err != nil {
 						ui.Fail(errors.Wrapf(err, "'%s' workflow: computing execution", spec.Name))
 					}
@@ -290,6 +355,15 @@ func NewExecuteCmd() *cobra.Command {
 			if len(operations) == 0 {
 				fmt.Printf("nothing to run\n")
 				os.Exit(0)
+			}
+
+			// Initialize transfer server if expected
+			if transferSrv.Count() > 0 {
+				fmt.Printf("Starting transfer server for %d tarballs...\n", transferSrv.Count())
+				if _, err := transferSrv.Listen(); err != nil {
+					ui.Fail(errors.Wrap(err, "failed to start transfer server"))
+				}
+				fmt.Printf("Transfer server started.\n")
 			}
 
 			// Calculate parallelism

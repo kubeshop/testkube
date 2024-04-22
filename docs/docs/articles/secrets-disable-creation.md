@@ -1,7 +1,10 @@
-## testkube-api.enableSecretsEndpoint
+# Disable Secret Creation
 
-Activating the secrets endpoint will enable autocomplete features. This functionality applies to inputs that reference secret names and keys. It is available across all forms and pages where inputs for secrets references are present.
+Setting `testkube-api.disableSecretCreation` to `true` will prevent the creation of new secrets from the dashboard and the API.  
+This setting hides the options for creating secrets, allowing only references to existing secrets to be used.
 
-For example, in the Settings panel of a Test:
+For instance, in areas where git credentials (such as username and token) would typically be entered, these inputs will also be hidden. Instead, users will see inputs designed for referencing existing secrets.
 
-![Secrets Autocomplete](../img/secrets-autocomplete.png)
+This change ensures that only pre-defined secrets can be utilized, enhancing security by limiting the ability to add new secrets dynamically.
+
+[Back to Helm Chart reference](./helm-chart.md)

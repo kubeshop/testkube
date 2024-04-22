@@ -61,16 +61,17 @@ func Success(message string, subMessages ...string) { ui.Success(message, subMes
 func SuccessAndExit(message string, subMessages ...string) {
 	ui.SuccessAndExit(message, subMessages...)
 }
-func Warn(message string, subMessages ...string)  { ui.Warn(message, subMessages...) }
-func Alert(message string, subMessages ...string) { ui.Alert(message, subMessages...) }
-func LogLine(message string)                      { ui.LogLine(message) }
-func Debug(message string, subMessages ...string) { ui.Debug(message, subMessages...) }
-func Info(message string, subMessages ...string)  { ui.Info(message, subMessages...) }
-func Link(message string, subMessages ...string)  { ui.Link(message, subMessages...) }
-func Err(err error)                               { ui.Err(err) }
-func Errf(err string, params ...interface{})      { ui.Errf(err, params...) }
-func Fail(err error)                              { ui.Fail(err) }
-func Failf(err string, params ...interface{})     { ui.Failf(err, params...) }
+func Warn(message string, subMessages ...string)          { ui.Warn(message, subMessages...) }
+func Alert(message string, subMessages ...string)         { ui.Alert(message, subMessages...) }
+func LogLine(message string)                              { ui.LogLine(message) }
+func Debug(message string, subMessages ...string)         { ui.Debug(message, subMessages...) }
+func Info(message string, subMessages ...string)          { ui.Info(message, subMessages...) }
+func Link(message string, subMessages ...string)          { ui.Link(message, subMessages...) }
+func ExecutionLink(message string, subMessages ...string) { ui.ExecutionLink(message, subMessages...) }
+func Err(err error)                                       { ui.Err(err) }
+func Errf(err string, params ...interface{})              { ui.Errf(err, params...) }
+func Fail(err error)                                      { ui.Fail(err) }
+func Failf(err string, params ...interface{})             { ui.Failf(err, params...) }
 func CommandOutput(output []byte, command string, params ...string) {
 	ui.CommandOutput(output, command, params...)
 }

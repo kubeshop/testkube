@@ -7994,6 +7994,10 @@ components:
         executionName:
           type: string
           description: TestWorkflow execution name override
+        tarball:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/TestWorkflowTarballRequest"
         config:
           $ref: "#/components/schemas/TestWorkflowConfigValue"
         count:
@@ -8036,6 +8040,10 @@ components:
           $ref: "#/components/schemas/BoxedString"
         executionRequest:
           $ref: "#/components/schemas/TestWorkflowStepExecuteTestExecutionRequest"
+        tarball:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/TestWorkflowTarballRequest"
         matrix:
           type: object
           description: "matrix of parameters to spawn instances"
@@ -8056,6 +8064,24 @@ components:
             - type: array
               items:
                 type: string
+
+    TestWorkflowTarballRequest:
+      type: object
+      properties:
+        from:
+          type: string
+          description: path to load the files from
+        files:
+          type: object
+          description: "dynamic expression or static list of file patterns to pack"
+          properties:
+            static:
+              type: array
+              items: {}
+            expression:
+              type: string
+      required:
+      - from
 
     TestWorkflowStepExecuteTestExecutionRequest:
       type: object
@@ -8226,6 +8252,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestWorkflowContentFile"
+        tarball:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestWorkflowContentTarball"
 
     TestWorkflowContentGit:
       type: object
@@ -8273,6 +8303,21 @@ components:
           $ref: "#/components/schemas/BoxedInteger"
       required:
         - path
+
+    TestWorkflowContentTarball:
+      type: object
+      properties:
+        url:
+          type: string
+          description: url for the tarball to extract
+        path:
+          type: string
+          description: path where the tarball should be extracted
+        mount:
+          $ref: "#/components/schemas/BoxedBoolean"
+      required:
+      - url
+      - path
 
     TestWorkflowRef:
       type: object

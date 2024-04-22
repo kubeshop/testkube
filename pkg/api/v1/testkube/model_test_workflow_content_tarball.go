@@ -9,8 +9,10 @@
  */
 package testkube
 
-type TestWorkflowContent struct {
-	Git     *TestWorkflowContentGit      `json:"git,omitempty"`
-	Files   []TestWorkflowContentFile    `json:"files,omitempty"`
-	Tarball []TestWorkflowContentTarball `json:"tarball,omitempty"`
+type TestWorkflowContentTarball struct {
+	// url for the tarball to extract
+	Url string `json:"url"`
+	// path where the tarball should be extracted
+	Path  string        `json:"path"`
+	Mount *BoxedBoolean `json:"mount,omitempty"`
 }

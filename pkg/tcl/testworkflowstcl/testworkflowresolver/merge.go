@@ -71,6 +71,7 @@ func MergeContent(dst, include *testworkflowsv1.Content) *testworkflowsv1.Conten
 	}
 	dst.Files = append(dst.Files, include.Files...)
 	dst.Git = MergeContentGit(dst.Git, include.Git)
+	dst.Tarball = append(dst.Tarball, include.Tarball...)
 	return dst
 }
 

@@ -9,8 +9,8 @@
  */
 package testkube
 
-type TestWorkflowContent struct {
-	Git     *TestWorkflowContentGit      `json:"git,omitempty"`
-	Files   []TestWorkflowContentFile    `json:"files,omitempty"`
-	Tarball []TestWorkflowContentTarball `json:"tarball,omitempty"`
+// dynamic expression or static list of file patterns to pack
+type TestWorkflowTarballRequestFiles struct {
+	Static     []interface{} `json:"static,omitempty"`
+	Expression string        `json:"expression,omitempty"`
 }
