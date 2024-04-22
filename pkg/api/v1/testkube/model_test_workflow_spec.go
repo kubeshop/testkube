@@ -21,5 +21,5 @@ type TestWorkflowSpec struct {
 	Setup    []TestWorkflowStep                      `json:"setup,omitempty"`
 	Steps    []TestWorkflowStep                      `json:"steps,omitempty"`
 	After    []TestWorkflowStep                      `json:"after,omitempty"`
-	Events    []TestWorkflowEvent                    `json:"events,omitempty"`
+	Events   []TestWorkflowEvent                     `json:"events,omitempty"`
 }

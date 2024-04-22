@@ -14,9 +14,9 @@ type TestWorkflowTemplateSpec struct {
 	Content   *TestWorkflowContent                   `json:"content,omitempty"`
 	Container *TestWorkflowContainerConfig           `json:"container,omitempty"`
 	Job       *TestWorkflowJobConfig                 `json:"job,omitempty"`
-	Pod       *TestWorkflowPodConfig                  `json:"pod,omitempty"`
 	// map of long-running pods to spawn, like database
 	Services map[string]TestWorkflowSpawnInstruction `json:"services,omitempty"`
+	Pod      *TestWorkflowPodConfig                  `json:"pod,omitempty"`
 	Setup    []TestWorkflowIndependentStep           `json:"setup,omitempty"`
 	Steps    []TestWorkflowIndependentStep           `json:"steps,omitempty"`
 	After    []TestWorkflowIndependentStep           `json:"after,omitempty"`
