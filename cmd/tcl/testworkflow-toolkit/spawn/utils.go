@@ -102,11 +102,11 @@ func BuildResources(services []Service, ref string, machines ...expressionstcl.M
 			transferVolumeMounts := make([]corev1.VolumeMount, len(transfer))
 			for transferIndex, v := range transfer {
 				volumeName := fmt.Sprintf("%s-t%d", ref, transferIndex)
-				id, err := srv.Include(v.From, v.Files)
+				entry, err := srv.Include(v.From, v.Files)
 				if err != nil {
 					return nil, nil, nil, errors.Wrapf(err, "%s: %s instance: transfer.%d", svc.Name, humanize.Ordinal(int(i+1)), transferIndex)
 				}
-				transferArgs[transferIndex] = shellquote.Join(fmt.Sprintf("%s=%s", v.MountPath, id))
+				transferArgs[transferIndex] = shellquote.Join(fmt.Sprintf("%s=%s", v.MountPath, entry.Url))
 				transferVolumeMounts[transferIndex] = corev1.VolumeMount{Name: volumeName, MountPath: v.MountPath}
 				pod.Spec.Volumes = append(pod.Spec.Volumes, corev1.Volume{
 					Name:         volumeName,
@@ -119,7 +119,7 @@ func BuildResources(services []Service, ref string, machines ...expressionstcl.M
 					Name:            fmt.Sprintf("%s-tktw-init", ref),
 					Image:           env.Config().Images.Toolkit,
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command:         []string{"/toolkit", "transfer", "--addr", fmt.Sprintf("%s:9999", env.IP())},
+					Command:         []string{"/toolkit", "tarball"},
 					Args:            transferArgs,
 					Env: []corev1.EnvVar{
 						{Name: "TK_NS", Value: env.Namespace()},

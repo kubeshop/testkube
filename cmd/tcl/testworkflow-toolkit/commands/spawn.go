@@ -187,7 +187,7 @@ func NewSpawnCmd() *cobra.Command {
 
 			// Start transferring server when needed
 			if transferServer.Count() > 0 {
-				_, err = transferServer.Listen("tcp", ":9999")
+				_, err = transferServer.Listen()
 				if err != nil {
 					fail("failed to start transfer server")
 				}
