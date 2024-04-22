@@ -11,20 +11,25 @@ If it is not installed already, you can install it via your OS's package manager
 
 To load completions in your current shell session:
 
+```
 	source <(testkube completion bash)
+```
 
 To load completions for every new session, execute once:
 
 #### Linux:
 
+```
 	testkube completion bash > /etc/bash_completion.d/testkube
+```
 
 #### macOS:
 
+```
 	testkube completion bash > $(brew --prefix)/etc/bash_completion.d/testkube
+```
 
 You will need to start a new shell for this setup to take effect.
-
 
 ```
 testkube completion bash
@@ -50,5 +55,4 @@ testkube completion bash
 
 ### SEE ALSO
 
-* [testkube completion](testkube_completion.md)	 - Generate the autocompletion script for the specified shell
-
+- [testkube completion](testkube_completion.md) - Generate the autocompletion script for the specified shell
