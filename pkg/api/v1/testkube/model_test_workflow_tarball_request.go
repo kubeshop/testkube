@@ -9,8 +9,8 @@
  */
 package testkube
 
-type TestWorkflowContent struct {
-	Git     *TestWorkflowContentGit      `json:"git,omitempty"`
-	Files   []TestWorkflowContentFile    `json:"files,omitempty"`
-	Tarball []TestWorkflowContentTarball `json:"tarball,omitempty"`
+type TestWorkflowTarballRequest struct {
+	// path to load the files from
+	From  string                           `json:"from"`
+	Files *TestWorkflowTarballRequestFiles `json:"files,omitempty"`
 }

@@ -94,19 +94,28 @@ func MapBoxedIntegerToInt32(v *testkube.BoxedInteger) *int32 {
 	return &v.Value
 }
 
+func MapDynamicListAPIToKube(v interface{}) *testworkflowsv1.DynamicList {
+	var item testworkflowsv1.DynamicList
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil
+	}
+	err = json.Unmarshal(b, &item)
+	if err != nil {
+		return nil
+	}
+	return &item
+}
+
 func MapDynamicListMapAPIToKube(v map[string]interface{}) map[string]testworkflowsv1.DynamicList {
 	if len(v) == 0 {
 		return nil
 	}
 	result := make(map[string]testworkflowsv1.DynamicList, len(v))
 	for k := range v {
-		var item testworkflowsv1.DynamicList
-		b, err := json.Marshal(v[k])
-		if err == nil {
-			err = json.Unmarshal(b, &item)
-			if err == nil {
-				result[k] = item
-			}
+		item := MapDynamicListAPIToKube(v[k])
+		if item != nil {
+			result[k] = *item
 		}
 	}
 	return result
@@ -292,10 +301,19 @@ func MapContentGitAPIToKube(v testkube.TestWorkflowContentGit) testworkflowsv1.C
 	}
 }
 
+func MapContentTarballAPIToKube(v testkube.TestWorkflowContentTarball) testworkflowsv1.ContentTarball {
+	return testworkflowsv1.ContentTarball{
+		Url:   v.Url,
+		Path:  v.Path,
+		Mount: MapBoxedBooleanToBool(v.Mount),
+	}
+}
+
 func MapContentAPIToKube(v testkube.TestWorkflowContent) testworkflowsv1.Content {
 	return testworkflowsv1.Content{
-		Git:   common.MapPtr(v.Git, MapContentGitAPIToKube),
-		Files: common.MapSlice(v.Files, MapContentFileAPIToKube),
+		Git:     common.MapPtr(v.Git, MapContentGitAPIToKube),
+		Files:   common.MapSlice(v.Files, MapContentFileAPIToKube),
+		Tarball: common.MapSlice(v.Tarball, MapContentTarballAPIToKube),
 	}
 }
 
@@ -610,11 +628,30 @@ func MapStepExecuteTestExecutionRequestAPIToKube(v testkube.TestWorkflowStepExec
 	}
 }
 
+func MapTarballRequestFilesAPIToKube(v testkube.TestWorkflowTarballRequestFiles) *testworkflowsv1.DynamicList {
+	if v.Expression != "" {
+		return MapDynamicListAPIToKube(v.Expression)
+	}
+	return MapDynamicListAPIToKube(v.Static)
+}
+
+func MapTarballRequestAPIToKube(v testkube.TestWorkflowTarballRequest) testworkflowsv1.TarballRequest {
+	var files *testworkflowsv1.DynamicList
+	if v.Files != nil {
+		files = MapTarballRequestFilesAPIToKube(*v.Files)
+	}
+	return testworkflowsv1.TarballRequest{
+		From:  v.From,
+		Files: files,
+	}
+}
+
 func MapStepExecuteTestAPIToKube(v testkube.TestWorkflowStepExecuteTestRef) testworkflowsv1.StepExecuteTest {
 	return testworkflowsv1.StepExecuteTest{
 		Name:             v.Name,
 		Description:      v.Description,
 		ExecutionRequest: common.MapPtr(v.ExecutionRequest, MapStepExecuteTestExecutionRequestAPIToKube),
+		Tarball:          common.MapMap(v.Tarball, MapTarballRequestAPIToKube),
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
 			Count:    MapBoxedStringToIntOrString(v.Count),
 			MaxCount: MapBoxedStringToIntOrString(v.MaxCount),
@@ -629,6 +666,7 @@ func MapStepExecuteTestWorkflowAPIToKube(v testkube.TestWorkflowStepExecuteTestW
 		Name:          v.Name,
 		Description:   v.Description,
 		ExecutionName: v.ExecutionName,
+		Tarball:       common.MapMap(v.Tarball, MapTarballRequestAPIToKube),
 		Config:        MapConfigValueAPIToKube(v.Config),
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
 			Count:    MapBoxedStringToIntOrString(v.Count),

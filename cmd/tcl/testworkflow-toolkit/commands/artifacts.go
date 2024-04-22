@@ -127,7 +127,7 @@ func NewArtifactsCmd() *cobra.Command {
 			ui.ExitOnError("initializing uploader", err)
 
 			started := time.Now()
-			err = walker.Walk(os.DirFS("/"), func(path string, file fs.File, err error) error {
+			err = walker.Walk(os.DirFS("/"), func(path string, file fs.File, _ fs.FileInfo, err error) error {
 				if err != nil {
 					fmt.Printf("Warning: '%s' has been ignored, as there was a problem reading it: %s\n", path, err.Error())
 					return nil

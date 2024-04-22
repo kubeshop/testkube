@@ -93,13 +93,16 @@ func MapDynamicListMapKubeToAPI(v map[string]testworkflowsv1.DynamicList) map[st
 	}
 	result := make(map[string]interface{}, len(v))
 	for k := range v {
-		if v[k].Dynamic {
-			result[k] = v[k].Dynamic
-		} else {
-			result[k] = v[k].Static
-		}
+		result[k] = MapDynamicListKubeToAPI(v[k])
 	}
 	return result
+}
+
+func MapDynamicListKubeToAPI(v testworkflowsv1.DynamicList) interface{} {
+	if v.Dynamic {
+		return v.Expression
+	}
+	return v.Static
 }
 
 func MapHostPathVolumeSourceKubeToAPI(v corev1.HostPathVolumeSource) testkube.HostPathVolumeSource {
@@ -399,10 +402,19 @@ func MapContentGitKubeToAPI(v testworkflowsv1.ContentGit) testkube.TestWorkflowC
 	}
 }
 
+func MapContentTarballKubeToAPI(v testworkflowsv1.ContentTarball) testkube.TestWorkflowContentTarball {
+	return testkube.TestWorkflowContentTarball{
+		Url:   v.Url,
+		Path:  v.Path,
+		Mount: MapBoolToBoxedBoolean(v.Mount),
+	}
+}
+
 func MapContentKubeToAPI(v testworkflowsv1.Content) testkube.TestWorkflowContent {
 	return testkube.TestWorkflowContent{
-		Git:   common.MapPtr(v.Git, MapContentGitKubeToAPI),
-		Files: common.MapSlice(v.Files, MapContentFileKubeToAPI),
+		Git:     common.MapPtr(v.Git, MapContentGitKubeToAPI),
+		Files:   common.MapSlice(v.Files, MapContentFileKubeToAPI),
+		Tarball: common.MapSlice(v.Tarball, MapContentTarballKubeToAPI),
 	}
 }
 
@@ -588,11 +600,29 @@ func MapStepExecuteTestExecutionRequestKubeToAPI(v testworkflowsv1.TestExecution
 		ExecutionNamespace:                 v.ExecutionNamespace,
 	}
 }
+
+func MapTarballRequestFilesKubeToAPI(v testworkflowsv1.DynamicList) testkube.TestWorkflowTarballRequestFiles {
+	if v.Expression != "" {
+		return testkube.TestWorkflowTarballRequestFiles{Expression: v.Expression}
+	}
+	return testkube.TestWorkflowTarballRequestFiles{Static: common.MapSlice(v.Static, func(s string) interface{} {
+		return s
+	})}
+}
+
+func MapTarballRequestKubeToAPI(v testworkflowsv1.TarballRequest) testkube.TestWorkflowTarballRequest {
+	return testkube.TestWorkflowTarballRequest{
+		From:  v.From,
+		Files: common.MapPtr(v.Files, MapTarballRequestFilesKubeToAPI),
+	}
+}
+
 func MapStepExecuteTestKubeToAPI(v testworkflowsv1.StepExecuteTest) testkube.TestWorkflowStepExecuteTestRef {
 	return testkube.TestWorkflowStepExecuteTestRef{
 		Name:             v.Name,
 		Description:      v.Description,
 		ExecutionRequest: common.MapPtr(v.ExecutionRequest, MapStepExecuteTestExecutionRequestKubeToAPI),
+		Tarball:          common.MapMap(v.Tarball, MapTarballRequestKubeToAPI),
 		Count:            MapIntOrStringToBoxedString(v.Count),
 		MaxCount:         MapIntOrStringToBoxedString(v.MaxCount),
 		Matrix:           MapDynamicListMapKubeToAPI(v.Matrix),
@@ -605,6 +635,7 @@ func MapStepExecuteTestWorkflowKubeToAPI(v testworkflowsv1.StepExecuteWorkflow) 
 		Name:          v.Name,
 		Description:   v.Description,
 		ExecutionName: v.ExecutionName,
+		Tarball:       common.MapMap(v.Tarball, MapTarballRequestKubeToAPI),
 		Config:        MapConfigValueKubeToAPI(v.Config),
 		Count:         MapIntOrStringToBoxedString(v.Count),
 		MaxCount:      MapIntOrStringToBoxedString(v.MaxCount),

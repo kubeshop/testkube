@@ -189,6 +189,20 @@ func (mr *MockContainerMockRecorder) Detach() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Detach", reflect.TypeOf((*MockContainer)(nil).Detach))
 }
 
+// EnableToolkit mocks base method.
+func (m *MockContainer) EnableToolkit(arg0 string) Container {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnableToolkit", arg0)
+	ret0, _ := ret[0].(Container)
+	return ret0
+}
+
+// EnableToolkit indicates an expected call of EnableToolkit.
+func (mr *MockContainerMockRecorder) EnableToolkit(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableToolkit", reflect.TypeOf((*MockContainer)(nil).EnableToolkit), arg0)
+}
+
 // Env mocks base method.
 func (m *MockContainer) Env() []v10.EnvVar {
 	m.ctrl.T.Helper()
@@ -215,6 +229,20 @@ func (m *MockContainer) EnvFrom() []v10.EnvFromSource {
 func (mr *MockContainerMockRecorder) EnvFrom() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvFrom", reflect.TypeOf((*MockContainer)(nil).EnvFrom))
+}
+
+// HasVolumeAt mocks base method.
+func (m *MockContainer) HasVolumeAt(arg0 string) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasVolumeAt", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasVolumeAt indicates an expected call of HasVolumeAt.
+func (mr *MockContainerMockRecorder) HasVolumeAt(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasVolumeAt", reflect.TypeOf((*MockContainer)(nil).HasVolumeAt), arg0)
 }
 
 // Image mocks base method.
