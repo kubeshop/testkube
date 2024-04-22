@@ -7880,6 +7880,8 @@ components:
           description: delay before the step
         content:
           $ref: "#/components/schemas/TestWorkflowContent"
+        pause:
+          $ref: "#/components/schemas/TestWorkflowStepPause"
         shell:
           type: string
           description: script to run in a default shell for the container
@@ -7938,6 +7940,8 @@ components:
           description: delay before the step
         content:
           $ref: "#/components/schemas/TestWorkflowContent"
+        pause:
+          $ref: "#/components/schemas/TestWorkflowStepPause"
         shell:
           type: string
           description: script to run in a default shell for the container
@@ -7961,6 +7965,18 @@ components:
           description: nested steps to run
           items:
             $ref: "#/components/schemas/TestWorkflowStep"
+
+    TestWorkflowStepPause:
+      type: object
+      properties:
+        condition:
+          type: string
+          description: expression to declare under which conditions the step should be paused
+          default: always
+        timeout:
+          type: string
+          pattern: "^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$"
+          description: maximum time this step may take
 
     TestWorkflowStepExecute:
       type: object

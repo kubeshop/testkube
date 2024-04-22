@@ -707,6 +707,13 @@ func MapRetryPolicyAPIToKube(v testkube.TestWorkflowRetryPolicy) testworkflowsv1
 	}
 }
 
+func MapPauseConfigAPIToKube(v testkube.TestWorkflowStepPause) testworkflowsv1.PauseConfig {
+	return testworkflowsv1.PauseConfig{
+		Condition: v.Condition,
+		Timeout:   v.Timeout,
+	}
+}
+
 func MapStepAPIToKube(v testkube.TestWorkflowStep) testworkflowsv1.Step {
 	return testworkflowsv1.Step{
 		StepBase: testworkflowsv1.StepBase{
@@ -718,6 +725,7 @@ func MapStepAPIToKube(v testkube.TestWorkflowStep) testworkflowsv1.Step {
 			Timeout:    v.Timeout,
 			Delay:      v.Delay,
 			Content:    common.MapPtr(v.Content, MapContentAPIToKube),
+			Pause:      common.MapPtr(v.Pause, MapPauseConfigAPIToKube),
 			Shell:      v.Shell,
 			Run:        common.MapPtr(v.Run, MapStepRunAPIToKube),
 			WorkingDir: MapBoxedStringToString(v.WorkingDir),
@@ -743,6 +751,7 @@ func MapIndependentStepAPIToKube(v testkube.TestWorkflowIndependentStep) testwor
 			Timeout:    v.Timeout,
 			Delay:      v.Delay,
 			Content:    common.MapPtr(v.Content, MapContentAPIToKube),
+			Pause:      common.MapPtr(v.Pause, MapPauseConfigAPIToKube),
 			Shell:      v.Shell,
 			Run:        common.MapPtr(v.Run, MapStepRunAPIToKube),
 			WorkingDir: MapBoxedStringToString(v.WorkingDir),
