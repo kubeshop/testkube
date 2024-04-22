@@ -52,7 +52,7 @@ func PodName(ref, svcName string, index int64) string {
 
 func BuildResources(services []Service, ref string, machines ...expressionstcl.Machine) ([][]*corev1.Pod, testworkflowprocessor.ConfigMapFiles, transfer.Server, error) {
 	// Initialize state
-	srv := transfer.NewServer(constants.DefaultTransferDirPath)
+	srv := transfer.NewServer(constants.DefaultTransferDirPath, env.IP(), constants.DefaultTransferPort)
 	pods := make([][]*corev1.Pod, len(services))
 	storage := testworkflowprocessor.NewConfigMapFiles(fmt.Sprintf("%s-%s-vol", env.ExecutionId(), ref), map[string]string{
 		constants.ExecutionIdLabelName:         env.ExecutionId(),
