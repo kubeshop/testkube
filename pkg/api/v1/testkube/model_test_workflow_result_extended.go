@@ -86,7 +86,10 @@ func (r *TestWorkflowResult) Clone() *TestWorkflowResult {
 		StartedAt:       r.StartedAt,
 		FinishedAt:      r.FinishedAt,
 		Duration:        r.Duration,
+		TotalDuration:   r.TotalDuration,
 		DurationMs:      r.DurationMs,
+		PausedMs:        r.PausedMs,
+		TotalDurationMs: r.DurationMs + r.PausedMs,
 		Initialization:  r.Initialization.Clone(),
 		Steps:           steps,
 	}
@@ -109,8 +112,64 @@ func (r *TestWorkflowResult) UpdateStepResult(sig []TestWorkflowSignature, ref s
 
 func (r *TestWorkflowResult) RecomputeDuration() {
 	if !r.FinishedAt.IsZero() {
-		r.Duration = r.FinishedAt.Sub(r.QueuedAt).Round(time.Millisecond).String()
-		r.DurationMs = int32(r.FinishedAt.Sub(r.QueuedAt).Milliseconds())
+		r.PausedMs = 0
+		for _, p := range r.Pauses {
+			resumedAt := p.ResumedAt
+			if resumedAt.IsZero() {
+				resumedAt = r.FinishedAt
+			}
+			r.PausedMs += int32(resumedAt.Sub(p.PausedAt).Milliseconds())
+		}
+		totalDuration := r.FinishedAt.Sub(r.QueuedAt)
+		duration := totalDuration - time.Duration(1e3*r.PausedMs)
+		r.DurationMs = int32(duration.Milliseconds())
+		r.Duration = duration.Round(time.Millisecond).String()
+		r.TotalDurationMs = int32(totalDuration.Milliseconds())
+		r.TotalDuration = totalDuration.Round(time.Millisecond).String()
+	}
+}
+
+func (r *TestWorkflowResult) HasPauseAt(ref string, t time.Time) bool {
+	for _, p := range r.Pauses {
+		if ref == p.Ref && !p.PausedAt.After(t) && (p.ResumedAt.IsZero() || !p.ResumedAt.Before(t)) {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *TestWorkflowResult) HasUnfinishedPause(ref string) bool {
+	for _, p := range r.Pauses {
+		if ref == p.Ref && p.ResumedAt.IsZero() {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *TestWorkflowResult) PauseStart(sig []TestWorkflowSignature, scheduledAt time.Time, ref string, start time.Time) {
+	if r.HasPauseAt(ref, start) {
+		return
+	}
+	r.Pauses = append(r.Pauses, TestWorkflowPause{Ref: ref, PausedAt: start})
+	r.Recompute(sig, scheduledAt)
+}
+
+func (r *TestWorkflowResult) PauseEnd(sig []TestWorkflowSignature, scheduledAt time.Time, ref string, end time.Time) {
+	for i, p := range r.Pauses {
+		if p.Ref != ref {
+			continue
+		}
+		if !p.PausedAt.After(end) && !p.ResumedAt.Before(end) {
+			// It's already covered by another period
+			return
+		}
+		if !p.PausedAt.After(end) && (p.ResumedAt.IsZero() || p.ResumedAt.Equal(end)) {
+			// It found a period to fulfill
+			r.Pauses[i].ResumedAt = end
+			r.Recompute(sig, scheduledAt)
+			return
+		}
 	}
 }
 
@@ -237,13 +296,8 @@ func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature, scheduledAt 
 }
 
 func (r *TestWorkflowResult) RecomputeStep(sig TestWorkflowSignature) {
-	children := sig.Children
-	if len(children) == 0 {
-		return
-	}
-
 	// Compute nested steps
-	for _, ch := range children {
+	for _, ch := range sig.Children {
 		r.RecomputeStep(ch)
 	}
 
@@ -255,6 +309,13 @@ func (r *TestWorkflowResult) RecomputeStep(sig TestWorkflowSignature) {
 
 	// Compute time
 	v = recomputeTestWorkflowStepResult(v, sig, r)
+
+	// Mark as paused during pause period
+	if r.HasUnfinishedPause(sig.Ref) {
+		v.Status = common.Ptr(PAUSED_TestWorkflowStepStatus)
+	} else if v.Status != nil && *v.Status == PAUSED_TestWorkflowStepStatus {
+		v.Status = common.Ptr(RUNNING_TestWorkflowStepStatus)
+	}
 }
 
 func walkSteps(sig []TestWorkflowSignature, fn func(signature TestWorkflowSignature)) {

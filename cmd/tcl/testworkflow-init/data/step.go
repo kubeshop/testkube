@@ -18,6 +18,8 @@ import (
 
 	"github.com/pkg/errors"
 	gopsutil "github.com/shirou/gopsutil/v3/process"
+
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
 )
 
 var Step = &step{}
@@ -92,6 +94,7 @@ func (s *step) Kill() {
 	s.cmdMu.Unlock()
 }
 
+// TODO: Add timestamp, so the starting pause will be at application start
 func (s *step) Pause() (err error) {
 	// Lock running
 	swapped := s.paused.CompareAndSwap(false, true)
@@ -117,7 +120,7 @@ func (s *step) Pause() (err error) {
 	s.cmdMu.Unlock()
 
 	// Display output
-	PrintHintDetails(s.Ref, "pause", time.Now())
+	PrintHintDetails(s.Ref, "pause", time.Now().Format(constants.PreciseTimeFormat))
 	return err
 }
 
@@ -146,7 +149,7 @@ func (s *step) Resume() (err error) {
 	s.pauseMu.Unlock()
 
 	// Display output
-	PrintHintDetails(s.Ref, "resume", time.Now())
+	PrintHintDetails(s.Ref, "resume", time.Now().Format(constants.PreciseTimeFormat))
 	return err
 }
 

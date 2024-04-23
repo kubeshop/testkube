@@ -7680,9 +7680,22 @@ components:
         duration:
           type: string
           description: Go-formatted (human-readable) duration
+        totalDuration:
+          type: string
+          description: Go-formatted (human-readable) total duration (incl. pause)
         durationMs:
           type: integer
           description: Duration in milliseconds
+        pausedMs:
+          type: integer
+          description: Pause duration in milliseconds
+        totalDurationMs:
+          type: integer
+          description: Total duration in milliseconds (incl. pause)
+        pauses:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestWorkflowPause"
         initialization:
           $ref: "#/components/schemas/TestWorkflowStepResult"
         steps:
@@ -7692,6 +7705,24 @@ components:
       required:
         - status
         - predictedStatus
+
+    TestWorkflowPause:
+      type: object
+      properties:
+        ref:
+          type: string
+          description: step at which it was paused
+        pausedAt:
+          type: string
+          format: date-time
+          description: when the pause has started
+        resumedAt:
+          type: string
+          format: date-time
+          description: when the pause has ended
+      required:
+      - ref
+      - pausedAt
 
     TestWorkflowStepResult:
       type: object
