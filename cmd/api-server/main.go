@@ -11,8 +11,11 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/nats-io/nats.go"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
@@ -407,19 +410,7 @@ func main() {
 		ui.ExitOnError("Creating job templates", err)
 	}
 
-	proContext := config.ProContext{
-		APIKey:                           cfg.TestkubeProAPIKey,
-		URL:                              cfg.TestkubeProURL,
-		TLSInsecure:                      cfg.TestkubeProTLSInsecure,
-		WorkerCount:                      cfg.TestkubeProWorkerCount,
-		LogStreamWorkerCount:             cfg.TestkubeProLogStreamWorkerCount,
-		WorkflowNotificationsWorkerCount: cfg.TestkubeProWorkflowNotificationsWorkerCount,
-		SkipVerify:                       cfg.TestkubeProSkipVerify,
-		EnvID:                            cfg.TestkubeProEnvID,
-		OrgID:                            cfg.TestkubeProOrgID,
-		Migrate:                          cfg.TestkubeProMigrate,
-		ConnectionTimeout:                cfg.TestkubeProConnectionTimeout,
-	}
+	proContext := newProContext(cfg, grpcClient)
 
 	// Check Pro/Enterprise subscription
 	var subscriptionChecker checktcl.SubscriptionChecker
@@ -593,6 +584,7 @@ func main() {
 		testWorkflowResultsRepository,
 		testWorkflowOutputRepository,
 		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
+		cfg.GlobalWorkflowTemplateName,
 		configMapConfig,
 	)
 	apiPro.AppendRoutes()
@@ -829,4 +821,40 @@ func newGRPCTransportCredentials(cfg *config.Config) (credentials.TransportCrede
 		KeyFile:    cfg.LogServerKeyFile,
 		CAFile:     cfg.LogServerCAFile,
 	})
+}
+
+func newProContext(cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) config.ProContext {
+	proContext := config.ProContext{
+		APIKey:                           cfg.TestkubeProAPIKey,
+		URL:                              cfg.TestkubeProURL,
+		TLSInsecure:                      cfg.TestkubeProTLSInsecure,
+		WorkerCount:                      cfg.TestkubeProWorkerCount,
+		LogStreamWorkerCount:             cfg.TestkubeProLogStreamWorkerCount,
+		WorkflowNotificationsWorkerCount: cfg.TestkubeProWorkflowNotificationsWorkerCount,
+		SkipVerify:                       cfg.TestkubeProSkipVerify,
+		EnvID:                            cfg.TestkubeProEnvID,
+		OrgID:                            cfg.TestkubeProOrgID,
+		Migrate:                          cfg.TestkubeProMigrate,
+		ConnectionTimeout:                cfg.TestkubeProConnectionTimeout,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	md := metadata.Pairs("api-key", cfg.TestkubeProAPIKey)
+	ctx = metadata.NewOutgoingContext(ctx, md)
+	defer cancel()
+	getProContext, err := grpcClient.GetProContext(ctx, &emptypb.Empty{})
+	if err != nil {
+		ui.WarnOnError("cannot fetch pro-context from cloud: %s", err)
+		return proContext
+	}
+
+	if proContext.EnvID == "" {
+		proContext.EnvID = getProContext.EnvId
+	}
+
+	if proContext.OrgID == "" {
+		proContext.OrgID = getProContext.OrgId
+	}
+
+	return proContext
 }

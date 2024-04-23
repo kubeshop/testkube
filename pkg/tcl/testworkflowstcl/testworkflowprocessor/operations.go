@@ -20,7 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	"github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
+	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
@@ -112,18 +112,22 @@ func ProcessExecute(_ InternalProcessor, layer Intermediate, container Container
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
 		SetCommand("/toolkit", "execute").
-		EnableToolkit(stage.Ref())
+		EnableToolkit(stage.Ref()).
+		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
 	args := make([]string, 0)
 	for _, t := range step.Execute.Tests {
-		args = append(args, "-t", t.Name)
+		b, err := json.Marshal(t)
+		if err != nil {
+			return nil, errors.Wrap(err, "execute: serializing Test")
+		}
+		args = append(args, "-t", expressionstcl.NewStringValue(string(b)).Template())
 	}
 	for _, w := range step.Execute.Workflows {
-		if len(w.Config) == 0 {
-			args = append(args, "-w", w.Name)
-		} else {
-			v, _ := json.Marshal(testworkflows.MapConfigValueKubeToAPI(w.Config))
-			args = append(args, "-w", fmt.Sprintf(`%s={"config":%s}`, w.Name, v))
+		b, err := json.Marshal(w)
+		if err != nil {
+			return nil, errors.Wrap(err, "execute: serializing TestWorkflow")
 		}
+		args = append(args, "-w", expressionstcl.NewStringValue(string(b)).Template())
 	}
 	if step.Execute.Async {
 		args = append(args, "--async")
@@ -278,6 +282,45 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container Contai
 		}
 	}
 
+	selfContainer.SetArgs(args...)
+
+	return stage, nil
+}
+
+func ProcessContentTarball(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+	if step.Content == nil || len(step.Content.Tarball) == 0 {
+		return nil, nil
+	}
+
+	selfContainer := container.CreateChild()
+	stage := NewContainerStage(layer.NextRef(), selfContainer)
+	stage.SetRetryPolicy(step.Retry)
+	stage.SetCategory("Download tarball")
+
+	selfContainer.
+		SetImage(constants.DefaultToolkitImage).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetCommand("/toolkit", "tarball").
+		EnableToolkit(stage.Ref())
+
+	// Build volume pair and share with all siblings
+	args := make([]string, len(step.Content.Tarball))
+	for i, t := range step.Content.Tarball {
+		args[i] = fmt.Sprintf("%s=%s", t.Path, t.Url)
+		needsMount := t.Mount != nil && *t.Mount
+		if !needsMount {
+			needsMount = selfContainer.HasVolumeAt(t.Path)
+		}
+
+		if needsMount && t.Mount != nil && !*t.Mount {
+			return nil, fmt.Errorf("content.tarball[%d]: %s: is not part of any volume: should be mounted", i, t.Path)
+		}
+
+		if (needsMount && t.Mount == nil) || (t.Mount == nil && *t.Mount) {
+			volumeMount := layer.AddEmptyDirVolume(nil, t.Path)
+			container.AppendVolumeMounts(volumeMount)
+		}
+	}
 	selfContainer.SetArgs(args...)
 
 	return stage, nil

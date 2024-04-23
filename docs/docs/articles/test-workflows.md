@@ -127,6 +127,26 @@ spec:
     container:
         image: grafana/k6:latest
 ```
+## events
+### cronjob
+`spec.events.cronjob` allows to run the workflow on specified schedule(s) :
+
+```yaml
+spec:
+  events:
+  - cronjob:
+      cron: "*/20 * * * *"
+      labels:
+        key1: value1
+      annotations:
+        key2: value2
+  - cronjob:
+      cron: "*/5 * * * *"
+      labels:
+        key3: value3
+      annotations:
+        key4: value4
+```
 ## steps
 Steps are the main building blocks in Test Workflows. They describe actions that should be executed in specific order.
 ```yaml

@@ -54,6 +54,7 @@ func NewFullFeatured(inspector imageinspector.Inspector) Processor {
 		Register(ProcessDelay).
 		Register(ProcessContentFiles).
 		Register(ProcessContentGit).
+		Register(ProcessContentTarball).
 		Register(ProcessNestedSetupSteps).
 		Register(ProcessRunCommand).
 		Register(ProcessShellCommand).

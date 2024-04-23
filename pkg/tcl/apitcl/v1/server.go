@@ -37,6 +37,7 @@ type apiTCL struct {
 	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
 	TestWorkflowExecutor        testworkflowexecutor.TestWorkflowExecutor
 	ApiUrl                      string
+	GlobalTemplateName          string
 	configMap                   configRepo.Repository
 }
 
@@ -53,6 +54,7 @@ func NewApiTCL(
 	testWorkflowResults testworkflow.Repository,
 	testWorkflowOutput testworkflow.OutputRepository,
 	apiUrl string,
+	globalTemplateName string,
 	configMap configRepo.Repository,
 ) ApiTCL {
 	executor := testworkflowexecutor.New(testkubeAPI.Events, testkubeAPI.Clientset, testWorkflowResults, testWorkflowOutput, testkubeAPI.Namespace)
@@ -67,6 +69,7 @@ func NewApiTCL(
 		TestWorkflowTemplatesClient: testworkflowsv1.NewTestWorkflowTemplatesClient(kubeClient, testkubeAPI.Namespace),
 		TestWorkflowExecutor:        executor,
 		ApiUrl:                      apiUrl,
+		GlobalTemplateName:          globalTemplateName,
 		configMap:                   configMap,
 	}
 }
