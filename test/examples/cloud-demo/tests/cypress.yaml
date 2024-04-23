@@ -1,0 +1,52 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: cypress-v13-executor
+spec:
+  image: kubeshop/testkube-cypress-executor:cypress13
+  command: ["./node_modules/cypress/bin/cypress"]
+  args: [
+    "run",
+    "--reporter",
+    "junit",
+    "--reporter-options",
+    "mochaFile=<reportFile>,toConsole=false",
+    "--project",
+    "<projectPath>",
+    "--env",
+    "<envVars>"
+  ]
+  types:
+    - cypress:v13/test
+  features:
+    - artifacts
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: cypress-video
+  labels:
+    core-tests: executors
+spec:
+  type: cypress:v13/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: test/cypress/executor-tests/cypress-13
+  executionRequest:
+    variables:
+      CYPRESS_CUSTOM_ENV:
+        name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+        type: basic
+    args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - video=true
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 600
+  schedule: "5 */4 * * *"

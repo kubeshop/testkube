@@ -1,0 +1,46 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: container-executor-playwright-v1.32.3-args
+spec:
+  image: mcr.microsoft.com/playwright:v1.32.3-focal
+  command: ["npx", "--yes", "playwright@1.32.3", "test", "--output", "/data/artifacts/playwright-results"]
+  executor_type: container
+  types:
+  - container-executor-playwright-v1.32.3-args/test
+  features:
+  - artifacts
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: playwright
+  labels:
+    core-tests: executors
+spec:
+  type: container-executor-playwright-v1.32.3-args/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: develop
+      path: test/playwright/executor-tests/playwright-project
+      workingDir: test/playwright/executor-tests/playwright-project
+  executionRequest:
+    artifactRequest:
+      storageClassName: standard
+      volumeMountPath: /data/artifacts
+      dirs:
+        - ./
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
+    activeDeadlineSeconds: 600
+    preRunScript: "npm ci"
+    args:
+      - "tests/smoke2.spec.js"
+    variables:
+      PLAYWRIGHT_HTML_REPORT:
+        name: PLAYWRIGHT_HTML_REPORT
+        value: "/data/artifacts/playwright-report"
+        type: basic
+  schedule: "25 */4 * * *"
