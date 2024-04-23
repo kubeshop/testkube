@@ -36,10 +36,6 @@ type step struct {
 	pauseMu sync.Mutex
 }
 
-type PauseState struct {
-	Time time.Time `json:"time"`
-}
-
 // TODO: Obfuscate Stdout/Stderr streams
 func (s *step) Run(negative bool, cmd string, args ...string) {
 	// Avoid multiple runs at once
@@ -122,7 +118,6 @@ func (s *step) Pause() (err error) {
 
 	// Display output
 	PrintHintDetails(s.Ref, "pause", time.Now())
-	PrintOutput(s.Ref, "pause-start", PauseState{Time: time.Now()})
 	return err
 }
 
@@ -152,7 +147,6 @@ func (s *step) Resume() (err error) {
 
 	// Display output
 	PrintHintDetails(s.Ref, "resume", time.Now())
-	PrintOutput(s.Ref, "pause-end", PauseState{Time: time.Now()})
 	return err
 }
 
