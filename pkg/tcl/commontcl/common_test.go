@@ -4,9 +4,9 @@
 // License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at
 //
-//	https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
+//     https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
 
-package v1
+package commontcl
 
 import (
 	"context"
@@ -25,20 +25,18 @@ func Test_apiTCL_getClusterID(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		configRepo := configRepo.NewMockRepository(ctrl)
 		clusterID := "cluster-id"
-		var api apiTCL
-		api.configMap = configRepo
 		configRepo.EXPECT().GetUniqueClusterId(gomock.Any()).Return(clusterID, nil)
-		if got := api.getClusterID(context.Background()); got != clusterID {
+		if got := GetClusterID(context.Background(), configRepo); got != clusterID {
 			t.Errorf("apiTCL.getClusterID() = %v, want %v", got, clusterID)
 		}
 	})
 }
 
-func Test_getImage(t *testing.T) {
+func Test_GetImage(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Get Image from empty container", func(t *testing.T) {
-		if got := getImage(nil); got != "" {
+		if got := GetImage(nil); got != "" {
 			t.Errorf("getImage() = %v, wanted empty", got)
 		}
 	})
@@ -48,13 +46,13 @@ func Test_getImage(t *testing.T) {
 			Image: image,
 		}
 
-		if got := getImage(container); got != image {
+		if got := GetImage(container); got != image {
 			t.Errorf("getImage() = %v, want %v", got, image)
 		}
 	})
 }
 
-func Test_hasArtifacts(t *testing.T) {
+func Test_HasArtifacts(t *testing.T) {
 	type args struct {
 		steps []testworkflowsv1.Step
 	}
@@ -152,14 +150,14 @@ func Test_hasArtifacts(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := hasStepLike(tt.args.steps, hasArtifacts); got != tt.want {
+			if got := HasStepLike(tt.args.steps, HasArtifacts); got != tt.want {
 				t.Errorf("hasArtifacts() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func Test_hasTemplateArtifacts(t *testing.T) {
+func Test_HasTemplateArtifacts(t *testing.T) {
 	type args struct {
 		steps []testworkflowsv1.IndependentStep
 	}
@@ -255,14 +253,14 @@ func Test_hasTemplateArtifacts(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := hasIndependentStepLike(tt.args.steps, hasTemplateArtifacts); got != tt.want {
+			if got := HasIndependentStepLike(tt.args.steps, HasTemplateArtifacts); got != tt.want {
 				t.Errorf("hasArtifacts() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func Test_hasKubeshopGitURI(t *testing.T) {
+func Test_HasKubeshopGitURI(t *testing.T) {
 	type args struct {
 		spec testworkflowsv1.TestWorkflowSpec
 	}
@@ -327,14 +325,14 @@ func Test_hasKubeshopGitURI(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isKubeshopGitURI(tt.args.spec.Content) || hasWorkflowStepLike(tt.args.spec, hasKubeshopGitURI); got != tt.want {
+			if got := IsKubeshopGitURI(tt.args.spec.Content) || HasWorkflowStepLike(tt.args.spec, HasKubeshopGitURI); got != tt.want {
 				t.Errorf("hasKubeshopGitURI() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func Test_getDataSource(t *testing.T) {
+func Test_GetDataSource(t *testing.T) {
 	type args struct {
 		content *testworkflowsv1.Content
 	}
@@ -377,7 +375,7 @@ func Test_getDataSource(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := getDataSource(tt.args.content); got != tt.want {
+			if got := GetDataSource(tt.args.content); got != tt.want {
 				t.Errorf("getDataSource() = %v, want %v", got, tt.want)
 			}
 		})

@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	v1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	testkube "github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	testworkflowprocessor "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 )
@@ -37,15 +38,32 @@ func (m *MockTestWorkflowExecutor) EXPECT() *MockTestWorkflowExecutorMockRecorde
 }
 
 // Control mocks base method.
-func (m *MockTestWorkflowExecutor) Control(arg0 context.Context, arg1 testkube.TestWorkflowExecution) {
+func (m *MockTestWorkflowExecutor) Control(arg0 context.Context, arg1 *testkube.TestWorkflowExecution) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Control", arg0, arg1)
+	ret := m.ctrl.Call(m, "Control", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Control indicates an expected call of Control.
 func (mr *MockTestWorkflowExecutorMockRecorder) Control(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Control", reflect.TypeOf((*MockTestWorkflowExecutor)(nil).Control), arg0, arg1)
+}
+
+// Execute mocks base method.
+func (m *MockTestWorkflowExecutor) Execute(arg0 context.Context, arg1 v1.TestWorkflow, arg2 testkube.TestWorkflowExecutionRequest) (testkube.TestWorkflowExecution, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Execute", arg0, arg1, arg2)
+	ret0, _ := ret[0].(testkube.TestWorkflowExecution)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Execute indicates an expected call of Execute.
+func (mr *MockTestWorkflowExecutorMockRecorder) Execute(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockTestWorkflowExecutor)(nil).Execute), arg0, arg1, arg2)
 }
 
 // Recover mocks base method.

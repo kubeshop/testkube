@@ -19,6 +19,7 @@ import (
 	testsourcesv1 "github.com/kubeshop/testkube-operator/pkg/client/testsources/v1"
 	testsuiteexecutionsv1 "github.com/kubeshop/testkube-operator/pkg/client/testsuiteexecutions/v1"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
+	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	faketestkube "github.com/kubeshop/testkube-operator/pkg/clientset/versioned/fake"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -58,6 +59,7 @@ func TestService_Run(t *testing.T) {
 	configMapConfig := config.NewMockRepository(mockCtrl)
 	mockConfigMapClient := configmap.NewMockInterface(mockCtrl)
 	mockTestSuiteExecutionsClient := testsuiteexecutionsv1.NewMockInterface(mockCtrl)
+	mockTestWorkflowsClient := testworkflowsclientv1.NewMockInterface(mockCtrl)
 
 	mockExecutor := client.NewMockExecutor(mockCtrl)
 
@@ -159,6 +161,7 @@ func TestService_Run(t *testing.T) {
 		fakeTestkubeClientset,
 		mockTestSuitesClient,
 		mockTestsClient,
+		mockTestWorkflowsClient,
 		mockResultRepository,
 		mockTestResultRepository,
 		mockLeaseBackend,

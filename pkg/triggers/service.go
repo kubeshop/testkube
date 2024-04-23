@@ -16,6 +16,7 @@ import (
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
+	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	testkubeclientsetv1 "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -63,6 +64,7 @@ type Service struct {
 	testKubeClientset             testkubeclientsetv1.Interface
 	testSuitesClient              testsuitesclientv3.Interface
 	testsClient                   testsclientv3.Interface
+	testWorkflowsClient           testworkflowsclientv1.Interface
 	resultRepository              result.Repository
 	testResultRepository          testresult.Repository
 	logger                        *zap.SugaredLogger
@@ -85,6 +87,7 @@ func NewService(
 	testKubeClientset testkubeclientsetv1.Interface,
 	testSuitesClient testsuitesclientv3.Interface,
 	testsClient testsclientv3.Interface,
+	testWorkflowsClient testworkflowsclientv1.Interface,
 	resultRepository result.Repository,
 	testResultRepository testresult.Repository,
 	leaseBackend LeaseBackend,
@@ -111,6 +114,7 @@ func NewService(
 		clientset:                     clientset,
 		testKubeClientset:             testKubeClientset,
 		testSuitesClient:              testSuitesClient,
+		testWorkflowsClient:           testWorkflowsClient,
 		testsClient:                   testsClient,
 		resultRepository:              resultRepository,
 		testResultRepository:          testResultRepository,

@@ -11,6 +11,8 @@ import (
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/workerpool"
@@ -19,8 +21,9 @@ import (
 type Execution string
 
 const (
-	ExecutionTest      = "test"
-	ExecutionTestSuite = "testsuite"
+	ExecutionTest         = "test"
+	ExecutionTestSuite    = "testsuite"
+	ExecutionTestWorkflow = "testworkflow"
 )
 
 type ExecutorF func(context.Context, *watcherEvent, *testtriggersv1.TestTrigger) error
@@ -123,6 +126,16 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 		for r := range wp.GetResponses() {
 			status.addTestSuiteExecutionID(r.Result.Id)
 		}
+
+	case ExecutionTestWorkflow:
+		testWorkflows, err := s.getTestWorkflows(t)
+		if err != nil {
+			return err
+		}
+
+		for _ = range testWorkflows {
+
+		}
 	default:
 		return errors.Errorf("invalid execution: %s", t.Spec.Execution)
 	}
@@ -223,4 +236,50 @@ func (s *Service) getTestSuites(t *testtriggersv1.TestTrigger) ([]testsuitesv3.T
 		testSuites = append(testSuites, testSuitesList.Items...)
 	}
 	return testSuites, nil
+}
+
+func (s *Service) getTestWorkflows(t *testtriggersv1.TestTrigger) ([]testworkflowsv1.TestWorkflow, error) {
+	var testWorkflows []testworkflowsv1.TestWorkflow
+	if t.Spec.TestSelector.Name != "" {
+		s.logger.Debugf("trigger service: executor component: fetching testworkflowsv3.TestWorkflow with name %s", t.Spec.TestSelector.Name)
+		testWorkflow, err := s.testWorkflowsClient.Get(t.Spec.TestSelector.Name)
+		if err != nil {
+			return nil, err
+		}
+		testWorkflows = append(testWorkflows, *testWorkflow)
+	}
+
+	if t.Spec.TestSelector.NameRegex != "" {
+		s.logger.Debugf("trigger service: executor component: fetching testworkflosv1.TestWorkflow with name regex %s", t.Spec.TestSelector.NameRegex)
+		testWorkflowsList, err := s.testWorkflowsClient.List("")
+		if err != nil {
+			return nil, err
+		}
+
+		re, err := regexp.Compile(t.Spec.TestSelector.NameRegex)
+		if err != nil {
+			return nil, err
+		}
+
+		for i := range testWorkflowsList.Items {
+			if re.MatchString(testWorkflowsList.Items[i].Name) {
+				testWorkflows = append(testWorkflows, testWorkflowsList.Items[i])
+			}
+		}
+	}
+
+	if t.Spec.TestSelector.LabelSelector != nil {
+		selector, err := metav1.LabelSelectorAsSelector(t.Spec.TestSelector.LabelSelector)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "error creating selector from test resource label selector")
+		}
+		stringifiedSelector := selector.String()
+		s.logger.Debugf("trigger service: executor component: fetching testworkflowsv1.TestWorkflow with label %s", stringifiedSelector)
+		testWorkflowsList, err := s.testWorkflowsClient.List(stringifiedSelector)
+		if err != nil {
+			return nil, err
+		}
+		testWorkflows = append(testWorkflows, testWorkflowsList.Items...)
+	}
+	return testWorkflows, nil
 }

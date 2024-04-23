@@ -84,6 +84,7 @@ import (
 	testsuiteexecutionsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testsuiteexecutions/v1"
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v2"
 	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
+	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/migrations"
 	"github.com/kubeshop/testkube/pkg/configmap"
@@ -231,6 +232,7 @@ func main() {
 	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testExecutionsClient := testexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testsuiteExecutionsClient := testsuiteexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+	testWorkflowsClient := testworkflowsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	templatesClient := templatesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 
 	clientset, err := k8sclient.ConnectToK8s()
@@ -583,6 +585,7 @@ func main() {
 		inspector,
 		testWorkflowResultsRepository,
 		testWorkflowOutputRepository,
+		resultsRepository,
 		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
 		cfg.GlobalWorkflowTemplateName,
 		configMapConfig,
@@ -625,6 +628,7 @@ func main() {
 			testkubeClientset,
 			testsuitesClientV3,
 			testsClientV3,
+			testWorkflowsClient,
 			resultsRepository,
 			testResultsRepository,
 			triggerLeaseBackend,
