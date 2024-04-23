@@ -259,7 +259,7 @@ func (c *Client) downloadFile(ctx context.Context, bucket, bucketFolder, file st
 		return nil, ErrArtifactsNotFound
 	}
 
-	if bucketFolder != "" {
+	if bucketFolder != "" && bucketFolder != file {
 		file = strings.Trim(bucketFolder, "/") + "/" + file
 	}
 
