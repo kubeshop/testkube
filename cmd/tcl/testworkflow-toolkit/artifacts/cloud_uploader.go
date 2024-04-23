@@ -30,8 +30,9 @@ import (
 
 type CloudUploaderRequestEnhancer = func(req *http.Request, path string, size int64)
 
-func NewCloudUploader(opts ...CloudUploaderOpt) Uploader {
+func NewCloudUploader(client cloudexecutor.Executor, opts ...CloudUploaderOpt) Uploader {
 	uploader := &cloudUploader{
+		client:       client,
 		parallelism:  1,
 		reqEnhancers: make([]CloudUploaderRequestEnhancer, 0),
 	}
@@ -51,9 +52,6 @@ type cloudUploader struct {
 }
 
 func (d *cloudUploader) Start() (err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	d.client = env.Cloud(ctx)
 	d.sema = make(chan struct{}, d.parallelism)
 	return err
 }
