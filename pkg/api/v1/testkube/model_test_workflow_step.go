@@ -14,6 +14,8 @@ type TestWorkflowStep struct {
 	Name string `json:"name,omitempty"`
 	// expression to declare under which conditions the step should be run; defaults to \"passed\", except artifacts where it defaults to \"always\"
 	Condition string `json:"condition,omitempty"`
+	// expression to declare under which conditions the step should be paused initially
+	Paused string `json:"paused,omitempty"`
 	// is the step expected to fail
 	Negative bool `json:"negative,omitempty"`
 	// is the step optional, so the failure won't affect the TestWorkflow result
@@ -25,9 +27,8 @@ type TestWorkflowStep struct {
 	// maximum time this step may take
 	Timeout string `json:"timeout,omitempty"`
 	// delay before the step
-	Delay   string                 `json:"delay,omitempty"`
-	Content *TestWorkflowContent   `json:"content,omitempty"`
-	Pause   *TestWorkflowStepPause `json:"pause,omitempty"`
+	Delay   string               `json:"delay,omitempty"`
+	Content *TestWorkflowContent `json:"content,omitempty"`
 	// script to run in a default shell for the container
 	Shell      string                       `json:"shell,omitempty"`
 	Run        *TestWorkflowStepRun         `json:"run,omitempty"`
