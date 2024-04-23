@@ -222,7 +222,9 @@ func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, pod
 			}
 
 			// Process the received line
-			if len(line) > 0 {
+			if !isNewLine && len(line) == 0 {
+				isNewLine = true
+			} else if len(line) > 0 {
 				hadComment := false
 				instruction, isHint, err := data.DetectInstruction(line)
 				if err == nil && instruction != nil {
