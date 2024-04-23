@@ -23,17 +23,17 @@ type StageLifecycle interface {
 	Negative() bool
 	Optional() bool
 	Condition() string
+	Paused() string
 	RetryPolicy() testworkflowsv1.RetryPolicy
 	Timeout() string
-	Pause() *testworkflowsv1.PauseConfig
 
 	SetNegative(negative bool) StageLifecycle
 	SetOptional(optional bool) StageLifecycle
 	SetCondition(expr string) StageLifecycle
+	SetPaused(paused string) StageLifecycle
 	AppendConditions(expr ...string) StageLifecycle
 	SetRetryPolicy(policy *testworkflowsv1.RetryPolicy) StageLifecycle
 	SetTimeout(tpl string) StageLifecycle
-	SetPause(config *testworkflowsv1.PauseConfig) StageLifecycle
 }
 
 type stageLifecycle struct {
@@ -41,7 +41,7 @@ type stageLifecycle struct {
 	optional  bool
 	condition string
 	retry     testworkflowsv1.RetryPolicy
-	pause     *testworkflowsv1.PauseConfig
+	paused    string
 	timeout   string
 }
 
@@ -72,8 +72,8 @@ func (s *stageLifecycle) Timeout() string {
 	return s.timeout
 }
 
-func (s *stageLifecycle) Pause() *testworkflowsv1.PauseConfig {
-	return s.pause
+func (s *stageLifecycle) Paused() string {
+	return s.paused
 }
 
 func (s *stageLifecycle) SetNegative(negative bool) StageLifecycle {
@@ -120,7 +120,7 @@ func (s *stageLifecycle) SetTimeout(tpl string) StageLifecycle {
 	return s
 }
 
-func (s *stageLifecycle) SetPause(pause *testworkflowsv1.PauseConfig) StageLifecycle {
-	s.pause = pause.DeepCopy()
+func (s *stageLifecycle) SetPaused(paused string) StageLifecycle {
+	s.paused = paused
 	return s
 }

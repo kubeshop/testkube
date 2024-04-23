@@ -42,8 +42,7 @@ func main() {
 	conditions := []data.Rule(nil)
 	resulting := []data.Rule(nil)
 	timeouts := []data.Timeout(nil)
-	pause := ""
-	pauseTimeout := ""
+	paused := ""
 	args := []string(nil)
 
 	// Read arguments into the base data
@@ -82,10 +81,8 @@ func main() {
 			}
 		case constants.ArgComputeEnv, constants.ArgComputeEnvLong:
 			computed = append(computed, strings.Split(os.Args[i+1], ",")...)
-		case constants.ArgPause, constants.ArgPauseLong:
-			pause = os.Args[i+1]
-		case constants.ArgPauseTimeout, constants.ArgPauseTimeoutLong:
-			pauseTimeout = os.Args[i+1]
+		case constants.ArgPaused, constants.ArgPausedLong:
+			paused = os.Args[i+1]
 		case constants.ArgNegative, constants.ArgNegativeLong:
 			config["negative"] = os.Args[i+1]
 		case constants.ArgRetryCount:
@@ -132,7 +129,6 @@ func main() {
 		}
 	}
 
-	// TODO: Don't start steps yet if paused and not skipped
 	// Start all acknowledged steps
 	for _, f := range resulting {
 		for _, r := range f.Refs {
@@ -168,17 +164,14 @@ func main() {
 	}
 
 	// Handle pausing
-	if pause != "" {
-		// TODO: Compute the pause
-		paused := false
-		if paused {
-			if pauseTimeout != "" {
-				// TODO: Handle pause timeout
-			}
-
-			// TODO: Start waiting server
-			// TODO: Wait for call
-			// TODO: Stop pause timeout
+	if paused != "" {
+		expr, err := data.Expression(paused)
+		if err != nil {
+			output.Failf(output.CodeInputError, "broken paused condition: %s: %s", paused, err.Error())
+		}
+		v, _ := expr.BoolValue()
+		if v {
+			data.Step.Pause()
 		}
 	}
 
@@ -218,6 +211,7 @@ func main() {
 	}()
 
 	// Handle timeouts
+	// FIXME: Take in account pause periods
 	for _, t := range timeouts {
 		go func(ref string) {
 			time.Sleep(data.State.GetStep(ref).TimeoutAt.Sub(time.Now()))
@@ -228,6 +222,8 @@ func main() {
 			data.Finish()
 		}(t.Ref)
 	}
+
+	// Run the control server
 
 	// Start the task
 	data.Step.Executed = true

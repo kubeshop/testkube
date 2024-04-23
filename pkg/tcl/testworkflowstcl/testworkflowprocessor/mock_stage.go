@@ -208,18 +208,18 @@ func (mr *MockStageMockRecorder) Optional() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Optional", reflect.TypeOf((*MockStage)(nil).Optional))
 }
 
-// Pause mocks base method.
-func (m *MockStage) Pause() *v1.PauseConfig {
+// Paused mocks base method.
+func (m *MockStage) Paused() string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Pause")
-	ret0, _ := ret[0].(*v1.PauseConfig)
+	ret := m.ctrl.Call(m, "Paused")
+	ret0, _ := ret[0].(string)
 	return ret0
 }
 
-// Pause indicates an expected call of Pause.
-func (mr *MockStageMockRecorder) Pause() *gomock.Call {
+// Paused indicates an expected call of Paused.
+func (mr *MockStageMockRecorder) Paused() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pause", reflect.TypeOf((*MockStage)(nil).Pause))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Paused", reflect.TypeOf((*MockStage)(nil).Paused))
 }
 
 // Ref mocks base method.
@@ -338,18 +338,18 @@ func (mr *MockStageMockRecorder) SetOptional(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetOptional", reflect.TypeOf((*MockStage)(nil).SetOptional), arg0)
 }
 
-// SetPause mocks base method.
-func (m *MockStage) SetPause(arg0 *v1.PauseConfig) StageLifecycle {
+// SetPaused mocks base method.
+func (m *MockStage) SetPaused(arg0 string) StageLifecycle {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetPause", arg0)
+	ret := m.ctrl.Call(m, "SetPaused", arg0)
 	ret0, _ := ret[0].(StageLifecycle)
 	return ret0
 }
 
-// SetPause indicates an expected call of SetPause.
-func (mr *MockStageMockRecorder) SetPause(arg0 interface{}) *gomock.Call {
+// SetPaused indicates an expected call of SetPaused.
+func (mr *MockStageMockRecorder) SetPaused(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetPause", reflect.TypeOf((*MockStage)(nil).SetPause), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetPaused", reflect.TypeOf((*MockStage)(nil).SetPaused), arg0)
 }
 
 // SetRetryPolicy mocks base method.

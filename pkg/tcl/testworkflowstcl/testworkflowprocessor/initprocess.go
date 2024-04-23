@@ -27,7 +27,7 @@ type initProcess struct {
 	init       []string
 	params     []string
 	retry      map[string]testworkflowsv1.RetryPolicy
-	pause      *testworkflowsv1.PauseConfig
+	paused     string
 	command    []string
 	args       []string
 	envs       []string
@@ -81,11 +81,8 @@ func (p *initProcess) Command() []string {
 	for _, r := range p.results {
 		args = append(args, constants.ArgResult, r)
 	}
-	if p.pause != nil {
-		args = append(args, constants.ArgPause, p.pause.Condition)
-		if p.pause.Timeout != "" {
-			args = append(args, constants.ArgPauseTimeout, p.pause.Timeout)
-		}
+	if p.paused != "" {
+		args = append(args, constants.ArgPaused, p.paused)
 	}
 	return append([]string{constants2.DefaultInitPath, p.ref}, append(args, constants.ArgSeparator)...)
 }
@@ -199,12 +196,11 @@ func (p *initProcess) AddRetryPolicy(policy testworkflowsv1.RetryPolicy, ref str
 	return p
 }
 
-func (p *initProcess) SetPause(pause *testworkflowsv1.PauseConfig) *initProcess {
-	pause = pause.DeepCopy()
-	if pause.Condition == "" {
-		pause.Condition = "always"
+func (p *initProcess) SetPaused(paused string) *initProcess {
+	if paused == "null" || paused == "false" || paused == "never" {
+		paused = ""
 	}
-	p.pause = pause
+	p.paused = paused
 	return p
 }
 
@@ -213,7 +209,7 @@ func (p *initProcess) Children(ref string) *initProcess {
 		ref:        ref,
 		params:     p.params,
 		retry:      maps.Clone(p.retry),
-		pause:      p.pause.DeepCopy(),
+		paused:     p.paused,
 		command:    p.command,
 		args:       p.args,
 		init:       p.init,

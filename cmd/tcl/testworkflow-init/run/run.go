@@ -11,60 +11,21 @@ package run
 import (
 	"fmt"
 	"os"
-	"os/exec"
 
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/utils"
 )
 
 const (
 	defaultBinPath = "/.tktw/bin"
 )
 
-func getProcessStatus(err error) (bool, uint8) {
-	if err == nil {
-		return true, 0
-	}
-	if e, ok := err.(*exec.ExitError); ok {
-		if e.ProcessState != nil {
-			return false, uint8(e.ProcessState.ExitCode())
-		}
-		return false, 1
-	}
-	fmt.Println(err.Error())
-	return false, 1
-}
-
-// TODO: Obfuscate Stdout/Stderr streams
-func createCommand(cmd string, args ...string) (c *exec.Cmd) {
-	c = exec.Command(cmd, args...)
-	out := utils.NewOutputProcessor(data.Step.Ref, os.Stdout)
-	c.Stdout = out
-	c.Stderr = os.Stderr
-	c.Stdin = os.Stdin
-	return
-}
-
 func execute(cmd string, args ...string) {
-	data.Step.Cmd = createCommand(cmd, args...)
-	success, exitCode := getProcessStatus(data.Step.Cmd.Run())
-	data.Step.ExitCode = exitCode
-
-	actualSuccess := success
-	if data.Config.Negative {
-		actualSuccess = !success
-	}
-
-	if actualSuccess {
-		data.Step.Status = data.StepStatusPassed
-	} else {
-		data.Step.Status = data.StepStatusFailed
-	}
+	data.Step.Run(data.Config.Negative, cmd, args...)
 
 	if data.Config.Negative {
-		fmt.Printf("Expected to fail: finished with exit code %d.\n", exitCode)
+		fmt.Printf("Expected to fail: finished with exit code %d.\n", data.Step.ExitCode)
 	} else if data.Config.Debug {
-		fmt.Printf("Exit code: %d.\n", exitCode)
+		fmt.Printf("Exit code: %d.\n", data.Step.ExitCode)
 	}
 }
 

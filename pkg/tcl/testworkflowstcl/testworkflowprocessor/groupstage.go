@@ -132,7 +132,7 @@ func (s *groupStage) Flatten() []Stage {
 
 	// Merge stage into single one below if possible
 	first := s.children[0]
-	if len(s.children) == 1 && (s.name == "" || first.Name() == "") && (s.timeout == "" || first.Timeout() == "") && (s.pause == nil || first.Pause() == nil) {
+	if len(s.children) == 1 && (s.name == "" || first.Name() == "") && (s.timeout == "" || first.Timeout() == "") && (s.paused == "" || first.Paused() == "") {
 		if first.Name() == "" {
 			first.SetName(s.name)
 		}
@@ -146,8 +146,8 @@ func (s *groupStage) Flatten() []Stage {
 		if s.optional {
 			first.SetOptional(true)
 		}
-		if s.pause != nil {
-			first.SetPause(s.pause)
+		if s.paused != "" {
+			first.SetPaused(s.paused)
 		}
 		return []Stage{first}
 	}
