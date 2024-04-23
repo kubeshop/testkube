@@ -436,14 +436,16 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, errors.Wrap(err, "deploying reqyuired resources")
 	}
 
-	// Start to control the results
-	err = e.Control(context.Background(), &execution)
-	if err != nil {
-		e.handleFatalError(&execution, err, time.Time{})
-		return execution, errors.Wrap(err, "starting results control")
-	}
-
 	e.sendRunWorkflowTelemetry(ctx, &workflow)
+
+	// Start to control the results
+	go func() {
+		err = e.Control(context.Background(), &execution)
+		if err != nil {
+			e.handleFatalError(&execution, err, time.Time{})
+			return
+		}
+	}()
 
 	return execution, nil
 }
