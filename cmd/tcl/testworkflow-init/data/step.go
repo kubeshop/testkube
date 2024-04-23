@@ -8,7 +8,6 @@
 
 package data
 
-import "C"
 import (
 	"fmt"
 	"os"
@@ -19,8 +18,6 @@ import (
 
 	"github.com/pkg/errors"
 	gopsutil "github.com/shirou/gopsutil/v3/process"
-
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/utils"
 )
 
 var Step = &step{}
@@ -39,6 +36,10 @@ type step struct {
 	pauseMu sync.Mutex
 }
 
+type PauseState struct {
+	Time time.Time `json:"time"`
+}
+
 // TODO: Obfuscate Stdout/Stderr streams
 func (s *step) Run(negative bool, cmd string, args ...string) {
 	// Avoid multiple runs at once
@@ -52,7 +53,7 @@ func (s *step) Run(negative bool, cmd string, args ...string) {
 	// Prepare the command
 	s.cmdMu.Lock()
 	s.cmd = exec.Command(cmd, args...)
-	out := utils.NewOutputProcessor(s.Ref, os.Stdout)
+	out := NewOutputProcessor(s.Ref, os.Stdout)
 	s.cmd.Stdout = out
 	s.cmd.Stderr = os.Stderr
 	s.cmd.Stdin = os.Stdin
@@ -87,6 +88,14 @@ func (s *step) Run(negative bool, cmd string, args ...string) {
 	s.cmdMu.Unlock()
 }
 
+func (s *step) Kill() {
+	s.cmdMu.Lock()
+	if s.cmd != nil && s.cmd.Process != nil {
+		_ = s.cmd.Process.Kill()
+	}
+	s.cmdMu.Unlock()
+}
+
 func (s *step) Pause() (err error) {
 	// Lock running
 	swapped := s.paused.CompareAndSwap(false, true)
@@ -100,15 +109,20 @@ func (s *step) Pause() (err error) {
 	// Pause already started application
 	s.cmdMu.Lock()
 	if s.cmd != nil && s.cmd.Process != nil {
-		err = each(int32(s.cmd.Process.Pid), func(p *gopsutil.Process) error {
-			return p.Suspend()
-		})
+		ps, totalFailure, err2 := processes()
+		if err2 != nil && totalFailure {
+			err = err2
+		} else {
+			err = each(int32(s.cmd.Process.Pid), ps, func(p *gopsutil.Process) error {
+				return p.Suspend()
+			})
+		}
 	}
 	s.cmdMu.Unlock()
 
 	// Display output
 	PrintHintDetails(s.Ref, "status", "paused")
-	PrintOutput(s.Ref, "pause-start", time.Now())
+	PrintOutput(s.Ref, "pause-start", PauseState{Time: time.Now()})
 	return err
 }
 
@@ -124,36 +138,73 @@ func (s *step) Resume() (err error) {
 	// Resume started application
 	s.cmdMu.Lock()
 	if s.cmd != nil && s.cmd.Process != nil {
-		err = each(int32(s.cmd.Process.Pid), func(p *gopsutil.Process) error {
-			return p.Resume()
-		})
+		ps, totalFailure, err2 := processes()
+		if err2 != nil && totalFailure {
+			err = err2
+		} else {
+			err = each(int32(s.cmd.Process.Pid), ps, func(p *gopsutil.Process) error {
+				return p.Resume()
+			})
+		}
 	}
 	s.cmdMu.Unlock()
 	s.pauseMu.Unlock()
 
 	// Display output
 	PrintHintDetails(s.Ref, "status", "running")
-	PrintOutput(s.Ref, "pause-end", time.Now())
-	return nil
+	PrintOutput(s.Ref, "pause-start", PauseState{Time: time.Now()})
+	return err
 }
 
-// TODO: Think what about detached processes
-func each(pid int32, fn func(*gopsutil.Process) error) error {
-	p := &gopsutil.Process{Pid: pid}
-	err := fn(p)
+func processes() (map[int32]int32, bool, error) {
+	// Get list of processes
+	list, err := gopsutil.Processes()
+	if err != nil {
+		return nil, true, errors.Wrapf(err, "failed to list processes")
+	}
+	ownPid := os.Getpid()
+
+	// Get parent process for each process
+	r := map[int32]int32{}
+	var errs []error
+	for _, p := range list {
+		if p.Pid == int32(ownPid) {
+			continue
+		}
+		r[p.Pid], err = p.Ppid()
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	// Return info
+	if len(errs) > 0 {
+		err = errors.Wrapf(errs[0], "failed to load %d/%d processes", len(errs), len(r))
+	}
+	return r, len(errs) == len(r), err
+}
+
+func each(pid int32, pidToPpid map[int32]int32, fn func(*gopsutil.Process) error) error {
+	if _, ok := pidToPpid[pid]; !ok {
+		return fmt.Errorf("process %d: not found", pid)
+	}
+
+	// Run operation for the process
+	err := fn(&gopsutil.Process{Pid: pid})
 	if err != nil {
 		return errors.Wrapf(err, "process %d: failed to perform", pid)
 	}
-	children, err := p.Children()
-	if err != nil {
-		return errors.Wrapf(err, "process %d: failed to get children", pid)
-	}
-	for _, child := range children {
-		err := each(child.Pid, fn)
-		if err != nil {
-			return errors.Wrapf(err, "process %d", pid)
+
+	// Run operation for all the children recursively
+	for p, ppid := range pidToPpid {
+		if ppid == pid {
+			err = each(p, pidToPpid, fn)
+			if err != nil {
+				return errors.Wrapf(err, "process %d: children", pid)
+			}
 		}
 	}
+
 	return nil
 }
 

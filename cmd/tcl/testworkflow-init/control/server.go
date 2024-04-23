@@ -34,6 +34,7 @@ func NewServer(port int, step Pauseable) *server {
 
 func (s *server) handler() *http.ServeMux {
 	mux := http.NewServeMux()
+	// TODO: Consider "shell" command too for debugging?
 	mux.HandleFunc("/pause", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

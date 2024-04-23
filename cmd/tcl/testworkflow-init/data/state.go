@@ -179,9 +179,7 @@ func Finish() {
 	persistState(filepath.Join(defaultInternalPath, "state"))
 
 	// Kill the sub-process
-	if Step.Cmd != nil && Step.Cmd.Process != nil {
-		_ = Step.Cmd.Process.Kill()
-	}
+	Step.Kill()
 
 	// Emit end hint to allow exporting the timestamp
 	PrintHint(Step.Ref, "end")

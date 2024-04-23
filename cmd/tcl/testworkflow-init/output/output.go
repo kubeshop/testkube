@@ -20,9 +20,7 @@ func Failf(exitCode uint8, message string, args ...interface{}) {
 	fmt.Printf(message+"\n", args...)
 
 	// Kill the sub-process
-	if data.Step.Cmd != nil && data.Step.Cmd.Process != nil {
-		_ = data.Step.Cmd.Process.Kill()
-	}
+	data.Step.Kill()
 
 	// Exit
 	os.Exit(int(exitCode))
