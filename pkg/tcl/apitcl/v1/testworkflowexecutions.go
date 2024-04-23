@@ -250,6 +250,86 @@ func (s *apiTCL) AbortTestWorkflowExecutionHandler() fiber.Handler {
 	}
 }
 
+func (s *apiTCL) PauseTestWorkflowExecutionHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		name := c.Params("id")
+		executionID := c.Params("executionID")
+		errPrefix := fmt.Sprintf("failed to abort test workflow execution '%s'", executionID)
+
+		var execution testkube.TestWorkflowExecution
+		var err error
+		if name == "" {
+			execution, err = s.TestWorkflowResults.Get(ctx, executionID)
+		} else {
+			execution, err = s.TestWorkflowResults.GetByNameAndTestWorkflow(ctx, executionID, name)
+		}
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		if execution.Result != nil && execution.Result.IsFinished() {
+			return s.BadRequest(c, errPrefix, "checking execution", errors.New("execution already finished"))
+		}
+
+		// Obtain the controller
+		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, s.Namespace, execution.Id, execution.ScheduledAt)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "fetching job", err)
+		}
+
+		// Resuming the execution
+		err = ctrl.Pause(context.Background())
+		if err != nil {
+			return s.ClientError(c, "pausing test workflow execution", err)
+		}
+
+		c.Status(http.StatusNoContent)
+
+		return nil
+	}
+}
+
+func (s *apiTCL) ResumeTestWorkflowExecutionHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		name := c.Params("id")
+		executionID := c.Params("executionID")
+		errPrefix := fmt.Sprintf("failed to abort test workflow execution '%s'", executionID)
+
+		var execution testkube.TestWorkflowExecution
+		var err error
+		if name == "" {
+			execution, err = s.TestWorkflowResults.Get(ctx, executionID)
+		} else {
+			execution, err = s.TestWorkflowResults.GetByNameAndTestWorkflow(ctx, executionID, name)
+		}
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		if execution.Result != nil && execution.Result.IsFinished() {
+			return s.BadRequest(c, errPrefix, "checking execution", errors.New("execution already finished"))
+		}
+
+		// Obtain the controller
+		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, s.Namespace, execution.Id, execution.ScheduledAt)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "fetching job", err)
+		}
+
+		// Resuming the execution
+		err = ctrl.Resume(context.Background())
+		if err != nil {
+			return s.ClientError(c, "resuming test workflow execution", err)
+		}
+
+		c.Status(http.StatusNoContent)
+
+		return nil
+	}
+}
+
 func (s *apiTCL) AbortAllTestWorkflowExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
