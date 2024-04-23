@@ -40,6 +40,9 @@ const sidebars = {
             "articles/test-workflows",
             "articles/test-workflows-creating",
             "articles/test-workflow-templates",
+            "articles/test-workflows-examples-basics",
+            "articles/test-workflows-examples-configuration",
+            "articles/test-workflows-examples-templates",
           ],
         },
         {
