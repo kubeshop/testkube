@@ -4,22 +4,23 @@ import (
 	"context"
 	"sync"
 
+	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 // Runnable is an interface of runnable objects
 type Runnable interface {
-	testkube.Test | testkube.TestSuite
+	testkube.Test | testkube.TestSuite | testworkflowsv1.TestWorkflow
 }
 
 // Requestable is an interface of requestable objects
 type Requestable interface {
-	testkube.ExecutionRequest | testkube.TestSuiteExecutionRequest
+	testkube.ExecutionRequest | testkube.TestSuiteExecutionRequest | testkube.TestWorkflowExecutionRequest
 }
 
 // Returnable is an interface of returnable objects
 type Returnable interface {
-	testkube.Execution | testkube.TestSuiteExecution
+	testkube.Execution | testkube.TestSuiteExecution | testkube.TestWorkflowExecution
 }
 
 // ExecuteFn is a function type for executing runnable and requestable parameters with returnable results

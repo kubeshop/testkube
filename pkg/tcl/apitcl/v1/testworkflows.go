@@ -21,8 +21,10 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/scheduler"
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowresolver"
+	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
 func (s *apiTCL) ListTestWorkflowsHandler() fiber.Handler {
@@ -276,12 +278,35 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 			return s.BadRequest(c, errPrefix, "invalid body", err)
 		}
 
-		execution, err := s.TestWorkflowExecutor.Execute(ctx, *workflow, request)
+		var results []testkube.TestWorkflowExecution
+
+		concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", strconv.Itoa(scheduler.DefaultConcurrencyLevel)))
 		if err != nil {
-			return s.BadRequest(c, errPrefix, "failed execution", err)
+			return s.BadRequest(c, errPrefix, "can't detect concurrency level", err)
 		}
 
-		return c.JSON(execution)
+		workerpoolService := workerpool.New[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest,
+			testkube.TestWorkflowExecution](concurrencyLevel)
+		requests := []workerpool.Request[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution]{
+			{
+				Object:  *workflow,
+				Options: request,
+				ExecFn:  s.TestWorkflowExecutor.Execute,
+			},
+		}
+
+		go workerpoolService.SendRequests(requests)
+		go workerpoolService.Run(ctx)
+
+		for r := range workerpoolService.GetResponses() {
+			results = append(results, r.Result)
+		}
+
+		if len(results) != 0 {
+			return c.JSON(results[0])
+		}
+
+		return s.InternalError(c, errPrefix, "error", errors.New("no execution results"))
 	}
 }
 
