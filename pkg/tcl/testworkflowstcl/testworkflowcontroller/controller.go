@@ -362,13 +362,11 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 				}
 				if v.Value.Hint != nil {
 					if v.Value.Hint.Name == "pause" && v.Value.Hint.Ref == container.Name {
-						result.Status = common.Ptr(testkube.PAUSED_TestWorkflowStatus)
 						stepResult = result.UpdateStepResult(sig, v.Value.Hint.Ref, testkube.TestWorkflowStepResult{
 							Status: common.Ptr(testkube.PAUSED_TestWorkflowStepStatus),
 						}, c.scheduledAt)
 						w.SendValue(Notification{Result: result.Clone()})
 					} else if v.Value.Hint.Name == "resume" && v.Value.Hint.Ref == container.Name {
-						result.Status = common.Ptr(testkube.RUNNING_TestWorkflowStatus)
 						stepResult = result.UpdateStepResult(sig, v.Value.Hint.Ref, testkube.TestWorkflowStepResult{
 							Status: common.Ptr(testkube.RUNNING_TestWorkflowStepStatus),
 						}, c.scheduledAt)

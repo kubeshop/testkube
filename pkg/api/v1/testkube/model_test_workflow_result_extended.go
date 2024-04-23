@@ -209,7 +209,7 @@ func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature, scheduledAt 
 	// Check pause status
 	isPaused := false
 	walkSteps(sig, func(s TestWorkflowSignature) {
-		if r.Steps[s.Ref].Status != nil && *r.Steps[s.Ref].Status == PASSED_TestWorkflowStepStatus {
+		if r.Steps[s.Ref].Status != nil && *r.Steps[s.Ref].Status == PAUSED_TestWorkflowStepStatus {
 			isPaused = true
 		}
 	})
@@ -229,7 +229,9 @@ func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature, scheduledAt 
 		r.Status = r.PredictedStatus
 	} else if isPaused {
 		r.Status = common.Ptr(PAUSED_TestWorkflowStatus)
-	} else if r.Status != nil && *r.Status == PAUSED_TestWorkflowStatus {
+	}
+
+	if !isPaused && r.Status != nil && *r.Status == PAUSED_TestWorkflowStatus {
 		r.Status = common.Ptr(RUNNING_TestWorkflowStatus)
 	}
 }
