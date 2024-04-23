@@ -15,6 +15,7 @@ type TestWorkflowStepStatus string
 const (
 	QUEUED_TestWorkflowStepStatus  TestWorkflowStepStatus = "queued"
 	RUNNING_TestWorkflowStepStatus TestWorkflowStepStatus = "running"
+	PAUSED_TestWorkflowStepStatus  TestWorkflowStepStatus = "paused"
 	PASSED_TestWorkflowStepStatus  TestWorkflowStepStatus = "passed"
 	FAILED_TestWorkflowStepStatus  TestWorkflowStepStatus = "failed"
 	TIMEOUT_TestWorkflowStepStatus TestWorkflowStepStatus = "timeout"

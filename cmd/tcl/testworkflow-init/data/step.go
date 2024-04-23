@@ -121,7 +121,7 @@ func (s *step) Pause() (err error) {
 	s.cmdMu.Unlock()
 
 	// Display output
-	PrintHintDetails(s.Ref, "status", "paused")
+	PrintHintDetails(s.Ref, "pause", time.Now())
 	PrintOutput(s.Ref, "pause-start", PauseState{Time: time.Now()})
 	return err
 }
@@ -151,8 +151,8 @@ func (s *step) Resume() (err error) {
 	s.pauseMu.Unlock()
 
 	// Display output
-	PrintHintDetails(s.Ref, "status", "running")
-	PrintOutput(s.Ref, "pause-start", PauseState{Time: time.Now()})
+	PrintHintDetails(s.Ref, "resume", time.Now())
+	PrintOutput(s.Ref, "pause-end", PauseState{Time: time.Now()})
 	return err
 }
 

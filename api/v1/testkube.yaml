@@ -5808,6 +5808,7 @@ components:
         - failed
         - queued
         - running
+        - paused
       properties:
         results:
           type: integer
@@ -7742,6 +7743,7 @@ components:
       enum:
         - queued
         - running
+        - paused
         - passed
         - failed
         - aborted
@@ -7751,6 +7753,7 @@ components:
       enum:
         - queued
         - running
+        - paused
         - passed
         - failed
         - timeout

@@ -7,7 +7,7 @@ import (
 )
 
 func (r *TestWorkflowResult) IsFinished() bool {
-	return !r.IsStatus(QUEUED_TestWorkflowStatus) && !r.IsStatus(RUNNING_TestWorkflowStatus)
+	return !r.IsStatus(QUEUED_TestWorkflowStatus) && !r.IsStatus(RUNNING_TestWorkflowStatus) && !r.IsStatus(PAUSED_TestWorkflowStatus)
 }
 
 func (r *TestWorkflowResult) IsStatus(s TestWorkflowStatus) bool {
@@ -59,7 +59,7 @@ func (r *TestWorkflowResult) Fatal(err error, aborted bool, ts time.Time) {
 			s := r.Steps[i]
 			s.Status = common.Ptr(SKIPPED_TestWorkflowStepStatus)
 			r.Steps[i] = s
-		} else if *r.Steps[i].Status == RUNNING_TestWorkflowStepStatus {
+		} else if *r.Steps[i].Status == RUNNING_TestWorkflowStepStatus || *r.Steps[i].Status == PAUSED_TestWorkflowStepStatus {
 			s := r.Steps[i]
 			s.Status = common.Ptr(FAILED_TestWorkflowStepStatus)
 			if aborted {
@@ -206,6 +206,14 @@ func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature, scheduledAt 
 	last := r.Steps[sig[len(sig)-1].Ref]
 	r.FinishedAt = adjustMinimumTime(r.FinishedAt, last.FinishedAt)
 
+	// Check pause status
+	isPaused := false
+	walkSteps(sig, func(s TestWorkflowSignature) {
+		if r.Steps[s.Ref].Status != nil && *r.Steps[s.Ref].Status == PASSED_TestWorkflowStepStatus {
+			isPaused = true
+		}
+	})
+
 	// Recompute the TestWorkflow status
 	totalSig := TestWorkflowSignature{Children: sig}
 	result, _ := predictTestWorkflowStepStatus(TestWorkflowStepResult{}, totalSig, r)
@@ -219,6 +227,10 @@ func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature, scheduledAt 
 	r.PredictedStatus = status
 	if !r.FinishedAt.IsZero() || *status == ABORTED_TestWorkflowStatus {
 		r.Status = r.PredictedStatus
+	} else if isPaused {
+		r.Status = common.Ptr(PAUSED_TestWorkflowStatus)
+	} else if r.Status != nil && *r.Status == PAUSED_TestWorkflowStatus {
+		r.Status = common.Ptr(RUNNING_TestWorkflowStatus)
 	}
 }
 
@@ -304,7 +316,7 @@ func adjustMinimumTime(dst, min time.Time) time.Time {
 func predictTestWorkflowStepStatus(v TestWorkflowStepResult, sig TestWorkflowSignature, r *TestWorkflowResult) (TestWorkflowStepStatus, bool) {
 	children := sig.Children
 	if len(children) == 0 {
-		if getTestWorkflowStepStatus(v) == QUEUED_TestWorkflowStepStatus || getTestWorkflowStepStatus(v) == RUNNING_TestWorkflowStepStatus {
+		if getTestWorkflowStepStatus(v) == QUEUED_TestWorkflowStepStatus || getTestWorkflowStepStatus(v) == RUNNING_TestWorkflowStepStatus || getTestWorkflowStepStatus(v) == PAUSED_TestWorkflowStepStatus {
 			return PASSED_TestWorkflowStepStatus, false
 		}
 		return *v.Status, true
@@ -326,7 +338,7 @@ func predictTestWorkflowStepStatus(v TestWorkflowStepResult, sig TestWorkflowSig
 		if !ch.Optional && (status == FAILED_TestWorkflowStepStatus || status == TIMEOUT_TestWorkflowStepStatus) {
 			failed = true
 		}
-		if status == QUEUED_TestWorkflowStepStatus || status == RUNNING_TestWorkflowStepStatus {
+		if status == QUEUED_TestWorkflowStepStatus || status == RUNNING_TestWorkflowStepStatus || status == PAUSED_TestWorkflowStepStatus {
 			finished = false
 		}
 	}
