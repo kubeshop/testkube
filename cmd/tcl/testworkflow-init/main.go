@@ -20,6 +20,7 @@ import (
 	"github.com/kballard/go-shellquote"
 
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/control"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/output"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/run"
@@ -224,6 +225,11 @@ func main() {
 	}
 
 	// Run the control server
+	controlSrv := control.NewServer(constants.ControlServerPort, data.Step)
+	_, err = controlSrv.Listen()
+	if err != nil {
+		fmt.Printf("Failed to start control server at port %d: %s\n", constants.ControlServerPort, err.Error())
+	}
 
 	// Start the task
 	data.Step.Executed = true

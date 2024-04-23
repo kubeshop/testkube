@@ -87,11 +87,11 @@ func (s *step) Run(negative bool, cmd string, args ...string) {
 	s.cmdMu.Unlock()
 }
 
-func (s *step) Pause() {
+func (s *step) Pause() (err error) {
 	// Lock running
 	swapped := s.paused.CompareAndSwap(false, true)
 	if !swapped {
-		return
+		return nil
 	}
 	s.pauseMu.Lock()
 
@@ -100,24 +100,23 @@ func (s *step) Pause() {
 	// Pause already started application
 	s.cmdMu.Lock()
 	if s.cmd != nil && s.cmd.Process != nil {
-		err := each(int32(s.cmd.Process.Pid), func(p *gopsutil.Process) error {
+		err = each(int32(s.cmd.Process.Pid), func(p *gopsutil.Process) error {
 			return p.Suspend()
 		})
-		if err != nil {
-			fmt.Printf("Warning: failed to pause: %s\n", err)
-		}
 	}
 	s.cmdMu.Unlock()
 
 	// Display output
-	PrintOutput(s.Ref, "pause", time.Now())
+	PrintHintDetails(s.Ref, "status", "paused")
+	PrintOutput(s.Ref, "pause-start", time.Now())
+	return err
 }
 
-func (s *step) Resume() {
+func (s *step) Resume() (err error) {
 	// Unlock running
 	swapped := s.paused.CompareAndSwap(true, false)
 	if !swapped {
-		return
+		return nil
 	}
 
 	// TODO: Finish current pause period
@@ -125,20 +124,20 @@ func (s *step) Resume() {
 	// Resume started application
 	s.cmdMu.Lock()
 	if s.cmd != nil && s.cmd.Process != nil {
-		err := each(int32(s.cmd.Process.Pid), func(p *gopsutil.Process) error {
+		err = each(int32(s.cmd.Process.Pid), func(p *gopsutil.Process) error {
 			return p.Resume()
 		})
-		if err != nil {
-			fmt.Printf("Warning: failed to resume: %s\n", err)
-		}
 	}
 	s.cmdMu.Unlock()
 	s.pauseMu.Unlock()
 
 	// Display output
-	PrintOutput(s.Ref, "resume", time.Now())
+	PrintHintDetails(s.Ref, "status", "running")
+	PrintOutput(s.Ref, "pause-end", time.Now())
+	return nil
 }
 
+// TODO: Think what about detached processes
 func each(pid int32, fn func(*gopsutil.Process) error) error {
 	p := &gopsutil.Process{Pid: pid}
 	err := fn(p)
