@@ -211,16 +211,25 @@ func main() {
 		data.Finish()
 	}()
 
-	// Handle timeouts
-	// FIXME: Take in account pause periods
+	// Handle timeouts.
+	// Ignores time when the step was paused.
 	for _, t := range timeouts {
 		go func(ref string) {
-			time.Sleep(data.State.GetStep(ref).TimeoutAt.Sub(time.Now()))
-			fmt.Printf("Timed out.\n")
-			data.State.GetStep(ref).SetStatus(data.StepStatusTimeout)
-			data.Step.Status = data.StepStatusTimeout
-			data.Step.ExitCode = output.CodeTimeout
-			data.Finish()
+			start := now
+			timeout := data.State.GetStep(ref).TimeoutAt.Sub(start)
+			for {
+				time.Sleep(timeout)
+				took := data.Step.Took(start)
+				if took < timeout {
+					timeout -= took
+					continue
+				}
+				fmt.Printf("Timed out.\n")
+				data.State.GetStep(ref).SetStatus(data.StepStatusTimeout)
+				data.Step.Status = data.StepStatusTimeout
+				data.Step.ExitCode = output.CodeTimeout
+				data.Finish()
+			}
 		}(t.Ref)
 	}
 

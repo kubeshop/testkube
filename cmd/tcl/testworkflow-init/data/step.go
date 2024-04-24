@@ -31,11 +31,13 @@ type step struct {
 	Executed   bool
 	InitStatus string
 
-	paused  atomic.Bool
-	cmd     *exec.Cmd
-	runMu   sync.Mutex
-	cmdMu   sync.Mutex
-	pauseMu sync.Mutex
+	paused      atomic.Bool
+	pausedNs    atomic.Int64
+	pausedStart time.Time
+	cmd         *exec.Cmd
+	runMu       sync.Mutex
+	cmdMu       sync.Mutex
+	pauseMu     sync.Mutex
 }
 
 // TODO: Obfuscate Stdout/Stderr streams
@@ -86,6 +88,17 @@ func (s *step) Run(negative bool, cmd string, args ...string) {
 	s.cmdMu.Unlock()
 }
 
+func (s *step) Took(since time.Time) time.Duration {
+	now := time.Now()
+	if s.paused.Load() {
+		now = s.pausedStart
+	}
+	if !now.After(since) {
+		return 0
+	}
+	return now.Sub(since) - time.Duration(s.pausedNs.Load())
+}
+
 func (s *step) Kill() {
 	s.cmdMu.Lock()
 	if s.cmd != nil && s.cmd.Process != nil {
@@ -102,7 +115,8 @@ func (s *step) Pause(t time.Time) (err error) {
 	}
 	s.pauseMu.Lock()
 
-	// TODO: Save the information about current pause time
+	// Save the information about current pause time
+	s.pausedStart = time.Now()
 
 	// Pause already started application
 	s.cmdMu.Lock()
@@ -130,7 +144,8 @@ func (s *step) Resume() (err error) {
 		return nil
 	}
 
-	// TODO: Finish current pause period
+	// Finish current pause period
+	s.pausedNs.Add(time.Now().Sub(s.pausedStart).Nanoseconds())
 
 	// Resume started application
 	s.cmdMu.Lock()
