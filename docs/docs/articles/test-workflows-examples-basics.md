@@ -141,9 +141,6 @@ spec:
       image: 'cypress/included:13.6.4'
       workingDir: '/data/repo/test/cypress/executor-tests/cypress-12'
       shell: 'cypress run'
-  - artifacts:
-      paths:
-      - '**/*'
 ```
 
 ![Running Multiple Steps](../img/running-multiple-steps.png)
