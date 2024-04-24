@@ -362,11 +362,21 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 				}
 				if v.Value.Hint != nil {
 					if v.Value.Hint.Name == constants2.InstructionPause {
-						start, _ := time.Parse(constants2.PreciseTimeFormat, v.Value.Hint.Value.(string))
+						ts, _ := v.Value.Hint.Value.(string)
+						start, err := time.Parse(constants2.PreciseTimeFormat, ts)
+						if err != nil {
+							start = v.Value.Time
+							w.SendError(fmt.Errorf("invalid timestamp provided with pausing instruction: %v", v.Value.Hint.Value))
+						}
 						result.PauseStart(sig, c.scheduledAt, v.Value.Hint.Ref, start)
 						w.SendValue(Notification{Result: result.Clone()})
 					} else if v.Value.Hint.Name == constants2.InstructionResume {
-						end, _ := time.Parse(constants2.PreciseTimeFormat, v.Value.Hint.Value.(string))
+						ts, _ := v.Value.Hint.Value.(string)
+						end, err := time.Parse(constants2.PreciseTimeFormat, ts)
+						if err != nil {
+							end = v.Value.Time
+							w.SendError(fmt.Errorf("invalid timestamp provided with resuming instruction: %v", v.Value.Hint.Value))
+						}
 						result.PauseEnd(sig, c.scheduledAt, v.Value.Hint.Ref, end)
 						w.SendValue(Notification{Result: result.Clone()})
 					} else if v.Value.Hint.Name == constants2.InstructionStart && v.Value.Hint.Ref == container.Name {
