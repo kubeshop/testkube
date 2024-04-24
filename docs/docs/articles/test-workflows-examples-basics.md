@@ -259,7 +259,7 @@ spec:
 
 By default, the next step will run only when the previous steps have succeeded. This can be controlled with the **condition** property.
 
-As an example, **condition:always** will cause the step to always be executed, even if the previous step has failed.
+As an example, **condition: always** will cause the step to always be executed, even if the previous step has failed.
 
 ### Retry Mechanism
 
