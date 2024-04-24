@@ -84,10 +84,12 @@ func (s *groupStage) ContainerStages() []ContainerStage {
 
 func (s *groupStage) Children() []Stage {
 	// Add virtual stage for pausing if there are no operations where it could be included
-	if len(s.children) == 0 || s.children[0].HasPause() {
-		return append([]Stage{
-			NewContainerStage(s.ref+"_pause", NewContainer().SetCommand(constants.DefaultShellPath).SetArgs("-c", "exit 0")),
-		}, s.children...)
+	if s.paused != "" {
+		if len(s.children) == 0 || s.children[0].HasPause() {
+			return append([]Stage{
+				NewContainerStage(s.ref+"_pause", NewContainer().SetCommand(constants.DefaultShellPath).SetArgs("-c", "exit 0")),
+			}, s.children...)
+		}
 	}
 	return s.children
 }
