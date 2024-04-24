@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 )
 
@@ -182,7 +183,7 @@ func Finish() {
 	Step.Kill()
 
 	// Emit end hint to allow exporting the timestamp
-	PrintHint(Step.Ref, "end")
+	PrintHint(Step.Ref, constants.InstructionEnd)
 
 	// The init process needs to finish with zero exit code,
 	// to continue with the next container.
