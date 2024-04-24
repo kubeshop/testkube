@@ -7619,9 +7619,18 @@ components:
         duration:
           type: string
           description: Go-formatted (human-readable) duration
+        totalDuration:
+          type: string
+          description: Go-formatted (human-readable) duration (incl. pause)
         durationMs:
           type: integer
           description: Duration in milliseconds
+        totalDurationMs:
+          type: integer
+          description: Duration in milliseconds (incl. pause)
+        pausedMs:
+          type: integer
+          description: Pause duration in milliseconds
       required:
         - status
         - predictedStatus
