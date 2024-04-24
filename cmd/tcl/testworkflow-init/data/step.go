@@ -48,7 +48,6 @@ func (s *step) Run(negative bool, cmd string, args ...string) {
 
 	// Wait until not paused
 	s.pauseMu.Lock()
-	s.pauseMu.Unlock()
 
 	// Prepare the command
 	s.cmdMu.Lock()
@@ -65,9 +64,11 @@ func (s *step) Run(negative bool, cmd string, args ...string) {
 	// Run the command
 	err := s.cmd.Start()
 	if err == nil {
+		s.pauseMu.Unlock()
 		s.cmdMu.Unlock()
 		success, exitCode = getProcessStatus(s.cmd.Wait())
 	} else {
+		s.pauseMu.Unlock()
 		s.cmdMu.Unlock()
 		success, exitCode = getProcessStatus(err)
 	}
