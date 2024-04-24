@@ -197,8 +197,16 @@ func (p *initProcess) AddRetryPolicy(policy testworkflowsv1.RetryPolicy, ref str
 }
 
 func (p *initProcess) SetPaused(paused string) *initProcess {
-	if paused == "null" || paused == "false" || paused == "never" {
-		paused = ""
+	expr, err := expressionstcl.EvalExpressionPartial(paused)
+	if err == nil {
+		if expr.Static() == nil {
+			paused = expr.String()
+		} else {
+			v, err := expr.Static().BoolValue()
+			if err == nil && !v {
+				paused = ""
+			}
+		}
 	}
 	p.paused = paused
 	return p
