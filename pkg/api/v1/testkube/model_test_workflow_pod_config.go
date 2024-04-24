@@ -21,5 +21,21 @@ type TestWorkflowPodConfig struct {
 	// label selector for node that the pod should land on
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 	// volumes to append to the pod
-	Volumes []Volume `json:"volumes,omitempty"`
+	Volumes                   []Volume                   `json:"volumes,omitempty"`
+	ActiveDeadlineSeconds     *BoxedInteger              `json:"activeDeadlineSeconds,omitempty"`
+	DnsPolicy                 string                     `json:"dnsPolicy,omitempty"`
+	NodeName                  string                     `json:"nodeName,omitempty"`
+	SecurityContext           *PodSecurityContext        `json:"securityContext,omitempty"`
+	Hostname                  string                     `json:"hostname,omitempty"`
+	Subdomain                 string                     `json:"subdomain,omitempty"`
+	Affinity                  *Affinity                  `json:"affinity,omitempty"`
+	Tolerations               []Toleration               `json:"tolerations,omitempty"`
+	HostAliases               []HostAlias                `json:"hostAliases,omitempty"`
+	PriorityClassName         string                     `json:"priorityClassName,omitempty"`
+	Priority                  *BoxedInteger              `json:"priority,omitempty"`
+	DnsConfig                 *PodDnsConfig              `json:"dnsConfig,omitempty"`
+	PreemptionPolicy          *BoxedString               `json:"preemptionPolicy,omitempty"`
+	TopologySpreadConstraints []TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
+	SchedulingGates           []PodSchedulingGate        `json:"schedulingGates,omitempty"`
+	ResourceClaims            []ResourceClaim            `json:"resourceClaims,omitempty"`
 }
