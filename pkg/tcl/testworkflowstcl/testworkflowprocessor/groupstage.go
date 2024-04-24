@@ -48,7 +48,7 @@ func (s *groupStage) Len() int {
 }
 
 func (s *groupStage) HasPause() bool {
-	return s.HasPause() || (len(s.Children()) > 0 && s.Children()[0].HasPause())
+	return s.paused != "" || (len(s.Children()) > 0 && s.Children()[0].HasPause())
 }
 
 func (s *groupStage) Signature() Signature {
