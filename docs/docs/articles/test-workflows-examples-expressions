@@ -39,7 +39,7 @@ There are some functions that help to cast or serialize values, such as **int**,
 
 ### General Functions
 
-There are some functions that aid in working with data, i.e. **join**, **split**, **floor**, **round**, **trim**, **len**, **map**, **filter**, **jq**, **shellargs** or **shellquote**.
+There are some functions that aid in working with data, i.e. **join**, **split**, **floor**, **round**, **trim**, **len**, **map**, **filter**, **jq**, **shellparse** or **shellquote**.
 
 ### File System Functions
 
