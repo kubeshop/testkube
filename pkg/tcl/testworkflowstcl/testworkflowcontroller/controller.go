@@ -361,21 +361,21 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 					continue
 				}
 				if v.Value.Hint != nil {
-					if v.Value.Hint.Name == "pause" {
+					if v.Value.Hint.Name == constants2.InstructionPause {
 						start, _ := time.Parse(constants2.PreciseTimeFormat, v.Value.Hint.Value.(string))
 						result.PauseStart(sig, c.scheduledAt, v.Value.Hint.Ref, start)
 						w.SendValue(Notification{Result: result.Clone()})
-					} else if v.Value.Hint.Name == "resume" {
+					} else if v.Value.Hint.Name == constants2.InstructionResume {
 						end, _ := time.Parse(constants2.PreciseTimeFormat, v.Value.Hint.Value.(string))
 						result.PauseEnd(sig, c.scheduledAt, v.Value.Hint.Ref, end)
 						w.SendValue(Notification{Result: result.Clone()})
-					} else if v.Value.Hint.Name == "start" && v.Value.Hint.Ref == container.Name {
+					} else if v.Value.Hint.Name == constants2.InstructionStart && v.Value.Hint.Ref == container.Name {
 						if v.Value.Time.After(stepResult.StartedAt) {
 							stepResult = result.UpdateStepResult(sig, container.Name, testkube.TestWorkflowStepResult{
 								StartedAt: v.Value.Time.UTC(),
 							}, c.scheduledAt)
 						}
-					} else if v.Value.Hint.Name == "status" {
+					} else if v.Value.Hint.Name == constants2.InstructionStatus {
 						status := testkube.TestWorkflowStepStatus(v.Value.Hint.Value.(string))
 						if status == "" {
 							status = testkube.PASSED_TestWorkflowStepStatus

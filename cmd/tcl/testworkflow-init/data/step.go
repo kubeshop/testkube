@@ -134,7 +134,7 @@ func (s *step) Pause(t time.Time) (err error) {
 	s.cmdMu.Unlock()
 
 	// Display output
-	PrintHintDetails(s.Ref, "pause", t.Format(constants.PreciseTimeFormat))
+	PrintHintDetails(s.Ref, constants.InstructionPause, t.Format(constants.PreciseTimeFormat))
 	return err
 }
 
@@ -164,7 +164,7 @@ func (s *step) Resume() (err error) {
 	s.pauseMu.Unlock()
 
 	// Display output
-	PrintHintDetails(s.Ref, "resume", time.Now().Format(constants.PreciseTimeFormat))
+	PrintHintDetails(s.Ref, constants.InstructionResume, time.Now().Format(constants.PreciseTimeFormat))
 	return err
 }
 
