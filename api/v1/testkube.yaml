@@ -7818,6 +7818,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestWorkflowStep"
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestWorkflowEvent"
 
     TestWorkflowTemplateSpec:
       type: object
@@ -7844,6 +7848,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestWorkflowIndependentStep"
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestWorkflowEvent"
 
     TestWorkflowIndependentStep:
       type: object
@@ -7972,7 +7980,50 @@ components:
           type: array
           description: workflows to schedule
           items:
-            $ref: "#/components/schemas/TestWorkflowRef"
+            $ref: "#/components/schemas/TestWorkflowStepExecuteTestWorkflowRef"
+
+    TestWorkflowStepExecuteTestWorkflowRef:
+      type: object
+      properties:
+        name:
+          type: string
+          description: TestWorkflow name to include
+        description:
+          type: string
+          description: TestWorkflow execution description to display
+        executionName:
+          type: string
+          description: TestWorkflow execution name override
+        tarball:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/TestWorkflowTarballRequest"
+        config:
+          $ref: "#/components/schemas/TestWorkflowConfigValue"
+        count:
+          $ref: "#/components/schemas/BoxedString"
+        maxCount:
+          $ref: "#/components/schemas/BoxedString"
+        matrix:
+          type: object
+          description: "matrix of parameters to spawn instances"
+          additionalProperties:
+            description: "dynamic expression or static list of values"
+            oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        shards:
+          type: object
+          description: "parameters that should be distributed across sharded instances"
+          additionalProperties:
+            description: "dynamic expression or static list of values"
+            oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
 
     TestWorkflowStepExecuteTestRef:
       type: object
@@ -7980,6 +8031,181 @@ components:
         name:
           type: string
           description: test name to schedule
+        description:
+          type: string
+          description: test execution description to display
+        count:
+          $ref: "#/components/schemas/BoxedString"
+        maxCount:
+          $ref: "#/components/schemas/BoxedString"
+        executionRequest:
+          $ref: "#/components/schemas/TestWorkflowStepExecuteTestExecutionRequest"
+        tarball:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/TestWorkflowTarballRequest"
+        matrix:
+          type: object
+          description: "matrix of parameters to spawn instances"
+          additionalProperties:
+            description: "dynamic expression or static list of values"
+            oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        shards:
+          type: object
+          description: "parameters that should be distributed across sharded instances"
+          additionalProperties:
+            description: "dynamic expression or static list of values"
+            oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+
+    TestWorkflowTarballRequest:
+      type: object
+      properties:
+        from:
+          type: string
+          description: path to load the files from
+        files:
+          type: object
+          description: "dynamic expression or static list of file patterns to pack"
+          properties:
+            static:
+              type: array
+              items: {}
+            expression:
+              type: string
+      required:
+      - from
+
+    TestWorkflowStepExecuteTestExecutionRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: test execution custom name
+          example: "testing with 1000 users"
+        executionLabels:
+          type: object
+          description: "test execution labels"
+          additionalProperties:
+            type: string
+          example:
+            users: "3"
+            prefix: "some-"
+        isVariablesFileUploaded:
+          type: boolean
+          description: in case the variables file is too big, it will be uploaded
+          example: false
+        variablesFile:
+          type: string
+          description: variables file content - need to be in format for particular executor (e.g. postman envs file)
+        variables:
+          $ref: "#/components/schemas/Variables"
+        testSecretUUID:
+          type: string
+          description: test secret uuid
+          readOnly: true
+          example: "7934600f-b367-48dd-b981-4353304362fb"
+        command:
+          type: array
+          description: "executor image command"
+          items:
+            type: string
+          example:
+          - "curl"
+        args:
+          type: array
+          description: "additional executor binary arguments"
+          items:
+            type: string
+          example:
+          - "--repeats"
+          - "5"
+          - "--insecure"
+        argsMode:
+          type: string
+          description: usage mode for arguments
+          enum:
+          - append
+          - override
+          - replace
+        image:
+          type: string
+          description: container image, executor will run inside this image
+          example: kubeshop/testkube-executor-custom:1.10.11-dev-0a9c91
+        imagePullSecrets:
+          type: array
+          description: "container image pull secrets"
+          items:
+            $ref: "#/components/schemas/LocalObjectReference"
+        sync:
+          type: boolean
+          description: whether to start execution sync or async
+        httpProxy:
+          type: string
+          description: http proxy for executor containers
+          example: user:pass@my.proxy.server:8080
+        httpsProxy:
+          type: string
+          description: https proxy for executor containers
+          example: user:pass@my.proxy.server:8081
+        negativeTest:
+          type: boolean
+          description: whether to run test as negative test
+          example: false
+        activeDeadlineSeconds:
+          type: integer
+          format: int64
+          description: duration in seconds the test may be active, until its stopped
+          example: 1
+        artifactRequest:
+          $ref: "#/components/schemas/ArtifactRequest"
+          description: configuration parameters for storing test artifacts
+        jobTemplate:
+          type: string
+          description: job template extensions
+        cronJobTemplate:
+          type: string
+          description: cron job template extensions
+        preRunScript:
+          type: string
+          description: script to run before test execution
+          example: "echo -n '$SECRET_ENV' > ./secret_file"
+        postRunScript:
+          type: string
+          description: script to run after test execution
+          example: "sleep 30"
+        executePostRunScriptBeforeScraping:
+          type: boolean
+          description: execute post run script before scraping (prebuilt executor only)
+        sourceScripts:
+          type: boolean
+          description: run scripts using source command (container executor only)
+        scraperTemplate:
+          type: string
+          description: scraper template extensions
+        pvcTemplate:
+          type: string
+          description: pvc template extensions
+        envConfigMaps:
+          type: array
+          description: "config map references"
+          items:
+            $ref: "#/components/schemas/EnvReference"
+        envSecrets:
+          type: array
+          description: "secret references"
+          items:
+            $ref: "#/components/schemas/EnvReference"
+        executionNamespace:
+          type: string
+          description: namespace for test execution (Pro edition only)
 
     TestWorkflowStepArtifacts:
       type: object
@@ -8026,6 +8252,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestWorkflowContentFile"
+        tarball:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestWorkflowContentTarball"
 
     TestWorkflowContentGit:
       type: object
@@ -8074,6 +8304,21 @@ components:
       required:
         - path
 
+    TestWorkflowContentTarball:
+      type: object
+      properties:
+        url:
+          type: string
+          description: url for the tarball to extract
+        path:
+          type: string
+          description: path where the tarball should be extracted
+        mount:
+          $ref: "#/components/schemas/BoxedBoolean"
+      required:
+      - url
+      - path
+
     TestWorkflowRef:
       type: object
       properties:
@@ -8084,7 +8329,6 @@ components:
           $ref: "#/components/schemas/TestWorkflowConfigValue"
       required:
         - name
-        - path
 
     TestWorkflowTemplateRef:
       type: object
@@ -8302,6 +8546,33 @@ components:
         - integer
         - number
         - boolean
+
+    TestWorkflowEvent:
+      type: object
+      properties:
+        cronjob:
+          $ref: "#/components/schemas/TestWorkflowCronJobConfig"
+
+    TestWorkflowCronJobConfig:
+      type: object
+      description: cron job configuration
+      required:
+        - cron
+      properties:
+        cron:
+          type: string
+          description: cron schedule to run a test workflow
+          example: "* * * * *"
+        labels:
+          type: object
+          description: labels to attach to the cron job
+          additionalProperties:
+            type: string
+        annotations:
+          type: object
+          description: annotations to attach to the cron job
+          additionalProperties:
+            type: string
 
     ContentGitAuthType:
       type: string

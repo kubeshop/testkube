@@ -7,7 +7,7 @@ helm repo add kubeshop https://kubeshop.github.io/helm-charts
 ```
 
 If this repo already exists, run `helm repo update` to retrieve
-the `latest` versions of the packages.  You can then run `helm search repo
+the `latest` versions of the packages. You can then run `helm search repo
 testkube` to see the charts.
 
 ## 2. Install the `testkube` chart.
@@ -36,6 +36,7 @@ And from a namespace other than `testkube`:
 ```sh
 helm delete --namespace namespace_name my-testkube kubeshop/testkube
 ```
+
 :::
 
 ## Testkube Multi-namespace Feature
@@ -56,12 +57,14 @@ These commands will deploy Testkube components into two namespaces: testkube and
 
 ```sh
 testkube-api:
-  additionalNamespaces: 
+  additionalNamespaces:
   - namespace2
   - namespace3
 
 ```
+
 Additionally, It is possible to change the namespace for **_testkube-operator_** by setting a value for **_namespace_** variable in the **_testkube-operator_** section:
+
 ```sh
 testkube-operator:
   namespace: testkube-system
@@ -69,7 +72,7 @@ testkube-operator:
 
 :::note
 
-Please note that the **Testkube Operator** creates **ClusterRoles**, so for the second deployment of Testkube, we need to disable the Operator, because it will fail with a `resources already exist` error.  Be aware that the Operator is deployed once with the first chart installation of Testkube. Therefore, if you uninstall the first release, it will uninstall the Operator as well.
+Please note that the **Testkube Operator** creates **ClusterRoles**, so for the second deployment of Testkube, we need to disable the Operator, because it will fail with a `resources already exist` error. Be aware that the Operator is deployed once with the first chart installation of Testkube. Therefore, if you uninstall the first release, it will uninstall the Operator as well.
 
 :::
 **2. For the users who already have Testkube installed**
@@ -81,12 +84,13 @@ helm repo update kubeshop
 
 helm install testkube1 kubeshop/testkube --namespace testkube1 --set testkube-api.multinamespace.enabled=true --set testkube-operator.enabled=false
 ```
+
 #### Helm Properties
 
 The following Helm defaults are used in the `testkube` chart:
 
-| Parameter                              | Is optional | Default                              |
-| -------------------------------------- | ----------- | ------------------------------------ |
+| Parameter                              | Is optional | Default                              | Additional details                          |
+| -------------------------------------- | ----------- | ------------------------------------ | ------------------------------------------- |
 | mongodb.auth.enabled                   | yes         | false                                |
 | mongodb.service.port                   | yes         | "27017"                              |
 | mongodb.service.portName               | yes         | "mongodb"                            |
@@ -116,21 +120,22 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.dashboardUri              | yes         | ""                                   |
 | testkube-api.clusterName               | yes         | ""                                   |
 | testkube-api.storage.compressArtifacts | yes         | true                                 |
-| testkube-api.enableSecretsEndpoint     | yes         | false                                |
+| testkube-api.enableSecretsEndpoint     | yes         | false                                | [Learn more](./secrets-enable-endpoint.md)  |
 | testkube-api.disableMongoMigrations    | yes         | false                                |
 | testkube-api.enabledExecutors          | yes         | ""                                   |
-| testkube-api.disableSecretCreation     | yes         | false                                |
+| testkube-api.disableSecretCreation     | yes         | false                                | [Learn more](./secrets-disable-creation.md) |
 | testkube-api.defaultStorageClassName   | yes         | ""                                   |
 
->For more configuration parameters of a `MongoDB` chart please visit: 
-<https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>
+> For more configuration parameters of a `MongoDB` chart please visit:
+> <https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>
 
->For more configuration parameters of an `NATS` chart please visit: 
-<https://docs.nats.io/running-a-nats-service/nats-kubernetes/helm-charts>
+> For more configuration parameters of an `NATS` chart please visit:
+> <https://docs.nats.io/running-a-nats-service/nats-kubernetes/helm-charts>
 
 :::note
 
 Please note that we use **global** parameters in our `values.yaml`:
+
 ```
 global:
   imageRegistry: ""
@@ -139,6 +144,6 @@ global:
   annotations: {}
 ```
 
-They override all sub-chart values for the image parameters if specified. 
+They override all sub-chart values for the image parameters if specified.
 
 :::

@@ -40,11 +40,11 @@ There are some functions that help to cast or serialize values, such as **int**,
 
 ### General Functions
 
-There are some functions that aid in working with data, i.e. **join**, **split**, **floor**, **round**, **trim**, **len**, **map**, **filter**, **jq**, **shellargs** or **shellquote**.
+There are some functions that aid in working with data, i.e. **join**, **split**, **floor**, **round**, **trim**, **len**, **map**, **filter**, **jq**, **shellparse** or **shellquote**.
 
 ### File System Functions
 
-You can as well read the file system in the Test Workflow to determine values based on that. You can read files with **file function**, or list files with **glob**.
+You can as well read the file system in the Test Workflow to determine values based on that. You can read files with **file** function, or list files with **glob**.
 
 ![Built-in Functions](../img/built-in-functions.png) 
 

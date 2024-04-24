@@ -40,7 +40,6 @@ func createCommand(cmd string, args ...string) (c *exec.Cmd) {
 	c = exec.Command(cmd, args...)
 	out := utils.NewOutputProcessor(data.Step.Ref, os.Stdout)
 	c.Stdout = out
-	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	c.Stdin = os.Stdin
 	return

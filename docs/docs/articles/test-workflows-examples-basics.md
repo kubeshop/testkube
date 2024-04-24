@@ -141,9 +141,6 @@ spec:
       image: 'cypress/included:13.6.4'
       workingDir: '/data/repo/test/cypress/executor-tests/cypress-12'
       shell: 'cypress run'
-  - artifacts:
-      paths:
-      - '**/*'
 ```
 
 ![Running Multiple Steps](../img/running-multiple-steps.png)
@@ -259,7 +256,7 @@ spec:
 
 By default, the next step will run only when the previous steps have succeeded. This can be controlled with the **condition** property.
 
-As an example, **condition:always** will cause the step to always be executed, even if the previous step has failed.
+As an example, **condition: always** will cause the step to always be executed, even if the previous step has failed.
 
 ### Retry Mechanism
 

@@ -66,7 +66,7 @@ With the CLI, you can provide the variables with **--config** arguments.
 
 ### Running with Execute (Test Suite Like)
 
-Configurable Test Workflows may also be parameterized in the **execute step**. Use this for passing dynamic data.
+Configurable Test Workflows may also be parameterized in the **execute** step. Use this for passing dynamic data.
 
 ```yaml
 apiVersion: testworkflows.testkube.io/v1

@@ -13,6 +13,8 @@ import (
 	"encoding/json"
 	"fmt"
 	math2 "math"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -199,10 +201,10 @@ var stdFunctions = map[string]StdFunction{
 			return NewValue(shellquote.Join(args...)), nil
 		},
 	},
-	"shellargs": {
+	"shellparse": {
 		Handler: func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 {
-				return nil, fmt.Errorf(`"shellargs" function expects 1 arguments, %d provided`, len(value))
+				return nil, fmt.Errorf(`"shellparse" function expects 1 arguments, %d provided`, len(value))
 			}
 			v, _ := value[0].StringValue()
 			words, err := shellquote.Split(v)
@@ -457,6 +459,94 @@ var stdFunctions = map[string]StdFunction{
 					return nil, errors.Wrap(err, `"jq" error: executing: %v`)
 				}
 				result = append(result, v)
+			}
+			return NewValue(result), nil
+		},
+	},
+	"relpath": {
+		ReturnType: TypeString,
+		Handler: func(value ...StaticValue) (Expression, error) {
+			if len(value) != 1 && len(value) != 2 {
+				return nil, fmt.Errorf(`"relpath" function expects 1-2 arguments, %d provided`, len(value))
+			}
+			destinationPath, _ := value[0].StringValue()
+			sourcePath := "/"
+			if len(value) == 2 {
+				sourcePath, _ = value[1].StringValue()
+			} else {
+				cwd, err := os.Getwd()
+				if err == nil {
+					sourcePath = cwd
+				}
+			}
+			destinationPath, err := filepath.Abs(destinationPath)
+			if err != nil {
+				return nil, err
+			}
+			sourcePath, err = filepath.Abs(sourcePath)
+			if err != nil {
+				return nil, err
+			}
+			v, err := filepath.Rel(sourcePath, destinationPath)
+			return NewValue(v), err
+		},
+	},
+	"abspath": {
+		ReturnType: TypeString,
+		Handler: func(value ...StaticValue) (Expression, error) {
+			if len(value) != 1 && len(value) != 2 {
+				return nil, fmt.Errorf(`"relpath" function expects 1-2 arguments, %d provided`, len(value))
+			}
+			destinationPath, _ := value[0].StringValue()
+			if filepath.IsAbs(destinationPath) {
+				return NewValue(filepath.Clean(destinationPath)), nil
+			}
+
+			sourcePath := "/"
+			if len(value) == 2 {
+				sourcePath, _ = value[1].StringValue()
+			} else {
+				cwd, err := os.Getwd()
+				if err == nil {
+					sourcePath = cwd
+				}
+			}
+			sourcePath, err := filepath.Abs(sourcePath)
+			if err != nil {
+				return nil, err
+			}
+			return NewValue(filepath.Join(sourcePath, destinationPath)), err
+		},
+	},
+	"range": {
+		Handler: func(value ...StaticValue) (Expression, error) {
+			if len(value) != 1 && len(value) != 2 {
+				return nil, fmt.Errorf(`"range" function expects 1-2 arguments, %d provided`, len(value))
+			}
+
+			// Compute start value
+			start, err := value[0].IntValue()
+			if err != nil {
+				return nil, fmt.Errorf(`"range" function expects integer arguments, %s provided`, value[0].String())
+			}
+
+			// Compute end value
+			var end int64
+			if len(value) == 1 {
+				end = start
+				start = 0
+			} else {
+				end, err = value[1].IntValue()
+				if err != nil {
+					return nil, fmt.Errorf(`"range" function expects integer arguments, %s provided`, value[1].String())
+				}
+			}
+
+			// Build a range (inclusive start, exclusive end)
+			items := int64(math2.Max(0, float64(end-start)))
+			result := make([]int64, items)
+			for i := int64(0); i < items; i++ {
+				result[i] = start + i
 			}
 			return NewValue(result), nil
 		},

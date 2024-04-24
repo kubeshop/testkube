@@ -41,9 +41,28 @@ If you prefer to use the Dashboard, go to Test Workflows:
 and click the `Add a new test workflow` button.
 
 ### Creation Options
-Currently, the Test Workflow can be created using an example or by importing YML.
+Currently, the Test Workflow can be created from scratch, with the help of the wizard, by using an example or by importing YML.
 
 ![create test workflow selection](../img/dashboard-create-workflow-selection.png)
+
+#### Wizard
+The wizard consists of three steps:
+
+##### Name & Type
+To define a test, specify its name and choose from the available templates. Each template may come with predefined configuration values, which can be modified as needed.
+
+![create test workflow from wizard - name & type step](../img/dashboard-create-workflow-from-wizard-name-type-step.png)
+
+##### Source
+Specify the source from which to fetch the data. Choose between Git, File, or String sources.
+
+![create test workflow from wizard - source step](../img/dashboard-create-workflow-from-wizard-source-step.png)
+
+##### Summary
+
+Preview the YAML content of the test workflow, make changes if necessary, and create it.
+
+![create test workflow from wizard - summary step](../img/dashboard-create-workflow-from-wizard-summary-step.png)
 
 #### Example
 You can choose one of the predefined examples and adjust it.
@@ -52,6 +71,7 @@ You can choose one of the predefined examples and adjust it.
 
 #### YML
 You can also paste the complete Test Workflow definition
+
 ![create test workflow from yaml](../img/dashboard-create-workflow-from-yaml.png)
 
 # Additional Test Workflow Examples

@@ -10,10 +10,11 @@ follow='false'
 schedule='false'
 executor_type='all'
 namespace='testkube'
+client='proxy'
 custom_testsuite=''
 branch_overwrite=''
 
-while getopts 'hdcrfse:n:t:b:v' flag; do
+while getopts 'hdcrfse:n:l:t:b:v' flag; do
   case "${flag}" in
     h) help='true' ;; # TODO: describe params
     d) delete='true' ;;
@@ -23,6 +24,7 @@ while getopts 'hdcrfse:n:t:b:v' flag; do
     s) schedule='true' ;;
     e) executor_type="${OPTARG}" ;;
     n) namespace="${OPTARG}" ;;
+    l) client="${OPTARG}" ;;
     t) custom_testsuite="${OPTARG}" ;;
     b) branch_overwrite="${OPTARG}" ;;
     v) set -x ;;
@@ -37,7 +39,7 @@ print_title() {
 create_update_testsuite_json() { # testsuite_name testsuite_path
   exit_code=0
   type=""
-  kubectl testkube --namespace $namespace get testsuite $1 > /dev/null 2>&1 || exit_code=$?
+  kubectl testkube --client $client --namespace $namespace get testsuite $1 > /dev/null 2>&1 || exit_code=$?
 
   if [ $exit_code == 0 ] ; then # testsuite already created
     type="update"
@@ -47,9 +49,9 @@ create_update_testsuite_json() { # testsuite_name testsuite_path
 
   if [ "$schedule" = true ] ; then # workaround for appending schedule
     random_minute="$(($RANDOM % 59))"
-    cat $2 | kubectl testkube --namespace $namespace $type testsuite --name $1 --schedule "$random_minute */4 * * *"
+    cat $2 | kubectl testkube --client $client --namespace $namespace $type testsuite --name $1 --schedule "$random_minute */4 * * *"
   else
-    cat $2 | kubectl testkube --namespace $namespace $type testsuite --name $1
+    cat $2 | kubectl testkube --client $client --namespace $namespace $type testsuite --name $1
   fi
 }
 
@@ -58,7 +60,7 @@ create_update_testsuite() { # testsuite_name testsuite_path
 
     if [ "$schedule" = true ] ; then # workaround for appending schedule
       random_minute="$(($RANDOM % 59))"
-      kubectl testkube --namespace $namespace update testsuite --name $1 --schedule "$random_minute */4 * * *"
+      kubectl testkube --client $client --namespace $namespace update testsuite --name $1 --schedule "$random_minute */4 * * *"
     fi
 }
 
@@ -73,11 +75,11 @@ run_follow_testsuite() { # testsuite_name
     branch_overwrite_param=" --git-branch $branch_overwrite"
   fi
 
-  kubectl testkube --namespace $namespace run testsuite $1 $follow_param $branch_overwrite_param
+  kubectl testkube --client $client --namespace $namespace run testsuite $1 $follow_param $branch_overwrite_param
 }
 
 run_follow_workflow() { # workflow_name
-  kubectl testkube --namespace $namespace run tw $1
+  kubectl testkube --client $client --namespace $namespace run tw $1
 }
 
 common_run() { # name, test_crd_file, testsuite_name, testsuite_file, custom_executor_crd_file
@@ -102,7 +104,7 @@ common_run() { # name, test_crd_file, testsuite_name, testsuite_file, custom_exe
       # Executors (not created by default)
       kubectl --namespace $namespace apply -f $custom_executor_crd_file
     fi
-    
+
     # Tests
     kubectl --namespace $namespace apply -f $test_crd_file
 
@@ -137,7 +139,7 @@ common_workflow_run() { # name, workflow_crd_file, workflow_suite_file, custom_w
       # Workflow Template
       kubectl --namespace $namespace apply -f $custom_workflow_template_crd_file
     fi
-    
+
     # Workflow
     kubectl --namespace $namespace apply -f $workflow_crd_file
 
@@ -155,7 +157,7 @@ artillery-smoke() {
   test_crd_file="test/artillery/executor-smoke/crd/crd.yaml"
   testsuite_name="executor-artillery-smoke-tests"
   testsuite_file="test/suites/executor-artillery-smoke-tests.yaml"
-  
+
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
 }
 
@@ -263,7 +265,7 @@ curl-smoke() {
   test_crd_file="test/curl/executor-tests/crd/smoke.yaml"
   testsuite_name="executor-curl-smoke-tests"
   testsuite_file="test/suites/executor-curl-smoke-tests.yaml"
-  
+
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
 }
 
@@ -283,7 +285,7 @@ ginkgo-smoke() {
   test_crd_file="test/ginkgo/executor-tests/crd/smoke.yaml"
   testsuite_name="executor-ginkgo-smoke-tests"
   testsuite_file="test/suites/executor-ginkgo-smoke-tests.yaml"
-  
+
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
 }
 
@@ -428,7 +430,7 @@ workflow-cypress-smoke() {
   workflow_suite_file="test/suites/test-workflows/cypress-workflow.yaml"
 
   custom_workflow_template_crd_file="test/test-workflow-templates/cypress.yaml"
-  
+
   common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file" "$custom_workflow_template_crd_file"
 }
 
@@ -437,7 +439,7 @@ workflow-gradle-smoke() {
   workflow_crd_file="test/gradle/executor-smoke/crd-workflow/smoke.yaml"
   workflow_suite_name="gradle-workflow-suite"
   workflow_suite_file="test/suites/test-workflows/gradle-workflow.yaml"
-  
+
   common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 
@@ -446,7 +448,7 @@ workflow-jmeter-smoke() {
   workflow_crd_file="test/jmeter/executor-tests/crd-workflow/smoke.yaml"
   workflow_suite_name="jmeter-workflow-suite"
   workflow_suite_file="test/suites/test-workflows/jmeter-workflow.yaml"
-  
+
   common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 
@@ -457,7 +459,7 @@ workflow-k6-smoke() {
   workflow_suite_file="test/suites/test-workflows/k6-workflow.yaml"
 
   custom_workflow_template_crd_file="test/test-workflow-templates/k6.yaml"
-  
+
   common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file" "$custom_workflow_template_crd_file"
 }
 
@@ -466,7 +468,7 @@ workflow-maven-smoke() {
   workflow_crd_file="test/maven/executor-smoke/crd-workflow/smoke.yaml"
   workflow_suite_name="maven-workflow-suite"
   workflow_suite_file="test/suites/test-workflows/maven-workflow.yaml"
-  
+
   common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 
@@ -475,7 +477,7 @@ workflow-playwright-smoke() {
   workflow_crd_file="test/playwright/executor-tests/crd-workflow/smoke.yaml"
   workflow_suite_name="playwright-workflow-suite"
   workflow_suite_file="test/suites/test-workflows/playwright-workflow.yaml"
-  
+
   common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 
@@ -486,7 +488,7 @@ workflow-postman-smoke() {
   workflow_suite_file="test/suites/test-workflows/postman-workflow.yaml"
 
   custom_workflow_template_crd_file="test/test-workflow-templates/postman.yaml"
-  
+
   common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file" "$custom_workflow_template_crd_file"
 }
 
@@ -495,7 +497,7 @@ workflow-soapui-smoke() {
   workflow_crd_file="test/soapui/executor-smoke/crd-workflow/smoke.yaml"
   workflow_suite_name="soapui-workflow-suite"
   workflow_suite_file="test/suites/test-workflows/soapui-workflow.yaml"
-  
+
   common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 
@@ -504,7 +506,7 @@ workflow-special-cases-failures() {
   workflow_crd_file="test/special-cases/test-workflows/edge-cases-expected-fails.yaml"
   workflow_suite_name="edge-cases-expected-failure-suite"
   workflow_suite_file="test/suites/special-cases/test-workflows/edge-cases-expected-fails.yaml"
-  
+
   common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 

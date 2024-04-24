@@ -25,6 +25,7 @@ import (
 
 func init() {
 	RootCmd.AddCommand(NewCloneCmd())
+	RootCmd.AddCommand(NewTarballCmd())
 	RootCmd.AddCommand(NewExecuteCmd())
 	RootCmd.AddCommand(NewArtifactsCmd())
 }

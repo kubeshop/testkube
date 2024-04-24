@@ -40,8 +40,9 @@ type envCloudConfig struct {
 }
 
 type envExecutionConfig struct {
-	WorkflowName string `envconfig:"TK_WF"`
-	Id           string `envconfig:"TK_EX"`
+	WorkflowName   string `envconfig:"TK_WF"`
+	Id             string `envconfig:"TK_EX"`
+	GlobalTemplate string `envconfig:"TK_TMPL"`
 }
 
 type envSystemConfig struct {
@@ -76,6 +77,8 @@ func Config() *envConfig {
 		err = envconfig.Process("", &cfg.Cloud)
 		ui.ExitOnError("configuring environment", err)
 		err = envconfig.Process("", &cfg.Execution)
+		ui.ExitOnError("configuring environment", err)
+		err = envconfig.Process("", &cfg.Images)
 		ui.ExitOnError("configuring environment", err)
 	}
 	cfgLoaded = true

@@ -159,7 +159,7 @@ type walker struct {
 	patterns    []string // TODO: Optimize to check only patterns matching specific searchPaths
 }
 
-type WalkerFn = func(path string, file fs.File, err error) error
+type WalkerFn = func(path string, file fs.File, stat fs.FileInfo, err error) error
 
 type Walker interface {
 	Root() string
@@ -210,8 +210,17 @@ func (w *walker) walk(fsys fs.FS, path string, walker WalkerFn) error {
 			return nil
 		}
 
+		// Read original file stat
+		stat, err := d.Info()
+		if err != nil {
+			fmt.Printf("Warning: '%s' ignored from scraping: could not stat file: %v\n", resolvedPath, err)
+			return nil
+		}
+
+		// Pass the data to final walker
+		relativeFilePath := strings.TrimLeft(resolvedPath[len(w.root):], "/")
 		file, err := fsys.Open(filePath)
-		return walker(strings.TrimLeft(resolvedPath[len(w.root):], "/"), file, err)
+		return walker(relativeFilePath, file, stat, err)
 	})
 }
 

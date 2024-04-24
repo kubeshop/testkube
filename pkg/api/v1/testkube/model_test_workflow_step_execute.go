@@ -17,5 +17,5 @@ type TestWorkflowStepExecute struct {
 	// tests to schedule
 	Tests []TestWorkflowStepExecuteTestRef `json:"tests,omitempty"`
 	// workflows to schedule
-	Workflows []TestWorkflowRef `json:"workflows,omitempty"`
+	Workflows []TestWorkflowStepExecuteTestWorkflowRef `json:"workflows,omitempty"`
 }
