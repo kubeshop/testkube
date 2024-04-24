@@ -280,11 +280,7 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 
 		var results []testkube.TestWorkflowExecution
 
-		concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", strconv.Itoa(scheduler.DefaultConcurrencyLevel)))
-		if err != nil {
-			return s.BadRequest(c, errPrefix, "can't detect concurrency level", err)
-		}
-
+		concurrencyLevel := scheduler.DefaultConcurrencyLevel
 		workerpoolService := workerpool.New[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest,
 			testkube.TestWorkflowExecution](concurrencyLevel)
 		requests := []workerpool.Request[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution]{

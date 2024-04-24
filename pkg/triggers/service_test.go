@@ -35,6 +35,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
+	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowexecutor"
 )
 
 func TestService_Run(t *testing.T) {
@@ -60,6 +62,8 @@ func TestService_Run(t *testing.T) {
 	mockConfigMapClient := configmap.NewMockInterface(mockCtrl)
 	mockTestSuiteExecutionsClient := testsuiteexecutionsv1.NewMockInterface(mockCtrl)
 	mockTestWorkflowsClient := testworkflowsclientv1.NewMockInterface(mockCtrl)
+	mockTestWorkflowExecutor := testworkflowexecutor.NewMockTestWorkflowExecutor(mockCtrl)
+	mockTestWorkflowRepository := testworkflow.NewMockRepository(mockCtrl)
 
 	mockExecutor := client.NewMockExecutor(mockCtrl)
 
@@ -171,6 +175,8 @@ func TestService_Run(t *testing.T) {
 		mockExecutor,
 		eventBus,
 		metrics,
+		mockTestWorkflowExecutor,
+		mockTestWorkflowRepository,
 		WithClusterID(testClusterID),
 		WithIdentifier(testIdentifier),
 		WithScraperInterval(50*time.Millisecond),

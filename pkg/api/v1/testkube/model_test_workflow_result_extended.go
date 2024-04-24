@@ -21,6 +21,10 @@ func (r *TestWorkflowResult) IsQueued() bool {
 	return r.IsStatus(QUEUED_TestWorkflowStatus)
 }
 
+func (r *TestWorkflowResult) IsRunning() bool {
+	return r.IsStatus(RUNNING_TestWorkflowStatus)
+}
+
 func (r *TestWorkflowResult) IsFailed() bool {
 	return r.IsStatus(FAILED_TestWorkflowStatus)
 }

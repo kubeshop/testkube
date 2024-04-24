@@ -133,9 +133,49 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 			return err
 		}
 
-		for _ = range testWorkflows {
-
+		request := testkube.TestWorkflowExecutionRequest{
+			Config: make(map[string]string, len(variables)),
 		}
+
+		for _, variable := range variables {
+			request.Config[variable.Name] = variable.Value
+		}
+
+		wp := workerpool.New[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution](concurrencyLevel)
+		go func() {
+			isDelayDefined := t.Spec.Delay != nil
+			if isDelayDefined {
+				s.logger.Infof(
+					"trigger service: executor component: trigger %s/%s has delayed testworkflow execution configured for %f seconds",
+					t.Namespace, t.Name, t.Spec.Delay.Seconds(),
+				)
+				time.Sleep(t.Spec.Delay.Duration)
+			}
+			s.logger.Infof(
+				"trigger service: executor component: scheduling testworkflow executions for trigger %s/%s",
+				t.Namespace, t.Name,
+			)
+
+			requests := make([]workerpool.Request[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest,
+				testkube.TestWorkflowExecution], len(testWorkflows))
+			for i := range testWorkflows {
+				requests[i] = workerpool.Request[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest,
+					testkube.TestWorkflowExecution]{
+					Object:  testWorkflows[i],
+					Options: request,
+					// Pro edition only (tcl protected code)
+					ExecFn: s.testWorkflowExecutor.Execute,
+				}
+			}
+
+			go wp.SendRequests(requests)
+			go wp.Run(ctx)
+		}()
+
+		for r := range wp.GetResponses() {
+			status.addTestWorkflowExecutionID(r.Result.Id)
+		}
+
 	default:
 		return errors.Errorf("invalid execution: %s", t.Spec.Execution)
 	}

@@ -27,6 +27,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/scheduler"
+	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowexecutor"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/utils"
 	"github.com/kubeshop/testkube/pkg/version"
@@ -74,6 +76,8 @@ type Service struct {
 	testExecutor                  client.Executor
 	eventsBus                     bus.Bus
 	metrics                       metrics.Metrics
+	testWorkflowExecutor          testworkflowexecutor.TestWorkflowExecutor
+	testWorkflowResultsRepository testworkflow.Repository
 	testkubeNamespace             string
 	watcherNamespaces             []string
 	disableSecretCreation         bool
@@ -97,6 +101,8 @@ func NewService(
 	testExecutor client.Executor,
 	eventsBus bus.Bus,
 	metrics metrics.Metrics,
+	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
+	testWorkflowResultsRepository testworkflow.Repository,
 	opts ...Option,
 ) *Service {
 	identifier := fmt.Sprintf(defaultIdentifierFormat, utils.RandAlphanum(10))
@@ -125,6 +131,8 @@ func NewService(
 		testExecutor:                  testExecutor,
 		eventsBus:                     eventsBus,
 		metrics:                       metrics,
+		testWorkflowExecutor:          testWorkflowExecutor,
+		testWorkflowResultsRepository: testWorkflowResultsRepository,
 		httpClient:                    http.NewClient(),
 		watchFromDate:                 time.Now(),
 		triggerStatus:                 make(map[statusKey]*triggerStatus),
