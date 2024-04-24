@@ -26,6 +26,7 @@ func (s *Service) runExecutionScraper(ctx context.Context) {
 				if status.hasActiveTests() {
 					s.checkForRunningTestExecutions(ctx, status)
 					s.checkForRunningTestSuiteExecutions(ctx, status)
+					s.checkForRunningTestWorkflowExecutions(ctx, status)
 					if !status.hasActiveTests() {
 						s.logger.Debugf("marking status as finished for testtrigger %s", triggerName)
 						status.done()
