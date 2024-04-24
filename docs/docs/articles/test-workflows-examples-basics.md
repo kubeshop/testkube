@@ -109,8 +109,6 @@ spec:
   - shell: 'tree /data/repo'
 ```
 
-![Secret Token](../img/secret-token.png)
-
 ## Using Multiple Steps
 
 ### Running Multiple Steps
