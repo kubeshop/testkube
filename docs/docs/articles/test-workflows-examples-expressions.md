@@ -18,10 +18,11 @@ You can do basic math easily, like **config.workers * 5**.
 
 ### General Variables
 
-There are some built-in variables available in most of the places.
-env object has a reference to the environment variables
-config object has a reference to defined configuration variables
-execution has some execution data
+There are some built-in variables available in most of the places;
+
+- **env** - Object has a reference to the environment variables.
+- **config** - Object has a reference to defined configuration variables.
+- **execution** - Object has some execution data.
 
 ### Contextual Variables
 
