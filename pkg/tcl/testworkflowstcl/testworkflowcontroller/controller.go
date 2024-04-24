@@ -132,7 +132,7 @@ func (c *controller) command(ctx context.Context, name string, body io.Reader) e
 	if v.Value.Status.PodIP == "" {
 		return errors.New("there is no IP assigned to this pod")
 	}
-	r, err := http.NewRequest("POST", fmt.Sprintf("http://%s:%d/%s", v.Value.Status.PodIP, constants2.ControlServerPort, name), body)
+	r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s:%d/%s", v.Value.Status.PodIP, constants2.ControlServerPort, name), body)
 	if err != nil {
 		return err
 	}
