@@ -94,8 +94,7 @@ func (s *step) Kill() {
 	s.cmdMu.Unlock()
 }
 
-// TODO: Add timestamp, so the starting pause will be at application start
-func (s *step) Pause() (err error) {
+func (s *step) Pause(t time.Time) (err error) {
 	// Lock running
 	swapped := s.paused.CompareAndSwap(false, true)
 	if !swapped {
@@ -120,7 +119,7 @@ func (s *step) Pause() (err error) {
 	s.cmdMu.Unlock()
 
 	// Display output
-	PrintHintDetails(s.Ref, "pause", time.Now().Format(constants.PreciseTimeFormat))
+	PrintHintDetails(s.Ref, "pause", t.Format(constants.PreciseTimeFormat))
 	return err
 }
 

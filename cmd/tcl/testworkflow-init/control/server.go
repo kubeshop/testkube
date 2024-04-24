@@ -13,10 +13,11 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"time"
 )
 
 type Pauseable interface {
-	Pause() error
+	Pause(time.Time) error
 	Resume() error
 }
 
@@ -40,7 +41,7 @@ func (s *server) handler() *http.ServeMux {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		if err := s.step.Pause(); err != nil {
+		if err := s.step.Pause(time.Now()); err != nil {
 			fmt.Printf("Warning: failed to pause: %s\n", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

@@ -172,7 +172,7 @@ func main() {
 		}
 		v, _ := expr.BoolValue()
 		if v {
-			data.Step.Pause()
+			data.Step.Pause(now)
 		}
 	}
 
