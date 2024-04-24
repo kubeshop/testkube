@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 )
 
 type Condition struct {
@@ -121,6 +122,9 @@ func (s *stageLifecycle) SetTimeout(tpl string) StageLifecycle {
 }
 
 func (s *stageLifecycle) SetPaused(paused string) StageLifecycle {
-	s.paused = paused
+	v, ok, _ := expressionstcl.EvalBoolean(paused)
+	if ok && !v {
+		paused = ""
+	}
 	return s
 }
