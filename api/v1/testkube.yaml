@@ -8476,7 +8476,7 @@ components:
         resourceClaims:
           type: array
           items:
-            $ref: "#/components/schemas/ResourceClaim"
+            $ref: "#/components/schemas/PodResourceClaim"
 
     TestWorkflowContainerConfig:
       type: object
@@ -8833,11 +8833,21 @@ components:
         name:
           type: string
 
-    ResourceClaim:
+    PodResourceClaim:
       type: object
       properties:
         name:
           type: string
+        source:
+          $ref: "#/components/schemas/ClaimSource"
+
+    ClaimSource:
+      type: object
+      properties:
+        resourceClaimName:
+          $ref: "#/components/schemas/BoxedString"
+        resourceClaimTemplateName:
+          $ref: "#/components/schemas/BoxedString"
 
     NodeSelectorRequirement:
       type: object

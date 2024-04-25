@@ -502,8 +502,14 @@ func MapPodSchedulingGateKubeToAPI(v corev1.PodSchedulingGate) testkube.PodSched
 	return testkube.PodSchedulingGate{Name: v.Name}
 }
 
-func MapResourceClaimKubeToAPI(v corev1.ResourceClaim) testkube.ResourceClaim {
-	return testkube.ResourceClaim{Name: v.Name}
+func MapPodResourceClaimKubeToAPI(v corev1.PodResourceClaim) testkube.PodResourceClaim {
+	return testkube.PodResourceClaim{
+		Name: v.Name,
+		Source: &testkube.ClaimSource{
+			ResourceClaimName:         MapStringToBoxedString(v.Source.ResourceClaimName),
+			ResourceClaimTemplateName: MapStringToBoxedString(v.Source.ResourceClaimTemplateName),
+		},
+	}
 }
 
 func MapPodSecurityContextKubeToAPI(v corev1.PodSecurityContext) testkube.PodSecurityContext {
@@ -640,7 +646,7 @@ func MapPodConfigKubeToAPI(v testworkflowsv1.PodConfig) testkube.TestWorkflowPod
 		PreemptionPolicy:          MapStringToBoxedString(common.MapPtr(v.PreemptionPolicy, common.MapEnumToString[corev1.PreemptionPolicy])),
 		TopologySpreadConstraints: common.MapSlice(v.TopologySpreadConstraints, MapTopologySpreadConstraintKubeToAPI),
 		SchedulingGates:           common.MapSlice(v.SchedulingGates, MapPodSchedulingGateKubeToAPI),
-		ResourceClaims:            common.MapSlice(v.ResourceClaims, MapResourceClaimKubeToAPI),
+		ResourceClaims:            common.MapSlice(v.ResourceClaims, MapPodResourceClaimKubeToAPI),
 	}
 }
 

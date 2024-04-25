@@ -9,6 +9,7 @@
  */
 package testkube
 
-type ResourceClaim struct {
-	Name string `json:"name,omitempty"`
+type PodResourceClaim struct {
+	Name   string       `json:"name,omitempty"`
+	Source *ClaimSource `json:"source,omitempty"`
 }

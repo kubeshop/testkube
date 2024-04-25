@@ -37,5 +37,5 @@ type TestWorkflowPodConfig struct {
 	PreemptionPolicy          *BoxedString               `json:"preemptionPolicy,omitempty"`
 	TopologySpreadConstraints []TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
 	SchedulingGates           []PodSchedulingGate        `json:"schedulingGates,omitempty"`
-	ResourceClaims            []ResourceClaim            `json:"resourceClaims,omitempty"`
+	ResourceClaims            []PodResourceClaim         `json:"resourceClaims,omitempty"`
 }
