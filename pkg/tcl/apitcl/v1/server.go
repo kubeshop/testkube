@@ -119,6 +119,8 @@ func (s *apiTCL) AppendRoutes() {
 	testWorkflows.Get("/:id/executions/:executionID", s.pro(s.GetTestWorkflowExecutionHandler()))
 	testWorkflows.Post("/:id/abort", s.pro(s.AbortAllTestWorkflowExecutionsHandler()))
 	testWorkflows.Post("/:id/executions/:executionID/abort", s.pro(s.AbortTestWorkflowExecutionHandler()))
+	testWorkflows.Post("/:id/executions/:executionID/pause", s.pro(s.PauseTestWorkflowExecutionHandler()))
+	testWorkflows.Post("/:id/executions/:executionID/resume", s.pro(s.ResumeTestWorkflowExecutionHandler()))
 	testWorkflows.Get("/:id/executions/:executionID/logs", s.pro(s.GetTestWorkflowExecutionLogsHandler()))
 
 	testWorkflowExecutions := root.Group("/test-workflow-executions")
@@ -127,6 +129,8 @@ func (s *apiTCL) AppendRoutes() {
 	testWorkflowExecutions.Get("/:executionID/notifications", s.pro(s.StreamTestWorkflowExecutionNotificationsHandler()))
 	testWorkflowExecutions.Get("/:executionID/notifications/stream", s.pro(s.StreamTestWorkflowExecutionNotificationsWebSocketHandler()))
 	testWorkflowExecutions.Post("/:executionID/abort", s.pro(s.AbortTestWorkflowExecutionHandler()))
+	testWorkflowExecutions.Post("/:executionID/pause", s.pro(s.PauseTestWorkflowExecutionHandler()))
+	testWorkflowExecutions.Post("/:executionID/resume", s.pro(s.ResumeTestWorkflowExecutionHandler()))
 	testWorkflowExecutions.Get("/:executionID/logs", s.pro(s.GetTestWorkflowExecutionLogsHandler()))
 	testWorkflowExecutions.Get("/:executionID/artifacts", s.pro(s.ListTestWorkflowExecutionArtifactsHandler()))
 	testWorkflowExecutions.Get("/:executionID/artifacts/:filename", s.pro(s.GetTestWorkflowArtifactHandler()))

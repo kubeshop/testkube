@@ -27,6 +27,7 @@ type initProcess struct {
 	init       []string
 	params     []string
 	retry      map[string]testworkflowsv1.RetryPolicy
+	paused     bool
 	command    []string
 	args       []string
 	envs       []string
@@ -79,6 +80,9 @@ func (p *initProcess) Command() []string {
 	}
 	for _, r := range p.results {
 		args = append(args, constants.ArgResult, r)
+	}
+	if p.paused {
+		args = append(args, constants.ArgPaused)
 	}
 	return append([]string{constants2.DefaultInitPath, p.ref}, append(args, constants.ArgSeparator)...)
 }
@@ -192,11 +196,17 @@ func (p *initProcess) AddRetryPolicy(policy testworkflowsv1.RetryPolicy, ref str
 	return p
 }
 
+func (p *initProcess) SetPaused(paused bool) *initProcess {
+	p.paused = paused
+	return p
+}
+
 func (p *initProcess) Children(ref string) *initProcess {
 	return &initProcess{
 		ref:        ref,
 		params:     p.params,
 		retry:      maps.Clone(p.retry),
+		paused:     p.paused,
 		command:    p.command,
 		args:       p.args,
 		init:       p.init,

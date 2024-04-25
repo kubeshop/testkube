@@ -20,6 +20,7 @@ import (
 	"github.com/kballard/go-shellquote"
 
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/control"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/output"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/run"
@@ -42,6 +43,7 @@ func main() {
 	conditions := []data.Rule(nil)
 	resulting := []data.Rule(nil)
 	timeouts := []data.Timeout(nil)
+	paused := false
 	args := []string(nil)
 
 	// Read arguments into the base data
@@ -80,6 +82,9 @@ func main() {
 			}
 		case constants.ArgComputeEnv, constants.ArgComputeEnvLong:
 			computed = append(computed, strings.Split(os.Args[i+1], ",")...)
+		case constants.ArgPaused, constants.ArgPausedLong:
+			paused = true
+			i--
 		case constants.ArgNegative, constants.ArgNegativeLong:
 			config["negative"] = os.Args[i+1]
 		case constants.ArgRetryCount:
@@ -160,6 +165,11 @@ func main() {
 		data.Finish()
 	}
 
+	// Handle pausing
+	if paused {
+		data.Step.Pause(now)
+	}
+
 	// Load the rest of the configuration
 	var err error
 	for k, v := range config {
@@ -195,16 +205,33 @@ func main() {
 		data.Finish()
 	}()
 
-	// Handle timeouts
+	// Handle timeouts.
+	// Ignores time when the step was paused.
 	for _, t := range timeouts {
 		go func(ref string) {
-			time.Sleep(data.State.GetStep(ref).TimeoutAt.Sub(time.Now()))
-			fmt.Printf("Timed out.\n")
-			data.State.GetStep(ref).SetStatus(data.StepStatusTimeout)
-			data.Step.Status = data.StepStatusTimeout
-			data.Step.ExitCode = output.CodeTimeout
-			data.Finish()
+			start := now
+			timeout := data.State.GetStep(ref).TimeoutAt.Sub(start)
+			for {
+				time.Sleep(timeout)
+				took := data.Step.Took(start)
+				if took < timeout {
+					timeout -= took
+					continue
+				}
+				fmt.Printf("Timed out.\n")
+				data.State.GetStep(ref).SetStatus(data.StepStatusTimeout)
+				data.Step.Status = data.StepStatusTimeout
+				data.Step.ExitCode = output.CodeTimeout
+				data.Finish()
+			}
 		}(t.Ref)
+	}
+
+	// Run the control server
+	controlSrv := control.NewServer(constants.ControlServerPort, data.Step)
+	_, err = controlSrv.Listen()
+	if err != nil {
+		fmt.Printf("Failed to start control server at port %d: %s\n", constants.ControlServerPort, err.Error())
 	}
 
 	// Start the task

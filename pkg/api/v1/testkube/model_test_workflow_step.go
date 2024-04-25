@@ -14,6 +14,8 @@ type TestWorkflowStep struct {
 	Name string `json:"name,omitempty"`
 	// expression to declare under which conditions the step should be run; defaults to \"passed\", except artifacts where it defaults to \"always\"
 	Condition string `json:"condition,omitempty"`
+	// should the step be paused initially
+	Paused bool `json:"paused,omitempty"`
 	// is the step expected to fail
 	Negative bool `json:"negative,omitempty"`
 	// is the step optional, so the failure won't affect the TestWorkflow result

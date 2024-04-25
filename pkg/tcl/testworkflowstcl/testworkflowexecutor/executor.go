@@ -201,7 +201,7 @@ func (e *executor) Control(ctx context.Context, execution *testkube.TestWorkflow
 			} else {
 				if ref != v.Value.Ref {
 					ref = v.Value.Ref
-					_, err := writer.Write([]byte(data.SprintHint(ref, "start")))
+					_, err := writer.Write([]byte(data.SprintHint(ref, constants.InstructionStart)))
 					if err != nil {
 						log.DefaultLogger.Error(errors.Wrap(err, "saving log output signature"))
 					}

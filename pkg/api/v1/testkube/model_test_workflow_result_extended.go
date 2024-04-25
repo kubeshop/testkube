@@ -7,7 +7,7 @@ import (
 )
 
 func (r *TestWorkflowResult) IsFinished() bool {
-	return !r.IsStatus(QUEUED_TestWorkflowStatus) && !r.IsStatus(RUNNING_TestWorkflowStatus)
+	return !r.IsStatus(QUEUED_TestWorkflowStatus) && !r.IsStatus(RUNNING_TestWorkflowStatus) && !r.IsStatus(PAUSED_TestWorkflowStatus)
 }
 
 func (r *TestWorkflowResult) IsStatus(s TestWorkflowStatus) bool {
@@ -63,7 +63,7 @@ func (r *TestWorkflowResult) Fatal(err error, aborted bool, ts time.Time) {
 			s := r.Steps[i]
 			s.Status = common.Ptr(SKIPPED_TestWorkflowStepStatus)
 			r.Steps[i] = s
-		} else if *r.Steps[i].Status == RUNNING_TestWorkflowStepStatus {
+		} else if *r.Steps[i].Status == RUNNING_TestWorkflowStepStatus || *r.Steps[i].Status == PAUSED_TestWorkflowStepStatus {
 			s := r.Steps[i]
 			s.Status = common.Ptr(FAILED_TestWorkflowStepStatus)
 			if aborted {
@@ -90,7 +90,10 @@ func (r *TestWorkflowResult) Clone() *TestWorkflowResult {
 		StartedAt:       r.StartedAt,
 		FinishedAt:      r.FinishedAt,
 		Duration:        r.Duration,
+		TotalDuration:   r.TotalDuration,
 		DurationMs:      r.DurationMs,
+		PausedMs:        r.PausedMs,
+		TotalDurationMs: r.DurationMs + r.PausedMs,
 		Initialization:  r.Initialization.Clone(),
 		Steps:           steps,
 	}
@@ -113,8 +116,64 @@ func (r *TestWorkflowResult) UpdateStepResult(sig []TestWorkflowSignature, ref s
 
 func (r *TestWorkflowResult) RecomputeDuration() {
 	if !r.FinishedAt.IsZero() {
-		r.Duration = r.FinishedAt.Sub(r.QueuedAt).Round(time.Millisecond).String()
-		r.DurationMs = int32(r.FinishedAt.Sub(r.QueuedAt).Milliseconds())
+		r.PausedMs = 0
+		for _, p := range r.Pauses {
+			resumedAt := p.ResumedAt
+			if resumedAt.IsZero() {
+				resumedAt = r.FinishedAt
+			}
+			r.PausedMs += int32(resumedAt.Sub(p.PausedAt).Milliseconds())
+		}
+		totalDuration := r.FinishedAt.Sub(r.QueuedAt)
+		duration := totalDuration - time.Duration(1e3*r.PausedMs)
+		r.DurationMs = int32(duration.Milliseconds())
+		r.Duration = duration.Round(time.Millisecond).String()
+		r.TotalDurationMs = int32(totalDuration.Milliseconds())
+		r.TotalDuration = totalDuration.Round(time.Millisecond).String()
+	}
+}
+
+func (r *TestWorkflowResult) HasPauseAt(ref string, t time.Time) bool {
+	for _, p := range r.Pauses {
+		if ref == p.Ref && !p.PausedAt.After(t) && (p.ResumedAt.IsZero() || !p.ResumedAt.Before(t)) {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *TestWorkflowResult) HasUnfinishedPause(ref string) bool {
+	for _, p := range r.Pauses {
+		if ref == p.Ref && p.ResumedAt.IsZero() {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *TestWorkflowResult) PauseStart(sig []TestWorkflowSignature, scheduledAt time.Time, ref string, start time.Time) {
+	if r.HasPauseAt(ref, start) {
+		return
+	}
+	r.Pauses = append(r.Pauses, TestWorkflowPause{Ref: ref, PausedAt: start})
+	r.Recompute(sig, scheduledAt)
+}
+
+func (r *TestWorkflowResult) PauseEnd(sig []TestWorkflowSignature, scheduledAt time.Time, ref string, end time.Time) {
+	for i, p := range r.Pauses {
+		if p.Ref != ref {
+			continue
+		}
+		if !p.PausedAt.After(end) && !p.ResumedAt.Before(end) {
+			// It's already covered by another period
+			return
+		}
+		if !p.PausedAt.After(end) && (p.ResumedAt.IsZero() || p.ResumedAt.Equal(end)) {
+			// It found a period to fulfill
+			r.Pauses[i].ResumedAt = end
+			r.Recompute(sig, scheduledAt)
+			return
+		}
 	}
 }
 
@@ -210,6 +269,14 @@ func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature, scheduledAt 
 	last := r.Steps[sig[len(sig)-1].Ref]
 	r.FinishedAt = adjustMinimumTime(r.FinishedAt, last.FinishedAt)
 
+	// Check pause status
+	isPaused := false
+	walkSteps(sig, func(s TestWorkflowSignature) {
+		if r.Steps[s.Ref].Status != nil && *r.Steps[s.Ref].Status == PAUSED_TestWorkflowStepStatus {
+			isPaused = true
+		}
+	})
+
 	// Recompute the TestWorkflow status
 	totalSig := TestWorkflowSignature{Children: sig}
 	result, _ := predictTestWorkflowStepStatus(TestWorkflowStepResult{}, totalSig, r)
@@ -223,17 +290,18 @@ func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature, scheduledAt 
 	r.PredictedStatus = status
 	if !r.FinishedAt.IsZero() || *status == ABORTED_TestWorkflowStatus {
 		r.Status = r.PredictedStatus
+	} else if isPaused {
+		r.Status = common.Ptr(PAUSED_TestWorkflowStatus)
+	}
+
+	if !isPaused && r.Status != nil && *r.Status == PAUSED_TestWorkflowStatus {
+		r.Status = common.Ptr(RUNNING_TestWorkflowStatus)
 	}
 }
 
 func (r *TestWorkflowResult) RecomputeStep(sig TestWorkflowSignature) {
-	children := sig.Children
-	if len(children) == 0 {
-		return
-	}
-
 	// Compute nested steps
-	for _, ch := range children {
+	for _, ch := range sig.Children {
 		r.RecomputeStep(ch)
 	}
 
@@ -245,6 +313,13 @@ func (r *TestWorkflowResult) RecomputeStep(sig TestWorkflowSignature) {
 
 	// Compute time
 	v = recomputeTestWorkflowStepResult(v, sig, r)
+
+	// Mark as paused during pause period
+	if r.HasUnfinishedPause(sig.Ref) {
+		v.Status = common.Ptr(PAUSED_TestWorkflowStepStatus)
+	} else if v.Status != nil && *v.Status == PAUSED_TestWorkflowStepStatus {
+		v.Status = common.Ptr(RUNNING_TestWorkflowStepStatus)
+	}
 }
 
 func walkSteps(sig []TestWorkflowSignature, fn func(signature TestWorkflowSignature)) {
@@ -308,7 +383,7 @@ func adjustMinimumTime(dst, min time.Time) time.Time {
 func predictTestWorkflowStepStatus(v TestWorkflowStepResult, sig TestWorkflowSignature, r *TestWorkflowResult) (TestWorkflowStepStatus, bool) {
 	children := sig.Children
 	if len(children) == 0 {
-		if getTestWorkflowStepStatus(v) == QUEUED_TestWorkflowStepStatus || getTestWorkflowStepStatus(v) == RUNNING_TestWorkflowStepStatus {
+		if getTestWorkflowStepStatus(v) == QUEUED_TestWorkflowStepStatus || getTestWorkflowStepStatus(v) == RUNNING_TestWorkflowStepStatus || getTestWorkflowStepStatus(v) == PAUSED_TestWorkflowStepStatus {
 			return PASSED_TestWorkflowStepStatus, false
 		}
 		return *v.Status, true
@@ -330,7 +405,7 @@ func predictTestWorkflowStepStatus(v TestWorkflowStepResult, sig TestWorkflowSig
 		if !ch.Optional && (status == FAILED_TestWorkflowStepStatus || status == TIMEOUT_TestWorkflowStepStatus) {
 			failed = true
 		}
-		if status == QUEUED_TestWorkflowStepStatus || status == RUNNING_TestWorkflowStepStatus {
+		if status == QUEUED_TestWorkflowStepStatus || status == RUNNING_TestWorkflowStepStatus || status == PAUSED_TestWorkflowStepStatus {
 			finished = false
 		}
 	}

@@ -5808,6 +5808,7 @@ components:
         - failed
         - queued
         - running
+        - paused
       properties:
         results:
           type: integer
@@ -7619,9 +7620,18 @@ components:
         duration:
           type: string
           description: Go-formatted (human-readable) duration
+        totalDuration:
+          type: string
+          description: Go-formatted (human-readable) duration (incl. pause)
         durationMs:
           type: integer
           description: Duration in milliseconds
+        totalDurationMs:
+          type: integer
+          description: Duration in milliseconds (incl. pause)
+        pausedMs:
+          type: integer
+          description: Pause duration in milliseconds
       required:
         - status
         - predictedStatus
@@ -7680,9 +7690,22 @@ components:
         duration:
           type: string
           description: Go-formatted (human-readable) duration
+        totalDuration:
+          type: string
+          description: Go-formatted (human-readable) total duration (incl. pause)
         durationMs:
           type: integer
           description: Duration in milliseconds
+        pausedMs:
+          type: integer
+          description: Pause duration in milliseconds
+        totalDurationMs:
+          type: integer
+          description: Total duration in milliseconds (incl. pause)
+        pauses:
+          type: array
+          items:
+            $ref: "#/components/schemas/TestWorkflowPause"
         initialization:
           $ref: "#/components/schemas/TestWorkflowStepResult"
         steps:
@@ -7692,6 +7715,24 @@ components:
       required:
         - status
         - predictedStatus
+
+    TestWorkflowPause:
+      type: object
+      properties:
+        ref:
+          type: string
+          description: step at which it was paused
+        pausedAt:
+          type: string
+          format: date-time
+          description: when the pause has started
+        resumedAt:
+          type: string
+          format: date-time
+          description: when the pause has ended
+      required:
+      - ref
+      - pausedAt
 
     TestWorkflowStepResult:
       type: object
@@ -7743,6 +7784,7 @@ components:
       enum:
         - queued
         - running
+        - paused
         - passed
         - failed
         - aborted
@@ -7752,6 +7794,7 @@ components:
       enum:
         - queued
         - running
+        - paused
         - passed
         - failed
         - timeout
@@ -7863,6 +7906,9 @@ components:
         condition:
           type: string
           description: expression to declare under which conditions the step should be run; defaults to "passed", except artifacts where it defaults to "always"
+        paused:
+          type: boolean
+          description: should the step be paused initially
         negative:
           type: boolean
           description: is the step expected to fail
@@ -7914,6 +7960,9 @@ components:
         condition:
           type: string
           description: expression to declare under which conditions the step should be run; defaults to "passed", except artifacts where it defaults to "always"
+        paused:
+          type: boolean
+          description: should the step be paused initially
         negative:
           type: boolean
           description: is the step expected to fail

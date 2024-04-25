@@ -56,6 +56,24 @@ func EvalExpressionPartial(str string, machines ...Machine) (Expression, error) 
 	return expr, err
 }
 
+func EvalBoolean(str string, machines ...Machine) (bool, bool, error) {
+	// Fast-track
+	if str == "" {
+		return false, true, nil
+	}
+
+	// Compute
+	expr, err := EvalExpressionPartial(str, machines...)
+	if err != nil || expr.Static() == nil {
+		return false, false, err
+	}
+	v, err := expr.Static().BoolValue()
+	if err != nil {
+		return false, false, err
+	}
+	return v, true, nil
+}
+
 func EvalExpression(str string, machines ...Machine) (StaticValue, error) {
 	expr, err := EvalExpressionPartial(str, machines...)
 	if err != nil {
