@@ -31,6 +31,38 @@ func MergePodConfig(dst, include *testworkflowsv1.PodConfig) *testworkflowsv1.Po
 	if include.ServiceAccountName != "" {
 		dst.ServiceAccountName = include.ServiceAccountName
 	}
+	if include.ActiveDeadlineSeconds != nil {
+		dst.ActiveDeadlineSeconds = include.ActiveDeadlineSeconds
+	}
+	if include.DNSPolicy != "" {
+		dst.DNSPolicy = include.DNSPolicy
+	}
+	if include.NodeName != "" {
+		dst.NodeName = include.NodeName
+	}
+	dst.SecurityContext = MergePodSecurityContext(dst.SecurityContext, include.SecurityContext)
+	if include.Hostname != "" {
+		dst.Hostname = include.Hostname
+	}
+	if include.Subdomain != "" {
+		dst.Subdomain = include.Subdomain
+	}
+	dst.Affinity = MergeAffinity(dst.Affinity, include.Affinity)
+	dst.Tolerations = append(dst.Tolerations, include.Tolerations...)
+	dst.HostAliases = append(dst.HostAliases, include.HostAliases...)
+	if include.PriorityClassName != "" {
+		dst.PriorityClassName = include.PriorityClassName
+	}
+	if include.Priority != nil {
+		dst.Priority = include.Priority
+	}
+	dst.DNSConfig = MergePodDNSConfig(dst.DNSConfig, include.DNSConfig)
+	if include.PreemptionPolicy != nil {
+		dst.PreemptionPolicy = include.PreemptionPolicy
+	}
+	dst.TopologySpreadConstraints = append(dst.TopologySpreadConstraints, include.TopologySpreadConstraints...)
+	dst.SchedulingGates = append(dst.SchedulingGates, include.SchedulingGates...)
+	dst.ResourceClaims = append(include.ResourceClaims, dst.ResourceClaims...)
 	return dst
 }
 
@@ -45,6 +77,103 @@ func MergeJobConfig(dst, include *testworkflowsv1.JobConfig) *testworkflowsv1.Jo
 	return dst
 }
 
+func MergePodDNSConfig(dst, include *corev1.PodDNSConfig) *corev1.PodDNSConfig {
+	if dst == nil {
+		return include
+	} else if include == nil {
+		return dst
+	}
+	dst.Nameservers = append(dst.Nameservers, include.Nameservers...)
+	dst.Searches = append(dst.Searches, include.Searches...)
+	dst.Options = append(dst.Options, include.Options...)
+	return dst
+}
+
+func MergePodSecurityContext(dst, include *corev1.PodSecurityContext) *corev1.PodSecurityContext {
+	if dst == nil {
+		return include
+	} else if include == nil {
+		return dst
+	}
+	dst.SELinuxOptions = MergeSELinuxOptions(dst.SELinuxOptions, include.SELinuxOptions)
+	dst.WindowsOptions = MergeWindowsSecurityContextOptions(dst.WindowsOptions, include.WindowsOptions)
+	if include.RunAsUser != nil {
+		dst.RunAsUser = include.RunAsUser
+	}
+	if include.RunAsGroup != nil {
+		dst.RunAsGroup = include.RunAsGroup
+	}
+	if include.RunAsNonRoot != nil {
+		dst.RunAsNonRoot = include.RunAsNonRoot
+	}
+	dst.SupplementalGroups = append(dst.SupplementalGroups, include.SupplementalGroups...)
+	if include.FSGroup != nil {
+		dst.FSGroup = include.FSGroup
+	}
+	if include.FSGroupChangePolicy != nil {
+		dst.FSGroupChangePolicy = include.FSGroupChangePolicy
+	}
+	if include.SeccompProfile != nil {
+		dst.SeccompProfile = include.SeccompProfile
+	}
+	return dst
+}
+
+func MergeNodeSelector(dst, include *corev1.NodeSelector) *corev1.NodeSelector {
+	if dst == nil {
+		return include
+	} else if include == nil {
+		return dst
+	}
+	dst.NodeSelectorTerms = append(dst.NodeSelectorTerms, include.NodeSelectorTerms...)
+	return dst
+}
+
+func MergeNodeAffinity(dst, include *corev1.NodeAffinity) *corev1.NodeAffinity {
+	if dst == nil {
+		return include
+	} else if include == nil {
+		return dst
+	}
+	dst.RequiredDuringSchedulingIgnoredDuringExecution = MergeNodeSelector(dst.RequiredDuringSchedulingIgnoredDuringExecution, include.RequiredDuringSchedulingIgnoredDuringExecution)
+	dst.PreferredDuringSchedulingIgnoredDuringExecution = append(dst.PreferredDuringSchedulingIgnoredDuringExecution, include.PreferredDuringSchedulingIgnoredDuringExecution...)
+	return dst
+}
+
+func MergePodAffinity(dst, include *corev1.PodAffinity) *corev1.PodAffinity {
+	if dst == nil {
+		return include
+	} else if include == nil {
+		return dst
+	}
+	dst.RequiredDuringSchedulingIgnoredDuringExecution = append(dst.RequiredDuringSchedulingIgnoredDuringExecution, include.RequiredDuringSchedulingIgnoredDuringExecution...)
+	dst.PreferredDuringSchedulingIgnoredDuringExecution = append(dst.PreferredDuringSchedulingIgnoredDuringExecution, include.PreferredDuringSchedulingIgnoredDuringExecution...)
+	return dst
+}
+
+func MergePodAntiAffinity(dst, include *corev1.PodAntiAffinity) *corev1.PodAntiAffinity {
+	if dst == nil {
+		return include
+	} else if include == nil {
+		return dst
+	}
+	dst.RequiredDuringSchedulingIgnoredDuringExecution = append(dst.RequiredDuringSchedulingIgnoredDuringExecution, include.RequiredDuringSchedulingIgnoredDuringExecution...)
+	dst.PreferredDuringSchedulingIgnoredDuringExecution = append(dst.PreferredDuringSchedulingIgnoredDuringExecution, include.PreferredDuringSchedulingIgnoredDuringExecution...)
+	return dst
+}
+
+func MergeAffinity(dst, include *corev1.Affinity) *corev1.Affinity {
+	if dst == nil {
+		return include
+	} else if include == nil {
+		return dst
+	}
+	dst.NodeAffinity = MergeNodeAffinity(dst.NodeAffinity, include.NodeAffinity)
+	dst.PodAffinity = MergePodAffinity(dst.PodAffinity, include.PodAffinity)
+	dst.PodAntiAffinity = MergePodAntiAffinity(dst.PodAntiAffinity, include.PodAntiAffinity)
+	return dst
+}
+
 func MergeContentGit(dst, include *testworkflowsv1.ContentGit) *testworkflowsv1.ContentGit {
 	if dst == nil {
 		return include
@@ -54,13 +183,93 @@ func MergeContentGit(dst, include *testworkflowsv1.ContentGit) *testworkflowsv1.
 	return include
 }
 
+func MergeCapabilities(dst, include *corev1.Capabilities) *corev1.Capabilities {
+	if dst == nil {
+		return include
+	} else if include == nil {
+		return dst
+	}
+	dst.Add = append(dst.Add, include.Add...)
+	dst.Drop = append(dst.Drop, include.Drop...)
+	return dst
+}
+
+func MergeSELinuxOptions(dst, include *corev1.SELinuxOptions) *corev1.SELinuxOptions {
+	if dst == nil {
+		return include
+	} else if include == nil {
+		return dst
+	}
+	if include.User != "" {
+		dst.User = include.User
+	}
+	if include.Role != "" {
+		dst.Role = include.Role
+	}
+	if include.Type != "" {
+		dst.Type = include.Type
+	}
+	if include.Level != "" {
+		dst.Level = include.Level
+	}
+	return dst
+}
+
+func MergeWindowsSecurityContextOptions(dst, include *corev1.WindowsSecurityContextOptions) *corev1.WindowsSecurityContextOptions {
+	if dst == nil {
+		return include
+	} else if include == nil {
+		return dst
+	}
+	if include.GMSACredentialSpecName != nil {
+		dst.GMSACredentialSpecName = include.GMSACredentialSpecName
+	}
+	if include.GMSACredentialSpec != nil {
+		dst.GMSACredentialSpec = include.GMSACredentialSpec
+	}
+	if include.RunAsUserName != nil {
+		dst.RunAsUserName = include.RunAsUserName
+	}
+	if include.HostProcess != nil {
+		dst.HostProcess = include.HostProcess
+	}
+	return dst
+}
+
 func MergeSecurityContext(dst, include *corev1.SecurityContext) *corev1.SecurityContext {
 	if dst == nil {
 		return include
 	} else if include == nil {
 		return dst
 	}
-	return include
+	dst.Capabilities = MergeCapabilities(dst.Capabilities, include.Capabilities)
+	if include.Privileged != nil {
+		dst.Privileged = include.Privileged
+	}
+	dst.SELinuxOptions = MergeSELinuxOptions(dst.SELinuxOptions, include.SELinuxOptions)
+	dst.WindowsOptions = MergeWindowsSecurityContextOptions(dst.WindowsOptions, include.WindowsOptions)
+	if include.RunAsUser != nil {
+		dst.RunAsUser = include.RunAsUser
+	}
+	if include.RunAsGroup != nil {
+		dst.RunAsGroup = include.RunAsGroup
+	}
+	if include.RunAsNonRoot != nil {
+		dst.RunAsNonRoot = include.RunAsNonRoot
+	}
+	if include.ReadOnlyRootFilesystem != nil {
+		dst.ReadOnlyRootFilesystem = include.ReadOnlyRootFilesystem
+	}
+	if include.AllowPrivilegeEscalation != nil {
+		dst.AllowPrivilegeEscalation = include.AllowPrivilegeEscalation
+	}
+	if include.ProcMount != nil {
+		dst.ProcMount = include.ProcMount
+	}
+	if include.SeccompProfile != nil {
+		dst.SeccompProfile = include.SeccompProfile
+	}
+	return dst
 }
 
 func MergeContent(dst, include *testworkflowsv1.Content) *testworkflowsv1.Content {

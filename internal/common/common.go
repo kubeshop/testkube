@@ -38,6 +38,14 @@ func ResolvePtr[T any](v *T, def T) T {
 	return *v
 }
 
+func MapEnumToString[T ~string](v T) string {
+	return string(v)
+}
+
+func MapStringToEnum[T ~string](v string) T {
+	return T(v)
+}
+
 func MapSlice[T any, U any](s []T, fn func(T) U) []U {
 	if len(s) == 0 {
 		return nil

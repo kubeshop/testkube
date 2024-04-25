@@ -245,20 +245,39 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 
 	// Build pod template
+	if podConfig.SecurityContext == nil {
+		podConfig.SecurityContext = &corev1.PodSecurityContext{}
+	}
+	if podConfig.SecurityContext.FSGroup == nil {
+		podConfig.SecurityContext.FSGroup = common.Ptr(constants.DefaultFsGroup)
+	}
 	podSpec := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: podConfig.Annotations,
 			Labels:      podConfig.Labels,
 		},
 		Spec: corev1.PodSpec{
-			RestartPolicy:      corev1.RestartPolicyNever,
-			Volumes:            volumes,
-			ImagePullSecrets:   podConfig.ImagePullSecrets,
-			ServiceAccountName: podConfig.ServiceAccountName,
-			NodeSelector:       podConfig.NodeSelector,
-			SecurityContext: &corev1.PodSecurityContext{
-				FSGroup: common.Ptr(constants.DefaultFsGroup),
-			},
+			RestartPolicy:             corev1.RestartPolicyNever,
+			Volumes:                   volumes,
+			ImagePullSecrets:          podConfig.ImagePullSecrets,
+			ServiceAccountName:        podConfig.ServiceAccountName,
+			NodeSelector:              podConfig.NodeSelector,
+			ActiveDeadlineSeconds:     podConfig.ActiveDeadlineSeconds,
+			DNSPolicy:                 podConfig.DNSPolicy,
+			NodeName:                  podConfig.NodeName,
+			SecurityContext:           podConfig.SecurityContext,
+			Hostname:                  podConfig.Hostname,
+			Subdomain:                 podConfig.Subdomain,
+			Affinity:                  podConfig.Affinity,
+			Tolerations:               podConfig.Tolerations,
+			HostAliases:               podConfig.HostAliases,
+			PriorityClassName:         podConfig.PriorityClassName,
+			Priority:                  podConfig.Priority,
+			DNSConfig:                 podConfig.DNSConfig,
+			PreemptionPolicy:          podConfig.PreemptionPolicy,
+			TopologySpreadConstraints: podConfig.TopologySpreadConstraints,
+			SchedulingGates:           podConfig.SchedulingGates,
+			ResourceClaims:            podConfig.ResourceClaims,
 		},
 	}
 	AnnotateControlledBy(&podSpec, "{{execution.id}}")

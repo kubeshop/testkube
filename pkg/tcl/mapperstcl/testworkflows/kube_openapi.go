@@ -11,6 +11,7 @@ package testworkflows
 import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
@@ -470,14 +471,182 @@ func MapCronJobConfigKubeToAPI(v testworkflowsv1.CronJobConfig) testkube.TestWor
 	}
 }
 
+func MapTolerationKubeToAPI(v corev1.Toleration) testkube.Toleration {
+	return testkube.Toleration{
+		Key:               v.Key,
+		Operator:          common.MapEnumToString(v.Operator),
+		Value:             v.Value,
+		Effect:            common.MapEnumToString(v.Effect),
+		TolerationSeconds: MapInt64ToBoxedInteger(v.TolerationSeconds),
+	}
+}
+
+func MapHostAliasKubeToAPI(v corev1.HostAlias) testkube.HostAlias {
+	return testkube.HostAlias{Ip: v.IP, Hostnames: v.Hostnames}
+}
+
+func MapTopologySpreadConstraintKubeToAPI(v corev1.TopologySpreadConstraint) testkube.TopologySpreadConstraint {
+	return testkube.TopologySpreadConstraint{
+		MaxSkew:            v.MaxSkew,
+		TopologyKey:        v.TopologyKey,
+		WhenUnsatisfiable:  common.MapEnumToString(v.WhenUnsatisfiable),
+		LabelSelector:      common.MapPtr(v.LabelSelector, MapLabelSelectorKubeToAPI),
+		MinDomains:         MapInt32ToBoxedInteger(v.MinDomains),
+		NodeAffinityPolicy: MapStringToBoxedString(common.MapPtr(v.NodeAffinityPolicy, common.MapEnumToString[corev1.NodeInclusionPolicy])),
+		NodeTaintsPolicy:   MapStringToBoxedString(common.MapPtr(v.NodeTaintsPolicy, common.MapEnumToString[corev1.NodeInclusionPolicy])),
+		MatchLabelKeys:     v.MatchLabelKeys,
+	}
+}
+
+func MapPodSchedulingGateKubeToAPI(v corev1.PodSchedulingGate) testkube.PodSchedulingGate {
+	return testkube.PodSchedulingGate{Name: v.Name}
+}
+
+func MapPodResourceClaimKubeToAPI(v corev1.PodResourceClaim) testkube.PodResourceClaim {
+	return testkube.PodResourceClaim{
+		Name: v.Name,
+		Source: &testkube.ClaimSource{
+			ResourceClaimName:         MapStringToBoxedString(v.Source.ResourceClaimName),
+			ResourceClaimTemplateName: MapStringToBoxedString(v.Source.ResourceClaimTemplateName),
+		},
+	}
+}
+
+func MapPodSecurityContextKubeToAPI(v corev1.PodSecurityContext) testkube.PodSecurityContext {
+	return testkube.PodSecurityContext{
+		RunAsUser:    MapInt64ToBoxedInteger(v.RunAsUser),
+		RunAsGroup:   MapInt64ToBoxedInteger(v.RunAsGroup),
+		RunAsNonRoot: MapBoolToBoxedBoolean(v.RunAsNonRoot),
+	}
+}
+
+func MapNodeSelectorRequirementKubeToAPI(v corev1.NodeSelectorRequirement) testkube.NodeSelectorRequirement {
+	return testkube.NodeSelectorRequirement{
+		Key:      v.Key,
+		Operator: common.MapEnumToString(v.Operator),
+		Values:   v.Values,
+	}
+}
+
+func MapNodeSelectorTermKubeToAPI(v corev1.NodeSelectorTerm) testkube.NodeSelectorTerm {
+	return testkube.NodeSelectorTerm{
+		MatchExpressions: common.MapSlice(v.MatchExpressions, MapNodeSelectorRequirementKubeToAPI),
+		MatchFields:      common.MapSlice(v.MatchFields, MapNodeSelectorRequirementKubeToAPI),
+	}
+}
+
+func MapNodeSelectorKubeToAPI(v corev1.NodeSelector) testkube.NodeSelector {
+	return testkube.NodeSelector{
+		NodeSelectorTerms: common.MapSlice(v.NodeSelectorTerms, MapNodeSelectorTermKubeToAPI),
+	}
+}
+
+func MapPreferredSchedulingTermKubeToAPI(v corev1.PreferredSchedulingTerm) testkube.PreferredSchedulingTerm {
+	return testkube.PreferredSchedulingTerm{
+		Weight:     v.Weight,
+		Preference: common.Ptr(MapNodeSelectorTermKubeToAPI(v.Preference)),
+	}
+}
+
+func MapNodeAffinityKubeToAPI(v corev1.NodeAffinity) testkube.NodeAffinity {
+	return testkube.NodeAffinity{
+		RequiredDuringSchedulingIgnoredDuringExecution:  common.MapPtr(v.RequiredDuringSchedulingIgnoredDuringExecution, MapNodeSelectorKubeToAPI),
+		PreferredDuringSchedulingIgnoredDuringExecution: common.MapSlice(v.PreferredDuringSchedulingIgnoredDuringExecution, MapPreferredSchedulingTermKubeToAPI),
+	}
+}
+
+func MapPodAffinityKubeToAPI(v corev1.PodAffinity) testkube.PodAffinity {
+	return testkube.PodAffinity{
+		RequiredDuringSchedulingIgnoredDuringExecution:  common.MapSlice(v.RequiredDuringSchedulingIgnoredDuringExecution, MapPodAffinityTermKubeToAPI),
+		PreferredDuringSchedulingIgnoredDuringExecution: common.MapSlice(v.PreferredDuringSchedulingIgnoredDuringExecution, MapWeightedPodAffinityTermKubeToAPI),
+	}
+}
+
+func MapLabelSelectorRequirementKubeToAPI(v metav1.LabelSelectorRequirement) testkube.LabelSelectorRequirement {
+	return testkube.LabelSelectorRequirement{
+		Key:      v.Key,
+		Operator: common.MapEnumToString(v.Operator),
+		Values:   v.Values,
+	}
+}
+
+func MapLabelSelectorKubeToAPI(v metav1.LabelSelector) testkube.LabelSelector {
+	return testkube.LabelSelector{
+		MatchLabels:      v.MatchLabels,
+		MatchExpressions: common.MapSlice(v.MatchExpressions, MapLabelSelectorRequirementKubeToAPI),
+	}
+}
+
+func MapPodAffinityTermKubeToAPI(v corev1.PodAffinityTerm) testkube.PodAffinityTerm {
+	return testkube.PodAffinityTerm{
+		LabelSelector:     common.MapPtr(v.LabelSelector, MapLabelSelectorKubeToAPI),
+		Namespaces:        v.Namespaces,
+		TopologyKey:       v.TopologyKey,
+		NamespaceSelector: common.MapPtr(v.NamespaceSelector, MapLabelSelectorKubeToAPI),
+	}
+}
+
+func MapWeightedPodAffinityTermKubeToAPI(v corev1.WeightedPodAffinityTerm) testkube.WeightedPodAffinityTerm {
+	return testkube.WeightedPodAffinityTerm{
+		Weight:          v.Weight,
+		PodAffinityTerm: common.Ptr(MapPodAffinityTermKubeToAPI(v.PodAffinityTerm)),
+	}
+}
+
+func MapPodAntiAffinityKubeToAPI(v corev1.PodAntiAffinity) testkube.PodAffinity {
+	return testkube.PodAffinity{
+		RequiredDuringSchedulingIgnoredDuringExecution:  common.MapSlice(v.RequiredDuringSchedulingIgnoredDuringExecution, MapPodAffinityTermKubeToAPI),
+		PreferredDuringSchedulingIgnoredDuringExecution: common.MapSlice(v.PreferredDuringSchedulingIgnoredDuringExecution, MapWeightedPodAffinityTermKubeToAPI),
+	}
+}
+
+func MapAffinityKubeToAPI(v corev1.Affinity) testkube.Affinity {
+	return testkube.Affinity{
+		NodeAffinity:    common.MapPtr(v.NodeAffinity, MapNodeAffinityKubeToAPI),
+		PodAffinity:     common.MapPtr(v.PodAffinity, MapPodAffinityKubeToAPI),
+		PodAntiAffinity: common.MapPtr(v.PodAntiAffinity, MapPodAntiAffinityKubeToAPI),
+	}
+}
+
+func MapPodDNSConfigOptionKubeToAPI(v corev1.PodDNSConfigOption) testkube.PodDnsConfigOption {
+	return testkube.PodDnsConfigOption{
+		Name:  v.Name,
+		Value: MapStringToBoxedString(v.Value),
+	}
+}
+
+func MapPodDNSConfigKubeToAPI(v corev1.PodDNSConfig) testkube.PodDnsConfig {
+	return testkube.PodDnsConfig{
+		Nameservers: v.Nameservers,
+		Searches:    v.Searches,
+		Options:     common.MapSlice(v.Options, MapPodDNSConfigOptionKubeToAPI),
+	}
+}
+
 func MapPodConfigKubeToAPI(v testworkflowsv1.PodConfig) testkube.TestWorkflowPodConfig {
 	return testkube.TestWorkflowPodConfig{
-		ServiceAccountName: v.ServiceAccountName,
-		ImagePullSecrets:   common.MapSlice(v.ImagePullSecrets, MapLocalObjectReferenceKubeToAPI),
-		NodeSelector:       v.NodeSelector,
-		Labels:             v.Labels,
-		Annotations:        v.Annotations,
-		Volumes:            common.MapSlice(v.Volumes, MapVolumeKubeToAPI),
+		ServiceAccountName:        v.ServiceAccountName,
+		ImagePullSecrets:          common.MapSlice(v.ImagePullSecrets, MapLocalObjectReferenceKubeToAPI),
+		NodeSelector:              v.NodeSelector,
+		Labels:                    v.Labels,
+		Annotations:               v.Annotations,
+		Volumes:                   common.MapSlice(v.Volumes, MapVolumeKubeToAPI),
+		ActiveDeadlineSeconds:     MapInt64ToBoxedInteger(v.ActiveDeadlineSeconds),
+		DnsPolicy:                 common.MapEnumToString(v.DNSPolicy),
+		NodeName:                  v.NodeName,
+		SecurityContext:           common.MapPtr(v.SecurityContext, MapPodSecurityContextKubeToAPI),
+		Hostname:                  v.Hostname,
+		Subdomain:                 v.Subdomain,
+		Affinity:                  common.MapPtr(v.Affinity, MapAffinityKubeToAPI),
+		Tolerations:               common.MapSlice(v.Tolerations, MapTolerationKubeToAPI),
+		HostAliases:               common.MapSlice(v.HostAliases, MapHostAliasKubeToAPI),
+		PriorityClassName:         v.PriorityClassName,
+		Priority:                  MapInt32ToBoxedInteger(v.Priority),
+		DnsConfig:                 common.MapPtr(v.DNSConfig, MapPodDNSConfigKubeToAPI),
+		PreemptionPolicy:          MapStringToBoxedString(common.MapPtr(v.PreemptionPolicy, common.MapEnumToString[corev1.PreemptionPolicy])),
+		TopologySpreadConstraints: common.MapSlice(v.TopologySpreadConstraints, MapTopologySpreadConstraintKubeToAPI),
+		SchedulingGates:           common.MapSlice(v.SchedulingGates, MapPodSchedulingGateKubeToAPI),
+		ResourceClaims:            common.MapSlice(v.ResourceClaims, MapPodResourceClaimKubeToAPI),
 	}
 }
 
