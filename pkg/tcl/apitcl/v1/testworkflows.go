@@ -279,6 +279,7 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 		}
 
 		var results []testkube.TestWorkflowExecution
+		var errs []error
 
 		concurrencyLevel := scheduler.DefaultConcurrencyLevel
 		workerpoolService := workerpool.New[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest,
@@ -296,6 +297,13 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 
 		for r := range workerpoolService.GetResponses() {
 			results = append(results, r.Result)
+			if r.Err != nil {
+				errs = append(errs, r.Err)
+			}
+		}
+
+		if len(errs) != 0 {
+			return s.InternalError(c, errPrefix, "execution error", errs[0])
 		}
 
 		if len(results) != 0 {
