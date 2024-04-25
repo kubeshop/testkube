@@ -8436,6 +8436,48 @@ components:
           description: volumes to append to the pod
           items:
             $ref: "#/components/schemas/Volume"
+        activeDeadlineSeconds:
+          $ref: "#/components/schemas/BoxedInteger"
+        dnsPolicy:
+          type: string
+        nodeName:
+          type: string
+        securityContext:
+          $ref: "#/components/schemas/PodSecurityContext"
+        hostname:
+          type: string
+        subdomain:
+          type: string
+        affinity:
+          $ref: "#/components/schemas/Affinity"
+        tolerations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Toleration"
+        hostAliases:
+          type: array
+          items:
+            $ref: "#/components/schemas/HostAlias"
+        priorityClassName:
+          type: string
+        priority:
+          $ref: "#/components/schemas/BoxedInteger"
+        dnsConfig:
+          $ref: "#/components/schemas/PodDNSConfig"
+        preemptionPolicy:
+          $ref: "#/components/schemas/BoxedString"
+        topologySpreadConstraints:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopologySpreadConstraint"
+        schedulingGates:
+          type: array
+          items:
+            $ref: "#/components/schemas/PodSchedulingGate"
+        resourceClaims:
+          type: array
+          items:
+            $ref: "#/components/schemas/PodResourceClaim"
 
     TestWorkflowContainerConfig:
       type: object
@@ -8729,6 +8771,230 @@ components:
           $ref: "#/components/schemas/BoxedBoolean"
         allowPrivilegeEscalation:
           $ref: "#/components/schemas/BoxedBoolean"
+
+    PodSecurityContext:
+      type: object
+      properties:
+        runAsUser:
+          $ref: "#/components/schemas/BoxedInteger"
+        runAsGroup:
+          $ref: "#/components/schemas/BoxedInteger"
+        runAsNonRoot:
+          $ref: "#/components/schemas/BoxedBoolean"
+
+    Toleration:
+      type: object
+      properties:
+        key:
+          type: string
+        operator:
+          type: string
+        value:
+          type: string
+        effect:
+          type: string
+        tolerationSeconds:
+          $ref: "#/components/schemas/BoxedInteger"
+
+    HostAlias:
+      type: object
+      properties:
+        ip:
+          type: string
+        hostnames:
+          type: array
+          items:
+            type: string
+
+    TopologySpreadConstraint:
+      type: object
+      properties:
+        maxSkew:
+          type: integer
+        topologyKey:
+          type: string
+        whenUnsatisfiable:
+          type: string
+        labelSelector:
+          $ref: "#/components/schemas/LabelSelector"
+        minDomains:
+          $ref: "#/components/schemas/BoxedInteger"
+        nodeAffinityPolicy:
+          $ref: "#/components/schemas/BoxedString"
+        nodeTaintsPolicy:
+          $ref: "#/components/schemas/BoxedString"
+        matchLabelKeys:
+          type: array
+          items:
+            type: string
+
+    PodSchedulingGate:
+      type: object
+      properties:
+        name:
+          type: string
+
+    PodResourceClaim:
+      type: object
+      properties:
+        name:
+          type: string
+        source:
+          $ref: "#/components/schemas/ClaimSource"
+
+    ClaimSource:
+      type: object
+      properties:
+        resourceClaimName:
+          $ref: "#/components/schemas/BoxedString"
+        resourceClaimTemplateName:
+          $ref: "#/components/schemas/BoxedString"
+
+    NodeSelectorRequirement:
+      type: object
+      properties:
+        key:
+          type: string
+        operator:
+          type: string
+        values:
+          type: array
+          items:
+            type: string
+
+    NodeSelectorTerm:
+      type: object
+      properties:
+        matchExpressions:
+          type: array
+          items:
+            $ref: "#/components/schemas/NodeSelectorRequirement"
+        matchFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/NodeSelectorRequirement"
+
+    NodeSelector:
+      type: object
+      properties:
+        nodeSelectorTerms:
+          type: array
+          items:
+            $ref: "#/components/schemas/NodeSelectorTerm"
+
+    PreferredSchedulingTerm:
+      type: object
+      properties:
+        weight:
+          type: integer
+        preference:
+          $ref: "#/components/schemas/NodeSelectorTerm"
+      required:
+      - preference
+
+    NodeAffinity:
+      type: object
+      properties:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          $ref: "#/components/schemas/NodeSelector"
+        preferredDuringSchedulingIgnoredDuringExecution:
+          type: array
+          items:
+            $ref: "#/components/schemas/PreferredSchedulingTerm"
+
+    PodAffinity:
+      type: object
+      properties:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          type: array
+          items:
+            $ref: "#/components/schemas/PodAffinityTerm"
+        preferredDuringSchedulingIgnoredDuringExecution:
+          type: array
+          items:
+            $ref: "#/components/schemas/WeightedPodAffinityTerm"
+
+    LabelSelectorRequirement:
+      type: object
+      properties:
+        key:
+          type: string
+        operator:
+          type: string
+        values:
+          type: array
+          items:
+            type: string
+
+    LabelSelector:
+      type: object
+      properties:
+        matchLabels:
+          type: object
+          additionalProperties:
+            type: string
+        matchExpressions:
+          type: array
+          items:
+            $ref: "#/components/schemas/LabelSelectorRequirement"
+
+    PodAffinityTerm:
+      type: object
+      properties:
+        labelSelector:
+          $ref: "#/components/schemas/LabelSelector"
+        namespaces:
+          type: array
+          items:
+            type: string
+        topologyKey:
+          type: string
+        namespaceSelector:
+          $ref: "#/components/schemas/LabelSelector"
+
+    WeightedPodAffinityTerm:
+      type: object
+      properties:
+        weight:
+          type: integer
+        podAffinityTerm:
+          $ref: "#/components/schemas/PodAffinityTerm"
+      required:
+      - podAffinityTerm
+
+    Affinity:
+      type: object
+      properties:
+        nodeAffinity:
+          $ref: "#/components/schemas/NodeAffinity"
+        podAffinity:
+          $ref: "#/components/schemas/PodAffinity"
+        podAntiAffinity:
+          $ref: "#/components/schemas/PodAffinity"
+
+    PodDNSConfig:
+      type: object
+      properties:
+        nameservers:
+          type: array
+          items:
+            type: string
+        searches:
+          type: array
+          items:
+            type: string
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/PodDNSConfigOption"
+
+    PodDNSConfigOption:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          $ref: "#/components/schemas/BoxedString"
 
     VolumeMount:
       description: VolumeMount describes a mounting of a Volume

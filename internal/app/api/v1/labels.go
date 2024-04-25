@@ -19,19 +19,17 @@ func (s TestkubeAPI) ListLabelsHandler() fiber.Handler {
 			}
 
 			for key, testValues := range nextLabels {
-				if values, ok := labels[key]; !ok {
-					labels[key] = testValues
-				} else {
-					valuesMap := map[string]struct{}{}
+				valuesMap := make(map[string]struct{})
+				if values, ok := labels[key]; ok {
 					for _, v := range values {
 						valuesMap[v] = struct{}{}
 					}
+				}
 
-					for _, label := range testValues {
-						if _, ok := valuesMap[label]; !ok {
-							labels[key] = append(labels[key], label)
-							valuesMap[label] = struct{}{}
-						}
+				for _, label := range testValues {
+					if _, ok := valuesMap[label]; !ok {
+						labels[key] = append(labels[key], label)
+						valuesMap[label] = struct{}{}
 					}
 				}
 			}
