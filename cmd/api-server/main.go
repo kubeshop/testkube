@@ -853,6 +853,10 @@ func newProContext(cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) 
 		ConnectionTimeout:                cfg.TestkubeProConnectionTimeout,
 	}
 
+	if grpcClient == nil {
+		return proContext
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	md := metadata.Pairs("api-key", cfg.TestkubeProAPIKey)
 	ctx = metadata.NewOutgoingContext(ctx, md)
