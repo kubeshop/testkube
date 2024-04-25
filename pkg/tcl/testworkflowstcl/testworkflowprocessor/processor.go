@@ -96,7 +96,7 @@ func (p *processor) process(layer Intermediate, container Container, step testwo
 
 	// Add virtual pause step in case no other is there
 	if self.HasPause() && len(self.Children()) == 0 {
-		pause := NewContainerStage(self.Ref()+"-pause", container.CreateChild().
+		pause := NewContainerStage(self.Ref()+"pause", container.CreateChild().
 			SetCommand(constants.DefaultShellPath).
 			SetArgs("-c", "exit 0"))
 		pause.SetCategory("Wait for continue")
