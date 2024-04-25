@@ -91,7 +91,7 @@ func (s *Service) checkForRunningTestWorkflowExecutions(ctx context.Context, sta
 			s.logger.Errorf("trigger service: execution scraper component: error fetching testworkflow execution result: %v", err)
 			continue
 		}
-		if execution.Result != nil && (!execution.Result.IsRunning() && !execution.Result.IsQueued()) {
+		if execution.Result != nil && !(execution.Result.IsRunning() || execution.Result.IsQueued() || execution.Result.IsPaused()) {
 			s.logger.Debugf("trigger service: execution scraper component: testworkflow execution %s is finished", id)
 			status.removeTestWorkflowExecutionID(id)
 		}
@@ -176,7 +176,7 @@ func (s *Service) abortRunningTestWorkflowExecutions(ctx context.Context, status
 			s.logger.Errorf("trigger service: execution scraper component: error fetching testworkflow execution result: %v", err)
 			continue
 		}
-		if execution.Result != nil && (execution.Result.IsRunning() || execution.Result.IsQueued()) {
+		if execution.Result != nil && (execution.Result.IsRunning() || execution.Result.IsQueued() || execution.Result.IsPaused()) {
 			// Pro edition only (tcl protected code)
 			// Obtain the controller
 			ctrl, err := testworkflowcontroller.New(ctx, s.clientset, s.testkubeNamespace, execution.Id, execution.ScheduledAt)
