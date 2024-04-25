@@ -190,6 +190,7 @@ func (s *Service) abortRunningTestWorkflowExecutions(ctx context.Context, status
 			err = ctrl.Abort(context.Background())
 			if err != nil {
 				s.logger.Errorf("trigger service: execution scraper component: error aborting test workflow execution: %v", err)
+				continue
 			}
 
 			s.logger.Debugf("trigger service: execution scraper component: testworkflow execution %s is aborted", id)
