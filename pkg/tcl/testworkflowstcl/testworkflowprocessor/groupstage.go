@@ -15,7 +15,6 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
 type groupStage struct {
@@ -48,7 +47,7 @@ func (s *groupStage) Len() int {
 }
 
 func (s *groupStage) HasPause() bool {
-	return s.paused != "" || (len(s.Children()) > 0 && s.Children()[0].HasPause())
+	return s.paused || (len(s.Children()) > 0 && s.Children()[0].HasPause())
 }
 
 func (s *groupStage) Signature() Signature {
@@ -76,27 +75,19 @@ func (s *groupStage) Signature() Signature {
 
 func (s *groupStage) ContainerStages() []ContainerStage {
 	c := []ContainerStage(nil)
-	for _, ch := range s.Children() {
+	for _, ch := range s.children {
 		c = append(c, ch.ContainerStages()...)
 	}
 	return c
 }
 
 func (s *groupStage) Children() []Stage {
-	// Add virtual stage for pausing if there are no operations where it could be included
-	if s.paused != "" {
-		if len(s.children) == 0 || s.children[0].HasPause() {
-			return append([]Stage{
-				NewContainerStage(s.ref+"_pause", NewContainer().SetCommand(constants.DefaultShellPath).SetArgs("-c", "exit 0")),
-			}, s.children...)
-		}
-	}
 	return s.children
 }
 
 func (s *groupStage) RecursiveChildren() []Stage {
 	res := make([]Stage, 0)
-	for _, ch := range s.Children() {
+	for _, ch := range s.children {
 		if v, ok := ch.(GroupStage); ok {
 			res = append(res, v.RecursiveChildren()...)
 		} else {
@@ -108,7 +99,7 @@ func (s *groupStage) RecursiveChildren() []Stage {
 
 func (s *groupStage) GetImages() map[string]struct{} {
 	v := make(map[string]struct{})
-	for _, ch := range s.Children() {
+	for _, ch := range s.children {
 		maps.Copy(v, ch.GetImages())
 	}
 	return v
@@ -123,7 +114,7 @@ func (s *groupStage) Flatten() []Stage {
 	s.children = next
 
 	// Delete empty stage
-	if len(s.Children()) == 0 {
+	if len(s.children) == 0 {
 		return nil
 	}
 
@@ -134,7 +125,7 @@ func (s *groupStage) Flatten() []Stage {
 
 	// Merge stage into single one below if possible
 	first := s.children[0]
-	if len(s.children) == 1 && (s.name == "" || first.Name() == "") && (s.timeout == "" || first.Timeout() == "") && (s.paused == "" || first.Paused() == "") {
+	if len(s.children) == 1 && (s.name == "" || first.Name() == "") && (s.timeout == "" || first.Timeout() == "") && (!s.paused || !first.Paused()) {
 		if first.Name() == "" {
 			first.SetName(s.name)
 		}
@@ -148,8 +139,8 @@ func (s *groupStage) Flatten() []Stage {
 		if s.optional {
 			first.SetOptional(true)
 		}
-		if s.paused != "" {
-			first.SetPaused(s.paused)
+		if s.paused {
+			first.SetPaused(true)
 		}
 		return []Stage{first}
 	}

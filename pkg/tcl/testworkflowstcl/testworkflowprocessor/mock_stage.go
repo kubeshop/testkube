@@ -209,10 +209,10 @@ func (mr *MockStageMockRecorder) Optional() *gomock.Call {
 }
 
 // Paused mocks base method.
-func (m *MockStage) Paused() string {
+func (m *MockStage) Paused() bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Paused")
-	ret0, _ := ret[0].(string)
+	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
@@ -339,7 +339,7 @@ func (mr *MockStageMockRecorder) SetOptional(arg0 interface{}) *gomock.Call {
 }
 
 // SetPaused mocks base method.
-func (m *MockStage) SetPaused(arg0 string) StageLifecycle {
+func (m *MockStage) SetPaused(arg0 bool) StageLifecycle {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SetPaused", arg0)
 	ret0, _ := ret[0].(StageLifecycle)

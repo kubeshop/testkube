@@ -77,5 +77,5 @@ func (s *containerStage) Container() Container {
 }
 
 func (s *containerStage) HasPause() bool {
-	return s.paused != ""
+	return s.paused
 }

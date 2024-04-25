@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 )
 
 type Condition struct {
@@ -24,14 +23,14 @@ type StageLifecycle interface {
 	Negative() bool
 	Optional() bool
 	Condition() string
-	Paused() string
+	Paused() bool
 	RetryPolicy() testworkflowsv1.RetryPolicy
 	Timeout() string
 
 	SetNegative(negative bool) StageLifecycle
 	SetOptional(optional bool) StageLifecycle
 	SetCondition(expr string) StageLifecycle
-	SetPaused(paused string) StageLifecycle
+	SetPaused(paused bool) StageLifecycle
 	AppendConditions(expr ...string) StageLifecycle
 	SetRetryPolicy(policy *testworkflowsv1.RetryPolicy) StageLifecycle
 	SetTimeout(tpl string) StageLifecycle
@@ -40,9 +39,9 @@ type StageLifecycle interface {
 type stageLifecycle struct {
 	negative  bool
 	optional  bool
+	paused    bool
 	condition string
 	retry     testworkflowsv1.RetryPolicy
-	paused    string
 	timeout   string
 }
 
@@ -73,7 +72,7 @@ func (s *stageLifecycle) Timeout() string {
 	return s.timeout
 }
 
-func (s *stageLifecycle) Paused() string {
+func (s *stageLifecycle) Paused() bool {
 	return s.paused
 }
 
@@ -121,10 +120,7 @@ func (s *stageLifecycle) SetTimeout(tpl string) StageLifecycle {
 	return s
 }
 
-func (s *stageLifecycle) SetPaused(paused string) StageLifecycle {
-	v, ok, _ := expressionstcl.EvalBoolean(paused)
-	if ok && !v {
-		paused = ""
-	}
+func (s *stageLifecycle) SetPaused(paused bool) StageLifecycle {
+	s.paused = paused
 	return s
 }

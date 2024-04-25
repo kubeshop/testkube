@@ -43,7 +43,7 @@ func main() {
 	conditions := []data.Rule(nil)
 	resulting := []data.Rule(nil)
 	timeouts := []data.Timeout(nil)
-	paused := ""
+	paused := false
 	args := []string(nil)
 
 	// Read arguments into the base data
@@ -83,7 +83,8 @@ func main() {
 		case constants.ArgComputeEnv, constants.ArgComputeEnvLong:
 			computed = append(computed, strings.Split(os.Args[i+1], ",")...)
 		case constants.ArgPaused, constants.ArgPausedLong:
-			paused = os.Args[i+1]
+			paused = true
+			i--
 		case constants.ArgNegative, constants.ArgNegativeLong:
 			config["negative"] = os.Args[i+1]
 		case constants.ArgRetryCount:
@@ -165,15 +166,8 @@ func main() {
 	}
 
 	// Handle pausing
-	if paused != "" {
-		expr, err := data.Expression(paused)
-		if err != nil {
-			output.Failf(output.CodeInputError, "broken paused condition: %s: %s", paused, err.Error())
-		}
-		v, _ := expr.BoolValue()
-		if v {
-			data.Step.Pause(now)
-		}
+	if paused {
+		data.Step.Pause(now)
 	}
 
 	// Load the rest of the configuration

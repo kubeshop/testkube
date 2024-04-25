@@ -7906,8 +7906,8 @@ components:
           type: string
           description: expression to declare under which conditions the step should be run; defaults to "passed", except artifacts where it defaults to "always"
         paused:
-          type: string
-          description: expression to declare under which conditions the step should be paused initially
+          type: boolean
+          description: should the step be paused initially
         negative:
           type: boolean
           description: is the step expected to fail
@@ -7960,8 +7960,8 @@ components:
           type: string
           description: expression to declare under which conditions the step should be run; defaults to "passed", except artifacts where it defaults to "always"
         paused:
-          type: string
-          description: expression to declare under which conditions the step should be paused initially
+          type: boolean
+          description: should the step be paused initially
         negative:
           type: boolean
           description: is the step expected to fail
