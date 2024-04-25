@@ -148,6 +148,7 @@ func (r *MongoRepository) GetRunning(ctx context.Context) (result []testkube.Tes
 
 	cursor, err := r.Coll.Find(ctx, bson.M{
 		"$or": bson.A{
+			bson.M{"result.status": testkube.PAUSED_TestWorkflowStatus},
 			bson.M{"result.status": testkube.RUNNING_TestWorkflowStatus},
 			bson.M{"result.status": testkube.QUEUED_TestWorkflowStatus},
 		},

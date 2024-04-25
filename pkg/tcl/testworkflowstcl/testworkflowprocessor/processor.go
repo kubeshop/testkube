@@ -78,7 +78,7 @@ func (p *processor) process(layer Intermediate, container Container, step testwo
 	// Build an initial group for the inner items
 	self := NewGroupStage(ref, false)
 	self.SetName(step.Name)
-	self.SetOptional(step.Optional).SetNegative(step.Negative).SetTimeout(step.Timeout)
+	self.SetOptional(step.Optional).SetNegative(step.Negative).SetTimeout(step.Timeout).SetPaused(step.Paused)
 	if step.Condition != "" {
 		self.SetCondition(step.Condition)
 	} else {
@@ -92,6 +92,15 @@ func (p *processor) process(layer Intermediate, container Container, step testwo
 			return nil, err
 		}
 		self.Add(stage)
+	}
+
+	// Add virtual pause step in case no other is there
+	if self.HasPause() && len(self.Children()) == 0 {
+		pause := NewContainerStage(self.Ref()+"pause", container.CreateChild().
+			SetCommand(constants.DefaultShellPath).
+			SetArgs("-c", "exit 0"))
+		pause.SetCategory("Wait for continue")
+		self.Add(pause)
 	}
 
 	return self, nil

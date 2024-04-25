@@ -19,6 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
@@ -153,7 +154,7 @@ func (e *executor) Control(ctx context.Context, execution testkube.TestWorkflowE
 			} else {
 				if ref != v.Value.Ref {
 					ref = v.Value.Ref
-					_, err := writer.Write([]byte(data.SprintHint(ref, "start")))
+					_, err := writer.Write([]byte(data.SprintHint(ref, constants.InstructionStart)))
 					if err != nil {
 						log.DefaultLogger.Error(errors.Wrap(err, "saving log output signature"))
 					}

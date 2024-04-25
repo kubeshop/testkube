@@ -11,6 +11,8 @@ package data
 import (
 	"strings"
 	"time"
+
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
 )
 
 type TestWorkflowStatus string
@@ -54,7 +56,7 @@ func (s *StepInfo) Start(t time.Time) {
 	if s.StartTime.IsZero() {
 		s.StartTime = t
 		s.Iteration = 1
-		PrintHint(s.Ref, "start")
+		PrintHint(s.Ref, constants.InstructionStart)
 	}
 }
 
@@ -63,7 +65,7 @@ func (s *StepInfo) Next() {
 		s.Start(time.Now())
 	} else {
 		s.Iteration++
-		PrintHintDetails(s.Ref, "iteration", s.Iteration)
+		PrintHintDetails(s.Ref, constants.InstructionIteration, s.Iteration)
 	}
 }
 
@@ -97,9 +99,9 @@ func (s *StepInfo) SetStatus(status StepStatus) {
 		s.Status = status
 		s.HasStatus = true
 		if status == StepStatusPassed {
-			PrintHintDetails(s.Ref, "status", "passed")
+			PrintHintDetails(s.Ref, constants.InstructionStatus, "passed")
 		} else {
-			PrintHintDetails(s.Ref, "status", status)
+			PrintHintDetails(s.Ref, constants.InstructionStatus, status)
 		}
 	}
 }

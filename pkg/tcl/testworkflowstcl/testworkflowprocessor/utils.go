@@ -44,6 +44,9 @@ func isNotOptional(stage Stage) bool {
 }
 
 func buildKubernetesContainers(stage Stage, init *initProcess, machines ...expressionstcl.Machine) (containers []corev1.Container, err error) {
+	if stage.Paused() {
+		init.SetPaused(stage.Paused())
+	}
 	if stage.Timeout() != "" {
 		init.AddTimeout(stage.Timeout(), stage.Ref())
 	}
@@ -74,15 +77,15 @@ func buildKubernetesContainers(stage Stage, init *initProcess, machines ...expre
 		}
 
 		if group.Negative() {
-			init.AddResult(strings.Join(directRefResults, "&&"), ""+stage.Ref()+".v")
+			init.AddResult(strings.Join(directRefResults, "&&"), stage.Ref()+".v")
 		} else {
-			init.AddResult(strings.Join(directRefResults, "&&"), ""+stage.Ref())
+			init.AddResult(strings.Join(directRefResults, "&&"), stage.Ref())
 		}
 
 		for i, ch := range group.Children() {
 			// Condition should be executed only in the first leaf
 			if i == 1 {
-				init.ResetCondition()
+				init.ResetCondition().SetPaused(false)
 			}
 			// Pass down to another group or container
 			sub, serr := buildKubernetesContainers(ch, init.Children(ch.Ref()), machines...)

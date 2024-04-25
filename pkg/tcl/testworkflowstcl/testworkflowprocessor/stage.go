@@ -18,6 +18,7 @@ type Stage interface {
 	StageMetadata
 	StageLifecycle
 	Len() int
+	HasPause() bool
 	Signature() Signature
 	Resolve(m ...expressionstcl.Machine) error
 	ContainerStages() []ContainerStage

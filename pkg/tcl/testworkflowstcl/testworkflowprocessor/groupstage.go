@@ -40,15 +40,19 @@ func NewGroupStage(ref string, virtual bool) GroupStage {
 
 func (s *groupStage) Len() int {
 	count := 0
-	for _, ch := range s.children {
+	for _, ch := range s.Children() {
 		count += ch.Len()
 	}
 	return count
 }
 
+func (s *groupStage) HasPause() bool {
+	return s.paused || (len(s.Children()) > 0 && s.Children()[0].HasPause())
+}
+
 func (s *groupStage) Signature() Signature {
 	sig := []Signature(nil)
-	for _, ch := range s.children {
+	for _, ch := range s.Children() {
 		si := ch.Signature()
 		_, ok := ch.(GroupStage)
 		// Include children directly, if the stage is virtual
@@ -121,7 +125,7 @@ func (s *groupStage) Flatten() []Stage {
 
 	// Merge stage into single one below if possible
 	first := s.children[0]
-	if len(s.children) == 1 && (s.name == "" || first.Name() == "") && (s.timeout == "" || first.Timeout() == "") {
+	if len(s.children) == 1 && (s.name == "" || first.Name() == "") && (s.timeout == "" || first.Timeout() == "") && (!s.paused || !first.Paused()) {
 		if first.Name() == "" {
 			first.SetName(s.name)
 		}
@@ -134,6 +138,9 @@ func (s *groupStage) Flatten() []Stage {
 		}
 		if s.optional {
 			first.SetOptional(true)
+		}
+		if s.paused {
+			first.SetPaused(true)
 		}
 		return []Stage{first}
 	}

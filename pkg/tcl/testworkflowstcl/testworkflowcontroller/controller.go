@@ -11,6 +11,8 @@ package testworkflowcontroller
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
 	"time"
 
 	"github.com/pkg/errors"
@@ -18,6 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
+	constants2 "github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
@@ -36,6 +39,8 @@ var (
 
 type Controller interface {
 	Abort(ctx context.Context) error
+	Pause(ctx context.Context) error
+	Resume(ctx context.Context) error
 	Cleanup(ctx context.Context) error
 	Watch(ctx context.Context) Watcher[Notification]
 }
@@ -116,6 +121,40 @@ func (c *controller) Abort(ctx context.Context) error {
 
 func (c *controller) Cleanup(ctx context.Context) error {
 	return Cleanup(ctx, c.clientSet, c.namespace, c.id)
+}
+
+func (c *controller) command(ctx context.Context, name string, body io.Reader) error {
+	// TODO: add waiting for the started container + retries?
+	v := <-c.pod.Any(ctx)
+	if v.Error != nil {
+		return v.Error
+	}
+	if v.Value.Status.PodIP == "" {
+		return errors.New("there is no IP assigned to this pod")
+	}
+	r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s:%d/%s", v.Value.Status.PodIP, constants2.ControlServerPort, name), body)
+	if err != nil {
+		return err
+	}
+	client := &http.Client{}
+	res, err := client.Do(r)
+	if err != nil {
+		return fmt.Errorf("control server error: %s", err.Error())
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(res.Body)
+		return fmt.Errorf("control server error: status %d: %s", res.StatusCode, string(body))
+	}
+	return nil
+}
+
+func (c *controller) Pause(ctx context.Context) error {
+	return c.command(ctx, "pause", nil)
+}
+
+func (c *controller) Resume(ctx context.Context) error {
+	return c.command(ctx, "resume", nil)
 }
 
 func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
@@ -322,13 +361,31 @@ func (c *controller) Watch(parentCtx context.Context) Watcher[Notification] {
 					continue
 				}
 				if v.Value.Hint != nil {
-					if v.Value.Hint.Name == "start" && v.Value.Hint.Ref == container.Name {
+					if v.Value.Hint.Name == constants2.InstructionPause {
+						ts, _ := v.Value.Hint.Value.(string)
+						start, err := time.Parse(constants2.PreciseTimeFormat, ts)
+						if err != nil {
+							start = v.Value.Time
+							w.SendError(fmt.Errorf("invalid timestamp provided with pausing instruction: %v", v.Value.Hint.Value))
+						}
+						result.PauseStart(sig, c.scheduledAt, v.Value.Hint.Ref, start)
+						w.SendValue(Notification{Result: result.Clone()})
+					} else if v.Value.Hint.Name == constants2.InstructionResume {
+						ts, _ := v.Value.Hint.Value.(string)
+						end, err := time.Parse(constants2.PreciseTimeFormat, ts)
+						if err != nil {
+							end = v.Value.Time
+							w.SendError(fmt.Errorf("invalid timestamp provided with resuming instruction: %v", v.Value.Hint.Value))
+						}
+						result.PauseEnd(sig, c.scheduledAt, v.Value.Hint.Ref, end)
+						w.SendValue(Notification{Result: result.Clone()})
+					} else if v.Value.Hint.Name == constants2.InstructionStart && v.Value.Hint.Ref == container.Name {
 						if v.Value.Time.After(stepResult.StartedAt) {
 							stepResult = result.UpdateStepResult(sig, container.Name, testkube.TestWorkflowStepResult{
 								StartedAt: v.Value.Time.UTC(),
 							}, c.scheduledAt)
 						}
-					} else if v.Value.Hint.Name == "status" {
+					} else if v.Value.Hint.Name == constants2.InstructionStatus {
 						status := testkube.TestWorkflowStepStatus(v.Value.Hint.Value.(string))
 						if status == "" {
 							status = testkube.PASSED_TestWorkflowStepStatus

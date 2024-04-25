@@ -1,3 +1,11 @@
+// Copyright 2024 Testkube.
+//
+// Licensed as a Testkube Pro file under the Testkube Community
+// License (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
+//
+//	https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
+
 package constants
 
 const (
@@ -14,6 +22,8 @@ const (
 	ArgComputeEnvLong = "--env"
 	ArgNegative       = "-n"
 	ArgNegativeLong   = "--negative"
+	ArgPaused         = "-p"
+	ArgPausedLong     = "--pause"
 	ArgDebug          = "--debug"
 	ArgRetryUntil     = "--retryUntil" // TODO: Replace when multi-level retry will be there
 	ArgRetryCount     = "--retryCount" // TODO: Replace when multi-level retry will be there

@@ -678,6 +678,7 @@ func MapStepKubeToAPI(v testworkflowsv1.Step) testkube.TestWorkflowStep {
 	return testkube.TestWorkflowStep{
 		Name:       v.Name,
 		Condition:  v.Condition,
+		Paused:     v.Paused,
 		Negative:   v.Negative,
 		Optional:   v.Optional,
 		Use:        common.MapSlice(v.Use, MapTemplateRefKubeToAPI),
@@ -701,6 +702,7 @@ func MapIndependentStepKubeToAPI(v testworkflowsv1.IndependentStep) testkube.Tes
 	return testkube.TestWorkflowIndependentStep{
 		Name:       v.Name,
 		Condition:  v.Condition,
+		Paused:     v.Paused,
 		Negative:   v.Negative,
 		Optional:   v.Optional,
 		Retry:      common.MapPtr(v.Retry, MapRetryPolicyKubeToAPI),
