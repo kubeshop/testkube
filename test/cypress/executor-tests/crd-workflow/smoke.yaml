@@ -35,6 +35,9 @@ spec:
       artifacts:
         paths:
         - '**/*'
+  events:
+  - cronjob:
+      cron: "1 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -73,6 +76,9 @@ spec:
       artifacts:
         paths:
         - '**/*'
+  events:
+  - cronjob:
+      cron: "2 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -108,6 +114,9 @@ spec:
     artifacts:
       paths:
       - '**/*'
+  events:
+  - cronjob:
+      cron: "3 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -139,6 +148,9 @@ spec:
       config:
         version: 13.5.0
         params: "--env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
+  events:
+  - cronjob:
+      cron: "4 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -170,6 +182,9 @@ spec:
       config:
         version: 13.5.0
         params: "--env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
+  events:
+  - cronjob:
+      cron: "5 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -203,6 +218,9 @@ spec:
         config:
           version: 13.5.0
           params: "--env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
+  events:
+  - cronjob:
+      cron: "6 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -241,3 +259,51 @@ spec:
       artifacts:
         paths:
         - '**/*'
+  events:
+  - cronjob:
+      cron: "7 */4 * * *"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-workflow-smoke-13-junit-report
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/executor-tests/cypress-13
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/included:13.6.4
+      args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+      - --reporter
+      - junit
+      - --reporter-optionsmochaFile=/data/artifacts/junit/junit-[hash].xml,toConsole=false
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+    steps:
+    - name: Saving artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
+  events:
+  - cronjob:
+      cron: "8 */4 * * *"
+---

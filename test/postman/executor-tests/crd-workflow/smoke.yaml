@@ -26,6 +26,9 @@ spec:
       - postman-executor-smoke.postman_collection.json
       - "--env-var"
       - "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
+  events:
+  - cronjob:
+      cron: "35 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -53,6 +56,9 @@ spec:
       args:
       - run
       - postman-executor-smoke-without-envs.postman_collection.json
+  events:
+  - cronjob:
+      cron: "35 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -80,6 +86,9 @@ spec:
       name: pre-official/postman
       config:
         params: "postman-executor-smoke.postman_collection.json --env-var TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
+  events:
+  - cronjob:
+      cron: "35 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -106,3 +115,6 @@ spec:
       name: pre-official/postman
       config:
         params: "postman-executor-smoke-without-envs.postman_collection.json"
+  events:
+  - cronjob:
+      cron: "35 */4 * * *"

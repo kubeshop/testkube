@@ -27,3 +27,6 @@ spec:
       env:
       - name: TESTKUBE_MAVEN
         value: "true"
+  events:
+  - cronjob:
+      cron: "13 */4 * * *"
