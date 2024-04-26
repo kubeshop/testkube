@@ -19,24 +19,39 @@ func MapTestTriggerListKubeToAPI(crd *testsv1.TestTriggerList) (testTriggers []t
 
 // MapCRDToAPI maps TestTrigger CRD to OpenAPI spec TestTrigger
 func MapCRDToAPI(crd *testsv1.TestTrigger) testkube.TestTrigger {
-	resource := testkube.TestTriggerResources(crd.Spec.Resource)
-	action := testkube.TestTriggerActions(crd.Spec.Action)
-	execution := testkube.TestTriggerExecutions(crd.Spec.Execution)
-	concurrencyPolicy := testkube.TestTriggerConcurrencyPolicies(crd.Spec.ConcurrencyPolicy)
+	var resource *testkube.TestTriggerResources
+	if crd.Spec.Resource != "" {
+		resource = (*testkube.TestTriggerResources)(&crd.Spec.Resource)
+	}
+
+	var action *testkube.TestTriggerActions
+	if crd.Spec.Action != "" {
+		action = (*testkube.TestTriggerActions)(&crd.Spec.Action)
+	}
+
+	var execution *testkube.TestTriggerExecutions
+	if crd.Spec.Execution != "" {
+		execution = (*testkube.TestTriggerExecutions)(&crd.Spec.Execution)
+	}
+
+	var concurrencyPolicy *testkube.TestTriggerConcurrencyPolicies
+	if crd.Spec.ConcurrencyPolicy != "" {
+		concurrencyPolicy = (*testkube.TestTriggerConcurrencyPolicies)(&crd.Spec.ConcurrencyPolicy)
+	}
 
 	return testkube.TestTrigger{
 		Name:              crd.Name,
 		Namespace:         crd.Namespace,
 		Labels:            crd.Labels,
-		Resource:          &resource,
+		Resource:          resource,
 		ResourceSelector:  mapSelectorFromCRD(crd.Spec.ResourceSelector),
 		Event:             string(crd.Spec.Event),
 		ConditionSpec:     mapConditionSpecFromCRD(crd.Spec.ConditionSpec),
 		ProbeSpec:         mapProbeSpecFromCRD(crd.Spec.ProbeSpec),
-		Action:            &action,
-		Execution:         &execution,
+		Action:            action,
+		Execution:         execution,
 		TestSelector:      mapSelectorFromCRD(crd.Spec.TestSelector),
-		ConcurrencyPolicy: &concurrencyPolicy,
+		ConcurrencyPolicy: concurrencyPolicy,
 	}
 }
 
@@ -93,19 +108,39 @@ func mapConditionSpecFromCRD(conditionSpec *testsv1.TestTriggerConditionSpec) *t
 }
 
 func MapTestTriggerCRDToTestTriggerUpsertRequest(request testsv1.TestTrigger) testkube.TestTriggerUpsertRequest {
+	var resource *testkube.TestTriggerResources
+	if request.Spec.Resource != "" {
+		resource = (*testkube.TestTriggerResources)(&request.Spec.Resource)
+	}
+
+	var action *testkube.TestTriggerActions
+	if request.Spec.Action != "" {
+		action = (*testkube.TestTriggerActions)(&request.Spec.Action)
+	}
+
+	var execution *testkube.TestTriggerExecutions
+	if request.Spec.Execution != "" {
+		execution = (*testkube.TestTriggerExecutions)(&request.Spec.Execution)
+	}
+
+	var concurrencyPolicy *testkube.TestTriggerConcurrencyPolicies
+	if request.Spec.ConcurrencyPolicy != "" {
+		concurrencyPolicy = (*testkube.TestTriggerConcurrencyPolicies)(&request.Spec.ConcurrencyPolicy)
+	}
+
 	return testkube.TestTriggerUpsertRequest{
 		Name:              request.Name,
 		Namespace:         request.Namespace,
 		Labels:            request.Labels,
-		Resource:          (*testkube.TestTriggerResources)(&request.Spec.Resource),
+		Resource:          resource,
 		ResourceSelector:  mapSelectorFromCRD(request.Spec.ResourceSelector),
 		Event:             string(request.Spec.Event),
 		ConditionSpec:     mapConditionSpecFromCRD(request.Spec.ConditionSpec),
 		ProbeSpec:         mapProbeSpecFromCRD(request.Spec.ProbeSpec),
-		Action:            (*testkube.TestTriggerActions)(&request.Spec.Action),
-		Execution:         (*testkube.TestTriggerExecutions)(&request.Spec.Execution),
+		Action:            action,
+		Execution:         execution,
 		TestSelector:      mapSelectorFromCRD(request.Spec.TestSelector),
-		ConcurrencyPolicy: (*testkube.TestTriggerConcurrencyPolicies)(&request.Spec.ConcurrencyPolicy),
+		ConcurrencyPolicy: concurrencyPolicy,
 	}
 }
 
