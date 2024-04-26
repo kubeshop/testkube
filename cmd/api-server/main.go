@@ -84,6 +84,7 @@ import (
 	testsuiteexecutionsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testsuiteexecutions/v1"
 	testsuitesclientv2 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v2"
 	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
+	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/migrations"
 	"github.com/kubeshop/testkube/pkg/configmap"
@@ -92,6 +93,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/reconciler"
 	"github.com/kubeshop/testkube/pkg/secret"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowexecutor"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -231,6 +233,8 @@ func main() {
 	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testExecutionsClient := testexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testsuiteExecutionsClient := testsuiteexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+	testWorkflowsClient := testworkflowsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+	testWorkflowTemplatesClient := testworkflowsclientv1.NewTestWorkflowTemplatesClient(kubeClient, cfg.TestkubeNamespace)
 	templatesClient := templatesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 
 	clientset, err := k8sclient.ConnectToK8s()
@@ -267,6 +271,7 @@ func main() {
 		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		// Pro edition only (tcl protected code)
 		testWorkflowResultsRepository = cloudtestworkflow.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 		testWorkflowOutputRepository = cloudtestworkflow.NewCloudOutputRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
@@ -279,6 +284,7 @@ func main() {
 		mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb, result.WithFeatureFlags(features), result.WithLogsClient(logGrpcClient))
 		resultsRepository = mongoResultsRepository
 		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb)
+		// Pro edition only (tcl protected code)
 		testWorkflowResultsRepository = testworkflow.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
 		configRepository = configrepository.NewMongoRepository(db)
 		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
@@ -290,6 +296,7 @@ func main() {
 			log.DefaultLogger.Errorw("Error setting expiration policy", "error", expErr)
 		}
 		storageClient = minioClient
+		// Pro edition only (tcl protected code)
 		testWorkflowOutputRepository = testworkflow.NewMinioOutputRepository(storageClient, cfg.LogsBucket)
 		artifactStorage = minio.NewMinIOArtifactClient(storageClient)
 		// init storage
@@ -583,6 +590,7 @@ func main() {
 		inspector,
 		testWorkflowResultsRepository,
 		testWorkflowOutputRepository,
+		resultsRepository,
 		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
 		cfg.GlobalWorkflowTemplateName,
 		configMapConfig,
@@ -617,6 +625,10 @@ func main() {
 		eventsEmitter.Loader.Register(agentHandle)
 	}
 
+	// Pro edition only (tcl protected code)
+	testWorkflowExecutor := testworkflowexecutor.New(eventsEmitter, clientset, testWorkflowResultsRepository,
+		testWorkflowOutputRepository, testWorkflowTemplatesClient, inspector, configMapConfig, resultsRepository,
+		cfg.GlobalWorkflowTemplateName, cfg.TestkubeNamespace, "http://"+cfg.APIServerFullname+":"+cfg.APIServerPort)
 	api.InitEvents()
 	if !cfg.DisableTestTriggers {
 		triggerService := triggers.NewService(
@@ -625,6 +637,7 @@ func main() {
 			testkubeClientset,
 			testsuitesClientV3,
 			testsClientV3,
+			testWorkflowsClient,
 			resultsRepository,
 			testResultsRepository,
 			triggerLeaseBackend,
@@ -634,6 +647,8 @@ func main() {
 			executor,
 			eventBus,
 			metrics,
+			testWorkflowExecutor,
+			testWorkflowResultsRepository,
 			triggers.WithHostnameIdentifier(),
 			triggers.WithTestkubeNamespace(cfg.TestkubeNamespace),
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),

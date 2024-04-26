@@ -14,6 +14,7 @@ type TestTriggerExecutions string
 
 // List of TestTriggerExecutions
 const (
-	TEST_TestTriggerExecutions      TestTriggerExecutions = "test"
-	TESTSUITE_TestTriggerExecutions TestTriggerExecutions = "testsuite"
+	TEST_TestTriggerExecutions         TestTriggerExecutions = "test"
+	TESTSUITE_TestTriggerExecutions    TestTriggerExecutions = "testsuite"
+	TESTWORKFLOW_TestTriggerExecutions TestTriggerExecutions = "testworkflow"
 )

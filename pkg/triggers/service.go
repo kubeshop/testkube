@@ -16,6 +16,7 @@ import (
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
+	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	testkubeclientsetv1 "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -26,6 +27,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/scheduler"
+	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowexecutor"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/utils"
 	"github.com/kubeshop/testkube/pkg/version"
@@ -63,6 +66,7 @@ type Service struct {
 	testKubeClientset             testkubeclientsetv1.Interface
 	testSuitesClient              testsuitesclientv3.Interface
 	testsClient                   testsclientv3.Interface
+	testWorkflowsClient           testworkflowsclientv1.Interface
 	resultRepository              result.Repository
 	testResultRepository          testresult.Repository
 	logger                        *zap.SugaredLogger
@@ -72,6 +76,8 @@ type Service struct {
 	testExecutor                  client.Executor
 	eventsBus                     bus.Bus
 	metrics                       metrics.Metrics
+	testWorkflowExecutor          testworkflowexecutor.TestWorkflowExecutor
+	testWorkflowResultsRepository testworkflow.Repository
 	testkubeNamespace             string
 	watcherNamespaces             []string
 	disableSecretCreation         bool
@@ -85,6 +91,7 @@ func NewService(
 	testKubeClientset testkubeclientsetv1.Interface,
 	testSuitesClient testsuitesclientv3.Interface,
 	testsClient testsclientv3.Interface,
+	testWorkflowsClient testworkflowsclientv1.Interface,
 	resultRepository result.Repository,
 	testResultRepository testresult.Repository,
 	leaseBackend LeaseBackend,
@@ -94,6 +101,8 @@ func NewService(
 	testExecutor client.Executor,
 	eventsBus bus.Bus,
 	metrics metrics.Metrics,
+	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
+	testWorkflowResultsRepository testworkflow.Repository,
 	opts ...Option,
 ) *Service {
 	identifier := fmt.Sprintf(defaultIdentifierFormat, utils.RandAlphanum(10))
@@ -111,6 +120,7 @@ func NewService(
 		clientset:                     clientset,
 		testKubeClientset:             testKubeClientset,
 		testSuitesClient:              testSuitesClient,
+		testWorkflowsClient:           testWorkflowsClient,
 		testsClient:                   testsClient,
 		resultRepository:              resultRepository,
 		testResultRepository:          testResultRepository,
@@ -121,6 +131,8 @@ func NewService(
 		testExecutor:                  testExecutor,
 		eventsBus:                     eventsBus,
 		metrics:                       metrics,
+		testWorkflowExecutor:          testWorkflowExecutor,
+		testWorkflowResultsRepository: testWorkflowResultsRepository,
 		httpClient:                    http.NewClient(),
 		watchFromDate:                 time.Now(),
 		triggerStatus:                 make(map[statusKey]*triggerStatus),

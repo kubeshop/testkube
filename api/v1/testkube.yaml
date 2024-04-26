@@ -7150,6 +7150,7 @@ components:
       enum:
         - test
         - testsuite
+        - testworkflow
 
     TestTriggerActions:
       description: supported actions for test triggers
