@@ -15,3 +15,4 @@ spec:
       - name: cypress-workflow-smoke-13-preofficial-trait-checkout-on-step
       - name: cypress-workflow-smoke-13-preofficial-trait-sub-step
       - name: cypress-workflow-smoke-12.7.0
+      - name: cypress-workflow-smoke-13-junit-report
