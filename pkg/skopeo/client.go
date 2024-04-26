@@ -1,6 +1,7 @@
 package skopeo
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -99,6 +100,11 @@ func (c *client) Inspect(registry, image string) (*DockerImage, error) {
 	if err != nil {
 		return nil, err
 	}
+	// skopeo can return a non-json line for some os & arch combinations and it malforms the JSON.
+	// We need to trim the non-json part from the beginning of the output.
+	// Example starting line:
+	// time="2024-04-26T11:12:44+02:00" level=error msg="Couldn't get cpu architecture: getCPUInfo for OS darwin not implemented"
+	result = trimTopNonJSON(result)
 
 	var dockerImage DockerImage
 	if err = json.Unmarshal(result, &dockerImage); err != nil {
@@ -121,6 +127,17 @@ func (c *client) Inspect(registry, image string) (*DockerImage, error) {
 
 	dockerImage.Shell = shell
 	return &dockerImage, nil
+}
+
+// trimNonJSON removes all bytes before the first JSON opening brace '{'.
+func trimTopNonJSON(data []byte) []byte {
+	// Find the index of the first occurrence of '{' which marks the beginning of JSON.
+	index := bytes.IndexByte(data, '{')
+	if index == -1 {
+		return nil // Return nil if no JSON opening brace is found
+	}
+	// Return the slice from the first '{' to the end of the data.
+	return data[index:]
 }
 
 // ParseSecretData parses secret data for docker auth config

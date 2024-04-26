@@ -28,7 +28,9 @@ type TestWorkflowExecution struct {
 	Signature []TestWorkflowSignature `json:"signature,omitempty"`
 	Result    *TestWorkflowResult     `json:"result,omitempty"`
 	// additional information from the steps, like referenced executed tests or artifacts
-	Output           []TestWorkflowOutput `json:"output,omitempty"`
+	Output []TestWorkflowOutput `json:"output,omitempty"`
+	// generated reports from the steps, like junit
+	Reports          []TestWorkflowReport `json:"reports,omitempty"`
 	Workflow         *TestWorkflow        `json:"workflow"`
 	ResolvedWorkflow *TestWorkflow        `json:"resolvedWorkflow,omitempty"`
 }

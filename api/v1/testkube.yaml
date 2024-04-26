@@ -3270,7 +3270,7 @@ paths:
         - api
       parameters:
         - $ref: "#/components/parameters/All"
-        - $ref: "#/components/parameters/Namespace"        
+        - $ref: "#/components/parameters/Namespace"
       summary: "List secrets"
       description: "List secrets available in cluster"
       operationId: listSecrets
@@ -6002,7 +6002,7 @@ components:
           description: whether to share volume between pods
         useDefaultStorageClassName:
           type: boolean
-          description: whether to use default storage class name     
+          description: whether to use default storage class name
 
     ArtifactUpdateRequest:
       description: artifact request update body
@@ -6281,7 +6281,7 @@ components:
           description: configuration parameters for executed slave pods
         executionNamespace:
           type: string
-          description: namespace for test execution (Pro edition only) 
+          description: namespace for test execution (Pro edition only)
 
     TestSuiteStepExecutionRequest:
       description: test step execution request body
@@ -6696,10 +6696,10 @@ components:
           type: string
           format: date-time
           description: Timestamp of log
-          example: "2018-03-20T09:12:28Z"  
+          example: "2018-03-20T09:12:28Z"
         content:
           type: string
-          description: Message/event data passed from executor (like log lines etc)  
+          description: Message/event data passed from executor (like log lines etc)
         type:
           type: string
           description: One of possible log types
@@ -6713,7 +6713,7 @@ components:
             - job-executor
         error:
           type: boolean
-          description: indicates a log error 
+          description: indicates a log error
         version:
           type: string
           description: One of possible log versions
@@ -6730,7 +6730,7 @@ components:
         v1:
           $ref: "#/components/schemas/LogV1"
           description: Old output - for backwards compatibility - will be removed for non-structured logs
-       
+
     LogV1:
       description: Log format version 1
       type: object
@@ -7035,7 +7035,7 @@ components:
       properties:
         logsV2:
           type: boolean
-          description: Log processing version 2 
+          description: Log processing version 2
 
     TestTrigger:
       type: object
@@ -7539,6 +7539,11 @@ components:
           description: additional information from the steps, like referenced executed tests or artifacts
           items:
             $ref: "#/components/schemas/TestWorkflowOutput"
+        reports:
+          type: array
+          description: generated reports from the steps, like junit
+          items:
+            $ref: "#/components/schemas/TestWorkflowReport"
         workflow:
           $ref: "#/components/schemas/TestWorkflow"
         resolvedWorkflow:
@@ -7656,6 +7661,47 @@ components:
           type: object
           additionalProperties: {}
           description: value returned
+
+    TestWorkflowReport:
+      type: object
+      properties:
+        ref:
+          type: string
+          description: step reference
+        kind:
+          type: string
+          enum:
+            - junit
+          description: report kind/type
+          example: junit
+        file:
+          type: string
+          description: file path to full report in artifact storage
+        summary:
+          $ref: "#/components/schemas/TestWorkflowReportSummary"
+
+    TestWorkflowReportSummary:
+      type: object
+      properties:
+        tests:
+          type: integer
+          description: total number of test cases
+        passed:
+          type: integer
+          description: number of passed test cases
+        failed:
+          type: integer
+          description: number of failed test cases
+        skipped:
+          type: integer
+          description: number of skipped test cases
+        errored:
+          type: integer
+          description: number of error test cases
+        duration:
+          type: integer
+          format: int64
+          description: total duration of all test cases in milliseconds
 
     TestWorkflowResult:
       type: object
@@ -9332,7 +9378,7 @@ components:
         type: boolean
         default: false
       description: flag to request all resources
-      required: false      
+      required: false
   requestBodies:
     UploadsBody:
       description: "Upload files request body data"
