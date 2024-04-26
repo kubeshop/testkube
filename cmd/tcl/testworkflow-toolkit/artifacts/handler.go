@@ -19,8 +19,9 @@ import (
 )
 
 type handler struct {
-	uploader  Uploader
-	processor Processor
+	uploader      Uploader
+	processor     Processor
+	postProcessor PostProcessor
 
 	success   atomic.Uint32
 	errors    atomic.Uint32
@@ -33,17 +34,35 @@ type Handler interface {
 	End() error
 }
 
-func NewHandler(uploader Uploader, processor Processor) Handler {
-	return &handler{
+type HandlerOpts func(h *handler)
+
+func WithPostProcessor(postProcessor PostProcessor) HandlerOpts {
+	return func(h *handler) {
+		h.postProcessor = postProcessor
+	}
+}
+
+func NewHandler(uploader Uploader, processor Processor, opts ...HandlerOpts) Handler {
+	h := &handler{
 		uploader:  uploader,
 		processor: processor,
 	}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
 }
 
 func (h *handler) Start() (err error) {
 	err = h.processor.Start()
 	if err != nil {
 		return err
+	}
+	if h.postProcessor != nil {
+		err = h.postProcessor.Start()
+		if err != nil {
+			return err
+		}
 	}
 	return h.uploader.Start()
 }
@@ -61,6 +80,13 @@ func (h *handler) Add(path string, file fs.File, stat fs.FileInfo) (err error) {
 		h.errors.Add(1)
 		fmt.Printf(ui.Red("%s: failed: %s"), path, err.Error())
 	}
+	if h.postProcessor != nil {
+		err = h.postProcessor.Add(path)
+		if err != nil {
+			h.errors.Add(1)
+			fmt.Printf(ui.Red("post processor error: %s: failed: %s"), path, err.Error())
+		}
+	}
 	return err
 }
 
@@ -75,6 +101,12 @@ func (h *handler) End() (err error) {
 	err = h.uploader.End()
 	if err != nil {
 		return err
+	}
+	if h.postProcessor != nil {
+		err = h.postProcessor.End()
+		if err != nil {
+			return err
+		}
 	}
 
 	errs := h.errors.Load()

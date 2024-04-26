@@ -22,6 +22,7 @@ const (
 	CmdTestWorkflowExecutionInsert               executor.Command = "workflow_execution_insert"
 	CmdTestWorkflowExecutionUpdate               executor.Command = "workflow_execution_update"
 	CmdTestWorkflowExecutionUpdateResult         executor.Command = "workflow_execution_update_result"
+	CmdTestWorkflowExecutionAddReport            executor.Command = "workflow_execution_add_report"
 	CmdTestWorkflowExecutionUpdateOutput         executor.Command = "workflow_execution_update_output"
 	CmdTestWorkflowExecutionDeleteByWorkflow     executor.Command = "workflow_execution_delete_by_workflow"
 	CmdTestWorkflowExecutionDeleteAll            executor.Command = "workflow_execution_delete_all"

@@ -83,10 +83,10 @@ func (mr *MockFileSystemMockRecorder) OpenFileBuffered(arg0 interface{}) *gomock
 }
 
 // OpenFileRO mocks base method.
-func (m *MockFileSystem) OpenFileRO(arg0 string) (*os.File, error) {
+func (m *MockFileSystem) OpenFileRO(arg0 string) (fs.File, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "OpenFileRO", arg0)
-	ret0, _ := ret[0].(*os.File)
+	ret0, _ := ret[0].(fs.File)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -125,6 +125,22 @@ func (m *MockFileSystem) ReadFile(arg0 string) ([]byte, error) {
 func (mr *MockFileSystemMockRecorder) ReadFile(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFile", reflect.TypeOf((*MockFileSystem)(nil).ReadFile), arg0)
+}
+
+// ReadFileBuffered mocks base method.
+func (m *MockFileSystem) ReadFileBuffered(arg0 string) (*bufio.Reader, func() error, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadFileBuffered", arg0)
+	ret0, _ := ret[0].(*bufio.Reader)
+	ret1, _ := ret[1].(func() error)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ReadFileBuffered indicates an expected call of ReadFileBuffered.
+func (mr *MockFileSystemMockRecorder) ReadFileBuffered(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFileBuffered", reflect.TypeOf((*MockFileSystem)(nil).ReadFileBuffered), arg0)
 }
 
 // Stat mocks base method.

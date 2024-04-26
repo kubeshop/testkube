@@ -10,9 +10,11 @@ package artifacts
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -34,7 +36,10 @@ type internalArtifactStorage struct {
 
 func newArtifactUploader() Uploader {
 	if env.CloudEnabled() {
-		return NewCloudUploader(WithParallelismCloud(30), CloudDetectMimetype)
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		client := env.Cloud(ctx)
+		return NewCloudUploader(client, WithParallelismCloud(30), CloudDetectMimetype)
 	}
 	return NewDirectUploader(WithParallelism(30), DirectDetectMimetype)
 }
