@@ -1,0 +1,21 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: postman-test
+  labels:
+    core-tests: executors
+spec:
+  type: postman/collection
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+  executionRequest:
+    args:
+      - --env-var
+      - TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
+  schedule: "30 */4 * * *"

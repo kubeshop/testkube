@@ -1,7 +1,7 @@
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: maven-workflow-smoke-jdk11
+  name: gradle-java-test
   labels:
     core-tests: workflows
 spec:
@@ -10,23 +10,24 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - contrib/executor/maven/examples/hello-maven
+      - contrib/executor/gradle/examples/hello-gradle
   container:
     resources:
       requests:
-        cpu: 256m
-        memory: 256Mi
-    workingDir: /data/repo/contrib/executor/maven/examples/hello-maven
+        cpu: 512m
+        memory: 512Mi
+    workingDir: /data/repo/contrib/executor/gradle/examples/hello-gradle
   steps:
   - name: Run tests
     run:
-      image: maven:3.9.6-eclipse-temurin-11-focal
+      image: gradle:8.5.0-jdk11
       command:
-      - "mvn"
-      - "test"
+      - gradle
+      - --no-daemon
+      - test
       env:
-      - name: TESTKUBE_MAVEN
+      - name: TESTKUBE_GRADLE
         value: "true"
   events:
   - cronjob:
-      cron: "13 */4 * * *"
+      cron: "38 */4 * * *"

@@ -28,6 +28,9 @@ spec:
       env:
       - name: TESTKUBE_GRADLE
         value: "true"
+  events:
+  - cronjob:
+      cron: "10 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -55,3 +58,6 @@ spec:
       env:
       - name: TESTKUBE_GRADLE
         value: "true"
+  events:
+  - cronjob:
+      cron: "10 */4 * * *"

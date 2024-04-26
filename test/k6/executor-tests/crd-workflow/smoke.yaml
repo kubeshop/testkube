@@ -29,6 +29,9 @@ spec:
       env:
       - name: K6_SYSTEM_ENV
         value: K6_SYSTEM_ENV_value
+  events:
+  - cronjob:
+      cron: "12 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -61,6 +64,9 @@ spec:
       config:
         version: 0.48.0
         params: "k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value"
+  events:
+  - cronjob:
+      cron: "12 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -92,6 +98,9 @@ spec:
       config:
         version: 0.48.0
         params: "k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value"
+  events:
+  - cronjob:
+      cron: "12 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -137,3 +146,6 @@ spec:
         artifacts:
           paths:
           - '*'
+  events:
+  - cronjob:
+      cron: "12 */4 * * *"

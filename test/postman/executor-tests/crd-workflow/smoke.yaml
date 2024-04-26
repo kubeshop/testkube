@@ -26,6 +26,9 @@ spec:
       - postman-executor-smoke.postman_collection.json
       - "--env-var"
       - "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
+  events:
+  - cronjob:
+      cron: "35 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -53,6 +56,9 @@ spec:
       args:
       - run
       - postman-executor-smoke-without-envs.postman_collection.json
+  events:
+  - cronjob:
+      cron: "35 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -80,6 +86,9 @@ spec:
       name: pre-official/postman
       config:
         params: "postman-executor-smoke.postman_collection.json --env-var TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
+  events:
+  - cronjob:
+      cron: "35 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -106,3 +115,38 @@ spec:
       name: pre-official/postman
       config:
         params: "postman-executor-smoke-without-envs.postman_collection.json"
+  events:
+  - cronjob:
+      cron: "35 */4 * * *"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: postman-workflow-smoke-cron-trigger-test
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+  container:
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
+    workingDir: /data/repo/test/postman/executor-tests
+  steps:
+  - name: Run test
+    run:
+      image: postman/newman:6-alpine
+      args:
+      - run
+      - postman-executor-smoke.postman_collection.json
+      - "--env-var"
+      - "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
+  events:
+  - cronjob:
+      cron: "*/5 * * * *"
