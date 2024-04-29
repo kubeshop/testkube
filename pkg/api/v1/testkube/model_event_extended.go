@@ -174,7 +174,13 @@ func (e Event) Log() []any {
 	var id, name, eventType, labelsStr string
 	var labels map[string]string
 
-	if e.TestSuiteExecution != nil {
+	if e.TestWorkflowExecution != nil {
+		id = e.TestWorkflowExecution.Id
+		name = e.TestWorkflowExecution.Name
+		if e.TestWorkflowExecution.Workflow != nil {
+			labels = e.TestWorkflowExecution.Workflow.Labels
+		}
+	} else if e.TestSuiteExecution != nil {
 		id = e.TestSuiteExecution.Id
 		name = e.TestSuiteExecution.Name
 		labels = e.TestSuiteExecution.Labels
@@ -212,8 +218,12 @@ func (e Event) Log() []any {
 func (e Event) Valid(selector string, types []EventType) (valid bool) {
 	var executionLabels map[string]string
 
-	// load labels from event test execution or test-suite execution
-	if e.TestSuiteExecution != nil {
+	// load labels from event test execution or test-suite execution or test workflow execution
+	if e.TestWorkflowExecution != nil {
+		if e.TestWorkflowExecution.Workflow != nil {
+			executionLabels = e.TestWorkflowExecution.Workflow.Labels
+		}
+	} else if e.TestSuiteExecution != nil {
 		executionLabels = e.TestSuiteExecution.Labels
 	} else if e.TestExecution != nil {
 		executionLabels = e.TestExecution.Labels
