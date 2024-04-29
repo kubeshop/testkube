@@ -22,12 +22,31 @@ const sidebars = {
         type: "doc",
         id: "index",
       },
-      items: ["articles/supported-tests", "articles/testkube-benefits", "articles/open-source-or-pro"],
+      items: [
+        "articles/supported-tests",
+        "articles/testkube-benefits",
+        "articles/open-source-or-pro",
+      ],
     },
     {
       type: "doc",
       label: "Getting Started",
       id: "articles/getting-started",
+    },
+    {
+      type: "category",
+      label: "Installing",
+      items: [
+        { type: "doc", id: "articles/install/overview" },
+        { type: "doc", id: "articles/install/cli" },
+        { type: "doc", id: "articles/install/quickstart-install" },
+        { type: "doc", id: "articles/install/reference-architectures" },
+        { type: "doc", id: "articles/install/install-with-cli" },
+        { type: "doc", id: "articles/install/install-with-helm" },
+        { type: "doc", id: "articles/install/advanced-install" },
+        { type: "doc", id: "articles/install/uninstall" },
+        { type: "doc", id: "articles/install/faq" },
+      ],
     },
     {
       type: "category",
@@ -109,19 +128,19 @@ const sidebars = {
           },
           items: [
             {
-              type: "category", 
-              label: "Github Actions", 
+              type: "category",
+              label: "Github Actions",
               link: {
                 type: "doc",
-                id: "articles/github-actions"
+                id: "articles/github-actions",
               },
               items: [
                 {
                   type: "doc",
                   id: "articles/run-tests-with-github-actions",
-                  label: "Migrate from testkube-run-action"
-                }
-              ]
+                  label: "Migrate from testkube-run-action",
+                },
+              ],
             },
             "articles/gitlab",
             "articles/jenkins",
@@ -158,7 +177,7 @@ const sidebars = {
         "articles/logging",
         "articles/install-cli",
         "articles/uninstall",
-        "articles/upgrade",       
+        "articles/upgrade",
       ],
     },
     {
@@ -217,9 +236,10 @@ const sidebars = {
       label: "Testkube Pro On-Prem",
       items: [
         "testkube-pro-on-prem/articles/testkube-pro-on-prem",
-        "testkube-pro-on-prem/articles/usage-guide", 
+        "testkube-pro-on-prem/articles/usage-guide",
         "testkube-pro-on-prem/articles/auth",
-        "testkube-pro-on-prem/articles/migrating-from-oss-to-pro"],
+        "testkube-pro-on-prem/articles/migrating-from-oss-to-pro",
+      ],
     },
     "articles/testkube-oss",
     {
@@ -271,9 +291,7 @@ const sidebars = {
     {
       type: "category",
       label: "FAQs",
-      items: [
-        "articles/testkube-licensing-FAQ",
-      ],
+      items: ["articles/testkube-licensing-FAQ"],
     },
   ],
 
