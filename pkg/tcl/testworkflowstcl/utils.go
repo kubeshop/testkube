@@ -6,7 +6,7 @@
 //
 //     https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
 
-package commontcl
+package testworkflowstcl
 
 import (
 	"context"
