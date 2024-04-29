@@ -36,10 +36,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/result"
-	"github.com/kubeshop/testkube/pkg/tcl/commontcl"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
 	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
@@ -467,16 +467,16 @@ func (e *executor) sendRunWorkflowTelemetry(ctx context.Context, workflow *testw
 	out, err := telemetry.SendRunWorkflowEvent("testkube_api_run_test_workflow", telemetry.RunWorkflowParams{
 		RunParams: telemetry.RunParams{
 			AppVersion: version.Version,
-			DataSource: commontcl.GetDataSource(workflow.Spec.Content),
-			Host:       commontcl.GetHostname(),
-			ClusterID:  commontcl.GetClusterID(ctx, e.configMap),
+			DataSource: testworkflowstcl.GetDataSource(workflow.Spec.Content),
+			Host:       testworkflowstcl.GetHostname(),
+			ClusterID:  testworkflowstcl.GetClusterID(ctx, e.configMap),
 		},
 		WorkflowParams: telemetry.WorkflowParams{
 			TestWorkflowSteps:        int32(len(workflow.Spec.Setup) + len(workflow.Spec.Steps) + len(workflow.Spec.After)),
-			TestWorkflowImage:        commontcl.GetImage(workflow.Spec.Container),
-			TestWorkflowArtifactUsed: commontcl.HasWorkflowStepLike(workflow.Spec, commontcl.HasArtifacts),
-			TestWorkflowKubeshopGitURI: commontcl.IsKubeshopGitURI(workflow.Spec.Content) ||
-				commontcl.HasWorkflowStepLike(workflow.Spec, commontcl.HasKubeshopGitURI),
+			TestWorkflowImage:        testworkflowstcl.GetImage(workflow.Spec.Container),
+			TestWorkflowArtifactUsed: testworkflowstcl.HasWorkflowStepLike(workflow.Spec, testworkflowstcl.HasArtifacts),
+			TestWorkflowKubeshopGitURI: testworkflowstcl.IsKubeshopGitURI(workflow.Spec.Content) ||
+				testworkflowstcl.HasWorkflowStepLike(workflow.Spec, testworkflowstcl.HasKubeshopGitURI),
 		},
 	})
 
