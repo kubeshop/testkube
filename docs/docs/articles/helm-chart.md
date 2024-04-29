@@ -127,10 +127,10 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.defaultStorageClassName   | yes         | ""                                   |
 
 > For more configuration parameters of a `MongoDB` chart please visit:
-> <https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>
+> [MongoDB Parameters](https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters)
 
 > For more configuration parameters of an `NATS` chart please visit:
-> <https://docs.nats.io/running-a-nats-service/nats-kubernetes/helm-charts>
+> [NATS Helm Chart](https://docs.nats.io/running-a-nats-service/nats-kubernetes/helm-charts)
 
 :::note
 

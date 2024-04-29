@@ -2,8 +2,7 @@
 
 ## Info
 
-These diagrams were made with the C4 diagram technique
-(<https://c4model.com/>). They describe the structure of Testkube Core OSS.
+These diagrams were made with the [C4 diagram technique](https://c4model.com/). They describe the structure of Testkube Core OSS.
 
 ## Diagrams
 
@@ -25,12 +24,11 @@ See also [Dependencies for Testkube](../articles/testkube-dependencies.md) descr
 
 ### TestSuites and Tests
 
-Parameters passed through tests suites and tests priority: 
+Parameters passed through tests suites and tests priority:
 
 1. Test Suite execution variables overrides.
 2. Test Suite variables overrides.
 3. Test execution (variables passed for single test runs) overrides.
 4. Test variables.
-
 
 ![variables passing](../img/params-passing.png)

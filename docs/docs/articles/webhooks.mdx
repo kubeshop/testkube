@@ -72,7 +72,7 @@ metadata:
   name: example-webhook
   namespace: testkube
 spec:
-  uri: <YOUR_ENDPOINT_URL>
+  uri: YOUR_ENDPOINT_URL
   events:
     - start-test
     - end-test-success
@@ -80,7 +80,7 @@ spec:
   selector: ""
 ```
 
-Where <YOUR_ENDPOINT_URL> should be replaced with the HTTPS endpoint URL where you want to receive the webhook events.
+Where `YOUR_ENDPOINT_URL` should be replaced with the HTTPS endpoint URL where you want to receive the webhook events.
 
 And then apply with:
 
@@ -170,7 +170,7 @@ And set it with `--payload-template template.json`.
 testkube create webhook --name example-webhook --events start-test --events end-test-passed --events end-test-failed --payload-template template.json --uri <YOUR_ENDPOINT_URL>
 ```
 
-Where <YOUR_ENDPOINT_URL> should be replaced with the HTTPS endpoint URL where you want to receive the webhook events.
+Where `<YOUR_ENDPOINT_URL>` should be replaced with the HTTPS endpoint URL where you want to receive the webhook events.
 
 ```sh title="Expected output:"
 Webhook created example-webhook 🥇

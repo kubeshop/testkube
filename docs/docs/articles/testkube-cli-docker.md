@@ -4,7 +4,7 @@ Starting with Testkube version 1.13, the easiest way to start managing your team
 
 ## Prerequisites
 
-Before using the Testkube CLI Docker image, ensure that you have Docker installed and running on your system. You can download and install Docker from the official Docker website (<https://www.docker.com/>).
+Before using the Testkube CLI Docker image, ensure that you have Docker installed and running on your system. You can download and install Docker from the official [Docker website](https://www.docker.com/).
 
 To pull the image, run:
 
@@ -50,17 +50,17 @@ docker run kubeshop/testkube-cli:latest version --namespace testkube --api-uri h
 
 This command starts a new Docker container with the Testkube CLI image and executes the command `testkube version`, pointing to the api-server running on the Testkube demo environment.
 
-There are multiple *client types* you can set for the Testkube CLI:
+There are multiple _client types_ you can set for the Testkube CLI:
 
-* direct - for connecting to a remotely deployed environment
-* proxy - for connecting to local environments, not relevant in the case of a Docker container
-* cloud - for connecting to Testkube Cloud
-* cluster - for connecting to current Kubernetes cluster environment (when running inside the cluster pod, make sure pod service account can access `services/proxy` resource)
+- direct - for connecting to a remotely deployed environment
+- proxy - for connecting to local environments, not relevant in the case of a Docker container
+- cloud - for connecting to Testkube Cloud
+- cluster - for connecting to current Kubernetes cluster environment (when running inside the cluster pod, make sure pod service account can access `services/proxy` resource)
 
 You can also use your existing `kubectl` configuration file as a volume:
 
 ```bash
-docker run -v ~/.testkube:/.testkube kubeshop/testkube-cli:1.11.13-SNAPSHOT-5f34248fd-arm64v8 --api-uri https://demo.testkube.io/results --client direct version 
+docker run -v ~/.testkube:/.testkube kubeshop/testkube-cli:1.11.13-SNAPSHOT-5f34248fd-arm64v8 --api-uri https://demo.testkube.io/results --client direct version
 ```
 
 ## Conclusion

@@ -1,4 +1,3 @@
-
 # Enable Secrets Endpoint
 
 Activating the secrets endpoint will enable autocomplete features. 
