@@ -100,11 +100,11 @@ func NewInitCmdDemo() *cobra.Command {
 				ui.Warn("License key is required to install " + demoInstallationName)
 				return
 			}
-			/*
-				if !isContextApproved(noConfirm, demoInstallationName) {
-					return
-				}
-			*/
+
+			if !isContextApproved(noConfirm, demoInstallationName) {
+				return
+			}
+
 			err := helmInstallDemo(license, namespace, dryRun)
 			ui.ExitOnError("Installing "+demoInstallationName, err)
 

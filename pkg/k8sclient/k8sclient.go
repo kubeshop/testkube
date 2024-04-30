@@ -292,6 +292,7 @@ func PortForward(ctx context.Context, namespace, serviceName string, servicePort
 	for _, port := range svc.Spec.Ports {
 		if port.Port == int32(servicePort) {
 			podPort = port.TargetPort
+			break
 		}
 	}
 
@@ -323,6 +324,7 @@ func PortForward(ctx context.Context, namespace, serviceName string, servicePort
 		for _, p := range c.Ports {
 			if p.ContainerPort == podPort.IntVal || p.Name == podPort.StrVal {
 				podPortNumber = p.ContainerPort
+				break
 			}
 		}
 	}
@@ -349,7 +351,7 @@ func PortForward(ctx context.Context, namespace, serviceName string, servicePort
 		SubResource("portforward").
 		URL()
 
-	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", url)
+	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, http.MethodPost, url)
 	forwarder, err := portforward.New(dialer, []string{fmt.Sprintf("%d:%d", localhostPort, podPortNumber)}, ctx.Done(), readyChan, os.Stdout, os.Stderr)
 	if err != nil {
 		return errors.Wrap(err, "create port forwarder")
