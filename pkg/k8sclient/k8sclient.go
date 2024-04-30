@@ -5,19 +5,27 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path"
 	"time"
 
+	"github.com/pkg/errors"
+	"google.golang.org/appengine/log"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/transport/spdy"
 
 	corev1 "k8s.io/api/core/v1"
 	networkv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/portforward"
 )
 
 const (
@@ -267,4 +275,130 @@ func GetPodLogs(ctx context.Context, k8sClient kubernetes.Interface, namespace s
 		}
 	}
 	return logs, nil
+}
+
+func PortForward(ctx context.Context, namespace, serviceName string, servicePort, localhostPort int, verbose bool) error {
+
+	clientSet, err := ConnectToK8s()
+	if err != nil {
+		return err
+	}
+	svc, err := clientSet.CoreV1().Services(namespace).Get(ctx, serviceName, v1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	var podPort intstr.IntOrString
+	for _, port := range svc.Spec.Ports {
+		if port.Port == int32(servicePort) {
+			podPort = port.TargetPort
+			break
+		}
+	}
+
+	pods, err := clientSet.
+		CoreV1().
+		Pods(namespace).
+		List(ctx, v1.ListOptions{
+			LabelSelector: labels.SelectorFromSet(labels.Set(svc.Spec.Selector)).String(),
+		})
+	if err != nil {
+		return err
+	}
+
+	var servicePod *corev1.Pod
+	for _, pod := range pods.Items {
+		if pod.Status.Phase != corev1.PodRunning {
+			continue
+		}
+		servicePod = &pod
+		break
+	}
+
+	if servicePod == nil {
+		return fmt.Errorf("no running pods found for service %s/%s", namespace, serviceName)
+	}
+
+	var podPortNumber int32
+	for _, c := range servicePod.Spec.Containers {
+		for _, p := range c.Ports {
+			if p.ContainerPort == podPort.IntVal || p.Name == podPort.StrVal {
+				podPortNumber = p.ContainerPort
+				break
+			}
+		}
+	}
+
+	restConfig, err := GetK8sClientConfig()
+	if err != nil {
+		return err
+	}
+
+	transport, upgrader, err := spdy.RoundTripperFor(restConfig)
+	if err != nil {
+		return errors.Wrap(err, "create round tripper")
+	}
+
+	readyChan := make(chan struct{})
+
+	url := clientSet.
+		CoreV1().
+		RESTClient().
+		Post().
+		Resource("pods").
+		Namespace(namespace).
+		Name(servicePod.Name).
+		SubResource("portforward").
+		URL()
+
+	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, http.MethodPost, url)
+	out := os.Stdout
+	if !verbose {
+		out = nil
+	}
+	forwarder, err := portforward.New(dialer, []string{fmt.Sprintf("%d:%d", localhostPort, podPortNumber)}, ctx.Done(), readyChan, out, os.Stderr)
+	if err != nil {
+		return errors.Wrap(err, "create port forwarder")
+	}
+
+	go func() {
+		if err = forwarder.ForwardPorts(); err != nil {
+			log.Errorf(ctx, "port forwarding failed: %v", err)
+		}
+	}()
+	<-readyChan
+	return nil
+}
+
+func IsPodOfServiceRunning(ctx context.Context, namespace, serviceName string) (bool, error) {
+	clientSet, err := ConnectToK8s()
+	if err != nil {
+		return false, err
+	}
+
+	svc, err := clientSet.CoreV1().Services(namespace).Get(ctx, serviceName, v1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+	pods, err := clientSet.
+		CoreV1().
+		Pods(namespace).
+		List(ctx, v1.ListOptions{
+			LabelSelector: labels.SelectorFromSet(labels.Set(svc.Spec.Selector)).String(),
+		})
+	if err != nil {
+		return false, err
+	}
+
+	if len(pods.Items) > 0 {
+		for _, pod := range pods.Items {
+			if pod.Status.Phase == corev1.PodRunning {
+				return true, nil
+			} else {
+				return false, nil
+			}
+		}
+	}
+	return false, nil
+
 }

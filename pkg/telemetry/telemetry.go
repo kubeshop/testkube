@@ -49,6 +49,12 @@ func SendCmdEvent(cmd *cobra.Command, version string) (string, error) {
 }
 
 func SendCmdErrorEvent(cmd *cobra.Command, version, errType string, errorStackTrace string) (string, error) {
+	return SendCmdErrorEventWithLicense(cmd, version, errType, errorStackTrace, "")
+}
+
+// SendCmdErrorEventWithLicense will send CLI error event with license
+func SendCmdErrorEventWithLicense(cmd *cobra.Command, version, errType, errorStackTrace, license string) (string, error) {
+
 	// get all sub-commands passed to cli
 	command := strings.TrimPrefix(cmd.CommandPath(), "kubectl-testkube ")
 	if command == "" {
@@ -75,6 +81,7 @@ func SendCmdErrorEvent(cmd *cobra.Command, version, errType string, errorStackTr
 					ClusterType:     GetClusterType(),
 					ErrorType:       errType,
 					ErrorStackTrace: errorStackTrace,
+					License:         license,
 				},
 			}},
 	}
@@ -83,15 +90,14 @@ func SendCmdErrorEvent(cmd *cobra.Command, version, errType string, errorStackTr
 }
 
 func SendCmdAttemptEvent(cmd *cobra.Command, version string) (string, error) {
-	// get all sub-commands passed to cli
-	command := strings.TrimPrefix(cmd.CommandPath(), "kubectl-testkube ")
-	if command == "" {
-		command = "root"
-	}
-
-	command += "_attempt"
 	// TODO pass error
-	payload := NewCLIPayload(getCurrentContext(), getUserID(cmd), command, version, "cli_command_execution", GetClusterType())
+	payload := NewCLIPayload(getCurrentContext(), getUserID(cmd), getCommand(cmd), version, "cli_command_execution", GetClusterType())
+	return sendData(senders, payload)
+}
+
+// SendCmdAttempWithLicenseEvent will send CLI command attempt event with license
+func SendCmdAttempWithLicenseEvent(cmd *cobra.Command, version, license string) (string, error) {
+	payload := NewCLIWithLicensePayload(getCurrentContext(), getUserID(cmd), getCommand(cmd), version, "cli_command_execution", GetClusterType(), license)
 	return sendData(senders, payload)
 }
 
@@ -150,6 +156,16 @@ func sendData(senders map[string]Sender, payload Payload) (out string, err error
 	wg.Wait()
 
 	return out, nil
+}
+
+func getCommand(cmd *cobra.Command) string {
+	command := strings.TrimPrefix(cmd.CommandPath(), "kubectl-testkube ")
+	if command == "" {
+		command = "root"
+	}
+
+	command += "_attempt"
+	return command
 }
 
 func getCurrentContext() RunContext {
