@@ -1,4 +1,4 @@
-# About installing Testkube
+# About Installing Testkube
 
 :::info
 **Testkube Cloud** is a solution that manages the Testkube control plane for you.

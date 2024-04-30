@@ -24,6 +24,8 @@ You can use Helm to uninstall Testkube:
 helm uninstall testkube
 ```
 
-### Giving feedback
+### Giving Feedback
 
-We’re sad to see you going. Did Testkube not meet your expectations? We’re keen on feedback, so feel free to share your experience and we will look into making Testkube better for everyone.
+We’re sad to see you going. Did Testkube not meet your expectations? We’re keen on feedback, so feel free to [share your thoughts][contact] and we will look into making Testkube better for everyone.
+
+[contact]: https://testkubeworkspace.slack.com/ssb/redirect#/shared-invite/email

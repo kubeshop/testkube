@@ -1,10 +1,10 @@
-# Advanced install
+# Advanced Install
 
 A variety of advanced topics to further customize your deployment.
 
-## Organization management
+## Organization Management
 
-### Bootstrap configuration
+### Bootstrap Configuration
 
 By default, Testkube will automatically add users to the default organizations when they get invited. You can change the bootstrap configuration to change this behaviour programmatically.
 
@@ -56,9 +56,9 @@ Next, you can enhance the configuration to automatically add new users to organi
                 - name: production_2
 ```
 
-Note: The default organization and environment mapping only apply on first sign in. After, you can remove users from environments or change roles thru Testkube UI.
+Note: The default organization and environment mapping only apply on first sign in. After, you can remove users from environments or change roles through the Testkube UI.
 
-Additionally, by default, Testkube Pro creates a personal organization for every new user. When using default organization and environment configuration, you can turn off personal organizations using the following config:
+Additionally, by default, Testkube Pro creates a personal organization for every new user. When using the default organization and environment configuration, you can turn off personal organizations using the following config:
 
 ```helm
 testkube-cloud-api:
@@ -69,7 +69,7 @@ testkube-cloud-api:
 
 ### Invitations
 
-Users will now have to be invited within the dashboard. You can the SMTP server and Testkube will send e-mail invitations, alternatively new users will join the organisation without explicitly accepting the invitation.
+Users will now have to be invited within the dashboard. You can configure the SMTP server and Testkube will send e-mail invitations, alternatively new users will join the organisation without explicitly accepting the invitation.
 
 ```bash
 testkube-cloud-api:
@@ -108,7 +108,7 @@ annotations:
 
 To use your own ingress controller, reach out to our support team and we’ll gladly investigate your ingress of choice. Alternatively, you can give it a try yourself by deploying Testkube and seeing whether gRPC and WebSockets are working properly.
 
-## Bring your own infra
+## Bring Your Own Infra
 
 Testkube Enterprise supports integrating with existing infrastructure components such as MongoDB, NATS, Dex, etc. For production environments, it's recommended to use your own infra or to harden the sub-charts.
 
@@ -176,13 +176,13 @@ testkube-cloud-api:
     oauth: {} # check out the `testkube-cloud-api.api.oauth` block in the values.yaml for all available settings
 ```
 
-## Air-gapped environments
+## Air-gapped Environments
 
 ### Offline License
 
 By default, Testkube will work with licenses that require internet connectivity. These licenses have the following format: `XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-V3`. However, if you want to use Testkube in offline environments you will need to use an offline license.
 
-Contact support if you need an offline license.
+[Contact support][contact] if you need an offline license.
 
 Once you obtained an offline license, you should create a Shared Secret and afterwards
 
@@ -192,6 +192,8 @@ global:
   enterpriseLicenseSecretRef: testkube-enterprise-license
 ```
 
-### Artifactory and other Registry proxies
+### Artifactory and Other Registry Proxies
 
 By default, Testkube will pull images from the [docker.io](http://docker.io) registry. You can override the image of each individual service.
+
+[contact]: https://testkube.io/contact

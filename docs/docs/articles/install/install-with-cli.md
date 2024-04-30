@@ -14,7 +14,7 @@ testkube init
 
 ## Deploy an agent that will connect to a control plane
 
-The agent profile installs an agent that will join a control plane running within a different cluster or namespace. The agent acts as a test runner for your organisation’s environment. You can install multiple agents depending
+The agent profile installs an agent that will join a control plane running within a different cluster or namespace. The agent acts as a test runner for your organisation’s environment. You can install multiple agents as seen in [the Testkube On-Prem Federated reference architecture][architecture-federated].
 
 You will be asked for an agent token which you can find in your Testkube dashboard.
 
@@ -49,3 +49,4 @@ The following built-in configuration profiles are currently available:
 
 [install-cli]: /articles/install/cli
 [request-license]: https://testkube.io/download
+[architecture-federated]: https://deploy-preview-5346--testkube-docs-preview.netlify.app/articles/install/reference-architectures#testkube-on-prem-federated
