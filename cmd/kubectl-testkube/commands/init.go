@@ -152,7 +152,9 @@ func NewInitCmdDemo() *cobra.Command {
 			if err == nil {
 				cfg.Namespace = namespace
 				err = config.Save(cfg)
-				ui.Debug("Cannot save config")
+				if err != nil {
+					ui.Debug("Cannot save config")
+				}
 			}
 
 			ui.Info("Your initial admin credentials are: admin@example.com / password")
