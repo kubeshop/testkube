@@ -121,11 +121,12 @@ func NewInitCmdDemo() *cobra.Command {
 
 			if license == "" {
 				response, err := pterm.DefaultInteractiveTextInput.Show("Enter license key")
-				license = response
+				license = strings.TrimSpace(response)
 				ui.ExitOnError("cannot read license", err)
 			}
 
 			if len(license) != len(licenseFormat) {
+				sendErrTelemetry(cmd, cfg, "install_license_malformed", license, err)
 				ui.Failf("license malformed, expected license of format: " + licenseFormat)
 			}
 
