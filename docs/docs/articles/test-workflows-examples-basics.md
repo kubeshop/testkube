@@ -367,7 +367,7 @@ By using the **job** property, you can configure labels and annotations of the J
 
 ### Configuring the Pod
 
-By using the **pod** property, you can configure labels, annotations, serviceAccountName, imagePullSecrets, or volumes of a Pod.
+By using the **pod** property, you can configure labels, annotations, serviceAccountName, imagePullSecrets, volumes, or other properties of a [PodSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#podspec-v1-core).
 
 ```yaml
 apiVersion: testworkflows.testkube.io/v1
