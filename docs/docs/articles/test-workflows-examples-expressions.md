@@ -6,7 +6,7 @@ We have designed a simple expressions language, that allows dynamic evaluation o
 
 ## JSON-Native
 
-It is built on JSON, so every JSON syntax is a valid expression value as well, like **[ “a”, “b”, “c” ]**.
+It is built on JSON, so every JSON syntax is a valid expression value as well, like `[ "a", "b", "c" ]`.
 
 ## Math
 
