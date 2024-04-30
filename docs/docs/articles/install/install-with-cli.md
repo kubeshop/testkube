@@ -32,11 +32,11 @@ You will be asked for a license key which you can request for free, no credit ca
 testkube init demo
 ```
 
-Once deployed, use `testkube dashboard port-forward` to conveniently access all services on your localhost.
+Once deployed, use `testkube dashboard` to conveniently access all services on your localhost.
 
 ## Deploy other profiles
 
-You can find all available profiles by running `testkube init --list-profiles`. Each profile will interactively ask you the information it needs or you can use `testkube init <profile> --help` to run non-interactively by passing in the required flags.
+You can find all available profiles by running `testkube init --help`. Each profile will interactively ask you the information it needs or you can use `testkube init <profile> --help` to run non-interactively by passing in the required flags.
 
 The following built-in configuration profiles are currently available:
 
