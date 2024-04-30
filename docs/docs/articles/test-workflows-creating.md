@@ -26,7 +26,7 @@ Optionally, the follow option can be used to watch execution and get the log sum
 `testkube run testworkflow TEST_WORKFLOW_NAME -f`
 
 ### Delete
-The Test Workflow can be deleted using the `testkube delete testworkflow` command using Test Workflow name:
+The Test Workflow can be deleted using the `testkube delete testworkflow` command using the Test Workflow name:
 `testkube delete testworkflow TEST_WORKFLOW_NAME`
 
 ### Alias
@@ -70,7 +70,7 @@ You can choose one of the predefined examples and adjust it.
 ![create test workflow from example](../img/dashboard-create-workflow-from-example.png)
 
 #### YML
-You can also paste the complete TestWorkflow definition.
+You can also paste the complete Test Workflow definition
 
 ![create test workflow from yaml](../img/dashboard-create-workflow-from-yaml.png)
 
