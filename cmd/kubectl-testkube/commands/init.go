@@ -28,6 +28,8 @@ const (
 )
 
 func NewInitCmd() *cobra.Command {
+	standaloneCmd := NewInitCmdStandalone()
+
 	cmd := &cobra.Command{
 		Use:     "init <profile>",
 		Aliases: []string{"g"},
@@ -37,12 +39,11 @@ func NewInitCmd() *cobra.Command {
 			"\t" + demoProfile + " -> " + demoInstallationName + "\n" +
 			"\t" + agentProfile + " -> " + agentInstallationName,
 		Run: func(cmd *cobra.Command, args []string) {
-			err := cmd.Help()
-			ui.PrintOnError("Displaying help", err)
+			standaloneCmd.Run(cmd, args)
 		},
 	}
 
-	cmd.AddCommand(NewInitCmdStandalone())
+	cmd.AddCommand(standaloneCmd)
 	cmd.AddCommand(NewInitCmdDemo())
 
 	return cmd
@@ -53,12 +54,11 @@ func NewInitCmdStandalone() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     standaloneAgentProfile,
-		Short:   "Install " + standaloneInstallationName + " Helm chart registry in current kubectl context and update dependencies",
+		Short:   "Install " + standaloneInstallationName + " in your current context",
 		Aliases: []string{"install"},
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Info("WELCOME TO")
 			ui.Logo()
-
+			ui.Info("Welcome to the installer for " + standaloneInstallationName + ".")
 			ui.NL()
 
 			if !isContextApproved(options.NoConfirm, standaloneInstallationName) {
