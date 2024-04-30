@@ -38,6 +38,7 @@ type Params struct {
 	TestWorkflowImage          string     `json:"test_workflow_image,omitempty"`
 	TestWorkflowArtifactUsed   bool       `json:"test_workflow_artifact_used,omitempty"`
 	TestWorkflowKubeshopGitURI bool       `json:"test_workflow_kubeshop_git_uri,omitempty"`
+	License                    string     `json:"license,omitempty"`
 }
 
 type Event struct {
@@ -115,6 +116,30 @@ func NewCLIPayload(context RunContext, id, name, version, category, clusterType 
 					Context:         context,
 					ClusterType:     clusterType,
 					CliContext:      GetCliRunContext(),
+				},
+			}},
+	}
+}
+
+func NewCLIWithLicensePayload(context RunContext, id, name, version, category, clusterType, license string) Payload {
+	return Payload{
+		ClientID: id,
+		UserID:   id,
+		Events: []Event{
+			{
+				Name: text.GAEventName(name),
+				Params: Params{
+					EventCount:      1,
+					EventCategory:   category,
+					AppVersion:      version,
+					AppName:         "kubectl-testkube",
+					MachineID:       GetMachineID(),
+					OperatingSystem: runtime.GOOS,
+					Architecture:    runtime.GOARCH,
+					Context:         context,
+					ClusterType:     clusterType,
+					CliContext:      GetCliRunContext(),
+					License:         license,
 				},
 			}},
 	}
