@@ -27,14 +27,13 @@ const (
 )
 
 var DefaultConfig = Data{
-	TelemetryEnabled:    true,
-	Namespace:           "testkube",
-	EnterpriseNamespace: "testkube-enterprise",
-	APIURI:              "http://localhost:8088",
-	APIServerName:       APIServerName,
-	APIServerPort:       APIServerPort,
-	DashboardName:       DashboardName,
-	DashboardPort:       DashboardPort,
+	TelemetryEnabled: true,
+	Namespace:        "testkube",
+	APIURI:           "http://localhost:8088",
+	APIServerName:    APIServerName,
+	APIServerPort:    APIServerPort,
+	DashboardName:    DashboardName,
+	DashboardPort:    DashboardPort,
 	OAuth2Data: OAuth2Data{
 		Provider: oauth.GithubProviderType,
 	},

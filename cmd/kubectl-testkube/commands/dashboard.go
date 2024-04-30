@@ -21,27 +21,37 @@ const maxPortNumber = 65535
 
 // NewDashboardCmd is a method to create new dashboard command
 func NewDashboardCmd() *cobra.Command {
+	var namespace string
+	var verbose bool
+
 	cmd := &cobra.Command{
 		Use:     "dashboard",
 		Aliases: []string{"d", "open-dashboard", "ui"},
-		Short:   "Open Testkube Pro dashboard",
-		Long:    `Open Testkube Pro dashboard`,
+		Short:   "Open Testkube dashboard",
+		Long:    `Open Testkube dashboard`,
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config file", err)
 
+			if namespace == "" {
+				namespace = cfg.Namespace
+			}
+
 			if cfg.ContextType != config.ContextTypeCloud {
-				isEnyterpriseInstalled, _ := k8sclient.IsPodOfServiceRunning(context.Background(), cfg.EnterpriseNamespace, config.EnterpriseUiName)
-				if isEnyterpriseInstalled {
-					openOnPremDashboard(cmd, cfg)
+				isDashboardRunning, _ := k8sclient.IsPodOfServiceRunning(context.Background(), cfg.Namespace, config.EnterpriseUiName)
+				if isDashboardRunning {
+					openOnPremDashboard(cmd, cfg, verbose)
 				} else {
-					ui.Warn("As of 1.17 the dashboard is no longer included with Testkube Core OSS - please refer to https://bit.ly/tk-dashboard for more info")
+					ui.Warn("No dashboard found. Is it running in the " + namespace + " namespace?")
 				}
 			} else {
 				openCloudDashboard(cfg)
 			}
 		},
 	}
+
+	cmd.Flags().BoolVarP(&verbose, "verbose", "", false, "show additional debug messages")
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "Namespace to install "+demoInstallationName)
 
 	return cmd
 }
@@ -53,27 +63,26 @@ func openCloudDashboard(cfg config.Data) {
 	ui.PrintOnError("openning dashboard", err)
 }
 
-func openOnPremDashboard(cmd *cobra.Command, cfg config.Data) {
+func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose bool) {
 	uiLocalPort, err := getDashboardLocalPort(config.EnterpriseApiForwardingPort)
 	ui.PrintOnError("getting an ui forwarding available port", err)
 	uri := fmt.Sprintf("http://localhost:%d", uiLocalPort)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	err = k8sclient.PortForward(ctx, cfg.EnterpriseNamespace, config.EnterpriseApiName, config.EnterpriseApiPort, config.EnterpriseApiForwardingPort)
+	err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseApiName, config.EnterpriseApiPort, config.EnterpriseApiForwardingPort, verbose)
 	ui.PrintOnError("port forwarding api", err)
-	err = k8sclient.PortForward(ctx, cfg.EnterpriseNamespace, config.EnterpriseUiName, config.EnterpriseUiPort, uiLocalPort)
+	err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseUiName, config.EnterpriseUiPort, uiLocalPort, verbose)
 	ui.PrintOnError("port forwarding ui", err)
-	err = k8sclient.PortForward(ctx, cfg.EnterpriseNamespace, config.EnterpriseDexName, config.EnterpriseDexPort, config.EnterpriseDexForwardingPort)
+	err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseDexName, config.EnterpriseDexPort, config.EnterpriseDexForwardingPort, verbose)
 	ui.PrintOnError("port forwarding dex", err)
 
 	err = open.Run(uri)
-	ui.ExitOnError("openning dashboard in browser", err)
+	ui.ExitOnError("opening dashboard in browser", err)
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-	ui.NL()
-	ui.Success("The on prem ui is accessible here:", uri)
-	ui.Success("Port forwarding is started for the needed components, hit Ctrl+c (or Cmd+c) to stop")
+	ui.Success("The dashboard is accessible here:", uri)
+	ui.Success("Port forwarding the necessary services, hit Ctrl+c (or Cmd+c) to stop")
 	<-c
 	cancel()
 

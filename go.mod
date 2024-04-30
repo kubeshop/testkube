@@ -22,7 +22,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.1
 	github.com/gofiber/websocket/v2 v2.1.1
 	github.com/golang/mock v1.6.0
-	github.com/gookit/color v1.5.3
+	github.com/gookit/color v1.5.4
 	github.com/gorilla/websocket v1.5.0
 	github.com/h2non/filetype v1.1.3
 	github.com/itchyny/gojq v0.12.14
@@ -42,7 +42,7 @@ require (
 	github.com/onsi/gomega v1.31.0
 	github.com/otiai10/copy v1.11.0
 	github.com/prometheus/client_golang v1.18.0
-	github.com/pterm/pterm v0.12.62
+	github.com/pterm/pterm v0.12.79
 	github.com/segmentio/analytics-go/v3 v3.2.1
 	github.com/shirou/gopsutil/v3 v3.24.3
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
@@ -64,9 +64,9 @@ require (
 )
 
 require (
-	atomicgo.dev/cursor v0.1.1 // indirect
+	atomicgo.dev/cursor v0.2.0 // indirect
 	atomicgo.dev/keyboard v0.2.9 // indirect
-	atomicgo.dev/schedule v0.0.2 // indirect
+	atomicgo.dev/schedule v0.1.0 // indirect
 	github.com/AlecAivazis/survey/v2 v2.3.6 // indirect
 	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/alecthomas/chroma v0.10.0 // indirect
@@ -79,7 +79,7 @@ require (
 	github.com/cli/go-gh v0.1.3-0.20221102170023-e3ec45fb1d1b // indirect
 	github.com/cli/safeexec v1.0.0 // indirect
 	github.com/cli/shurcooL-graphql v0.0.2 // indirect
-	github.com/containerd/console v1.0.3 // indirect
+	github.com/containerd/console v1.0.4 // indirect
 	github.com/dlclark/regexp2 v1.8.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.2 // indirect
 	github.com/evanphx/json-patch/v5 v5.7.0 // indirect
@@ -123,7 +123,7 @@ require (
 	github.com/package-url/packageurl-go v0.1.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/pquerna/cachecontrol v0.2.0 // indirect
-	github.com/rivo/uniseg v0.4.4 // indirect
+	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.0.0 // indirect
 	github.com/savsgio/gotils v0.0.0-20230208104028-c358bd845dee // indirect
 	github.com/segmentio/backo-go v1.0.1 // indirect
@@ -194,8 +194,8 @@ require (
 	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/oauth2 v0.13.0
 	golang.org/x/sync v0.6.0
-	golang.org/x/sys v0.18.0 // indirect
-	golang.org/x/term v0.18.0 // indirect
+	golang.org/x/sys v0.19.0 // indirect
+	golang.org/x/term v0.19.0 // indirect
 	golang.org/x/text v0.14.0
 	golang.org/x/time v0.3.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect

@@ -277,7 +277,7 @@ func GetPodLogs(ctx context.Context, k8sClient kubernetes.Interface, namespace s
 	return logs, nil
 }
 
-func PortForward(ctx context.Context, namespace, serviceName string, servicePort, localhostPort int) error {
+func PortForward(ctx context.Context, namespace, serviceName string, servicePort, localhostPort int, verbose bool) error {
 
 	clientSet, err := ConnectToK8s()
 	if err != nil {
@@ -352,7 +352,11 @@ func PortForward(ctx context.Context, namespace, serviceName string, servicePort
 		URL()
 
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, http.MethodPost, url)
-	forwarder, err := portforward.New(dialer, []string{fmt.Sprintf("%d:%d", localhostPort, podPortNumber)}, ctx.Done(), readyChan, os.Stdout, os.Stderr)
+	out := os.Stdout
+	if !verbose {
+		out = nil
+	}
+	forwarder, err := portforward.New(dialer, []string{fmt.Sprintf("%d:%d", localhostPort, podPortNumber)}, ctx.Done(), readyChan, out, os.Stderr)
 	if err != nil {
 		return errors.Wrap(err, "create port forwarder")
 	}

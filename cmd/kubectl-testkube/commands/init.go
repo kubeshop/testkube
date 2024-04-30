@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -15,13 +16,15 @@ import (
 )
 
 const (
+	defaultNamespace       = "testkube"
 	standaloneAgentProfile = "standalone-agent"
 	demoProfile            = "demo"
 	agentProfile           = "agent"
 
-	standaloneInstallationName = "Testkube Standalone(OSS)"
-	demoInstallationName       = "Testkube Enterprise On-Premise"
+	standaloneInstallationName = "Testkube OSS"
+	demoInstallationName       = "Testkube On-Prem demo"
 	agentInstallationName      = "Testkube Agent"
+	licenseFormat              = "XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-V3"
 )
 
 func NewInitCmd() *cobra.Command {
@@ -65,7 +68,7 @@ func NewInitCmdStandalone() *cobra.Command {
 			common.ProcessMasterFlags(cmd, &options, nil)
 
 			err := common.HelmUpgradeOrInstalTestkube(options)
-			ui.ExitOnError("Installing "+standaloneInstallationName, err)
+			ui.ExitOnError("Cannot install Testkube", err)
 
 			ui.Info(`To help improve the quality of Testkube, we collect anonymous basic telemetry data. Head out to https://docs.testkube.io/articles/telemetry to read our policy or feel free to:`)
 
@@ -92,51 +95,91 @@ func NewInitCmdDemo() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     demoProfile,
 		Short:   "Install " + demoInstallationName + " Helm chart registry in current kubectl context and update dependencies",
-		Aliases: []string{"on-premise", "on-prem", "enterprise"},
+		Aliases: []string{"on-premise-demo", "on-prem-demo", "enterprise-demo"},
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.Info("WELCOME TO")
 			ui.Logo()
+			ui.Info("Welcome to the installer for " + demoInstallationName + ".")
+			ui.NL()
 
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config file", err)
 
-			ui.NL()
+			kubecontext, err := common.GetCurrentKubernetesContext()
+			if err != nil {
+				ui.Failf("kubeconfig not found")
+			}
+
+			if namespace == "" {
+				if noConfirm {
+					namespace = defaultNamespace
+				} else {
+					response, err := pterm.DefaultInteractiveTextInput.WithDefaultValue("testkube").Show("Enter namespace for this installation")
+					namespace = response
+					ui.ExitOnError("cannot read namespace", err)
+				}
+			}
+
 			if license == "" {
-				ui.Warn("License key is required to install " + demoInstallationName)
+				response, err := pterm.DefaultInteractiveTextInput.Show("Enter license key")
+				license = response
+				ui.ExitOnError("cannot read license", err)
+			}
+
+			if len(license) != len(licenseFormat) {
+				ui.Failf("license malformed, expected license of format: " + licenseFormat)
+			}
+
+			ui.NL()
+			ui.Warn("Installation is about to start and may take a several minutes:")
+			ui.NL()
+			ui.Warn("- Testkube will be installed in the " + kubecontext + " context.")
+			ui.Warn("- Testkube services will be applied to the " + namespace + " namespace.")
+			ui.Warn("- Testkube CRDs and cluster roles will be applied to your cluster.")
+			ui.NL()
+
+			if ok := ui.Confirm("Do you want to continue"); !ok {
+				sendErrTelemetry(cmd, cfg, "install_cancelled", license, err)
 				return
 			}
 
 			sendAttemptTelemetry(cmd, cfg, license)
+			err = helmInstallDemo(license, namespace, dryRun)
+			if err != nil {
+				sendErrTelemetry(cmd, cfg, "install_failed", license, err)
+			}
+			ui.ExitOnError("Cannot install Testkube", err)
 
-			if !isContextApproved(noConfirm, demoInstallationName) {
-				ui.Errf("Testkube installation cancelled")
-				sendErrTelemetry(cmd, cfg, "user_cancel", license, err)
+			if err == nil {
+				cfg.Namespace = namespace
+				err = config.Save(cfg)
+				ui.Debug("Cannot save config")
+			}
+
+			ui.Info("Your initial admin credentials are: admin@example.com / password")
+			ui.Info("Make sure to copy these credentials now as you will not be able to see this again.")
+			ui.NL()
+			ok := ui.Confirm("Do you want to continue?")
+
+			ui.Info("You can use `testkube dashboard` to access Testkube without exposing services.")
+			ui.NL()
+
+			if !ok {
 				return
 			}
 
-			err = helmInstallDemo(license, namespace, dryRun, cfg)
-			if err != nil {
-				sendErrTelemetry(cmd, cfg, "helm_install", license, err)
+			if ok := ui.Confirm("Do you want to open the dashboard?"); ok {
+				cfg, err := config.Load()
+				ui.ExitOnError("Cannot open dashboard", err)
+				openOnPremDashboard(nil, cfg, false)
 			}
-			ui.ExitOnError("Installing "+demoInstallationName, err)
-
-			ui.Info(`To help improve the quality of Testkube, we collect anonymous basic telemetry data. Head out to https://docs.testkube.io/articles/telemetry to read our policy or feel free to:`)
-
-			ui.NL()
-			ui.ShellCommand("disable telemetry by typing", "testkube disable telemetry")
-			ui.NL()
-
-			ui.ShellCommand("testkube on-prem dashboard can be opened by typing", "testkube ui")
-			ui.Info(" Happy Testing! 🚀")
-			ui.NL()
-
 		},
 	}
 
+	cmd.Flags().BoolVarP(&noConfirm, "export", "", false, "Export the values.yaml")
 	cmd.Flags().BoolVarP(&noConfirm, "no-confirm", "y", false, "Skip confirmation")
 	cmd.Flags().StringVarP(&license, "license", "l", "", "License key")
 	cmd.Flags().BoolVarP(&dryRun, "dry-run", "", false, "Dry run")
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "testkube-enterprise", "Namespace to install "+demoInstallationName)
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "Namespace to install "+demoInstallationName)
 
 	return cmd
 }
@@ -161,46 +204,46 @@ func isContextApproved(isNoConfirm bool, installedComponent string) bool {
 	return true
 }
 
-func helmInstallDemo(license, namespace string, dryRun bool, cfg config.Data) error {
+func helmInstallDemo(license, namespace string, dryRun bool) error {
 	helmPath, err := exec.LookPath("helm")
 	if err != nil {
 		return err
 	}
-	ui.Info("Helm installing " + demoInstallationName)
+
+	ui.Info("Installing Testkube… ")
+
 	args := []string{"repo", "add", "testkubeenterprise", "https://kubeshop.github.io/testkube-cloud-charts"}
 	_, err = process.ExecuteWithOptions(process.Options{Command: helmPath, Args: args, DryRun: dryRun})
 	if err != nil && !strings.Contains(err.Error(), "Error: repository name (kubeshop) already exists, please specify a different name") {
-		ui.WarnOnError("adding testkube repo", err)
+		return err
 	}
 
 	_, err = process.ExecuteWithOptions(process.Options{Command: helmPath, Args: []string{"repo", "update"}, DryRun: dryRun})
-	ui.ExitOnError("updating helm repositories", err)
+	if err != nil {
+		return err
+	}
 
-	//helm upgrade --install --create-namespace --namespace=testkube testkube -f=profiles/values.demo.yaml . --set global.enterpriseLicense=$LICENSE
 	args = []string{"upgrade", "--install",
-		"--create-namespace", "--namespace", namespace,
+		"--create-namespace",
+		"--namespace", namespace,
 		"--set", "global.enterpriseLicense=" + license,
 		"--values", "https://raw.githubusercontent.com/kubeshop/testkube-cloud-charts/main/charts/testkube-enterprise/profiles/values.demo.yaml",
-		"testkube-enterprise", "testkubeenterprise/testkube-enterprise"}
+		"--wait",
+		"testkube", "testkubeenterprise/testkube-enterprise"}
+
+	ui.Debug("Helm command: ", helmPath+" "+strings.Join(args, " "))
 	out, err := process.ExecuteWithOptions(process.Options{Command: helmPath, Args: args, DryRun: dryRun})
-	ui.ExitOnError("installing "+demoInstallationName, err)
-
-	cfg.EnterpriseNamespace = namespace
-	err = config.Save(cfg)
-	ui.ExitOnError("saving config file", err)
-
-	ui.Debug("Helm run command: ")
-	ui.Debug(helmPath, args...)
-
+	if err != nil {
+		return err
+	}
 	ui.Debug("Helm command output: ", string(out))
+	ui.NL()
 	return nil
-
 }
 
 func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType, license string, errorLogs error) {
 	errorStackTrace := fmt.Sprintf("%+v", errorLogs)
 	if clientCfg.TelemetryEnabled {
-		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
 		out, err := telemetry.SendCmdErrorEventWithLicense(cmd, common.Version, errType, license, errorStackTrace)
 		if ui.Verbose && err != nil {
 			ui.Err(err)
@@ -212,7 +255,6 @@ func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType, licens
 
 func sendAttemptTelemetry(cmd *cobra.Command, clientCfg config.Data, license string) {
 	if clientCfg.TelemetryEnabled {
-		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
 		out, err := telemetry.SendCmdAttempWithLicenseEvent(cmd, common.Version, license)
 		if ui.Verbose && err != nil {
 			ui.Err(err)
