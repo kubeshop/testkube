@@ -148,7 +148,7 @@ spec:
 ### Setting Up Defaults
 
 To configure default container settings, you may use the container property.
-It has a similar syntax to the Kubernetes’ native Container spec.
+It has a similar syntax to the Kubernetes’ native [Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#container-v1-core) spec.
 
 ```yaml
 apiVersion: testworkflows.testkube.io/v1
