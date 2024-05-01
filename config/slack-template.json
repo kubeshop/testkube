@@ -160,6 +160,21 @@
 				"text": "Test Suite Execution URI: {{ .DashboardURI }}/test-suites/{{ .TestName }}/executions/{{ .ExecutionID }}"
 			}
 		},
+		{{ else if eq .TestType "Test Workflow" }}
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Test Workflow URI: {{ .DashboardURI }}/test-workflows/{{ .TestName }}"
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Test Workflow Execution URI: {{ .DashboardURI }}/test-workflows/{{ .TestName }}/executions/{{ .ExecutionID }}"
+			}
+		},
 		{{ else }}
 		{
 			"type": "section",
