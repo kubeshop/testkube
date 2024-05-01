@@ -14,7 +14,12 @@
         "end-testsuite-success",
         "end-testsuite-failed",
         "end-testsuite-aborted",
-        "end-testsuite-timeout"
+        "end-testsuite-timeout",
+        "start-testworkflow",
+        "queue-testworkflow",
+        "end-testworkflow-success",
+        "end-testworkflow-failed",
+        "end-testworkflow-aborted"
       ]
     }
   ]
