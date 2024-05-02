@@ -2,26 +2,6 @@
 
 The Testkube CLI includes installation commands to help you set up Testkube for your environment. You can choose from one of our built-in configuration profiles (see below) and the CLI will help you with the last-mile configuration to finalise your setup. You can find instructions on how to install the CLI [here][install-cli].
 
-## Deploy the open-source, standalone agent
-
-The standalone-agent profile installs the agent that functions on its own without a control plane. It allows you to use the test orchestration engine through the CLI and Custom Resource Definitions.
-
-The standalone-agent is fully open-sourced under a MIT license [on GitHub](https://github.com/kubeshop/testkube).
-
-```
-testkube init
-```
-
-## Deploy an agent that will connect to a control plane
-
-The agent profile installs an agent that will join a control plane running within a different cluster or namespace. The agent acts as a test runner for your organisation’s environment. You can install multiple agents as seen in [the Testkube On-Prem Federated reference architecture][architecture-federated].
-
-You will be asked for an agent token which you can find in your Testkube dashboard.
-
-```
-testkube init agent
-```
-
 ## Deploy an on-prem demo
 
 Our demo profile bootstraps Testkube’s control plane and agent within the same namespace. It will also create an admin user, organisation and environment.
@@ -33,6 +13,29 @@ testkube init demo
 ```
 
 Once deployed, use `testkube dashboard` to conveniently access all services on your localhost.
+
+
+## Deploy an agent that will connect to a control plane
+
+The agent profile installs an agent that will join a control plane running within a different cluster or namespace. The agent acts as a test runner for your organisation’s environment. You can install multiple agents as seen in [the Testkube On-Prem Federated reference architecture][architecture-federated].
+
+You will be asked for an agent token which you can find in your Testkube dashboard.
+
+```
+testkube init agent
+```
+
+
+## Deploy the open-source, standalone agent
+
+The standalone-agent profile installs the agent that functions on its own without a control plane (no dashboard available in this mode). It allows you to use the test orchestration engine through the CLI and Custom Resource Definitions.
+
+The standalone-agent is fully open-sourced under a MIT license [on GitHub](https://github.com/kubeshop/testkube).
+
+```
+testkube init
+```
+
 
 ## Deploy other profiles
 
