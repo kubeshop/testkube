@@ -229,7 +229,7 @@ func helmInstallDemo(license, namespace string, dryRun bool) error {
 	args = []string{"upgrade", "--install",
 		"--create-namespace",
 		"--namespace", namespace,
-		"--set", "global.enterpriseLicense=" + license,
+		"--set", "global.enterpriseLicenseKey=" + license,
 		"--values", "https://raw.githubusercontent.com/kubeshop/testkube-cloud-charts/main/charts/testkube-enterprise/profiles/values.demo.yaml",
 		"--wait",
 		"testkube", "testkubeenterprise/testkube-enterprise"}
