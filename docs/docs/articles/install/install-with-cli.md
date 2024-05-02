@@ -43,9 +43,9 @@ You can find all available profiles by running `testkube init --help`. Each prof
 
 The following built-in configuration profiles are currently available:
 
-- **standalone-agent**: enables components to run the agent without a control plane. This profile is completely open-source and allows you to run tests with the CLI and CRDs.
-- **agent**: enables components to run the agent joining a control plane. You can use this profile after creating an environment.
 - **demo**: similar to the default profile, but it will configure a default user, organisation and admin to try out Testkube On Prem within minutes.
+- **agent**: enables components to run the agent joining a control plane. You can use this profile after creating an environment.
+- **standalone-agent**: enables components to run the agent without a control plane. This profile is completely open-source and allows you to run tests with the CLI and CRDs.
 
 <!-- - **default:** enables both the control plane and an agent running within the same namespace. This profile is recommended to get started with light to medium workloads. You can view your test definition and executions within the dashboard.
 - **minimal:** enables the control plane without any agent. You will use the profile for advanced setups where agent(s) will run in one or more different clusters or namespaces. Learn more by reading our reference architectures. -->
