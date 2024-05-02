@@ -2,15 +2,18 @@
 
 The Testkube CLI includes installation commands to help you set up Testkube for your environment. You can choose from one of our built-in configuration profiles (see below) and the CLI will help you with the last-mile configuration to finalise your setup. You can find instructions on how to install the CLI [here][install-cli].
 
-## Deploy the open-source, standalone agent
+## Deploy an on-prem demo
 
-The standalone-agent profile installs the agent that functions on its own without a control plane. It allows you to use the test orchestration engine through the CLI and Custom Resource Definitions.
+Our demo profile bootstraps Testkube’s control plane (dashboard) and agent within the same namespace. It will also create an admin user, organisation and environment.
 
-The standalone-agent is fully open-sourced under a MIT license [on GitHub](https://github.com/kubeshop/testkube).
+You will be asked for a license key which you can request for free, no credit card required. You can get the license at http://testkube.io/download
 
 ```
-testkube init
+testkube init demo
 ```
+
+Once deployed, use `testkube dashboard` to conveniently access all services on your localhost.
+
 
 ## Deploy an agent that will connect to a control plane
 
@@ -22,17 +25,17 @@ You will be asked for an agent token which you can find in your Testkube dashboa
 testkube init agent
 ```
 
-## Deploy an on-prem demo
 
-Our demo profile bootstraps Testkube’s control plane and agent within the same namespace. It will also create an admin user, organisation and environment.
+## Deploy the open-source, standalone agent
 
-You will be asked for a license key which you can request for free, no credit card required.
+The standalone-agent profile installs the agent that functions on its own without a control plane (no dashboard available in this mode). It allows you to use the test orchestration engine through the CLI and Custom Resource Definitions.
+
+The standalone-agent is fully open-sourced under a MIT license [on GitHub](https://github.com/kubeshop/testkube).
 
 ```
-testkube init demo
+testkube init
 ```
 
-Once deployed, use `testkube dashboard` to conveniently access all services on your localhost.
 
 ## Deploy other profiles
 
@@ -40,9 +43,9 @@ You can find all available profiles by running `testkube init --help`. Each prof
 
 The following built-in configuration profiles are currently available:
 
-- **standalone-agent**: enables components to run the agent without a control plane. This profile is completely open-source and allows you to run tests with the CLI and CRDs.
-- **agent**: enables components to run the agent joining a control plane. You can use this profile after creating an environment.
 - **demo**: similar to the default profile, but it will configure a default user, organisation and admin to try out Testkube On Prem within minutes.
+- **agent**: enables components to run the agent joining a control plane. You can use this profile after creating an environment.
+- **standalone-agent**: enables components to run the agent without a control plane. This profile is completely open-source and allows you to run tests with the CLI and CRDs.
 
 <!-- - **default:** enables both the control plane and an agent running within the same namespace. This profile is recommended to get started with light to medium workloads. You can view your test definition and executions within the dashboard.
 - **minimal:** enables the control plane without any agent. You will use the profile for advanced setups where agent(s) will run in one or more different clusters or namespaces. Learn more by reading our reference architectures. -->
