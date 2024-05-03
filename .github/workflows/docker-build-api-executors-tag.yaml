@@ -36,7 +36,7 @@ jobs:
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -103,7 +103,7 @@ jobs:
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -159,7 +159,7 @@ jobs:
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -234,7 +234,7 @@ jobs:
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -298,7 +298,7 @@ jobs:
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -359,7 +359,7 @@ jobs:
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -419,7 +419,7 @@ jobs:
           cache: false
 
       - name: Docker Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
           key: jmeterd-buildx-${{ github.sha }}
@@ -470,7 +470,7 @@ jobs:
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -531,7 +531,7 @@ jobs:
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -603,7 +603,7 @@ jobs:
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -733,7 +733,7 @@ jobs:
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
