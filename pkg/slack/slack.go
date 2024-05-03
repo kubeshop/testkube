@@ -216,9 +216,10 @@ func (s *Notifier) composeTestWorkflowMessage(execution *testkube.TestWorkflowEx
 		return nil, err
 	}
 
-	var namespace string
+	var name, namespace string
 	var labels map[string]string
 	if execution.Workflow != nil {
+		name = execution.Workflow.Name
 		namespace = execution.Workflow.Namespace
 		labels = execution.Workflow.Labels
 	}
@@ -244,7 +245,7 @@ func (s *Notifier) composeTestWorkflowMessage(execution *testkube.TestWorkflowEx
 		EventType:     string(eventType),
 		Namespace:     namespace,
 		Labels:        testkube.MapToString(labels),
-		TestName:      execution.Name,
+		TestName:      name,
 		TestType:      "Test Workflow",
 		Status:        status,
 		StartTime:     startTime,
