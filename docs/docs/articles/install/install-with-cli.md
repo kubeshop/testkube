@@ -6,7 +6,7 @@ The Testkube CLI includes installation commands to help you set up Testkube for 
 
 Our demo profile bootstraps Testkube’s control plane (dashboard) and agent within the same namespace. It will also create an admin user, organisation and environment.
 
-You will be asked for a license key which you can request for free, no credit card required. You can get the license at http://testkube.io/download
+You will be asked for a license key which you can request for free, no credit card required. You can get the license at https://testkube.io/download
 
 ```
 testkube init demo
