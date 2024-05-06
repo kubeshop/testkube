@@ -52,6 +52,8 @@ type Params struct {
 	ProAPIKeyFile             string `envconfig:"RUNNER_PRO_API_KEY_FILE"`                      // RUNNER_PRO_API_KEY_FILE
 	ProAPICAFile              string `envconfig:"RUNNER_PRO_API_CA_FILE"`                       // RUNNER_PRO_API_CA_FILE
 	SlavesConfigs             string `envconfig:"RUNNER_SLAVES_CONFIGS"`                        // RUNNER_SLAVES_CONFIGS
+	IstioProxyWait            bool   // RUNNER_ISTIO_PROXY_WAIT
+	IstioProxyExit            bool   // RUNNER_ISTIO_PROXY_EXIT
 }
 
 // LoadTestkubeVariables loads the parameters provided as environment variables in the Test CRD
@@ -102,6 +104,8 @@ func PrintParams(params Params) {
 	printSensitiveParam("RUNNER_PRO_API_KEY", params.ProAPIKey)
 	output.PrintLogf("RUNNER_PRO_CONNECTION_TIMEOUT=%d", params.ProConnectionTimeoutSec)
 	output.PrintLogf("RUNNER_PRO_API_SKIP_VERIFY=\"%t\"", params.ProAPISkipVerify)
+	output.PrintLogf("RUNNER_ISTIO_PROXY_WAIT=\"%t\"", params.IstioProxyWait)
+	output.PrintLogf("RUNNER_ISTIO_PROXY_EXIT=\"%t\"", params.IstioProxyExit)
 
 }
 

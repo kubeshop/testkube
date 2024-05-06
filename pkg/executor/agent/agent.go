@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -26,6 +28,7 @@ func Run(ctx context.Context, r runner.Runner, args []string) {
 	var test []byte
 	var err error
 
+	// Validation
 	stat, _ := os.Stdin.Stat()
 	switch {
 	case (stat.Mode() & os.ModeCharDevice) == 0:
@@ -67,6 +70,19 @@ func Run(ctx context.Context, r runner.Runner, args []string) {
 		envs.PrintParams(params)
 	}
 
+	if params.IstioProxyWait {
+		output.PrintEvent("waiting for istio's proxy to become ready", e.Id)
+		for {
+			// TODO(emil): should this be head or get?
+			resp, err := http.Head("http://localhost:15021/healthz/ready")
+			if err == nil && resp.StatusCode == http.StatusOK {
+				break
+			}
+			output.PrintEvent("still waiting for istio's proxy to become ready", e.Id)
+			time.Sleep(3 * time.Second)
+		}
+	}
+
 	if r.GetType().IsMain() && e.PreRunScript != "" {
 		output.PrintEvent("running prerun script", e.Id)
 
@@ -102,6 +118,17 @@ func Run(ctx context.Context, r runner.Runner, args []string) {
 		output.PrintResult(result)
 	}
 
+	if params.IstioProxyExit {
+		output.PrintEvent("sending exit signal to istio's proxy", e.Id)
+		for {
+			resp, err := http.Post("http://localhost:15020/quitquitquit", "", nil)
+			if err == nil && resp.StatusCode == http.StatusOK {
+				break
+			}
+			output.PrintEvent("still sending exit signal to istio's proxy", e.Id)
+			time.Sleep(3 * time.Second)
+		}
+	}
 }
 
 // RunScript runs script
