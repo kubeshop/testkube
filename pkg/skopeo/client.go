@@ -95,7 +95,7 @@ func (c *client) Inspect(registry, image string) (*DockerImage, error) {
 		config = registry + "/" + image
 	}
 
-	if !strings.Contains(config, "://")
+	if !strings.Contains(config, "://") {
 		config = "docker://" + config
 	}
 
