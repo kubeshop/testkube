@@ -35,7 +35,7 @@ jobs:
 
       - name: Set up QEMU
         if: matrix.name == 'linux'
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         if: matrix.name == 'linux'
