@@ -20,12 +20,18 @@ spec:
         command:
           - "/bin/runner"
           - '{{ .Jsn }}'
-        {{- if .RunnerCustomCASecret }}
+        {{- if or .RunnerCustomCASecret .IstioProxyWait }}
         env:
+        {{- if .RunnerCustomCASecret }}
           - name: SSL_CERT_DIR
             value: /etc/testkube/certs
           - name: GIT_SSL_CAPATH
             value: /etc/testkube/certs
+        {{- end }}
+        {{- if .IstioProxyWait }}
+          - name: RUNNER_ISTIO_PROXY_WAIT
+            value: "true"
+        {{- end }}
         {{- end }}
         volumeMounts:
         - name: data-volume
@@ -64,7 +70,7 @@ spec:
         {{- end }}
         {{- end }}
       containers:
-      {{ if .Features.LogsV2 -}}
+      {{- if .Features.LogsV2 }}
       - name: "{{ .Name }}-logs"
         {{- if .Registry }}
         image: {{ .Registry }}/{{ .LogSidecarImage }}
@@ -89,6 +95,7 @@ spec:
           value: test
         - name: SOURCE
           value: "job-pod:{{ .Name }}"
+      {{- end }}
       - name: "{{ .Name }}"
         {{- if .Registry }}
         image: {{ .Registry }}/{{ .Image }}
@@ -108,8 +115,8 @@ spec:
             value: /etc/testkube/certs
         {{- end }}
         {{- if .IstioProxyExit }}
-          - name: ISTIO_PROXY_EXIT
-            value: true
+          - name: RUNNER_ISTIO_PROXY_EXIT
+            value: "true"
         {{- end }}
         {{- end }}
         volumeMounts:
