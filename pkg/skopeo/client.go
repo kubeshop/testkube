@@ -90,9 +90,13 @@ func (c *client) Inspect(registry, image string) (*DockerImage, error) {
 		args = append(args, "--creds", c.dockerAuthConfigs[i].Username+":"+c.dockerAuthConfigs[i].Password)
 	}
 
-	config := "docker://" + image
+	config := image
 	if registry != "" {
 		config = registry + "/" + image
+	}
+
+	if !strings.Contains(config, "://")
+		config = "docker://" + config
 	}
 
 	args = append(args, "--config", config)
