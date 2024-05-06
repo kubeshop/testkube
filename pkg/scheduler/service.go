@@ -100,6 +100,7 @@ func NewScheduler(
 		namespace:                 namespace,
 		agentAPITLSSecret:         agentAPITLSSecret,
 		runnerCustomCASecret:      runnerCustomCASecret,
+		istioProxyWait:            istioProxyWait,
 		istioProxyExit:            istioProxyExit,
 	}
 }
