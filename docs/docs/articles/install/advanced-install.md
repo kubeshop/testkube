@@ -194,6 +194,6 @@ global:
 
 ### Artifactory and Other Registry Proxies
 
-By default, Testkube will pull images from the [docker.io](http://docker.io) registry. You can override the image of each individual service.
+By default, Testkube will pull images from the [docker.io](https://docker.io) registry. You can override the image of each individual service.
 
 [contact]: https://testkube.io/contact
