@@ -2,7 +2,7 @@
 
 ## Can Testkube be deployed on OpenShift?
 
-Yes, OpenShift is supported. You might need to tweak the configuration a bit to fit the security requirements. Feel free to contact us if it does not work out and we’ll gladly hot fix it.
+Yes, OpenShift is supported. You might need to tweak the configuration a bit to fit the security requirements. Feel free to contact us if it does not work out, and we’ll gladly hot fix it.
 
 ## Can Testkube OSS be migrated to join a control plane?
 
@@ -24,7 +24,7 @@ The Control Plane containing the Dashboard can be hosted either by us or by you.
 Yes, you can download and install Testkube in your airgapped environment as long as it has access to dockerhub (for example via artifactory) to retrieve the Testkube images. 
 If that doesn't work for you please [get in touch](https://testkube.io/contact), and we will help you install Testkube as required.
 
-## Can I use Testkube to test applications or services thar are not running in Kubernetes
+## Can I use Testkube to test applications or services that are not running in Kubernetes
 
 Yes, you can use Testkube to test any applications or components as long as the cluster the Testkube agent is running in has network access to the applications
 or components to be tested.
