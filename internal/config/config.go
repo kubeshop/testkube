@@ -109,7 +109,7 @@ type Config struct {
 	// This should not be necessery in environments that support native
 	// sidecars (Kubernetes 1.28+ and Istio 1.19+):
 	// https://istio.io/latest/blog/2023/native-sidecars/
-	IstioProxyExit bool `envconfig:"ISTIO_PROXY_EXIT" default:"fasle"`
+	IstioProxyExit bool `envconfig:"ISTIO_PROXY_EXIT" default:"false"`
 
 	// DEPRECATED: Use TestkubeProAPIKey instead
 	TestkubeCloudAPIKey string `envconfig:"TESTKUBE_CLOUD_API_KEY" default:""`
