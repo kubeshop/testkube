@@ -62,6 +62,7 @@ type PodOptions struct {
 	NatsUri               string
 	LogSidecarImage       string
 	RunnerCustomCASecret  string
+	IstioProxyWait        bool
 	IstioProxyExit        bool
 }
 
@@ -289,6 +290,7 @@ func (c *Client) newPodOptions(runnerExecutionStr []byte, podName string, execut
 		NatsUri:              c.slavesConfigs.NatsUri,
 		LogSidecarImage:      c.slavesConfigs.LogSidecarImage,
 		RunnerCustomCASecret: c.slavesConfigs.RunnerCustomCASecret,
+		IstioProxyWait:       c.slavesConfigs.IstioProxyWait,
 		IstioProxyExit:       c.slavesConfigs.IstioProxyExit,
 	}
 }

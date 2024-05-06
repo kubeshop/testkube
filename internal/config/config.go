@@ -104,6 +104,12 @@ type Config struct {
 	TestkubeExecutionNamespaces                 string        `envconfig:"TESTKUBE_EXECUTION_NAMESPACES" default:""`
 	TestkubeDefaultStorageClassName             string        `envconfig:"TESTKUBE_DEFAULT_STORAGE_CLASS_NAME" default:""`
 	GlobalWorkflowTemplateName                  string        `envconfig:"TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_NAME" default:""`
+	// IstioProxyWait triggers logic in the test runner jobs to wait for Istio'
+	// Envoy proxy to become ready.
+	// This should only be necessary with Istio versions before 1.7, after
+	// which one should use either the global (1.7) or pod-level (1.8)
+	// holdApplicationUntilProxyStarts setting.
+	IstioProxyWait bool `envconfig:"ISTIO_PROXY_WAIT" default:"false"`
 	// IstioProxyExit triggers logic in the test runner jobs that sends an exit
 	// signal to Istio's Envoy proxy sidecar, otherwise, the proxy never exits.
 	// This should not be necessery in environments that support native

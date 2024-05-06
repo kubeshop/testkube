@@ -39,6 +39,7 @@ type ExecuteOptions struct {
 	// AgentAPITLSSecret is a secret name that contains TLS certificate for Agent (gRPC) API
 	AgentAPITLSSecret    string
 	ImagePullSecretNames []string
+	IstioProxyWait       bool
 	IstioProxyExit       bool
 	Features             featureflags.FeatureFlags
 }
