@@ -44,6 +44,7 @@ const sidebars = {
         { type: "doc", id: "articles/install/install-with-cli" },
         { type: "doc", id: "articles/install/install-with-helm" },
         { type: "doc", id: "articles/install/advanced-install" },
+        { type: "doc", id: "articles/install/quickstart-no-k8s" },
         { type: "doc", id: "articles/install/uninstall" },
         { type: "doc", id: "articles/install/faq" },
       ],
