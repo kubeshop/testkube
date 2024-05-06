@@ -527,6 +527,7 @@ func main() {
 		cfg.TestkubeNamespace,
 		cfg.TestkubeProTLSSecret,
 		cfg.TestkubeProRunnerCustomCASecret,
+		cfg.IstioProxyExit,
 	)
 	if mode == common.ModeAgent {
 		sched.WithSubscriptionChecker(subscriptionChecker)

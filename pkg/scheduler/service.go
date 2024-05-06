@@ -47,6 +47,7 @@ type Scheduler struct {
 	namespace                 string
 	agentAPITLSSecret         string
 	runnerCustomCASecret      string
+	istioProxyExit            bool
 }
 
 func NewScheduler(
@@ -72,6 +73,7 @@ func NewScheduler(
 	namespace string,
 	agentAPITLSSecret string,
 	runnerCustomCASecret string,
+	istioProxyExit bool,
 ) *Scheduler {
 	return &Scheduler{
 		metrics:                   metrics,
@@ -96,6 +98,7 @@ func NewScheduler(
 		namespace:                 namespace,
 		agentAPITLSSecret:         agentAPITLSSecret,
 		runnerCustomCASecret:      runnerCustomCASecret,
+		istioProxyExit:            istioProxyExit,
 	}
 }
 

@@ -560,6 +560,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		CertificateSecret:    certificateSecret,
 		AgentAPITLSSecret:    s.agentAPITLSSecret,
 		ImagePullSecretNames: imagePullSecrets,
+		IstioProxyExit:       s.istioProxyExit,
 		Features:             s.featureFlags,
 	}, nil
 }

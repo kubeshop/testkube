@@ -187,6 +187,7 @@ type SlavesConfigs struct {
 	NatsUri               string                  `json:"natsUri"`
 	LogSidecarImage       string                  `json:"logSidecarImage"`
 	RunnerCustomCASecret  string                  `json:"runnerCustomCASecret"`
+	IstioProxyExit        bool                    `json:"istioProxyExit"`
 }
 
 type SlaveImages struct {
@@ -209,6 +210,7 @@ func GetSlavesConfigs(initImage string,
 	natsUri string,
 	logSidecarImage string,
 	runnerCustomCASecret string,
+	istioProxyExit bool,
 ) SlavesConfigs {
 	return SlavesConfigs{
 		Images: SlaveImages{
@@ -227,6 +229,7 @@ func GetSlavesConfigs(initImage string,
 		NatsUri:               natsUri,
 		LogSidecarImage:       logSidecarImage,
 		RunnerCustomCASecret:  runnerCustomCASecret,
+		IstioProxyExit:        istioProxyExit,
 	}
 }
 

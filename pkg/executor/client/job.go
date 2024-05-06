@@ -199,6 +199,7 @@ type JobOptions struct {
 	LogSidecarImage       string
 	APIURI                string
 	SlavePodTemplate      string
+	IstioProxyExit        bool
 	Features              featureflags.FeatureFlags
 	PvcTemplate           string
 	PvcTemplateExtensions string
@@ -642,6 +643,7 @@ func NewJobOptionsFromExecutionOptions(options ExecuteOptions) JobOptions {
 		ExecutionNumber:       options.Request.Number,
 		ContextType:           contextType,
 		ContextData:           contextData,
+		IstioProxyExit:        options.IstioProxyExit,
 		Features:              options.Features,
 		PvcTemplateExtensions: options.Request.PvcTemplate,
 	}
@@ -1019,6 +1021,7 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 			natsURI,
 			images.LogSidecar,
 			jobOptions.RunnerCustomCASecret,
+			jobOptions.IstioProxyExit,
 		))
 
 		if err != nil {

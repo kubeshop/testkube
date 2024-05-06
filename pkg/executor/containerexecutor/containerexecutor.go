@@ -198,6 +198,7 @@ type JobOptions struct {
 	LogSidecarImage           string
 	NatsUri                   string
 	APIURI                    string
+	IstioProxyExit            bool
 	Features                  featureflags.FeatureFlags
 }
 
@@ -730,6 +731,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		ExecutionNumber:           options.Request.Number,
 		ContextType:               contextType,
 		ContextData:               contextData,
+		IstioProxyExit:            options.IstioProxyExit,
 		Features:                  options.Features,
 	}
 }

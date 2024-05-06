@@ -62,6 +62,7 @@ type PodOptions struct {
 	NatsUri               string
 	LogSidecarImage       string
 	RunnerCustomCASecret  string
+	IstioProxyExit        bool
 }
 
 // NewClient is a method to create new slave client
@@ -288,6 +289,7 @@ func (c *Client) newPodOptions(runnerExecutionStr []byte, podName string, execut
 		NatsUri:              c.slavesConfigs.NatsUri,
 		LogSidecarImage:      c.slavesConfigs.LogSidecarImage,
 		RunnerCustomCASecret: c.slavesConfigs.RunnerCustomCASecret,
+		IstioProxyExit:       c.slavesConfigs.IstioProxyExit,
 	}
 }
 
