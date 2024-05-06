@@ -46,12 +46,18 @@ spec:
         command:
           - "/bin/runner"
           - '{{ .Jsn }}'
-        {{- if .RunnerCustomCASecret }}
+        {{- if or .RunnerCustomCASecret .IstioProxyExit }}
         env:
+        {{- if .RunnerCustomCASecret }}
           - name: SSL_CERT_DIR
             value: /etc/testkube/certs
           - name: GIT_SSL_CAPATH
             value: /etc/testkube/certs
+        {{- end }}
+        {{- if .IstioProxyExit }}
+          - name: ISTIO_PROXY_EXIT
+            value: true
+        {{- end }}
         {{- end }}
         volumeMounts:
         {{- if .RunnerCustomCASecret }}

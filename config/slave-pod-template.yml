@@ -95,6 +95,11 @@ spec:
     image: {{ .Image }}
     {{- end }}
     imagePullPolicy: IfNotPresent
+    {{- if .IstioProxyExit }}
+    env:
+      - name: ISTIO_PROXY_EXIT
+        value: true
+    {{- end }}
     ports:
     {{- range $port := .Ports }}
     - name: {{ $port.Name }}
