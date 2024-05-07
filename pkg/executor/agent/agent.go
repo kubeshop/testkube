@@ -17,6 +17,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func PreRun(ctx context.Context) {
@@ -27,14 +28,14 @@ func PreRun(ctx context.Context) {
 	}
 
 	if params.IstioProxyWait {
-		output.PrintEvent("waiting for istio's proxy to become ready")
+		output.PrintLogf("%s Waiting for Istio's proxy to become ready...", ui.IconWorld)
 		for {
-			// TODO(emil): should this be head or get?
 			resp, err := http.Head("http://localhost:15021/healthz/ready")
 			if err == nil && resp.StatusCode == http.StatusOK {
+				output.PrintLogf("%s Istio's proxy is ready", ui.IconCheckMark)
 				break
 			}
-			output.PrintEvent("still waiting for istio's proxy to become ready")
+			output.PrintLogf("%s Still waiting for Istio's proxy to become ready...", ui.IconWorld)
 			time.Sleep(3 * time.Second)
 		}
 	}
@@ -48,13 +49,14 @@ func PostRun(ctx context.Context) {
 	}
 
 	if params.IstioProxyExit {
-		output.PrintEvent("sending exit signal to istio's proxy")
+		output.PrintLogf("%s Sending exit signal to Istio's proxy...", ui.IconWorld)
 		for {
 			resp, err := http.Post("http://localhost:15020/quitquitquit", "", nil)
 			if err == nil && resp.StatusCode == http.StatusOK {
+				output.PrintLogf("%s Sent exit signal to Istio's proxy", ui.IconCheckMark)
 				break
 			}
-			output.PrintEvent("still sending exit signal to istio's proxy")
+			output.PrintLogf("%s Still sending exit signal to Istio's proxy...", ui.IconWorld)
 			time.Sleep(3 * time.Second)
 		}
 	}
