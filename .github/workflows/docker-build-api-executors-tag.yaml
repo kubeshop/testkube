@@ -30,7 +30,7 @@ jobs:
         uses: docker/setup-qemu-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
@@ -97,7 +97,7 @@ jobs:
         uses: docker/setup-qemu-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
@@ -153,7 +153,7 @@ jobs:
         uses: docker/setup-qemu-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
@@ -228,7 +228,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
@@ -292,7 +292,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
@@ -353,7 +353,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
@@ -413,7 +413,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
@@ -464,7 +464,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
@@ -525,7 +525,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
@@ -597,7 +597,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
@@ -727,7 +727,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
