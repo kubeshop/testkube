@@ -8450,6 +8450,9 @@ components:
           description: annotations to attach to the job
           additionalProperties:
             type: string
+        namespace:
+          type: string
+          description: namespace for execution of test workflow
 
     TestWorkflowPodConfig:
       type: object
@@ -8524,9 +8527,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PodResourceClaim"
-        namespace:
-          type: string
-          description: namespace for execution of test workflow
 
     TestWorkflowContainerConfig:
       type: object
