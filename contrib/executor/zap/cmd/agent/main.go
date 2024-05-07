@@ -15,6 +15,8 @@ import (
 
 func main() {
 	ctx := context.Background()
+	agent.PreRun(ctx)
+	defer agent.PostRun(ctx)
 	params, err := envs.LoadTestkubeVariables()
 	if err != nil {
 		output.PrintError(os.Stderr, errors.Errorf("%s could not initialize ZAP Executor environment variables: %v", ui.IconCross, err))

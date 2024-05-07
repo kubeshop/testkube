@@ -13,11 +13,13 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
+	agent.PreRun(ctx)
+	defer agent.PostRun(ctx)
 	params, err := envs.LoadTestkubeVariables()
 	if err != nil {
 		output.PrintError(os.Stderr, errors.Errorf("could not initialize Template Executor environment variables: %v", err))
 		os.Exit(1)
 	}
-
-	agent.Run(context.Background(), runner.NewRunner(params), os.Args)
+	agent.Run(ctx, runner.NewRunner(params), os.Args)
 }

@@ -14,12 +14,13 @@ import (
 
 func main() {
 	ctx := context.Background()
+	agent.PreRun(ctx)
+	defer agent.PostRun(ctx)
 	params, err := envs.LoadTestkubeVariables()
 	if err != nil {
 		output.PrintError(os.Stderr, errors.Errorf("could not initialize Tracetest Executor environment variables: %v", err))
 		os.Exit(1)
 	}
-
 	r, err := runner.NewRunner(ctx, params)
 	if err != nil {
 		output.PrintError(os.Stderr, errors.Wrap(err, "could not initialize runner"))

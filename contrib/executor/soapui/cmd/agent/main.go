@@ -14,6 +14,8 @@ import (
 
 func main() {
 	ctx := context.Background()
+	agent.PreRun(ctx)
+	defer agent.PostRun(ctx)
 	params, err := envs.LoadTestkubeVariables()
 	if err != nil {
 		output.PrintError(os.Stderr, errors.Errorf("could not initialize SoapUI Executor environment variables: %v", err))
@@ -24,6 +26,5 @@ func main() {
 		output.PrintError(os.Stderr, errors.Errorf("could not initialize runner: %v", err))
 		os.Exit(1)
 	}
-
 	agent.Run(ctx, r, os.Args)
 }

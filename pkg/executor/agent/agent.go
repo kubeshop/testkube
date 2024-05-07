@@ -19,6 +19,47 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/runner"
 )
 
+func PreRun(ctx context.Context) {
+	params, err := envs.LoadTestkubeVariables()
+	if err != nil {
+		output.PrintError(os.Stderr, errors.Wrap(err, "error loading env vars"))
+		os.Exit(1)
+	}
+
+	if params.IstioProxyWait {
+		output.PrintEvent("waiting for istio's proxy to become ready")
+		for {
+			// TODO(emil): should this be head or get?
+			resp, err := http.Head("http://localhost:15021/healthz/ready")
+			if err == nil && resp.StatusCode == http.StatusOK {
+				break
+			}
+			output.PrintEvent("still waiting for istio's proxy to become ready")
+			time.Sleep(3 * time.Second)
+		}
+	}
+}
+
+func PostRun(ctx context.Context) {
+	params, err := envs.LoadTestkubeVariables()
+	if err != nil {
+		output.PrintError(os.Stderr, errors.Wrap(err, "error loading env vars"))
+		os.Exit(1)
+	}
+
+	if params.IstioProxyExit {
+		output.PrintEvent("sending exit signal to istio's proxy")
+		for {
+			resp, err := http.Post("http://localhost:15020/quitquitquit", "", nil)
+			if err == nil && resp.StatusCode == http.StatusOK {
+				break
+			}
+			output.PrintEvent("still sending exit signal to istio's proxy")
+			time.Sleep(3 * time.Second)
+		}
+	}
+}
+
 // Run starts test runner, test runner can have 3 states
 // - pod:success, test execution: success
 // - pod:success, test execution: failed
@@ -70,19 +111,6 @@ func Run(ctx context.Context, r runner.Runner, args []string) {
 		envs.PrintParams(params)
 	}
 
-	if params.IstioProxyWait {
-		output.PrintEvent("waiting for istio's proxy to become ready", e.Id)
-		for {
-			// TODO(emil): should this be head or get?
-			resp, err := http.Head("http://localhost:15021/healthz/ready")
-			if err == nil && resp.StatusCode == http.StatusOK {
-				break
-			}
-			output.PrintEvent("still waiting for istio's proxy to become ready", e.Id)
-			time.Sleep(3 * time.Second)
-		}
-	}
-
 	if r.GetType().IsMain() && e.PreRunScript != "" {
 		output.PrintEvent("running prerun script", e.Id)
 
@@ -116,18 +144,6 @@ func Run(ctx context.Context, r runner.Runner, args []string) {
 	if r.GetType().IsMain() {
 		output.PrintEvent("test execution finished", e.Id)
 		output.PrintResult(result)
-	}
-
-	if params.IstioProxyExit {
-		output.PrintEvent("sending exit signal to istio's proxy", e.Id)
-		for {
-			resp, err := http.Post("http://localhost:15020/quitquitquit", "", nil)
-			if err == nil && resp.StatusCode == http.StatusOK {
-				break
-			}
-			output.PrintEvent("still sending exit signal to istio's proxy", e.Id)
-			time.Sleep(3 * time.Second)
-		}
 	}
 }
 

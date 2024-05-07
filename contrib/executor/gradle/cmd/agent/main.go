@@ -14,6 +14,8 @@ import (
 
 func main() {
 	ctx := context.Background()
+	agent.PreRun(ctx)
+	defer agent.PostRun(ctx)
 	params, err := envs.LoadTestkubeVariables()
 	if err != nil {
 		output.PrintError(os.Stderr, errors.Errorf("could not initialize Gradle Executor environment variables: %v", err))

@@ -9,5 +9,8 @@ import (
 )
 
 func main() {
-	agent.Run(context.Background(), runner.NewRunner(), os.Args)
+	ctx := context.Background()
+	agent.PreRun(ctx)
+	defer agent.PostRun(ctx)
+	agent.Run(ctx, runner.NewRunner(), os.Args)
 }
