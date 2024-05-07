@@ -38,4 +38,6 @@ type TestWorkflowPodConfig struct {
 	TopologySpreadConstraints []TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
 	SchedulingGates           []PodSchedulingGate        `json:"schedulingGates,omitempty"`
 	ResourceClaims            []PodResourceClaim         `json:"resourceClaims,omitempty"`
+	// namespace for execution of test workflow
+	Namespace string `json:"namespace,omitempty"`
 }

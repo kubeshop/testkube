@@ -8524,6 +8524,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PodResourceClaim"
+        namespace:
+          type: string
+          description: namespace for execution of test workflow
 
     TestWorkflowContainerConfig:
       type: object
