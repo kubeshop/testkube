@@ -313,6 +313,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			Name:        "{{execution.id}}",
 			Annotations: jobConfig.Annotations,
 			Labels:      jobConfig.Labels,
+			Namespace:   jobConfig.Namespace,
 		},
 		Spec: batchv1.JobSpec{
 			BackoffLimit: common.Ptr(int32(0)),
