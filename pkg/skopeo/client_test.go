@@ -129,3 +129,51 @@ func TestExtractRegistry(t *testing.T) {
 		})
 	}
 }
+
+// TestTrimTopNonJSON tests the trimNonJSON function with various inputs to ensure it correctly trims non-JSON leading characters.
+func TestTrimTopNonJSON(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []byte
+		expected []byte
+	}{
+		{
+			name:     "No JSON",
+			input:    []byte("hello world"),
+			expected: nil,
+		},
+		{
+			name:     "Valid JSON at start",
+			input:    []byte(`{"key": "value"}`),
+			expected: []byte(`{"key": "value"}`),
+		},
+		{
+			name:     "JSON with leading text",
+			input:    []byte(`error: failed {"key": "value"}`),
+			expected: []byte(`{"key": "value"}`),
+		},
+		{
+			name:     "Multiple JSON objects, trim to first",
+			input:    []byte(`error: failed {"key1": "value1"} another error {"key2": "value2"}`),
+			expected: []byte(`{"key1": "value1"} another error {"key2": "value2"}`),
+		},
+		{
+			name:     "No opening brace",
+			input:    []byte(`error: failed no json here`),
+			expected: nil,
+		},
+		{
+			name: "Leading spaces and newline before JSON",
+			input: []byte(`  
+			            {"key": "value"}`),
+			expected: []byte(`{"key": "value"}`),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := trimTopNonJSON(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}

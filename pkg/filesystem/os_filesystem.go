@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"bufio"
+	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -24,7 +25,7 @@ func (s *OSFileSystem) OpenFile(name string, flag int, perm os.FileMode) (*os.Fi
 	return os.OpenFile(name, flag, perm)
 }
 
-func (s *OSFileSystem) OpenFileRO(name string) (*os.File, error) {
+func (s *OSFileSystem) OpenFileRO(name string) (fs.File, error) {
 	return os.Open(name)
 }
 
@@ -35,6 +36,15 @@ func (s *OSFileSystem) OpenFileBuffered(name string) (*bufio.Reader, error) {
 	}
 
 	return bufio.NewReader(f), nil
+}
+
+func (s *OSFileSystem) ReadFileBuffered(name string) (reader *bufio.Reader, closer func() error, err error) {
+	f, err := os.Open(name)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return bufio.NewReader(f), f.Close, nil
 }
 
 func (s *OSFileSystem) ReadDir(dirname string) ([]os.DirEntry, error) {

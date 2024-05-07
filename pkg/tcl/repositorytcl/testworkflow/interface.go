@@ -52,7 +52,7 @@ type Repository interface {
 	GetExecutionsTotals(ctx context.Context, filter ...Filter) (totals testkube.ExecutionsTotals, err error)
 	// GetExecutions gets executions using a filter, use filter with no data for all
 	GetExecutions(ctx context.Context, filter Filter) ([]testkube.TestWorkflowExecution, error)
-	// GetExecutions gets executions using a filter, use filter with no data for all
+	// GetExecutionsSummary gets executions summary using a filter, use filter with no data for all
 	GetExecutionsSummary(ctx context.Context, filter Filter) ([]testkube.TestWorkflowExecutionSummary, error)
 	// Insert inserts new execution result
 	Insert(ctx context.Context, result testkube.TestWorkflowExecution) error
@@ -60,6 +60,8 @@ type Repository interface {
 	Update(ctx context.Context, result testkube.TestWorkflowExecution) error
 	// UpdateResult updates execution result
 	UpdateResult(ctx context.Context, id string, result *testkube.TestWorkflowResult) (err error)
+	// UpdateReport appends a report to the execution
+	UpdateReport(ctx context.Context, id string, report *testkube.TestWorkflowReport) (err error)
 	// UpdateOutput updates list of output references in the execution result
 	UpdateOutput(ctx context.Context, id string, output []testkube.TestWorkflowOutput) (err error)
 	// DeleteByTestWorkflow deletes execution results by workflow
