@@ -350,6 +350,15 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, errors.Wrap(err, "resolving error")
 	}
 
+	namespace := e.namespace
+	if workflow.Spec.Job != nil && workflow.Spec.Job.Namespace != "" {
+		namespace = workflow.Spec.Job.Namespace
+	}
+
+	if _, ok := e.serviceAccountNames[namespace]; !ok {
+		return execution, fmt.Errorf("not supported execution namespace %s", namespace)
+	}
+
 	// Build the basic Execution data
 	id := primitive.NewObjectID().Hex()
 	now := time.Now()
@@ -375,7 +384,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 
 			"dashboard.url":  os.Getenv("TESTKUBE_DASHBOARD_URI"),
 			"api.url":        e.apiUrl,
-			"namespace":      execution.Namespace,
+			"namespace":      namespace,
 			"globalTemplate": globalTemplateStr,
 
 			"images.init":    constants.DefaultInitImage,
@@ -411,15 +420,6 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	next, _ := e.repository.GetByNameAndTestWorkflow(ctx, executionName, workflow.Name)
 	if next.Name == executionName {
 		return execution, errors.Wrap(err, "execution name already exists")
-	}
-
-	namespace := e.namespace
-	if bundle.Job.Namespace != "" {
-		namespace = bundle.Job.Namespace
-	}
-
-	if _, ok := e.serviceAccountNames[namespace]; !ok {
-		return execution, fmt.Errorf("not supported execution namespace %s", namespace)
 	}
 
 	// Build Execution entity
