@@ -148,7 +148,7 @@ func NewTestkubeAPI(
 		disableSecretCreation: disableSecretCreation,
 		SubscriptionChecker:   subscriptionChecker,
 		LabelSources:          common.Ptr(make([]LabelSource, 0)),
-		serviceAccountNames:   serviceAccountNames,
+		ServiceAccountNames:   serviceAccountNames,
 	}
 
 	// will be reused in websockets handler
@@ -212,7 +212,7 @@ type TestkubeAPI struct {
 	disableSecretCreation bool
 	SubscriptionChecker   checktcl.SubscriptionChecker
 	LabelSources          *[]LabelSource
-	serviceAccountNames   map[string]string
+	ServiceAccountNames   map[string]string
 }
 
 type storageParams struct {

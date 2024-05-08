@@ -69,6 +69,7 @@ type executor struct {
 	globalTemplateName          string
 	apiUrl                      string
 	namespace                   string
+	serviceAccountNames         map[string]string
 }
 
 func New(emitter *event.Emitter,
@@ -79,7 +80,12 @@ func New(emitter *event.Emitter,
 	imageInspector imageinspector.Inspector,
 	configMap configRepo.Repository,
 	executionResults result.Repository,
+	serviceAccountNames map[string]string,
 	globalTemplateName, namespace, apiUrl string) TestWorkflowExecutor {
+	if serviceAccountNames == nil {
+		serviceAccountNames = make(map[string]string)
+	}
+
 	return &executor{
 		emitter:                     emitter,
 		clientSet:                   clientSet,
@@ -89,6 +95,7 @@ func New(emitter *event.Emitter,
 		imageInspector:              imageInspector,
 		configMap:                   configMap,
 		executionResults:            executionResults,
+		serviceAccountNames:         serviceAccountNames,
 		globalTemplateName:          globalTemplateName,
 		apiUrl:                      apiUrl,
 		namespace:                   namespace,
@@ -409,6 +416,10 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	namespace := e.namespace
 	if bundle.Job.Namespace != "" {
 		namespace = bundle.Job.Namespace
+	}
+
+	if _, ok := e.serviceAccountNames[namespace]; !ok {
+		return execution, fmt.Errorf("not supported execution namespace %s", namespace)
 	}
 
 	// Build Execution entity
