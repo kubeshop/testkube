@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/utils"
+
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubeshop/testkube/pkg/skopeo"
@@ -46,17 +48,16 @@ func (s *skopeoFetcher) Fetch(ctx context.Context, registry, image string, pullS
 // extractRegistry takes a container image string and returns the registry part.
 // It defaults to "docker.io" if no registry is specified.
 func extractRegistry(image string) string {
-	defaultRegistry := "https://index.docker.io/v1/"
 	parts := strings.Split(image, "/")
 	// If the image is just a name, return the default registry.
 	if len(parts) == 1 {
-		return defaultRegistry
+		return utils.DefaultDockerRegistry
 	}
 	// If the first part contains '.' or ':', it's likely a registry.
 	if strings.Contains(parts[0], ".") || strings.Contains(parts[0], ":") {
 		return parts[0]
 	}
-	return defaultRegistry
+	return utils.DefaultDockerRegistry
 }
 
 func determineUserGroupPair(userGroupStr string) (int64, int64) {
