@@ -2,6 +2,8 @@ package commands
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 	"os/exec"
 	"strings"
 
@@ -9,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/pro"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/telemetry"
@@ -19,15 +22,18 @@ const (
 	defaultNamespace       = "testkube"
 	standaloneAgentProfile = "standalone-agent"
 	demoProfile            = "demo"
+	demoValuesUrl          = "https://raw.githubusercontent.com/kubeshop/testkube-cloud-charts/main/charts/testkube-enterprise/profiles/values.demo.yaml"
 	agentProfile           = "agent"
 
 	standaloneInstallationName = "Testkube OSS"
 	demoInstallationName       = "Testkube On-Prem demo"
 	agentInstallationName      = "Testkube Agent"
 	licenseFormat              = "XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-V3"
+	helpUrl                    = "https://testkubeworkspace.slack.com"
 )
 
 func NewInitCmd() *cobra.Command {
+	var export bool
 	standaloneCmd := NewInitCmdStandalone()
 
 	cmd := &cobra.Command{
@@ -39,24 +45,36 @@ func NewInitCmd() *cobra.Command {
 			"\t" + demoProfile + " -> " + demoInstallationName + "\n" +
 			"\t" + agentProfile + " -> " + agentInstallationName,
 		Run: func(cmd *cobra.Command, args []string) {
+			if export {
+				ui.Failf("export is unavailable for this profile")
+				return
+			}
 			standaloneCmd.Run(cmd, args)
 		},
 	}
 
 	cmd.AddCommand(standaloneCmd)
 	cmd.AddCommand(NewInitCmdDemo())
+	cmd.AddCommand(pro.NewInitCmd())
+	cmd.Flags().BoolVarP(&export, "export", "", false, "Export the values.yaml")
 
 	return cmd
 }
 
 func NewInitCmdStandalone() *cobra.Command {
+	var export bool
 	var options common.HelmOptions
 
 	cmd := &cobra.Command{
 		Use:     standaloneAgentProfile,
 		Short:   "Install " + standaloneInstallationName + " in your current context",
-		Aliases: []string{"install"},
+		Aliases: []string{"oss", "standalone"},
 		Run: func(cmd *cobra.Command, args []string) {
+			if export {
+				ui.Failf("export is unavailable for this profile")
+				return
+			}
+
 			ui.Logo()
 			ui.Info("Welcome to the installer for " + standaloneInstallationName + ".")
 			ui.NL()
@@ -82,6 +100,7 @@ func NewInitCmdStandalone() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVarP(&export, "export", "", false, "Export the values.yaml")
 	common.PopulateHelmFlags(cmd, &options)
 	common.PopulateMasterFlags(cmd, &options)
 
@@ -89,14 +108,25 @@ func NewInitCmdStandalone() *cobra.Command {
 }
 
 func NewInitCmdDemo() *cobra.Command {
-	var noConfirm, dryRun bool
+	var noConfirm, dryRun, export bool
 	var license, namespace string
 
 	cmd := &cobra.Command{
 		Use:     demoProfile,
-		Short:   "Install " + demoInstallationName + " Helm chart registry in current kubectl context and update dependencies",
+		Short:   "Install " + demoInstallationName + " in your current context",
 		Aliases: []string{"on-premise-demo", "on-prem-demo", "enterprise-demo"},
 		Run: func(cmd *cobra.Command, args []string) {
+			if export {
+				valuesResp, err := http.Get(demoValuesUrl)
+				ui.ExitOnError("cannot fetch values", err)
+				valuesBytes, err := io.ReadAll(valuesResp.Body)
+				ui.ExitOnError("cannot fetch values", err)
+				values := string(valuesBytes)
+				_, err = fmt.Println(values)
+				ui.ExitOnError("cannot print values", err)
+				return
+			}
+
 			ui.Logo()
 			ui.Info("Welcome to the installer for " + demoInstallationName + ".")
 			ui.NL()
@@ -197,7 +227,7 @@ func NewInitCmdDemo() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVarP(&noConfirm, "export", "", false, "Export the values.yaml")
+	cmd.Flags().BoolVarP(&export, "export", "", false, "Export the values.yaml")
 	cmd.Flags().BoolVarP(&noConfirm, "no-confirm", "y", false, "Skip confirmation")
 	cmd.Flags().StringVarP(&license, "license", "l", "", "License key")
 	cmd.Flags().BoolVarP(&dryRun, "dry-run", "", false, "Dry run")
@@ -227,21 +257,25 @@ func isContextApproved(isNoConfirm bool, installedComponent string) bool {
 }
 
 func helmInstallDemo(license, namespace string, dryRun bool) error {
+	spinner := ui.NewSpinner("Installing Testkube… ")
+
 	helmPath, err := exec.LookPath("helm")
 	if err != nil {
+		spinner.Fail("Failed to install Testkube")
 		return err
 	}
-
-	ui.Info("Installing Testkube… ")
 
 	args := []string{"repo", "add", "testkubeenterprise", "https://kubeshop.github.io/testkube-cloud-charts"}
 	_, err = process.ExecuteWithOptions(process.Options{Command: helmPath, Args: args, DryRun: dryRun})
 	if err != nil && !strings.Contains(err.Error(), "Error: repository name (kubeshop) already exists, please specify a different name") {
+		spinner.Fail("Failed to install Testkube")
 		return err
 	}
 
 	_, err = process.ExecuteWithOptions(process.Options{Command: helmPath, Args: []string{"repo", "update"}, DryRun: dryRun})
+
 	if err != nil {
+		spinner.Fail("Failed to install Testkube")
 		return err
 	}
 
@@ -249,15 +283,19 @@ func helmInstallDemo(license, namespace string, dryRun bool) error {
 		"--create-namespace",
 		"--namespace", namespace,
 		"--set", "global.enterpriseLicenseKey=" + license,
-		"--values", "https://raw.githubusercontent.com/kubeshop/testkube-cloud-charts/main/charts/testkube-enterprise/profiles/values.demo.yaml",
+		"--values", demoValuesUrl,
 		"--wait",
 		"testkube", "testkubeenterprise/testkube-enterprise"}
 
 	ui.Debug("Helm command: ", helmPath+" "+strings.Join(args, " "))
+
 	out, err := process.ExecuteWithOptions(process.Options{Command: helmPath, Args: args, DryRun: dryRun})
 	if err != nil {
+		spinner.Fail("Failed to install Testkube")
 		return err
 	}
+	spinner.Success()
+
 	ui.Debug("Helm command output: ", string(out))
 	ui.NL()
 	return nil
