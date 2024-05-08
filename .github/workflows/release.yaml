@@ -328,7 +328,7 @@ jobs:
           echo RELEASE_TAG=${SOURCE_TAG:1} >> $GITHUB_ENV
 
       - name: Repository Dispatch
-        uses: peter-evans/repository-dispatch@v2
+        uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.CI_BOT_TOKEN }}
           repository: kubeshop/testkube-argocd
