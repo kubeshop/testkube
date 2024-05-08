@@ -38,7 +38,7 @@ func newArtifactUploader() Uploader {
 	if env.CloudEnabled() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		client := env.Cloud(ctx)
+		client, _ := env.Cloud(ctx)
 		return NewCloudUploader(client, WithParallelismCloud(30), CloudDetectMimetype)
 	}
 	return NewDirectUploader(WithParallelism(30), DirectDetectMimetype)

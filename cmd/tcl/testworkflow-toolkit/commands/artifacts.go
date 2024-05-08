@@ -18,6 +18,12 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/protobuf/types/known/emptypb"
+
+	"github.com/kubeshop/testkube/pkg/agent"
+	"github.com/kubeshop/testkube/pkg/capabilities"
+	"github.com/kubeshop/testkube/pkg/cloud"
+
 	"github.com/kubeshop/testkube/pkg/filesystem"
 
 	"github.com/minio/minio-go/v7"
@@ -102,10 +108,20 @@ func NewArtifactsCmd() *cobra.Command {
 			if env.CloudEnabled() {
 				ctx, cancel := context.WithTimeout(cmd.Context(), 30*time.Second)
 				defer cancel()
-				client := env.Cloud(ctx)
-				defer client.Close()
-				if env.JUnitParserEnabled() {
-					junitProcessor := artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), client)
+				ctx = agent.AddAPIKeyMeta(ctx, env.Config().Cloud.ApiKey)
+				executor, client := env.Cloud(ctx)
+				proContext, err := client.GetProContext(ctx, &emptypb.Empty{})
+				var supported []*cloud.Capability
+				if err != nil {
+					fmt.Printf("Warning: couldn't get capabilities: %s\n", err.Error())
+				}
+				if proContext != nil {
+					supported = proContext.Capabilities
+				}
+				defer executor.Close()
+
+				if env.JUnitParserEnabled() || capabilities.Enabled(supported, capabilities.CapabilityJUnitReports) {
+					junitProcessor := artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), executor)
 					handlerOpts = append(handlerOpts, artifacts.WithPostProcessor(junitProcessor))
 				}
 				if compress != "" {
@@ -114,10 +130,10 @@ func NewArtifactsCmd() *cobra.Command {
 					if unpack {
 						opts = append(opts, cloudUnpack)
 					}
-					uploader = artifacts.NewCloudUploader(client, opts...)
+					uploader = artifacts.NewCloudUploader(executor, opts...)
 				} else {
 					processor = artifacts.NewDirectProcessor()
-					uploader = artifacts.NewCloudUploader(client, artifacts.WithParallelismCloud(30), artifacts.CloudDetectMimetype)
+					uploader = artifacts.NewCloudUploader(executor, artifacts.WithParallelismCloud(30), artifacts.CloudDetectMimetype)
 				}
 			} else if compress != "" && unpack {
 				processor = artifacts.NewTarCachedProcessor(compress, compressCachePath)
