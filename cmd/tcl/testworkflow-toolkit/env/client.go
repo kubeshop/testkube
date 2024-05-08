@@ -63,12 +63,12 @@ func ObjectStorageClient() (*minio.Client, error) {
 	return c, c.Connect()
 }
 
-func Cloud(ctx context.Context) cloudexecutor.Executor {
+func Cloud(ctx context.Context) (cloudexecutor.Executor, cloud.TestKubeCloudAPIClient) {
 	cfg := Config().Cloud
 	grpcConn, err := agent.NewGRPCConnection(ctx, cfg.TlsInsecure, cfg.SkipVerify, cfg.Url, "", "", "", log.DefaultLogger)
 	if err != nil {
 		ui.Fail(fmt.Errorf("failed to connect with Cloud: %w", err))
 	}
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
-	return cloudexecutor.NewCloudGRPCExecutor(grpcClient, grpcConn, cfg.ApiKey)
+	return cloudexecutor.NewCloudGRPCExecutor(grpcClient, grpcConn, cfg.ApiKey), grpcClient
 }
