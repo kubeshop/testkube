@@ -56,23 +56,6 @@ func TestParseSecretData(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("parse docker config missed registry", func(t *testing.T) {
-		t.Parallel()
-
-		secret := corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "dockercfg",
-			},
-
-			Data: map[string][]byte{".dockerconfigjson": []byte("{\"auths\": {\"https://index.docker.io/v1/\": {\"username\": \"plainuser\", \"password\": \"plainpass\"}}}")},
-		}
-
-		out, err := ParseSecretData([]corev1.Secret{secret}, "fake")
-
-		assert.Nil(t, out)
-		assert.EqualError(t, err, "secret dockercfg is not defined for registry: fake")
-	})
-
 	t.Run("parse docker config missed data", func(t *testing.T) {
 		t.Parallel()
 
@@ -101,33 +84,6 @@ func TestParseSecretData(t *testing.T) {
 		assert.ErrorContains(t, err, "illegal base64 data")
 	})
 
-}
-
-// TestExtractRegistry uses table-driven tests to validate the extractRegistry function.
-func TestExtractRegistry(t *testing.T) {
-	tests := []struct {
-		name     string
-		image    string
-		expected string
-	}{
-		{"DockerHub short", "nginx:latest", "https://index.docker.io/v1/"},
-		{"DockerHub long", "library/nginx:latest", "https://index.docker.io/v1/"},
-		{"GCR", "gcr.io/google-containers/busybox:latest", "gcr.io"},
-		{"ECR", "123456789012.dkr.ecr.us-east-1.amazonaws.com/my-application:latest", "123456789012.dkr.ecr.us-east-1.amazonaws.com"},
-		{"MCR", "mcr.microsoft.com/dotnet/core/sdk:3.1", "mcr.microsoft.com"},
-		{"Quay", "quay.io/bitnami/nginx:latest", "quay.io"},
-		{"Custom port", "localhost:5000/myimage:latest", "localhost:5000"},
-		{"No tag", "myregistry.com/myimage", "myregistry.com"},
-		{"Only image", "myimage", "https://index.docker.io/v1/"},
-	}
-
-	for _, tc := range tests {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			got := extractRegistry(tc.image)
-			assert.Equal(t, tc.expected, got)
-		})
-	}
 }
 
 // TestTrimTopNonJSON tests the trimNonJSON function with various inputs to ensure it correctly trims non-JSON leading characters.

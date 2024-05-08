@@ -21,6 +21,10 @@ func NewSkopeoFetcher() InfoFetcher {
 }
 
 func (s *skopeoFetcher) Fetch(ctx context.Context, registry, image string, pullSecrets []corev1.Secret) (*Info, error) {
+	// If registry is not provided, extract it from the image name
+	if registry == "" {
+		registry = extractRegistry(image)
+	}
 	client, err := skopeo.NewClientFromSecrets(pullSecrets, registry)
 	if err != nil {
 		return nil, err
