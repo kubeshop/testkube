@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/utils"
+
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubeshop/testkube/pkg/process"
@@ -90,10 +92,11 @@ func (c *client) Inspect(registry, image string) (*DockerImage, error) {
 		args = append(args, "--creds", c.dockerAuthConfigs[i].Username+":"+c.dockerAuthConfigs[i].Password)
 	}
 
-	config := "docker://" + image
-	if registry != "" {
-		config = registry + "/" + image
+	// If registry is provided via config and the image does not start with the registry, prepend it
+	if registry != "" && registry != utils.DefaultDockerRegistry && !strings.HasPrefix(image, registry) {
+		image = registry + "/" + image
 	}
+	config := "docker://" + image
 
 	args = append(args, "--config", config)
 	result, err := process.Execute("skopeo", args...)
