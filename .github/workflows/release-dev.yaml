@@ -203,7 +203,7 @@ jobs:
 
       - name: Get MSFT Cert
         id: write_file
-        uses: timheuer/base64-to-file@v1.1
+        uses: timheuer/base64-to-file@v1.2
         with:
           fileName: "kubeshop_msft.p12"
           fileDir: "./temp/"
