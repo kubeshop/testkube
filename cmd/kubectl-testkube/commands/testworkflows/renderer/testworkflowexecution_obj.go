@@ -21,7 +21,7 @@ func TestWorkflowExecutionRenderer(client client.Client, ui *ui.UI, obj interfac
 	if execution.Id != "" {
 		ui.Warn("Execution ID:        ", execution.Id)
 		ui.Warn("Execution name:      ", execution.Name)
-		ui.Warn("Execution namespace: ", execution.Name)
+		ui.Warn("Execution namespace: ", execution.Namespace)
 		if execution.Number != 0 {
 			ui.Warn("Execution number:    ", fmt.Sprintf("%d", execution.Number))
 		}
