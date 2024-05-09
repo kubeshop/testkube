@@ -627,7 +627,7 @@ func main() {
 
 	// Pro edition only (tcl protected code)
 	testWorkflowExecutor := testworkflowexecutor.New(eventsEmitter, clientset, testWorkflowResultsRepository,
-		testWorkflowOutputRepository, testWorkflowTemplatesClient, inspector, configMapConfig, resultsRepository,
+		testWorkflowOutputRepository, testWorkflowTemplatesClient, inspector, configMapConfig, resultsRepository, serviceAccountNames,
 		cfg.GlobalWorkflowTemplateName, cfg.TestkubeNamespace, "http://"+cfg.APIServerFullname+":"+cfg.APIServerPort)
 	api.InitEvents()
 	if !cfg.DisableTestTriggers {

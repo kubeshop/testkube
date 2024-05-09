@@ -454,6 +454,7 @@ func MapJobConfigKubeToAPI(v testworkflowsv1.JobConfig) testkube.TestWorkflowJob
 	return testkube.TestWorkflowJobConfig{
 		Labels:      v.Labels,
 		Annotations: v.Annotations,
+		Namespace:   v.Namespace,
 	}
 }
 

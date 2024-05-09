@@ -58,7 +58,7 @@ func NewApiTCL(
 ) ApiTCL {
 	testWorkflowTemplatesClient := testworkflowsv1.NewTestWorkflowTemplatesClient(kubeClient, testkubeAPI.Namespace)
 	executor := testworkflowexecutor.New(testkubeAPI.Events, testkubeAPI.Clientset, testWorkflowResults, testWorkflowOutput,
-		testWorkflowTemplatesClient, imageInspector, configMap, executionResults, globalTemplateName,
+		testWorkflowTemplatesClient, imageInspector, configMap, executionResults, testkubeAPI.ServiceAccountNames, globalTemplateName,
 		testkubeAPI.Namespace, apiUrl)
 	go executor.Recover(context.Background())
 	return &apiTCL{

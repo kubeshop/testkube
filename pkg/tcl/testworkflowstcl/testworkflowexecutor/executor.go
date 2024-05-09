@@ -69,6 +69,7 @@ type executor struct {
 	globalTemplateName          string
 	apiUrl                      string
 	namespace                   string
+	serviceAccountNames         map[string]string
 }
 
 func New(emitter *event.Emitter,
@@ -79,7 +80,12 @@ func New(emitter *event.Emitter,
 	imageInspector imageinspector.Inspector,
 	configMap configRepo.Repository,
 	executionResults result.Repository,
+	serviceAccountNames map[string]string,
 	globalTemplateName, namespace, apiUrl string) TestWorkflowExecutor {
+	if serviceAccountNames == nil {
+		serviceAccountNames = make(map[string]string)
+	}
+
 	return &executor{
 		emitter:                     emitter,
 		clientSet:                   clientSet,
@@ -89,6 +95,7 @@ func New(emitter *event.Emitter,
 		imageInspector:              imageInspector,
 		configMap:                   configMap,
 		executionResults:            executionResults,
+		serviceAccountNames:         serviceAccountNames,
 		globalTemplateName:          globalTemplateName,
 		apiUrl:                      apiUrl,
 		namespace:                   namespace,
@@ -118,19 +125,24 @@ func (e *executor) Schedule(bundle *testworkflowprocessor.Bundle, execution test
 }
 
 func (e *executor) Deploy(ctx context.Context, bundle *testworkflowprocessor.Bundle) (err error) {
+	namespace := e.namespace
+	if bundle.Job.Namespace != "" {
+		namespace = bundle.Job.Namespace
+	}
+
 	for _, item := range bundle.Secrets {
-		_, err = e.clientSet.CoreV1().Secrets(e.namespace).Create(ctx, &item, metav1.CreateOptions{})
+		_, err = e.clientSet.CoreV1().Secrets(namespace).Create(ctx, &item, metav1.CreateOptions{})
 		if err != nil {
 			return
 		}
 	}
 	for _, item := range bundle.ConfigMaps {
-		_, err = e.clientSet.CoreV1().ConfigMaps(e.namespace).Create(ctx, &item, metav1.CreateOptions{})
+		_, err = e.clientSet.CoreV1().ConfigMaps(namespace).Create(ctx, &item, metav1.CreateOptions{})
 		if err != nil {
 			return
 		}
 	}
-	_, err = e.clientSet.BatchV1().Jobs(e.namespace).Create(ctx, &bundle.Job, metav1.CreateOptions{})
+	_, err = e.clientSet.BatchV1().Jobs(namespace).Create(ctx, &bundle.Job, metav1.CreateOptions{})
 	return
 }
 
@@ -154,7 +166,7 @@ func (e *executor) handleFatalError(execution *testkube.TestWorkflowExecution, e
 		log.DefaultLogger.Errorf("failed to save fatal error for execution %s: %v", execution.Id, err)
 	}
 	e.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(execution))
-	go testworkflowcontroller.Cleanup(context.Background(), e.clientSet, e.namespace, execution.Id)
+	go testworkflowcontroller.Cleanup(context.Background(), e.clientSet, execution.Namespace, execution.Id)
 }
 
 func (e *executor) Recover(ctx context.Context) {
@@ -168,7 +180,7 @@ func (e *executor) Recover(ctx context.Context) {
 }
 
 func (e *executor) Control(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
-	ctrl, err := testworkflowcontroller.New(ctx, e.clientSet, e.namespace, execution.Id, execution.ScheduledAt)
+	ctrl, err := testworkflowcontroller.New(ctx, e.clientSet, execution.Namespace, execution.Id, execution.ScheduledAt)
 	if err != nil {
 		log.DefaultLogger.Errorw("failed to save TestWorkflow log output", "id", execution.Id, "error", err)
 		return err
@@ -228,7 +240,7 @@ func (e *executor) Control(ctx context.Context, execution *testkube.TestWorkflow
 				e.handleFatalError(execution, testworkflowcontroller.ErrJobAborted, abortedAt)
 			} else {
 				// Handle unknown state
-				ctrl, err = testworkflowcontroller.New(ctx, e.clientSet, e.namespace, execution.Id, execution.ScheduledAt)
+				ctrl, err = testworkflowcontroller.New(ctx, e.clientSet, execution.Namespace, execution.Id, execution.ScheduledAt)
 				if err == nil {
 					for v := range ctrl.Watch(ctx).Stream(ctx).Channel() {
 						if v.Error != nil || v.Value.Output == nil {
@@ -276,7 +288,7 @@ func (e *executor) Control(ctx context.Context, execution *testkube.TestWorkflow
 
 	wg.Wait()
 
-	err = testworkflowcontroller.Cleanup(ctx, e.clientSet, e.namespace, execution.Id)
+	err = testworkflowcontroller.Cleanup(ctx, e.clientSet, execution.Namespace, execution.Id)
 	if err != nil {
 		log.DefaultLogger.Errorw("failed to cleanup TestWorkflow resources", "id", execution.Id, "error", err)
 	}
@@ -338,6 +350,15 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, errors.Wrap(err, "resolving error")
 	}
 
+	namespace := e.namespace
+	if workflow.Spec.Job != nil && workflow.Spec.Job.Namespace != "" {
+		namespace = workflow.Spec.Job.Namespace
+	}
+
+	if _, ok := e.serviceAccountNames[namespace]; !ok {
+		return execution, fmt.Errorf("not supported execution namespace %s", namespace)
+	}
+
 	// Build the basic Execution data
 	id := primitive.NewObjectID().Hex()
 	now := time.Now()
@@ -363,7 +384,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 
 			"dashboard.url":  os.Getenv("TESTKUBE_DASHBOARD_URI"),
 			"api.url":        e.apiUrl,
-			"namespace":      e.namespace,
+			"namespace":      namespace,
 			"globalTemplate": globalTemplateStr,
 
 			"images.init":    constants.DefaultInitImage,
@@ -406,6 +427,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	execution = testkube.TestWorkflowExecution{
 		Id:          id,
 		Name:        executionName,
+		Namespace:   namespace,
 		Number:      number,
 		ScheduledAt: now,
 		StatusAt:    now,

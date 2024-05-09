@@ -7518,6 +7518,10 @@ components:
           type: string
           description: execution name
           example: "some-workflow-name-1"
+        namespace:
+          type: string
+          description: execution namespace
+          example: "my-testkube"          
         number:
           type: integer
           description: sequence number for the execution
@@ -8450,6 +8454,9 @@ components:
           description: annotations to attach to the job
           additionalProperties:
             type: string
+        namespace:
+          type: string
+          description: namespace for execution of test workflow
 
     TestWorkflowPodConfig:
       type: object
