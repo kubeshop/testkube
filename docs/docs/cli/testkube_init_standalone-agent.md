@@ -1,9 +1,9 @@
-## testkube pro connect
+## testkube init standalone-agent
 
-Testkube Pro connect 
+Install Testkube OSS in your current context
 
 ```
-testkube pro connect [flags]
+testkube init standalone-agent [flags]
 ```
 
 ### Options
@@ -16,13 +16,12 @@ testkube pro connect [flags]
       --chart string          chart name (usually you don't need to change it) (default "kubeshop/testkube")
       --dry-run               dry run mode - only print commands that would be executed
       --env-id string         Testkube Pro environment id [required for centralized mode]
+      --export                Export the values.yaml
       --feature-logs-v2       Logs v2 feature flag
-  -h, --help                  help for connect
+  -h, --help                  help for standalone-agent
       --logs-prefix string    usually don't need to be changed [required for custom cloud mode] (default "logs")
       --logs-uri string       Testkube Pro logs URI [required for centralized mode]
       --master-insecure       should client connect in insecure mode (will use http instead of https)
-      --minio-replicas int    MinIO replicas
-      --mongo-replicas int    MongoDB replicas
       --name string           installation name (usually you don't need to change it) (default "testkube")
       --namespace string      namespace where to install (default "testkube")
       --no-confirm            don't ask for confirmation - unatended installation mode
@@ -47,5 +46,5 @@ testkube pro connect [flags]
 
 ### SEE ALSO
 
-* [testkube pro](testkube_pro.md)	 - Testkube Pro commands
+* [testkube init](testkube_init.md)	 - Init Testkube profiles(standalone-agent|demo|agent)
 

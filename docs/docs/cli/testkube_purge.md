@@ -1,10 +1,10 @@
 ## testkube purge
 
-Uninstall Helm chart registry from current kubectl context
+Uninstall Testkube from your current kubectl context
 
 ### Synopsis
 
-Uninstall Helm chart registry from current kubectl context
+Uninstall Testkube from your current kubectl context
 
 ```
 testkube purge [flags]
@@ -21,11 +21,12 @@ testkube purge [flags]
 ### Options inherited from parent commands
 
 ```
-  -a, --api-uri string   api uri, default value read from config if set (default "http://localhost:8088")
-  -c, --client string    client used for connecting to Testkube API one of proxy|direct|cluster (default "proxy")
-      --insecure         insecure connection for direct client
-      --oauth-enabled    enable oauth
-      --verbose          show additional debug messages
+  -a, --api-uri string          api uri, default value read from config if set (default "http://localhost:8088")
+  -c, --client string           client used for connecting to Testkube API one of proxy|direct|cluster (default "proxy")
+      --header stringToString   headers for direct client key value pair: --header name=value (default [])
+      --insecure                insecure connection for direct client
+      --oauth-enabled           enable oauth
+      --verbose                 show additional debug messages
 ```
 
 ### SEE ALSO

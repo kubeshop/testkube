@@ -30,10 +30,16 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 		return nil, "", fmt.Errorf("parsing flag value %w", err)
 	}
 
+	headers, err := cmd.Flags().GetStringToString("header")
+	if err != nil {
+		return nil, "", fmt.Errorf("parsing flag value %w", err)
+	}
+
 	options := client.Options{
 		Namespace: namespace,
 		ApiUri:    apiURI,
 		Insecure:  insecure,
+		Headers:   headers,
 	}
 
 	cfg, err := config.Load()

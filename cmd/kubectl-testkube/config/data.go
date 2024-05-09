@@ -32,15 +32,16 @@ type CloudContext struct {
 }
 
 type Data struct {
-	TelemetryEnabled bool       `json:"telemetryEnabled,omitempty"`
-	Namespace        string     `json:"namespace,omitempty"`
-	Initialized      bool       `json:"initialized,omitempty"`
-	APIURI           string     `json:"apiURI,omitempty"`
-	APIServerName    string     `json:"apiServerName,omitempty"`
-	APIServerPort    int        `json:"apiServerPort,omitempty"`
-	DashboardName    string     `json:"dashboardName,omitempty"`
-	DashboardPort    int        `json:"dashboardPort,omitempty"`
-	OAuth2Data       OAuth2Data `json:"oauth2Data"`
+	TelemetryEnabled bool              `json:"telemetryEnabled,omitempty"`
+	Namespace        string            `json:"namespace,omitempty"`
+	Initialized      bool              `json:"initialized,omitempty"`
+	APIURI           string            `json:"apiURI,omitempty"`
+	Headers          map[string]string `json:"headers,omitempty"`
+	APIServerName    string            `json:"apiServerName,omitempty"`
+	APIServerPort    int               `json:"apiServerPort,omitempty"`
+	DashboardName    string            `json:"dashboardName,omitempty"`
+	DashboardPort    int               `json:"dashboardPort,omitempty"`
+	OAuth2Data       OAuth2Data        `json:"oauth2Data"`
 
 	ContextType  ContextType  `json:"contextType,omitempty"`
 	CloudContext CloudContext `json:"cloudContext,omitempty"`

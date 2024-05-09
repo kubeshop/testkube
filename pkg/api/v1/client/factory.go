@@ -31,6 +31,7 @@ type Options struct {
 	APIServerName string
 	APIServerPort int
 	Insecure      bool
+	Headers       map[string]string
 
 	// Testkube Cloud
 	CloudApiPathPrefix string
@@ -47,8 +48,8 @@ func GetClient(clientType ClientType, options Options) (client Client, err error
 	switch clientType {
 
 	case ClientCloud:
-		ConfigureClient(httpClient, nil, options.CloudApiKey)
-		ConfigureClient(sseClient, nil, options.CloudApiKey)
+		ConfigureClient(httpClient, nil, options.CloudApiKey, options.Headers)
+		ConfigureClient(sseClient, nil, options.CloudApiKey, options.Headers)
 		client = NewCloudAPIClient(httpClient, sseClient, options.ApiUri, options.CloudApiPathPrefix)
 
 	case ClientDirect:
@@ -60,8 +61,8 @@ func GetClient(clientType ClientType, options Options) (client Client, err error
 			}
 		}
 
-		ConfigureClient(httpClient, token, "")
-		ConfigureClient(sseClient, token, "")
+		ConfigureClient(httpClient, token, "", options.Headers)
+		ConfigureClient(sseClient, token, "", options.Headers)
 		client = NewDirectAPIClient(httpClient, sseClient, options.ApiUri, "")
 
 	case ClientProxy, ClientCluster:
