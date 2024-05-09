@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # setup-go@v4 handles Go cache by default
       - name: Set up Go
@@ -85,7 +85,7 @@ jobs:
           MINIO_ROOT_PASSWORD: minio123
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # setup-go@v4 handles Go cache by default
       - name: Set up Go
