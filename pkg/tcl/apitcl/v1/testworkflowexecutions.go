@@ -239,7 +239,7 @@ func (s *apiTCL) AbortTestWorkflowExecutionHandler() fiber.Handler {
 		}
 
 		// Abort the execution
-		err = ctrl.Abort(context.Background())
+		err = ctrl.Abort(ctx)
 		if err != nil {
 			return s.ClientError(c, "aborting test workflow execution", err)
 		}
@@ -279,7 +279,7 @@ func (s *apiTCL) PauseTestWorkflowExecutionHandler() fiber.Handler {
 		}
 
 		// Resuming the execution
-		err = ctrl.Pause(context.Background())
+		err = ctrl.Pause(ctx)
 		if err != nil {
 			return s.ClientError(c, "pausing test workflow execution", err)
 		}
@@ -314,12 +314,13 @@ func (s *apiTCL) ResumeTestWorkflowExecutionHandler() fiber.Handler {
 
 		// Obtain the controller
 		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.Namespace, execution.Id, execution.ScheduledAt)
+		defer ctrl.StopController()
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "fetching job", err)
 		}
 
 		// Resuming the execution
-		err = ctrl.Resume(context.Background())
+		err = ctrl.Resume(ctx)
 		if err != nil {
 			return s.ClientError(c, "resuming test workflow execution", err)
 		}
@@ -350,12 +351,13 @@ func (s *apiTCL) AbortAllTestWorkflowExecutionsHandler() fiber.Handler {
 		for _, execution := range executions {
 			// Obtain the controller
 			ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.Namespace, execution.Id, execution.ScheduledAt)
+			defer ctrl.StopController()
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "fetching job", err)
 			}
 
 			// Abort the execution
-			err = ctrl.Abort(context.Background())
+			err = ctrl.Abort(ctx)
 			if err != nil {
 				return s.ClientError(c, errPrefix, err)
 			}
@@ -464,6 +466,7 @@ func (s *apiTCL) GetTestWorkflowNotificationsStream(ctx context.Context, executi
 				ch <- n.Value.ToInternal()
 			}
 		}
+		ctrl.StopController()
 		close(ch)
 	}()
 	return ch, nil

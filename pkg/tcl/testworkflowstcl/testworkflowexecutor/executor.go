@@ -166,6 +166,7 @@ func (e *executor) Control(ctx context.Context, execution *testkube.TestWorkflow
 		log.DefaultLogger.Errorw("failed to control the TestWorkflow", "id", execution.Id, "error", err)
 		return err
 	}
+	defer ctrl.StopController()
 
 	// Prepare stream for writing log
 	r, writer := io.Pipe()
