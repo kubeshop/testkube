@@ -40,9 +40,8 @@ type envCloudConfig struct {
 }
 
 type envExecutionConfig struct {
-	WorkflowName   string `envconfig:"TK_WF"`
-	Id             string `envconfig:"TK_EX"`
-	GlobalTemplate string `envconfig:"TK_TMPL"`
+	WorkflowName string `envconfig:"TK_WF"`
+	Id           string `envconfig:"TK_EX"`
 }
 
 type envSystemConfig struct {
@@ -53,8 +52,8 @@ type envSystemConfig struct {
 }
 
 type envImagesConfig struct {
-	Init    string `envconfig:"TK_IMG_INIT"`
-	Toolkit string `envconfig:"TK_IMG_TOOLKIT"`
+	Init    string `envconfig:"TESTKUBE_TW_INIT_IMAGE"`
+	Toolkit string `envconfig:"TESTKUBE_TW_TOOLKIT_IMAGE"`
 }
 
 type featuresConfig struct {

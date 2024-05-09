@@ -23,7 +23,6 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/kustomize/kyaml/yaml"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
@@ -316,7 +315,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	}
 
 	// Fetch the global template
-	globalTemplateStr := ""
+	globalTemplateRef := testworkflowsv1.TemplateRef{}
 	if e.globalTemplateName != "" {
 		internalName := testworkflowresolver.GetInternalTemplateName(e.globalTemplateName)
 		displayName := testworkflowresolver.GetDisplayTemplateName(e.globalTemplateName)
@@ -330,11 +329,8 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			}
 		}
 		if _, ok := tplsMap[internalName]; ok {
-			workflow.Spec.Use = append([]testworkflowsv1.TemplateRef{{Name: displayName}}, workflow.Spec.Use...)
-			b, err := yaml.Marshal(tplsMap[internalName])
-			if err == nil {
-				globalTemplateStr = string(b)
-			}
+			globalTemplateRef = testworkflowsv1.TemplateRef{Name: displayName}
+			workflow.Spec.Use = append([]testworkflowsv1.TemplateRef{globalTemplateRef}, workflow.Spec.Use...)
 		}
 	}
 
@@ -348,6 +344,16 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	err = testworkflowresolver.ApplyTemplates(&workflow, tplsMap)
 	if err != nil {
 		return execution, errors.Wrap(err, "resolving error")
+	}
+
+	// Apply global template to parallel steps
+	if globalTemplateRef.Name != "" {
+		testworkflowresolver.AddGlobalTemplateRef(&workflow, globalTemplateRef)
+		workflow.Spec.Use = nil
+		err = testworkflowresolver.ApplyTemplates(&workflow, tplsMap)
+		if err != nil {
+			return execution, errors.Wrap(err, "resolving with global templates error")
+		}
 	}
 
 	namespace := e.namespace
@@ -382,10 +388,9 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			"cloud.api.skipVerify":  common.GetOr(os.Getenv("TESTKUBE_PRO_SKIP_VERIFY"), os.Getenv("TESTKUBE_CLOUD_SKIP_VERIFY"), "false"),
 			"cloud.api.url":         common.GetOr(os.Getenv("TESTKUBE_PRO_URL"), os.Getenv("TESTKUBE_CLOUD_URL")),
 
-			"dashboard.url":  os.Getenv("TESTKUBE_DASHBOARD_URI"),
-			"api.url":        e.apiUrl,
-			"namespace":      namespace,
-			"globalTemplate": globalTemplateStr,
+			"dashboard.url": os.Getenv("TESTKUBE_DASHBOARD_URI"),
+			"api.url":       e.apiUrl,
+			"namespace":     namespace,
 
 			"images.init":    constants.DefaultInitImage,
 			"images.toolkit": constants.DefaultToolkitImage,
@@ -456,7 +461,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	err = e.Deploy(context.Background(), bundle)
 	if err != nil {
 		e.handleFatalError(&execution, err, time.Time{})
-		return execution, errors.Wrap(err, "deploying reqyuired resources")
+		return execution, errors.Wrap(err, "deploying required resources")
 	}
 
 	e.sendRunWorkflowTelemetry(ctx, &workflow)
