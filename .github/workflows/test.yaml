@@ -44,7 +44,7 @@ jobs:
 
       - name: Upload code coverage artifact
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: unit-test-coverage
           path: coverage.out
@@ -169,7 +169,7 @@ jobs:
 
       - name: Upload code coverage artifact
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: integration-test-coverage
           path: coverage.out
