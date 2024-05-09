@@ -14,6 +14,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
 )
 
 const testWorkflowNotificationsRetryCount = 10
@@ -118,7 +119,7 @@ func (ag *Agent) executeWorkflowNotificationsRequest(ctx context.Context, req *c
 			StreamId: req.StreamId,
 			SeqNo:    0,
 			Type:     cloud.TestWorkflowNotificationType_WORKFLOW_STREAM_ERROR,
-			Message:  message,
+			Message:  fmt.Sprintf("%s %s", time.Now().Format(testworkflowcontroller.KubernetesLogTimeFormat), message),
 		}
 		return nil
 	}
