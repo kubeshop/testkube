@@ -58,7 +58,7 @@ func (s *apiTCL) StreamTestWorkflowExecutionNotificationsHandler() fiber.Handler
 			_ = w.Flush()
 			enc := json.NewEncoder(w)
 
-			for n := range ctrl.Watch(ctx).Stream(ctx).Channel() {
+			for n := range ctrl.Watch(ctx) {
 				if n.Error == nil {
 					_ = enc.Encode(n.Value)
 					_, _ = fmt.Fprintf(w, "\n")
@@ -96,7 +96,7 @@ func (s *apiTCL) StreamTestWorkflowExecutionNotificationsWebSocketHandler() fibe
 			return
 		}
 
-		for n := range ctrl.Watch(ctx).Stream(ctx).Channel() {
+		for n := range ctrl.Watch(ctx) {
 			if n.Error == nil {
 				_ = c.WriteJSON(n.Value)
 			}
@@ -459,7 +459,7 @@ func (s *apiTCL) GetTestWorkflowNotificationsStream(ctx context.Context, executi
 	// Stream the notifications
 	ch := make(chan testkube.TestWorkflowExecutionNotification)
 	go func() {
-		for n := range ctrl.Watch(ctx).Stream(ctx).Channel() {
+		for n := range ctrl.Watch(ctx) {
 			if n.Error == nil {
 				ch <- n.Value.ToInternal()
 			}

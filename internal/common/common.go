@@ -13,6 +13,20 @@ func MergeMaps(ms ...map[string]string) map[string]string {
 	return res
 }
 
+func Always[T any](_ T) bool {
+	return true
+}
+
+func Never[T any](_ T) bool {
+	return false
+}
+
+func DeepEqualCmp[T any](v1 T) func(T) bool {
+	return func(v2 T) bool {
+		return reflect.DeepEqual(v1, v2)
+	}
+}
+
 func Ptr[T any](v T) *T {
 	return &v
 }

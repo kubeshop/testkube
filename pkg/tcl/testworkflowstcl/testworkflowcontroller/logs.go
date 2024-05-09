@@ -11,10 +11,7 @@ package testworkflowcontroller
 import (
 	"bufio"
 	"context"
-	"errors"
 	"io"
-	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -23,7 +20,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
@@ -40,131 +36,12 @@ type ContainerLog struct {
 	Output *data.Instruction
 }
 
-type ContainerResult struct {
-	Status     testkube.TestWorkflowStepStatus
-	Details    string
-	ExitCode   int
-	FinishedAt time.Time
-}
-
-var UnknownContainerResult = ContainerResult{
-	Status:   testkube.ABORTED_TestWorkflowStepStatus,
-	ExitCode: -1,
-}
-
-func GetContainerResult(c corev1.ContainerStatus) ContainerResult {
-	if c.State.Waiting != nil {
-		return ContainerResult{Status: testkube.QUEUED_TestWorkflowStepStatus, ExitCode: -1}
-	}
-	if c.State.Running != nil {
-		return ContainerResult{Status: testkube.RUNNING_TestWorkflowStepStatus, ExitCode: -1}
-	}
-	re := regexp.MustCompile(`^([^,]*),(0|[1-9]\d*)$`)
-
-	// Workaround - GKE sends SIGKILL after the container is already terminated,
-	// and the pod gets stuck then.
-	if c.State.Terminated.Reason != "Completed" {
-		return ContainerResult{Status: testkube.ABORTED_TestWorkflowStepStatus, Details: c.State.Terminated.Reason, ExitCode: -1, FinishedAt: c.State.Terminated.FinishedAt.Time}
-	}
-
-	msg := c.State.Terminated.Message
-	match := re.FindStringSubmatch(msg)
-	if match == nil {
-		return ContainerResult{Status: testkube.ABORTED_TestWorkflowStepStatus, ExitCode: -1, FinishedAt: c.State.Terminated.FinishedAt.Time}
-	}
-	status := testkube.TestWorkflowStepStatus(match[1])
-	exitCode, _ := strconv.Atoi(match[2])
-	if status == "" {
-		status = testkube.PASSED_TestWorkflowStepStatus
-	}
-	return ContainerResult{Status: status, ExitCode: exitCode, FinishedAt: c.State.Terminated.FinishedAt.Time}
-}
-
-func GetFinalContainerResult(ctx context.Context, pod Watcher[*corev1.Pod], containerName string) (ContainerResult, error) {
-	w := WatchContainerStatus(ctx, pod, containerName, 0)
-	stream := w.Stream(ctx)
-	defer w.Close()
-
-	for c := range stream.Channel() {
-		if c.Error != nil {
-			return UnknownContainerResult, c.Error
-		}
-		if c.Value.State.Terminated == nil {
-			continue
-		}
-		return GetContainerResult(c.Value), nil
-	}
-	return UnknownContainerResult, nil
-}
-
-var ErrNoStartedEvent = errors.New("started event not received")
-
-func WatchContainerPreEvents(ctx context.Context, podEvents Watcher[*corev1.Event], containerName string, cacheSize int, includePodWarnings bool) Watcher[*corev1.Event] {
-	w := newWatcher[*corev1.Event](ctx, cacheSize)
-	go func() {
-		events := WatchContainerEvents(ctx, podEvents, containerName, 0, includePodWarnings)
-		defer events.Close()
-		defer w.Close()
-
-		for ev := range events.Stream(ctx).Channel() {
-			if ev.Error != nil {
-				w.SendError(ev.Error)
-			} else {
-				w.SendValue(ev.Value)
-				if ev.Value.Reason == "Started" {
-					return
-				}
-			}
-		}
-	}()
-	return w
-}
-
-func WatchPodPreEvents(ctx context.Context, podEvents Watcher[*corev1.Event], cacheSize int) Watcher[*corev1.Event] {
-	w := newWatcher[*corev1.Event](ctx, cacheSize)
-	go func() {
-		defer w.Close()
-
-		for ev := range podEvents.Stream(w.ctx).Channel() {
-			if ev.Error != nil {
-				w.SendError(ev.Error)
-			} else {
-				w.SendValue(ev.Value)
-				if ev.Value.Reason == "Scheduled" {
-					return
-				}
-			}
-		}
-	}()
-	return w
-}
-
-func WaitUntilContainerIsStarted(ctx context.Context, podEvents Watcher[*corev1.Event], containerName string) error {
-	events := WatchContainerPreEvents(ctx, podEvents, containerName, 0, false)
-	defer events.Close()
-
-	for ev := range events.Stream(ctx).Channel() {
-		if ev.Error != nil {
-			return ev.Error
-		} else if ev.Value.Reason == "Started" {
-			return nil
-		}
-	}
-	return ErrNoStartedEvent
-}
-
-func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, podEvents Watcher[*corev1.Event], namespace, podName, containerName string) Watcher[ContainerLog] {
-	w := newWatcher[ContainerLog](ctx, 0)
+func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int) Channel[ContainerLog] {
+	w := newChannel[ContainerLog](ctx, bufferSize)
 
 	go func() {
 		defer w.Close()
-
-		// Wait until "Started" event, to avoid calling logs on the
-		err := WaitUntilContainerIsStarted(ctx, podEvents, containerName)
-		if err != nil {
-			w.SendError(err)
-			return
-		}
+		var err error
 
 		// Create logs stream request
 		req := clientSet.CoreV1().Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{
@@ -178,7 +55,7 @@ func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, pod
 			if err != nil {
 				// The container is not necessarily already started when Started event is received
 				if !strings.Contains(err.Error(), "is waiting to start") {
-					w.SendError(err)
+					w.Error(err)
 					return
 				}
 				continue
@@ -212,7 +89,7 @@ func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, pod
 				if len(tmpTsPrefix) > 0 {
 					prepend = tmpTsPrefix
 				}
-				w.SendError(err)
+				w.Error(err)
 			}
 
 			// Check for the next part
@@ -236,28 +113,28 @@ func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, pod
 					} else {
 						log.Output = instruction
 					}
-					w.SendValue(log)
+					w.Send(log)
 				}
 
 				// Append as regular log if expected
 				if !hadComment {
-					if isNewLine {
-						line = append(append([]byte("\n"), tsPrefix...), line...)
-					} else if !isStarted {
+					if !isStarted {
 						line = append(tsPrefix, line...)
 						isStarted = true
+					} else if isNewLine {
+						line = append(append([]byte("\n"), tsPrefix...), line...)
 					}
-					w.SendValue(ContainerLog{Time: ts, Log: line})
+					w.Send(ContainerLog{Time: ts, Log: line})
 					isNewLine = true
 				}
 			} else if isStarted {
-				w.SendValue(ContainerLog{Time: ts, Log: append([]byte("\n"), tsPrefix...)})
+				w.Send(ContainerLog{Time: ts, Log: append([]byte("\n"), tsPrefix...)})
 			}
 
 			// Handle the error
 			if err != nil {
 				if err != io.EOF {
-					w.SendError(err)
+					w.Error(err)
 				}
 				return
 			}

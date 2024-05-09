@@ -49,7 +49,6 @@ import (
 
 //go:generate mockgen -destination=./mock_executor.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowexecutor" TestWorkflowExecutor
 type TestWorkflowExecutor interface {
-	Schedule(bundle *testworkflowprocessor.Bundle, execution testkube.TestWorkflowExecution)
 	Control(ctx context.Context, execution *testkube.TestWorkflowExecution) error
 	Recover(ctx context.Context)
 	Execute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (
@@ -101,28 +100,6 @@ func New(emitter *event.Emitter,
 	}
 }
 
-func (e *executor) Schedule(bundle *testworkflowprocessor.Bundle, execution testkube.TestWorkflowExecution) {
-	// Inform about execution start
-	e.emitter.Notify(testkube.NewEventQueueTestWorkflow(&execution))
-
-	// Deploy required resources
-	err := e.Deploy(context.Background(), bundle)
-	if err != nil {
-		e.handleFatalError(&execution, err, time.Time{})
-		return
-	}
-
-	// Start to control the results
-	go func() {
-		err = e.Control(context.Background(), &execution)
-		if err != nil {
-			e.handleFatalError(&execution, err, time.Time{})
-			return
-		}
-
-	}()
-}
-
 func (e *executor) Deploy(ctx context.Context, bundle *testworkflowprocessor.Bundle) (err error) {
 	namespace := e.namespace
 	if bundle.Job.Namespace != "" {
@@ -154,7 +131,7 @@ func (e *executor) handleFatalError(execution *testkube.TestWorkflowExecution, e
 	if ts.IsZero() {
 		ts = time.Now()
 		if isAborted || isTimeout {
-			ts = ts.Truncate(testworkflowcontroller.JobRetrievalTimeout)
+			ts = ts.Truncate(testworkflowcontroller.DefaultInitTimeout)
 		}
 	}
 
@@ -174,14 +151,19 @@ func (e *executor) Recover(ctx context.Context) {
 		return
 	}
 	for i := range list {
-		e.Control(context.Background(), &list[i])
+		go func(execution *testkube.TestWorkflowExecution) {
+			err := e.Control(context.Background(), execution)
+			if err != nil {
+				e.handleFatalError(execution, err, time.Time{})
+			}
+		}(&list[i])
 	}
 }
 
 func (e *executor) Control(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
 	ctrl, err := testworkflowcontroller.New(ctx, e.clientSet, execution.Namespace, execution.Id, execution.ScheduledAt)
 	if err != nil {
-		log.DefaultLogger.Errorw("failed to save TestWorkflow log output", "id", execution.Id, "error", err)
+		log.DefaultLogger.Errorw("failed to control the TestWorkflow", "id", execution.Id, "error", err)
 		return err
 	}
 
@@ -195,8 +177,9 @@ func (e *executor) Control(ctx context.Context, execution *testkube.TestWorkflow
 	go func() {
 		defer wg.Done()
 
-		for v := range ctrl.Watch(ctx).Stream(ctx).Channel() {
+		for v := range ctrl.Watch(ctx) {
 			if v.Error != nil {
+				log.DefaultLogger.Errorw("error from TestWorkflow watcher", "id", execution.Id, "error", v.Error)
 				continue
 			}
 			if v.Value.Output != nil {
@@ -239,9 +222,10 @@ func (e *executor) Control(ctx context.Context, execution *testkube.TestWorkflow
 				e.handleFatalError(execution, testworkflowcontroller.ErrJobAborted, abortedAt)
 			} else {
 				// Handle unknown state
+				ctrl.StopController()
 				ctrl, err = testworkflowcontroller.New(ctx, e.clientSet, execution.Namespace, execution.Id, execution.ScheduledAt)
 				if err == nil {
-					for v := range ctrl.Watch(ctx).Stream(ctx).Channel() {
+					for v := range ctrl.Watch(ctx) {
 						if v.Error != nil || v.Value.Output == nil {
 							continue
 						}
