@@ -232,6 +232,7 @@ func main() {
 	_, err = controlSrv.Listen()
 	if err != nil {
 		fmt.Printf("Failed to start control server at port %d: %s\n", constants.ControlServerPort, err.Error())
+		os.Exit(int(output.CodeInternal))
 	}
 
 	// Start the task
