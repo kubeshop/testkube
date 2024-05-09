@@ -363,7 +363,22 @@ spec:
 
 ### Configuring the Job
 
-By using the **job** property, you can configure labels and annotations of the Job.
+By using the **job** property, you can configure labels, annotations and execution namespace of the Job.
+In case of supplying namespace you will need to setup execution namespaces in your helm chart values. It's possible to generate all required RBAC or just manually supply them.
+
+```yaml
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: overview--example-12
+spec:
+  job:
+    labels:
+      job-label: 'foobar'
+    annotations:
+      this.is.important: false    
+    namespace: "default"
+```
 
 ### Configuring the Pod
 
@@ -373,7 +388,7 @@ By using the **pod** property, you can configure labels, annotations, serviceAcc
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: overview--example-12
+  name: overview--example-13
 spec:
   job:
     labels:
