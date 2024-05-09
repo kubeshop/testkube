@@ -11,6 +11,7 @@ package artifacts
 import (
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -65,20 +66,22 @@ func isPathIn(path string, dirs []string) bool {
 	return false
 }
 
-func sanitizePath(path string) (string, error) {
-	path, err := filepath.Abs(path)
+func sanitizePath(path, root string) (string, error) {
+	if !filepath.IsAbs(path) {
+		path = filepath.Clean(filepath.Join(root, path))
+	}
 	path = strings.TrimRight(filepath.ToSlash(path), "/")
 	if path == "" {
 		path = "/"
 	}
-	return path, err
+	return path, nil
 }
 
-func sanitizePaths(input []string) ([]string, error) {
+func sanitizePaths(input []string, root string) ([]string, error) {
 	paths := make([]string, len(input))
 	for i := range input {
 		var err error
-		paths[i], err = sanitizePath(input[i])
+		paths[i], err = sanitizePath(input[i], root)
 		if err != nil {
 			return nil, fmt.Errorf("error while resolving path: %s: %w", input[i], err)
 		}
@@ -130,13 +133,17 @@ func CreateWalker(patterns, roots []string, root string) (Walker, error) {
 	var err error
 
 	// Build absolute paths
-	if patterns, err = sanitizePaths(patterns); err != nil {
+	if patterns, err = sanitizePaths(patterns, root); err != nil {
 		return nil, err
 	}
-	if roots, err = sanitizePaths(roots); err != nil {
+	if roots, err = sanitizePaths(roots, root); err != nil {
 		return nil, err
 	}
-	if root, err = sanitizePath(root); err != nil {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	if root, err = sanitizePath(root, cwd); err != nil {
 		return nil, err
 	}
 	// Include only if it is matching some mounted volumes
