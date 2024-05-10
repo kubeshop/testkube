@@ -312,7 +312,7 @@ func NewParallelCmd() *cobra.Command {
 						updates <- Update{index: index, result: v.Value.Result}
 						current := v.Value.Result.Current(sig)
 						status := testkube.QUEUED_TestWorkflowStatus
-						if v.Value.Result.Status != nil && *v.Value.Result.Status != prevStatus {
+						if v.Value.Result.Status != nil {
 							status = *v.Value.Result.Status
 						}
 
