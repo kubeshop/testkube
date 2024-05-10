@@ -121,6 +121,9 @@ func NewParallelCmd() *cobra.Command {
 				infos = append(infos, fmt.Sprintf("sharded %d times", params.ShardCount))
 			}
 			parallelism := int64(parallel.Parallelism)
+			if parallelism <= 0 {
+				parallelism = 1000
+			}
 			if params.Count > 1 {
 				if parallelism < params.Count {
 					infos = append(infos, fmt.Sprintf("parallel: %d", parallelism))
@@ -221,7 +224,6 @@ func NewParallelCmd() *cobra.Command {
 
 			// Prepare runner
 			// TODO: Share resources like configMaps?
-			// TODO: Clean up on whole step failure
 			type Update struct {
 				index  int64
 				result *testkube.TestWorkflowResult
@@ -292,7 +294,7 @@ func NewParallelCmd() *cobra.Command {
 
 				fmt.Printf("%s: created\n", common2.InstanceLabel("worker", index, params.Count))
 
-				// TODO: Add support for watching only result
+				// TODO: Add support for watching only result?
 				prevStatus := testkube.QUEUED_TestWorkflowStatus
 				for v := range ctrl.Watch(context.Background()) {
 					if v.Error != nil {
@@ -305,7 +307,6 @@ func NewParallelCmd() *cobra.Command {
 							data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: prevStatus})
 							fmt.Printf("%s: %s\n", common2.InstanceLabel("worker", index, params.Count), prevStatus)
 
-							// FIXME: abort on pause is success
 							if v.Value.Result.IsFinished() {
 								return v.Value.Result.IsPassed()
 							}
@@ -341,7 +342,6 @@ func NewParallelCmd() *cobra.Command {
 					}
 
 					// Resume all at once
-					// TODO: Consider resuming further created steps later immediately?
 					if total != 0 && total == paused {
 						fmt.Println("resuming all workers")
 						var wg sync.WaitGroup
