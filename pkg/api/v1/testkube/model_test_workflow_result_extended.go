@@ -20,7 +20,7 @@ func (r *TestWorkflowResult) IsStatus(s TestWorkflowStatus) bool {
 func (r *TestWorkflowResult) LatestTimestamp() time.Time {
 	ts := time.Time{}
 	if r.FinishedAt.After(ts) {
-		ts = r.QueuedAt
+		ts = r.FinishedAt
 	} else if r.StartedAt.After(ts) {
 		ts = r.StartedAt
 	} else if r.QueuedAt.After(ts) {

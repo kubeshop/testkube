@@ -21,6 +21,8 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 )
 
+const eventBufferSize = 20
+
 type podState struct {
 	pod        *corev1.Pod
 	queued     map[string]time.Time
@@ -67,7 +69,7 @@ func newPodState(parentCtx context.Context) *podState {
 
 func (p *podState) preStartWatcher(name string) *channel[podStateUpdate] {
 	if _, ok := p.prestart[name]; !ok {
-		p.prestart[name] = newChannel[podStateUpdate](p.ctx, 20) // TODO: Consider different way?
+		p.prestart[name] = newChannel[podStateUpdate](p.ctx, eventBufferSize)
 	}
 	return p.prestart[name]
 }
