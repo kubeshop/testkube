@@ -13,4 +13,5 @@ const (
 	CodeAborted    uint8 = 137
 	CodeInputError uint8 = 155
 	CodeNoCommand  uint8 = 189
+	CodeInternal   uint8 = 190
 )

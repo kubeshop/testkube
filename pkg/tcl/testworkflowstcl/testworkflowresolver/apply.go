@@ -229,3 +229,16 @@ func ApplyTemplates(workflow *testworkflowsv1.TestWorkflow, templates map[string
 
 	return nil
 }
+
+func addGlobalTemplateRefToSpec(spec *testworkflowsv1.TestWorkflowSpec, ref testworkflowsv1.TemplateRef) {
+	if spec == nil {
+		return
+	}
+	spec.Use = append([]testworkflowsv1.TemplateRef{ref}, spec.Use...)
+}
+
+func AddGlobalTemplateRef(t *testworkflowsv1.TestWorkflow, ref testworkflowsv1.TemplateRef) {
+	if t != nil {
+		addGlobalTemplateRefToSpec(&t.Spec, ref)
+	}
+}

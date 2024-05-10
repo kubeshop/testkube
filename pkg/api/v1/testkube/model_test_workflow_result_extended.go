@@ -17,6 +17,34 @@ func (r *TestWorkflowResult) IsStatus(s TestWorkflowStatus) bool {
 	return *r.Status == s
 }
 
+func (r *TestWorkflowResult) LatestTimestamp() time.Time {
+	ts := time.Time{}
+	if r.FinishedAt.After(ts) {
+		ts = r.FinishedAt
+	} else if r.StartedAt.After(ts) {
+		ts = r.StartedAt
+	} else if r.QueuedAt.After(ts) {
+		ts = r.QueuedAt
+	}
+	if r.Initialization.FinishedAt.After(ts) {
+		ts = r.Initialization.FinishedAt
+	} else if r.Initialization.StartedAt.After(ts) {
+		ts = r.Initialization.StartedAt
+	} else if r.Initialization.QueuedAt.After(ts) {
+		ts = r.Initialization.QueuedAt
+	}
+	for k := range r.Steps {
+		if r.Steps[k].FinishedAt.After(ts) {
+			ts = r.Steps[k].FinishedAt
+		} else if r.Steps[k].StartedAt.After(ts) {
+			ts = r.Steps[k].StartedAt
+		} else if r.Steps[k].QueuedAt.After(ts) {
+			ts = r.Steps[k].QueuedAt
+		}
+	}
+	return ts
+}
+
 func (r *TestWorkflowResult) IsQueued() bool {
 	return r.IsStatus(QUEUED_TestWorkflowStatus)
 }
@@ -263,15 +291,17 @@ func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature, scheduledAt 
 
 	// Calibrate execution clock
 	if r.Initialization != nil {
-		if r.Initialization.QueuedAt.Before(r.QueuedAt) {
+		if !r.Initialization.QueuedAt.IsZero() && r.Initialization.QueuedAt.Before(r.QueuedAt) {
 			r.QueuedAt = r.Initialization.QueuedAt
 		}
-		if r.Initialization.StartedAt.Before(r.StartedAt) {
+		if !r.Initialization.StartedAt.IsZero() && r.Initialization.StartedAt.Before(r.StartedAt) {
 			r.StartedAt = r.Initialization.StartedAt
 		}
 	}
 	last := r.Steps[sig[len(sig)-1].Ref]
-	r.FinishedAt = adjustMinimumTime(r.FinishedAt, last.FinishedAt)
+	if !last.FinishedAt.IsZero() {
+		r.FinishedAt = adjustMinimumTime(r.FinishedAt, last.FinishedAt)
+	}
 
 	// Check pause status
 	isPaused := false
@@ -301,6 +331,10 @@ func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature, scheduledAt 
 	if !isPaused && r.Status != nil && *r.Status == PAUSED_TestWorkflowStatus {
 		r.Status = common.Ptr(RUNNING_TestWorkflowStatus)
 	}
+
+	if r.FinishedAt.IsZero() && r.Status != nil && *r.Status == ABORTED_TestWorkflowStatus {
+		r.FinishedAt = r.LatestTimestamp()
+	}
 }
 
 func (r *TestWorkflowResult) RecomputeStep(sig TestWorkflowSignature) {
@@ -319,7 +353,7 @@ func (r *TestWorkflowResult) RecomputeStep(sig TestWorkflowSignature) {
 	v = recomputeTestWorkflowStepResult(v, sig, r)
 
 	// Mark as paused during pause period
-	if r.HasUnfinishedPause(sig.Ref) {
+	if r.HasUnfinishedPause(sig.Ref) && !r.IsFinished() && v.FinishedAt.IsZero() {
 		v.Status = common.Ptr(PAUSED_TestWorkflowStepStatus)
 	} else if v.Status != nil && *v.Status == PAUSED_TestWorkflowStepStatus {
 		v.Status = common.Ptr(RUNNING_TestWorkflowStepStatus)
