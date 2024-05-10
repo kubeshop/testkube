@@ -437,6 +437,8 @@ func (c *container) EnableToolkit(ref string) Container {
 			"TK_OS_CA_FILE":             "{{internal.storage.caFile}}",
 			"TESTKUBE_TW_TOOLKIT_IMAGE": "{{internal.images.toolkit}}",
 			"TESTKUBE_TW_INIT_IMAGE":    "{{internal.images.init}}",
+			"TK_IMG_P":                  "{{internal.images.persistence.enabled}}",
+			"TK_IMG_PK":                 "{{internal.images.persistence.key}}",
 		})
 }
 

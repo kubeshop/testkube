@@ -56,18 +56,21 @@ type TestWorkflowExecutor interface {
 }
 
 type executor struct {
-	emitter                     *event.Emitter
-	clientSet                   kubernetes.Interface
-	repository                  testworkflow.Repository
-	output                      testworkflow.OutputRepository
-	testWorkflowTemplatesClient testworkflowsclientv1.TestWorkflowTemplatesInterface
-	imageInspector              imageinspector.Inspector
-	configMap                   configRepo.Repository
-	executionResults            result.Repository
-	globalTemplateName          string
-	apiUrl                      string
-	namespace                   string
-	serviceAccountNames         map[string]string
+	emitter                        *event.Emitter
+	clientSet                      kubernetes.Interface
+	repository                     testworkflow.Repository
+	output                         testworkflow.OutputRepository
+	testWorkflowTemplatesClient    testworkflowsclientv1.TestWorkflowTemplatesInterface
+	imageInspector                 imageinspector.Inspector
+	configMap                      configRepo.Repository
+	executionResults               result.Repository
+	globalTemplateName             string
+	apiUrl                         string
+	namespace                      string
+	defaultRegistry                string
+	enableImageDataPersistentCache bool
+	imageDataPersistentCacheKey    string
+	serviceAccountNames            map[string]string
 }
 
 func New(emitter *event.Emitter,
@@ -79,24 +82,28 @@ func New(emitter *event.Emitter,
 	configMap configRepo.Repository,
 	executionResults result.Repository,
 	serviceAccountNames map[string]string,
-	globalTemplateName, namespace, apiUrl string) TestWorkflowExecutor {
+	globalTemplateName, namespace, apiUrl, defaultRegistry string,
+	enableImageDataPersistentCache bool, imageDataPersistentCacheKey string) TestWorkflowExecutor {
 	if serviceAccountNames == nil {
 		serviceAccountNames = make(map[string]string)
 	}
 
 	return &executor{
-		emitter:                     emitter,
-		clientSet:                   clientSet,
-		repository:                  repository,
-		output:                      output,
-		testWorkflowTemplatesClient: testWorkflowTemplatesClient,
-		imageInspector:              imageInspector,
-		configMap:                   configMap,
-		executionResults:            executionResults,
-		serviceAccountNames:         serviceAccountNames,
-		globalTemplateName:          globalTemplateName,
-		apiUrl:                      apiUrl,
-		namespace:                   namespace,
+		emitter:                        emitter,
+		clientSet:                      clientSet,
+		repository:                     repository,
+		output:                         output,
+		testWorkflowTemplatesClient:    testWorkflowTemplatesClient,
+		imageInspector:                 imageInspector,
+		configMap:                      configMap,
+		executionResults:               executionResults,
+		serviceAccountNames:            serviceAccountNames,
+		globalTemplateName:             globalTemplateName,
+		apiUrl:                         apiUrl,
+		namespace:                      namespace,
+		defaultRegistry:                defaultRegistry,
+		enableImageDataPersistentCache: enableImageDataPersistentCache,
+		imageDataPersistentCacheKey:    imageDataPersistentCacheKey,
 	}
 }
 
@@ -373,12 +380,15 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			"cloud.api.skipVerify":  common.GetOr(os.Getenv("TESTKUBE_PRO_SKIP_VERIFY"), os.Getenv("TESTKUBE_CLOUD_SKIP_VERIFY"), "false"),
 			"cloud.api.url":         common.GetOr(os.Getenv("TESTKUBE_PRO_URL"), os.Getenv("TESTKUBE_CLOUD_URL")),
 
-			"dashboard.url": os.Getenv("TESTKUBE_DASHBOARD_URI"),
-			"api.url":       e.apiUrl,
-			"namespace":     namespace,
+			"dashboard.url":   os.Getenv("TESTKUBE_DASHBOARD_URI"),
+			"api.url":         e.apiUrl,
+			"namespace":       namespace,
+			"defaultRegistry": e.defaultRegistry,
 
-			"images.init":    constants.DefaultInitImage,
-			"images.toolkit": constants.DefaultToolkitImage,
+			"images.init":                constants.DefaultInitImage,
+			"images.toolkit":             constants.DefaultToolkitImage,
+			"images.persistence.enabled": strconv.FormatBool(e.enableImageDataPersistentCache),
+			"images.persistence.key":     e.imageDataPersistentCacheKey,
 		}).
 		RegisterStringMap("workflow", map[string]string{
 			"name": workflow.Name,

@@ -597,6 +597,9 @@ func main() {
 		cfg.GlobalWorkflowTemplateName,
 		cfg.TestkubeNamespace,
 		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
+		cfg.TestkubeRegistry,
+		cfg.EnableImageDataPersistentCache,
+		cfg.ImageDataPersistentCacheKey,
 	)
 
 	// Apply Pro server enhancements

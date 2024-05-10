@@ -20,9 +20,12 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
+	"github.com/kubeshop/testkube/pkg/configmap"
 	phttp "github.com/kubeshop/testkube/pkg/http"
+	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -45,6 +48,24 @@ func Kubernetes() *kubernetes.Clientset {
 		ui.Fail(fmt.Errorf("couldn't instantiate Kubernetes client: %w", err))
 	}
 	return c
+}
+
+func ImageInspector() imageinspector.Inspector {
+	clientSet := Kubernetes()
+	secretClient := &secret.Client{ClientSet: clientSet, Namespace: Namespace(), Log: log.DefaultLogger}
+	configMapClient := &configmap.Client{ClientSet: clientSet, Namespace: Namespace(), Log: log.DefaultLogger}
+	inspectorStorages := []imageinspector.Storage{imageinspector.NewMemoryStorage()}
+	if Config().Images.InspectorPersistenceEnabled {
+		configmapStorage := imageinspector.NewConfigMapStorage(configMapClient, Config().Images.InspectorPersistenceCacheKey, true)
+		_ = configmapStorage.CopyTo(context.Background(), inspectorStorages[0].(imageinspector.StorageTransfer))
+		inspectorStorages = append(inspectorStorages, configmapStorage)
+	}
+	return imageinspector.NewInspector(
+		Config().System.DefaultRegistry,
+		imageinspector.NewSkopeoFetcher(),
+		imageinspector.NewSecretFetcher(secretClient),
+		inspectorStorages...,
+	)
 }
 
 func Testkube() client.Client {
