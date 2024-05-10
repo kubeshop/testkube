@@ -16,6 +16,7 @@ service TestKubeCloudAPI {
     rpc ExecuteAsync(stream ExecuteResponse) returns (stream ExecuteRequest);
     rpc GetLogsStream(stream LogsStreamResponse) returns (stream LogsStreamRequest);
     rpc GetTestWorkflowNotificationsStream(stream TestWorkflowNotificationsResponse) returns (stream TestWorkflowNotificationsRequest);
+    rpc GetProContext(google.protobuf.Empty) returns (ProContextResponse);
 }
 
 enum LogsStreamRequestType {
@@ -78,6 +79,17 @@ message TestWorkflowNotificationsResponse {
   string ref = 4;
   TestWorkflowNotificationType type = 5;
   string message = 6; // based on type: log/error = inline, others = serialized to JSON
+}
+
+message ProContextResponse {
+  string org_id = 1;
+  string env_id = 2;
+  repeated Capability capabilities = 3;
+}
+
+message Capability {
+  string name = 1;
+  bool enabled = 2;
 }
 
 message HeaderValue {
