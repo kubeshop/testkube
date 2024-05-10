@@ -234,10 +234,15 @@ func NewParallelCmd() *cobra.Command {
 
 				// Build internal machine
 				id := fmt.Sprintf("%s-%d", env.ExecutionId(), index)
+				fsPrefix := fmt.Sprintf("%s/%d", env.Ref(), index+1)
+				if env.Config().Execution.FSPrefix != "" {
+					fsPrefix = fmt.Sprintf("%s/%s", env.Config().Execution.FSPrefix, fsPrefix)
+				}
 				machine := expressionstcl.NewMachine().
 					Register("execution.id", env.ExecutionId()).
 					Register("resource.rootId", env.ExecutionId()).
 					Register("resource.id", id).
+					Register("resource.fsPrefix", fsPrefix).
 					Register("workflow.name", env.WorkflowName())
 
 				// Build the resources bundle

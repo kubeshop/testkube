@@ -44,6 +44,7 @@ type envExecutionConfig struct {
 	Id             string `envconfig:"TK_EX"`
 	ResourceId     string `envconfig:"TK_EXI"`
 	RootResourceId string `envconfig:"TK_EXR"`
+	FSPrefix       string `envconfig:"TK_FS"`
 }
 
 type envSystemConfig struct {

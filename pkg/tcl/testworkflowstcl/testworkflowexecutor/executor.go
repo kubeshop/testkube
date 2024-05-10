@@ -394,8 +394,9 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			"name": workflow.Name,
 		}).
 		Register("resource", map[string]string{
-			"id":   id,
-			"root": id,
+			"id":       id,
+			"root":     id,
+			"fsPrefix": "",
 		}).
 		RegisterStringMap("execution", map[string]string{
 			"id": id,
