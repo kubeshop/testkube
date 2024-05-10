@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -66,6 +67,8 @@ func cleanupJobs(labelName string) func(ctx context.Context, clientSet kubernete
 
 func Cleanup(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
 	var errs []error
+	var errsMu sync.Mutex
+	var wg sync.WaitGroup
 	ops := []func(context.Context, kubernetes.Interface, string, string) error{
 		cleanupJobs(constants.RootResourceIdLabelName),
 		cleanupJobs(constants.ResourceIdLabelName),
@@ -76,11 +79,18 @@ func Cleanup(ctx context.Context, clientSet kubernetes.Interface, namespace, id 
 		cleanupSecrets(constants.RootResourceIdLabelName),
 		cleanupSecrets(constants.ResourceIdLabelName),
 	}
+	wg.Add(len(ops))
 	for _, op := range ops {
-		err := op(ctx, clientSet, namespace, id)
-		if err != nil {
-			errs = append(errs, err)
-		}
+		go func(op func(context.Context, kubernetes.Interface, string, string) error) {
+			err := op(ctx, clientSet, namespace, id)
+			if err != nil {
+				errsMu.Lock()
+				errs = append(errs, err)
+				errsMu.Unlock()
+			}
+			wg.Done()
+		}(op)
 	}
+	wg.Wait()
 	return errors.Join(errs...)
 }
