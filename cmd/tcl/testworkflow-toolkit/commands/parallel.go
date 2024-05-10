@@ -37,14 +37,11 @@ import (
 )
 
 type ParallelStatus struct {
-	Index           int                         `json:"index"`
-	Description     string                      `json:"description,omitempty"`
-	Status          testkube.TestWorkflowStatus `json:"status,omitempty"`
-	CreatedAt       *time.Time                  `json:"createdAt,omitempty"`
-	StartedAt       *time.Time                  `json:"startedAt,omitempty"`
-	FinishedAt      *time.Time                  `json:"finishedAt,omitempty"`
-	DurationMs      int64                       `json:"durationMs,omitempty"`
-	TotalDurationMs int64                       `json:"totalDurationMs,omitempty"`
+	Index       int                              `json:"index"`
+	Description string                           `json:"description,omitempty"`
+	Status      testkube.TestWorkflowStatus      `json:"status,omitempty"`
+	Signature   []testkube.TestWorkflowSignature `json:"signature,omitempty"`
+	Result      *testkube.TestWorkflowResult     `json:"result,omitempty"`
 }
 
 func NewParallelCmd() *cobra.Command {
@@ -282,6 +279,9 @@ func NewParallelCmd() *cobra.Command {
 					return false
 				}
 
+				// Inform about the step structure
+				data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Signature: testworkflowprocessor.MapSignatureListToInternal(bundle.Signature)})
+
 				// Control the execution
 				// TODO: Consider aggregated controller to limit number of watchers
 				ctrl, err := testworkflowcontroller.New(context.Background(), clientSet, env.Namespace(), id, scheduledAt, testworkflowcontroller.ControllerOptions{
@@ -302,20 +302,21 @@ func NewParallelCmd() *cobra.Command {
 						fmt.Printf("%s: error: %s\n", common2.InstanceLabel("worker", index, params.Count), v.Error.Error())
 					} else if v.Value.Result != nil {
 						updates <- Update{index: index, result: v.Value.Result}
-						// TODO: Pass the timestamps/duration down too
 						if v.Value.Result.Status != nil && *v.Value.Result.Status != prevStatus {
 							prevStatus = *v.Value.Result.Status
-							data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: prevStatus})
 							fmt.Printf("%s: %s\n", common2.InstanceLabel("worker", index, params.Count), prevStatus)
 
 							if v.Value.Result.IsFinished() {
+								data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: prevStatus, Result: v.Value.Result})
 								return v.Value.Result.IsPassed()
+							} else {
+								data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: prevStatus})
 							}
 						}
 					}
 				}
 
-				return true
+				return false
 			}
 
 			// Orchestrate resume
