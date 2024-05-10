@@ -19,7 +19,7 @@ type TestWorkflowExecution struct {
 	// execution name
 	Name string `json:"name"`
 	// execution namespace
-	Namespace string `json:"namespace"`
+	Namespace string `json:"namespace,omitempty"`
 	// sequence number for the execution
 	Number int32 `json:"number,omitempty"`
 	// when the execution has been scheduled to run

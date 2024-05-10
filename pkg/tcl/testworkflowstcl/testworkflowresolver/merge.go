@@ -77,6 +77,9 @@ func MergeJobConfig(dst, include *testworkflowsv1.JobConfig) *testworkflowsv1.Jo
 	if include.Namespace != "" {
 		dst.Namespace = include.Namespace
 	}
+	if include.ActiveDeadlineSeconds != nil {
+		dst.ActiveDeadlineSeconds = include.ActiveDeadlineSeconds
+	}
 	return dst
 }
 
