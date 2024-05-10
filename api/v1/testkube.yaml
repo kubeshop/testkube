@@ -8457,6 +8457,8 @@ components:
         namespace:
           type: string
           description: namespace for execution of test workflow
+        activeDeadlineSeconds:
+          $ref: "#/components/schemas/BoxedInteger"
 
     TestWorkflowPodConfig:
       type: object

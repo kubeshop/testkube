@@ -15,5 +15,6 @@ type TestWorkflowJobConfig struct {
 	// annotations to attach to the job
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// namespace for execution of test workflow
-	Namespace string `json:"namespace,omitempty"`
+	Namespace             string        `json:"namespace,omitempty"`
+	ActiveDeadlineSeconds *BoxedInteger `json:"activeDeadlineSeconds,omitempty"`
 }

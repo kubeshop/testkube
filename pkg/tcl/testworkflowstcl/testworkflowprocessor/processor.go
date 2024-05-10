@@ -316,7 +316,8 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			Namespace:   jobConfig.Namespace,
 		},
 		Spec: batchv1.JobSpec{
-			BackoffLimit: common.Ptr(int32(0)),
+			BackoffLimit:          common.Ptr(int32(0)),
+			ActiveDeadlineSeconds: jobConfig.ActiveDeadlineSeconds,
 		},
 	}
 	AnnotateControlledBy(&jobSpec, "{{execution.id}}")

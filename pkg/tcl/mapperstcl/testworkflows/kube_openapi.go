@@ -452,9 +452,10 @@ func MapResourcesKubeToAPI(v testworkflowsv1.Resources) testkube.TestWorkflowRes
 
 func MapJobConfigKubeToAPI(v testworkflowsv1.JobConfig) testkube.TestWorkflowJobConfig {
 	return testkube.TestWorkflowJobConfig{
-		Labels:      v.Labels,
-		Annotations: v.Annotations,
-		Namespace:   v.Namespace,
+		Labels:                v.Labels,
+		Annotations:           v.Annotations,
+		Namespace:             v.Namespace,
+		ActiveDeadlineSeconds: MapInt64ToBoxedInteger(v.ActiveDeadlineSeconds),
 	}
 }
 
