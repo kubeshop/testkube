@@ -49,11 +49,11 @@ func SendCmdEvent(cmd *cobra.Command, version string) (string, error) {
 }
 
 func SendCmdErrorEvent(cmd *cobra.Command, version, errType string, errorStackTrace string) (string, error) {
-	return SendCmdErrorEventWithLicense(cmd, version, errType, errorStackTrace, "")
+	return SendCmdErrorEventWithLicense(cmd, version, errType, errorStackTrace, "", "")
 }
 
 // SendCmdErrorEventWithLicense will send CLI error event with license
-func SendCmdErrorEventWithLicense(cmd *cobra.Command, version, errType, errorStackTrace, license string) (string, error) {
+func SendCmdErrorEventWithLicense(cmd *cobra.Command, version, errType, errorStackTrace, license, step string) (string, error) {
 
 	// get all sub-commands passed to cli
 	command := strings.TrimPrefix(cmd.CommandPath(), "kubectl-testkube ")
@@ -82,6 +82,7 @@ func SendCmdErrorEventWithLicense(cmd *cobra.Command, version, errType, errorSta
 					ErrorType:       errType,
 					ErrorStackTrace: errorStackTrace,
 					License:         license,
+					Step:            step,
 				},
 			}},
 	}
@@ -95,9 +96,9 @@ func SendCmdAttemptEvent(cmd *cobra.Command, version string) (string, error) {
 	return sendData(senders, payload)
 }
 
-// SendCmdAttempWithLicenseEvent will send CLI command attempt event with license
-func SendCmdAttempWithLicenseEvent(cmd *cobra.Command, version, license string) (string, error) {
-	payload := NewCLIWithLicensePayload(getCurrentContext(), getUserID(cmd), getCommand(cmd), version, "cli_command_execution", GetClusterType(), license)
+// SendCmdWithLicenseEvent will send CLI command attempt event with license
+func SendCmdWithLicenseEvent(cmd *cobra.Command, version, license, step string) (string, error) {
+	payload := NewCLIWithLicensePayload(getCurrentContext(), getUserID(cmd), getCommandWithoutAttempt(cmd), version, "cli_command_execution", GetClusterType(), license, step)
 	return sendData(senders, payload)
 }
 
@@ -159,12 +160,14 @@ func sendData(senders map[string]Sender, payload Payload) (out string, err error
 }
 
 func getCommand(cmd *cobra.Command) string {
+	return getCommandWithoutAttempt(cmd) + "_attempt"
+}
+
+func getCommandWithoutAttempt(cmd *cobra.Command) string {
 	command := strings.TrimPrefix(cmd.CommandPath(), "kubectl-testkube ")
 	if command == "" {
 		command = "root"
 	}
-
-	command += "_attempt"
 	return command
 }
 
