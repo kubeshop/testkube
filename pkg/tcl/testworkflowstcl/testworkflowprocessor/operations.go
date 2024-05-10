@@ -326,6 +326,30 @@ func ProcessContentTarball(_ InternalProcessor, layer Intermediate, container Co
 	return stage, nil
 }
 
+func ProcessParallel(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+	if step.Parallel == nil {
+		return nil, nil
+	}
+
+	stage := NewContainerStage(layer.NextRef(), container.CreateChild())
+	stage.SetCategory("Run in parallel")
+
+	stage.Container().
+		SetImage(constants.DefaultToolkitImage).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetCommand("/toolkit", "parallel").
+		EnableToolkit(stage.Ref()).
+		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
+
+	v, err := json.Marshal(step.Parallel)
+	if err != nil {
+		return nil, errors.Wrap(err, "parallel: marshalling error")
+	}
+	stage.Container().SetArgs(expressionstcl.NewStringValue(string(v)).Template())
+
+	return stage, nil
+}
+
 func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
 	if step.Artifacts == nil {
 		return nil, nil

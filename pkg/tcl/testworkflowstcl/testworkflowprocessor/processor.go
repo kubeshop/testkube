@@ -60,7 +60,8 @@ func NewFullFeatured(inspector imageinspector.Inspector) Processor {
 		Register(ProcessShellCommand).
 		Register(ProcessExecute).
 		Register(ProcessNestedSteps).
-		Register(ProcessArtifacts)
+		Register(ProcessArtifacts).
+		Register(ProcessParallel)
 }
 
 func (p *processor) Register(operation Operation) Processor {

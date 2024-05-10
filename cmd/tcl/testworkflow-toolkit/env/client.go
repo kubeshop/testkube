@@ -11,6 +11,7 @@ package env
 import (
 	"context"
 	"fmt"
+	"math"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -39,6 +40,8 @@ func KubernetesConfig() *rest.Config {
 			ui.Fail(fmt.Errorf("couldn't find Kubernetes config: %w and %w", err, fsErr))
 		}
 	}
+	c.QPS = float32(math.Max(float64(c.QPS), 30))
+	c.Burst = int(math.Max(float64(c.Burst), 50))
 	return c
 }
 
