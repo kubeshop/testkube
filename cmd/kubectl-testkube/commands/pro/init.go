@@ -12,6 +12,7 @@ import (
 )
 
 func NewInitCmd() *cobra.Command {
+	var export bool
 	options := common.HelmOptions{
 		NoMinio: true,
 		NoMongo: true,
@@ -20,8 +21,13 @@ func NewInitCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "init",
 		Short:   "Install Testkube Pro Agent and connect to Testkube Pro environment",
-		Aliases: []string{"install"},
+		Aliases: []string{"install", "agent"},
 		Run: func(cmd *cobra.Command, args []string) {
+			if export {
+				ui.Failf("export is unavailable for this profile")
+				return
+			}
+
 			ui.Info("WELCOME TO")
 			ui.Logo()
 
@@ -85,6 +91,7 @@ func NewInitCmd() *cobra.Command {
 	common.PopulateHelmFlags(cmd, &options)
 	common.PopulateMasterFlags(cmd, &options)
 
+	cmd.Flags().BoolVarP(&export, "export", "", false, "Export the values.yaml")
 	cmd.Flags().BoolVar(&options.MultiNamespace, "multi-namespace", false, "multi namespace mode")
 	cmd.Flags().BoolVar(&options.NoOperator, "no-operator", false, "should operator be installed (for more instances in multi namespace mode it should be set to true)")
 
