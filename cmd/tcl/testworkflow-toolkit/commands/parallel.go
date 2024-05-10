@@ -295,7 +295,6 @@ func NewParallelCmd() *cobra.Command {
 
 				fmt.Printf("%s: created\n", common2.InstanceLabel("worker", index, params.Count))
 
-				// TODO: Add support for watching only result?
 				prevStatus := testkube.QUEUED_TestWorkflowStatus
 				for v := range ctrl.Watch(context.Background()) {
 					if v.Error != nil {
