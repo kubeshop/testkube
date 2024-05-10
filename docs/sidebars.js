@@ -273,6 +273,11 @@ const sidebars = {
         "articles/testkube-dependencies",
         "articles/architecture",
         "articles/telemetry",
+        {
+          type: 'link',
+          label: 'OpenAPI Specification',
+          href: 'https://api.testkube.io/openapi',
+        },
       ],
     },
     "articles/common-issues",
