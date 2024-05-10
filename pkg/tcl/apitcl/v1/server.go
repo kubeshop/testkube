@@ -21,9 +21,7 @@ import (
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/imageinspector"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
-	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowexecutor"
 )
@@ -48,19 +46,13 @@ func NewApiTCL(
 	testkubeAPI apiv1.TestkubeAPI,
 	proContext *config.ProContext,
 	kubeClient kubeclient.Client,
-	imageInspector imageinspector.Inspector,
 	testWorkflowResults testworkflow.Repository,
 	testWorkflowOutput testworkflow.OutputRepository,
-	executionResults result.Repository,
-	apiUrl string,
-	globalTemplateName string,
 	configMap configRepo.Repository,
+	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
 ) ApiTCL {
 	testWorkflowTemplatesClient := testworkflowsv1.NewTestWorkflowTemplatesClient(kubeClient, testkubeAPI.Namespace)
-	executor := testworkflowexecutor.New(testkubeAPI.Events, testkubeAPI.Clientset, testWorkflowResults, testWorkflowOutput,
-		testWorkflowTemplatesClient, imageInspector, configMap, executionResults, testkubeAPI.ServiceAccountNames, globalTemplateName,
-		testkubeAPI.Namespace, apiUrl)
-	go executor.Recover(context.Background())
+	go testWorkflowExecutor.Recover(context.Background())
 	return &apiTCL{
 		TestkubeAPI:                 testkubeAPI,
 		ProContext:                  proContext,
@@ -68,7 +60,7 @@ func NewApiTCL(
 		TestWorkflowOutput:          testWorkflowOutput,
 		TestWorkflowsClient:         testworkflowsv1.NewClient(kubeClient, testkubeAPI.Namespace),
 		TestWorkflowTemplatesClient: testWorkflowTemplatesClient,
-		TestWorkflowExecutor:        executor,
+		TestWorkflowExecutor:        testWorkflowExecutor,
 		configMap:                   configMap,
 	}
 }

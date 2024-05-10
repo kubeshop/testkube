@@ -583,18 +583,31 @@ func main() {
 		cfg.EnableK8sEvents,
 	)
 
+	// Pro edition only (tcl protected code)
+	testWorkflowExecutor := testworkflowexecutor.New(
+		eventsEmitter,
+		clientset,
+		testWorkflowResultsRepository,
+		testWorkflowOutputRepository,
+		testWorkflowTemplatesClient,
+		inspector,
+		configMapConfig,
+		resultsRepository,
+		serviceAccountNames,
+		cfg.GlobalWorkflowTemplateName,
+		cfg.TestkubeNamespace,
+		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
+	)
+
 	// Apply Pro server enhancements
 	apiPro := apitclv1.NewApiTCL(
 		api,
 		&proContext,
 		kubeClient,
-		inspector,
 		testWorkflowResultsRepository,
 		testWorkflowOutputRepository,
-		resultsRepository,
-		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
-		cfg.GlobalWorkflowTemplateName,
 		configMapConfig,
+		testWorkflowExecutor,
 	)
 	apiPro.AppendRoutes()
 
@@ -626,10 +639,6 @@ func main() {
 		eventsEmitter.Loader.Register(agentHandle)
 	}
 
-	// Pro edition only (tcl protected code)
-	testWorkflowExecutor := testworkflowexecutor.New(eventsEmitter, clientset, testWorkflowResultsRepository,
-		testWorkflowOutputRepository, testWorkflowTemplatesClient, inspector, configMapConfig, resultsRepository, serviceAccountNames,
-		cfg.GlobalWorkflowTemplateName, cfg.TestkubeNamespace, "http://"+cfg.APIServerFullname+":"+cfg.APIServerPort)
 	api.InitEvents()
 	if !cfg.DisableTestTriggers {
 		triggerService := triggers.NewService(
