@@ -147,6 +147,7 @@ func NewParallelCmd() *cobra.Command {
 				// Clone the spec
 				spec := parallel.DeepCopy()
 				err = expressionstcl.Simplify(&spec, machines...)
+				ui.ExitOnError(fmt.Sprintf("%d: error:", i), err)
 
 				// Prepare the transfer
 				for ti, t := range spec.Transfer {

@@ -70,7 +70,7 @@ func TestProcessBasic(t *testing.T) {
 	want := batchv1.Job{
 		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "dummy-id",
+			Name: "dummy-id-abc",
 			Labels: map[string]string{
 				constants.ResourceIdLabelName:     "dummy-id-abc",
 				constants.RootResourceIdLabelName: "dummy-id",
@@ -1122,7 +1122,7 @@ func TestProcessRunShell(t *testing.T) {
 	want := batchv1.Job{
 		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "dummy-id",
+			Name: "dummy-id-abc",
 			Labels: map[string]string{
 				constants.RootResourceIdLabelName: "dummy-id",
 				constants.ResourceIdLabelName:     "dummy-id-abc",
