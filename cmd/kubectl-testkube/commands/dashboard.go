@@ -2,13 +2,13 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 
@@ -40,7 +40,7 @@ func NewDashboardCmd() *cobra.Command {
 			if cfg.ContextType != config.ContextTypeCloud {
 				isDashboardRunning, _ := k8sclient.IsPodOfServiceRunning(context.Background(), cfg.Namespace, config.EnterpriseUiName)
 				if isDashboardRunning {
-					openOnPremDashboard(cmd, cfg, verbose)
+					openOnPremDashboard(cmd, cfg, verbose, "")
 				} else {
 					ui.Warn("No dashboard found. Is it running in the " + namespace + " namespace?")
 				}
@@ -63,20 +63,39 @@ func openCloudDashboard(cfg config.Data) {
 	ui.PrintOnError("openning dashboard", err)
 }
 
-func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose bool) {
+func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose bool, license string) {
+	var errs []error
 	uiLocalPort, err := getDashboardLocalPort(config.EnterpriseApiForwardingPort)
 	ui.PrintOnError("getting an ui forwarding available port", err)
 	uri := fmt.Sprintf("http://localhost:%d", uiLocalPort)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseApiName, config.EnterpriseApiPort, config.EnterpriseApiForwardingPort, verbose)
+	if err != nil {
+		errs = append(errs, err)
+	}
 	ui.PrintOnError("port forwarding api", err)
 	err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseUiName, config.EnterpriseUiPort, uiLocalPort, verbose)
+	if err != nil {
+		errs = append(errs, err)
+	}
 	ui.PrintOnError("port forwarding ui", err)
 	err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseDexName, config.EnterpriseDexPort, config.EnterpriseDexForwardingPort, verbose)
+	if err != nil {
+		errs = append(errs, err)
+	}
 	ui.PrintOnError("port forwarding dex", err)
 
 	err = open.Run(uri)
+	if err != nil {
+		errs = append(errs, err)
+	}
+	if len(errs) > 0 {
+		retErr := errors.Join(errs...)
+		sendErrTelemetry(cmd, cfg, "open_dashboard", license, "opening dashboard", retErr)
+	} else {
+		sendTelemetry(cmd, cfg, license, "dashbboard opened successfully")
+	}
 	ui.ExitOnError("opening dashboard in browser", err)
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)

@@ -134,10 +134,14 @@ func NewInitCmdDemo() *cobra.Command {
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config file", err)
 
+			sendTelemetry(cmd, cfg, license, "installation launched")
+
 			kubecontext, err := common.GetCurrentKubernetesContext()
 			if err != nil {
 				ui.Failf("kubeconfig not found")
+				sendErrTelemetry(cmd, cfg, "install_kubeconfig_not_found", license, "kubeconfig not found", err)
 			}
+			sendTelemetry(cmd, cfg, license, "kubeconfig found")
 
 			if namespace == "" {
 				if noConfirm {
@@ -145,20 +149,25 @@ func NewInitCmdDemo() *cobra.Command {
 				} else {
 					response, err := pterm.DefaultInteractiveTextInput.WithDefaultValue("testkube").Show("Enter namespace for this installation")
 					namespace = response
+					sendErrTelemetry(cmd, cfg, "install_namespace_not_found", license, "namespace not found", err)
 					ui.ExitOnError("cannot read namespace", err)
 				}
 			}
+			sendTelemetry(cmd, cfg, license, "namespace found")
 
 			if license == "" {
 				response, err := pterm.DefaultInteractiveTextInput.Show("Enter license key")
 				license = strings.TrimSpace(response)
+				sendErrTelemetry(cmd, cfg, "install_license_malformed", license, "license validation", err)
 				ui.ExitOnError("cannot read license", err)
 			}
+			sendTelemetry(cmd, cfg, license, "license found")
 
 			if len(license) != len(licenseFormat) {
-				sendErrTelemetry(cmd, cfg, "install_license_malformed", license, err)
+				sendErrTelemetry(cmd, cfg, "install_license_malformed", license, "license validation", err)
 				ui.Failf("license malformed, expected license of format: " + licenseFormat)
 			}
+			sendTelemetry(cmd, cfg, license, "license validated")
 
 			ui.NL()
 			ui.Warn("Installation is about to start and may take a several minutes:")
@@ -170,15 +179,15 @@ func NewInitCmdDemo() *cobra.Command {
 
 			if !noConfirm {
 				if ok := ui.Confirm("Do you want to continue"); !ok {
-					sendErrTelemetry(cmd, cfg, "install_cancelled", license, err)
+					sendErrTelemetry(cmd, cfg, "install_cancelled", license, "user install confirmation", err)
 					return
 				}
 			}
 
-			sendAttemptTelemetry(cmd, cfg, license)
+			sendTelemetry(cmd, cfg, license, "installing started")
 			err = helmInstallDemo(license, namespace, dryRun)
 			if err != nil {
-				sendErrTelemetry(cmd, cfg, "install_failed", license, err)
+				sendErrTelemetry(cmd, cfg, "install_failed", license, "installing", err)
 				ui.NL()
 				ui.Info(fmt.Sprint(err))
 				ui.NL()
@@ -187,18 +196,20 @@ func NewInitCmdDemo() *cobra.Command {
 				return
 			}
 
-			if err == nil {
-				cfg.Namespace = namespace
-				err = config.Save(cfg)
-				if err != nil {
-					ui.Debug("Cannot save config")
-				}
+			sendTelemetry(cmd, cfg, license, "installing finished")
+
+			cfg.Namespace = namespace
+			err = config.Save(cfg)
+			if err != nil {
+				ui.Debug("Cannot save config")
 			}
 
-			ui.Info("Your initial admin credentials are: admin@example.com / password")
+			ui.Info("The default admin credentials are: admin@example.com / password")
 			ui.Info("Make sure to copy these credentials now as you will not be able to see this again.")
 			ui.NL()
 			ok := ui.Confirm("Do you want to continue?")
+
+			sendTelemetry(cmd, cfg, license, "user confirmed proceeding")
 
 			ui.Info("You can use `testkube dashboard` to access Testkube without exposing services.")
 			ui.NL()
@@ -208,9 +219,10 @@ func NewInitCmdDemo() *cobra.Command {
 			}
 
 			if ok := ui.Confirm("Do you want to open the dashboard?"); ok {
+				sendTelemetry(cmd, cfg, license, "opening dashboard")
 				cfg, err := config.Load()
 				ui.ExitOnError("Cannot open dashboard", err)
-				openOnPremDashboard(nil, cfg, false)
+				openOnPremDashboard(nil, cfg, false, license)
 			}
 		},
 	}
@@ -289,10 +301,10 @@ func helmInstallDemo(license, namespace string, dryRun bool) error {
 	return nil
 }
 
-func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType, license string, errorLogs error) {
+func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType, license, step string, errorLogs error) {
 	errorStackTrace := fmt.Sprintf("%+v", errorLogs)
 	if clientCfg.TelemetryEnabled {
-		out, err := telemetry.SendCmdErrorEventWithLicense(cmd, common.Version, errType, license, errorStackTrace)
+		out, err := telemetry.SendCmdErrorEventWithLicense(cmd, common.Version, errType, errorStackTrace, license, step)
 		if ui.Verbose && err != nil {
 			ui.Err(err)
 		}
@@ -301,9 +313,9 @@ func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType, licens
 	}
 }
 
-func sendAttemptTelemetry(cmd *cobra.Command, clientCfg config.Data, license string) {
+func sendTelemetry(cmd *cobra.Command, clientCfg config.Data, license, step string) {
 	if clientCfg.TelemetryEnabled {
-		out, err := telemetry.SendCmdAttempWithLicenseEvent(cmd, common.Version, license)
+		out, err := telemetry.SendCmdWithLicenseEvent(cmd, common.Version, license, step)
 		if ui.Verbose && err != nil {
 			ui.Err(err)
 		}

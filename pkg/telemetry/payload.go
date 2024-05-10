@@ -39,6 +39,7 @@ type Params struct {
 	TestWorkflowArtifactUsed   bool       `json:"test_workflow_artifact_used,omitempty"`
 	TestWorkflowKubeshopGitURI bool       `json:"test_workflow_kubeshop_git_uri,omitempty"`
 	License                    string     `json:"license,omitempty"`
+	Step                       string     `json:"step,omitempty"`
 }
 
 type Event struct {
@@ -121,7 +122,7 @@ func NewCLIPayload(context RunContext, id, name, version, category, clusterType 
 	}
 }
 
-func NewCLIWithLicensePayload(context RunContext, id, name, version, category, clusterType, license string) Payload {
+func NewCLIWithLicensePayload(context RunContext, id, name, version, category, clusterType, license, step string) Payload {
 	return Payload{
 		ClientID: id,
 		UserID:   id,
@@ -140,6 +141,7 @@ func NewCLIWithLicensePayload(context RunContext, id, name, version, category, c
 					ClusterType:     clusterType,
 					CliContext:      GetCliRunContext(),
 					License:         license,
+					Step:            step,
 				},
 			}},
 	}
