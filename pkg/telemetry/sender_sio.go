@@ -89,6 +89,14 @@ func mapProperties(params Params) analytics.Properties {
 		Set("errorType", params.ErrorType).
 		Set("errorStackTrace", params.ErrorStackTrace)
 
+	if params.License != "" {
+		properties = properties.Set("license", params.License)
+	}
+
+	if params.Step != "" {
+		properties = properties.Set("step", params.Step)
+	}
+
 	if params.DataSource != "" {
 		properties = properties.Set("dataSource", params.DataSource)
 	}
