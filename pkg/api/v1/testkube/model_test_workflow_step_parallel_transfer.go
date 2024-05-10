@@ -9,8 +9,11 @@
  */
 package testkube
 
-type TestWorkflowTarballRequest struct {
+type TestWorkflowStepParallelTransfer struct {
 	// path to load the files from
-	From  string                          `json:"from"`
+	From string `json:"from"`
+	// path to load the files from
+	To    string                          `json:"to,omitempty"`
 	Files *TestWorkflowTarballFilePattern `json:"files,omitempty"`
+	Mount *BoxedBoolean                   `json:"mount,omitempty"`
 }

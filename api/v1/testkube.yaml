@@ -7886,6 +7886,72 @@ components:
         spec:
           $ref: "#/components/schemas/TestWorkflowTemplateSpec"
 
+    TestWorkflowStepParallel:
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/TestWorkflowSpec"
+      - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
+      - properties:
+          transfer:
+            type: array
+            items:
+              $ref: "#/components/schemas/TestWorkflowStepParallelTransfer"
+
+    TestWorkflowIndependentStepParallel:
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/TestWorkflowTemplateSpec"
+      - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
+      - properties:
+          transfer:
+            type: array
+            items:
+              $ref: "#/components/schemas/TestWorkflowStepParallelTransfer"
+
+    TestWorkflowStepExecuteStrategy:
+      type: object
+      properties:
+        count:
+          $ref: "#/components/schemas/BoxedString"
+        maxCount:
+          $ref: "#/components/schemas/BoxedString"
+        matrix:
+          type: object
+          description: "matrix of parameters to spawn instances"
+          additionalProperties:
+            description: "dynamic expression or static list of values"
+            oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        shards:
+          type: object
+          description: "parameters that should be distributed across sharded instances"
+          additionalProperties:
+            description: "dynamic expression or static list of values"
+            oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+
+    TestWorkflowStepParallelTransfer:
+      type: object
+      properties:
+        from:
+          type: string
+          description: path to load the files from
+        to:
+          type: string
+          description: path to load the files from
+        files:
+          $ref: "#/components/schemas/TestWorkflowTarballFilePattern"
+        mount:
+          $ref: "#/components/schemas/BoxedBoolean"
+      required:
+      - from
+
     TestWorkflowSpec:
       type: object
       properties:
@@ -7993,6 +8059,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowStepExecute"
         artifacts:
           $ref: "#/components/schemas/TestWorkflowStepArtifacts"
+        parallel:
+          $ref: "#/components/schemas/TestWorkflowIndependentStepParallel"
         setup:
           type: array
           description: nested setup steps to run
@@ -8054,6 +8122,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowStepExecute"
         artifacts:
           $ref: "#/components/schemas/TestWorkflowStepArtifacts"
+        parallel:
+          $ref: "#/components/schemas/TestWorkflowStepParallel"
         setup:
           type: array
           description: nested setup steps to run
@@ -8087,86 +8157,46 @@ components:
 
     TestWorkflowStepExecuteTestWorkflowRef:
       type: object
-      properties:
-        name:
-          type: string
-          description: TestWorkflow name to include
-        description:
-          type: string
-          description: TestWorkflow execution description to display
-        executionName:
-          type: string
-          description: TestWorkflow execution name override
-        tarball:
-          type: object
-          additionalProperties:
-            $ref: "#/components/schemas/TestWorkflowTarballRequest"
-        config:
-          $ref: "#/components/schemas/TestWorkflowConfigValue"
-        count:
-          $ref: "#/components/schemas/BoxedString"
-        maxCount:
-          $ref: "#/components/schemas/BoxedString"
-        matrix:
-          type: object
-          description: "matrix of parameters to spawn instances"
-          additionalProperties:
-            description: "dynamic expression or static list of values"
-            oneOf:
-            - type: string
-            - type: array
-              items:
-                type: string
-        shards:
-          type: object
-          description: "parameters that should be distributed across sharded instances"
-          additionalProperties:
-            description: "dynamic expression or static list of values"
-            oneOf:
-            - type: string
-            - type: array
-              items:
-                type: string
+      allOf:
+      - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
+      - properties:
+          name:
+            type: string
+            description: TestWorkflow name to include
+          description:
+            type: string
+            description: TestWorkflow execution description to display
+          executionName:
+            type: string
+            description: TestWorkflow execution name override
+          tarball:
+            type: object
+            additionalProperties:
+              $ref: "#/components/schemas/TestWorkflowTarballRequest"
+          config:
+            $ref: "#/components/schemas/TestWorkflowConfigValue"
 
     TestWorkflowStepExecuteTestRef:
       type: object
-      properties:
-        name:
-          type: string
-          description: test name to schedule
-        description:
-          type: string
-          description: test execution description to display
-        count:
-          $ref: "#/components/schemas/BoxedString"
-        maxCount:
-          $ref: "#/components/schemas/BoxedString"
-        executionRequest:
-          $ref: "#/components/schemas/TestWorkflowStepExecuteTestExecutionRequest"
-        tarball:
-          type: object
-          additionalProperties:
-            $ref: "#/components/schemas/TestWorkflowTarballRequest"
-        matrix:
-          type: object
-          description: "matrix of parameters to spawn instances"
-          additionalProperties:
-            description: "dynamic expression or static list of values"
-            oneOf:
-            - type: string
-            - type: array
-              items:
-                type: string
-        shards:
-          type: object
-          description: "parameters that should be distributed across sharded instances"
-          additionalProperties:
-            description: "dynamic expression or static list of values"
-            oneOf:
-            - type: string
-            - type: array
-              items:
-                type: string
+      allOf:
+      - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
+      - properties:
+          name:
+            type: string
+            description: test name to schedule
+          description:
+            type: string
+            description: test execution description to display
+          count:
+            $ref: "#/components/schemas/BoxedString"
+          maxCount:
+            $ref: "#/components/schemas/BoxedString"
+          executionRequest:
+            $ref: "#/components/schemas/TestWorkflowStepExecuteTestExecutionRequest"
+          tarball:
+            type: object
+            additionalProperties:
+              $ref: "#/components/schemas/TestWorkflowTarballRequest"
 
     TestWorkflowTarballRequest:
       type: object
@@ -8175,16 +8205,19 @@ components:
           type: string
           description: path to load the files from
         files:
-          type: object
-          description: "dynamic expression or static list of file patterns to pack"
-          properties:
-            static:
-              type: array
-              items: {}
-            expression:
-              type: string
+          $ref: "#/components/schemas/TestWorkflowTarballFilePattern"
       required:
       - from
+
+    TestWorkflowTarballFilePattern:
+      type: object
+      description: "dynamic expression or static list of file patterns to pack"
+      properties:
+        static:
+          type: array
+          items: {}
+        expression:
+          type: string
 
     TestWorkflowStepExecuteTestExecutionRequest:
       type: object

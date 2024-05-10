@@ -10,7 +10,7 @@
 package testkube
 
 // dynamic expression or static list of file patterns to pack
-type TestWorkflowTarballRequestFiles struct {
+type TestWorkflowTarballFilePattern struct {
 	Static     []interface{} `json:"static,omitempty"`
 	Expression string        `json:"expression,omitempty"`
 }

@@ -27,12 +27,13 @@ type TestWorkflowIndependentStep struct {
 	Delay   string               `json:"delay,omitempty"`
 	Content *TestWorkflowContent `json:"content,omitempty"`
 	// script to run in a default shell for the container
-	Shell      string                       `json:"shell,omitempty"`
-	Run        *TestWorkflowStepRun         `json:"run,omitempty"`
-	WorkingDir *BoxedString                 `json:"workingDir,omitempty"`
-	Container  *TestWorkflowContainerConfig `json:"container,omitempty"`
-	Execute    *TestWorkflowStepExecute     `json:"execute,omitempty"`
-	Artifacts  *TestWorkflowStepArtifacts   `json:"artifacts,omitempty"`
+	Shell      string                               `json:"shell,omitempty"`
+	Run        *TestWorkflowStepRun                 `json:"run,omitempty"`
+	WorkingDir *BoxedString                         `json:"workingDir,omitempty"`
+	Container  *TestWorkflowContainerConfig         `json:"container,omitempty"`
+	Execute    *TestWorkflowStepExecute             `json:"execute,omitempty"`
+	Artifacts  *TestWorkflowStepArtifacts           `json:"artifacts,omitempty"`
+	Parallel   *TestWorkflowIndependentStepParallel `json:"parallel,omitempty"`
 	// nested setup steps to run
 	Setup []TestWorkflowIndependentStep `json:"setup,omitempty"`
 	// nested steps to run

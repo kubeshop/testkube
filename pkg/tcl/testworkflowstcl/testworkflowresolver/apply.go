@@ -51,26 +51,33 @@ func getConfiguredTemplate(name string, cfg map[string]intstr.IntOrString, templ
 	return buildTemplate(tpl, cfg)
 }
 
+func injectTemplateToSpec(spec *testworkflowsv1.TestWorkflowSpec, template testworkflowsv1.TestWorkflowTemplate) error {
+	if spec == nil {
+		return nil
+	}
+	// Apply top-level configuration
+	spec.Pod = MergePodConfig(template.Spec.Pod, spec.Pod)
+	spec.Job = MergeJobConfig(template.Spec.Job, spec.Job)
+
+	// Apply basic configuration
+	spec.Content = MergeContent(template.Spec.Content, spec.Content)
+	spec.Container = MergeContainerConfig(template.Spec.Container, spec.Container)
+
+	// Include the steps from the template
+	setup := common.MapSlice(template.Spec.Setup, ConvertIndependentStepToStep)
+	spec.Setup = append(setup, spec.Setup...)
+	steps := common.MapSlice(template.Spec.Steps, ConvertIndependentStepToStep)
+	spec.Steps = append(steps, spec.Steps...)
+	after := common.MapSlice(template.Spec.After, ConvertIndependentStepToStep)
+	spec.After = append(spec.After, after...)
+	return nil
+}
+
 func InjectTemplate(workflow *testworkflowsv1.TestWorkflow, template testworkflowsv1.TestWorkflowTemplate) error {
 	if workflow == nil {
 		return nil
 	}
-	// Apply top-level configuration
-	workflow.Spec.Pod = MergePodConfig(template.Spec.Pod, workflow.Spec.Pod)
-	workflow.Spec.Job = MergeJobConfig(template.Spec.Job, workflow.Spec.Job)
-
-	// Apply basic configuration
-	workflow.Spec.Content = MergeContent(template.Spec.Content, workflow.Spec.Content)
-	workflow.Spec.Container = MergeContainerConfig(template.Spec.Container, workflow.Spec.Container)
-
-	// Include the steps from the template
-	setup := common.MapSlice(template.Spec.Setup, ConvertIndependentStepToStep)
-	workflow.Spec.Setup = append(setup, workflow.Spec.Setup...)
-	steps := common.MapSlice(template.Spec.Steps, ConvertIndependentStepToStep)
-	workflow.Spec.Steps = append(steps, workflow.Spec.Steps...)
-	after := common.MapSlice(template.Spec.After, ConvertIndependentStepToStep)
-	workflow.Spec.After = append(workflow.Spec.After, after...)
-	return nil
+	return injectTemplateToSpec(&workflow.Spec, template)
 }
 
 func InjectStepTemplate(step *testworkflowsv1.Step, template testworkflowsv1.TestWorkflowTemplate) error {
@@ -135,6 +142,14 @@ func applyTemplatesToStep(step testworkflowsv1.Step, templates map[string]testwo
 		step.Template = nil
 	}
 
+	// Apply templates in the parallel steps
+	if step.Parallel != nil {
+		err := applyTemplatesToSpec(&step.Parallel.TestWorkflowSpec, templates)
+		if err != nil {
+			return step, errors.Wrap(err, ".parallel")
+		}
+	}
+
 	// Resolve templates in the sub-steps
 	var err error
 	for i := range step.Setup {
@@ -176,58 +191,78 @@ func FlattenStepList(steps []testworkflowsv1.Step) []testworkflowsv1.Step {
 	return result
 }
 
-func ApplyTemplates(workflow *testworkflowsv1.TestWorkflow, templates map[string]testworkflowsv1.TestWorkflowTemplate) error {
-	if workflow == nil {
+func applyTemplatesToSpec(spec *testworkflowsv1.TestWorkflowSpec, templates map[string]testworkflowsv1.TestWorkflowTemplate) error {
+	if spec == nil {
 		return nil
 	}
 
 	// Encapsulate TestWorkflow configuration to not pass it into templates accidentally
 	random := rand.String(10)
-	err := expressionstcl.Simplify(workflow, expressionstcl.ReplacePrefixMachine("config.", random+"."))
+	err := expressionstcl.Simplify(spec, expressionstcl.ReplacePrefixMachine("config.", random+"."))
 	if err != nil {
 		return err
 	}
-	defer expressionstcl.Simplify(workflow, expressionstcl.ReplacePrefixMachine(random+".", "config."))
+	defer expressionstcl.Simplify(spec, expressionstcl.ReplacePrefixMachine(random+".", "config."))
 
 	// Apply top-level templates
-	for i, ref := range workflow.Spec.Use {
+	for i, ref := range spec.Use {
 		tpl, err := getConfiguredTemplate(ref.Name, ref.Config, templates)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("spec.use[%d]: resolving template", i))
 		}
-		err = InjectTemplate(workflow, tpl)
+		err = injectTemplateToSpec(spec, tpl)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("spec.use[%d]: injecting template", i))
 		}
 	}
-	workflow.Spec.Use = nil
+	spec.Use = nil
 
 	// Apply templates on the step level
-	for i := range workflow.Spec.Setup {
-		workflow.Spec.Setup[i], err = applyTemplatesToStep(workflow.Spec.Setup[i], templates)
+	for i := range spec.Setup {
+		spec.Setup[i], err = applyTemplatesToStep(spec.Setup[i], templates)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("spec.setup[%d]", i))
 		}
 	}
-	for i := range workflow.Spec.Steps {
-		workflow.Spec.Steps[i], err = applyTemplatesToStep(workflow.Spec.Steps[i], templates)
+	for i := range spec.Steps {
+		spec.Steps[i], err = applyTemplatesToStep(spec.Steps[i], templates)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("spec.steps[%d]", i))
 		}
 	}
-	for i := range workflow.Spec.After {
-		workflow.Spec.After[i], err = applyTemplatesToStep(workflow.Spec.After[i], templates)
+	for i := range spec.After {
+		spec.After[i], err = applyTemplatesToStep(spec.After[i], templates)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("spec.after[%d]", i))
 		}
 	}
 
 	// Simplify the lists
-	workflow.Spec.Setup = FlattenStepList(workflow.Spec.Setup)
-	workflow.Spec.Steps = FlattenStepList(workflow.Spec.Steps)
-	workflow.Spec.After = FlattenStepList(workflow.Spec.After)
+	spec.Setup = FlattenStepList(spec.Setup)
+	spec.Steps = FlattenStepList(spec.Steps)
+	spec.After = FlattenStepList(spec.After)
 
 	return nil
+}
+
+func ApplyTemplates(workflow *testworkflowsv1.TestWorkflow, templates map[string]testworkflowsv1.TestWorkflowTemplate) error {
+	if workflow == nil {
+		return nil
+	}
+	return applyTemplatesToSpec(&workflow.Spec, templates)
+}
+
+func addGlobalTemplateRefToStep(step *testworkflowsv1.Step, ref testworkflowsv1.TemplateRef) {
+	if step.Parallel != nil {
+		addGlobalTemplateRefToSpec(&step.Parallel.TestWorkflowSpec, ref)
+	}
+	for i := range step.Setup {
+		addGlobalTemplateRefToStep(&step.Setup[i], ref)
+	}
+	for i := range step.Steps {
+		addGlobalTemplateRefToStep(&step.Steps[i], ref)
+	}
+	return
 }
 
 func addGlobalTemplateRefToSpec(spec *testworkflowsv1.TestWorkflowSpec, ref testworkflowsv1.TemplateRef) {
@@ -235,6 +270,16 @@ func addGlobalTemplateRefToSpec(spec *testworkflowsv1.TestWorkflowSpec, ref test
 		return
 	}
 	spec.Use = append([]testworkflowsv1.TemplateRef{ref}, spec.Use...)
+	for i := range spec.Setup {
+		addGlobalTemplateRefToStep(&spec.Setup[i], ref)
+	}
+	for i := range spec.Steps {
+		addGlobalTemplateRefToStep(&spec.Steps[i], ref)
+	}
+	for i := range spec.After {
+		addGlobalTemplateRefToStep(&spec.After[i], ref)
+	}
+	return
 }
 
 func AddGlobalTemplateRef(t *testworkflowsv1.TestWorkflow, ref testworkflowsv1.TemplateRef) {

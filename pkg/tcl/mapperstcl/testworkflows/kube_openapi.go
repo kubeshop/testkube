@@ -772,11 +772,11 @@ func MapStepExecuteTestExecutionRequestKubeToAPI(v testworkflowsv1.TestExecution
 	}
 }
 
-func MapTarballRequestFilesKubeToAPI(v testworkflowsv1.DynamicList) testkube.TestWorkflowTarballRequestFiles {
+func MapTarballFilePatternKubeToAPI(v testworkflowsv1.DynamicList) testkube.TestWorkflowTarballFilePattern {
 	if v.Expression != "" {
-		return testkube.TestWorkflowTarballRequestFiles{Expression: v.Expression}
+		return testkube.TestWorkflowTarballFilePattern{Expression: v.Expression}
 	}
-	return testkube.TestWorkflowTarballRequestFiles{Static: common.MapSlice(v.Static, func(s string) interface{} {
+	return testkube.TestWorkflowTarballFilePattern{Static: common.MapSlice(v.Static, func(s string) interface{} {
 		return s
 	})}
 }
@@ -784,7 +784,7 @@ func MapTarballRequestFilesKubeToAPI(v testworkflowsv1.DynamicList) testkube.Tes
 func MapTarballRequestKubeToAPI(v testworkflowsv1.TarballRequest) testkube.TestWorkflowTarballRequest {
 	return testkube.TestWorkflowTarballRequest{
 		From:  v.From,
-		Files: common.MapPtr(v.Files, MapTarballRequestFilesKubeToAPI),
+		Files: common.MapPtr(v.Files, MapTarballFilePatternKubeToAPI),
 	}
 }
 
@@ -845,6 +845,54 @@ func MapRetryPolicyKubeToAPI(v testworkflowsv1.RetryPolicy) testkube.TestWorkflo
 	}
 }
 
+func MapStepParallelTransferKubeToAPI(v testworkflowsv1.StepParallelTransfer) testkube.TestWorkflowStepParallelTransfer {
+	return testkube.TestWorkflowStepParallelTransfer{
+		From:  v.From,
+		To:    v.To,
+		Files: common.MapPtr(v.Files, MapTarballFilePatternKubeToAPI),
+		Mount: MapBoolToBoxedBoolean(v.Mount),
+	}
+}
+
+func MapStepParallelKubeToAPI(v testworkflowsv1.StepParallel) testkube.TestWorkflowStepParallel {
+	return testkube.TestWorkflowStepParallel{
+		Count:     MapIntOrStringToBoxedString(v.Count),
+		MaxCount:  MapIntOrStringToBoxedString(v.MaxCount),
+		Matrix:    MapDynamicListMapKubeToAPI(v.Matrix),
+		Shards:    MapDynamicListMapKubeToAPI(v.Shards),
+		Transfer:  common.MapSlice(v.Transfer, MapStepParallelTransferKubeToAPI),
+		Use:       common.MapSlice(v.Use, MapTemplateRefKubeToAPI),
+		Config:    common.MapMap(v.Config, MapParameterSchemaKubeToAPI),
+		Content:   common.MapPtr(v.Content, MapContentKubeToAPI),
+		Container: common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
+		Job:       common.MapPtr(v.Job, MapJobConfigKubeToAPI),
+		Pod:       common.MapPtr(v.Pod, MapPodConfigKubeToAPI),
+		Setup:     common.MapSlice(v.Setup, MapStepKubeToAPI),
+		Steps:     common.MapSlice(v.Steps, MapStepKubeToAPI),
+		After:     common.MapSlice(v.After, MapStepKubeToAPI),
+		Events:    common.MapSlice(v.Events, MapEventKubeToAPI),
+	}
+}
+
+func MapIndependentStepParallelKubeToAPI(v testworkflowsv1.IndependentStepParallel) testkube.TestWorkflowIndependentStepParallel {
+	return testkube.TestWorkflowIndependentStepParallel{
+		Count:     MapIntOrStringToBoxedString(v.Count),
+		MaxCount:  MapIntOrStringToBoxedString(v.MaxCount),
+		Matrix:    MapDynamicListMapKubeToAPI(v.Matrix),
+		Shards:    MapDynamicListMapKubeToAPI(v.Shards),
+		Transfer:  common.MapSlice(v.Transfer, MapStepParallelTransferKubeToAPI),
+		Config:    common.MapMap(v.Config, MapParameterSchemaKubeToAPI),
+		Content:   common.MapPtr(v.Content, MapContentKubeToAPI),
+		Container: common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
+		Job:       common.MapPtr(v.Job, MapJobConfigKubeToAPI),
+		Pod:       common.MapPtr(v.Pod, MapPodConfigKubeToAPI),
+		Setup:     common.MapSlice(v.Setup, MapIndependentStepKubeToAPI),
+		Steps:     common.MapSlice(v.Steps, MapIndependentStepKubeToAPI),
+		After:     common.MapSlice(v.After, MapIndependentStepKubeToAPI),
+		Events:    common.MapSlice(v.Events, MapEventKubeToAPI),
+	}
+}
+
 func MapStepKubeToAPI(v testworkflowsv1.Step) testkube.TestWorkflowStep {
 	return testkube.TestWorkflowStep{
 		Name:       v.Name,
@@ -866,6 +914,7 @@ func MapStepKubeToAPI(v testworkflowsv1.Step) testkube.TestWorkflowStep {
 		Artifacts:  common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
 		Setup:      common.MapSlice(v.Setup, MapStepKubeToAPI),
 		Steps:      common.MapSlice(v.Steps, MapStepKubeToAPI),
+		Parallel:   common.MapPtr(v.Parallel, MapStepParallelKubeToAPI),
 	}
 }
 
@@ -888,6 +937,7 @@ func MapIndependentStepKubeToAPI(v testworkflowsv1.IndependentStep) testkube.Tes
 		Artifacts:  common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
 		Setup:      common.MapSlice(v.Setup, MapIndependentStepKubeToAPI),
 		Steps:      common.MapSlice(v.Steps, MapIndependentStepKubeToAPI),
+		Parallel:   common.MapPtr(v.Parallel, MapIndependentStepParallelKubeToAPI),
 	}
 }
 
