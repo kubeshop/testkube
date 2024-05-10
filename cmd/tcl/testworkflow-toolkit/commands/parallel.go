@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -24,7 +25,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	initconstants "github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/artifacts"
 	common2 "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/transfer"
@@ -40,6 +43,7 @@ type ParallelStatus struct {
 	Index       int                              `json:"index"`
 	Description string                           `json:"description,omitempty"`
 	Current     string                           `json:"current,omitempty"`
+	Logs        string                           `json:"logs,omitempty"`
 	Status      testkube.TestWorkflowStatus      `json:"status,omitempty"`
 	Signature   []testkube.TestWorkflowSignature `json:"signature,omitempty"`
 	Result      *testkube.TestWorkflowResult     `json:"result,omitempty"`
@@ -219,6 +223,7 @@ func NewParallelCmd() *cobra.Command {
 			// Load Kubernetes client and image inspector
 			clientSet := env.Kubernetes()
 			inspector := env.ImageInspector()
+			storage := artifacts.InternalStorage()
 
 			// Prepare runner
 			// TODO: Share resources like configMaps?
@@ -255,7 +260,37 @@ func NewParallelCmd() *cobra.Command {
 					return false
 				}
 				defer func() {
-					err := testworkflowcontroller.Cleanup(context.Background(), clientSet, env.Namespace(), id)
+					// Save logs
+					reader, writer := io.Pipe()
+					filePath := fmt.Sprintf("logs/%d.log", index)
+					ctrl, err := testworkflowcontroller.New(context.Background(), clientSet, env.Namespace(), id, scheduledAt, testworkflowcontroller.ControllerOptions{
+						Timeout: 120 * time.Second,
+					})
+					if err == nil {
+						go func() {
+							defer writer.Close()
+							ref := ""
+							for v := range ctrl.Watch(context.Background()) {
+								if v.Error == nil && v.Value.Log != "" {
+									if ref != v.Value.Ref {
+										ref = v.Value.Ref
+										_, _ = writer.Write([]byte(data.SprintHint(ref, initconstants.InstructionStart)))
+									}
+									_, _ = writer.Write([]byte(v.Value.Log))
+								}
+							}
+						}()
+						err = storage.SaveStream(filePath, reader)
+					}
+					if err == nil {
+						data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Logs: storage.FullPath(filePath)})
+						fmt.Printf("%s: saved logs\n", common2.InstanceLabel("worker", index, params.Count))
+					} else {
+						fmt.Printf("%s: warning: problem saving the logs: %s\n", common2.InstanceLabel("worker", index, params.Count), err.Error())
+					}
+
+					// Clean up
+					err = testworkflowcontroller.Cleanup(context.Background(), clientSet, env.Namespace(), id)
 					if err == nil {
 						fmt.Printf("%s: cleaned resources\n", common2.InstanceLabel("worker", index, params.Count))
 					} else {
