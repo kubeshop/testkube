@@ -898,7 +898,9 @@ func MapStepParallelAPIToKube(v testkube.TestWorkflowStepParallel) testworkflows
 			Matrix:   MapDynamicListMapAPIToKube(v.Matrix),
 			Shards:   MapDynamicListMapAPIToKube(v.Shards),
 		},
-		Transfer: nil,
+		Parallelism: v.Parallelism,
+		Description: v.Description,
+		Transfer:    common.MapSlice(v.Transfer, MapStepParallelTransferAPIToKube),
 		TestWorkflowSpec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Config:    common.MapMap(v.Config, MapParameterSchemaAPIToKube),
@@ -924,7 +926,9 @@ func MapIndependentStepParallelAPIToKube(v testkube.TestWorkflowIndependentStepP
 			Matrix:   MapDynamicListMapAPIToKube(v.Matrix),
 			Shards:   MapDynamicListMapAPIToKube(v.Shards),
 		},
-		Transfer: nil,
+		Parallelism: v.Parallelism,
+		Description: v.Description,
+		Transfer:    common.MapSlice(v.Transfer, MapStepParallelTransferAPIToKube),
 		TestWorkflowTemplateSpec: testworkflowsv1.TestWorkflowTemplateSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Config:    common.MapMap(v.Config, MapParameterSchemaAPIToKube),

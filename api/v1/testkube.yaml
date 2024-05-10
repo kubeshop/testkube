@@ -7892,6 +7892,12 @@ components:
       - $ref: "#/components/schemas/TestWorkflowSpec"
       - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
       - properties:
+          parallelism:
+            type: integer
+            description: how many resources could be scheduled in parallel
+          description:
+            type: string
+            description: worker description to display
           transfer:
             type: array
             items:
@@ -7903,6 +7909,12 @@ components:
       - $ref: "#/components/schemas/TestWorkflowTemplateSpec"
       - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
       - properties:
+          parallelism:
+            type: integer
+            description: how many resources could be scheduled in parallel
+          description:
+            type: string
+            description: worker description to display
           transfer:
             type: array
             items:

@@ -81,7 +81,6 @@ func NewParallelCmd() *cobra.Command {
 					"namespace":       env.Namespace(),
 					"defaultRegistry": env.Config().System.DefaultRegistry,
 
-					// TODO: Use it in toolkit containers
 					"images.init":                env.Config().Images.Init,
 					"images.toolkit":             env.Config().Images.Toolkit,
 					"images.persistence.enabled": strconv.FormatBool(env.Config().Images.InspectorPersistenceEnabled),
@@ -121,8 +120,7 @@ func NewParallelCmd() *cobra.Command {
 			if params.ShardCount > 1 {
 				infos = append(infos, fmt.Sprintf("sharded %d times", params.ShardCount))
 			}
-			// TODO: Support parallelism level
-			parallelism := int64(5000)
+			parallelism := int64(parallel.Parallelism)
 			if params.Count > 1 {
 				if parallelism < params.Count {
 					infos = append(infos, fmt.Sprintf("parallel: %d", parallelism))
@@ -137,8 +135,8 @@ func NewParallelCmd() *cobra.Command {
 			}
 
 			// Analyze instances to run
-			// TODO: Store the description too
 			specs := make([]testworkflowsv1.TestWorkflowSpec, params.Count)
+			descriptions := make([]string, params.Count)
 			for i := int64(0); i < params.Count; i++ {
 				machines := []expressionstcl.Machine{baseMachine, params.MachineAt(i)}
 				// Clone the spec
@@ -190,6 +188,7 @@ func NewParallelCmd() *cobra.Command {
 
 				// Prepare the workflow to run
 				specs[i] = spec.TestWorkflowSpec
+				descriptions[i] = spec.Description
 			}
 
 			// Initialize transfer server if expected
@@ -211,9 +210,10 @@ func NewParallelCmd() *cobra.Command {
 			for index := range specs {
 				data.PrintOutput(env.Ref(), "parallel", ParallelStatus{
 					Index:       index,
-					Description: "", // TODO
+					Description: descriptions[index],
 				})
 			}
+			descriptions = nil
 
 			// Load Kubernetes client and image inspector
 			clientSet := env.Kubernetes()
