@@ -140,7 +140,7 @@ func WatchJob(ctx context.Context, clientSet kubernetes.Interface, namespace, na
 
 func WatchMainPod(ctx context.Context, clientSet kubernetes.Interface, namespace, name string, bufferSize int) Channel[*corev1.Pod] {
 	return watchPod(ctx, clientSet, namespace, bufferSize, metav1.ListOptions{
-		LabelSelector: constants.ExecutionIdMainPodLabelName + "=" + name,
+		LabelSelector: constants.ResourceIdLabelName + "=" + name,
 	})
 }
 

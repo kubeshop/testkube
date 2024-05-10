@@ -165,7 +165,7 @@ func ProcessContentFiles(_ InternalProcessor, layer Intermediate, container Cont
 			continue
 		}
 
-		volRef := "{{execution.id}}-" + layer.NextRef()
+		volRef := "{{resource.id}}-" + layer.NextRef()
 
 		if f.ContentFrom.ConfigMapKeyRef != nil {
 			layer.AddVolume(corev1.Volume{

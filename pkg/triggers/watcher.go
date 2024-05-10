@@ -305,7 +305,7 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 }
 
 func (s *Service) checkExecutionPodStatus(ctx context.Context, executionID string, pods []*corev1.Pod) error {
-	if len(pods) > 0 && pods[0].Labels[constants.ExecutionIdLabelName] != "" {
+	if len(pods) > 0 && pods[0].Labels[constants.ResourceIdLabelName] != "" {
 		return nil
 	}
 

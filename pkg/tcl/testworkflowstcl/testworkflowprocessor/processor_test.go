@@ -36,7 +36,8 @@ var (
 	ins         = &dummyInspector{}
 	proc        = NewFullFeatured(ins)
 	execMachine = expressionstcl.NewMachine().
-			Register("execution.id", "dummy-id")
+			Register("resource.rootId", "dummy-id").
+			Register("resource.id", "dummy-id-abc")
 )
 
 func TestProcessEmpty(t *testing.T) {
@@ -69,8 +70,11 @@ func TestProcessBasic(t *testing.T) {
 	want := batchv1.Job{
 		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "dummy-id",
-			Labels: map[string]string{constants.ExecutionIdLabelName: "dummy-id"},
+			Name: "dummy-id",
+			Labels: map[string]string{
+				constants.ResourceIdLabelName:     "dummy-id-abc",
+				constants.RootResourceIdLabelName: "dummy-id",
+			},
 			Annotations: map[string]string{
 				constants.SignatureAnnotationName: string(sigSerialized),
 			},
@@ -80,8 +84,8 @@ func TestProcessBasic(t *testing.T) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						constants.ExecutionIdLabelName:        "dummy-id",
-						constants.ExecutionIdMainPodLabelName: "dummy-id",
+						constants.ResourceIdLabelName:     "dummy-id-abc",
+						constants.RootResourceIdLabelName: "dummy-id",
 					},
 					Annotations: map[string]string(nil),
 				},
@@ -1118,8 +1122,11 @@ func TestProcessRunShell(t *testing.T) {
 	want := batchv1.Job{
 		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "dummy-id",
-			Labels: map[string]string{constants.ExecutionIdLabelName: "dummy-id"},
+			Name: "dummy-id",
+			Labels: map[string]string{
+				constants.RootResourceIdLabelName: "dummy-id",
+				constants.ResourceIdLabelName:     "dummy-id-abc",
+			},
 			Annotations: map[string]string{
 				constants.SignatureAnnotationName: string(sigSerialized),
 			},
@@ -1129,8 +1136,8 @@ func TestProcessRunShell(t *testing.T) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						constants.ExecutionIdLabelName:        "dummy-id",
-						constants.ExecutionIdMainPodLabelName: "dummy-id",
+						constants.RootResourceIdLabelName: "dummy-id",
+						constants.ResourceIdLabelName:     "dummy-id-abc",
 					},
 					Annotations: map[string]string(nil),
 				},

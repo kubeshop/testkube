@@ -20,49 +20,61 @@ import (
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
-func cleanupConfigMaps(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
-	return clientSet.CoreV1().ConfigMaps(namespace).DeleteCollection(ctx, metav1.DeleteOptions{
-		GracePeriodSeconds: common.Ptr(int64(0)),
-		PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
-	}, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", constants.ExecutionIdLabelName, id),
-	})
+func cleanupConfigMaps(labelName string) func(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
+	return func(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
+		return clientSet.CoreV1().ConfigMaps(namespace).DeleteCollection(ctx, metav1.DeleteOptions{
+			GracePeriodSeconds: common.Ptr(int64(0)),
+			PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
+		}, metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("%s=%s", labelName, id),
+		})
+	}
 }
 
-func cleanupSecrets(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
-	return clientSet.CoreV1().Secrets(namespace).DeleteCollection(ctx, metav1.DeleteOptions{
-		GracePeriodSeconds: common.Ptr(int64(0)),
-		PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
-	}, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", constants.ExecutionIdLabelName, id),
-	})
+func cleanupSecrets(labelName string) func(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
+	return func(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
+		return clientSet.CoreV1().Secrets(namespace).DeleteCollection(ctx, metav1.DeleteOptions{
+			GracePeriodSeconds: common.Ptr(int64(0)),
+			PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
+		}, metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("%s=%s", labelName, id),
+		})
+	}
 }
 
-func cleanupPods(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
-	return clientSet.CoreV1().Pods(namespace).DeleteCollection(ctx, metav1.DeleteOptions{
-		GracePeriodSeconds: common.Ptr(int64(0)),
-		PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
-	}, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", constants.ExecutionIdLabelName, id),
-	})
+func cleanupPods(labelName string) func(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
+	return func(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
+		return clientSet.CoreV1().Pods(namespace).DeleteCollection(ctx, metav1.DeleteOptions{
+			GracePeriodSeconds: common.Ptr(int64(0)),
+			PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
+		}, metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("%s=%s", labelName, id),
+		})
+	}
 }
 
-func cleanupJobs(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
-	return clientSet.BatchV1().Jobs(namespace).DeleteCollection(ctx, metav1.DeleteOptions{
-		GracePeriodSeconds: common.Ptr(int64(0)),
-		PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
-	}, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", constants.ExecutionIdLabelName, id),
-	})
+func cleanupJobs(labelName string) func(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
+	return func(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
+		return clientSet.BatchV1().Jobs(namespace).DeleteCollection(ctx, metav1.DeleteOptions{
+			GracePeriodSeconds: common.Ptr(int64(0)),
+			PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
+		}, metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("%s=%s", labelName, id),
+		})
+	}
 }
 
 func Cleanup(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
 	var errs []error
 	ops := []func(context.Context, kubernetes.Interface, string, string) error{
-		cleanupJobs,
-		cleanupPods,
-		cleanupConfigMaps,
-		cleanupSecrets,
+		cleanupJobs(constants.RootResourceIdLabelName),
+		cleanupJobs(constants.ResourceIdLabelName),
+		cleanupPods(constants.RootResourceIdLabelName),
+		cleanupPods(constants.ResourceIdLabelName),
+		cleanupConfigMaps(constants.RootResourceIdLabelName),
+		cleanupConfigMaps(constants.ResourceIdLabelName),
+		cleanupSecrets(constants.RootResourceIdLabelName),
+		cleanupSecrets(constants.ResourceIdLabelName),
 	}
 	for _, op := range ops {
 		err := op(ctx, clientSet, namespace, id)

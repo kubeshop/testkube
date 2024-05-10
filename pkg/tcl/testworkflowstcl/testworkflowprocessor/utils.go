@@ -21,17 +21,18 @@ import (
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
-func AnnotateControlledBy(obj metav1.Object, testWorkflowId string) {
+func AnnotateControlledBy(obj metav1.Object, rootId, id string) {
 	labels := obj.GetLabels()
 	if labels == nil {
 		labels = map[string]string{}
 	}
-	labels[constants.ExecutionIdLabelName] = testWorkflowId
+	labels[constants.RootResourceIdLabelName] = rootId
+	labels[constants.ResourceIdLabelName] = id
 	obj.SetLabels(labels)
 
 	// Annotate Pod template in the Job
 	if v, ok := obj.(*batchv1.Job); ok {
-		AnnotateControlledBy(&v.Spec.Template, testWorkflowId)
+		AnnotateControlledBy(&v.Spec.Template, rootId, id)
 	}
 }
 
