@@ -42,7 +42,7 @@ func (s *apiTCL) StreamTestWorkflowExecutionNotificationsHandler() fiber.Handler
 		}
 
 		// Check for the logs
-		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.Namespace, execution.Id, execution.ScheduledAt)
+		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "fetching job", err)
 		}
@@ -91,7 +91,7 @@ func (s *apiTCL) StreamTestWorkflowExecutionNotificationsWebSocketHandler() fibe
 		}
 
 		// Check for the logs TODO: Load from the database if possible
-		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.Namespace, execution.Id, execution.ScheduledAt)
+		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
 		if err != nil {
 			return
 		}
@@ -233,7 +233,7 @@ func (s *apiTCL) AbortTestWorkflowExecutionHandler() fiber.Handler {
 		}
 
 		// Obtain the controller
-		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.Namespace, execution.Id, execution.ScheduledAt)
+		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "fetching job", err)
 		}
@@ -273,7 +273,7 @@ func (s *apiTCL) PauseTestWorkflowExecutionHandler() fiber.Handler {
 		}
 
 		// Obtain the controller
-		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.Namespace, execution.Id, execution.ScheduledAt)
+		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "fetching job", err)
 		}
@@ -313,8 +313,7 @@ func (s *apiTCL) ResumeTestWorkflowExecutionHandler() fiber.Handler {
 		}
 
 		// Obtain the controller
-		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.Namespace, execution.Id, execution.ScheduledAt)
-		defer ctrl.StopController()
+		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "fetching job", err)
 		}
@@ -350,8 +349,7 @@ func (s *apiTCL) AbortAllTestWorkflowExecutionsHandler() fiber.Handler {
 
 		for _, execution := range executions {
 			// Obtain the controller
-			ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.Namespace, execution.Id, execution.ScheduledAt)
-			defer ctrl.StopController()
+			ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "fetching job", err)
 			}
@@ -453,7 +451,7 @@ func (s *apiTCL) GetTestWorkflowNotificationsStream(ctx context.Context, executi
 	}
 
 	// Check for the logs
-	ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.Namespace, execution.Id, execution.ScheduledAt)
+	ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
 	if err != nil {
 		return nil, err
 	}

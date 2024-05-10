@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	DefaultInitTimeout = 1 * time.Second
+	DefaultInitTimeout = 5 * time.Second
 )
 
 var (
