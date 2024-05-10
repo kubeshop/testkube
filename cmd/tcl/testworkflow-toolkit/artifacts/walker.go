@@ -59,6 +59,7 @@ func isPatternIn(pattern string, dirs []string) bool {
 func isPathIn(path string, dirs []string) bool {
 	for _, dir := range dirs {
 		path = strings.TrimRight(path, "/")
+		dir = strings.TrimRight(dir, "/")
 		if dir == path || strings.HasPrefix(path, dir+"/") {
 			return true
 		}
@@ -92,6 +93,7 @@ func sanitizePaths(input []string, root string) ([]string, error) {
 func filterPatterns(patterns, dirs []string) []string {
 	result := make([]string, 0)
 	for _, p := range patterns {
+		fmt.Println(p, dirs, isPatternIn(p, dirs))
 		if isPatternIn(p, dirs) {
 			result = append(result, p)
 		}

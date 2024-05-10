@@ -20,6 +20,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pkg/errors"
+
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/artifacts"
 )
 
@@ -66,6 +68,14 @@ func (t *server) GetUrl(id string) string {
 
 func (t *server) Include(dirPath string, files []string) (Entry, error) {
 	id := SourceID(dirPath, files)
+
+	if !filepath.IsAbs(dirPath) {
+		var err error
+		dirPath, err = filepath.Abs(dirPath)
+		if err != nil {
+			return Entry{}, errors.Wrap(err, "failed to build absolute path for inclusion")
+		}
+	}
 
 	// Ensure that is not prepared already
 	if _, ok := t.files[id]; ok {
