@@ -138,31 +138,30 @@ func (c *channel[T]) Peek(ctx context.Context) <-chan T {
 }
 
 func (c *channel[T]) PeekMessage(ctx context.Context) <-chan ChannelMessage[T] {
-	// Wait until there is any value
-	select {
-	case <-ctx.Done():
-		ch := make(chan ChannelMessage[T], 1)
-		ch <- ChannelMessage[T]{Error: ctx.Err()}
-		close(ch)
-		return ch
-	case <-c.lastMessageExists:
-	}
-
-	// Read lock
-	c.lastMu.RLock()
-	defer c.lastMu.RUnlock()
-
-	// Return the last value if available
-	if c.lastMessage != nil {
-		ch := make(chan ChannelMessage[T], 1)
-		ch <- *c.lastMessage
-		close(ch)
-		return ch
-	}
-
-	// Return empty if it's already closed and there is no value
 	ch := make(chan ChannelMessage[T])
-	close(ch)
+	go func() {
+		// Handle case when there are no messages yet
+		// Wait until there is any value
+		select {
+		case <-ctx.Done():
+			ch <- ChannelMessage[T]{Error: ctx.Err()}
+			close(ch)
+			return
+		case <-c.lastMessageExists:
+		}
+
+		// Read lock
+		c.lastMu.RLock()
+		defer c.lastMu.RUnlock()
+
+		// Return the last value if available
+		if c.lastMessage != nil {
+			ch <- *c.lastMessage
+		}
+
+		// Return empty if it's already closed and there is no value
+		close(ch)
+	}()
 	return ch
 }
 
