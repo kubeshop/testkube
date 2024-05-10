@@ -366,7 +366,7 @@ func (r *TestWorkflowResult) Current(sig []TestWorkflowSignature) string {
 	}
 	current := ""
 	walkSteps(sig, func(signature TestWorkflowSignature) {
-		if s, ok := r.Steps[signature.Ref]; ok && len(signature.Children) == 0 && !s.QueuedAt.IsZero() && current == "" {
+		if s, ok := r.Steps[signature.Ref]; ok && len(signature.Children) == 0 && !s.QueuedAt.IsZero() && s.FinishedAt.IsZero() && current == "" {
 			current = signature.Ref
 		}
 	})
