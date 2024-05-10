@@ -76,8 +76,8 @@ func NewParallelCmd() *cobra.Command {
 					"cloud.api.skipVerify":  strconv.FormatBool(env.Config().Cloud.SkipVerify),
 					"cloud.api.url":         env.Config().Cloud.Url,
 
-					"dashboard.url":   "", // TODO
-					"api.url":         "", // TODO
+					"dashboard.url":   env.Config().System.DashboardUrl,
+					"api.url":         env.Config().System.ApiUrl,
 					"namespace":       env.Namespace(),
 					"defaultRegistry": env.Config().System.DefaultRegistry,
 

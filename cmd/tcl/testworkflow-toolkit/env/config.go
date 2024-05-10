@@ -52,6 +52,8 @@ type envSystemConfig struct {
 	Namespace       string `envconfig:"TK_NS"`
 	DefaultRegistry string `envconfig:"TK_R"`
 	Ip              string `envconfig:"TK_IP"`
+	DashboardUrl    string `envconfig:"TK_DASH"`
+	ApiUrl          string `envconfig:"TK_API"`
 }
 
 type envImagesConfig struct {
