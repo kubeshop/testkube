@@ -284,8 +284,9 @@ func NewParallelCmd() *cobra.Command {
 
 				// Control the execution
 				// TODO: Consider aggregated controller to limit number of watchers
-				// TODO: Customize timeouts
-				ctrl, err := testworkflowcontroller.New(context.Background(), clientSet, env.Namespace(), id, scheduledAt)
+				ctrl, err := testworkflowcontroller.New(context.Background(), clientSet, env.Namespace(), id, scheduledAt, testworkflowcontroller.ControllerOptions{
+					Timeout: 120 * time.Second,
+				})
 				if err != nil {
 					fmt.Printf("%s: error: failed to deploy job: %s\n", common2.InstanceLabel("worker", index, params.Count), err.Error())
 					return false

@@ -30,6 +30,10 @@ var (
 	ErrJobTimeout = errors.New("timeout retrieving job")
 )
 
+type ControllerOptions struct {
+	Timeout time.Duration
+}
+
 type Controller interface {
 	Abort(ctx context.Context) error
 	Pause(ctx context.Context) error
@@ -39,9 +43,14 @@ type Controller interface {
 	StopController()
 }
 
-func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, id string, scheduledAt time.Time) (Controller, error) {
+func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, id string, scheduledAt time.Time, opts ...ControllerOptions) (Controller, error) {
 	// Get the initialization timeout
 	timeout := DefaultInitTimeout
+	for _, opt := range opts {
+		if opt.Timeout != 0 {
+			timeout = opt.Timeout
+		}
+	}
 
 	// Create local context for stopping all the processes
 	ctx, ctxCancel := context.WithCancel(parentCtx)
