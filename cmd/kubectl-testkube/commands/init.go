@@ -163,7 +163,8 @@ func NewInitCmdDemo() *cobra.Command {
 			}
 			sendTelemetry(cmd, cfg, license, "license found")
 
-			if len(license) != len(licenseFormat) {
+			valid := len(license) == len(licenseFormat) || strings.HasPrefix(license, "key/")
+			if !valid {
 				sendErrTelemetry(cmd, cfg, "install_license_malformed", license, "license validation", err)
 				ui.Failf("license malformed, expected license of format: " + licenseFormat)
 			}
