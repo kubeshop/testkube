@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWebhookLoader(t *testing.T) {
+func TestCDEventLoader(t *testing.T) {
 	t.Parallel()
 
 	cdeventLoader, err := NewCDEventLoader("target", "", "", "", nil)
