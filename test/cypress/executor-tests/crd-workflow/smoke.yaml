@@ -338,19 +338,18 @@ spec:
             cpu: 1
             memory: 1Gi
         workingDir: /data/repo/test/cypress/executor-tests/cypress-13
-      steps:
-      - run:
-          image: cypress/included:13.6.4
-          args:
-          - --env
-          - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
-          - --config
-          - '{"video":true,"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
-          - --spec
-          - '{{ join(shard.testFiles, ",") }}'
-          env:
-          - name: CYPRESS_CUSTOM_ENV
-            value: CYPRESS_CUSTOM_ENV_value
+      run:
+        image: cypress/included:13.6.4
+        args:
+        - --env
+        - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+        - --config
+        - '{"video":true,"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+        - --spec
+        - '{{ join(shard.testFiles, ",") }}'
+        env:
+        - name: CYPRESS_CUSTOM_ENV
+          value: CYPRESS_CUSTOM_ENV_value
     artifacts:
       workingDir: /data/artifacts
       paths:

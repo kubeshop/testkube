@@ -16,6 +16,22 @@ type TestWorkflowStepParallel struct {
 	Matrix map[string]interface{} `json:"matrix,omitempty"`
 	// parameters that should be distributed across sharded instances
 	Shards map[string]interface{} `json:"shards,omitempty"`
+	// should the step be paused initially
+	Paused bool `json:"paused,omitempty"`
+	// is the step expected to fail
+	Negative bool `json:"negative,omitempty"`
+	// is the step optional, so the failure won't affect the TestWorkflow result
+	Optional bool                     `json:"optional,omitempty"`
+	Retry    *TestWorkflowRetryPolicy `json:"retry,omitempty"`
+	// maximum time this step may take
+	Timeout string `json:"timeout,omitempty"`
+	// delay before the step
+	Delay string `json:"delay,omitempty"`
+	// script to run in a default shell for the container
+	Shell     string                     `json:"shell,omitempty"`
+	Run       *TestWorkflowStepRun       `json:"run,omitempty"`
+	Execute   *TestWorkflowStepExecute   `json:"execute,omitempty"`
+	Artifacts *TestWorkflowStepArtifacts `json:"artifacts,omitempty"`
 	// how many resources could be scheduled in parallel
 	Parallelism int32 `json:"parallelism,omitempty"`
 	// worker description to display
@@ -24,6 +40,7 @@ type TestWorkflowStepParallel struct {
 	Transfer []TestWorkflowStepParallelTransfer `json:"transfer,omitempty"`
 	// list of files to fetch from parallel steps
 	Fetch     []TestWorkflowStepParallelFetch        `json:"fetch,omitempty"`
+	Template  *TestWorkflowTemplateRef               `json:"template,omitempty"`
 	Use       []TestWorkflowTemplateRef              `json:"use,omitempty"`
 	Config    map[string]TestWorkflowParameterSchema `json:"config,omitempty"`
 	Content   *TestWorkflowContent                   `json:"content,omitempty"`

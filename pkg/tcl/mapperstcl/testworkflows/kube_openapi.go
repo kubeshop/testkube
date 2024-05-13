@@ -881,7 +881,17 @@ func MapStepParallelKubeToAPI(v testworkflowsv1.StepParallel) testkube.TestWorkf
 		Setup:       common.MapSlice(v.Setup, MapStepKubeToAPI),
 		Steps:       common.MapSlice(v.Steps, MapStepKubeToAPI),
 		After:       common.MapSlice(v.After, MapStepKubeToAPI),
-		Events:      common.MapSlice(v.Events, MapEventKubeToAPI),
+		Paused:      v.Paused,
+		Negative:    v.Negative,
+		Optional:    v.Optional,
+		Template:    common.MapPtr(v.Template, MapTemplateRefKubeToAPI),
+		Retry:       common.MapPtr(v.Retry, MapRetryPolicyKubeToAPI),
+		Timeout:     v.Timeout,
+		Delay:       v.Delay,
+		Shell:       v.Shell,
+		Run:         common.MapPtr(v.Run, MapStepRunKubeToAPI),
+		Execute:     common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
+		Artifacts:   common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
 	}
 }
 
@@ -903,7 +913,16 @@ func MapIndependentStepParallelKubeToAPI(v testworkflowsv1.IndependentStepParall
 		Setup:       common.MapSlice(v.Setup, MapIndependentStepKubeToAPI),
 		Steps:       common.MapSlice(v.Steps, MapIndependentStepKubeToAPI),
 		After:       common.MapSlice(v.After, MapIndependentStepKubeToAPI),
-		Events:      common.MapSlice(v.Events, MapEventKubeToAPI),
+		Paused:      v.Paused,
+		Negative:    v.Negative,
+		Optional:    v.Optional,
+		Retry:       common.MapPtr(v.Retry, MapRetryPolicyKubeToAPI),
+		Timeout:     v.Timeout,
+		Delay:       v.Delay,
+		Shell:       v.Shell,
+		Run:         common.MapPtr(v.Run, MapStepRunKubeToAPI),
+		Execute:     common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
+		Artifacts:   common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
 	}
 }
 

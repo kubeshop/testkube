@@ -917,13 +917,27 @@ func MapStepParallelAPIToKube(v testkube.TestWorkflowStepParallel) testworkflows
 				Container: common.MapPtr(v.Container, MapContainerConfigAPIToKube),
 				Job:       common.MapPtr(v.Job, MapJobConfigAPIToKube),
 				Pod:       common.MapPtr(v.Pod, MapPodConfigAPIToKube),
-				Events:    common.MapSlice(v.Events, MapEventAPIToKube),
 			},
 			Use:   common.MapSlice(v.Use, MapTemplateRefAPIToKube),
 			Setup: common.MapSlice(v.Setup, MapStepAPIToKube),
 			Steps: common.MapSlice(v.Steps, MapStepAPIToKube),
 			After: common.MapSlice(v.After, MapStepAPIToKube),
 		},
+		StepControl: testworkflowsv1.StepControl{
+			Paused:   v.Paused,
+			Negative: v.Negative,
+			Optional: v.Optional,
+			Retry:    common.MapPtr(v.Retry, MapRetryPolicyAPIToKube),
+			Timeout:  v.Timeout,
+		},
+		StepOperations: testworkflowsv1.StepOperations{
+			Delay:     v.Delay,
+			Shell:     v.Shell,
+			Run:       common.MapPtr(v.Run, MapStepRunAPIToKube),
+			Execute:   common.MapPtr(v.Execute, MapStepExecuteAPIToKube),
+			Artifacts: common.MapPtr(v.Artifacts, MapStepArtifactsAPIToKube),
+		},
+		Template: common.MapPtr(v.Template, MapTemplateRefAPIToKube),
 	}
 }
 
@@ -946,11 +960,24 @@ func MapIndependentStepParallelAPIToKube(v testkube.TestWorkflowIndependentStepP
 				Container: common.MapPtr(v.Container, MapContainerConfigAPIToKube),
 				Job:       common.MapPtr(v.Job, MapJobConfigAPIToKube),
 				Pod:       common.MapPtr(v.Pod, MapPodConfigAPIToKube),
-				Events:    common.MapSlice(v.Events, MapEventAPIToKube),
 			},
 			Setup: common.MapSlice(v.Setup, MapIndependentStepAPIToKube),
 			Steps: common.MapSlice(v.Steps, MapIndependentStepAPIToKube),
 			After: common.MapSlice(v.After, MapIndependentStepAPIToKube),
+		},
+		StepControl: testworkflowsv1.StepControl{
+			Paused:   v.Paused,
+			Negative: v.Negative,
+			Optional: v.Optional,
+			Retry:    common.MapPtr(v.Retry, MapRetryPolicyAPIToKube),
+			Timeout:  v.Timeout,
+		},
+		StepOperations: testworkflowsv1.StepOperations{
+			Delay:     v.Delay,
+			Shell:     v.Shell,
+			Run:       common.MapPtr(v.Run, MapStepRunAPIToKube),
+			Execute:   common.MapPtr(v.Execute, MapStepExecuteAPIToKube),
+			Artifacts: common.MapPtr(v.Artifacts, MapStepArtifactsAPIToKube),
 		},
 	}
 }

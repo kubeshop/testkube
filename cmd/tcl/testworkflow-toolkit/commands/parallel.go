@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -96,6 +97,16 @@ func NewParallelCmd() *cobra.Command {
 			var parallel *testworkflowsv1.StepParallel
 			err := json.Unmarshal([]byte(args[0]), &parallel)
 			ui.ExitOnError("parsing parallel spec", err)
+
+			// Inject short syntax down
+			if !reflect.ValueOf(parallel.StepControl).IsZero() || !reflect.ValueOf(parallel.StepOperations).IsZero() {
+				parallel.Steps = append(parallel.Steps, testworkflowsv1.Step{
+					StepControl:    parallel.StepControl,
+					StepOperations: parallel.StepOperations,
+				})
+				parallel.StepControl = testworkflowsv1.StepControl{}
+				parallel.StepOperations = testworkflowsv1.StepOperations{}
+			}
 
 			// Initialize transfer server
 			transferSrv := transfer.NewServer(constants.DefaultTransferDirPath, env.IP(), constants.DefaultTransferPort)

@@ -7891,6 +7891,8 @@ components:
       allOf:
       - $ref: "#/components/schemas/TestWorkflowSpec"
       - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
+      - $ref: "#/components/schemas/TestWorkflowStepControl"
+      - $ref: "#/components/schemas/TestWorkflowStepOperations"
       - properties:
           parallelism:
             type: integer
@@ -7908,12 +7910,16 @@ components:
             description: list of files to fetch from parallel steps
             items:
               $ref: "#/components/schemas/TestWorkflowStepParallelFetch"
+          template:
+            $ref: "#/components/schemas/TestWorkflowTemplateRef"
 
     TestWorkflowIndependentStepParallel:
       type: object
       allOf:
       - $ref: "#/components/schemas/TestWorkflowTemplateSpec"
       - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
+      - $ref: "#/components/schemas/TestWorkflowStepControl"
+      - $ref: "#/components/schemas/TestWorkflowStepOperations"
       - properties:
           parallelism:
             type: integer
@@ -8053,6 +8059,42 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestWorkflowEvent"
+
+    TestWorkflowStepControl:
+      type: object
+      properties:
+        paused:
+          type: boolean
+          description: should the step be paused initially
+        negative:
+          type: boolean
+          description: is the step expected to fail
+        optional:
+          type: boolean
+          description: is the step optional, so the failure won't affect the TestWorkflow result
+        retry:
+          $ref: "#/components/schemas/TestWorkflowRetryPolicy"
+        timeout:
+          type: string
+          pattern: "^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$"
+          description: maximum time this step may take
+
+    TestWorkflowStepOperations:
+      type: object
+      properties:
+        delay:
+          type: string
+          pattern: "^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$"
+          description: delay before the step
+        shell:
+          type: string
+          description: script to run in a default shell for the container
+        run:
+          $ref: "#/components/schemas/TestWorkflowStepRun"
+        execute:
+          $ref: "#/components/schemas/TestWorkflowStepExecute"
+        artifacts:
+          $ref: "#/components/schemas/TestWorkflowStepArtifacts"
 
     TestWorkflowIndependentStep:
       type: object
