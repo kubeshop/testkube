@@ -235,7 +235,17 @@ func (c *container) HasVolumeAt(path string) bool {
 // Mutations
 
 func (c *container) AppendEnv(env ...corev1.EnvVar) Container {
+	needsDedupe := false
+	for i := range env {
+		if testworkflowresolver.HasEnvVar(c.Cr.Env, env[i].Name) {
+			needsDedupe = true
+			break
+		}
+	}
 	c.Cr.Env = append(c.Cr.Env, env...)
+	if needsDedupe {
+		c.Cr.Env = testworkflowresolver.DedupeEnvVars(c.Cr.Env)
+	}
 	return c
 }
 
@@ -297,7 +307,7 @@ func (c *container) ApplyCR(config *testworkflowsv1.ContainerConfig) Container {
 }
 
 func (c *container) ToContainerConfig() testworkflowsv1.ContainerConfig {
-	env := slices.Clone(c.Env())
+	env := testworkflowresolver.DedupeEnvVars(slices.Clone(c.Env()))
 	for i := range env {
 		env[i] = *env[i].DeepCopy()
 	}

@@ -313,7 +313,7 @@ func MergeContainerConfig(dst, include *testworkflowsv1.ContainerConfig) *testwo
 	if include.ImagePullPolicy != "" {
 		dst.ImagePullPolicy = include.ImagePullPolicy
 	}
-	dst.Env = append(dst.Env, include.Env...)
+	dst.Env = DedupeEnvVars(append(dst.Env, include.Env...))
 	dst.EnvFrom = append(dst.EnvFrom, include.EnvFrom...)
 	dst.VolumeMounts = append(dst.VolumeMounts, include.VolumeMounts...)
 	if include.Image != "" {
