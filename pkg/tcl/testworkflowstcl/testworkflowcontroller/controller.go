@@ -26,8 +26,10 @@ const (
 )
 
 var (
-	ErrJobAborted = errors.New("job was aborted")
-	ErrJobTimeout = errors.New("timeout retrieving job")
+	ErrJobAborted     = errors.New("job was aborted")
+	ErrJobTimeout     = errors.New("timeout retrieving job")
+	ErrNoIPAssigned   = errors.New("there is no IP assigned to this pod")
+	ErrNoNodeAssigned = errors.New("the pod is not assigned to a node yet")
 )
 
 type ControllerOptions struct {
@@ -40,6 +42,8 @@ type Controller interface {
 	Resume(ctx context.Context) error
 	Cleanup(ctx context.Context) error
 	Watch(ctx context.Context) <-chan ChannelMessage[Notification]
+	NodeName(ctx context.Context) (string, error)
+	PodIP(ctx context.Context) (string, error)
 	StopController()
 }
 
@@ -137,18 +141,44 @@ func (c *controller) Cleanup(ctx context.Context) error {
 	return Cleanup(ctx, c.clientSet, c.namespace, c.id)
 }
 
-func (c *controller) PodIP(ctx context.Context) (string, error) {
+func (c *controller) peekPod(ctx context.Context) (*corev1.Pod, error) {
 	v, ok := <-c.pod.PeekMessage(ctx)
 	if v.Error != nil {
-		return "", v.Error
+		return nil, v.Error
 	}
 	if !ok {
-		return "", context.Canceled
+		return nil, context.Canceled
 	}
-	if v.Value.Status.PodIP == "" {
-		return "", errors.New("there is no IP assigned to this pod")
+	if v.Value == nil {
+		return nil, errors.New("empty pod information")
 	}
-	return v.Value.Status.PodIP, nil
+	return v.Value, nil
+}
+
+func (c *controller) PodIP(ctx context.Context) (string, error) {
+	pod, err := c.peekPod(ctx)
+	if err != nil {
+		return "", err
+	}
+	if pod.Status.PodIP == "" {
+		return "", ErrNoIPAssigned
+	}
+	return pod.Status.PodIP, nil
+}
+
+func (c *controller) NodeName(ctx context.Context) (string, error) {
+	pod, err := c.peekPod(ctx)
+	if err != nil {
+		return "", err
+	}
+	nodeName := pod.Status.NominatedNodeName
+	if nodeName == "" {
+		nodeName = pod.Spec.NodeName
+	}
+	if nodeName == "" {
+		return "", ErrNoNodeAssigned
+	}
+	return nodeName, nil
 }
 
 func (c *controller) Pause(ctx context.Context) error {

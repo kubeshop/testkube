@@ -335,16 +335,31 @@ func NewParallelCmd() *cobra.Command {
 					return false
 				}
 				controllers[index] = ctrl
+				ctx, ctxCancel := context.WithCancel(context.Background())
 
 				fmt.Printf("%s: created\n", common2.InstanceLabel("worker", index, params.Count))
 
 				prevStatus := testkube.QUEUED_TestWorkflowStatus
 				prevStep := ""
-				ctx, ctxCancel := context.WithCancel(context.Background())
+				scheduled := false
 				for v := range ctrl.Watch(ctx) {
+					// Handle error
 					if v.Error != nil {
 						fmt.Printf("%s: error: %s\n", common2.InstanceLabel("worker", index, params.Count), v.Error.Error())
-					} else if v.Value.Result != nil {
+						continue
+					}
+
+					// Inform about the node assignment
+					if !scheduled {
+						nodeName, err := ctrl.NodeName(ctx)
+						if err == nil {
+							scheduled = true
+							fmt.Printf("%s: assigned to %s node\n", common2.InstanceLabel("worker", index, params.Count), ui.LightBlue(nodeName))
+						}
+					}
+
+					// Handle result change
+					if v.Value.Result != nil {
 						updates <- Update{index: index, result: v.Value.Result}
 						current := v.Value.Result.Current(sig)
 						status := testkube.QUEUED_TestWorkflowStatus
