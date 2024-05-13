@@ -295,7 +295,7 @@ func ProcessContentTarball(_ InternalProcessor, layer Intermediate, container Co
 	selfContainer := container.CreateChild()
 	stage := NewContainerStage(layer.NextRef(), selfContainer)
 	stage.SetRetryPolicy(step.Retry)
-	stage.SetCategory("Download tarball")
+	stage.SetCategory("Fetch tarball")
 
 	selfContainer.
 		SetImage(constants.DefaultToolkitImage).
