@@ -307,3 +307,54 @@ spec:
   - cronjob:
       cron: "8 */4 * * *"
 ---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: distributed-cypress-workflow-smoke-13
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/executor-tests/cypress-13
+  steps:
+  - name: Run tests
+    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+    parallel:
+      maxCount: 3
+      shards:
+        testFiles: 'glob("cypress/e2e/**/*.js")'
+      description: '{{ join(map(shard.testFiles, "relpath(_.value, \"cypress/e2e\")"), ", ") }}'
+      transfer:
+      - from: /data/repo
+      fetch:
+      - from: /data/artifacts
+      container:
+        resources:
+          requests:
+            cpu: 1
+            memory: 1Gi
+        workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+      steps:
+      - run:
+          image: cypress/included:13.6.4
+          args:
+          - --env
+          - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+          - --config
+          - '{"video":true,"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+          - --spec
+          - '{{ join(shard.testFiles, ",") }}'
+          env:
+          - name: CYPRESS_CUSTOM_ENV
+            value: CYPRESS_CUSTOM_ENV_value
+    artifacts:
+      workingDir: /data/artifacts
+      paths:
+      - '**/*'
+  events:
+  - cronjob:
+      cron: "10 */4 * * *"
