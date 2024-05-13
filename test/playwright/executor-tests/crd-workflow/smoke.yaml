@@ -212,3 +212,46 @@ spec:
   events:
   - cronjob:
       cron: "30 */4 * * *"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: distributed-playwright-workflow-smoke-artifacts
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/playwright/executor-tests/playwright-project
+  container:
+    image: mcr.microsoft.com/playwright:v1.38.0-focal
+    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+  steps:
+  - name: Install dependencies
+    # TODO: Upgrade our Playwright tests to use newer version; Blob reporter was not available in 1.32.3
+    shell: 'npm install --save-dev @playwright/test@1.38.0 && npm ci'
+  - name: Run tests
+    parallel:
+      count: 2
+      transfer:
+      - from: /data/repo
+      fetch:
+      - from: /data/repo/test/playwright/executor-tests/playwright-project/blob-report
+        to: /data/reports
+      steps:
+      - run:
+          workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+          image: mcr.microsoft.com/playwright:v1.38.0-focal
+          shell: 'npx playwright test --reporter=blob --shard {{ index + 1 }}/{{ count }}'
+  - name: Merge reports
+    condition: always
+    shell: 'npx playwright merge-reports --reporter=html /data/reports'
+    artifacts:
+      paths:
+      - "playwright-report/**"
+  events:
+  - cronjob:
+      cron: "25 */4 * * *"
