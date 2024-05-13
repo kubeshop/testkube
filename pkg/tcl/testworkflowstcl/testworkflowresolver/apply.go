@@ -144,6 +144,18 @@ func applyTemplatesToStep(step testworkflowsv1.Step, templates map[string]testwo
 
 	// Apply templates in the parallel steps
 	if step.Parallel != nil {
+		// Move the template operation alias along with other operations,
+		// so they can be properly resolved and isolated
+		if step.Parallel.Template != nil {
+			step.Parallel.Steps = append([]testworkflowsv1.Step{{
+				StepControl:    step.Parallel.StepControl,
+				StepOperations: step.Parallel.StepOperations,
+			}}, step.Parallel.Steps...)
+			step.Parallel.StepControl = testworkflowsv1.StepControl{}
+			step.Parallel.StepOperations = testworkflowsv1.StepOperations{}
+		}
+
+		// Resolve the spec inside of parallel step
 		err := applyTemplatesToSpec(&step.Parallel.TestWorkflowSpec, templates)
 		if err != nil {
 			return step, errors.Wrap(err, ".parallel")

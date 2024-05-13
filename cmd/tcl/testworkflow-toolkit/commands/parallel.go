@@ -100,10 +100,10 @@ func NewParallelCmd() *cobra.Command {
 
 			// Inject short syntax down
 			if !reflect.ValueOf(parallel.StepControl).IsZero() || !reflect.ValueOf(parallel.StepOperations).IsZero() {
-				parallel.Steps = append(parallel.Steps, testworkflowsv1.Step{
+				parallel.Steps = append([]testworkflowsv1.Step{{
 					StepControl:    parallel.StepControl,
 					StepOperations: parallel.StepOperations,
-				})
+				}}, parallel.Steps...)
 				parallel.StepControl = testworkflowsv1.StepControl{}
 				parallel.StepOperations = testworkflowsv1.StepOperations{}
 			}

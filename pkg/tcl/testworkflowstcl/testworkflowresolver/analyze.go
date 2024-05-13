@@ -33,6 +33,9 @@ func listStepTemplates(cr testworkflowsv1.Step) map[string]struct{} {
 	}
 	if cr.Parallel != nil {
 		maps.Copy(v, listSpecTemplates(cr.Parallel.TestWorkflowSpec))
+		if cr.Parallel.Template != nil {
+			v[GetInternalTemplateName(cr.Template.Name)] = struct{}{}
+		}
 	}
 	for i := range cr.Setup {
 		maps.Copy(v, listStepTemplates(cr.Setup[i]))
