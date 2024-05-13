@@ -54,27 +54,26 @@ func MapAPIToCRD(event testkube.Event, namespace string, eventTime time.Time) co
 
 	if event.Type_ != nil {
 		reason = string(*event.Type_)
-	}
-
-	switch event.Type_ {
-	case testkube.EventStartTest, testkube.EventStartTestSuite, testkube.EventStartTestWorkflow:
-		action = "started"
-	case testkube.EventEndTestSuccess, testkube.EventEndTestSuiteSuccess, testkube.EventEndTestWorkflowSuccess:
-		action = "succeed"
-	case testkube.EventEndTestFailed, testkube.EventEndTestSuiteFailed, testkube.EventEndTestWorkflowFailed:
-		action = "failed"
-	case testkube.EventEndTestAborted, testkube.EventEndTestSuiteAborted, testkube.EventEndTestWorkflowAborted:
-		action = "aborted"
-	case testkube.EventEndTestTimeout, testkube.EventEndTestSuiteTimeout:
-		action = "timeouted"
-	case testkube.EventQueueTestWorkflow:
-		action = "queued"
-	case testkube.EventCreated:
-		action = "created"
-	case testkube.EventUpdated:
-		action = "updated"
-	case testkube.EventDeleted:
-		action = "deleted"
+		switch *event.Type_ {
+		case *testkube.EventStartTest, *testkube.EventStartTestSuite, *testkube.EventStartTestWorkflow:
+			action = "started"
+		case *testkube.EventEndTestSuccess, *testkube.EventEndTestSuiteSuccess, *testkube.EventEndTestWorkflowSuccess:
+			action = "succeed"
+		case *testkube.EventEndTestFailed, *testkube.EventEndTestSuiteFailed, *testkube.EventEndTestWorkflowFailed:
+			action = "failed"
+		case *testkube.EventEndTestAborted, *testkube.EventEndTestSuiteAborted, *testkube.EventEndTestWorkflowAborted:
+			action = "aborted"
+		case *testkube.EventEndTestTimeout, *testkube.EventEndTestSuiteTimeout:
+			action = "timeouted"
+		case *testkube.EventQueueTestWorkflow:
+			action = "queued"
+		case *testkube.EventCreated:
+			action = "created"
+		case *testkube.EventUpdated:
+			action = "updated"
+		case *testkube.EventDeleted:
+			action = "deleted"
+		}
 	}
 
 	return corev1.Event{
