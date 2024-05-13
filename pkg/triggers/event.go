@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -51,6 +52,14 @@ func withConditionsGetter(conditionsGetter conditionsGetterFn) watcherOpts {
 func withAddressGetter(addressGetter addressGetterFn) watcherOpts {
 	return func(w *watcherEvent) {
 		w.addressGetter = addressGetter
+	}
+}
+
+func withName(name string) watcherOpts {
+	return func(w *watcherEvent) {
+		if name != "" {
+			w.name = name
+		}
 	}
 }
 
@@ -164,4 +173,14 @@ func getServiceConditions(
 
 func getServiceAdress(ctx context.Context, clientset kubernetes.Interface, object metav1.Object) (string, error) {
 	return fmt.Sprintf("%s.%s.svc.cluster.local", object.GetName(), object.GetNamespace()), nil
+}
+
+func getTestkubeEventNameAndCauses(event *corev1.Event) (string, []testtrigger.Cause) {
+	var causes []testtrigger.Cause
+	if strings.HasPrefix(event.Name, "testkube-test-") {
+		return "", causes
+	}
+
+	causes = append(causes, testtrigger.Cause("event-"+event.Reason))
+	return event.InvolvedObject.Name, causes
 }

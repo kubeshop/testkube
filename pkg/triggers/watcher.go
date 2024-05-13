@@ -730,7 +730,8 @@ func (s *Service) clusterEventEventHandler(ctx context.Context) cache.ResourceEv
 				return
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: cluster event %s/%s created", clusterEvent.Namespace, clusterEvent.Name)
-			event := newWatcherEvent(testtrigger.EventCreated, clusterEvent, testtrigger.ResourceEvent)
+			name, causes := getTestkubeEventNameAndCauses(clusterEvent)
+			event := newWatcherEvent(testtrigger.EventCreated, clusterEvent, testtrigger.ResourceEvent, withCauses(causes), withName(name))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching create cluster event event: %v", err)
 			}
