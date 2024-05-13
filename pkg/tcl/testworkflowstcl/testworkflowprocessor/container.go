@@ -56,6 +56,7 @@ type ContainerAccessors interface {
 	SecurityContext() *corev1.SecurityContext
 
 	HasVolumeAt(path string) bool
+	ToContainerConfig() testworkflowsv1.ContainerConfig
 }
 
 type ContainerMutations[T any] interface {

@@ -20,8 +20,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowresolver"
 )
 
 func ProcessDelay(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
@@ -333,6 +335,11 @@ func ProcessParallel(_ InternalProcessor, layer Intermediate, container Containe
 
 	stage := NewContainerStage(layer.NextRef(), container.CreateChild())
 	stage.SetCategory("Run in parallel")
+
+	// Inherit container defaults
+	inherited := common.Ptr(stage.Container().ToContainerConfig())
+	inherited.VolumeMounts = nil
+	step.Parallel.Container = testworkflowresolver.MergeContainerConfig(inherited, step.Parallel.Container)
 
 	stage.Container().
 		SetImage(constants.DefaultToolkitImage).
