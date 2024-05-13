@@ -58,13 +58,13 @@ var (
 	tplSteps = testworkflowsv1.TestWorkflowTemplate{
 		Spec: testworkflowsv1.TestWorkflowTemplateSpec{
 			Setup: []testworkflowsv1.IndependentStep{
-				{StepBase: testworkflowsv1.StepBase{Name: "setup-tpl-test"}},
+				{StepMeta: testworkflowsv1.StepMeta{Name: "setup-tpl-test"}},
 			},
 			Steps: []testworkflowsv1.IndependentStep{
-				{StepBase: testworkflowsv1.StepBase{Name: "steps-tpl-test"}},
+				{StepMeta: testworkflowsv1.StepMeta{Name: "steps-tpl-test"}},
 			},
 			After: []testworkflowsv1.IndependentStep{
-				{StepBase: testworkflowsv1.StepBase{Name: "after-tpl-test"}},
+				{StepMeta: testworkflowsv1.StepMeta{Name: "after-tpl-test"}},
 			},
 		},
 	}
@@ -78,13 +78,13 @@ var (
 				},
 			},
 			Setup: []testworkflowsv1.IndependentStep{
-				{StepBase: testworkflowsv1.StepBase{Name: "setup-tpl-test"}},
+				{StepMeta: testworkflowsv1.StepMeta{Name: "setup-tpl-test"}},
 			},
 			Steps: []testworkflowsv1.IndependentStep{
-				{StepBase: testworkflowsv1.StepBase{Name: "steps-tpl-test"}},
+				{StepMeta: testworkflowsv1.StepMeta{Name: "steps-tpl-test"}},
 			},
 			After: []testworkflowsv1.IndependentStep{
-				{StepBase: testworkflowsv1.StepBase{Name: "after-tpl-test"}},
+				{StepMeta: testworkflowsv1.StepMeta{Name: "after-tpl-test"}},
 			},
 		},
 	}
@@ -96,13 +96,13 @@ var (
 				},
 			},
 			Setup: []testworkflowsv1.IndependentStep{
-				{StepBase: testworkflowsv1.StepBase{Name: "setup-tpl-test-{{ config.index }}"}},
+				{StepMeta: testworkflowsv1.StepMeta{Name: "setup-tpl-test-{{ config.index }}"}},
 			},
 			Steps: []testworkflowsv1.IndependentStep{
-				{StepBase: testworkflowsv1.StepBase{Name: "steps-tpl-test-{{ config.index }}"}},
+				{StepMeta: testworkflowsv1.StepMeta{Name: "steps-tpl-test-{{ config.index }}"}},
 			},
 			After: []testworkflowsv1.IndependentStep{
-				{StepBase: testworkflowsv1.StepBase{Name: "after-tpl-test-{{ config.index }}"}},
+				{StepMeta: testworkflowsv1.StepMeta{Name: "after-tpl-test-{{ config.index }}"}},
 			},
 		},
 	}
@@ -162,38 +162,46 @@ var (
 	workflowSteps = testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			Setup: []testworkflowsv1.Step{
-				{StepBase: testworkflowsv1.StepBase{Name: "setup-tpl"}},
+				{StepMeta: testworkflowsv1.StepMeta{Name: "setup-tpl"}},
 			},
 			Steps: []testworkflowsv1.Step{
-				{StepBase: testworkflowsv1.StepBase{Name: "steps-tpl"}},
+				{StepMeta: testworkflowsv1.StepMeta{Name: "steps-tpl"}},
 			},
 			After: []testworkflowsv1.Step{
-				{StepBase: testworkflowsv1.StepBase{Name: "after-tpl"}},
+				{StepMeta: testworkflowsv1.StepMeta{Name: "after-tpl"}},
 			},
 		},
 	}
 	basicStep = testworkflowsv1.Step{
-		StepBase: testworkflowsv1.StepBase{
-			Name:  "basic",
-			Shell: "shell-command",
+		StepMeta: testworkflowsv1.StepMeta{
+			Name: "basic",
+		},
+		StepDefaults: testworkflowsv1.StepDefaults{
 			Container: &testworkflowsv1.ContainerConfig{
 				Env: []corev1.EnvVar{
 					{Name: "XYZ", Value: "some-value"},
 				},
 			},
 		},
+		StepOperations: testworkflowsv1.StepOperations{
+			Shell: "shell-command",
+		},
 	}
 	advancedStep = testworkflowsv1.Step{
-		StepBase: testworkflowsv1.StepBase{
+		StepMeta: testworkflowsv1.StepMeta{
 			Name:      "basic",
 			Condition: "always",
-			Delay:     "5s",
-			Shell:     "another-shell-command",
+		},
+		StepDefaults: testworkflowsv1.StepDefaults{
 			Container: &testworkflowsv1.ContainerConfig{
 				Env: []corev1.EnvVar{
 					{Name: "XYZ", Value: "some-value"},
 				},
 			},
+		},
+		StepOperations: testworkflowsv1.StepOperations{
+			Delay: "5s",
+			Shell: "another-shell-command",
 			Artifacts: &testworkflowsv1.StepArtifacts{
 				Paths: []string{"a", "b", "c"},
 			},
@@ -398,7 +406,7 @@ func TestApplyTemplatesStepBasicIsolatedWrapped(t *testing.T) {
 
 	want := *basicStep.DeepCopy()
 	want.Steps = append([]testworkflowsv1.Step{{
-		StepBase: testworkflowsv1.StepBase{
+		StepDefaults: testworkflowsv1.StepDefaults{
 			Container: tplStepsEnv.Spec.Container,
 		},
 		Setup: []testworkflowsv1.Step{
@@ -481,7 +489,7 @@ func TestApplyTemplatesStepAdvancedIsolatedWrapped(t *testing.T) {
 
 	want := *advancedStep.DeepCopy()
 	want.Steps = append([]testworkflowsv1.Step{{
-		StepBase: testworkflowsv1.StepBase{
+		StepDefaults: testworkflowsv1.StepDefaults{
 			Container: tplStepsEnv.Spec.Container,
 		},
 		Setup: []testworkflowsv1.Step{

@@ -236,9 +236,11 @@ func NewParallelCmd() *cobra.Command {
 
 				if len(fetch) > 0 {
 					spec.After = append(spec.After, testworkflowsv1.Step{
-						StepBase: testworkflowsv1.StepBase{
+						StepMeta: testworkflowsv1.StepMeta{
 							Name:      "Save the files",
 							Condition: "always",
+						},
+						StepOperations: testworkflowsv1.StepOperations{
 							Run: &testworkflowsv1.StepRun{
 								ContainerConfig: testworkflowsv1.ContainerConfig{
 									Image:           env.Config().Images.Toolkit,

@@ -342,7 +342,11 @@ func MergeMap[T comparable, U any](dst, include map[T]U) map[T]U {
 }
 
 func ConvertIndependentStepToStep(step testworkflowsv1.IndependentStep) (res testworkflowsv1.Step) {
-	res.StepBase = step.StepBase
+	res.StepMeta = step.StepMeta
+	res.StepControl = step.StepControl
+	res.StepSource = step.StepSource
+	res.StepDefaults = step.StepDefaults
+	res.StepOperations = step.StepOperations
 	res.Setup = common.MapSlice(step.Setup, ConvertIndependentStepToStep)
 	res.Steps = common.MapSlice(step.Steps, ConvertIndependentStepToStep)
 	return res

@@ -149,17 +149,20 @@ var (
 			},
 		},
 	}
-	stepBase = testworkflowsv1.StepBase{
+	stepBaseMeta = testworkflowsv1.StepMeta{
 		Name:      "some-name",
 		Condition: "some-condition",
-		Negative:  true,
-		Optional:  false,
+	}
+	stepBaseControl = testworkflowsv1.StepControl{
+		Negative: true,
+		Optional: false,
 		Retry: &testworkflowsv1.RetryPolicy{
 			Count: 444,
 			Until: "abc",
 		},
 		Timeout: "3h15m",
-		Delay:   "2m40s",
+	}
+	stepBaseSource = testworkflowsv1.StepSource{
 		Content: &testworkflowsv1.Content{
 			Git: &testworkflowsv1.ContentGit{
 				Uri:      "some-url",
@@ -190,6 +193,29 @@ var (
 				{Path: "abc", Content: "some-content"},
 			},
 		},
+	}
+	stepBaseDefaults = testworkflowsv1.StepDefaults{
+		WorkingDir: common.Ptr("/ssss"),
+		Container: &testworkflowsv1.ContainerConfig{
+			WorkingDir:      common.Ptr("/aaaa"),
+			Image:           "ssss",
+			ImagePullPolicy: "Never",
+			Env:             []corev1.EnvVar{{Name: "xyz", Value: "bar"}},
+			Command:         common.Ptr([]string{"ab"}),
+			Args:            common.Ptr([]string{"abrgs"}),
+			Resources: &testworkflowsv1.Resources{
+				Requests: map[corev1.ResourceName]intstr.IntOrString{
+					corev1.ResourceMemory: {Type: intstr.String, StrVal: "300m"},
+				},
+			},
+			SecurityContext: &corev1.SecurityContext{
+				Privileged: common.Ptr(true),
+				RunAsUser:  common.Ptr(int64(33)),
+			},
+		},
+	}
+	stepBaseOperations = testworkflowsv1.StepOperations{
+		Delay: "2m40s",
 		Shell: "shell-to-run",
 		Run: &testworkflowsv1.StepRun{
 			ContainerConfig: testworkflowsv1.ContainerConfig{
@@ -218,24 +244,6 @@ var (
 				},
 			},
 		},
-		WorkingDir: common.Ptr("/ssss"),
-		Container: &testworkflowsv1.ContainerConfig{
-			WorkingDir:      common.Ptr("/aaaa"),
-			Image:           "ssss",
-			ImagePullPolicy: "Never",
-			Env:             []corev1.EnvVar{{Name: "xyz", Value: "bar"}},
-			Command:         common.Ptr([]string{"ab"}),
-			Args:            common.Ptr([]string{"abrgs"}),
-			Resources: &testworkflowsv1.Resources{
-				Requests: map[corev1.ResourceName]intstr.IntOrString{
-					corev1.ResourceMemory: {Type: intstr.String, StrVal: "300m"},
-				},
-			},
-			SecurityContext: &corev1.SecurityContext{
-				Privileged: common.Ptr(true),
-				RunAsUser:  common.Ptr(int64(33)),
-			},
-		},
 		Execute: &testworkflowsv1.StepExecute{
 			Parallelism: 880,
 			Async:       false,
@@ -252,7 +260,11 @@ var (
 		},
 	}
 	step = testworkflowsv1.Step{
-		StepBase: stepBase,
+		StepMeta:       stepBaseMeta,
+		StepSource:     stepBaseSource,
+		StepControl:    stepBaseControl,
+		StepOperations: stepBaseOperations,
+		StepDefaults:   stepBaseDefaults,
 		Use: []testworkflowsv1.TemplateRef{
 			{Name: "/abc", Config: map[string]intstr.IntOrString{
 				"xxx": {Type: intstr.Int, IntVal: 322},
@@ -265,13 +277,17 @@ var (
 			},
 		},
 		Steps: []testworkflowsv1.Step{
-			{StepBase: testworkflowsv1.StepBase{Name: "xyz"}},
+			{StepMeta: testworkflowsv1.StepMeta{Name: "xyz"}},
 		},
 	}
 	independentStep = testworkflowsv1.IndependentStep{
-		StepBase: stepBase,
+		StepMeta:       stepBaseMeta,
+		StepSource:     stepBaseSource,
+		StepControl:    stepBaseControl,
+		StepOperations: stepBaseOperations,
+		StepDefaults:   stepBaseDefaults,
 		Steps: []testworkflowsv1.IndependentStep{
-			{StepBase: testworkflowsv1.StepBase{Name: "xyz"}},
+			{StepMeta: testworkflowsv1.StepMeta{Name: "xyz"}},
 		},
 	}
 	workflowSpecBase = testworkflowsv1.TestWorkflowSpecBase{

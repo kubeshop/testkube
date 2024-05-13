@@ -123,8 +123,10 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 
 	// Process steps
 	rootStep := testworkflowsv1.Step{
-		StepBase: testworkflowsv1.StepBase{
-			Content:   workflow.Spec.Content,
+		StepSource: testworkflowsv1.StepSource{
+			Content: workflow.Spec.Content,
+		},
+		StepDefaults: testworkflowsv1.StepDefaults{
 			Container: workflow.Spec.Container,
 		},
 		Steps: append(workflow.Spec.Setup, append(workflow.Spec.Steps, workflow.Spec.After...)...),

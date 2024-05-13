@@ -957,22 +957,30 @@ func MapIndependentStepParallelAPIToKube(v testkube.TestWorkflowIndependentStepP
 
 func MapStepAPIToKube(v testkube.TestWorkflowStep) testworkflowsv1.Step {
 	return testworkflowsv1.Step{
-		StepBase: testworkflowsv1.StepBase{
-			Name:       v.Name,
-			Condition:  v.Condition,
-			Paused:     v.Paused,
-			Negative:   v.Negative,
-			Optional:   v.Optional,
-			Retry:      common.MapPtr(v.Retry, MapRetryPolicyAPIToKube),
-			Timeout:    v.Timeout,
-			Delay:      v.Delay,
-			Content:    common.MapPtr(v.Content, MapContentAPIToKube),
-			Shell:      v.Shell,
-			Run:        common.MapPtr(v.Run, MapStepRunAPIToKube),
+		StepMeta: testworkflowsv1.StepMeta{
+			Name:      v.Name,
+			Condition: v.Condition,
+		},
+		StepControl: testworkflowsv1.StepControl{
+			Paused:   v.Paused,
+			Negative: v.Negative,
+			Optional: v.Optional,
+			Retry:    common.MapPtr(v.Retry, MapRetryPolicyAPIToKube),
+			Timeout:  v.Timeout,
+		},
+		StepSource: testworkflowsv1.StepSource{
+			Content: common.MapPtr(v.Content, MapContentAPIToKube),
+		},
+		StepOperations: testworkflowsv1.StepOperations{
+			Delay:     v.Delay,
+			Shell:     v.Shell,
+			Run:       common.MapPtr(v.Run, MapStepRunAPIToKube),
+			Execute:   common.MapPtr(v.Execute, MapStepExecuteAPIToKube),
+			Artifacts: common.MapPtr(v.Artifacts, MapStepArtifactsAPIToKube),
+		},
+		StepDefaults: testworkflowsv1.StepDefaults{
 			WorkingDir: MapBoxedStringToString(v.WorkingDir),
 			Container:  common.MapPtr(v.Container, MapContainerConfigAPIToKube),
-			Execute:    common.MapPtr(v.Execute, MapStepExecuteAPIToKube),
-			Artifacts:  common.MapPtr(v.Artifacts, MapStepArtifactsAPIToKube),
 		},
 		Use:      common.MapSlice(v.Use, MapTemplateRefAPIToKube),
 		Template: common.MapPtr(v.Template, MapTemplateRefAPIToKube),
@@ -984,22 +992,30 @@ func MapStepAPIToKube(v testkube.TestWorkflowStep) testworkflowsv1.Step {
 
 func MapIndependentStepAPIToKube(v testkube.TestWorkflowIndependentStep) testworkflowsv1.IndependentStep {
 	return testworkflowsv1.IndependentStep{
-		StepBase: testworkflowsv1.StepBase{
-			Name:       v.Name,
-			Condition:  v.Condition,
-			Paused:     v.Paused,
-			Negative:   v.Negative,
-			Optional:   v.Optional,
-			Retry:      common.MapPtr(v.Retry, MapRetryPolicyAPIToKube),
-			Timeout:    v.Timeout,
-			Delay:      v.Delay,
-			Content:    common.MapPtr(v.Content, MapContentAPIToKube),
-			Shell:      v.Shell,
-			Run:        common.MapPtr(v.Run, MapStepRunAPIToKube),
+		StepMeta: testworkflowsv1.StepMeta{
+			Name:      v.Name,
+			Condition: v.Condition,
+		},
+		StepControl: testworkflowsv1.StepControl{
+			Paused:   v.Paused,
+			Negative: v.Negative,
+			Optional: v.Optional,
+			Retry:    common.MapPtr(v.Retry, MapRetryPolicyAPIToKube),
+			Timeout:  v.Timeout,
+		},
+		StepSource: testworkflowsv1.StepSource{
+			Content: common.MapPtr(v.Content, MapContentAPIToKube),
+		},
+		StepOperations: testworkflowsv1.StepOperations{
+			Delay:     v.Delay,
+			Shell:     v.Shell,
+			Run:       common.MapPtr(v.Run, MapStepRunAPIToKube),
+			Execute:   common.MapPtr(v.Execute, MapStepExecuteAPIToKube),
+			Artifacts: common.MapPtr(v.Artifacts, MapStepArtifactsAPIToKube),
+		},
+		StepDefaults: testworkflowsv1.StepDefaults{
 			WorkingDir: MapBoxedStringToString(v.WorkingDir),
 			Container:  common.MapPtr(v.Container, MapContainerConfigAPIToKube),
-			Execute:    common.MapPtr(v.Execute, MapStepExecuteAPIToKube),
-			Artifacts:  common.MapPtr(v.Artifacts, MapStepArtifactsAPIToKube),
 		},
 		Setup:    common.MapSlice(v.Setup, MapIndependentStepAPIToKube),
 		Steps:    common.MapSlice(v.Steps, MapIndependentStepAPIToKube),
