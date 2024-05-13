@@ -9,18 +9,15 @@
 package commands
 
 import (
-	"archive/tar"
-	"compress/gzip"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -55,45 +52,10 @@ func NewTarballCmd() *cobra.Command {
 				}
 
 				// Process the files
-				uncompressedStream, err := gzip.NewReader(resp.Body)
-				ui.ExitOnError("start reading gzip", err)
-				tarReader := tar.NewReader(uncompressedStream)
-
-				// Unpack them
-				for {
-					header, err := tarReader.Next()
-					if err == io.EOF {
-						break
-					}
-					ui.ExitOnError("get next entry from tarball", err)
-					if filepath.IsAbs(header.Name) || relativeCheckRe.MatchString(filepath.ToSlash(header.Name)) {
-						ui.Fail(fmt.Errorf("unsafe file path in the tarball: %s", header.Name))
-					}
-
-					filePath := filepath.Join(dirPath, header.Name)
-
-					switch header.Typeflag {
-					case tar.TypeDir:
-						err := os.Mkdir(filePath, 0755)
-						ui.ExitOnError(fmt.Sprintf("%s: create directory", filePath), err)
-					case tar.TypeReg:
-						err := os.MkdirAll(filepath.Dir(filePath), 0755)
-						ui.ExitOnError(fmt.Sprintf("%s: create directory tree", filePath), err)
-						outFile, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, os.FileMode(header.Mode))
-						ui.ExitOnError(fmt.Sprintf("%s: create file", filePath), err)
-						_, err = io.Copy(outFile, tarReader)
-						ui.ExitOnError(fmt.Sprintf("%s: write file", filePath), err)
-						outFile.Close()
-					case tar.TypeSymlink:
-						err := os.MkdirAll(filepath.Dir(filePath), 0755)
-						ui.ExitOnError(fmt.Sprintf("%s: create directory tree", filePath), err)
-						err = os.Symlink(header.Linkname, filePath)
-						ui.ExitOnError(fmt.Sprintf("%s: create symlink", filePath), err)
-					default:
-						ui.Fail(fmt.Errorf("unknown entry type in the transferred archive: '%x' in %s", header.Typeflag, filePath))
-					}
+				err = common.UnpackTarball(dirPath, resp.Body)
+				if err != nil {
+					ui.Fail(err)
 				}
-				resp.Body.Close()
 			}
 		},
 	}
