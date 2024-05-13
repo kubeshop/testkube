@@ -176,6 +176,7 @@ spec:
       use:
       - name: distribute/evenly
       container:
+        workingDir: /data/repo/test/k6/executor-tests
         resources:
           requests:
             cpu: 128m
@@ -184,7 +185,6 @@ spec:
       - paused: true # synchronise running all workers
         run:
           image: grafana/k6:0.49.0
-          workingDir: /data/repo/test/k6/executor-tests
           shell: |
             k6 run k6-smoke-test.js \
               -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value \

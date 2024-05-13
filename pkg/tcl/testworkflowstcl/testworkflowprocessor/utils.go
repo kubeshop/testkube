@@ -120,7 +120,8 @@ func buildKubernetesContainers(stage Stage, init *initProcess, machines ...expre
 		SetNegative(c.Negative()).
 		AddRetryPolicy(c.RetryPolicy(), c.Ref()).
 		SetCommand(cr.Command...).
-		SetArgs(cr.Args...)
+		SetArgs(cr.Args...).
+		SetWorkingDir(cr.WorkingDir)
 
 	for _, env := range cr.Env {
 		if strings.Contains(env.Value, "{{") {
@@ -134,6 +135,7 @@ func buildKubernetesContainers(stage Stage, init *initProcess, machines ...expre
 
 	cr.Command = init.Command()
 	cr.Args = init.Args()
+	cr.WorkingDir = ""
 
 	// Ensure the container will have proper access to FS
 	if cr.SecurityContext == nil {
