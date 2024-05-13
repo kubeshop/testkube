@@ -122,9 +122,7 @@ func (t *server) handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/download/", http.StripPrefix("/download/", http.FileServer(http.Dir(t.storagePath))))
 	mux.HandleFunc("/upload/", func(writer http.ResponseWriter, request *http.Request) {
-		requestId := request.RequestURI[8:]
-		dirPath := t.requests[requestId]
-		fmt.Println(request.RequestURI, "--", request.URL, "---", requestId, "---", dirPath)
+		dirPath := t.requests[request.RequestURI[8:]]
 		if request.Method != http.MethodPost || dirPath == "" {
 			writer.WriteHeader(http.StatusNotFound)
 			return
