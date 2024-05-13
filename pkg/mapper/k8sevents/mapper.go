@@ -1,4 +1,4 @@
-package deployments
+package k8sevents
 
 import (
 	"fmt"
