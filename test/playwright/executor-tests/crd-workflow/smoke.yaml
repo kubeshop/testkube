@@ -242,8 +242,6 @@ spec:
       - from: /data/repo/test/playwright/executor-tests/playwright-project/blob-report
         to: /data/reports
       run:
-        workingDir: /data/repo/test/playwright/executor-tests/playwright-project
-        image: mcr.microsoft.com/playwright:v1.38.0-focal
         shell: 'npx playwright test --reporter=blob --shard {{ index + 1 }}/{{ count }}'
   - name: Merge reports
     condition: always

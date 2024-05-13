@@ -320,9 +320,11 @@ spec:
       revision: main
       paths:
       - test/cypress/executor-tests/cypress-13
+  container:
+    image: cypress/included:13.6.4
+    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
   steps:
   - name: Run tests
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
     parallel:
       maxCount: 3
       shards:
@@ -337,9 +339,7 @@ spec:
           requests:
             cpu: 1
             memory: 1Gi
-        workingDir: /data/repo/test/cypress/executor-tests/cypress-13
       run:
-        image: cypress/included:13.6.4
         args:
         - --env
         - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
