@@ -12,17 +12,12 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/pkg/ui"
-)
-
-var (
-	relativeCheckRe = regexp.MustCompile(`(^|/)\.\.(/|$)`)
 )
 
 func NewTarballCmd() *cobra.Command {

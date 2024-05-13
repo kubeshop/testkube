@@ -22,6 +22,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
@@ -31,6 +32,7 @@ import (
 	common2 "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/transfer"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
@@ -192,14 +194,81 @@ func NewParallelCmd() *cobra.Command {
 					})
 				}
 
+				// Prepare the fetch
+				fetch := make([]string, 0, len(spec.Fetch))
+				for ti, t := range spec.Fetch {
+					// Parse 'from' clause
+					from, err := expressionstcl.EvalTemplate(t.From, machines...)
+					ui.ExitOnError(fmt.Sprintf("%d: fetch.%d.from", i, ti), err)
+
+					// Parse 'to' clause
+					to := from
+					if t.To != "" {
+						to, err = expressionstcl.EvalTemplate(t.To, machines...)
+						ui.ExitOnError(fmt.Sprintf("%d: fetch.%d.to", i, ti), err)
+					}
+
+					// Parse 'files' clause
+					patterns := []string{"**/*"}
+					if t.Files != nil && !t.Files.Dynamic {
+						patterns = t.Files.Static
+					} else if t.Files != nil && t.Files.Dynamic {
+						patternsExpr, err := expressionstcl.EvalExpression(t.Files.Expression, machines...)
+						ui.ExitOnError(fmt.Sprintf("%d: fetch.%d.files", i, ti), err)
+						patternsList, err := patternsExpr.Static().SliceValue()
+						ui.ExitOnError(fmt.Sprintf("%d: fetch.%d.files", i, ti), err)
+						patterns = make([]string, len(patternsList))
+						for pi, p := range patternsList {
+							if s, ok := p.(string); ok {
+								patterns[pi] = s
+							} else {
+								p, err := json.Marshal(s)
+								ui.ExitOnError(fmt.Sprintf("%d: fetch.%d.files.%d", i, ti, pi), err)
+								patterns[pi] = string(p)
+							}
+						}
+					}
+
+					req := transferSrv.Request(to)
+					ui.ExitOnError(fmt.Sprintf("%d: fetch.%d", i, ti), err)
+					fetch = append(fetch, fmt.Sprintf("%s:%s=%s", from, strings.Join(patterns, ","), req.Url))
+				}
+
+				if len(fetch) > 0 {
+					spec.After = append(spec.After, testworkflowsv1.Step{
+						StepBase: testworkflowsv1.StepBase{
+							Name: "Save the files",
+							Run: &testworkflowsv1.StepRun{
+								ContainerConfig: testworkflowsv1.ContainerConfig{
+									Image:           env.Config().Images.Toolkit,
+									ImagePullPolicy: corev1.PullIfNotPresent,
+									Command:         common.Ptr([]string{"/toolkit", "transfer"}),
+									Env: []corev1.EnvVar{
+										{Name: "TK_NS", Value: env.Namespace()},
+										{Name: "TK_REF", Value: env.Ref()},
+									},
+									Args: &fetch,
+								},
+							},
+						},
+					})
+				}
+
 				// Prepare the workflow to run
 				specs[i] = spec.TestWorkflowSpec
 				descriptions[i] = spec.Description
 			}
 
 			// Initialize transfer server if expected
-			if transferSrv.Count() > 0 {
-				fmt.Printf("Starting transfer server for %d tarballs...\n", transferSrv.Count())
+			if transferSrv.Count() > 0 || transferSrv.RequestsCount() > 0 {
+				infos := make([]string, 0)
+				if transferSrv.Count() > 0 {
+					infos = append(infos, fmt.Sprintf("sending %d tarballs", transferSrv.Count()))
+				}
+				if transferSrv.RequestsCount() > 0 {
+					infos = append(infos, fmt.Sprintf("fetching %d requests", transferSrv.RequestsCount()))
+				}
+				fmt.Printf("Starting transfer server for %s...\n", strings.Join(infos, " and "))
 				if _, err = transferSrv.Listen(); err != nil {
 					ui.Fail(errors.Wrap(err, "failed to start transfer server"))
 				}

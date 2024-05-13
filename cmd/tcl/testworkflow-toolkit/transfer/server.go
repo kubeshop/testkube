@@ -9,24 +9,19 @@
 package transfer
 
 import (
-	"archive/tar"
-	"compress/gzip"
 	"context"
 	"fmt"
-	"io"
-	"io/fs"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 
-	"github.com/pkg/errors"
-
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/artifacts"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 )
 
 type server struct {
 	files       map[string]struct{}
+	requests    map[string]string
 	storagePath string
 	host        string
 	port        int
@@ -34,7 +29,9 @@ type server struct {
 
 type Server interface {
 	Count() int
+	RequestsCount() int
 	Has(dirPath string, files []string) bool
+	Request(dirPath string) RequestEntry
 	Include(dirPath string, files []string) (Entry, error)
 	Listen() (func(), error)
 }
@@ -44,9 +41,15 @@ type Entry struct {
 	Url string `json:"url"`
 }
 
+type RequestEntry struct {
+	Id  string `json:"id"`
+	Url string `json:"url"`
+}
+
 func NewServer(storagePath string, host string, port int) Server {
 	return &server{
 		files:       make(map[string]struct{}),
+		requests:    make(map[string]string),
 		storagePath: storagePath,
 		host:        host,
 		port:        port,
@@ -57,25 +60,25 @@ func (t *server) Count() int {
 	return len(t.files)
 }
 
+func (t *server) RequestsCount() int {
+	return len(t.requests)
+}
+
 func (t *server) Has(dirPath string, files []string) bool {
 	_, ok := t.files[SourceID(dirPath, files)]
 	return ok
 }
 
 func (t *server) GetUrl(id string) string {
-	return fmt.Sprintf("http://%s:%d/%s.tar.gz", t.host, t.port, id)
+	return fmt.Sprintf("http://%s:%d/download/%s.tar.gz", t.host, t.port, id)
+}
+
+func (t *server) GetRequestUrl(id string) string {
+	return fmt.Sprintf("http://%s:%d/upload/%s", t.host, t.port, id)
 }
 
 func (t *server) Include(dirPath string, files []string) (Entry, error) {
 	id := SourceID(dirPath, files)
-
-	if !filepath.IsAbs(dirPath) {
-		var err error
-		dirPath, err = filepath.Abs(dirPath)
-		if err != nil {
-			return Entry{}, errors.Wrap(err, "failed to build absolute path for inclusion")
-		}
-	}
 
 	// Ensure that is not prepared already
 	if _, ok := t.files[id]; ok {
@@ -90,52 +93,7 @@ func (t *server) Include(dirPath string, files []string) (Entry, error) {
 	defer fileStream.Close()
 
 	// Prepare files archive
-	gzipStream := gzip.NewWriter(fileStream)
-	tarStream := tar.NewWriter(gzipStream)
-	defer gzipStream.Close()
-	defer tarStream.Close()
-
-	// Append all the files
-	walker, err := artifacts.CreateWalker(files, []string{dirPath}, dirPath)
-	if err != nil {
-		return Entry{}, err
-	}
-	err = walker.Walk(os.DirFS("/"), func(path string, file fs.File, stat fs.FileInfo, err error) error {
-		if err != nil {
-			fmt.Printf("Warning: '%s' has been ignored, as there was a problem reading it: %s\n", path, err.Error())
-			return nil
-		}
-
-		// Append the file to the archive
-		name := stat.Name()
-		link := name
-		isSymlink := stat.Mode()&fs.ModeSymlink != 0
-		if isSymlink {
-			link, err = os.Readlink(filepath.Join(dirPath, path))
-			if err != nil {
-				fmt.Printf("Warning: '%s' has been ignored, as there was a problem reading link: %s\n", path, err.Error())
-				return nil
-			}
-		}
-
-		// Build the data
-		header, err := tar.FileInfoHeader(stat, link)
-		if err != nil {
-			return err
-		}
-		header.Name = path
-		err = tarStream.WriteHeader(header)
-		if err != nil {
-			return err
-		}
-
-		// Copy the contents for regular files
-		if !isSymlink {
-			_, err = io.Copy(tarStream, file)
-		}
-
-		return err
-	})
+	err = common.WriteTarball(fileStream, dirPath, files)
 	if err != nil {
 		return Entry{}, err
 	}
@@ -144,10 +102,48 @@ func (t *server) Include(dirPath string, files []string) (Entry, error) {
 	return Entry{Id: id, Url: t.GetUrl(id)}, nil
 }
 
+func (t *server) hasRequest(id string) bool {
+	_, ok := t.requests[id]
+	return ok
+}
+
+func (t *server) Request(dirPath string) RequestEntry {
+	id := SourceID(dirPath, []string{"request"})
+	number := 1
+	for t.hasRequest(fmt.Sprintf("%s/%d", id, number)) {
+		number++
+	}
+	id = fmt.Sprintf("%s/%d", id, number)
+	t.requests[id] = dirPath
+	return RequestEntry{Id: id, Url: t.GetRequestUrl(id)}
+}
+
+func (t *server) handler() http.Handler {
+	mux := http.NewServeMux()
+	mux.Handle("/download/", http.StripPrefix("/download/", http.FileServer(http.Dir(t.storagePath))))
+	mux.HandleFunc("/upload/", func(writer http.ResponseWriter, request *http.Request) {
+		requestId := request.RequestURI[8:]
+		dirPath := t.requests[requestId]
+		fmt.Println(request.RequestURI, "--", request.URL, "---", requestId, "---", dirPath)
+		if request.Method != http.MethodPost || dirPath == "" {
+			writer.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		err := common.UnpackTarball(dirPath, request.Body)
+		if err != nil {
+			fmt.Printf("Warning: '%s' error while unpacking tarball to: %s\n", dirPath, err.Error())
+			writer.WriteHeader(http.StatusInternalServerError)
+		} else {
+			writer.WriteHeader(http.StatusNoContent)
+		}
+	})
+	return mux
+}
+
 func (t *server) Listen() (func(), error) {
-	handler := http.FileServer(http.Dir(t.storagePath))
 	addr := fmt.Sprintf(":%d", t.port)
-	srv := http.Server{Addr: addr, Handler: handler}
+	srv := http.Server{Addr: addr, Handler: t.handler()}
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, err

@@ -7900,8 +7900,14 @@ components:
             description: worker description to display
           transfer:
             type: array
+            description: list of files to send to parallel steps
             items:
               $ref: "#/components/schemas/TestWorkflowStepParallelTransfer"
+          fetch:
+            type: array
+            description: list of files to fetch from parallel steps
+            items:
+              $ref: "#/components/schemas/TestWorkflowStepParallelFetch"
 
     TestWorkflowIndependentStepParallel:
       type: object
@@ -7917,8 +7923,14 @@ components:
             description: worker description to display
           transfer:
             type: array
+            description: list of files to send to parallel steps
             items:
               $ref: "#/components/schemas/TestWorkflowStepParallelTransfer"
+          fetch:
+            type: array
+            description: list of files to fetch from parallel steps
+            items:
+              $ref: "#/components/schemas/TestWorkflowStepParallelFetch"
 
     TestWorkflowStepExecuteStrategy:
       type: object
@@ -7956,11 +7968,25 @@ components:
           description: path to load the files from
         to:
           type: string
-          description: path to load the files from
+          description: path to save the files to
         files:
           $ref: "#/components/schemas/TestWorkflowTarballFilePattern"
         mount:
           $ref: "#/components/schemas/BoxedBoolean"
+      required:
+      - from
+
+    TestWorkflowStepParallelFetch:
+      type: object
+      properties:
+        from:
+          type: string
+          description: path to fetch files from
+        to:
+          type: string
+          description: path to save the files to
+        files:
+          $ref: "#/components/schemas/TestWorkflowTarballFilePattern"
       required:
       - from
 

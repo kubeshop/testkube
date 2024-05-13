@@ -13,16 +13,79 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 
 	"github.com/pkg/errors"
+
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/artifacts"
 )
 
 var (
 	relativeCheckRe = regexp.MustCompile(`(^|/)\.\.(/|$)`)
 )
+
+func WriteTarball(stream io.Writer, dirPath string, files []string) error {
+	// Ensure the absolute path
+	if !filepath.IsAbs(dirPath) {
+		var err error
+		dirPath, err = filepath.Abs(dirPath)
+		if err != nil {
+			return errors.Wrap(err, "failed to build absolute path for writing tarball")
+		}
+	}
+
+	// Prepare files archive
+	gzipStream := gzip.NewWriter(stream)
+	tarStream := tar.NewWriter(gzipStream)
+	defer gzipStream.Close()
+	defer tarStream.Close()
+
+	// Append all the files
+	walker, err := artifacts.CreateWalker(files, []string{dirPath}, dirPath)
+	if err != nil {
+		return err
+	}
+	err = walker.Walk(os.DirFS("/"), func(path string, file fs.File, stat fs.FileInfo, err error) error {
+		if err != nil {
+			fmt.Printf("Warning: '%s' has been ignored, as there was a problem reading it: %s\n", path, err.Error())
+			return nil
+		}
+
+		// Append the file to the archive
+		name := stat.Name()
+		link := name
+		isSymlink := stat.Mode()&fs.ModeSymlink != 0
+		if isSymlink {
+			link, err = os.Readlink(filepath.Join(dirPath, path))
+			if err != nil {
+				fmt.Printf("Warning: '%s' has been ignored, as there was a problem reading link: %s\n", path, err.Error())
+				return nil
+			}
+		}
+
+		// Build the data
+		header, err := tar.FileInfoHeader(stat, link)
+		if err != nil {
+			return err
+		}
+		header.Name = path
+		err = tarStream.WriteHeader(header)
+		if err != nil {
+			return err
+		}
+
+		// Copy the contents for regular files
+		if !isSymlink {
+			_, err = io.Copy(tarStream, file)
+		}
+
+		return err
+	})
+	return err
+}
 
 func UnpackTarball(dirPath string, stream io.ReadCloser) error {
 	defer stream.Close()

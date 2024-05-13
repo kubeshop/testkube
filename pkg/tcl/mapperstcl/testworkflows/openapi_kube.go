@@ -890,6 +890,14 @@ func MapStepParallelTransferAPIToKube(v testkube.TestWorkflowStepParallelTransfe
 	}
 }
 
+func MapStepParallelFetchAPIToKube(v testkube.TestWorkflowStepParallelFetch) testworkflowsv1.StepParallelFetch {
+	return testworkflowsv1.StepParallelFetch{
+		From:  v.From,
+		To:    v.To,
+		Files: common.ResolvePtr(common.MapPtr(v.Files, MapTarballFilePatternAPIToKube), nil),
+	}
+}
+
 func MapStepParallelAPIToKube(v testkube.TestWorkflowStepParallel) testworkflowsv1.StepParallel {
 	return testworkflowsv1.StepParallel{
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
@@ -901,6 +909,7 @@ func MapStepParallelAPIToKube(v testkube.TestWorkflowStepParallel) testworkflows
 		Parallelism: v.Parallelism,
 		Description: v.Description,
 		Transfer:    common.MapSlice(v.Transfer, MapStepParallelTransferAPIToKube),
+		Fetch:       common.MapSlice(v.Fetch, MapStepParallelFetchAPIToKube),
 		TestWorkflowSpec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Config:    common.MapMap(v.Config, MapParameterSchemaAPIToKube),
@@ -929,6 +938,7 @@ func MapIndependentStepParallelAPIToKube(v testkube.TestWorkflowIndependentStepP
 		Parallelism: v.Parallelism,
 		Description: v.Description,
 		Transfer:    common.MapSlice(v.Transfer, MapStepParallelTransferAPIToKube),
+		Fetch:       common.MapSlice(v.Fetch, MapStepParallelFetchAPIToKube),
 		TestWorkflowTemplateSpec: testworkflowsv1.TestWorkflowTemplateSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Config:    common.MapMap(v.Config, MapParameterSchemaAPIToKube),

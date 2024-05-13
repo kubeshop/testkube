@@ -854,6 +854,14 @@ func MapStepParallelTransferKubeToAPI(v testworkflowsv1.StepParallelTransfer) te
 	}
 }
 
+func MapStepParallelFetchKubeToAPI(v testworkflowsv1.StepParallelFetch) testkube.TestWorkflowStepParallelFetch {
+	return testkube.TestWorkflowStepParallelFetch{
+		From:  v.From,
+		To:    v.To,
+		Files: common.MapPtr(v.Files, MapTarballFilePatternKubeToAPI),
+	}
+}
+
 func MapStepParallelKubeToAPI(v testworkflowsv1.StepParallel) testkube.TestWorkflowStepParallel {
 	return testkube.TestWorkflowStepParallel{
 		Count:       MapIntOrStringToBoxedString(v.Count),
@@ -863,6 +871,7 @@ func MapStepParallelKubeToAPI(v testworkflowsv1.StepParallel) testkube.TestWorkf
 		Parallelism: v.Parallelism,
 		Description: v.Description,
 		Transfer:    common.MapSlice(v.Transfer, MapStepParallelTransferKubeToAPI),
+		Fetch:       common.MapSlice(v.Fetch, MapStepParallelFetchKubeToAPI),
 		Use:         common.MapSlice(v.Use, MapTemplateRefKubeToAPI),
 		Config:      common.MapMap(v.Config, MapParameterSchemaKubeToAPI),
 		Content:     common.MapPtr(v.Content, MapContentKubeToAPI),
@@ -885,6 +894,7 @@ func MapIndependentStepParallelKubeToAPI(v testworkflowsv1.IndependentStepParall
 		Parallelism: v.Parallelism,
 		Description: v.Description,
 		Transfer:    common.MapSlice(v.Transfer, MapStepParallelTransferKubeToAPI),
+		Fetch:       common.MapSlice(v.Fetch, MapStepParallelFetchKubeToAPI),
 		Config:      common.MapMap(v.Config, MapParameterSchemaKubeToAPI),
 		Content:     common.MapPtr(v.Content, MapContentKubeToAPI),
 		Container:   common.MapPtr(v.Container, MapContainerConfigKubeToAPI),

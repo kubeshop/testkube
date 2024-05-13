@@ -19,16 +19,19 @@ type TestWorkflowStepParallel struct {
 	// how many resources could be scheduled in parallel
 	Parallelism int32 `json:"parallelism,omitempty"`
 	// worker description to display
-	Description string                                 `json:"description,omitempty"`
-	Transfer    []TestWorkflowStepParallelTransfer     `json:"transfer,omitempty"`
-	Use         []TestWorkflowTemplateRef              `json:"use,omitempty"`
-	Config      map[string]TestWorkflowParameterSchema `json:"config,omitempty"`
-	Content     *TestWorkflowContent                   `json:"content,omitempty"`
-	Container   *TestWorkflowContainerConfig           `json:"container,omitempty"`
-	Job         *TestWorkflowJobConfig                 `json:"job,omitempty"`
-	Pod         *TestWorkflowPodConfig                 `json:"pod,omitempty"`
-	Setup       []TestWorkflowStep                     `json:"setup,omitempty"`
-	Steps       []TestWorkflowStep                     `json:"steps,omitempty"`
-	After       []TestWorkflowStep                     `json:"after,omitempty"`
-	Events      []TestWorkflowEvent                    `json:"events,omitempty"`
+	Description string `json:"description,omitempty"`
+	// list of files to send to parallel steps
+	Transfer []TestWorkflowStepParallelTransfer `json:"transfer,omitempty"`
+	// list of files to fetch from parallel steps
+	Fetch     []TestWorkflowStepParallelFetch        `json:"fetch,omitempty"`
+	Use       []TestWorkflowTemplateRef              `json:"use,omitempty"`
+	Config    map[string]TestWorkflowParameterSchema `json:"config,omitempty"`
+	Content   *TestWorkflowContent                   `json:"content,omitempty"`
+	Container *TestWorkflowContainerConfig           `json:"container,omitempty"`
+	Job       *TestWorkflowJobConfig                 `json:"job,omitempty"`
+	Pod       *TestWorkflowPodConfig                 `json:"pod,omitempty"`
+	Setup     []TestWorkflowStep                     `json:"setup,omitempty"`
+	Steps     []TestWorkflowStep                     `json:"steps,omitempty"`
+	After     []TestWorkflowStep                     `json:"after,omitempty"`
+	Events    []TestWorkflowEvent                    `json:"events,omitempty"`
 }
