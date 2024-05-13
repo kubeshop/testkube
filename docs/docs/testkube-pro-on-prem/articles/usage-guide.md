@@ -39,7 +39,7 @@ Testkube Enterprise is a cutting-edge Kubernetes-native testing platform designe
 
 ## Installation of Testkube Enterprise and an Agent in the same cluster
 
-We have a simplified installation process to allow to deploy everything in a single cluster. You can find all the details at [the Testkube Quickstart][testkube-quickstart].
+We have a simplified installation process to allow to deploy everything in a single cluster. You can find all the details at [the Testkube Quickstart](../../articles/install/quickstart-install.mdx).
 
 
 ## Installation of Testkube Enterprise and an Agent in multiple clusters
