@@ -302,7 +302,6 @@ func NewParallelCmd() *cobra.Command {
 					Description: descriptions[index],
 				})
 			}
-			descriptions = nil
 
 			// Load Kubernetes client and image inspector
 			clientSet := env.Kubernetes()
@@ -420,7 +419,11 @@ func NewParallelCmd() *cobra.Command {
 				controllers[index] = ctrl
 				ctx, ctxCancel := context.WithCancel(context.Background())
 
-				fmt.Printf("%s: created\n", common2.InstanceLabel("worker", index, params.Count))
+				if descriptions[index] != "" {
+					fmt.Printf("%s (%s): created\n", common2.InstanceLabel("worker", index, params.Count), descriptions[index])
+				} else {
+					fmt.Printf("%s: created\n", common2.InstanceLabel("worker", index, params.Count))
+				}
 
 				prevStatus := testkube.QUEUED_TestWorkflowStatus
 				prevStep := ""
