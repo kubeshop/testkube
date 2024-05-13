@@ -19,9 +19,9 @@ func NewInitCmd() *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "init",
+		Use:     "agent",
 		Short:   "Install Testkube Pro Agent and connect to Testkube Pro environment",
-		Aliases: []string{"install", "agent"},
+		Aliases: []string{"install", "agent", "init"},
 		Run: func(cmd *cobra.Command, args []string) {
 			if export {
 				ui.Failf("export is unavailable for this profile")
