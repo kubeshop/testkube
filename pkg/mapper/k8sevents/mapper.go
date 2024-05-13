@@ -78,7 +78,7 @@ func MapAPIToCRD(event testkube.Event, namespace string, eventTime time.Time) co
 
 	return corev1.Event{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("testkube-%s", event.Id),
+			Name:      fmt.Sprintf("testkube-event-%s", event.Id),
 			Namespace: namespace,
 			Labels:    labels,
 		},
