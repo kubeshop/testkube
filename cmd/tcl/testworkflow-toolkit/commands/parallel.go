@@ -346,7 +346,7 @@ func NewParallelCmd() *cobra.Command {
 							go func(index int64) {
 								err := controllers[index].Resume(context.Background())
 								if err != nil {
-									fmt.Printf("%s: warning: failed to resume: %s\n", common2.InstanceLabel("worker", index, params.Count), err.Error())
+									spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to resume", err.Error())
 								}
 								wg.Done()
 							}(index)
