@@ -13,6 +13,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
@@ -173,6 +175,27 @@ func CreateExecutionMachine(index int64) (string, expressionstcl.Machine) {
 		Register("resource.id", id).
 		Register("resource.fsPrefix", fsPrefix).
 		Register("workflow.name", env.WorkflowName())
+}
+
+func ExecuteParallel[T any](run func(int64, *T) bool, items []T, parallelism int64) int64 {
+	var wg sync.WaitGroup
+	wg.Add(len(items))
+	ch := make(chan struct{}, parallelism)
+	success := atomic.Int64{}
+
+	// Execute all operations
+	for index := range items {
+		ch <- struct{}{}
+		go func(index int) {
+			if run(int64(index), &items[index]) {
+				success.Add(1)
+			}
+			<-ch
+			wg.Done()
+		}(index)
+	}
+	wg.Wait()
+	return int64(len(items)) - success.Load()
 }
 
 func SaveLogs(ctx context.Context, clientSet kubernetes.Interface, storage artifacts.InternalArtifactStorage, namespace, id string, index int64) (string, error) {

@@ -17,7 +17,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
@@ -358,28 +357,11 @@ func NewParallelCmd() *cobra.Command {
 			}()
 
 			// Create channel for execution
-			var wg sync.WaitGroup
-			wg.Add(int(params.Count))
-			ch := make(chan struct{}, parallelism)
-			success := atomic.Int64{}
-
-			// Execute all operations
-			for index := range specs {
-				ch <- struct{}{}
-				go func(index int) {
-					if run(int64(index), &specs[index]) {
-						success.Add(1)
-					}
-					<-ch
-					wg.Done()
-				}(index)
-			}
-			wg.Wait()
-
-			if success.Load() == params.Count {
+			failed := spawn.ExecuteParallel(run, specs, parallelism)
+			if failed == 0 {
 				fmt.Printf("Successfully finished %d workers.\n", params.Count)
 			} else {
-				fmt.Printf("Failed to finish %d out of %d expected workers.\n", params.Count-success.Load(), params.Count)
+				fmt.Printf("Failed to finish %d out of %d expected workers.\n", failed, params.Count)
 				os.Exit(1)
 			}
 		},
