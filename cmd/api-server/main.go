@@ -580,6 +580,7 @@ func main() {
 		cfg.DisableSecretCreation,
 		subscriptionChecker,
 		serviceAccountNames,
+		cfg.EnableK8sEvents,
 	)
 
 	// Apply Pro server enhancements

@@ -99,6 +99,7 @@ func NewTestkubeAPI(
 	disableSecretCreation bool,
 	subscriptionChecker checktcl.SubscriptionChecker,
 	serviceAccountNames map[string]string,
+	enableK8sEvents bool,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -168,7 +169,10 @@ func NewTestkubeAPI(
 		}
 	}
 
-	s.Events.Loader.Register(k8sevent.NewK8sEventLoader(clientset, namespace, testkube.AllEventTypes))
+	if enableK8sEvents {
+		s.Events.Loader.Register(k8sevent.NewK8sEventLoader(clientset, namespace, testkube.AllEventTypes))
+	}
+
 	s.InitEnvs()
 	s.InitRoutes()
 
