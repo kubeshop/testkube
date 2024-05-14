@@ -12,7 +12,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"reflect"
 	"strconv"
@@ -25,7 +24,6 @@ import (
 	"github.com/spf13/cobra"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	initconstants "github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/artifacts"
 	common2 "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
@@ -227,33 +225,20 @@ func NewParallelCmd() *cobra.Command {
 				// Build the resources bundle
 				scheduledAt := time.Now()
 				bundle, err := testworkflowprocessor.NewFullFeatured(inspector).
-					Bundle(context.Background(), &testworkflowsv1.TestWorkflow{Spec: *spec}, machine, baseMachine, params.MachineAt(index)) // TODO: params.MachineAt should be limited until sub-parallel/sub-execute
+					Bundle(context.Background(), &testworkflowsv1.TestWorkflow{Spec: *spec}, machine, baseMachine, params.MachineAt(index))
 				if err != nil {
 					fmt.Printf("%d: failed to prepare resources: %s\n", index, err.Error())
 					return false
 				}
+
 				defer func() {
 					// Save logs
-					reader, writer := io.Pipe()
 					filePath := fmt.Sprintf("logs/%d.log", index)
 					ctrl, err := testworkflowcontroller.New(context.Background(), clientSet, env.Namespace(), id, scheduledAt, testworkflowcontroller.ControllerOptions{
 						Timeout: ControllerTimeout,
 					})
 					if err == nil {
-						go func() {
-							defer writer.Close()
-							ref := ""
-							for v := range ctrl.Watch(context.Background()) {
-								if v.Error == nil && v.Value.Log != "" {
-									if ref != v.Value.Ref {
-										ref = v.Value.Ref
-										_, _ = writer.Write([]byte(data.SprintHint(ref, initconstants.InstructionStart)))
-									}
-									_, _ = writer.Write([]byte(v.Value.Log))
-								}
-							}
-						}()
-						err = storage.SaveStream(filePath, reader)
+						err = storage.SaveStream(filePath, ctrl.Logs(context.Background()))
 					}
 					if err == nil {
 						data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Logs: storage.FullPath(filePath)})

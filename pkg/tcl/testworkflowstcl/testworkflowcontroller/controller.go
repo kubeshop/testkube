@@ -10,6 +10,7 @@ package testworkflowcontroller
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/pkg/errors"
@@ -17,6 +18,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
+	initconstants "github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
@@ -42,6 +45,7 @@ type Controller interface {
 	Resume(ctx context.Context) error
 	Cleanup(ctx context.Context) error
 	Watch(ctx context.Context) <-chan ChannelMessage[Notification]
+	Logs(ctx context.Context) io.Reader
 	NodeName(ctx context.Context) (string, error)
 	PodIP(ctx context.Context) (string, error)
 	StopController()
@@ -213,4 +217,22 @@ func (c *controller) Watch(parentCtx context.Context) <-chan ChannelMessage[Noti
 		return v.Channel()
 	}
 	return w.Channel()
+}
+
+func (c *controller) Logs(parentCtx context.Context) io.Reader {
+	reader, writer := io.Pipe()
+	go func() {
+		defer writer.Close()
+		ref := ""
+		for v := range c.Watch(parentCtx) {
+			if v.Error == nil && v.Value.Log != "" {
+				if ref != v.Value.Ref {
+					ref = v.Value.Ref
+					_, _ = writer.Write([]byte(data.SprintHint(ref, initconstants.InstructionStart)))
+				}
+				_, _ = writer.Write([]byte(v.Value.Log))
+			}
+		}
+	}()
+	return reader
 }
