@@ -276,10 +276,8 @@ func NewParallelCmd() *cobra.Command {
 
 					// Inform about the node assignment
 					if !scheduled && v.NodeName != "" {
-						if err == nil {
-							scheduled = true
-							log(fmt.Sprintf("assigned to %s node", ui.LightBlue(v.NodeName)))
-						}
+						scheduled = true
+						log(fmt.Sprintf("assigned to %s node", ui.LightBlue(v.NodeName)))
 					}
 
 					// Handle result change
