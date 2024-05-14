@@ -67,5 +67,5 @@ func (l *K8sEventListener) Notify(event testkube.Event) (result testkube.EventRe
 }
 
 func (l *K8sEventListener) Kind() string {
-	return "K8sevent"
+	return "k8sevent"
 }
