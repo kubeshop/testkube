@@ -10,11 +10,16 @@ package common
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/transfer"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 )
 
@@ -27,7 +32,7 @@ func ProcessTransfer(transferSrv transfer.Server, transfer []testworkflowsv1.Ste
 		// Parse 'from' clause
 		from, err := expressionstcl.EvalTemplate(t.From, machines...)
 		if err != nil {
-			return nil, errors.Wrapf(err, "transfer.%d.from", ti)
+			return nil, errors.Wrapf(err, "%d.from", ti)
 		}
 
 		// Parse 'to' clause
@@ -35,7 +40,7 @@ func ProcessTransfer(transferSrv transfer.Server, transfer []testworkflowsv1.Ste
 		if t.To != "" {
 			to, err = expressionstcl.EvalTemplate(t.To, machines...)
 			if err != nil {
-				return nil, errors.Wrapf(err, "transfer.%d.to", ti)
+				return nil, errors.Wrapf(err, "%d.to", ti)
 			}
 		}
 
@@ -46,11 +51,11 @@ func ProcessTransfer(transferSrv transfer.Server, transfer []testworkflowsv1.Ste
 		} else if t.Files != nil && t.Files.Dynamic {
 			patternsExpr, err := expressionstcl.EvalExpression(t.Files.Expression, machines...)
 			if err != nil {
-				return nil, errors.Wrapf(err, "transfer.%d.files", ti)
+				return nil, errors.Wrapf(err, "%d.files", ti)
 			}
 			patternsList, err := patternsExpr.Static().SliceValue()
 			if err != nil {
-				return nil, errors.Wrapf(err, "transfer.%d.files", ti)
+				return nil, errors.Wrapf(err, "%d.files", ti)
 			}
 			patterns = make([]string, len(patternsList))
 			for pi, p := range patternsList {
@@ -59,7 +64,7 @@ func ProcessTransfer(transferSrv transfer.Server, transfer []testworkflowsv1.Ste
 				} else {
 					p, err := json.Marshal(s)
 					if err != nil {
-						return nil, errors.Wrapf(err, "transfer.%d.files.%d", ti, pi)
+						return nil, errors.Wrapf(err, "%d.files.%d", ti, pi)
 					}
 					patterns[pi] = string(p)
 				}
@@ -68,9 +73,84 @@ func ProcessTransfer(transferSrv transfer.Server, transfer []testworkflowsv1.Ste
 
 		entry, err := transferSrv.Include(from, patterns)
 		if err != nil {
-			return nil, errors.Wrapf(err, "transfer.%d", ti)
+			return nil, errors.Wrapf(err, "%d", ti)
 		}
 		result = append(result, testworkflowsv1.ContentTarball{Url: entry.Url, Path: to, Mount: t.Mount})
 	}
 	return result, nil
+}
+
+func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParallelFetch, machines ...expressionstcl.Machine) (*testworkflowsv1.Step, error) {
+	if len(fetch) == 0 {
+		return nil, nil
+	}
+
+	result := make([]string, 0, len(fetch))
+	for ti, t := range fetch {
+		// Parse 'from' clause
+		from, err := expressionstcl.EvalTemplate(t.From, machines...)
+		if err != nil {
+			return nil, errors.Wrapf(err, "%d.from", ti)
+		}
+
+		// Parse 'to' clause
+		to := from
+		if t.To != "" {
+			to, err = expressionstcl.EvalTemplate(t.To, machines...)
+			if err != nil {
+				return nil, errors.Wrapf(err, "%d.to", ti)
+			}
+		}
+
+		// Parse 'files' clause
+		patterns := []string{"**/*"}
+		if t.Files != nil && !t.Files.Dynamic {
+			patterns = t.Files.Static
+		} else if t.Files != nil && t.Files.Dynamic {
+			patternsExpr, err := expressionstcl.EvalExpression(t.Files.Expression, machines...)
+			if err != nil {
+				return nil, errors.Wrapf(err, "%d.files", ti)
+			}
+			patternsList, err := patternsExpr.Static().SliceValue()
+			if err != nil {
+				return nil, errors.Wrapf(err, "%d.files", ti)
+			}
+			patterns = make([]string, len(patternsList))
+			for pi, p := range patternsList {
+				if s, ok := p.(string); ok {
+					patterns[pi] = s
+				} else {
+					p, err := json.Marshal(s)
+					if err != nil {
+						return nil, errors.Wrapf(err, "%d.files.%d", ti, pi)
+					}
+					patterns[pi] = string(p)
+				}
+			}
+		}
+
+		req := transferSrv.Request(to)
+		result = append(result, fmt.Sprintf("%s:%s=%s", from, strings.Join(patterns, ","), req.Url))
+	}
+
+	return &testworkflowsv1.Step{
+		StepMeta: testworkflowsv1.StepMeta{
+			Name:      "Save the files",
+			Condition: "always",
+		},
+		StepOperations: testworkflowsv1.StepOperations{
+			Run: &testworkflowsv1.StepRun{
+				ContainerConfig: testworkflowsv1.ContainerConfig{
+					Image:           env.Config().Images.Toolkit,
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Command:         common.Ptr([]string{"/toolkit", "transfer"}),
+					Env: []corev1.EnvVar{
+						{Name: "TK_NS", Value: env.Namespace()},
+						{Name: "TK_REF", Value: env.Ref()},
+					},
+					Args: &result,
+				},
+			},
+		},
+	}, nil
 }

@@ -23,7 +23,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
@@ -33,7 +32,6 @@ import (
 	common2 "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/transfer"
-	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
@@ -142,74 +140,18 @@ func NewParallelCmd() *cobra.Command {
 				// Clone the spec
 				spec := parallel.DeepCopy()
 				err = expressionstcl.Simplify(&spec, machines...)
-				ui.ExitOnError(fmt.Sprintf("%d: error:", i), err)
+				ui.ExitOnError(fmt.Sprintf("%d: error", i), err)
 
 				// Prepare the transfer
 				tarballs, err := common2.ProcessTransfer(transferSrv, spec.Transfer, machines...)
-				ui.ExitOnError(fmt.Sprintf("%d: error:", i), err)
+				ui.ExitOnError(fmt.Sprintf("%d: error: transfer", i), err)
 				spec.Content.Tarball = append(spec.Content.Tarball, tarballs...)
 
 				// Prepare the fetch
-				fetch := make([]string, 0, len(spec.Fetch))
-				for ti, t := range spec.Fetch {
-					// Parse 'from' clause
-					from, err := expressionstcl.EvalTemplate(t.From, machines...)
-					ui.ExitOnError(fmt.Sprintf("%d: fetch.%d.from", i, ti), err)
-
-					// Parse 'to' clause
-					to := from
-					if t.To != "" {
-						to, err = expressionstcl.EvalTemplate(t.To, machines...)
-						ui.ExitOnError(fmt.Sprintf("%d: fetch.%d.to", i, ti), err)
-					}
-
-					// Parse 'files' clause
-					patterns := []string{"**/*"}
-					if t.Files != nil && !t.Files.Dynamic {
-						patterns = t.Files.Static
-					} else if t.Files != nil && t.Files.Dynamic {
-						patternsExpr, err := expressionstcl.EvalExpression(t.Files.Expression, machines...)
-						ui.ExitOnError(fmt.Sprintf("%d: fetch.%d.files", i, ti), err)
-						patternsList, err := patternsExpr.Static().SliceValue()
-						ui.ExitOnError(fmt.Sprintf("%d: fetch.%d.files", i, ti), err)
-						patterns = make([]string, len(patternsList))
-						for pi, p := range patternsList {
-							if s, ok := p.(string); ok {
-								patterns[pi] = s
-							} else {
-								p, err := json.Marshal(s)
-								ui.ExitOnError(fmt.Sprintf("%d: fetch.%d.files.%d", i, ti, pi), err)
-								patterns[pi] = string(p)
-							}
-						}
-					}
-
-					req := transferSrv.Request(to)
-					ui.ExitOnError(fmt.Sprintf("%d: fetch.%d", i, ti), err)
-					fetch = append(fetch, fmt.Sprintf("%s:%s=%s", from, strings.Join(patterns, ","), req.Url))
-				}
-
-				if len(fetch) > 0 {
-					spec.After = append(spec.After, testworkflowsv1.Step{
-						StepMeta: testworkflowsv1.StepMeta{
-							Name:      "Save the files",
-							Condition: "always",
-						},
-						StepOperations: testworkflowsv1.StepOperations{
-							Run: &testworkflowsv1.StepRun{
-								ContainerConfig: testworkflowsv1.ContainerConfig{
-									Image:           env.Config().Images.Toolkit,
-									ImagePullPolicy: corev1.PullIfNotPresent,
-									Command:         common.Ptr([]string{"/toolkit", "transfer"}),
-									Env: []corev1.EnvVar{
-										{Name: "TK_NS", Value: env.Namespace()},
-										{Name: "TK_REF", Value: env.Ref()},
-									},
-									Args: &fetch,
-								},
-							},
-						},
-					})
+				fetchStep, err := common2.ProcessFetch(transferSrv, spec.Fetch, machines...)
+				ui.ExitOnError(fmt.Sprintf("%d: error: fetch", i), err)
+				if fetchStep != nil {
+					spec.After = append(spec.After, *fetchStep)
 				}
 
 				// Prepare the workflow to run
