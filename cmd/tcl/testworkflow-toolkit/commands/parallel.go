@@ -50,6 +50,11 @@ type ParallelStatus struct {
 	Result      *testkube.TestWorkflowResult     `json:"result,omitempty"`
 }
 
+const (
+	DefaultParallelism = 1000
+	ControllerTimeout  = 120 * time.Second
+)
+
 func NewParallelCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "parallel <spec>",
@@ -128,7 +133,7 @@ func NewParallelCmd() *cobra.Command {
 			// Print information
 			parallelism := int64(parallel.Parallelism)
 			if parallelism <= 0 {
-				parallelism = 1000
+				parallelism = DefaultParallelism
 			}
 			fmt.Println(params.String(parallelism))
 
@@ -177,8 +182,7 @@ func NewParallelCmd() *cobra.Command {
 
 			// Validate if there is anything to run
 			if len(specs) == 0 {
-				fmt.Printf("nothing to run\n")
-				os.Exit(0)
+				ui.SuccessAndExit("nothing to run")
 			}
 
 			// Send initial output
@@ -233,7 +237,7 @@ func NewParallelCmd() *cobra.Command {
 					reader, writer := io.Pipe()
 					filePath := fmt.Sprintf("logs/%d.log", index)
 					ctrl, err := testworkflowcontroller.New(context.Background(), clientSet, env.Namespace(), id, scheduledAt, testworkflowcontroller.ControllerOptions{
-						Timeout: 120 * time.Second,
+						Timeout: ControllerTimeout,
 					})
 					if err == nil {
 						go func() {
@@ -296,7 +300,7 @@ func NewParallelCmd() *cobra.Command {
 				// Control the execution
 				// TODO: Consider aggregated controller to limit number of watchers
 				ctrl, err := testworkflowcontroller.New(context.Background(), clientSet, env.Namespace(), id, scheduledAt, testworkflowcontroller.ControllerOptions{
-					Timeout: 120 * time.Second,
+					Timeout: ControllerTimeout,
 				})
 				if err != nil {
 					fmt.Printf("%s: error: failed to deploy job: %s\n", common2.InstanceLabel("worker", index, params.Count), err.Error())
