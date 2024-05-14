@@ -23,7 +23,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	initconstants "github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
@@ -274,23 +273,9 @@ func NewParallelCmd() *cobra.Command {
 				}()
 
 				// Deploy the resources
-				for _, item := range bundle.Secrets {
-					_, err = clientSet.CoreV1().Secrets(env.Namespace()).Create(context.Background(), &item, metav1.CreateOptions{})
-					if err != nil {
-						fmt.Printf("%s: failed to deploy secrets: %s\n", common2.InstanceLabel("worker", index, params.Count), err.Error())
-						return false
-					}
-				}
-				for _, item := range bundle.ConfigMaps {
-					_, err = clientSet.CoreV1().ConfigMaps(env.Namespace()).Create(context.Background(), &item, metav1.CreateOptions{})
-					if err != nil {
-						fmt.Printf("%s: failed to deploy config maps: %s\n", common2.InstanceLabel("worker", index, params.Count), err.Error())
-						return false
-					}
-				}
-				_, err = clientSet.BatchV1().Jobs(env.Namespace()).Create(context.Background(), &bundle.Job, metav1.CreateOptions{})
+				err = bundle.Deploy(context.Background(), clientSet, env.Namespace())
 				if err != nil {
-					fmt.Printf("%s: failed to deploy job: %s\n", common2.InstanceLabel("worker", index, params.Count), err.Error())
+					fmt.Printf("%s: %s\n", common2.InstanceLabel("worker", index, params.Count), err.Error())
 					return false
 				}
 
