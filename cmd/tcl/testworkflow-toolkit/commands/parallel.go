@@ -31,6 +31,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/artifacts"
 	common2 "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
@@ -148,12 +149,12 @@ func NewParallelCmd() *cobra.Command {
 				ui.ExitOnError(fmt.Sprintf("%d: error", i), err)
 
 				// Prepare the transfer
-				tarballs, err := common2.ProcessTransfer(transferSrv, spec.Transfer, machines...)
+				tarballs, err := spawn.ProcessTransfer(transferSrv, spec.Transfer, machines...)
 				ui.ExitOnError(fmt.Sprintf("%d: error: transfer", i), err)
 				spec.Content.Tarball = append(spec.Content.Tarball, tarballs...)
 
 				// Prepare the fetch
-				fetchStep, err := common2.ProcessFetch(transferSrv, spec.Fetch, machines...)
+				fetchStep, err := spawn.ProcessFetch(transferSrv, spec.Fetch, machines...)
 				ui.ExitOnError(fmt.Sprintf("%d: error: fetch", i), err)
 				if fetchStep != nil {
 					spec.After = append(spec.After, *fetchStep)
