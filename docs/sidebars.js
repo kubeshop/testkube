@@ -177,6 +177,7 @@ const sidebars = {
         },
         "articles/creating-first-test",
         "articles/cd-events",
+        "articles/k8s-events",
         "articles/slack-integration",
         "articles/generate-test-crds",
         "articles/logging",

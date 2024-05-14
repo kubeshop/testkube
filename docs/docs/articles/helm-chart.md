@@ -125,6 +125,7 @@ The following Helm defaults are used in the `testkube` chart:
 | testkube-api.enabledExecutors          | yes         | ""                                   |
 | testkube-api.disableSecretCreation     | yes         | false                                | [Learn more](./secrets-disable-creation.md) |
 | testkube-api.defaultStorageClassName   | yes         | ""                                   |
+| testkube-api.enableK8sEvents           | yes         | true                                 |
 
 > For more configuration parameters of a `MongoDB` chart please visit:
 > <https://github.com/bitnami/charts/tree/master/bitnami/mongodb#parameters>
