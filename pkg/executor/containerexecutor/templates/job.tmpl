@@ -26,6 +26,8 @@ spec:
         env:
           - name: SSL_CERT_DIR
             value: /etc/testkube/certs
+          - name: GIT_SSL_CAPATH
+            value: /etc/testkube/certs
         {{- end }}
         volumeMounts:
         - name: data-volume
@@ -98,6 +100,8 @@ spec:
         {{- if .RunnerCustomCASecret }}
         env:
           - name: SSL_CERT_DIR
+            value: /etc/testkube/certs
+          - name: GIT_SSL_CAPATH
             value: /etc/testkube/certs
         {{- end }}
         volumeMounts:
