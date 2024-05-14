@@ -216,7 +216,8 @@ func NewParallelCmd() *cobra.Command {
 					return false
 				}
 
-				// Compute the namespace where it's deployed to
+				// Compute the bundle instructions
+				sig := testworkflowprocessor.MapSignatureListToInternal(bundle.Signature)
 				namespace := bundle.Job.Namespace
 				if namespace == "" {
 					namespace = env.Namespace()
@@ -250,7 +251,6 @@ func NewParallelCmd() *cobra.Command {
 				}
 
 				// Inform about the step structure
-				sig := testworkflowprocessor.MapSignatureListToInternal(bundle.Signature)
 				data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Signature: sig})
 
 				// Control the execution
