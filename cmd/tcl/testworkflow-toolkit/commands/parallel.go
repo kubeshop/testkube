@@ -128,29 +128,11 @@ func NewParallelCmd() *cobra.Command {
 			}
 
 			// Print information
-			infos := make([]string, 0)
-			if params.MatrixCount > 1 {
-				infos = append(infos, fmt.Sprintf("%d combinations", params.MatrixCount))
-			}
-			if params.ShardCount > 1 {
-				infos = append(infos, fmt.Sprintf("sharded %d times", params.ShardCount))
-			}
 			parallelism := int64(parallel.Parallelism)
 			if parallelism <= 0 {
 				parallelism = 1000
 			}
-			if params.Count > 1 {
-				if parallelism < params.Count {
-					infos = append(infos, fmt.Sprintf("parallel: %d", parallelism))
-				} else if parallelism >= params.Count {
-					infos = append(infos, fmt.Sprintf("all in parallel"))
-				}
-			}
-			if params.Count == 1 {
-				fmt.Printf("1 instance requested\n")
-			} else {
-				fmt.Printf("%d instances requested: %s\n", params.Count, strings.Join(infos, ", "))
-			}
+			fmt.Println(params.String(parallelism))
 
 			// Analyze instances to run
 			specs := make([]testworkflowsv1.TestWorkflowSpec, params.Count)
