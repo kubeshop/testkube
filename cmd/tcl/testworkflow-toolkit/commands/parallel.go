@@ -16,7 +16,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -199,7 +198,7 @@ func NewParallelCmd() *cobra.Command {
 				err    error
 			}
 			updates := make(chan Update, 100)
-			controllers := map[int64]testworkflowcontroller.Controller{}
+			registry := spawn.NewRegistry(clientSet)
 			run := func(index int64, spec *testworkflowsv1.TestWorkflowSpec) bool {
 				log := spawn.CreateLogger("worker", descriptions[index], index, params.Count)
 				id, machine := spawn.CreateExecutionMachine(index)
@@ -261,7 +260,7 @@ func NewParallelCmd() *cobra.Command {
 					log("error", "failed to connect to the job", err.Error())
 					return false
 				}
-				controllers[index] = ctrl
+				registry.Set(index, ctrl)
 				ctx, ctxCancel := context.WithCancel(context.Background())
 				log("created")
 
@@ -315,43 +314,25 @@ func NewParallelCmd() *cobra.Command {
 
 			// Orchestrate resume
 			go func() {
-				statuses := map[int64]Update{}
 				for update := range updates {
-					statuses[update.index] = update
+					if update.result != nil {
+						registry.SetStatus(update.index, update.result.Status)
+					}
 
 					// Delete obsolete data
 					if update.done || update.err != nil {
-						if _, ok := controllers[update.index]; ok {
-							controllers[update.index].StopController()
-						}
-						delete(controllers, update.index)
-						delete(statuses, update.index)
-					}
-
-					// Determine status
-					total := len(statuses)
-					paused := 0
-					for _, u := range statuses {
-						if u.result != nil && u.result.Status != nil && *u.result.Status == testkube.PAUSED_TestWorkflowStatus {
-							paused++
-						}
+						registry.Destroy(update.index)
 					}
 
 					// Resume all at once
-					if total != 0 && total == paused {
+					if registry.Count() > 0 && registry.AllPaused() {
 						fmt.Println("resuming all workers")
-						var wg sync.WaitGroup
-						wg.Add(paused)
-						for index := range statuses {
-							go func(index int64) {
-								err := controllers[index].Resume(context.Background())
-								if err != nil {
-									spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to resume", err.Error())
-								}
-								wg.Done()
-							}(index)
-						}
-						wg.Wait()
+						registry.EachAsync(func(index int64, ctrl testworkflowcontroller.Controller) {
+							err := ctrl.Resume(context.Background())
+							if err != nil {
+								spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to resume", err.Error())
+							}
+						})
 					}
 				}
 			}()
