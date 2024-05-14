@@ -267,7 +267,7 @@ func NewParallelCmd() *cobra.Command {
 				prevStatus := testkube.QUEUED_TestWorkflowStatus
 				prevStep := ""
 				scheduled := false
-				for v := range ctrl.Watch(ctx) {
+				for v := range ctrl.WatchLightweight(ctx) {
 					// Handle error
 					if v.Error != nil {
 						log("error", v.Error.Error())
@@ -275,35 +275,23 @@ func NewParallelCmd() *cobra.Command {
 					}
 
 					// Inform about the node assignment
-					if !scheduled {
-						nodeName, err := ctrl.NodeName(ctx)
+					if !scheduled && v.NodeName != "" {
 						if err == nil {
 							scheduled = true
-							log(fmt.Sprintf("assigned to %s node", ui.LightBlue(nodeName)))
+							log(fmt.Sprintf("assigned to %s node", ui.LightBlue(v.NodeName)))
 						}
 					}
 
 					// Handle result change
-					if v.Value.Result != nil {
-						updates <- Update{index: index, result: v.Value.Result}
-						current := v.Value.Result.Current(sig)
-						status := testkube.QUEUED_TestWorkflowStatus
-						if v.Value.Result.Status != nil {
-							status = *v.Value.Result.Status
-						}
-
-						if status != prevStatus {
-							log(string(status))
-						}
-
-						if v.Value.Result.IsFinished() {
-							data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: status, Result: v.Value.Result})
+					if v.Status != prevStatus || v.Current != prevStep {
+						updates <- Update{index: index, result: v.Result}
+						prevStep = v.Current
+						if v.Result.IsFinished() {
+							data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: v.Status, Result: v.Result})
 							ctxCancel()
-							return v.Value.Result.IsPassed()
-						} else if status != prevStatus || current != prevStep {
-							prevStatus = status
-							prevStep = current
-							data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: status, Current: current})
+							return v.Result.IsPassed()
+						} else {
+							data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: v.Status, Current: v.Current})
 						}
 					}
 				}

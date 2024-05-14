@@ -20,6 +20,7 @@ import (
 
 	initconstants "github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
@@ -39,12 +40,22 @@ type ControllerOptions struct {
 	Timeout time.Duration
 }
 
+type LightweightNotification struct {
+	Error    error
+	NodeName string
+	PodIP    string
+	Current  string
+	Status   testkube.TestWorkflowStatus
+	Result   *testkube.TestWorkflowResult
+}
+
 type Controller interface {
 	Abort(ctx context.Context) error
 	Pause(ctx context.Context) error
 	Resume(ctx context.Context) error
 	Cleanup(ctx context.Context) error
 	Watch(ctx context.Context) <-chan ChannelMessage[Notification]
+	WatchLightweight(ctx context.Context) <-chan LightweightNotification
 	Logs(ctx context.Context) io.Reader
 	NodeName(ctx context.Context) (string, error)
 	PodIP(ctx context.Context) (string, error)
@@ -217,6 +228,47 @@ func (c *controller) Watch(parentCtx context.Context) <-chan ChannelMessage[Noti
 		return v.Channel()
 	}
 	return w.Channel()
+}
+
+// TODO: Make it actually light
+func (c *controller) WatchLightweight(parentCtx context.Context) <-chan LightweightNotification {
+	prevCurrent := ""
+	prevNodeName := ""
+	prevPodIP := ""
+	prevStatus := testkube.QUEUED_TestWorkflowStatus
+	sig := testworkflowprocessor.MapSignatureListToInternal(c.signature)
+	ch := make(chan LightweightNotification)
+	go func() {
+		defer close(ch)
+		for v := range c.Watch(parentCtx) {
+			if v.Error != nil {
+				ch <- LightweightNotification{Error: v.Error}
+				continue
+			}
+
+			nodeName, _ := c.NodeName(parentCtx)
+			podIP, _ := c.PodIP(parentCtx)
+			current := prevCurrent
+			status := prevStatus
+			if v.Value.Result != nil {
+				if v.Value.Result.Status != nil {
+					status = *v.Value.Result.Status
+				} else {
+					status = testkube.QUEUED_TestWorkflowStatus
+				}
+				current = v.Value.Result.Current(sig)
+			}
+
+			if nodeName != prevNodeName || podIP != prevPodIP || prevStatus != status || prevCurrent != current {
+				prevNodeName = nodeName
+				prevPodIP = podIP
+				prevStatus = status
+				prevCurrent = current
+				ch <- LightweightNotification{NodeName: nodeName, PodIP: podIP, Status: status, Current: current, Result: v.Value.Result}
+			}
+		}
+	}()
+	return ch
 }
 
 func (c *controller) Logs(parentCtx context.Context) io.Reader {
