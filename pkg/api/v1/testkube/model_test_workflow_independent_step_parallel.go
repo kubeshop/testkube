@@ -43,6 +43,7 @@ type TestWorkflowIndependentStepParallel struct {
 	Fetch     []TestWorkflowStepParallelFetch        `json:"fetch,omitempty"`
 	Config    map[string]TestWorkflowParameterSchema `json:"config,omitempty"`
 	Content   *TestWorkflowContent                   `json:"content,omitempty"`
+	Services  map[string]TestWorkflowServiceSpec     `json:"services,omitempty"`
 	Container *TestWorkflowContainerConfig           `json:"container,omitempty"`
 	Job       *TestWorkflowJobConfig                 `json:"job,omitempty"`
 	Pod       *TestWorkflowPodConfig                 `json:"pod,omitempty"`

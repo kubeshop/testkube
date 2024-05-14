@@ -363,6 +363,7 @@ func ConvertIndependentStepParallelToStepParallel(step testworkflowsv1.Independe
 func ConvertIndependentStepToStep(step testworkflowsv1.IndependentStep) (res testworkflowsv1.Step) {
 	res.StepMeta = step.StepMeta
 	res.StepControl = step.StepControl
+	res.Services = step.Services
 	res.StepSource = step.StepSource
 	res.StepDefaults = step.StepDefaults
 	res.StepOperations = step.StepOperations

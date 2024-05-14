@@ -61,6 +61,7 @@ func injectTemplateToSpec(spec *testworkflowsv1.TestWorkflowSpec, template testw
 
 	// Apply basic configuration
 	spec.Content = MergeContent(template.Spec.Content, spec.Content)
+	spec.Services = MergeMap(template.Spec.Services, spec.Services)
 	spec.Container = MergeContainerConfig(template.Spec.Container, spec.Container)
 
 	// Include the steps from the template
@@ -87,6 +88,7 @@ func InjectStepTemplate(step *testworkflowsv1.Step, template testworkflowsv1.Tes
 
 	// Apply basic configuration
 	step.Content = MergeContent(template.Spec.Content, step.Content)
+	step.Services = MergeMap(template.Spec.Services, step.Services)
 	step.Container = MergeContainerConfig(template.Spec.Container, step.Container)
 
 	// Fast-track when the template doesn't contain any steps to run
