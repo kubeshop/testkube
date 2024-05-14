@@ -58,7 +58,7 @@ func withAddressGetter(addressGetter addressGetterFn) watcherOpts {
 	}
 }
 
-func withName(name string) watcherOpts {
+func withNotEmptyName(name string) watcherOpts {
 	return func(w *watcherEvent) {
 		if name != "" {
 			w.name = name
