@@ -185,7 +185,6 @@ func NewParallelCmd() *cobra.Command {
 			}
 
 			// Load Kubernetes client and image inspector
-			clientSet := env.Kubernetes()
 			inspector := env.ImageInspector()
 			storage := artifacts.InternalStorage()
 
@@ -198,8 +197,9 @@ func NewParallelCmd() *cobra.Command {
 				err    error
 			}
 			updates := make(chan Update, 100)
-			registry := spawn.NewRegistry(clientSet)
+			registry := spawn.NewRegistry()
 			run := func(index int64, spec *testworkflowsv1.TestWorkflowSpec) bool {
+				clientSet := env.Kubernetes()
 				log := spawn.CreateLogger("worker", descriptions[index], index, params.Count)
 				id, machine := spawn.CreateExecutionMachine(index)
 

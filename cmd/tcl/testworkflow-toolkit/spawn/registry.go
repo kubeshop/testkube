@@ -12,7 +12,6 @@ import (
 	"sync"
 
 	"golang.org/x/exp/maps"
-	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
@@ -21,13 +20,11 @@ import (
 type registry struct {
 	controllers map[int64]testworkflowcontroller.Controller
 	statuses    map[int64]testkube.TestWorkflowStatus
-	clientSet   kubernetes.Interface
 	mu          sync.RWMutex
 }
 
-func NewRegistry(clientSet kubernetes.Interface) *registry {
+func NewRegistry() *registry {
 	return &registry{
-		clientSet:   clientSet,
 		controllers: make(map[int64]testworkflowcontroller.Controller),
 		statuses:    make(map[int64]testkube.TestWorkflowStatus),
 	}
