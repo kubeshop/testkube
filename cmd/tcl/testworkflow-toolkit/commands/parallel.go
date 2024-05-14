@@ -228,9 +228,15 @@ func NewParallelCmd() *cobra.Command {
 					return false
 				}
 
+				// Compute the namespace where it's deployed to
+				namespace := bundle.Job.Namespace
+				if namespace == "" {
+					namespace = env.Namespace()
+				}
+
 				defer func() {
 					// Save logs
-					logsFilePath, err := spawn.SaveLogs(context.Background(), clientSet, storage, env.Namespace(), id, index)
+					logsFilePath, err := spawn.SaveLogs(context.Background(), clientSet, storage, namespace, id, index)
 					if err == nil {
 						data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Logs: storage.FullPath(logsFilePath)})
 						fmt.Printf("%s: saved logs\n", workerLabel)
@@ -239,7 +245,7 @@ func NewParallelCmd() *cobra.Command {
 					}
 
 					// Clean up
-					err = testworkflowcontroller.Cleanup(context.Background(), clientSet, env.Namespace(), id)
+					err = testworkflowcontroller.Cleanup(context.Background(), clientSet, namespace, id)
 					if err == nil {
 						fmt.Printf("%s: cleaned resources\n", workerLabel)
 					} else {
@@ -249,7 +255,7 @@ func NewParallelCmd() *cobra.Command {
 				}()
 
 				// Deploy the resources
-				err = bundle.Deploy(context.Background(), clientSet, env.Namespace())
+				err = bundle.Deploy(context.Background(), clientSet, namespace)
 				if err != nil {
 					fmt.Printf("%s: %s\n", workerLabel, err.Error())
 					return false
@@ -261,7 +267,7 @@ func NewParallelCmd() *cobra.Command {
 
 				// Control the execution
 				// TODO: Consider aggregated controller to limit number of watchers
-				ctrl, err := testworkflowcontroller.New(context.Background(), clientSet, env.Namespace(), id, scheduledAt, testworkflowcontroller.ControllerOptions{
+				ctrl, err := testworkflowcontroller.New(context.Background(), clientSet, namespace, id, scheduledAt, testworkflowcontroller.ControllerOptions{
 					Timeout: spawn.ControllerTimeout,
 				})
 				if err != nil {
