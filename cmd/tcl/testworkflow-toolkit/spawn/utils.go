@@ -21,6 +21,7 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/artifacts"
+	common2 "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
@@ -169,4 +170,14 @@ func SaveLogs(ctx context.Context, clientSet kubernetes.Interface, storage artif
 		err = storage.SaveStream(filePath, ctrl.Logs(ctx))
 	}
 	return filePath, err
+}
+
+func CreateLogger(name, description string, index, count int64) func(...string) {
+	label := common2.InstanceLabel(name, index, count)
+	if description != "" {
+		label += " (" + description + ")"
+	}
+	return func(s ...string) {
+		fmt.Printf("%s: %s\n", label, strings.Join(s, ": "))
+	}
 }

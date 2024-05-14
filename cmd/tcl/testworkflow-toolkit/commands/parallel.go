@@ -202,7 +202,7 @@ func NewParallelCmd() *cobra.Command {
 			updates := make(chan Update, 100)
 			controllers := map[int64]testworkflowcontroller.Controller{}
 			run := func(index int64, spec *testworkflowsv1.TestWorkflowSpec) bool {
-				workerLabel := common2.InstanceLabel("worker", index, params.Count)
+				log := spawn.CreateLogger("worker", descriptions[index], index, params.Count)
 				id := fmt.Sprintf("%s-%d", env.ExecutionId(), index)
 				fsPrefix := fmt.Sprintf("%s/%d", env.Ref(), index+1)
 				if env.Config().Execution.FSPrefix != "" {
@@ -239,17 +239,17 @@ func NewParallelCmd() *cobra.Command {
 					logsFilePath, err := spawn.SaveLogs(context.Background(), clientSet, storage, namespace, id, index)
 					if err == nil {
 						data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Logs: storage.FullPath(logsFilePath)})
-						fmt.Printf("%s: saved logs\n", workerLabel)
+						log("saved logs")
 					} else {
-						fmt.Printf("%s: warning: problem saving the logs: %s\n", workerLabel, err.Error())
+						log("warning", "problem saving the logs", err.Error())
 					}
 
 					// Clean up
 					err = testworkflowcontroller.Cleanup(context.Background(), clientSet, namespace, id)
 					if err == nil {
-						fmt.Printf("%s: cleaned resources\n", workerLabel)
+						log("cleaned resources")
 					} else {
-						fmt.Printf("%s: warning: problem cleaning up resources: %s\n", workerLabel, err.Error())
+						log("warning", "problem cleaning up resources", err.Error())
 					}
 					updates <- Update{index: index, done: true, err: err}
 				}()
@@ -257,7 +257,7 @@ func NewParallelCmd() *cobra.Command {
 				// Deploy the resources
 				err = bundle.Deploy(context.Background(), clientSet, namespace)
 				if err != nil {
-					fmt.Printf("%s: %s\n", workerLabel, err.Error())
+					log("problem deploying", err.Error())
 					return false
 				}
 
@@ -271,17 +271,12 @@ func NewParallelCmd() *cobra.Command {
 					Timeout: spawn.ControllerTimeout,
 				})
 				if err != nil {
-					fmt.Printf("%s: error: failed to deploy job: %s\n", workerLabel, err.Error())
+					log("error", "failed to connect to the job", err.Error())
 					return false
 				}
 				controllers[index] = ctrl
 				ctx, ctxCancel := context.WithCancel(context.Background())
-
-				if descriptions[index] != "" {
-					fmt.Printf("%s (%s): created\n", workerLabel, descriptions[index])
-				} else {
-					fmt.Printf("%s: created\n", workerLabel)
-				}
+				log("created")
 
 				prevStatus := testkube.QUEUED_TestWorkflowStatus
 				prevStep := ""
@@ -289,7 +284,7 @@ func NewParallelCmd() *cobra.Command {
 				for v := range ctrl.Watch(ctx) {
 					// Handle error
 					if v.Error != nil {
-						fmt.Printf("%s: error: %s\n", workerLabel, v.Error.Error())
+						log("error", v.Error.Error())
 						continue
 					}
 
@@ -298,7 +293,7 @@ func NewParallelCmd() *cobra.Command {
 						nodeName, err := ctrl.NodeName(ctx)
 						if err == nil {
 							scheduled = true
-							fmt.Printf("%s: assigned to %s node\n", workerLabel, ui.LightBlue(nodeName))
+							log(fmt.Sprintf("assigned to %s node", ui.LightBlue(nodeName)))
 						}
 					}
 
@@ -312,7 +307,7 @@ func NewParallelCmd() *cobra.Command {
 						}
 
 						if status != prevStatus {
-							fmt.Printf("%s: %s\n", workerLabel, status)
+							log(string(status))
 						}
 
 						if v.Value.Result.IsFinished() {
