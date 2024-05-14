@@ -13,6 +13,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
+// TestkubeEventPrefix is prefix for testkube event
+const TestkubeEventPrefix = "testkube-event-"
+
 // MapAPIToCRD maps OpenAPI Event spec To CRD Event
 func MapAPIToCRD(event testkube.Event, namespace string, eventTime time.Time) corev1.Event {
 	var action, reason, message string
@@ -78,7 +81,7 @@ func MapAPIToCRD(event testkube.Event, namespace string, eventTime time.Time) co
 
 	return corev1.Event{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("testkube-event-%s", event.Id),
+			Name:      fmt.Sprintf("%s%s", TestkubeEventPrefix, event.Id),
 			Namespace: namespace,
 			Labels:    labels,
 		},

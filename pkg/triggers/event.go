@@ -14,10 +14,13 @@ import (
 	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
 	"github.com/kubeshop/testkube/pkg/mapper/daemonsets"
 	"github.com/kubeshop/testkube/pkg/mapper/deployments"
+	"github.com/kubeshop/testkube/pkg/mapper/k8sevents"
 	"github.com/kubeshop/testkube/pkg/mapper/pods"
 	"github.com/kubeshop/testkube/pkg/mapper/services"
 	"github.com/kubeshop/testkube/pkg/mapper/statefulsets"
 )
+
+const testkubeEventCausePrefix = "event-"
 
 type conditionsGetterFn func() ([]testtriggersv1.TestTriggerCondition, error)
 
@@ -177,10 +180,10 @@ func getServiceAdress(ctx context.Context, clientset kubernetes.Interface, objec
 
 func getTestkubeEventNameAndCauses(event *corev1.Event) (string, []testtrigger.Cause) {
 	var causes []testtrigger.Cause
-	if strings.HasPrefix(event.Name, "testkube-test-") {
+	if !strings.HasPrefix(event.Name, k8sevents.TestkubeEventPrefix) {
 		return "", causes
 	}
 
-	causes = append(causes, testtrigger.Cause("event-"+event.Reason))
+	causes = append(causes, testtrigger.Cause(fmt.Sprintf("%s%s", testkubeEventCausePrefix, event.Reason)))
 	return event.InvolvedObject.Name, causes
 }
