@@ -161,6 +161,20 @@ func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParal
 	}, nil
 }
 
+func CreateExecutionMachine(index int64) (string, expressionstcl.Machine) {
+	id := fmt.Sprintf("%s-%d", env.ExecutionId(), index)
+	fsPrefix := fmt.Sprintf("%s/%d", env.Ref(), index+1)
+	if env.Config().Execution.FSPrefix != "" {
+		fsPrefix = fmt.Sprintf("%s/%s", env.Config().Execution.FSPrefix, fsPrefix)
+	}
+	return id, expressionstcl.NewMachine().
+		Register("execution.id", env.ExecutionId()).
+		Register("resource.rootId", env.ExecutionId()).
+		Register("resource.id", id).
+		Register("resource.fsPrefix", fsPrefix).
+		Register("workflow.name", env.WorkflowName())
+}
+
 func SaveLogs(ctx context.Context, clientSet kubernetes.Interface, storage artifacts.InternalArtifactStorage, namespace, id string, index int64) (string, error) {
 	filePath := fmt.Sprintf("logs/%d.log", index)
 	ctrl, err := testworkflowcontroller.New(ctx, clientSet, namespace, id, time.Time{}, testworkflowcontroller.ControllerOptions{

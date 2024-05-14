@@ -203,21 +203,9 @@ func NewParallelCmd() *cobra.Command {
 			controllers := map[int64]testworkflowcontroller.Controller{}
 			run := func(index int64, spec *testworkflowsv1.TestWorkflowSpec) bool {
 				log := spawn.CreateLogger("worker", descriptions[index], index, params.Count)
-				id := fmt.Sprintf("%s-%d", env.ExecutionId(), index)
-				fsPrefix := fmt.Sprintf("%s/%d", env.Ref(), index+1)
-				if env.Config().Execution.FSPrefix != "" {
-					fsPrefix = fmt.Sprintf("%s/%s", env.Config().Execution.FSPrefix, fsPrefix)
-				}
+				id, machine := spawn.CreateExecutionMachine(index)
 
 				updates <- Update{index: index}
-
-				// Build internal machine
-				machine := expressionstcl.NewMachine().
-					Register("execution.id", env.ExecutionId()).
-					Register("resource.rootId", env.ExecutionId()).
-					Register("resource.id", id).
-					Register("resource.fsPrefix", fsPrefix).
-					Register("workflow.name", env.WorkflowName())
 
 				// Build the resources bundle
 				scheduledAt := time.Now()
