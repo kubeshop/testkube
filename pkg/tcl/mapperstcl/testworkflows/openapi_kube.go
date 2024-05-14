@@ -1038,8 +1038,8 @@ func MapProbeAPIToKube(v testkube.Probe) corev1.Probe {
 	}
 }
 
-func MapServiceSpecAPIToKube(v testkube.TestWorkflowServiceSpec) testworkflowsv1.ServiceSpec {
-	return testworkflowsv1.ServiceSpec{
+func MapIndependentServiceSpecAPIToKube(v testkube.TestWorkflowIndependentServiceSpec) testworkflowsv1.IndependentServiceSpec {
+	return testworkflowsv1.IndependentServiceSpec{
 		StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
 			Count:    MapBoxedStringToIntOrString(v.Count),
 			MaxCount: MapBoxedStringToIntOrString(v.MaxCount),
@@ -1067,6 +1067,41 @@ func MapServiceSpecAPIToKube(v testkube.TestWorkflowServiceSpec) testworkflowsv1
 		Content:        common.MapPtr(v.Content, MapContentAPIToKube),
 		RestartPolicy:  testworkflowsv1.ServiceRestartPolicy(v.RestartPolicy),
 		ReadinessProbe: common.MapPtr(v.ReadinessProbe, MapProbeAPIToKube),
+	}
+}
+
+func MapServiceSpecAPIToKube(v testkube.TestWorkflowServiceSpec) testworkflowsv1.ServiceSpec {
+	return testworkflowsv1.ServiceSpec{
+		Use: common.MapSlice(v.Use, MapTemplateRefAPIToKube),
+		IndependentServiceSpec: testworkflowsv1.IndependentServiceSpec{
+			StepExecuteStrategy: testworkflowsv1.StepExecuteStrategy{
+				Count:    MapBoxedStringToIntOrString(v.Count),
+				MaxCount: MapBoxedStringToIntOrString(v.MaxCount),
+				Matrix:   MapDynamicListMapAPIToKube(v.Matrix),
+				Shards:   MapDynamicListMapAPIToKube(v.Shards),
+			},
+			Pod: common.MapPtr(v.Pod, MapPodConfigAPIToKube),
+			StepRun: testworkflowsv1.StepRun{
+				ContainerConfig: testworkflowsv1.ContainerConfig{
+					WorkingDir:      MapBoxedStringToString(v.WorkingDir),
+					Image:           v.Image,
+					ImagePullPolicy: MapImagePullPolicyAPIToKube(v.ImagePullPolicy),
+					Env:             common.MapSlice(v.Env, MapEnvVarAPIToKube),
+					EnvFrom:         common.MapSlice(v.EnvFrom, MapEnvFromSourceAPIToKube),
+					Command:         MapBoxedStringListToStringSlice(v.Command),
+					Args:            MapBoxedStringListToStringSlice(v.Args),
+					Resources:       common.MapPtr(v.Resources, MapResourcesAPIToKube),
+					SecurityContext: MapSecurityContextAPIToKube(v.SecurityContext),
+					VolumeMounts:    common.MapSlice(v.VolumeMounts, MapVolumeMountAPIToKube),
+				},
+				Shell: MapBoxedStringToString(v.Shell),
+			},
+			Timeout:        v.Timeout,
+			Transfer:       common.MapSlice(v.Transfer, MapStepParallelTransferAPIToKube),
+			Content:        common.MapPtr(v.Content, MapContentAPIToKube),
+			RestartPolicy:  testworkflowsv1.ServiceRestartPolicy(v.RestartPolicy),
+			ReadinessProbe: common.MapPtr(v.ReadinessProbe, MapProbeAPIToKube),
+		},
 	}
 }
 
@@ -1119,7 +1154,7 @@ func MapIndependentStepAPIToKube(v testkube.TestWorkflowIndependentStep) testwor
 			Retry:    common.MapPtr(v.Retry, MapRetryPolicyAPIToKube),
 			Timeout:  v.Timeout,
 		},
-		Services: common.MapMap(v.Services, MapServiceSpecAPIToKube),
+		Services: common.MapMap(v.Services, MapIndependentServiceSpecAPIToKube),
 		StepSource: testworkflowsv1.StepSource{
 			Content: common.MapPtr(v.Content, MapContentAPIToKube),
 		},
@@ -1145,16 +1180,16 @@ func MapSpecAPIToKube(v testkube.TestWorkflowSpec) testworkflowsv1.TestWorkflowS
 		TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 			Config:    common.MapMap(v.Config, MapParameterSchemaAPIToKube),
 			Content:   common.MapPtr(v.Content, MapContentAPIToKube),
-			Services:  common.MapMap(v.Services, MapServiceSpecAPIToKube),
 			Container: common.MapPtr(v.Container, MapContainerConfigAPIToKube),
 			Job:       common.MapPtr(v.Job, MapJobConfigAPIToKube),
 			Pod:       common.MapPtr(v.Pod, MapPodConfigAPIToKube),
 			Events:    common.MapSlice(v.Events, MapEventAPIToKube),
 		},
-		Use:   common.MapSlice(v.Use, MapTemplateRefAPIToKube),
-		Setup: common.MapSlice(v.Setup, MapStepAPIToKube),
-		Steps: common.MapSlice(v.Steps, MapStepAPIToKube),
-		After: common.MapSlice(v.After, MapStepAPIToKube),
+		Services: common.MapMap(v.Services, MapServiceSpecAPIToKube),
+		Use:      common.MapSlice(v.Use, MapTemplateRefAPIToKube),
+		Setup:    common.MapSlice(v.Setup, MapStepAPIToKube),
+		Steps:    common.MapSlice(v.Steps, MapStepAPIToKube),
+		After:    common.MapSlice(v.After, MapStepAPIToKube),
 	}
 }
 
@@ -1163,15 +1198,15 @@ func MapTemplateSpecAPIToKube(v testkube.TestWorkflowTemplateSpec) testworkflows
 		TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 			Config:    common.MapMap(v.Config, MapParameterSchemaAPIToKube),
 			Content:   common.MapPtr(v.Content, MapContentAPIToKube),
-			Services:  common.MapMap(v.Services, MapServiceSpecAPIToKube),
 			Container: common.MapPtr(v.Container, MapContainerConfigAPIToKube),
 			Job:       common.MapPtr(v.Job, MapJobConfigAPIToKube),
 			Pod:       common.MapPtr(v.Pod, MapPodConfigAPIToKube),
 			Events:    common.MapSlice(v.Events, MapEventAPIToKube),
 		},
-		Setup: common.MapSlice(v.Setup, MapIndependentStepAPIToKube),
-		Steps: common.MapSlice(v.Steps, MapIndependentStepAPIToKube),
-		After: common.MapSlice(v.After, MapIndependentStepAPIToKube),
+		Services: common.MapMap(v.Services, MapIndependentServiceSpecAPIToKube),
+		Setup:    common.MapSlice(v.Setup, MapIndependentStepAPIToKube),
+		Steps:    common.MapSlice(v.Steps, MapIndependentStepAPIToKube),
+		After:    common.MapSlice(v.After, MapIndependentStepAPIToKube),
 	}
 }
 

@@ -61,7 +61,7 @@ func injectTemplateToSpec(spec *testworkflowsv1.TestWorkflowSpec, template testw
 
 	// Apply basic configuration
 	spec.Content = MergeContent(template.Spec.Content, spec.Content)
-	spec.Services = MergeMap(template.Spec.Services, spec.Services)
+	spec.Services = MergeMap(common.MapMap(template.Spec.Services, ConvertIndependentServiceToService), spec.Services)
 	spec.Container = MergeContainerConfig(template.Spec.Container, spec.Container)
 
 	// Include the steps from the template
@@ -88,7 +88,7 @@ func InjectStepTemplate(step *testworkflowsv1.Step, template testworkflowsv1.Tes
 
 	// Apply basic configuration
 	step.Content = MergeContent(template.Spec.Content, step.Content)
-	step.Services = MergeMap(template.Spec.Services, step.Services)
+	step.Services = MergeMap(common.MapMap(template.Spec.Services, ConvertIndependentServiceToService), step.Services)
 	step.Container = MergeContainerConfig(template.Spec.Container, step.Container)
 
 	// Fast-track when the template doesn't contain any steps to run
@@ -104,6 +104,16 @@ func InjectStepTemplate(step *testworkflowsv1.Step, template testworkflowsv1.Tes
 	step.Setup = append(setup, step.Setup...)
 	step.Steps = append(steps, append(step.Steps, after...)...)
 
+	return nil
+}
+
+func InjectServiceTemplate(svc *testworkflowsv1.ServiceSpec, template testworkflowsv1.TestWorkflowTemplate) error {
+	if svc == nil {
+		return nil
+	}
+	svc.Pod = MergePodConfig(template.Spec.Pod, svc.Pod)
+	svc.Content = MergeContent(template.Spec.Content, svc.Content)
+	svc.ContainerConfig = *MergeContainerConfig(template.Spec.Container, &svc.ContainerConfig)
 	return nil
 }
 
@@ -142,6 +152,28 @@ func applyTemplatesToStep(step testworkflowsv1.Step, templates map[string]testwo
 		}
 
 		step.Template = nil
+	}
+
+	// Apply templates to the services
+	for name, svc := range step.Services {
+		for i, ref := range svc.Use {
+			tpl, err := getConfiguredTemplate(ref.Name, ref.Config, templates)
+			if err != nil {
+				return step, errors.Wrap(err, fmt.Sprintf("services[%s].use[%d]: resolving template", name, i))
+			}
+			if len(tpl.Spec.Setup) > 0 || len(tpl.Spec.Steps) > 0 || len(tpl.Spec.After) > 0 {
+				return step, fmt.Errorf("services[%s].use[%d]: steps in template used for the service are not supported", name, i)
+			}
+			if len(tpl.Spec.Services) > 0 {
+				return step, fmt.Errorf("services[%s].use[%d]: additional services in template used for the service are not supported", name, i)
+			}
+			err = InjectServiceTemplate(&svc, tpl)
+			if err != nil {
+				return step, errors.Wrap(err, fmt.Sprintf("services[%s].use[%d]: injecting template", name, i))
+			}
+		}
+		svc.Use = nil
+		step.Services[name] = svc
 	}
 
 	// Apply templates in the parallel steps
@@ -230,6 +262,28 @@ func applyTemplatesToSpec(spec *testworkflowsv1.TestWorkflowSpec, templates map[
 		}
 	}
 	spec.Use = nil
+
+	// Apply templates to the services
+	for name, svc := range spec.Services {
+		for i, ref := range svc.Use {
+			tpl, err := getConfiguredTemplate(ref.Name, ref.Config, templates)
+			if err != nil {
+				return errors.Wrap(err, fmt.Sprintf("services[%s].use[%d]: resolving template", name, i))
+			}
+			if len(tpl.Spec.Setup) > 0 || len(tpl.Spec.Steps) > 0 || len(tpl.Spec.After) > 0 {
+				return fmt.Errorf("services[%s].use[%d]: steps in template used for the service are not supported", name, i)
+			}
+			if len(tpl.Spec.Services) > 0 {
+				return fmt.Errorf("services[%s].use[%d]: additional services in template used for the service are not supported", name, i)
+			}
+			err = InjectServiceTemplate(&svc, tpl)
+			if err != nil {
+				return errors.Wrap(err, fmt.Sprintf("services[%s].use[%d]: injecting template", name, i))
+			}
+		}
+		svc.Use = nil
+		spec.Services[name] = svc
+	}
 
 	// Apply templates on the step level
 	for i := range spec.Setup {

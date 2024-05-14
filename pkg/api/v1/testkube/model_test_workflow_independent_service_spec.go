@@ -9,7 +9,7 @@
  */
 package testkube
 
-type TestWorkflowServiceSpec struct {
+type TestWorkflowIndependentServiceSpec struct {
 	WorkingDir *BoxedString `json:"workingDir,omitempty"`
 	// image to be used for the container
 	Image           string           `json:"image,omitempty"`
@@ -33,7 +33,6 @@ type TestWorkflowServiceSpec struct {
 	Pod            *TestWorkflowPodConfig             `json:"pod,omitempty"`
 	RestartPolicy  string                             `json:"restartPolicy,omitempty"`
 	ReadinessProbe *Probe                             `json:"readinessProbe,omitempty"`
-	Use            []TestWorkflowTemplateRef          `json:"use,omitempty"`
 	Count          *BoxedString                       `json:"count,omitempty"`
 	MaxCount       *BoxedString                       `json:"maxCount,omitempty"`
 	// matrix of parameters to spawn instances

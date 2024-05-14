@@ -980,12 +980,39 @@ func MapProbeKubeToAPI(v corev1.Probe) testkube.Probe {
 	}
 }
 
+func MapIndependentServiceSpecKubeToAPI(v testworkflowsv1.IndependentServiceSpec) testkube.TestWorkflowIndependentServiceSpec {
+	return testkube.TestWorkflowIndependentServiceSpec{
+		Count:           MapIntOrStringToBoxedString(v.Count),
+		MaxCount:        MapIntOrStringToBoxedString(v.MaxCount),
+		Matrix:          MapDynamicListMapKubeToAPI(v.Matrix),
+		Shards:          MapDynamicListMapKubeToAPI(v.Shards),
+		Pod:             common.MapPtr(v.Pod, MapPodConfigKubeToAPI),
+		WorkingDir:      MapStringToBoxedString(v.WorkingDir),
+		Image:           v.Image,
+		ImagePullPolicy: MapImagePullPolicyKubeToAPI(v.ImagePullPolicy),
+		Env:             common.MapSlice(v.Env, MapEnvVarKubeToAPI),
+		EnvFrom:         common.MapSlice(v.EnvFrom, MapEnvFromSourceKubeToAPI),
+		Command:         MapStringSliceToBoxedStringList(v.Command),
+		Args:            MapStringSliceToBoxedStringList(v.Args),
+		Shell:           MapStringToBoxedString(v.Shell),
+		Resources:       common.MapPtr(v.Resources, MapResourcesKubeToAPI),
+		SecurityContext: MapSecurityContextKubeToAPI(v.SecurityContext),
+		VolumeMounts:    common.MapSlice(v.VolumeMounts, MapVolumeMountKubeToAPI),
+		Timeout:         v.Timeout,
+		Transfer:        common.MapSlice(v.Transfer, MapStepParallelTransferKubeToAPI),
+		Content:         common.MapPtr(v.Content, MapContentKubeToAPI),
+		RestartPolicy:   string(v.RestartPolicy),
+		ReadinessProbe:  common.MapPtr(v.ReadinessProbe, MapProbeKubeToAPI),
+	}
+}
+
 func MapServiceSpecKubeToAPI(v testworkflowsv1.ServiceSpec) testkube.TestWorkflowServiceSpec {
 	return testkube.TestWorkflowServiceSpec{
 		Count:           MapIntOrStringToBoxedString(v.Count),
 		MaxCount:        MapIntOrStringToBoxedString(v.MaxCount),
 		Matrix:          MapDynamicListMapKubeToAPI(v.Matrix),
 		Shards:          MapDynamicListMapKubeToAPI(v.Shards),
+		Use:             common.MapSlice(v.Use, MapTemplateRefKubeToAPI),
 		Pod:             common.MapPtr(v.Pod, MapPodConfigKubeToAPI),
 		WorkingDir:      MapStringToBoxedString(v.WorkingDir),
 		Image:           v.Image,
@@ -1043,7 +1070,7 @@ func MapIndependentStepKubeToAPI(v testworkflowsv1.IndependentStep) testkube.Tes
 		Timeout:    v.Timeout,
 		Delay:      v.Delay,
 		Content:    common.MapPtr(v.Content, MapContentKubeToAPI),
-		Services:   common.MapMap(v.Services, MapServiceSpecKubeToAPI),
+		Services:   common.MapMap(v.Services, MapIndependentServiceSpecKubeToAPI),
 		Shell:      v.Shell,
 		Run:        common.MapPtr(v.Run, MapStepRunKubeToAPI),
 		WorkingDir: MapStringToBoxedString(v.WorkingDir),

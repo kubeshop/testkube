@@ -7942,7 +7942,7 @@ components:
             items:
               $ref: "#/components/schemas/TestWorkflowStepParallelFetch"
 
-    TestWorkflowServiceSpec:
+    TestWorkflowIndependentServiceSpec:
       type: object
       allOf:
       - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
@@ -7964,6 +7964,17 @@ components:
             type: string
           readinessProbe:
             $ref: "#/components/schemas/Probe"
+
+    TestWorkflowServiceSpec:
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
+      - $ref: "#/components/schemas/TestWorkflowIndependentServiceSpec"
+      - properties:
+          use:
+            type: array
+            items:
+              $ref: "#/components/schemas/TestWorkflowTemplateRef"
 
     TestWorkflowStepExecuteStrategy:
       type: object
@@ -8071,7 +8082,7 @@ components:
         services:
           type: object
           additionalProperties:
-            $ref: "#/components/schemas/TestWorkflowServiceSpec"
+            $ref: "#/components/schemas/TestWorkflowIndependentServiceSpec"
         container:
           $ref: "#/components/schemas/TestWorkflowContainerConfig"
         job:
@@ -8164,7 +8175,7 @@ components:
         services:
           type: object
           additionalProperties:
-            $ref: "#/components/schemas/TestWorkflowServiceSpec"
+            $ref: "#/components/schemas/TestWorkflowIndependentServiceSpec"
         shell:
           type: string
           description: script to run in a default shell for the container

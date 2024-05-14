@@ -40,15 +40,15 @@ type TestWorkflowIndependentStepParallel struct {
 	// list of files to send to parallel steps
 	Transfer []TestWorkflowStepParallelTransfer `json:"transfer,omitempty"`
 	// list of files to fetch from parallel steps
-	Fetch     []TestWorkflowStepParallelFetch        `json:"fetch,omitempty"`
-	Config    map[string]TestWorkflowParameterSchema `json:"config,omitempty"`
-	Content   *TestWorkflowContent                   `json:"content,omitempty"`
-	Services  map[string]TestWorkflowServiceSpec     `json:"services,omitempty"`
-	Container *TestWorkflowContainerConfig           `json:"container,omitempty"`
-	Job       *TestWorkflowJobConfig                 `json:"job,omitempty"`
-	Pod       *TestWorkflowPodConfig                 `json:"pod,omitempty"`
-	Setup     []TestWorkflowIndependentStep          `json:"setup,omitempty"`
-	Steps     []TestWorkflowIndependentStep          `json:"steps,omitempty"`
-	After     []TestWorkflowIndependentStep          `json:"after,omitempty"`
-	Events    []TestWorkflowEvent                    `json:"events,omitempty"`
+	Fetch     []TestWorkflowStepParallelFetch               `json:"fetch,omitempty"`
+	Config    map[string]TestWorkflowParameterSchema        `json:"config,omitempty"`
+	Content   *TestWorkflowContent                          `json:"content,omitempty"`
+	Services  map[string]TestWorkflowIndependentServiceSpec `json:"services,omitempty"`
+	Container *TestWorkflowContainerConfig                  `json:"container,omitempty"`
+	Job       *TestWorkflowJobConfig                        `json:"job,omitempty"`
+	Pod       *TestWorkflowPodConfig                        `json:"pod,omitempty"`
+	Setup     []TestWorkflowIndependentStep                 `json:"setup,omitempty"`
+	Steps     []TestWorkflowIndependentStep                 `json:"steps,omitempty"`
+	After     []TestWorkflowIndependentStep                 `json:"after,omitempty"`
+	Events    []TestWorkflowEvent                           `json:"events,omitempty"`
 }

@@ -341,6 +341,10 @@ func MergeMap[T comparable, U any](dst, include map[T]U) map[T]U {
 	return dst
 }
 
+func ConvertIndependentServiceToService(svc testworkflowsv1.IndependentServiceSpec) testworkflowsv1.ServiceSpec {
+	return testworkflowsv1.ServiceSpec{IndependentServiceSpec: svc}
+}
+
 func ConvertIndependentStepParallelToStepParallel(step testworkflowsv1.IndependentStepParallel) testworkflowsv1.StepParallel {
 	return testworkflowsv1.StepParallel{
 		Parallelism:         step.Parallelism,
@@ -363,7 +367,7 @@ func ConvertIndependentStepParallelToStepParallel(step testworkflowsv1.Independe
 func ConvertIndependentStepToStep(step testworkflowsv1.IndependentStep) (res testworkflowsv1.Step) {
 	res.StepMeta = step.StepMeta
 	res.StepControl = step.StepControl
-	res.Services = step.Services
+	res.Services = common.MapMap(step.Services, ConvertIndependentServiceToService)
 	res.StepSource = step.StepSource
 	res.StepDefaults = step.StepDefaults
 	res.StepOperations = step.StepOperations
