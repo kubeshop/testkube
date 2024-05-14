@@ -145,47 +145,9 @@ func NewParallelCmd() *cobra.Command {
 				ui.ExitOnError(fmt.Sprintf("%d: error:", i), err)
 
 				// Prepare the transfer
-				for ti, t := range spec.Transfer {
-					// Parse 'from' clause
-					from, err := expressionstcl.EvalTemplate(t.From, machines...)
-					ui.ExitOnError(fmt.Sprintf("%d: transfer.%d.from", i, ti), err)
-
-					// Parse 'to' clause
-					to := from
-					if t.To != "" {
-						to, err = expressionstcl.EvalTemplate(t.To, machines...)
-						ui.ExitOnError(fmt.Sprintf("%d: transfer.%d.to", i, ti), err)
-					}
-
-					// Parse 'files' clause
-					patterns := []string{"**/*"}
-					if t.Files != nil && !t.Files.Dynamic {
-						patterns = t.Files.Static
-					} else if t.Files != nil && t.Files.Dynamic {
-						patternsExpr, err := expressionstcl.EvalExpression(t.Files.Expression, machines...)
-						ui.ExitOnError(fmt.Sprintf("%d: transfer.%d.files", i, ti), err)
-						patternsList, err := patternsExpr.Static().SliceValue()
-						ui.ExitOnError(fmt.Sprintf("%d: transfer.%d.files", i, ti), err)
-						patterns = make([]string, len(patternsList))
-						for pi, p := range patternsList {
-							if s, ok := p.(string); ok {
-								patterns[pi] = s
-							} else {
-								p, err := json.Marshal(s)
-								ui.ExitOnError(fmt.Sprintf("%d: transfer.%d.files.%d", i, ti, pi), err)
-								patterns[pi] = string(p)
-							}
-						}
-					}
-
-					entry, err := transferSrv.Include(from, patterns)
-					ui.ExitOnError(fmt.Sprintf("%d: transfer.%d", i, ti), err)
-					spec.Content.Tarball = append(spec.Content.Tarball, testworkflowsv1.ContentTarball{
-						Url:   entry.Url,
-						Path:  to,
-						Mount: t.Mount,
-					})
-				}
+				tarballs, err := common2.ProcessTransfer(transferSrv, spec.Transfer, machines...)
+				ui.ExitOnError(fmt.Sprintf("%d: error:", i), err)
+				spec.Content.Tarball = append(spec.Content.Tarball, tarballs...)
 
 				// Prepare the fetch
 				fetch := make([]string, 0, len(spec.Fetch))
