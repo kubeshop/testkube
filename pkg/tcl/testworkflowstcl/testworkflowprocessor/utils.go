@@ -21,17 +21,18 @@ import (
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
-func AnnotateControlledBy(obj metav1.Object, testWorkflowId string) {
+func AnnotateControlledBy(obj metav1.Object, rootId, id string) {
 	labels := obj.GetLabels()
 	if labels == nil {
 		labels = map[string]string{}
 	}
-	labels[constants.ExecutionIdLabelName] = testWorkflowId
+	labels[constants.RootResourceIdLabelName] = rootId
+	labels[constants.ResourceIdLabelName] = id
 	obj.SetLabels(labels)
 
 	// Annotate Pod template in the Job
 	if v, ok := obj.(*batchv1.Job); ok {
-		AnnotateControlledBy(&v.Spec.Template, testWorkflowId)
+		AnnotateControlledBy(&v.Spec.Template, rootId, id)
 	}
 }
 
@@ -119,7 +120,8 @@ func buildKubernetesContainers(stage Stage, init *initProcess, machines ...expre
 		SetNegative(c.Negative()).
 		AddRetryPolicy(c.RetryPolicy(), c.Ref()).
 		SetCommand(cr.Command...).
-		SetArgs(cr.Args...)
+		SetArgs(cr.Args...).
+		SetWorkingDir(cr.WorkingDir)
 
 	for _, env := range cr.Env {
 		if strings.Contains(env.Value, "{{") {
@@ -133,6 +135,7 @@ func buildKubernetesContainers(stage Stage, init *initProcess, machines ...expre
 
 	cr.Command = init.Command()
 	cr.Args = init.Args()
+	cr.WorkingDir = ""
 
 	// Ensure the container will have proper access to FS
 	if cr.SecurityContext == nil {

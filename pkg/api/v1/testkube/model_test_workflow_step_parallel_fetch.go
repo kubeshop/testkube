@@ -9,8 +9,10 @@
  */
 package testkube
 
-// dynamic expression or static list of file patterns to pack
-type TestWorkflowTarballRequestFiles struct {
-	Static     []interface{} `json:"static,omitempty"`
-	Expression string        `json:"expression,omitempty"`
+type TestWorkflowStepParallelFetch struct {
+	// path to fetch files from
+	From string `json:"from"`
+	// path to save the files to
+	To    string                          `json:"to,omitempty"`
+	Files *TestWorkflowTarballFilePattern `json:"files,omitempty"`
 }

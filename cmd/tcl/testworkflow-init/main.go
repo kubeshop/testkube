@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"slices"
 	"strings"
 	"syscall"
@@ -87,6 +88,18 @@ func main() {
 			i--
 		case constants.ArgNegative, constants.ArgNegativeLong:
 			config["negative"] = os.Args[i+1]
+		case constants.ArgWorkingDir, constants.ArgWorkingDirLong:
+			wd, err := filepath.Abs(os.Args[i+1])
+			if err == nil {
+				_ = os.MkdirAll(wd, 0755)
+				err = os.Chdir(wd)
+			} else {
+				_ = os.MkdirAll(wd, 0755)
+				err = os.Chdir(os.Args[i+1])
+			}
+			if err != nil {
+				fmt.Printf("warning: error using %s as working director: %s\n", os.Args[i+1], err.Error())
+			}
 		case constants.ArgRetryCount:
 			config["retryCount"] = os.Args[i+1]
 		case constants.ArgRetryUntil:

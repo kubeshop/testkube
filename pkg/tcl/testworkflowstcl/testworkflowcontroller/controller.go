@@ -10,6 +10,7 @@ package testworkflowcontroller
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/pkg/errors"
@@ -17,6 +18,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
+	initconstants "github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
@@ -26,9 +30,24 @@ const (
 )
 
 var (
-	ErrJobAborted = errors.New("job was aborted")
-	ErrJobTimeout = errors.New("timeout retrieving job")
+	ErrJobAborted     = errors.New("job was aborted")
+	ErrJobTimeout     = errors.New("timeout retrieving job")
+	ErrNoIPAssigned   = errors.New("there is no IP assigned to this pod")
+	ErrNoNodeAssigned = errors.New("the pod is not assigned to a node yet")
 )
+
+type ControllerOptions struct {
+	Timeout time.Duration
+}
+
+type LightweightNotification struct {
+	Error    error
+	NodeName string
+	PodIP    string
+	Current  string
+	Status   testkube.TestWorkflowStatus
+	Result   *testkube.TestWorkflowResult
+}
 
 type Controller interface {
 	Abort(ctx context.Context) error
@@ -36,12 +55,21 @@ type Controller interface {
 	Resume(ctx context.Context) error
 	Cleanup(ctx context.Context) error
 	Watch(ctx context.Context) <-chan ChannelMessage[Notification]
+	WatchLightweight(ctx context.Context) <-chan LightweightNotification
+	Logs(ctx context.Context) io.Reader
+	NodeName(ctx context.Context) (string, error)
+	PodIP(ctx context.Context) (string, error)
 	StopController()
 }
 
-func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, id string, scheduledAt time.Time) (Controller, error) {
+func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, id string, scheduledAt time.Time, opts ...ControllerOptions) (Controller, error) {
 	// Get the initialization timeout
 	timeout := DefaultInitTimeout
+	for _, opt := range opts {
+		if opt.Timeout != 0 {
+			timeout = opt.Timeout
+		}
+	}
 
 	// Create local context for stopping all the processes
 	ctx, ctxCancel := context.WithCancel(parentCtx)
@@ -128,18 +156,44 @@ func (c *controller) Cleanup(ctx context.Context) error {
 	return Cleanup(ctx, c.clientSet, c.namespace, c.id)
 }
 
-func (c *controller) PodIP(ctx context.Context) (string, error) {
+func (c *controller) peekPod(ctx context.Context) (*corev1.Pod, error) {
 	v, ok := <-c.pod.PeekMessage(ctx)
 	if v.Error != nil {
-		return "", v.Error
+		return nil, v.Error
 	}
 	if !ok {
-		return "", context.Canceled
+		return nil, context.Canceled
 	}
-	if v.Value.Status.PodIP == "" {
-		return "", errors.New("there is no IP assigned to this pod")
+	if v.Value == nil {
+		return nil, errors.New("empty pod information")
 	}
-	return v.Value.Status.PodIP, nil
+	return v.Value, nil
+}
+
+func (c *controller) PodIP(ctx context.Context) (string, error) {
+	pod, err := c.peekPod(ctx)
+	if err != nil {
+		return "", err
+	}
+	if pod.Status.PodIP == "" {
+		return "", ErrNoIPAssigned
+	}
+	return pod.Status.PodIP, nil
+}
+
+func (c *controller) NodeName(ctx context.Context) (string, error) {
+	pod, err := c.peekPod(ctx)
+	if err != nil {
+		return "", err
+	}
+	nodeName := pod.Status.NominatedNodeName
+	if nodeName == "" {
+		nodeName = pod.Spec.NodeName
+	}
+	if nodeName == "" {
+		return "", ErrNoNodeAssigned
+	}
+	return nodeName, nil
 }
 
 func (c *controller) Pause(ctx context.Context) error {
@@ -174,4 +228,63 @@ func (c *controller) Watch(parentCtx context.Context) <-chan ChannelMessage[Noti
 		return v.Channel()
 	}
 	return w.Channel()
+}
+
+// TODO: Make it actually light
+func (c *controller) WatchLightweight(parentCtx context.Context) <-chan LightweightNotification {
+	prevCurrent := ""
+	prevNodeName := ""
+	prevPodIP := ""
+	prevStatus := testkube.QUEUED_TestWorkflowStatus
+	sig := testworkflowprocessor.MapSignatureListToInternal(c.signature)
+	ch := make(chan LightweightNotification)
+	go func() {
+		defer close(ch)
+		for v := range c.Watch(parentCtx) {
+			if v.Error != nil {
+				ch <- LightweightNotification{Error: v.Error}
+				continue
+			}
+
+			nodeName, _ := c.NodeName(parentCtx)
+			podIP, _ := c.PodIP(parentCtx)
+			current := prevCurrent
+			status := prevStatus
+			if v.Value.Result != nil {
+				if v.Value.Result.Status != nil {
+					status = *v.Value.Result.Status
+				} else {
+					status = testkube.QUEUED_TestWorkflowStatus
+				}
+				current = v.Value.Result.Current(sig)
+			}
+
+			if nodeName != prevNodeName || podIP != prevPodIP || prevStatus != status || prevCurrent != current {
+				prevNodeName = nodeName
+				prevPodIP = podIP
+				prevStatus = status
+				prevCurrent = current
+				ch <- LightweightNotification{NodeName: nodeName, PodIP: podIP, Status: status, Current: current, Result: v.Value.Result}
+			}
+		}
+	}()
+	return ch
+}
+
+func (c *controller) Logs(parentCtx context.Context) io.Reader {
+	reader, writer := io.Pipe()
+	go func() {
+		defer writer.Close()
+		ref := ""
+		for v := range c.Watch(parentCtx) {
+			if v.Error == nil && v.Value.Log != "" {
+				if ref != v.Value.Ref {
+					ref = v.Value.Ref
+					_, _ = writer.Write([]byte(data.SprintHint(ref, initconstants.InstructionStart)))
+				}
+				_, _ = writer.Write([]byte(v.Value.Log))
+			}
+		}
+	}()
+	return reader
 }

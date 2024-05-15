@@ -453,6 +453,20 @@ func (mr *MockContainerMockRecorder) SetWorkingDir(arg0 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWorkingDir", reflect.TypeOf((*MockContainer)(nil).SetWorkingDir), arg0)
 }
 
+// ToContainerConfig mocks base method.
+func (m *MockContainer) ToContainerConfig() v1.ContainerConfig {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ToContainerConfig")
+	ret0, _ := ret[0].(v1.ContainerConfig)
+	return ret0
+}
+
+// ToContainerConfig indicates an expected call of ToContainerConfig.
+func (mr *MockContainerMockRecorder) ToContainerConfig() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ToContainerConfig", reflect.TypeOf((*MockContainer)(nil).ToContainerConfig))
+}
+
 // ToKubernetesTemplate mocks base method.
 func (m *MockContainer) ToKubernetesTemplate() (v10.Container, error) {
 	m.ctrl.T.Helper()

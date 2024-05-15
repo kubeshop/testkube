@@ -24,6 +24,7 @@ import (
 
 type initProcess struct {
 	ref        string
+	workingDir string
 	init       []string
 	params     []string
 	retry      map[string]testworkflowsv1.RetryPolicy
@@ -83,6 +84,9 @@ func (p *initProcess) Command() []string {
 	}
 	if p.paused {
 		args = append(args, constants.ArgPaused)
+	}
+	if p.workingDir != "" {
+		args = append(args, constants.ArgWorkingDir, p.workingDir)
 	}
 	return append([]string{constants2.DefaultInitPath, p.ref}, append(args, constants.ArgSeparator)...)
 }
@@ -201,6 +205,11 @@ func (p *initProcess) SetPaused(paused bool) *initProcess {
 	return p
 }
 
+func (p *initProcess) SetWorkingDir(workingDir string) *initProcess {
+	p.workingDir = workingDir
+	return p
+}
+
 func (p *initProcess) Children(ref string) *initProcess {
 	return &initProcess{
 		ref:        ref,
@@ -209,6 +218,7 @@ func (p *initProcess) Children(ref string) *initProcess {
 		paused:     p.paused,
 		command:    p.command,
 		args:       p.args,
+		workingDir: p.workingDir,
 		init:       p.init,
 		envs:       p.envs,
 		results:    p.results,

@@ -149,3 +149,110 @@ spec:
   events:
   - cronjob:
       cron: "12 */4 * * *"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: distributed-k6-workflow-smoke
+  labels:
+    core-tests: workflows
+spec:
+  config:
+    vus: {type: integer, default: 1000}
+    duration: {type: string, default: '5s'}
+    workers: {type: integer, default: 5}
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/k6/executor-tests/k6-smoke-test.js
+  steps:
+  - name: Run test
+    parallel:
+      count: 'config.workers'
+      transfer:
+      - from: /data/repo
+      use:
+      - name: distribute/evenly
+      container:
+        workingDir: /data/repo/test/k6/executor-tests
+        resources:
+          requests:
+            cpu: 128m
+            memory: 128Mi
+        env:
+        - name: K6_SYSTEM_ENV
+          value: K6_SYSTEM_ENV_value
+      paused: true # synchronize running all workers
+      run:
+        image: grafana/k6:0.49.0
+        shell: |
+          k6 run k6-smoke-test.js \
+            -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value \
+            --vus {{ shellquote(config.vus) }} \
+            --duration {{ shellquote(config.duration) }} \
+            --execution-segment {{ index }}/{{ count }}:{{ index + 1 }}/{{ count }}
+  events:
+  - cronjob:
+      cron: "20 */4 * * *"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: distributed-k6-workflow-smoke-artifacts
+  labels:
+    core-tests: workflows
+spec:
+  config:
+    vus: {type: integer, default: 1000}
+    duration: {type: string, default: '5s'}
+    workers: {type: integer, default: 5}
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/k6/executor-tests/k6-smoke-test.js
+  steps:
+  - name: Run test
+    parallel:
+      count: 'config.workers'
+      transfer:
+      - from: /data/repo
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          requests:
+            cpu: 128m
+            memory: 128Mi
+      paused: true # synchronise running all workers
+      run:
+        image: grafana/k6:0.49.0
+        workingDir: /data/repo/test/k6/executor-tests
+        args:
+        - run
+        - k6-smoke-test.js
+        - -e
+        - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+        - --vus
+        - '{{ config.vus }}'
+        - --duration
+        - '{{ config.duration }}'
+        - --execution-segment
+        - '{{ index }}/{{ count }}:{{ index + 1 }}/{{ count }}'
+        env:
+        - name: K6_SYSTEM_ENV
+          value: K6_SYSTEM_ENV_value
+        - name: K6_WEB_DASHBOARD
+          value: "true"
+        - name: K6_WEB_DASHBOARD_EXPORT
+          value: "/data/k6-test-report.html"
+      artifacts:
+        workingDir: /data
+        paths:
+        - '*.html'
+  events:
+  - cronjob:
+      cron: "30 */4 * * *"

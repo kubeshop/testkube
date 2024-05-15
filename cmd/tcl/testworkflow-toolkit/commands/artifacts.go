@@ -149,6 +149,11 @@ func NewArtifactsCmd() *cobra.Command {
 				uploader = artifacts.NewDirectUploader(artifacts.WithParallelism(30), artifacts.DirectDetectMimetype)
 			}
 
+			// Isolate the files under specific prefix
+			if env.Config().Execution.FSPrefix != "" {
+				handlerOpts = append(handlerOpts, artifacts.WithPathPrefix(env.Config().Execution.FSPrefix))
+			}
+
 			handler := artifacts.NewHandler(uploader, processor, handlerOpts...)
 
 			run(handler, walker, os.DirFS("/"))

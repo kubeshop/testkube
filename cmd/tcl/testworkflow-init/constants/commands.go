@@ -25,6 +25,8 @@ const (
 	ArgPaused         = "-p"
 	ArgPausedLong     = "--pause"
 	ArgDebug          = "--debug"
+	ArgWorkingDir     = "-w"
+	ArgWorkingDirLong = "--workingDir"
 	ArgRetryUntil     = "--retryUntil" // TODO: Replace when multi-level retry will be there
 	ArgRetryCount     = "--retryCount" // TODO: Replace when multi-level retry will be there
 )

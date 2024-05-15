@@ -21,13 +21,13 @@ import (
 )
 
 const (
-	DefaultInternalPath         = "/.tktw"
-	DefaultDataPath             = "/data"
-	DefaultTerminationLogPath   = "/dev/termination-log"
-	DefaultFsGroup              = int64(1001)
-	ExecutionIdLabelName        = "testworkflowid"
-	ExecutionIdMainPodLabelName = "testworkflowid-main"
-	SignatureAnnotationName     = "testworkflows.testkube.io/signature"
+	DefaultInternalPath       = "/.tktw"
+	DefaultDataPath           = "/data"
+	DefaultTerminationLogPath = "/dev/termination-log"
+	DefaultFsGroup            = int64(1001)
+	ResourceIdLabelName       = "testworkflowid"
+	RootResourceIdLabelName   = "testworkflowid-root"
+	SignatureAnnotationName   = "testworkflows.testkube.io/signature"
 )
 
 var (

@@ -59,6 +59,7 @@ func NewFullFeatured(inspector imageinspector.Inspector) Processor {
 		Register(ProcessRunCommand).
 		Register(ProcessShellCommand).
 		Register(ProcessExecute).
+		Register(ProcessParallel).
 		Register(ProcessNestedSteps).
 		Register(ProcessArtifacts)
 }
@@ -122,8 +123,10 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 
 	// Process steps
 	rootStep := testworkflowsv1.Step{
-		StepBase: testworkflowsv1.StepBase{
-			Content:   workflow.Spec.Content,
+		StepSource: testworkflowsv1.StepSource{
+			Content: workflow.Spec.Content,
+		},
+		StepDefaults: testworkflowsv1.StepDefaults{
 			Container: workflow.Spec.Container,
 		},
 		Steps: append(workflow.Spec.Setup, append(workflow.Spec.Steps, workflow.Spec.After...)...),
@@ -145,7 +148,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	// Finalize ConfigMaps
 	configMaps := layer.ConfigMaps()
 	for i := range configMaps {
-		AnnotateControlledBy(&configMaps[i], "{{execution.id}}")
+		AnnotateControlledBy(&configMaps[i], "{{resource.rootId}}", "{{resource.id}}")
 		err = expressionstcl.FinalizeForce(&configMaps[i], machines...)
 		if err != nil {
 			return nil, errors.Wrap(err, "finalizing ConfigMap")
@@ -155,7 +158,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	// Finalize Secrets
 	secrets := layer.Secrets()
 	for i := range secrets {
-		AnnotateControlledBy(&secrets[i], "{{execution.id}}")
+		AnnotateControlledBy(&secrets[i], "{{resource.rootId}}", "{{resource.id}}")
 		err = expressionstcl.FinalizeForce(&secrets[i], machines...)
 		if err != nil {
 			return nil, errors.Wrap(err, "finalizing Secret")
@@ -174,7 +177,8 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	// Append main label for the pod
 	layer.AppendPodConfig(&testworkflowsv1.PodConfig{
 		Labels: map[string]string{
-			constants.ExecutionIdMainPodLabelName: "{{execution.id}}",
+			constants.RootResourceIdLabelName: "{{resource.rootId}}",
+			constants.ResourceIdLabelName:     "{{resource.id}}",
 		},
 	})
 
@@ -280,7 +284,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			ResourceClaims:            podConfig.ResourceClaims,
 		},
 	}
-	AnnotateControlledBy(&podSpec, "{{execution.id}}")
+	AnnotateControlledBy(&podSpec, "{{resource.rootId}}", "{{resource.id}}")
 	err = expressionstcl.FinalizeForce(&podSpec, machines...)
 	if err != nil {
 		return nil, errors.Wrap(err, "finalizing pod template spec")
@@ -310,7 +314,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			APIVersion: batchv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        "{{execution.id}}",
+			Name:        "{{resource.id}}",
 			Annotations: jobConfig.Annotations,
 			Labels:      jobConfig.Labels,
 			Namespace:   jobConfig.Namespace,
@@ -320,7 +324,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			ActiveDeadlineSeconds: jobConfig.ActiveDeadlineSeconds,
 		},
 	}
-	AnnotateControlledBy(&jobSpec, "{{execution.id}}")
+	AnnotateControlledBy(&jobSpec, "{{resource.rootId}}", "{{resource.id}}")
 	err = expressionstcl.FinalizeForce(&jobSpec, machines...)
 	if err != nil {
 		return nil, errors.Wrap(err, "finalizing job spec")

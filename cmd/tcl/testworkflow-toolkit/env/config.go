@@ -40,20 +40,28 @@ type envCloudConfig struct {
 }
 
 type envExecutionConfig struct {
-	WorkflowName string `envconfig:"TK_WF"`
-	Id           string `envconfig:"TK_EX"`
+	WorkflowName   string `envconfig:"TK_WF"`
+	Id             string `envconfig:"TK_EX"`
+	ResourceId     string `envconfig:"TK_EXI"`
+	RootResourceId string `envconfig:"TK_EXR"`
+	FSPrefix       string `envconfig:"TK_FS"`
 }
 
 type envSystemConfig struct {
-	Debug     string `envconfig:"DEBUG"`
-	Ref       string `envconfig:"TK_REF"`
-	Namespace string `envconfig:"TK_NS"`
-	Ip        string `envconfig:"TK_IP"`
+	Debug           string `envconfig:"DEBUG"`
+	Ref             string `envconfig:"TK_REF"`
+	Namespace       string `envconfig:"TK_NS"`
+	DefaultRegistry string `envconfig:"TK_R"`
+	Ip              string `envconfig:"TK_IP"`
+	DashboardUrl    string `envconfig:"TK_DASH"`
+	ApiUrl          string `envconfig:"TK_API"`
 }
 
 type envImagesConfig struct {
-	Init    string `envconfig:"TESTKUBE_TW_INIT_IMAGE"`
-	Toolkit string `envconfig:"TESTKUBE_TW_TOOLKIT_IMAGE"`
+	Init                         string `envconfig:"TESTKUBE_TW_INIT_IMAGE"`
+	Toolkit                      string `envconfig:"TESTKUBE_TW_TOOLKIT_IMAGE"`
+	InspectorPersistenceEnabled  bool   `envconfig:"TK_IMG_P" default:"false"`
+	InspectorPersistenceCacheKey string `envconfig:"TK_IMG_PK"`
 }
 
 type featuresConfig struct {

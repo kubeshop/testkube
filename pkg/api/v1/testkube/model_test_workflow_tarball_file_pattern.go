@@ -9,8 +9,8 @@
  */
 package testkube
 
-type TestWorkflowTarballRequest struct {
-	// path to load the files from
-	From  string                          `json:"from"`
-	Files *TestWorkflowTarballFilePattern `json:"files,omitempty"`
+// dynamic expression or static list of file patterns to pack
+type TestWorkflowTarballFilePattern struct {
+	Static     []interface{} `json:"static,omitempty"`
+	Expression string        `json:"expression,omitempty"`
 }

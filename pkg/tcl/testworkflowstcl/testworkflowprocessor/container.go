@@ -56,6 +56,7 @@ type ContainerAccessors interface {
 	SecurityContext() *corev1.SecurityContext
 
 	HasVolumeAt(path string) bool
+	ToContainerConfig() testworkflowsv1.ContainerConfig
 }
 
 type ContainerMutations[T any] interface {
@@ -234,7 +235,17 @@ func (c *container) HasVolumeAt(path string) bool {
 // Mutations
 
 func (c *container) AppendEnv(env ...corev1.EnvVar) Container {
+	needsDedupe := false
+	for i := range env {
+		if testworkflowresolver.HasEnvVar(c.Cr.Env, env[i].Name) {
+			needsDedupe = true
+			break
+		}
+	}
 	c.Cr.Env = append(c.Cr.Env, env...)
+	if needsDedupe {
+		c.Cr.Env = testworkflowresolver.DedupeEnvVars(c.Cr.Env)
+	}
 	return c
 }
 
@@ -296,7 +307,7 @@ func (c *container) ApplyCR(config *testworkflowsv1.ContainerConfig) Container {
 }
 
 func (c *container) ToContainerConfig() testworkflowsv1.ContainerConfig {
-	env := slices.Clone(c.Env())
+	env := testworkflowresolver.DedupeEnvVars(slices.Clone(c.Env()))
 	for i := range env {
 		env[i] = *env[i].DeepCopy()
 	}
@@ -417,9 +428,13 @@ func (c *container) EnableToolkit(ref string) Container {
 		AppendEnvMap(map[string]string{
 			"TK_REF":                    ref,
 			"TK_NS":                     "{{internal.namespace}}",
-			"TK_TMPL":                   "{{internal.globalTemplate}}",
 			"TK_WF":                     "{{workflow.name}}",
 			"TK_EX":                     "{{execution.id}}",
+			"TK_EXI":                    "{{resource.id}}",
+			"TK_EXR":                    "{{resource.rootId}}",
+			"TK_FS":                     "{{resource.fsPrefix}}",
+			"TK_DASH":                   "{{internal.dashboard.url}}",
+			"TK_API":                    "{{internal.api.url}}",
 			"TK_C_URL":                  "{{internal.cloud.api.url}}",
 			"TK_C_KEY":                  "{{internal.cloud.api.key}}",
 			"TK_C_TLS_INSECURE":         "{{internal.cloud.api.tlsInsecure}}",
@@ -437,6 +452,8 @@ func (c *container) EnableToolkit(ref string) Container {
 			"TK_OS_CA_FILE":             "{{internal.storage.caFile}}",
 			"TESTKUBE_TW_TOOLKIT_IMAGE": "{{internal.images.toolkit}}",
 			"TESTKUBE_TW_INIT_IMAGE":    "{{internal.images.init}}",
+			"TK_IMG_P":                  "{{internal.images.persistence.enabled}}",
+			"TK_IMG_PK":                 "{{internal.images.persistence.key}}",
 		})
 }
 

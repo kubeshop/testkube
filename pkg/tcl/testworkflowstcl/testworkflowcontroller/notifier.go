@@ -67,7 +67,6 @@ func (n *notifier) Log(ref string, ts time.Time, message string) {
 }
 
 func (n *notifier) Error(err error) {
-	fmt.Println(ui.Red("Controller state error:"), err)
 	n.watcher.Error(err)
 }
 

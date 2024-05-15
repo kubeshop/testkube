@@ -93,7 +93,6 @@ func sanitizePaths(input []string, root string) ([]string, error) {
 func filterPatterns(patterns, dirs []string) []string {
 	result := make([]string, 0)
 	for _, p := range patterns {
-		fmt.Println(p, dirs, isPatternIn(p, dirs))
 		if isPatternIn(p, dirs) {
 			result = append(result, p)
 		}

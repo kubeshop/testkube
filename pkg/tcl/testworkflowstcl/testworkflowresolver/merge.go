@@ -313,7 +313,7 @@ func MergeContainerConfig(dst, include *testworkflowsv1.ContainerConfig) *testwo
 	if include.ImagePullPolicy != "" {
 		dst.ImagePullPolicy = include.ImagePullPolicy
 	}
-	dst.Env = append(dst.Env, include.Env...)
+	dst.Env = DedupeEnvVars(append(dst.Env, include.Env...))
 	dst.EnvFrom = append(dst.EnvFrom, include.EnvFrom...)
 	dst.VolumeMounts = append(dst.VolumeMounts, include.VolumeMounts...)
 	if include.Image != "" {
@@ -341,8 +341,32 @@ func MergeMap[T comparable, U any](dst, include map[T]U) map[T]U {
 	return dst
 }
 
+func ConvertIndependentStepParallelToStepParallel(step testworkflowsv1.IndependentStepParallel) testworkflowsv1.StepParallel {
+	return testworkflowsv1.StepParallel{
+		Parallelism:         step.Parallelism,
+		StepExecuteStrategy: step.StepExecuteStrategy,
+		Description:         step.Description,
+		Logs:                step.Logs,
+		Transfer:            step.Transfer,
+		Fetch:               step.Fetch,
+		TestWorkflowSpec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: step.TestWorkflowTemplateSpec.TestWorkflowSpecBase,
+			Setup:                common.MapSlice(step.TestWorkflowTemplateSpec.Setup, ConvertIndependentStepToStep),
+			Steps:                common.MapSlice(step.TestWorkflowTemplateSpec.Steps, ConvertIndependentStepToStep),
+			After:                common.MapSlice(step.TestWorkflowTemplateSpec.After, ConvertIndependentStepToStep),
+		},
+		StepControl:    step.StepControl,
+		StepOperations: step.StepOperations,
+	}
+}
+
 func ConvertIndependentStepToStep(step testworkflowsv1.IndependentStep) (res testworkflowsv1.Step) {
-	res.StepBase = step.StepBase
+	res.StepMeta = step.StepMeta
+	res.StepControl = step.StepControl
+	res.StepSource = step.StepSource
+	res.StepDefaults = step.StepDefaults
+	res.StepOperations = step.StepOperations
+	res.Parallel = common.MapPtr(step.Parallel, ConvertIndependentStepParallelToStepParallel)
 	res.Setup = common.MapSlice(step.Setup, ConvertIndependentStepToStep)
 	res.Steps = common.MapSlice(step.Steps, ConvertIndependentStepToStep)
 	return res

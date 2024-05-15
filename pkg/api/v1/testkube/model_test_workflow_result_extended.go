@@ -360,6 +360,19 @@ func (r *TestWorkflowResult) RecomputeStep(sig TestWorkflowSignature) {
 	}
 }
 
+func (r *TestWorkflowResult) Current(sig []TestWorkflowSignature) string {
+	if !r.IsRunning() || r.Initialization.FinishedAt.IsZero() {
+		return ""
+	}
+	current := ""
+	walkSteps(sig, func(signature TestWorkflowSignature) {
+		if s, ok := r.Steps[signature.Ref]; ok && len(signature.Children) == 0 && !s.QueuedAt.IsZero() && s.FinishedAt.IsZero() && current == "" {
+			current = signature.Ref
+		}
+	})
+	return current
+}
+
 func walkSteps(sig []TestWorkflowSignature, fn func(signature TestWorkflowSignature)) {
 	for _, s := range sig {
 		walkSteps(s.Children, fn)

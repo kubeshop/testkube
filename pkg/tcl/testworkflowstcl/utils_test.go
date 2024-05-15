@@ -66,7 +66,6 @@ func Test_HasArtifacts(t *testing.T) {
 			args: args{
 				steps: []testworkflowsv1.Step{
 					{
-						StepBase: testworkflowsv1.StepBase{},
 						Use:      []testworkflowsv1.TemplateRef{},
 						Template: &testworkflowsv1.TemplateRef{},
 						Setup:    []testworkflowsv1.Step{},
@@ -81,7 +80,7 @@ func Test_HasArtifacts(t *testing.T) {
 			args: args{
 				steps: []testworkflowsv1.Step{
 					{
-						StepBase: testworkflowsv1.StepBase{
+						StepOperations: testworkflowsv1.StepOperations{
 							Artifacts: &testworkflowsv1.StepArtifacts{
 								Paths: []string{"path"},
 							},
@@ -100,7 +99,7 @@ func Test_HasArtifacts(t *testing.T) {
 							{
 								Setup: []testworkflowsv1.Step{
 									{
-										StepBase: testworkflowsv1.StepBase{
+										StepOperations: testworkflowsv1.StepOperations{
 											Artifacts: &testworkflowsv1.StepArtifacts{
 												Paths: []string{"path"},
 											},
@@ -119,21 +118,21 @@ func Test_HasArtifacts(t *testing.T) {
 			args: args{
 				steps: []testworkflowsv1.Step{
 					{
-						StepBase: testworkflowsv1.StepBase{
+						StepOperations: testworkflowsv1.StepOperations{
 							Artifacts: &testworkflowsv1.StepArtifacts{
 								Paths: []string{"path"},
 							},
 						},
 						Setup: []testworkflowsv1.Step{
 							{
-								StepBase: testworkflowsv1.StepBase{
+								StepOperations: testworkflowsv1.StepOperations{
 									Artifacts: &testworkflowsv1.StepArtifacts{
 										Paths: []string{"path"},
 									},
 								},
 								Setup: []testworkflowsv1.Step{
 									{
-										StepBase: testworkflowsv1.StepBase{
+										StepOperations: testworkflowsv1.StepOperations{
 											Artifacts: &testworkflowsv1.StepArtifacts{
 												Paths: []string{"path"},
 											},
@@ -171,9 +170,8 @@ func Test_HasTemplateArtifacts(t *testing.T) {
 			args: args{
 				steps: []testworkflowsv1.IndependentStep{
 					{
-						StepBase: testworkflowsv1.StepBase{},
-						Setup:    []testworkflowsv1.IndependentStep{},
-						Steps:    []testworkflowsv1.IndependentStep{},
+						Setup: []testworkflowsv1.IndependentStep{},
+						Steps: []testworkflowsv1.IndependentStep{},
 					},
 				},
 			},
@@ -184,7 +182,7 @@ func Test_HasTemplateArtifacts(t *testing.T) {
 			args: args{
 				steps: []testworkflowsv1.IndependentStep{
 					{
-						StepBase: testworkflowsv1.StepBase{
+						StepOperations: testworkflowsv1.StepOperations{
 							Artifacts: &testworkflowsv1.StepArtifacts{
 								Paths: []string{"path"},
 							},
@@ -203,7 +201,7 @@ func Test_HasTemplateArtifacts(t *testing.T) {
 							{
 								Setup: []testworkflowsv1.IndependentStep{
 									{
-										StepBase: testworkflowsv1.StepBase{
+										StepOperations: testworkflowsv1.StepOperations{
 											Artifacts: &testworkflowsv1.StepArtifacts{
 												Paths: []string{"path"},
 											},
@@ -222,21 +220,21 @@ func Test_HasTemplateArtifacts(t *testing.T) {
 			args: args{
 				steps: []testworkflowsv1.IndependentStep{
 					{
-						StepBase: testworkflowsv1.StepBase{
+						StepOperations: testworkflowsv1.StepOperations{
 							Artifacts: &testworkflowsv1.StepArtifacts{
 								Paths: []string{"path"},
 							},
 						},
 						Setup: []testworkflowsv1.IndependentStep{
 							{
-								StepBase: testworkflowsv1.StepBase{
+								StepOperations: testworkflowsv1.StepOperations{
 									Artifacts: &testworkflowsv1.StepArtifacts{
 										Paths: []string{"path"},
 									},
 								},
 								Setup: []testworkflowsv1.IndependentStep{
 									{
-										StepBase: testworkflowsv1.StepBase{
+										StepOperations: testworkflowsv1.StepOperations{
 											Artifacts: &testworkflowsv1.StepArtifacts{
 												Paths: []string{"path"},
 											},
@@ -307,7 +305,7 @@ func Test_HasKubeshopGitURI(t *testing.T) {
 						{
 							Setup: []testworkflowsv1.Step{
 								{
-									StepBase: testworkflowsv1.StepBase{
+									StepSource: testworkflowsv1.StepSource{
 										Content: &testworkflowsv1.Content{
 											Git: &testworkflowsv1.ContentGit{
 												Uri: "github.com/kubeshop/testkube-tests-uri",
