@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -22,6 +23,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/artifacts"
 	common2 "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
@@ -218,6 +220,41 @@ func CreateLogger(name, description string, index, count int64) func(...string) 
 	return func(s ...string) {
 		fmt.Printf("%s: %s\n", label, strings.Join(s, ": "))
 	}
+}
+
+func CreateBaseMachine() expressionstcl.Machine {
+	return expressionstcl.CombinedMachines(
+		data.GetBaseTestWorkflowMachine(),
+		expressionstcl.NewMachine().RegisterStringMap("internal", map[string]string{
+			"storage.url":        env.Config().ObjectStorage.Endpoint,
+			"storage.accessKey":  env.Config().ObjectStorage.AccessKeyID,
+			"storage.secretKey":  env.Config().ObjectStorage.SecretAccessKey,
+			"storage.region":     env.Config().ObjectStorage.Region,
+			"storage.bucket":     env.Config().ObjectStorage.Bucket,
+			"storage.token":      env.Config().ObjectStorage.Token,
+			"storage.ssl":        strconv.FormatBool(env.Config().ObjectStorage.Ssl),
+			"storage.skipVerify": strconv.FormatBool(env.Config().ObjectStorage.SkipVerify),
+			"storage.certFile":   env.Config().ObjectStorage.CertFile,
+			"storage.keyFile":    env.Config().ObjectStorage.KeyFile,
+			"storage.caFile":     env.Config().ObjectStorage.CAFile,
+
+			"cloud.enabled":         strconv.FormatBool(env.Config().Cloud.ApiKey != ""),
+			"cloud.api.key":         env.Config().Cloud.ApiKey,
+			"cloud.api.tlsInsecure": strconv.FormatBool(env.Config().Cloud.TlsInsecure),
+			"cloud.api.skipVerify":  strconv.FormatBool(env.Config().Cloud.SkipVerify),
+			"cloud.api.url":         env.Config().Cloud.Url,
+
+			"dashboard.url":   env.Config().System.DashboardUrl,
+			"api.url":         env.Config().System.ApiUrl,
+			"namespace":       env.Namespace(),
+			"defaultRegistry": env.Config().System.DefaultRegistry,
+
+			"images.init":                env.Config().Images.Init,
+			"images.toolkit":             env.Config().Images.Toolkit,
+			"images.persistence.enabled": strconv.FormatBool(env.Config().Images.InspectorPersistenceEnabled),
+			"images.persistence.key":     env.Config().Images.InspectorPersistenceCacheKey,
+		}),
+	)
 }
 
 func CreateResultMachine(result testkube.TestWorkflowResult) expressionstcl.Machine {
