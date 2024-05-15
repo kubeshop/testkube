@@ -215,9 +215,6 @@ func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature, scheduledAt 
 		r.RecomputeStep(ch)
 	}
 
-	// Compute the duration
-	r.RecomputeDuration()
-
 	// Build status on the internal failure
 	if getTestWorkflowStepStatus(*r.Initialization) == ABORTED_TestWorkflowStepStatus {
 		r.Status = common.Ptr(ABORTED_TestWorkflowStatus)
@@ -335,6 +332,9 @@ func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature, scheduledAt 
 	if r.FinishedAt.IsZero() && r.Status != nil && *r.Status == ABORTED_TestWorkflowStatus {
 		r.FinishedAt = r.LatestTimestamp()
 	}
+
+	// Compute the duration
+	r.RecomputeDuration()
 }
 
 func (r *TestWorkflowResult) RecomputeStep(sig TestWorkflowSignature) {

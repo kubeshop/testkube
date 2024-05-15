@@ -80,7 +80,7 @@ func NewParallelCmd() *cobra.Command {
 
 			// Clean up universal copy
 			parallel.StepExecuteStrategy = testworkflowsv1.StepExecuteStrategy{}
-			if len(parallel.Transfer) > 0 && parallel.Content == nil {
+			if parallel.Content == nil {
 				parallel.Content = &testworkflowsv1.Content{}
 			}
 

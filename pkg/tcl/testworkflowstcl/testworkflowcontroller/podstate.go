@@ -23,6 +23,10 @@ import (
 
 const eventBufferSize = 20
 
+var (
+	ErrNotTerminatedYet = errors.New("the container is not terminated yet")
+)
+
 type podState struct {
 	pod        *corev1.Pod
 	queued     map[string]time.Time
@@ -111,7 +115,8 @@ func (p *podState) setStartedAt(name string, ts time.Time) {
 func (p *podState) setFinishedAt(name string, ts time.Time) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if !p.finished[name].Equal(ts) {
+	_, err := p.containerResult(name)
+	if !errors.Is(err, ErrNotTerminatedYet) && !p.finished[name].Equal(ts) {
 		p.finished[name] = ts.UTC()
 		if _, ok := p.finishedCh[name]; ok {
 			close(p.finishedCh[name])
@@ -130,6 +135,9 @@ func (p *podState) addWarning(name string, event *corev1.Event) {
 }
 
 func (p *podState) containerStatus(name string) *corev1.ContainerStatus {
+	if p.pod == nil {
+		return nil
+	}
 	for i := range p.pod.Status.InitContainerStatuses {
 		if p.pod.Status.InitContainerStatuses[i].Name == name {
 			return &p.pod.Status.InitContainerStatuses[i]
@@ -157,6 +165,9 @@ func (p *podState) RegisterEvent(event *corev1.Event) {
 }
 
 func (p *podState) RegisterPod(pod *corev1.Pod) {
+	if pod == nil {
+		return
+	}
 	pod.ManagedFields = nil
 	p.mu.Lock()
 	p.pod = pod
@@ -248,18 +259,22 @@ func (p *podState) FinishedAt(name string) time.Time {
 	return p.finished[name]
 }
 
-func (p *podState) ContainerResult(name string) (ContainerResult, error) {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
+func (p *podState) containerResult(name string) (ContainerResult, error) {
 	status := p.containerStatus(name)
 	if status == nil || status.State.Terminated == nil {
 		// TODO: Handle it nicer
-		if IsPodDone(p.pod) {
+		if p.pod != nil && IsPodDone(p.pod) {
 			return UnknownContainerResult, nil
 		}
-		return UnknownContainerResult, errors.New("the container is not terminated yet")
+		return UnknownContainerResult, ErrNotTerminatedYet
 	}
 	return GetContainerResult(*status), nil
+}
+
+func (p *podState) ContainerResult(name string) (ContainerResult, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.containerResult(name)
 }
 
 func initializePodState(parentCtx context.Context, pod Channel[*corev1.Pod], podEvents Channel[*corev1.Event], job Channel[*batchv1.Job], jobEvents Channel[*corev1.Event], errorHandler func(error)) *podState {
@@ -303,6 +318,7 @@ func initializePodState(parentCtx context.Context, pod Channel[*corev1.Pod], pod
 					state.RegisterEvent(v.Value)
 				}
 			}
+			wg.Done()
 		}()
 		wg.Add(1)
 		go func() {
@@ -313,6 +329,7 @@ func initializePodState(parentCtx context.Context, pod Channel[*corev1.Pod], pod
 					state.RegisterPod(v.Value)
 				}
 			}
+			wg.Done()
 		}()
 		wg.Wait()
 	}()
