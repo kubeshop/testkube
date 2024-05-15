@@ -144,6 +144,7 @@ func TestService_Run(t *testing.T) {
 		"",
 		false,
 		false,
+		false,
 	)
 
 	mockLeaseBackend := NewMockLeaseBackend(mockCtrl)

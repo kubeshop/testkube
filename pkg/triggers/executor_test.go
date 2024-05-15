@@ -131,6 +131,7 @@ func TestExecute(t *testing.T) {
 		"",
 		false,
 		false,
+		false,
 	)
 	s := &Service{
 		triggerStatus:    make(map[statusKey]*triggerStatus),
