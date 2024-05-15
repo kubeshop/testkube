@@ -55,12 +55,14 @@ func NewFullFeatured(inspector imageinspector.Inspector) Processor {
 		Register(ProcessContentFiles).
 		Register(ProcessContentGit).
 		Register(ProcessContentTarball).
+		Register(ProcessServicesStart).
 		Register(ProcessNestedSetupSteps).
 		Register(ProcessRunCommand).
 		Register(ProcessShellCommand).
 		Register(ProcessExecute).
 		Register(ProcessParallel).
 		Register(ProcessNestedSteps).
+		Register(ProcessServicesStop).
 		Register(ProcessArtifacts)
 }
 
@@ -126,6 +128,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		StepSource: testworkflowsv1.StepSource{
 			Content: workflow.Spec.Content,
 		},
+		Services: workflow.Spec.Services,
 		StepDefaults: testworkflowsv1.StepDefaults{
 			Container: workflow.Spec.Container,
 		},

@@ -36,6 +36,20 @@ func AnnotateControlledBy(obj metav1.Object, rootId, id string) {
 	}
 }
 
+func AnnotateGroupId(obj metav1.Object, id string) {
+	labels := obj.GetLabels()
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	labels[constants.GroupIdLabelName] = id
+	obj.SetLabels(labels)
+
+	// Annotate Pod template in the Job
+	if v, ok := obj.(*batchv1.Job); ok {
+		AnnotateGroupId(&v.Spec.Template, id)
+	}
+}
+
 func getRef(stage Stage) string {
 	return stage.Ref()
 }

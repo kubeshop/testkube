@@ -94,3 +94,29 @@ func Cleanup(ctx context.Context, clientSet kubernetes.Interface, namespace, id 
 	wg.Wait()
 	return errors.Join(errs...)
 }
+
+func CleanupGroup(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
+	var errs []error
+	var errsMu sync.Mutex
+	var wg sync.WaitGroup
+	ops := []func(context.Context, kubernetes.Interface, string, string) error{
+		cleanupJobs(constants.GroupIdLabelName),
+		cleanupPods(constants.GroupIdLabelName),
+		cleanupConfigMaps(constants.GroupIdLabelName),
+		cleanupSecrets(constants.GroupIdLabelName),
+	}
+	wg.Add(len(ops))
+	for _, op := range ops {
+		go func(op func(context.Context, kubernetes.Interface, string, string) error) {
+			err := op(ctx, clientSet, namespace, id)
+			if err != nil {
+				errsMu.Lock()
+				errs = append(errs, err)
+				errsMu.Unlock()
+			}
+			wg.Done()
+		}(op)
+	}
+	wg.Wait()
+	return errors.Join(errs...)
+}

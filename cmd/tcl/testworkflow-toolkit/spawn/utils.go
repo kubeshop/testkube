@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -166,9 +167,9 @@ func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParal
 	}, nil
 }
 
-func CreateExecutionMachine(index int64) (string, expressionstcl.Machine) {
-	id := fmt.Sprintf("%s-%d", env.ExecutionId(), index)
-	fsPrefix := fmt.Sprintf("%s/%d", env.Ref(), index+1)
+func CreateExecutionMachine(prefix string, index int64) (string, expressionstcl.Machine) {
+	id := fmt.Sprintf("%s-%s%d", env.ExecutionId(), prefix, index)
+	fsPrefix := fmt.Sprintf("%s/%s%d", env.Ref(), prefix, index+1)
 	if env.Config().Execution.FSPrefix != "" {
 		fsPrefix = fmt.Sprintf("%s/%s", env.Config().Execution.FSPrefix, fsPrefix)
 	}
@@ -178,6 +179,19 @@ func CreateExecutionMachine(index int64) (string, expressionstcl.Machine) {
 		Register("resource.id", id).
 		Register("resource.fsPrefix", fsPrefix).
 		Register("workflow.name", env.WorkflowName())
+}
+
+func GetServiceByResourceId(jobName string) (string, int64) {
+	regex := regexp.MustCompile(`-(.+?)-(\d+)$`)
+	v := regex.FindSubmatch([]byte(jobName))
+	if v == nil {
+		return "", 0
+	}
+	index, err := strconv.ParseInt(string(v[2]), 10, 64)
+	if err != nil {
+		return "", 0
+	}
+	return string(v[1]), index
 }
 
 func ExecuteParallel[T any](run func(int64, *T) bool, items []T, parallelism int64) int64 {
@@ -201,8 +215,8 @@ func ExecuteParallel[T any](run func(int64, *T) bool, items []T, parallelism int
 	return int64(len(items)) - success.Load()
 }
 
-func SaveLogs(ctx context.Context, clientSet kubernetes.Interface, storage artifacts.InternalArtifactStorage, namespace, id string, index int64) (string, error) {
-	filePath := fmt.Sprintf("logs/%d.log", index)
+func SaveLogs(ctx context.Context, clientSet kubernetes.Interface, storage artifacts.InternalArtifactStorage, namespace, id, prefix string, index int64) (string, error) {
+	filePath := fmt.Sprintf("logs/%s%d.log", prefix, index)
 	ctrl, err := testworkflowcontroller.New(ctx, clientSet, namespace, id, time.Time{}, testworkflowcontroller.ControllerOptions{
 		Timeout: ControllerTimeout,
 	})

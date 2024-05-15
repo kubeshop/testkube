@@ -177,7 +177,7 @@ func NewParallelCmd() *cobra.Command {
 			run := func(index int64, spec *testworkflowsv1.TestWorkflowSpec) bool {
 				clientSet := env.Kubernetes()
 				log := spawn.CreateLogger("worker", descriptions[index], index, params.Count)
-				id, machine := spawn.CreateExecutionMachine(index)
+				id, machine := spawn.CreateExecutionMachine("", index)
 
 				updates <- Update{index: index}
 
@@ -209,7 +209,7 @@ func NewParallelCmd() *cobra.Command {
 
 					// Save logs
 					if shouldSaveLogs {
-						logsFilePath, err := spawn.SaveLogs(context.Background(), clientSet, storage, namespace, id, index)
+						logsFilePath, err := spawn.SaveLogs(context.Background(), clientSet, storage, namespace, id, "", index)
 						if err == nil {
 							data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Logs: storage.FullPath(logsFilePath)})
 							log("saved logs")
