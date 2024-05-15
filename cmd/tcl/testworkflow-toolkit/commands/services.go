@@ -60,7 +60,7 @@ const (
 
 type ServiceInfo struct {
 	Group       string        `json:"group"`
-	Index       int           `json:"index"`
+	Index       int64         `json:"index"`
 	Name        string        `json:"name"`
 	Description string        `json:"description,omitempty"`
 	Logs        string        `json:"logs,omitempty"`
@@ -179,7 +179,7 @@ func NewServicesCmd() *cobra.Command {
 			for _, instance := range instances {
 				data.PrintOutput(env.Ref(), "service", ServiceInfo{
 					Group:       groupRef,
-					Index:       int(instance.Index),
+					Index:       instance.Index,
 					Name:        instance.Name,
 					Description: instance.Description,
 					Status:      ServiceStatusQueued,
@@ -210,7 +210,7 @@ func NewServicesCmd() *cobra.Command {
 			run := func(_ int64, instance *ServiceInstance) bool {
 				info := ServiceInfo{
 					Group:       groupRef,
-					Index:       int(instance.Index),
+					Index:       instance.Index,
 					Name:        instance.Name,
 					Description: instance.Description,
 					Status:      ServiceStatusQueued,

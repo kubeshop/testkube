@@ -79,7 +79,7 @@ func NewKillCmd() *cobra.Command {
 
 					logsFilePath, err := spawn.SaveLogs(context.Background(), clientSet, storage, env.Namespace(), id, service+"/", index)
 					if err == nil {
-						data.PrintOutput(env.Ref(), "service", ServiceInfo{Group: groupRef, Name: service, Index: int(index), Logs: storage.FullPath(logsFilePath)})
+						data.PrintOutput(env.Ref(), "service", ServiceInfo{Group: groupRef, Name: service, Index: index, Logs: storage.FullPath(logsFilePath)})
 						log("saved logs")
 					} else {
 						log("warning", "problem saving the logs", err.Error())
