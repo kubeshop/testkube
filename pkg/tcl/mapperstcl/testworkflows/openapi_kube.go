@@ -908,6 +908,7 @@ func MapStepParallelAPIToKube(v testkube.TestWorkflowStepParallel) testworkflows
 		},
 		Parallelism: v.Parallelism,
 		Description: v.Description,
+		Logs:        MapBoxedStringToString(v.Logs),
 		Transfer:    common.MapSlice(v.Transfer, MapStepParallelTransferAPIToKube),
 		Fetch:       common.MapSlice(v.Fetch, MapStepParallelFetchAPIToKube),
 		TestWorkflowSpec: testworkflowsv1.TestWorkflowSpec{
@@ -951,6 +952,7 @@ func MapIndependentStepParallelAPIToKube(v testkube.TestWorkflowIndependentStepP
 		},
 		Parallelism: v.Parallelism,
 		Description: v.Description,
+		Logs:        MapBoxedStringToString(v.Logs),
 		Transfer:    common.MapSlice(v.Transfer, MapStepParallelTransferAPIToKube),
 		Fetch:       common.MapSlice(v.Fetch, MapStepParallelFetchAPIToKube),
 		TestWorkflowTemplateSpec: testworkflowsv1.TestWorkflowTemplateSpec{

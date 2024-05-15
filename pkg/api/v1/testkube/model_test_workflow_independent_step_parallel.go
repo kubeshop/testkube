@@ -35,7 +35,8 @@ type TestWorkflowIndependentStepParallel struct {
 	// how many resources could be scheduled in parallel
 	Parallelism int32 `json:"parallelism,omitempty"`
 	// worker description to display
-	Description string `json:"description,omitempty"`
+	Description string       `json:"description,omitempty"`
+	Logs        *BoxedString `json:"logs,omitempty"`
 	// list of files to send to parallel steps
 	Transfer []TestWorkflowStepParallelTransfer `json:"transfer,omitempty"`
 	// list of files to fetch from parallel steps

@@ -28,6 +28,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/transfer"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
@@ -131,8 +132,15 @@ func NewParallelCmd() *cobra.Command {
 			// Analyze instances to run
 			specs := make([]testworkflowsv1.TestWorkflowSpec, params.Count)
 			descriptions := make([]string, params.Count)
+			logConditions := make([]*string, params.Count)
 			for i := int64(0); i < params.Count; i++ {
 				machines := []expressionstcl.Machine{baseMachine, params.MachineAt(i)}
+
+				// Copy the log condition
+				if parallel.Logs != nil {
+					logConditions[i] = common.Ptr(*parallel.Logs)
+				}
+
 				// Clone the spec
 				spec := parallel.DeepCopy()
 				err = expressionstcl.Simplify(&spec, machines...)
@@ -221,14 +229,25 @@ func NewParallelCmd() *cobra.Command {
 					namespace = env.Namespace()
 				}
 
+				var lastResult testkube.TestWorkflowResult
 				defer func() {
+					shouldSaveLogs := logConditions[index] == nil
+					if !shouldSaveLogs {
+						shouldSaveLogs, _ = spawn.EvalLogCondition(*logConditions[index], lastResult, machine, baseMachine, params.MachineAt(index))
+						if err != nil {
+							log("warning", "log condition", err.Error())
+						}
+					}
+
 					// Save logs
-					logsFilePath, err := spawn.SaveLogs(context.Background(), clientSet, storage, namespace, id, index)
-					if err == nil {
-						data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Logs: storage.FullPath(logsFilePath)})
-						log("saved logs")
-					} else {
-						log("warning", "problem saving the logs", err.Error())
+					if shouldSaveLogs {
+						logsFilePath, err := spawn.SaveLogs(context.Background(), clientSet, storage, namespace, id, index)
+						if err == nil {
+							data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Logs: storage.FullPath(logsFilePath)})
+							log("saved logs")
+						} else {
+							log("warning", "problem saving the logs", err.Error())
+						}
 					}
 
 					// Clean up
@@ -278,6 +297,11 @@ func NewParallelCmd() *cobra.Command {
 					if !scheduled && v.NodeName != "" {
 						scheduled = true
 						log(fmt.Sprintf("assigned to %s node", ui.LightBlue(v.NodeName)))
+					}
+
+					// Save the last result
+					if v.Result != nil {
+						lastResult = *v.Result
 					}
 
 					// Handle result change

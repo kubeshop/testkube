@@ -27,6 +27,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
 )
@@ -217,4 +218,31 @@ func CreateLogger(name, description string, index, count int64) func(...string) 
 	return func(s ...string) {
 		fmt.Printf("%s: %s\n", label, strings.Join(s, ": "))
 	}
+}
+
+func CreateResultMachine(result testkube.TestWorkflowResult) expressionstcl.Machine {
+	status := "queued"
+	if result.Status != nil {
+		if *result.Status == testkube.PASSED_TestWorkflowStatus {
+			status = ""
+		} else {
+			status = string(*result.Status)
+		}
+	}
+	return expressionstcl.NewMachine().
+		Register("status", status).
+		Register("always", true).
+		Register("never", false).
+		Register("failed", status != "").
+		Register("error", status != "").
+		Register("passed", status == "").
+		Register("success", status == "")
+}
+
+func EvalLogCondition(condition string, result testkube.TestWorkflowResult, machines ...expressionstcl.Machine) (bool, error) {
+	expr, err := expressionstcl.EvalExpression(condition, append([]expressionstcl.Machine{CreateResultMachine(result)}, machines...)...)
+	if err != nil {
+		return false, errors.Wrapf(err, "invalid expression for logs condition: %s", condition)
+	}
+	return expr.BoolValue()
 }

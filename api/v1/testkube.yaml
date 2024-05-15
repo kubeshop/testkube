@@ -7900,6 +7900,8 @@ components:
           description:
             type: string
             description: worker description to display
+          logs:
+            $ref: "#/components/schemas/BoxedString"
           transfer:
             type: array
             description: list of files to send to parallel steps
@@ -7927,6 +7929,8 @@ components:
           description:
             type: string
             description: worker description to display
+          logs:
+            $ref: "#/components/schemas/BoxedString"
           transfer:
             type: array
             description: list of files to send to parallel steps
