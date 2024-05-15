@@ -17,21 +17,19 @@ spec:
         image: {{ .InitImage }}
         {{- end }}
         imagePullPolicy: IfNotPresent
+        {{- if .IstioProxyInitBypass }}
+        securityContext:
+          runAsUser: 1337
+        {{- end }}
         command:
           - "/bin/runner"
           - '{{ .Jsn }}'
-        {{- if or .RunnerCustomCASecret .IstioProxyWait }}
-        env:
         {{- if .RunnerCustomCASecret }}
+        env:
           - name: SSL_CERT_DIR
             value: /etc/testkube/certs
           - name: GIT_SSL_CAPATH
             value: /etc/testkube/certs
-        {{- end }}
-        {{- if .IstioProxyWait }}
-          - name: RUNNER_ISTIO_PROXY_WAIT
-            value: "true"
-        {{- end }}
         {{- end }}
         volumeMounts:
         - name: data-volume
@@ -106,13 +104,17 @@ spec:
         command:
           - "/bin/runner"
           - '{{ .Jsn }}'
-        {{- if or .RunnerCustomCASecret .IstioProxyExit }}
+        {{- if or .RunnerCustomCASecret .IstioProxyWait .IstioProxyExit }}
         env:
         {{- if .RunnerCustomCASecret }}
           - name: SSL_CERT_DIR
             value: /etc/testkube/certs
           - name: GIT_SSL_CAPATH
             value: /etc/testkube/certs
+        {{- end }}
+        {{- if .IstioProxyWait }}
+          - name: RUNNER_ISTIO_PROXY_WAIT
+            value: "true"
         {{- end }}
         {{- if .IstioProxyExit }}
           - name: RUNNER_ISTIO_PROXY_EXIT

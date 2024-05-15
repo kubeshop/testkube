@@ -18,10 +18,9 @@ spec:
         image: {{ .InitImage }}
         {{- end }}
         imagePullPolicy: IfNotPresent
-        {{- if .IstioProxyWait }}
-        env:
-          - name: RUNNER_ISTIO_PROXY_WAIT
-            value: "true"
+        {{- if .IstioProxyInitBypass }}
+        securityContext:
+          runAsUser: 1337
         {{- end }}
         command:
           - "/bin/runner"
