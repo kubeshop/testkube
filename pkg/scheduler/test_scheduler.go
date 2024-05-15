@@ -562,6 +562,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		ImagePullSecretNames: imagePullSecrets,
 		IstioProxyWait:       s.istioProxyWait,
 		IstioProxyExit:       s.istioProxyExit,
+		IstioProxyInitBypass: s.istioProxyInitBypass,
 		Features:             s.featureFlags,
 	}, nil
 }

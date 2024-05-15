@@ -49,6 +49,7 @@ type Scheduler struct {
 	runnerCustomCASecret      string
 	istioProxyWait            bool
 	istioProxyExit            bool
+	istioProxyInitBypass      bool
 }
 
 func NewScheduler(
@@ -76,6 +77,7 @@ func NewScheduler(
 	runnerCustomCASecret string,
 	istioProxyWait bool,
 	istioProxyExit bool,
+	istioProxyInitBypass bool,
 ) *Scheduler {
 	return &Scheduler{
 		metrics:                   metrics,
@@ -102,6 +104,7 @@ func NewScheduler(
 		runnerCustomCASecret:      runnerCustomCASecret,
 		istioProxyWait:            istioProxyWait,
 		istioProxyExit:            istioProxyExit,
+		istioProxyInitBypass:      istioProxyInitBypass,
 	}
 }
 

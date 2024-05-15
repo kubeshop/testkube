@@ -529,6 +529,7 @@ func main() {
 		cfg.TestkubeProRunnerCustomCASecret,
 		cfg.IstioProxyWait,
 		cfg.IstioProxyExit,
+		cfg.IstioProxyInitBypass,
 	)
 	if mode == common.ModeAgent {
 		sched.WithSubscriptionChecker(subscriptionChecker)

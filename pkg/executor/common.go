@@ -189,6 +189,7 @@ type SlavesConfigs struct {
 	RunnerCustomCASecret  string                  `json:"runnerCustomCASecret"`
 	IstioProxyWait        bool                    `json:"istioProxyWait"`
 	IstioProxyExit        bool                    `json:"istioProxyExit"`
+	IstioProxyInitBypass  bool                    `json:"istioProxyInitBypass"`
 }
 
 type SlaveImages struct {
@@ -213,6 +214,7 @@ func GetSlavesConfigs(initImage string,
 	runnerCustomCASecret string,
 	istioProxyWait bool,
 	istioProxyExit bool,
+	istioProxyInitBypass bool,
 ) SlavesConfigs {
 	return SlavesConfigs{
 		Images: SlaveImages{
@@ -233,6 +235,7 @@ func GetSlavesConfigs(initImage string,
 		RunnerCustomCASecret:  runnerCustomCASecret,
 		IstioProxyWait:        istioProxyWait,
 		IstioProxyExit:        istioProxyExit,
+		IstioProxyInitBypass:  istioProxyInitBypass,
 	}
 }
 

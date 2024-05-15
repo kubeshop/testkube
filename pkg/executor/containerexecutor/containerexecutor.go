@@ -200,6 +200,7 @@ type JobOptions struct {
 	APIURI                    string
 	IstioProxyWait            bool
 	IstioProxyExit            bool
+	IstioProxyInitBypass      bool
 	Features                  featureflags.FeatureFlags
 }
 
@@ -734,6 +735,7 @@ func NewJobOptionsFromExecutionOptions(options client.ExecuteOptions) *JobOption
 		ContextData:               contextData,
 		IstioProxyWait:            options.IstioProxyWait,
 		IstioProxyExit:            options.IstioProxyExit,
+		IstioProxyInitBypass:      options.IstioProxyInitBypass,
 		Features:                  options.Features,
 	}
 }

@@ -41,6 +41,7 @@ type ExecuteOptions struct {
 	ImagePullSecretNames []string
 	IstioProxyWait       bool
 	IstioProxyExit       bool
+	IstioProxyInitBypass bool
 	Features             featureflags.FeatureFlags
 }
 

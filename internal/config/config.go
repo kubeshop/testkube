@@ -104,7 +104,7 @@ type Config struct {
 	TestkubeExecutionNamespaces                 string        `envconfig:"TESTKUBE_EXECUTION_NAMESPACES" default:""`
 	TestkubeDefaultStorageClassName             string        `envconfig:"TESTKUBE_DEFAULT_STORAGE_CLASS_NAME" default:""`
 	GlobalWorkflowTemplateName                  string        `envconfig:"TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_NAME" default:""`
-	// IstioProxyWait triggers logic in the test runner jobs to wait for Istio'
+	// IstioProxyWait triggers logic in the test runner jobs to wait for Istio's
 	// Envoy proxy to become ready.
 	// This should not be necessery in environments that support native
 	// sidecars (Kubernetes 1.28+ and Istio 1.19+):
@@ -122,6 +122,14 @@ type Config struct {
 	// sidecars (Kubernetes 1.28+ and Istio 1.19+):
 	// https://istio.io/latest/blog/2023/native-sidecars/
 	IstioProxyExit bool `envconfig:"ISTIO_PROXY_EXIT" default:"false"`
+	// IstioProxyInitBypass configures the init containers within test runner jobs to bypass the Istio's Envoy proxy.
+	// This is the solution recommended by Istio for init containers requiring
+	// network access:
+	// https://istio.io/latest/docs/setup/additional-setup/cni/#compatibility-with-application-init-containers
+	// This should not be necessery in environments that support native
+	// sidecars (Kubernetes 1.28+ and Istio 1.19+):
+	// https://istio.io/latest/blog/2023/native-sidecars/
+	IstioProxyInitBypass bool `envconfig:"ISTIO_PROXY_INIT_BYPASS" default:"false"`
 
 	// DEPRECATED: Use TestkubeProAPIKey instead
 	TestkubeCloudAPIKey string `envconfig:"TESTKUBE_CLOUD_API_KEY" default:""`

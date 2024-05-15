@@ -64,6 +64,7 @@ type PodOptions struct {
 	RunnerCustomCASecret  string
 	IstioProxyWait        bool
 	IstioProxyExit        bool
+	IstioProxyInitBypass  bool
 }
 
 // NewClient is a method to create new slave client
@@ -292,6 +293,7 @@ func (c *Client) newPodOptions(runnerExecutionStr []byte, podName string, execut
 		RunnerCustomCASecret: c.slavesConfigs.RunnerCustomCASecret,
 		IstioProxyWait:       c.slavesConfigs.IstioProxyWait,
 		IstioProxyExit:       c.slavesConfigs.IstioProxyExit,
+		IstioProxyInitBypass: c.slavesConfigs.IstioProxyInitBypass,
 	}
 }
 

@@ -33,27 +33,28 @@ type Params struct {
 	ContextType               string // RUNNER_CONTEXTTYPE
 	ContextData               string // RUNNER_CONTEXTDATA
 	APIURI                    string // RUNNER_APIURI
-	ClusterID                 string `envconfig:"RUNNER_CLUSTERID"`                             // RUNNER_CLUSTERID
-	CDEventsTarget            string `envconfig:"RUNNER_CDEVENTS_TARGET"`                       // RUNNER_CDEVENTS_TARGET
-	DashboardURI              string `envconfig:"RUNNER_DASHBOARD_URI"`                         // RUNNER_DASHBOARD_URI
-	CloudMode                 bool   `envconfig:"RUNNER_CLOUD_MODE"`                            // RUNNER_CLOUD_MODE
-	CloudAPIKey               string `envconfig:"RUNNER_CLOUD_API_KEY"`                         // RUNNER_CLOUD_API_KEY
-	CloudAPITLSInsecure       bool   `envconfig:"RUNNER_CLOUD_API_TLS_INSECURE"`                // RUNNER_CLOUD_API_TLS_INSECURE
-	CloudAPIURL               string `envconfig:"RUNNER_CLOUD_API_URL"`                         // RUNNER_CLOUD_API_URL
-	CloudConnectionTimeoutSec int    `envconfig:"RUNNER_CLOUD_CONNECTION_TIMEOUT" default:"10"` // RUNNER_CLOUD_CONNECTION_TIMEOUT
-	CloudAPISkipVerify        bool   `envconfig:"RUNNER_CLOUD_API_SKIP_VERIFY" default:"false"` // RUNNER_CLOUD_API_SKIP_VERIFY
-	ProMode                   bool   `envconfig:"RUNNER_PRO_MODE"`                              // RUNNER_PRO_MODE
-	ProAPIKey                 string `envconfig:"RUNNER_PRO_API_KEY"`                           // RUNNER_PRO_API_KEY
-	ProAPITLSInsecure         bool   `envconfig:"RUNNER_PRO_API_TLS_INSECURE"`                  // RUNNER_PRO_API_TLS_INSECURE
-	ProAPIURL                 string `envconfig:"RUNNER_PRO_API_URL"`                           // RUNNER_PRO_API_URL
-	ProConnectionTimeoutSec   int    `envconfig:"RUNNER_PRO_CONNECTION_TIMEOUT" default:"10"`   // RUNNER_PRO_CONNECTION_TIMEOUT
-	ProAPISkipVerify          bool   `envconfig:"RUNNER_PRO_API_SKIP_VERIFY" default:"false"`   // RUNNER_PRO_API_SKIP_VERIFY
-	ProAPICertFile            string `envconfig:"RUNNER_PRO_API_CERT_FILE"`                     // RUNNER_PRO_API_CERT_FILE
-	ProAPIKeyFile             string `envconfig:"RUNNER_PRO_API_KEY_FILE"`                      // RUNNER_PRO_API_KEY_FILE
-	ProAPICAFile              string `envconfig:"RUNNER_PRO_API_CA_FILE"`                       // RUNNER_PRO_API_CA_FILE
-	SlavesConfigs             string `envconfig:"RUNNER_SLAVES_CONFIGS"`                        // RUNNER_SLAVES_CONFIGS
-	IstioProxyWait            bool   `envconfig:"RUNNER_ISTIO_PROXY_WAIT" default:"false"`      // RUNNER_ISTIO_PROXY_WAIT
-	IstioProxyExit            bool   `envconfig:"RUNNER_ISTIO_PROXY_EXIT" default:"false"`      // RUNNER_ISTIO_PROXY_EXIT
+	ClusterID                 string `envconfig:"RUNNER_CLUSTERID"`                               // RUNNER_CLUSTERID
+	CDEventsTarget            string `envconfig:"RUNNER_CDEVENTS_TARGET"`                         // RUNNER_CDEVENTS_TARGET
+	DashboardURI              string `envconfig:"RUNNER_DASHBOARD_URI"`                           // RUNNER_DASHBOARD_URI
+	CloudMode                 bool   `envconfig:"RUNNER_CLOUD_MODE"`                              // RUNNER_CLOUD_MODE
+	CloudAPIKey               string `envconfig:"RUNNER_CLOUD_API_KEY"`                           // RUNNER_CLOUD_API_KEY
+	CloudAPITLSInsecure       bool   `envconfig:"RUNNER_CLOUD_API_TLS_INSECURE"`                  // RUNNER_CLOUD_API_TLS_INSECURE
+	CloudAPIURL               string `envconfig:"RUNNER_CLOUD_API_URL"`                           // RUNNER_CLOUD_API_URL
+	CloudConnectionTimeoutSec int    `envconfig:"RUNNER_CLOUD_CONNECTION_TIMEOUT" default:"10"`   // RUNNER_CLOUD_CONNECTION_TIMEOUT
+	CloudAPISkipVerify        bool   `envconfig:"RUNNER_CLOUD_API_SKIP_VERIFY" default:"false"`   // RUNNER_CLOUD_API_SKIP_VERIFY
+	ProMode                   bool   `envconfig:"RUNNER_PRO_MODE"`                                // RUNNER_PRO_MODE
+	ProAPIKey                 string `envconfig:"RUNNER_PRO_API_KEY"`                             // RUNNER_PRO_API_KEY
+	ProAPITLSInsecure         bool   `envconfig:"RUNNER_PRO_API_TLS_INSECURE"`                    // RUNNER_PRO_API_TLS_INSECURE
+	ProAPIURL                 string `envconfig:"RUNNER_PRO_API_URL"`                             // RUNNER_PRO_API_URL
+	ProConnectionTimeoutSec   int    `envconfig:"RUNNER_PRO_CONNECTION_TIMEOUT" default:"10"`     // RUNNER_PRO_CONNECTION_TIMEOUT
+	ProAPISkipVerify          bool   `envconfig:"RUNNER_PRO_API_SKIP_VERIFY" default:"false"`     // RUNNER_PRO_API_SKIP_VERIFY
+	ProAPICertFile            string `envconfig:"RUNNER_PRO_API_CERT_FILE"`                       // RUNNER_PRO_API_CERT_FILE
+	ProAPIKeyFile             string `envconfig:"RUNNER_PRO_API_KEY_FILE"`                        // RUNNER_PRO_API_KEY_FILE
+	ProAPICAFile              string `envconfig:"RUNNER_PRO_API_CA_FILE"`                         // RUNNER_PRO_API_CA_FILE
+	SlavesConfigs             string `envconfig:"RUNNER_SLAVES_CONFIGS"`                          // RUNNER_SLAVES_CONFIGS
+	IstioProxyWait            bool   `envconfig:"RUNNER_ISTIO_PROXY_WAIT" default:"false"`        // RUNNER_ISTIO_PROXY_WAIT
+	IstioProxyExit            bool   `envconfig:"RUNNER_ISTIO_PROXY_EXIT" default:"false"`        // RUNNER_ISTIO_PROXY_EXIT
+	IstioProxyInitBypass      bool   `envconfig:"RUNNER_ISTIO_PROXY_INIT_BYPASS" default:"false"` // RUNNER_ISTIO_PROXY_INIT_BYPASS
 }
 
 // LoadTestkubeVariables loads the parameters provided as environment variables in the Test CRD
@@ -106,6 +107,7 @@ func PrintParams(params Params) {
 	output.PrintLogf("RUNNER_PRO_API_SKIP_VERIFY=\"%t\"", params.ProAPISkipVerify)
 	output.PrintLogf("RUNNER_ISTIO_PROXY_WAIT=\"%t\"", params.IstioProxyWait)
 	output.PrintLogf("RUNNER_ISTIO_PROXY_EXIT=\"%t\"", params.IstioProxyExit)
+	output.PrintLogf("RUNNER_ISTIO_PROXY_INIT_BYPASS=\"%t\"", params.IstioProxyInitBypass)
 
 }
 
