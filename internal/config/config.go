@@ -122,7 +122,8 @@ type Config struct {
 	// sidecars (Kubernetes 1.28+ and Istio 1.19+):
 	// https://istio.io/latest/blog/2023/native-sidecars/
 	IstioProxyExit bool `envconfig:"ISTIO_PROXY_EXIT" default:"false"`
-	// IstioProxyInitBypass configures the init containers within test runner jobs to bypass the Istio's Envoy proxy.
+	// IstioProxyInitBypass configures the init containers within test runner
+	// jobs to bypass the Istio's Envoy proxy.
 	// This is the solution recommended by Istio for init containers requiring
 	// network access:
 	// https://istio.io/latest/docs/setup/additional-setup/cni/#compatibility-with-application-init-containers
