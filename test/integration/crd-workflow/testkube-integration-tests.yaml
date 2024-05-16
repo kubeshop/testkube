@@ -1,18 +1,18 @@
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: testkube-integration-tests
+  name: testkube-integration
   labels:
     core-tests: workflows
 spec:
-  config:
-    revision:
-      type: string
-      default: develop
+#  config:
+#    revision:
+#      type: string
+#      default: develop
   content:
     git:
       uri: https://github.com/kubeshop/testkube.git
-      revision: '{{ config.revision }}'
+      revision: 'dawid/feat/accompanying-services'
   services:
     db:
       image: mongo
@@ -73,4 +73,5 @@ spec:
           apt-get install -y ca-certificates libssl3 git skopeo
           go install gotest.tools/gotestsum@v1.9.0
 
+          # TODO: Support job executor tests too (./...)
           INTEGRATION=y gotestsum --format short-verbose -- -count 1 -run _Integration -cover ./pkg/...
