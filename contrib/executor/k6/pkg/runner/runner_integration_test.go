@@ -48,7 +48,7 @@ func TestRunFiles_Integration(t *testing.T) {
 
 		// then
 		assert.NoError(t, err)
-		assert.Equal(t, testkube.ExecutionStatusPassed, result.Status)
+		assert.Equal(t, *testkube.ExecutionStatusPassed, *result.Status)
 		assert.Len(t, result.Steps, 1)
 	})
 
