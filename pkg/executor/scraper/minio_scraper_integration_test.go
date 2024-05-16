@@ -62,7 +62,7 @@ func TestMinIOScraper_Archive_Integration(t *testing.T) {
 		cfg.StorageSecretAccessKey,
 		cfg.StorageRegion,
 		cfg.StorageToken,
-		cfg.StorageBucket,
+		"test-bucket-asdf",
 		cfg.StorageSSL,
 		cfg.StorageSkipVerify,
 		cfg.StorageCertFile,
@@ -94,9 +94,9 @@ func TestMinIOScraper_Archive_Integration(t *testing.T) {
 		t.Fatalf("error scraping: %v", err)
 	}
 
-	c := minio.NewClient(cfg.StorageEndpoint, cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageRegion, cfg.StorageToken, cfg.StorageBucket)
+	c := minio.NewClient(cfg.StorageEndpoint, cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageRegion, cfg.StorageToken, "test-bucket-asdf")
 	assert.NoError(t, c.Connect())
-	artifacts, err := c.ListFiles(context.Background(), cfg.StorageBucket)
+	artifacts, err := c.ListFiles(context.Background(), "test-bucket-asdf")
 	if err != nil {
 		t.Fatalf("error listing files from bucket: %v", err)
 	}
@@ -135,13 +135,14 @@ func TestMinIOScraper_Recursive_Integration(t *testing.T) {
 
 	extractor := scraper.NewRecursiveFilesystemExtractor(filesystem.NewOSFileSystem())
 
+	bucketName := "test-bucket-asdf1"
 	loader, err := scraper.NewMinIOUploader(
 		cfg.StorageEndpoint,
 		cfg.StorageAccessKeyID,
 		cfg.StorageSecretAccessKey,
 		cfg.StorageRegion,
 		cfg.StorageToken,
-		cfg.StorageBucket,
+		bucketName,
 		cfg.StorageSSL,
 		cfg.StorageSkipVerify,
 		cfg.StorageCertFile,
@@ -173,9 +174,9 @@ func TestMinIOScraper_Recursive_Integration(t *testing.T) {
 		t.Fatalf("error scraping: %v", err)
 	}
 
-	c := minio.NewClient(cfg.StorageEndpoint, cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageRegion, cfg.StorageToken, cfg.StorageBucket)
+	c := minio.NewClient(cfg.StorageEndpoint, cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageRegion, cfg.StorageToken, bucketName)
 	assert.NoError(t, c.Connect())
-	artifacts, err := c.ListFiles(context.Background(), cfg.StorageBucket)
+	artifacts, err := c.ListFiles(context.Background(), bucketName)
 	if err != nil {
 		t.Fatalf("error listing files from bucket: %v", err)
 	}

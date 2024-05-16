@@ -44,7 +44,7 @@ func RandString(n int) string {
 func TestLogs(t *testing.T) {
 	t.Skip("skipping test")
 	ctx := context.Background()
-	consumer, _ := NewMinioAdapter(cfg.StorageEndpoint, cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageRegion, cfg.StorageToken, cfg.StorageBucket, cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
+	consumer, _ := NewMinioAdapter(cfg.StorageEndpoint, cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageRegion, cfg.StorageToken, "test-1", cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
 	id := "test-bla"
 	for i := 0; i < 1000; i++ {
 		fmt.Println("sending", i)
@@ -60,8 +60,9 @@ func TestLogs(t *testing.T) {
 func BenchmarkLogs(b *testing.B) {
 	ctx := context.Background()
 	randomString := RandString(5)
-	consumer, _ := NewMinioAdapter(cfg.StorageEndpoint, cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageRegion, cfg.StorageToken, cfg.StorageBucket, cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
-	id := cfg.StorageBucket + "-" + randomString + "-" + strconv.Itoa(b.N)
+	bucket := "test-bench"
+	consumer, _ := NewMinioAdapter(cfg.StorageEndpoint, cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageRegion, cfg.StorageToken, bucket, cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
+	id := bucket + "-" + randomString + "-" + strconv.Itoa(b.N)
 	totalSize := 0
 	for i := 0; i < b.N; i++ {
 		consumer.Notify(ctx, id, events.Log{Time: time.Now(),
@@ -76,9 +77,10 @@ func BenchmarkLogs(b *testing.B) {
 }
 
 func BenchmarkLogs2(b *testing.B) {
-	consumer, _ := NewMinioAdapter(cfg.StorageEndpoint, cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageRegion, cfg.StorageToken, cfg.StorageBucket, cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
+	bucket := "test-bench"
+	consumer, _ := NewMinioAdapter(cfg.StorageEndpoint, cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageRegion, cfg.StorageToken, bucket, cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
 	idChan := make(chan string, 100)
-	go verifyConsumer(idChan, cfg.StorageBucket, consumer.minioClient)
+	go verifyConsumer(idChan, bucket, consumer.minioClient)
 	var counter atomic.Int32
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
@@ -162,11 +164,12 @@ func verifyConsumer(idChan chan string, bucket string, minioClient *minio.Client
 
 func DoRunBenchmark() {
 	numberOfConsumers := 100
-	consumer, _ := NewMinioAdapter(cfg.StorageEndpoint, cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageRegion, cfg.StorageToken, cfg.StorageBucket, cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
+	bucket := "test-bench"
+	consumer, _ := NewMinioAdapter(cfg.StorageEndpoint, cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageRegion, cfg.StorageToken, bucket, cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
 
 	idChan := make(chan string, numberOfConsumers)
 	DoRunBenchmark2(idChan, numberOfConsumers, consumer)
-	verifyConsumer(idChan, cfg.StorageBucket, consumer.minioClient)
+	verifyConsumer(idChan, bucket, consumer.minioClient)
 }
 
 func DoRunBenchmark2(idChan chan string, numberOfConsumers int, consumer *MinioAdapter) {
@@ -177,7 +180,7 @@ func DoRunBenchmark2(idChan chan string, numberOfConsumers int, consumer *MinioA
 		go func() {
 			defer wg.Done()
 			randomString := strconv.Itoa(int(counter.Add(1)))
-			id := cfg.StorageBucket + "-" + randomString
+			id := "test-bench" + "-" + randomString
 			testOneConsumer(consumer, id)
 			idChan <- id
 		}()

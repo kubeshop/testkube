@@ -28,7 +28,7 @@ func TestMinIOUploader_Upload_Tarball_Integration(t *testing.T) {
 		cfg.StorageSecretAccessKey,
 		cfg.StorageRegion,
 		cfg.StorageToken,
-		cfg.StorageBucket,
+		"test-bucket-fsgds",
 		cfg.StorageSSL,
 		cfg.StorageSkipVerify,
 		cfg.StorageCertFile,
@@ -71,7 +71,7 @@ func TestMinIOUploader_Upload_Tarball_Integration(t *testing.T) {
 		cfg.StorageSecretAccessKey,
 		cfg.StorageRegion,
 		cfg.StorageToken,
-		cfg.StorageBucket,
+		"test-bucket-fsgds",
 	)
 	if err := m.Connect(); err != nil {
 		t.Fatalf("error conecting to minio: %v", err)
@@ -94,7 +94,7 @@ func TestMinIOUploader_Upload_Raw_Integration(t *testing.T) {
 		cfg.StorageSecretAccessKey,
 		cfg.StorageRegion,
 		cfg.StorageToken,
-		cfg.StorageBucket,
+		"test-bucket-hgfhfg",
 		cfg.StorageSSL,
 		cfg.StorageSkipVerify,
 		cfg.StorageCertFile,
@@ -130,7 +130,7 @@ func TestMinIOUploader_Upload_Raw_Integration(t *testing.T) {
 		cfg.StorageSecretAccessKey,
 		cfg.StorageRegion,
 		cfg.StorageToken,
-		cfg.StorageBucket,
+		"test-bucket-hgfhfg",
 	)
 	if err := m.Connect(); err != nil {
 		t.Fatalf("error conecting to minio: %v", err)
