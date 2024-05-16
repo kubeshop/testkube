@@ -64,7 +64,7 @@ func NewKillCmd() *cobra.Command {
 
 				// Inform about detected services
 				for name, count := range services {
-					fmt.Printf("%s: detected %d instances to fetch logs\n", common.ServiceLabel(name), count)
+					fmt.Printf("%s: fetching logs of %d instances\n", common.ServiceLabel(name), count)
 				}
 
 				// Fetch logs for them
