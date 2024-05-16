@@ -357,6 +357,66 @@ func ProcessParallel(_ InternalProcessor, layer Intermediate, container Containe
 	return stage, nil
 }
 
+func ProcessServicesStart(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+	if len(step.Services) == 0 {
+		return nil, nil
+	}
+
+	// TODO: Think of better way to pass the data between steps
+	podsRef := layer.NextRef()
+	container.AppendEnv(corev1.EnvVar{Name: "TK_SVC_REF", Value: podsRef})
+
+	stage := NewContainerStage(layer.NextRef(), container.CreateChild())
+	stage.SetCategory("Start services")
+
+	stage.Container().
+		SetImage(constants.DefaultToolkitImage).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetCommand("/toolkit", "services", "-g", "{{env.TK_SVC_REF}}").
+		EnableToolkit(stage.Ref()).
+		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
+
+	args := make([]string, 0, len(step.Services))
+	for name := range step.Services {
+		v, err := json.Marshal(step.Services[name])
+		if err != nil {
+			return nil, errors.Wrapf(err, "services[%s]: marshalling error", name)
+		}
+		args = append(args, fmt.Sprintf("%s=%s", name, expressionstcl.NewStringValue(string(v)).Template()))
+	}
+	stage.Container().SetArgs(args...)
+
+	return stage, nil
+}
+
+func ProcessServicesStop(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+	if len(step.Services) == 0 {
+		return nil, nil
+	}
+
+	stage := NewContainerStage(layer.NextRef(), container.CreateChild())
+	stage.SetCondition("always") // TODO: actually, it's enough to do it when "Start services" is not skipped
+	stage.SetOptional(true)
+	stage.SetCategory("Stop services")
+
+	stage.Container().
+		SetImage(constants.DefaultToolkitImage).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetCommand("/toolkit", "kill", "{{env.TK_SVC_REF}}").
+		EnableToolkit(stage.Ref()).
+		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
+
+	args := make([]string, 0)
+	for name, v := range step.Services {
+		if v.Logs {
+			args = append(args, "-l", name)
+		}
+	}
+	stage.Container().SetArgs(args...)
+
+	return stage, nil
+}
+
 func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
 	if step.Artifacts == nil {
 		return nil, nil

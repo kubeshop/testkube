@@ -152,6 +152,9 @@ jobs:
         run: sudo apt-get install -y git
 
       - name: Integration Tests
+        env:
+          STORAGE_ACCESSKEYID: minio99
+          STORAGE_SECRETACCESSKEY: minio123
         run: INTEGRATION=y gotestsum --format pkgname --junitfile integration-tests.xml --jsonfile integration-tests.json -- -run _Integration -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Integration Test Summary

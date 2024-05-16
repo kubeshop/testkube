@@ -26,7 +26,7 @@ func generateWideLine(sizeKb int) string {
 func TestLogsV2Local(t *testing.T) {
 	t.Skip("only local")
 	ctx := context.Background()
-	consumer, _ := NewMinioV2Adapter("127.0.0.1:9000", "minioadmin", "minioadmin", "", "", "test-1", false, false, "", "", "")
+	consumer, _ := NewMinioV2Adapter(cfg.StorageEndpoint, cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageRegion, cfg.StorageToken, "test-1", cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
 	consumer.WithPath("./")
 	id := "test-bla"
 	err := consumer.Init(ctx, id)

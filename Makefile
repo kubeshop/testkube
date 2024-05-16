@@ -164,7 +164,7 @@ unit-tests:
 
 .PHONY: integration-tests
 integration-tests:
-	INTEGRATION="true" gotestsum --format pkgname -- -tags=integration -cover ./...
+	INTEGRATION="true" STORAGE_ACCESSKEYID="minio99" STORAGE_SECRETACCESSKEY="minio123" gotestsum --format pkgname -- -tags=integration -cover ./...
 
 test-e2e:
 	go test --tags=e2e -v ./test/e2e

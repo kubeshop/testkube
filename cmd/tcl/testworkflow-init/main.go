@@ -111,6 +111,14 @@ func main() {
 		}
 	}
 
+	// Configure PWD variable, to make it similar to shell environment variables
+	if os.Getenv("PWD") == "" {
+		cwd, err := os.Getwd()
+		if err == nil {
+			_ = os.Setenv("PWD", cwd)
+		}
+	}
+
 	// Compute environment variables
 	for _, name := range computed {
 		initial := os.Getenv(name)

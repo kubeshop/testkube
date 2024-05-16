@@ -27,6 +27,7 @@ const (
 	DefaultFsGroup            = int64(1001)
 	ResourceIdLabelName       = "testworkflowid"
 	RootResourceIdLabelName   = "testworkflowid-root"
+	GroupIdLabelName          = "testworkflowid-group"
 	SignatureAnnotationName   = "testworkflows.testkube.io/signature"
 )
 

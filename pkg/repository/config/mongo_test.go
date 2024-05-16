@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/kubeshop/testkube/pkg/repository/storage"
@@ -14,12 +15,15 @@ import (
 )
 
 const (
-	mongoDns    = "mongodb://localhost:27017"
 	mongoDbName = "testkube-test"
 )
 
+var (
+	cfg, _ = config.Get()
+)
+
 func getRepository() (*MongoRepository, error) {
-	db, err := storage.GetMongoDatabase(mongoDns, mongoDbName, storage.TypeMongoDB, false, nil)
+	db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, mongoDbName, storage.TypeMongoDB, false, nil)
 	repository := NewMongoRepository(db)
 	return repository, err
 }

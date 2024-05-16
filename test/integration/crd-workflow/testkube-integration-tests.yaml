@@ -1,0 +1,77 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: testkube-integration
+  labels:
+    core-tests: workflows
+spec:
+#  config:
+#    revision:
+#      type: string
+#      default: develop
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube.git
+      revision: 'dawid/feat/accompanying-services'
+  services:
+    db:
+      image: mongo
+      env:
+      - name: MONGO_INITDB_ROOT_USERNAME
+        value: root
+      - name: MONGO_INITDB_ROOT_PASSWORD
+        value: p4ssw0rd
+      readinessProbe:
+        tcpSocket:
+          port: 27017
+        periodSeconds: 1
+    nats:
+      image: bitnami/nats
+      readinessProbe:
+        tcpSocket:
+          port: 4222
+        periodSeconds: 1
+    minio:
+      image: bitnami/minio
+      env:
+      - name: MINIO_ROOT_USER
+        value: minio99
+      - name: MINIO_ROOT_PASSWORD
+        value: minio123
+      readinessProbe:
+        tcpSocket:
+          port: 9000
+        periodSeconds: 1
+  pod:
+    volumes:
+    - name: gocache
+      hostPath:
+        path: /go-cache/{{ workflow.name }}
+  steps:
+    - name: Run integration tests
+      run:
+        image: golang:1.22.1-bookworm
+        workingDir: /data/repo
+        volumeMounts:
+        - name: gocache
+          mountPath: /go-cache
+        env:
+        - name: GOCACHE
+          value: /go-cache
+        - name: API_MONGO_DSN
+          value: mongodb://root:p4ssw0rd@{{services.db.0.ip}}:27017
+        - name: NATS_URI
+          value: nats://{{services.nats.0.ip}}:4222
+        - name: STORAGE_ENDPOINT
+          value: '{{services.minio.0.ip}}:9000'
+        - name: STORAGE_ACCESSKEYID
+          value: minio99
+        - name: STORAGE_SECRETACCESSKEY
+          value: minio123
+        shell: |
+          apt-get update
+          apt-get install -y ca-certificates libssl3 git skopeo
+          go install gotest.tools/gotestsum@v1.9.0
+
+          # TODO: Support job executor tests too (./...)
+          INTEGRATION=y gotestsum --format short-verbose -- -count 1 -run _Integration -cover ./pkg/...
