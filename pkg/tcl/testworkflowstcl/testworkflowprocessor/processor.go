@@ -299,9 +299,6 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		Command:         []string{"/bin/sh", "-c"},
 		Args:            []string{constants.InitScript},
 		VolumeMounts:    layer.ContainerDefaults().VolumeMounts(),
-		SecurityContext: &corev1.SecurityContext{
-			RunAsGroup: common.Ptr(constants.DefaultFsGroup),
-		},
 	}
 	err = expressionstcl.FinalizeForce(&initContainer, machines...)
 	if err != nil {

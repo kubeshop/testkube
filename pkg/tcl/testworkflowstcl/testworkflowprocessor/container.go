@@ -209,13 +209,13 @@ func (c *container) Resources() (r testworkflowsv1.Resources) {
 }
 
 func (c *container) SecurityContext() *corev1.SecurityContext {
-	if c.Cr.SecurityContext != nil {
+	if c.parent == nil || c.parent.SecurityContext() == nil {
 		return c.Cr.SecurityContext
 	}
-	if c.parent == nil {
-		return nil
+	if c.Cr.SecurityContext == nil {
+		return c.parent.SecurityContext()
 	}
-	return c.parent.SecurityContext()
+	return testworkflowresolver.MergeSecurityContext(c.parent.SecurityContext().DeepCopy(), c.Cr.SecurityContext)
 }
 
 func (c *container) HasVolumeAt(path string) bool {
