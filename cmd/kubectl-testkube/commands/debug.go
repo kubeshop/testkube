@@ -13,8 +13,9 @@ import (
 // NewDebugCmd creates the 'testkube debug' command
 func NewDebugCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "debug",
-		Short: "Print environment information for debugging",
+		Use:     "debug",
+		Aliases: []string{"dbg", "d"},
+		Short:   "Print environment information for debugging",
 		Run: func(cmd *cobra.Command, args []string) {
 
 			cfg, err := config.Load()
@@ -74,6 +75,7 @@ func NewDebugCmd() *cobra.Command {
 		}}
 
 	cmd.AddCommand(debug.NewShowDebugInfoCmd())
+	cmd.AddCommand(debug.NewDebugControlPlaneCmd())
 
 	return cmd
 }

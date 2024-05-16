@@ -425,3 +425,96 @@ func uiGetToken(tokenChan chan cloudlogin.Tokens) (string, string, error) {
 
 	return token.IDToken, token.RefreshToken, nil
 }
+
+func KubectlPrintLogs(namespace string, labels map[string]string) error {
+	kubectl, err := exec.LookPath("kubectl")
+	if err != nil {
+		return err
+	}
+
+	args := []string{
+		"logs",
+		"--all-containers",
+		"-n", namespace,
+		"--max-log-requests=100",
+		"--tail=10000000",
+		"--ignore-errors=true",
+	}
+
+	for k, v := range labels {
+		args = append(args, fmt.Sprintf("-l %s=%s", k, v))
+	}
+
+	ui.ShellCommand(kubectl, args...)
+	ui.NL()
+
+	return process.ExecuteAndStreamOutput(kubectl, args...)
+}
+
+func KubectlPrintEvents(namespace string) error {
+	kubectl, err := exec.LookPath("kubectl")
+	if err != nil {
+		return err
+	}
+
+	args := []string{
+		"get",
+		"events",
+		"-n", namespace,
+	}
+
+	ui.ShellCommand(kubectl, args...)
+	ui.NL()
+
+	err = process.ExecuteAndStreamOutput(kubectl, args...)
+	if err != nil {
+		return err
+	}
+
+	args = []string{
+		"get",
+		"events",
+		"-A",
+	}
+
+	ui.ShellCommand(kubectl, args...)
+	ui.NL()
+
+	return process.ExecuteAndStreamOutput(kubectl, args...)
+}
+
+func KubectlPrintPods(namespace string) error {
+	kubectl, err := exec.LookPath("kubectl")
+	if err != nil {
+		return err
+	}
+
+	args := []string{
+		"get",
+		"pods",
+		"-n", namespace,
+		"--show-labels",
+	}
+
+	ui.ShellCommand(kubectl, args...)
+	ui.NL()
+
+	return process.ExecuteAndStreamOutput(kubectl, args...)
+}
+
+func KubectlPrintStorageClass(namespace string) error {
+	kubectl, err := exec.LookPath("kubectl")
+	if err != nil {
+		return err
+	}
+
+	args := []string{
+		"get",
+		"storageclass",
+	}
+
+	ui.ShellCommand(kubectl, args...)
+	ui.NL()
+
+	return process.ExecuteAndStreamOutput(kubectl, args...)
+}
