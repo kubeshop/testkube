@@ -5,14 +5,14 @@ metadata:
   labels:
     core-tests: workflows
 spec:
-#  config:
-#    revision:
-#      type: string
-#      default: develop
+  config:
+    revision:
+      type: string
+      default: develop
   content:
     git:
       uri: https://github.com/kubeshop/testkube.git
-      revision: 'dawid/feat/accompanying-services'
+      revision: '{{ config.revision }}'
   services:
     db:
       image: mongo
