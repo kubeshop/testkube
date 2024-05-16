@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
 
 	"github.com/stretchr/testify/require"
