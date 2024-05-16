@@ -37,16 +37,28 @@ const sidebars = {
       type: "category",
       label: "Installing",
       items: [
-        { type: "doc", id: "articles/install/overview" },
-        { type: "doc", id: "articles/install/cli" },
-        { type: "doc", id: "articles/install/quickstart-install" },
-        { type: "doc", id: "articles/install/reference-architectures" },
-        { type: "doc", id: "articles/install/install-with-cli" },
-        { type: "doc", id: "articles/install/install-with-helm" },
-        { type: "doc", id: "articles/install/advanced-install" },
-        { type: "doc", id: "articles/install/quickstart-no-k8s" },
-        { type: "doc", id: "articles/install/uninstall" },
-        { type: "doc", id: "articles/install/faq" },
+        "articles/install/overview",
+        "articles/install/cli",
+        "articles/install/quickstart-install",
+        "articles/install/reference-architectures",
+        {
+          type: "category",
+          label: "Install with Helm",
+          items: [
+            "articles/install/install-with-helm",
+            "articles/install/advanced-install",
+            "articles/install/auth",
+            "articles/install/advanced-multi-cluster",
+          ],
+        },
+        {
+          type: "doc",
+          label: "Install Testkube OSS",
+          id: "articles/install/install-oss",
+        },
+        "articles/install/quickstart-no-k8s",
+        "articles/install/uninstall",
+        "articles/install/faq",
       ],
     },
     {
@@ -184,6 +196,7 @@ const sidebars = {
         "articles/install-cli",
         "articles/uninstall",
         "articles/upgrade",
+        "articles/migrate-from-oss",
       ],
     },
     {
@@ -224,8 +237,6 @@ const sidebars = {
       label: "Testkube Pro",
       items: [
         "testkube-pro/articles/intro",
-        "testkube-pro/articles/installing-agent",
-        "testkube-pro/articles/transition-from-oss",
         "testkube-pro/articles/organization-management",
         "testkube-pro/articles/environment-management",
         "testkube-pro/articles/managing-cli-context",
@@ -239,24 +250,8 @@ const sidebars = {
     },
     {
       type: "category",
-      label: "Testkube Pro On-Prem",
-      items: [
-        "testkube-pro-on-prem/articles/testkube-pro-on-prem",
-        "testkube-pro-on-prem/articles/usage-guide",
-        "testkube-pro-on-prem/articles/auth",
-        "testkube-pro-on-prem/articles/migrating-from-oss-to-pro",
-      ],
-    },
-    "articles/testkube-oss",
-    {
-      type: "category",
       label: "Reference",
       items: [
-        {
-          type: "doc",
-          id: "articles/helm-chart",
-          label: "Helm Chart",
-        },
         "articles/crds-reference",
         {
           type: "category",
@@ -275,9 +270,9 @@ const sidebars = {
         "articles/architecture",
         "articles/telemetry",
         {
-          type: 'link',
-          label: 'OpenAPI Specification',
-          href: 'https://api.testkube.io/openapi',
+          type: "link",
+          label: "OpenAPI Specification",
+          href: "https://api.testkube.io/openapi",
         },
       ],
     },

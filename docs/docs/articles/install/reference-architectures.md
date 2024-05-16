@@ -9,7 +9,7 @@ The two sub-systems can be deployed in variety of ways to give flexibility into 
 
 ## Testkube OSS
 
-Testkube OSS has a standalone agent. It's fully open-sourced and does not require a license. To deploy this you will want to look at [deploying the standalone agent][deploy-standalone].
+Testkube OSS is a standalone agent. It has limited functionality and is [fully open-sourced][testkube-repo]. The standalone agent includes the full test orchestration engine: you can apply Tests, TestWorkflows, etc and execute them with your CLI. To deploy this you will want to look at [deploying the standalone agent][deploy-standalone].
 
 ![Deployment with standalone agent](../../img/architecture-standalone.jpeg)
 
@@ -21,7 +21,7 @@ You can also try [the quickstart demo][deploy-quickstart].
 
 ![Deployment with single agent](../../img/architecture-default.jpeg)
 
-## Testkube On-Prem Federated
+## Testkube On-Prem Multicluster
 
 Testkube On-Prem has the control plane in one namespace with multiple agents in other namespaces or clusters. You will create an environment for each of your clusters. To deploy this you will want to look at [installing with Helm][deploy-with-helm] for the control plane and [deploying an agent][deploy-agent] for the agents.
 
@@ -45,3 +45,4 @@ Your proprietory code never touches our servers, only test logs and artifacts wi
 [deploy-agent]: /articles/install/install-with-cli#deploy-an-agent-that-will-connect-to-a-control-plane
 [deploy-demo]: /articles/install/install-with-cli#deploy-an-on-prem-demo
 [deploy-with-helm]: /articles/install/install-with-helm
+[testkube-repo]: https://github.com/kubeshop/testkube

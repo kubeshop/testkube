@@ -1,4 +1,4 @@
-# Install Testkube with Helm
+# Helm configuration
 
 The Testkube Helm Chart lets you set up a customized Testkube for your environment.
 
@@ -47,20 +47,20 @@ helm upgrade --install \
 
 You will have to set a license key to get started with Testkube. You can also opt to use a shared secret for your license. You can request a free license, no up-front credit card required.
 
-```bash
+```diff
 global:
-	enterpriseLicense: XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-V3
++  enterpriseLicense: XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-V3
 ```
 
 ### Domain
 
 You should enable ingress and configure your domain to access Testkube services:
 
-```
+```diff
 global:
   ingress:
-    enabled: true
-  domain: "example.com"
++    enabled: true
++  domain: "example.com"
 ```
 
 By default, the following services will be exposed. You can also choose to override the subdomain for each service.

@@ -108,6 +108,32 @@ annotations:
 
 To use your own ingress controller, reach out to our support team and we’ll gladly investigate your ingress of choice. Alternatively, you can give it a try yourself by deploying Testkube and seeing whether gRPC and WebSockets are working properly.
 
+## Multi-namespaces
+
+These commands will deploy Testkube components into two namespaces: testkube and testkube1 and will create a watcher role to watch k8s resources in each namespace respectively. If you need to watch resources besides the installation namespace, please add them to the **_additionalNamespaces_** variable in **_testkube-api_** section:
+
+```diff
+testkube-agent:
+  testkube-api:
++    multinamespace:
++      enable: true
++    additionalNamespaces:
++    - namespace2
++    - namespace3
+```
+
+Additionally, It is possible to change the namespace for **_testkube-operator_** by setting a value for **_namespace_** variable in the **_testkube-operator_** section:
+
+```diff
+testkube-agent:
+  testkube-operator:
++    namespace: testkube-system
+```
+
+:::note
+Please note that the **Testkube Operator** creates **ClusterRoles**, so for the second deployment of Testkube, we need to disable the Operator, because it will fail with a `resources already exist` error. Be aware that the Operator is deployed once with the first chart installation of Testkube. Therefore, if you uninstall the first release, it will uninstall the Operator as well.
+:::
+
 ## Bring Your Own Infra
 
 Testkube Enterprise supports integrating with existing infrastructure components such as MongoDB, NATS, Dex, etc. For production environments, it's recommended to use your own infra or to harden the sub-charts.

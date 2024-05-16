@@ -129,7 +129,7 @@ const redirects = [
       "/getting-started/step2-installing-cluster-components",
       "/articles/step2-installing-cluster-components",
       "/getting-started/step3-creating-first-test",
-      "/articles/step3-creating-first-test"
+      "/articles/step3-creating-first-test",
     ],
     to: "/articles/getting-started",
   },
@@ -205,7 +205,7 @@ const redirects = [
   {
     from: "/concepts/test-executions",
     to: "/articles/test-executions",
-  },  
+  },
   {
     from: [
       "/guides/going-to-production/exposing-testkube/overview",
@@ -230,7 +230,10 @@ const redirects = [
     to: "/articles/oauth-cli",
   },
   {
-    from: ["/guides/going-to-production/authentication/oauth-ui","/articles/oauth-dashboard"],
+    from: [
+      "/guides/going-to-production/authentication/oauth-ui",
+      "/articles/oauth-dashboard",
+    ],
     to: "/articles/testkube-dashboard",
   },
   {
@@ -282,47 +285,88 @@ const redirects = [
     to: "/articles/templates",
   },
   {
-    from: ["/testkube-cloud/intro", "/testkube-cloud", "/testkube-cloud/articles/intro", "/testkube-pro/intro"],
+    from: [
+      "/testkube-cloud/intro",
+      "/testkube-cloud",
+      "/testkube-cloud/articles/intro",
+      "/testkube-pro/intro",
+    ],
     to: "/testkube-pro/articles/intro",
   },
   {
-    from: ["/testkube-cloud/installing-agent", "/testkube-cloud/articles/installing-agent", "/testkube-pro/installing-agent"],
+    from: [
+      "/testkube-cloud/installing-agent",
+      "/testkube-cloud/articles/installing-agent",
+      "/testkube-pro/installing-agent",
+    ],
     to: "/testkube-pro/articles/installing-agent",
   },
   {
-    from: ["/testkube-cloud/transition-from-oss", "/testkube-cloud/articles/transition-from-oss", "/testkube-pro/transition-from-oss"],
+    from: [
+      "/testkube-cloud/transition-from-oss",
+      "/testkube-cloud/articles/transition-from-oss",
+      "/testkube-pro/transition-from-oss",
+    ],
     to: "/testkube-pro/articles/transition-from-oss",
   },
   {
-    from: ["/testkube-cloud/organization-management", "/testkube-cloud/articles/organization-management", "/testkube-pro/organization-management"],
+    from: [
+      "/testkube-cloud/organization-management",
+      "/testkube-cloud/articles/organization-management",
+      "/testkube-pro/organization-management",
+    ],
     to: "/testkube-pro/articles/organization-management",
   },
   {
-    from: ["/testkube-cloud/environment-management", "/testkube-cloud/articles/environment-management", "/testkube-pro/environment-management"],
+    from: [
+      "/testkube-cloud/environment-management",
+      "/testkube-cloud/articles/environment-management",
+      "/testkube-pro/environment-management",
+    ],
     to: "/testkube-pro/articles/environment-management",
   },
   {
-    from: ["/testkube-cloud/managing-cli-context", "/testkube-cloud/articles/managing-cli-context", "/testkube-pro/managing-cli-context"],
+    from: [
+      "/testkube-cloud/managing-cli-context",
+      "/testkube-cloud/articles/managing-cli-context",
+      "/testkube-pro/managing-cli-context",
+    ],
     to: "/testkube-pro/articles/managing-cli-context",
   },
   {
-    from: ["/testkube-cloud/architecture", "/testkube-cloud/articles/architecture", "/testkube-pro/architecture"],
+    from: [
+      "/testkube-cloud/architecture",
+      "/testkube-cloud/articles/architecture",
+      "/testkube-pro/architecture",
+    ],
     to: "/testkube-pro/articles/architecture",
   },
   {
-    from: ["/testkube-cloud/articles/running-parallel-tests-with-test-suite","/testkube-pro/running-parallel-tests-with-test-suite"],
+    from: [
+      "/testkube-cloud/articles/running-parallel-tests-with-test-suite",
+      "/testkube-pro/running-parallel-tests-with-test-suite",
+    ],
     to: "/testkube-pro/articles/running-parallel-tests-with-test-suite",
   },
   {
-    from: ["/testkube-cloud/articles/AI-test-insights", "/testkube-pro/AI-test-insights"],
+    from: [
+      "/testkube-cloud/articles/AI-test-insights",
+      "/testkube-pro/AI-test-insights",
+    ],
     to: "/testkube-pro/articles/AI-test-insights",
   },
   {
-    from: ["/testkube-cloud/articles/status-pages", "/testkube-pro/status-pages"],
+    from: [
+      "/testkube-cloud/articles/status-pages",
+      "/testkube-pro/status-pages",
+    ],
     to: "/testkube-pro/articles/status-pages",
   },
   {
-    from: ["/testkube-cloud/articles/cached-results", "/testkube-pro/cached-results"],
+    from: [
+      "/testkube-cloud/articles/cached-results",
+      "/testkube-pro/cached-results",
+    ],
     to: "/testkube-pro/articles/cached-results",
   },
   {
@@ -363,23 +407,50 @@ const redirects = [
   {
     from: "/guides/upgrade",
     to: "/articles/upgrade",
-  },  
+  },
   {
     from: "/testkube-enterprise/articles/testkube-enterprise",
     to: "/testkube-pro-on-prem/articles/testkube-pro-on-prem",
-  },  
+  },
   {
     from: "/testkube-enterprise/articles/usage-guide",
     to: "/testkube-pro-on-prem/articles/usage-guide",
-  },  
-  {
-    from: "/testkube-enterprise/articles/auth",
-    to: "/testkube-pro-on-prem/articles/auth",
-  },  
+  },
   {
     from: "/testkube-enterprise/articles/migrating-from-oss-to-pro",
     to: "/testkube-pro-on-prem/articles/migrating-from-oss-to-pro",
-  },  
+  },
+  {
+    from: "/testkube-pro/articles/installing-agent",
+    to: "/articles/install/advanced-multi-cluster",
+  },
+  {
+    from: "/testkube-pro/articles/transition-from-oss",
+    to: "/articles/install/advanced-multi-cluster",
+  },
+  {
+    from: [
+      "/testkube-enterprise/articles/auth",
+      "/testkube-pro-on-prem/articles/auth",
+    ],
+    to: "/articles/install/auth",
+  },
+  {
+    from: "/testkube-pro-on-prem/articles/testkube-pro-on-prem",
+    to: "/articles/install/quickstart-install",
+  },
+  {
+    from: "/testkube-pro-on-prem/articles/usage-guide",
+    to: "/articles/install/install-with-helm",
+  },
+  {
+    from: "/testkube-pro-on-prem/articles/migrating-from-oss-to-pro",
+    to: "/articles/migrate-from-oss",
+  },
+  {
+    from: "/articles/testkube-oss",
+    to: "/articles/install/install-oss",
+  },
 ];
 
 module.exports = redirects;
