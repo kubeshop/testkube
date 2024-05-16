@@ -6,16 +6,20 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"path/filepath"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-
-	"github.com/kubeshop/testkube/pkg/log"
-
-	"github.com/pkg/errors"
-
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/log"
+
+	"github.com/h2non/filetype"
+	"github.com/pkg/errors"
 )
+
+func init() {
+	filetype.AddType("xml", "text/xml")
+}
 
 type CloudUploader struct {
 	executor executor.Executor
@@ -65,6 +69,7 @@ func (u *CloudUploader) putObject(ctx context.Context, url string, data io.Reade
 	if err != nil {
 		return err
 	}
+
 	req.Header.Set("Content-Type", "application/octet-stream")
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: u.skipVerify}
@@ -81,4 +86,18 @@ func (u *CloudUploader) putObject(ctx context.Context, url string, data io.Reade
 
 func (u *CloudUploader) Close() error {
 	return u.executor.Close()
+}
+
+func getContentType(filePath string) string {
+	ext := filepath.Ext(filePath)
+
+	// Remove the dot from the file extension
+	if len(ext) > 0 && ext[0] == '.' {
+		ext = ext[1:]
+	}
+	t := filetype.GetType(ext)
+	if t == filetype.Unknown {
+		return "text/plain"
+	}
+	return t.MIME.Value
 }
