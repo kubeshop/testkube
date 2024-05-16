@@ -24,8 +24,9 @@ type TestWorkflowIndependentStep struct {
 	// maximum time this step may take
 	Timeout string `json:"timeout,omitempty"`
 	// delay before the step
-	Delay   string               `json:"delay,omitempty"`
-	Content *TestWorkflowContent `json:"content,omitempty"`
+	Delay    string                                        `json:"delay,omitempty"`
+	Content  *TestWorkflowContent                          `json:"content,omitempty"`
+	Services map[string]TestWorkflowIndependentServiceSpec `json:"services,omitempty"`
 	// script to run in a default shell for the container
 	Shell      string                               `json:"shell,omitempty"`
 	Run        *TestWorkflowStepRun                 `json:"run,omitempty"`

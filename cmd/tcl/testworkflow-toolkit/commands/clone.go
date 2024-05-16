@@ -69,7 +69,11 @@ func NewCloneCmd() *cobra.Command {
 			// Clone repository
 			if len(paths) == 0 {
 				ui.Debug("full checkout")
-				err = Run("git", "clone", configArgs, authArgs, "--depth", 1, "--verbose", uri.String(), outputPath)
+				if revision == "" {
+					err = Run("git", "clone", configArgs, authArgs, "--depth", 1, "--verbose", uri.String(), outputPath)
+				} else {
+					err = Run("git", "clone", configArgs, authArgs, "--depth", 1, "--branch", revision, "--verbose", uri.String(), outputPath)
+				}
 				ui.ExitOnError("cloning repository", err)
 			} else {
 				ui.Debug("sparse checkout")

@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/nats-io/nats.go"
@@ -15,11 +16,15 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
+var (
+	cfg, _ = config.Get()
+)
+
 func TestMultipleMessages_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 
 	// given NATS connection
-	nc, err := nats.Connect("localhost")
+	nc, err := nats.Connect(cfg.NatsURI)
 	assert.NoError(t, err)
 	defer nc.Close()
 
@@ -81,7 +86,7 @@ func TestNATS_Integration(t *testing.T) {
 	event.Id = "123"
 
 	// and connection
-	nc, err := nats.Connect("localhost")
+	nc, err := nats.Connect(cfg.NatsURI)
 	assert.NoError(t, err)
 	defer nc.Close()
 

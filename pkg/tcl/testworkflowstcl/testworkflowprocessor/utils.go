@@ -36,6 +36,20 @@ func AnnotateControlledBy(obj metav1.Object, rootId, id string) {
 	}
 }
 
+func AnnotateGroupId(obj metav1.Object, id string) {
+	labels := obj.GetLabels()
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	labels[constants.GroupIdLabelName] = id
+	obj.SetLabels(labels)
+
+	// Annotate Pod template in the Job
+	if v, ok := obj.(*batchv1.Job); ok {
+		AnnotateGroupId(&v.Spec.Template, id)
+	}
+}
+
 func getRef(stage Stage) string {
 	return stage.Ref()
 }
@@ -44,7 +58,7 @@ func isNotOptional(stage Stage) bool {
 	return !stage.Optional()
 }
 
-func buildKubernetesContainers(stage Stage, init *initProcess, machines ...expressionstcl.Machine) (containers []corev1.Container, err error) {
+func buildKubernetesContainers(stage Stage, init *initProcess, fsGroup *int64, machines ...expressionstcl.Machine) (containers []corev1.Container, err error) {
 	if stage.Paused() {
 		init.SetPaused(stage.Paused())
 	}
@@ -89,7 +103,7 @@ func buildKubernetesContainers(stage Stage, init *initProcess, machines ...expre
 				init.ResetCondition().SetPaused(false)
 			}
 			// Pass down to another group or container
-			sub, serr := buildKubernetesContainers(ch, init.Children(ch.Ref()), machines...)
+			sub, serr := buildKubernetesContainers(ch, init.Children(ch.Ref()), fsGroup, machines...)
 			if serr != nil {
 				return nil, fmt.Errorf("%s: %s: resolving children: %s", stage.Ref(), stage.Name(), serr.Error())
 			}
@@ -142,7 +156,7 @@ func buildKubernetesContainers(stage Stage, init *initProcess, machines ...expre
 		cr.SecurityContext = &corev1.SecurityContext{}
 	}
 	if cr.SecurityContext.RunAsGroup == nil {
-		cr.SecurityContext.RunAsGroup = common.Ptr(constants.DefaultFsGroup)
+		cr.SecurityContext.RunAsGroup = fsGroup
 	}
 
 	containers = []corev1.Container{cr}
