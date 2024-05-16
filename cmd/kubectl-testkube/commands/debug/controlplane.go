@@ -17,10 +17,15 @@ func NewDebugControlPlaneCmd() *cobra.Command {
 		Short:   "Show debug info",
 		Long:    "Get all the necessary information to debug an issue in Testkube Control Plane",
 		Run: func(cmd *cobra.Command, args []string) {
-			ui.H1("Getting control plane logs")
 
 			namespace, err := cmd.Flags().GetString("namespace")
 			ui.ExitOnError("getting namespace", err)
+
+			ui.H1("Getting control plane logs")
+
+			ui.H2("Kubernetes Pods in namespace:" + namespace)
+			err = common.KubectlPrintPods(namespace)
+			ui.WarnOnError("getting Kubernetes pods", err)
 
 			ui.H2("API Server Logs")
 			err = common.KubectlPrintLogs(namespace, map[string]string{"app.kubernetes.io/name": "testkube-cloud-api"})
@@ -50,7 +55,11 @@ func NewDebugControlPlaneCmd() *cobra.Command {
 			err = common.KubectlPrintLogs(namespace, map[string]string{"app.kubernetes.io/name": "nats"})
 			ui.WarnOnError("getting worker service logs", err)
 
-			ui.H2("Agent debug info")
+			ui.H2("Kubernetes Events")
+			err = common.KubectlPrintEvents(namespace)
+			ui.WarnOnError("getting Kubernetes events", err)
+
+			ui.H1("Agent debug info")
 			client, _, err := common.GetClient(cmd)
 			ui.WarnOnError("getting client", err)
 

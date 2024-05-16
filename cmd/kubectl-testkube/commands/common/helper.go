@@ -445,7 +445,41 @@ func KubectlPrintLogs(namespace string, labels map[string]string) error {
 		args = append(args, fmt.Sprintf("-l %s=%s", k, v))
 	}
 
-	fmt.Printf("kubectl %+v\n", strings.Join(args, " "))
+	ui.ShellCommand(kubectl, args...)
+
+	return process.ExecuteAndStreamOutput(kubectl, args...)
+}
+
+func KubectlPrintEvents(namespace string) error {
+	kubectl, err := exec.LookPath("kubectl")
+	if err != nil {
+		return err
+	}
+
+	args := []string{
+		"events",
+		"-n", namespace,
+	}
+
+	ui.ShellCommand(kubectl, args...)
+
+	return process.ExecuteAndStreamOutput(kubectl, args...)
+}
+
+func KubectlPrintPods(namespace string) error {
+	kubectl, err := exec.LookPath("kubectl")
+	if err != nil {
+		return err
+	}
+
+	args := []string{
+		"get",
+		"pods",
+		"-n", namespace,
+		"--show-labels",
+	}
+
+	ui.ShellCommand(kubectl, args...)
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }

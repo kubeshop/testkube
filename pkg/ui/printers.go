@@ -219,9 +219,9 @@ func (ui *UI) Vector(table []string) {
 
 // Warn shows warning in terminal
 func (ui *UI) ShellCommand(title string, commands ...string) {
-	fmt.Fprintf(ui.Writer, "%s:\n", White(title))
+	fmt.Fprintf(ui.Writer, "$ %s\n", LightGray(title))
 	for _, sub := range commands {
-		fmt.Fprintf(ui.Writer, "$ %s\n", LightGray(sub))
+		fmt.Fprintf(ui.Writer, "\t%s\n", LightGray(sub))
 	}
 	fmt.Fprintln(ui.Writer)
 }
