@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/minio/minio-go/v7"
@@ -14,19 +15,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var (
+	cfg, _ = config.Get()
+)
+
 func TestArtifactClient(t *testing.T) {
 	test.IntegrationTest(t)
 	t.Parallel()
 
-	directMinioClient, err := minio.New("localhost:9000", &minio.Options{
-		Creds:  credentials.NewStaticV4("minio99", "minio123", ""),
-		Secure: false,
+	directMinioClient, err := minio.New(cfg.StorageEndpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageToken),
+		Secure: cfg.StorageSSL,
 	})
 	if err != nil {
 		t.Fatalf("unable to create direct minio client: %v", err)
 	}
 	// Prepare MinIO client
-	minioClient := NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-fsdf")
+	minioClient := NewClient(cfg.StorageEndpoint, cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageRegion, cfg.StorageToken, cfg.StorageBucket)
 	if err := minioClient.Connect(); err != nil {
 		t.Fatalf("unable to connect to minio: %v", err)
 	}
@@ -41,7 +46,7 @@ func TestArtifactClient(t *testing.T) {
 	t.Run("ListFiles", func(t *testing.T) {
 		t.Parallel()
 		// Upload a test file
-		_, err = directMinioClient.PutObject(ctx, "test-bucket-fsdf", "test-execution-id-1/test-file", bytes.NewReader([]byte("test-content")), 12, minio.PutObjectOptions{})
+		_, err = directMinioClient.PutObject(ctx, cfg.StorageBucket, "test-execution-id-1/test-file", bytes.NewReader([]byte("test-content")), 12, minio.PutObjectOptions{})
 		if err != nil {
 			t.Fatalf("unable to upload file: %v", err)
 		}
@@ -58,7 +63,7 @@ func TestArtifactClient(t *testing.T) {
 	t.Run("DownloadFile", func(t *testing.T) {
 		t.Parallel()
 		// Upload a test file
-		_, err = directMinioClient.PutObject(ctx, "test-bucket-fsdf", "test-execution-id-2/test-file", bytes.NewReader([]byte("test-content")), 12, minio.PutObjectOptions{})
+		_, err = directMinioClient.PutObject(ctx, cfg.StorageBucket, "test-execution-id-2/test-file", bytes.NewReader([]byte("test-content")), 12, minio.PutObjectOptions{})
 		if err != nil {
 			t.Fatalf("unable to upload file: %v", err)
 		}
@@ -83,7 +88,7 @@ func TestArtifactClient(t *testing.T) {
 		}
 
 		// Check if the file is uploaded
-		obj, err := directMinioClient.GetObject(ctx, "test-bucket-fsdf", "test-execution-id-3/test-file", minio.GetObjectOptions{})
+		obj, err := directMinioClient.GetObject(ctx, cfg.StorageBucket, "test-execution-id-3/test-file", minio.GetObjectOptions{})
 		if err != nil {
 			t.Fatalf("unable to get object from minio: %v", err)
 		}
@@ -103,11 +108,11 @@ func TestArtifactClient(t *testing.T) {
 		}
 		defer os.RemoveAll(tempDir)
 		// Upload test files
-		_, err = directMinioClient.PutObject(ctx, "test-bucket-fsdf", "test-execution-id-4/test-file1", bytes.NewReader([]byte("test-content")), 12, minio.PutObjectOptions{})
+		_, err = directMinioClient.PutObject(ctx, cfg.StorageBucket, "test-execution-id-4/test-file1", bytes.NewReader([]byte("test-content")), 12, minio.PutObjectOptions{})
 		if err != nil {
 			t.Fatalf("unable to upload file: %v", err)
 		}
-		_, err = directMinioClient.PutObject(ctx, "test-bucket-fsdf", "test-execution-id-4/test-file2", bytes.NewReader([]byte("test-content")), 12, minio.PutObjectOptions{})
+		_, err = directMinioClient.PutObject(ctx, cfg.StorageBucket, "test-execution-id-4/test-file2", bytes.NewReader([]byte("test-content")), 12, minio.PutObjectOptions{})
 		if err != nil {
 			t.Fatalf("unable to upload file: %v", err)
 		}

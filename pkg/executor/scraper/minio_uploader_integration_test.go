@@ -23,17 +23,17 @@ func TestMinIOUploader_Upload_Tarball_Integration(t *testing.T) {
 
 	// Create a new MinIO uploader with the appropriate configuration
 	uploader, err := scraper.NewMinIOUploader(
-		"localhost:9000",
-		"minio99",
-		"minio123",
-		"us-east-1",
-		"",
-		"test-bucket-fsgds",
-		false,
-		false,
-		"",
-		"",
-		"",
+		cfg.StorageEndpoint,
+		cfg.StorageAccessKeyID,
+		cfg.StorageSecretAccessKey,
+		cfg.StorageRegion,
+		cfg.StorageToken,
+		cfg.StorageBucket,
+		cfg.StorageSSL,
+		cfg.StorageSkipVerify,
+		cfg.StorageCertFile,
+		cfg.StorageKeyFile,
+		cfg.StorageCAFile,
 	)
 	if err != nil {
 		t.Fatalf("failed to create MinIO loader: %v", err)
@@ -66,12 +66,12 @@ func TestMinIOUploader_Upload_Tarball_Integration(t *testing.T) {
 	}
 
 	m := minio.NewClient(
-		"localhost:9000",
-		"minio99",
-		"minio123",
-		"us-east-1",
-		"",
-		"test-bucket-fsgds",
+		cfg.StorageEndpoint,
+		cfg.StorageAccessKeyID,
+		cfg.StorageSecretAccessKey,
+		cfg.StorageRegion,
+		cfg.StorageToken,
+		cfg.StorageBucket,
 	)
 	if err := m.Connect(); err != nil {
 		t.Fatalf("error conecting to minio: %v", err)
@@ -89,17 +89,17 @@ func TestMinIOUploader_Upload_Raw_Integration(t *testing.T) {
 
 	// Create a new MinIO loader with the appropriate configuration
 	uploader, err := scraper.NewMinIOUploader(
-		"localhost:9000",
-		"minio99",
-		"minio123",
-		"us-east-1",
-		"",
-		"test-bucket-hgfhfg",
-		false,
-		false,
-		"",
-		"",
-		"",
+		cfg.StorageEndpoint,
+		cfg.StorageAccessKeyID,
+		cfg.StorageSecretAccessKey,
+		cfg.StorageRegion,
+		cfg.StorageToken,
+		cfg.StorageBucket,
+		cfg.StorageSSL,
+		cfg.StorageSkipVerify,
+		cfg.StorageCertFile,
+		cfg.StorageKeyFile,
+		cfg.StorageCAFile,
 	)
 	if err != nil {
 		t.Fatalf("failed to create MinIO loader: %v", err)
@@ -125,12 +125,12 @@ func TestMinIOUploader_Upload_Raw_Integration(t *testing.T) {
 	}
 
 	m := minio.NewClient(
-		"localhost:9000",
-		"minio99",
-		"minio123",
-		"us-east-1",
-		"",
-		"test-bucket-hgfhfg",
+		cfg.StorageEndpoint,
+		cfg.StorageAccessKeyID,
+		cfg.StorageSecretAccessKey,
+		cfg.StorageRegion,
+		cfg.StorageToken,
+		cfg.StorageBucket,
 	)
 	if err := m.Connect(); err != nil {
 		t.Fatalf("error conecting to minio: %v", err)

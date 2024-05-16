@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -19,6 +20,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
 	"github.com/kubeshop/testkube/pkg/filesystem"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
+)
+
+var (
+	cfg, _ = config.Get()
 )
 
 func TestMinIOScraper_Archive_Integration(t *testing.T) {
@@ -52,17 +57,17 @@ func TestMinIOScraper_Archive_Integration(t *testing.T) {
 	extractor := scraper.NewArchiveFilesystemExtractor(filesystem.NewOSFileSystem())
 
 	loader, err := scraper.NewMinIOUploader(
-		"localhost:9000",
-		"minio99",
-		"minio123",
-		"us-east-1",
-		"",
-		"test-bucket-asdf",
-		false,
-		false,
-		"",
-		"",
-		"",
+		cfg.StorageEndpoint,
+		cfg.StorageAccessKeyID,
+		cfg.StorageSecretAccessKey,
+		cfg.StorageRegion,
+		cfg.StorageToken,
+		cfg.StorageBucket,
+		cfg.StorageSSL,
+		cfg.StorageSkipVerify,
+		cfg.StorageCertFile,
+		cfg.StorageKeyFile,
+		cfg.StorageCAFile,
 	)
 	if err != nil {
 		t.Fatalf("error creating minio loader: %v", err)
@@ -89,9 +94,9 @@ func TestMinIOScraper_Archive_Integration(t *testing.T) {
 		t.Fatalf("error scraping: %v", err)
 	}
 
-	c := minio.NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", "test-bucket-asdf")
+	c := minio.NewClient(cfg.StorageEndpoint, cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageRegion, cfg.StorageToken, cfg.StorageBucket)
 	assert.NoError(t, c.Connect())
-	artifacts, err := c.ListFiles(context.Background(), "test-bucket-asdf")
+	artifacts, err := c.ListFiles(context.Background(), cfg.StorageBucket)
 	if err != nil {
 		t.Fatalf("error listing files from bucket: %v", err)
 	}
@@ -130,19 +135,18 @@ func TestMinIOScraper_Recursive_Integration(t *testing.T) {
 
 	extractor := scraper.NewRecursiveFilesystemExtractor(filesystem.NewOSFileSystem())
 
-	bucketName := "test-bucket-asdf1"
 	loader, err := scraper.NewMinIOUploader(
-		"localhost:9000",
-		"minio99",
-		"minio123",
-		"us-east-1",
-		"",
-		bucketName,
-		false,
-		false,
-		"",
-		"",
-		"",
+		cfg.StorageEndpoint,
+		cfg.StorageAccessKeyID,
+		cfg.StorageSecretAccessKey,
+		cfg.StorageRegion,
+		cfg.StorageToken,
+		cfg.StorageBucket,
+		cfg.StorageSSL,
+		cfg.StorageSkipVerify,
+		cfg.StorageCertFile,
+		cfg.StorageKeyFile,
+		cfg.StorageCAFile,
 	)
 	if err != nil {
 		t.Fatalf("error creating minio loader: %v", err)
@@ -169,9 +173,9 @@ func TestMinIOScraper_Recursive_Integration(t *testing.T) {
 		t.Fatalf("error scraping: %v", err)
 	}
 
-	c := minio.NewClient("localhost:9000", "minio99", "minio123", "us-east-1", "", bucketName)
+	c := minio.NewClient(cfg.StorageEndpoint, cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageRegion, cfg.StorageToken, cfg.StorageBucket)
 	assert.NoError(t, c.Connect())
-	artifacts, err := c.ListFiles(context.Background(), bucketName)
+	artifacts, err := c.ListFiles(context.Background(), cfg.StorageBucket)
 	if err != nil {
 		t.Fatalf("error listing files from bucket: %v", err)
 	}

@@ -16,11 +16,16 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/kubeshop/testkube/pkg/logs/config"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 const hugeString = "82vbUcyQ0chpR665zbXY2mySOk7DGDFQCF1iLFjDNUYtNV8oQNaX3IYgJR30zBVhmDVjoZDJXO479tGSirHilZWEbzhjKJOdUwGb2HWOSOOjGh5r5wH0EHxRiOp8mBJv2rwdB2SoKF7JTBFgRt9M8F0JKp2Zx5kqh8eOGB1DGj64NLmwIpfuevJSv0wbDLrls5kEL5hHkszXPsuufVjJBsjNrxCoafuk93L2jE3ivVrMlkmLd9XAWKdop0oo0yRMJ9Vs1T5SZTkM6KXJB5hY3c14NsoPiG9Ay4EZmXrGpzGWI3RLAU6snXL8kV9sVLCG5DuRDnW047VR8eb78fpVj8YY3o9xpZd7xYPAhsmK0SwznHfrb0etAqdjQO6LFS9Blwre3G94DG5scVFH8RfteVNgKJXa8lTp8kKjtQLKNNA9mqyWfJ7uy8yjnVKwl7rodKqdtU6wjH2hf597MXA3roIS2xVhFpsCAVDybo9TVvZpoGfE9povhApoUR6Rmae9zvXPRoDbClOrvDElFkfgkJFzuoY2rPoV3dKuiTNwhYgPm36WPRk3SeFf2NiBQnWJBvjbRMIk5DsGfxcEiXQBfDvY4hgFctjwZ3USvWGriqT1cPsJ90LMLxbp38TRD1KVJ8ZgpqdvKTTi8dBqgEtob7okhdrkOahHJ3EKPtqV4PmaHvXSaIJvDG9c8jza64wxYBwMkHGt22i3HhCcIi8KmmfVo1ruqQLqKvINJg8eD5rKGV1mX9IipQcnrqADYnAj1wls7NSxsL0VZZm2pxRaGN494o2LCicHGEcOYkVLHufXY4Gv3friOIZSrT1r3NUgDBufpXWiG2b02TrRyFhgwRSS1a2OyMjHkT9tALmlIwFGF5HdaZphN6Mo5TFGdJyp65YU1scnlSGAVXzVdhsoD0RDZPSetdK2fzJC20kncaujAujHtSKnXrJNIhObnOjgMhCkx5E4z0oIH26DlfrbxS7k5SBQb1Zo3papQOk4uTNIdMBW4cE3V7AB8r6v4en3"
+
+var (
+	cfg, _ = config.Get()
+)
 
 func init() {
 	rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -39,7 +44,7 @@ func RandString(n int) string {
 func TestLogs(t *testing.T) {
 	t.Skip("skipping test")
 	ctx := context.Background()
-	consumer, _ := NewMinioAdapter("localhost:9000", "minio", "minio123", "", "", "test-1", false, false, "", "", "")
+	consumer, _ := NewMinioAdapter(cfg.StorageEndpoint, cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageRegion, cfg.StorageToken, cfg.StorageBucket, cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
 	id := "test-bla"
 	for i := 0; i < 1000; i++ {
 		fmt.Println("sending", i)
@@ -55,9 +60,8 @@ func TestLogs(t *testing.T) {
 func BenchmarkLogs(b *testing.B) {
 	ctx := context.Background()
 	randomString := RandString(5)
-	bucket := "test-bench"
-	consumer, _ := NewMinioAdapter("localhost:9000", "minio", "minio123", "", "", bucket, false, false, "", "", "")
-	id := "test-bench" + "-" + randomString + "-" + strconv.Itoa(b.N)
+	consumer, _ := NewMinioAdapter(cfg.StorageEndpoint, cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageRegion, cfg.StorageToken, cfg.StorageBucket, cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
+	id := cfg.StorageBucket + "-" + randomString + "-" + strconv.Itoa(b.N)
 	totalSize := 0
 	for i := 0; i < b.N; i++ {
 		consumer.Notify(ctx, id, events.Log{Time: time.Now(),
@@ -72,10 +76,9 @@ func BenchmarkLogs(b *testing.B) {
 }
 
 func BenchmarkLogs2(b *testing.B) {
-	bucket := "test-bench"
-	consumer, _ := NewMinioAdapter("localhost:9000", "minio", "minio123", "", "", bucket, false, false, "", "", "")
+	consumer, _ := NewMinioAdapter(cfg.StorageEndpoint, cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageRegion, cfg.StorageToken, cfg.StorageBucket, cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
 	idChan := make(chan string, 100)
-	go verifyConsumer(idChan, bucket, consumer.minioClient)
+	go verifyConsumer(idChan, cfg.StorageBucket, consumer.minioClient)
 	var counter atomic.Int32
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
@@ -159,12 +162,11 @@ func verifyConsumer(idChan chan string, bucket string, minioClient *minio.Client
 
 func DoRunBenchmark() {
 	numberOfConsumers := 100
-	bucket := "test-bench"
-	consumer, _ := NewMinioAdapter("testkube-minio-service-testkube:9000", "minio", "minio123", "", "", bucket, false, false, "", "", "")
+	consumer, _ := NewMinioAdapter(cfg.StorageEndpoint, cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageRegion, cfg.StorageToken, cfg.StorageBucket, cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
 
 	idChan := make(chan string, numberOfConsumers)
 	DoRunBenchmark2(idChan, numberOfConsumers, consumer)
-	verifyConsumer(idChan, bucket, consumer.minioClient)
+	verifyConsumer(idChan, cfg.StorageBucket, consumer.minioClient)
 }
 
 func DoRunBenchmark2(idChan chan string, numberOfConsumers int, consumer *MinioAdapter) {
@@ -175,7 +177,7 @@ func DoRunBenchmark2(idChan chan string, numberOfConsumers int, consumer *MinioA
 		go func() {
 			defer wg.Done()
 			randomString := strconv.Itoa(int(counter.Add(1)))
-			id := "test-bench" + "-" + randomString
+			id := cfg.StorageBucket + "-" + randomString
 			testOneConsumer(consumer, id)
 			idChan <- id
 		}()
