@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/kubeshop/testkube/pkg/datefilter"
@@ -23,8 +24,11 @@ import (
 )
 
 const (
-	mongoDns    = "mongodb://localhost:27017"
 	mongoDbName = "testkube-test"
+)
+
+var (
+	cfg, _ = config.Get()
 )
 
 func TestStorage_Integration(t *testing.T) {
@@ -369,7 +373,7 @@ func TestTestExecutionsMetrics_Integration(t *testing.T) {
 }
 
 func getRepository() (*MongoRepository, error) {
-	db, err := storage.GetMongoDatabase(mongoDns, mongoDbName, storage.TypeMongoDB, false, nil)
+	db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, mongoDbName, storage.TypeMongoDB, false, nil)
 	repository := NewMongoRepository(db, true, false)
 	return repository, err
 }

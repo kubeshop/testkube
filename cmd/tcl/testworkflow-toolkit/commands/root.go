@@ -30,6 +30,8 @@ func init() {
 	RootCmd.AddCommand(NewExecuteCmd())
 	RootCmd.AddCommand(NewArtifactsCmd())
 	RootCmd.AddCommand(NewParallelCmd())
+	RootCmd.AddCommand(NewServicesCmd())
+	RootCmd.AddCommand(NewKillCmd())
 }
 
 var RootCmd = &cobra.Command{

@@ -7942,6 +7942,40 @@ components:
             items:
               $ref: "#/components/schemas/TestWorkflowStepParallelFetch"
 
+    TestWorkflowIndependentServiceSpec:
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
+      - $ref: "#/components/schemas/TestWorkflowStepRun"
+      - properties:
+          timeout:
+            type: string
+            description: "maximum time until reaching readiness"
+          transfer:
+            type: array
+            description: list of files to send to parallel steps
+            items:
+              $ref: "#/components/schemas/TestWorkflowStepParallelTransfer"
+          content:
+            $ref: "#/components/schemas/TestWorkflowContent"
+          pod:
+            $ref: "#/components/schemas/TestWorkflowPodConfig"
+          restartPolicy:
+            type: string
+          readinessProbe:
+            $ref: "#/components/schemas/Probe"
+
+    TestWorkflowServiceSpec:
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
+      - $ref: "#/components/schemas/TestWorkflowIndependentServiceSpec"
+      - properties:
+          use:
+            type: array
+            items:
+              $ref: "#/components/schemas/TestWorkflowTemplateRef"
+
     TestWorkflowStepExecuteStrategy:
       type: object
       properties:
@@ -8011,6 +8045,10 @@ components:
           $ref: "#/components/schemas/TestWorkflowConfigSchema"
         content:
           $ref: "#/components/schemas/TestWorkflowContent"
+        services:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/TestWorkflowServiceSpec"
         container:
           $ref: "#/components/schemas/TestWorkflowContainerConfig"
         job:
@@ -8041,6 +8079,10 @@ components:
           $ref: "#/components/schemas/TestWorkflowConfigSchema"
         content:
           $ref: "#/components/schemas/TestWorkflowContent"
+        services:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/TestWorkflowIndependentServiceSpec"
         container:
           $ref: "#/components/schemas/TestWorkflowContainerConfig"
         job:
@@ -8130,6 +8172,10 @@ components:
           description: delay before the step
         content:
           $ref: "#/components/schemas/TestWorkflowContent"
+        services:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/TestWorkflowIndependentServiceSpec"
         shell:
           type: string
           description: script to run in a default shell for the container
@@ -8193,6 +8239,10 @@ components:
           description: delay before the step
         content:
           $ref: "#/components/schemas/TestWorkflowContent"
+        services:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/TestWorkflowServiceSpec"
         shell:
           type: string
           description: script to run in a default shell for the container
@@ -9169,6 +9219,80 @@ components:
         name:
           type: string
         value:
+          $ref: "#/components/schemas/BoxedString"
+
+    Probe:
+      type: object
+      description: "Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic."
+      properties:
+        initialDelaySeconds:
+          type: integer
+        timeoutSeconds:
+          type: integer
+        periodSeconds:
+          type: integer
+        successThreshold:
+          type: integer
+        failureThreshold:
+          type: integer
+        terminationGracePeriodSeconds:
+          $ref: "#/components/schemas/BoxedInteger"
+        exec:
+          $ref: "#/components/schemas/ExecAction"
+        httpGet:
+          $ref: "#/components/schemas/HTTPGetAction"
+        tcpSocket:
+          $ref: "#/components/schemas/TCPSocketAction"
+        grpc:
+          $ref: "#/components/schemas/GRPCAction"
+
+    ExecAction:
+      type: object
+      properties:
+        command:
+          type: array
+          description: "Command is the command line to execute inside the container, the working directory for the command is root ('/') in the container's filesystem. Exit status of 0 is treated as live/healthy and non-zero is unhealthy."
+          items:
+            type: string
+
+    HTTPGetAction:
+      type: object
+      properties:
+        path:
+          type: string
+        port:
+          type: string
+        host:
+          type: string
+        scheme:
+          type: string
+        httpHeaders:
+          type: array
+          items:
+            $ref: "#/components/schemas/HTTPHeader"
+
+    HTTPHeader:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+
+    TCPSocketAction:
+      type: object
+      properties:
+        port:
+          type: string
+        host:
+          type: string
+
+    GRPCAction:
+      type: object
+      properties:
+        port:
+          type: integer
+        service:
           $ref: "#/components/schemas/BoxedString"
 
     VolumeMount:
