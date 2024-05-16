@@ -220,8 +220,44 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		return nil, errors.Wrap(err, "applying image data")
 	}
 
+	// Adjust the security context in case it's a single container besides the Testkube' containers
+	// TODO: Consider flag argument, that would be used only for services?
+	containerStages := root.ContainerStages()
+	var otherContainers []ContainerStage
+	for _, c := range containerStages {
+		if c.Container().Image() != constants.DefaultInitImage && c.Container().Image() != constants.DefaultToolkitImage {
+			otherContainers = append(otherContainers, c)
+		}
+	}
+	if len(otherContainers) == 1 {
+		image := otherContainers[0].Container().Image()
+		if _, ok := images[image]; ok {
+			sc := otherContainers[0].Container().SecurityContext()
+			if sc == nil {
+				sc = &corev1.SecurityContext{}
+			}
+			if podConfig.SecurityContext == nil {
+				podConfig.SecurityContext = &corev1.PodSecurityContext{}
+			}
+			if sc.RunAsGroup == nil && podConfig.SecurityContext.RunAsGroup == nil {
+				sc.RunAsGroup = common.Ptr(images[image].Group)
+				otherContainers[0].Container().SetSecurityContext(sc)
+			}
+			if podConfig.SecurityContext.FSGroup == nil {
+				podConfig.SecurityContext.FSGroup = sc.RunAsGroup
+			}
+		}
+	}
+	containerStages = nil
+
+	// Determine FS Group for the containers
+	fsGroup := common.Ptr(constants.DefaultFsGroup)
+	if podConfig.SecurityContext != nil && podConfig.SecurityContext.FSGroup != nil {
+		fsGroup = podConfig.SecurityContext.FSGroup
+	}
+
 	// Build list of the containers
-	containers, err := buildKubernetesContainers(root, NewInitProcess().SetRef(root.Ref()), machines...)
+	containers, err := buildKubernetesContainers(root, NewInitProcess().SetRef(root.Ref()), fsGroup, machines...)
 	if err != nil {
 		return nil, errors.Wrap(err, "building Kubernetes containers")
 	}
