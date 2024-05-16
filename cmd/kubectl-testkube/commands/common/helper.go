@@ -425,3 +425,27 @@ func uiGetToken(tokenChan chan cloudlogin.Tokens) (string, string, error) {
 
 	return token.IDToken, token.RefreshToken, nil
 }
+
+func KubectlPrintLogs(namespace string, labels map[string]string) error {
+	kubectl, err := exec.LookPath("kubectl")
+	if err != nil {
+		return err
+	}
+
+	args := []string{
+		"logs",
+		"--all-containers",
+		"-n", namespace,
+		"--max-log-requests=100",
+		"--tail=10000000",
+		"--ignore-errors=true",
+	}
+
+	for k, v := range labels {
+		args = append(args, fmt.Sprintf("-l %s=%s", k, v))
+	}
+
+	fmt.Printf("kubectl %+v\n", strings.Join(args, " "))
+
+	return process.ExecuteAndStreamOutput(kubectl, args...)
+}

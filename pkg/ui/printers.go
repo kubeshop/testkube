@@ -74,6 +74,10 @@ func (ui *UI) LogLine(message string) {
 	fmt.Fprintf(ui.Writer, "%s\n", DarkGray(message))
 }
 
+func (ui *UI) LogMultiLine(message string) {
+	fmt.Fprintf(ui.Writer, "%s\n\n", DarkGray(message))
+}
+
 func (ui *UI) Debug(message string, subMessages ...string) {
 	if !ui.Verbose {
 		return
