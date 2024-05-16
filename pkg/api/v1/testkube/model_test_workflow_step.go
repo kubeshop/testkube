@@ -14,6 +14,8 @@ type TestWorkflowStep struct {
 	Name string `json:"name,omitempty"`
 	// expression to declare under which conditions the step should be run; defaults to \"passed\", except artifacts where it defaults to \"always\"
 	Condition string `json:"condition,omitempty"`
+	// should the step be paused initially
+	Paused bool `json:"paused,omitempty"`
 	// is the step expected to fail
 	Negative bool `json:"negative,omitempty"`
 	// is the step optional, so the failure won't affect the TestWorkflow result
@@ -34,6 +36,7 @@ type TestWorkflowStep struct {
 	Container  *TestWorkflowContainerConfig `json:"container,omitempty"`
 	Execute    *TestWorkflowStepExecute     `json:"execute,omitempty"`
 	Artifacts  *TestWorkflowStepArtifacts   `json:"artifacts,omitempty"`
+	Parallel   *TestWorkflowStepParallel    `json:"parallel,omitempty"`
 	// nested setup steps to run
 	Setup []TestWorkflowStep `json:"setup,omitempty"`
 	// nested steps to run

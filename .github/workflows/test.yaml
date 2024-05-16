@@ -14,11 +14,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # setup-go@v4 handles Go cache by default
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: 1.21
 
@@ -38,13 +38,13 @@ jobs:
 
       - name: Annotate Unit Tests
         if: always()
-        uses: guyarb/golang-test-annotations@v0.6.0
+        uses: guyarb/golang-test-annotations@v0.8.0
         with:
           test-results: unit-tests.json
 
       - name: Upload code coverage artifact
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: unit-test-coverage
           path: coverage.out
@@ -53,7 +53,7 @@ jobs:
 
       - name: Send coverage report to Codecov
         if: always()
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           file: ./coverage.out
           flags: unittests
@@ -85,27 +85,27 @@ jobs:
           MINIO_ROOT_PASSWORD: minio123
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # setup-go@v4 handles Go cache by default
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: 1.21
 
       - name: Set up Java@11
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: "adopt"
           java-version: "11"
 
       - name: Install node@19
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 19
 
       - name: Install pnpm@8.1
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
           version: 8.1.0
 
@@ -163,13 +163,13 @@ jobs:
 
       - name: Annotate Integration Tests
         if: always()
-        uses: guyarb/golang-test-annotations@v0.6.0
+        uses: guyarb/golang-test-annotations@v0.8.0
         with:
           test-results: integration-tests.json
 
       - name: Upload code coverage artifact
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: integration-test-coverage
           path: coverage.out
@@ -178,7 +178,7 @@ jobs:
 
       - name: Send coverage report to Codecov
         if: always()
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           file: ./coverage.out
           flags: integrationtests

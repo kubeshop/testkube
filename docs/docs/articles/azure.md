@@ -8,6 +8,9 @@ The Azure DevOps integration offers a versatile solution for managing your pipel
 Install the Testkube CLI extension using the following url:
 [https://marketplace.visualstudio.com/items?itemName=Testkube.testkubecli](https://marketplace.visualstudio.com/items?itemName=Testkube.testkubecli)
 
+#### Troubleshooting
+For solutions to common issues, such as the `--git` flags causing timeouts, please refer to our [Troubleshooting article](./azure-troubleshooting.md).
+
 ## Testkube Pro
 
 ### How to configure Testkube CLI action for Testkube Pro and run a test
@@ -40,7 +43,7 @@ stages:
         displayName: Run Testkube Test
 ```
 
-## Testkube OSS
+## Testkube Core OSS
 
 ### How to configure the Testkube CLI action for TK OSS and run a test
 

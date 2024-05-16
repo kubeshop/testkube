@@ -1,0 +1,33 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: gradle-java-test
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - contrib/executor/gradle/examples/hello-gradle
+  container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 512Mi
+    workingDir: /data/repo/contrib/executor/gradle/examples/hello-gradle
+  steps:
+  - name: Run tests
+    run:
+      image: gradle:8.5.0-jdk11
+      command:
+      - gradle
+      - --no-daemon
+      - test
+      env:
+      - name: TESTKUBE_GRADLE
+        value: "true"
+  events:
+  - cronjob:
+      cron: "38 */4 * * *"

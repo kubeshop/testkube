@@ -13,6 +13,20 @@ func MergeMaps(ms ...map[string]string) map[string]string {
 	return res
 }
 
+func Always[T any](_ T) bool {
+	return true
+}
+
+func Never[T any](_ T) bool {
+	return false
+}
+
+func DeepEqualCmp[T any](v1 T) func(T) bool {
+	return func(v2 T) bool {
+		return reflect.DeepEqual(v1, v2)
+	}
+}
+
 func Ptr[T any](v T) *T {
 	return &v
 }
@@ -36,6 +50,14 @@ func ResolvePtr[T any](v *T, def T) T {
 		return def
 	}
 	return *v
+}
+
+func MapEnumToString[T ~string](v T) string {
+	return string(v)
+}
+
+func MapStringToEnum[T ~string](v string) T {
+	return T(v)
 }
 
 func MapSlice[T any, U any](s []T, fn func(T) U) []U {

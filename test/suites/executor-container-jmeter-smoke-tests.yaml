@@ -1,0 +1,12 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: executor-container-jmeter-smoke-tests
+  labels:
+    app: testkube
+spec:
+  description: "container executor jmeter smoke tests"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: container-executor-jmeter-smoke

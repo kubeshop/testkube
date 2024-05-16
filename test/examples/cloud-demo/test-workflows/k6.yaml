@@ -1,0 +1,47 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: k6-loadtest
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/k6/executor-tests/k6-smoke-test.js
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+    workingDir: /data/repo/test/k6/executor-tests
+  steps:
+  - name: Run test
+    container:
+      image: grafana/k6:0.49.0
+    steps:
+    - shell: mkdir /data/artifacts
+    - run:
+        args:
+        - run
+        - k6-smoke-test.js
+        - -e
+        - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+        env:
+        - name: K6_SYSTEM_ENV
+          value: K6_SYSTEM_ENV_value
+        - name: K6_WEB_DASHBOARD
+          value: "true"
+        - name: K6_WEB_DASHBOARD_EXPORT
+          value: "/data/artifacts/k6-test-report.html"
+      steps:
+      - name: Saving artifacts
+        workingDir: /data/artifacts
+        artifacts:
+          paths:
+          - '*'
+  events:
+  - cronjob:
+      cron: "45 */4 * * *"

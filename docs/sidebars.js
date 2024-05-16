@@ -22,7 +22,11 @@ const sidebars = {
         type: "doc",
         id: "index",
       },
-      items: ["articles/supported-tests", "articles/testkube-benefits", "articles/open-source-or-pro"],
+      items: [
+        "articles/supported-tests",
+        "articles/testkube-benefits",
+        "articles/open-source-or-pro",
+      ],
     },
     {
       type: "doc",
@@ -31,8 +35,37 @@ const sidebars = {
     },
     {
       type: "category",
+      label: "Installing",
+      items: [
+        { type: "doc", id: "articles/install/overview" },
+        { type: "doc", id: "articles/install/cli" },
+        { type: "doc", id: "articles/install/quickstart-install" },
+        { type: "doc", id: "articles/install/reference-architectures" },
+        { type: "doc", id: "articles/install/install-with-cli" },
+        { type: "doc", id: "articles/install/install-with-helm" },
+        { type: "doc", id: "articles/install/advanced-install" },
+        { type: "doc", id: "articles/install/quickstart-no-k8s" },
+        { type: "doc", id: "articles/install/uninstall" },
+        { type: "doc", id: "articles/install/faq" },
+      ],
+    },
+    {
+      type: "category",
       label: "Concepts",
       items: [
+        {
+          type: "category",
+          label: "Test Workflows (beta)",
+          items: [
+            "articles/test-workflows",
+            "articles/test-workflows-creating",
+            "articles/test-workflow-templates",
+            "articles/test-workflows-examples-basics",
+            "articles/test-workflows-examples-configuration",
+            "articles/test-workflows-examples-expressions",
+            "articles/test-workflows-examples-templates",
+          ],
+        },
         {
           type: "category",
           label: "Tests",
@@ -99,12 +132,26 @@ const sidebars = {
             id: "articles/cicd-overview",
           },
           items: [
-            "articles/github-actions",
+            {
+              type: "category",
+              label: "Github Actions",
+              link: {
+                type: "doc",
+                id: "articles/github-actions",
+              },
+              items: [
+                {
+                  type: "doc",
+                  id: "articles/run-tests-with-github-actions",
+                  label: "Migrate from testkube-run-action",
+                },
+              ],
+            },
             "articles/gitlab",
             "articles/jenkins",
             "articles/jenkins-ui",
+            "articles/azure",
             "articles/circleci",
-            "articles/run-tests-with-github-actions",
             "articles/testkube-cli-docker",
             {
               type: "category",
@@ -130,12 +177,13 @@ const sidebars = {
         },
         "articles/creating-first-test",
         "articles/cd-events",
+        "articles/k8s-events",
         "articles/slack-integration",
         "articles/generate-test-crds",
         "articles/logging",
         "articles/install-cli",
         "articles/uninstall",
-        "articles/upgrade",       
+        "articles/upgrade",
       ],
     },
     {
@@ -194,9 +242,10 @@ const sidebars = {
       label: "Testkube Pro On-Prem",
       items: [
         "testkube-pro-on-prem/articles/testkube-pro-on-prem",
-        "testkube-pro-on-prem/articles/usage-guide", 
+        "testkube-pro-on-prem/articles/usage-guide",
         "testkube-pro-on-prem/articles/auth",
-        "testkube-pro-on-prem/articles/migrating-from-oss-to-pro"],
+        "testkube-pro-on-prem/articles/migrating-from-oss-to-pro",
+      ],
     },
     "articles/testkube-oss",
     {
@@ -225,6 +274,11 @@ const sidebars = {
         "articles/testkube-dependencies",
         "articles/architecture",
         "articles/telemetry",
+        {
+          type: 'link',
+          label: 'OpenAPI Specification',
+          href: 'https://api.testkube.io/openapi',
+        },
       ],
     },
     "articles/common-issues",
@@ -244,6 +298,11 @@ const sidebars = {
           items: ["articles/crds"],
         },
       ],
+    },
+    {
+      type: "category",
+      label: "FAQs",
+      items: ["articles/testkube-licensing-FAQ"],
     },
   ],
 

@@ -1,0 +1,20 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: k6-parallel
+spec:
+  description: "k6 parallel testsuite"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: k6-loadtest
+      executionRequest:
+        args:
+          - "-vu"
+          - "1"
+    - test: k6-loadtest
+      executionRequest:
+        args:
+          - "-vu"
+          - "2"
+  schedule: "52 */4 * * *"

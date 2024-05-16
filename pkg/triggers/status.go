@@ -15,11 +15,12 @@ func newStatusKey(namespace, name string) statusKey {
 }
 
 type triggerStatus struct {
-	testTrigger           *testtriggersv1.TestTrigger
-	lastExecutionStarted  *time.Time
-	lastExecutionFinished *time.Time
-	testExecutionIDs      []string
-	testSuiteExecutionIDs []string
+	testTrigger              *testtriggersv1.TestTrigger
+	lastExecutionStarted     *time.Time
+	lastExecutionFinished    *time.Time
+	testExecutionIDs         []string
+	testSuiteExecutionIDs    []string
+	testWorkflowExecutionIDs []string
 	sync.RWMutex
 }
 
@@ -31,7 +32,7 @@ func (s *triggerStatus) hasActiveTests() bool {
 	defer s.RUnlock()
 
 	s.RLock()
-	return len(s.testExecutionIDs) > 0 || len(s.testSuiteExecutionIDs) > 0
+	return len(s.testExecutionIDs) > 0 || len(s.testSuiteExecutionIDs) > 0 || len(s.testWorkflowExecutionIDs) > 0
 }
 
 func (s *triggerStatus) getExecutionIDs() []string {
@@ -52,6 +53,16 @@ func (s *triggerStatus) getTestSuiteExecutionIDs() []string {
 	copy(testSuiteExecutionIDs, s.testSuiteExecutionIDs)
 
 	return testSuiteExecutionIDs
+}
+
+func (s *triggerStatus) getTestWorkflowExecutionIDs() []string {
+	defer s.RUnlock()
+
+	s.RLock()
+	testWorkflowExecutionIDs := make([]string, len(s.testWorkflowExecutionIDs))
+	copy(testWorkflowExecutionIDs, s.testWorkflowExecutionIDs)
+
+	return testWorkflowExecutionIDs
 }
 
 func (s *triggerStatus) start() {
@@ -95,6 +106,24 @@ func (s *triggerStatus) removeTestSuiteExecutionID(targetID string) {
 	for i, id := range s.testSuiteExecutionIDs {
 		if id == targetID {
 			s.testSuiteExecutionIDs = append(s.testSuiteExecutionIDs[:i], s.testSuiteExecutionIDs[i+1:]...)
+		}
+	}
+}
+
+func (s *triggerStatus) addTestWorkflowExecutionID(id string) {
+	defer s.Unlock()
+
+	s.Lock()
+	s.testWorkflowExecutionIDs = append(s.testWorkflowExecutionIDs, id)
+}
+
+func (s *triggerStatus) removeTestWorkflowExecutionID(targetID string) {
+	defer s.Unlock()
+
+	s.Lock()
+	for i, id := range s.testWorkflowExecutionIDs {
+		if id == targetID {
+			s.testWorkflowExecutionIDs = append(s.testWorkflowExecutionIDs[:i], s.testWorkflowExecutionIDs[i+1:]...)
 		}
 	}
 }

@@ -54,6 +54,9 @@ type ContainerAccessors interface {
 
 	Resources() testworkflowsv1.Resources
 	SecurityContext() *corev1.SecurityContext
+
+	HasVolumeAt(path string) bool
+	ToContainerConfig() testworkflowsv1.ContainerConfig
 }
 
 type ContainerMutations[T any] interface {
@@ -215,10 +218,34 @@ func (c *container) SecurityContext() *corev1.SecurityContext {
 	return c.parent.SecurityContext()
 }
 
+func (c *container) HasVolumeAt(path string) bool {
+	absPath := path
+	if !filepath.IsAbs(path) {
+		absPath = filepath.Join(c.WorkingDir(), path)
+	}
+	mounts := c.VolumeMounts()
+	for _, mount := range mounts {
+		if strings.HasPrefix(filepath.Clean(absPath), filepath.Clean(mount.MountPath)+"/") {
+			return true
+		}
+	}
+	return false
+}
+
 // Mutations
 
 func (c *container) AppendEnv(env ...corev1.EnvVar) Container {
+	needsDedupe := false
+	for i := range env {
+		if testworkflowresolver.HasEnvVar(c.Cr.Env, env[i].Name) {
+			needsDedupe = true
+			break
+		}
+	}
 	c.Cr.Env = append(c.Cr.Env, env...)
+	if needsDedupe {
+		c.Cr.Env = testworkflowresolver.DedupeEnvVars(c.Cr.Env)
+	}
 	return c
 }
 
@@ -280,7 +307,7 @@ func (c *container) ApplyCR(config *testworkflowsv1.ContainerConfig) Container {
 }
 
 func (c *container) ToContainerConfig() testworkflowsv1.ContainerConfig {
-	env := slices.Clone(c.Env())
+	env := testworkflowresolver.DedupeEnvVars(slices.Clone(c.Env()))
 	for i := range env {
 		env[i] = *env[i].DeepCopy()
 	}
@@ -399,28 +426,34 @@ func (c *container) EnableToolkit(ref string) Container {
 			ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}},
 		}).
 		AppendEnvMap(map[string]string{
-			"TK_REF":                ref,
-			"TK_NS":                 "{{internal.namespace}}",
-			"TK_TMPL":               "{{internal.globalTemplate}}",
-			"TK_WF":                 "{{workflow.name}}",
-			"TK_EX":                 "{{execution.id}}",
-			"TK_C_URL":              "{{internal.cloud.api.url}}",
-			"TK_C_KEY":              "{{internal.cloud.api.key}}",
-			"TK_C_TLS_INSECURE":     "{{internal.cloud.api.tlsInsecure}}",
-			"TK_C_SKIP_VERIFY":      "{{internal.cloud.api.skipVerify}}",
-			"TK_OS_ENDPOINT":        "{{internal.storage.url}}",
-			"TK_OS_ACCESSKEY":       "{{internal.storage.accessKey}}",
-			"TK_OS_SECRETKEY":       "{{internal.storage.secretKey}}",
-			"TK_OS_REGION":          "{{internal.storage.region}}",
-			"TK_OS_TOKEN":           "{{internal.storage.token}}",
-			"TK_OS_BUCKET":          "{{internal.storage.bucket}}",
-			"TK_OS_SSL":             "{{internal.storage.ssl}}",
-			"TK_OS_SSL_SKIP_VERIFY": "{{internal.storage.skipVerify}}",
-			"TK_OS_CERT_FILE":       "{{internal.storage.certFile}}",
-			"TK_OS_KEY_FILE":        "{{internal.storage.keyFile}}",
-			"TK_OS_CA_FILE":         "{{internal.storage.caFile}}",
-			"TK_IMG_TOOLKIT":        "{{internal.images.toolkit}}",
-			"TK_IMG_INIT":           "{{internal.images.init}}",
+			"TK_REF":                    ref,
+			"TK_NS":                     "{{internal.namespace}}",
+			"TK_WF":                     "{{workflow.name}}",
+			"TK_EX":                     "{{execution.id}}",
+			"TK_EXI":                    "{{resource.id}}",
+			"TK_EXR":                    "{{resource.rootId}}",
+			"TK_FS":                     "{{resource.fsPrefix}}",
+			"TK_DASH":                   "{{internal.dashboard.url}}",
+			"TK_API":                    "{{internal.api.url}}",
+			"TK_C_URL":                  "{{internal.cloud.api.url}}",
+			"TK_C_KEY":                  "{{internal.cloud.api.key}}",
+			"TK_C_TLS_INSECURE":         "{{internal.cloud.api.tlsInsecure}}",
+			"TK_C_SKIP_VERIFY":          "{{internal.cloud.api.skipVerify}}",
+			"TK_OS_ENDPOINT":            "{{internal.storage.url}}",
+			"TK_OS_ACCESSKEY":           "{{internal.storage.accessKey}}",
+			"TK_OS_SECRETKEY":           "{{internal.storage.secretKey}}",
+			"TK_OS_REGION":              "{{internal.storage.region}}",
+			"TK_OS_TOKEN":               "{{internal.storage.token}}",
+			"TK_OS_BUCKET":              "{{internal.storage.bucket}}",
+			"TK_OS_SSL":                 "{{internal.storage.ssl}}",
+			"TK_OS_SSL_SKIP_VERIFY":     "{{internal.storage.skipVerify}}",
+			"TK_OS_CERT_FILE":           "{{internal.storage.certFile}}",
+			"TK_OS_KEY_FILE":            "{{internal.storage.keyFile}}",
+			"TK_OS_CA_FILE":             "{{internal.storage.caFile}}",
+			"TESTKUBE_TW_TOOLKIT_IMAGE": "{{internal.images.toolkit}}",
+			"TESTKUBE_TW_INIT_IMAGE":    "{{internal.images.init}}",
+			"TK_IMG_P":                  "{{internal.images.persistence.enabled}}",
+			"TK_IMG_PK":                 "{{internal.images.persistence.key}}",
 		})
 }
 

@@ -1,0 +1,11 @@
+apiVersion: executor.testkube.io/v1
+kind: Executor
+metadata:
+  name: container-executor-soapui-5.7
+spec:
+  image: smartbear/soapuios-testrunner:5.7.2
+  executor_type: container
+  types:
+  - container-executor-soapui-5.7/test
+  features:
+  - artifacts

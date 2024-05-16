@@ -1,0 +1,12 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: gradle-workflow-suite
+  labels:
+    core-tests: workflows-suite
+spec:
+  steps:
+  - execute:
+      workflows:
+      - name: gradle-workflow-smoke-jdk11
+      - name: gradle-workflow-smoke-jdk11-default-command

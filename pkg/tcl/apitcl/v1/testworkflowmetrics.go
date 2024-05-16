@@ -1,12 +1,19 @@
+// Copyright 2024 Testkube.
+//
+// Licensed as a Testkube Pro file under the Testkube Community
+// License (the "License"); you may not use this file except in compliance with
+// the License. You may obtain a copy of the License at
+//
+//	https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
+
 package v1
 
 import (
 	"context"
-	"os"
-	"strings"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/version"
 )
@@ -24,55 +31,20 @@ func (s *apiTCL) sendCreateWorkflowTelemetry(ctx context.Context, workflow *test
 		return
 	}
 
-	clusterID, err := s.configMap.GetUniqueClusterId(ctx)
-	if err != nil {
-		log.DefaultLogger.Debugf("getting cluster id error", "error", err)
-	}
-
-	host, err := os.Hostname()
-	if err != nil {
-		log.DefaultLogger.Debugf("getting hostname error", "hostname", host, "error", err)
-	}
-
-	var dataSource string
-	isKubeshopGitURI := false
-	if workflow.Spec.Content != nil {
-		if len(workflow.Spec.Content.Files) != 0 {
-			dataSource = "files"
-		} else if workflow.Spec.Content.Git != nil {
-			dataSource = "git"
-			if strings.Contains(workflow.Spec.Content.Git.Uri, "kubeshop") {
-				isKubeshopGitURI = true
-			}
-		}
-	}
-
-	hasArtifacts := false
-	for _, step := range workflow.Spec.Steps {
-		if step.Artifacts != nil {
-			hasArtifacts = true
-			break
-		}
-	}
-
-	image := ""
-	if workflow.Spec.Container != nil {
-		image = workflow.Spec.Container.Image
-	}
-
 	out, err := telemetry.SendCreateWorkflowEvent("testkube_api_create_test_workflow", telemetry.CreateWorkflowParams{
 		CreateParams: telemetry.CreateParams{
 			AppVersion: version.Version,
-			DataSource: dataSource,
-			Host:       host,
-			ClusterID:  clusterID,
+			DataSource: testworkflowstcl.GetDataSource(workflow.Spec.Content),
+			Host:       testworkflowstcl.GetHostname(),
+			ClusterID:  testworkflowstcl.GetClusterID(ctx, s.configMap),
 		},
 		WorkflowParams: telemetry.WorkflowParams{
-			TestWorkflowSteps:          int32(len(workflow.Spec.Steps)),
-			TestWorkflowTemplateUsed:   len(workflow.Spec.Use) != 0,
-			TestWorkflowImage:          image,
-			TestWorkflowArtifactUsed:   hasArtifacts,
-			TestWorkflowKubeshopGitURI: isKubeshopGitURI,
+			TestWorkflowSteps:        int32(len(workflow.Spec.Setup) + len(workflow.Spec.Steps) + len(workflow.Spec.After)),
+			TestWorkflowTemplateUsed: len(workflow.Spec.Use) != 0,
+			TestWorkflowImage:        testworkflowstcl.GetImage(workflow.Spec.Container),
+			TestWorkflowArtifactUsed: testworkflowstcl.HasWorkflowStepLike(workflow.Spec, testworkflowstcl.HasArtifacts),
+			TestWorkflowKubeshopGitURI: testworkflowstcl.IsKubeshopGitURI(workflow.Spec.Content) ||
+				testworkflowstcl.HasWorkflowStepLike(workflow.Spec, testworkflowstcl.HasKubeshopGitURI),
 		},
 	})
 	if err != nil {
@@ -95,130 +67,24 @@ func (s *apiTCL) sendCreateWorkflowTemplateTelemetry(ctx context.Context, templa
 		return
 	}
 
-	clusterID, err := s.configMap.GetUniqueClusterId(ctx)
-	if err != nil {
-		log.DefaultLogger.Debugf("getting cluster id error", "error", err)
-	}
-
-	host, err := os.Hostname()
-	if err != nil {
-		log.DefaultLogger.Debugf("getting hostname error", "hostname", host, "error", err)
-	}
-
-	var dataSource string
-	isKubeshopGitURI := false
-	if template.Spec.Content != nil {
-		if len(template.Spec.Content.Files) != 0 {
-			dataSource = "files"
-		} else if template.Spec.Content.Git != nil {
-			dataSource = "git"
-			if strings.Contains(template.Spec.Content.Git.Uri, "kubeshop") {
-				isKubeshopGitURI = true
-			}
-		}
-	}
-
-	hasArtifacts := false
-	for _, step := range template.Spec.Steps {
-		if step.Artifacts != nil {
-			hasArtifacts = true
-			break
-		}
-	}
-
-	image := ""
-	if template.Spec.Container != nil {
-		image = template.Spec.Container.Image
-	}
-
 	out, err := telemetry.SendCreateWorkflowEvent("testkube_api_create_test_workflow_template", telemetry.CreateWorkflowParams{
 		CreateParams: telemetry.CreateParams{
 			AppVersion: version.Version,
-			DataSource: dataSource,
-			Host:       host,
-			ClusterID:  clusterID,
+			DataSource: testworkflowstcl.GetDataSource(template.Spec.Content),
+			Host:       testworkflowstcl.GetHostname(),
+			ClusterID:  testworkflowstcl.GetClusterID(ctx, s.configMap),
 		},
 		WorkflowParams: telemetry.WorkflowParams{
-			TestWorkflowSteps:          int32(len(template.Spec.Steps)),
-			TestWorkflowImage:          image,
-			TestWorkflowArtifactUsed:   hasArtifacts,
-			TestWorkflowKubeshopGitURI: isKubeshopGitURI,
+			TestWorkflowSteps:        int32(len(template.Spec.Setup) + len(template.Spec.Steps) + len(template.Spec.After)),
+			TestWorkflowImage:        testworkflowstcl.GetImage(template.Spec.Container),
+			TestWorkflowArtifactUsed: testworkflowstcl.HasTemplateStepLike(template.Spec, testworkflowstcl.HasTemplateArtifacts),
+			TestWorkflowKubeshopGitURI: testworkflowstcl.IsKubeshopGitURI(template.Spec.Content) ||
+				testworkflowstcl.HasTemplateStepLike(template.Spec, testworkflowstcl.HasTemplateKubeshopGitURI),
 		},
 	})
 	if err != nil {
 		log.DefaultLogger.Debugf("sending create test workflow template telemetry event error", "error", err)
 	} else {
 		log.DefaultLogger.Debugf("sending create test workflow template telemetry event", "output", out)
-	}
-}
-
-func (s *apiTCL) sendRunWorkflowTelemetry(ctx context.Context, workflow *testworkflowsv1.TestWorkflow) {
-	if workflow == nil {
-		log.DefaultLogger.Debug("empty workflow passed to telemetry event")
-		return
-	}
-	telemetryEnabled, err := s.configMap.GetTelemetryEnabled(ctx)
-	if err != nil {
-		log.DefaultLogger.Debugf("getting telemetry enabled error", "error", err)
-	}
-	if !telemetryEnabled {
-		return
-	}
-
-	clusterID, err := s.configMap.GetUniqueClusterId(ctx)
-	if err != nil {
-		log.DefaultLogger.Debugf("getting cluster id error", "error", err)
-	}
-
-	host, err := os.Hostname()
-	if err != nil {
-		log.DefaultLogger.Debugf("getting hostname error", "hostname", host, "error", err)
-	}
-
-	var dataSource string
-	isKubeshopGitURI := false
-	if workflow.Spec.Content != nil {
-		if len(workflow.Spec.Content.Files) != 0 {
-			dataSource = "files"
-		} else if workflow.Spec.Content.Git != nil {
-			dataSource = "git"
-			if strings.Contains(workflow.Spec.Content.Git.Uri, "kubeshop") {
-				isKubeshopGitURI = true
-			}
-		}
-	}
-
-	hasArtifacts := false
-	for _, step := range workflow.Spec.Steps {
-		if step.Artifacts != nil {
-			hasArtifacts = true
-			break
-		}
-	}
-
-	image := ""
-	if workflow.Spec.Container != nil {
-		image = workflow.Spec.Container.Image
-	}
-
-	out, err := telemetry.SendRunWorkflowEvent("testkube_api_run_test_workflow", telemetry.RunWorkflowParams{
-		RunParams: telemetry.RunParams{
-			AppVersion: version.Version,
-			DataSource: dataSource,
-			Host:       host,
-			ClusterID:  clusterID,
-		},
-		WorkflowParams: telemetry.WorkflowParams{
-			TestWorkflowSteps:          int32(len(workflow.Spec.Steps)),
-			TestWorkflowImage:          image,
-			TestWorkflowArtifactUsed:   hasArtifacts,
-			TestWorkflowKubeshopGitURI: isKubeshopGitURI,
-		},
-	})
-
-	if err != nil {
-		log.DefaultLogger.Debugf("sending run test workflow telemetry event error", "error", err)
-	} else {
-		log.DefaultLogger.Debugf("sending run test workflow telemetry event", "output", out)
 	}
 }

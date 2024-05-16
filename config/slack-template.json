@@ -31,10 +31,22 @@
 		{
 			"type": "section",
 			"fields": [
+				{{ if eq .TestType "Test Suite" }}				
+				{
+					"type": "mrkdwn",
+					"text": "*Test Suite Name*"
+				},
+				{{ else if eq .TestType "Test Workflow" }}
+				{
+					"type": "mrkdwn",
+					"text": "*Test Workflow Name*"
+				},
+				{{ else }}
 				{
 					"type": "mrkdwn",
 					"text": "*Test Name*"
-				},
+				},		
+				{{ end }}
 				{
 					"type": "mrkdwn",
 					"text": "*Type*"
@@ -131,21 +143,21 @@
 			}
 		},
 		{{ end }}
-		{
-			"type": "section",
-			"text": {
-				"type": "mrkdwn",
-				"text": "*Test Execution CLI*"
-			}
-		},
-		{
-			"type": "section",
-			"text": {
-				"type": "mrkdwn",
-				"text": "`kubectl testkube get execution {{ .ExecutionName }} `\n"
-			}
-		},
 		{{ if eq .TestType "Test Suite" }}
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "*Test Suite Execution CLI*"
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "`kubectl testkube get tse {{ .ExecutionName }} `\n"
+			}
+		},
 		{
 			"type": "section",
 			"text": {
@@ -160,7 +172,50 @@
 				"text": "Test Suite Execution URI: {{ .DashboardURI }}/test-suites/{{ .TestName }}/executions/{{ .ExecutionID }}"
 			}
 		},
+		{{ else if eq .TestType "Test Workflow" }}
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "*Test Workflow Execution CLI*"
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "`kubectl testkube get twe {{ .ExecutionName }} `\n"
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Test Workflow URI: {{ .DashboardURI }}/test-workflows/{{ .TestName }}"
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Test Workflow Execution URI: {{ .DashboardURI }}/test-workflows/{{ .TestName }}/executions/{{ .ExecutionID }}"
+			}
+		},
 		{{ else }}
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "*Test Execution CLI*"
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "`kubectl testkube get execution {{ .ExecutionName }} `\n"
+			}
+		},
 		{
 			"type": "section",
 			"text": {

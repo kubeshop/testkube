@@ -15,6 +15,7 @@ const notificationConfigString = `[
       "selector": {},
       "testName": [],
       "testSuiteName": [],
+	  "testWorkflowName": [],
       "events": [
         "start-test",
         "end-test-success",
@@ -25,7 +26,12 @@ const notificationConfigString = `[
         "end-testsuite-success",
         "end-testsuite-failed",
         "end-testsuite-aborted",
-        "end-testsuite-timeout"
+        "end-testsuite-timeout",
+        "start-testworkflow",
+        "queue-testworkflow",
+        "end-testworkflow-success",
+        "end-testworkflow-failed",
+        "end-testworkflow-aborted"
       ]
     }
   ]`
@@ -36,6 +42,7 @@ const multipleConfigurationString = `[
       "selector": {},
       "testName": [],
       "testSuiteName": [],
+      "testWorkflowName": [],	  
       "events": [
         "start-test"
       ]
@@ -45,6 +52,7 @@ const multipleConfigurationString = `[
       "selector": {},
       "testName": [],
       "testSuiteName": [],
+	  "testWorkflowName": [],		  
       "events": [
         "end-test-failed"
       ]
@@ -57,7 +65,7 @@ func TestParamsNilAssign(t *testing.T) {
 
 	assert.Nil(t, err)
 
-	t.Run("allow all when selector, testname, testsuite is not specified", func(t *testing.T) {
+	t.Run("allow all when selector, testname, testsuite, testworkflow is not specified", func(t *testing.T) {
 		config := NewConfig(notificationConfig)
 		assert.False(t, config.HasChannelsDefined())
 		channels, needs := config.NeedsSending(&testkube.Event{Type_: testkube.EventStartTest})
@@ -106,6 +114,19 @@ func TestParamsNilAssign(t *testing.T) {
 		assert.False(t, needs)
 		assert.Equal(t, 0, len(channels))
 		notificationConfig[0].TestSuiteNames = oldTestSuiteNames
+	})
+
+	t.Run("allow only one testworkflow when only one testworkflow is specified", func(t *testing.T) {
+		oldTestWorkflowNames := notificationConfig[0].TestWorkflowNames
+		notificationConfig[0].TestWorkflowNames = []string{"testworkflow1"}
+		config := NewConfig(notificationConfig)
+		channels, needs := config.NeedsSending(&testkube.Event{TestWorkflowExecution: &testkube.TestWorkflowExecution{Name: "testworkflow1"}, Type_: testkube.EventStartTestWorkflow})
+		assert.True(t, needs)
+		assert.Equal(t, 0, len(channels))
+		channels, needs = config.NeedsSending(&testkube.Event{TestWorkflowExecution: &testkube.TestWorkflowExecution{Name: "testworkflow2"}, Type_: testkube.EventStartTestWorkflow})
+		assert.False(t, needs)
+		assert.Equal(t, 0, len(channels))
+		notificationConfig[0].TestWorkflowNames = oldTestWorkflowNames
 	})
 
 	t.Run("allow only on one channel when only one channel is specified", func(t *testing.T) {

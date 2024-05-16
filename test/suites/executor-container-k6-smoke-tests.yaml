@@ -13,3 +13,9 @@ spec:
   - stopOnFailure: false
     execute:
     - test: container-executor-k6-smoke-git-file
+  - stopOnFailure: false
+    execute:
+    - test: container-executor-k6-smoke-report
+  - stopOnFailure: false
+    execute:
+    - test: container-executor-k6-env-args

@@ -1,48 +1,41 @@
 ## testkube init
 
-Install Helm chart registry in current kubectl context and update dependencies
+Init Testkube profiles(standalone-agent|demo|agent)
+
+### Synopsis
+
+Init installs the Testkube in your cluster as follows:
+	standalone-agent -> Testkube OSS
+	demo -> Testkube On-Prem demo
+	agent -> Testkube Agent
 
 ```
-testkube init [flags]
+testkube init <profile> [flags]
 ```
 
 ### Options
 
 ```
-      --agent-prefix string   usually don't need to be changed [required for custom cloud mode] (default "agent")
-      --agent-token string    Testkube Pro agent key [required for centralized mode]
-      --agent-uri string      Testkube Pro agent URI [required for centralized mode]
-      --api-prefix string     usually don't need to be changed [required for custom cloud mode] (default "api")
-      --chart string          chart name (usually you don't need to change it) (default "kubeshop/testkube")
-      --dry-run               dry run mode - only print commands that would be executed
-      --env-id string         Testkube Pro environment id [required for centralized mode]
-      --feature-logs-v2       Logs v2 feature flag
-  -h, --help                  help for init
-      --logs-prefix string    usually don't need to be changed [required for custom cloud mode] (default "logs")
-      --logs-uri string       Testkube Pro logs URI [required for centralized mode]
-      --master-insecure       should client connect in insecure mode (will use http instead of https)
-      --name string           installation name (usually you don't need to change it) (default "testkube")
-      --namespace string      namespace where to install (default "testkube")
-      --no-confirm            don't ask for confirmation - unatended installation mode
-      --no-minio              don't install MinIO
-      --no-mongo              don't install MongoDB
-      --org-id string         Testkube Pro organization id [required for centralized mode]
-      --root-domain string    usually don't need to be changed [required for custom cloud mode] (default "testkube.io")
-      --ui-prefix string      usually don't need to be changed [required for custom cloud mode] (default "app")
-      --values string         path to Helm values file
+      --export   Export the values.yaml
+  -h, --help     help for init
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -a, --api-uri string   api uri, default value read from config if set (default "http://localhost:8088")
-  -c, --client string    client used for connecting to Testkube API one of proxy|direct|cluster (default "proxy")
-      --insecure         insecure connection for direct client
-      --oauth-enabled    enable oauth
-      --verbose          show additional debug messages
+  -a, --api-uri string          api uri, default value read from config if set (default "http://localhost:8088")
+  -c, --client string           client used for connecting to Testkube API one of proxy|direct|cluster (default "proxy")
+      --header stringToString   headers for direct client key value pair: --header name=value (default [])
+      --insecure                insecure connection for direct client
+      --namespace string        Kubernetes namespace, default value read from config if set (default "testkube")
+      --oauth-enabled           enable oauth
+      --verbose                 show additional debug messages
 ```
 
 ### SEE ALSO
 
 * [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube init demo](testkube_init_demo.md)	 - Install Testkube On-Prem demo in your current context
+* [testkube init init](testkube_init_init.md)	 - Install Testkube Pro Agent and connect to Testkube Pro environment
+* [testkube init standalone-agent](testkube_init_standalone-agent.md)	 - Install Testkube OSS in your current context
 

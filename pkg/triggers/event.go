@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -13,10 +14,13 @@ import (
 	"github.com/kubeshop/testkube-operator/pkg/validation/tests/v1/testtrigger"
 	"github.com/kubeshop/testkube/pkg/mapper/daemonsets"
 	"github.com/kubeshop/testkube/pkg/mapper/deployments"
+	"github.com/kubeshop/testkube/pkg/mapper/k8sevents"
 	"github.com/kubeshop/testkube/pkg/mapper/pods"
 	"github.com/kubeshop/testkube/pkg/mapper/services"
 	"github.com/kubeshop/testkube/pkg/mapper/statefulsets"
 )
+
+const testkubeEventCausePrefix = "event-"
 
 type conditionsGetterFn func() ([]testtriggersv1.TestTriggerCondition, error)
 
@@ -51,6 +55,14 @@ func withConditionsGetter(conditionsGetter conditionsGetterFn) watcherOpts {
 func withAddressGetter(addressGetter addressGetterFn) watcherOpts {
 	return func(w *watcherEvent) {
 		w.addressGetter = addressGetter
+	}
+}
+
+func withNotEmptyName(name string) watcherOpts {
+	return func(w *watcherEvent) {
+		if name != "" {
+			w.name = name
+		}
 	}
 }
 
@@ -164,4 +176,14 @@ func getServiceConditions(
 
 func getServiceAdress(ctx context.Context, clientset kubernetes.Interface, object metav1.Object) (string, error) {
 	return fmt.Sprintf("%s.%s.svc.cluster.local", object.GetName(), object.GetNamespace()), nil
+}
+
+func getTestkubeEventNameAndCauses(event *corev1.Event) (string, []testtrigger.Cause) {
+	var causes []testtrigger.Cause
+	if !strings.HasPrefix(event.Name, k8sevents.TestkubeEventPrefix) {
+		return "", causes
+	}
+
+	causes = append(causes, testtrigger.Cause(fmt.Sprintf("%s%s", testkubeEventCausePrefix, event.Reason)))
+	return event.InvolvedObject.Name, causes
 }

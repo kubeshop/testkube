@@ -21,7 +21,6 @@ import (
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/imageinspector"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowexecutor"
@@ -30,14 +29,11 @@ import (
 type apiTCL struct {
 	apiv1.TestkubeAPI
 	ProContext                  *config.ProContext
-	ImageInspector              imageinspector.Inspector
 	TestWorkflowResults         testworkflow.Repository
 	TestWorkflowOutput          testworkflow.OutputRepository
 	TestWorkflowsClient         testworkflowsv1.Interface
 	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
 	TestWorkflowExecutor        testworkflowexecutor.TestWorkflowExecutor
-	ApiUrl                      string
-	GlobalTemplateName          string
 	configMap                   configRepo.Repository
 }
 
@@ -50,26 +46,21 @@ func NewApiTCL(
 	testkubeAPI apiv1.TestkubeAPI,
 	proContext *config.ProContext,
 	kubeClient kubeclient.Client,
-	imageInspector imageinspector.Inspector,
 	testWorkflowResults testworkflow.Repository,
 	testWorkflowOutput testworkflow.OutputRepository,
-	apiUrl string,
-	globalTemplateName string,
 	configMap configRepo.Repository,
+	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
 ) ApiTCL {
-	executor := testworkflowexecutor.New(testkubeAPI.Events, testkubeAPI.Clientset, testWorkflowResults, testWorkflowOutput, testkubeAPI.Namespace)
-	go executor.Recover(context.Background())
+	testWorkflowTemplatesClient := testworkflowsv1.NewTestWorkflowTemplatesClient(kubeClient, testkubeAPI.Namespace)
+	go testWorkflowExecutor.Recover(context.Background())
 	return &apiTCL{
 		TestkubeAPI:                 testkubeAPI,
 		ProContext:                  proContext,
-		ImageInspector:              imageInspector,
 		TestWorkflowResults:         testWorkflowResults,
 		TestWorkflowOutput:          testWorkflowOutput,
 		TestWorkflowsClient:         testworkflowsv1.NewClient(kubeClient, testkubeAPI.Namespace),
-		TestWorkflowTemplatesClient: testworkflowsv1.NewTestWorkflowTemplatesClient(kubeClient, testkubeAPI.Namespace),
-		TestWorkflowExecutor:        executor,
-		ApiUrl:                      apiUrl,
-		GlobalTemplateName:          globalTemplateName,
+		TestWorkflowTemplatesClient: testWorkflowTemplatesClient,
+		TestWorkflowExecutor:        testWorkflowExecutor,
 		configMap:                   configMap,
 	}
 }
@@ -120,6 +111,8 @@ func (s *apiTCL) AppendRoutes() {
 	testWorkflows.Get("/:id/executions/:executionID", s.pro(s.GetTestWorkflowExecutionHandler()))
 	testWorkflows.Post("/:id/abort", s.pro(s.AbortAllTestWorkflowExecutionsHandler()))
 	testWorkflows.Post("/:id/executions/:executionID/abort", s.pro(s.AbortTestWorkflowExecutionHandler()))
+	testWorkflows.Post("/:id/executions/:executionID/pause", s.pro(s.PauseTestWorkflowExecutionHandler()))
+	testWorkflows.Post("/:id/executions/:executionID/resume", s.pro(s.ResumeTestWorkflowExecutionHandler()))
 	testWorkflows.Get("/:id/executions/:executionID/logs", s.pro(s.GetTestWorkflowExecutionLogsHandler()))
 
 	testWorkflowExecutions := root.Group("/test-workflow-executions")
@@ -128,6 +121,8 @@ func (s *apiTCL) AppendRoutes() {
 	testWorkflowExecutions.Get("/:executionID/notifications", s.pro(s.StreamTestWorkflowExecutionNotificationsHandler()))
 	testWorkflowExecutions.Get("/:executionID/notifications/stream", s.pro(s.StreamTestWorkflowExecutionNotificationsWebSocketHandler()))
 	testWorkflowExecutions.Post("/:executionID/abort", s.pro(s.AbortTestWorkflowExecutionHandler()))
+	testWorkflowExecutions.Post("/:executionID/pause", s.pro(s.PauseTestWorkflowExecutionHandler()))
+	testWorkflowExecutions.Post("/:executionID/resume", s.pro(s.ResumeTestWorkflowExecutionHandler()))
 	testWorkflowExecutions.Get("/:executionID/logs", s.pro(s.GetTestWorkflowExecutionLogsHandler()))
 	testWorkflowExecutions.Get("/:executionID/artifacts", s.pro(s.ListTestWorkflowExecutionArtifactsHandler()))
 	testWorkflowExecutions.Get("/:executionID/artifacts/:filename", s.pro(s.GetTestWorkflowArtifactHandler()))

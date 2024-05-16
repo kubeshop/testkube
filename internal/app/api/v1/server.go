@@ -42,6 +42,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
+	"github.com/kubeshop/testkube/pkg/event/kind/k8sevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
@@ -95,9 +96,10 @@ func NewTestkubeAPI(
 	ff featureflags.FeatureFlags,
 	logsStream logsclient.Stream,
 	logGrpcClient logsclient.StreamGetter,
-	subscriptionChecker checktcl.SubscriptionChecker,
 	disableSecretCreation bool,
+	subscriptionChecker checktcl.SubscriptionChecker,
 	serviceAccountNames map[string]string,
+	enableK8sEvents bool,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -145,10 +147,10 @@ func NewTestkubeAPI(
 		featureFlags:          ff,
 		logsStream:            logsStream,
 		logGrpcClient:         logGrpcClient,
-		SubscriptionChecker:   subscriptionChecker,
 		disableSecretCreation: disableSecretCreation,
+		SubscriptionChecker:   subscriptionChecker,
 		LabelSources:          common.Ptr(make([]LabelSource, 0)),
-		serviceAccountNames:   serviceAccountNames,
+		ServiceAccountNames:   serviceAccountNames,
 	}
 
 	// will be reused in websockets handler
@@ -165,6 +167,10 @@ func NewTestkubeAPI(
 		} else {
 			s.Log.Debug("cdevents init error", "error", err.Error())
 		}
+	}
+
+	if enableK8sEvents {
+		s.Events.Loader.Register(k8sevent.NewK8sEventLoader(clientset, namespace, testkube.AllEventTypes))
 	}
 
 	s.InitEnvs()
@@ -209,10 +215,10 @@ type TestkubeAPI struct {
 	logsStream            logsclient.Stream
 	logGrpcClient         logsclient.StreamGetter
 	proContext            *config.ProContext
-	SubscriptionChecker   checktcl.SubscriptionChecker
 	disableSecretCreation bool
+	SubscriptionChecker   checktcl.SubscriptionChecker
 	LabelSources          *[]LabelSource
-	serviceAccountNames   map[string]string
+	ServiceAccountNames   map[string]string
 }
 
 type storageParams struct {

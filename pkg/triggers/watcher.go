@@ -305,9 +305,10 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 }
 
 func (s *Service) checkExecutionPodStatus(ctx context.Context, executionID string, pods []*corev1.Pod) error {
-	if len(pods) > 0 && pods[0].Labels[constants.ExecutionIdLabelName] != "" {
+	if len(pods) > 0 && pods[0].Labels[constants.ResourceIdLabelName] != "" {
 		return nil
 	}
+
 	execution, err := s.resultRepository.Get(ctx, executionID)
 	if err != nil {
 		s.logger.Errorf("get execution returned an error %v while looking for execution id: %s", err, executionID)
@@ -729,7 +730,8 @@ func (s *Service) clusterEventEventHandler(ctx context.Context) cache.ResourceEv
 				return
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: cluster event %s/%s created", clusterEvent.Namespace, clusterEvent.Name)
-			event := newWatcherEvent(testtrigger.EventCreated, clusterEvent, testtrigger.ResourceEvent)
+			name, causes := getTestkubeEventNameAndCauses(clusterEvent)
+			event := newWatcherEvent(testtrigger.EventCreated, clusterEvent, testtrigger.ResourceEvent, withCauses(causes), withNotEmptyName(name))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching create cluster event event: %v", err)
 			}

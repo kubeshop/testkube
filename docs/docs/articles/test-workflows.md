@@ -1,8 +1,8 @@
 # Test Workflows
 
 ## Introduction
-TestWorkflows are an easy and extremely powerful way to define and run your tests in 
-your Kubernetes clusters. Thanks to their flexibility, TestWorkflows solve many of the 
+Test Workflows are an easy and extremely powerful way to define and run your tests in 
+your Kubernetes clusters. Thanks to their flexibility, Test Workflows solve many of the 
 problems that can occur with standard Tests, including:
 
 - Running Tests using different testing tool versions and dependencies.
@@ -12,8 +12,8 @@ problems that can occur with standard Tests, including:
 
 ## Test Workflow Structure
 
-TestWorkflows are defined using a specific workflow language wrapped in a CRD. The high-level structure
-of a TestWorkflow is as follows:
+Test Workflows are defined using a specific workflow language wrapped in a CRD. The high-level structure
+of a Test Workflow is as follows:
 
 ```yaml title="testworkflows-outline.yaml"
 apiVersion: testworkflows.testkube.io/v1

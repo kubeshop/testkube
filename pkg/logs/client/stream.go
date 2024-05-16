@@ -15,7 +15,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
-const ConsumerPrefix = "lc"
+const (
+	ConsumerPrefix          = "lc"
+	defaultLogMessageMaxAge = time.Hour * 24 * 2
+)
 
 func NewNatsLogStream(nc *nats.Conn) (s Stream, err error) {
 	js, err := jetstream.New(nc)
@@ -24,9 +27,10 @@ func NewNatsLogStream(nc *nats.Conn) (s Stream, err error) {
 	}
 
 	return &NatsLogStream{
-		nc:  nc,
-		js:  js,
-		log: log.DefaultLogger,
+		nc:     nc,
+		js:     js,
+		log:    log.DefaultLogger,
+		maxAge: defaultLogMessageMaxAge,
 	}, nil
 }
 
@@ -34,12 +38,15 @@ type NatsLogStream struct {
 	nc  *nats.Conn
 	js  jetstream.JetStream
 	log *zap.SugaredLogger
+	// log message maxAge time
+	maxAge time.Duration
 }
 
 func (c NatsLogStream) Init(ctx context.Context, id string) (StreamMetadata, error) {
 	s, err := c.js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
 		Name:    c.Name(id),
 		Storage: jetstream.FileStorage, // durable stream
+		MaxAge:  c.maxAge,
 	})
 
 	if err == nil {

@@ -43,12 +43,6 @@ var directDisableMultipart = artifacts.WithMinioOptionsEnhancer(func(options *mi
 	options.DisableMultipart = true
 })
 
-var directDetectMimetype = artifacts.WithMinioOptionsEnhancer(func(options *minio.PutObjectOptions, path string, size int64) {
-	if options.ContentType == "" {
-		options.ContentType = artifacts.DetectMimetype(path)
-	}
-})
-
 var directUnpack = artifacts.WithMinioOptionsEnhancer(func(options *minio.PutObjectOptions, path string, size int64) {
 	options.UserMetadata = map[string]string{
 		"X-Amz-Meta-Snowball-Auto-Extract": "true",
@@ -63,18 +57,6 @@ var cloudAddGzipEncoding = artifacts.WithRequestEnhancerCloud(func(req *http.Req
 
 var cloudUnpack = artifacts.WithRequestEnhancerCloud(func(req *http.Request, path string, size int64) {
 	req.Header.Set("X-Amz-Meta-Snowball-Auto-Extract", "true")
-})
-
-var cloudDetectMimetype = artifacts.WithRequestEnhancerCloud(func(req *http.Request, path string, size int64) {
-	if req.Header.Get("Content-Type") == "" {
-		contentType := artifacts.DetectMimetype(path)
-		if contentType != "" {
-			req.Header.Set("Content-Type", contentType)
-		}
-		if contentType == "application/gzip" && req.Header.Get("Content-Encoding") == "" {
-			req.Header.Set("Content-Encoding", "gzip")
-		}
-	}
 })
 
 func NewArtifactsCmd() *cobra.Command {
@@ -151,7 +133,7 @@ func NewArtifactsCmd() *cobra.Command {
 					uploader = artifacts.NewCloudUploader(executor, opts...)
 				} else {
 					processor = artifacts.NewDirectProcessor()
-					uploader = artifacts.NewCloudUploader(executor, artifacts.WithParallelismCloud(30), cloudDetectMimetype)
+					uploader = artifacts.NewCloudUploader(executor, artifacts.WithParallelismCloud(30), artifacts.CloudDetectMimetype)
 				}
 			} else if compress != "" && unpack {
 				processor = artifacts.NewTarCachedProcessor(compress, compressCachePath)
@@ -164,7 +146,12 @@ func NewArtifactsCmd() *cobra.Command {
 				uploader = artifacts.NewDirectUploader(directAddGzipEncoding)
 			} else {
 				processor = artifacts.NewDirectProcessor()
-				uploader = artifacts.NewDirectUploader(artifacts.WithParallelism(30), directDetectMimetype)
+				uploader = artifacts.NewDirectUploader(artifacts.WithParallelism(30), artifacts.DirectDetectMimetype)
+			}
+
+			// Isolate the files under specific prefix
+			if env.Config().Execution.FSPrefix != "" {
+				handlerOpts = append(handlerOpts, artifacts.WithPathPrefix(env.Config().Execution.FSPrefix))
 			}
 
 			handler := artifacts.NewHandler(uploader, processor, handlerOpts...)
@@ -187,7 +174,7 @@ func run(handler artifacts.Handler, walker artifacts.Walker, dirFS fs.FS) {
 	ui.ExitOnError("initializing uploader", err)
 
 	started := time.Now()
-	err = walker.Walk(dirFS, func(path string, file fs.File, err error) error {
+	err = walker.Walk(dirFS, func(path string, file fs.File, _ fs.FileInfo, err error) error {
 		if err != nil {
 			fmt.Printf("Warning: '%s' has been ignored, as there was a problem reading it: %s\n", path, err.Error())
 			return nil

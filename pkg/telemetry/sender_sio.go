@@ -19,6 +19,8 @@ const ProEnvVariableName = "TESTKUBE_PRO_API_KEY"
 var SegmentioKey = "jELokNFNcLeQhxdpGF47PcxCtOLpwVuu"
 var CloudSegmentioKey = ""
 
+const AppBuild string = "oss"
+
 func StdLogger() analytics.Logger {
 	return stdLogger{}
 }
@@ -69,6 +71,13 @@ func mapEvent(userID string, event Event) analytics.Track {
 		Event:      event.Name,
 		UserId:     userID,
 		Properties: mapProperties(event.Params),
+		Context: &analytics.Context{
+			App: analytics.AppInfo{
+				Name:    event.Params.AppName,
+				Version: event.Params.AppVersion,
+				Build:   AppBuild,
+			},
+		},
 	}
 }
 
@@ -88,14 +97,6 @@ func mapProperties(params Params) analytics.Properties {
 		Set("clusterType", params.ClusterType).
 		Set("errorType", params.ErrorType).
 		Set("errorStackTrace", params.ErrorStackTrace)
-
-	if params.License != "" {
-		properties = properties.Set("license", params.License)
-	}
-
-	if params.Step != "" {
-		properties = properties.Set("step", params.Step)
-	}
 
 	if params.DataSource != "" {
 		properties = properties.Set("dataSource", params.DataSource)

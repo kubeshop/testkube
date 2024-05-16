@@ -49,7 +49,7 @@ uiIngress:
     alb.ingress.kubernetes.io/healthcheck-port: "8088"
     alb.ingress.kubernetes.io/ssl-redirect: "443"
     alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:us-east-1:*******:certificate/*****"
-  path: /results/v1
+  path: /v1
   hosts:
     - test-api.aws.testkube.io
 ```
@@ -107,7 +107,7 @@ spec:
     - host: test-api.aws.testkube.io
       http:
         paths:
-          - path: /results/v1
+          - path: /v1
             pathType: Prefix
             backend:
               service:
@@ -142,7 +142,7 @@ service:
 
 :::caution
 
-Do not forget to add `apiServerEndpoint` to the values.yaml for `testkube-dashboard`, e.g.: `apiServerEndpoint: "test-api.aws.testkube.io/results/v1"`.
+Do not forget to add `apiServerEndpoint` to the values.yaml for `testkube-dashboard`, e.g.: `apiServerEndpoint: "test-api.aws.testkube.io/v1"`.
 
 :::
 

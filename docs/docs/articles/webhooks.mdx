@@ -246,6 +246,7 @@ It's possible to use golang based template string as header or uri value.
 We also provide special helper methods to use in the webhook template:
 `executionstatustostring` is the method to convert a pointer to a execution status to a string type.
 `testsuiteexecutionstatustostring` is the method to convert a pointer to a test suite execution status to a string type.
+`testworkflowstatustostring` is the method to convert a pointer to a test workflow status to a string type.
 
 Usage example:
 
@@ -314,6 +315,11 @@ Webhooks can be triggered on any of the following events:
 - end-testsuite-failed
 - end-testsuite-aborted
 - end-testsuite-timeout
+- start-testworkflow
+- start-testworkflow
+- end-testworkflow-success
+- end-testworkflow-failed
+- end-testworkflow-aborted
 - created
 - updated
 - deleted
@@ -322,6 +328,7 @@ They can be triggered by the following resources:
 
 - test
 - testsuite
+- testworkflow
 - executor
 - trigger
 - webhook
@@ -338,6 +345,7 @@ They can be triggered by the following resources:
 - `Type_` - event Type (for example, `start-test`, `end-test,success`, etc. All available trigger events can be found in the [Supported Event types](#supported-event-types) section).
 - `TestExecution` - test execution details (example: [TestExecution (Execution)](#testexecution-execution) section)
 - `TestSuiteExecution` - test suite execution details (example: [TestSuiteExecution](#testsuiteexecution) section)
+- `TestWorkflowExecution` - test suite execution details (example: [TestWorkflowExecution](#testworkflowexecution) section)
 - `ClusterName` - cluster name
 - `Envs` (API-server ENV variables) - list of Testkube API-Server ENV variables
 
@@ -383,6 +391,22 @@ The full Execution data model can be found [here](https://github.com/kubeshop/te
 - `RunningContext` - Running context - how the TestSuite has been triggered (for example, `user-ui`)
 
 The full TestSuiteExecution data model can be found [here](https://github.com/kubeshop/testkube/blob/main/pkg/api/v1/testkube/model_test_suite_execution.go).
+
+### TestWorkflowExecution:
+
+- `Id` - TestWorkflowExecution ID (for example, `64f8d5b2712890925aea51dc`)
+- `Name` - TestWorkflow name (for example, `wf-postman-smoke-tests`)
+- `Namepace` - TestWorkflowExecution namespace (for example, `my-testkube`)
+- `Number` - TestWorkflowExecution sequence number
+- `ScheduledAt` - TestWorkflow scheduled time (for example, `2023-09-06 19:23:34.543433547 +0000 UTC`)
+- `StatusAt` - Time when the execution result's status has changed last time (for example, `2023-09-06 19:23:42.221493031 +0000 UTC`)
+- `Signature` - Structured tree of TestWorkflow steps
+- `Result` - TestWorkflow execution result
+- `Output` - Additional information from the steps, like referenced executed tests or artifacts
+- `Workflow` - TestWorkflow definition
+- `ResolvedWorkflow` -  TestWorkflow definition with resolved fields
+
+The full TestWorkflowExecution data model can be found [here](https://github.com/kubeshop/testkube/blob/main/pkg/api/v1/testkube/model_test_workflow_execution.go).
 
 ## Additional Examples
 

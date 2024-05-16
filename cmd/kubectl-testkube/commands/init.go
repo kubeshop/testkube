@@ -149,9 +149,7 @@ func NewInitCmdDemo() *cobra.Command {
 				} else {
 					response, err := pterm.DefaultInteractiveTextInput.WithDefaultValue("testkube").Show("Enter namespace for this installation")
 					namespace = response
-					if err != nil {
-						sendErrTelemetry(cmd, cfg, "install_namespace_not_found", license, "namespace not found", err)
-					}
+					sendErrTelemetry(cmd, cfg, "install_namespace_not_found", license, "namespace not found", err)
 					ui.ExitOnError("cannot read namespace", err)
 				}
 			}
@@ -160,15 +158,14 @@ func NewInitCmdDemo() *cobra.Command {
 			if license == "" {
 				response, err := pterm.DefaultInteractiveTextInput.Show("Enter license key")
 				license = strings.TrimSpace(response)
-				if err != nil {
-					sendErrTelemetry(cmd, cfg, "install_license_malformed", license, "license validation", err)
-				}
+				sendErrTelemetry(cmd, cfg, "install_license_malformed", license, "license validation", err)
 				ui.ExitOnError("cannot read license", err)
 			}
 			sendTelemetry(cmd, cfg, license, "license found")
 
-			if len(license) != len(licenseFormat) {
-				sendErrTelemetry(cmd, cfg, "install_license_format_not_matching", license, "license validation", err)
+			valid := len(license) == len(licenseFormat) || strings.HasPrefix(license, "key/")
+			if !valid {
+				sendErrTelemetry(cmd, cfg, "install_license_malformed", license, "license validation", err)
 				ui.Failf("license malformed, expected license of format: " + licenseFormat)
 			}
 			sendTelemetry(cmd, cfg, license, "license validated")

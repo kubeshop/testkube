@@ -38,15 +38,21 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return base.RoundTrip(req)
 }
 
-func ConfigureClient(client *http.Client, token *oauth2.Token, cloudApiKey string) {
+func ConfigureClient(client *http.Client, token *oauth2.Token, cloudApiKey string, headers map[string]string) {
+	hs := headers
+	if hs == nil {
+		hs = make(map[string]string)
+	}
+
 	if token != nil {
-		client.Transport = &transport{headers: map[string]string{
-			"Authorization": oauth.AuthorizationPrefix + " " + token.AccessToken}}
+		hs["Authorization"] = oauth.AuthorizationPrefix + " " + token.AccessToken
 	}
+
 	if cloudApiKey != "" {
-		client.Transport = &transport{headers: map[string]string{
-			"Authorization": "Bearer " + cloudApiKey}}
+		hs["Authorization"] = "Bearer " + cloudApiKey
 	}
+
+	client.Transport = &transport{headers: hs}
 }
 
 // NewDirectClient returns new direct client
