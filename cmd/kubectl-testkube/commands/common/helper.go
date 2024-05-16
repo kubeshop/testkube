@@ -446,6 +446,7 @@ func KubectlPrintLogs(namespace string, labels map[string]string) error {
 	}
 
 	ui.ShellCommand(kubectl, args...)
+	ui.NL()
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
@@ -457,11 +458,27 @@ func KubectlPrintEvents(namespace string) error {
 	}
 
 	args := []string{
+		"get",
 		"events",
 		"-n", namespace,
 	}
 
 	ui.ShellCommand(kubectl, args...)
+	ui.NL()
+
+	err = process.ExecuteAndStreamOutput(kubectl, args...)
+	if err != nil {
+		return err
+	}
+
+	args = []string{
+		"get",
+		"events",
+		"-A",
+	}
+
+	ui.ShellCommand(kubectl, args...)
+	ui.NL()
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
@@ -480,6 +497,24 @@ func KubectlPrintPods(namespace string) error {
 	}
 
 	ui.ShellCommand(kubectl, args...)
+	ui.NL()
+
+	return process.ExecuteAndStreamOutput(kubectl, args...)
+}
+
+func KubectlPrintStorageClass(namespace string) error {
+	kubectl, err := exec.LookPath("kubectl")
+	if err != nil {
+		return err
+	}
+
+	args := []string{
+		"get",
+		"storageclass",
+	}
+
+	ui.ShellCommand(kubectl, args...)
+	ui.NL()
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
