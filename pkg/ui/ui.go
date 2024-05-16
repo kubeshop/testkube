@@ -64,6 +64,7 @@ func SuccessAndExit(message string, subMessages ...string) {
 func Warn(message string, subMessages ...string)          { ui.Warn(message, subMessages...) }
 func Alert(message string, subMessages ...string)         { ui.Alert(message, subMessages...) }
 func LogLine(message string)                              { ui.LogLine(message) }
+func LogMultiLine(message string)                         { ui.LogMultiLine(message) }
 func Debug(message string, subMessages ...string)         { ui.Debug(message, subMessages...) }
 func Info(message string, subMessages ...string)          { ui.Info(message, subMessages...) }
 func Link(message string, subMessages ...string)          { ui.Link(message, subMessages...) }

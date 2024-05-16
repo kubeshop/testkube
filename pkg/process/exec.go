@@ -1,6 +1,7 @@
 package process
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -135,4 +136,30 @@ func ExecuteString(command string) (out []byte, err error) {
 	}
 
 	return out, nil
+}
+
+func ExecuteAndStreamOutput(command string, arguments ...string) error {
+	cmd := exec.Command(command, arguments...)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+
+	err = cmd.Start()
+	if err != nil {
+		return err
+	}
+
+	// print the output of the subprocess
+	scanner := bufio.NewScanner(stdout)
+	for scanner.Scan() {
+		m := scanner.Text()
+		fmt.Println(m)
+	}
+
+	if scanner.Err() != nil {
+		return scanner.Err()
+	}
+
+	return cmd.Wait()
 }
