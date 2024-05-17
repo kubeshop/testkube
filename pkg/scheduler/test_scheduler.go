@@ -717,6 +717,10 @@ func mergeArtifacts(artifactBase *testkube.ArtifactRequest, artifactAdjust *test
 			artifactBase.UseDefaultStorageClassName = artifactAdjust.UseDefaultStorageClassName
 		}
 
+		if !artifactBase.SidecarScraper && artifactAdjust.SidecarScraper {
+			artifactBase.SidecarScraper = artifactAdjust.SidecarScraper
+		}
+
 		var fields = []struct {
 			source      string
 			destination *string
