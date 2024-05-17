@@ -758,6 +758,7 @@ func MapTestArtifactRequestAPIToKube(v testkube.ArtifactRequest) testsv3.Artifac
 		OmitFolderPerExecution:     v.OmitFolderPerExecution,
 		SharedBetweenPods:          v.SharedBetweenPods,
 		UseDefaultStorageClassName: v.UseDefaultStorageClassName,
+		SidecarScraper:             v.SidecarScraper,
 	}
 }
 

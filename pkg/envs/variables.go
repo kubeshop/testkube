@@ -52,6 +52,7 @@ type Params struct {
 	ProAPIKeyFile             string `envconfig:"RUNNER_PRO_API_KEY_FILE"`                      // RUNNER_PRO_API_KEY_FILE
 	ProAPICAFile              string `envconfig:"RUNNER_PRO_API_CA_FILE"`                       // RUNNER_PRO_API_CA_FILE
 	SlavesConfigs             string `envconfig:"RUNNER_SLAVES_CONFIGS"`                        // RUNNER_SLAVES_CONFIGS
+	SidecarScraperMode        bool   `envconfig:"RUNNER_SIDECAR_SCRAPER_MODE"`                  // RUNNER_SIDECAR_SCRAPER_MODE
 }
 
 // LoadTestkubeVariables loads the parameters provided as environment variables in the Test CRD

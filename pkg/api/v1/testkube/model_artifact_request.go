@@ -27,4 +27,6 @@ type ArtifactRequest struct {
 	SharedBetweenPods bool `json:"sharedBetweenPods,omitempty"`
 	// whether to use default storage class name
 	UseDefaultStorageClassName bool `json:"useDefaultStorageClassName,omitempty"`
+	// run scraper as pod sidecar container
+	SidecarScraper bool `json:"sidecarScraper,omitempty"`
 }
