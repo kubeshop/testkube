@@ -207,7 +207,7 @@ spec:
       useDefaultStorageClassName: {{ .ExecutionRequest.ArtifactRequest.UseDefaultStorageClassName }}
       {{- end }}
       {{- if .ExecutionRequest.ArtifactRequest.SidecarScraper }}
-      useDefaultStorageClassName: {{ .ExecutionRequest.ArtifactRequest.SidecarScraper }}
+      sidecarScraper: {{ .ExecutionRequest.ArtifactRequest.SidecarScraper }}
       {{- end }
     {{- end }}
     {{- if .ExecutionRequest.JobTemplate }}
