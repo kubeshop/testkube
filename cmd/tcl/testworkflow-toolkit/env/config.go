@@ -45,7 +45,8 @@ type envExecutionConfig struct {
 	ResourceId     string `envconfig:"TK_EXI"`
 	RootResourceId string `envconfig:"TK_EXR"`
 	FSPrefix       string `envconfig:"TK_FS"`
-	// TODO(emil): add configuration here for istio waiting and exiting
+	IstioProxyWait bool   `envconfig:"TK_EX_ISTIO_PROXY_WAIT"`
+	IstioProxyExit bool   `envconfig:"TK_EX_ISTIO_PROXY_EXIT"`
 }
 
 type envSystemConfig struct {

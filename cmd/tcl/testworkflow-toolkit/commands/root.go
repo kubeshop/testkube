@@ -11,9 +11,11 @@ package commands
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -45,7 +47,46 @@ var RootCmd = &cobra.Command{
 	},
 }
 
+func preExecute() {
+	cfg := env.Config()
+
+	if cfg.Execution.IstioProxyWait {
+		fmt.Println("Waiting for Istio's proxy to become ready...")
+		for {
+			resp, err := http.Head("http://localhost:15021/healthz/ready")
+			if err == nil && resp.StatusCode == http.StatusOK {
+				fmt.Println("Istio's proxy is ready")
+				break
+			}
+			fmt.Println("Still waiting for Istio's proxy to become ready...")
+			time.Sleep(3 * time.Second)
+		}
+	}
+}
+
+func postExecute(exitCode int) {
+	cfg := env.Config()
+
+	if cfg.Execution.IstioProxyExit {
+		fmt.Println("Sending exit signal to Istio's proxy...")
+		for {
+			resp, err := http.Post("http://localhost:15020/quitquitquit", "", nil)
+			if err == nil && resp.StatusCode == http.StatusOK {
+				fmt.Println("Sent exit signal to Istio's proxy")
+				break
+			}
+			fmt.Println("Still sending exit signal to Istio's proxy...")
+			time.Sleep(3 * time.Second)
+		}
+	}
+
+	os.Exit(exitCode)
+}
+
 func Execute() {
+	// Run pre-execute hooks
+	preExecute()
+
 	// Run services within an errgroup to propagate errors between services.
 	g, ctx := errgroup.WithContext(context.Background())
 
@@ -61,7 +102,6 @@ func Execute() {
 		case sig := <-stopSignal:
 			go func() {
 				<-stopSignal
-				// TODO(emil): deferred functions will not be ran here so need to be careful to make sure postexecute is ran
 				os.Exit(137)
 			}()
 			return errors.Errorf("received signal: %v", sig)
@@ -72,7 +112,8 @@ func Execute() {
 
 	if err := RootCmd.ExecuteContext(ctx); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		// TODO(emil): deferred functions will not be ran here so need to be careful to make sure postexecute is ran
-		os.Exit(1)
+		postExecute(1)
 	}
+
+	postExecute(0)
 }
