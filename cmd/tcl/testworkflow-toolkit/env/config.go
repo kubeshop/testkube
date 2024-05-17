@@ -45,6 +45,7 @@ type envExecutionConfig struct {
 	ResourceId     string `envconfig:"TK_EXI"`
 	RootResourceId string `envconfig:"TK_EXR"`
 	FSPrefix       string `envconfig:"TK_FS"`
+	// TODO(emil): add configuration here for istio waiting and exiting
 }
 
 type envSystemConfig struct {

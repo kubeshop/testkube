@@ -25,5 +25,6 @@ func main() {
 		ui.Fail(errors.New("environment is misconfigured"))
 	}
 
+	// TODO(emil): add pre and post execute hooks with the istio wait and exit commands
 	commands.Execute()
 }

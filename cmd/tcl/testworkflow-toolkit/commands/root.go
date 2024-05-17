@@ -61,6 +61,7 @@ func Execute() {
 		case sig := <-stopSignal:
 			go func() {
 				<-stopSignal
+				// TODO(emil): deferred functions will not be ran here so need to be careful to make sure postexecute is ran
 				os.Exit(137)
 			}()
 			return errors.Errorf("received signal: %v", sig)
@@ -71,6 +72,7 @@ func Execute() {
 
 	if err := RootCmd.ExecuteContext(ctx); err != nil {
 		fmt.Fprintln(os.Stderr, err)
+		// TODO(emil): deferred functions will not be ran here so need to be careful to make sure postexecute is ran
 		os.Exit(1)
 	}
 }
