@@ -173,6 +173,7 @@ func CreateExecutionMachine(prefix string, index int64) (string, expressionstcl.
 	if env.Config().Execution.FSPrefix != "" {
 		fsPrefix = fmt.Sprintf("%s/%s", env.Config().Execution.FSPrefix, fsPrefix)
 	}
+	// TODO(emil): register path for custom ca cert
 	// TODO(emil): register new values here for istio configs
 	return id, expressionstcl.NewMachine().
 		Register("execution.id", env.ExecutionId()).
