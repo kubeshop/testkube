@@ -76,7 +76,7 @@ func (r *ScraperRunner) Run(ctx context.Context, execution testkube.Execution) (
 
 	if r.Params.ScrapperEnabled {
 		var mountPath string
-		if execution.ArtifactRequest.SidecarScraper {
+		if r.Params.SidecarScraperMode {
 			podsClient := r.clientset.CoreV1().Pods(execution.TestNamespace)
 			pods, err := executor.GetJobPods(ctx, podsClient, execution.Id, 1, 10)
 			if err != nil {
