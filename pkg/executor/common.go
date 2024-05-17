@@ -564,7 +564,8 @@ func GetPodErrorMessage(ctx context.Context, client kubernetes.Interface, pod *c
 	}
 
 	if message == "" {
-		message = fmt.Sprintf("execution pod %s failed", pod.Name)
+		statusStr := pod.Status.String()
+		message = fmt.Sprintf("execution pod %s failed, status: %s", pod.Name, statusStr)
 	}
 
 	return message

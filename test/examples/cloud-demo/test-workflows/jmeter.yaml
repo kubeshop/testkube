@@ -1,0 +1,33 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: jmeter-report
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+  container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 512Mi
+    workingDir: /data/repo/test/jmeter/executor-tests
+  steps:
+  - name: Run tests
+    shell: jmeter -n -t jmeter-executor-smoke.jmx -j /data/artifacts/jmeter.log -o /data/artifacts/report -l /data/artifacts/jtl-report.jtl -e
+    container:
+      image: justb4/jmeter:5.5
+    steps:
+    - name: Save artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
+  events:
+  - cronjob:
+      cron: "40 */4 * * *"

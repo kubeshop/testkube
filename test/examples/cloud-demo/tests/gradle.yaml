@@ -1,0 +1,24 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: gradle-java-test
+  labels:
+    core-tests: executors
+spec:
+  type: gradle/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: contrib/executor/gradle/examples/hello-gradle-jdk18
+  executionRequest:
+    variables:
+      TESTKUBE_GRADLE:
+        name: TESTKUBE_GRADLE
+        value: "true"
+        type: basic
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
+    activeDeadlineSeconds: 180
+  schedule: "10 */4 * * *"

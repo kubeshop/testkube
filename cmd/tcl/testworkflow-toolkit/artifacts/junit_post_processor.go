@@ -73,8 +73,8 @@ func (p *JUnitPostProcessor) sendJUnitReport(path string, report []byte) error {
 	_, err := p.client.Execute(ctx, testworkflow.CmdTestWorkflowExecutionAddReport, &testworkflow.ExecutionsAddReportRequest{
 		ID:           env.ExecutionId(),
 		WorkflowName: env.WorkflowName(),
-		WorkflowStep: env.Ref(),
-		Filepath:     path,
+		WorkflowStep: env.Ref(), // TODO: think if it's valid for the parallel steps that have independent refs
+		Filepath:     path,      // TODO: adjust to support sub-paths from parallel execution?
 		Report:       report,
 	})
 	return err

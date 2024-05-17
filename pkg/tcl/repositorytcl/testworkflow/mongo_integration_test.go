@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/stretchr/testify/assert"
@@ -13,12 +14,16 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
+var (
+	cfg, _ = config.Get()
+)
+
 func TestNewMongoRepository_UpdateReport_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 
 	ctx := context.Background()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.APIMongoDSN))
 	if err != nil {
 		t.Fatalf("error connecting to mongo: %v", err)
 	}

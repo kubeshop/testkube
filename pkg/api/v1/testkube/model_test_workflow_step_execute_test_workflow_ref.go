@@ -15,10 +15,11 @@ type TestWorkflowStepExecuteTestWorkflowRef struct {
 	// TestWorkflow execution description to display
 	Description string `json:"description,omitempty"`
 	// TestWorkflow execution name override
-	ExecutionName string            `json:"executionName,omitempty"`
-	Config        map[string]string `json:"config,omitempty"`
-	Count         *BoxedString      `json:"count,omitempty"`
-	MaxCount      *BoxedString      `json:"maxCount,omitempty"`
+	ExecutionName string                                `json:"executionName,omitempty"`
+	Tarball       map[string]TestWorkflowTarballRequest `json:"tarball,omitempty"`
+	Config        map[string]string                     `json:"config,omitempty"`
+	Count         *BoxedString                          `json:"count,omitempty"`
+	MaxCount      *BoxedString                          `json:"maxCount,omitempty"`
 	// matrix of parameters to spawn instances
 	Matrix map[string]interface{} `json:"matrix,omitempty"`
 	// parameters that should be distributed across sharded instances

@@ -82,4 +82,11 @@ func TestListTemplates(t *testing.T) {
 			Setup: []testworkflowsv1.Step{{Steps: []testworkflowsv1.Step{{Use: refList2}}}},
 			After: []testworkflowsv1.Step{{Steps: []testworkflowsv1.Step{{Template: &refList2[0]}}}},
 		}}))
+	assert.Equal(t, refList2Want, ListTemplates(&testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{{Steps: []testworkflowsv1.Step{{Parallel: &testworkflowsv1.StepParallel{
+				TestWorkflowSpec: testworkflowsv1.TestWorkflowSpec{Use: refList2},
+			}}}}},
+			After: []testworkflowsv1.Step{{Steps: []testworkflowsv1.Step{{Template: &refList2[0]}}}},
+		}}))
 }

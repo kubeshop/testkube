@@ -121,6 +121,7 @@ openapi-generate-model-testkube:
 	find ./pkg/api/v1/testkube -type f -exec sed -i '' -e "s/package swagger/package testkube/g" {} \;
 	find ./pkg/api/v1/testkube -type f -exec sed -i '' -e "s/\*map\[string\]/map[string]/g" {} \;
 	find ./pkg/api/v1/testkube -name "*.go" -type f -exec sed -i '' -e "s/ map\[string\]Object / map\[string\]interface\{\} /g" {} \; # support map with empty additional properties
+	find ./pkg/api/v1/testkube -name "*.go" -type f -exec sed -i '' -e "s/ \[\]Object / \[\]interface\{\} /g" {} \; # support list with unknown values
 	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ map/ \*map/g" {} \;
 	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ string/ \*string/g" {} \;
 	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \[\]/ \*\[\]/g" {} \;
@@ -163,7 +164,7 @@ unit-tests:
 
 .PHONY: integration-tests
 integration-tests:
-	INTEGRATION="true" gotestsum --format pkgname -- -tags=integration -cover ./...
+	INTEGRATION="true" STORAGE_ACCESSKEYID="minio99" STORAGE_SECRETACCESSKEY="minio123" gotestsum --format pkgname -- -tags=integration -cover ./...
 
 test-e2e:
 	go test --tags=e2e -v ./test/e2e

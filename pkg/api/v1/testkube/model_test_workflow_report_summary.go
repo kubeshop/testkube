@@ -20,6 +20,6 @@ type TestWorkflowReportSummary struct {
 	Skipped int32 `json:"skipped,omitempty"`
 	// number of error test cases
 	Errored int32 `json:"errored,omitempty"`
-	// total duration of all test cases
+	// total duration of all test cases in milliseconds
 	Duration int64 `json:"duration,omitempty"`
 }

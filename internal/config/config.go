@@ -104,6 +104,7 @@ type Config struct {
 	TestkubeExecutionNamespaces                 string        `envconfig:"TESTKUBE_EXECUTION_NAMESPACES" default:""`
 	TestkubeDefaultStorageClassName             string        `envconfig:"TESTKUBE_DEFAULT_STORAGE_CLASS_NAME" default:""`
 	GlobalWorkflowTemplateName                  string        `envconfig:"TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_NAME" default:""`
+	EnableK8sEvents                             bool          `envconfig:"ENABLE_K8S_EVENTS" default:"true"`
 	// IstioProxyWait triggers logic in the test runner jobs to wait for Istio's
 	// Envoy proxy to become ready.
 	// This should not be necessary in environments that support native

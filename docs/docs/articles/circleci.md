@@ -61,7 +61,7 @@ workflows:
     jobs:
       - run-tests
 ```
-## Testkube OSS
+## Testkube Core OSS
 
 ### How to configure Testkube CLI action for TK OSS and run a test
 

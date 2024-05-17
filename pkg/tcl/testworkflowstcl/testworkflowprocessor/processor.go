@@ -54,11 +54,15 @@ func NewFullFeatured(inspector imageinspector.Inspector) Processor {
 		Register(ProcessDelay).
 		Register(ProcessContentFiles).
 		Register(ProcessContentGit).
+		Register(ProcessContentTarball).
+		Register(ProcessServicesStart).
 		Register(ProcessNestedSetupSteps).
 		Register(ProcessRunCommand).
 		Register(ProcessShellCommand).
 		Register(ProcessExecute).
+		Register(ProcessParallel).
 		Register(ProcessNestedSteps).
+		Register(ProcessServicesStop).
 		Register(ProcessArtifacts)
 }
 
@@ -77,7 +81,7 @@ func (p *processor) process(layer Intermediate, container Container, step testwo
 	// Build an initial group for the inner items
 	self := NewGroupStage(ref, false)
 	self.SetName(step.Name)
-	self.SetOptional(step.Optional).SetNegative(step.Negative).SetTimeout(step.Timeout)
+	self.SetOptional(step.Optional).SetNegative(step.Negative).SetTimeout(step.Timeout).SetPaused(step.Paused)
 	if step.Condition != "" {
 		self.SetCondition(step.Condition)
 	} else {
@@ -91,6 +95,15 @@ func (p *processor) process(layer Intermediate, container Container, step testwo
 			return nil, err
 		}
 		self.Add(stage)
+	}
+
+	// Add virtual pause step in case no other is there
+	if self.HasPause() && len(self.Children()) == 0 {
+		pause := NewContainerStage(self.Ref()+"pause", container.CreateChild().
+			SetCommand(constants.DefaultShellPath).
+			SetArgs("-c", "exit 0"))
+		pause.SetCategory("Wait for continue")
+		self.Add(pause)
 	}
 
 	return self, nil
@@ -112,8 +125,11 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 
 	// Process steps
 	rootStep := testworkflowsv1.Step{
-		StepBase: testworkflowsv1.StepBase{
-			Content:   workflow.Spec.Content,
+		StepSource: testworkflowsv1.StepSource{
+			Content: workflow.Spec.Content,
+		},
+		Services: workflow.Spec.Services,
+		StepDefaults: testworkflowsv1.StepDefaults{
 			Container: workflow.Spec.Container,
 		},
 		Steps: append(workflow.Spec.Setup, append(workflow.Spec.Steps, workflow.Spec.After...)...),
@@ -135,7 +151,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	// Finalize ConfigMaps
 	configMaps := layer.ConfigMaps()
 	for i := range configMaps {
-		AnnotateControlledBy(&configMaps[i], "{{execution.id}}")
+		AnnotateControlledBy(&configMaps[i], "{{resource.rootId}}", "{{resource.id}}")
 		err = expressionstcl.FinalizeForce(&configMaps[i], machines...)
 		if err != nil {
 			return nil, errors.Wrap(err, "finalizing ConfigMap")
@@ -145,7 +161,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	// Finalize Secrets
 	secrets := layer.Secrets()
 	for i := range secrets {
-		AnnotateControlledBy(&secrets[i], "{{execution.id}}")
+		AnnotateControlledBy(&secrets[i], "{{resource.rootId}}", "{{resource.id}}")
 		err = expressionstcl.FinalizeForce(&secrets[i], machines...)
 		if err != nil {
 			return nil, errors.Wrap(err, "finalizing Secret")
@@ -164,7 +180,8 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	// Append main label for the pod
 	layer.AppendPodConfig(&testworkflowsv1.PodConfig{
 		Labels: map[string]string{
-			constants.ExecutionIdMainPodLabelName: "{{execution.id}}",
+			constants.RootResourceIdLabelName: "{{resource.rootId}}",
+			constants.ResourceIdLabelName:     "{{resource.id}}",
 		},
 	})
 
@@ -203,8 +220,44 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		return nil, errors.Wrap(err, "applying image data")
 	}
 
+	// Adjust the security context in case it's a single container besides the Testkube' containers
+	// TODO: Consider flag argument, that would be used only for services?
+	containerStages := root.ContainerStages()
+	var otherContainers []ContainerStage
+	for _, c := range containerStages {
+		if c.Container().Image() != constants.DefaultInitImage && c.Container().Image() != constants.DefaultToolkitImage {
+			otherContainers = append(otherContainers, c)
+		}
+	}
+	if len(otherContainers) == 1 {
+		image := otherContainers[0].Container().Image()
+		if _, ok := images[image]; ok {
+			sc := otherContainers[0].Container().SecurityContext()
+			if sc == nil {
+				sc = &corev1.SecurityContext{}
+			}
+			if podConfig.SecurityContext == nil {
+				podConfig.SecurityContext = &corev1.PodSecurityContext{}
+			}
+			if sc.RunAsGroup == nil && podConfig.SecurityContext.RunAsGroup == nil {
+				sc.RunAsGroup = common.Ptr(images[image].Group)
+				otherContainers[0].Container().SetSecurityContext(sc)
+			}
+			if podConfig.SecurityContext.FSGroup == nil {
+				podConfig.SecurityContext.FSGroup = sc.RunAsGroup
+			}
+		}
+	}
+	containerStages = nil
+
+	// Determine FS Group for the containers
+	fsGroup := common.Ptr(constants.DefaultFsGroup)
+	if podConfig.SecurityContext != nil && podConfig.SecurityContext.FSGroup != nil {
+		fsGroup = podConfig.SecurityContext.FSGroup
+	}
+
 	// Build list of the containers
-	containers, err := buildKubernetesContainers(root, NewInitProcess().SetRef(root.Ref()), machines...)
+	containers, err := buildKubernetesContainers(root, NewInitProcess().SetRef(root.Ref()), fsGroup, machines...)
 	if err != nil {
 		return nil, errors.Wrap(err, "building Kubernetes containers")
 	}
@@ -235,23 +288,42 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 
 	// Build pod template
+	if podConfig.SecurityContext == nil {
+		podConfig.SecurityContext = &corev1.PodSecurityContext{}
+	}
+	if podConfig.SecurityContext.FSGroup == nil {
+		podConfig.SecurityContext.FSGroup = common.Ptr(constants.DefaultFsGroup)
+	}
 	podSpec := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: podConfig.Annotations,
 			Labels:      podConfig.Labels,
 		},
 		Spec: corev1.PodSpec{
-			RestartPolicy:      corev1.RestartPolicyNever,
-			Volumes:            volumes,
-			ImagePullSecrets:   podConfig.ImagePullSecrets,
-			ServiceAccountName: podConfig.ServiceAccountName,
-			NodeSelector:       podConfig.NodeSelector,
-			SecurityContext: &corev1.PodSecurityContext{
-				FSGroup: common.Ptr(constants.DefaultFsGroup),
-			},
+			RestartPolicy:             corev1.RestartPolicyNever,
+			Volumes:                   volumes,
+			ImagePullSecrets:          podConfig.ImagePullSecrets,
+			ServiceAccountName:        podConfig.ServiceAccountName,
+			NodeSelector:              podConfig.NodeSelector,
+			ActiveDeadlineSeconds:     podConfig.ActiveDeadlineSeconds,
+			DNSPolicy:                 podConfig.DNSPolicy,
+			NodeName:                  podConfig.NodeName,
+			SecurityContext:           podConfig.SecurityContext,
+			Hostname:                  podConfig.Hostname,
+			Subdomain:                 podConfig.Subdomain,
+			Affinity:                  podConfig.Affinity,
+			Tolerations:               podConfig.Tolerations,
+			HostAliases:               podConfig.HostAliases,
+			PriorityClassName:         podConfig.PriorityClassName,
+			Priority:                  podConfig.Priority,
+			DNSConfig:                 podConfig.DNSConfig,
+			PreemptionPolicy:          podConfig.PreemptionPolicy,
+			TopologySpreadConstraints: podConfig.TopologySpreadConstraints,
+			SchedulingGates:           podConfig.SchedulingGates,
+			ResourceClaims:            podConfig.ResourceClaims,
 		},
 	}
-	AnnotateControlledBy(&podSpec, "{{execution.id}}")
+	AnnotateControlledBy(&podSpec, "{{resource.rootId}}", "{{resource.id}}")
 	err = expressionstcl.FinalizeForce(&podSpec, machines...)
 	if err != nil {
 		return nil, errors.Wrap(err, "finalizing pod template spec")
@@ -264,7 +336,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		Args:            []string{constants.InitScript},
 		VolumeMounts:    layer.ContainerDefaults().VolumeMounts(),
 		SecurityContext: &corev1.SecurityContext{
-			RunAsGroup: common.Ptr(constants.DefaultFsGroup),
+			RunAsGroup: fsGroup,
 		},
 	}
 	err = expressionstcl.FinalizeForce(&initContainer, machines...)
@@ -281,15 +353,17 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			APIVersion: batchv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        "{{execution.id}}",
+			Name:        "{{resource.id}}",
 			Annotations: jobConfig.Annotations,
 			Labels:      jobConfig.Labels,
+			Namespace:   jobConfig.Namespace,
 		},
 		Spec: batchv1.JobSpec{
-			BackoffLimit: common.Ptr(int32(0)),
+			BackoffLimit:          common.Ptr(int32(0)),
+			ActiveDeadlineSeconds: jobConfig.ActiveDeadlineSeconds,
 		},
 	}
-	AnnotateControlledBy(&jobSpec, "{{execution.id}}")
+	AnnotateControlledBy(&jobSpec, "{{resource.rootId}}", "{{resource.id}}")
 	err = expressionstcl.FinalizeForce(&jobSpec, machines...)
 	if err != nil {
 		return nil, errors.Wrap(err, "finalizing job spec")

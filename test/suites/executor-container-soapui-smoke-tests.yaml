@@ -1,0 +1,12 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: executor-container-soapui-smoke-tests
+  labels:
+    app: testkube
+spec:
+  description: "container executor soapui smoke tests"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: container-executor-soapui-smoke

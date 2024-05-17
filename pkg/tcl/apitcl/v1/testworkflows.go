@@ -12,24 +12,19 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/pkg/errors"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"sigs.k8s.io/kustomize/kyaml/yaml"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/scheduler"
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowresolver"
+	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
 func (s *apiTCL) ListTestWorkflowsHandler() fiber.Handler {
@@ -276,12 +271,6 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 			return s.ClientError(c, errPrefix, err)
 		}
 
-		// Delete unnecessary data
-		delete(workflow.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
-
-		// Preserve initial workflow
-		initialWorkflow := workflow.DeepCopy()
-
 		// Load the execution request
 		var request testkube.TestWorkflowExecutionRequest
 		err = c.BodyParser(&request)
@@ -289,146 +278,39 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 			return s.BadRequest(c, errPrefix, "invalid body", err)
 		}
 
-		// Fetch the templates
-		tpls := testworkflowresolver.ListTemplates(workflow)
-		tplsMap := make(map[string]testworkflowsv1.TestWorkflowTemplate, len(tpls))
-		for tplName := range tpls {
-			tpl, err := s.TestWorkflowTemplatesClient.Get(tplName)
-			if err != nil {
-				return s.BadRequest(c, errPrefix, "fetching error", err)
-			}
-			tplsMap[tplName] = *tpl
-		}
+		var results []testkube.TestWorkflowExecution
+		var errs []error
 
-		// Fetch the global template
-		globalTemplateStr := ""
-		if s.GlobalTemplateName != "" {
-			internalName := testworkflowresolver.GetInternalTemplateName(s.GlobalTemplateName)
-			displayName := testworkflowresolver.GetDisplayTemplateName(s.GlobalTemplateName)
-
-			if _, ok := tplsMap[internalName]; !ok {
-				globalTemplatePtr, err := s.TestWorkflowTemplatesClient.Get(internalName)
-				if err != nil && !IsNotFound(err) {
-					return s.BadRequest(c, errPrefix, "global template error", err)
-				} else if err == nil {
-					tplsMap[internalName] = *globalTemplatePtr
-				}
-			}
-			if _, ok := tplsMap[internalName]; ok {
-				workflow.Spec.Use = append([]testworkflowsv1.TemplateRef{{Name: displayName}}, workflow.Spec.Use...)
-				b, err := yaml.Marshal(tplsMap[internalName])
-				if err == nil {
-					globalTemplateStr = string(b)
-				}
-			}
-		}
-
-		// Apply the configuration
-		_, err = testworkflowresolver.ApplyWorkflowConfig(workflow, testworkflowmappers.MapConfigValueAPIToKube(request.Config))
-		if err != nil {
-			return s.BadRequest(c, errPrefix, "configuration", err)
-		}
-
-		// Resolve the TestWorkflow
-		err = testworkflowresolver.ApplyTemplates(workflow, tplsMap)
-		if err != nil {
-			return s.BadRequest(c, errPrefix, "resolving error", err)
-		}
-
-		// Build the basic Execution data
-		id := primitive.NewObjectID().Hex()
-		now := time.Now()
-		machine := expressionstcl.NewMachine().
-			RegisterStringMap("internal", map[string]string{
-				"storage.url":        os.Getenv("STORAGE_ENDPOINT"),
-				"storage.accessKey":  os.Getenv("STORAGE_ACCESSKEYID"),
-				"storage.secretKey":  os.Getenv("STORAGE_SECRETACCESSKEY"),
-				"storage.region":     os.Getenv("STORAGE_REGION"),
-				"storage.bucket":     os.Getenv("STORAGE_BUCKET"),
-				"storage.token":      os.Getenv("STORAGE_TOKEN"),
-				"storage.ssl":        common.GetOr(os.Getenv("STORAGE_SSL"), "false"),
-				"storage.skipVerify": common.GetOr(os.Getenv("STORAGE_SKIP_VERIFY"), "false"),
-				"storage.certFile":   os.Getenv("STORAGE_CERT_FILE"),
-				"storage.keyFile":    os.Getenv("STORAGE_KEY_FILE"),
-				"storage.caFile":     os.Getenv("STORAGE_CA_FILE"),
-
-				"cloud.enabled":         strconv.FormatBool(os.Getenv("TESTKUBE_PRO_API_KEY") != "" || os.Getenv("TESTKUBE_CLOUD_API_KEY") != ""),
-				"cloud.api.key":         common.GetOr(os.Getenv("TESTKUBE_PRO_API_KEY"), os.Getenv("TESTKUBE_CLOUD_API_KEY")),
-				"cloud.api.tlsInsecure": common.GetOr(os.Getenv("TESTKUBE_PRO_TLS_INSECURE"), os.Getenv("TESTKUBE_CLOUD_TLS_INSECURE"), "false"),
-				"cloud.api.skipVerify":  common.GetOr(os.Getenv("TESTKUBE_PRO_SKIP_VERIFY"), os.Getenv("TESTKUBE_CLOUD_SKIP_VERIFY"), "false"),
-				"cloud.api.url":         common.GetOr(os.Getenv("TESTKUBE_PRO_URL"), os.Getenv("TESTKUBE_CLOUD_URL")),
-
-				"dashboard.url":  os.Getenv("TESTKUBE_DASHBOARD_URI"),
-				"api.url":        s.ApiUrl,
-				"namespace":      s.Namespace,
-				"globalTemplate": globalTemplateStr,
-
-				"images.init":    constants.DefaultInitImage,
-				"images.toolkit": constants.DefaultToolkitImage,
-			}).
-			RegisterStringMap("workflow", map[string]string{
-				"name": workflow.Name,
-			}).
-			RegisterStringMap("execution", map[string]string{
-				"id": id,
-			})
-
-		// Preserve resolved TestWorkflow
-		resolvedWorkflow := workflow.DeepCopy()
-
-		// Process the TestWorkflow
-		bundle, err := testworkflowprocessor.NewFullFeatured(s.ImageInspector).
-			Bundle(c.Context(), workflow, machine)
-		if err != nil {
-			return s.BadRequest(c, errPrefix, "processing error", err)
-		}
-
-		// Load execution identifier data
-		// TODO: Consider if that should not be shared (as now it is between Tests and Test Suites)
-		number, _ := s.ExecutionResults.GetNextExecutionNumber(context.Background(), workflow.Name)
-		executionName := request.Name
-		if executionName == "" {
-			executionName = fmt.Sprintf("%s-%d", workflow.Name, number)
-		}
-
-		// Ensure it is unique name
-		// TODO: Consider if we shouldn't make name unique across all TestWorkflows
-		next, _ := s.TestWorkflowResults.GetByNameAndTestWorkflow(ctx, executionName, workflow.Name)
-		if next.Name == executionName {
-			return s.BadRequest(c, errPrefix, "execution name already exists", errors.New(executionName))
-		}
-
-		// Build Execution entity
-		// TODO: Consider storing "config" as well
-		execution := testkube.TestWorkflowExecution{
-			Id:          id,
-			Name:        executionName,
-			Number:      number,
-			ScheduledAt: now,
-			StatusAt:    now,
-			Signature:   testworkflowprocessor.MapSignatureListToInternal(bundle.Signature),
-			Result: &testkube.TestWorkflowResult{
-				Status:          common.Ptr(testkube.QUEUED_TestWorkflowStatus),
-				PredictedStatus: common.Ptr(testkube.PASSED_TestWorkflowStatus),
-				Initialization: &testkube.TestWorkflowStepResult{
-					Status: common.Ptr(testkube.QUEUED_TestWorkflowStepStatus),
-				},
-				Steps: testworkflowprocessor.MapSignatureListToStepResults(bundle.Signature),
+		concurrencyLevel := scheduler.DefaultConcurrencyLevel
+		workerpoolService := workerpool.New[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest,
+			testkube.TestWorkflowExecution](concurrencyLevel)
+		requests := []workerpool.Request[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution]{
+			{
+				Object:  *workflow,
+				Options: request,
+				ExecFn:  s.TestWorkflowExecutor.Execute,
 			},
-			Output:           []testkube.TestWorkflowOutput{},
-			Workflow:         testworkflowmappers.MapKubeToAPI(initialWorkflow),
-			ResolvedWorkflow: testworkflowmappers.MapKubeToAPI(resolvedWorkflow),
-		}
-		err = s.TestWorkflowResults.Insert(ctx, execution)
-		if err != nil {
-			return s.InternalError(c, errPrefix, "inserting execution to storage", err)
 		}
 
-		// Schedule the execution
-		s.TestWorkflowExecutor.Schedule(bundle, execution)
-		s.sendRunWorkflowTelemetry(c.Context(), workflow)
+		go workerpoolService.SendRequests(requests)
+		go workerpoolService.Run(ctx)
 
-		return c.JSON(execution)
+		for r := range workerpoolService.GetResponses() {
+			results = append(results, r.Result)
+			if r.Err != nil {
+				errs = append(errs, r.Err)
+			}
+		}
+
+		if len(errs) != 0 {
+			return s.InternalError(c, errPrefix, "execution error", errs[0])
+		}
+
+		if len(results) != 0 {
+			return c.JSON(results[0])
+		}
+
+		return s.InternalError(c, errPrefix, "error", errors.New("no execution results"))
 	}
 }
 

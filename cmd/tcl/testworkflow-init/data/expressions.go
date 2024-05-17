@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl/libs"
 )
 
 var aliases = map[string]string{
@@ -72,6 +71,12 @@ var StateMachine = expressionstcl.NewMachine().
 			return State.GetOutput(name[7:])
 		}
 		return nil, false, nil
+	}).
+	RegisterAccessorExt(func(name string) (interface{}, bool, error) {
+		if strings.HasPrefix(name, "services.") {
+			return State.GetOutput(name)
+		}
+		return nil, false, nil
 	})
 
 var EnvMachine = expressionstcl.NewMachine().
@@ -93,16 +98,13 @@ var RefStatusMachine = expressionstcl.NewMachine().
 		return string(State.GetStep(ref).Status), true
 	})
 
-var wd, _ = os.Getwd()
-var FileMachine = libs.NewFsMachine(os.DirFS("/"), wd)
-
 func Template(tpl string, m ...expressionstcl.Machine) (string, error) {
-	m = append(m, AliasMachine, baseTestWorkflowMachine)
+	m = append(m, AliasMachine, GetBaseTestWorkflowMachine())
 	return expressionstcl.EvalTemplate(tpl, m...)
 }
 
 func Expression(expr string, m ...expressionstcl.Machine) (expressionstcl.StaticValue, error) {
-	m = append(m, AliasMachine, baseTestWorkflowMachine)
+	m = append(m, AliasMachine, GetBaseTestWorkflowMachine())
 	return expressionstcl.EvalExpression(expr, m...)
 }
 

@@ -2,14 +2,14 @@
 
 ## Info
 
-This diagram was made with the C4 diagram technique
-(<https://c4model.com/>).
+These diagrams were made with the C4 diagram technique
+(<https://c4model.com/>). They describe the structure of Testkube Core OSS.
 
 ## Diagrams
 
 ### System Context
 
-![testkube system context diagram](../img/system_context.png)
+![testkube system context diagram](../img/system-context.png)
 
 ### Containers
 

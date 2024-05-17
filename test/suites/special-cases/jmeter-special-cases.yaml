@@ -42,4 +42,4 @@ spec:
     - test: jmeterd-executor-smoke-args-override-workingdir
   - stopOnFailure: false
     execute:
-    - test: jmeterd-executor-smoke-output-dir
+    - test: jmeterd-executor-smoke-runner-artifacts-dir

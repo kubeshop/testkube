@@ -20,16 +20,16 @@ jobs:
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version:  ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -37,7 +37,7 @@ jobs:
           key: testkube-api-go-${{ hashFiles('**/go.sum') }}
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -46,7 +46,7 @@ jobs:
         uses: prompt/actions-commit-hash@v3
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
@@ -78,16 +78,16 @@ jobs:
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version:  ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -95,7 +95,7 @@ jobs:
           key: testkube-tw-init-go-${{ hashFiles('**/go.sum') }}
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -104,7 +104,7 @@ jobs:
         uses: prompt/actions-commit-hash@v3
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
@@ -136,16 +136,16 @@ jobs:
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version:  ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -153,7 +153,7 @@ jobs:
           key: testkube-tw-toolkit-go-${{ hashFiles('**/go.sum') }}
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -162,7 +162,7 @@ jobs:
         uses: prompt/actions-commit-hash@v3
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
@@ -186,6 +186,128 @@ jobs:
         run: |
           docker push kubeshop/testkube-tw-toolkit:${{ steps.commit.outputs.short }}
 
+  logs_sidecar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.21
+
+      - name: Go Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: logs-sidecar-go-${{ hashFiles('**/go.sum') }}
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - id: commit
+        uses: prompt/actions-commit-hash@v3
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser-pro
+          version: latest
+          args: release -f ./goreleaser_files/.goreleaser-docker-build-logs-sidecar.yml --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
+          DOCKER_IMAGE_TAG: ${{ steps.commit.outputs.short }}
+
+      - name: Push Docker images
+        run: |
+          docker push kubeshop/testkube-logs-sidecar:${{ steps.commit.outputs.short }}-arm64v8
+          docker push kubeshop/testkube-logs-sidecar:${{ steps.commit.outputs.short }}-amd64
+
+          docker manifest create kubeshop/testkube-logs-sidecar:${{ steps.commit.outputs.short }} --amend kubeshop/testkube-logs-sidecar:${{ steps.commit.outputs.short }}-arm64v8 --amend kubeshop/testkube-logs-sidecar:${{ steps.commit.outputs.short }}-amd64
+          docker manifest push -p kubeshop/testkube-logs-sidecar:${{ steps.commit.outputs.short }}
+
+  logs_server:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.21
+
+      - name: Go Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: logs-server-go-${{ hashFiles('**/go.sum') }}
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - id: commit
+        uses: prompt/actions-commit-hash@v3
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser-pro
+          version: latest
+          args: release -f ./goreleaser_files/.goreleaser-docker-build-logs-server.yml --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
+          DOCKER_IMAGE_TAG: ${{ steps.commit.outputs.short }}
+
+      - name: Push Docker images
+        run: |
+          docker push kubeshop/testkube-logs-server:${{ steps.commit.outputs.short }}-arm64v8
+          docker push kubeshop/testkube-logs-server:${{ steps.commit.outputs.short }}-amd64
+
+          docker manifest create kubeshop/testkube-logs-server:${{ steps.commit.outputs.short }} --amend kubeshop/testkube-logs-server:${{ steps.commit.outputs.short }}-arm64v8 --amend kubeshop/testkube-logs-server:${{ steps.commit.outputs.short }}-amd64
+          docker manifest push -p kubeshop/testkube-logs-server:${{ steps.commit.outputs.short }}
+
   single_executor:
     strategy:
       matrix:
@@ -198,16 +320,16 @@ jobs:
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version:  ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -220,13 +342,13 @@ jobs:
         uses: prompt/actions-commit-hash@v3
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
@@ -254,16 +376,16 @@ jobs:
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version:  ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -273,7 +395,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -282,7 +404,7 @@ jobs:
         uses: prompt/actions-commit-hash@v3
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
@@ -302,20 +424,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version:  ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -325,7 +447,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -334,7 +456,7 @@ jobs:
         uses: prompt/actions-commit-hash@v3
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
@@ -358,10 +480,10 @@ jobs:
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Docker Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
@@ -372,7 +494,7 @@ jobs:
         uses: prompt/actions-commit-hash@v3
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -394,16 +516,16 @@ jobs:
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -413,7 +535,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -422,7 +544,7 @@ jobs:
         uses: prompt/actions-commit-hash@v3
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
@@ -446,16 +568,16 @@ jobs:
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -465,7 +587,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -474,7 +596,7 @@ jobs:
         uses: prompt/actions-commit-hash@v3
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
@@ -498,16 +620,16 @@ jobs:
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -517,7 +639,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -526,7 +648,7 @@ jobs:
         uses: prompt/actions-commit-hash@v3
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
@@ -549,16 +671,16 @@ jobs:
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -568,7 +690,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -577,7 +699,7 @@ jobs:
         uses: prompt/actions-commit-hash@v3
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
@@ -598,14 +720,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Get commit sha
         id: github_sha
         run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
 
       - name: Repository Dispatch
-        uses: peter-evans/repository-dispatch@v2
+        uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.CI_BOT_TOKEN }}
           repository: kubeshop/helm-charts

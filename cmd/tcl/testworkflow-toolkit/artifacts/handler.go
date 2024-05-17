@@ -11,6 +11,7 @@ package artifacts
 import (
 	"fmt"
 	"io/fs"
+	"path/filepath"
 	"sync/atomic"
 
 	"github.com/dustin/go-humanize"
@@ -22,6 +23,7 @@ type handler struct {
 	uploader      Uploader
 	processor     Processor
 	postProcessor PostProcessor
+	pathPrefix    string
 
 	success   atomic.Uint32
 	errors    atomic.Uint32
@@ -39,6 +41,12 @@ type HandlerOpts func(h *handler)
 func WithPostProcessor(postProcessor PostProcessor) HandlerOpts {
 	return func(h *handler) {
 		h.postProcessor = postProcessor
+	}
+}
+
+func WithPathPrefix(pathPrefix string) HandlerOpts {
+	return func(h *handler) {
+		h.pathPrefix = pathPrefix
 	}
 }
 
@@ -68,17 +76,23 @@ func (h *handler) Start() (err error) {
 }
 
 func (h *handler) Add(path string, file fs.File, stat fs.FileInfo) (err error) {
+	// Apply path prefix correctly
+	uploadPath := path
+	if h.pathPrefix != "" {
+		uploadPath = filepath.Join(h.pathPrefix, uploadPath)
+	}
+
 	size := uint64(stat.Size())
 	h.totalSize.Add(size)
 
-	fmt.Printf(ui.LightGray("%s (%s)\n"), path, humanize.Bytes(uint64(stat.Size())))
+	fmt.Printf(ui.LightGray("%s (%s)\n"), uploadPath, humanize.Bytes(uint64(stat.Size())))
 
-	err = h.processor.Add(h.uploader, path, file, stat)
+	err = h.processor.Add(h.uploader, uploadPath, file, stat)
 	if err == nil {
 		h.success.Add(1)
 	} else {
 		h.errors.Add(1)
-		fmt.Printf(ui.Red("%s: failed: %s"), path, err.Error())
+		fmt.Printf(ui.Red("%s: failed: %s"), uploadPath, err.Error())
 	}
 	if h.postProcessor != nil {
 		err = h.postProcessor.Add(path)

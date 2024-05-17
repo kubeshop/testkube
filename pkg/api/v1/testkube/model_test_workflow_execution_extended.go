@@ -38,3 +38,10 @@ func (e *TestWorkflowExecution) EscapeDots() *TestWorkflowExecution {
 func (e *TestWorkflowExecution) UnscapeDots() *TestWorkflowExecution {
 	return e.ConvertDots(utils.UnescapeDots)
 }
+
+func (e *TestWorkflowExecution) GetNamespace(defaultNamespace string) string {
+	if e.Namespace == "" {
+		return defaultNamespace
+	}
+	return e.Namespace
+}

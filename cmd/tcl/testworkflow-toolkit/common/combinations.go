@@ -137,6 +137,31 @@ type ParamsSpec struct {
 	Shards      map[string][]interface{}
 }
 
+func (p *ParamsSpec) String(parallelism int64) string {
+	infos := make([]string, 0)
+	if p.MatrixCount > 1 {
+		infos = append(infos, fmt.Sprintf("%d combinations", p.MatrixCount))
+	}
+	if p.ShardCount > 1 {
+		infos = append(infos, fmt.Sprintf("sharded %d times", p.ShardCount))
+	}
+	if p.Count > 1 {
+		if parallelism < p.Count {
+			if parallelism == 1 {
+				infos = append(infos, fmt.Sprintf("parallel: %d", parallelism))
+			} else {
+				infos = append(infos, "run sequentially")
+			}
+		} else if parallelism >= p.Count {
+			infos = append(infos, fmt.Sprintf("all in parallel"))
+		}
+	}
+	if p.Count == 1 {
+		return fmt.Sprintf("1 instance requested")
+	}
+	return fmt.Sprintf("%d instances requested: %s", p.Count, strings.Join(infos, ", "))
+}
+
 func (p *ParamsSpec) ShardIndexAt(index int64) int64 {
 	return index % p.ShardCount
 }

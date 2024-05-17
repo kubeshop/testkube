@@ -1,4 +1,4 @@
-# Testkube Open Source
+# Testkube Core Open Source
 
 Welcome to the Open Source version of Testkube! 
 
@@ -8,7 +8,7 @@ Visit [Open Source or Pro](open-source-or-pro.md) to see a comparison of feature
 
 Also, take a look at our [Quick Setup Video](https://www.youtube.com/watch?v=ynzEkOUhxKk).
 
-## Getting Started with Testkube Open Source
+## Getting Started with Testkube Core Open Source
 
 **Installation via Helm:** Dive into detailed installation instructions with [Helm in our official documentation](https://docs.testkube.io/articles/helm-chart/).
 
@@ -27,11 +27,14 @@ This command will set up the following components in your Kubernetes cluster:
 - Use MongoDB for test results and Minio for artifact storage (optional; disable with --no-minio). 
 - Testkube will listen and manage all the CRDs for Tests, TestSuites, Executors, etc… inside the Testkube namespace.
 
-
 Verify Your Installation: Ensure that Testkube is up and running with: 
 `kubectl get all -n testkube`.
 
 Once set up, you're ready to unleash the full potential of Testkube in your environment. Whether you opt for the Open Source or Pro variant, Testkube is committed to powering your development and testing workflows seamlessly.
+
+## Upgrade Testkube Core Open Source
+
+See [upgrade](upgrade.md) for instructions on how to upgrade your Testkube Core Open Source components.
 
 ## Minimum Resource Requirements
 

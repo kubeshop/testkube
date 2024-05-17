@@ -1,6 +1,6 @@
-# How to Migrate from Testkube OSS to Testkube Pro On-Prem
+# How to Migrate from Testkube Core OSS to Testkube Pro On-Prem
 
-It is possible to deploy Testkube Pro On-Prem within the same k8s cluster where Testkube OSS is already running. To achieve this, you should install Testkube Pro On-Prem in a different namespace and connect Testkube OSS as an Agent.
+It is possible to deploy Testkube Pro On-Prem within the same k8s cluster where Testkube Core OSS is already running. To achieve this, you should install Testkube Pro On-Prem in a different namespace and connect Testkube Core OSS as an Agent.
 
 :::note
 Please note that your test executions will not be migrated to Testkube Pro On-Prem, only Test definitions.
@@ -9,7 +9,7 @@ Please note that your test executions will not be migrated to Testkube Pro On-Pr
 ## License
 
 To start with Testkube Pro On-Prem you need to request a license. Depending on your environment requirements it can be either an offline or an online license. Read more about these types of licenses [here](https://docs.testkube.io/testkube-pro-on-prem/articles/usage-guide#license). If you require an online license, it can be acquired [here](https://testkube.io/download). If you need an offline license, please contact us using this [form](https://testkube.io/contact).
-There are multiple ways to integrate Testkube OSS into your Testkube Pro On-Prem setup. We highly recommend creating a k8s secret, as it provides a more secure way to store sensitive data.
+There are multiple ways to integrate Testkube Core OSS into your Testkube Pro On-Prem setup. We highly recommend creating a k8s secret, as it provides a more secure way to store sensitive data.
 
 At this point there are two options to deploy Testkube Pro On-Prem:
 
@@ -23,7 +23,7 @@ At this point there are two options to deploy Testkube Pro On-Prem:
 
 **One-cluster Installation:**
 
-- *Description:* With this option, you can connect only one Agent (e.g. your existing Testkube OSS) within the same Kubernetes cluster. Access to the Dashboard is achieved through port-forwarding to localhost.
+- *Description:* With this option, you can connect only one Agent (e.g. your existing Testkube Core OSS) within the same Kubernetes cluster. Access to the Dashboard is achieved through port-forwarding to localhost.
 
 - *Requirements:* No domain names or certificates are required for this approach.
 
@@ -80,10 +80,10 @@ Now, let’s deploy Testkube Pro On-Prem. Please refer to the installation comma
 
 It may take a few minutes for the certificates to be issued and for the pods to reach `Ready` status. Once everything is up and running, you may go to dashboard.your-domain.it.com and log in.
 
-The only thing that is remaining is to connect Testkube OSS as an Agent. [Create a new environment](https://docs.testkube.io/testkube-pro/articles/environment-management/#creating-a-new-environment) and duplicate the installation command. Execute this command in the cluster where Testkube OSS is deployed to seamlessly upgrade the existing installation to Agent mode. Pay attention to the namespace name, ensuring it aligns with the namespace of Testkube OSS.
+The only thing that is remaining is to connect Testkube Core OSS as an Agent. [Create a new environment](https://docs.testkube.io/testkube-pro/articles/environment-management/#creating-a-new-environment) and duplicate the installation command. Execute this command in the cluster where Testkube Core OSS is deployed to seamlessly upgrade the existing installation to Agent mode. Pay attention to the namespace name, ensuring it aligns with the namespace of Testkube Core OSS.
 
 After running the command, navigate to the Dashboard and you will see all your tests available.
 
 ## One-cluster Installation
 
-It is possible to deploy Testkube Pro On-Prem and connect an Agent to it in the same k8s cluster without exposing endpoints to the outside world. By simply running `bash <(curl -sSLf https://download.testkube.io)` and entering the license key (for now it works with Online licenses only), you will have a working environment in just a few minutes. The script will ask you for the namespace where your Testkube OSS is running and automatically connect it as an Agent, preserving all created tests. Please check out the [official documentation](https://docs.testkube.io/testkube-pro-on-prem/articles/usage-guide/#installation-of-testkube-pro-on-prem-and-an-agent-in-the-same-cluster) for more detailed info.
+It is possible to deploy Testkube Pro On-Prem and connect an Agent to it in the same k8s cluster without exposing endpoints to the outside world. You can find all the instructions at [the Testkube Quickstart](../../articles/install/quickstart-install.mdx).

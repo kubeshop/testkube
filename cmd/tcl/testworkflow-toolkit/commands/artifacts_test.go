@@ -1,10 +1,10 @@
 package commands
 
 import (
+	"embed"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/kubeshop/testkube/pkg/utils/test"
@@ -19,6 +19,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/filesystem"
 )
+
+//go:embed testdata/*
+var testDataFixtures embed.FS
 
 func TestRun_Integration(t *testing.T) {
 	test.IntegrationTest(t)
@@ -41,7 +44,7 @@ func TestRun_Integration(t *testing.T) {
 	server := httptest.NewServer(h)
 	defer server.Close()
 
-	walker, err := artifacts.CreateWalker([]string{"./testdata/*"}, []string{"."}, "")
+	walker, err := artifacts.CreateWalker([]string{"./testdata/*"}, []string{"/"}, "/")
 	if err != nil {
 		t.Fatalf("failed to create walker: %v", err)
 	}
@@ -57,7 +60,7 @@ func TestRun_Integration(t *testing.T) {
 	postProcessor := artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), mockClient)
 	handler := artifacts.NewHandler(uploader, processor, artifacts.WithPostProcessor(postProcessor))
 
-	run(handler, walker, os.DirFS("/"))
+	run(handler, walker, testDataFixtures)
 
 	assert.Equal(t, 2, httpRequestCount)
 }

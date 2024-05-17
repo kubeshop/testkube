@@ -1,0 +1,19 @@
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: k6-loadtest
+  labels:
+    core-tests: executors
+spec:
+  type: k6/script
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/k6/executor-tests/k6-smoke-test-without-envs.js
+  executionRequest:
+    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 256Mi\n              cpu: 256m\n"
+    activeDeadlineSeconds: 180
+  schedule: "20 */4 * * *"

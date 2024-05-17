@@ -8,6 +8,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
 )
 
 func (s *Service) runExecutionScraper(ctx context.Context) {
@@ -25,6 +26,7 @@ func (s *Service) runExecutionScraper(ctx context.Context) {
 				if status.hasActiveTests() {
 					s.checkForRunningTestExecutions(ctx, status)
 					s.checkForRunningTestSuiteExecutions(ctx, status)
+					s.checkForRunningTestWorkflowExecutions(ctx, status)
 					if !status.hasActiveTests() {
 						s.logger.Debugf("marking status as finished for testtrigger %s", triggerName)
 						status.done()
@@ -75,10 +77,32 @@ func (s *Service) checkForRunningTestSuiteExecutions(ctx context.Context, status
 	}
 }
 
+func (s *Service) checkForRunningTestWorkflowExecutions(ctx context.Context, status *triggerStatus) {
+	testWorkflowExecutionIDs := status.getTestWorkflowExecutionIDs()
+
+	for _, id := range testWorkflowExecutionIDs {
+		// Pro edition only (tcl protected code)
+		execution, err := s.testWorkflowResultsRepository.Get(ctx, id)
+		if err == mongo.ErrNoDocuments {
+			s.logger.Warnf("trigger service: execution scraper component: no testworkflow execution found for id %s", id)
+			status.removeTestWorkflowExecutionID(id)
+			continue
+		} else if err != nil {
+			s.logger.Errorf("trigger service: execution scraper component: error fetching testworkflow execution result: %v", err)
+			continue
+		}
+		if execution.Result != nil && !(execution.Result.IsRunning() || execution.Result.IsQueued() || execution.Result.IsPaused()) {
+			s.logger.Debugf("trigger service: execution scraper component: testworkflow execution %s is finished", id)
+			status.removeTestWorkflowExecutionID(id)
+		}
+	}
+}
+
 func (s *Service) abortExecutions(ctx context.Context, testTriggerName string, status *triggerStatus) {
 	s.logger.Debugf("trigger service: abort executions")
 	s.abortRunningTestExecutions(ctx, status)
 	s.abortRunningTestSuiteExecutions(ctx, status)
+	s.abortRunningTestWorkflowExecutions(ctx, status)
 	if !status.hasActiveTests() {
 		s.logger.Debugf("marking status as finished for testtrigger %s", testTriggerName)
 		status.done()
@@ -134,6 +158,43 @@ func (s *Service) abortRunningTestSuiteExecutions(ctx context.Context, status *t
 
 			s.logger.Debugf("trigger service: execution scraper component: testsuite execution %s is aborted", id)
 			status.removeTestSuiteExecutionID(id)
+		}
+	}
+}
+
+func (s *Service) abortRunningTestWorkflowExecutions(ctx context.Context, status *triggerStatus) {
+	testWorkflowExecutionIDs := status.getTestWorkflowExecutionIDs()
+
+	for _, id := range testWorkflowExecutionIDs {
+		// Pro edition only (tcl protected code)
+		execution, err := s.testWorkflowResultsRepository.Get(ctx, id)
+		if err == mongo.ErrNoDocuments {
+			s.logger.Warnf("trigger service: execution scraper component: no testworkflow execution found for id %s", id)
+			status.removeTestWorkflowExecutionID(id)
+			continue
+		} else if err != nil {
+			s.logger.Errorf("trigger service: execution scraper component: error fetching testworkflow execution result: %v", err)
+			continue
+		}
+		if execution.Result != nil && (execution.Result.IsRunning() || execution.Result.IsQueued() || execution.Result.IsPaused()) {
+			// Pro edition only (tcl protected code)
+			// Obtain the controller
+			ctrl, err := testworkflowcontroller.New(ctx, s.clientset, s.testkubeNamespace, execution.Id, execution.ScheduledAt)
+			if err != nil {
+				s.logger.Errorf("trigger service: execution scraper component: error obtaining test workflow controller: %v", err)
+				continue
+			}
+
+			// Pro edition only (tcl protected code)
+			// Abort the execution
+			err = ctrl.Abort(context.Background())
+			if err != nil {
+				s.logger.Errorf("trigger service: execution scraper component: error aborting test workflow execution: %v", err)
+				continue
+			}
+
+			s.logger.Debugf("trigger service: execution scraper component: testworkflow execution %s is aborted", id)
+			status.removeTestWorkflowExecutionID(id)
 		}
 	}
 }

@@ -20,6 +20,7 @@
     - [Invitations](#invitations)
       - [Invitations via email](#invitations-via-email)
       - [Auto-accept invitations](#auto-accept-invitations)
+    - [Organization and Environment Management](#organization-and-environment-management)
   - [Bring Your Own Infra](#bring-your-own-infra)
     - [MongoDB](#mongodb)
     - [NATS](#nats)
@@ -36,6 +37,12 @@ Welcome to the Testkube Enterprise Helm chart installation and usage guide.
 This comprehensive guide provides step-by-step instructions for installing and utilizing the Testkube Enterprise Helm chart.
 Testkube Enterprise is a cutting-edge Kubernetes-native testing platform designed to optimize your testing and quality assurance processes with enterprise-grade features.
 
+## Installation of Testkube Enterprise and an Agent in the same cluster
+
+We have a simplified installation process to allow to deploy everything in a single cluster. You can find all the details at [the Testkube Quickstart](../../articles/install/quickstart-install.mdx).
+
+
+## Installation of Testkube Enterprise and an Agent in multiple clusters
 ## Prerequisites
 
 Before you proceed with the installation, please ensure that you have the following prerequisites in place:
@@ -230,6 +237,29 @@ global:
   certificateProvider: ""
 ```
 
+#### Custom certificates
+
+In order to use custom certificates, first a secret needs to be created with the following entries:
+* `tls.crt` - the certificate
+* `tls.key` - the private key
+* `ca.crt` - the CA certificate (if the certificate is not self-signed)
+
+If certificate-based authentication is required, the custom certificates need to be configured in the following places:
+* Enterprise API
+  * If `MINIO_ENDPOINT` is set to an exposed URL, then the following Helm values need to be configured:
+    - The following Helm parameter needs to be enabled to inject the custom certificate into MinIO `testkube-cloud-api.minio.certSecret.enabled: true`
+    - If the certificate is not self-signed, the CA cert needs to be injected also by enabling the Helm parameter `testkube-cloud-api.minio.mountCACertificate: true`
+    - Custom certificate verification can also be skipped by setting `testkube-cloud-api.minio.skipVerify: true`
+  * If `MINIO_ENDPOINT` uses the Kubernetes DNS record (`testkube-enterprise-minio.<namespace>.svc.cluster.local:9000`), `AGENT_STORAGE_HOSTNAME` should be set to point to the exposed storage URL
+* Agent
+  * Agent API
+    - If the Enterprise API is configured to use certificate-based authentication or is using a certificate signed by a custom CA, the Agent API needs to be configured to use the same certificates by pointing `testkube-api.cloud.tls.certificate.secretRef` to the Kubernetes secret which contains the certificates
+    - Custom certificate verification can also be skipped by setting `testkube-api.cloud.tls.skipVerify: true`
+  * Storage
+    - The following Helm parameter needs to be enabled to inject the custom certificate into MinIO `testkube-api.storage.certSecret.enabled: true`
+    - If the certificate is not self-signed, the CA cert needs to be injected also by enabling the Helm parameter `testkube-cloud-api.minio.mountCACertificate: true`
+    - Custom certificate verification can also be skipped by setting `testkube-api.storage.skipVerify: true`
+
 ### Auth
 
 Testkube Enterprise utilizes [Dex](https://dexidp.io/) for authentication and authorization.
@@ -284,6 +314,55 @@ Organizations and Environments when they get invited.
 ```helm
 testkube-cloud-api:
   inviteMode: auto-accept
+```
+
+### Organization and Environment Management
+
+Testkube Pro On-Prem allows you to manage organizations and environments using configuration.
+
+```helm
+testkube-cloud-api:
+  api:
+    features:
+      bootstrapConfig:
+        enabled: true
+        config:
+          organizations:
+            - name: prod_organization
+              environments:
+                - name: production_1
+                - name: production_2
+```
+
+On startup, the `prod_organization` organization with two environments, `production_1` and `production_2` will be created.
+
+Next, you can enhance the configuration to automatically add new users to organizations and environments with predefined roles. For example, the following config makes new users join `prod_organization` as a member role and use `production_1` environment as a run role:
+
+```helm
+      bootstrapConfig:
+        enabled: true
+        config:
+          default_organizations:
+            - prod_organization
+          organizations:
+            - name: prod_organization
+              default_role: member
+              default_environments:
+                - production_1
+              environments:
+                - name: production_1
+                  default_role: run
+                - name: production_2
+```
+Note: The default organization and environment mapping only apply on first sign in. After, you can remove users from environments or change roles thru Testkube UI.
+
+Additionally, by default, Testkube Pro creates a personal organization for every new user. When using default organization and environment configuration, you can turn off personal organizations using the following config:
+
+```helm
+testkube-cloud-api:
+  api:
+    features:
+      disablePersonalOrgs: true
 ```
 
 ## Bring Your Own Infra
