@@ -146,6 +146,7 @@ func MapAPIToCRD(request *testkube.Execution, generation int64) testexecutionv1.
 			OmitFolderPerExecution:     request.ArtifactRequest.OmitFolderPerExecution,
 			SharedBetweenPods:          request.ArtifactRequest.SharedBetweenPods,
 			UseDefaultStorageClassName: request.ArtifactRequest.UseDefaultStorageClassName,
+			SidecarScraper:             request.ArtifactRequest.SidecarScraper,
 		}
 	}
 
