@@ -76,7 +76,7 @@ func (r *ScraperRunner) Run(ctx context.Context, execution testkube.Execution) (
 
 	if r.Params.ScrapperEnabled {
 		var mountPath string
-		if r.Params.SidecarScraperMode {
+		if execution.ArtifactRequest.SidecarScraper {
 			podsClient := r.clientset.CoreV1().Pods(execution.TestNamespace)
 			pods, err := executor.GetJobPods(ctx, podsClient, execution.Id, 1, 10)
 			if err != nil {
@@ -85,11 +85,9 @@ func (r *ScraperRunner) Run(ctx context.Context, execution testkube.Execution) (
 
 			for _, pod := range pods.Items {
 				if pod.Labels["job-name"] != execution.Id {
-					continue
-				}
-
-				if err = wait.PollUntilContextTimeout(ctx, pollInterval, pollTimeout, true, r.isContainerTerminated(pod.Name, execution.Id, execution.TestNamespace)); err != nil {
-					return *result.Err(errors.Wrap(err, "waiting for executor pod complete error")), nil
+					if err = wait.PollUntilContextTimeout(ctx, pollInterval, pollTimeout, true, r.isContainerTerminated(pod.Name, execution.Id, execution.TestNamespace)); err != nil {
+						return *result.Err(errors.Wrap(err, "waiting for executor pod complete error")), nil
+					}
 				}
 			}
 		} else {
