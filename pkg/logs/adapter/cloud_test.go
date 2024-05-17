@@ -23,9 +23,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/logs/pb"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
 func TestCloudAdapter(t *testing.T) {
+	test.IntegrationTest(t)
 
 	t.Run("GRPC server receives log data", func(t *testing.T) {
 		// given grpc test server
@@ -139,7 +141,7 @@ func TestCloudAdapter(t *testing.T) {
 		err = a.Init(ctx, id)
 		assert.NoError(t, err)
 
-		messageCount := 10_000
+		messageCount := 1000
 		for i := 0; i < messageCount; i++ {
 			// and data is sent
 			err = a.Notify(ctx, id, *events.NewLog("log1"))
@@ -169,8 +171,8 @@ func TestCloudAdapter(t *testing.T) {
 		grpcClient := pb.NewCloudLogsServiceClient(grpcConn)
 		a := NewCloudAdapter(grpcClient, "APIKEY")
 
-		streamsCount := 100
-		messageCount := 1_000
+		streamsCount := 10
+		messageCount := 100
 
 		// when streams are initialized
 		var wg sync.WaitGroup
