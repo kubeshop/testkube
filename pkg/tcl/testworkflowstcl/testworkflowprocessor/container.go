@@ -426,13 +426,14 @@ func (c *container) EnableToolkit(ref string) Container {
 			ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}},
 		}).
 		AppendEnvMap(map[string]string{
-			"TK_REF":                    ref,
-			"TK_NS":                     "{{internal.namespace}}",
-			"TK_WF":                     "{{workflow.name}}",
-			"TK_EX":                     "{{execution.id}}",
-			"TK_EXI":                    "{{resource.id}}",
-			"TK_EXR":                    "{{resource.rootId}}",
-			"TK_FS":                     "{{resource.fsPrefix}}",
+			"TK_REF": ref,
+			"TK_NS":  "{{internal.namespace}}",
+			"TK_WF":  "{{workflow.name}}",
+			"TK_EX":  "{{execution.id}}",
+			"TK_EXI": "{{resource.id}}",
+			"TK_EXR": "{{resource.rootId}}",
+			"TK_FS":  "{{resource.fsPrefix}}",
+			// TODO(emil): add istio specific environment variables
 			"TK_DASH":                   "{{internal.dashboard.url}}",
 			"TK_API":                    "{{internal.api.url}}",
 			"TK_C_URL":                  "{{internal.cloud.api.url}}",

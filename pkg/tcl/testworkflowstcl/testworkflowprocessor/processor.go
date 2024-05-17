@@ -335,6 +335,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		Command:         []string{"/bin/sh", "-c"},
 		Args:            []string{constants.InitScript},
 		VolumeMounts:    layer.ContainerDefaults().VolumeMounts(),
+		// TODO(emil): modify to bypass proxy based on the flag
 		SecurityContext: &corev1.SecurityContext{
 			RunAsGroup: fsGroup,
 		},
@@ -343,6 +344,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	if err != nil {
 		return nil, errors.Wrap(err, "finalizing container's resources")
 	}
+	// TODO(emil): all these containers need to have the securityContext modified to run as user 1337 to bypass the envoy proxy
 	podSpec.Spec.InitContainers = append([]corev1.Container{initContainer}, containers[:len(containers)-1]...)
 	podSpec.Spec.Containers = containers[len(containers)-1:]
 

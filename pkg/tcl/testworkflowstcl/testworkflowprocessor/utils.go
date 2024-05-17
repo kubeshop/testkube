@@ -158,6 +158,7 @@ func buildKubernetesContainers(stage Stage, init *initProcess, fsGroup *int64, m
 	if cr.SecurityContext.RunAsGroup == nil {
 		cr.SecurityContext.RunAsGroup = fsGroup
 	}
+	// TODO(emil): set user id here if bypassing the istio proxy
 
 	containers = []corev1.Container{cr}
 	return
