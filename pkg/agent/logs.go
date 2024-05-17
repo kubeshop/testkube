@@ -19,7 +19,7 @@ const logStreamRetryCount = 10
 func (ag *Agent) runLogStreamLoop(ctx context.Context) error {
 	ctx = AddAPIKeyMeta(ctx, ag.apiKey)
 
-	ag.logger.Infow("initiating log streaming connection with Cloud API")
+	ag.logger.Infow("initiating log streaming connection with control plane")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	stream, err := ag.client.GetLogsStream(ctx, opts...)
@@ -91,9 +91,9 @@ func (ag *Agent) runLogStreamWorker(ctx context.Context, numWorkers int) error {
 }
 
 func (ag *Agent) executeLogStreamRequest(ctx context.Context, req *cloud.LogsStreamRequest) error {
-	ag.logger.Info("start sending logs stream")
+	ag.logger.Debugw("start sending logs stream")
 	logCh, err := ag.logStreamFunc(ctx, req.ExecutionId)
-	ag.logger.Info("got channel")
+	ag.logger.Debugw("got channel")
 
 	for i := 0; i < logStreamRetryCount; i++ {
 		if err != nil {
@@ -129,7 +129,9 @@ func (ag *Agent) executeLogStreamRequest(ctx context.Context, req *cloud.LogsStr
 				ag.logger.Debugw("channel closed")
 				return nil
 			}
-			ag.logger.Debugw("start sending log output", "content", logOutput.Content)
+
+			// TODO candidate for TRACE level when implemented
+			ag.logger.Debugw("sending log output", "content", logOutput.Content)
 
 			msg := &cloud.LogsStreamResponse{
 				StreamId:   req.StreamId,

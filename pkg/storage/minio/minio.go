@@ -255,7 +255,7 @@ func (c *Client) downloadFile(ctx context.Context, bucket, bucketFolder, file st
 	}
 
 	if !exists {
-		c.Log.Infow("bucket doesn't exist", "bucket", bucket)
+		c.Log.Warnw("bucket doesn't exist", "bucket", bucket)
 		return nil, ErrArtifactsNotFound
 	}
 
@@ -286,7 +286,7 @@ func (c *Client) DownloadFile(ctx context.Context, bucketFolder, file string) (*
 		exists, err := c.minioClient.BucketExists(ctx, bucketFolder)
 		c.Log.Debugw("Checking if bucket exists", exists, err)
 		if err == nil && exists {
-			c.Log.Infow("Bucket exists, trying to get files from former bucket per execution", exists, err)
+			c.Log.Debugw("Bucket exists, trying to get files from former bucket per execution", exists, err)
 			objFirst, errFirst = c.downloadFile(ctx, bucketFolder, "", file)
 			if errFirst == nil && objFirst != nil {
 				return objFirst, nil
@@ -313,7 +313,7 @@ func (c *Client) downloadArchive(ctx context.Context, bucket, bucketFolder strin
 	}
 
 	if !exists {
-		c.Log.Infow("bucket doesn't exist", "bucket", bucket)
+		c.Log.Warnw("bucket doesn't exist", "bucket", bucket)
 		return nil, ErrArtifactsNotFound
 	}
 

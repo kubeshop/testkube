@@ -199,9 +199,6 @@ func parseContainerLogs(b []byte) ([]Output, error) {
 		}
 
 		log := GetLogEntry(b)
-
-		fmt.Printf("LOG: %s => '%+v'\n", b, log.Content)
-
 		if log.Type_ == TypeResult &&
 			log.Result != nil && log.Result.Status != nil {
 			message := getResultMessage(*log.Result)

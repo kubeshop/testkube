@@ -92,10 +92,10 @@ func LoadConfigFromStringOrFile(inputString, configDir, filename, configType str
 				return "", errors.Wrapf(err, "error decoding %s from base64", configType)
 			}
 			raw = string(data)
-			log.DefaultLogger.Infof("parsed %s from base64 env var", configType)
+			log.DefaultLogger.Debugf("parsed %s from base64 env var", configType)
 		} else {
 			raw = inputString
-			log.DefaultLogger.Infof("parsed %s from plain env var", configType)
+			log.DefaultLogger.Debugf("parsed %s from plain env var", configType)
 		}
 	} else if f, err := os.Open(filepath.Join(configDir, filename)); err == nil {
 		data, err = io.ReadAll(f)
@@ -103,9 +103,9 @@ func LoadConfigFromStringOrFile(inputString, configDir, filename, configType str
 			return "", errors.Wrapf(err, "error reading file %s from config dir %s", filename, configDir)
 		}
 		raw = string(data)
-		log.DefaultLogger.Infof("loaded %s from file %s", configType, filepath.Join(configDir, filename))
+		log.DefaultLogger.Debugf("loaded %s from file %s", configType, filepath.Join(configDir, filename))
 	} else {
-		log.DefaultLogger.Infof("no %s config found", configType)
+		log.DefaultLogger.Warnf("no %s config found", configType)
 	}
 
 	return raw, nil

@@ -283,11 +283,11 @@ func (s TestkubeAPI) SendTelemetryStartEvent(ctx context.Context, ch chan struct
 // InitEnvs initializes api server settings
 func (s *TestkubeAPI) InitEnvs() {
 	if err := envconfig.Process("STORAGE", &s.storageParams); err != nil {
-		s.Log.Infow("Processing STORAGE environment config", err)
+		s.Log.Debugw("Processing STORAGE environment config", err)
 	}
 
 	if err := envconfig.Process("TESTKUBE_OAUTH", &s.oauthParams); err != nil {
-		s.Log.Infow("Processing TESTKUBE_OAUTH environment config", err)
+		s.Log.Debugw("Processing TESTKUBE_OAUTH environment config", err)
 	}
 }
 

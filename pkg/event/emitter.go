@@ -131,7 +131,11 @@ func (e *Emitter) Notify(event testkube.Event) {
 	event.ClusterName = e.ClusterName
 	event.Envs = e.Envs
 	err := e.Bus.PublishTopic(event.Topic(), event)
-	e.Log.Infow("event published", append(event.Log(), "error", err)...)
+	if err != nil {
+		e.Log.Errorw("error publishing event", append(event.Log(), "error", err))
+		return
+	}
+	e.Log.Debugw("event published", event.Log()...)
 }
 
 // Listen runs emitter workers responsible for sending HTTP requests
@@ -173,13 +177,14 @@ func (e *Emitter) stopListener(name string) {
 }
 
 func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
+	// TODO TRACE level candidate when implemented
 	log := e.Log.With("listen-on", l.Events(), "queue-group", l.Name(), "selector", l.Selector(), "metadata", l.Metadata())
 	return func(event testkube.Event) error {
 		if event.Valid(l.Selector(), l.Events()) {
-			log.Infow("notification result", l.Notify(event))
-			log.Infow("listener notified", event.Log()...)
+			result := l.Notify(event)
+			log.Debugw("listener notified", append(event.Log(), "result", result))
 		} else {
-			log.Infow("dropping event not matching selector or type", event.Log()...)
+			log.Debugw("dropping event not matching selector or type", event.Log()...)
 		}
 		return nil
 	}
