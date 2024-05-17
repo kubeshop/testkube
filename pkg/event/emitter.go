@@ -177,14 +177,13 @@ func (e *Emitter) stopListener(name string) {
 }
 
 func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
-	// TODO TRACE level candidate when implemented
-	log := e.Log.With("listen-on", l.Events(), "queue-group", l.Name(), "selector", l.Selector(), "metadata", l.Metadata())
+	logger := e.Log.With("listen-on", l.Events(), "queue-group", l.Name(), "selector", l.Selector(), "metadata", l.Metadata())
 	return func(event testkube.Event) error {
 		if event.Valid(l.Selector(), l.Events()) {
 			result := l.Notify(event)
-			log.Debugw("listener notified", append(event.Log(), "result", result))
+			log.Tracew(logger, "listener notified", append(event.Log(), "result", result))
 		} else {
-			log.Debugw("dropping event not matching selector or type", event.Log()...)
+			log.Tracew(logger, "dropping event not matching selector or type", event.Log()...)
 		}
 		return nil
 	}
@@ -200,7 +199,7 @@ func (e *Emitter) Reconcile(ctx context.Context) {
 		default:
 			listeners := e.Loader.Reconcile()
 			e.UpdateListeners(listeners)
-			e.Log.Debugw("reconciled listeners", e.Logs()...)
+			log.Tracew(e.Log, "reconciled listeners", e.Logs()...)
 			time.Sleep(reconcileInterval)
 		}
 	}

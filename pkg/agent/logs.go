@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/log"
 
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
@@ -130,8 +131,7 @@ func (ag *Agent) executeLogStreamRequest(ctx context.Context, req *cloud.LogsStr
 				return nil
 			}
 
-			// TODO candidate for TRACE level when implemented
-			ag.logger.Debugw("sending log output", "content", logOutput.Content)
+			log.Tracew(ag.logger, "sending log output", "content", logOutput.Content)
 
 			msg := &cloud.LogsStreamResponse{
 				StreamId:   req.StreamId,

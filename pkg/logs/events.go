@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/logs/adapter"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/logs/state"
@@ -69,19 +70,17 @@ func (ls *LogsService) initConsumer(ctx context.Context, a adapter.Adapter, stre
 
 // handleMessage will handle incoming message from logs stream and proxy it to given adapter
 func (ls *LogsService) handleMessage(ctx context.Context, a adapter.Adapter, id string) func(msg jetstream.Msg) {
-	log := ls.log.With("id", id, "adapter", a.Name())
+	logger := ls.log.With("id", id, "adapter", a.Name())
 
 	return func(msg jetstream.Msg) {
-		if ls.traceMessages {
-			log.Debugw("got message", "data", string(msg.Data()))
-		}
+		log.Tracew(logger, "got message", "data", string(msg.Data()))
 
 		// deliver to subscriber
 		logChunk := events.Log{}
 		err := json.Unmarshal(msg.Data(), &logChunk)
 		if err != nil {
 			if err := msg.Nak(); err != nil {
-				log.Errorw("error nacking message", "error", err)
+				logger.Errorw("error nacking message", "error", err)
 				return
 			}
 			return
@@ -90,15 +89,15 @@ func (ls *LogsService) handleMessage(ctx context.Context, a adapter.Adapter, id 
 		err = a.Notify(ctx, id, logChunk)
 		if err != nil {
 			if err := msg.Nak(); err != nil {
-				log.Errorw("error nacking message", "error", err)
+				logger.Errorw("error nacking message", "error", err)
 				return
 			}
-			log.Errorw("error notifying adapter", "error", err)
+			logger.Errorw("error notifying adapter", "error", err)
 			return
 		}
 
 		if err := msg.Ack(); err != nil {
-			log.Errorw("error acking message", "error", err)
+			logger.Errorw("error acking message", "error", err)
 		}
 	}
 }
@@ -177,9 +176,7 @@ func (ls *LogsService) handleStop(ctx context.Context, group string) func(msg *n
 			event   = events.Trigger{}
 		)
 
-		if ls.traceMessages {
-			ls.log.Debugw("got stop event", "data", string(msg.Data))
-		}
+		log.Tracew(ls.log, "got stop event", "data", string(msg.Data))
 
 		err := json.Unmarshal(msg.Data, &event)
 		if err != nil {
