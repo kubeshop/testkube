@@ -317,8 +317,14 @@ func newArtifactRequestFromFlags(cmd *cobra.Command) (request *testkube.Artifact
 		return nil, err
 	}
 
+	artifactSidecarScraper, err := cmd.Flags().GetBool("artifact-sidecar-scraper")
+	if err != nil {
+		return nil, err
+	}
+
 	if artifactStorageClassName != "" || artifactVolumeMountPath != "" || len(dirs) != 0 || len(masks) != 0 ||
-		artifactStorageBucket != "" || artifactOmitFolderPerExecution || artifactSharedBetweenPods || artifactUseDefaultStorageClassName {
+		artifactStorageBucket != "" || artifactOmitFolderPerExecution || artifactSharedBetweenPods ||
+		artifactUseDefaultStorageClassName || artifactSidecarScraper {
 		request = &testkube.ArtifactRequest{
 			StorageClassName:           artifactStorageClassName,
 			VolumeMountPath:            artifactVolumeMountPath,
@@ -328,6 +334,7 @@ func newArtifactRequestFromFlags(cmd *cobra.Command) (request *testkube.Artifact
 			OmitFolderPerExecution:     artifactOmitFolderPerExecution,
 			SharedBetweenPods:          artifactSharedBetweenPods,
 			UseDefaultStorageClassName: artifactUseDefaultStorageClassName,
+			SidecarScraper:             artifactSidecarScraper,
 		}
 	}
 
@@ -1290,6 +1297,16 @@ func newArtifactUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.Ar
 		}
 
 		request.UseDefaultStorageClassName = &value
+		nonEmpty = true
+	}
+
+	if cmd.Flag("artifact-sidecar-scraper").Changed {
+		value, err := cmd.Flags().GetBool("artifact-sidecar-scraper")
+		if err != nil {
+			return nil, err
+		}
+
+		request.SidecarScraper = &value
 		nonEmpty = true
 	}
 

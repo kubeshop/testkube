@@ -134,6 +134,7 @@ func TestRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 			ui.Warn("    Omit folder per execution:      ", fmt.Sprint(test.ExecutionRequest.ArtifactRequest.OmitFolderPerExecution))
 			ui.Warn("    Shared between pods:            ", fmt.Sprint(test.ExecutionRequest.ArtifactRequest.SharedBetweenPods))
 			ui.Warn("    Use default storage class name: ", fmt.Sprint(test.ExecutionRequest.ArtifactRequest.UseDefaultStorageClassName))
+			ui.Warn("    Sidecar scraper: ", fmt.Sprint(test.ExecutionRequest.ArtifactRequest.SidecarScraper))
 		}
 
 		if test.ExecutionRequest.JobTemplate != "" {

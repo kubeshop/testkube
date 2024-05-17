@@ -6004,6 +6004,9 @@ components:
         useDefaultStorageClassName:
           type: boolean
           description: whether to use default storage class name
+        sidecarScraper:
+          type: boolean
+          description: run scraper as pod sidecar container
 
     ArtifactUpdateRequest:
       description: artifact request update body

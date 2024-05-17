@@ -140,6 +140,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 			OmitFolderPerExecution:     executionRequest.ArtifactRequest.OmitFolderPerExecution,
 			SharedBetweenPods:          executionRequest.ArtifactRequest.SharedBetweenPods,
 			UseDefaultStorageClassName: executionRequest.ArtifactRequest.UseDefaultStorageClassName,
+			SidecarScraper:             executionRequest.ArtifactRequest.SidecarScraper,
 		}
 	}
 
@@ -686,6 +687,11 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 
 			if (*executionRequest.ArtifactRequest).UseDefaultStorageClassName != nil {
 				request.ArtifactRequest.UseDefaultStorageClassName = *(*executionRequest.ArtifactRequest).UseDefaultStorageClassName
+				emptyArtifact = false
+			}
+
+			if (*executionRequest.ArtifactRequest).SidecarScraper != nil {
+				request.ArtifactRequest.SidecarScraper = *(*executionRequest.ArtifactRequest).SidecarScraper
 				emptyArtifact = false
 			}
 		}

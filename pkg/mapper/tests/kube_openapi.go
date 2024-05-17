@@ -128,6 +128,7 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 			OmitFolderPerExecution:     specExecutionRequest.ArtifactRequest.OmitFolderPerExecution,
 			SharedBetweenPods:          specExecutionRequest.ArtifactRequest.SharedBetweenPods,
 			UseDefaultStorageClassName: specExecutionRequest.ArtifactRequest.UseDefaultStorageClassName,
+			SidecarScraper:             specExecutionRequest.ArtifactRequest.SidecarScraper,
 		}
 	}
 
@@ -539,6 +540,7 @@ func MapSpecExecutionRequestToExecutionUpdateRequest(
 			OmitFolderPerExecution:     &request.ArtifactRequest.OmitFolderPerExecution,
 			SharedBetweenPods:          &request.ArtifactRequest.SharedBetweenPods,
 			UseDefaultStorageClassName: &request.ArtifactRequest.UseDefaultStorageClassName,
+			SidecarScraper:             &request.ArtifactRequest.SidecarScraper,
 		}
 
 		executionRequest.ArtifactRequest = &artifactRequest
