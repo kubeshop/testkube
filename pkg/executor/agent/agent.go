@@ -29,8 +29,13 @@ func PreRun(ctx context.Context) {
 
 	if params.IstioProxyWait {
 		output.PrintLogf("%s Waiting for Istio's proxy to become ready...", ui.IconWorld)
+		req, err := http.NewRequestWithContext(ctx, http.MethodHead, "http://localhost:15021/healthz/ready", nil)
+		if err != nil {
+			output.PrintError(os.Stderr, errors.Wrap(err, "error creating istio ready request"))
+			os.Exit(1)
+		}
 		for {
-			resp, err := http.Head("http://localhost:15021/healthz/ready")
+			resp, err := http.DefaultClient.Do(req)
 			if err == nil && resp.StatusCode == http.StatusOK {
 				output.PrintLogf("%s Istio's proxy is ready", ui.IconCheckMark)
 				break
@@ -50,8 +55,13 @@ func PostRun(ctx context.Context) {
 
 	if params.IstioProxyExit {
 		output.PrintLogf("%s Sending exit signal to Istio's proxy...", ui.IconWorld)
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://localhost:15020/quitquitquit", nil)
+		if err != nil {
+			output.PrintError(os.Stderr, errors.Wrap(err, "error creating istio quit request"))
+			os.Exit(1)
+		}
 		for {
-			resp, err := http.Post("http://localhost:15020/quitquitquit", "", nil)
+			resp, err := http.DefaultClient.Do(req)
 			if err == nil && resp.StatusCode == http.StatusOK {
 				output.PrintLogf("%s Sent exit signal to Istio's proxy", ui.IconCheckMark)
 				break
