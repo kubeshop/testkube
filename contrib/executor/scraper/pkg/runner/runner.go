@@ -40,21 +40,13 @@ func NewRunner(ctx context.Context, params envs.Params) (*ScraperRunner, error) 
 		return nil, err
 	}
 
-	if params.SidecarScraperMode {
-		r.clientset, err = k8sclient.ConnectToK8s()
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	return r, nil
 }
 
 // ScraperRunner prepares data for executor
 type ScraperRunner struct {
-	Params    envs.Params
-	Scraper   scraper.Scraper
-	clientset kubernetes.Interface
+	Params  envs.Params
+	Scraper scraper.Scraper
 }
 
 var _ runner.Runner = &ScraperRunner{}
@@ -76,8 +68,13 @@ func (r *ScraperRunner) Run(ctx context.Context, execution testkube.Execution) (
 
 	if r.Params.ScrapperEnabled {
 		var mountPath string
-		if r.Params.SidecarScraperMode {
-			podsClient := r.clientset.CoreV1().Pods(execution.TestNamespace)
+		if execution.ArtifactRequest.SidecarScraper {
+			clientset, err := k8sclient.ConnectToK8s()
+			if err != nil {
+				return *result.Err(errors.Wrap(err, "getting kubernetes client set")), nil
+			}
+
+			podsClient := clientset.CoreV1().Pods(execution.TestNamespace)
 			pods, err := executor.GetJobPods(ctx, podsClient, execution.Id, 1, 10)
 			if err != nil {
 				return *result.Err(errors.Wrap(err, "error getting job pods")), nil
@@ -85,7 +82,7 @@ func (r *ScraperRunner) Run(ctx context.Context, execution testkube.Execution) (
 
 			for _, pod := range pods.Items {
 				if pod.Labels["job-name"] == execution.Id {
-					if err = wait.PollUntilContextTimeout(ctx, pollInterval, pollTimeout, true, r.isContainerTerminated(pod.Name, execution.Id, execution.TestNamespace)); err != nil {
+					if err = wait.PollUntilContextTimeout(ctx, pollInterval, pollTimeout, true, isContainerTerminated(clientset, pod.Name, execution.Id, execution.TestNamespace)); err != nil {
 						return *result.Err(errors.Wrap(err, "waiting for executor pod complete error")), nil
 					}
 				}
@@ -128,9 +125,9 @@ func (r *ScraperRunner) GetType() runner.Type {
 }
 
 // isContainerTerminated checks if pod container is terminated through kubernetes API
-func (r *ScraperRunner) isContainerTerminated(podName, containerName, namespace string) wait.ConditionWithContextFunc {
+func isContainerTerminated(clientset kubernetes.Interface, podName, containerName, namespace string) wait.ConditionWithContextFunc {
 	return func(ctx context.Context) (bool, error) {
-		pod, err := r.clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
+		pod, err := clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}

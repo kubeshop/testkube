@@ -195,10 +195,6 @@ func NewScraperJobSpec(log *zap.SugaredLogger, options *JobOptions) (*batchv1.Jo
 		envs = append(envs, corev1.EnvVar{Name: "HTTPS_PROXY", Value: options.HTTPSProxy})
 	}
 
-	if options.ArtifactRequest != nil && options.ArtifactRequest.SidecarScraper {
-		envs = append(envs, corev1.EnvVar{Name: "RUNNER_SIDECAR_SCRAPER_MODE", Value: fmt.Sprint(options.ArtifactRequest.SidecarScraper)})
-	}
-
 	for i := range job.Spec.Template.Spec.Containers {
 		job.Spec.Template.Spec.Containers[i].Env = append(job.Spec.Template.Spec.Containers[i].Env, envs...)
 	}
