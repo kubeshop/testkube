@@ -489,7 +489,7 @@ func (c *ContainerExecutor) updateResultsFromPod(
 			execution.ExecutionResult.Err(err)
 			err = c.repository.UpdateResult(ctx, execution.Id, *execution)
 			if err != nil {
-				l.Infow("Update result", "error", err)
+				l.Errorw("Update result error", "error", err)
 			}
 			return execution.ExecutionResult, err
 		}

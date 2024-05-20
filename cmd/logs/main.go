@@ -88,8 +88,7 @@ func main() {
 	svc := logs.NewLogsService(nc, js, state, logStream).
 		WithHttpAddress(cfg.HttpAddress).
 		WithGrpcAddress(cfg.GrpcAddress).
-		WithLogsRepositoryFactory(repository.NewJsMinioFactory(minioClient, cfg.StorageBucket, logStream)).
-		WithMessageTracing(cfg.TraceMessages)
+		WithLogsRepositoryFactory(repository.NewJsMinioFactory(minioClient, cfg.StorageBucket, logStream))
 
 	// quite noisy in logs - will echo all messages incoming from logs
 	if cfg.AttachDebugAdapter {
@@ -138,7 +137,6 @@ func main() {
 			cfg.StorageCAFile)
 
 		minioAdapter.
-			WithTraceMessages(cfg.TraceMessages).
 			WithPath(cfg.StorageFilePath)
 
 		if err != nil {

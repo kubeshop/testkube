@@ -131,7 +131,11 @@ func (e *Emitter) Notify(event testkube.Event) {
 	event.ClusterName = e.ClusterName
 	event.Envs = e.Envs
 	err := e.Bus.PublishTopic(event.Topic(), event)
-	e.Log.Infow("event published", append(event.Log(), "error", err)...)
+	if err != nil {
+		e.Log.Errorw("error publishing event", append(event.Log(), "error", err))
+		return
+	}
+	e.Log.Debugw("event published", event.Log()...)
 }
 
 // Listen runs emitter workers responsible for sending HTTP requests
@@ -173,13 +177,13 @@ func (e *Emitter) stopListener(name string) {
 }
 
 func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
-	log := e.Log.With("listen-on", l.Events(), "queue-group", l.Name(), "selector", l.Selector(), "metadata", l.Metadata())
+	logger := e.Log.With("listen-on", l.Events(), "queue-group", l.Name(), "selector", l.Selector(), "metadata", l.Metadata())
 	return func(event testkube.Event) error {
 		if event.Valid(l.Selector(), l.Events()) {
-			log.Infow("notification result", l.Notify(event))
-			log.Infow("listener notified", event.Log()...)
+			result := l.Notify(event)
+			log.Tracew(logger, "listener notified", append(event.Log(), "result", result))
 		} else {
-			log.Infow("dropping event not matching selector or type", event.Log()...)
+			log.Tracew(logger, "dropping event not matching selector or type", event.Log()...)
 		}
 		return nil
 	}
@@ -195,7 +199,7 @@ func (e *Emitter) Reconcile(ctx context.Context) {
 		default:
 			listeners := e.Loader.Reconcile()
 			e.UpdateListeners(listeners)
-			e.Log.Debugw("reconciled listeners", e.Logs()...)
+			log.Tracew(e.Log, "reconciled listeners", e.Logs()...)
 			time.Sleep(reconcileInterval)
 		}
 	}
