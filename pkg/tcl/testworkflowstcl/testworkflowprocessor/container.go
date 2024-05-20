@@ -433,7 +433,7 @@ func (c *container) EnableToolkit(ref string) Container {
 			"TK_EXI":                    "{{resource.id}}",
 			"TK_EXR":                    "{{resource.rootId}}",
 			"TK_FS":                     "{{resource.fsPrefix}}",
-			"TKC_SA":                    "{{internal.serviceaccount.default}}",
+			"TK_SA":                     "{{internal.serviceaccount.default}}",
 			"TK_DASH":                   "{{internal.dashboard.url}}",
 			"TK_API":                    "{{internal.api.url}}",
 			"TK_C_URL":                  "{{internal.cloud.api.url}}",

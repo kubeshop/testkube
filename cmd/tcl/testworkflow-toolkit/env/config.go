@@ -52,7 +52,7 @@ type envSystemConfig struct {
 	Ref                   string `envconfig:"TK_REF"`
 	Namespace             string `envconfig:"TK_NS"`
 	DefaultRegistry       string `envconfig:"TK_R"`
-	DefaultServiceAccount string `envconfig:"TKC_SA"`
+	DefaultServiceAccount string `envconfig:"TK_SA"`
 	Ip                    string `envconfig:"TK_IP"`
 	DashboardUrl          string `envconfig:"TK_DASH"`
 	ApiUrl                string `envconfig:"TK_API"`
