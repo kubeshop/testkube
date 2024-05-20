@@ -361,6 +361,8 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			"cloud.api.skipVerify":  common.GetOr(os.Getenv("TESTKUBE_PRO_SKIP_VERIFY"), os.Getenv("TESTKUBE_CLOUD_SKIP_VERIFY"), "false"),
 			"cloud.api.url":         common.GetOr(os.Getenv("TESTKUBE_PRO_URL"), os.Getenv("TESTKUBE_CLOUD_URL")),
 
+			"serviceaccount.default": e.serviceAccountNames[namespace],
+
 			"dashboard.url":   os.Getenv("TESTKUBE_DASHBOARD_URI"),
 			"api.url":         e.apiUrl,
 			"namespace":       namespace,
@@ -385,6 +387,14 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 
 	// Preserve resolved TestWorkflow
 	resolvedWorkflow := workflow.DeepCopy()
+
+	// Apply default service account
+	if workflow.Spec.Pod == nil {
+		workflow.Spec.Pod = &testworkflowsv1.PodConfig{}
+	}
+	if workflow.Spec.Pod.ServiceAccountName == "" {
+		workflow.Spec.Pod.ServiceAccountName = "{{internal.serviceaccount.default}}"
+	}
 
 	// Process the TestWorkflow
 	bundle, err := testworkflowprocessor.NewFullFeatured(e.imageInspector).
