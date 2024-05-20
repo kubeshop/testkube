@@ -252,6 +252,8 @@ func CreateBaseMachine() expressionstcl.Machine {
 			"storage.keyFile":    env.Config().ObjectStorage.KeyFile,
 			"storage.caFile":     env.Config().ObjectStorage.CAFile,
 
+			"serviceaccount.default": env.Config().System.DefaultServiceAccount,
+
 			"cloud.enabled":         strconv.FormatBool(env.Config().Cloud.ApiKey != ""),
 			"cloud.api.key":         env.Config().Cloud.ApiKey,
 			"cloud.api.tlsInsecure": strconv.FormatBool(env.Config().Cloud.TlsInsecure),

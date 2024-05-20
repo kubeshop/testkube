@@ -84,6 +84,14 @@ func NewParallelCmd() *cobra.Command {
 				parallel.Content = &testworkflowsv1.Content{}
 			}
 
+			// Apply default service account
+			if parallel.Pod == nil {
+				parallel.Pod = &testworkflowsv1.PodConfig{}
+			}
+			if parallel.Pod.ServiceAccountName == "" {
+				parallel.Pod.ServiceAccountName = "{{internal.serviceaccount.default}}"
+			}
+
 			// Print information about the computed request
 			if params.Count == 0 {
 				fmt.Printf("0 instances requested (combinations=%d, count=%d), skipping\n", params.MatrixCount, params.ShardCount)
@@ -197,6 +205,14 @@ func NewParallelCmd() *cobra.Command {
 					namespace = env.Namespace()
 				}
 
+				// Deploy the resources
+				err = bundle.Deploy(context.Background(), clientSet, namespace)
+				if err != nil {
+					log("problem deploying", err.Error())
+					return false
+				}
+
+				// Final clean up
 				var lastResult testkube.TestWorkflowResult
 				defer func() {
 					shouldSaveLogs := logConditions[index] == nil
@@ -227,13 +243,6 @@ func NewParallelCmd() *cobra.Command {
 					}
 					updates <- Update{index: index, done: true, err: err}
 				}()
-
-				// Deploy the resources
-				err = bundle.Deploy(context.Background(), clientSet, namespace)
-				if err != nil {
-					log("problem deploying", err.Error())
-					return false
-				}
 
 				// Inform about the step structure
 				data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Signature: sig})
