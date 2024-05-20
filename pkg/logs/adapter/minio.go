@@ -96,21 +96,14 @@ type MinioAdapter struct {
 	disconnected   bool
 	buffInfos      map[string]BufferInfo
 	mapLock        sync.RWMutex
-	traceMessages  bool
 }
 
 func (s *MinioAdapter) Init(ctx context.Context, id string) error {
 	return nil
 }
 
-func (s *MinioAdapter) WithTraceMessages(enabled bool) {
-	s.traceMessages = enabled
-}
-
 func (s *MinioAdapter) Notify(ctx context.Context, id string, e events.Log) error {
-	if s.traceMessages {
-		s.Log.Debugw("minio consumer notify", "id", id, "event", e)
-	}
+	log.Tracew(s.Log, "minio consumer notify", "id", id, "event", e)
 	if s.disconnected {
 		s.Log.Debugw("minio consumer disconnected", "id", id)
 		return ErrMinioAdapterDisconnected{}

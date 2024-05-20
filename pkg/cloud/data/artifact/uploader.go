@@ -32,7 +32,7 @@ func NewCloudUploader(executor executor.Executor, skipVerify bool) *CloudUploade
 }
 
 func (u *CloudUploader) Upload(ctx context.Context, object *scraper.Object, execution testkube.Execution) error {
-	log.DefaultLogger.Infow("cloud uploader is requesting signed URL", "file", object.Name, "folder", execution.Id, "size", object.Size)
+	log.DefaultLogger.Debugw("cloud uploader is requesting signed URL", "file", object.Name, "folder", execution.Id, "size", object.Size)
 	req := &PutObjectSignedURLRequest{
 		Object:        object.Name,
 		ExecutionID:   execution.Id,
@@ -44,10 +44,11 @@ func (u *CloudUploader) Upload(ctx context.Context, object *scraper.Object, exec
 		return errors.Wrapf(err, "failed to get signed URL for object [%s]", req.Object)
 	}
 
-	log.DefaultLogger.Infow("cloud uploader is uploading file", "file", object.Name, "folder", req.ExecutionID, "size", object.Size)
 	if err := u.putObject(ctx, signedURL, object.Data); err != nil {
 		return errors.Wrapf(err, "failed to send object [%s] to cloud", req.Object)
 	}
+
+	log.DefaultLogger.Infow("cloud uploader uploaded file", "file", object.Name, "folder", req.ExecutionID, "size", object.Size)
 
 	return nil
 }
