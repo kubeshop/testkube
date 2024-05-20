@@ -98,6 +98,16 @@ func NewServicesCmd() *cobra.Command {
 				ui.ExitOnError("parsing service spec", err)
 				services[name] = *svc
 
+				// Apply default service account
+				if services[name].Pod == nil {
+					svc := services[name]
+					svc.Pod = &testworkflowsv1.PodConfig{}
+					services[name] = svc
+				}
+				if services[name].Pod.ServiceAccountName == "" {
+					services[name].Pod.ServiceAccountName = "{{internal.serviceaccount.default}}"
+				}
+
 				// Initialize empty array of details for each of the services
 				data.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", name), []ServiceState{})
 			}

@@ -48,13 +48,14 @@ type envExecutionConfig struct {
 }
 
 type envSystemConfig struct {
-	Debug           string `envconfig:"DEBUG"`
-	Ref             string `envconfig:"TK_REF"`
-	Namespace       string `envconfig:"TK_NS"`
-	DefaultRegistry string `envconfig:"TK_R"`
-	Ip              string `envconfig:"TK_IP"`
-	DashboardUrl    string `envconfig:"TK_DASH"`
-	ApiUrl          string `envconfig:"TK_API"`
+	Debug                 string `envconfig:"DEBUG"`
+	Ref                   string `envconfig:"TK_REF"`
+	Namespace             string `envconfig:"TK_NS"`
+	DefaultRegistry       string `envconfig:"TK_R"`
+	DefaultServiceAccount string `envconfig:"TK_SA"`
+	Ip                    string `envconfig:"TK_IP"`
+	DashboardUrl          string `envconfig:"TK_DASH"`
+	ApiUrl                string `envconfig:"TK_API"`
 }
 
 type envImagesConfig struct {
