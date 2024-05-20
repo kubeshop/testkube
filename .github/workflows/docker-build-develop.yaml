@@ -715,8 +715,8 @@ jobs:
           docker push kubeshop/testkube-postman-executor:node21-${{ steps.commit.outputs.short }}-arm64v8
           docker push kubeshop/testkube-postman-executor:node21-${{ steps.commit.outputs.short }}-amd64
 
-          docker manifest create kubeshop/testkube-postman-executor:node21-${{ steps.github_sha.outputs.sha_short }} --amend kubeshop/testkube-postman-executor:node21-${{ steps.github_sha.outputs.sha_short }}-arm64v8 --amend kubeshop/testkube-postman-executor:${{ steps.github_sha.outputs.sha_short }}-amd64
-          docker manifest push -p kubeshop/testkube-postman-executor:node21-${{ steps.github_sha.outputs.sha_short }}
+          docker manifest create kubeshop/testkube-postman-executor:node21-${{ steps.commit.outputs.short }} --amend kubeshop/testkube-postman-executor:node21-${{ steps.commit.outputs.short }}-arm64v8 --amend kubeshop/testkube-postman-executor:${{ steps.commit.outputs.short }}-amd64
+          docker manifest push -p kubeshop/testkube-postman-executor:node21-${{ steps.commit.outputs.short }}
 
 
 #  workflow_dispatch:
