@@ -21,16 +21,15 @@ func NewLogsServer(repo repository.Factory, state state.Interface) *LogsServer {
 
 type LogsServer struct {
 	pb.UnimplementedLogsServiceServer
-	repoFactory   repository.Factory
-	state         state.Interface
-	log           *zap.SugaredLogger
-	traceMessages bool
+	repoFactory repository.Factory
+	state       state.Interface
+	log         *zap.SugaredLogger
 }
 
 func (s LogsServer) Logs(req *pb.LogRequest, stream pb.LogsService_LogsServer) error {
 	ctx := stream.Context()
 
-	log := s.log.With("execution_id", req.ExecutionId)
+	logger := s.log.With("execution_id", req.ExecutionId)
 
 	// get state of current log stream (pending or finished)
 	st, err := s.state.Get(ctx, req.ExecutionId)
@@ -44,7 +43,7 @@ func (s LogsServer) Logs(req *pb.LogRequest, stream pb.LogsService_LogsServer) e
 		return err
 	}
 
-	log.Debugw("starting sending log stream", "repo", fmt.Sprintf("%T", repo), "state", st)
+	logger.Debugw("starting sending log stream", "repo", fmt.Sprintf("%T", repo), "state", st)
 
 	// stream logs from repository through GRPC channel
 	ch, err := repo.Get(ctx, req.ExecutionId)
@@ -53,20 +52,13 @@ func (s LogsServer) Logs(req *pb.LogRequest, stream pb.LogsService_LogsServer) e
 	}
 
 	for l := range ch {
-		if s.traceMessages {
-			log.Debugw("sending log chunk", "log", l)
-		}
+		log.Tracew(logger, "sending log chunk", "log", l)
 		if err := stream.Send(pb.MapResponseToPB(l)); err != nil {
 			return err
 		}
 	}
 
-	log.Debugw("log stream finished")
+	logger.Debugw("log stream finished")
 
 	return nil
-}
-
-func (s *LogsServer) WithMessageTracing(enabled bool) *LogsServer {
-	s.traceMessages = enabled
-	return s
 }

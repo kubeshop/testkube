@@ -76,11 +76,9 @@ func (s *TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 
 		l := s.Log.With("testID", id)
 
-		if len(tests) != 0 {
-			l.Infow("executing test", "test", tests[0])
-		}
 		var results []testkube.Execution
 		if len(tests) != 0 {
+			l.Infow("executing test", "test", tests[0])
 			request.TestExecutionName = strings.Clone(c.Query("testExecutionName"))
 			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", strconv.Itoa(scheduler.DefaultConcurrencyLevel)))
 			if err != nil {
@@ -298,10 +296,9 @@ func (s *TestkubeAPI) ExecutionLogsHandlerV2() fiber.Handler {
 		ctx.Response.Header.Set("Transfer-Encoding", "chunked")
 
 		ctx.SetBodyStreamWriter(func(w *bufio.Writer) {
-			s.Log.Debug("start streaming logs")
 			_ = w.Flush()
 
-			s.Log.Infow("getting logs from grpc log server")
+			s.Log.Debugw("getting logs from grpc log server")
 			logs, err := s.logGrpcClient.Get(ctx, executionID)
 			if err != nil {
 				s.Log.Errorw("can't get logs from grpc", "error", err)
@@ -385,7 +382,7 @@ func (s *TestkubeAPI) AbortExecutionHandler() fiber.Handler {
 		executionID := c.Params("executionID")
 		errPrefix := "failed to abort execution %s"
 
-		s.Log.Infow("aborting execution", "executionID", executionID)
+		s.Log.Debugw("aborting execution", "executionID", executionID)
 		execution, err := s.ExecutionResults.Get(ctx, executionID)
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
@@ -567,7 +564,7 @@ func (s *TestkubeAPI) streamLogsFromResult(executionResult *testkube.ExecutionRe
 
 	err := enc.Encode(output)
 	if err != nil {
-		s.Log.Infow("Encode", "error", err)
+		s.Log.Errorw("encoding execution output error", "error", err)
 		return err
 	}
 	_, _ = fmt.Fprintf(w, "\n")
@@ -578,7 +575,7 @@ func (s *TestkubeAPI) streamLogsFromResult(executionResult *testkube.ExecutionRe
 // streamLogsFromJob streams logs in chunks to writer from the running execution
 func (s *TestkubeAPI) streamLogsFromJob(ctx context.Context, executionID, testType, namespace string, w *bufio.Writer) {
 	enc := json.NewEncoder(w)
-	s.Log.Infow("getting logs from Kubernetes job")
+	s.Log.Debugw("getting logs from Kubernetes job")
 
 	executor, err := s.getExecutorByTestType(testType)
 	if err != nil {
@@ -597,7 +594,7 @@ func (s *TestkubeAPI) streamLogsFromJob(ctx context.Context, executionID, testTy
 		return
 	}
 
-	s.Log.Infow("looping through logs channel")
+	s.Log.Debugw("looping through logs channel")
 	// loop through pods log lines - it's blocking channel
 	// and pass single log output as sse data chunk
 	for out := range logs {
@@ -605,7 +602,7 @@ func (s *TestkubeAPI) streamLogsFromJob(ctx context.Context, executionID, testTy
 		_, _ = fmt.Fprintf(w, "data: ")
 		err = enc.Encode(out)
 		if err != nil {
-			s.Log.Infow("Encode", "error", err)
+			s.Log.Errorw("encoding log line error", "error", err)
 		}
 		// enc.Encode adds \n and we need \n\n after `data: {}` chunk
 		_, _ = fmt.Fprintf(w, "\n")
@@ -740,7 +737,7 @@ func (s *TestkubeAPI) getArtifactStorage(bucket string) (storage.ArtifactsStorag
 // streamLogsFromLogServer writes logs from the output of log server to the writer
 func (s *TestkubeAPI) streamLogsFromLogServer(logs chan events.LogResponse, w *bufio.Writer) {
 	enc := json.NewEncoder(w)
-	s.Log.Infow("looping through logs channel")
+	s.Log.Debugw("looping through logs channel")
 	// loop through grpc server log lines - it's blocking channel
 	// and pass single log output as sse data chunk
 	for out := range logs {
@@ -753,7 +750,7 @@ func (s *TestkubeAPI) streamLogsFromLogServer(logs chan events.LogResponse, w *b
 		_, _ = fmt.Fprintf(w, "data: ")
 		err := enc.Encode(out.Log)
 		if err != nil {
-			s.Log.Infow("Encode", "error", err)
+			s.Log.Errorw("encoding log line error", "error", err)
 		}
 		// enc.Encode adds \n and we need \n\n after `data: {}` chunk
 		_, _ = fmt.Fprintf(w, "\n")

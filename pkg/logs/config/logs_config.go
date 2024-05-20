@@ -11,7 +11,6 @@ type Config struct {
 
 	// Debug variables
 	AttachDebugAdapter bool `envconfig:"ATTACH_DEBUG_ADAPTER" default:"false"`
-	TraceMessages      bool `envconfig:"TRACE_MESSAGES" default:"false"`
 
 	TestkubeProAPIKey               string `envconfig:"TESTKUBE_PRO_API_KEY" default:""`
 	TestkubeProURL                  string `envconfig:"TESTKUBE_PRO_URL" default:""`

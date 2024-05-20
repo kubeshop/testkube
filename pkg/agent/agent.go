@@ -82,7 +82,7 @@ func NewGRPCConnection(
 	}
 
 	userAgent := version.Version + "/" + version.Commit
-	logger.Infow("initiating connection with agent api", "userAgent", userAgent, "server", server, "insecure", isInsecure, "skipVerify", skipVerify, "certFile", certFile, "keyFile", keyFile, "caFile", caFile)
+	logger.Infow("initiating connection with control plane", "userAgent", userAgent, "server", server, "insecure", isInsecure, "skipVerify", skipVerify, "certFile", certFile, "keyFile", keyFile, "caFile", caFile)
 	// WithBlock, WithReturnConnectionError and FailOnNonTempDialError are recommended not to be used by gRPC go docs
 	// but given that Agent will not work if gRPC connection cannot be established, it is ok to use them and assert issues at dial time
 	return grpc.DialContext(
@@ -315,7 +315,7 @@ func (ag *Agent) runCommandLoop(ctx context.Context) error {
 	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
 	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
 
-	ag.logger.Infow("initiating streaming connection with Pro API")
+	ag.logger.Infow("initiating streaming connection with control plane")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	stream, err := ag.client.ExecuteAsync(ctx, opts...)

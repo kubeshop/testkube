@@ -62,7 +62,6 @@ type MinioV2Adapter struct {
 	bucket         string
 	region         string
 	log            *zap.SugaredLogger
-	traceMessages  bool
 	lock           sync.RWMutex
 	path           string
 	files          map[string]*os.File
@@ -110,20 +109,12 @@ func (s *MinioV2Adapter) deleteFile(id string) {
 	delete(s.files, id)
 }
 
-func (s *MinioV2Adapter) WithTraceMessages(enabled bool) *MinioV2Adapter {
-	s.traceMessages = enabled
-	return s
-}
-
 func (s *MinioV2Adapter) WithPath(path string) {
 	s.path = path
 }
 
 func (s *MinioV2Adapter) Notify(ctx context.Context, id string, e events.Log) error {
-	if s.traceMessages {
-		s.log.Debugw("minio consumer notify", "id", id, "event", e)
-	}
-
+	log.Tracew(s.log, "minio consumer notify", "id", id, "event", e)
 	chunk, err := json.Marshal(e)
 	if err != nil {
 		return err

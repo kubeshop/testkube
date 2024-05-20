@@ -84,7 +84,7 @@ func (c GrpcClient) Get(ctx context.Context, id string) (chan events.LogResponse
 		for {
 			l, err := r.Recv()
 			if err == io.EOF {
-				log.Infow("client stream finished", "error", err)
+				log.Debugw("client stream finished", "error", err)
 				return
 			} else if err != nil {
 				ch <- events.LogResponse{Error: err}

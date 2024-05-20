@@ -98,7 +98,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 		return s.handleExecutionError(ctx, execution, "can't create new test execution, can't insert into storage: %w", err)
 	}
 
-	s.logger.Infow("calling executor with options", "executionId", execution.Id, "options", options.Request)
+	s.logger.Debugw("calling executor with options", "executionId", execution.Id, "options", options.Request)
 
 	execution.Start()
 
@@ -442,9 +442,9 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		}
 
 		request.SlavePodRequest = mergeSlavePodRequests(request.SlavePodRequest, test.ExecutionRequest.SlavePodRequest)
-		s.logger.Infow("checking for negative test change", "test", test.Name, "negativeTest", request.NegativeTest, "isNegativeTestChangedOnRun", request.IsNegativeTestChangedOnRun)
+		s.logger.Debugw("checking for negative test change", "test", test.Name, "negativeTest", request.NegativeTest, "isNegativeTestChangedOnRun", request.IsNegativeTestChangedOnRun)
 		if !request.IsNegativeTestChangedOnRun {
-			s.logger.Infow("setting negative test from test definition", "test", test.Name, "negativeTest", test.ExecutionRequest.NegativeTest)
+			s.logger.Debugw("setting negative test from test definition", "test", test.Name, "negativeTest", test.ExecutionRequest.NegativeTest)
 			request.NegativeTest = test.ExecutionRequest.NegativeTest
 		}
 
