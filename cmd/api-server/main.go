@@ -94,14 +94,12 @@ import (
 	"github.com/kubeshop/testkube/pkg/reconciler"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowexecutor"
-	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 var verbose = flag.Bool("v", false, "enable verbosity level")
 
 func init() {
 	flag.Parse()
-	ui.Verbose = *verbose
 }
 
 func runMigrations() (err error) {
@@ -143,10 +141,10 @@ func runMongoMigrations(ctx context.Context, db *mongo.Database, migrationsDir s
 func main() {
 	cfg, err := config.Get()
 	cfg.CleanLegacyVars()
-	ui.ExitOnError("error getting application config", err)
+	exitOnError("error getting application config", err)
 
 	features, err := featureflags.Get()
-	ui.ExitOnError("error getting application feature flags", err)
+	exitOnError("error getting application feature flags", err)
 
 	log.DefaultLogger.Infow("Feature flags configured", "ff", features)
 
@@ -172,23 +170,23 @@ func main() {
 	})
 
 	ln, err := net.Listen("tcp", ":"+cfg.APIServerPort)
-	ui.ExitOnError("Checking if port "+cfg.APIServerPort+"is free", err)
+	exitOnError("Checking if port "+cfg.APIServerPort+"is free", err)
 	_ = ln.Close()
 	log.DefaultLogger.Debugw("TCP Port is available", "port", cfg.APIServerPort)
 
 	ln, err = net.Listen("tcp", ":"+cfg.GraphqlPort)
-	ui.ExitOnError("Checking if port "+cfg.GraphqlPort+"is free", err)
+	exitOnError("Checking if port "+cfg.GraphqlPort+"is free", err)
 	_ = ln.Close()
 	log.DefaultLogger.Debugw("TCP Port is available", "port", cfg.GraphqlPort)
 
 	kubeClient, err := kubeclient.GetClient()
-	ui.ExitOnError("Getting kubernetes client", err)
+	exitOnError("Getting kubernetes client", err)
 
 	secretClient, err := secret.NewClient(cfg.TestkubeNamespace)
-	ui.ExitOnError("Getting secret client", err)
+	exitOnError("Getting secret client", err)
 
 	configMapClient, err := configmap.NewClient(cfg.TestkubeNamespace)
-	ui.ExitOnError("Getting config map client", err)
+	exitOnError("Getting config map client", err)
 	// agent
 	var grpcClient cloud.TestKubeCloudAPIClient
 	var grpcConn *grpc.ClientConn
@@ -207,7 +205,7 @@ func main() {
 			cfg.TestkubeProCAFile,
 			log.DefaultLogger,
 		)
-		ui.ExitOnError("error creating gRPC connection", err)
+		exitOnError("error creating gRPC connection", err)
 		defer grpcConn.Close()
 
 		grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
@@ -239,22 +237,22 @@ func main() {
 
 	clientset, err := k8sclient.ConnectToK8s()
 	if err != nil {
-		ui.ExitOnError("Creating k8s clientset", err)
+		exitOnError("Creating k8s clientset", err)
 	}
 
 	k8sCfg, err := k8sclient.GetK8sClientConfig()
 	if err != nil {
-		ui.ExitOnError("Getting k8s client config", err)
+		exitOnError("Getting k8s client config", err)
 	}
 	testkubeClientset, err := testkubeclientset.NewForConfig(k8sCfg)
 	if err != nil {
-		ui.ExitOnError("Creating TestKube Clientset", err)
+		exitOnError("Creating TestKube Clientset", err)
 	}
 
 	var logGrpcClient logsclient.StreamGetter
 	if features.LogsV2 {
 		creds, err := newGRPCTransportCredentials(cfg)
-		ui.ExitOnError("Getting log server TLS credentials", err)
+		exitOnError("Getting log server TLS credentials", err)
 		logGrpcClient = logsclient.NewGrpcClient(cfg.LogServerGrpcAddress, creds)
 	}
 
@@ -279,7 +277,7 @@ func main() {
 	} else {
 		mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
 		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)
-		ui.ExitOnError("Getting mongo database", err)
+		exitOnError("Getting mongo database", err)
 		isDocDb := cfg.APIMongoDBType == storage.TypeDocDB
 		mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb, result.WithFeatureFlags(features), result.WithLogsClient(logGrpcClient))
 		resultsRepository = mongoResultsRepository
@@ -290,7 +288,7 @@ func main() {
 		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
 		minioClient := newStorageClient(cfg)
 		if err = minioClient.Connect(); err != nil {
-			ui.ExitOnError("Connecting to minio", err)
+			exitOnError("Connecting to minio", err)
 		}
 		if expErr := minioClient.SetExpirationPolicy(cfg.StorageExpiration); expErr != nil {
 			log.DefaultLogger.Errorw("Error setting expiration policy", "error", expErr)
@@ -328,7 +326,7 @@ func main() {
 	}
 
 	configMapConfig, err := configrepository.NewConfigMapConfig(configName, cfg.TestkubeNamespace)
-	ui.ExitOnError("Getting config map config", err)
+	exitOnError("Getting config map config", err)
 
 	// try to load from mongo based config first
 	telemetryEnabled, err := configMapConfig.GetTelemetryEnabled(ctx)
@@ -369,7 +367,7 @@ func main() {
 	// TODO check if this version exists somewhere in stats (probably could be removed)
 	migrations.Migrator.Add(migrations.NewVersion_0_9_2(scriptsClient, testsClientV1, testsClientV3, testsuitesClientV2))
 	if err := runMigrations(); err != nil {
-		ui.ExitOnError("Running server migrations", err)
+		exitOnError("Running server migrations", err)
 	}
 
 	apiVersion := version.Version
@@ -386,7 +384,7 @@ func main() {
 
 	nc, err := newNATSConnection(cfg)
 	if err != nil {
-		ui.ExitOnError("Creating NATS connection", err)
+		exitOnError("Creating NATS connection", err)
 	}
 	eventBus := bus.NewNATSBus(nc)
 	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName, envs)
@@ -396,7 +394,7 @@ func main() {
 	if features.LogsV2 {
 		logsStream, err = logsclient.NewNatsLogStream(nc.Conn)
 		if err != nil {
-			ui.ExitOnError("Creating logs streaming client", err)
+			exitOnError("Creating logs streaming client", err)
 		}
 	}
 
@@ -404,17 +402,17 @@ func main() {
 
 	defaultExecutors, err := parseDefaultExecutors(cfg)
 	if err != nil {
-		ui.ExitOnError("Parsing default executors", err)
+		exitOnError("Parsing default executors", err)
 	}
 
 	images, err := kubeexecutor.SyncDefaultExecutors(executorsClient, cfg.TestkubeNamespace, defaultExecutors, cfg.TestkubeReadonlyExecutors)
 	if err != nil {
-		ui.ExitOnError("Sync default executors", err)
+		exitOnError("Sync default executors", err)
 	}
 
 	jobTemplates, err := parser.ParseJobTemplates(cfg)
 	if err != nil {
-		ui.ExitOnError("Creating job templates", err)
+		exitOnError("Creating job templates", err)
 	}
 
 	proContext := newProContext(cfg, grpcClient)
@@ -423,7 +421,7 @@ func main() {
 	var subscriptionChecker checktcl.SubscriptionChecker
 	if mode == common.ModeAgent {
 		subscriptionChecker, err = checktcl.NewSubscriptionChecker(ctx, proContext, grpcClient, grpcConn)
-		ui.ExitOnError("Failed creating subscription checker", err)
+		exitOnError("Failed creating subscription checker", err)
 	}
 
 	serviceAccountNames := map[string]string{
@@ -433,7 +431,7 @@ func main() {
 	// Pro edition only (tcl protected code)
 	if cfg.TestkubeExecutionNamespaces != "" {
 		err = subscriptionChecker.IsActiveOrgPlanEnterpriseForFeature("execution namespace")
-		ui.ExitOnError("Subscription checking", err)
+		exitOnError("Subscription checking", err)
 
 		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
 	}
@@ -462,12 +460,12 @@ func main() {
 		cfg.TestkubeDefaultStorageClassName,
 	)
 	if err != nil {
-		ui.ExitOnError("Creating executor client", err)
+		exitOnError("Creating executor client", err)
 	}
 
 	containerTemplates, err := parser.ParseContainerTemplates(cfg)
 	if err != nil {
-		ui.ExitOnError("Creating container job templates", err)
+		exitOnError("Creating container job templates", err)
 	}
 
 	inspectorStorages := []imageinspector.Storage{imageinspector.NewMemoryStorage()}
@@ -508,7 +506,7 @@ func main() {
 		cfg.TestkubeDefaultStorageClassName,
 	)
 	if err != nil {
-		ui.ExitOnError("Creating container executor", err)
+		exitOnError("Creating container executor", err)
 	}
 
 	sched := scheduler.NewScheduler(
@@ -541,7 +539,7 @@ func main() {
 
 	slackLoader, err := newSlackLoader(cfg, envs)
 	if err != nil {
-		ui.ExitOnError("Creating slack loader", err)
+		exitOnError("Creating slack loader", err)
 	}
 
 	api := apiv1.NewTestkubeAPI(
@@ -630,12 +628,12 @@ func main() {
 			proContext,
 		)
 		if err != nil {
-			ui.ExitOnError("Starting agent", err)
+			exitOnError("Starting agent", err)
 		}
 		g.Go(func() error {
 			err = agentHandle.Run(ctx)
 			if err != nil {
-				ui.ExitOnError("Running agent", err)
+				exitOnError("Running agent", err)
 			}
 			return nil
 		})
@@ -814,25 +812,25 @@ func getMongoSSLConfig(cfg *config.Config, secretClient *secret.Client) *storage
 	clientCertPath := "/tmp/mongodb.pem"
 	rootCAPath := "/tmp/mongodb-root-ca.pem"
 	mongoSSLSecret, err := secretClient.Get(cfg.APIMongoSSLCert)
-	ui.ExitOnError(fmt.Sprintf("Could not get secret %s for MongoDB connection", cfg.APIMongoSSLCert), err)
+	exitOnError(fmt.Sprintf("Could not get secret %s for MongoDB connection", cfg.APIMongoSSLCert), err)
 
 	var keyFile, caFile, pass string
 	var ok bool
 	if keyFile, ok = mongoSSLSecret[cfg.APIMongoSSLClientFileKey]; !ok {
-		ui.Warn("Could not find sslClientCertificateKeyFile with key %s in secret %s", cfg.APIMongoSSLClientFileKey, cfg.APIMongoSSLCert)
+		log.DefaultLogger.Warnf("Could not find sslClientCertificateKeyFile with key %s in secret %s", cfg.APIMongoSSLClientFileKey, cfg.APIMongoSSLCert)
 	}
 	if caFile, ok = mongoSSLSecret[cfg.APIMongoSSLCAFileKey]; !ok {
-		ui.Warn("Could not find sslCertificateAuthorityFile with key %s in secret %s", cfg.APIMongoSSLCAFileKey, cfg.APIMongoSSLCert)
+		log.DefaultLogger.Warnf("Could not find sslCertificateAuthorityFile with key %s in secret %s", cfg.APIMongoSSLCAFileKey, cfg.APIMongoSSLCert)
 	}
 	if pass, ok = mongoSSLSecret[cfg.APIMongoSSLClientFilePass]; !ok {
-		ui.Warn("Could not find sslClientCertificateKeyFilePassword with key %s in secret %s", cfg.APIMongoSSLClientFilePass, cfg.APIMongoSSLCert)
+		log.DefaultLogger.Warnf("Could not find sslClientCertificateKeyFilePassword with key %s in secret %s", cfg.APIMongoSSLClientFilePass, cfg.APIMongoSSLCert)
 	}
 
 	err = os.WriteFile(clientCertPath, []byte(keyFile), 0644)
-	ui.ExitOnError(fmt.Sprintf("Could not place mongodb certificate key file: %s", err))
+	exitOnError("Could not place mongodb certificate key file", err)
 
 	err = os.WriteFile(rootCAPath, []byte(caFile), 0644)
-	ui.ExitOnError(fmt.Sprintf("Could not place mongodb ssl ca file: %s", err))
+	exitOnError("Could not place mongodb ssl ca file: %s", err)
 
 	return &storage.MongoSSLConfig{
 		SSLClientCertificateKeyFile:         clientCertPath,
@@ -876,7 +874,7 @@ func newProContext(cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) 
 	defer cancel()
 	getProContext, err := grpcClient.GetProContext(ctx, &emptypb.Empty{})
 	if err != nil {
-		ui.WarnOnError("cannot fetch pro-context from cloud: %s", err)
+		log.DefaultLogger.Warnf("cannot fetch pro-context from cloud: %s", err)
 		return proContext
 	}
 
@@ -889,4 +887,11 @@ func newProContext(cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) 
 	}
 
 	return proContext
+}
+
+func exitOnError(title string, err error) {
+	if err != nil {
+		log.DefaultLogger.Errorw(title, "error", err)
+		os.Exit(1)
+	}
 }
