@@ -8,14 +8,12 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor"
+
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/runner"
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
@@ -82,7 +80,7 @@ func (r *ScraperRunner) Run(ctx context.Context, execution testkube.Execution) (
 
 			for _, pod := range pods.Items {
 				if pod.Labels["job-name"] == execution.Id {
-					if err = wait.PollUntilContextTimeout(ctx, pollInterval, pollTimeout, true, isContainerTerminated(clientset, pod.Name, execution.Id, execution.TestNamespace)); err != nil {
+					if err = wait.PollUntilContextTimeout(ctx, pollInterval, pollTimeout, true, k8sclient.IsContainerTerminated(clientset, pod.Name, execution.Id, execution.TestNamespace)); err != nil {
 						return *result.Err(errors.Wrap(err, "waiting for executor pod complete error")), nil
 					}
 				}
@@ -122,34 +120,4 @@ func (r *ScraperRunner) Run(ctx context.Context, execution testkube.Execution) (
 // GetType returns runner type
 func (r *ScraperRunner) GetType() runner.Type {
 	return runner.TypeFin
-}
-
-// isContainerTerminated checks if pod container is terminated through kubernetes API
-func isContainerTerminated(clientset kubernetes.Interface, podName, containerName, namespace string) wait.ConditionWithContextFunc {
-	return func(ctx context.Context) (bool, error) {
-		pod, err := clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
-		if err != nil {
-			return false, err
-		}
-
-		if pod.Status.Phase == corev1.PodSucceeded {
-			return true, nil
-		}
-
-		if err = executor.IsPodFailed(pod); err != nil {
-			return true, err
-		}
-
-		for _, s := range pod.Status.ContainerStatuses {
-			if s.Name != containerName {
-				continue
-			}
-
-			if s.State.Terminated != nil {
-				return true, nil
-			}
-		}
-
-		return false, nil
-	}
 }
