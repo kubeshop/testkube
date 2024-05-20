@@ -26,6 +26,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/portforward"
+
+	"github.com/kubeshop/testkube/pkg/executor"
 )
 
 const (
@@ -401,4 +403,34 @@ func IsPodOfServiceRunning(ctx context.Context, namespace, serviceName string) (
 	}
 	return false, nil
 
+}
+
+// IsContainerTerminated checks if pod container is terminated through kubernetes API
+func IsContainerTerminated(clientset kubernetes.Interface, podName, containerName, namespace string) wait.ConditionWithContextFunc {
+	return func(ctx context.Context) (bool, error) {
+		pod, err := clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+
+		if pod.Status.Phase == corev1.PodSucceeded {
+			return true, nil
+		}
+
+		if err = executor.IsPodFailed(pod); err != nil {
+			return true, err
+		}
+
+		for _, s := range pod.Status.ContainerStatuses {
+			if s.Name != containerName {
+				continue
+			}
+
+			if s.State.Terminated != nil {
+				return true, nil
+			}
+		}
+
+		return false, nil
+	}
 }
