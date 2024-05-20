@@ -35,7 +35,7 @@ testkube init <profile> [flags]
 ### SEE ALSO
 
 * [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube init agent](testkube_init_agent.md)	 - Install Testkube Pro Agent and connect to Testkube Pro environment
 * [testkube init demo](testkube_init_demo.md)	 - Install Testkube On-Prem demo in your current context
-* [testkube init init](testkube_init_init.md)	 - Install Testkube Pro Agent and connect to Testkube Pro environment
 * [testkube init standalone-agent](testkube_init_standalone-agent.md)	 - Install Testkube OSS in your current context
 

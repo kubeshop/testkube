@@ -1,15 +1,21 @@
-## testkube pro
+## testkube debug controlplane
 
-Testkube Pro commands
+Show debug info
+
+### Synopsis
+
+Get all the necessary information to debug an issue in Testkube Control Plane
 
 ```
-testkube pro [flags]
+testkube debug controlplane [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for pro
+      --attach-agent-log        Attach agent log to the output keep in mind to configure valid agent first in the Testkube CLI
+  -h, --help                    help for controlplane
+      --labels stringToString   Labels to filter logs by (default [])
 ```
 
 ### Options inherited from parent commands
@@ -26,9 +32,5 @@ testkube pro [flags]
 
 ### SEE ALSO
 
-* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
-* [testkube pro agent](testkube_pro_agent.md)	 - Install Testkube Pro Agent and connect to Testkube Pro environment
-* [testkube pro connect](testkube_pro_connect.md)	 - Testkube Pro connect 
-* [testkube pro disconnect](testkube_pro_disconnect.md)	 - Switch back to Testkube Core OSS mode, based on active .kube/config file
-* [testkube pro login](testkube_pro_login.md)	 - Login to Testkube Pro
+* [testkube debug](testkube_debug.md)	 - Print environment information for debugging
 
