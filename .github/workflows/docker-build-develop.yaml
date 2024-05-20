@@ -712,7 +712,12 @@ jobs:
 
       - name: Push image to the Registry
         run: |
-          docker push kubeshop/testkube-postman-executor:node21-${{ steps.commit.outputs.short }}
+          docker push kubeshop/testkube-postman-executor:node21-${{ steps.commit.outputs.short }}-arm64v8
+          docker push kubeshop/testkube-postman-executor:node21-${{ steps.commit.outputs.short }}-amd64
+
+          docker manifest create kubeshop/testkube-postman-executor:node21-${{ steps.github_sha.outputs.sha_short }} --amend kubeshop/testkube-postman-executor:node21-${{ steps.github_sha.outputs.sha_short }}-arm64v8 --amend kubeshop/testkube-postman-executor:${{ steps.github_sha.outputs.sha_short }}-amd64
+          docker manifest push -p kubeshop/testkube-postman-executor:node21-${{ steps.github_sha.outputs.sha_short }}
+
 
 #  workflow_dispatch:
 #    needs: [api, single_executor, executor_jmeter, executor_jmeterd, jmeterd_slave, executor_maven, executor_gradle, executor_cypress, executor_playwright]
