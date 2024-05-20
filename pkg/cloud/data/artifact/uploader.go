@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"io"
 	"net/http"
 	"path/filepath"
 
@@ -44,7 +43,7 @@ func (u *CloudUploader) Upload(ctx context.Context, object *scraper.Object, exec
 		return errors.Wrapf(err, "failed to get signed URL for object [%s]", req.Object)
 	}
 
-	if err := u.putObject(ctx, signedURL, object.Data); err != nil {
+	if err := u.putObject(ctx, signedURL, object); err != nil {
 		return errors.Wrapf(err, "failed to send object [%s] to cloud", req.Object)
 	}
 
@@ -65,13 +64,13 @@ func (u *CloudUploader) getSignedURL(ctx context.Context, req *PutObjectSignedUR
 	return commandResponse.URL, nil
 }
 
-func (u *CloudUploader) putObject(ctx context.Context, url string, data io.Reader) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, data)
+func (u *CloudUploader) putObject(ctx context.Context, url string, object *scraper.Object) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, object.Data)
 	if err != nil {
 		return err
 	}
 
-	req.Header.Set("Content-Type", getContentType(url))
+	req.Header.Set("Content-Type", getContentType(object.Name))
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: u.skipVerify}
 	client := &http.Client{Transport: tr}
