@@ -97,6 +97,15 @@ You can omit using explicit value of `storageClassName` in the `Test` definition
 ```
 In this case it's necessary to supply `defaultStorageClassName` value in your helm chart values during installation.
 
+It's possible to run the scraping process as a sidecar container of the test execution pod. Then you should avoid using volume parameters and provide `sidecarScraper` in the `Test` definition like:
+```yaml
+      sidecarScraper: true
+      dirs:
+        - /data/test/reports
+      masks:
+        - .*\.txt,result.*
+```
+
 You need to save test related files into specified directories on the dynamically created volume. They will be uploaded from there to Testkube file storage and available later for downloading using standard Testkube CLI or Testkube Dashboard commands. For example:
 
 ```yaml
