@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"maps"
 	"net"
 	"os"
 	"os/signal"
@@ -430,9 +429,6 @@ func main() {
 	serviceAccountNames := map[string]string{
 		cfg.TestkubeNamespace: cfg.JobServiceAccountName,
 	}
-	testWorkflowServiceAccountNames := map[string]string{
-		cfg.TestkubeNamespace: cfg.TestWorkflowsJobServiceAccountName,
-	}
 
 	// Pro edition only (tcl protected code)
 	if cfg.TestkubeExecutionNamespaces != "" {
@@ -440,10 +436,6 @@ func main() {
 		ui.ExitOnError("Subscription checking", err)
 
 		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
-		maps.Copy(testWorkflowServiceAccountNames, serviceAccountNames)
-		if cfg.TestWorkflowsJobServiceAccountName != "" {
-			testWorkflowServiceAccountNames[cfg.TestkubeNamespace] = cfg.TestWorkflowsJobServiceAccountName
-		}
 	}
 
 	executor, err := client.NewJobExecutor(
@@ -601,7 +593,7 @@ func main() {
 		inspector,
 		configMapConfig,
 		resultsRepository,
-		testWorkflowServiceAccountNames,
+		serviceAccountNames,
 		cfg.GlobalWorkflowTemplateName,
 		cfg.TestkubeNamespace,
 		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
