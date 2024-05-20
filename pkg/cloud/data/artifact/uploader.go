@@ -71,7 +71,7 @@ func (u *CloudUploader) putObject(ctx context.Context, url string, data io.Reade
 		return err
 	}
 
-	req.Header.Set("Content-Type", "application/octet-stream")
+	req.Header.Set("Content-Type", getContentType(url))
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: u.skipVerify}
 	client := &http.Client{Transport: tr}
