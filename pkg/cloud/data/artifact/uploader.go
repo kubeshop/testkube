@@ -32,18 +32,21 @@ func NewCloudUploader(executor executor.Executor, skipVerify bool) *CloudUploade
 
 func (u *CloudUploader) Upload(ctx context.Context, object *scraper.Object, execution testkube.Execution) error {
 	log.DefaultLogger.Debugw("cloud uploader is requesting signed URL", "file", object.Name, "folder", execution.Id, "size", object.Size)
+
+	contentType := getContentType(object.Name)
 	req := &PutObjectSignedURLRequest{
 		Object:        object.Name,
 		ExecutionID:   execution.Id,
 		TestName:      execution.TestName,
 		TestSuiteName: execution.TestSuiteName,
+		ContentType:   contentType,
 	}
 	signedURL, err := u.getSignedURL(ctx, req)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get signed URL for object [%s]", req.Object)
 	}
 
-	if err := u.putObject(ctx, signedURL, object); err != nil {
+	if err := u.putObject(ctx, signedURL, object, contentType); err != nil {
 		return errors.Wrapf(err, "failed to send object [%s] to cloud", req.Object)
 	}
 
@@ -64,13 +67,13 @@ func (u *CloudUploader) getSignedURL(ctx context.Context, req *PutObjectSignedUR
 	return commandResponse.URL, nil
 }
 
-func (u *CloudUploader) putObject(ctx context.Context, url string, object *scraper.Object) error {
+func (u *CloudUploader) putObject(ctx context.Context, url string, object *scraper.Object, contentType string) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, object.Data)
 	if err != nil {
 		return err
 	}
 
-	req.Header.Set("Content-Type", getContentType(object.Name))
+	req.Header.Set("Content-Type", contentType)
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: u.skipVerify}
 	client := &http.Client{Transport: tr}
