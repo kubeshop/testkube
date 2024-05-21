@@ -57,7 +57,7 @@ func TestRun_Integration(t *testing.T) {
 	mockClient.EXPECT().Execute(gomock.Any(), artifact.CmdScraperPutObjectSignedURL, gomock.Any()).Return(mockResponseJson, nil).Times(2)
 	mockClient.EXPECT().Execute(gomock.Any(), testworkflow.CmdTestWorkflowExecutionAddReport, gomock.Any()).Return(nil, nil)
 	uploader := artifacts.NewCloudUploader(mockClient)
-	postProcessor := artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), mockClient)
+	postProcessor := artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), mockClient, "/", "")
 	handler := artifacts.NewHandler(uploader, processor, artifacts.WithPostProcessor(postProcessor))
 
 	run(handler, walker, testDataFixtures)
