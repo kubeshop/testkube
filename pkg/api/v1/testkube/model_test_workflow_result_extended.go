@@ -1,6 +1,7 @@
 package testkube
 
 import (
+	"slices"
 	"time"
 
 	"github.com/kubeshop/testkube/internal/common"
@@ -125,6 +126,7 @@ func (r *TestWorkflowResult) Clone() *TestWorkflowResult {
 		TotalDuration:   r.TotalDuration,
 		DurationMs:      r.DurationMs,
 		PausedMs:        r.PausedMs,
+		Pauses:          slices.Clone(r.Pauses),
 		TotalDurationMs: r.DurationMs + r.PausedMs,
 		Initialization:  r.Initialization.Clone(),
 		Steps:           steps,
