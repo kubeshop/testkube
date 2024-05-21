@@ -744,7 +744,7 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: playwright-go-${{ hashFiles('**/go.sum') }}
+          key: postman-node-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
 

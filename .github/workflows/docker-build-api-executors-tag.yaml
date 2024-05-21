@@ -737,7 +737,7 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: maven-go-${{ hashFiles('**/go.sum') }}
+          key: postman-node-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
 
