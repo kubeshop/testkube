@@ -56,6 +56,13 @@ func NewCreateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.CreateW
 		PayloadTemplateReference: payloadTemplateReference,
 	}
 
+	if cmd.Flag("enable").Changed {
+		options.Disabled = false
+	}
+	if cmd.Flag("disable").Changed {
+		options.Disabled = true
+	}
+
 	return options, nil
 }
 
@@ -137,5 +144,18 @@ func NewUpdateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.UpdateW
 		options.Headers = &headers
 	}
 
+	if cmd.Flag("enable").Changed {
+		options.Disabled = new(bool)
+		*options.Disabled = false
+	}
+	if cmd.Flag("disable").Changed {
+		options.Disabled = new(bool)
+		*options.Disabled = true
+	}
+
 	return options, nil
+}
+
+func isBothEnabledAndDisabledSet(cmd *cobra.Command) bool {
+	return cmd.Flag("enable").Changed && cmd.Flag("disable").Changed
 }

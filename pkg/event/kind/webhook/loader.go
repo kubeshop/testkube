@@ -66,7 +66,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 
 		types := webhooks.MapEventArrayToCRDEvents(webhook.Spec.Events)
 		name := fmt.Sprintf("%s.%s", webhook.ObjectMeta.Namespace, webhook.ObjectMeta.Name)
-		listeners = append(listeners, NewWebhookListener(name, webhook.Spec.Uri, webhook.Spec.Selector, types, webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers))
+		listeners = append(listeners, NewWebhookListener(name, webhook.Spec.Uri, webhook.Spec.Selector, types, webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled))
 	}
 
 	return listeners, nil

@@ -22,7 +22,7 @@ import (
 var _ common.Listener = (*WebhookListener)(nil)
 
 func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
-	payloadObjectField, payloadTemplate string, headers map[string]string) *WebhookListener {
+	payloadObjectField, payloadTemplate string, headers map[string]string, disabled bool) *WebhookListener {
 	return &WebhookListener{
 		name:               name,
 		Uri:                uri,
@@ -33,6 +33,7 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 		payloadObjectField: payloadObjectField,
 		payloadTemplate:    payloadTemplate,
 		headers:            headers,
+		disabled:           disabled,
 	}
 }
 
@@ -46,6 +47,7 @@ type WebhookListener struct {
 	payloadObjectField string
 	payloadTemplate    string
 	headers            map[string]string
+	disabled           bool
 }
 
 func (l *WebhookListener) Name() string {
@@ -68,6 +70,7 @@ func (l *WebhookListener) Metadata() map[string]string {
 		"payloadObjectField": l.payloadObjectField,
 		"payloadTemplate":    l.payloadTemplate,
 		"headers":            fmt.Sprintf("%v", l.headers),
+		"disabled":           fmt.Sprint(l.disabled),
 	}
 }
 
@@ -83,7 +86,16 @@ func (l *WebhookListener) Headers() map[string]string {
 	return l.headers
 }
 
+func (l *WebhookListener) Disabled() bool {
+	return l.disabled
+}
+
 func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventResult) {
+	if l.disabled {
+		l.Log.With(event.Log()...).Debug("webhook listener is disabled")
+		return testkube.NewFailedEventResult(event.Id, errors.New("webhook listener is disabled"))
+	}
+
 	body := bytes.NewBuffer([]byte{})
 	log := l.Log.With(event.Log()...)
 
