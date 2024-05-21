@@ -46,7 +46,7 @@ spec:
     volumes:
     - name: gocache
       hostPath:
-        path: /go-cache/{{ workflow.name }}
+        path: /tmp/go-cache-{{ workflow.name }}
   steps:
     - name: Run integration tests
       run:
