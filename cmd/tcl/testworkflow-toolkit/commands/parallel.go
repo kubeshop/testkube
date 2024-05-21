@@ -289,6 +289,9 @@ func NewParallelCmd() *cobra.Command {
 						updates <- Update{index: index, result: v.Result}
 						prevStep = v.Current
 						prevStatus = v.Status
+						if v.Status != prevStatus {
+							log(string(v.Status))
+						}
 						if v.Result.IsFinished() {
 							data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: v.Status, Result: v.Result})
 							ctxCancel()
