@@ -36,11 +36,11 @@ func TestHandler_CloudUploader(t *testing.T) {
 	setFilesystemExpectations := func(fs *filesystem.MockFileSystem) {
 		fs.
 			EXPECT().
-			OpenFileRO("test.log").
+			OpenFileRO("/test.log").
 			Return(filesystem.NewMockFile("test.log", []byte("test")), nil)
 		fs.
 			EXPECT().
-			OpenFileRO("report/junit.xml").
+			OpenFileRO("/report/junit.xml").
 			Return(filesystem.NewMockFile("report/junit.xml", []byte(testdata.BasicJUnit)), nil)
 
 	}
@@ -138,7 +138,7 @@ func TestHandler_CloudUploader(t *testing.T) {
 			}
 			var handlerOpts []HandlerOpts
 			if tc.withJUnitPostProcessor {
-				pp := NewJUnitPostProcessor(mockFilesystem, mockExecutor)
+				pp := NewJUnitPostProcessor(mockFilesystem, mockExecutor, "/", "")
 				handlerOpts = append(handlerOpts, WithPostProcessor(pp))
 			}
 			handler := NewHandler(uploader, tc.processor, handlerOpts...)

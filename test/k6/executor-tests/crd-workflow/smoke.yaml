@@ -50,15 +50,14 @@ spec:
     - name: K6_SYSTEM_ENV # currently only possible on this level
       value: K6_SYSTEM_ENV_value
   steps:
-  - name: Checkout
+  - name: Run from trait
+    workingDir: /data/repo/test/k6/executor-tests
     content:
       git:
         uri: https://github.com/kubeshop/testkube
         revision: main
         paths:
         - test/k6/executor-tests/k6-smoke-test.js
-  - name: Run from trait
-    workingDir: /data/repo/test/k6/executor-tests
     template:
       name: pre-official/k6
       config:

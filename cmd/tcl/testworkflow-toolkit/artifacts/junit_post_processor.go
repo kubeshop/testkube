@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -22,12 +23,14 @@ import (
 
 // JUnitPostProcessor is a post-processor that checks XML files for JUnit reports and sends them to the cloud.
 type JUnitPostProcessor struct {
-	fs     filesystem.FileSystem
-	client cloudexecutor.Executor
+	fs         filesystem.FileSystem
+	client     cloudexecutor.Executor
+	root       string
+	pathPrefix string
 }
 
-func NewJUnitPostProcessor(fs filesystem.FileSystem, client cloudexecutor.Executor) *JUnitPostProcessor {
-	return &JUnitPostProcessor{fs: fs, client: client}
+func NewJUnitPostProcessor(fs filesystem.FileSystem, client cloudexecutor.Executor, root, pathPrefix string) *JUnitPostProcessor {
+	return &JUnitPostProcessor{fs: fs, client: client, root: root, pathPrefix: pathPrefix}
 }
 
 func (p *JUnitPostProcessor) Start() error {
@@ -36,7 +39,15 @@ func (p *JUnitPostProcessor) Start() error {
 
 // Add checks if the file is a JUnit report and sends it to the cloud.
 func (p *JUnitPostProcessor) Add(path string) error {
-	file, err := p.fs.OpenFileRO(path)
+	uploadPath := path
+	if p.pathPrefix != "" {
+		uploadPath = filepath.Join(p.pathPrefix, uploadPath)
+	}
+	absPath := path
+	if !filepath.IsAbs(path) {
+		absPath = filepath.Join(p.root, absPath)
+	}
+	file, err := p.fs.OpenFileRO(absPath)
 	if err != nil {
 		return errors.Wrapf(err, "failed to open %s", path)
 	}
@@ -60,7 +71,7 @@ func (p *JUnitPostProcessor) Add(path string) error {
 		return nil
 	}
 	fmt.Printf("Processing JUnit report: %s\n", ui.LightCyan(path))
-	if err := p.sendJUnitReport(path, xmlData); err != nil {
+	if err := p.sendJUnitReport(uploadPath, xmlData); err != nil {
 		return errors.Wrapf(err, "failed to send JUnit report %s", stat.Name())
 	}
 	return nil
@@ -68,13 +79,17 @@ func (p *JUnitPostProcessor) Add(path string) error {
 
 // sendJUnitReport sends the JUnit report to the Agent gRPC API.
 func (p *JUnitPostProcessor) sendJUnitReport(path string, report []byte) error {
+	// Apply path prefix correctly
+	if p.pathPrefix != "" {
+		path = filepath.Join(p.pathPrefix, path)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	_, err := p.client.Execute(ctx, testworkflow.CmdTestWorkflowExecutionAddReport, &testworkflow.ExecutionsAddReportRequest{
 		ID:           env.ExecutionId(),
 		WorkflowName: env.WorkflowName(),
 		WorkflowStep: env.Ref(), // TODO: think if it's valid for the parallel steps that have independent refs
-		Filepath:     path,      // TODO: adjust to support sub-paths from parallel execution?
+		Filepath:     path,
 		Report:       report,
 	})
 	return err
