@@ -3,6 +3,7 @@ package commands
 import (
 	"embed"
 	"encoding/json"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -57,7 +58,15 @@ func TestRun_Integration(t *testing.T) {
 	mockClient.EXPECT().Execute(gomock.Any(), artifact.CmdScraperPutObjectSignedURL, gomock.Any()).Return(mockResponseJson, nil).Times(2)
 	mockClient.EXPECT().Execute(gomock.Any(), testworkflow.CmdTestWorkflowExecutionAddReport, gomock.Any()).Return(nil, nil)
 	uploader := artifacts.NewCloudUploader(mockClient)
-	postProcessor := artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), mockClient)
+	mockFs := filesystem.NewMockFileSystem(mockCtrl)
+	mockFs.EXPECT().OpenFileRO(gomock.Any()).AnyTimes().DoAndReturn(func(path string) (fs.File, error) {
+		b, err := testDataFixtures.ReadFile(path[1:])
+		if err != nil {
+			return nil, err
+		}
+		return filesystem.NewMockFile(path[1:], b), nil
+	})
+	postProcessor := artifacts.NewJUnitPostProcessor(mockFs, mockClient, "/", "")
 	handler := artifacts.NewHandler(uploader, processor, artifacts.WithPostProcessor(postProcessor))
 
 	run(handler, walker, testDataFixtures)

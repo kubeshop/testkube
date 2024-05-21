@@ -293,7 +293,8 @@ spec:
       - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
       - --reporter
       - junit
-      - --reporter-optionsmochaFile=/data/artifacts/junit/junit-[hash].xml,toConsole=false
+      - --reporter-options
+      - mochaFile=/data/artifacts/junit/junit-[hash].xml,toConsole=false
       env:
       - name: CYPRESS_CUSTOM_ENV
         value: CYPRESS_CUSTOM_ENV_value

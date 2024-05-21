@@ -58,12 +58,12 @@ func TestJUnitPostProcessor_Add(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			mockFS := filesystem.NewMockFileSystem(mockCtrl)
-			mockFS.EXPECT().OpenFileRO(tc.path).Return(tc.file, nil)
+			mockFS.EXPECT().OpenFileRO("/"+tc.path).Return(tc.file, nil)
 			mockClient := executor.NewMockExecutor(mockCtrl)
 			if tc.setup != nil {
 				tc.setup(mockClient)
 			}
-			pp := NewJUnitPostProcessor(mockFS, mockClient)
+			pp := NewJUnitPostProcessor(mockFS, mockClient, "/", "")
 			err := pp.Add(tc.path)
 			assert.Equal(t, tc.want, err)
 		})

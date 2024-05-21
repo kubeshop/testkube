@@ -70,14 +70,13 @@ spec:
         cpu: 128m
         memory: 128Mi
     workingDir: /data/repo/test/k6/executor-tests
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/k6/executor-tests/k6-smoke-test-without-envs.js
   steps:
-  - name: Checkout
-    content:
-      git:
-        uri: https://github.com/kubeshop/testkube
-        revision: main
-        paths:
-        - test/k6/executor-tests/k6-smoke-test-without-envs.js
   - name: Run from template
     workingDir: /data/repo/test/k6/executor-tests
     template: # template will be executed here
