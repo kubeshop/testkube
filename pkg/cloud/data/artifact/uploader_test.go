@@ -57,6 +57,7 @@ func TestCloudLoader_Load(t *testing.T) {
 					ExecutionID:   "my-execution-id",
 					TestName:      "my-test",
 					TestSuiteName: "my-test-suite",
+					ContentType:   "text/plain",
 				}
 
 				mockExecutor.EXPECT().Execute(gomock.Any(), cloudscraper.CmdScraperPutObjectSignedURL, gomock.Eq(req)).Return([]byte(`{"URL":"`+testServer.URL+`/dummy"}`), nil).Times(1)
@@ -79,6 +80,7 @@ func TestCloudLoader_Load(t *testing.T) {
 					ExecutionID:   "my-execution-id",
 					TestName:      "my-test",
 					TestSuiteName: "my-test-suite",
+					ContentType:   "text/plain",
 				}
 
 				mockExecutor.EXPECT().Execute(gomock.Any(), cloudscraper.CmdScraperPutObjectSignedURL, gomock.Eq(req)).Return(nil, errors.New("connection error")).Times(1)
