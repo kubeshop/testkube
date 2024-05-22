@@ -852,13 +852,7 @@ func (s TestkubeAPI) ListTestSuiteTestsHandler() fiber.Handler {
 func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
 
 	filter := testresult.NewExecutionsFilter()
-	// id for /test-suites/ID/executions
-	name := c.Params("id", "")
-	if name == "" {
-		// query param for /executions?id
-		name = c.Query("id", "")
-	}
-
+	name := c.Query("id", "")
 	if name != "" {
 		filter = filter.WithName(name)
 	}
