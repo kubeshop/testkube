@@ -8894,6 +8894,32 @@ components:
           additionalProperties:
             type: string
 
+    TestWorkflowExecutionCR:
+      type: object
+      required:
+        - testWorkflow
+      properties:
+        testWorkflow:
+          $ref: "#/components/schemas/ObjectRef"
+          description: test workflow name and namespace
+        executionRequest:
+          $ref: "#/components/schemas/TestWorkflowExecutionRequest"
+          description: test workflow execution request parameters
+        status:
+          $ref: "#/components/schemas/TestWorkflowExecutionStatusCR"
+          description: test workflow execution status
+
+    TestWorkflowExecutionStatusCR:
+      type: object
+      description: test workflow execution status
+      properties:
+        latestExecution:
+          $ref: "#/components/schemas/TestWorkflowExecution"
+        generation:
+          type: integer
+          format: int64
+          description: test workflow execution generation
+
     ContentGitAuthType:
       type: string
       description: auth type for git requests
