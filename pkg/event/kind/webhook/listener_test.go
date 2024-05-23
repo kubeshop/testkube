@@ -157,7 +157,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		})
 
 		// then
-		assert.NotEqual(t, "", r.Error())
+		assert.Equal(t, "", r.Error())
 	})
 }
 
