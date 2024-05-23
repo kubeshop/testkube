@@ -27,4 +27,6 @@ type WebhookCreateRequest struct {
 	Headers map[string]string `json:"headers,omitempty"`
 	// webhook labels
 	Labels map[string]string `json:"labels,omitempty"`
+	// whether webhook is disabled
+	Disabled bool `json:"disabled,omitempty"`
 }
